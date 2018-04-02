@@ -1,0 +1,4 @@
+NAME WAIT.COM
+
+EXPORTS
+    YoriMain=YoriCmd_WAIT

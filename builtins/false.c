@@ -1,0 +1,51 @@
+/**
+ * @file builtins/false.c
+ *
+ * Yori shell evaluate to false
+ *
+ * Copyright (c) 2018 Malcolm J. Smith
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include <yoripch.h>
+#include <yorilib.h>
+
+/**
+ False command (does nothing, unsuccessfully)
+
+ @param ArgC The number of arguments.
+
+ @param ArgV The argument array.
+
+ @return ExitCode, zero for success, nonzero for failure.
+ */
+DWORD
+YORI_BUILTIN_FN
+YoriCmd_FALSE(
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
+    )
+{
+    UNREFERENCED_PARAMETER(ArgC);
+    UNREFERENCED_PARAMETER(ArgV);
+    return EXIT_FAILURE;
+}
+
+// vim:sw=4:ts=4:et:

@@ -1,0 +1,4 @@
+NAME PUSHD.COM
+
+EXPORTS
+    YoriMain=YoriCmd_PUSHD

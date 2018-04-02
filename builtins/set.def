@@ -1,0 +1,4 @@
+NAME SET.COM
+
+EXPORTS
+    YoriMain=YoriCmd_SET

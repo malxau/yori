@@ -1,0 +1,44 @@
+set BLDID=`date`
+set DIRNAME=%BLDID%
+
+set ARCH=win32
+cl /? 2>&1 | findstr /C:"for x64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=amd64
+cl /? 2>&1 | findstr /C:"for AMD64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=amd64
+cl /? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=arm64
+
+echo *** Cleaning tree
+nmake /nologo clean >NUL
+
+echo *** Building debug
+nmake /nologo PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+
+REM This is a bad idea.  We should really generate setups from the hosted
+REM file tree to ensure the binaries in the setup are available/servicable
+REM from the web.
+
+echo *** Generating debug installer
+
+mkdir out >NUL 2>&1
+makensis /V2 /DDBG=1 /DSHIPPDB=1 /DPACKARCH=%ARCH% setup.nsi &
+makensis /V2 /DDBG=1 /DPACKARCH=%ARCH% setup.nsi &
+makensis /V2 /DDBG=1 /DSYMONLY=1 /DPACKARCH=%ARCH% setup.nsi &
+wait
+
+echo *** Cleaning tree
+nmake /nologo clean >NUL
+
+echo *** Building retail
+nmake /nologo PDB=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+
+echo *** Generating retail installer
+makensis /V2 /DSHIPPDB=1 /DPACKARCH=%ARCH% setup.nsi &
+makensis /V2 /DPACKARCH=%ARCH% setup.nsi &
+makensis /V2 /DSYMONLY=1 /DPACKARCH=%ARCH% setup.nsi &
+wait
+
+echo *** Cleaning tree
+
+nmake /nologo clean >NUL

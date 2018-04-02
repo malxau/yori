@@ -1,0 +1,19 @@
+# Doxyfile 1.8.13
+
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "Yori"
+QUIET                  = YES
+OPTIMIZE_OUTPUT_FOR_C  = YES
+TYPEDEF_HIDES_STRUCT   = YES
+RECURSIVE              = YES
+EXCLUDE                = 
+EXCLUDE_PATTERNS       =
+GENERATE_HTML          = YES
+OUTPUT_DIRECTORY       = doc
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+GENERATE_HTMLHELP      = YES
+CHM_FILE               = Yoricode.chm
+HHC_LOCATION           = "C:\Program Files\Html Help Workshop\hhc.exe"
+SEARCHENGINE           = NO
+GENERATE_LATEX         = NO

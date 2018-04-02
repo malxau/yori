@@ -1,0 +1,23 @@
+NAME YORIMIN
+
+EXPORTS
+    YoriApiAddAlias
+    YoriApiBuiltinRegister
+    YoriApiBuiltinUnregister
+    YoriApiDeleteAlias
+    YoriApiExecuteBuiltin
+    YoriApiExecuteExpression
+    YoriApiExitProcess
+    YoriApiExpandAlias
+    YoriApiFreeYoriString
+    YoriApiGetAliasStrings
+    YoriApiGetErrorLevel
+    YoriApiGetJobInformation
+    YoriApiGetJobOutput
+    YoriApiGetNextJobId
+    YoriApiGetYoriVersion
+    YoriApiPipeJobOutput
+    YoriApiSetDefaultColor
+    YoriApiSetJobPriority
+    YoriApiTerminateJob
+    YoriApiWaitForJob

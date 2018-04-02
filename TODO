@@ -1,0 +1,23 @@
+M2:
+
+ - Merge sdir recursion root and criteria arguments
+ - Have scut dump parse variables for flexible output
+ - Allow child yori process to execute a plan in the background
+ - Colorize help and error text
+ - Extensible tab completion, see bash's complete command
+ - Ctrl+R
+ - APIs for history, history command
+ - Environment variable substitution
+ - Isolate aliases during call
+ - Clean up memory on shell exit (for background jobs)
+
+M3:
+
+ - Touch
+ - Take sdir file attribute logic into yorilib, make findfiles, improve if
+ - Xargs
+ - Z
+ - Pager
+ - Split sdir brief recurse into standalone du
+ - Installer/updater
+

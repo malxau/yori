@@ -1,0 +1,4 @@
+NAME CHDIR.COM
+
+EXPORTS
+    YoriMain=YoriCmd_CHDIR

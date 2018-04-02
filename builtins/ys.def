@@ -1,0 +1,4 @@
+NAME YS.COM
+
+EXPORTS
+    YoriMain=YoriCmd_YS

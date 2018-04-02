@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Do not remove this test for UTF-8: if “Ω” doesn’t appear as greek uppercase omega letter enclosed in quotation marks, you should use an editor that supports UTF-8, not this one. -->
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+<metadata>
+<!-- Read this before publishing packages to chocolatey.org: https://github.com/chocolatey/chocolatey/wiki/CreatePackages -->
+<id>sdir</id>
+<title>Sdir</title>
+<version>1.27</version>
+<authors>malxau</authors>
+<owners>malxau</owners>
+<summary>Colorful, sorted multi-column directory enumeration</summary>
+<description>Colorful, sorted multi-column directory enumeration.  Can include a range of information, or be compact and concise.</description>
+<projectUrl>http://www.malsmith.net/sdir/</projectUrl>
+<tags>sdir</tags>
+<copyright>Copyright (c) 2014-2017 Malcolm J. Smith</copyright>
+<licenseUrl>http://www.malsmith.net/license/mit/</licenseUrl>
+<packageSourceUrl>http://www.malsmith.net/sdir/</packageSourceUrl>
+<projectSourceUrl>http://www.malsmith.net/sdir/</projectSourceUrl>
+<requireLicenseAcceptance>false</requireLicenseAcceptance>
+<releaseNotes>Support current window background, reduce load time, add NT 3.1 support</releaseNotes>
+</metadata>
+<files>
+<file src="tools\sdir.exe" target="tools" />
+</files>
+</package>

@@ -1,0 +1,4 @@
+NAME VER.COM
+
+EXPORTS
+    YoriMain=YoriCmd_VER

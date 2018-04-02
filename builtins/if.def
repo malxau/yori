@@ -1,0 +1,4 @@
+NAME IF.COM
+
+EXPORTS
+    YoriMain=YoriCmd_IF

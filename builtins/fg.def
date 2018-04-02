@@ -1,0 +1,4 @@
+NAME FG.COM
+
+EXPORTS
+    YoriMain=YoriCmd_FG
