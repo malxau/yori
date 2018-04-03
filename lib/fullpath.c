@@ -975,7 +975,7 @@ YoriLibExpandShellDirectoryGuid(
     memcpy(ExpandedSymbol->StartOfString, ExpandedString, (LocationLength + 1) * sizeof(TCHAR));
     ExpandedSymbol->LengthInChars = LocationLength;
 
-    pCoTaskMemFree(ExpandedSymbol);
+    pCoTaskMemFree(ExpandedString);
     FreeLibrary(hShell);
     FreeLibrary(hOle32);
     return TRUE;
