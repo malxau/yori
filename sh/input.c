@@ -1893,7 +1893,22 @@ YoriShGetExpression(
         if (KeyPressFound) {
             YoriShDisplayAfterKeyPress(&Buffer);
         }
-        if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, ActuallyRead, &ActuallyRead)) {
+
+        //
+        //  If we processed any events, remove them from the queue.
+        //
+
+        if (ActuallyRead > 0) {
+            if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, ActuallyRead, &ActuallyRead)) {
+                break;
+            }
+        }
+
+        //
+        //  Wait to see if any further events arrive.
+        //
+
+        if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), INFINITE) != WAIT_OBJECT_0) {
             break;
         }
     }
