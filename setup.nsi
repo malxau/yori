@@ -1,4 +1,5 @@
-!include "Sections.nsh"
+!INCLUDE "Sections.nsh"
+!INCLUDE "x64.nsh"
 
 ; The name of the installer
 Name "Yori utils"
@@ -9,6 +10,15 @@ XPStyle on
 
 !IFNDEF PACKARCH
 !define PACKARCH "win32"
+!ENDIF
+
+
+!IF "${PACKARCH}" == "amd64"
+InstallDir $PROGRAMFILES64\bin
+!ELSE IF "${PACKARCH}" == "arm64"
+InstallDir $PROGRAMFILES64\bin
+!ELSE
+InstallDir $PROGRAMFILES32\bin
 !ENDIF
 
 !IFDEF DBG
@@ -34,12 +44,10 @@ XPStyle on
 ; The file to write
 OutFile "out\yori-${PACKARCH}-installer-${BUILDDATE}${DBGSUFFIX}${PDBSUFFIX}${SYMONLYSUFFIX}.exe"
 
-; The default installation directory
-InstallDir $PROGRAMFILES\bin
 
 ; Registry key to check for directory (so if you install again, it will 
 ; overwrite the old one automatically)
-InstallDirRegKey HKLM "Software\yori" "Install_Dir"
+InstallDirRegKey HKCU "Software\yori" "Install_Dir"
 
 ;--------------------------------
 
@@ -56,6 +64,10 @@ UninstPage instfiles
 
 RequestExecutionLevel user
 
+; Disable WOW64 redirection
+Section
+  ${DisableX64FSRedirection}
+SectionEnd
 
 ; The stuff to install
 SectionGroup "Yori Shells"
@@ -418,7 +430,7 @@ Section "Uninstall support"
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR
 
-  AddSize 40
+  AddSize 50
 
   ; Install to per-user start menu so we don't require admin privs
   ; Note admin is still required for add/remove programs support
@@ -440,6 +452,8 @@ SectionEnd
 ; Uninstaller
 
 Section "Uninstall"
+
+  ${DisableX64FSRedirection}
 
   ; Set output path to the installation directory.
   SetOutPath $INSTDIR
