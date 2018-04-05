@@ -1187,8 +1187,6 @@ YoriShExecuteExpression(
     YORI_CMD_CONTEXT CmdContext;
     YORI_STRING CurrentFullExpression;
 
-    ASSERT(Expression->StartOfString[Expression->LengthInChars] == '\0');
-
     //
     //  Expand all backquotes.
     //
