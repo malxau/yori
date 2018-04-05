@@ -1,5 +1,4 @@
 set BLDID=`date`
-set DIRNAME=%BLDID%
 
 set ARCH=win32
 cl /? 2>&1 | findstr /C:"for x64" >NUL 2>&1
