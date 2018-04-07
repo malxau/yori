@@ -5,4 +5,5 @@ cache.mk
 **/*.lib
 **/*.obj
 **/*.pdb
+doc/**
 !crt/i386/*.obj
