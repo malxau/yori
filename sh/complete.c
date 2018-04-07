@@ -430,9 +430,9 @@ YoriShFileTabCompletionCallback(
         Match->YsValue.MemoryToFree = Match;
 
         if (Context->Prefix.LengthInChars > 0) {
-            CopyMemory(Match->YsValue.StartOfString, Context->Prefix.StartOfString, Context->Prefix.LengthInChars * sizeof(TCHAR));
+            memcpy(Match->YsValue.StartOfString, Context->Prefix.StartOfString, Context->Prefix.LengthInChars * sizeof(TCHAR));
         }
-        CopyMemory(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars], Filename->StartOfString, Filename->LengthInChars * sizeof(TCHAR));
+        memcpy(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars], Filename->StartOfString, Filename->LengthInChars * sizeof(TCHAR));
         Match->YsValue.StartOfString[Context->Prefix.LengthInChars + Filename->LengthInChars] = '\0';
         Match->YsValue.LengthInChars = Context->Prefix.LengthInChars + Filename->LengthInChars;
     } else {
@@ -458,12 +458,12 @@ YoriShFileTabCompletionCallback(
         Match->YsValue.MemoryToFree = Match;
     
         if (Context->Prefix.LengthInChars > 0) {
-            CopyMemory(Match->YsValue.StartOfString, Context->Prefix.StartOfString, Context->Prefix.LengthInChars * sizeof(TCHAR));
+            memcpy(Match->YsValue.StartOfString, Context->Prefix.StartOfString, Context->Prefix.LengthInChars * sizeof(TCHAR));
         }
         if (Context->CharsToFinalSlash > 0) {
-            CopyMemory(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars], Context->SearchString, Context->CharsToFinalSlash * sizeof(TCHAR));
+            memcpy(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars], Context->SearchString, Context->CharsToFinalSlash * sizeof(TCHAR));
         }
-        CopyMemory(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars + Context->CharsToFinalSlash], FileInfo->cFileName, CharsInFileName * sizeof(TCHAR));
+        memcpy(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars + Context->CharsToFinalSlash], FileInfo->cFileName, CharsInFileName * sizeof(TCHAR));
         Match->YsValue.StartOfString[Context->Prefix.LengthInChars + Context->CharsToFinalSlash + CharsInFileName] = '\0';
         Match->YsValue.LengthInChars = Context->Prefix.LengthInChars + Context->CharsToFinalSlash + CharsInFileName;
     }
@@ -731,7 +731,7 @@ YoriShTabCompletion(
         Buffer->TabContext.PreviousMatch = NULL;
 
         if (CmdContext.CurrentArg < CmdContext.argc) {
-            CopyMemory(&CurrentArgString, &CmdContext.ysargv[CmdContext.CurrentArg], sizeof(YORI_STRING));
+            memcpy(&CurrentArgString, &CmdContext.ysargv[CmdContext.CurrentArg], sizeof(YORI_STRING));
         }
         SearchLength = CurrentArgString.LengthInChars + 1;
         if (!YoriLibAllocateString(&Buffer->TabContext.SearchString, SearchLength + 1)) {
@@ -818,7 +818,7 @@ YoriShTabCompletion(
                 ZeroMemory(CmdContext.ysargv, CmdContext.argc * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
                 CmdContext.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(CmdContext.ysargv, CmdContext.argc * sizeof(YORI_STRING));
 
-                CopyMemory(CmdContext.ysargv, OldArgv, OldArgCount * sizeof(YORI_STRING));
+                memcpy(CmdContext.ysargv, OldArgv, OldArgCount * sizeof(YORI_STRING));
                 for (Count = 0; Count < OldArgCount; Count++) {
                     CmdContext.ArgContexts[Count] = OldArgContext[Count];
                 }

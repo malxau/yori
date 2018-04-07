@@ -200,7 +200,7 @@ YoriCmd_SET(
                             YoriLibSPrintf(VariableName, _T("%y"), &YsVariableName);
                             if (GetEnvironmentVariable(VariableName, NULL, 0) > 0) {
                                 if (WriteIndex != StartOfVariableName) {
-                                    MoveMemory(&Value[WriteIndex], &Value[StartOfVariableName], (ReadIndex - StartOfVariableName) * sizeof(TCHAR));
+                                    memmove(&Value[WriteIndex], &Value[StartOfVariableName], (ReadIndex - StartOfVariableName) * sizeof(TCHAR));
                                 }
                                 WriteIndex += (ReadIndex - StartOfVariableName);
                             }

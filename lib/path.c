@@ -1176,10 +1176,10 @@ YoriLibAddEnvironmentComponent(
         //
 
         if (PathLength > 0) {
-            MoveMemory(&PathData[NewComponent->LengthInChars + 1], PathData, PathLength * sizeof(TCHAR));
+            memmove(&PathData[NewComponent->LengthInChars + 1], PathData, PathLength * sizeof(TCHAR));
             PathData[NewComponent->LengthInChars + 1 + PathLength] = '\0';
         }
-        CopyMemory(PathData, NewComponent->StartOfString, NewComponent->LengthInChars * sizeof(TCHAR));
+        memcpy(PathData, NewComponent->StartOfString, NewComponent->LengthInChars * sizeof(TCHAR));
         if (PathLength > 0) {
             PathData[NewComponent->LengthInChars] = ';';
         } else {
@@ -1196,7 +1196,7 @@ YoriLibAddEnvironmentComponent(
             PathData[PathLength] = ';';
             PathLength++;
         }
-        CopyMemory(&PathData[PathLength], NewComponent->StartOfString, NewComponent->LengthInChars * sizeof(TCHAR));
+        memcpy(&PathData[PathLength], NewComponent->StartOfString, NewComponent->LengthInChars * sizeof(TCHAR));
         PathData[PathLength + NewComponent->LengthInChars] = '\0';
     }
 

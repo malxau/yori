@@ -116,7 +116,7 @@ YoriLibReallocateString(
     }
 
     if (String->LengthInChars > 0) {
-        CopyMemory(NewMemoryToFree, String->StartOfString, String->LengthInChars * sizeof(TCHAR));
+        memcpy(NewMemoryToFree, String->StartOfString, String->LengthInChars * sizeof(TCHAR));
     }
 
     if (String->MemoryToFree) {
@@ -151,7 +151,7 @@ YoriLibCStringFromYoriString(
         return NULL;
     }
 
-    CopyMemory(Return, String->StartOfString, String->LengthInChars * sizeof(TCHAR));
+    memcpy(Return, String->StartOfString, String->LengthInChars * sizeof(TCHAR));
     Return[String->LengthInChars] = '\0';
     return Return;
 }
@@ -199,7 +199,7 @@ YoriLibCloneString(
         YoriLibReference(Src->MemoryToFree);
     }
 
-    CopyMemory(Dest, Src, sizeof(YORI_STRING));
+    memcpy(Dest, Src, sizeof(YORI_STRING));
 }
 
 /**

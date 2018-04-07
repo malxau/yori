@@ -320,10 +320,12 @@ YoriShAddYoriStringToInput(
         }
 
         if (Buffer->String.LengthInChars != Buffer->CurrentOffset) {
-            MoveMemory(&Buffer->String.StartOfString[Buffer->CurrentOffset + String->LengthInChars], &Buffer->String.StartOfString[Buffer->CurrentOffset], (Buffer->String.LengthInChars - Buffer->CurrentOffset) * sizeof(TCHAR));
+            memmove(&Buffer->String.StartOfString[Buffer->CurrentOffset + String->LengthInChars],
+                    &Buffer->String.StartOfString[Buffer->CurrentOffset],
+                    (Buffer->String.LengthInChars - Buffer->CurrentOffset) * sizeof(TCHAR));
         }
         Buffer->String.LengthInChars += String->LengthInChars;
-        CopyMemory(&Buffer->String.StartOfString[Buffer->CurrentOffset], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
+        memcpy(&Buffer->String.StartOfString[Buffer->CurrentOffset], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
 
         if (Buffer->DirtyLength == 0) {
             Buffer->DirtyBeginOffset = Buffer->CurrentOffset;
@@ -342,7 +344,7 @@ YoriShAddYoriStringToInput(
         if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, Buffer->CurrentOffset + String->LengthInChars)) {
             return;
         }
-        CopyMemory(&Buffer->String.StartOfString[Buffer->CurrentOffset], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
+        memcpy(&Buffer->String.StartOfString[Buffer->CurrentOffset], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
         Buffer->CurrentOffset += String->LengthInChars;
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->String.LengthInChars = Buffer->CurrentOffset;
@@ -444,7 +446,9 @@ YoriShBackspace(
     }
 
     if (Buffer->CurrentOffset != Buffer->String.LengthInChars) {
-        MoveMemory(&Buffer->String.StartOfString[Buffer->CurrentOffset - CountToUse], &Buffer->String.StartOfString[Buffer->CurrentOffset], (Buffer->String.LengthInChars - Buffer->CurrentOffset) * sizeof(TCHAR));
+        memmove(&Buffer->String.StartOfString[Buffer->CurrentOffset - CountToUse],
+                &Buffer->String.StartOfString[Buffer->CurrentOffset],
+                (Buffer->String.LengthInChars - Buffer->CurrentOffset) * sizeof(TCHAR));
     }
 
     if (Buffer->DirtyLength == 0) {

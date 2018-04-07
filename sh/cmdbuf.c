@@ -293,7 +293,7 @@ YoriShCmdBufferPump(
                     break;
                 }
 
-                CopyMemory(NewBuffer, SignalledBuffer->Buffer, SignalledBuffer->BytesAllocated);
+                memcpy(NewBuffer, SignalledBuffer->Buffer, SignalledBuffer->BytesAllocated);
                 YoriLibFree(SignalledBuffer->Buffer);
                 SignalledBuffer->Buffer = NewBuffer;
                 SignalledBuffer->BytesAllocated = NewBytesAllocated;

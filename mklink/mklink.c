@@ -273,11 +273,15 @@ MklinkCreateJunction(
     ReparseData->PrintNameOffsetInBytes = (WORD)(ExistingFileLength * sizeof(TCHAR) + sizeof(TCHAR));
     ReparseData->PrintNameLengthInBytes = (WORD)((ExistingFileLength - 4) * sizeof(TCHAR));
 
-    CopyMemory(YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->RealNameOffsetInBytes), ExistingFile, ExistingFileLength * sizeof(TCHAR) + sizeof(TCHAR));
+    memcpy(YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->RealNameOffsetInBytes),
+           ExistingFile,
+           ExistingFileLength * sizeof(TCHAR) + sizeof(TCHAR));
 
     *(TCHAR*)YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->RealNameOffsetInBytes + sizeof(TCHAR)) = '?';
 
-    CopyMemory(YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->PrintNameOffsetInBytes), ExistingFile + 4, (ExistingFileLength - 4)* sizeof(TCHAR) + sizeof(TCHAR));
+    memcpy(YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->PrintNameOffsetInBytes),
+           ExistingFile + 4,
+           (ExistingFileLength - 4)* sizeof(TCHAR) + sizeof(TCHAR));
 
     if (!CreateDirectory(NewLink, NULL)) {
         LastError = GetLastError();

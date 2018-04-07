@@ -730,7 +730,7 @@ YoriCmd_CALL(
         }
         NewStackEntry->ArgContext.ArgV[i].LengthAllocated = ArgV[i].LengthInChars + 1;
         NewStackEntry->ArgContext.ArgV[i].LengthInChars = ArgV[i].LengthInChars;
-        CopyMemory(NewStackEntry->ArgContext.ArgV[i].StartOfString, ArgV[i].StartOfString, ArgLength * sizeof(TCHAR));
+        memcpy(NewStackEntry->ArgContext.ArgV[i].StartOfString, ArgV[i].StartOfString, ArgLength * sizeof(TCHAR));
         NewStackEntry->ArgContext.ArgV[i].StartOfString[ArgV[i].LengthInChars] = '\0';
     }
 
@@ -1292,7 +1292,7 @@ YoriCmd_YS(
         return EXIT_FAILURE;
     }
 
-    CopyMemory(&Script.FileName, &FileName, sizeof(YORI_STRING));
+    memcpy(&Script.FileName, &FileName, sizeof(YORI_STRING));
 
     CloseHandle(FileHandle);
 

@@ -601,7 +601,7 @@ YoriShParseCmdlineToCmdContext(
         if (YoriShExpandEnvironmentVariables(&CmdContext->ysargv[ArgCount], &EnvExpandedString)) {
             if (EnvExpandedString.StartOfString != CmdContext->ysargv[ArgCount].StartOfString) {
                 YoriLibFreeStringContents(&CmdContext->ysargv[ArgCount]);
-                CopyMemory(&CmdContext->ysargv[ArgCount], &EnvExpandedString, sizeof(YORI_STRING));
+                memcpy(&CmdContext->ysargv[ArgCount], &EnvExpandedString, sizeof(YORI_STRING));
                 ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ysargv[ArgCount]));
             }
         }
@@ -765,7 +765,7 @@ YoriShRemoveEscapesFromCmdContext(
 
             YoriLibFreeStringContents(&CmdContext->ysargv[ArgIndex]);
 
-            CopyMemory(&CmdContext->ysargv[ArgIndex], &NewArg, sizeof(YORI_STRING));
+            memcpy(&CmdContext->ysargv[ArgIndex], &NewArg, sizeof(YORI_STRING));
         }
     }
 
@@ -798,7 +798,7 @@ YoriShCopyArg(
     if (SrcCmdContext->ysargv[SrcArgument].MemoryToFree != NULL) {
         YoriLibReference(SrcCmdContext->ysargv[SrcArgument].MemoryToFree);
     }
-    CopyMemory(&DestCmdContext->ysargv[DestArgument], &SrcCmdContext->ysargv[SrcArgument], sizeof(YORI_STRING));
+    memcpy(&DestCmdContext->ysargv[DestArgument], &SrcCmdContext->ysargv[SrcArgument], sizeof(YORI_STRING));
 }
 
 /**
@@ -1041,7 +1041,7 @@ YoriShCheckForDeviceNameAndDuplicate(
         if (UserName.MemoryToFree != NULL) {
             YoriLibReference(UserName.MemoryToFree);
         }
-        CopyMemory(ResolvedName, &UserName, sizeof(YORI_STRING));
+        memcpy(ResolvedName, &UserName, sizeof(YORI_STRING));
 
     } else {
         return YoriLibUserStringToSingleFilePath(&UserName, TRUE, ResolvedName);

@@ -242,7 +242,7 @@ YoriShExpandEnvironmentVariables(
     //
 
     if (!AnyVariableExpanded) {
-        CopyMemory(ResultingExpression, Expression, sizeof(YORI_STRING));
+        memcpy(ResultingExpression, Expression, sizeof(YORI_STRING));
         return TRUE;
     }
 
@@ -301,7 +301,7 @@ YoriShExpandEnvironmentVariables(
             }
 
             if (!VariableExpanded) {
-                CopyMemory(&ResultingExpression->StartOfString[DestIndex], &Expression->StartOfString[SrcIndex], (EndVarIndex - SrcIndex) * sizeof(TCHAR));
+                memcpy(&ResultingExpression->StartOfString[DestIndex], &Expression->StartOfString[SrcIndex], (EndVarIndex - SrcIndex) * sizeof(TCHAR));
                 DestIndex += (EndVarIndex - SrcIndex);
                 SrcIndex = EndVarIndex;
                 if (SrcIndex >= Expression->LengthInChars) {

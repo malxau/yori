@@ -88,7 +88,7 @@ YoriLibGetEnvironmentStrings(
             return FALSE;
         }
 
-        CopyMemory(EnvStrings->StartOfString, OsEnvStrings, CharCount * sizeof(TCHAR));
+        memcpy(EnvStrings->StartOfString, OsEnvStrings, CharCount * sizeof(TCHAR));
 
         if (pFreeEnvironmentStringsW) {
             pFreeEnvironmentStringsW(OsEnvStrings);

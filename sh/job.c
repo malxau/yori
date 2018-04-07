@@ -519,7 +519,7 @@ YoriShGetJobInformation(
                 }
             }
 
-            CopyMemory(Command->StartOfString, ThisJob->szCmd, CmdLength * sizeof(TCHAR));
+            memcpy(Command->StartOfString, ThisJob->szCmd, CmdLength * sizeof(TCHAR));
             Command->LengthInChars = CmdLength - 1;
 
             return TRUE;

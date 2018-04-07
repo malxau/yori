@@ -345,7 +345,9 @@ DirFileFoundCallback(
                     return FALSE;
                 }
             }
-            CopyMemory(DirContext->CurrentDirectoryName.StartOfString, ThisDirName.StartOfString, ThisDirName.LengthInChars * sizeof(TCHAR));
+            memcpy(DirContext->CurrentDirectoryName.StartOfString,
+                   ThisDirName.StartOfString,
+                   ThisDirName.LengthInChars * sizeof(TCHAR));
             DirContext->CurrentDirectoryName.LengthInChars = ThisDirName.LengthInChars;
             if (!DirContext->MinimalDisplay) {
                 DirOutputBeginningOfDirectorySummary(DirContext);

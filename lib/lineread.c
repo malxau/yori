@@ -231,11 +231,6 @@ YoriLibReadLineToString(
     //
     //  If the line read context doesn't have a buffer yet, allocate it
     //
-    //  MSFIX Replace the MoveMemory calls in this routine with a YORI_STRING
-    //  that can advance through the buffer.  When no newline is encountered,
-    //  we can then do a single MoveMemory on what should be a small amount of
-    //  data, rather than moving after every single line
-    //
 
     if (ReadContext->PreviousBuffer == NULL) {
         ReadContext->LengthOfBuffer = UserString->LengthAllocated;
@@ -354,7 +349,7 @@ YoriLibReadLineToString(
         //
 
         if (ReadContext->CurrentBufferOffset != 0) {
-            MoveMemory(ReadContext->PreviousBuffer, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->CurrentBufferOffset), ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset);
+            memmove(ReadContext->PreviousBuffer, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->CurrentBufferOffset), ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset);
             ReadContext->BytesInBuffer -= ReadContext->CurrentBufferOffset;
             ReadContext->CurrentBufferOffset = 0;
         }

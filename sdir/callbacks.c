@@ -1724,7 +1724,7 @@ SdirCollectObjectId (
 
     if (hFile != INVALID_HANDLE_VALUE) {
         if (DeviceIoControl(hFile, FSCTL_GET_OBJECT_ID, NULL, 0, &Buffer, sizeof(Buffer), &BytesReturned, NULL)) {
-            CopyMemory(&Entry->ObjectId, &Buffer.ObjectId, sizeof(Buffer.ObjectId));
+            memcpy(&Entry->ObjectId, &Buffer.ObjectId, sizeof(Buffer.ObjectId));
         }
         CloseHandle(hFile);
     }
@@ -2577,7 +2577,7 @@ SdirGenerateObjectId(
 {
     UCHAR Buffer[16];
     if (SdirStringToHexBuffer(String, (PUCHAR)&Buffer, sizeof(Buffer))) {
-        CopyMemory(Entry->ObjectId, Buffer, sizeof(Buffer));
+        memcpy(Entry->ObjectId, Buffer, sizeof(Buffer));
     }
     return TRUE;
 }

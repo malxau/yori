@@ -118,7 +118,7 @@ YoriShPasteText(
         YoriLibFreeStringContents(Buffer);
         YoriLibAllocateString(Buffer, StringLength + 1);
     }
-    CopyMemory(Buffer->StartOfString, pMem, (StringLength + 1) * sizeof(WCHAR));
+    memcpy(Buffer->StartOfString, pMem, (StringLength + 1) * sizeof(WCHAR));
     Buffer->LengthInChars = StringLength;
     GlobalUnlock(hMem);
 

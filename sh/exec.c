@@ -1145,11 +1145,11 @@ YoriShExpandBackquotes(
             return FALSE;
         }
 
-        CopyMemory(NewFullExpression, CurrentFullExpression.StartOfString, InitialPortionLength * sizeof(TCHAR));
+        memcpy(NewFullExpression, CurrentFullExpression.StartOfString, InitialPortionLength * sizeof(TCHAR));
         if (ProcessOutput.LengthInChars != 0) {
-            CopyMemory(&NewFullExpression[InitialPortionLength], ProcessOutput.StartOfString, ProcessOutput.LengthInChars * sizeof(TCHAR));
+            memcpy(&NewFullExpression[InitialPortionLength], ProcessOutput.StartOfString, ProcessOutput.LengthInChars * sizeof(TCHAR));
         }
-        CopyMemory(&NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars], SecondBackQuote + 1, TrailingPortionLength * sizeof(TCHAR));
+        memcpy(&NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars], SecondBackQuote + 1, TrailingPortionLength * sizeof(TCHAR));
         NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars + TrailingPortionLength] = '\0';
 
         YoriLibFreeStringContents(&CurrentFullExpression);
@@ -1163,7 +1163,7 @@ YoriShExpandBackquotes(
         YoriShFreeCmdContext(&CmdContext);
     }
 
-    CopyMemory(ResultingExpression, &CurrentFullExpression, sizeof(YORI_STRING));
+    memcpy(ResultingExpression, &CurrentFullExpression, sizeof(YORI_STRING));
     return TRUE;
 }
 

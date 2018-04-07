@@ -178,7 +178,7 @@ YoriLibMultibyteOutput(
     if (Encoding == CP_UTF16) {
         ASSERT(OutputBufferLength >= InputBufferLength * sizeof(WCHAR));
         if (OutputBufferLength >= InputBufferLength * sizeof(WCHAR)) {
-            CopyMemory(OutputStringBuffer, InputStringBuffer, InputBufferLength * sizeof(WCHAR));
+            memcpy(OutputStringBuffer, InputStringBuffer, InputBufferLength * sizeof(WCHAR));
         }
         return;
     }
@@ -245,7 +245,7 @@ YoriLibMultibyteInput(
     if (Encoding == CP_UTF16) {
         ASSERT(OutputBufferLength >= InputBufferLength);
         if (OutputBufferLength >= InputBufferLength) {
-            CopyMemory(OutputStringBuffer, InputStringBuffer, InputBufferLength * sizeof(WCHAR));
+            memcpy(OutputStringBuffer, InputStringBuffer, InputBufferLength * sizeof(WCHAR));
         }
         return;
     }
