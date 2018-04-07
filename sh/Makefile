@@ -27,6 +27,7 @@ OBJS=\
      builtin.obj      \
      clip.obj         \
      cmdbuf.obj       \
+     complete.obj     \
      env.obj          \
      exec.obj         \
      history.obj      \

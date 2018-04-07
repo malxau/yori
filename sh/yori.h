@@ -300,6 +300,117 @@ extern YORI_LIST_ENTRY YoriShCommandHistory;
 extern DWORD YoriShCommandHistoryCount;
 
 /**
+ Information about a single tab complete match.
+ */
+typedef struct _YORI_TAB_COMPLETE_MATCH {
+
+    /**
+     The list entry for this match.  Paired with @ref
+     YORI_TAB_COMPLETE_CONTEXT::MatchList .
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The string corresponding to this match.
+     */
+    YORI_STRING YsValue;
+
+} YORI_TAB_COMPLETE_MATCH, *PYORI_TAB_COMPLETE_MATCH;
+
+/**
+ Information about the state of tab completion.
+ */
+typedef struct _YORI_TAB_COMPLETE_CONTEXT {
+
+    /**
+     Indicates the number of times tab has been repeatedly pressed.  This
+     is reset if any other key is pressed instead of tab.  It is used to
+     determine if the tab context requires initialization for the first
+     tab, and where to resume from for later tabs.
+     */
+    DWORD TabCount;
+
+    /**
+     Indicates which data source to search through.
+     */
+    enum {
+        YoriTabCompleteSearchExecutables = 1,
+        YoriTabCompleteSearchFiles = 2,
+        YoriTabCompleteSearchHistory = 3
+    } SearchType;
+
+    /**
+     A list of matches that apply to the criteria that was searched.
+     */
+    YORI_LIST_ENTRY MatchList;
+
+    /**
+     Pointer to the previously returned match.  If the user repeatedly hits
+     tab, we advance to the next match.
+     */
+    PYORI_TAB_COMPLETE_MATCH PreviousMatch;
+
+    /**
+     The matching criteria that is being searched for.  This is typically
+     the string that was present when the user first hit tab followed by
+     a "*".
+     */
+    YORI_STRING SearchString;
+
+} YORI_TAB_COMPLETE_CONTEXT, *PYORI_TAB_COMPLETE_CONTEXT;
+
+/**
+ The context of a line that is currently being entered by the user.
+ */
+typedef struct _YORI_INPUT_BUFFER {
+
+    /**
+     Pointer to a string containing the text as being entered by the user.
+     */
+    YORI_STRING String;
+
+    /**
+     The current offset within @ref String that the user is modifying.
+     */
+    DWORD CurrentOffset;
+
+    /**
+     The number of characters that were filled in prior to a key press
+     being evaluated.
+     */
+    DWORD PreviousMaxPopulated;
+
+    /**
+     The current position that was selected prior to a key press being
+     evaluated.
+     */
+    DWORD PreviousCurrentOffset;
+
+    /**
+     The number of times the tab key had been pressed prior to a key being
+     evaluated.
+     */
+    DWORD PriorTabCount;
+
+    /**
+     The first character in the buffer that may have changed since the last
+     draw.
+     */
+    DWORD DirtyBeginOffset;
+
+    /**
+     The last character in the buffer that may have changed since the last
+     draw.
+     */
+    DWORD DirtyLength;
+
+    /**
+     Extra information specific to tab completion processing.
+     */
+    YORI_TAB_COMPLETE_CONTEXT TabContext;
+} YORI_INPUT_BUFFER, *PYORI_INPUT_BUFFER;
+
+/**
  The exit code ("error level") of the previous process to complete.
  */
 extern DWORD g_ErrorLevel;
@@ -455,6 +566,15 @@ YoriShPipeProcessBuffers(
     __in HANDLE hPipeErrors
     );
 
+// *** COMPLETE.C ***
+
+VOID
+YoriShTabCompletion(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in BOOL ExpandFullPath,
+    __in BOOL SearchHistory
+    );
+
 // *** ENV.C ***
 
 BOOL
@@ -521,6 +641,12 @@ BOOL
 YoriShSaveHistoryToFile();
 
 // *** INPUT.C ***
+
+BOOL
+YoriShEnsureStringHasEnoughCharacters(
+    __inout PYORI_STRING String,
+    __in DWORD CharactersNeeded
+    );
 
 BOOL
 YoriShGetExpression(
