@@ -336,7 +336,8 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
     enum {
         YoriTabCompleteSearchExecutables = 1,
         YoriTabCompleteSearchFiles = 2,
-        YoriTabCompleteSearchHistory = 3
+        YoriTabCompleteSearchHistory = 3,
+        YoriTabCompleteSearchArguments = 4
     } SearchType;
 
     /**
@@ -739,6 +740,12 @@ YoriShCopyArg(
     __in DWORD DestArgument
     );
 
+BOOL
+YoriShCopyCmdContext(
+    __out PYORI_CMD_CONTEXT DestCmdContext,
+    __in PYORI_CMD_CONTEXT SrcCmdContext
+    );
+
 VOID
 YoriShCheckIfArgNeedsQuotes(
     __in PYORI_CMD_CONTEXT CmdContext,
@@ -776,6 +783,12 @@ YoriShParseCmdContextToExecPlan(
 BOOL
 YoriShDoesExpressionSpecifyPath(
     __in PYORI_STRING SearchFor
+    );
+
+BOOL
+YoriShResolveCommandToExecutable(
+    __in PYORI_CMD_CONTEXT CmdContext,
+    __out PBOOL ExecutableFound
     );
 
 // *** PROMPT.C ***

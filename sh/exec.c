@@ -861,8 +861,8 @@ YoriShExecExecPlan(
     )
 {
     PYORI_SINGLE_EXEC_CONTEXT ExecContext;
-    YORI_STRING FoundExecutable;
     PVOID PreviouslyObservedOutputBuffer = NULL;
+    BOOL ExecutableFound;
 
     ExecContext = ExecPlan->FirstCmd;
     while (ExecContext != NULL) {
@@ -880,24 +880,19 @@ YoriShExecExecPlan(
             ExecContext->StdOut.Buffer.ProcessBuffers = PreviouslyObservedOutputBuffer;
         }
     
-        YoriLibInitEmptyString(&FoundExecutable);
-
         if (YoriLibIsOperationCancelled()) {
             break;
         }
 
-        YoriShExpandAlias(&ExecContext->CmdToExec);
+        if (!YoriShResolveCommandToExecutable(&ExecContext->CmdToExec, &ExecutableFound)) {
+            break;
+        }
 
-        if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ysargv[0], NULL, NULL, &FoundExecutable) && FoundExecutable.LengthInChars > 0) {
-            YoriLibFreeStringContents(&ExecContext->CmdToExec.ysargv[0]);
-            memcpy(&ExecContext->CmdToExec.ysargv[0], &FoundExecutable, sizeof(YORI_STRING));
-            YoriLibInitEmptyString(&FoundExecutable);
+        if (ExecutableFound) {
             g_ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
         } else {
             g_ErrorLevel = YoriShBuiltIn(ExecContext);
         }
-
-        YoriLibFreeStringContents(&FoundExecutable);
 
         //
         //  If the program output back to a shell owned buffer and we waited

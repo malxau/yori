@@ -802,6 +802,44 @@ YoriShCopyArg(
 }
 
 /**
+ Perform a deep copy of a command context.  This will allocate a new argument
+ array but reference any arguments from the source (so they must still be
+ reallocated individually if/when modified.)
+
+ @param DestCmdContext Pointer to the command context to populate with contents
+        from the source.
+
+ @param SrcCmdContext Pointer to the source command context.
+
+ @return TRUE to indicate success, or FALSE to indicate failure.
+ */
+BOOL
+YoriShCopyCmdContext(
+    __out PYORI_CMD_CONTEXT DestCmdContext,
+    __in PYORI_CMD_CONTEXT SrcCmdContext
+    )
+{
+    DWORD Count;
+
+    DestCmdContext->MemoryToFree = YoriLibReferencedMalloc(SrcCmdContext->argc * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    if (DestCmdContext->MemoryToFree == NULL) {
+        return FALSE;
+    }
+
+    DestCmdContext->ysargv = DestCmdContext->MemoryToFree;
+    DestCmdContext->ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(DestCmdContext->ysargv, SrcCmdContext->argc * sizeof(YORI_STRING));
+
+    DestCmdContext->argc = SrcCmdContext->argc;
+    DestCmdContext->CurrentArg = SrcCmdContext->CurrentArg;
+
+    for (Count = 0; Count < DestCmdContext->argc; Count++) {
+        YoriShCopyArg(SrcCmdContext, Count, DestCmdContext, Count);
+    }
+
+    return TRUE;
+}
+
+/**
  Check if an argument contains spaces and now requires quoting.  Previously
  quoted arguments retain quotes.  This function is used when the contents of
  an argument have changed such as via tab completion.  If the argument
@@ -1380,6 +1418,45 @@ YoriShDoesExpressionSpecifyPath(
         }
     }
     return FALSE;
+}
+
+/**
+ Expand any aliases in a command context, resolve any executable via path
+ lookups, and return with an exec context indicating which program to run.
+ If a program is found, ExecutableFound is set to TRUE on return.  If a 
+ program is not found, the command should be considered a builtin.  This
+ function does not validate if any such builtin exists.
+
+ @param CmdContext The command context to resolve aliases and paths in.
+
+ @param ExecutableFound On successful completion, indicates if an external
+        executable was found (by being set to TRUE) or if the command should
+        be considered a builtin (by being set to FALSE.)
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShResolveCommandToExecutable(
+    __in PYORI_CMD_CONTEXT CmdContext,
+    __out PBOOL ExecutableFound
+    )
+{
+    YORI_STRING FoundExecutable;
+
+    YoriLibInitEmptyString(&FoundExecutable);
+
+    YoriShExpandAlias(CmdContext);
+
+    if (YoriLibLocateExecutableInPath(&CmdContext->ysargv[0], NULL, NULL, &FoundExecutable) && FoundExecutable.LengthInChars > 0) {
+        YoriLibFreeStringContents(&CmdContext->ysargv[0]);
+        memcpy(&CmdContext->ysargv[0], &FoundExecutable, sizeof(YORI_STRING));
+        *ExecutableFound = TRUE;
+    } else {
+        YoriLibFreeStringContents(&FoundExecutable);
+        *ExecutableFound = FALSE;
+    }
+
+    return TRUE;
 }
 
 

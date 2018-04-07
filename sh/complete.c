@@ -378,6 +378,7 @@ typedef struct _YORI_FILE_COMPLETE_CONTEXT {
      directory, if present.)
      */
     BOOL ExpandFullPath;
+
 } YORI_FILE_COMPLETE_CONTEXT, *PYORI_FILE_COMPLETE_CONTEXT;
 
 /**
@@ -571,16 +572,25 @@ YoriShFindFinalSlashIfSpecified(
         on success.
 
  @param ExpandFullPath Specifies if full path expansion should be performed.
+
+ @param IncludeDirectories TRUE if directories should be included in results,
+        FALSE if they should be ommitted.
+
+ @param IncludeFiles TRUE if files should be included in results, FALSE if
+        they should be ommitted (used for directory only results.)
  */
 VOID
 YoriShPerformFileTabCompletion(
     __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
-    __in BOOL ExpandFullPath
+    __in BOOL ExpandFullPath,
+    __in BOOL IncludeDirectories,
+    __in BOOL IncludeFiles
     )
 {
     YORI_FILE_COMPLETE_CONTEXT EnumContext;
     YORI_STRING YsSearchString;
     DWORD PrefixLen;
+    DWORD MatchFlags = 0;
 
     YoriLibInitEmptyString(&YsSearchString);
     YsSearchString.StartOfString = TabContext->SearchString.StartOfString;
@@ -601,7 +611,19 @@ YoriShPerformFileTabCompletion(
     YoriLibInitEmptyString(&EnumContext.Prefix);
     EnumContext.TabContext = TabContext;
     EnumContext.FilesFound = 0;
-    YoriLibForEachFile(&YsSearchString, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, YoriShFileTabCompletionCallback, &EnumContext);
+
+    if (IncludeFiles) {
+        MatchFlags |= YORILIB_FILEENUM_RETURN_FILES;
+    }
+    if (IncludeDirectories) {
+        MatchFlags |= YORILIB_FILEENUM_RETURN_DIRECTORIES;
+    }
+
+    if (MatchFlags == 0) {
+        return;
+    }
+
+    YoriLibForEachFile(&YsSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, &EnumContext);
 
     if (EnumContext.FilesFound == 0) {
         DWORD Count = sizeof(YoriShTabHeuristicMatches)/sizeof(YoriShTabHeuristicMatches[0]);
@@ -681,6 +703,172 @@ YoriShPerformFileTabCompletion(
 }
 
 /**
+ A context describing the actions that can be performed in response to a
+ completion within a command argument.
+ */
+typedef struct _YORI_SH_ARG_TAB_COMPLETION_ACTION {
+
+    /**
+     The type of action to perform for argument completion.
+     */
+    enum {
+        CompletionActionTypeFilesAndDirectories = 1,
+        CompletionActionTypeFiles = 2,
+        CompletionActionTypeDirectories = 3,
+        CompletionActionTypeInsensitiveList = 4,
+        CompletionActionTypeSensitiveList = 5
+    } CompletionAction;
+} YORI_SH_ARG_TAB_COMPLETION_ACTION, *PYORI_SH_ARG_TAB_COMPLETION_ACTION;
+
+/**
+ Check for the given executable or builtin command how to expand its arguments.
+ 
+ @param Executable Pointer to the executable or builtin command.  Note this
+        is a fully qualified path on entry.
+
+ @param CurrentArg Specifies the index of the argument being completed for this
+        command.
+
+ @param Action On successful completion, populated with the action to perform
+        for this command.
+ */
+BOOL
+YoriShResolveTabCompletionActionForExecutable(
+    __in PYORI_STRING Executable,
+    __in DWORD CurrentArg,
+    __out PYORI_SH_ARG_TAB_COMPLETION_ACTION Action
+    )
+{
+    YORI_STRING FilePartOnly;
+    DWORD FinalSeperator;
+
+    UNREFERENCED_PARAMETER(CurrentArg);
+    FinalSeperator = YoriShFindFinalSlashIfSpecified(Executable);
+
+    YoriLibInitEmptyString(&FilePartOnly);
+    FilePartOnly.StartOfString = &Executable->StartOfString[FinalSeperator];
+    FilePartOnly.LengthInChars = Executable->LengthInChars - FinalSeperator;
+
+    if (FilePartOnly.LengthInChars == 0) {
+        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+        return TRUE;
+    }
+
+    if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("CHDIR")) == 0) {
+        Action->CompletionAction = CompletionActionTypeDirectories;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("CHDIR.COM")) == 0) {
+        Action->CompletionAction = CompletionActionTypeDirectories;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("YMKDIR.EXE")) == 0) {
+        Action->CompletionAction = CompletionActionTypeDirectories;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("YRMDIR.EXE")) == 0) {
+        Action->CompletionAction = CompletionActionTypeDirectories;
+    } else {
+        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+    }
+    return TRUE;
+}
+
+/**
+ Populates the list of matches for a command argument based tab completion.
+ This function uses command specific patterns to determine how to complete
+ arguments.
+
+ @param TabContext Pointer to the tab completion context.  This provides
+        the search criteria and has its match list populated with results
+        on success.
+
+ @param ExpandFullPath Specifies if full path expansion should be performed.
+
+ @param SrcCmdContext Pointer to a caller allocated command context since
+        basic arguments have already been parsed.  Note this should not be
+        modified in this routine (that's for the caller.)
+ */
+VOID
+YoriShPerformArgumentTabCompletion(
+    __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
+    __in BOOL ExpandFullPath,
+    __in PYORI_CMD_CONTEXT SrcCmdContext
+    )
+{
+    YORI_CMD_CONTEXT CmdContext;
+    YORI_SH_ARG_TAB_COMPLETION_ACTION CompletionAction;
+    BOOL ExecutableFound;
+
+    //
+    //  MSFIX Things to do:
+    //  1. Need to take the active character and locate which backquote
+    //     scope it's in.  Note that "normal" backquote evaluation is
+    //     left to right.  We can then calculate cursor position within
+    //     the substring.
+    //  2. Resolve the current string into a command context, capturing
+    //     the current argument.  Note we still need to remember any
+    //     "surrounding" backquote scope.
+    //  3. Parse the command context into an exec plan, and capture which
+    //     exec context contains the current argument.  Note the answer
+    //     may be none, since the argument might be a seperator.  This
+    //     should return which argument within the exec context is the
+    //     thing we're trying to complete too, which may be none due to
+    //     things like redirection, so we're in one command but not in
+    //     its arguments.
+    //  4. If we're looking at the first thing in an exec context, we
+    //     probably should do executable completion.
+    //  5. If we're an arg within an exec context, take the first thing
+    //     from the exec context, resolve aliases, resolve path, and
+    //     we should then either be looking at a located executable or
+    //     be searching for a builtin.  Look for a matching script to
+    //     handle this command.
+    //  6. Note when performing any substitution we should just use the
+    //     command context from #2 (we already know the active argument)
+    //     and put this back together with backquote scope from 1.
+    //
+    //  Things to consider in the script-to-shell language:
+    //  1. Insensitive?
+    //  2. Match files only
+    //  3. Match directories only
+    //  4. Match files or directories
+    //  5. Match list
+    //
+
+
+    if (!YoriShCopyCmdContext(&CmdContext, SrcCmdContext)) {
+        return;
+    }
+
+    //
+    //  Currently the caller won't call here for argument zero, and this
+    //  routine doesn't do anything smart enough to discover it's really
+    //  on argument zero, so everything is always an argument.
+    //
+
+    ASSERT(CmdContext.CurrentArg > 0);
+
+    if (!YoriShResolveCommandToExecutable(&CmdContext, &ExecutableFound)) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    if (!YoriShResolveTabCompletionActionForExecutable(&CmdContext.ysargv[0], CmdContext.CurrentArg, &CompletionAction)) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    switch(CompletionAction.CompletionAction) {
+        case CompletionActionTypeFilesAndDirectories:
+            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, TRUE);
+            break;
+        case CompletionActionTypeFiles:
+            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, FALSE, TRUE);
+            break;
+        case CompletionActionTypeDirectories:
+            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, FALSE);
+            break;
+    }
+
+
+    YoriShFreeCmdContext(&CmdContext);
+}
+
+/**
  Perform tab completion processing.  On error the buffer is left unchanged.
 
  @param Buffer Pointer to the current input context.
@@ -752,15 +940,17 @@ YoriShTabCompletion(
             }
 
         } else {
-            Buffer->TabContext.SearchType = YoriTabCompleteSearchFiles;
+            Buffer->TabContext.SearchType = YoriTabCompleteSearchArguments;
         }
 
         if (Buffer->TabContext.SearchType == YoriTabCompleteSearchExecutables) {
             YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath);
         } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchHistory) {
             YoriShPerformHistoryTabCompletion(&Buffer->TabContext, ExpandFullPath);
+        } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchArguments) {
+            YoriShPerformArgumentTabCompletion(&Buffer->TabContext, ExpandFullPath, &CmdContext);
         } else {
-            YoriShPerformFileTabCompletion(&Buffer->TabContext, ExpandFullPath);
+            YoriShPerformFileTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE, TRUE);
         }
     }
 
