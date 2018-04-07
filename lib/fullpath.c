@@ -1237,9 +1237,16 @@ YoriLibUnescapePath(
     BOOLEAN HasEscape = FALSE;
     BOOLEAN UncPath = FALSE;
     DWORD Offset;
+    DWORD BufferLength;
     YORI_STRING SubsetToCopy;
 
     Offset = 0;
+
+    //
+    //  Check if the path is prefixed (and needs that removing.)
+    //  Check if it's prefixed as \\?\UNC which needs to have that
+    //  prefix removed but also have an extra backslash inserted.
+    //
 
     if (Path->LengthInChars >= 4 &&
         YoriLibIsSep(Path->StartOfString[0]) &&
@@ -1258,9 +1265,20 @@ YoriLibUnescapePath(
         }
     }
 
-    if (UnescapedPath->LengthAllocated <= Path->LengthInChars - Offset) {
+    //
+    //  We need a buffer for the input string, minus the offset we're
+    //  ignoring, plus a NULL.  A UNC path also needs an extra prefix
+    //  backslash.
+    //
+
+    BufferLength = Path->LengthInChars - Offset + 1;
+    if (UncPath) {
+        BufferLength++;
+    }
+
+    if (UnescapedPath->LengthAllocated < BufferLength) {
         YoriLibFreeStringContents(UnescapedPath);
-        if (!YoriLibAllocateString(UnescapedPath, Path->LengthInChars - Offset + 1)) {
+        if (!YoriLibAllocateString(UnescapedPath, BufferLength)) {
             return FALSE;
         }
     }
@@ -1270,10 +1288,10 @@ YoriLibUnescapePath(
     SubsetToCopy.LengthInChars -= Offset;
 
     if (UncPath) {
-        YoriLibSPrintfS(UnescapedPath->StartOfString, Path->LengthInChars - Offset + 1, _T("\\%y"), &SubsetToCopy);
+        YoriLibSPrintfS(UnescapedPath->StartOfString, BufferLength, _T("\\%y"), &SubsetToCopy);
         UnescapedPath->LengthInChars = SubsetToCopy.LengthInChars + 1;
     } else {
-        YoriLibSPrintfS(UnescapedPath->StartOfString, Path->LengthInChars - Offset + 1, _T("%y"), &SubsetToCopy);
+        YoriLibSPrintfS(UnescapedPath->StartOfString, BufferLength, _T("%y"), &SubsetToCopy);
         UnescapedPath->LengthInChars = SubsetToCopy.LengthInChars;
     }
 
