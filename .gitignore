@@ -1,0 +1,8 @@
+cache.mk
+**/*.com
+**/*.exe
+**/*.exp
+**/*.lib
+**/*.obj
+**/*.pdb
+!crt/i386/*.obj
