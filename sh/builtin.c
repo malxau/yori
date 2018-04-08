@@ -638,7 +638,7 @@ YoriShExecuteBuiltinString(
         return FALSE;
     }
 
-    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan)) {
+    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         YoriShFreeCmdContext(&CmdContext);
         return FALSE;

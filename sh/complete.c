@@ -77,27 +77,27 @@ YoriShPerformHistoryTabCompletion(
             //
             //  Allocate a match entry for this file.
             //
-    
+
             Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (HistoryEntry->CmdLine.LengthInChars + 1) * sizeof(TCHAR));
             if (Match == NULL) {
                 return;
             }
-    
+
             //
             //  Populate the file into the entry.
             //
-    
+
             YoriLibInitEmptyString(&Match->YsValue);
             Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
             YoriLibReference(Match);
             Match->YsValue.MemoryToFree = Match;
             YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y"), &HistoryEntry->CmdLine);
             Match->YsValue.LengthInChars = HistoryEntry->CmdLine.LengthInChars;
-    
+
             //
             //  Append to the list.
             //
-    
+
             YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
         }
         ListEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, ListEntry);
@@ -246,28 +246,28 @@ YoriShPerformExecutableTabCompletion(
                 //
                 //  Allocate a match entry for this file.
                 //
-        
+
                 Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (AliasNameLength + 1) * sizeof(TCHAR));
                 if (Match == NULL) {
                     YoriLibFreeStringContents(&AliasStrings);
                     return;
                 }
-        
+
                 //
                 //  Populate the file into the entry.
                 //
-        
+
                 YoriLibInitEmptyString(&Match->YsValue);
                 Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
                 YoriLibReference(Match);
                 Match->YsValue.MemoryToFree = Match;
                 _tcscpy(Match->YsValue.StartOfString, ThisAlias);
                 Match->YsValue.LengthInChars = AliasNameLength;
-        
+
                 //
                 //  Append to the list.
                 //
-        
+
                 YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
             }
 
@@ -307,27 +307,27 @@ YoriShPerformExecutableTabCompletion(
                 //
                 //  Allocate a match entry for this file.
                 //
-        
+
                 Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (BuiltinLength + 1) * sizeof(TCHAR));
                 if (Match == NULL) {
                     return;
                 }
-        
+
                 //
                 //  Populate the file into the entry.
                 //
-        
+
                 YoriLibInitEmptyString(&Match->YsValue);
                 Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
                 YoriLibReference(Match);
                 Match->YsValue.MemoryToFree = Match;
                 _tcscpy(Match->YsValue.StartOfString, ThisBuiltin);
                 Match->YsValue.LengthInChars = BuiltinLength;
-        
+
                 //
                 //  Append to the list.
                 //
-        
+
                 YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
             }
 
@@ -443,21 +443,21 @@ YoriShFileTabCompletionCallback(
         //
         //  Allocate a match entry for this file.
         //
-    
+
         Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Context->CharsToFinalSlash + CharsInFileName + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
-    
+
         //
         //  Populate the file into the entry.
         //
-    
+
         YoriLibInitEmptyString(&Match->YsValue);
         Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
         YoriLibReference(Match);
         Match->YsValue.MemoryToFree = Match;
-    
+
         if (Context->Prefix.LengthInChars > 0) {
             memcpy(Match->YsValue.StartOfString, Context->Prefix.StartOfString, Context->Prefix.LengthInChars * sizeof(TCHAR));
         }
@@ -715,8 +715,10 @@ typedef struct _YORI_SH_ARG_TAB_COMPLETION_ACTION {
         CompletionActionTypeFilesAndDirectories = 1,
         CompletionActionTypeFiles = 2,
         CompletionActionTypeDirectories = 3,
-        CompletionActionTypeInsensitiveList = 4,
-        CompletionActionTypeSensitiveList = 5
+        CompletionActionTypeExecutables = 4,
+        CompletionActionTypeExecutablesAndBuiltins = 5,
+        CompletionActionTypeInsensitiveList = 6,
+        CompletionActionTypeSensitiveList = 7
     } CompletionAction;
 } YORI_SH_ARG_TAB_COMPLETION_ACTION, *PYORI_SH_ARG_TAB_COMPLETION_ACTION;
 
@@ -792,6 +794,10 @@ YoriShPerformArgumentTabCompletion(
 {
     YORI_CMD_CONTEXT CmdContext;
     YORI_SH_ARG_TAB_COMPLETION_ACTION CompletionAction;
+    YORI_EXEC_PLAN ExecPlan;
+    PYORI_SINGLE_EXEC_CONTEXT CurrentExecContext;
+    DWORD CurrentExecContextArg;
+    BOOL ActiveExecContextArg;
     BOOL ExecutableFound;
 
     //
@@ -809,24 +815,17 @@ YoriShPerformArgumentTabCompletion(
     //     should return which argument within the exec context is the
     //     thing we're trying to complete too, which may be none due to
     //     things like redirection, so we're in one command but not in
-    //     its arguments.
+    //     its arguments. (done)
     //  4. If we're looking at the first thing in an exec context, we
-    //     probably should do executable completion.
+    //     probably should do executable completion. (done)
     //  5. If we're an arg within an exec context, take the first thing
     //     from the exec context, resolve aliases, resolve path, and
     //     we should then either be looking at a located executable or
     //     be searching for a builtin.  Look for a matching script to
-    //     handle this command.
+    //     handle this command. (done)
     //  6. Note when performing any substitution we should just use the
     //     command context from #2 (we already know the active argument)
     //     and put this back together with backquote scope from 1.
-    //
-    //  Things to consider in the script-to-shell language:
-    //  1. Insensitive?
-    //  2. Match files only
-    //  3. Match directories only
-    //  4. Match files or directories
-    //  5. Match list
     //
 
 
@@ -842,14 +841,46 @@ YoriShPerformArgumentTabCompletion(
 
     ASSERT(CmdContext.CurrentArg > 0);
 
-    if (!YoriShResolveCommandToExecutable(&CmdContext, &ExecutableFound)) {
+    ActiveExecContextArg = FALSE;
+    CurrentExecContextArg = 0;
+    CurrentExecContext = NULL;
+
+    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, &CurrentExecContext, &ActiveExecContextArg, &CurrentExecContextArg)) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
 
-    if (!YoriShResolveTabCompletionActionForExecutable(&CmdContext.ysargv[0], CmdContext.CurrentArg, &CompletionAction)) {
-        YoriShFreeCmdContext(&CmdContext);
-        return;
+    ASSERT(CurrentExecContext != NULL);
+
+    if (!ActiveExecContextArg) {
+
+        //
+        //  The active argument isn't for the receiving program.  Default to
+        //  handing it to file completion.
+        //
+
+        CompletionAction.CompletionAction = CompletionActionTypeFilesAndDirectories;
+    } else if (CurrentExecContextArg == 0) {
+
+        //
+        //  The active argument is the first one, to launch a program.  Default
+        //  to handing it to executable completion.
+        //
+
+        CompletionAction.CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
+    } else {
+
+        if (!YoriShResolveCommandToExecutable(&CurrentExecContext->CmdToExec, &ExecutableFound)) {
+            YoriShFreeExecPlan(&ExecPlan);
+            YoriShFreeCmdContext(&CmdContext);
+            return;
+        }
+
+        if (!YoriShResolveTabCompletionActionForExecutable(&CurrentExecContext->CmdToExec.ysargv[0], CurrentExecContextArg, &CompletionAction)) {
+            YoriShFreeExecPlan(&ExecPlan);
+            YoriShFreeCmdContext(&CmdContext);
+            return;
+        }
     }
 
     switch(CompletionAction.CompletionAction) {
@@ -862,9 +893,13 @@ YoriShPerformArgumentTabCompletion(
         case CompletionActionTypeDirectories:
             YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, FALSE);
             break;
+        case CompletionActionTypeExecutablesAndBuiltins:
+            YoriShPerformExecutableTabCompletion(TabContext, ExpandFullPath);
+            break;
     }
 
 
+    YoriShFreeExecPlan(&ExecPlan);
     YoriShFreeCmdContext(&CmdContext);
 }
 
@@ -926,7 +961,7 @@ YoriShTabCompletion(
             YoriShFreeCmdContext(&CmdContext);
             return;
         }
-    
+
         Buffer->TabContext.SearchString.LengthInChars = YoriLibSPrintfS(Buffer->TabContext.SearchString.StartOfString, SearchLength + 1, _T("%y*"), &CurrentArgString);
 
         if (CmdContext.CurrentArg == 0) {
@@ -1067,7 +1102,7 @@ YoriShTabCompletion(
             Buffer->DirtyLength = Buffer->String.LengthInChars;
         }
     }
-    
+
     YoriShFreeCmdContext(&CmdContext);
 }
 

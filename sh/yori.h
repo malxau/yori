@@ -757,13 +757,6 @@ YoriShFreeCmdContext(
     __in PYORI_CMD_CONTEXT CmdContext
     );
 
-DWORD
-YoriShParseCmdContextToExecContext(
-    __in PYORI_CMD_CONTEXT CmdContext,
-    __in ULONG InitialArgument,
-    __out PYORI_SINGLE_EXEC_CONTEXT ExecContext
-    );
-
 VOID
 YoriShFreeExecContext(
     __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
@@ -777,7 +770,10 @@ YoriShFreeExecPlan(
 BOOL
 YoriShParseCmdContextToExecPlan(
     __in PYORI_CMD_CONTEXT CmdContext,
-    __out PYORI_EXEC_PLAN ExecPlan
+    __out PYORI_EXEC_PLAN ExecPlan,
+    __out_opt PYORI_SINGLE_EXEC_CONTEXT* CurrentExecContext,
+    __out_opt PBOOL CurrentArgIsForProgram,
+    __out_opt PDWORD CurrentArgIndex
     );
 
 BOOL

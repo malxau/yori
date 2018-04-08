@@ -1103,6 +1103,16 @@ YoriShCheckForDeviceNameAndDuplicate(
  @param ExecContext Is populated with information about how to execute a
         single program.
 
+ @param CurrentArgIsForProgram If specified, this routine populates this value
+        with TRUE if the current argument in the command context has become a
+        parameter for the current command (as opposed to a seperator or
+        redirection.)
+
+ @param CurrentArgIndex If specified, this routine populates this value with
+        the index within the CurrentExecContext of the current argument in the
+        command context.  This is only meaningful if CurrentArgIsForProgram
+        is TRUE.
+
  @return The number of arguments consumed while creating information about
          how to execute a single program.
  */
@@ -1110,7 +1120,9 @@ DWORD
 YoriShParseCmdContextToExecContext(
     __in PYORI_CMD_CONTEXT CmdContext,
     __in DWORD InitialArgument,
-    __out PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __out PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __out_opt PBOOL CurrentArgIsForProgram,
+    __out_opt PDWORD CurrentArgIndex
     )
 {
     DWORD Count;
@@ -1248,6 +1260,12 @@ YoriShParseCmdContextToExecContext(
         if (!RemoveThisArg) {
             PYORI_CMD_CONTEXT CmdToExec = &ExecContext->CmdToExec;
             YoriShCopyArg(CmdContext, Count, CmdToExec, CmdToExec->argc);
+            if (CurrentArgIsForProgram != NULL) {
+                if (CmdContext->CurrentArg == Count) {
+                    *CurrentArgIsForProgram = TRUE;
+                    *CurrentArgIndex = CmdToExec->argc;
+                }
+            }
             CmdToExec->argc++;
         }
     }
@@ -1311,12 +1329,29 @@ YoriShFreeExecPlan(
  @param ExecPlan Is populated with information about how to execute a
         series of programs.
 
+ @param CurrentExecContext If specified, this routine populated this value
+        with which single exec context is the one that processed the current
+        argument in the command context.
+
+ @param CurrentArgIsForProgram If specified, this routine populates this value
+        with TRUE if the current argument in the command context has become a
+        parameter for the current command (as opposed to a seperator or
+        redirection.)
+
+ @param CurrentArgIndex If specified, this routine populates this value with
+        the index within the CurrentExecContext of the current argument in the
+        command context.  This is only meaningful if CurrentArgIsForProgram
+        is TRUE.
+
  @return TRUE to indicate parsing success, FALSE to indicate failure.
  */
 BOOL
 YoriShParseCmdContextToExecPlan(
     __in PYORI_CMD_CONTEXT CmdContext,
-    __out PYORI_EXEC_PLAN ExecPlan
+    __out PYORI_EXEC_PLAN ExecPlan,
+    __out_opt PYORI_SINGLE_EXEC_CONTEXT* CurrentExecContext,
+    __out_opt PBOOL CurrentArgIsForProgram,
+    __out_opt PDWORD CurrentArgIndex
     )
 {
     DWORD CurrentArg = 0;
@@ -1324,6 +1359,8 @@ YoriShParseCmdContextToExecPlan(
     DWORD ArgOfLastOperatorIndex = 0;
     PYORI_SINGLE_EXEC_CONTEXT ThisProgram;
     PYORI_SINGLE_EXEC_CONTEXT PreviousProgram = NULL;
+    BOOL LocalCurrentArgIsForProgram;
+    DWORD LocalCurrentArgIndex;
 
     ZeroMemory(ExecPlan, sizeof(YORI_EXEC_PLAN));
 
@@ -1335,10 +1372,37 @@ YoriShParseCmdContextToExecPlan(
             return FALSE;
         }
 
-        ArgsConsumed = YoriShParseCmdContextToExecContext(CmdContext, CurrentArg, ThisProgram);
+        LocalCurrentArgIsForProgram = FALSE;
+        LocalCurrentArgIndex = 0;
+
+        ArgsConsumed = YoriShParseCmdContextToExecContext(CmdContext, CurrentArg, ThisProgram, &LocalCurrentArgIsForProgram, &LocalCurrentArgIndex);
         if (ArgsConsumed == 0) {
             YoriShFreeExecPlan(ExecPlan);
             return FALSE;
+        }
+
+        //
+        //  If the active argument within the command context falls within the
+        //  scope of this single program, and the caller wants to know where it
+        //  falls, return this program, whether the current arg index maps to
+        //  a program argument (as opposed to redirection or a seperator),
+        //  and the index of the program argument.
+        //
+
+        if (CmdContext->CurrentArg >= CurrentArg &&
+            CmdContext->CurrentArg < CurrentArg + ArgsConsumed) {
+
+            if (CurrentExecContext != NULL) {
+                *CurrentExecContext = ThisProgram;
+            }
+
+            if (CurrentArgIndex != NULL) {
+                *CurrentArgIndex = LocalCurrentArgIndex;
+            }
+
+            if (CurrentArgIsForProgram != NULL) {
+                *CurrentArgIsForProgram = LocalCurrentArgIsForProgram;
+            }
         }
 
         if (PreviousProgram != NULL) {
