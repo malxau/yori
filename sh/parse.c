@@ -333,11 +333,11 @@ YoriShParseCmdlineToCmdContext(
 
                 if (!CurrentArgFound &&
                     (Char.StartOfString - CmdLine->StartOfString > (LONG)CurrentOffset)) {
-    
+
                     CurrentArgFound = TRUE;
                     CmdContext->CurrentArg = ArgCount;
                 }
-    
+
                 ArgCount++;
             }
 
@@ -349,7 +349,7 @@ YoriShParseCmdlineToCmdContext(
 
 
         } else {
-            
+
             RequiredCharCount++;
             Char.StartOfString++;
             Char.LengthInChars--;
@@ -1067,7 +1067,7 @@ YoriShCheckForDeviceNameAndDuplicate(
     UserName.LengthInChars = UserString->LengthInChars - UserStringOffset;
     UserName.LengthAllocated = UserString->LengthAllocated - UserStringOffset;
     UserName.MemoryToFree = UserString->MemoryToFree;
-    
+
     //
     //  If the user doesn't provide a name with this argument, then we're
     //  going to attempt to use an empty file name and fail.
@@ -1360,9 +1360,11 @@ YoriShParseCmdContextToExecPlan(
     PYORI_SINGLE_EXEC_CONTEXT ThisProgram;
     PYORI_SINGLE_EXEC_CONTEXT PreviousProgram = NULL;
     BOOL LocalCurrentArgIsForProgram;
+    BOOL FoundProgramMatch;
     DWORD LocalCurrentArgIndex;
 
     ZeroMemory(ExecPlan, sizeof(YORI_EXEC_PLAN));
+    FoundProgramMatch = FALSE;
 
     while (CurrentArg < CmdContext->argc) {
 
@@ -1391,6 +1393,8 @@ YoriShParseCmdContextToExecPlan(
 
         if (CmdContext->CurrentArg >= CurrentArg &&
             CmdContext->CurrentArg < CurrentArg + ArgsConsumed) {
+
+            FoundProgramMatch = TRUE;
 
             if (CurrentExecContext != NULL) {
                 *CurrentExecContext = ThisProgram;
@@ -1444,6 +1448,23 @@ YoriShParseCmdContextToExecPlan(
 
             ArgOfLastOperatorIndex = CurrentArg;
             CurrentArg++;
+        }
+    }
+
+    if (CmdContext->CurrentArg >= CmdContext->argc &&
+        PreviousProgram != NULL &&
+        !FoundProgramMatch) {
+
+        if (CurrentExecContext != NULL) {
+            *CurrentExecContext = PreviousProgram;
+        }
+
+        if (CurrentArgIndex != NULL) {
+            *CurrentArgIndex = PreviousProgram->CmdToExec.argc + 1;
+        }
+
+        if (CurrentArgIsForProgram != NULL) {
+            *CurrentArgIsForProgram = TRUE;
         }
     }
 
@@ -1518,6 +1539,95 @@ YoriShResolveCommandToExecutable(
     } else {
         YoriLibFreeStringContents(&FoundExecutable);
         *ExecutableFound = FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Find a yori string corresponding to the substring in another string that
+ is delimited by backquotes.  The substring is not referenced.
+
+ @param String The larger string to search through.
+
+ @param StartingOffset The offset within the larger string to commence
+        searching.
+
+ @param RequireTerminator If TRUE, only return a substring if both the
+        beginning and ending operators are found.  If FALSE, assume the absence
+        of an ending operator implies the substring operates to the end of the
+        parent string.
+
+ @param Substring On successful completion, populated with the start and length
+        of the backquote delimited substring.
+
+ @return TRUE if a substring was found, FALSE if it was not.
+ */
+BOOL
+YoriShFindBackquoteSubstring(
+    __in PYORI_STRING String,
+    __in DWORD StartingOffset,
+    __in BOOL RequireTerminator,
+    __out PYORI_STRING Substring
+    )
+{
+
+    LPTSTR FirstBackQuote;
+    LPTSTR SecondBackQuote;
+    DWORD Index;
+
+    //
+    //  Look to see if backquotes are present and note their locations
+    //  if they are.
+    //
+
+    FirstBackQuote = NULL;
+    SecondBackQuote = NULL;
+    for (Index = StartingOffset; Index < String->LengthInChars; Index++) {
+
+        //
+        //  If it's an escape, advance to the next character and ignore
+        //  its value, then continue processing from the next next
+        //  character.
+        //
+
+        if (YoriLibIsEscapeChar(String->StartOfString[Index])) {
+            Index++;
+            if (Index >= String->LengthInChars) {
+                break;
+            } else {
+                continue;
+            }
+        }
+        if (String->StartOfString[Index] == '`') {
+            if (FirstBackQuote == NULL) {
+                FirstBackQuote = &String->StartOfString[Index];
+            } else {
+                SecondBackQuote = &String->StartOfString[Index];
+                break;
+            }
+        }
+    }
+
+    if (RequireTerminator && SecondBackQuote == NULL) {
+        FirstBackQuote = NULL;
+    }
+
+    //
+    //  If there are no more backquotes, expansion is complete, so return
+    //  the result.
+    //
+
+    if (FirstBackQuote == NULL) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(Substring);
+    Substring->StartOfString = FirstBackQuote + 1;
+    if (SecondBackQuote != NULL) {
+        Substring->LengthInChars = (DWORD)(SecondBackQuote - FirstBackQuote - 1);
+    } else {
+        Substring->LengthInChars = String->LengthInChars - (DWORD)(FirstBackQuote - String->StartOfString) - 1;
     }
 
     return TRUE;

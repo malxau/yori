@@ -787,6 +787,14 @@ YoriShResolveCommandToExecutable(
     __out PBOOL ExecutableFound
     );
 
+BOOL
+YoriShFindBackquoteSubstring(
+    __in PYORI_STRING String,
+    __in DWORD StartingOffset,
+    __in BOOL RequireTerminator,
+    __out PYORI_STRING Substring
+    );
+
 // *** PROMPT.C ***
 BOOL
 YoriShDisplayPrompt();

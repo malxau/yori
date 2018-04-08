@@ -105,6 +105,32 @@ YoriShPerformHistoryTabCompletion(
 }
 
 /**
+ A context passed between the initiator of executable tab completion and each
+ callback invoked when an executable match is found.
+ */
+typedef struct _YORI_SH_EXEC_TAB_COMPLETE_CONTEXT {
+
+    /**
+     The TabContext to populate any matches into.
+     */
+    PYORI_TAB_COMPLETE_CONTEXT TabContext;
+
+    /**
+     A prefix string to prepend to every match.  This is used when characters
+     were ignored at the beginning of the user's string in order to find
+     matches.
+     */
+    YORI_STRING Prefix;
+
+    /**
+     A suffix string to append to every match.  This is used when characters
+     were ignored at the beginning of the user's string in order to find
+     matches.
+     */
+    YORI_STRING Suffix;
+} YORI_SH_EXEC_TAB_COMPLETE_CONTEXT, *PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT;
+
+/**
  A callback function that is invoked by the path resolver to add any
  candidate programs to the tab completion list.
 
@@ -114,14 +140,14 @@ YoriShPerformHistoryTabCompletion(
         match.
  */
 BOOL
-YoriShAddToTabList(
+YoriShAddExecutableToTabList(
     __in PYORI_STRING FoundPath,
     __in PVOID Context
     )
 {
     PYORI_TAB_COMPLETE_MATCH Match;
     PYORI_TAB_COMPLETE_MATCH Existing;
-    PYORI_TAB_COMPLETE_CONTEXT TabContext = (PYORI_TAB_COMPLETE_CONTEXT)Context;
+    PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT ExecTabContext = (PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT)Context;
     PYORI_LIST_ENTRY ListEntry;
 
 
@@ -129,7 +155,7 @@ YoriShAddToTabList(
     //  Allocate a match entry for this file.
     //
 
-    Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (FoundPath->LengthInChars + 1) * sizeof(TCHAR));
+    Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (ExecTabContext->Prefix.LengthInChars + FoundPath->LengthInChars + ExecTabContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
     if (Match == NULL) {
         return FALSE;
     }
@@ -142,19 +168,17 @@ YoriShAddToTabList(
     Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
     YoriLibReference(Match);
     Match->YsValue.MemoryToFree = Match;
-    memcpy(Match->YsValue.StartOfString, FoundPath->StartOfString, FoundPath->LengthInChars * sizeof(TCHAR));
-    Match->YsValue.LengthInChars = FoundPath->LengthInChars;
-    Match->YsValue.LengthAllocated = FoundPath->LengthInChars + 1;
-    Match->YsValue.StartOfString[Match->YsValue.LengthInChars] = '\0';
+    Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%y%y"), &ExecTabContext->Prefix, FoundPath, &ExecTabContext->Suffix);
+    Match->YsValue.LengthAllocated = Match->YsValue.LengthInChars + 1;
 
     //
     //  Insert into the list if no duplicate is found.
     //
 
-    ListEntry = YoriLibGetNextListEntry(&TabContext->MatchList, NULL);
+    ListEntry = YoriLibGetNextListEntry(&ExecTabContext->TabContext->MatchList, NULL);
     do {
         if (ListEntry == NULL) {
-            YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
+            YoriLibAppendList(&ExecTabContext->TabContext->MatchList, &Match->ListEntry);
             Match = NULL;
             break;
         }
@@ -162,7 +186,7 @@ YoriShAddToTabList(
         if (YoriLibCompareStringInsensitive(&Match->YsValue, &Existing->YsValue) == 0) {
             break;
         }
-        ListEntry = YoriLibGetNextListEntry(&TabContext->MatchList, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&ExecTabContext->TabContext->MatchList, ListEntry);
 
     } while(TRUE);
 
@@ -186,11 +210,15 @@ YoriShAddToTabList(
 
  @param ExpandFullPath Specifies if full path expansion should be performed.
         For executable matches, full path expansion is always performed.
+
+ @param IncludeBuiltins If TRUE, include any builtin commands as part of
+        the match.
  */
 VOID
 YoriShPerformExecutableTabCompletion(
     __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
-    __in BOOL ExpandFullPath
+    __in BOOL ExpandFullPath,
+    __in BOOL IncludeBuiltins
     )
 {
     LPTSTR FoundPath;
@@ -199,14 +227,37 @@ YoriShPerformExecutableTabCompletion(
     PYORI_TAB_COMPLETE_MATCH Match;
     YORI_STRING AliasStrings;
     DWORD CompareLength;
+    YORI_SH_EXEC_TAB_COMPLETE_CONTEXT ExecTabContext;
 
     UNREFERENCED_PARAMETER(ExpandFullPath);
+
+    ExecTabContext.TabContext = TabContext;
+    YoriLibInitEmptyString(&ExecTabContext.Prefix);
+    YoriLibInitEmptyString(&ExecTabContext.Suffix);
+
+    //
+    //  If we're doing an executable search where the first character is a `,
+    //  skip over it.  This happens when searching for executables after a
+    //  backquote.
+    //
+    //  MSFIX Might want some more generic heuristics like the file seach.
+    //
+
+    if (TabContext->SearchString.LengthInChars > 0 &&
+        TabContext->SearchString.StartOfString[0] == '`') {
+
+        ExecTabContext.Prefix.StartOfString = TabContext->SearchString.StartOfString;
+        ExecTabContext.Prefix.LengthInChars = 1;
+
+        TabContext->SearchString.StartOfString++;
+        TabContext->SearchString.LengthInChars--;
+    }
 
     //
     //  Set up state necessary for different types of searching.
     //
 
-    FoundPath = _tcschr(TabContext->SearchString.StartOfString, '*');
+    FoundPath = YoriLibFindLeftMostCharacter(&TabContext->SearchString, '*');
     if (FoundPath != NULL) {
         CompareLength = (DWORD)(FoundPath - TabContext->SearchString.StartOfString);
     } else {
@@ -214,11 +265,24 @@ YoriShPerformExecutableTabCompletion(
     }
 
     //
+    //  If the argument ends in `, also strip it off
+    //
+
+    if (CompareLength > 1 &&
+        TabContext->SearchString.StartOfString[CompareLength - 1] == '`') {
+
+        ExecTabContext.Suffix.StartOfString = &TabContext->SearchString.StartOfString[CompareLength - 1];
+        ExecTabContext.Suffix.LengthInChars = 1;
+
+        CompareLength--;
+    }
+
+    //
     //  Firstly, search the table of aliases.
     //
 
     YoriLibInitEmptyString(&AliasStrings);
-    if (YoriShGetAliasStrings(TRUE, &AliasStrings)) {
+    if (IncludeBuiltins && YoriShGetAliasStrings(TRUE, &AliasStrings)) {
         LPTSTR ThisAlias;
         LPTSTR AliasValue;
         DWORD AliasLength;
@@ -247,7 +311,7 @@ YoriShPerformExecutableTabCompletion(
                 //  Allocate a match entry for this file.
                 //
 
-                Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (AliasNameLength + 1) * sizeof(TCHAR));
+                Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (ExecTabContext.Prefix.LengthInChars + AliasNameLength + ExecTabContext.Suffix.LengthInChars + 1) * sizeof(TCHAR));
                 if (Match == NULL) {
                     YoriLibFreeStringContents(&AliasStrings);
                     return;
@@ -261,8 +325,8 @@ YoriShPerformExecutableTabCompletion(
                 Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
                 YoriLibReference(Match);
                 Match->YsValue.MemoryToFree = Match;
-                _tcscpy(Match->YsValue.StartOfString, ThisAlias);
-                Match->YsValue.LengthInChars = AliasNameLength;
+                Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%s%y"), &ExecTabContext.Prefix, ThisAlias, &ExecTabContext.Suffix);
+                Match->YsValue.LengthAllocated = Match->YsValue.LengthInChars + 1;
 
                 //
                 //  Append to the list.
@@ -287,14 +351,17 @@ YoriShPerformExecutableTabCompletion(
     //
 
     YoriLibInitEmptyString(&FoundExecutable);
-    Result = YoriLibLocateExecutableInPath(&TabContext->SearchString, YoriShAddToTabList, TabContext, &FoundExecutable);
+    Result = YoriLibLocateExecutableInPath(&TabContext->SearchString,
+                                           YoriShAddExecutableToTabList,
+                                           &ExecTabContext,
+                                           &FoundExecutable);
     ASSERT(FoundExecutable.StartOfString == NULL);
 
     //
     //  Thirdly, search the table of builtins.
     //
 
-    if (YoriShBuiltins != NULL) {
+    if (IncludeBuiltins && YoriShBuiltins != NULL) {
         LPTSTR ThisBuiltin;
         DWORD BuiltinLength;
 
@@ -308,7 +375,7 @@ YoriShPerformExecutableTabCompletion(
                 //  Allocate a match entry for this file.
                 //
 
-                Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (BuiltinLength + 1) * sizeof(TCHAR));
+                Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (ExecTabContext.Prefix.LengthInChars + BuiltinLength + ExecTabContext.Suffix.LengthInChars + 1) * sizeof(TCHAR));
                 if (Match == NULL) {
                     return;
                 }
@@ -321,8 +388,8 @@ YoriShPerformExecutableTabCompletion(
                 Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
                 YoriLibReference(Match);
                 Match->YsValue.MemoryToFree = Match;
-                _tcscpy(Match->YsValue.StartOfString, ThisBuiltin);
-                Match->YsValue.LengthInChars = BuiltinLength;
+                Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%s%y"), &ExecTabContext.Prefix, ThisBuiltin, &ExecTabContext.Suffix);
+                Match->YsValue.LengthAllocated = Match->YsValue.LengthInChars + 1;
 
                 //
                 //  Append to the list.
@@ -355,6 +422,11 @@ typedef struct _YORI_FILE_COMPLETE_CONTEXT {
      Extra characters to include at the beginning of any found match.
      */
     YORI_STRING Prefix;
+
+    /**
+     Extra characters to include at the end of any found match.
+     */
+    YORI_STRING Suffix;
 
     /**
      The string to search for.
@@ -416,7 +488,7 @@ YoriShFileTabCompletionCallback(
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Filename->LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Filename->LengthInChars + Context->Suffix.LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -430,21 +502,20 @@ YoriShFileTabCompletionCallback(
         YoriLibReference(Match);
         Match->YsValue.MemoryToFree = Match;
 
-        if (Context->Prefix.LengthInChars > 0) {
-            memcpy(Match->YsValue.StartOfString, Context->Prefix.StartOfString, Context->Prefix.LengthInChars * sizeof(TCHAR));
-        }
-        memcpy(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars], Filename->StartOfString, Filename->LengthInChars * sizeof(TCHAR));
-        Match->YsValue.StartOfString[Context->Prefix.LengthInChars + Filename->LengthInChars] = '\0';
-        Match->YsValue.LengthInChars = Context->Prefix.LengthInChars + Filename->LengthInChars;
+        Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%y%y"), &Context->Prefix, Filename, &Context->Suffix);
+
+        Match->YsValue.LengthAllocated = Match->YsValue.LengthInChars + 1;
     } else {
-        DWORD CharsInFileName;
-        CharsInFileName = _tcslen(FileInfo->cFileName);
+        YORI_STRING StringToFinalSlash;
+        YORI_STRING FilenameOnly;
+
+        YoriLibConstantString(&FilenameOnly, FileInfo->cFileName);
 
         //
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Context->CharsToFinalSlash + CharsInFileName + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Context->CharsToFinalSlash + FilenameOnly.LengthInChars + Context->Suffix.LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -458,15 +529,14 @@ YoriShFileTabCompletionCallback(
         YoriLibReference(Match);
         Match->YsValue.MemoryToFree = Match;
 
-        if (Context->Prefix.LengthInChars > 0) {
-            memcpy(Match->YsValue.StartOfString, Context->Prefix.StartOfString, Context->Prefix.LengthInChars * sizeof(TCHAR));
-        }
-        if (Context->CharsToFinalSlash > 0) {
-            memcpy(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars], Context->SearchString, Context->CharsToFinalSlash * sizeof(TCHAR));
-        }
-        memcpy(&Match->YsValue.StartOfString[Context->Prefix.LengthInChars + Context->CharsToFinalSlash], FileInfo->cFileName, CharsInFileName * sizeof(TCHAR));
-        Match->YsValue.StartOfString[Context->Prefix.LengthInChars + Context->CharsToFinalSlash + CharsInFileName] = '\0';
-        Match->YsValue.LengthInChars = Context->Prefix.LengthInChars + Context->CharsToFinalSlash + CharsInFileName;
+        YoriLibInitEmptyString(&StringToFinalSlash);
+        StringToFinalSlash.StartOfString = Context->SearchString;
+        StringToFinalSlash.LengthInChars = Context->CharsToFinalSlash;
+
+
+        Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%y%y%y"), &Context->Prefix, &StringToFinalSlash, &FilenameOnly, &Context->Suffix);
+
+        Match->YsValue.LengthAllocated = Match->YsValue.LengthInChars + 1;
     }
 
     //
@@ -521,7 +591,8 @@ YORI_TAB_FILE_HEURISTIC_MATCH YoriShTabHeuristicMatches[] = {
     {_T(">>"), 2},
     {_T(">"), 1},
     {_T(":"), 1},
-    {_T("="), 1}
+    {_T("="), 1},
+    {_T("'"), 1}
 };
 
 /**
@@ -597,6 +668,10 @@ YoriShPerformFileTabCompletion(
     YsSearchString.LengthInChars = TabContext->SearchString.LengthInChars;
     YsSearchString.LengthAllocated = TabContext->SearchString.LengthAllocated;
 
+    //
+    //  Strip off any file:/// prefix
+    //
+
     PrefixLen = sizeof("file:///") - 1;
 
     if (YoriLibCompareStringWithLiteralInsensitiveCount(&YsSearchString, _T("file:///"), PrefixLen) == 0) {
@@ -605,12 +680,45 @@ YoriShPerformFileTabCompletion(
         YsSearchString.LengthAllocated -= PrefixLen;
     }
 
+    YoriLibInitEmptyString(&EnumContext.Prefix);
+    YoriLibInitEmptyString(&EnumContext.Suffix);
+
+    //
+    //  Calculate what suffix to apply.  These are characters to ignore when
+    //  searching but to reapply to the result once matches are found.
+    //  Rather than modify the input buffer, it is reallocated here for this
+    //  case.
+    //
+
+    if (YsSearchString.LengthInChars > 1 &&
+        YsSearchString.StartOfString[YsSearchString.LengthInChars - 1] == '*' &&
+        YsSearchString.StartOfString[YsSearchString.LengthInChars - 2] == '`') {
+
+        YORI_STRING NewSearchString;
+
+        if (!YoriLibAllocateString(&NewSearchString, YsSearchString.LengthInChars)) {
+            return;
+        }
+
+        memcpy(NewSearchString.StartOfString, YsSearchString.StartOfString, (YsSearchString.LengthInChars - 2) * sizeof(TCHAR));
+        NewSearchString.StartOfString[YsSearchString.LengthInChars - 2] = '*';
+        NewSearchString.StartOfString[YsSearchString.LengthInChars - 1] = '\0';
+        NewSearchString.LengthInChars = YsSearchString.LengthInChars - 1;
+
+        memcpy(&YsSearchString, &NewSearchString, sizeof(YORI_STRING));
+
+        YoriLibConstantString(&EnumContext.Suffix, _T("`"));
+    }
+
     EnumContext.ExpandFullPath = ExpandFullPath;
     EnumContext.CharsToFinalSlash = YoriShFindFinalSlashIfSpecified(&YsSearchString);
     EnumContext.SearchString = YsSearchString.StartOfString;
-    YoriLibInitEmptyString(&EnumContext.Prefix);
     EnumContext.TabContext = TabContext;
     EnumContext.FilesFound = 0;
+
+    //
+    //  Set flags indicating what to find
+    //
 
     if (IncludeFiles) {
         MatchFlags |= YORILIB_FILEENUM_RETURN_FILES;
@@ -619,11 +727,35 @@ YoriShPerformFileTabCompletion(
         MatchFlags |= YORILIB_FILEENUM_RETURN_DIRECTORIES;
     }
 
+    //
+    //  If there's nothing to find, we're done
+    //
+
     if (MatchFlags == 0) {
+        YoriLibFreeStringContents(&YsSearchString);
         return;
     }
 
-    YoriLibForEachFile(&YsSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, &EnumContext);
+    //
+    //  > and < are actually obscure wildcard characters in NT that nobody
+    //  uses for that purpose, but people do use them on shells to redirect
+    //  commands.  If the string starts with these, don't bother with a
+    //  wildcard match, fall through to below where we'll take note of the
+    //  redirection prefix and perform matches on paths that follow it.
+    //
+
+    if (YsSearchString.LengthInChars < 1 ||
+        (YsSearchString.StartOfString[0] != '>' && YsSearchString.StartOfString[0] != '<')) {
+
+        YoriLibForEachFile(&YsSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, &EnumContext);
+    }
+
+    //
+    //  If we haven't found any matches against the literal file name, strip
+    //  off common prefixes and continue searching for files.  On matches these
+    //  prefixes are added back.  This is used for commands which include a
+    //  file name but it's prefixed with some other string.
+    //
 
     if (EnumContext.FilesFound == 0) {
         DWORD Count = sizeof(YoriShTabHeuristicMatches)/sizeof(YoriShTabHeuristicMatches[0]);
@@ -634,6 +766,7 @@ YoriShPerformFileTabCompletion(
 
         MatchArray = YoriLibMalloc(sizeof(YORI_STRING) * Count);
         if (MatchArray == NULL) {
+            YoriLibFreeStringContents(&YsSearchString);
             return;
         }
 
@@ -644,6 +777,7 @@ YoriShPerformFileTabCompletion(
         FoundMatch = YoriLibFindFirstMatchingSubstring(&YsSearchString, Count, MatchArray, &StringOffsetOfMatch);
         if (FoundMatch == NULL) {
             YoriLibFree(MatchArray);
+            YoriLibFreeStringContents(&YsSearchString);
             return;
         }
 
@@ -656,6 +790,7 @@ YoriShPerformFileTabCompletion(
         if (Index == Count) {
             ASSERT(Index != Count);
             YoriLibFree(MatchArray);
+            YoriLibFreeStringContents(&YsSearchString);
             return;
         }
 
@@ -667,6 +802,7 @@ YoriShPerformFileTabCompletion(
             (DWORD)(-1 * YoriShTabHeuristicMatches[Index].CharsToSkip) > YsSearchString.LengthInChars) {
 
             YoriLibFree(MatchArray);
+            YoriLibFreeStringContents(&YsSearchString);
             return;
         }
 
@@ -678,6 +814,7 @@ YoriShPerformFileTabCompletion(
             StringOffsetOfMatch + (DWORD)YoriShTabHeuristicMatches[Index].CharsToSkip >= YsSearchString.LengthInChars) {
 
             YoriLibFree(MatchArray);
+            YoriLibFreeStringContents(&YsSearchString);
             return;
         }
 
@@ -695,9 +832,10 @@ YoriShPerformFileTabCompletion(
         EnumContext.CharsToFinalSlash = YoriShFindFinalSlashIfSpecified(&YsSearchString);
         EnumContext.SearchString = YsSearchString.StartOfString;
 
-        YoriLibForEachFile(&YsSearchString, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, YoriShFileTabCompletionCallback, &EnumContext);
+        YoriLibForEachFile(&YsSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, &EnumContext);
 
         YoriLibFree(MatchArray);
+        YoriLibFreeStringContents(&YsSearchString);
     }
     return;
 }
@@ -762,6 +900,8 @@ YoriShResolveTabCompletionActionForExecutable(
         Action->CompletionAction = CompletionActionTypeDirectories;
     } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("YMKDIR.EXE")) == 0) {
         Action->CompletionAction = CompletionActionTypeDirectories;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("NICE.EXE")) == 0) {
+        Action->CompletionAction = CompletionActionTypeExecutables;
     } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("YRMDIR.EXE")) == 0) {
         Action->CompletionAction = CompletionActionTypeDirectories;
     } else {
@@ -784,62 +924,126 @@ YoriShResolveTabCompletionActionForExecutable(
  @param SrcCmdContext Pointer to a caller allocated command context since
         basic arguments have already been parsed.  Note this should not be
         modified in this routine (that's for the caller.)
+
+ @param RawCommandString Pointer to the raw input buffer string.  This is used
+        within this routine for backquote evaluation, because unlike other
+        simpler tab completion, this one cares what process the argument is
+        for, and that requires more awareness of seperators.
+
+ @param CommandCharOffset The offset, in characters, to where the user
+        requested completion within the master string.
  */
 VOID
 YoriShPerformArgumentTabCompletion(
     __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
     __in BOOL ExpandFullPath,
-    __in PYORI_CMD_CONTEXT SrcCmdContext
+    __in PYORI_CMD_CONTEXT SrcCmdContext,
+    __in PYORI_STRING RawCommandString,
+    __in DWORD CommandCharOffset
     )
 {
     YORI_CMD_CONTEXT CmdContext;
     YORI_SH_ARG_TAB_COMPLETION_ACTION CompletionAction;
     YORI_EXEC_PLAN ExecPlan;
     PYORI_SINGLE_EXEC_CONTEXT CurrentExecContext;
+    YORI_STRING BackquoteSubstring;
+    DWORD StartingOffset;
     DWORD CurrentExecContextArg;
     BOOL ActiveExecContextArg;
     BOOL ExecutableFound;
+    BOOL FoundInSubstring;
 
     //
-    //  MSFIX Things to do:
-    //  1. Need to take the active character and locate which backquote
-    //     scope it's in.  Note that "normal" backquote evaluation is
-    //     left to right.  We can then calculate cursor position within
-    //     the substring.
+    //  This function needs to implement a more substantial parser
+    //  than many others.
+    //
+    //  1. Take the active character and locate which backquote scope
+    //     it's in, and calculate cursor position within the substring.
+    //
     //  2. Resolve the current string into a command context, capturing
-    //     the current argument.  Note we still need to remember any
-    //     "surrounding" backquote scope.
+    //     the current argument.
+    //
     //  3. Parse the command context into an exec plan, and capture which
     //     exec context contains the current argument.  Note the answer
     //     may be none, since the argument might be a seperator.  This
-    //     should return which argument within the exec context is the
-    //     thing we're trying to complete too, which may be none due to
-    //     things like redirection, so we're in one command but not in
-    //     its arguments. (done)
-    //  4. If we're looking at the first thing in an exec context, we
-    //     probably should do executable completion. (done)
-    //  5. If we're an arg within an exec context, take the first thing
+    //     returns which argument within the exec context is the thing
+    //     we're trying to complete too, which may be none due to things
+    //     like redirection, so we're in one command but not in its
+    //     arguments.
+    //
+    //  4. If we're looking at the first thing in an exec context, perform
+    //     executable completion.
+    //
+    //  5. If we're looking at something that's not a command argument,
+    //     perform file completion.
+    //
+    //  6. If we're an arg within an exec context, take the first thing
     //     from the exec context, resolve aliases, resolve path, and
     //     we should then either be looking at a located executable or
     //     be searching for a builtin.  Look for a matching script to
-    //     handle this command. (done)
-    //  6. Note when performing any substitution we should just use the
-    //     command context from #2 (we already know the active argument)
-    //     and put this back together with backquote scope from 1.
+    //     handle this command.
+    //
+    //  7. The parent is responsible for reassembling everything and doesn't
+    //     need all of this state.  This function is only using the state to
+    //     populate match criteria.
     //
 
+    //
+    //  Look through the string for backquotes, and check if the current
+    //  active character is in (or out) of the backquoted regions.  If it's
+    //  in a backquoted region, parse that region into a command context so
+    //  we can apply the rules for the region.
+    //
 
-    if (!YoriShCopyCmdContext(&CmdContext, SrcCmdContext)) {
-        return;
+    FoundInSubstring = FALSE;
+    StartingOffset = 0;
+    while(TRUE) {
+        if (!YoriShFindBackquoteSubstring(RawCommandString, StartingOffset, FALSE, &BackquoteSubstring)) {
+            break;
+        }
+
+        StartingOffset = (DWORD)(BackquoteSubstring.StartOfString - RawCommandString->StartOfString);
+
+        if (CommandCharOffset < StartingOffset) {
+            break;
+        }
+
+        if (CommandCharOffset <= StartingOffset + BackquoteSubstring.LengthInChars + 2) {
+            FoundInSubstring = TRUE;
+            break;
+        }
+
+        StartingOffset += BackquoteSubstring.LengthInChars + 2;
     }
 
     //
-    //  Currently the caller won't call here for argument zero, and this
-    //  routine doesn't do anything smart enough to discover it's really
-    //  on argument zero, so everything is always an argument.
+    //  If we're in a backquote, generate a command context from it by parsing
+    //  the expression.  In the more common case, the parent did that, so we
+    //  can use it by referencing it without reparsing it.
     //
 
-    ASSERT(CmdContext.CurrentArg > 0);
+    if (FoundInSubstring) {
+        ASSERT(CommandCharOffset > StartingOffset);
+        if (!YoriShParseCmdlineToCmdContext(&BackquoteSubstring, CommandCharOffset - StartingOffset, &CmdContext)) {
+            return;
+        }
+    } else {
+
+        if (!YoriShCopyCmdContext(&CmdContext, SrcCmdContext)) {
+            return;
+        }
+
+        //
+        //  Currently the caller won't call here for argument zero
+        //
+
+        ASSERT(CmdContext.CurrentArg > 0);
+    }
+
+    //
+    //  Parse the command context into an exec plan (series of programs to
+    //  run), and find which program is the one the argument is for
+    //
 
     ActiveExecContextArg = FALSE;
     CurrentExecContextArg = 0;
@@ -870,11 +1074,20 @@ YoriShPerformArgumentTabCompletion(
         CompletionAction.CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
     } else {
 
+        //
+        //  The active argument is for the program.  Resolve the program
+        //  aliases and path to an unambiguous thing to execute.
+        //
+
         if (!YoriShResolveCommandToExecutable(&CurrentExecContext->CmdToExec, &ExecutableFound)) {
             YoriShFreeExecPlan(&ExecPlan);
             YoriShFreeCmdContext(&CmdContext);
             return;
         }
+
+        //
+        //  Determine the action to perform for this particular executable.
+        //
 
         if (!YoriShResolveTabCompletionActionForExecutable(&CurrentExecContext->CmdToExec.ysargv[0], CurrentExecContextArg, &CompletionAction)) {
             YoriShFreeExecPlan(&ExecPlan);
@@ -882,6 +1095,10 @@ YoriShPerformArgumentTabCompletion(
             return;
         }
     }
+
+    //
+    //  Perform the requested completion action.
+    //
 
     switch(CompletionAction.CompletionAction) {
         case CompletionActionTypeFilesAndDirectories:
@@ -893,8 +1110,11 @@ YoriShPerformArgumentTabCompletion(
         case CompletionActionTypeDirectories:
             YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, FALSE);
             break;
+        case CompletionActionTypeExecutables:
+            YoriShPerformExecutableTabCompletion(TabContext, ExpandFullPath, FALSE);
+            break;
         case CompletionActionTypeExecutablesAndBuiltins:
-            YoriShPerformExecutableTabCompletion(TabContext, ExpandFullPath);
+            YoriShPerformExecutableTabCompletion(TabContext, ExpandFullPath, TRUE);
             break;
     }
 
@@ -979,11 +1199,11 @@ YoriShTabCompletion(
         }
 
         if (Buffer->TabContext.SearchType == YoriTabCompleteSearchExecutables) {
-            YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath);
+            YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE);
         } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchHistory) {
             YoriShPerformHistoryTabCompletion(&Buffer->TabContext, ExpandFullPath);
         } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchArguments) {
-            YoriShPerformArgumentTabCompletion(&Buffer->TabContext, ExpandFullPath, &CmdContext);
+            YoriShPerformArgumentTabCompletion(&Buffer->TabContext, ExpandFullPath, &CmdContext, &Buffer->String, Buffer->CurrentOffset);
         } else {
             YoriShPerformFileTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE, TRUE);
         }
@@ -1058,6 +1278,7 @@ YoriShTabCompletion(
             NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
 
             if (OldArgv != NULL) {
+                YoriLibFreeStringContents(&CmdContext.ysargv[CmdContext.CurrentArg]);
                 YoriLibFree(CmdContext.ysargv);
                 CmdContext.argc = OldArgCount;
                 CmdContext.ysargv = OldArgv;

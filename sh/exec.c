@@ -986,11 +986,7 @@ YoriShExpandBackquotes(
     YORI_CMD_CONTEXT CmdContext;
     YORI_STRING CurrentFullExpression;
     YORI_STRING CurrentExpressionSubset;
-    DWORD Index;
     PVOID OutputBuffer;
-
-    LPTSTR FirstBackQuote;
-    LPTSTR SecondBackQuote;
 
     YORI_STRING ProcessOutput;
     DWORD InitialPortionLength;
@@ -1010,56 +1006,9 @@ YoriShExpandBackquotes(
         //
 
 
-        //
-        //  Look to see if backquotes are present and note their locations
-        //  if they are.
-        //
-
-        FirstBackQuote = NULL;
-        SecondBackQuote = NULL;
-        for (Index = 0; Index < CurrentFullExpression.LengthInChars; Index++) {
-
-            //
-            //  If it's an escape, advance to the next character and ignore
-            //  its value, then continue processing from the next next
-            //  character.
-            //
-
-            if (YoriLibIsEscapeChar(CurrentFullExpression.StartOfString[Index])) {
-                Index++;
-                if (Index >= CurrentFullExpression.LengthInChars) {
-                    break;
-                } else {
-                    continue;
-                }
-            }
-            if (CurrentFullExpression.StartOfString[Index] == '`') {
-                if (FirstBackQuote == NULL) {
-                    FirstBackQuote = &CurrentFullExpression.StartOfString[Index];
-                } else {
-                    SecondBackQuote = &CurrentFullExpression.StartOfString[Index];
-                    break;
-                }
-            }
-        }
-        
-        if (SecondBackQuote == NULL) {
-            FirstBackQuote = NULL;
-        }
-
-        //
-        //  If there are no more backquotes, expansion is complete, so return
-        //  the result.
-        //
-
-        if (FirstBackQuote == NULL) {
+        if (!YoriShFindBackquoteSubstring(&CurrentFullExpression, 0, TRUE, &CurrentExpressionSubset)) {
             break;
         }
-
-        YoriLibInitEmptyString(&CurrentExpressionSubset);
-
-        CurrentExpressionSubset.StartOfString = FirstBackQuote + 1;
-        CurrentExpressionSubset.LengthInChars = (DWORD)(SecondBackQuote - FirstBackQuote - 1);
 
         //
         //  Parse the expression we're trying to execute.
@@ -1128,8 +1077,8 @@ YoriShExpandBackquotes(
         //  number just obtained from the buffer.
         //
 
-        InitialPortionLength = (DWORD)(FirstBackQuote - CurrentFullExpression.StartOfString);
-        TrailingPortionLength = CurrentFullExpression.LengthInChars - (DWORD)(SecondBackQuote - CurrentFullExpression.StartOfString) - 1;
+        InitialPortionLength = (DWORD)(CurrentExpressionSubset.StartOfString - CurrentFullExpression.StartOfString - 1);
+        TrailingPortionLength = CurrentFullExpression.LengthInChars - InitialPortionLength - CurrentExpressionSubset.LengthInChars - 2;
 
         NewFullExpression = YoriLibReferencedMalloc((InitialPortionLength + ProcessOutput.LengthInChars + TrailingPortionLength + 1) * sizeof(TCHAR) );
 
@@ -1137,6 +1086,7 @@ YoriShExpandBackquotes(
             YoriShFreeExecPlan(&ExecPlan);
             YoriShFreeCmdContext(&CmdContext);
             YoriLibFreeStringContents(&CurrentFullExpression);
+            YoriLibFreeStringContents(&ProcessOutput);
             return FALSE;
         }
 
@@ -1144,7 +1094,9 @@ YoriShExpandBackquotes(
         if (ProcessOutput.LengthInChars != 0) {
             memcpy(&NewFullExpression[InitialPortionLength], ProcessOutput.StartOfString, ProcessOutput.LengthInChars * sizeof(TCHAR));
         }
-        memcpy(&NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars], SecondBackQuote + 1, TrailingPortionLength * sizeof(TCHAR));
+        memcpy(&NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars],
+               &CurrentFullExpression.StartOfString[InitialPortionLength + CurrentExpressionSubset.LengthInChars + 2],
+               TrailingPortionLength * sizeof(TCHAR));
         NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars + TrailingPortionLength] = '\0';
 
         YoriLibFreeStringContents(&CurrentFullExpression);
