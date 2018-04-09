@@ -251,8 +251,8 @@ YoriShExpandAliasHelper(
 
         memcpy(&ArgContext, CmdContext, sizeof(YORI_CMD_CONTEXT));
 
-        ArgContext.argc = ArgContext.argc - 1;
-        ArgContext.ysargv = &ArgContext.ysargv[1];
+        ArgContext.ArgC = ArgContext.ArgC - 1;
+        ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
 
         CmdLine = YoriShBuildCmdlineFromCmdContext(&ArgContext, TRUE, NULL, NULL);
@@ -266,11 +266,11 @@ YoriShExpandAliasHelper(
         }
     } else {
         CmdIndex = YoriLibDecimalStringToInt(VariableName);
-        if (CmdIndex > 0 && CmdContext->argc > CmdIndex) {
-            if (CmdContext->ysargv[CmdIndex].LengthInChars < OutputString->LengthAllocated) {
-                YoriLibYPrintf(OutputString, _T("%y"), &CmdContext->ysargv[CmdIndex]);
+        if (CmdIndex > 0 && CmdContext->ArgC > CmdIndex) {
+            if (CmdContext->ArgV[CmdIndex].LengthInChars < OutputString->LengthAllocated) {
+                YoriLibYPrintf(OutputString, _T("%y"), &CmdContext->ArgV[CmdIndex]);
             }
-            return CmdContext->ysargv[CmdIndex].LengthInChars;
+            return CmdContext->ArgV[CmdIndex].LengthInChars;
         }
     }
     return 0;
@@ -301,10 +301,10 @@ YoriShExpandAlias(
             PYORI_ALIAS ExistingAlias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
             YORI_STRING NewCmdString;
             YoriLibInitEmptyString(&NewCmdString);
-            if (YoriLibCompareStringInsensitive(&ExistingAlias->Alias, &CmdContext->ysargv[0]) == 0) {
+            if (YoriLibCompareStringInsensitive(&ExistingAlias->Alias, &CmdContext->ArgV[0]) == 0) {
                 YoriLibExpandCommandVariables(&ExistingAlias->Value, '$', FALSE, YoriShExpandAliasHelper, CmdContext, &NewCmdString);
                 if (NewCmdString.LengthInChars > 0) {
-                    if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, &NewCmdContext) && NewCmdContext.argc > 0) {
+                    if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, &NewCmdContext) && NewCmdContext.ArgC > 0) {
                         YoriShFreeCmdContext(CmdContext);
                         memcpy(CmdContext, &NewCmdContext, sizeof(YORI_CMD_CONTEXT));
                         YoriLibFreeStringContents(&NewCmdString);

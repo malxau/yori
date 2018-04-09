@@ -972,24 +972,24 @@ YoriShResolveTabCompletionStringToAction(
         return FALSE;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/commands")) == 0) {
+    if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/commands")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/directories")) == 0) {
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/directories")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeDirectories;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/executables")) == 0) {
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/executables")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeExecutables;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/files")) == 0) {
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/files")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeFilesAndDirectories;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/filesonly")) == 0) {
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/filesonly")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeFiles;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/insensitivelist")) == 0) {
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/insensitivelist")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeInsensitiveList;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/sensitivelist")) == 0) {
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/sensitivelist")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeSensitiveList;
     } else {
         YoriShFreeCmdContext(&CmdContext);
@@ -1008,12 +1008,12 @@ YoriShResolveTabCompletionStringToAction(
         DWORD Count;
         PYORI_TAB_COMPLETE_MATCH Match;
 
-        for (Count = 1; Count < CmdContext.argc; Count++) {
+        for (Count = 1; Count < CmdContext.ArgC; Count++) {
             //
             //  Allocate a match entry for this file.
             //
 
-            Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (CmdContext.ysargv[Count].LengthInChars + 1) * sizeof(TCHAR));
+            Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (CmdContext.ArgV[Count].LengthInChars + 1) * sizeof(TCHAR));
             if (Match == NULL) {
                 YoriShFreeCmdContext(&CmdContext);
                 return TRUE;
@@ -1027,8 +1027,8 @@ YoriShResolveTabCompletionStringToAction(
             Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
             YoriLibReference(Match);
             Match->YsValue.MemoryToFree = Match;
-            YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y"), &CmdContext.ysargv[Count]);
-            Match->YsValue.LengthInChars = CmdContext.ysargv[Count].LengthInChars;
+            YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y"), &CmdContext.ArgV[Count]);
+            Match->YsValue.LengthInChars = CmdContext.ArgV[Count].LengthInChars;
 
             //
             //  Append to the list.
@@ -1361,7 +1361,7 @@ YoriShPerformArgumentTabCompletion(
         //  Determine the action to perform for this particular executable.
         //
 
-        if (!YoriShResolveTabCompletionActionForExecutable(TabContext, &CurrentExecContext->CmdToExec.ysargv[0], CurrentExecContextArg, &CompletionAction)) {
+        if (!YoriShResolveTabCompletionActionForExecutable(TabContext, &CurrentExecContext->CmdToExec.ArgV[0], CurrentExecContextArg, &CompletionAction)) {
             YoriShFreeExecPlan(&ExecPlan);
             YoriShFreeCmdContext(&CmdContext);
             return;
@@ -1445,7 +1445,7 @@ YoriShTabCompletion(
         return;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
@@ -1464,8 +1464,8 @@ YoriShTabCompletion(
         YoriLibInitializeListHead(&Buffer->TabContext.MatchList);
         Buffer->TabContext.PreviousMatch = NULL;
 
-        if (CmdContext.CurrentArg < CmdContext.argc) {
-            memcpy(&CurrentArgString, &CmdContext.ysargv[CmdContext.CurrentArg], sizeof(YORI_STRING));
+        if (CmdContext.CurrentArg < CmdContext.ArgC) {
+            memcpy(&CurrentArgString, &CmdContext.ArgV[CmdContext.CurrentArg], sizeof(YORI_STRING));
         }
         SearchLength = CurrentArgString.LengthInChars + 1;
         if (!YoriLibAllocateString(&Buffer->TabContext.SearchString, SearchLength + 1)) {
@@ -1479,7 +1479,7 @@ YoriShTabCompletion(
 
             if (SearchHistory) {
                 Buffer->TabContext.SearchType = YoriTabCompleteSearchHistory;
-            } else if (!YoriShDoesExpressionSpecifyPath(&CmdContext.ysargv[0])) {
+            } else if (!YoriShDoesExpressionSpecifyPath(&CmdContext.ArgV[0])) {
                 Buffer->TabContext.SearchType = YoriTabCompleteSearchExecutables;
             } else {
                 Buffer->TabContext.SearchType = YoriTabCompleteSearchFiles;
@@ -1537,42 +1537,42 @@ YoriShTabCompletion(
             PYORI_ARG_CONTEXT OldArgContext = NULL;
             DWORD OldArgCount = 0;
 
-            if (CmdContext.CurrentArg >= CmdContext.argc) {
+            if (CmdContext.CurrentArg >= CmdContext.ArgC) {
                 DWORD Count;
 
-                OldArgCount = CmdContext.argc;
-                OldArgv = CmdContext.ysargv;
+                OldArgCount = CmdContext.ArgC;
+                OldArgv = CmdContext.ArgV;
                 OldArgContext = CmdContext.ArgContexts;
 
-                CmdContext.ysargv = YoriLibMalloc((CmdContext.CurrentArg + 1) * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
-                if (CmdContext.ysargv == NULL) {
+                CmdContext.ArgV = YoriLibMalloc((CmdContext.CurrentArg + 1) * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+                if (CmdContext.ArgV == NULL) {
                     YoriShFreeCmdContext(&CmdContext);
                     return;
                 }
 
-                CmdContext.argc = CmdContext.CurrentArg + 1;
-                ZeroMemory(CmdContext.ysargv, CmdContext.argc * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
-                CmdContext.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(CmdContext.ysargv, CmdContext.argc * sizeof(YORI_STRING));
+                CmdContext.ArgC = CmdContext.CurrentArg + 1;
+                ZeroMemory(CmdContext.ArgV, CmdContext.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+                CmdContext.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(CmdContext.ArgV, CmdContext.ArgC * sizeof(YORI_STRING));
 
-                memcpy(CmdContext.ysargv, OldArgv, OldArgCount * sizeof(YORI_STRING));
+                memcpy(CmdContext.ArgV, OldArgv, OldArgCount * sizeof(YORI_STRING));
                 for (Count = 0; Count < OldArgCount; Count++) {
                     CmdContext.ArgContexts[Count] = OldArgContext[Count];
                 }
 
-                YoriLibInitEmptyString(&CmdContext.ysargv[CmdContext.CurrentArg]);
+                YoriLibInitEmptyString(&CmdContext.ArgV[CmdContext.CurrentArg]);
             }
 
-            YoriLibFreeStringContents(&CmdContext.ysargv[CmdContext.CurrentArg]);
-            YoriLibCloneString(&CmdContext.ysargv[CmdContext.CurrentArg], &Match->YsValue);
+            YoriLibFreeStringContents(&CmdContext.ArgV[CmdContext.CurrentArg]);
+            YoriLibCloneString(&CmdContext.ArgV[CmdContext.CurrentArg], &Match->YsValue);
             CmdContext.ArgContexts[CmdContext.CurrentArg].Quoted = FALSE;
             YoriShCheckIfArgNeedsQuotes(&CmdContext, CmdContext.CurrentArg);
             NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
 
             if (OldArgv != NULL) {
-                YoriLibFreeStringContents(&CmdContext.ysargv[CmdContext.CurrentArg]);
-                YoriLibFree(CmdContext.ysargv);
-                CmdContext.argc = OldArgCount;
-                CmdContext.ysargv = OldArgv;
+                YoriLibFreeStringContents(&CmdContext.ArgV[CmdContext.CurrentArg]);
+                YoriLibFree(CmdContext.ArgV);
+                CmdContext.ArgC = OldArgCount;
+                CmdContext.ArgV = OldArgv;
                 CmdContext.ArgContexts = OldArgContext;
             }
 

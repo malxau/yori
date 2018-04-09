@@ -218,17 +218,17 @@ YoriShBuckPass (
 
     memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_CMD_CONTEXT));
 
-    ExecContext->CmdToExec.argc += ExtraArgCount;
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.argc * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    ExecContext->CmdToExec.ArgC += ExtraArgCount;
+    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
     if (ExecContext->CmdToExec.MemoryToFree == NULL) {
         memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_CMD_CONTEXT));
         return ExitCode;
     }
 
-    ExecContext->CmdToExec.ysargv = ExecContext->CmdToExec.MemoryToFree;
+    ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
 
-    ExecContext->CmdToExec.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ysargv, sizeof(YORI_STRING) * ExecContext->CmdToExec.argc);
-    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_ARG_CONTEXT) * ExecContext->CmdToExec.argc);
+    ExecContext->CmdToExec.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
+    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
 
     va_start(marker, ExtraArgCount);
     for (count = 0; count < ExtraArgCount; count++) {
@@ -236,7 +236,7 @@ YoriShBuckPass (
         YORI_STRING YsNewArg;
         YORI_STRING FoundInPath;
 
-        YoriLibInitEmptyString(&ExecContext->CmdToExec.ysargv[count]);
+        YoriLibInitEmptyString(&ExecContext->CmdToExec.ArgV[count]);
         YoriLibConstantString(&YsNewArg, NewArg);
 
         //
@@ -247,22 +247,22 @@ YoriShBuckPass (
         if (count == 0) {
             YoriLibInitEmptyString(&FoundInPath);
             if (YoriLibLocateExecutableInPath(&YsNewArg, NULL, NULL, &FoundInPath) && FoundInPath.LengthInChars > 0) {
-                memcpy(&ExecContext->CmdToExec.ysargv[0], &FoundInPath, sizeof(YORI_STRING));
-                ASSERT(YoriLibIsStringNullTerminated(&ExecContext->CmdToExec.ysargv[0]));
+                memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
+                ASSERT(YoriLibIsStringNullTerminated(&ExecContext->CmdToExec.ArgV[0]));
                 YoriLibInitEmptyString(&FoundInPath);
             } else {
                 ExecAsBuiltin = TRUE;
-                YoriLibConstantString(&ExecContext->CmdToExec.ysargv[count], NewArg);
+                YoriLibConstantString(&ExecContext->CmdToExec.ArgV[count], NewArg);
             }
 
             YoriLibFreeStringContents(&FoundInPath);
         } else {
-            YoriLibConstantString(&ExecContext->CmdToExec.ysargv[count], NewArg);
+            YoriLibConstantString(&ExecContext->CmdToExec.ArgV[count], NewArg);
         }
     }
     va_end(marker);
 
-    for (count = 0; count < OldCmdContext.argc; count++) {
+    for (count = 0; count < OldCmdContext.ArgC; count++) {
         YoriShCopyArg(&OldCmdContext, count, &ExecContext->CmdToExec, count + ExtraArgCount);
     }
 
@@ -340,11 +340,11 @@ YoriShExecuteInProc(
         }
     }
 
-    for (Count = 0; Count < CmdContext->argc; Count++) {
-        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ysargv[Count]));
+    for (Count = 0; Count < CmdContext->ArgC; Count++) {
+        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[Count]));
     }
 
-    ExitCode = Fn(CmdContext->argc, CmdContext->ysargv);
+    ExitCode = Fn(CmdContext->ArgC, CmdContext->ArgV);
     YoriShRevertRedirection(&PreviousRedirectContext);
 
     if (WasPipe) {
@@ -445,7 +445,7 @@ YoriShBuiltIn (
         ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
         while (ListEntry != NULL) {
             CallbackEntry = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
-            if (YoriLibCompareStringInsensitive(&CallbackEntry->BuiltinName, &CmdContext->ysargv[0]) == 0) {
+            if (YoriLibCompareStringInsensitive(&CallbackEntry->BuiltinName, &CmdContext->ArgV[0]) == 0) {
                 BuiltInCmd = CallbackEntry->BuiltInFn;
                 break;
             }
@@ -458,12 +458,12 @@ YoriShBuiltIn (
         LPSTR ExportName;
         DWORD LengthNeeded;
         ASSERT(CallbackEntry == NULL);
-        LengthNeeded = CmdContext->ysargv[0].LengthInChars + sizeof("YoriCmd_");
+        LengthNeeded = CmdContext->ArgV[0].LengthInChars + sizeof("YoriCmd_");
         ExportName = YoriLibMalloc(LengthNeeded);
         if (ExportName == NULL) {
             return ExitCode;
         }
-        YoriLibSPrintfA(ExportName, "YoriCmd_%ls", CmdContext->ysargv[0].StartOfString);
+        YoriLibSPrintfA(ExportName, "YoriCmd_%ls", CmdContext->ArgV[0].StartOfString);
         _strupr(ExportName + sizeof("YoriCmd_") - 1);
         BuiltInCmd = (PYORI_CMD_BUILTIN)GetProcAddress(hThisExecutable, ExportName);
         YoriLibFree(ExportName);
@@ -497,7 +497,7 @@ YoriShBuiltIn (
             YoriShReleaseDll(HostingModule);
         }
     } else {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Unrecognized command: %y\n"), &CmdContext->ysargv[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Unrecognized command: %y\n"), &CmdContext->ArgV[0]);
         if (ExecContext->StdOutType == StdOutTypePipe &&
             ExecContext->NextProgram != NULL &&
             ExecContext->NextProgram->StdInType == StdInTypePipe) {
@@ -633,7 +633,7 @@ YoriShExecuteBuiltinString(
         return FALSE;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return FALSE;
     }

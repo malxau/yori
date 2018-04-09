@@ -491,7 +491,7 @@ YoriShMoveCursorToPriorArgument(
         return;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
@@ -541,12 +541,12 @@ YoriShMoveCursorToNextArgument(
         return;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
 
-    if (CmdContext.CurrentArg + 1 < (DWORD)CmdContext.argc) {
+    if (CmdContext.CurrentArg + 1 < (DWORD)CmdContext.ArgC) {
         CmdContext.CurrentArg++;
     } else {
         MoveToEnd = TRUE;
@@ -625,7 +625,7 @@ YoriShHotkey(
         return FALSE;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return FALSE;
     }

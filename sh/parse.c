@@ -378,11 +378,11 @@ YoriShParseCmdlineToCmdContext(
         CmdContext->CurrentArg = ArgCount;
     }
 
-    CmdContext->argc = ArgCount;
+    CmdContext->ArgC = ArgCount;
 
     if (ArgCount == 0) {
         CmdContext->MemoryToFree = NULL;
-        CmdContext->ysargv = NULL;
+        CmdContext->ArgV = NULL;
         CmdContext->ArgContexts = NULL;
         return TRUE;
     }
@@ -393,19 +393,19 @@ YoriShParseCmdlineToCmdContext(
         return FALSE;
     }
 
-    CmdContext->ysargv = CmdContext->MemoryToFree;
+    CmdContext->ArgV = CmdContext->MemoryToFree;
 
-    CmdContext->ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ysargv, ArgCount * sizeof(YORI_STRING));
+    CmdContext->ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, ArgCount * sizeof(YORI_STRING));
     OutputString = (LPTSTR)(CmdContext->ArgContexts + ArgCount);
 
     ArgCount = 0;
     QuoteOpen = FALSE;
     IsMultiCommandOperatorArgument = FALSE;
-    YoriLibInitEmptyString(&CmdContext->ysargv[ArgCount]);
-    CmdContext->ysargv[ArgCount].StartOfString = OutputString;
+    YoriLibInitEmptyString(&CmdContext->ArgV[ArgCount]);
+    CmdContext->ArgV[ArgCount].StartOfString = OutputString;
     CmdContext->ArgContexts[ArgCount].Quoted = FALSE;
     YoriLibReference(CmdContext->MemoryToFree);
-    CmdContext->ysargv[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
+    CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
 
     //
     //  Consume all spaces.  After this, we're either at
@@ -500,14 +500,14 @@ YoriShParseCmdlineToCmdContext(
             YoriShTrimSpacesFromBeginning(&Char);
 
             *OutputString = '\0';
-            CmdContext->ysargv[ArgCount].LengthInChars = (DWORD)(OutputString - CmdContext->ysargv[ArgCount].StartOfString);
-            CmdContext->ysargv[ArgCount].LengthAllocated = CmdContext->ysargv[ArgCount].LengthInChars + 1;
+            CmdContext->ArgV[ArgCount].LengthInChars = (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString);
+            CmdContext->ArgV[ArgCount].LengthAllocated = CmdContext->ArgV[ArgCount].LengthInChars + 1;
             OutputString++;
 
             if (Char.LengthInChars > 0) {
                 ArgCount++;
-                YoriLibInitEmptyString(&CmdContext->ysargv[ArgCount]);
-                CmdContext->ysargv[ArgCount].StartOfString = OutputString;
+                YoriLibInitEmptyString(&CmdContext->ArgV[ArgCount]);
+                CmdContext->ArgV[ArgCount].StartOfString = OutputString;
                 if (Char.StartOfString[0] == '"') {
                     CmdContext->ArgContexts[ArgCount].Quoted = TRUE;
                     LookingForFirstQuote = TRUE;
@@ -516,7 +516,7 @@ YoriShParseCmdlineToCmdContext(
                     LookingForFirstQuote = FALSE;
                 }
                 YoriLibReference(CmdContext->MemoryToFree);
-                CmdContext->ysargv[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
+                CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
 
                 //
                 //  If we were processing a space but the next argument is a
@@ -553,13 +553,13 @@ YoriShParseCmdlineToCmdContext(
                 if (TerminateNextArg) {
                     YoriShTrimSpacesFromBeginning(&Char);
                     *OutputString = '\0';
-                    CmdContext->ysargv[ArgCount].LengthInChars = (DWORD)(OutputString - CmdContext->ysargv[ArgCount].StartOfString);
-                    CmdContext->ysargv[ArgCount].LengthAllocated = CmdContext->ysargv[ArgCount].LengthInChars + 1;
+                    CmdContext->ArgV[ArgCount].LengthInChars = (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString);
+                    CmdContext->ArgV[ArgCount].LengthAllocated = CmdContext->ArgV[ArgCount].LengthInChars + 1;
                     OutputString++;
                     if (Char.LengthInChars > 0) {
                         ArgCount++;
-                        YoriLibInitEmptyString(&CmdContext->ysargv[ArgCount]);
-                        CmdContext->ysargv[ArgCount].StartOfString = OutputString;
+                        YoriLibInitEmptyString(&CmdContext->ArgV[ArgCount]);
+                        CmdContext->ArgV[ArgCount].StartOfString = OutputString;
                         if (Char.StartOfString[0] == '"') {
                             CmdContext->ArgContexts[ArgCount].Quoted = TRUE;
                             LookingForFirstQuote = TRUE;
@@ -568,7 +568,7 @@ YoriShParseCmdlineToCmdContext(
                             LookingForFirstQuote = FALSE;
                         }
                         YoriLibReference(CmdContext->MemoryToFree);
-                        CmdContext->ysargv[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
+                        CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
                     }
                 }
             }
@@ -585,24 +585,24 @@ YoriShParseCmdlineToCmdContext(
     //  If the argument hasn't already been terminated, terminate it now.
     //
 
-    if (CmdContext->ysargv[ArgCount].LengthInChars == 0) {
+    if (CmdContext->ArgV[ArgCount].LengthInChars == 0) {
         *OutputString = '\0';
-        CmdContext->ysargv[ArgCount].LengthInChars = (DWORD)(OutputString - CmdContext->ysargv[ArgCount].StartOfString);
-        CmdContext->ysargv[ArgCount].LengthAllocated = CmdContext->ysargv[ArgCount].LengthInChars + 1;
+        CmdContext->ArgV[ArgCount].LengthInChars = (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString);
+        CmdContext->ArgV[ArgCount].LengthAllocated = CmdContext->ArgV[ArgCount].LengthInChars + 1;
     }
 
     //
     //  Expand any environment variables in any of the arguments.
     //
 
-    for (ArgCount = 0; ArgCount < CmdContext->argc; ArgCount++) {
+    for (ArgCount = 0; ArgCount < CmdContext->ArgC; ArgCount++) {
         YORI_STRING EnvExpandedString;
-        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ysargv[ArgCount]));
-        if (YoriShExpandEnvironmentVariables(&CmdContext->ysargv[ArgCount], &EnvExpandedString)) {
-            if (EnvExpandedString.StartOfString != CmdContext->ysargv[ArgCount].StartOfString) {
-                YoriLibFreeStringContents(&CmdContext->ysargv[ArgCount]);
-                memcpy(&CmdContext->ysargv[ArgCount], &EnvExpandedString, sizeof(YORI_STRING));
-                ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ysargv[ArgCount]));
+        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
+        if (YoriShExpandEnvironmentVariables(&CmdContext->ArgV[ArgCount], &EnvExpandedString)) {
+            if (EnvExpandedString.StartOfString != CmdContext->ArgV[ArgCount].StartOfString) {
+                YoriLibFreeStringContents(&CmdContext->ArgV[ArgCount]);
+                memcpy(&CmdContext->ArgV[ArgCount], &EnvExpandedString, sizeof(YORI_STRING));
+                ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
             }
         }
     }
@@ -646,8 +646,8 @@ YoriShBuildCmdlineFromCmdContext(
     DWORD SrcOffset;
     DWORD DestOffset;
 
-    for (count = 0; count < CmdContext->argc; count++) {
-        BufferLength += 3 + CmdContext->ysargv[count].LengthInChars;
+    for (count = 0; count < CmdContext->ArgC; count++) {
+        BufferLength += 3 + CmdContext->ArgV[count].LengthInChars;
     }
 
     BufferLength += 2;
@@ -659,8 +659,8 @@ YoriShBuildCmdlineFromCmdContext(
 
     YoriLibSPrintfS(CmdLine, BufferLength, _T(""));
 
-    for (count = 0; count < CmdContext->argc; count++) {
-        ThisArg = &CmdContext->ysargv[count];
+    for (count = 0; count < CmdContext->ArgC; count++) {
+        ThisArg = &CmdContext->ArgV[count];
 
         if (count != 0) {
             CmdLine[CmdLineOffset++] = ' ';
@@ -704,7 +704,7 @@ YoriShBuildCmdlineFromCmdContext(
 
 /**
  Remove escapes from an existing CmdContext.  This is used before invoking a
- builtin which expects argc/argv formed arguments, but does not want escapes
+ builtin which expects ArgC/ArgV formed arguments, but does not want escapes
  preserved.
 
  @param CmdContext Pointer to the command context.  Individual arguments
@@ -724,8 +724,8 @@ YoriShRemoveEscapesFromCmdContext(
     BOOLEAN EscapeFound;
     PYORI_STRING ThisArg;
 
-    for (ArgIndex = 0; ArgIndex < CmdContext->argc; ArgIndex++) {
-        ThisArg = &CmdContext->ysargv[ArgIndex];
+    for (ArgIndex = 0; ArgIndex < CmdContext->ArgC; ArgIndex++) {
+        ThisArg = &CmdContext->ArgV[ArgIndex];
 
         EscapeFound = FALSE;
 
@@ -763,9 +763,9 @@ YoriShRemoveEscapesFromCmdContext(
             NewArg.StartOfString[DestIndex] = '\0';
             NewArg.LengthInChars = DestIndex;
 
-            YoriLibFreeStringContents(&CmdContext->ysargv[ArgIndex]);
+            YoriLibFreeStringContents(&CmdContext->ArgV[ArgIndex]);
 
-            memcpy(&CmdContext->ysargv[ArgIndex], &NewArg, sizeof(YORI_STRING));
+            memcpy(&CmdContext->ArgV[ArgIndex], &NewArg, sizeof(YORI_STRING));
         }
     }
 
@@ -795,10 +795,10 @@ YoriShCopyArg(
     )
 {
     DestCmdContext->ArgContexts[DestArgument].Quoted = SrcCmdContext->ArgContexts[SrcArgument].Quoted;
-    if (SrcCmdContext->ysargv[SrcArgument].MemoryToFree != NULL) {
-        YoriLibReference(SrcCmdContext->ysargv[SrcArgument].MemoryToFree);
+    if (SrcCmdContext->ArgV[SrcArgument].MemoryToFree != NULL) {
+        YoriLibReference(SrcCmdContext->ArgV[SrcArgument].MemoryToFree);
     }
-    memcpy(&DestCmdContext->ysargv[DestArgument], &SrcCmdContext->ysargv[SrcArgument], sizeof(YORI_STRING));
+    memcpy(&DestCmdContext->ArgV[DestArgument], &SrcCmdContext->ArgV[SrcArgument], sizeof(YORI_STRING));
 }
 
 /**
@@ -821,18 +821,18 @@ YoriShCopyCmdContext(
 {
     DWORD Count;
 
-    DestCmdContext->MemoryToFree = YoriLibReferencedMalloc(SrcCmdContext->argc * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    DestCmdContext->MemoryToFree = YoriLibReferencedMalloc(SrcCmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
     if (DestCmdContext->MemoryToFree == NULL) {
         return FALSE;
     }
 
-    DestCmdContext->ysargv = DestCmdContext->MemoryToFree;
-    DestCmdContext->ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(DestCmdContext->ysargv, SrcCmdContext->argc * sizeof(YORI_STRING));
+    DestCmdContext->ArgV = DestCmdContext->MemoryToFree;
+    DestCmdContext->ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(DestCmdContext->ArgV, SrcCmdContext->ArgC * sizeof(YORI_STRING));
 
-    DestCmdContext->argc = SrcCmdContext->argc;
+    DestCmdContext->ArgC = SrcCmdContext->ArgC;
     DestCmdContext->CurrentArg = SrcCmdContext->CurrentArg;
 
-    for (Count = 0; Count < DestCmdContext->argc; Count++) {
+    for (Count = 0; Count < DestCmdContext->ArgC; Count++) {
         YoriShCopyArg(SrcCmdContext, Count, DestCmdContext, Count);
     }
 
@@ -858,7 +858,7 @@ YoriShCheckIfArgNeedsQuotes(
 {
     BOOL HasWhiteSpace;
 
-    HasWhiteSpace = YoriLibCheckIfArgNeedsQuotes(&CmdContext->ysargv[ArgIndex]);
+    HasWhiteSpace = YoriLibCheckIfArgNeedsQuotes(&CmdContext->ArgV[ArgIndex]);
     if (HasWhiteSpace) {
         CmdContext->ArgContexts[ArgIndex].Quoted = TRUE;
     }
@@ -878,9 +878,9 @@ YoriShFreeCmdContext(
 {
     DWORD Count;
 
-    if (CmdContext->ysargv != NULL) {
-        for (Count = 0; Count < CmdContext->argc; Count++) {
-            YoriLibFreeStringContents(&CmdContext->ysargv[Count]);
+    if (CmdContext->ArgV != NULL) {
+        for (Count = 0; Count < CmdContext->ArgC; Count++) {
+            YoriLibFreeStringContents(&CmdContext->ArgV[Count]);
         }
     }
     if (CmdContext->MemoryToFree) {
@@ -1142,9 +1142,9 @@ YoriShParseCmdContextToExecContext(
     //  program.
     //
 
-    for (Count = InitialArgument; Count < CmdContext->argc; Count++) {
-        if (Count != (CmdContext->argc - 1)) {
-            if (YoriShIsArgumentProgramSeperator(&CmdContext->ysargv[Count])) {
+    for (Count = InitialArgument; Count < CmdContext->ArgC; Count++) {
+        if (Count != (CmdContext->ArgC - 1)) {
+            if (YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[Count])) {
                 break;
             }
         }
@@ -1157,8 +1157,8 @@ YoriShParseCmdContextToExecContext(
         return 0;
     }
 
-    ExecContext->CmdToExec.ysargv = ExecContext->CmdToExec.MemoryToFree;
-    ExecContext->CmdToExec.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ysargv, ArgumentsConsumed * sizeof(YORI_STRING));
+    ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
+    ExecContext->CmdToExec.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, ArgumentsConsumed * sizeof(YORI_STRING));
 
     //
     //  MSFIX This parsing logic is really lame.
@@ -1179,7 +1179,7 @@ YoriShParseCmdContextToExecContext(
 
         if (Count > InitialArgument) {
 
-            ThisArg = &CmdContext->ysargv[Count];
+            ThisArg = &CmdContext->ArgV[Count];
 
             if (!CmdContext->ArgContexts[Count].Quoted) {
 
@@ -1233,7 +1233,7 @@ YoriShParseCmdContextToExecContext(
                 }
             }
 
-            if (Count == (CmdContext->argc - 1)) {
+            if (Count == (CmdContext->ArgC - 1)) {
                 if (ThisArg->StartOfString[0] == '&') {
                     if (YoriLibCompareStringWithLiteral(ThisArg, _T("&")) == 0) {
                         ExecContext->WaitForCompletion = FALSE;
@@ -1259,14 +1259,14 @@ YoriShParseCmdContextToExecContext(
 
         if (!RemoveThisArg) {
             PYORI_CMD_CONTEXT CmdToExec = &ExecContext->CmdToExec;
-            YoriShCopyArg(CmdContext, Count, CmdToExec, CmdToExec->argc);
+            YoriShCopyArg(CmdContext, Count, CmdToExec, CmdToExec->ArgC);
             if (CurrentArgIsForProgram != NULL) {
                 if (CmdContext->CurrentArg == Count) {
                     *CurrentArgIsForProgram = TRUE;
-                    *CurrentArgIndex = CmdToExec->argc;
+                    *CurrentArgIndex = CmdToExec->ArgC;
                 }
             }
-            CmdToExec->argc++;
+            CmdToExec->ArgC++;
         }
     }
 
@@ -1366,7 +1366,7 @@ YoriShParseCmdContextToExecPlan(
     ZeroMemory(ExecPlan, sizeof(YORI_EXEC_PLAN));
     FoundProgramMatch = FALSE;
 
-    while (CurrentArg < CmdContext->argc) {
+    while (CurrentArg < CmdContext->ArgC) {
 
         ThisProgram = YoriLibMalloc(sizeof(YORI_SINGLE_EXEC_CONTEXT));
         if (ThisProgram == NULL) {
@@ -1412,7 +1412,7 @@ YoriShParseCmdContextToExecPlan(
         if (PreviousProgram != NULL) {
             PYORI_STRING ArgOfLastOperator;
 
-            ArgOfLastOperator = &CmdContext->ysargv[ArgOfLastOperatorIndex];
+            ArgOfLastOperator = &CmdContext->ArgV[ArgOfLastOperatorIndex];
 
             PreviousProgram->NextProgram = ThisProgram;
             if (YoriLibCompareStringWithLiteralInsensitive(ArgOfLastOperator, _T("&")) == 0 ||
@@ -1443,15 +1443,15 @@ YoriShParseCmdContextToExecPlan(
         PreviousProgram = ThisProgram;
         CurrentArg += ArgsConsumed;
 
-        while (CurrentArg < CmdContext->argc &&
-               YoriShIsArgumentProgramSeperator(&CmdContext->ysargv[CurrentArg])) {
+        while (CurrentArg < CmdContext->ArgC &&
+               YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[CurrentArg])) {
 
             ArgOfLastOperatorIndex = CurrentArg;
             CurrentArg++;
         }
     }
 
-    if (CmdContext->CurrentArg >= CmdContext->argc &&
+    if (CmdContext->CurrentArg >= CmdContext->ArgC &&
         PreviousProgram != NULL &&
         !FoundProgramMatch) {
 
@@ -1460,7 +1460,7 @@ YoriShParseCmdContextToExecPlan(
         }
 
         if (CurrentArgIndex != NULL) {
-            *CurrentArgIndex = PreviousProgram->CmdToExec.argc + 1;
+            *CurrentArgIndex = PreviousProgram->CmdToExec.ArgC + 1;
         }
 
         if (CurrentArgIsForProgram != NULL) {
@@ -1532,9 +1532,9 @@ YoriShResolveCommandToExecutable(
 
     YoriShExpandAlias(CmdContext);
 
-    if (YoriLibLocateExecutableInPath(&CmdContext->ysargv[0], NULL, NULL, &FoundExecutable) && FoundExecutable.LengthInChars > 0) {
-        YoriLibFreeStringContents(&CmdContext->ysargv[0]);
-        memcpy(&CmdContext->ysargv[0], &FoundExecutable, sizeof(YORI_STRING));
+    if (YoriLibLocateExecutableInPath(&CmdContext->ArgV[0], NULL, NULL, &FoundExecutable) && FoundExecutable.LengthInChars > 0) {
+        YoriLibFreeStringContents(&CmdContext->ArgV[0]);
+        memcpy(&CmdContext->ArgV[0], &FoundExecutable, sizeof(YORI_STRING));
         *ExecutableFound = TRUE;
     } else {
         YoriLibFreeStringContents(&FoundExecutable);

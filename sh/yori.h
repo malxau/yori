@@ -48,13 +48,13 @@ typedef struct _YORI_CMD_CONTEXT {
     /**
      The number of arguments.
      */
-    DWORD argc;
+    DWORD ArgC;
 
     /**
      An array of pointers to each argument.  Each of these arguments has been
      referenced and should be dereferenced when no longer needed.
      */
-    PYORI_STRING ysargv;
+    PYORI_STRING ArgV;
 
     /**
      An array of information about each argument, including the object that

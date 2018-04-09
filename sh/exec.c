@@ -646,11 +646,11 @@ YoriShExecViaShellExecute(
     ZeroMemory(&sei, sizeof(sei));
     sei.cbSize = sizeof(sei);
     sei.fMask = SEE_MASK_NOCLOSEPROCESS|SEE_MASK_FLAG_NO_UI|SEE_MASK_NOZONECHECKS|SEE_MASK_UNICODE;
-    sei.lpFile = ExecContext->CmdToExec.ysargv[0].StartOfString;
-    if (ExecContext->CmdToExec.argc > 1) {
+    sei.lpFile = ExecContext->CmdToExec.ArgV[0].StartOfString;
+    if (ExecContext->CmdToExec.ArgC > 1) {
         memcpy(&ArgContext, &ExecContext->CmdToExec, sizeof(YORI_CMD_CONTEXT));
-        ArgContext.argc--;
-        ArgContext.ysargv = &ArgContext.ysargv[1];
+        ArgContext.ArgC--;
+        ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
         Args = YoriShBuildCmdlineFromCmdContext(&ArgContext, TRUE, NULL, NULL);
     }
@@ -709,16 +709,16 @@ YoriShExecuteSingleProgram(
     BOOLEAN LaunchFailed = FALSE;
     BOOLEAN LaunchViaShellExecute = FALSE;
 
-    szExt = YoriLibFindRightMostCharacter(&ExecContext->CmdToExec.ysargv[0], '.');
+    szExt = YoriLibFindRightMostCharacter(&ExecContext->CmdToExec.ArgV[0], '.');
     if (szExt != NULL) {
         YORI_STRING YsExt;
 
         YoriLibInitEmptyString(&YsExt);
         YsExt.StartOfString = szExt;
-        YsExt.LengthInChars = ExecContext->CmdToExec.ysargv[0].LengthInChars - (DWORD)(szExt - ExecContext->CmdToExec.ysargv[0].StartOfString);
+        YsExt.LengthInChars = ExecContext->CmdToExec.ArgV[0].LengthInChars - (DWORD)(szExt - ExecContext->CmdToExec.ArgV[0].StartOfString);
 
         if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
-            if (YoriShExecuteNamedModuleInProc(ExecContext->CmdToExec.ysargv[0].StartOfString, ExecContext, &ExitCode)) {
+            if (YoriShExecuteNamedModuleInProc(ExecContext->CmdToExec.ArgV[0].StartOfString, ExecContext, &ExitCode)) {
                 ExecProcess = FALSE;
             }
         } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
@@ -992,7 +992,7 @@ YoriShExecuteExpressionAndCaptureOutput(
         return FALSE;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -1178,7 +1178,7 @@ YoriShExecuteExpression(
         return FALSE;
     }
 
-    if (CmdContext.argc == 0) {
+    if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
         YoriLibFreeStringContents(&CurrentFullExpression);
         return FALSE;
