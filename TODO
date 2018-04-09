@@ -4,7 +4,6 @@ M2:
  - Have scut dump parse variables for flexible output
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text
- - Extensible tab completion, see bash's complete command
  - Ctrl+R
  - APIs for history, history command
  - Environment variable substitution

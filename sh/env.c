@@ -90,6 +90,45 @@ YoriShGetEnvironmentVariable(
 }
 
 /**
+ Capture the value from an environment variable, allocating a Yori string of
+ appropriate size to contain the contents.
+
+ @param Name Pointer to the name of the variable to obtain.
+
+ @param Value On successful completion, populated with a newly allocated
+        string containing the environment variable's contents.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShAllocateAndGetEnvironmentVariable(
+    __in LPCTSTR Name,
+    __out PYORI_STRING Value
+    )
+{
+    DWORD LengthNeeded;
+
+    LengthNeeded = YoriShGetEnvironmentVariable(Name, NULL, 0);
+    if (LengthNeeded == 0) {
+        YoriLibInitEmptyString(Value);
+        return TRUE;
+    }
+
+    if (!YoriLibAllocateString(Value, LengthNeeded)) {
+        return FALSE;
+    }
+
+    Value->LengthInChars = YoriShGetEnvironmentVariable(Name, Value->StartOfString, Value->LengthAllocated);
+    if (Value->LengthInChars == 0 || Value->LengthInChars >= Value->LengthAllocated) {
+        YoriLibFreeStringContents(Value);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+/**
  Returns the expanded form of an environment variable.  For variables that are
  not defined, the expanded form is the name of the variable itself, keeping
  the seperators in place.

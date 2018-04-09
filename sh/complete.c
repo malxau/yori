@@ -835,8 +835,8 @@ YoriShPerformFileTabCompletion(
         YoriLibForEachFile(&YsSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, &EnumContext);
 
         YoriLibFree(MatchArray);
-        YoriLibFreeStringContents(&YsSearchString);
     }
+    YoriLibFreeStringContents(&YsSearchString);
     return;
 }
 
@@ -858,10 +858,196 @@ typedef struct _YORI_SH_ARG_TAB_COMPLETION_ACTION {
         CompletionActionTypeInsensitiveList = 6,
         CompletionActionTypeSensitiveList = 7
     } CompletionAction;
+
+    /**
+     For sensitive and insensitive lists, the list of matches.  Note these
+     aren't guaranteed to match the specified criteria.
+     */
+    YORI_LIST_ENTRY List;
 } YORI_SH_ARG_TAB_COMPLETION_ACTION, *PYORI_SH_ARG_TAB_COMPLETION_ACTION;
 
 /**
+ Perform a list tab completion.  This walks through a list provided by a
+ completion script and compares each entry to the currently input string.
+ If they match, the list entry is retained (including its current allocation)
+ and is transferred to the completion list.  Any entry that is not a match is
+ deallocated in this routine.
+
+ @param TabContext Pointer to the tab completion context.  This provides
+        the search criteria and has its match list populated with results
+        on success.
+
+ @param CompletionAction The action to perform, including the list of
+        candidates to test against the currently entered string.
+
+ @param Insensitive If TRUE, comparisons are case insensitive; if FALSE,
+        comparisons are case sensitive.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShPerformListTabCompletion(
+    __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
+    __inout PYORI_SH_ARG_TAB_COMPLETION_ACTION CompletionAction,
+    __in BOOL Insensitive
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_LIST_ENTRY NextEntry;
+    PYORI_TAB_COMPLETE_MATCH Match;
+    YORI_STRING SearchString;
+    int MatchResult;
+
+    //
+    //  Generate the current argument being completed without any
+    //  trailing '*'.
+    //
+
+    YoriLibInitEmptyString(&SearchString);
+    SearchString.StartOfString = TabContext->SearchString.StartOfString;
+    SearchString.LengthInChars = TabContext->SearchString.LengthInChars;
+
+    if (SearchString.LengthInChars > 0 &&
+        SearchString.StartOfString[SearchString.LengthInChars - 1] == '*') {
+
+        SearchString.LengthInChars--;
+    }
+
+    ListEntry = YoriLibGetNextListEntry(&CompletionAction->List, NULL);
+    while (ListEntry != NULL) {
+        Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
+        NextEntry = YoriLibGetNextListEntry(&CompletionAction->List, ListEntry);
+
+        YoriLibRemoveListItem(&Match->ListEntry);
+
+        //
+        //  Check if the given list item matches the current string being
+        //  completed.
+        //
+
+        if (Insensitive) {
+            MatchResult = YoriLibCompareStringInsensitiveCount(&SearchString, &Match->YsValue, SearchString.LengthInChars);
+        } else {
+            MatchResult = YoriLibCompareStringCount(&SearchString, &Match->YsValue, SearchString.LengthInChars);
+        }
+
+        //
+        //  If it's a match, add it to the list; if not, free it.
+        //
+
+        if (MatchResult == 0) {
+            YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
+        } else {
+            YoriLibFreeStringContents(&Match->YsValue);
+            YoriLibDereference(Match);
+        }
+
+        ListEntry = NextEntry;
+    }
+
+    return TRUE;
+}
+
+/**
+ Parse a string describing the actions to perform for a specific tab completion
+ into a master action, possibly including a list of values associated with
+ that action.
+
+ @param TabCompletionString Pointer to the string describing the action.
+
+ @param TabCompletionAction On successful completion, updated with the
+        description for the tab completion action.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShResolveTabCompletionStringToAction(
+    __in PYORI_STRING TabCompletionString,
+    __out PYORI_SH_ARG_TAB_COMPLETION_ACTION TabCompletionAction
+    )
+{
+    YORI_CMD_CONTEXT CmdContext;
+
+    if (!YoriShParseCmdlineToCmdContext(TabCompletionString, 0, &CmdContext)) {
+        return FALSE;
+    }
+
+    if (CmdContext.argc == 0) {
+        YoriShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/commands")) == 0) {
+        TabCompletionAction->CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/directories")) == 0) {
+        TabCompletionAction->CompletionAction = CompletionActionTypeDirectories;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/executables")) == 0) {
+        TabCompletionAction->CompletionAction = CompletionActionTypeExecutables;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/files")) == 0) {
+        TabCompletionAction->CompletionAction = CompletionActionTypeFilesAndDirectories;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/filesonly")) == 0) {
+        TabCompletionAction->CompletionAction = CompletionActionTypeFiles;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/insensitivelist")) == 0) {
+        TabCompletionAction->CompletionAction = CompletionActionTypeInsensitiveList;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ysargv[0], _T("/sensitivelist")) == 0) {
+        TabCompletionAction->CompletionAction = CompletionActionTypeSensitiveList;
+    } else {
+        YoriShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+
+    //
+    //  If the request specifies a list of things, populate the list from
+    //  the command context into the list of match candidates.
+    //
+
+    if (TabCompletionAction->CompletionAction == CompletionActionTypeInsensitiveList ||
+        TabCompletionAction->CompletionAction == CompletionActionTypeSensitiveList) {
+
+        DWORD Count;
+        PYORI_TAB_COMPLETE_MATCH Match;
+
+        for (Count = 1; Count < CmdContext.argc; Count++) {
+            //
+            //  Allocate a match entry for this file.
+            //
+
+            Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (CmdContext.ysargv[Count].LengthInChars + 1) * sizeof(TCHAR));
+            if (Match == NULL) {
+                YoriShFreeCmdContext(&CmdContext);
+                return TRUE;
+            }
+
+            //
+            //  Populate the file into the entry.
+            //
+
+            YoriLibInitEmptyString(&Match->YsValue);
+            Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
+            YoriLibReference(Match);
+            Match->YsValue.MemoryToFree = Match;
+            YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y"), &CmdContext.ysargv[Count]);
+            Match->YsValue.LengthInChars = CmdContext.ysargv[Count].LengthInChars;
+
+            //
+            //  Append to the list.
+            //
+
+            YoriLibAppendList(&TabCompletionAction->List, &Match->ListEntry);
+        }
+    }
+
+    YoriShFreeCmdContext(&CmdContext);
+    return TRUE;
+}
+
+/**
  Check for the given executable or builtin command how to expand its arguments.
+
+ @param TabContext Pointer to the tab completion context.  This provides
+        the search criteria and has its match list populated with results
+        on success.
  
  @param Executable Pointer to the executable or builtin command.  Note this
         is a fully qualified path on entry.
@@ -874,15 +1060,28 @@ typedef struct _YORI_SH_ARG_TAB_COMPLETION_ACTION {
  */
 BOOL
 YoriShResolveTabCompletionActionForExecutable(
+    __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
     __in PYORI_STRING Executable,
     __in DWORD CurrentArg,
     __out PYORI_SH_ARG_TAB_COMPLETION_ACTION Action
     )
 {
     YORI_STRING FilePartOnly;
+    YORI_STRING ActionString;
+    YORI_STRING YoriCompletePathVariable;
+    YORI_STRING FoundCompletionScript;
+    YORI_STRING CompletionExpression;
+    YORI_STRING ArgToComplete;
     DWORD FinalSeperator;
 
     UNREFERENCED_PARAMETER(CurrentArg);
+
+    YoriLibInitializeListHead(&Action->List);
+
+    //
+    //  Find just the executable name, without any prepending path.
+    //
+
     FinalSeperator = YoriShFindFinalSlashIfSpecified(Executable);
 
     YoriLibInitEmptyString(&FilePartOnly);
@@ -894,19 +1093,88 @@ YoriShResolveTabCompletionActionForExecutable(
         return TRUE;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("CHDIR")) == 0) {
-        Action->CompletionAction = CompletionActionTypeDirectories;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("CHDIR.COM")) == 0) {
-        Action->CompletionAction = CompletionActionTypeDirectories;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("YMKDIR.EXE")) == 0) {
-        Action->CompletionAction = CompletionActionTypeDirectories;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("NICE.EXE")) == 0) {
-        Action->CompletionAction = CompletionActionTypeExecutables;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(&FilePartOnly, _T("YRMDIR.EXE")) == 0) {
-        Action->CompletionAction = CompletionActionTypeDirectories;
-    } else {
-        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+    //
+    //  Find the set of locations to search for completion scripts.  This
+    //  may be empty but typically shouldn't fail except for memory.
+    //
+
+    if (!YoriShAllocateAndGetEnvironmentVariable(_T("YORICOMPLETEPATH"), &YoriCompletePathVariable)) {
+        return FALSE;
     }
+
+    if (YoriCompletePathVariable.LengthInChars == 0) {
+        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+        return TRUE;
+    }
+
+    if (!YoriLibAllocateString(&FoundCompletionScript, YoriCompletePathVariable.LengthInChars + MAX_PATH)) {
+        YoriLibFreeStringContents(&YoriCompletePathVariable);
+        return FALSE;
+    }
+
+    //
+    //  Search through the locations for a matching script name.  If there
+    //  isn't one, perform a default action.
+    //
+
+    if (!YoriLibPathLocateUnknownExtensionUnknownLocation(&FilePartOnly, &YoriCompletePathVariable, NULL, NULL, &FoundCompletionScript)) {
+        YoriLibFreeStringContents(&FoundCompletionScript);
+        YoriLibFreeStringContents(&YoriCompletePathVariable);
+
+        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+        return TRUE;
+    }
+
+    YoriLibFreeStringContents(&YoriCompletePathVariable);
+
+    if (FoundCompletionScript.LengthInChars == 0) {
+        YoriLibFreeStringContents(&FoundCompletionScript);
+        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+        return TRUE;
+    }
+
+    //
+    //  If there is one, create an expression and invoke the script.
+    //
+
+    YoriLibInitEmptyString(&ArgToComplete);
+    ArgToComplete.StartOfString = TabContext->SearchString.StartOfString;
+    ArgToComplete.LengthInChars = TabContext->SearchString.LengthInChars;
+
+    if (ArgToComplete.LengthInChars > 0 &&
+        ArgToComplete.StartOfString[ArgToComplete.LengthInChars - 1] == '*') {
+
+        ArgToComplete.LengthInChars--;
+    }
+    if (!YoriLibAllocateString(&CompletionExpression, FoundCompletionScript.LengthInChars + 20 + ArgToComplete.LengthInChars)) {
+
+        YoriLibFreeStringContents(&FoundCompletionScript);
+        return FALSE;
+    }
+
+    CompletionExpression.LengthInChars = YoriLibSPrintf(CompletionExpression.StartOfString, _T("%y %i %y"), &FoundCompletionScript, CurrentArg, &ArgToComplete);
+
+    YoriLibFreeStringContents(&FoundCompletionScript);
+
+    if (!YoriShExecuteExpressionAndCaptureOutput(&CompletionExpression, &ActionString)) {
+
+        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+        return TRUE;
+    }
+
+    YoriLibFreeStringContents(&CompletionExpression);
+
+    //
+    //  Parse the result and determine the appropriate action.
+    //
+
+    if (!YoriShResolveTabCompletionStringToAction(&ActionString, Action)) {
+        YoriLibFreeStringContents(&ActionString);
+        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+        return TRUE;
+    }
+
+    YoriLibFreeStringContents(&ActionString);
     return TRUE;
 }
 
@@ -952,6 +1220,8 @@ YoriShPerformArgumentTabCompletion(
     BOOL ActiveExecContextArg;
     BOOL ExecutableFound;
     BOOL FoundInSubstring;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_TAB_COMPLETE_MATCH Match;
 
     //
     //  This function needs to implement a more substantial parser
@@ -1064,6 +1334,7 @@ YoriShPerformArgumentTabCompletion(
         //
 
         CompletionAction.CompletionAction = CompletionActionTypeFilesAndDirectories;
+        YoriLibInitializeListHead(&CompletionAction.List);
     } else if (CurrentExecContextArg == 0) {
 
         //
@@ -1072,6 +1343,7 @@ YoriShPerformArgumentTabCompletion(
         //
 
         CompletionAction.CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
+        YoriLibInitializeListHead(&CompletionAction.List);
     } else {
 
         //
@@ -1089,7 +1361,7 @@ YoriShPerformArgumentTabCompletion(
         //  Determine the action to perform for this particular executable.
         //
 
-        if (!YoriShResolveTabCompletionActionForExecutable(&CurrentExecContext->CmdToExec.ysargv[0], CurrentExecContextArg, &CompletionAction)) {
+        if (!YoriShResolveTabCompletionActionForExecutable(TabContext, &CurrentExecContext->CmdToExec.ysargv[0], CurrentExecContextArg, &CompletionAction)) {
             YoriShFreeExecPlan(&ExecPlan);
             YoriShFreeCmdContext(&CmdContext);
             return;
@@ -1116,8 +1388,27 @@ YoriShPerformArgumentTabCompletion(
         case CompletionActionTypeExecutablesAndBuiltins:
             YoriShPerformExecutableTabCompletion(TabContext, ExpandFullPath, TRUE);
             break;
+        case CompletionActionTypeInsensitiveList:
+            YoriShPerformListTabCompletion(TabContext, &CompletionAction, TRUE);
+            break;
+        case CompletionActionTypeSensitiveList:
+            YoriShPerformListTabCompletion(TabContext, &CompletionAction, FALSE);
+            break;
     }
 
+    //
+    //  Free any items that completion scripts have populated for list
+    //  completion.
+    //
+
+    ListEntry = YoriLibGetNextListEntry(&CompletionAction.List, NULL);
+    while (ListEntry != NULL) {
+        Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&CompletionAction.List, ListEntry);
+
+        YoriLibFreeStringContents(&Match->YsValue);
+        YoriLibDereference(Match);
+    }
 
     YoriShFreeExecPlan(&ExecPlan);
     YoriShFreeCmdContext(&CmdContext);

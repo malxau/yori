@@ -35,8 +35,9 @@ CHAR strHelpText[] =
         "\n"
         "Outputs text.\n"
         "\n"
-        "ECHO [-e] [-n] String\n"
+        "ECHO [-e] [-n] [--] String\n"
         "\n"
+        "   --             Treat all further arguments as disaplay parameters\n"
         "   -e             Display to standard error stream\n"
         "   -n             Do not display a newline after text\n";
 
@@ -100,6 +101,10 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 NewLine = FALSE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i + 1;
+                break;
             }
         } else {
             ArgumentUnderstood = TRUE;

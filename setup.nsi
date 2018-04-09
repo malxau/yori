@@ -423,6 +423,15 @@ SectionEnd
 
 SectionGroupEnd
 
+Section "Completion scripts"
+  SetOutPath "$INSTDIR\completion"
+  File "completion\chdir.ys1"
+  File "completion\chdir.com.ys1"
+  File "completion\nice.exe.ys1"
+  File "completion\ymkdir.exe.ys1"
+  File "completion\yrmdir.exe.ys1"
+SectionEnd
+
 !IFNDEF SYMONLY
 
 Section "Uninstall support"

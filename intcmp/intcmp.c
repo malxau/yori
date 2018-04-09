@@ -35,7 +35,9 @@ CHAR strHelpText[] =
         "\n"
         "Compare two integer values.\n"
         "\n"
-        "INTCMP <string><operator><string>\n"
+        "INTCMP [--] <string><operator><string>\n"
+        "\n"
+        "   --             Treat all further arguments as comparison parameters\n"
         "\n"
         "Operators are:\n"
         "   ==             Numbers match exactly\n"
@@ -141,6 +143,12 @@ ymain(
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 IntCmpHelp();
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                if (i + 1 < ArgC) {
+                    ArgumentUnderstood = TRUE;
+                    StartArg = i + 1;
+                    break;
+                }
             }
         } else {
             ArgumentUnderstood = TRUE;

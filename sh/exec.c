@@ -961,6 +961,95 @@ YoriShExecExecPlan(
     }
 }
 
+/**
+ Execute an expression and capture the output of the entire expression into
+ a buffer.  This is used when evaluating backquoted expressions.
+
+ @param Expression Pointer to a string describing the expression to execute.
+
+ @param ProcessOutput On successful completion, populated with the result of
+        the expression.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShExecuteExpressionAndCaptureOutput(
+    __in PYORI_STRING Expression,
+    __out PYORI_STRING ProcessOutput
+    )
+{
+    YORI_EXEC_PLAN ExecPlan;
+    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
+    YORI_CMD_CONTEXT CmdContext;
+    PVOID OutputBuffer;
+
+    //
+    //  Parse the expression we're trying to execute.
+    //
+
+    if (!YoriShParseCmdlineToCmdContext(Expression, 0, &CmdContext)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
+        return FALSE;
+    }
+
+    if (CmdContext.argc == 0) {
+        YoriShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
+        YoriShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    //
+    //  If we're doing backquote evaluation, set the output back to a 
+    //  shell owned buffer, and the process must wait.
+    //
+
+    ExecContext = ExecPlan.FirstCmd;
+    while (ExecContext != NULL) {
+
+        if (ExecContext->StdOutType == StdOutTypeDefault) {
+            ExecContext->StdOutType = StdOutTypeBuffer;
+
+            if (!ExecContext->WaitForCompletion &&
+                ExecContext->NextProgramType != NextProgramExecUnconditionally) {
+
+                ExecContext->WaitForCompletion = TRUE;
+            }
+        }
+    
+        ExecContext = ExecContext->NextProgram;
+    }
+
+    YoriShExecExecPlan(&ExecPlan, &OutputBuffer);
+
+    YoriLibInitEmptyString(ProcessOutput);
+    if (OutputBuffer != NULL) {
+
+        YoriShGetProcessOutputBuffer(OutputBuffer, ProcessOutput);
+
+        //
+        //  Truncate any newlines from the output, which tools
+        //  frequently emit but are of no value here
+        //
+
+        while (ProcessOutput->LengthInChars > 0 &&
+               (ProcessOutput->StartOfString[ProcessOutput->LengthInChars - 1] == '\n' ||
+                ProcessOutput->StartOfString[ProcessOutput->LengthInChars - 1] == '\r')) {
+
+            ProcessOutput->LengthInChars--;
+        }
+    }
+
+    YoriShFreeExecPlan(&ExecPlan);
+    YoriShFreeCmdContext(&CmdContext);
+
+    return TRUE;
+}
+
 
 /**
  Parse and execute all backquotes in an expression, potentially resulting
@@ -981,17 +1070,14 @@ YoriShExpandBackquotes(
     __out PYORI_STRING ResultingExpression
     )
 {
-    YORI_EXEC_PLAN ExecPlan;
-    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
-    YORI_CMD_CONTEXT CmdContext;
     YORI_STRING CurrentFullExpression;
     YORI_STRING CurrentExpressionSubset;
-    PVOID OutputBuffer;
 
     YORI_STRING ProcessOutput;
-    DWORD InitialPortionLength;
-    DWORD TrailingPortionLength;
-    LPTSTR NewFullExpression;
+
+    YORI_STRING InitialPortion;
+    YORI_STRING TrailingPortion;
+    YORI_STRING NewFullExpression;
 
     YoriLibInitEmptyString(&CurrentFullExpression);
     CurrentFullExpression.StartOfString = Expression->StartOfString;
@@ -1010,65 +1096,8 @@ YoriShExpandBackquotes(
             break;
         }
 
-        //
-        //  Parse the expression we're trying to execute.
-        //
-
-        if (!YoriShParseCmdlineToCmdContext(&CurrentExpressionSubset, 0, &CmdContext)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
-            return FALSE;
-        }
-
-        if (CmdContext.argc == 0) {
-            YoriShFreeCmdContext(&CmdContext);
-            return FALSE;
-        }
-    
-        if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
-            YoriShFreeCmdContext(&CmdContext);
-            return FALSE;
-        }
-
-        //
-        //  If we're doing backquote evaluation, set the output back to a 
-        //  shell owned buffer, and the process must wait.
-        //
-
-        ExecContext = ExecPlan.FirstCmd;
-        while (ExecContext != NULL) {
-
-            if (ExecContext->StdOutType == StdOutTypeDefault) {
-                ExecContext->StdOutType = StdOutTypeBuffer;
-
-                if (!ExecContext->WaitForCompletion &&
-                    ExecContext->NextProgramType != NextProgramExecUnconditionally) {
-
-                    ExecContext->WaitForCompletion = TRUE;
-                }
-            }
-        
-            ExecContext = ExecContext->NextProgram;
-        }
-
-        YoriShExecExecPlan(&ExecPlan, &OutputBuffer);
-    
-        YoriLibInitEmptyString(&ProcessOutput);
-        if (OutputBuffer != NULL) {
-
-            YoriShGetProcessOutputBuffer(OutputBuffer, &ProcessOutput);
-
-            //
-            //  Truncate any newlines from the output, which tools
-            //  frequently emit but are of no value here
-            //
-
-            while (ProcessOutput.LengthInChars > 0 &&
-                   (ProcessOutput.StartOfString[ProcessOutput.LengthInChars - 1] == '\n' ||
-                    ProcessOutput.StartOfString[ProcessOutput.LengthInChars - 1] == '\r')) {
-
-                ProcessOutput.LengthInChars--;
-            }
+        if (!YoriShExecuteExpressionAndCaptureOutput(&CurrentExpressionSubset, &ProcessOutput)) {
+            break;
         }
 
         //
@@ -1077,37 +1106,32 @@ YoriShExpandBackquotes(
         //  number just obtained from the buffer.
         //
 
-        InitialPortionLength = (DWORD)(CurrentExpressionSubset.StartOfString - CurrentFullExpression.StartOfString - 1);
-        TrailingPortionLength = CurrentFullExpression.LengthInChars - InitialPortionLength - CurrentExpressionSubset.LengthInChars - 2;
+        YoriLibInitEmptyString(&InitialPortion);
+        YoriLibInitEmptyString(&TrailingPortion);
 
-        NewFullExpression = YoriLibReferencedMalloc((InitialPortionLength + ProcessOutput.LengthInChars + TrailingPortionLength + 1) * sizeof(TCHAR) );
+        InitialPortion.StartOfString = CurrentFullExpression.StartOfString;
+        InitialPortion.LengthInChars = (DWORD)(CurrentExpressionSubset.StartOfString - CurrentFullExpression.StartOfString - 1);
 
-        if (NewFullExpression == NULL) {
-            YoriShFreeExecPlan(&ExecPlan);
-            YoriShFreeCmdContext(&CmdContext);
+        TrailingPortion.StartOfString = &CurrentFullExpression.StartOfString[InitialPortion.LengthInChars + CurrentExpressionSubset.LengthInChars + 2];
+        TrailingPortion.LengthInChars = CurrentFullExpression.LengthInChars - InitialPortion.LengthInChars - CurrentExpressionSubset.LengthInChars - 2;
+
+        if (!YoriLibAllocateString(&NewFullExpression, InitialPortion.LengthInChars + ProcessOutput.LengthInChars + TrailingPortion.LengthInChars + 1)) {
             YoriLibFreeStringContents(&CurrentFullExpression);
             YoriLibFreeStringContents(&ProcessOutput);
             return FALSE;
         }
 
-        memcpy(NewFullExpression, CurrentFullExpression.StartOfString, InitialPortionLength * sizeof(TCHAR));
-        if (ProcessOutput.LengthInChars != 0) {
-            memcpy(&NewFullExpression[InitialPortionLength], ProcessOutput.StartOfString, ProcessOutput.LengthInChars * sizeof(TCHAR));
-        }
-        memcpy(&NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars],
-               &CurrentFullExpression.StartOfString[InitialPortionLength + CurrentExpressionSubset.LengthInChars + 2],
-               TrailingPortionLength * sizeof(TCHAR));
-        NewFullExpression[InitialPortionLength + ProcessOutput.LengthInChars + TrailingPortionLength] = '\0';
+        NewFullExpression.LengthInChars = YoriLibSPrintf(NewFullExpression.StartOfString,
+                                                         _T("%y%y%y"),
+                                                         &InitialPortion,
+                                                         &ProcessOutput,
+                                                         &TrailingPortion);
 
         YoriLibFreeStringContents(&CurrentFullExpression);
-        CurrentFullExpression.StartOfString = NewFullExpression;
-        CurrentFullExpression.MemoryToFree = NewFullExpression;
-        CurrentFullExpression.LengthInChars = InitialPortionLength + ProcessOutput.LengthInChars + TrailingPortionLength;
+
+        memcpy(&CurrentFullExpression, &NewFullExpression, sizeof(YORI_STRING));
 
         YoriLibFreeStringContents(&ProcessOutput);
-
-        YoriShFreeExecPlan(&ExecPlan);
-        YoriShFreeCmdContext(&CmdContext);
     }
 
     memcpy(ResultingExpression, &CurrentFullExpression, sizeof(YORI_STRING));

@@ -591,6 +591,12 @@ YoriShGetEnvironmentVariable(
     );
 
 BOOL
+YoriShAllocateAndGetEnvironmentVariable(
+    __in LPCTSTR Name,
+    __out PYORI_STRING Value
+    );
+
+BOOL
 YoriShExpandEnvironmentVariables(
     __in PYORI_STRING Expression,
     __out PYORI_STRING ResultingExpression
@@ -612,6 +618,12 @@ YoriShRevertRedirection(
 DWORD
 YoriShExecuteSingleProgram(
     __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    );
+
+BOOL
+YoriShExecuteExpressionAndCaptureOutput(
+    __in PYORI_STRING Expression,
+    __out PYORI_STRING ProcessOutput
     );
 
 BOOL

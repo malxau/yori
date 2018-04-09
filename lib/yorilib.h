@@ -812,6 +812,15 @@ YoriLibPathLocateKnownExtensionUnknownLocation(
     );
 
 BOOL
+YoriLibPathLocateUnknownExtensionUnknownLocation(
+    __in PYORI_STRING SearchFor,
+    __in PYORI_STRING PathVariable,
+    __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
+    __in_opt PVOID MatchAllContext,
+    __inout PYORI_STRING FoundPath
+    );
+
+BOOL
 YoriLibLocateExecutableInPath(
     __in PYORI_STRING SearchFor,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,

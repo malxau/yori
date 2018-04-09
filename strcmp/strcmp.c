@@ -35,8 +35,9 @@ CHAR strHelpText[] =
         "\n"
         "Compare two strings.\n"
         "\n"
-        "STRCMP [-i] <string><operator><string>\n"
+        "STRCMP [-i] [--] <string><operator><string>\n"
         "\n"
+        "   --             Treat all further arguments as comparison parameters\n"
         "   -i             Match case insensitively\n"
         "\n"
         "Operators are:\n"
@@ -122,6 +123,12 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 MatchInsensitive = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                if (i + 1 < ArgC) {
+                    ArgumentUnderstood = TRUE;
+                    StartArg = i + 1;
+                    break;
+                }
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -148,6 +155,7 @@ ymain(
 
     MatchingOperator = YoriLibFindFirstMatchingSubstring(&Expression, sizeof(OperatorMatches)/sizeof(OperatorMatches[0]), OperatorMatches, &OperatorIndex);
     if (MatchingOperator == NULL) {
+        YoriLibFreeStringContents(&Expression);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("strcmp: missing operator\n"));
         return EXIT_FAILURE;
     }

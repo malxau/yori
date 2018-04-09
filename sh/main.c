@@ -121,6 +121,16 @@ YoriShInit()
             }
         }
 
+        if (YoriShGetEnvironmentVariable(_T("YORICOMPLETEPATH"), NULL, 0) == 0) {
+            YORI_STRING CompletePath;
+
+            if (YoriLibAllocateString(&CompletePath, ModuleName.LengthInChars + sizeof("\\completion"))) {
+                CompletePath.LengthInChars = YoriLibSPrintf(CompletePath.StartOfString, _T("%y\\completion"), &ModuleName);
+                YoriLibAddEnvironmentComponent(_T("YORICOMPLETEPATH"), &CompletePath, FALSE);
+                YoriLibFreeStringContents(&CompletePath);
+            }
+        }
+
         YoriLibFreeStringContents(&ModuleName);
     }
 
