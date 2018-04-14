@@ -255,7 +255,7 @@ YoriShExpandAliasHelper(
         ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
 
-        CmdLine = YoriShBuildCmdlineFromCmdContext(&ArgContext, TRUE, NULL, NULL);
+        CmdLine = YoriShBuildCmdlineFromCmdContext(&ArgContext, FALSE, NULL, NULL);
         if (CmdLine != NULL) {
             ArgLength = _tcslen(CmdLine);
             if (ArgLength < OutputString->LengthAllocated) {
@@ -302,7 +302,7 @@ YoriShExpandAlias(
             YORI_STRING NewCmdString;
             YoriLibInitEmptyString(&NewCmdString);
             if (YoriLibCompareStringInsensitive(&ExistingAlias->Alias, &CmdContext->ArgV[0]) == 0) {
-                YoriLibExpandCommandVariables(&ExistingAlias->Value, '$', FALSE, YoriShExpandAliasHelper, CmdContext, &NewCmdString);
+                YoriLibExpandCommandVariables(&ExistingAlias->Value, '$', TRUE, YoriShExpandAliasHelper, CmdContext, &NewCmdString);
                 if (NewCmdString.LengthInChars > 0) {
                     if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, &NewCmdContext) && NewCmdContext.ArgC > 0) {
                         YoriShFreeCmdContext(CmdContext);
