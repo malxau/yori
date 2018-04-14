@@ -361,21 +361,20 @@ YoriShPerformExecutableTabCompletion(
     //  Thirdly, search the table of builtins.
     //
 
-    if (IncludeBuiltins && YoriShBuiltins != NULL) {
-        LPTSTR ThisBuiltin;
-        DWORD BuiltinLength;
+    if (IncludeBuiltins && YoriShBuiltinCallbacks.Next != NULL) {
+        PYORI_LIST_ENTRY ListEntry;
+        PYORI_BUILTIN_CALLBACK Callback;
 
-        ThisBuiltin = YoriShBuiltins;
-        while (*ThisBuiltin != '\0') {
-            BuiltinLength = _tcslen(ThisBuiltin);
-
-            if (YoriLibCompareStringWithLiteralInsensitiveCount(&TabContext->SearchString, ThisBuiltin, CompareLength) == 0) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
+        while (ListEntry != NULL) {
+            Callback = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
+            if (YoriLibCompareStringInsensitiveCount(&TabContext->SearchString, &Callback->BuiltinName, CompareLength) == 0) {
 
                 //
                 //  Allocate a match entry for this file.
                 //
 
-                Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (ExecTabContext.Prefix.LengthInChars + BuiltinLength + ExecTabContext.Suffix.LengthInChars + 1) * sizeof(TCHAR));
+                Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (ExecTabContext.Prefix.LengthInChars + Callback->BuiltinName.LengthInChars + ExecTabContext.Suffix.LengthInChars + 1) * sizeof(TCHAR));
                 if (Match == NULL) {
                     return;
                 }
@@ -388,7 +387,7 @@ YoriShPerformExecutableTabCompletion(
                 Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
                 YoriLibReference(Match);
                 Match->YsValue.MemoryToFree = Match;
-                Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%s%y"), &ExecTabContext.Prefix, ThisBuiltin, &ExecTabContext.Suffix);
+                Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%y%y"), &ExecTabContext.Prefix, &Callback->BuiltinName, &ExecTabContext.Suffix);
                 Match->YsValue.LengthAllocated = Match->YsValue.LengthInChars + 1;
 
                 //
@@ -397,13 +396,7 @@ YoriShPerformExecutableTabCompletion(
 
                 YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
             }
-
-            //
-            //  Move to the next alias
-            //
-
-            ThisBuiltin += BuiltinLength;
-            ThisBuiltin++;
+            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, ListEntry);
         }
     }
 }

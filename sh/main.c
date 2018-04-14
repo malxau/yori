@@ -81,6 +81,22 @@ YoriShInit()
     TCHAR Letter;
     TCHAR AliasName[3];
     TCHAR AliasValue[16];
+    YORI_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
+
+    //
+    //  Translate the constant builtin function mapping into dynamic function
+    //  mappings.
+    //
+
+    while (BuiltinNameMapping->CommandName != NULL) {
+        YORI_STRING YsCommandName;
+
+        YoriLibConstantString(&YsCommandName, BuiltinNameMapping->CommandName);
+        if (!YoriShBuiltinRegister(&YsCommandName, BuiltinNameMapping->BuiltinFn)) {
+            return FALSE;
+        }
+        BuiltinNameMapping++;
+    }
 
     //
     //  If we don't have a prompt defined, set a default.
@@ -350,6 +366,7 @@ ymain (
     YoriShSaveHistoryToFile();
     YoriShClearAllHistory();
     YoriShClearAllAliases();
+    YoriShBuiltinUnregisterAll();
 
     return g_ExitProcessExitCode;
 }

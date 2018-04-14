@@ -29,7 +29,10 @@
 /**
  The list of builtin commands supported by this build of Yori.
  */
-CONST
-LPTSTR YoriShBuiltins = _T("\0");
+CONST YORI_BUILTIN_NAME_MAPPING
+YoriShBuiltins[] = {
+                    {NULL,            NULL}
+                   };
+
 
 // vim:sw=4:ts=4:et:

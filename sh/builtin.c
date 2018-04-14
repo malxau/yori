@@ -26,66 +26,16 @@
 
 #include "yori.h"
 
-/**
- A structure containing information about a currently loaded DLL.
- */
-typedef struct _YORI_LOADED_MODULE {
-
-    /**
-     The entry for this loaded module on the list of actively loaded
-     modules.
-     */
-    YORI_LIST_ENTRY ListEntry;
-
-    /**
-     A string describing the DLL file name.
-     */
-    YORI_STRING DllName;
-
-    /**
-     The reference count of this module.
-     */
-    ULONG ReferenceCount;
-
-    /**
-     A handle to the DLL.
-     */
-    HANDLE ModuleHandle;
-} YORI_LOADED_MODULE, *PYORI_LOADED_MODULE;
-
-/**
- A structure containing an individual builtin callback.
- */
-typedef struct _YORI_BUILTIN_CALLBACK {
-
-    /**
-     Links between the registered builtin callbacks.
-     */
-    YORI_LIST_ENTRY ListEntry;
-
-    /**
-     The name of the callback.
-     */
-    YORI_STRING BuiltinName;
-
-    /**
-     A function pointer to the builtin.
-     */
-    PYORI_CMD_BUILTIN BuiltInFn;
-
-    /**
-     Pointer to a referenced module that implements this builtin function.
-     This may be NULL if it's a function statically linked into the main
-     executable.
-     */
-    PYORI_LOADED_MODULE ReferencedModule;
-
-} YORI_BUILTIN_CALLBACK, *PYORI_BUILTIN_CALLBACK;
 
 /**
  A list of currently loaded modules.
  */
 YORI_LIST_ENTRY YoriShLoadedModules;
+
+/**
+ List of builtin callbacks currently registered with Yori.
+ */
+YORI_LIST_ENTRY YoriShBuiltinCallbacks;
 
 /**
  Load a DLL file into a loaded module object that can be referenced.
@@ -184,11 +134,6 @@ YoriShReferenceDll(
  by the shell.
  */
 PYORI_LOADED_MODULE YoriShActiveModule = NULL;
-
-/**
- List of builtin callbacks currently registered with Yori.
- */
-YORI_LIST_ENTRY YoriShBuiltinCallbacks;
 
 /**
  Invoke a different program to complete executing the command.  This may be
@@ -436,7 +381,6 @@ YoriShBuiltIn (
 {
     DWORD ExitCode = 1;
     PYORI_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
-    HANDLE hThisExecutable = GetModuleHandle(NULL);
     PYORI_CMD_BUILTIN BuiltInCmd = NULL;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_BUILTIN_CALLBACK CallbackEntry = NULL;
@@ -452,21 +396,6 @@ YoriShBuiltIn (
             ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, ListEntry);
             CallbackEntry = NULL;
         }
-    }
-
-    if (BuiltInCmd == NULL) {
-        LPSTR ExportName;
-        DWORD LengthNeeded;
-        ASSERT(CallbackEntry == NULL);
-        LengthNeeded = CmdContext->ArgV[0].LengthInChars + sizeof("YoriCmd_");
-        ExportName = YoriLibMalloc(LengthNeeded);
-        if (ExportName == NULL) {
-            return ExitCode;
-        }
-        YoriLibSPrintfA(ExportName, "YoriCmd_%ls", CmdContext->ArgV[0].StartOfString);
-        _strupr(ExportName + sizeof("YoriCmd_") - 1);
-        BuiltInCmd = (PYORI_CMD_BUILTIN)GetProcAddress(hThisExecutable, ExportName);
-        YoriLibFree(ExportName);
     }
 
     if (BuiltInCmd) {
@@ -604,6 +533,36 @@ YoriShBuiltinUnregister(
     }
 
     return FALSE;
+}
+
+/**
+ Dissociate all previously associated builtin commands in preparation for
+ process exit.
+ */
+VOID
+YoriShBuiltinUnregisterAll(
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_BUILTIN_CALLBACK Callback;
+
+    if (YoriShBuiltinCallbacks.Next == NULL) {
+        return;
+    }
+
+    ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
+    while (ListEntry != NULL) {
+        Callback = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
+        YoriLibRemoveListItem(&Callback->ListEntry);
+        if (Callback->ReferencedModule != NULL) {
+            YoriShReleaseDll(Callback->ReferencedModule);
+            Callback->ReferencedModule = NULL;
+        }
+        YoriLibDereference(Callback);
+        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
+    }
+
+    return;
 }
 
 

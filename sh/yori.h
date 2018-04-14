@@ -412,6 +412,79 @@ typedef struct _YORI_INPUT_BUFFER {
 } YORI_INPUT_BUFFER, *PYORI_INPUT_BUFFER;
 
 /**
+ A structure defining a mapping between a command name and a function to
+ execute.  This is used to populate builtin commands.
+ */
+typedef struct _YORI_BUILTIN_NAME_MAPPING {
+
+    /**
+     The command name.
+     */
+    LPTSTR CommandName;
+
+    /**
+     Pointer to the function to execute.
+     */
+    PYORI_CMD_BUILTIN BuiltinFn;
+} YORI_BUILTIN_NAME_MAPPING, *PYORI_BUILTIN_NAME_MAPPING;
+
+/**
+ A structure containing information about a currently loaded DLL.
+ */
+typedef struct _YORI_LOADED_MODULE {
+
+    /**
+     The entry for this loaded module on the list of actively loaded
+     modules.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     A string describing the DLL file name.
+     */
+    YORI_STRING DllName;
+
+    /**
+     The reference count of this module.
+     */
+    ULONG ReferenceCount;
+
+    /**
+     A handle to the DLL.
+     */
+    HANDLE ModuleHandle;
+} YORI_LOADED_MODULE, *PYORI_LOADED_MODULE;
+
+/**
+ A structure containing an individual builtin callback.
+ */
+typedef struct _YORI_BUILTIN_CALLBACK {
+
+    /**
+     Links between the registered builtin callbacks.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The name of the callback.
+     */
+    YORI_STRING BuiltinName;
+
+    /**
+     A function pointer to the builtin.
+     */
+    PYORI_CMD_BUILTIN BuiltInFn;
+
+    /**
+     Pointer to a referenced module that implements this builtin function.
+     This may be NULL if it's a function statically linked into the main
+     executable.
+     */
+    PYORI_LOADED_MODULE ReferencedModule;
+
+} YORI_BUILTIN_CALLBACK, *PYORI_BUILTIN_CALLBACK;
+
+/**
  The exit code ("error level") of the previous process to complete.
  */
 extern DWORD g_ErrorLevel;
@@ -421,6 +494,9 @@ extern DWORD g_PreviousJobId;
 extern BOOL g_ExitProcess;
 
 extern DWORD g_ExitProcessExitCode;
+
+extern YORI_LIST_ENTRY YoriShBuiltinCallbacks;
+
 
 // *** ALIAS.C ***
 
@@ -468,7 +544,7 @@ YoriShLoadSystemAliases();
 
 // *** BUILTIN.C ***
 
-extern CONST LPTSTR YoriShBuiltins;
+extern CONST YORI_BUILTIN_NAME_MAPPING YoriShBuiltins[];
 
 DWORD
 YoriShBuckPass (
@@ -504,6 +580,10 @@ BOOL
 YoriShBuiltinUnregister(
     __in PYORI_STRING BuiltinCmd,
     __in PYORI_CMD_BUILTIN CallbackFn
+    );
+
+VOID
+YoriShBuiltinUnregisterAll(
     );
 
 // *** CLIP.C ***

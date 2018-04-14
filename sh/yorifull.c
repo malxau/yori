@@ -27,26 +27,113 @@
 #include "yori.h"
 
 /**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_ALIAS;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_BUILTIN;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_CHDIR;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_COLOR;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_EXIT;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_FALSE;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_FG;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_IF;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_JOB;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_PUSHD;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_REM;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_SET;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_SETLOCAL;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_TRUE;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_VER;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_WAIT;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_YS;
+
+/**
  The list of builtin commands supported by this build of Yori.
  */
-CONST
-LPTSTR YoriShBuiltins = _T("ALIAS\0")
-                        _T("BUILTIN\0")
-                        _T("CHDIR\0")
-                        _T("COLOR\0")
-                        _T("EXIT\0")
-                        _T("FALSE\0")
-                        _T("FG\0")
-                        _T("IF\0")
-                        _T("JOB\0")
-                        _T("PUSHD\0")
-                        _T("REM\0")
-                        _T("SET\0")
-                        _T("SETLOCAL\0")
-                        _T("TRUE\0")
-                        _T("VER\0")
-                        _T("WAIT\0")
-                        _T("YS\0")
-                        _T("\0");
+CONST YORI_BUILTIN_NAME_MAPPING
+YoriShBuiltins[] = {
+                    {_T("ALIAS"),     YoriCmd_ALIAS},
+                    {_T("BUILTIN"),   YoriCmd_BUILTIN},
+                    {_T("CHDIR"),     YoriCmd_CHDIR},
+                    {_T("COLOR"),     YoriCmd_COLOR},
+                    {_T("EXIT"),      YoriCmd_EXIT},
+                    {_T("FALSE"),     YoriCmd_FALSE},
+                    {_T("FG"),        YoriCmd_FG},
+                    {_T("IF"),        YoriCmd_IF},
+                    {_T("JOB"),       YoriCmd_JOB},
+                    {_T("PUSHD"),     YoriCmd_PUSHD},
+                    {_T("REM"),       YoriCmd_REM},
+                    {_T("SET"),       YoriCmd_SET},
+                    {_T("SETLOCAL"),  YoriCmd_SETLOCAL},
+                    {_T("TRUE"),      YoriCmd_TRUE},
+                    {_T("VER"),       YoriCmd_VER},
+                    {_T("WAIT"),      YoriCmd_WAIT},
+                    {_T("YS"),        YoriCmd_YS},
+                    {NULL,            NULL}
+                   };
 
 // vim:sw=4:ts=4:et:

@@ -21,24 +21,3 @@ EXPORTS
     YoriApiSetJobPriority
     YoriApiTerminateJob
     YoriApiWaitForJob
-
-; NOTE! When adding new builtins be sure to update the table of builtins for
-; the benefit of tab completion
-
-    YoriCmd_ALIAS
-    YoriCmd_BUILTIN
-    YoriCmd_CHDIR
-    YoriCmd_COLOR
-    YoriCmd_EXIT
-    YoriCmd_FALSE
-    YoriCmd_FG
-    YoriCmd_IF
-    YoriCmd_JOB
-    YoriCmd_PUSHD
-    YoriCmd_REM
-    YoriCmd_SET
-    YoriCmd_SETLOCAL
-    YoriCmd_TRUE
-    YoriCmd_VER
-    YoriCmd_WAIT
-    YoriCmd_YS
