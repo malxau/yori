@@ -3,7 +3,7 @@
  *
  * Yori shell cshot
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,9 @@ CHAR strHelpText[] =
         "Captures previous output on the console and outputs to standard output.\n"
         "\n"
         "CSHOT [-s num] [-c num]\n"
-        ;
+        "\n"
+        "   -c             The number of lines to capture\n"
+        "   -s             The number of lines to skip\n";
 
 /**
  Display usage text to the user.
@@ -46,7 +48,7 @@ CshotHelp()
 {
     YORI_STRING License;
 
-    YoriLibMitLicenseText(_T("2017"), &License);
+    YoriLibMitLicenseText(_T("2017-2018"), &License);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cshot %i.%i\n"), CSHOT_VER_MAJOR, CSHOT_VER_MINOR);
 #if YORI_BUILD_ID
@@ -135,9 +137,7 @@ ymain(
         return EXIT_FAILURE;
     }
 
-    if (LineCount == 0) {
-        LineCount = ScreenInfo.dwSize.Y - ScreenInfo.dwCursorPosition.Y;
-    } else if (LineCount > (DWORD)ScreenInfo.dwCursorPosition.Y) {
+    if (LineCount == 0 || LineCount > (DWORD)ScreenInfo.dwCursorPosition.Y) {
         LineCount = ScreenInfo.dwCursorPosition.Y;
     }
 
@@ -223,6 +223,7 @@ ymain(
         }
     }
 
+    YoriLibFree(ReadBuffer);
     return EXIT_SUCCESS;
 }
 
