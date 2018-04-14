@@ -1,8 +1,10 @@
-set FIRSTCHAR=`echo -- %2%|cut -o 0 -l 1`
-if strcmp -- %FIRSTCHAR%==/; goto arg
-if strcmp -- %FIRSTCHAR%==-; goto arg
+set FIRSTCHAR=%2%
+if strcmp -- %FIRSTCHAR:~0,1%==/; goto arg
+if strcmp -- %FIRSTCHAR:~0,1%==-; goto arg
+set FIRSTCHAR=
 echo -- /directories
 goto :eof
 
 :arg
+set FIRSTCHAR=
 echo -- /insensitivelist -e /e

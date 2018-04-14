@@ -1,9 +1,11 @@
-set FIRSTCHAR=`echo -- %2%|cut -o 0 -l 1`
+set FIRSTCHAR=%2%
 if strcmp -- %FIRSTCHAR%==/; goto arg
 if strcmp -- %FIRSTCHAR%==-; goto arg
 
 echo -- /directories
+set FIRSTCHAR=
 goto :eof
 
 :arg
+set FIRSTCHAR=
 echo -- /insensitivelist -b -r -s /b /r /s

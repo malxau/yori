@@ -135,7 +135,7 @@ YoriShDisplayPrompt()
     YORI_STRING DisplayString;
     PYORI_STRING StringToUse;
 
-    EnvVarLength = YoriShGetEnvironmentVariable(_T("YORIPROMPT"), NULL, 0);
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0);
     if (EnvVarLength > 0) {
         if (YoriLibAllocateString(&PromptVar, EnvVarLength)) {
 
@@ -147,7 +147,7 @@ YoriShDisplayPrompt()
             //  Get the raw prompt expression.
             //
 
-            PromptVar.LengthInChars = YoriShGetEnvironmentVariable(_T("YORIPROMPT"), PromptVar.StartOfString, PromptVar.LengthAllocated);
+            PromptVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), PromptVar.StartOfString, PromptVar.LengthAllocated);
             StringToUse = &PromptVar;
 
             //
@@ -223,7 +223,7 @@ YoriShDisplayPrompt()
     //  If we have a dynamic title, do that too.
     //
 
-    EnvVarLength = YoriShGetEnvironmentVariable(_T("YORITITLE"), NULL, 0);
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORITITLE"), NULL, 0);
     if (EnvVarLength > 0) {
         if (YoriLibAllocateString(&PromptVar, EnvVarLength)) {
 
@@ -235,7 +235,7 @@ YoriShDisplayPrompt()
             //  Get the raw title expression.
             //
 
-            PromptVar.LengthInChars = YoriShGetEnvironmentVariable(_T("YORITITLE"), PromptVar.StartOfString, PromptVar.LengthAllocated);
+            PromptVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORITITLE"), PromptVar.StartOfString, PromptVar.LengthAllocated);
             StringToUse = &PromptVar;
 
             //

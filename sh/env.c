@@ -60,33 +60,305 @@ YoriShIsEnvironmentVariableChar(
          is too small, the number of characters needed (including NULL.)
  */
 DWORD
-YoriShGetEnvironmentVariable(
+YoriShGetEnvironmentVariableWithoutSubstitution(
     __in LPCTSTR Name,
     __out_opt LPTSTR Variable,
     __in DWORD Size
     )
 {
+    DWORD Length;
+    TCHAR NumString[12];
+
+    //
+    //  Query the variable and/or length required.
+    //
+
     if (_tcsicmp(Name, _T("CD")) == 0) {
-        return GetCurrentDirectory(Size, Variable);
+        Length = GetCurrentDirectory(Size, Variable);
     } else if (tcsicmp(Name, _T("ERRORLEVEL")) == 0) {
-        DWORD ReturnValue;
         if (Variable != NULL) {
-            ReturnValue = YoriLibSPrintfS(Variable, Size, _T("%i"), g_ErrorLevel);
+            Length = YoriLibSPrintfS(Variable, Size, _T("%i"), g_ErrorLevel);
         } else {
-            ReturnValue = 10;
+            Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("%i"), g_ErrorLevel);
+            Length++;
         }
-        return ReturnValue;
     } else if (tcsicmp(Name, _T("LASTJOB")) == 0) {
-        DWORD ReturnValue;
         if (Variable != NULL) {
-            ReturnValue = YoriLibSPrintfS(Variable, Size, _T("%i"), g_PreviousJobId);
+            Length = YoriLibSPrintfS(Variable, Size, _T("%i"), g_PreviousJobId);
         } else {
-            ReturnValue = 10;
+            Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("%i"), g_PreviousJobId);
+            Length++;
         }
-        return ReturnValue;
     } else {
-        return GetEnvironmentVariable(Name, Variable, Size);
+        Length = GetEnvironmentVariable(Name, Variable, Size);
     }
+
+    return Length;
+}
+
+/**
+ Wrapper around the Win32 GetEnvironmentVariable call, but augmented with
+ "magic" things that appear to be variables but aren't, including %CD% and
+ %ERRORLEVEL%.
+
+ @param Name The name of the environment variable to get.
+
+ @param Variable Pointer to the buffer to receive the variable's contents.
+
+ @param Size The length of the Variable parameter, in characters.
+
+ @param ReturnedSize On successful completion, populated with the number of
+        characters copied (without NULL), or if the buffer is too small, the
+        number of characters needed (including NULL.)
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShGetEnvironmentVariable(
+    __in LPCTSTR Name,
+    __out_opt LPTSTR Variable,
+    __in DWORD Size,
+    __out PDWORD ReturnedSize
+    )
+{
+    DWORD DataLength;
+    LPTSTR DataVariable;
+    LPTSTR ColonPtr;
+    LPTSTR EqualsPtr;
+    LPTSTR RawName;
+    DWORD RawNameLength;
+    DWORD ProcessedLength;
+
+    //
+    //  Find the colon which is followed by information about the substring
+    //  to return.  If there isn't one, this is a simple case that can be
+    //  handed to the lower level routine.
+    //
+
+    ColonPtr = _tcschr(Name, ':');
+    if (ColonPtr == NULL) {
+        DataLength = YoriShGetEnvironmentVariableWithoutSubstitution(Name, Variable, Size);
+        if (DataLength == 0) {
+            return FALSE;
+        }
+        *ReturnedSize = DataLength;
+        return TRUE;
+    }
+
+    //
+    //  If one exists, copy the part of the string before the colon so it can
+    //  be NULL terminated and we can call into the OS APIs.
+    //
+
+    RawNameLength = (DWORD)(ColonPtr - Name);
+    RawName = YoriLibMalloc((RawNameLength + 1) * sizeof(TCHAR));
+    if (RawName == NULL) {
+        return FALSE;
+    }
+    memcpy(RawName, Name, RawNameLength * sizeof(TCHAR));
+    RawName[RawNameLength] = '\0';
+    ColonPtr++;
+
+
+    //
+    //  Check what kind of processing we're doing.  It may be substring
+    //  fetching (indicated with ~) or may be string substitution (no ~,
+    //  but an = somewhere else.)
+    //
+
+    EqualsPtr = NULL;
+    if (ColonPtr[0] != '~') {
+        EqualsPtr = _tcschr(ColonPtr, '=');
+    }
+
+    DataVariable = NULL;
+    DataLength = YoriShGetEnvironmentVariableWithoutSubstitution(RawName, NULL, 0);
+    if (DataLength == 0) {
+        YoriLibFree(RawName);
+        return FALSE;
+    }
+
+    //
+    //  If the request wants to return data, or if we're doing string
+    //  substitution, this routine needs to double buffer.
+    //
+
+    if (Variable != NULL || EqualsPtr != NULL) {
+        DWORD FinalDataLength;
+        DataVariable = YoriLibMalloc(DataLength * sizeof(TCHAR));
+        if (DataVariable == NULL) {
+            YoriLibFree(RawName);
+            return FALSE;
+        }
+
+        FinalDataLength = YoriShGetEnvironmentVariableWithoutSubstitution(RawName, DataVariable, DataLength);
+
+        if (FinalDataLength >= DataLength || FinalDataLength == 0) {
+            YoriLibFree(RawName);
+            YoriLibFree(DataVariable);
+            return FALSE;
+        }
+    }
+
+    ProcessedLength = 0;
+
+    if (ColonPtr[0] == '~') {
+        YORI_STRING SubstringString;
+        DWORD CharsConsumed;
+        LONGLONG RequestedOffset;
+        LONGLONG RequestedLength;
+        ULONG ActualOffset;
+        ULONG ActualLength;
+
+        RequestedOffset = 0;
+        RequestedLength = DataLength - 1;
+
+        //
+        //  Parse the range that the user requested.
+        //
+
+        YoriLibConstantString(&SubstringString, ColonPtr + 1);
+        if (!YoriLibStringToNumber(&SubstringString, FALSE, &RequestedOffset, &CharsConsumed)) {
+            YoriLibFree(RawName);
+            return FALSE;
+        }
+
+        if (CharsConsumed < SubstringString.LengthInChars) {
+            SubstringString.StartOfString += CharsConsumed;
+            SubstringString.LengthInChars -= CharsConsumed;
+
+            if (SubstringString.StartOfString[0] == ',' && SubstringString.LengthInChars > 1) {
+                SubstringString.StartOfString++;
+                SubstringString.LengthInChars--;
+
+                if (!YoriLibStringToNumber(&SubstringString, FALSE, &RequestedLength, &CharsConsumed)) {
+                    YoriLibFree(RawName);
+                    return FALSE;
+                }
+            }
+        }
+
+        //
+        //  Remove the NULL from the data length.  We'll add it back as needed
+        //  below.
+        //
+
+        DataLength--;
+
+        //
+        //  Check the user request against the known string length making any
+        //  adjustments necessary.
+        //
+
+        if (RequestedOffset >= 0) {
+            if (RequestedOffset < DataLength) {
+                ActualOffset = (ULONG)RequestedOffset;
+            } else {
+                ActualOffset = 0;
+                RequestedLength = 0;
+            }
+        } else {
+            RequestedOffset = RequestedOffset * -1;
+            if (RequestedOffset > DataLength) {
+                ActualOffset = 0;
+                RequestedLength = 0;
+            } else {
+                ActualOffset = (DWORD)(DataLength - RequestedOffset);
+            }
+        }
+
+        if (RequestedLength < 0) {
+            RequestedLength = RequestedLength * -1;
+            if (RequestedLength > DataLength) {
+                RequestedLength = DataLength;
+            }
+
+            RequestedLength = DataLength - RequestedLength;
+        }
+
+        if (ActualOffset + RequestedLength < DataLength) {
+            ActualLength = (ULONG)RequestedLength;
+        } else {
+            ActualLength = DataLength - ActualOffset;
+        }
+
+        //
+        //  If this is a request for data and the buffer is big enough, return
+        //  data.  If it's not a request for data or the buffer is too small,
+        //  return the actual length plus a NULL terminator.
+        //
+
+        if (Variable == NULL) {
+            ProcessedLength = ActualLength + 1;
+        } else if (Size < ActualLength + 1) {
+            ProcessedLength = ActualLength + 1;
+        } else {
+            memcpy(Variable, DataVariable + ActualOffset, ActualLength * sizeof(TCHAR));
+            Variable[ActualLength] = '\0';
+            ProcessedLength = ActualLength;
+        }
+
+    } else if (EqualsPtr != NULL) {
+        YORI_STRING SearchExpr;
+        YORI_STRING ReplaceExpr;
+        YORI_STRING RawVariable;
+        PYORI_STRING FoundMatch;
+        DWORD FoundAt;
+        DWORD CurrentOffset;
+
+        YoriLibInitEmptyString(&SearchExpr);
+        SearchExpr.StartOfString = ColonPtr;
+        SearchExpr.LengthInChars = (DWORD)(EqualsPtr - ColonPtr);
+        YoriLibConstantString(&ReplaceExpr, EqualsPtr + 1);
+
+        if (SearchExpr.LengthInChars == 0) {
+            YoriLibFree(DataVariable);
+            YoriLibFree(RawName);
+            return FALSE;
+        }
+
+        YoriLibConstantString(&RawVariable, DataVariable);
+        CurrentOffset = 0;
+        FoundMatch = YoriLibFindFirstMatchingSubstring(&RawVariable, 1, &SearchExpr, &FoundAt);
+        while (FoundMatch) {
+            if (Variable != NULL && CurrentOffset + FoundAt < Size) {
+                memcpy(Variable + CurrentOffset, RawVariable.StartOfString, FoundAt * sizeof(TCHAR));
+            }
+            CurrentOffset += FoundAt;
+            if (Variable != NULL && CurrentOffset + ReplaceExpr.LengthInChars < Size) {
+                memcpy(Variable + CurrentOffset,
+                       ReplaceExpr.StartOfString,
+                       ReplaceExpr.LengthInChars * sizeof(TCHAR));
+            }
+            CurrentOffset += ReplaceExpr.LengthInChars;
+            RawVariable.StartOfString += FoundAt + SearchExpr.LengthInChars;
+            RawVariable.LengthInChars -= FoundAt + SearchExpr.LengthInChars;
+            FoundMatch = YoriLibFindFirstMatchingSubstring(&RawVariable, 1, &SearchExpr, &FoundAt);
+        }
+        if (Variable != NULL && CurrentOffset + RawVariable.LengthInChars < Size) {
+            memcpy(Variable + CurrentOffset,
+                   RawVariable.StartOfString,
+                   RawVariable.LengthInChars * sizeof(TCHAR));
+        }
+
+        CurrentOffset += RawVariable.LengthInChars;
+        if (Variable != NULL && CurrentOffset < Size) {
+            Variable[CurrentOffset] = '\0';
+            ProcessedLength = CurrentOffset;
+        } else {
+            ProcessedLength = CurrentOffset + 1;
+        }
+    } else {
+        ProcessedLength = YoriShGetEnvironmentVariableWithoutSubstitution(Name, Variable, Size);
+    }
+
+    if (DataVariable != NULL) {
+        YoriLibFree(DataVariable);
+    }
+    YoriLibFree(RawName);
+
+    *ReturnedSize = ProcessedLength;
+    return TRUE;
 }
 
 /**
@@ -108,8 +380,7 @@ YoriShAllocateAndGetEnvironmentVariable(
 {
     DWORD LengthNeeded;
 
-    LengthNeeded = YoriShGetEnvironmentVariable(Name, NULL, 0);
-    if (LengthNeeded == 0) {
+    if (!YoriShGetEnvironmentVariable(Name, NULL, 0, &LengthNeeded)) {
         YoriLibInitEmptyString(Value);
         return TRUE;
     }
@@ -118,8 +389,9 @@ YoriShAllocateAndGetEnvironmentVariable(
         return FALSE;
     }
 
-    Value->LengthInChars = YoriShGetEnvironmentVariable(Name, Value->StartOfString, Value->LengthAllocated);
-    if (Value->LengthInChars == 0 || Value->LengthInChars >= Value->LengthAllocated) {
+    if (!YoriShGetEnvironmentVariable(Name, Value->StartOfString, Value->LengthAllocated, &Value->LengthInChars) ||
+        Value->LengthInChars >= Value->LengthAllocated) {
+
         YoriLibFreeStringContents(Value);
         return FALSE;
     }
@@ -142,14 +414,18 @@ YoriShAllocateAndGetEnvironmentVariable(
  @param Result Optionally points to a buffer to receive the result.  If not
         specified, only the length required is returned.
 
- @return The number of characters copied (without NULL), of if the buffer
-         is too small, the number of characters needed (including NULL.)
+ @param ReturnedSize On successful completion, populated with the number of
+        characters copied (without NULL), or if the buffer is too small, the
+        number of characters needed (including NULL.)
+
+ @return TRUE to indicate success, FALSE to indicate failure.
  */
-DWORD
+BOOL
 YoriShGetEnvironmentExpandedText(
     __in PYORI_STRING Name,
     __in TCHAR Seperator,
-    __inout PYORI_STRING Result
+    __inout PYORI_STRING Result,
+    __out PDWORD ReturnedSize
     )
 {
     DWORD EnvVarCopied;
@@ -158,17 +434,10 @@ YoriShGetEnvironmentExpandedText(
 
     EnvVarName = YoriLibCStringFromYoriString(Name);
     if (EnvVarName == NULL) {
-        return 0;
+        return FALSE;
     }
 
-    EnvVarCopied = YoriShGetEnvironmentVariable(EnvVarName, Result->StartOfString, Result->LengthAllocated);
-
-    if (EnvVarCopied > 0) {
-        ReturnValue = EnvVarCopied;
-        if (Result->LengthAllocated > EnvVarCopied) {
-            Result->LengthInChars = EnvVarCopied;
-        }
-    } else {
+    if (!YoriShGetEnvironmentVariable(EnvVarName, Result->StartOfString, Result->LengthAllocated, &EnvVarCopied)) {
 
         if (Result->LengthAllocated > 2 + Name->LengthInChars) {
             Result->LengthInChars = YoriLibSPrintf(Result->StartOfString, _T("%c%y%c"), Seperator, Name, Seperator);
@@ -176,11 +445,19 @@ YoriShGetEnvironmentExpandedText(
         } else {
             ReturnValue = Name->LengthInChars + 2 + 1;
         }
+
+    } else {
+
+        ReturnValue = EnvVarCopied;
+        if (Result->LengthAllocated > EnvVarCopied) {
+            Result->LengthInChars = EnvVarCopied;
+        }
     }
 
     YoriLibDereference(EnvVarName);
 
-    return ReturnValue;
+    *ReturnedSize = ReturnValue;
+    return TRUE;
 }
 
 /**
@@ -249,10 +526,11 @@ YoriShExpandEnvironmentVariables(
                 if (YoriShIsEnvironmentVariableChar(Expression->StartOfString[EndVarIndex])) {
 
                     VariableName.LengthInChars = EndVarIndex - SrcIndex - 1;
-                    ExpandResult = YoriShGetEnvironmentExpandedText(&VariableName,
-                                                                    Expression->StartOfString[SrcIndex],
-                                                                    &ExpandedVariable);
-                    if (ExpandResult == 0) {
+                    if (!YoriShGetEnvironmentExpandedText(&VariableName,
+                                                          Expression->StartOfString[SrcIndex],
+                                                          &ExpandedVariable,
+                                                          &ExpandResult) ||
+                        ExpandResult == 0) {
                         return FALSE;
                     }
 
@@ -325,10 +603,11 @@ YoriShExpandEnvironmentVariables(
                     VariableName.LengthInChars = EndVarIndex - SrcIndex - 1;
                     ExpandedVariable.StartOfString = &ResultingExpression->StartOfString[DestIndex];
                     ExpandedVariable.LengthAllocated = ResultingExpression->LengthAllocated - DestIndex;
-                    ExpandResult = YoriShGetEnvironmentExpandedText(&VariableName,
-                                                                    Expression->StartOfString[SrcIndex],
-                                                                    &ExpandedVariable);
-                    if (ExpandResult == 0) {
+                    if (!YoriShGetEnvironmentExpandedText(&VariableName,
+                                                          Expression->StartOfString[SrcIndex],
+                                                          &ExpandedVariable,
+                                                          &ExpandResult)) {
+                        YoriLibFreeStringContents(ResultingExpression);
                         return FALSE;
                     }
 

@@ -6,7 +6,6 @@ M2:
  - Colorize help and error text
  - Ctrl+R
  - APIs for history, history command
- - Environment variable substitution
  - Isolate aliases during call
  - Clean up memory on shell exit (for background jobs)
 

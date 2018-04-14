@@ -102,7 +102,7 @@ YoriShInit()
     //  If we don't have a prompt defined, set a default.
     //
 
-    if (YoriShGetEnvironmentVariable(_T("YORIPROMPT"), NULL, 0) == 0) {
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0) == 0) {
         SetEnvironmentVariable(_T("YORIPROMPT"), _T("$E$[35;1m$P$$E$[0m$G$"));
     }
 
@@ -111,7 +111,7 @@ YoriShInit()
     //  path to the shell the user wants to keep using.
     //
 
-    if (YoriShGetEnvironmentVariable(_T("YORISPEC"), NULL, 0) == 0) {
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISPEC"), NULL, 0) == 0) {
         YORI_STRING ModuleName;
 
         //
@@ -137,7 +137,7 @@ YoriShInit()
             }
         }
 
-        if (YoriShGetEnvironmentVariable(_T("YORICOMPLETEPATH"), NULL, 0) == 0) {
+        if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORICOMPLETEPATH"), NULL, 0) == 0) {
             YORI_STRING CompletePath;
 
             if (YoriLibAllocateString(&CompletePath, ModuleName.LengthInChars + sizeof("\\completion"))) {
@@ -150,7 +150,7 @@ YoriShInit()
         YoriLibFreeStringContents(&ModuleName);
     }
 
-    if (YoriShGetEnvironmentVariable(_T("PATHEXT"), NULL, 0) == 0) {
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("PATHEXT"), NULL, 0) == 0) {
         SetEnvironmentVariable(_T("PATHEXT"), _T(".YS1;.COM;.EXE;.CMD;.BAT"));
     } else {
         YORI_STRING NewExt;

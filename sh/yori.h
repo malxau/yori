@@ -664,10 +664,18 @@ YoriShIsEnvironmentVariableChar(
     );
 
 DWORD
-YoriShGetEnvironmentVariable(
+YoriShGetEnvironmentVariableWithoutSubstitution(
     __in LPCTSTR Name,
     __out_opt LPTSTR Variable,
     __in DWORD Size
+    );
+
+BOOL
+YoriShGetEnvironmentVariable(
+    __in LPCTSTR Name,
+    __out_opt LPTSTR Variable,
+    __in DWORD Size,
+    __out PDWORD ReturnedSize
     );
 
 BOOL
