@@ -14,6 +14,7 @@ OBJS=\
 	 cancel.obj   \
 	 cmdline.obj  \
 	 color.obj    \
+	 cshot.obj    \
 	 debug.obj    \
 	 env.obj      \
 	 ep_yori.obj  \

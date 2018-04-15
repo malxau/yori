@@ -252,4 +252,146 @@ typedef struct _GUID {
 
 #endif
 
+/**
+ A private definition of CONSOLE_FONT_INFOEX in case the compilation
+ environment doesn't provide it.
+ */
+typedef struct _YORI_CONSOLE_FONT_INFOEX {
+    /**
+     The size of the structure in bytes.
+     */
+    DWORD cbSize;
+
+    /**
+     The index of the font in the console font table.  This is really quite
+     useless for applications.
+     */
+    DWORD nFont;
+
+    /**
+     The dimensions to each character in the font.
+     */
+    COORD dwFontSize;
+
+    /**
+     The family of the font.
+     */
+    UINT FontFamily;
+
+    /**
+     The weight (boldness) of the font.
+     */
+    UINT FontWeight;
+
+    /**
+     The font's name.  This is actually useful for applications.
+     */
+    WCHAR FaceName[LF_FACESIZE];
+} YORI_CONSOLE_FONT_INFOEX, *PYORI_CONSOLE_FONT_INFOEX;
+
+/**
+ A private definition of CONSOLE_SCREEN_BUFFER_INFOEX in case the compilation
+ environment doesn't provide it.
+ */
+typedef struct _YORI_CONSOLE_SCREEN_BUFFER_INFOEX {
+
+    /**
+     The number of bytes in this structure.
+     */
+    DWORD cbSize;
+
+    /**
+     The size of the window buffer.
+     */
+    COORD dwSize;
+
+    /**
+     The position of the cursor within the window buffer.
+     */
+    COORD dwCursorPosition;
+
+    /**
+     The color attribute to use when writing new characters to the console.
+     */
+    WORD wAttributes;
+
+    /**
+     The subset of the buffer that is currently displayed on the window.
+     */
+    SMALL_RECT srWindow;
+
+    /**
+     The maximum size that the window could become.
+     */
+    COORD dwMaximumWindowSize;
+
+    /**
+     The color attribute to use for popups.
+     */
+    WORD wPopupAttributes;
+
+    /**
+     TRUE if the console can be made to run in full screen mode.
+     */
+    BOOL bFullScreenSupported;
+
+    /**
+     A mapping table describing the RGB values to use for the 16 console
+     colors.
+     */
+    DWORD ColorTable[16];
+} YORI_CONSOLE_SCREEN_BUFFER_INFOEX, *PYORI_CONSOLE_SCREEN_BUFFER_INFOEX;
+
+/**
+ A prototype for the GetConsoleScreenBufferEx function.
+ */
+typedef BOOL WINAPI GET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
+
+/**
+ A prototype for a pointer to the GetConsoleScreenBufferEx function.
+ */
+typedef GET_CONSOLE_SCREEN_BUFFER_INFO_EX *PGET_CONSOLE_SCREEN_BUFFER_INFO_EX;
+
+/**
+ A prototype for the GetCurrentConsoleFontEx function.
+ */
+typedef
+BOOL WINAPI GET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX);
+
+/**
+ A prototype for a pointer to the GetCurrentConsoleFontEx function.
+ */
+typedef GET_CURRENT_CONSOLE_FONT_EX *PGET_CURRENT_CONSOLE_FONT_EX;
+
+/**
+ A prototype for the RegisterApplicationRestart function.
+ */
+typedef LONG WINAPI REGISTER_APPLICATION_RESTART(LPCWSTR, DWORD);
+
+/**
+ A prototype for a pointer to the RegisterApplicationRestart function.
+ */
+typedef REGISTER_APPLICATION_RESTART *PREGISTER_APPLICATION_RESTART;
+
+/**
+ A prototype for the SetConsoleScreenBufferEx function.
+ */
+typedef BOOL WINAPI SET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
+
+/**
+ A prototype for a pointer to the the SetConsoleScreenBufferEx function.
+ */
+typedef SET_CONSOLE_SCREEN_BUFFER_INFO_EX *PSET_CONSOLE_SCREEN_BUFFER_INFO_EX;
+
+/**
+ A prototype for the SetCurrentConsoleFontEx function.
+ */
+typedef
+BOOL WINAPI SET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX);
+
+/**
+ A prototype for a pointer to the SetCurrentConsoleFontEx function.
+ */
+typedef SET_CURRENT_CONSOLE_FONT_EX *PSET_CURRENT_CONSOLE_FONT_EX;
+
 // vim:sw=4:ts=4:et:

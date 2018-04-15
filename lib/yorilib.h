@@ -294,6 +294,15 @@ YoriLibAreColorsIdentical(
     __in YORILIB_COLOR_ATTRIBUTES Color2
     );
 
+// *** CSHOT.C ***
+
+BOOL
+YoriLibRewriteConsoleContents(
+    __in HANDLE hTarget,
+    __in DWORD LineCount,
+    __in DWORD SkipCount
+    );
+
 // *** DEBUG.C ***
 
 
@@ -789,6 +798,9 @@ VOID
 YoriLibVtSetDefaultColor(
     __in WORD NewDefaultColor
     );
+
+WORD
+YoriLibVtGetDefaultColor();
 
 // *** PATH.C ***
 

@@ -672,6 +672,7 @@ YoriShGetExpression(
     BOOL KeyPressFound;
     DWORD NumericKeyValue = 0;
     BOOL NumericKeyAnsiMode = FALSE;
+    BOOL RestartStateSaved = FALSE;
 
     CursorInfo.bVisible = TRUE;
     CursorInfo.dwSize = 20;
@@ -929,10 +930,32 @@ YoriShGetExpression(
         }
 
         //
-        //  Wait to see if any further events arrive.
+        //  Wait to see if any further events arrive.  If we haven't saved
+        //  state and the user hasn't done anything for 30 seconds, save
+        //  state.
         //
 
-        if (WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), INFINITE) != WAIT_OBJECT_0) {
+        while (TRUE) {
+            if (!RestartStateSaved) {
+                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 30 * 1000);
+            } else {
+                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), INFINITE);
+            }
+
+            if (err == WAIT_OBJECT_0) {
+                break;
+            }
+
+            if (err == WAIT_TIMEOUT) {
+                ASSERT(!RestartStateSaved);
+                YoriShSaveRestartState();
+                RestartStateSaved = TRUE;
+            } else {
+                break;
+            }
+        }
+
+        if (err != WAIT_OBJECT_0) {
             break;
         }
     }

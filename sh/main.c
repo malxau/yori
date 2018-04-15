@@ -268,6 +268,14 @@ YoriShParseArgs(
                     ArgumentUnderstood = TRUE;
                     break;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("restart")) == 0) {
+                if (ArgC > i + 1) {
+                    YoriShLoadSavedRestartState(&ArgV[i + 1]);
+                    YoriShDiscardSavedRestartState(&ArgV[i + 1]);
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                    break;
+                }
             }
         }
 
@@ -368,6 +376,7 @@ ymain (
     YoriShClearAllHistory();
     YoriShClearAllAliases();
     YoriShBuiltinUnregisterAll();
+    YoriShDiscardSavedRestartState(NULL);
 
     return g_ExitProcessExitCode;
 }

@@ -36,6 +36,7 @@ OBJS=\
      main.obj         \
      parse.obj        \
      prompt.obj       \
+     restart.obj      \
      yori.obj         \
 
 BUILTINTABLE_OBJS =              \

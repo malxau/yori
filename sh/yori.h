@@ -899,6 +899,21 @@ YoriShFindBackquoteSubstring(
 BOOL
 YoriShDisplayPrompt();
 
+// *** RESTART.C ***
+
+BOOL
+YoriShSaveRestartState();
+
+BOOL
+YoriShLoadSavedRestartState(
+    __in PYORI_STRING ProcessId
+    );
+
+VOID
+YoriShDiscardSavedRestartState(
+    __in_opt PYORI_STRING ProcessId
+    );
+
 #ifndef ERROR_ELEVATION_REQUIRED
 /**
  Define for the error indicating than an executable needs to be launched with

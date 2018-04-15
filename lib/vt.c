@@ -63,6 +63,20 @@ YoriLibVtSetDefaultColor(
 }
 
 /**
+ Return the current default color for the process.
+
+ @return The current default color for the process.
+ */
+WORD
+YoriLibVtGetDefaultColor()
+{
+    if (YoriLibVtResetColorSet) {
+        return YoriLibVtResetColor;
+    }
+    return DEFAULT_COLOR;
+}
+
+/**
  Convert any incoming string to the active output encoding, and send it to
  the output device.
 

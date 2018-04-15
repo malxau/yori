@@ -79,14 +79,6 @@ ymain(
     BOOL ArgumentUnderstood;
     DWORD SkipCount = 0;
     DWORD LineCount = 0;
-    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    HANDLE hConsole;
-    SMALL_RECT ReadWindow;
-    PCHAR_INFO ReadBuffer;
-    COORD ReadBufferSize;
-    COORD ReadBufferOffset;
-    DWORD LastAttribute;
-    WORD LineIndex;
     DWORD i;
     YORI_STRING Arg;
     LONGLONG Temp;
@@ -127,103 +119,9 @@ ymain(
         }
     }
 
-    hConsole = CreateFile(_T("CONOUT$"), GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
-    if (hConsole == INVALID_HANDLE_VALUE) {
+    if (!YoriLibRewriteConsoleContents(GetStdHandle(STD_OUTPUT_HANDLE), LineCount, SkipCount)) {
         return EXIT_FAILURE;
     }
-
-    if (!GetConsoleScreenBufferInfo(hConsole, &ScreenInfo)) {
-        CloseHandle(hConsole);
-        return EXIT_FAILURE;
-    }
-
-    if (LineCount == 0 || LineCount > (DWORD)ScreenInfo.dwCursorPosition.Y) {
-        LineCount = ScreenInfo.dwCursorPosition.Y;
-    }
-
-    if (SkipCount >= (DWORD)ScreenInfo.dwCursorPosition.Y) {
-        CloseHandle(hConsole);
-        return EXIT_FAILURE;
-    }
-
-    if (LineCount + SkipCount > (DWORD)ScreenInfo.dwCursorPosition.Y) {
-        LineCount = ScreenInfo.dwCursorPosition.Y - SkipCount;
-    }
-
-    if (LineCount == 0) {
-        CloseHandle(hConsole);
-        return EXIT_FAILURE;
-    }
-
-    ReadWindow.Left = 0;
-    ReadWindow.Right = (WORD)(ScreenInfo.dwSize.X - 1);
-    ReadWindow.Top = (WORD)(ScreenInfo.dwCursorPosition.Y - SkipCount - LineCount);
-    ReadWindow.Bottom = (WORD)(ScreenInfo.dwCursorPosition.Y - SkipCount - 1);
-
-    ReadBufferSize.X = (WORD)(ReadWindow.Right - ReadWindow.Left + 1);
-    ReadBufferSize.Y = (WORD)(ReadWindow.Bottom - ReadWindow.Top + 1);
-
-    ReadBuffer = YoriLibMalloc(ReadBufferSize.X * ReadBufferSize.Y * sizeof(CHAR_INFO));
-    if (ReadBuffer == NULL) {
-        CloseHandle(hConsole);
-        return EXIT_FAILURE;
-    }
-
-    ReadBufferOffset.X = 0;
-    ReadBufferOffset.Y = 0;
-
-    //
-    //  ReadConsoleOutput fails if it's given a large request, so give it
-    //  a pile of small (one line) requests.
-    //
-
-    for (LineIndex = 0; LineIndex < (WORD)ReadBufferSize.Y; LineIndex++) {
-        SMALL_RECT LineReadWindow;
-        COORD LineReadBufferSize;
-
-        LineReadWindow.Left = ReadWindow.Left;
-        LineReadWindow.Right = ReadWindow.Right;
-        LineReadWindow.Top = (WORD)(ReadWindow.Top + LineIndex);
-        LineReadWindow.Bottom = LineReadWindow.Top;
-
-        LineReadBufferSize.X = ReadBufferSize.X;
-        LineReadBufferSize.Y = 1;
-
-        if (!ReadConsoleOutput(hConsole, &ReadBuffer[LineIndex * ReadBufferSize.X], LineReadBufferSize, ReadBufferOffset, &LineReadWindow)) {
-            DWORD Err = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(Err);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cshot: ReadConsoleOutput failed: %s"), ErrText);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ReadBufferSize %ix%i ReadWindow (%i,%i)-(%i,%i)\n"), ReadBufferSize.X, ReadBufferSize.Y, ReadWindow.Left, ReadWindow.Top, ReadWindow.Right, ReadWindow.Bottom);
-            YoriLibFreeWinErrorText(ErrText);
-            CloseHandle(hConsole);
-            YoriLibFree(ReadBuffer);
-            return EXIT_FAILURE;
-        }
-    }
-
-    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, ReadBuffer[0].Attributes);
-    LastAttribute = ReadBuffer[0].Attributes;
-
-    for (ReadBufferOffset.Y = 0; ReadBufferOffset.Y < ReadBufferSize.Y; ReadBufferOffset.Y++) {
-        DWORD CurrentMode;
-
-        for (ReadBufferOffset.X = 0; ReadBufferOffset.X < ReadBufferSize.X; ReadBufferOffset.X++) {
-            DWORD CellIndex;
-
-            CellIndex = ReadBufferOffset.Y * ReadBufferSize.X + ReadBufferOffset.X;
-            
-            if (ReadBuffer[CellIndex].Attributes != LastAttribute) {
-                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, ReadBuffer[CellIndex].Attributes);
-                LastAttribute = ReadBuffer[CellIndex].Attributes;
-            }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c"), ReadBuffer[CellIndex].Char.UnicodeChar);
-        }
-        if (!GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &CurrentMode)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-        }
-    }
-
-    YoriLibFree(ReadBuffer);
     return EXIT_SUCCESS;
 }
 

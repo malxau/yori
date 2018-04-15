@@ -26,53 +26,6 @@
 
 #include "cvtvt.h"
 
-/**
- A private definition of CONSOLE_FONT_INFOEX in case the compilation
- environment doesn't provide it.
- */
-typedef struct _CVTVT_CONSOLE_FONT_INFOEX {
-    /**
-     The size of the structure in bytes.
-     */
-    DWORD cbSize;
-
-    /**
-     The index of the font in the console font table.  This is really quite
-     useless for applications.
-     */
-    DWORD nFont;
-
-    /**
-     The dimensions to each character in the font.
-     */
-    COORD dwFontSize;
-
-    /**
-     The family of the font.
-     */
-    UINT FontFamily;
-
-    /**
-     The weight (boldness) of the font.
-     */
-    UINT FontWeight;
-
-    /**
-     The font's name.  This is actually useful for applications.
-     */
-    WCHAR FaceName[LF_FACESIZE];
-} CVTVT_CONSOLE_FONT_INFOEX, *PCVTVT_CONSOLE_FONT_INFOEX;
-
-/**
- A prototype for the GetCurrentConsoleFontEx function.
- */
-typedef
-BOOL WINAPI GET_CURRENT_CONSOLE_FONT_EX_FN(HANDLE, BOOL, PCVTVT_CONSOLE_FONT_INFOEX);
-
-/**
- A prototype for a pointer to the GetCurrentConsoleFontEx function.
- */
-typedef GET_CURRENT_CONSOLE_FONT_EX_FN *PGET_CURRENT_CONSOLE_FONT_EX_FN;
 
 /**
  The default color to use when all else fails.
@@ -99,7 +52,7 @@ BOOLEAN CvtvtUnderlineOn = FALSE;
  On systems that support it, populated with font information from the console
  so the output display can match the input.
  */
-CVTVT_CONSOLE_FONT_INFOEX CvtvtFontInfo = {0};
+YORI_CONSOLE_FONT_INFOEX CvtvtFontInfo = {0};
 
 /**
  Attempt to capture the current console font.  This is only available on
@@ -112,14 +65,14 @@ CvtvtCaptureConsoleFont()
 {
     HANDLE hConsole;
     HMODULE hKernel;
-    PGET_CURRENT_CONSOLE_FONT_EX_FN GetCurrentConsoleFontExFn;
+    PGET_CURRENT_CONSOLE_FONT_EX GetCurrentConsoleFontExFn;
 
     hKernel = GetModuleHandle(_T("KERNEL32"));
     if (hKernel == NULL) {
         return FALSE;
     }
 
-    GetCurrentConsoleFontExFn = (PGET_CURRENT_CONSOLE_FONT_EX_FN)GetProcAddress(hKernel, "GetCurrentConsoleFontEx");
+    GetCurrentConsoleFontExFn = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "GetCurrentConsoleFontEx");
     if (GetCurrentConsoleFontExFn == NULL) {
         return FALSE;
     }
