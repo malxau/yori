@@ -118,6 +118,12 @@ PADD_CONSOLE_ALIASW pAddConsoleAliasW;
 #define ALIAS_APP_NAME _T("YORI.EXE")
 
 /**
+ The app name to use when asking conhost for alias information that is
+ being imported from CMD.
+ */
+#define ALIAS_IMPORT_APP_NAME _T("CMD.EXE")
+
+/**
  Delete an existing shell alias.
 
  @param Alias The alias to delete.
@@ -472,13 +478,92 @@ YoriShAddAliasLiteral(
 }
 
 /**
+ Convert a CMD alias into a Yori alias.  This means converting $1 et al to
+ $1$, and $* to $*$.  $T is not currently supported, and this routine will
+ fail for those to prevent importing them.
+
+ @param CmdAliasValue The value of the alias to import, in CMD format.
+
+ @param YoriAliasValue On successful completion, updated to point to the alias
+        in Yori format.  The caller is expected to free this with
+        @ref YoriLibDereference.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShImportAliasValue(
+    __in LPTSTR CmdAliasValue,
+    __out LPTSTR * YoriAliasValue
+    )
+{
+    ULONG Index;
+    ULONG CharsNeeded;
+    YORI_STRING NewString;
+    YORI_STRING ExpandedString;
+
+    CharsNeeded = 0;
+    for (Index = 0; CmdAliasValue[Index] != '\0'; Index++) {
+        if (CmdAliasValue[Index] == '$') {
+            if (CmdAliasValue[Index + 1] >= '0' && CmdAliasValue[Index + 1] <= '9') {
+                CharsNeeded++;
+            } else if (CmdAliasValue[Index + 1] == '*') {
+                CharsNeeded++;
+            } else if (YoriLibUpcaseChar(CmdAliasValue[Index + 1]) == 'T') {
+                return FALSE;
+            }
+        }
+        CharsNeeded++;
+    }
+
+    CharsNeeded++;
+    if (!YoriLibAllocateString(&NewString, CharsNeeded)) {
+        return FALSE;
+    }
+
+    CharsNeeded = 0;
+    for (Index = 0; CmdAliasValue[Index] != '\0'; Index++) {
+        NewString.StartOfString[CharsNeeded] = CmdAliasValue[Index];
+        if (CmdAliasValue[Index] == '$' && CmdAliasValue[Index + 1] != '\0') {
+            CharsNeeded++;
+            Index++;
+            NewString.StartOfString[CharsNeeded] = CmdAliasValue[Index];
+            if (CmdAliasValue[Index] >= '0' && CmdAliasValue[Index] <= '9') {
+                CharsNeeded++;
+                NewString.StartOfString[CharsNeeded] = '$';
+            } else if (CmdAliasValue[Index] == '*') {
+                CharsNeeded++;
+                NewString.StartOfString[CharsNeeded] = '$';
+            }
+        }
+        CharsNeeded++;
+    }
+
+    NewString.StartOfString[CharsNeeded] ='\0';
+    NewString.LengthInChars = CharsNeeded;
+
+    if (YoriShExpandAliasFromString(&NewString, &ExpandedString)) {
+        YoriLibFreeStringContents(&NewString);
+        *YoriAliasValue = ExpandedString.StartOfString;
+    } else {
+        *YoriAliasValue = NewString.StartOfString;
+    }
+    return TRUE;
+}
+
+/**
  Load aliases from the console and incorporate those into the shell's internal
  alias system.  This allows aliases to be inherited across subshells.
+
+ @param ImportFromCmd If TRUE, aliases are loaded for the CMD.EXE process and
+        migrated to match Yori syntax.  If FALSE, aliases are loaded for the
+        YORI.EXE process.
 
  @return TRUE to indicate success or FALSE to indicate failure.
  */
 BOOL
-YoriShLoadSystemAliases()
+YoriShLoadSystemAliases(
+    __in BOOL ImportFromCmd
+    )
 {
     HANDLE hKernel;
     DWORD LengthRequired;
@@ -486,6 +571,7 @@ YoriShLoadSystemAliases()
     LPTSTR AliasBuffer;
     LPTSTR ThisVar;
     LPTSTR Value;
+    LPTSTR AppName;
     DWORD VarLen;
     DWORD BytesConsumed;
 
@@ -502,7 +588,13 @@ YoriShLoadSystemAliases()
         return FALSE;
     }
 
-    LengthRequired = pGetConsoleAliasesLengthW(ALIAS_APP_NAME);
+    if (ImportFromCmd) {
+        AppName = ALIAS_IMPORT_APP_NAME;
+    } else {
+        AppName = ALIAS_APP_NAME;
+    }
+
+    LengthRequired = pGetConsoleAliasesLengthW(AppName);
     if (LengthRequired == 0) {
         return TRUE;
     }
@@ -512,7 +604,7 @@ YoriShLoadSystemAliases()
         return FALSE;
     }
 
-    LengthReturned = pGetConsoleAliasesW(AliasBuffer, LengthRequired, ALIAS_APP_NAME);
+    LengthReturned = pGetConsoleAliasesW(AliasBuffer, LengthRequired, AppName);
     if (LengthReturned == 0 || LengthReturned > LengthRequired) {
         YoriLibFree(AliasBuffer);
         return FALSE;
@@ -527,7 +619,17 @@ YoriShLoadSystemAliases()
         if (Value) {
             *Value = '\0';
             Value++;
-            YoriShAddAliasLiteral(ThisVar, Value, FALSE);
+            if (ImportFromCmd) {
+                LPTSTR MigratedValue = NULL;
+
+                if (YoriShImportAliasValue(Value, &MigratedValue)) {
+                    YoriShAddAliasLiteral(ThisVar, MigratedValue, FALSE);
+                    YoriLibDereference(MigratedValue);
+                }
+
+            } else {
+                YoriShAddAliasLiteral(ThisVar, Value, FALSE);
+            }
         }
         ThisVar += VarLen;
         ThisVar++;

@@ -209,7 +209,8 @@ YoriShInit()
         YoriShAddAliasLiteral(AliasName, AliasValue, TRUE);
     }
 
-    YoriShLoadSystemAliases();
+    YoriShLoadSystemAliases(TRUE);
+    YoriShLoadSystemAliases(FALSE);
 
     return TRUE;
 }
