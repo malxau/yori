@@ -42,6 +42,11 @@ DWORD YoriShCommandHistoryCount;
 DWORD YoriShCommandHistoryMax;
 
 /**
+ Set to TRUE once the history module has been initialized.
+ */
+BOOL YoriShHistoryInitialized;
+
+/**
  Add an entered command into the command history buffer.  On error it is
  silently discarded and not propagated into history.
 
@@ -111,27 +116,29 @@ YoriShClearAllHistory()
 }
 
 /**
- Load history from a file if the user has requested this behavior by
- setting YORIHISTFILE.  Configure the maximum amount of history to retain
- if the user has requested this behavior by setting YORIHISTSIZE.
+ Configure the maximum amount of history to retain if the user has requested
+ this behavior by setting YORIHISTSIZE.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriShLoadHistoryFromFile()
+YoriShInitHistory()
 {
     DWORD EnvVarLength;
-    YORI_STRING UserHistFileName;
-    YORI_STRING FilePath;
-    HANDLE FileHandle;
-    PVOID LineContext = NULL;
-    YORI_STRING LineString;
+
+    if (YoriShHistoryInitialized) {
+        return FALSE;
+    }
 
     //
     //  Default the history buffer size to something sane.
     //
 
     YoriShCommandHistoryMax = 250;
+
+    if (YoriShCommandHistory.Next == NULL) {
+        YoriLibInitializeListHead(&YoriShCommandHistory);
+    }
 
     //
     //  See if the user has other ideas.
@@ -150,7 +157,6 @@ YoriShLoadHistoryFromFile()
         HistSizeString.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTSIZE"), HistSizeString.StartOfString, HistSizeString.LengthAllocated);
 
         if (HistSizeString.LengthInChars == 0 || HistSizeString.LengthInChars >= HistSizeString.LengthAllocated) {
-            YoriLibFreeStringContents(&UserHistFileName);
             return FALSE;
         }
 
@@ -160,6 +166,32 @@ YoriShLoadHistoryFromFile()
 
         YoriLibFreeStringContents(&HistSizeString);
     }
+    YoriShHistoryInitialized = TRUE;
+    return TRUE;
+}
+
+/**
+ Load history from a file if the user has requested this behavior by
+ setting YORIHISTFILE.  Configure the maximum amount of history to retain
+ if the user has requested this behavior by setting YORIHISTSIZE.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShLoadHistoryFromFile()
+{
+    DWORD EnvVarLength;
+    YORI_STRING UserHistFileName;
+    YORI_STRING FilePath;
+    HANDLE FileHandle;
+    PVOID LineContext = NULL;
+    YORI_STRING LineString;
+
+    if (YoriShHistoryInitialized) {
+        return TRUE;
+    }
+
+    YoriShInitHistory();
 
     //
     //  Check if there's a file to load saved history from.
@@ -307,6 +339,80 @@ YoriShSaveHistoryToFile()
     }
 
     CloseHandle(FileHandle);
+    return TRUE;
+}
+
+/**
+ Build history into an array of NULL terminated strings terminated by an
+ additional NULL terminator.  The result must be freed with a subsequent
+ call to @ref YoriLibFreeStringContents .
+
+ @param MaximumNumber Specifies the maximum number of lines of history to
+        return.  This number refers to the most recent history entries.
+        If this value is zero, all are returned.
+
+ @param HistoryStrings On successful completion, populated with the set of
+        history strings.
+
+ @return Return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShGetHistoryStrings(
+    __in DWORD MaximumNumber,
+    __inout PYORI_STRING HistoryStrings
+    )
+{
+    DWORD CharsNeeded = 0;
+    DWORD StringOffset;
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PYORI_HISTORY_ENTRY HistoryEntry;
+    PYORI_LIST_ENTRY StartReturningFrom = NULL;
+
+    if (YoriShCommandHistory.Next != NULL) {
+        DWORD EntriesToSkip = 0;
+        if (YoriShCommandHistoryCount > MaximumNumber && MaximumNumber > 0) {
+            EntriesToSkip = YoriShCommandHistoryCount - MaximumNumber;
+            while (EntriesToSkip > 0) {
+                ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+                EntriesToSkip--;
+            }
+
+            StartReturningFrom = ListEntry;
+        }
+
+        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, StartReturningFrom);
+        while (ListEntry != NULL) {
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            CharsNeeded += HistoryEntry->CmdLine.LengthInChars + 1;
+            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+        }
+    }
+
+    CharsNeeded += 1;
+
+    if (HistoryStrings->LengthAllocated < CharsNeeded) {
+        YoriLibFreeStringContents(HistoryStrings);
+        if (!YoriLibAllocateString(HistoryStrings, CharsNeeded)) {
+            return FALSE;
+        }
+    }
+
+    StringOffset = 0;
+
+    if (YoriShCommandHistory.Next != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, StartReturningFrom);
+        while (ListEntry != NULL) {
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            memcpy(&HistoryStrings->StartOfString[StringOffset], HistoryEntry->CmdLine.StartOfString, HistoryEntry->CmdLine.LengthInChars * sizeof(TCHAR));
+            StringOffset += HistoryEntry->CmdLine.LengthInChars;
+            HistoryStrings->StartOfString[StringOffset] = '\0';
+            StringOffset++;
+            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+        }
+    }
+    HistoryStrings->StartOfString[StringOffset] = '\0';
+    HistoryStrings->LengthInChars = StringOffset;
+
     return TRUE;
 }
 

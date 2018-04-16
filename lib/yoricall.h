@@ -83,6 +83,12 @@ YoriCallGetErrorLevel(
     );
 
 BOOL
+YoriCallGetHistoryStrings(
+    __in DWORD MaximumNumber,
+    __out PYORI_STRING HistoryStrings
+    );
+
+BOOL
 YoriCallGetJobInformation(
     __in DWORD JobId,
     __out PBOOL HasCompleted,

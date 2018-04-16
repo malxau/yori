@@ -9,6 +9,7 @@ MODULES =  alias.com     \
            exit.com      \
            false.com     \
            fg.com        \
+           history.com   \
            if.com        \
            job.com       \
            pushd.com     \
@@ -27,6 +28,7 @@ BUILTINS = alias.obj     \
            exit.obj      \
            false.obj     \
            fg.obj        \
+           history.obj   \
            if.obj        \
            job.obj       \
            pushd.obj     \

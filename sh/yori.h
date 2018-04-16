@@ -736,10 +736,19 @@ VOID
 YoriShClearAllHistory();
 
 BOOL
+YoriShInitHistory();
+
+BOOL
 YoriShLoadHistoryFromFile();
 
 BOOL
 YoriShSaveHistoryToFile();
+
+BOOL
+YoriShGetHistoryStrings(
+    __in DWORD MaximumNumber,
+    __inout PYORI_STRING HistoryStrings
+    );
 
 // *** INPUT.C ***
 

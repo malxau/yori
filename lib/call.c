@@ -472,6 +472,53 @@ YoriCallGetErrorLevel(
 }
 
 /**
+ Prototype for the @ref YoriApiGetHistoryStrings function.
+ */
+typedef BOOL YORI_API_GET_HISTORY_STRINGS(DWORD, PYORI_STRING);
+
+/**
+ Prototype for a pointer to the @ref YoriApiGetHistoryStrings function.
+ */
+typedef YORI_API_GET_HISTORY_STRINGS *PYORI_API_GET_HISTORY_STRINGS;
+
+/**
+ Pointer to the @ref YoriApiGetHistoryStrings function.
+ */
+PYORI_API_GET_HISTORY_STRINGS pYoriApiGetHistoryStrings;
+
+/**
+ Build history into an array of NULL terminated strings terminated by an
+ additional NULL terminator.  The result must be freed with a subsequent
+ call to @ref YoriCallFreeYoriString .
+
+ @param MaximumNumber Specifies the maximum number of lines of history to
+        return.  This number refers to the most recent history entries.
+        If this value is zero, all are returned.
+
+ @param HistoryStrings On successful completion, populated with the set of
+        history strings.
+
+ @return Return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriCallGetHistoryStrings(
+    __in DWORD MaximumNumber,
+    __out PYORI_STRING HistoryStrings
+    )
+{
+    if (pYoriApiGetHistoryStrings == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiGetHistoryStrings = (PYORI_API_GET_HISTORY_STRINGS)GetProcAddress(hYori, "YoriApiGetHistoryStrings");
+        if (pYoriApiGetHistoryStrings == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiGetHistoryStrings(MaximumNumber, HistoryStrings);
+}
+
+/**
  Prototype for the @ref YoriApiGetJobInformation function.
  */
 typedef BOOL YORI_API_GET_JOB_INFORMATION(DWORD, PBOOL, PBOOL, PDWORD, PYORI_STRING);

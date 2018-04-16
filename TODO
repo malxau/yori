@@ -5,7 +5,6 @@ M2:
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text
  - Ctrl+R
- - APIs for history, history command
  - Isolate aliases during call
  - Clean up memory on shell exit (for background jobs)
 

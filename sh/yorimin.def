@@ -12,6 +12,7 @@ EXPORTS
     YoriApiFreeYoriString
     YoriApiGetAliasStrings
     YoriApiGetErrorLevel
+    YoriApiGetHistoryStrings
     YoriApiGetJobInformation
     YoriApiGetJobOutput
     YoriApiGetNextJobId

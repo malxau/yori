@@ -206,6 +206,30 @@ YoriApiGetErrorLevel()
 }
 
 /**
+ Build history into an array of NULL terminated strings terminated by an
+ additional NULL terminator.  The result must be freed with a subsequent
+ call to @ref YoriApiFreeYoriString .
+
+ @param MaximumNumber Specifies the maximum number of lines of history to
+        return.  This number refers to the most recent history entries.
+        If this value is zero, all are returned.
+
+ @param HistoryStrings On successful completion, populated with the set of
+        history strings.
+
+ @return Return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiGetHistoryStrings(
+    __in DWORD MaximumNumber,
+    __out PYORI_STRING HistoryStrings
+    )
+{
+    YoriLibInitEmptyString(HistoryStrings);
+    return YoriShGetHistoryStrings(MaximumNumber, HistoryStrings);
+}
+
+/**
  Returns information associated with an executing or completed job ID.
 
  @param JobId The ID to query information for.

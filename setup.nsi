@@ -97,6 +97,7 @@ Section /o "Modular"
   File "bin\${PACKARCH}\modules\exit.com"
   File "bin\${PACKARCH}\modules\false.com"
   File "bin\${PACKARCH}\modules\fg.com"
+  File "bin\${PACKARCH}\modules\history.com"
   File "bin\${PACKARCH}\modules\if.com"
   File "bin\${PACKARCH}\modules\job.com"
   File "bin\${PACKARCH}\modules\pushd.com"
@@ -121,6 +122,7 @@ Section /o "Modular Debugging Support"
   File "sym\${PACKARCH}\exit.pdb"
   File "sym\${PACKARCH}\false.pdb"
   File "sym\${PACKARCH}\fg.pdb"
+  File "sym\${PACKARCH}\history.pdb"
   File "sym\${PACKARCH}\if.pdb"
   File "sym\${PACKARCH}\job.pdb"
   File "sym\${PACKARCH}\pushd.pdb"
@@ -493,6 +495,8 @@ Section "Uninstall"
   Delete $INSTDIR\false.pdb
   Delete $INSTDIR\fg.com
   Delete $INSTDIR\fg.pdb
+  Delete $INSTDIR\history.com
+  Delete $INSTDIR\history.pdb
   Delete $INSTDIR\if.com
   Delete $INSTDIR\if.pdb
   Delete $INSTDIR\job.com

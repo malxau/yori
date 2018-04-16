@@ -27,6 +27,12 @@
 #include "yori.h"
 
 /**
+ Set to TRUE once the process has been registered for restart processing.
+ This is only done once for the lifetime of the process.
+ */
+BOOL YoriShProcessRegisteredForRestart = FALSE;
+
+/**
  Return a path to the temp directory, but allocate extra space for a file name
  to append to it.
 
@@ -279,6 +285,26 @@ YoriShSaveRestartState()
     }
 
     //
+    //  Write history.  We only care about values here but want to maintain
+    //  sort order, so zero prefix count to use as a key.
+    //
+
+    if (YoriShGetHistoryStrings(100, &Env)) {
+        LPTSTR ThisValue;
+
+        ThisValue = Env.StartOfString;
+        Count = 1;
+        while (*ThisValue != '\0') {
+            YoriLibSPrintf(WriteBuffer.StartOfString, _T("%03i"), Count);
+            WritePrivateProfileString(_T("History"), WriteBuffer.StartOfString, ThisValue, RestartFileName.StartOfString);
+            ThisValue += _tcslen(ThisValue) + 1;
+            Count++;
+        }
+
+        YoriLibFreeStringContents(&Env);
+    }
+
+    //
     //  Write the window contents
     //
 
@@ -310,13 +336,15 @@ YoriShSaveRestartState()
     }
 
     //
-    //  TODO:
-    //   - History
+    //  Register the process to be restarted on failure
     //
     
-    YoriLibSPrintf(WriteBuffer.StartOfString, _T("-restart %x"), GetCurrentProcessId());
+    if (!YoriShProcessRegisteredForRestart) {
+        YoriLibSPrintf(WriteBuffer.StartOfString, _T("-restart %x"), GetCurrentProcessId());
 
-    pRegisterApplicationRestart(WriteBuffer.StartOfString, 0);
+        pRegisterApplicationRestart(WriteBuffer.StartOfString, 0);
+        YoriShProcessRegisteredForRestart = TRUE;
+    }
 
     YoriLibFreeStringContents(&RestartFileName);
     YoriLibFreeStringContents(&WriteBuffer);
@@ -499,6 +527,42 @@ YoriShLoadSavedRestartState(
                     ThisValue++;
 
                     YoriShAddAliasLiteral(ThisVar, ThisValue, FALSE);
+                }
+            }
+        }
+    }
+
+    //
+    //  Populate history
+    //
+
+    ReadBuffer.LengthInChars = GetPrivateProfileSection(_T("History"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+
+    if (ReadBuffer.LengthInChars > 0) {
+        LPTSTR ThisPair;
+        LPTSTR ThisVar;
+        LPTSTR ThisValue;
+        YORI_STRING ThisEntry;
+        DWORD ValueLength;
+
+        YoriShInitHistory();
+
+        ThisPair = ReadBuffer.StartOfString;
+        while (*ThisPair != '\0') {
+            ThisVar = ThisPair;
+            ThisPair += _tcslen(ThisPair) + 1;
+            if (ThisVar[0] != '=') {
+                ThisValue = _tcschr(ThisVar, '=');
+                if (ThisValue) {
+                    ThisValue[0] = '\0';
+                    ThisValue++;
+                    ValueLength = _tcslen(ThisValue);
+                    if (YoriLibAllocateString(&ThisEntry, ValueLength + 1)) {
+                        memcpy(ThisEntry.StartOfString, ThisValue, (ValueLength + 1) * sizeof(TCHAR));
+                        ThisEntry.LengthInChars = ValueLength;
+
+                        YoriShAddToHistory(&ThisEntry);
+                    }
                 }
             }
         }
