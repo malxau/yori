@@ -932,9 +932,12 @@ YoriShGetExpression(
         //
         //  Wait to see if any further events arrive.  If we haven't saved
         //  state and the user hasn't done anything for 30 seconds, save
-        //  state.
+        //  state.  Initialize the variable for compilers that are smart
+        //  enough to expect variables to be initialized but too stupid to
+        //  understand that they actually are.
         //
 
+        err = WAIT_OBJECT_0;
         while (TRUE) {
             if (!RestartStateSaved) {
                 err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 30 * 1000);
