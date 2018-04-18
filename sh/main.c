@@ -347,6 +347,8 @@ ymain (
         if (TerminateApp) {
             YoriShClearAllHistory();
             YoriShClearAllAliases();
+            YoriShBuiltinUnregisterAll();
+            YoriShDiscardSavedRestartState(NULL);
             return ExitCode;
         }
     }
