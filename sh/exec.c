@@ -727,6 +727,7 @@ YoriShExecuteSingleProgram(
         } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
                    YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
             ExecProcess = FALSE;
+            YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
             ExitCode = YoriShBuckPass(ExecContext, 2, _T("cmd.exe"), _T("/c"));
         } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
             LaunchViaShellExecute = TRUE;
