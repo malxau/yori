@@ -372,14 +372,13 @@ YoriShWaitForProcessToTerminate(
 
         //
         //  If the user has hit Ctrl+C or Ctrl+Break, request the process
-        //  to clean up gracefully.  Give it 100ms, and at the end of that
-        //  time, it can clean up less gracefully.
+        //  to clean up gracefully and unwind.  Later on we'll try to kill
+        //  all processes in the exec plan, so we don't need to try too hard
+        //  at this point.
         //
 
         if (Result == (WAIT_OBJECT_0 + 1)) {
             GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, dwProcessId);
-            Sleep(100);
-            TerminateProcess(hProcess, 1);
             break;
         }
 
@@ -825,16 +824,17 @@ YoriShExecuteSingleProgram(
         //
 
         if (ProcessInfo.hProcess != NULL) {
+            ASSERT(ExecContext->hProcess == NULL);
+            ExecContext->hProcess = ProcessInfo.hProcess;
+            ExecContext->dwProcessId = ProcessInfo.dwProcessId;
             if (ExecContext->WaitForCompletion) {
                 YoriShWaitForProcessToTerminate(ExecContext, ProcessInfo.hProcess, ProcessInfo.dwProcessId);
                 GetExitCodeProcess(ProcessInfo.hProcess, &ExitCode);
-                CloseHandle(ProcessInfo.hProcess);
             } else if (ExecContext->StdOutType != StdOutTypePipe) {
-                if (!YoriShCreateNewJob(ExecContext, ProcessInfo.hProcess, ProcessInfo.dwProcessId)) {
-                    CloseHandle(ProcessInfo.hProcess);
+                if (YoriShCreateNewJob(ExecContext, ProcessInfo.hProcess, ProcessInfo.dwProcessId)) {
+                    ExecContext->dwProcessId = 0;
+                    ExecContext->hProcess = NULL;
                 }
-            } else {
-                CloseHandle(ProcessInfo.hProcess);
             }
         }
 
@@ -844,6 +844,53 @@ YoriShExecuteSingleProgram(
     }
     return ExitCode;
 }
+
+/**
+ Cancel an exec plan.  This is invoked after the user hits Ctrl+C and attempts
+ to terminate all outstanding processes associated with the request.
+
+ @param ExecPlan The plan to terminate all outstanding processes in.
+ */
+VOID
+YoriShCancelExecPlan(
+    __in PYORI_EXEC_PLAN ExecPlan
+    )
+{
+    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
+
+    //
+    //  Loop and ask the processes nicely to terminate.
+    //
+
+    ExecContext = ExecPlan->FirstCmd;
+    while (ExecContext != NULL) {
+        if (ExecContext->hProcess != NULL) {
+            if (WaitForSingleObject(ExecContext->hProcess, 0) != WAIT_OBJECT_0) {
+                if (ExecContext->dwProcessId != 0) {
+                    GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, ExecContext->dwProcessId);
+                }
+            }
+        }
+        ExecContext = ExecContext->NextProgram;
+    }
+
+    Sleep(50);
+
+    //
+    //  Loop again and ask the processes less nicely to terminate.
+    //
+
+    ExecContext = ExecPlan->FirstCmd;
+    while (ExecContext != NULL) {
+        if (ExecContext->hProcess != NULL) {
+            if (WaitForSingleObject(ExecContext->hProcess, 0) != WAIT_OBJECT_0) {
+                TerminateProcess(ExecContext->hProcess, 1);
+            }
+        }
+        ExecContext = ExecContext->NextProgram;
+    }
+}
+
 
 /**
  Execute an exec plan.  An exec plan has multiple processes, including
@@ -959,6 +1006,10 @@ YoriShExecExecPlan(
 
     if (OutputBuffer != NULL) {
         *OutputBuffer = PreviouslyObservedOutputBuffer;
+    }
+
+    if (YoriLibIsOperationCancelled()) {
+        YoriShCancelExecPlan(ExecPlan);
     }
 }
 

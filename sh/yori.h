@@ -188,6 +188,18 @@ typedef struct _YORI_SINGLE_EXEC_CONTEXT {
     } StdErr;
 
     /**
+     If the process has been launched, contains a handle to the child
+     process.
+     */
+    HANDLE hProcess;
+
+    /**
+     The process identifier of the child process if it has been launched.
+     For some reason some APIs want this and others want the handle.
+     */
+    DWORD dwProcessId;
+
+    /**
      TRUE if when the program is executed we should wait for it to complete.
      If FALSE, execution can resume immediately, either executing the next
      program or returning to the user for more input.

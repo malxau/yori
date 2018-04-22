@@ -1291,6 +1291,10 @@ YoriShFreeExecContext(
     YoriShExecContextCleanupStdIn(ExecContext);
     YoriShExecContextCleanupStdOut(ExecContext);
     YoriShExecContextCleanupStdErr(ExecContext);
+    if (ExecContext->hProcess != NULL) {
+        CloseHandle(ExecContext->hProcess);
+        ExecContext->hProcess = NULL;
+    }
 }
 
 /**
