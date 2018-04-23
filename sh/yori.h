@@ -343,6 +343,12 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
     DWORD TabCount;
 
     /**
+     Indicates the number of characters of valid data exists in an argument
+     when making suggestions.  Not used outside of suggestions.
+     */
+    DWORD CurrentArgLength;
+
+    /**
      Indicates which data source to search through.
      */
     enum {
@@ -391,7 +397,7 @@ typedef struct _YORI_INPUT_BUFFER {
      The number of characters that were filled in prior to a key press
      being evaluated.
      */
-    DWORD PreviousMaxPopulated;
+    DWORD PreviousCharsDisplayed;
 
     /**
      The current position that was selected prior to a key press being
@@ -418,9 +424,24 @@ typedef struct _YORI_INPUT_BUFFER {
     DWORD DirtyLength;
 
     /**
+     Delay before suggesting values in milliseconds.
+     */
+    DWORD DelayBeforeSuggesting;
+
+    /**
+     Minimum number of characters in an arg before suggesting.
+     */
+    DWORD MinimumCharsInArgBeforeSuggesting;
+
+    /**
      Extra information specific to tab completion processing.
      */
     YORI_TAB_COMPLETE_CONTEXT TabContext;
+
+    /**
+     The currently active suggestion string.
+     */
+     YORI_STRING SuggestionString;
 } YORI_INPUT_BUFFER, *PYORI_INPUT_BUFFER;
 
 /**
@@ -662,10 +683,26 @@ YoriShPipeProcessBuffers(
 // *** COMPLETE.C ***
 
 VOID
+YoriShClearTabCompletionMatches(
+    __inout PYORI_INPUT_BUFFER Buffer
+    );
+
+VOID
 YoriShTabCompletion(
     __inout PYORI_INPUT_BUFFER Buffer,
     __in BOOL ExpandFullPath,
     __in BOOL SearchHistory
+    );
+
+VOID
+YoriShTrimSuggestionList(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PYORI_STRING NewString
+    );
+
+VOID
+YoriShCompleteSuggestion(
+    __inout PYORI_INPUT_BUFFER Buffer
     );
 
 // *** ENV.C ***

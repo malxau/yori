@@ -151,23 +151,10 @@ YoriShPostKeyPress(
     //  down since the user is not repeatedly pressing Tab.
     //
 
-    if (Buffer->PriorTabCount == Buffer->TabContext.TabCount) {
-        PYORI_LIST_ENTRY ListEntry = NULL;
-        PYORI_TAB_COMPLETE_MATCH Match;
+    if (Buffer->PriorTabCount == Buffer->TabContext.TabCount &&
+        Buffer->SuggestionString.LengthInChars == 0) {
 
-        YoriLibFreeStringContents(&Buffer->TabContext.SearchString);
-
-        ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
-        while (ListEntry != NULL) {
-            Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
-            ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, ListEntry);
-
-            YoriLibFreeStringContents(&Match->YsValue);
-            YoriLibDereference(Match);
-        }
-
-        ZeroMemory(&Buffer->TabContext, sizeof(Buffer->TabContext));
-        Buffer->PriorTabCount = 0;
+        YoriShClearTabCompletionMatches(Buffer);
     }
 }
 
@@ -186,10 +173,13 @@ YoriShDisplayAfterKeyPress(
     DWORD NumberToFill = 0;
     COORD WritePosition;
     COORD FillPosition;
+    COORD SuggestionPosition;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
 
     WritePosition.X = 0;
     WritePosition.Y = 0;
+    SuggestionPosition.X = 0;
+    SuggestionPosition.Y = 0;
     FillPosition.X = 0;
     FillPosition.Y = 0;
 
@@ -201,8 +191,8 @@ YoriShDisplayAfterKeyPress(
     //  displayed buffer.
     //
 
-    if (Buffer->PreviousMaxPopulated > Buffer->String.LengthInChars) {
-        NumberToFill = Buffer->PreviousMaxPopulated - Buffer->String.LengthInChars;
+    if (Buffer->PreviousCharsDisplayed > Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars) {
+        NumberToFill = Buffer->PreviousCharsDisplayed - Buffer->String.LengthInChars - Buffer->SuggestionString.LengthInChars;
     }
 
     //
@@ -224,9 +214,14 @@ YoriShDisplayAfterKeyPress(
         WritePosition = YoriShDetermineCellLocationIfMoved((-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset);
     }
 
+    if (Buffer->SuggestionString.LengthInChars > 0) {
+        YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars);
+        SuggestionPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars);
+    }
+
     if (NumberToFill) {
-        YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + NumberToFill);
-        FillPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars);
+        YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill);
+        FillPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars);
     }
 
     //
@@ -241,6 +236,11 @@ YoriShDisplayAfterKeyPress(
         FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE), ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
     }
 
+    if (Buffer->SuggestionString.LengthInChars > 0) {
+        WriteConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+        FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE), (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+    }
+
     //
     //  If there are additional cells to empty due to truncation, display
     //  those now.
@@ -252,7 +252,7 @@ YoriShDisplayAfterKeyPress(
     }
 
     Buffer->PreviousCurrentOffset = Buffer->CurrentOffset;
-    Buffer->PreviousMaxPopulated = Buffer->String.LengthInChars;
+    Buffer->PreviousCharsDisplayed = Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars;
     Buffer->DirtyBeginOffset = 0;
     Buffer->DirtyLength = 0;
 }
@@ -302,12 +302,31 @@ YoriShAddYoriStringToInput(
     __in BOOLEAN InsertMode
     )
 {
+    BOOL KeepSuggestions;
+
     //
     //  Need more allocated than populated due to NULL termination
     //
 
+    KeepSuggestions = FALSE;
     ASSERT(Buffer->String.LengthAllocated > Buffer->String.LengthInChars);
     ASSERT(Buffer->String.LengthInChars >= Buffer->CurrentOffset);
+
+    //
+    //  If the characters are at the end of the string, see if a
+    //  current suggestion can be retained.
+    //
+
+    if (Buffer->String.LengthInChars == Buffer->CurrentOffset) {
+        KeepSuggestions = TRUE;
+    }
+
+    if (!KeepSuggestions) {
+        YoriLibFreeStringContents(&Buffer->SuggestionString);
+        YoriShClearTabCompletionMatches(Buffer);
+    } else {
+        YoriShTrimSuggestionList(Buffer, String);
+    }
 
     //
     //  If we're inserting, shuffle the data; if we're overwriting, clobber
@@ -404,6 +423,7 @@ YoriShTerminateInput(
     )
 {
     YoriShPostKeyPress(Buffer);
+    YoriLibFreeStringContents(&Buffer->SuggestionString);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
@@ -419,6 +439,7 @@ YoriShClearInput(
     __inout PYORI_INPUT_BUFFER Buffer
     )
 {
+    YoriLibFreeStringContents(&Buffer->SuggestionString);
     Buffer->String.LengthInChars = 0;
     Buffer->CurrentOffset = 0;
 }
@@ -466,6 +487,8 @@ YoriShBackspace(
 
     Buffer->CurrentOffset -= CountToUse;
     Buffer->String.LengthInChars -= CountToUse;
+
+    YoriLibFreeStringContents(&Buffer->SuggestionString);
 }
 
 /**
@@ -648,6 +671,63 @@ YoriShHotkey(
 }
 
 /**
+ Check the environment to see if the user wants to customize suggestion
+ settings.
+
+ @param Buffer Pointer to the input buffer structure to update in response
+        to values found in the environment.
+ */
+VOID
+YoriShConfigureSuggestionSettings(
+    __in PYORI_INPUT_BUFFER Buffer
+    )
+{
+    DWORD EnvVarLength;
+    YORI_STRING EnvVar;
+    LONGLONG llTemp;
+    DWORD CharsConsumed;
+
+    //
+    //  Default to suggesting in 300ms after seeing 2 chars in an arg.
+    //
+
+    Buffer->DelayBeforeSuggesting = 300;
+    Buffer->MinimumCharsInArgBeforeSuggesting = 2;
+
+    //
+    //  Check the environment to see if the user wants to override the
+    //  suggestion delay.  Note a value of zero disables the feature.
+    //
+
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), NULL, 0);
+    if (EnvVarLength > 0) {
+        if (YoriLibAllocateString(&EnvVar, EnvVarLength)) {
+            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), EnvVar.StartOfString, EnvVar.LengthAllocated);
+            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                Buffer->DelayBeforeSuggesting = (ULONG)llTemp;
+            }
+            YoriLibFreeStringContents(&EnvVar);
+        }
+    }
+
+    //
+    //  Check the environment to see if the user wants to override the
+    //  minimum number of characters needed in an arg before suggesting.
+    //
+
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), NULL, 0);
+    if (EnvVarLength > 0) {
+        if (YoriLibAllocateString(&EnvVar, EnvVarLength)) {
+            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), EnvVar.StartOfString, EnvVar.LengthAllocated);
+            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                Buffer->MinimumCharsInArgBeforeSuggesting = (ULONG)llTemp;
+            }
+            YoriLibFreeStringContents(&EnvVar);
+        }
+    }
+}
+
+/**
  Get a new expression from the user through the console.
 
  @param Expression On successful completion, updated to point to the
@@ -673,6 +753,7 @@ YoriShGetExpression(
     DWORD NumericKeyValue = 0;
     BOOL NumericKeyAnsiMode = FALSE;
     BOOL RestartStateSaved = FALSE;
+    BOOL SuggestionPopulated = FALSE;
 
     CursorInfo.bVisible = TRUE;
     CursorInfo.dwSize = 20;
@@ -683,6 +764,8 @@ YoriShGetExpression(
     if (!YoriLibAllocateString(&Buffer.String, 256)) {
         return FALSE;
     }
+
+    YoriShConfigureSuggestionSettings(&Buffer);
 
     while (TRUE) {
 
@@ -937,23 +1020,43 @@ YoriShGetExpression(
         //  understand that they actually are.
         //
 
+        SuggestionPopulated = FALSE;
+        if (Buffer.SuggestionString.LengthInChars > 0 ||
+            Buffer.DelayBeforeSuggesting == 0) {
+
+            SuggestionPopulated = TRUE;
+        }
         err = WAIT_OBJECT_0;
         while (TRUE) {
-            if (!RestartStateSaved) {
+            if (!SuggestionPopulated) {
+                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), Buffer.DelayBeforeSuggesting);
+                if (err == WAIT_OBJECT_0) {
+                    break;
+                }
+                if (err == WAIT_TIMEOUT) {
+                    ASSERT(!SuggestionPopulated);
+                    YoriShCompleteSuggestion(&Buffer);
+                    SuggestionPopulated = TRUE;
+                    YoriShDisplayAfterKeyPress(&Buffer);
+                }
+            } else if (!RestartStateSaved) {
                 err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 30 * 1000);
+                if (err == WAIT_OBJECT_0) {
+                    break;
+                }
+                if (err == WAIT_TIMEOUT) {
+                    ASSERT(!RestartStateSaved);
+                    YoriShSaveRestartState();
+                    RestartStateSaved = TRUE;
+                }
             } else {
                 err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), INFINITE);
+                if (err == WAIT_OBJECT_0) {
+                    break;
+                }
             }
 
-            if (err == WAIT_OBJECT_0) {
-                break;
-            }
-
-            if (err == WAIT_TIMEOUT) {
-                ASSERT(!RestartStateSaved);
-                YoriShSaveRestartState();
-                RestartStateSaved = TRUE;
-            } else {
+            if (err != WAIT_TIMEOUT) {
                 break;
             }
         }

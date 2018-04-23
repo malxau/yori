@@ -3,7 +3,7 @@
  *
  * Yori shell tab completion
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1408,6 +1408,97 @@ YoriShPerformArgumentTabCompletion(
 }
 
 /**
+ Populate tab completion matches.
+
+ @param Buffer Pointer to the input buffer.
+
+ @param CmdContext Pointer to the parsed command context.
+
+ @param ExpandFullPath If TRUE, the path should be expanded to contain a fully
+        specified path.  If FALSE, a minimal or relative path should be used.
+
+ @param SearchHistory Specifies that tab completion should search through
+        command history for matches rather than executable matches.
+ */
+VOID
+YoriShPopulateTabCompletionMatches(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_CMD_CONTEXT CmdContext,
+    __in BOOL ExpandFullPath,
+    __in BOOL SearchHistory
+    )
+{
+    YORI_STRING CurrentArgString;
+    DWORD SearchLength;
+
+    YoriLibInitEmptyString(&CurrentArgString);
+
+    YoriLibInitializeListHead(&Buffer->TabContext.MatchList);
+    Buffer->TabContext.PreviousMatch = NULL;
+
+    if (CmdContext->CurrentArg < CmdContext->ArgC) {
+        memcpy(&CurrentArgString, &CmdContext->ArgV[CmdContext->CurrentArg], sizeof(YORI_STRING));
+    }
+    SearchLength = CurrentArgString.LengthInChars + 1;
+    if (!YoriLibAllocateString(&Buffer->TabContext.SearchString, SearchLength + 1)) {
+        return;
+    }
+
+    Buffer->TabContext.SearchString.LengthInChars = YoriLibSPrintfS(Buffer->TabContext.SearchString.StartOfString, SearchLength + 1, _T("%y*"), &CurrentArgString);
+
+    if (CmdContext->CurrentArg == 0) {
+
+        if (SearchHistory) {
+            Buffer->TabContext.SearchType = YoriTabCompleteSearchHistory;
+        } else if (!YoriShDoesExpressionSpecifyPath(&CmdContext->ArgV[0])) {
+            Buffer->TabContext.SearchType = YoriTabCompleteSearchExecutables;
+        } else {
+            Buffer->TabContext.SearchType = YoriTabCompleteSearchFiles;
+        }
+
+    } else {
+        Buffer->TabContext.SearchType = YoriTabCompleteSearchArguments;
+    }
+
+    if (Buffer->TabContext.SearchType == YoriTabCompleteSearchExecutables) {
+        YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE);
+    } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchHistory) {
+        YoriShPerformHistoryTabCompletion(&Buffer->TabContext, ExpandFullPath);
+    } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchArguments) {
+        YoriShPerformArgumentTabCompletion(&Buffer->TabContext, ExpandFullPath, CmdContext, &Buffer->String, Buffer->CurrentOffset);
+    } else {
+        YoriShPerformFileTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE, TRUE);
+    }
+}
+
+/**
+ Free any matches collected as a result of a prior tab completion operation.
+
+ @param Buffer The input buffer containing tab completion results to free.
+ */
+VOID
+YoriShClearTabCompletionMatches(
+    __inout PYORI_INPUT_BUFFER Buffer
+    )
+{
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PYORI_TAB_COMPLETE_MATCH Match;
+
+    YoriLibFreeStringContents(&Buffer->TabContext.SearchString);
+
+    ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+    while (ListEntry != NULL) {
+        Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, ListEntry);
+
+        YoriLibFreeStringContents(&Match->YsValue);
+        YoriLibDereference(Match);
+    }
+
+    ZeroMemory(&Buffer->TabContext, sizeof(Buffer->TabContext));
+}
+
+/**
  Perform tab completion processing.  On error the buffer is left unchanged.
 
  @param Buffer Pointer to the current input context.
@@ -1425,7 +1516,6 @@ YoriShTabCompletion(
     __in BOOL SearchHistory
     )
 {
-    DWORD SearchLength;
     YORI_CMD_CONTEXT CmdContext;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_TAB_COMPLETE_MATCH Match;
@@ -1448,49 +1538,8 @@ YoriShTabCompletion(
     //  criteria and populate the list of matches.
     //
 
-    if (Buffer->TabContext.TabCount == 1) {
-
-        YORI_STRING CurrentArgString;
-
-        YoriLibInitEmptyString(&CurrentArgString);
-
-        YoriLibInitializeListHead(&Buffer->TabContext.MatchList);
-        Buffer->TabContext.PreviousMatch = NULL;
-
-        if (CmdContext.CurrentArg < CmdContext.ArgC) {
-            memcpy(&CurrentArgString, &CmdContext.ArgV[CmdContext.CurrentArg], sizeof(YORI_STRING));
-        }
-        SearchLength = CurrentArgString.LengthInChars + 1;
-        if (!YoriLibAllocateString(&Buffer->TabContext.SearchString, SearchLength + 1)) {
-            YoriShFreeCmdContext(&CmdContext);
-            return;
-        }
-
-        Buffer->TabContext.SearchString.LengthInChars = YoriLibSPrintfS(Buffer->TabContext.SearchString.StartOfString, SearchLength + 1, _T("%y*"), &CurrentArgString);
-
-        if (CmdContext.CurrentArg == 0) {
-
-            if (SearchHistory) {
-                Buffer->TabContext.SearchType = YoriTabCompleteSearchHistory;
-            } else if (!YoriShDoesExpressionSpecifyPath(&CmdContext.ArgV[0])) {
-                Buffer->TabContext.SearchType = YoriTabCompleteSearchExecutables;
-            } else {
-                Buffer->TabContext.SearchType = YoriTabCompleteSearchFiles;
-            }
-
-        } else {
-            Buffer->TabContext.SearchType = YoriTabCompleteSearchArguments;
-        }
-
-        if (Buffer->TabContext.SearchType == YoriTabCompleteSearchExecutables) {
-            YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE);
-        } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchHistory) {
-            YoriShPerformHistoryTabCompletion(&Buffer->TabContext, ExpandFullPath);
-        } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchArguments) {
-            YoriShPerformArgumentTabCompletion(&Buffer->TabContext, ExpandFullPath, &CmdContext, &Buffer->String, Buffer->CurrentOffset);
-        } else {
-            YoriShPerformFileTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE, TRUE);
-        }
+    if (Buffer->TabContext.TabCount == 1 && Buffer->TabContext.MatchList.Next == NULL) {
+        YoriShPopulateTabCompletionMatches(Buffer, &CmdContext, ExpandFullPath, SearchHistory);
     }
 
     //
@@ -1508,6 +1557,9 @@ YoriShTabCompletion(
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
+
+    YoriLibFreeStringContents(&Buffer->SuggestionString);
+    Buffer->TabContext.CurrentArgLength = 0;
 
     Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
     Buffer->TabContext.PreviousMatch = Match;
@@ -1589,6 +1641,7 @@ YoriShTabCompletion(
                 YoriShFreeCmdContext(&CmdContext);
                 return;
             }
+            YoriLibFreeStringContents(&Buffer->SuggestionString);
             YoriLibYPrintf(&Buffer->String, _T("%s"), NewString);
             if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
                 Buffer->CurrentOffset = Buffer->String.LengthInChars;
@@ -1611,5 +1664,183 @@ YoriShTabCompletion(
     YoriShFreeCmdContext(&CmdContext);
 }
 
+/**
+ Take a previously populated suggestion list and remove any entries that are
+ no longer consistent with a newly added string.  This may mean the currently
+ active suggestion needs to be updated.
+
+ @param Buffer Pointer to the input buffer containing the tab context
+        indicating previous matches and the current suggestion.
+
+ @param NewString Pointer to a new string being appended to the input buffer.
+ */
+VOID
+YoriShTrimSuggestionList(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PYORI_STRING NewString
+    )
+{
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PYORI_TAB_COMPLETE_MATCH Match;
+    YORI_STRING CompareString;
+
+    if (Buffer->SuggestionString.LengthInChars == 0) {
+        return;
+    }
+
+    //
+    //  Find any match that's not consistent with the newly entered text
+    //  and discard it.
+    //
+
+    ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+    while (ListEntry != NULL) {
+        Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, ListEntry);
+
+        YoriLibInitEmptyString(&CompareString);
+
+        //
+        //  Assumption is that anything in the list currently matches the
+        //  argument, so we're only looking for mismatches in the new text.
+        //
+
+        ASSERT(Match->YsValue.LengthInChars > Buffer->TabContext.CurrentArgLength);
+
+        CompareString.StartOfString = &Match->YsValue.StartOfString[Buffer->TabContext.CurrentArgLength];
+        CompareString.LengthInChars = Match->YsValue.LengthInChars - Buffer->TabContext.CurrentArgLength;
+
+        //
+        //  If the new characters don't match, remove it.
+        //
+
+        if (CompareString.LengthInChars <= NewString->LengthInChars ||
+            YoriLibCompareStringInsensitiveCount(&CompareString,
+                                                 NewString,
+                                                 NewString->LengthInChars) != 0) {
+            YoriLibRemoveListItem(&Match->ListEntry);
+            YoriLibFreeStringContents(&Match->YsValue);
+            YoriLibDereference(Match);
+        }
+    }
+
+    if (Buffer->SuggestionString.LengthInChars != 0) {
+        Buffer->TabContext.CurrentArgLength += NewString->LengthInChars;
+
+        //
+        //  If the existing suggestion isn't consistent with the newly entered
+        //  text, discard it and look for a new match.
+        //
+
+        if (Buffer->SuggestionString.LengthInChars < NewString->LengthInChars ||
+            YoriLibCompareStringInsensitiveCount(&Buffer->SuggestionString,
+                                                 NewString,
+                                                 NewString->LengthInChars) != 0) {
+
+            YoriLibFreeStringContents(&Buffer->SuggestionString);
+
+            //
+            //  Check if we have any match.  If we do, try to use it.  If not, leave
+            //  the buffer unchanged.
+            //
+
+            ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+            if (ListEntry == NULL) {
+                Buffer->TabContext.CurrentArgLength = 0;
+                return;
+            }
+
+            Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
+
+            if (Match->YsValue.LengthInChars > Buffer->TabContext.CurrentArgLength) {
+                YoriLibCloneString(&Buffer->SuggestionString, &Match->YsValue);
+                Buffer->SuggestionString.StartOfString += Buffer->TabContext.CurrentArgLength;
+                Buffer->SuggestionString.LengthInChars -= Buffer->TabContext.CurrentArgLength;
+            }
+        } else {
+            Buffer->SuggestionString.StartOfString += NewString->LengthInChars;
+            Buffer->SuggestionString.LengthInChars -= NewString->LengthInChars;
+            if (Buffer->SuggestionString.LengthInChars == 0) {
+                YoriLibFreeStringContents(&Buffer->SuggestionString);
+            }
+        }
+    }
+}
+
+/**
+ Perform suggestion completion processing.
+
+ @param Buffer Pointer to the current input context.
+ */
+VOID
+YoriShCompleteSuggestion(
+    __inout PYORI_INPUT_BUFFER Buffer
+    )
+{
+    YORI_CMD_CONTEXT CmdContext;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_TAB_COMPLETE_MATCH Match;
+
+    if (Buffer->String.LengthInChars == 0) {
+        return;
+    }
+    if (Buffer->TabContext.MatchList.Next != NULL) {
+        return;
+    }
+    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
+        return;
+    }
+
+    if (CmdContext.ArgC == 0) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    if (CmdContext.CurrentArg >= CmdContext.ArgC) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    if (CmdContext.CurrentArg == 0) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    if (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars < Buffer->MinimumCharsInArgBeforeSuggesting) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    //
+    //  If we're searching for the first time, set up the search
+    //  criteria and populate the list of matches.
+    //
+
+    YoriShPopulateTabCompletionMatches(Buffer, &CmdContext, FALSE, FALSE);
+
+    //
+    //  Check if we have any match.  If we do, try to use it.  If not, leave
+    //  the buffer unchanged.
+    //
+
+    ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+    if (ListEntry == NULL) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
+
+    ASSERT(Buffer->SuggestionString.MemoryToFree == NULL);
+    Buffer->TabContext.CurrentArgLength = CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars;
+
+    if (Match->YsValue.LengthInChars > Buffer->TabContext.CurrentArgLength) {
+        YoriLibCloneString(&Buffer->SuggestionString, &Match->YsValue);
+        Buffer->SuggestionString.StartOfString += Buffer->TabContext.CurrentArgLength;
+        Buffer->SuggestionString.LengthInChars -= Buffer->TabContext.CurrentArgLength;
+    }
+
+    YoriShFreeCmdContext(&CmdContext);
+}
 
 // vim:sw=4:ts=4:et:
