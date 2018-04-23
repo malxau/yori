@@ -853,6 +853,10 @@ YoriShGetExpression(
                             YoriLibFreeStringContents(&ClipboardData);
                         }
                     } else if (KeyCode == VK_TAB) {
+                        if (Buffer.SuggestionString.LengthInChars > 0) {
+                            YoriShClearTabCompletionMatches(&Buffer);
+                            YoriLibFreeStringContents(&Buffer.SuggestionString);
+                        }
                         YoriShTabCompletion(&Buffer, TRUE, FALSE);
                     }
                 } else if (CtrlMask == ENHANCED_KEY) {

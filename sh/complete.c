@@ -128,7 +128,52 @@ typedef struct _YORI_SH_EXEC_TAB_COMPLETE_CONTEXT {
      matches.
      */
     YORI_STRING Suffix;
+
+    /**
+     If TRUE, the resulting tab completion should expand the entire path,
+     if FALSE it should only expand the file name.
+     */
+    BOOL ExpandFullPath;
 } YORI_SH_EXEC_TAB_COMPLETE_CONTEXT, *PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT;
+
+/**
+ Find the final seperator or colon in event of a drive letter colon
+ prefix string, such that the criteria being searched for can be
+ seperated from the location of the search.
+
+ @param String Pointer to the string to locate the final seperator
+        in.
+
+ @return The index of the seperator, which may be zero to indicate
+         one was not found.
+ */
+DWORD
+YoriShFindFinalSlashIfSpecified(
+    __in PYORI_STRING String
+    )
+{
+    DWORD CharsInFileName;
+
+    CharsInFileName = String->LengthInChars;
+
+    while (CharsInFileName > 0) {
+        if (YoriLibIsSep(String->StartOfString[CharsInFileName - 1])) {
+
+            break;
+        }
+
+        if (CharsInFileName == 2 &&
+            YoriLibIsDriveLetterWithColon(String)) {
+
+            break;
+        }
+
+        CharsInFileName--;
+    }
+
+    return CharsInFileName;
+}
+
 
 /**
  A callback function that is invoked by the path resolver to add any
@@ -149,13 +194,31 @@ YoriShAddExecutableToTabList(
     PYORI_TAB_COMPLETE_MATCH Existing;
     PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT ExecTabContext = (PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT)Context;
     PYORI_LIST_ENTRY ListEntry;
+    YORI_STRING PathToReturn;
 
+    YoriLibInitEmptyString(&PathToReturn);
+
+    //
+    //  Because executable matching is not invoked if a path is specified,
+    //  we "know" that a non full path match is just the final component,
+    //  no special prefixes to restore.
+    //
+
+    PathToReturn.StartOfString = FoundPath->StartOfString;
+    PathToReturn.LengthInChars = FoundPath->LengthInChars;
+    if (!ExecTabContext->ExpandFullPath) {
+        DWORD PathOffset;
+        PathOffset = YoriShFindFinalSlashIfSpecified(FoundPath);
+
+        PathToReturn.StartOfString += PathOffset;
+        PathToReturn.LengthInChars -= PathOffset;
+    }
 
     //
     //  Allocate a match entry for this file.
     //
 
-    Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (ExecTabContext->Prefix.LengthInChars + FoundPath->LengthInChars + ExecTabContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
+    Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (ExecTabContext->Prefix.LengthInChars + PathToReturn.LengthInChars + ExecTabContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
     if (Match == NULL) {
         return FALSE;
     }
@@ -168,7 +231,7 @@ YoriShAddExecutableToTabList(
     Match->YsValue.StartOfString = (LPTSTR)(Match + 1);
     YoriLibReference(Match);
     Match->YsValue.MemoryToFree = Match;
-    Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%y%y"), &ExecTabContext->Prefix, FoundPath, &ExecTabContext->Suffix);
+    Match->YsValue.LengthInChars = YoriLibSPrintf(Match->YsValue.StartOfString, _T("%y%y%y"), &ExecTabContext->Prefix, &PathToReturn, &ExecTabContext->Suffix);
     Match->YsValue.LengthAllocated = Match->YsValue.LengthInChars + 1;
 
     //
@@ -229,11 +292,10 @@ YoriShPerformExecutableTabCompletion(
     DWORD CompareLength;
     YORI_SH_EXEC_TAB_COMPLETE_CONTEXT ExecTabContext;
 
-    UNREFERENCED_PARAMETER(ExpandFullPath);
-
     ExecTabContext.TabContext = TabContext;
     YoriLibInitEmptyString(&ExecTabContext.Prefix);
     YoriLibInitEmptyString(&ExecTabContext.Suffix);
+    ExecTabContext.ExpandFullPath = ExpandFullPath;
 
     //
     //  If we're doing an executable search where the first character is a `,
@@ -587,44 +649,6 @@ YORI_TAB_FILE_HEURISTIC_MATCH YoriShTabHeuristicMatches[] = {
     {_T("="), 1},
     {_T("'"), 1}
 };
-
-/**
- Find the final seperator or colon in event of a drive letter colon
- prefix string, such that the criteria being searched for can be
- seperated from the location of the search.
-
- @param String Pointer to the string to locate the final seperator
-        in.
-
- @return The index of the seperator, which may be zero to indicate
-         one was not found.
- */
-DWORD
-YoriShFindFinalSlashIfSpecified(
-    __in PYORI_STRING String
-    )
-{
-    DWORD CharsInFileName;
-
-    CharsInFileName = String->LengthInChars;
-
-    while (CharsInFileName > 0) {
-        if (YoriLibIsSep(String->StartOfString[CharsInFileName - 1])) {
-
-            break;
-        }
-
-        if (CharsInFileName == 2 &&
-            YoriLibIsDriveLetterWithColon(String)) {
-
-            break;
-        }
-
-        CharsInFileName--;
-    }
-
-    return CharsInFileName;
-}
 
 /**
  Populates the list of matches for a file based tab completion.  This
@@ -1797,11 +1821,6 @@ YoriShCompleteSuggestion(
     }
 
     if (CmdContext.CurrentArg >= CmdContext.ArgC) {
-        YoriShFreeCmdContext(&CmdContext);
-        return;
-    }
-
-    if (CmdContext.CurrentArg == 0) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
