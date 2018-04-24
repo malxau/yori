@@ -331,7 +331,9 @@ YoriLibGetFullPathNameReturnAllocation(
 
     } else if (YoriLibIsDriveLetterWithColon(FileName)) {
 
-        if (FileName->LengthInChars >= 3 && !YoriLibIsSep(FileName->StartOfString[2])) {
+        if (FileName->LengthInChars == 2 ||
+            (FileName->LengthInChars >= 3 && !YoriLibIsSep(FileName->StartOfString[2]))) {
+
             DriveRelativePath = TRUE;
             StartOfRelativePath.StartOfString += 2;
             StartOfRelativePath.LengthInChars -= 2;

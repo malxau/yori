@@ -359,6 +359,12 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
     } SearchType;
 
     /**
+     TRUE if later compares should be case sensitive.  This is used when
+     refining suggestions.
+     */
+    BOOL CaseSensitive;
+
+    /**
      A list of matches that apply to the criteria that was searched.
      */
     YORI_LIST_ENTRY MatchList;

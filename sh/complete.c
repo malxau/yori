@@ -1410,6 +1410,7 @@ YoriShPerformArgumentTabCompletion(
             break;
         case CompletionActionTypeSensitiveList:
             YoriShPerformListTabCompletion(TabContext, &CompletionAction, FALSE);
+            TabContext->CaseSensitive = TRUE;
             break;
     }
 
@@ -1584,6 +1585,7 @@ YoriShTabCompletion(
 
     YoriLibFreeStringContents(&Buffer->SuggestionString);
     Buffer->TabContext.CurrentArgLength = 0;
+    Buffer->TabContext.CaseSensitive = FALSE;
 
     Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
     Buffer->TabContext.PreviousMatch = Match;
@@ -1707,6 +1709,7 @@ YoriShTrimSuggestionList(
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_TAB_COMPLETE_MATCH Match;
     YORI_STRING CompareString;
+    BOOL TrimItem;
 
     if (Buffer->SuggestionString.LengthInChars == 0) {
         return;
@@ -1729,7 +1732,7 @@ YoriShTrimSuggestionList(
         //  argument, so we're only looking for mismatches in the new text.
         //
 
-        ASSERT(Match->YsValue.LengthInChars > Buffer->TabContext.CurrentArgLength);
+        ASSERT(Match->YsValue.LengthInChars >= Buffer->TabContext.CurrentArgLength);
 
         CompareString.StartOfString = &Match->YsValue.StartOfString[Buffer->TabContext.CurrentArgLength];
         CompareString.LengthInChars = Match->YsValue.LengthInChars - Buffer->TabContext.CurrentArgLength;
@@ -1738,10 +1741,25 @@ YoriShTrimSuggestionList(
         //  If the new characters don't match, remove it.
         //
 
-        if (CompareString.LengthInChars <= NewString->LengthInChars ||
-            YoriLibCompareStringInsensitiveCount(&CompareString,
-                                                 NewString,
-                                                 NewString->LengthInChars) != 0) {
+        TrimItem = FALSE;
+
+        if (CompareString.LengthInChars <= NewString->LengthInChars) {
+            TrimItem = TRUE;
+        } else if (Buffer->TabContext.CaseSensitive) {
+            if (YoriLibCompareStringCount(&CompareString,
+                                          NewString,
+                                          NewString->LengthInChars) != 0) {
+                TrimItem = TRUE;
+            }
+        } else {
+            if (YoriLibCompareStringInsensitiveCount(&CompareString,
+                                                     NewString,
+                                                     NewString->LengthInChars) != 0) {
+                TrimItem = TRUE;
+            }
+        }
+
+        if (TrimItem) {
             YoriLibRemoveListItem(&Match->ListEntry);
             YoriLibFreeStringContents(&Match->YsValue);
             YoriLibDereference(Match);
@@ -1804,6 +1822,8 @@ YoriShCompleteSuggestion(
     YORI_CMD_CONTEXT CmdContext;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_TAB_COMPLETE_MATCH Match;
+    PYORI_STRING Arg;
+    DWORD Index;
 
     if (Buffer->String.LengthInChars == 0) {
         return;
@@ -1820,7 +1840,7 @@ YoriShCompleteSuggestion(
         return;
     }
 
-    if (CmdContext.CurrentArg >= CmdContext.ArgC) {
+    if (CmdContext.CurrentArg != CmdContext.ArgC - 1) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
@@ -1828,6 +1848,23 @@ YoriShCompleteSuggestion(
     if (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars < Buffer->MinimumCharsInArgBeforeSuggesting) {
         YoriShFreeCmdContext(&CmdContext);
         return;
+    }
+
+    //
+    //  Check if the argument has a wildcard like '*' or '?' in it, and don't
+    //  suggest if so.  Suggestions get really messed up when the first part
+    //  of a name contains a wild and we're attachings proposed suffixes to it.
+    //  It's not great to have this check here because it implicitly disables
+    //  matching of arguments, but the alternative is pushing the distinction
+    //  between regular tab and suggestion throughout all the above code.
+    //
+
+    Arg = &CmdContext.ArgV[CmdContext.CurrentArg];
+    for (Index = 0; Index < Arg->LengthInChars; Index++) {
+        if (Arg->StartOfString[Index] == '*' || Arg->StartOfString[Index] == '?') {
+            YoriShFreeCmdContext(&CmdContext);
+            return;
+        }
     }
 
     //
