@@ -307,6 +307,7 @@ ymain(
         FileType = FileType & ~(FILE_TYPE_REMOTE);
         if (FileType == FILE_TYPE_CHAR) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
+            YoriLibFree(TailContext.LinesArray);
             return EXIT_FAILURE;
         }
 
@@ -329,6 +330,7 @@ ymain(
     for (Count = 0; Count < TailContext.LinesToDisplay; Count++) {
         YoriLibFreeStringContents(&TailContext.LinesArray[Count]);
     }
+    YoriLibFree(TailContext.LinesArray);
 
     if (TailContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("tail: no matching files found\n"));
