@@ -688,10 +688,10 @@ YoriShConfigureSuggestionSettings(
     DWORD CharsConsumed;
 
     //
-    //  Default to suggesting in 300ms after seeing 2 chars in an arg.
+    //  Default to suggesting in 400ms after seeing 2 chars in an arg.
     //
 
-    Buffer->DelayBeforeSuggesting = 300;
+    Buffer->DelayBeforeSuggesting = 400;
     Buffer->MinimumCharsInArgBeforeSuggesting = 2;
 
     //

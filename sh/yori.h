@@ -325,7 +325,7 @@ typedef struct _YORI_TAB_COMPLETE_MATCH {
     /**
      The string corresponding to this match.
      */
-    YORI_STRING YsValue;
+    YORI_STRING Value;
 
 } YORI_TAB_COMPLETE_MATCH, *PYORI_TAB_COMPLETE_MATCH;
 
