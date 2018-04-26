@@ -20,6 +20,7 @@ OBJS=\
 	 ep_yori.obj  \
 	 fileenum.obj \
 	 fullpath.obj \
+	 hash.obj     \
 	 iconv.obj    \
 	 jobobj.obj   \
 	 license.obj  \

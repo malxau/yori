@@ -27,6 +27,59 @@
 #include "yori.h"
 
 /**
+ Add a new match to the list of matches and add the match to the hash table
+ to check for duplicates.
+
+ @param TabContext Pointer to the tab context to add the match to.
+
+ @param EntryToInsertBefore If non-NULL, the new match should be inserted
+        before this entry in the list.  If NULL, the new match is inserted
+        at the end of the list.
+
+ @param Match Pointer to the match to insert.
+ */
+VOID
+YoriShAddMatchToTabContext(
+    __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
+    __in_opt PYORI_LIST_ENTRY EntryToInsertBefore,
+    __inout PYORI_TAB_COMPLETE_MATCH Match
+    )
+{
+    ASSERT(TabContext->MatchHashTable != NULL);
+    ASSERT(Match->Value.MemoryToFree != NULL);
+    YoriLibHashInsertByKey(TabContext->MatchHashTable, &Match->Value, Match, &Match->HashEntry);
+    if (EntryToInsertBefore == NULL) {
+        YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
+    } else {
+        YoriLibAppendList(EntryToInsertBefore, &Match->ListEntry);
+    }
+}
+
+/**
+ Remove an item that is currently in the list of matches and the hash table
+ of matches.  Note this routine should not be used unless the match has
+ been inserted into the list/hash table.
+
+ @param TabContext Pointer to the tab context to remove the match from.
+
+ @param Match Pointer to the match to remove.
+ */
+VOID
+YoriShRemoveMatchFromTabContext(
+    __inout PYORI_TAB_COMPLETE_CONTEXT TabContext,
+    __in PYORI_TAB_COMPLETE_MATCH Match
+    )
+{
+    UNREFERENCED_PARAMETER(TabContext);
+    ASSERT(TabContext->MatchHashTable != NULL);
+    ASSERT(Match->Value.MemoryToFree != NULL);
+    YoriLibHashRemoveByEntry(&Match->HashEntry);
+    YoriLibRemoveListItem(&Match->ListEntry);
+    YoriLibFreeStringContents(&Match->Value);
+    YoriLibDereference(Match);
+}
+
+/**
  Populates the list of matches for a command history tab completion.  This
  function searches the history for matching commands in MRU order and
  populates the list with the result.
@@ -98,7 +151,6 @@ YoriShPerformHistoryTabCompletion(
             //  Append to the list.
             //
 
-            YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
         }
         ListEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, ListEntry);
     }
@@ -202,9 +254,8 @@ YoriShAddExecutableToTabList(
     )
 {
     PYORI_TAB_COMPLETE_MATCH Match;
-    PYORI_TAB_COMPLETE_MATCH Existing;
     PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT ExecTabContext = (PYORI_SH_EXEC_TAB_COMPLETE_CONTEXT)Context;
-    PYORI_LIST_ENTRY ListEntry;
+    PYORI_HASH_ENTRY PriorEntry;
     YORI_STRING PathToReturn;
     YORI_STRING StringToFinalSlash;
 
@@ -254,22 +305,10 @@ YoriShAddExecutableToTabList(
     //  Insert into the list if no duplicate is found.
     //
 
-    ListEntry = YoriLibGetNextListEntry(&ExecTabContext->TabContext->MatchList, NULL);
-    do {
-        if (ListEntry == NULL) {
-            YoriLibAppendList(&ExecTabContext->TabContext->MatchList, &Match->ListEntry);
-            Match = NULL;
-            break;
-        }
-        Existing = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
-        if (YoriLibCompareStringInsensitive(&Match->Value, &Existing->Value) == 0) {
-            break;
-        }
-        ListEntry = YoriLibGetNextListEntry(&ExecTabContext->TabContext->MatchList, ListEntry);
-
-    } while(TRUE);
-
-    if (Match != NULL) {
+    PriorEntry = YoriLibHashLookupByKey(ExecTabContext->TabContext->MatchHashTable, &Match->Value);
+    if (PriorEntry == NULL) {
+        YoriShAddMatchToTabContext(ExecTabContext->TabContext, NULL, Match);
+    } else {
         YoriLibFreeStringContents(&Match->Value);
         YoriLibDereference(Match);
     }
@@ -418,7 +457,7 @@ YoriShPerformExecutableTabCompletion(
                 //  Append to the list.
                 //
 
-                YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
+                YoriShAddMatchToTabContext(TabContext, NULL, Match);
             }
 
             //
@@ -480,7 +519,7 @@ YoriShPerformExecutableTabCompletion(
                 //  Append to the list.
                 //
 
-                YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
+                YoriShAddMatchToTabContext(TabContext, NULL, Match);
             }
             ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, ListEntry);
         }
@@ -634,25 +673,37 @@ YoriShFileTabCompletionCallback(
     //  that is greater than this one.
     //
 
-    ListEntry = YoriLibGetNextListEntry(&Context->TabContext->MatchList, NULL);
-    do {
-        if (ListEntry == NULL) {
-            YoriLibAppendList(&Context->TabContext->MatchList, &Match->ListEntry);
-            break;
-        }
-        Existing = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
-        CompareResult = YoriLibCompareStringInsensitive(&Match->Value, &Existing->Value);
-        if (Context->KeepCompletionsSorted && CompareResult < 0) {
-            YoriLibAppendList(ListEntry, &Match->ListEntry);
-            break;
-        } else if (CompareResult == 0) {
+    if (!Context->KeepCompletionsSorted) {
+        PYORI_HASH_ENTRY PriorEntry;
+        PriorEntry = YoriLibHashLookupByKey(Context->TabContext->MatchHashTable, &Match->Value);
+        if (PriorEntry == NULL) {
+            YoriShAddMatchToTabContext(Context->TabContext, NULL, Match);
+        } else {
             YoriLibFreeStringContents(&Match->Value);
             YoriLibDereference(Match);
             Match = NULL;
-            break;
         }
-        ListEntry = YoriLibGetNextListEntry(&Context->TabContext->MatchList, ListEntry);
-    } while(TRUE);
+    } else {
+        ListEntry = YoriLibGetNextListEntry(&Context->TabContext->MatchList, NULL);
+        do {
+            if (ListEntry == NULL) {
+                YoriShAddMatchToTabContext(Context->TabContext, NULL, Match);
+                break;
+            }
+            Existing = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
+            CompareResult = YoriLibCompareStringInsensitive(&Match->Value, &Existing->Value);
+            if (CompareResult < 0) {
+                YoriShAddMatchToTabContext(Context->TabContext, ListEntry, Match);
+                break;
+            } else if (CompareResult == 0) {
+                YoriLibFreeStringContents(&Match->Value);
+                YoriLibDereference(Match);
+                Match = NULL;
+                break;
+            }
+            ListEntry = YoriLibGetNextListEntry(&Context->TabContext->MatchList, ListEntry);
+        } while(TRUE);
+    }
 
     if (Match != NULL) {
         Context->FilesFound++;
@@ -1006,7 +1057,7 @@ YoriShPerformListTabCompletion(
         //
 
         if (MatchResult == 0) {
-            YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
+            YoriShAddMatchToTabContext(TabContext, NULL, Match);
         } else {
             YoriLibFreeStringContents(&Match->Value);
             YoriLibDereference(Match);
@@ -1512,6 +1563,12 @@ YoriShPopulateTabCompletionMatches(
 
     YoriLibInitEmptyString(&CurrentArgString);
 
+    if (Buffer->TabContext.MatchHashTable == NULL) {
+        Buffer->TabContext.MatchHashTable = YoriLibAllocateHashTable(250);
+        if (Buffer->TabContext.MatchHashTable == NULL) {
+            return;
+        }
+    }
     YoriLibInitializeListHead(&Buffer->TabContext.MatchList);
     Buffer->TabContext.PreviousMatch = NULL;
 
@@ -1574,10 +1631,12 @@ YoriShClearTabCompletionMatches(
         Match = CONTAINING_RECORD(ListEntry, YORI_TAB_COMPLETE_MATCH, ListEntry);
         ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, ListEntry);
 
-        YoriLibFreeStringContents(&Match->Value);
-        YoriLibDereference(Match);
+        YoriShRemoveMatchFromTabContext(&Buffer->TabContext, Match);
     }
 
+    if (Buffer->TabContext.MatchHashTable != NULL) {
+        YoriLibFreeEmptyHashTable(Buffer->TabContext.MatchHashTable);
+    }
     ZeroMemory(&Buffer->TabContext, sizeof(Buffer->TabContext));
 }
 
@@ -1818,9 +1877,7 @@ YoriShTrimSuggestionList(
         }
 
         if (TrimItem) {
-            YoriLibRemoveListItem(&Match->ListEntry);
-            YoriLibFreeStringContents(&Match->Value);
-            YoriLibDereference(Match);
+            YoriShRemoveMatchFromTabContext(&Buffer->TabContext, Match);
         }
     }
 

@@ -34,9 +34,14 @@
 typedef struct _YORI_ALIAS {
 
     /**
-     Links between the registered aliases.
+     Links between all registered aliases.
      */
     YORI_LIST_ENTRY ListEntry;
+
+    /**
+     Hash link for efficient lookup of aliases.
+     */
+    YORI_HASH_ENTRY HashEntry;
 
     /**
      The name of the alias.
@@ -58,7 +63,12 @@ typedef struct _YORI_ALIAS {
 /**
  List of aliases currently registered with Yori.
  */
-YORI_LIST_ENTRY YoriShAliases;
+YORI_LIST_ENTRY YoriShAliasesList;
+
+/**
+ Hashtable of aliases currently registered with Yori.
+ */
+PYORI_HASH_TABLE YoriShAliasesHash;
 
 /**
  Prototype for a function to the length of get aliases in the console for a
@@ -136,23 +146,28 @@ YoriShDeleteAlias(
     __in PYORI_STRING Alias
     )
 {
-    PYORI_LIST_ENTRY ListEntry = NULL;
-    if (YoriShAliases.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
-        while (ListEntry != NULL) {
-            PYORI_ALIAS ExistingAlias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
-            if (YoriLibCompareStringInsensitive(&ExistingAlias->Alias, Alias) == 0) {
-                if (!ExistingAlias->Internal && pAddConsoleAliasW) {
-                    pAddConsoleAliasW(ExistingAlias->Alias.StartOfString, NULL, ALIAS_APP_NAME);
-                }
-                YoriLibRemoveListItem(&ExistingAlias->ListEntry);
-                YoriLibDereference(ExistingAlias);
-                return TRUE;
-            }
-            ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
-        }
+    PYORI_HASH_ENTRY HashEntry;
+    PYORI_ALIAS ExistingAlias;
+
+    if (YoriShAliasesHash == NULL) {
+        return FALSE;
     }
-    return FALSE;
+
+    HashEntry = YoriLibHashRemoveByKey(YoriShAliasesHash, Alias);
+    if (HashEntry == NULL) {
+        return FALSE;
+    }
+
+    ExistingAlias = HashEntry->Context;
+
+    if (!ExistingAlias->Internal && pAddConsoleAliasW) {
+        pAddConsoleAliasW(ExistingAlias->Alias.StartOfString, NULL, ALIAS_APP_NAME);
+    }
+    YoriLibRemoveListItem(&ExistingAlias->ListEntry);
+    YoriLibFreeStringContents(&ExistingAlias->Alias);
+    YoriLibFreeStringContents(&ExistingAlias->Value);
+    YoriLibDereference(ExistingAlias);
+    return TRUE;
 }
 
 
@@ -176,22 +191,17 @@ YoriShAddAlias(
     )
 {
     PYORI_ALIAS NewAlias;
-    PYORI_LIST_ENTRY ListEntry = NULL;
     DWORD AliasNameLengthInChars;
     DWORD ValueNameLengthInChars;
 
-    if (YoriShAliases.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
-        while (ListEntry != NULL) {
-            PYORI_ALIAS ExistingAlias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
-            if (YoriLibCompareStringInsensitive(&ExistingAlias->Alias, Alias) == 0) {
-                YoriShDeleteAlias(Alias);
-                break;
-            }
-            ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
-        }
+    if (YoriShAliasesHash != NULL) {
+        YoriShDeleteAlias(Alias);
     } else {
-        YoriLibInitializeListHead(&YoriShAliases);
+        YoriLibInitializeListHead(&YoriShAliasesList);
+        YoriShAliasesHash = YoriLibAllocateHashTable(250);
+        if (YoriShAliasesHash == NULL) {
+            return FALSE;
+        }
     }
 
     AliasNameLengthInChars = Alias->LengthInChars;
@@ -202,11 +212,14 @@ YoriShAddAlias(
         return FALSE;
     }
 
-    NewAlias->Alias.MemoryToFree = NULL;
+    YoriLibReference(NewAlias);
+    NewAlias->Alias.MemoryToFree = NewAlias;
     NewAlias->Alias.StartOfString = (LPTSTR)(NewAlias + 1);
     NewAlias->Alias.LengthInChars = AliasNameLengthInChars;
     NewAlias->Alias.LengthAllocated = AliasNameLengthInChars + 1;
-    NewAlias->Value.MemoryToFree = NULL;
+
+    YoriLibReference(NewAlias);
+    NewAlias->Value.MemoryToFree = NewAlias;
     NewAlias->Value.StartOfString = NewAlias->Alias.StartOfString + AliasNameLengthInChars + 1;
     NewAlias->Value.LengthInChars = ValueNameLengthInChars;
     NewAlias->Value.LengthAllocated = ValueNameLengthInChars + 1;
@@ -221,9 +234,10 @@ YoriShAddAlias(
         pAddConsoleAliasW(NewAlias->Alias.StartOfString, NewAlias->Value.StartOfString, ALIAS_APP_NAME);
     }
 
-    YoriLibAppendList(&YoriShAliases, &NewAlias->ListEntry);
+    YoriLibAppendList(&YoriShAliasesList, &NewAlias->ListEntry);
+    YoriLibHashInsertByKey(YoriShAliasesHash, &NewAlias->Alias, NewAlias, &NewAlias->HashEntry);
     
-    return FALSE;
+    return TRUE;
 }
 
 /**
@@ -298,30 +312,34 @@ YoriShExpandAlias(
     __inout PYORI_CMD_CONTEXT CmdContext
     )
 {
-    PYORI_LIST_ENTRY ListEntry = NULL;
     YORI_CMD_CONTEXT NewCmdContext;
+    YORI_STRING NewCmdString;
 
-    if (YoriShAliases.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
-        while (ListEntry != NULL) {
-            PYORI_ALIAS ExistingAlias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
-            YORI_STRING NewCmdString;
-            YoriLibInitEmptyString(&NewCmdString);
-            if (YoriLibCompareStringInsensitive(&ExistingAlias->Alias, &CmdContext->ArgV[0]) == 0) {
-                YoriLibExpandCommandVariables(&ExistingAlias->Value, '$', TRUE, YoriShExpandAliasHelper, CmdContext, &NewCmdString);
-                if (NewCmdString.LengthInChars > 0) {
-                    if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, &NewCmdContext) && NewCmdContext.ArgC > 0) {
-                        YoriShFreeCmdContext(CmdContext);
-                        memcpy(CmdContext, &NewCmdContext, sizeof(YORI_CMD_CONTEXT));
-                        YoriLibFreeStringContents(&NewCmdString);
-                        return TRUE;
-                    }
-                }
-                YoriLibFreeStringContents(&NewCmdString);
-            }
-            ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
+    PYORI_HASH_ENTRY HashEntry;
+    PYORI_ALIAS ExistingAlias;
+
+    if (YoriShAliasesHash == NULL) {
+        return FALSE;
+    }
+
+    HashEntry = YoriLibHashLookupByKey(YoriShAliasesHash, &CmdContext->ArgV[0]);
+    if (HashEntry == NULL) {
+        return FALSE;
+    }
+
+    ExistingAlias = HashEntry->Context;
+
+    YoriLibInitEmptyString(&NewCmdString);
+    YoriLibExpandCommandVariables(&ExistingAlias->Value, '$', TRUE, YoriShExpandAliasHelper, CmdContext, &NewCmdString);
+    if (NewCmdString.LengthInChars > 0) {
+        if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, &NewCmdContext) && NewCmdContext.ArgC > 0) {
+            YoriShFreeCmdContext(CmdContext);
+            memcpy(CmdContext, &NewCmdContext, sizeof(YORI_CMD_CONTEXT));
+            YoriLibFreeStringContents(&NewCmdString);
+            return TRUE;
         }
     }
+    YoriLibFreeStringContents(&NewCmdString);
     return FALSE;
 }
 
@@ -373,17 +391,23 @@ YoriShClearAllAliases()
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_ALIAS Alias;
 
-    if (YoriShAliases.Next == NULL) {
+    if (YoriShAliasesList.Next == NULL) {
         return;
     }
 
-    ListEntry = YoriLibGetNextListEntry(&YoriShAliases, NULL);
+    ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, NULL);
     while (ListEntry != NULL) {
         Alias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
-        ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, ListEntry);
+        YoriLibHashRemoveByEntry(&Alias->HashEntry);
         YoriLibRemoveListItem(&Alias->ListEntry);
+        YoriLibFreeStringContents(&Alias->Alias);
+        YoriLibFreeStringContents(&Alias->Value);
         YoriLibDereference(Alias);
     }
+
+    YoriLibFreeEmptyHashTable(YoriShAliasesHash);
+    YoriShAliasesHash = NULL;
 }
 
 /**
@@ -411,14 +435,14 @@ YoriShGetAliasStrings(
     PYORI_ALIAS Alias;
     DWORD StringOffset;
 
-    if (YoriShAliases.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShAliases, NULL);
+    if (YoriShAliasesList.Next != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, NULL);
         while (ListEntry != NULL) {
             Alias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
             if (IncludeInternal || !Alias->Internal) {
                 CharsNeeded += Alias->Alias.LengthInChars + Alias->Value.LengthInChars + 2;
             }
-            ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, ListEntry);
         }
     }
 
@@ -433,15 +457,15 @@ YoriShGetAliasStrings(
 
     StringOffset = 0;
 
-    if (YoriShAliases.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShAliases, NULL);
+    if (YoriShAliasesList.Next != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, NULL);
         while (ListEntry != NULL) {
             Alias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
             if (IncludeInternal || !Alias->Internal) {
                 YoriLibSPrintf(&AliasStrings->StartOfString[StringOffset], _T("%y=%y"), &Alias->Alias, &Alias->Value);
                 StringOffset += Alias->Alias.LengthInChars + Alias->Value.LengthInChars + 2;
             }
-            ListEntry = YoriLibGetNextListEntry(&YoriShAliases, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, ListEntry);
         }
     }
     AliasStrings->StartOfString[StringOffset] = '\0';

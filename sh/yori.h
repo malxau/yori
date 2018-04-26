@@ -323,6 +323,12 @@ typedef struct _YORI_TAB_COMPLETE_MATCH {
     YORI_LIST_ENTRY ListEntry;
 
     /**
+     The hash entry for this match.  Paired with @ref
+     YORI_TAB_COMPLETE_CONTEXT::MatchHashTable .
+     */
+    YORI_HASH_ENTRY HashEntry;
+
+    /**
      The string corresponding to this match.
      */
     YORI_STRING Value;
@@ -368,6 +374,12 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
      A list of matches that apply to the criteria that was searched.
      */
     YORI_LIST_ENTRY MatchList;
+
+    /**
+     A hash table of matches that apply to the criteria that was searched.
+     This is used to efficiently strip duplicates.
+     */
+    PYORI_HASH_TABLE MatchHashTable;
 
     /**
      Pointer to the previously returned match.  If the user repeatedly hits

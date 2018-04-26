@@ -424,6 +424,7 @@ YoriShTerminateInput(
 {
     YoriShPostKeyPress(Buffer);
     YoriLibFreeStringContents(&Buffer->SuggestionString);
+    YoriShClearTabCompletionMatches(Buffer);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
@@ -440,6 +441,7 @@ YoriShClearInput(
     )
 {
     YoriLibFreeStringContents(&Buffer->SuggestionString);
+    YoriShClearTabCompletionMatches(Buffer);
     Buffer->String.LengthInChars = 0;
     Buffer->CurrentOffset = 0;
 }

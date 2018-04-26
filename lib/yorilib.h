@@ -71,6 +71,55 @@ typedef struct _YORI_STRING {
 } YORI_STRING, *PYORI_STRING;
 
 /**
+ A structure describing an entry that is an element of a hash table.
+ */
+typedef struct _YORI_HASH_ENTRY {
+
+    /**
+     The links of this entry within the hash bucket.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     A string that represents the key for the object within the table.
+     */
+    YORI_STRING Key;
+
+    /**
+     An opaque context block that can be used by the user of the hash
+     table to identify the entry.
+     */
+    PVOID Context;
+} YORI_HASH_ENTRY, *PYORI_HASH_ENTRY;
+
+/**
+ A structure describing a hash bucket in a hash table.
+ */
+typedef struct _YORI_HASH_BUCKET {
+
+    /**
+     A list of matching entries within the hash bucket.
+     */
+    YORI_LIST_ENTRY ListHead;
+} YORI_HASH_BUCKET, *PYORI_HASH_BUCKET;
+
+/**
+ A structure describing a hash table.
+ */
+typedef struct _YORI_HASH_TABLE {
+
+    /**
+     The number of buckets in the hash table.
+     */
+    DWORD NumberBuckets;
+
+    /**
+     An array of hash buckets.
+     */
+    PYORI_HASH_BUCKET Buckets;
+} YORI_HASH_TABLE, *PYORI_HASH_TABLE;
+
+/**
  Adds a specified number of bytes to a pointer value and returns the
  added value.
  */
@@ -470,6 +519,43 @@ BOOL
 YoriLibUnescapePath(
     __in PYORI_STRING Path,
     __inout PYORI_STRING UnescapedPath
+    );
+
+// *** HASH.C ***
+
+PYORI_HASH_TABLE
+YoriLibAllocateHashTable(
+    __in DWORD NumberBuckets
+    );
+
+VOID
+YoriLibFreeEmptyHashTable(
+    __in PYORI_HASH_TABLE HashTable
+    );
+
+VOID
+YoriLibHashInsertByKey(
+    __in PYORI_HASH_TABLE HashTable,
+    __in PYORI_STRING KeyString,
+    __in PVOID Context,
+    __out PYORI_HASH_ENTRY HashEntry
+    );
+
+PYORI_HASH_ENTRY
+YoriLibHashLookupByKey(
+    __in PYORI_HASH_TABLE HashTable,
+    __in PYORI_STRING KeyString
+    );
+
+VOID
+YoriLibHashRemoveByEntry(
+    __in PYORI_HASH_ENTRY HashEntry
+    );
+
+PYORI_HASH_ENTRY
+YoriLibHashRemoveByKey(
+    __in PYORI_HASH_TABLE HashTable,
+    __in PYORI_STRING KeyString
     );
 
 // *** ICONV.C ***
