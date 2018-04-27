@@ -38,6 +38,11 @@ YORI_LIST_ENTRY YoriShLoadedModules;
 YORI_LIST_ENTRY YoriShBuiltinCallbacks;
 
 /**
+ Hash table of builtin callbacks currently registered with Yori.
+ */
+PYORI_HASH_TABLE YoriShBuiltinHash;
+
+/**
  Load a DLL file into a loaded module object that can be referenced.
 
  @param DllName Pointer to a NULL terminated string of a DLL to load.
@@ -382,25 +387,22 @@ YoriShBuiltIn (
     DWORD ExitCode = 1;
     PYORI_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
     PYORI_CMD_BUILTIN BuiltInCmd = NULL;
-    PYORI_LIST_ENTRY ListEntry;
     PYORI_BUILTIN_CALLBACK CallbackEntry = NULL;
+    PYORI_HASH_ENTRY HashEntry;
 
-    if (YoriShBuiltinCallbacks.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
-        while (ListEntry != NULL) {
-            CallbackEntry = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
-            if (YoriLibCompareStringInsensitive(&CallbackEntry->BuiltinName, &CmdContext->ArgV[0]) == 0) {
-                BuiltInCmd = CallbackEntry->BuiltInFn;
-                break;
-            }
-            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, ListEntry);
-            CallbackEntry = NULL;
+    if (YoriShBuiltinHash != NULL) {
+        HashEntry = YoriLibHashLookupByKey(YoriShBuiltinHash, &CmdContext->ArgV[0]);
+        if (HashEntry != NULL) {
+            CallbackEntry = (PYORI_BUILTIN_CALLBACK)HashEntry->Context;
+            BuiltInCmd = CallbackEntry->BuiltInFn;
         }
     }
 
     if (BuiltInCmd) {
         PYORI_LOADED_MODULE PreviousModule;
         PYORI_LOADED_MODULE HostingModule = NULL;
+
+        ASSERT(CallbackEntry != NULL);
 
         //
         //  If the function is in a module, reference the DLL to keep it alive
@@ -458,6 +460,12 @@ YoriShBuiltinRegister(
     if (YoriShBuiltinCallbacks.Next == NULL) {
         YoriLibInitializeListHead(&YoriShBuiltinCallbacks);
     }
+    if (YoriShBuiltinHash == NULL) {
+        YoriShBuiltinHash = YoriLibAllocateHashTable(50);
+        if (YoriShBuiltinHash == NULL) {
+            return FALSE;
+        }
+    }
 
     NewCallback = YoriLibReferencedMalloc(sizeof(YORI_BUILTIN_CALLBACK) + (BuiltinCmd->LengthInChars + 1) * sizeof(TCHAR));
     if (NewCallback == NULL) {
@@ -469,6 +477,8 @@ YoriShBuiltinRegister(
     NewCallback->BuiltinName.LengthInChars = BuiltinCmd->LengthInChars;
     memcpy(NewCallback->BuiltinName.StartOfString, BuiltinCmd->StartOfString, BuiltinCmd->LengthInChars * sizeof(TCHAR));
     NewCallback->BuiltinName.StartOfString[BuiltinCmd->LengthInChars] = '\0';
+    YoriLibReference(NewCallback);
+    NewCallback->BuiltinName.MemoryToFree = NewCallback;
 
     NewCallback->BuiltInFn = CallbackFn;
     if (YoriShActiveModule != NULL) {
@@ -482,10 +492,8 @@ YoriShBuiltinRegister(
     //  the first to be removed.
     //
 
-    if (YoriShBuiltinCallbacks.Next == NULL) {
-        YoriLibInitializeListHead(&YoriShBuiltinCallbacks);
-    }
     YoriLibInsertList(&YoriShBuiltinCallbacks, &NewCallback->ListEntry);
+    YoriLibHashInsertByKey(YoriShBuiltinHash, &NewCallback->BuiltinName, NewCallback, &NewCallback->HashEntry);
     return TRUE;
 }
 
@@ -506,30 +514,29 @@ YoriShBuiltinUnregister(
     __in PYORI_CMD_BUILTIN CallbackFn
     )
 {
-    PYORI_LIST_ENTRY ListEntry;
     PYORI_BUILTIN_CALLBACK Callback;
+    PYORI_HASH_ENTRY HashEntry;
 
     UNREFERENCED_PARAMETER(CallbackFn);
 
-    if (YoriShBuiltinCallbacks.Next == NULL) {
+    if (YoriShBuiltinHash == NULL) {
         return FALSE;
     }
 
-    ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
-    while (ListEntry != NULL) {
-        Callback = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
-        if (YoriLibCompareStringInsensitive(BuiltinCmd, &Callback->BuiltinName) == 0) {
+
+    if (YoriShBuiltinHash != NULL) {
+        HashEntry = YoriLibHashRemoveByKey(YoriShBuiltinHash, BuiltinCmd);
+        if (HashEntry != NULL) {
+            Callback = (PYORI_BUILTIN_CALLBACK)HashEntry->Context;
             ASSERT(CallbackFn == Callback->BuiltInFn);
             YoriLibRemoveListItem(&Callback->ListEntry);
             if (Callback->ReferencedModule != NULL) {
                 YoriShReleaseDll(Callback->ReferencedModule);
                 Callback->ReferencedModule = NULL;
             }
+            YoriLibFreeStringContents(&Callback->BuiltinName);
             YoriLibDereference(Callback);
-            return TRUE;
         }
-
-        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, ListEntry);
     }
 
     return FALSE;
@@ -554,12 +561,18 @@ YoriShBuiltinUnregisterAll(
     while (ListEntry != NULL) {
         Callback = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
         YoriLibRemoveListItem(&Callback->ListEntry);
+        YoriLibHashRemoveByEntry(&Callback->HashEntry);
         if (Callback->ReferencedModule != NULL) {
             YoriShReleaseDll(Callback->ReferencedModule);
             Callback->ReferencedModule = NULL;
         }
+        YoriLibFreeStringContents(&Callback->BuiltinName);
         YoriLibDereference(Callback);
         ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
+    }
+
+    if (YoriShBuiltinHash != NULL) {
+        YoriLibFreeEmptyHashTable(YoriShBuiltinHash);
     }
 
     return;

@@ -522,6 +522,11 @@ typedef struct _YORI_BUILTIN_CALLBACK {
     YORI_STRING BuiltinName;
 
     /**
+     The hash entry for this match.  Paired with @ref YoriShBuiltinHash .
+     */
+    YORI_HASH_ENTRY HashEntry;
+
+    /**
      A function pointer to the builtin.
      */
     PYORI_CMD_BUILTIN BuiltInFn;
