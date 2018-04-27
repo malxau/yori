@@ -161,6 +161,7 @@ YoriCmd_CHDIR(
               NewDir->StartOfString[0] <= 'z' &&
               (NewDir->StartOfString[0] - 'a' + 'A') == OldCurrentDirectory.StartOfString[0]))) {
 
+            YoriLibFreeStringContents(&OldCurrentDirectory);
             return EXIT_SUCCESS;
         }
 
