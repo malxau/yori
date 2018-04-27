@@ -1043,7 +1043,9 @@ YoriShGetExpression(
                     ASSERT(!SuggestionPopulated);
                     YoriShCompleteSuggestion(&Buffer);
                     SuggestionPopulated = TRUE;
-                    YoriShDisplayAfterKeyPress(&Buffer);
+                    if (Buffer.SuggestionString.LengthInChars > 0) {
+                        YoriShDisplayAfterKeyPress(&Buffer);
+                    }
                 }
             } else if (!RestartStateSaved) {
                 err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 30 * 1000);
