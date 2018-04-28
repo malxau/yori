@@ -3,7 +3,7 @@
  *
  * SCUT - A command line tool to manipulate shortcuts
  *
- * Copyright (c) 2004-2017 Malcolm Smith
+ * Copyright (c) 2004-2018 Malcolm Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -430,16 +430,17 @@ CHAR strScutHelpText[] =
         "     [-workingdir workingdir]\n"
         "SCUT -exec <filename> [-target target] [-args args] [-show showcmd]\n"
         "     [-workingdir workingdir]\n"
-        "SCUT -dump <filename>\n";
+        "SCUT [-f fmt] -dump <filename>\n";
 
 /**
  Display help text and license for the scut application.
  */
-VOID ScutHelp()
+VOID
+ScutHelp()
 {
     YORI_STRING License;
 
-    YoriLibMitLicenseText(_T("2004-2017"), &License);
+    YoriLibMitLicenseText(_T("2004-2018"), &License);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Scut %i.%i\n"), SCUT_VER_MAJOR, SCUT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
@@ -451,7 +452,97 @@ VOID ScutHelp()
 }
 
 /**
+ A callback function to expand any known variables found when parsing the
+ format string.
+
+ @param OutputString A pointer to the output string to populate with data
+        if a known variable is found.  The allocated length indicates the
+        amount of the string that can be written to.
+
+ @param VariableName The variable name to expand.
+
+ @param scut Pointer to an IShellLinkW interface that can supply the data
+        to populate.
+ 
+ @return The number of characters successfully populated, or the number of
+         characters required in order to successfully populate, or zero
+         on error.
+ */
+DWORD
+ScutExpandVariables(
+    __inout PYORI_STRING OutputString,
+    __in PYORI_STRING VariableName,
+    __in IShellLinkW * scut
+    )
+{
+    TCHAR szTemp[MAX_PATH];
+    DWORD CharsNeeded;
+    int   wTemp = 0;
+    BOOL  Numeric = FALSE;
+
+    if (YoriLibCompareStringWithLiteral(VariableName, _T("TARGET")) == 0) {
+        if (scut->Vtbl->GetPath(scut, szTemp, MAX_PATH, NULL, 0) != NOERROR) {
+            return 0;
+        }
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ARGS")) == 0) {
+        if (scut->Vtbl->GetArguments(scut, szTemp, MAX_PATH) != NOERROR) {
+            return 0;
+        }
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WORKINGDIR")) == 0) {
+        if (scut->Vtbl->GetWorkingDirectory(scut, szTemp, MAX_PATH) != NOERROR) {
+            return 0;
+        }
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DESCRIPTION")) == 0) {
+        if (scut->Vtbl->GetDescription(scut, szTemp, MAX_PATH) != NOERROR) {
+            return 0;
+        }
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ICONPATH")) == 0) {
+        if (scut->Vtbl->GetIconLocation(scut, szTemp, MAX_PATH, &wTemp) != NOERROR) {
+            return 0;
+        }
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ICONINDEX")) == 0) {
+        if (scut->Vtbl->GetIconLocation(scut, szTemp, MAX_PATH, &wTemp) != NOERROR) {
+            return 0;
+        }
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHOW")) == 0) {
+        if (scut->Vtbl->GetShowCmd(scut, &wTemp) != NOERROR) {
+            return 0;
+        }
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HOTKEY")) == 0) {
+        USHORT ShortTemp;
+        if (scut->Vtbl->GetHotkey(scut, &ShortTemp) != NOERROR) {
+            return 0;
+        }
+        wTemp = ShortTemp;
+        Numeric = TRUE;
+    } else {
+        return 0;
+    }
+
+    if (Numeric) {
+        CharsNeeded = YoriLibSPrintf(szTemp, _T("%i"), wTemp);
+    } else {
+        CharsNeeded = _tcslen(szTemp);
+    }
+    if (OutputString->LengthAllocated < CharsNeeded) {
+        return CharsNeeded;
+    }
+
+    memcpy(OutputString->StartOfString, szTemp, CharsNeeded * sizeof(TCHAR));
+    OutputString->LengthInChars = CharsNeeded;
+    return CharsNeeded;
+}
+
+/**
  The main entrypoint for scut.
+
+ @param ArgC The number of arguments.
+
+ @param ArgV An array of arguments.
+
+ @return ExitCode for the process.
  */
 DWORD
 ymain(
@@ -476,13 +567,24 @@ ymain(
     LONGLONG llTemp;
     DWORD   CharsConsumed;
     DWORD   ExitCode;
+    LPTSTR FormatString = _T("Target:          $TARGET$\n")
+                          _T("Arguments:       $ARGS$\n")
+                          _T("Working dir:     $WORKINGDIR$\n")
+                          _T("Description:     $DESCRIPTION$\n")
+                          _T("Icon Path:       $ICONPATH$\n")
+                          _T("Icon Index:      $ICONINDEX$\n")
+                          _T("Show State:      $SHOW$\n")
+                          _T("Hotkey:          $HOTKEY$\n");
 
     HRESULT hRes;
     BOOL    ArgumentUnderstood;
     DWORD   i;
+    YORI_STRING YsFormatString;
+
     YoriLibInitEmptyString(&szFile);
     YoriLibInitEmptyString(&szIcon);
     YoriLibInitEmptyString(&szWorkingDir);
+    YoriLibInitEmptyString(&YsFormatString);
 
     ExitCode = EXIT_FAILURE;
 
@@ -537,6 +639,12 @@ ymain(
                 szDesc = ArgV[i + 1].StartOfString;
                 ArgumentUnderstood = TRUE;
             }
+            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+                YsFormatString.StartOfString = ArgV[i + 1].StartOfString;
+                YsFormatString.LengthInChars = ArgV[i + 1].LengthInChars;
+                YsFormatString.LengthAllocated = ArgV[i + 1].LengthAllocated;
+                ArgumentUnderstood = TRUE;
+            }
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("hotkey")) == 0) {
                 llTemp = 0;
                 YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
@@ -554,7 +662,6 @@ ymain(
                 wIcon = (WORD)llTemp;
                 ArgumentUnderstood = TRUE;
             }
-    
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("show")) == 0) {
                 llTemp = 0;
                 YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
@@ -581,6 +688,10 @@ ymain(
     if (op == ScutOperationUnknown) {
         ScutHelp();
         goto Exit;
+    }
+
+    if (op == ScutOperationDump && YsFormatString.StartOfString == NULL) {
+        YoriLibConstantString(&YsFormatString, FormatString);
     }
 
     hRes = CoInitialize(NULL);
@@ -621,45 +732,14 @@ ymain(
     }
 
     if (op == ScutOperationDump) {
-        TCHAR szTemp[MAX_PATH];
-        int   wTemp;
-        if (scut->Vtbl->GetPath(scut, szTemp, MAX_PATH, NULL, 0) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetPath failure\n"));
-            goto Exit;
+        YORI_STRING DisplayString;
+        YoriLibInitEmptyString(&DisplayString);
+        YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ScutExpandVariables, scut, &DisplayString);
+        if (DisplayString.StartOfString != NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+            YoriLibFreeStringContents(&DisplayString);
+            ExitCode = EXIT_SUCCESS;
         }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Target:          %s\n"), szTemp);
-        if (scut->Vtbl->GetArguments(scut, szTemp, MAX_PATH) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetArguments failure\n"));
-            goto Exit;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Arguments:       %s\n"), szTemp);
-        if (scut->Vtbl->GetWorkingDirectory(scut, szTemp, MAX_PATH) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetWorkingDirectory failure\n"));
-            goto Exit;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Working Dir:     %s\n"), szTemp);
-        if (scut->Vtbl->GetDescription(scut, szTemp, MAX_PATH) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetDescription failure\n"));
-            goto Exit;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Description:     %s\n"), szTemp);
-        if (scut->Vtbl->GetIconLocation(scut, szTemp, MAX_PATH, &wTemp) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetIconLocation failure\n"));
-            goto Exit;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Icon Path:       %s\n"), szTemp);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Icon Index:      %i\n"), wTemp);
-        if (scut->Vtbl->GetShowCmd(scut, &wTemp) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetShowCmd failure\n"));
-            goto Exit;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Show state:      %i\n"), wTemp);
-        if (scut->Vtbl->GetHotkey(scut, &wShow) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetHotkey failure\n"));
-            goto Exit;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Hotkey:          %i\n"), wShow);
-        ExitCode = EXIT_SUCCESS;
         goto Exit;
     }
 

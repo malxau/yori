@@ -1,7 +1,6 @@
 M2:
 
  - Merge sdir recursion root and criteria arguments
- - Have scut dump parse variables for flexible output
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text
  - Ctrl+R
