@@ -339,42 +339,39 @@ ymain (
     )
 {
     YORI_STRING CurrentExpression;
-    DWORD ExitCode;
     BOOL TerminateApp = FALSE;
 
     YoriShInit();
-    if (YoriShParseArgs(ArgC, ArgV, &TerminateApp, &ExitCode)) {
-        if (TerminateApp) {
-            YoriShClearAllHistory();
-            YoriShClearAllAliases();
-            YoriShBuiltinUnregisterAll();
-            YoriShDiscardSavedRestartState(NULL);
-            return ExitCode;
+    YoriShParseArgs(ArgC, ArgV, &TerminateApp, &g_ExitProcessExitCode);
+
+    if (!TerminateApp) {
+
+        YoriShLoadHistoryFromFile();
+
+        while(TRUE) {
+
+            YoriShPostCommand();
+            YoriShScanJobsReportCompletion(FALSE);
+            YoriShScanProcessBuffersForTeardown(FALSE);
+            if (g_ExitProcess) {
+                break;
+            }
+            YoriShDisplayPrompt();
+            if (!YoriShGetExpression(&CurrentExpression)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Failed to read expression!"));
+                continue;
+            }
+            if (CurrentExpression.LengthInChars > 0) {
+                YoriShExecuteExpression(&CurrentExpression);
+            }
+            YoriLibFreeStringContents(&CurrentExpression);
         }
+
+        YoriShSaveHistoryToFile();
     }
 
-    YoriShLoadHistoryFromFile();
-
-    while(TRUE) {
-
-        YoriShPostCommand();
-        YoriShScanJobsReportCompletion();
-        YoriShScanProcessBuffersForTeardown();
-        if (g_ExitProcess) {
-            break;
-        }
-        YoriShDisplayPrompt();
-        if (!YoriShGetExpression(&CurrentExpression)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Failed to read expression!"));
-            continue;
-        }
-        if (CurrentExpression.LengthInChars > 0) {
-            YoriShExecuteExpression(&CurrentExpression);
-        }
-        YoriLibFreeStringContents(&CurrentExpression);
-    }
-
-    YoriShSaveHistoryToFile();
+    YoriShScanProcessBuffersForTeardown(TRUE);
+    YoriShScanJobsReportCompletion(TRUE);
     YoriShClearAllHistory();
     YoriShClearAllAliases();
     YoriShBuiltinUnregisterAll();

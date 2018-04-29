@@ -5,7 +5,6 @@ M2:
  - Colorize help and error text
  - Ctrl+R
  - Isolate aliases during call
- - Clean up memory on shell exit (for background jobs)
 
 M3:
 

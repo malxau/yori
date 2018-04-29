@@ -60,7 +60,6 @@ typedef struct _YORI_PROCESS_BUFFER {
      */
     DWORD BytesSent;
 
-
     /**
      The data buffer.
      */
@@ -87,6 +86,11 @@ typedef struct _YORI_BUFFERED_PROCESS {
      A handle to the buffer processing thread.
      */
     HANDLE hPumpThread;
+
+    /**
+     A handle indicating that the buffer pumping thread should terminate.
+     */
+    HANDLE hCancelPumpEvent;
 
     /**
      A lock for the data and sizes referred to in this structure.
@@ -150,6 +154,9 @@ YoriShFreeProcessBuffers(
     if (ThisBuffer->hPumpThread != NULL) {
         CloseHandle(ThisBuffer->hPumpThread);
     }
+    if (ThisBuffer->hCancelPumpEvent != NULL) {
+        CloseHandle(ThisBuffer->hCancelPumpEvent);
+    }
     if (ThisBuffer->Mutex) {
         CloseHandle(ThisBuffer->Mutex);
     }
@@ -182,6 +189,13 @@ YoriShCmdBufferPumpToNextProcess(
     ASSERT(ThisBuffer->ErrorBuffer.Buffer == NULL);
 
     while (TRUE) {
+
+        ASSERT(ThisBuffer->hCancelPumpEvent != NULL);
+        if (ThisBuffer->hCancelPumpEvent != NULL) {
+            if (WaitForSingleObject(ThisBuffer->hCancelPumpEvent, 0) == WAIT_OBJECT_0) {
+                break;
+            }
+        }
 
         BytesToWrite = 4096;
         AcquireMutex(ThisBuffer->Mutex);
@@ -232,11 +246,13 @@ YoriShCmdBufferPump(
     DWORD BytesRead;
     HANDLE HandlesToWait[2];
     DWORD HandleCount;
+    DWORD HandleIndex;
     DWORD Error;
     PYORI_PROCESS_BUFFER SignalledBuffer;
 
     while (TRUE) {
         HandleCount = 0;
+
         if (ThisBuffer->OutputBuffer.hSource != NULL) {
             HandlesToWait[HandleCount] = ThisBuffer->OutputBuffer.hSource;
             HandleCount++;
@@ -251,27 +267,28 @@ YoriShCmdBufferPump(
             break;
         }
 
+        ASSERT(ThisBuffer->hCancelPumpEvent != NULL);
+        if (ThisBuffer->hCancelPumpEvent != NULL) {
+            Error = WaitForSingleObject(ThisBuffer->hCancelPumpEvent, 0);
+            if (Error == WAIT_OBJECT_0) {
+                AcquireMutex(ThisBuffer->Mutex);
+                break;
+            }
+        }
+
         Error = WaitForMultipleObjects(HandleCount, HandlesToWait, FALSE, INFINITE);
-        if (Error != WAIT_OBJECT_0 && Error != (WAIT_OBJECT_0 + 1)) {
+        if (Error < WAIT_OBJECT_0 || Error > (WAIT_OBJECT_0 + 1)) {
             AcquireMutex(ThisBuffer->Mutex);
             break;
         }
 
-        if (Error == WAIT_OBJECT_0) {
-            if (HandlesToWait[0] == ThisBuffer->OutputBuffer.hSource) {
-                SignalledBuffer = &ThisBuffer->OutputBuffer;
-            } else {
-                ASSERT(HandlesToWait[0] == ThisBuffer->ErrorBuffer.hSource);
-                SignalledBuffer = &ThisBuffer->ErrorBuffer;
-            }
-        } else {
-            ASSERT(Error == WAIT_OBJECT_0 + 1);
-            if (HandlesToWait[1] == ThisBuffer->OutputBuffer.hSource) {
-                SignalledBuffer = &ThisBuffer->OutputBuffer;
-            } else {
-                ASSERT(HandlesToWait[1] == ThisBuffer->ErrorBuffer.hSource);
-                SignalledBuffer = &ThisBuffer->ErrorBuffer;
-            }
+        HandleIndex = Error - WAIT_OBJECT_0;
+        SignalledBuffer = NULL;
+
+        if (HandlesToWait[HandleIndex] == ThisBuffer->OutputBuffer.hSource) {
+            SignalledBuffer = &ThisBuffer->OutputBuffer;
+        } else if (HandlesToWait[HandleIndex] == ThisBuffer->ErrorBuffer.hSource) {
+            SignalledBuffer = &ThisBuffer->ErrorBuffer;
         }
 
         if (ReadFile(SignalledBuffer->hSource,
@@ -403,6 +420,12 @@ YoriShCreateNewProcessBuffer(
 
     ThisBuffer->Mutex = CreateMutex(NULL, FALSE, NULL);
     if (ThisBuffer->Mutex == NULL) {
+        YoriShFreeProcessBuffers(ThisBuffer);
+        return FALSE;
+    }
+
+    ThisBuffer->hCancelPumpEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (ThisBuffer->hCancelPumpEvent == NULL) {
         YoriShFreeProcessBuffers(ThisBuffer);
         return FALSE;
     }
@@ -604,7 +627,6 @@ YoriShGetProcessBuffer(
         return FALSE;
     }
 
-
     LengthNeeded = YoriLibGetMultibyteInputSizeNeeded(ThisBuffer->Buffer, ThisBuffer->BytesPopulated);
     if (LengthNeeded == 0 && ThisBuffer->BytesPopulated == 0) {
         YoriLibInitEmptyString(String);
@@ -676,10 +698,16 @@ YoriShGetProcessErrorBuffer(
  Scan the set of outstanding process buffers and delete any that have
  completed.
 
+ @param TeardownAll TRUE if the shell is exiting and wants to tear down all
+        state.  FALSE if this is a periodic check to tear down things that
+        have been around a while.
+
  @return Always TRUE currently.
  */
 BOOL
-YoriShScanProcessBuffersForTeardown()
+YoriShScanProcessBuffersForTeardown(
+    __in BOOL TeardownAll
+    )
 {
     PYORI_BUFFERED_PROCESS ThisBuffer;
     PYORI_LIST_ENTRY ListEntry;
@@ -693,10 +721,20 @@ YoriShScanProcessBuffersForTeardown()
         ThisBuffer = CONTAINING_RECORD(ListEntry, YORI_BUFFERED_PROCESS, ListEntry);
         ListEntry = YoriLibGetNextListEntry(&BufferedProcessList, ListEntry);
         if (ThisBuffer->hPumpThread != NULL) {
-            if (WaitForSingleObject(ThisBuffer->hPumpThread, 0) == WAIT_OBJECT_0) {
-                CloseHandle(ThisBuffer->hPumpThread);
-                ThisBuffer->hPumpThread = NULL;
-                YoriShDereferenceProcessBuffer(ThisBuffer);
+            if (TeardownAll) {
+                //SetEvent(ThisBuffer->hCancelPumpEvent);
+                TerminateThread(ThisBuffer->hPumpThread, 0);
+                if (WaitForSingleObject(ThisBuffer->hPumpThread, INFINITE) == WAIT_OBJECT_0) {
+                    CloseHandle(ThisBuffer->hPumpThread);
+                    ThisBuffer->hPumpThread = NULL;
+                    YoriShDereferenceProcessBuffer(ThisBuffer);
+                }
+            } else {
+                if (WaitForSingleObject(ThisBuffer->hPumpThread, 0) == WAIT_OBJECT_0) {
+                    CloseHandle(ThisBuffer->hPumpThread);
+                    ThisBuffer->hPumpThread = NULL;
+                    YoriShDereferenceProcessBuffer(ThisBuffer);
+                }
             }
         }
     }

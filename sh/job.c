@@ -195,10 +195,16 @@ YoriShFreeJob(
  Scan the set of outstanding jobs and report to the user if any have
  completed.
 
+ @param TeardownAll TRUE if the shell is exiting and wants to tear down all
+        state.  FALSE if this is a periodic check to tear down things that
+        have been around a while.
+
  @return Always TRUE currently.
  */
 BOOL
-YoriShScanJobsReportCompletion()
+YoriShScanJobsReportCompletion(
+    __in BOOL TeardownAll
+    )
 {
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
@@ -215,14 +221,22 @@ YoriShScanJobsReportCompletion()
             if (WaitForSingleObject(ThisJob->hProcess, 0) == WAIT_OBJECT_0) {
                 GetExitCodeProcess(ThisJob->hProcess, &ThisJob->ExitCode);
                 ThisJob->JobState = JobStateCompletedAwaitingDelete;
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i completed, result %i: %s\n"), ThisJob->JobId, ThisJob->ExitCode, ThisJob->szCmd);
+                if (!TeardownAll) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i completed, result %i: %s\n"), ThisJob->JobId, ThisJob->ExitCode, ThisJob->szCmd);
+                }
             }
+        }
+
+        if (TeardownAll && ThisJob->JobState == JobStateExecuting) {
+            ThisJob->JobState = JobStateCompletedAwaitingDelete;
         }
 
         if (ThisJob->JobState == JobStateCompletedAwaitingDelete) {
             ThisJob->ScanEncounteredAfterCompleteCount++;
-            if (ThisJob->ScanEncounteredAfterCompleteCount >= 16) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i deleted, result %i: %s\n"), ThisJob->JobId, ThisJob->ExitCode, ThisJob->szCmd);
+            if (ThisJob->ScanEncounteredAfterCompleteCount >= 16 || TeardownAll) {
+                if (!TeardownAll) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i deleted, result %i: %s\n"), ThisJob->JobId, ThisJob->ExitCode, ThisJob->szCmd);
+                }
                 YoriShFreeJob(ThisJob);
             }
         }

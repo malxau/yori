@@ -845,7 +845,9 @@ YoriShCreateNewJob(
     );
 
 BOOL
-YoriShScanJobsReportCompletion();
+YoriShScanJobsReportCompletion(
+    __in BOOL TeardownAll
+    );
 
 DWORD
 YoriShGetNextJobId(
