@@ -31,6 +31,20 @@
 #pragma warning(disable: 4226)
 
 /**
+ Define the error type for HRESULT.
+ */
+typedef long HRESULT;
+
+#ifndef STDMETHODCALLTYPE
+
+/**
+ Define the Windows standard calling convention if it hasn't been defined
+ already.
+ */
+#define STDMETHODCALLTYPE __stdcall
+#endif
+
+/**
  Standard COM QueryInterface method.
  */
 typedef HRESULT STDMETHODCALLTYPE IUnknown_QueryInterface (PVOID This, const GUID * riid, LPVOID * ppvObj);
@@ -61,20 +75,6 @@ typedef struct IPersistFile {
      */
      struct IPersistFileVtbl *Vtbl;
 } IPersistFile;
-
-/**
- Define the error type for HRESULT.
- */
-typedef long HRESULT;
-
-#ifndef STDMETHODCALLTYPE
-
-/**
- Define the Windows standard calling convention if it hasn't been defined
- already.
- */
-#define STDMETHODCALLTYPE __stdcall
-#endif
 
 /**
  Indicates the GUID of the class implementing the functionality.

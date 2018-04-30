@@ -61,7 +61,7 @@ HelpHelp()
  Text to display to the user about Yori and its tools.
  */
 const
-CHAR strHelpText[] =
+CHAR strHelpText1[] =
         "\n"
         "For more information about a command, run <command> /?\n"
         "\n"
@@ -100,7 +100,13 @@ CHAR strHelpText[] =
         "INCLUDE   Include a script within another script (only valid in scripts)\n"
         "INTCMP    Compare two integer values\n"
         "JOB       Displays or updates background job status\n"
-        "LINES     Count the number of lines in one or more files\n"
+        "LINES     Count the number of lines in one or more files";
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpText2[] =
         "MKDIR     Creates directories\n"
         "MKLINK    Creates hardlinks, symbolic links, or junctions\n"
         "MOVE      Moves or renames one or more files\n"
@@ -143,7 +149,8 @@ CHAR strHelpText[] =
 BOOL
 HelpText()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText1);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText2);
     return TRUE;
 }
 
