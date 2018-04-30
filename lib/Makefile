@@ -19,6 +19,7 @@ OBJS=\
 	 env.obj      \
 	 ep_yori.obj  \
 	 fileenum.obj \
+	 fileinfo.obj \
 	 fullpath.obj \
 	 hash.obj     \
 	 iconv.obj    \

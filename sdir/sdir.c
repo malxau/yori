@@ -41,14 +41,14 @@ DWORD SdirAllocatedDirents     = 1000;
  Pointer to an array of directory entries.  This corresponds to files in
  a single directory, populated in response to enumerate.
  */
-PSDIR_DIRENT SdirDirCollection = NULL;
+PYORI_FILE_INFO SdirDirCollection = NULL;
 
 /**
  Pointer to an array of pointers to directory entries.  These pointers
  are maintained sorted based on the user's sort criteria so that files
  can be displayed in order from this indirection.
  */
-PSDIR_DIRENT * SdirDirSorted   = NULL;
+PYORI_FILE_INFO * SdirDirSorted   = NULL;
 
 /**
  Specifies the number of allocated directory entries that have been
@@ -94,16 +94,15 @@ SdirDisplayCollection();
 
  @param FindData Information returned by the system when enumerating files.
 
- @param FullPath Pointer to a NULL terminate string referring to the full
-        path to the file.
+ @param FullPath Pointer to a string referring to the full path to the file.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 SdirCaptureFoundItemIntoDirent (
-    __out PSDIR_DIRENT CurrentEntry,
+    __out PYORI_FILE_INFO CurrentEntry,
     __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
+    __in PYORI_STRING FullPath
     ) 
 {
     DWORD i;
@@ -199,36 +198,32 @@ SdirUpdateFindDataFromFileInformation (
  */
 YORILIB_COLOR_ATTRIBUTES
 SdirRenderAttributesFromPath (
-    __in LPTSTR FullPath
+    __in PYORI_STRING FullPath
     )
 {
     HANDLE hFind;
     WIN32_FIND_DATA FindData;
-    SDIR_DIRENT CurrentEntry;
+    YORI_FILE_INFO CurrentEntry;
 
     memset(&CurrentEntry, 0, sizeof(CurrentEntry));
 
-    hFind = FindFirstFile(FullPath, &FindData);
+    hFind = FindFirstFile(FullPath->StartOfString, &FindData);
     if (hFind != INVALID_HANDLE_VALUE) {
         SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, FullPath);
         FindClose(hFind);
         return CurrentEntry.RenderAttributes;
     } else {
-        LPTSTR Dummy;
-        DWORD DummyLen;
+        YORI_STRING DummyString;
 
-        DummyLen = (DWORD)_tcslen(FullPath) + 2;
-
-        Dummy = YoriLibMalloc(DummyLen * sizeof(TCHAR));
-        if (Dummy == NULL) {
+        if (!YoriLibAllocateString(&DummyString, FullPath->LengthInChars + 2)) {
             return SdirDefaultColor;
-        }
+        };
 
         memset(&FindData, 0, sizeof(FindData));
-        YoriLibSPrintfS(Dummy, DummyLen, _T("%s\\"), FullPath);
-        SdirUpdateFindDataFromFileInformation(&FindData, Dummy);
-        SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, Dummy);
-        YoriLibFree(Dummy);
+        DummyString.LengthInChars = YoriLibSPrintfS(DummyString.StartOfString, DummyString.LengthAllocated, _T("%s\\"), FullPath);
+        SdirUpdateFindDataFromFileInformation(&FindData, DummyString.StartOfString);
+        SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, &DummyString);
+        YoriLibFreeStringContents(&DummyString);
         return CurrentEntry.RenderAttributes;
     }
 }
@@ -246,10 +241,10 @@ SdirRenderAttributesFromPath (
 BOOL
 SdirAddToCollection (
     __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
+    __in PYORI_STRING FullPath
     ) 
 {
-    PSDIR_DIRENT CurrentEntry;
+    PYORI_FILE_INFO CurrentEntry;
     DWORD i, j;
     DWORD CompareResult = 0;
 
@@ -366,16 +361,15 @@ SdirItemFoundCallback(
 #if defined(UNICODE)
     if (Opts->FindFirstStreamW && (Opts->FtNamedStreams.Flags & SDIR_FEATURE_DISPLAY)) {
         HANDLE hStreamFind;
-        SDIR_WIN32_FIND_STREAM_DATA FindStreamData;
+        WIN32_FIND_STREAM_DATA FindStreamData;
         WIN32_FIND_DATA BogusFindData;
-        LPTSTR StreamFullPath;
-        DWORD StreamFullPathLength;
+        YORI_STRING StreamFullPath;
 
         //
         //  Display the default stream
         //
 
-        SdirAddToCollection(FindData, FullPath->StartOfString);
+        SdirAddToCollection(FindData, FullPath);
 
         //
         //  Look for any named streams
@@ -384,9 +378,7 @@ SdirItemFoundCallback(
         hStreamFind = Opts->FindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
         if (hStreamFind != INVALID_HANDLE_VALUE) {
 
-            StreamFullPathLength = FullPath->LengthInChars + SDIR_MAX_STREAM_NAME;
-            StreamFullPath = YoriLibMalloc(StreamFullPathLength * sizeof(TCHAR));
-            if (StreamFullPath == NULL) {
+            if (!YoriLibAllocateString(&StreamFullPath, FullPath->LengthInChars + YORI_LIB_MAX_STREAM_NAME)) {
                 FindClose(hStreamFind);
                 return FALSE;
             }
@@ -407,7 +399,7 @@ SdirItemFoundCallback(
                         FindStreamData.cStreamName[StreamLength - 6] = '\0';
                     }
 
-                    YoriLibSPrintfS(StreamFullPath, StreamFullPathLength, _T("%s%s%s"), Opts->ParentName.StartOfString, FindData->cFileName, FindStreamData.cStreamName);
+                    StreamFullPath.LengthInChars = YoriLibSPrintfS(StreamFullPath.StartOfString, StreamFullPath.LengthAllocated, _T("%s%s%s"), Opts->ParentName.StartOfString, FindData->cFileName, FindStreamData.cStreamName);
 
                     //
                     //  Assume file state is stream state
@@ -425,8 +417,8 @@ SdirItemFoundCallback(
                     //  Populate stream information
                     //
 
-                    SdirUpdateFindDataFromFileInformation(&BogusFindData, StreamFullPath);
-                    SdirAddToCollection(&BogusFindData, StreamFullPath);
+                    SdirUpdateFindDataFromFileInformation(&BogusFindData, StreamFullPath.StartOfString);
+                    SdirAddToCollection(&BogusFindData, &StreamFullPath);
                 }
             } while (Opts->FindNextStreamW(hStreamFind, &FindStreamData));
 
@@ -434,17 +426,14 @@ SdirItemFoundCallback(
             //  MSFIX Keep this on the context so we can reuse it
             //
 
-            if (StreamFullPath != NULL) {
-                YoriLibFree(StreamFullPath);
-                StreamFullPath = NULL;
-            }
+            YoriLibFreeStringContents(&StreamFullPath);
         }
 
         FindClose(hStreamFind);
 
     } else {
 #endif
-        SdirAddToCollection(FindData, FullPath->StartOfString);
+        SdirAddToCollection(FindData, FullPath);
 #if defined(UNICODE)
     }
 #endif
@@ -469,8 +458,8 @@ SdirEnumeratePath (
     LPTSTR FinalPart;
     DWORD SizeCopied;
     ULONG DirEntsToPreserve;
-    PSDIR_DIRENT NewSdirDirCollection;
-    PSDIR_DIRENT * NewSdirDirSorted;
+    PYORI_FILE_INFO NewSdirDirCollection;
+    PYORI_FILE_INFO * NewSdirDirSorted;
     SDIR_ITEM_FOUND_CONTEXT ItemFoundContext;
     YORI_STRING YsFindStr;
 
@@ -580,14 +569,14 @@ SdirEnumeratePath (
                 SdirAllocatedDirents += 100;
             }
 
-            NewSdirDirCollection = YoriLibMalloc(SdirAllocatedDirents * sizeof(SDIR_DIRENT));
+            NewSdirDirCollection = YoriLibMalloc(SdirAllocatedDirents * sizeof(YORI_FILE_INFO));
             if (NewSdirDirCollection == NULL) {
                 SdirAllocatedDirents = SdirDirCollectionCurrent;
                 SdirDisplayError(GetLastError(), _T("YoriLibMalloc"));
                 return FALSE;
             }
     
-            NewSdirDirSorted = YoriLibMalloc(SdirAllocatedDirents * sizeof(PSDIR_DIRENT));
+            NewSdirDirSorted = YoriLibMalloc(SdirAllocatedDirents * sizeof(PYORI_FILE_INFO));
             if (NewSdirDirSorted == NULL) {
                 SdirAllocatedDirents = SdirDirCollectionCurrent;
                 YoriLibFree(NewSdirDirCollection);
@@ -608,9 +597,9 @@ SdirEnumeratePath (
             //
     
             if (DirEntsToPreserve > 0) {
-                memcpy(NewSdirDirCollection, SdirDirCollection, sizeof(SDIR_DIRENT)*DirEntsToPreserve);
+                memcpy(NewSdirDirCollection, SdirDirCollection, sizeof(YORI_FILE_INFO)*DirEntsToPreserve);
                 for (SizeCopied = 0; SizeCopied < DirEntsToPreserve; SizeCopied++) {
-                    NewSdirDirSorted[SizeCopied] = (PSDIR_DIRENT)((PUCHAR)SdirDirSorted[SizeCopied] -
+                    NewSdirDirSorted[SizeCopied] = (PYORI_FILE_INFO)((PUCHAR)SdirDirSorted[SizeCopied] -
                                                                   (PUCHAR)SdirDirCollection +
                                                                   (PUCHAR)NewSdirDirCollection);
                 }
@@ -743,7 +732,7 @@ SdirNewlineThroughDisplay()
 BOOL
 SdirDisplayCollection()
 {
-    PSDIR_DIRENT CurrentEntry;
+    PYORI_FILE_INFO CurrentEntry;
     DWORD Index, Ext;
     YORILIB_COLOR_ATTRIBUTES Attributes;
     YORILIB_COLOR_ATTRIBUTES FeatureColor;
@@ -1276,7 +1265,7 @@ SdirDisplayHeirarchySummary(
     //  Display directory name
     //
 
-    RenderAttributes = SdirRenderAttributesFromPath(NodeName);
+    RenderAttributes = SdirRenderAttributesFromPath(&YsNodeName);
     RenderAttributes = YoriLibCombineColors(RenderAttributes, Background);
     Len = YsNodeName.LengthInChars;
     PrefixLen = 0;
@@ -1442,7 +1431,7 @@ SdirEnumerateAndDisplaySubtree (
     memcpy(&SummaryOnEntry, Summary, sizeof(SDIR_SUMMARY));
 
     TreeRootLen = (DWORD)_tcslen(TreeRoot);
-    NextSubDirLength = TreeRootLen + SDIR_MAX_FILE_NAME + 2;
+    NextSubDirLength = TreeRootLen + YORI_LIB_MAX_FILE_NAME + 2;
     NextSubDir = YoriLibMalloc(NextSubDirLength * sizeof(TCHAR));
     if (NextSubDir == NULL) {
         SdirDisplayError(GetLastError(), _T("YoriLibMalloc"));
@@ -1533,11 +1522,12 @@ SdirEnumerateAndDisplaySubtree (
         YORILIB_COLOR_ATTRIBUTES RenderAttributes;
         YORI_STRING YsTreeRoot;
 
-        RenderAttributes = SdirRenderAttributesFromPath(TreeRoot);
-
         YoriLibInitEmptyString(&YsTreeRoot);
         YsTreeRoot.StartOfString = TreeRoot;
         YsTreeRoot.LengthInChars = TreeRootLen;
+        YsTreeRoot.LengthAllocated = TreeRootLen + 1;
+
+        RenderAttributes = SdirRenderAttributesFromPath(&YsTreeRoot);
 
         if (YoriLibIsFullPathUnc(&YsTreeRoot)) {
             SdirWriteStringWithAttribute(_T("\\\\"), RenderAttributes);

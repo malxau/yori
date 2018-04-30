@@ -129,7 +129,7 @@ typedef struct _SDIR_ATTRIBUTE_APPLY {
      A dummy directory entry containing values to compare against.  This is
      used to allow all compare functions to operate on two directory entries.
      */
-    SDIR_DIRENT CompareEntry;
+    YORI_FILE_INFO CompareEntry;
 } SDIR_ATTRIBUTE_APPLY, *PSDIR_ATTRIBUTE_APPLY;
 
 
@@ -811,7 +811,7 @@ error_return:
  */
 BOOL
 SdirApplyAttribute(
-    __in PSDIR_DIRENT DirEnt,
+    __in PYORI_FILE_INFO DirEnt,
     __out PYORILIB_COLOR_ATTRIBUTES Attribute
     )
 {

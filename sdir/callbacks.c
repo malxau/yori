@@ -105,8 +105,8 @@ SdirGetNumPermissionPairs()
  */
 DWORD
 SdirCompareAccessDate (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareDate(&Left->AccessTime, &Right->AccessTime);
@@ -125,8 +125,8 @@ SdirCompareAccessDate (
  */
 DWORD
 SdirCompareAccessTime (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareTime(&Left->AccessTime, &Right->AccessTime);
@@ -145,8 +145,8 @@ SdirCompareAccessTime (
  */
 DWORD
 SdirCompareAllocatedRangeCount (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->AllocatedRangeCount, (PULARGE_INTEGER)&Right->AllocatedRangeCount);
@@ -165,8 +165,8 @@ SdirCompareAllocatedRangeCount (
  */
 DWORD
 SdirCompareAllocationSize (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->AllocationSize, (PULARGE_INTEGER)&Right->AllocationSize);
@@ -185,8 +185,8 @@ SdirCompareAllocationSize (
  */
 DWORD
 SdirCompareArch (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->Architecture < Right->Architecture) {
@@ -210,8 +210,8 @@ SdirCompareArch (
  */
 DWORD
 SdirCompareCompressionAlgorithm (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->CompressionAlgorithm < Right->CompressionAlgorithm) {
@@ -235,8 +235,8 @@ SdirCompareCompressionAlgorithm (
  */
 DWORD
 SdirCompareCompressedFileSize (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->CompressedFileSize, (PULARGE_INTEGER)&Right->CompressedFileSize);
@@ -255,8 +255,8 @@ SdirCompareCompressedFileSize (
  */
 DWORD
 SdirCompareCreateDate (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareDate(&Left->CreateTime, &Right->CreateTime);
@@ -275,8 +275,8 @@ SdirCompareCreateDate (
  */
 DWORD
 SdirCompareCreateTime (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareTime(&Left->CreateTime, &Right->CreateTime);
@@ -295,8 +295,8 @@ SdirCompareCreateTime (
  */
 DWORD
 SdirCompareEffectivePermissions (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->EffectivePermissions < Right->EffectivePermissions) {
@@ -320,8 +320,8 @@ SdirCompareEffectivePermissions (
  */
 DWORD
 SdirCompareFileAttributes (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->FileAttributes < Right->FileAttributes) {
@@ -345,8 +345,8 @@ SdirCompareFileAttributes (
  */
 DWORD
 SdirCompareFileExtension (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareString(Left->Extension, Right->Extension);
@@ -365,8 +365,8 @@ SdirCompareFileExtension (
  */
 DWORD
 SdirCompareFileId (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FileId, (PULARGE_INTEGER)&Right->FileId);
@@ -385,8 +385,8 @@ SdirCompareFileId (
  */
 DWORD
 SdirCompareFileName (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareString(Left->FileName, Right->FileName);
@@ -405,8 +405,8 @@ SdirCompareFileName (
  */
 DWORD
 SdirCompareFileSize (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FileSize, (PULARGE_INTEGER)&Right->FileSize);
@@ -425,8 +425,8 @@ SdirCompareFileSize (
  */
 DWORD
 SdirCompareFragmentCount (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FragmentCount, (PULARGE_INTEGER)&Right->FragmentCount);
@@ -445,8 +445,8 @@ SdirCompareFragmentCount (
  */
 DWORD
 SdirCompareLinkCount (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->LinkCount < Right->LinkCount) {
@@ -470,8 +470,8 @@ SdirCompareLinkCount (
  */
 DWORD
 SdirCompareObjectId (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     int result = memcmp(&Left->ObjectId, &Right->ObjectId, sizeof(Left->ObjectId));
@@ -497,8 +497,8 @@ SdirCompareObjectId (
  */
 DWORD
 SdirCompareOsVersion (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->OsVersionHigh < Right->OsVersionHigh) {
@@ -529,8 +529,8 @@ SdirCompareOsVersion (
  */
 DWORD
 SdirCompareOwner (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareString(Left->Owner, Right->Owner);
@@ -549,8 +549,8 @@ SdirCompareOwner (
  */
 DWORD
 SdirCompareReparseTag (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->ReparseTag < Right->ReparseTag) {
@@ -574,8 +574,8 @@ SdirCompareReparseTag (
  */
 DWORD
 SdirCompareShortName (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareString(Left->ShortFileName, Right->ShortFileName);
@@ -594,8 +594,8 @@ SdirCompareShortName (
  */
 DWORD
 SdirCompareSubsystem (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->Subsystem < Right->Subsystem) {
@@ -619,8 +619,8 @@ SdirCompareSubsystem (
  */
 DWORD
 SdirCompareStreamCount (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if (Left->StreamCount < Right->StreamCount) {
@@ -644,8 +644,8 @@ SdirCompareStreamCount (
  */
 DWORD
 SdirCompareUsn (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->Usn, (PULARGE_INTEGER)&Right->Usn);
@@ -664,8 +664,8 @@ SdirCompareUsn (
  */
 DWORD
 SdirCompareVersion (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FileVersion, (PULARGE_INTEGER)&Right->FileVersion);
@@ -684,8 +684,8 @@ SdirCompareVersion (
  */
 DWORD
 SdirCompareWriteDate (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareDate(&Left->WriteTime, &Right->WriteTime);
@@ -704,8 +704,8 @@ SdirCompareWriteDate (
  */
 DWORD
 SdirCompareWriteTime (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     return SdirCompareTime(&Left->WriteTime, &Right->WriteTime);
@@ -724,8 +724,8 @@ SdirCompareWriteTime (
  */
 DWORD
 SdirBitwiseEffectivePermissions (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if ((Left->EffectivePermissions & Right->EffectivePermissions) == Right->EffectivePermissions) {
@@ -747,8 +747,8 @@ SdirBitwiseEffectivePermissions (
  */
 DWORD
 SdirBitwiseFileAttributes (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     if ((Left->FileAttributes & Right->FileAttributes) == Right->FileAttributes) {
@@ -790,8 +790,8 @@ SdirGetUpcasedCharFromString (
  */
 DWORD
 SdirBitwiseFileName (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     )
 {
     DWORD LeftIndex, RightIndex;
@@ -854,446 +854,6 @@ SdirBitwiseFileName (
 //  File enumeration support
 //
 
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's access time.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectAccessTime (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    FILETIME tmp;
-
-    UNREFERENCED_PARAMETER(FullPath);
-
-    FileTimeToLocalFileTime(&FindData->ftLastAccessTime, &tmp);
-    FileTimeToSystemTime(&tmp, &Entry->AccessTime);
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's allocated range count.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectAllocatedRangeCount (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFile;
-
-    Entry->AllocatedRangeCount.HighPart = 0;
-    Entry->AllocatedRangeCount.LowPart = 0;
-
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES|FILE_READ_DATA,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-
-        FILE_ALLOCATED_RANGE_BUFFER StartBuffer;
-        union {
-            FILE_ALLOCATED_RANGE_BUFFER Extents[1];
-            UCHAR Buffer[2048];
-        } u;
-        DWORD BytesReturned;
-        DWORD ElementCount;
-
-        LARGE_INTEGER PriorRunLength = {0};
-        LARGE_INTEGER PriorRunOffset = {0};
-
-        StartBuffer.FileOffset.QuadPart = 0;
-        StartBuffer.Length.LowPart = FindData->nFileSizeLow;
-        StartBuffer.Length.HighPart = FindData->nFileSizeHigh;
-
-        while ((DeviceIoControl(hFile, FSCTL_QUERY_ALLOCATED_RANGES, &StartBuffer, sizeof(StartBuffer), &u.Extents, sizeof(u), &BytesReturned, NULL) || GetLastError() == ERROR_MORE_DATA) &&
-               BytesReturned > 0) {
-
-            ElementCount = BytesReturned / sizeof(FILE_ALLOCATED_RANGE_BUFFER);
-
-            // 
-            //  Look through the extents.  If it's not a sparse hole, record it as a 
-            //  fragment.  If it's also discontiguous with the previous run, count it as a
-            //  fragment.
-            //
-
-            for (BytesReturned = 0; BytesReturned < ElementCount; BytesReturned++) {
-
-                if (u.Extents[BytesReturned].FileOffset.QuadPart == 0 ||
-                    PriorRunOffset.QuadPart + PriorRunLength.QuadPart != u.Extents[BytesReturned].FileOffset.QuadPart) {
-
-                    if (Entry->AllocatedRangeCount.LowPart == (DWORD)-1) {
-                        Entry->AllocatedRangeCount.HighPart++;
-                    }
-                    Entry->AllocatedRangeCount.LowPart++;
-                }
-
-                PriorRunLength.QuadPart = u.Extents[BytesReturned].Length.QuadPart;
-                PriorRunOffset.QuadPart = u.Extents[BytesReturned].FileOffset.QuadPart;
-            }
-
-            StartBuffer.FileOffset.QuadPart = u.Extents[ElementCount - 1].FileOffset.QuadPart + u.Extents[ElementCount - 1].Length.QuadPart;
-
-            if ((ULONG)StartBuffer.FileOffset.HighPart > FindData->nFileSizeHigh ||
-                ((ULONG)StartBuffer.FileOffset.HighPart == FindData->nFileSizeHigh &&
-                 StartBuffer.FileOffset.LowPart >= FindData->nFileSizeLow)) {
-
-                break;
-            }
-        }
-
-        CloseHandle(hFile);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the allocation size.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectAllocationSize (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    BOOL RealAllocSize = FALSE;
-
-    if (Opts->GetFileInformationByHandleEx) {
-
-        HANDLE hFile;
-
-        hFile = CreateFile(FullPath,
-                           FILE_READ_ATTRIBUTES,
-                           FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                           NULL,
-                           OPEN_EXISTING,
-                           FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                           NULL);
-    
-        if (hFile != INVALID_HANDLE_VALUE) {
-            FILE_STANDARD_INFO StandardInfo;
-    
-            if (Opts->GetFileInformationByHandleEx(hFile, FileStandardInfo, &StandardInfo, sizeof(StandardInfo))) {
-                Entry->AllocationSize = StandardInfo.AllocationSize;
-                RealAllocSize = TRUE;
-            }
-
-            CloseHandle(hFile);
-        }
-    }
-
-    if (!RealAllocSize) {
-        ULONG BytesPerSector;
-        ULONG SectorsPerCluster;
-        ULONG FreeClusters;
-        ULONG TotalClusters;
-        ULONG ClusterSize;
-
-        GetDiskFreeSpace(Opts->ParentName.StartOfString, &SectorsPerCluster, &BytesPerSector, &FreeClusters, &TotalClusters);
-
-        ClusterSize = SectorsPerCluster * BytesPerSector;
-
-        Entry->AllocationSize.LowPart = FindData->nFileSizeLow;
-        Entry->AllocationSize.HighPart = FindData->nFileSizeHigh;
-
-        SdirFileSizeFromLargeInt(&Entry->AllocationSize) = (SdirFileSizeFromLargeInt(&Entry->AllocationSize) + ClusterSize - 1) & (~(ClusterSize - 1));
-    }
-
-    return TRUE;
-}
-
-/**
- A structure containing the core fields of a PE header.
- */
-typedef struct _SDIR_PE_HEADERS {
-    /**
-     The signature indicating a PE file.
-     */
-    DWORD Signature;
-
-    /**
-     The base PE header.
-     */
-    IMAGE_FILE_HEADER ImageHeader;
-
-    /**
-     The contents of the PE optional header.  This isn't really optional in
-     NT since it contains core fields needed for NT to run things.
-     */
-    IMAGE_OPTIONAL_HEADER OptionalHeader;
-} SDIR_PE_HEADERS, *PSDIR_PE_HEADERS;
-
-/**
- Helper function to load an executable's PE header for parsing.  This is used
- by multiple collection functions whose data comes from a PE header.
-
- @param FullPath Pointer to a string to the full file name.
-
- @param PeHeaders On successful completion, updated to point to the contents
-        of the executable's PE headers.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCapturePeHeaders (
-    __in LPCTSTR FullPath,
-    __out PSDIR_PE_HEADERS PeHeaders
-    )
-{
-    HANDLE hFileRead;
-    IMAGE_DOS_HEADER DosHeader;
-    DWORD BytesReturned;
-
-    //
-    //  We want the earlier handle to be attribute only so we can
-    //  operate on directories, but we need data for this, so we
-    //  end up with two handles.
-    //
-
-    hFileRead = CreateFile(FullPath,
-                           FILE_READ_ATTRIBUTES|FILE_READ_DATA,
-                           FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                           NULL,
-                           OPEN_EXISTING,
-                           FILE_FLAG_BACKUP_SEMANTICS,
-                           NULL);
-
-    if (hFileRead != INVALID_HANDLE_VALUE) {
-
-        if (ReadFile(hFileRead, &DosHeader, sizeof(DosHeader), &BytesReturned, NULL) &&
-            BytesReturned == sizeof(DosHeader) &&
-            DosHeader.e_magic == IMAGE_DOS_SIGNATURE &&
-            DosHeader.e_lfanew != 0) {
-
-            SetFilePointer(hFileRead, DosHeader.e_lfanew, NULL, FILE_BEGIN);
-
-            if (ReadFile(hFileRead, PeHeaders, sizeof(SDIR_PE_HEADERS), &BytesReturned, NULL) &&
-                BytesReturned == sizeof(SDIR_PE_HEADERS) &&
-                PeHeaders->Signature == IMAGE_NT_SIGNATURE &&
-                PeHeaders->ImageHeader.SizeOfOptionalHeader >= FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, Subsystem)) {
-
-                CloseHandle(hFileRead);
-                return TRUE;
-
-            }
-        }
-        CloseHandle(hFileRead);
-    }
-    return FALSE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the executable's architecture.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectArch (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    SDIR_PE_HEADERS PeHeaders;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->OsVersionHigh = 0;
-    Entry->OsVersionLow = 0;
-
-    if (SdirCapturePeHeaders(FullPath, &PeHeaders)) {
-
-        Entry->Architecture = PeHeaders.ImageHeader.Machine;
-    }
-
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's compression algorithm.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectCompressionAlgorithm (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFile;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->CompressionAlgorithm = SdirCompressionNone;
-
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-
-        USHORT NtfsCompressionAlgorithm;
-        DWORD BytesReturned;
-        struct {
-            WOF_EXTERNAL_INFO WofHeader;
-            union {
-                WIM_PROVIDER_EXTERNAL_INFO WimInfo;
-                FILE_PROVIDER_EXTERNAL_INFO FileInfo;
-            } u;
-        } WofInfo;
-
-        if (DeviceIoControl(hFile, FSCTL_GET_COMPRESSION, NULL, 0, &NtfsCompressionAlgorithm, sizeof(NtfsCompressionAlgorithm), &BytesReturned, NULL)) {
-
-            if (NtfsCompressionAlgorithm == COMPRESSION_FORMAT_LZNT1) {
-                Entry->CompressionAlgorithm = SdirCompressionLznt;
-            } else if (NtfsCompressionAlgorithm != COMPRESSION_FORMAT_NONE) {
-                Entry->CompressionAlgorithm = SdirCompressionNtfsUnknown;
-            }
-        }
-
-        if (Entry->CompressionAlgorithm == SdirCompressionNone) {
-            if (DeviceIoControl(hFile, FSCTL_GET_EXTERNAL_BACKING, NULL, 0, &WofInfo, sizeof(WofInfo), &BytesReturned, NULL)) {
-    
-                if (WofInfo.WofHeader.Provider == WOF_PROVIDER_WIM) {
-                    Entry->CompressionAlgorithm = SdirCompressionWim;
-                } else if (WofInfo.WofHeader.Provider == WOF_PROVIDER_FILE) {
-                    if (WofInfo.u.FileInfo.Algorithm == FILE_PROVIDER_COMPRESSION_XPRESS4K) {
-                        Entry->CompressionAlgorithm = SdirCompressionXpress4k;
-                    } else if (WofInfo.u.FileInfo.Algorithm == FILE_PROVIDER_COMPRESSION_XPRESS8K) {
-                        Entry->CompressionAlgorithm = SdirCompressionXpress8k;
-                    } else if (WofInfo.u.FileInfo.Algorithm == FILE_PROVIDER_COMPRESSION_XPRESS16K) {
-                        Entry->CompressionAlgorithm = SdirCompressionXpress16k;
-                    } else if (WofInfo.u.FileInfo.Algorithm == FILE_PROVIDER_COMPRESSION_LZX) {
-                        Entry->CompressionAlgorithm = SdirCompressionLzx;
-                    } else {
-                        Entry->CompressionAlgorithm = SdirCompressionWofFileUnknown;
-                    }
-                } else {
-                    Entry->CompressionAlgorithm = SdirCompressionWofUnknown;
-                }
-            }
-        }
-
-        CloseHandle(hFile);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's compression size.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectCompressedFileSize (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    Entry->CompressedFileSize.LowPart = FindData->nFileSizeLow;
-    Entry->CompressedFileSize.HighPart = FindData->nFileSizeHigh;
-
-    if (Opts->GetCompressedFileSize) {
-        Entry->CompressedFileSize.LowPart = Opts->GetCompressedFileSize(FullPath, (PDWORD)&Entry->CompressedFileSize.HighPart);
-
-        if (Entry->CompressedFileSize.LowPart == INVALID_FILE_SIZE) {
-            Entry->CompressedFileSize.LowPart = FindData->nFileSizeLow;
-            Entry->CompressedFileSize.HighPart = FindData->nFileSizeHigh;
-        }
-    }
-
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's creation time.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectCreateTime (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    FILETIME tmp;
-
-    UNREFERENCED_PARAMETER(FullPath);
-
-    FileTimeToLocalFileTime(&FindData->ftCreationTime, &tmp);
-    FileTimeToSystemTime(&tmp, &Entry->CreateTime);
-    return TRUE;
-}
 
 /**
  Collect information from a directory enumerate and full file name relating
@@ -1309,78 +869,30 @@ SdirCollectCreateTime (
  */
 BOOL
 SdirCollectEffectivePermissions (
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
+    __in PYORI_STRING FullPath
     )
 {
 
-    //
-    //  Allocate some buffers on the stack to hold the user SID,
-    //  and one for the security descriptor which we can reallocate
-    //  as needed.
-    //
+    if (YoriLibCollectEffectivePermissions(Entry, FindData, FullPath)) {
+        DWORD i;
+        ACCESS_MASK UnderstoodPermissions = 0;
 
-    UCHAR LocalSecurityDescriptor[512];
-    PUCHAR SecurityDescriptor = NULL;
-    DWORD dwSdRequired = 0;
-    HANDLE TokenHandle = NULL;
-    DWORD i;
-    BOOL AccessGranted;
-    ACCESS_MASK UnderstoodPermissions = 0;
-    GENERIC_MAPPING Mapping = {0};
-    PRIVILEGE_SET Privilege;
-    DWORD PrivilegeLength = sizeof(Privilege);
+        //
+        //  Strip off any permissions we don't understand so that tests for
+        //  equality are meaningful
+        //
 
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->EffectivePermissions = 0;
-
-    SecurityDescriptor = LocalSecurityDescriptor;
-
-    if (!GetFileSecurity(FullPath, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(LocalSecurityDescriptor), &dwSdRequired)) {
-        if (dwSdRequired != 0) {
-            SecurityDescriptor = YoriLibMalloc(dwSdRequired);
-    
-            if (!GetFileSecurity(FullPath, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, dwSdRequired, &dwSdRequired)) {
-                goto Exit;
-            }
-        } else {
-            goto Exit;
+        for (i = 0; i < SdirGetNumPermissionPairs(); i++) {
+            UnderstoodPermissions |= PermissionPairs[i].FileAttribute;
         }
+
+        Entry->EffectivePermissions &= UnderstoodPermissions;
+        return TRUE;
     }
 
-    if (!ImpersonateSelf(SecurityIdentification)) {
-        goto Exit;
-    }
-    if (!OpenThreadToken(GetCurrentThread(), TOKEN_READ, TRUE, &TokenHandle)) {
-        RevertToSelf();
-        goto Exit;
-    }
-
-    AccessCheck((PSECURITY_DESCRIPTOR)SecurityDescriptor, TokenHandle, MAXIMUM_ALLOWED, &Mapping, &Privilege, &PrivilegeLength, &Entry->EffectivePermissions, &AccessGranted);
-
-    //
-    //  Strip off any permissions we don't understand so that tests for
-    //  equality are meaningful
-    //
-
-    for (i = 0; i < SdirGetNumPermissionPairs(); i++) {
-        UnderstoodPermissions |= PermissionPairs[i].FileAttribute;
-    }
-
-    Entry->EffectivePermissions &= UnderstoodPermissions;
-
-Exit:
-    if (TokenHandle != NULL) {
-        CloseHandle(TokenHandle);
-        RevertToSelf();
-    }
-    if (SecurityDescriptor != NULL && SecurityDescriptor != LocalSecurityDescriptor) {
-        YoriLibFree(SecurityDescriptor);
-    }
-
-    return TRUE;
+    return FALSE;
 }
 
 /**
@@ -1397,702 +909,34 @@ Exit:
  */
 BOOL
 SdirCollectFileAttributes (
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
+    __in PYORI_STRING FullPath
     )
 {
-    DWORD i;
 
-    UNREFERENCED_PARAMETER(FullPath);
+    if (YoriLibCollectFileAttributes(Entry, FindData, FullPath)) {
+        DWORD i;
+        DWORD Mask;
+   
+        //
+        //  We do this bit by bit to ensure that we don't have file attributes
+        //  recorded that we don't understand.  This allows us to perform
+        //  equality comparisons where the result is understandable to the user
+        //  in that it can be specified and displayed.
+        //
 
-    //
-    //  We do this bit by bit to ensure that we don't have file attributes
-    //  recorded that we don't understand.  This allows us to perform
-    //  equality comparisons where the result is understandable to the user
-    //  in that it can be specified and displayed.
-    //
 
-    Entry->FileAttributes = 0;
-    for (i = 0; i < SdirGetNumAttrPairs(); i++) {
-        if (FindData->dwFileAttributes & AttrPairs[i].FileAttribute) {
-            Entry->FileAttributes |= AttrPairs[i].FileAttribute;
-        }
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's extension.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectFileExtension (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    UNREFERENCED_PARAMETER(FullPath);
-    UNREFERENCED_PARAMETER(FindData);
-    UNREFERENCED_PARAMETER(Entry);
-
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's ID.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectFileId (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFile;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->FileId.QuadPart = 0;
-
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-        BY_HANDLE_FILE_INFORMATION FileInfo;
-
-        if (GetFileInformationByHandle(hFile, &FileInfo)) {
-            Entry->FileId.LowPart = FileInfo.nFileIndexLow;
-            Entry->FileId.HighPart = FileInfo.nFileIndexHigh;
+        Mask = 0;
+        for (i = 0; i < SdirGetNumAttrPairs(); i++) {
+            Mask |= AttrPairs[i].FileAttribute;
         }
 
-        CloseHandle(hFile);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's name.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectFileName (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    UNREFERENCED_PARAMETER(FullPath);
-
-    SdirCopyFileName(Entry->FileName, FindData->cFileName, SDIR_MAX_FILE_NAME - 1, &Entry->FileNameLengthInChars);
-
-    Entry->Extension = _tcsrchr(Entry->FileName, '.');
-
-    //
-    //  For simplicity's sake, if we have no extension set the field
-    //  to the end of string, so we'll see a valid pointer of nothing.
-    //
-
-    if (Entry->Extension == NULL) {
-        Entry->Extension = Entry->FileName + Entry->FileNameLengthInChars;
-    } else {
-        Entry->Extension++;
+        Entry->FileAttributes &= Mask;
+        return TRUE;
     }
 
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's size.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectFileSize (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    UNREFERENCED_PARAMETER(FullPath);
-
-    Entry->FileSize.LowPart = FindData->nFileSizeLow;
-    Entry->FileSize.HighPart = FindData->nFileSizeHigh;
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's fragment count.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectFragmentCount (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFile;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->FragmentCount.HighPart = 0;
-    Entry->FragmentCount.LowPart = 0;
-
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-
-        STARTING_VCN_INPUT_BUFFER StartBuffer;
-        union {
-            RETRIEVAL_POINTERS_BUFFER Extents;
-            UCHAR Buffer[2048];
-        } u;
-        DWORD BytesReturned;
-
-        LARGE_INTEGER PriorRunLength = {0};
-        LARGE_INTEGER PriorNextVcn = {0};
-        LARGE_INTEGER PriorLcn = {0};
-
-        StartBuffer.StartingVcn.QuadPart = 0;
-
-        while ((DeviceIoControl(hFile, FSCTL_GET_RETRIEVAL_POINTERS, &StartBuffer, sizeof(StartBuffer), &u.Extents, sizeof(u), &BytesReturned, NULL) || GetLastError() == ERROR_MORE_DATA) &&
-               u.Extents.ExtentCount > 0) {
-
-            // 
-            //  Look through the extents.  If it's not a sparse hole, record it as a 
-            //  fragment.  If it's also discontiguous with the previous run, count it as a
-            //  fragment.
-            //
-
-            for (BytesReturned = 0; BytesReturned < u.Extents.ExtentCount; BytesReturned++) {
-                if (u.Extents.Extents[BytesReturned].Lcn.HighPart != (DWORD)-1 &&
-                    u.Extents.Extents[BytesReturned].Lcn.LowPart != (DWORD)-1) {
-
-                    if (PriorLcn.QuadPart + PriorRunLength.QuadPart != u.Extents.Extents[BytesReturned].Lcn.QuadPart) {
-                        if (Entry->FragmentCount.LowPart == (DWORD)-1) {
-                            Entry->FragmentCount.HighPart++;
-                        }
-                        Entry->FragmentCount.LowPart++;
-                    }
-                }
-
-                PriorRunLength.QuadPart = u.Extents.Extents[BytesReturned].NextVcn.QuadPart - PriorNextVcn.QuadPart;
-                PriorNextVcn = u.Extents.Extents[BytesReturned].NextVcn;
-                PriorLcn = u.Extents.Extents[BytesReturned].Lcn;
-            }
-
-            StartBuffer.StartingVcn.QuadPart = u.Extents.Extents[u.Extents.ExtentCount - 1].NextVcn.QuadPart;
-        }
-
-        CloseHandle(hFile);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's link count.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectLinkCount (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFile;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->LinkCount = 0;
-
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-        BY_HANDLE_FILE_INFORMATION FileInfo;
-
-        if (GetFileInformationByHandle(hFile, &FileInfo)) {
-            Entry->LinkCount = FileInfo.nNumberOfLinks;
-        }
-
-        CloseHandle(hFile);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's object ID.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectObjectId (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFile;
-    FILE_OBJECTID_BUFFER Buffer;
-    DWORD BytesReturned;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    ZeroMemory(&Entry->ObjectId, sizeof(Entry->ObjectId));
-
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-        if (DeviceIoControl(hFile, FSCTL_GET_OBJECT_ID, NULL, 0, &Buffer, sizeof(Buffer), &BytesReturned, NULL)) {
-            memcpy(&Entry->ObjectId, &Buffer.ObjectId, sizeof(Buffer.ObjectId));
-        }
-        CloseHandle(hFile);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the executable's minimum OS version.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectOsVersion (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    SDIR_PE_HEADERS PeHeaders;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->OsVersionHigh = 0;
-    Entry->OsVersionLow = 0;
-
-    if (SdirCapturePeHeaders(FullPath, &PeHeaders)) {
-
-        Entry->OsVersionHigh = PeHeaders.OptionalHeader.MajorSubsystemVersion;
-        Entry->OsVersionLow = PeHeaders.OptionalHeader.MinorSubsystemVersion;
-    }
-
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's owner.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectOwner (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-
-    //
-    //  Allocate some buffers on the stack to hold the user name, domain name
-    //  and owner portion of the security descriptor.  In the first case, this
-    //  is to help ensure we have space to store the whole thing; in the
-    //  second case, this function crashes without a buffer even if we discard
-    //  the result; and the descriptor here doesn't contain the ACL and only
-    //  needs to be big enough to hold one variable sized owner SID.
-    //
-
-    TCHAR UserName[128];
-    DWORD NameLength = sizeof(UserName)/sizeof(UserName[0]);
-    TCHAR DomainName[128];
-    DWORD DomainLength = sizeof(DomainName)/sizeof(DomainName[0]);
-    UCHAR SecurityDescriptor[256];
-    DWORD dwSdRequired = 0;
-    BOOL OwnerDefaulted;
-    PSID pOwnerSid;
-    SID_NAME_USE eUse;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    UserName[0] = '\0';
-    Entry->Owner[0] = '\0';
-
-    if (GetFileSecurity(FullPath, OWNER_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(SecurityDescriptor), &dwSdRequired)) {
-        if (GetSecurityDescriptorOwner((PSECURITY_DESCRIPTOR)SecurityDescriptor, &pOwnerSid, &OwnerDefaulted)) {
-            if (LookupAccountSid(NULL, pOwnerSid, UserName, &NameLength, DomainName, &DomainLength, &eUse)) {
-                UserName[sizeof(Entry->Owner) - 1] = '\0';
-                memcpy(Entry->Owner, UserName, sizeof(Entry->Owner));
-            }
-        }
-    }
-
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's reparse tag.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectReparseTag (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    UNREFERENCED_PARAMETER(FullPath);
-
-    if (Entry->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
-        Entry->ReparseTag = FindData->dwReserved0;
-    } else {
-        Entry->ReparseTag = 0;
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's short file name.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectShortName (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    UNREFERENCED_PARAMETER(FullPath);
-
-    if (FindData->cAlternateFileName[0] == '\0') {
-        DWORD FileNameLength = (DWORD)_tcslen(FindData->cFileName);
-
-        if (FileNameLength <= 12) {
-            SdirCopyFileName(Entry->ShortFileName, FindData->cFileName, sizeof(Entry->ShortFileName), NULL);
-        } else {
-            Entry->ShortFileName[0] = '\0';
-        }
-    } else {
-        SdirCopyFileName(Entry->ShortFileName, FindData->cAlternateFileName, sizeof(Entry->ShortFileName), NULL);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the executable's subsystem type.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectSubsystem (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    SDIR_PE_HEADERS PeHeaders;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->Subsystem = 0;
-
-    if (SdirCapturePeHeaders(FullPath, &PeHeaders)) {
-
-        Entry->Subsystem = PeHeaders.OptionalHeader.Subsystem;
-    }
-
-    return TRUE;
-}
-
-#ifdef UNICODE
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's stream count.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectStreamCount (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFind;
-    SDIR_WIN32_FIND_STREAM_DATA FindStreamData;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->StreamCount = 0;
-
-    //
-    //  These APIs are Unicode only.  We could do an ANSI to Unicode thunk here, but
-    //  since Unicode is the default build and ANSI is only useful for older systems
-    //  (where this API won't exist) there doesn't seem much point.
-    //
-
-    if (Opts->FindFirstStreamW && Opts->FindNextStreamW) {
-        hFind = Opts->FindFirstStreamW(FullPath, 0, &FindStreamData, 0);
-        if (hFind != INVALID_HANDLE_VALUE) {
-
-            do {
-                Entry->StreamCount++;
-            } while (Opts->FindNextStreamW(hFind, &FindStreamData));
-        }
-
-        FindClose(hFind);
-    }
-
-    return TRUE;
-}
-#endif
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's USN.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectUsn (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    HANDLE hFile;
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->Usn.QuadPart = 0;
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-
-        struct {
-            SDIR_USN_RECORD UsnRecord;
-            WCHAR FileName[SDIR_MAX_FILE_NAME];
-        } s1;
-        DWORD BytesReturned;
-
-        if (DeviceIoControl(hFile, FSCTL_READ_FILE_USN_DATA, NULL, 0, &s1, sizeof(s1), &BytesReturned, NULL)) {
-            Entry->Usn.QuadPart = s1.UsnRecord.Usn.QuadPart;
-        }
-
-        CloseHandle(hFile);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the executable's version resource.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectVersion (
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    DWORD Junk;
-    PVOID Buffer;
-    DWORD VerSize;
-    VS_FIXEDFILEINFO * RootBlock;
-
-    if (Opts->GetFileVersionInfoSize == NULL) {
-        if (!SdirLoadVerFunctions()) {
-            return TRUE;
-        }
-    }
-    VerSize = Opts->GetFileVersionInfoSize((LPTSTR)FullPath, &Junk);
-
-    UNREFERENCED_PARAMETER(FindData);
-
-    Entry->FileVersion.QuadPart = 0;
-    Entry->FileVersionFlags = 0;
-
-    Buffer = YoriLibMalloc(VerSize);
-    if (Buffer != NULL) {
-        if (Opts->GetFileVersionInfo((LPTSTR)FullPath, 0, VerSize, Buffer)) {
-            if (Opts->VerQueryValue(Buffer, _T("\\"), (PVOID*)&RootBlock, (PUINT)&Junk)) {
-                Entry->FileVersion.HighPart = RootBlock->dwFileVersionMS;
-                Entry->FileVersion.LowPart = RootBlock->dwFileVersionLS;
-                Entry->FileVersionFlags = RootBlock->dwFileFlags & RootBlock->dwFileFlagsMask;
-            }
-        }
-        YoriLibFree(Buffer);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's write time.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectWriteTime(
-    __inout PSDIR_DIRENT Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in LPCTSTR FullPath
-    )
-{
-    FILETIME tmp;
-
-    UNREFERENCED_PARAMETER(FullPath);
-
-    FileTimeToLocalFileTime(&FindData->ftLastWriteTime, &tmp);
-    FileTimeToSystemTime(&tmp, &Entry->WriteTime);
-    return TRUE;
+    return FALSE;
 }
 
 /**
@@ -2104,7 +948,7 @@ SdirCollectWriteTime(
  */
 BOOL
 SdirCollectSummary(
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
 
@@ -2168,7 +1012,7 @@ SdirCollectSummary(
  */
 BOOL
 SdirGenerateAccessDate(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2188,7 +1032,7 @@ SdirGenerateAccessDate(
  */
 BOOL
 SdirGenerateAccessTime(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2208,7 +1052,7 @@ SdirGenerateAccessTime(
  */
 BOOL
 SdirGenerateAllocatedRangeCount(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2229,7 +1073,7 @@ SdirGenerateAllocatedRangeCount(
  */
 BOOL
 SdirGenerateAllocationSize(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2250,7 +1094,7 @@ SdirGenerateAllocationSize(
  */
 BOOL
 SdirGenerateArch(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2283,30 +1127,30 @@ SdirGenerateArch(
  */
 BOOL
 SdirGenerateCompressionAlgorithm(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
     if (_tcsicmp(String, _T("None")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionNone;
+        Entry->CompressionAlgorithm = YoriLibCompressionNone;
     } else if (_tcsicmp(String, _T("LZNT")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionLznt;
+        Entry->CompressionAlgorithm = YoriLibCompressionLznt;
     } else if (_tcsicmp(String, _T("NTFS")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionNtfsUnknown;
+        Entry->CompressionAlgorithm = YoriLibCompressionNtfsUnknown;
     } else if (_tcsicmp(String, _T("WIM")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionWim;
+        Entry->CompressionAlgorithm = YoriLibCompressionWim;
     } else if (_tcsicmp(String, _T("LZX")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionLzx;
+        Entry->CompressionAlgorithm = YoriLibCompressionLzx;
     } else if (_tcsicmp(String, _T("Xp4")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionXpress4k;
+        Entry->CompressionAlgorithm = YoriLibCompressionXpress4k;
     } else if (_tcsicmp(String, _T("Xp8")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionXpress8k;
+        Entry->CompressionAlgorithm = YoriLibCompressionXpress8k;
     } else if (_tcsicmp(String, _T("Xp16")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionXpress16k;
+        Entry->CompressionAlgorithm = YoriLibCompressionXpress16k;
     } else if (_tcsicmp(String, _T("File")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionWofFileUnknown;
+        Entry->CompressionAlgorithm = YoriLibCompressionWofFileUnknown;
     } else if (_tcsicmp(String, _T("Wof")) == 0) {
-        Entry->CompressionAlgorithm = SdirCompressionWofUnknown;
+        Entry->CompressionAlgorithm = YoriLibCompressionWofUnknown;
     } else {
         return FALSE;
     }
@@ -2326,7 +1170,7 @@ SdirGenerateCompressionAlgorithm(
  */
 BOOL
 SdirGenerateCompressedFileSize(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2347,7 +1191,7 @@ SdirGenerateCompressedFileSize(
  */
 BOOL
 SdirGenerateCreateDate(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2367,7 +1211,7 @@ SdirGenerateCreateDate(
  */
 BOOL
 SdirGenerateCreateTime(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2387,7 +1231,7 @@ SdirGenerateCreateTime(
  */
 BOOL
 SdirGenerateEffectivePermissions(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2421,7 +1265,7 @@ SdirGenerateEffectivePermissions(
  */
 BOOL
 SdirGenerateFileAttributes(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2455,7 +1299,7 @@ SdirGenerateFileAttributes(
  */
 BOOL
 SdirGenerateFileExtension(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2485,7 +1329,7 @@ SdirGenerateFileExtension(
  */
 BOOL
 SdirGenerateFileName(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2508,7 +1352,7 @@ SdirGenerateFileName(
  */
 BOOL
 SdirGenerateFileSize(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2529,7 +1373,7 @@ SdirGenerateFileSize(
  */
 BOOL
 SdirGenerateFragmentCount(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2550,7 +1394,7 @@ SdirGenerateFragmentCount(
  */
 BOOL
 SdirGenerateLinkCount(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2571,7 +1415,7 @@ SdirGenerateLinkCount(
  */
 BOOL
 SdirGenerateObjectId(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2595,7 +1439,7 @@ SdirGenerateObjectId(
  */
 BOOL
 SdirGenerateOsVersion(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2623,7 +1467,7 @@ SdirGenerateOsVersion(
  */
 BOOL
 SdirGenerateOwner(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2646,7 +1490,7 @@ SdirGenerateOwner(
  */
 BOOL
 SdirGenerateReparseTag(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2667,7 +1511,7 @@ SdirGenerateReparseTag(
  */
 BOOL
 SdirGenerateShortName(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2690,7 +1534,7 @@ SdirGenerateShortName(
  */
 BOOL
 SdirGenerateSubsystem (
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2744,7 +1588,7 @@ SdirGenerateSubsystem (
  */
 BOOL
 SdirGenerateStreamCount(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2765,7 +1609,7 @@ SdirGenerateStreamCount(
  */
 BOOL
 SdirGenerateUsn(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2786,7 +1630,7 @@ SdirGenerateUsn(
  */
 BOOL
 SdirGenerateVersion(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2824,7 +1668,7 @@ SdirGenerateVersion(
  */
 BOOL
 SdirGenerateWriteDate(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2844,7 +1688,7 @@ SdirGenerateWriteDate(
  */
 BOOL
 SdirGenerateWriteTime(
-    __inout PSDIR_DIRENT Entry,
+    __inout PYORI_FILE_INFO Entry,
     __in LPCTSTR String
     )
 {
@@ -2876,7 +1720,7 @@ ULONG
 SdirDisplayFileAccessDate (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayFileDate(Buffer, Attributes, &Entry->AccessTime);
@@ -2902,7 +1746,7 @@ ULONG
 SdirDisplayFileAccessTime (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayFileTime(Buffer, Attributes, &Entry->AccessTime);
@@ -2928,7 +1772,7 @@ ULONG
 SdirDisplayAllocatedRangeCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR Str[8];
@@ -2971,7 +1815,7 @@ ULONG
 SdirDisplayAllocationSize (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayGenericSize(Buffer, Attributes, &Entry->AllocationSize);
@@ -2997,7 +1841,7 @@ ULONG
 SdirDisplayArch (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR StrBuf[8];
@@ -3050,7 +1894,7 @@ ULONG
 SdirDisplayCompressionAlgorithm (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR StrBuf[8];
@@ -3058,34 +1902,34 @@ SdirDisplayCompressionAlgorithm (
 
     if (Buffer) {
         switch(Entry->CompressionAlgorithm) {
-            case SdirCompressionNone:
+            case YoriLibCompressionNone:
                 StrFixed = _T("None");
                 break;
-            case SdirCompressionLznt:
+            case YoriLibCompressionLznt:
                 StrFixed = _T("LZNT");
                 break;
-            case SdirCompressionNtfsUnknown:
+            case YoriLibCompressionNtfsUnknown:
                 StrFixed = _T("NTFS");
                 break;
-            case SdirCompressionWim:
+            case YoriLibCompressionWim:
                 StrFixed = _T("WIM ");
                 break;
-            case SdirCompressionLzx:
+            case YoriLibCompressionLzx:
                 StrFixed = _T("LZX ");
                 break;
-            case SdirCompressionXpress4k:
+            case YoriLibCompressionXpress4k:
                 StrFixed = _T("Xp4 ");
                 break;
-            case SdirCompressionXpress8k:
+            case YoriLibCompressionXpress8k:
                 StrFixed = _T("Xp8 ");
                 break;
-            case SdirCompressionXpress16k:
+            case YoriLibCompressionXpress16k:
                 StrFixed = _T("Xp16");
                 break;
-            case SdirCompressionWofFileUnknown:
+            case YoriLibCompressionWofFileUnknown:
                 StrFixed = _T("File");
                 break;
-            case SdirCompressionWofUnknown:
+            case YoriLibCompressionWofUnknown:
                 StrFixed = _T("Wof ");
                 break;
             default:
@@ -3118,7 +1962,7 @@ ULONG
 SdirDisplayCompressedFileSize (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayGenericSize(Buffer, Attributes, &Entry->CompressedFileSize);
@@ -3144,7 +1988,7 @@ ULONG
 SdirDisplayEffectivePermissions (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR StrAtts[32];
@@ -3187,7 +2031,7 @@ ULONG
 SdirDisplayFileCreateDate (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayFileDate(Buffer, Attributes, &Entry->CreateTime);
@@ -3213,7 +2057,7 @@ ULONG
 SdirDisplayFileCreateTime (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayFileTime(Buffer, Attributes, &Entry->CreateTime);
@@ -3239,7 +2083,7 @@ ULONG
 SdirDisplayFileAttributes (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR StrAtts[32];
@@ -3282,7 +2126,7 @@ ULONG
 SdirDisplayFileId (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayHex64(Buffer, Attributes, &Entry->FileId);
@@ -3308,7 +2152,7 @@ ULONG
 SdirDisplayFileSize (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     if (Buffer) {
@@ -3351,7 +2195,7 @@ ULONG
 SdirDisplayFragmentCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR Str[8];
@@ -3394,7 +2238,7 @@ ULONG
 SdirDisplayLinkCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR Str[5];
@@ -3430,7 +2274,7 @@ ULONG
 SdirDisplayObjectId (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     if (Buffer) {
@@ -3460,7 +2304,7 @@ ULONG
 SdirDisplayOsVersion (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR Str[30];
@@ -3501,7 +2345,7 @@ ULONG
 SdirDisplayOwner (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     ULONG CurrentChar = 0;
@@ -3541,7 +2385,7 @@ ULONG
 SdirDisplayReparseTag (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     ULONG Tag = 0;
@@ -3571,7 +2415,7 @@ ULONG
 SdirDisplayShortName (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     ULONG CurrentChar = 0;
@@ -3618,7 +2462,7 @@ ULONG
 SdirDisplaySubsystem (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR StrBuf[8];
@@ -3701,7 +2545,7 @@ ULONG
 SdirDisplayStreamCount (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR Str[5];
@@ -3737,7 +2581,7 @@ ULONG
 SdirDisplayUsn(
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayHex64(Buffer, Attributes, &Entry->Usn);
@@ -3763,7 +2607,7 @@ ULONG
 SdirDisplayVersion(
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     TCHAR Str[40];
@@ -3869,7 +2713,7 @@ ULONG
 SdirDisplayFileWriteDate (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayFileDate(Buffer, Attributes, &Entry->WriteTime);
@@ -3895,7 +2739,7 @@ ULONG
 SdirDisplayFileWriteTime (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     )
 {
     return SdirDisplayFileTime(Buffer, Attributes, &Entry->WriteTime);
@@ -3928,27 +2772,27 @@ const SDIR_OPT
 SdirOptions[] = {
 
     {OPT_OS(FtAllocatedRangeCount),      _T("ac"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayAllocatedRangeCount,  SdirCollectAllocatedRangeCount,
+        SdirDisplayAllocatedRangeCount,  YoriLibCollectAllocatedRangeCount,
         SdirCompareAllocatedRangeCount,  NULL,                          SdirGenerateAllocatedRangeCount,
         "allocated range count"},
 
     {OPT_OS(FtAccessDate),               _T("ad"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
-        SdirDisplayFileAccessDate,       SdirCollectAccessTime,
+        SdirDisplayFileAccessDate,       YoriLibCollectAccessTime,
         SdirCompareAccessDate,           NULL,                          SdirGenerateAccessDate,
         "access date"},
 
     {OPT_OS(FtArch),                     _T("ar"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayArch,                 SdirCollectArch,
+        SdirDisplayArch,                 YoriLibCollectArch,
         SdirCompareArch,                 NULL,                          SdirGenerateArch,
         "CPU architecture"},
 
     {OPT_OS(FtAllocationSize),           _T("as"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayAllocationSize,       SdirCollectAllocationSize,
+        SdirDisplayAllocationSize,       YoriLibCollectAllocationSize,
         SdirCompareAllocationSize,       NULL,                          SdirGenerateAllocationSize,
         "allocation size"},
 
     {OPT_OS(FtAccessTime),               _T("at"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
-        SdirDisplayFileAccessTime,       SdirCollectAccessTime,
+        SdirDisplayFileAccessTime,       YoriLibCollectAccessTime,
         SdirCompareAccessTime,           NULL,                          SdirGenerateAccessTime,
         "access time"},
 
@@ -3958,22 +2802,22 @@ SdirOptions[] = {
         "brief alternate mask"},
 
     {OPT_OS(FtCompressionAlgorithm),     _T("ca"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayCompressionAlgorithm, SdirCollectCompressionAlgorithm,
+        SdirDisplayCompressionAlgorithm, YoriLibCollectCompressionAlgorithm,
         SdirCompareCompressionAlgorithm, NULL,                          SdirGenerateCompressionAlgorithm,
         "compression algorithm"},
     
     {OPT_OS(FtCreateDate),               _T("cd"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFileCreateDate,       SdirCollectCreateTime,
+        SdirDisplayFileCreateDate,       YoriLibCollectCreateTime,
         SdirCompareCreateDate,           NULL,                          SdirGenerateCreateDate,
         "create date"},
 
     {OPT_OS(FtCompressedFileSize),       _T("cs"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayCompressedFileSize,   SdirCollectCompressedFileSize,
+        SdirDisplayCompressedFileSize,   YoriLibCollectCompressedFileSize,
         SdirCompareCompressedFileSize,   NULL,                          SdirGenerateCompressedFileSize,
         "compressed size"},
 
     {OPT_OS(FtCreateTime),               _T("ct"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFileCreateTime,       SdirCollectCreateTime,
+        SdirDisplayFileCreateTime,       YoriLibCollectCreateTime,
         SdirCompareCreateTime,           NULL,                          SdirGenerateCreateTime,
         "create time"},
 
@@ -3993,27 +2837,27 @@ SdirOptions[] = {
         "file attributes"},
 
     {OPT_OS(FtFragmentCount),            _T("fc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFragmentCount,        SdirCollectFragmentCount,
+        SdirDisplayFragmentCount,        YoriLibCollectFragmentCount,
         SdirCompareFragmentCount,        NULL,                          SdirGenerateFragmentCount,
         "fragment count"},
 
     {OPT_OS(FtFileExtension),            _T("fe"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_FIXED_COLOR, 0, 0},
-        NULL,                            SdirCollectFileExtension,
+        NULL,                            YoriLibCollectFileExtension,
         SdirCompareFileExtension,        NULL,                          SdirGenerateFileExtension,
         "file extension"},
 
     {OPT_OS(FtFileId),                   _T("fi"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFileId,               SdirCollectFileId,
+        SdirDisplayFileId,               YoriLibCollectFileId,
         SdirCompareFileId,               NULL,                          NULL,
         "file id"},
 
     {OPT_OS(FtFileName),                 _T("fn"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
-        NULL,                            SdirCollectFileName,
+        NULL,                            YoriLibCollectFileName,
         SdirCompareFileName,             SdirBitwiseFileName,           SdirGenerateFileName,
         "file name"},
 
     {OPT_OS(FtFileSize),                 _T("fs"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayFileSize,             SdirCollectFileSize,
+        SdirDisplayFileSize,             YoriLibCollectFileSize,
         SdirCompareFileSize,             NULL,                          SdirGenerateFileSize,
         "file size"},
 
@@ -4023,7 +2867,7 @@ SdirOptions[] = {
         "grid"},
 
     {OPT_OS(FtLinkCount),                _T("lc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayLinkCount,            SdirCollectLinkCount,
+        SdirDisplayLinkCount,            YoriLibCollectLinkCount,
         SdirCompareLinkCount,            NULL,                          SdirGenerateLinkCount,
         "link count"},
 
@@ -4040,28 +2884,28 @@ SdirOptions[] = {
 #endif
 
     {OPT_OS(FtObjectId),                _T("oi"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayObjectId,             SdirCollectObjectId,
+        SdirDisplayObjectId,             YoriLibCollectObjectId,
         SdirCompareObjectId,             NULL,                          SdirGenerateObjectId,
         "object id"},
 
     {OPT_OS(FtOsVersion),                _T("os"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayOsVersion,            SdirCollectOsVersion,
+        SdirDisplayOsVersion,            YoriLibCollectOsVersion,
         SdirCompareOsVersion,            NULL,                          SdirGenerateOsVersion,
         "minimum OS version"},
 
     {OPT_OS(FtOwner),                    _T("ow"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayOwner,                SdirCollectOwner,
+        SdirDisplayOwner,                YoriLibCollectOwner,
         SdirCompareOwner,                NULL,                          SdirGenerateOwner,
         "owner"},
 
     {OPT_OS(FtReparseTag),               _T("rt"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayReparseTag,           SdirCollectReparseTag,
+        SdirDisplayReparseTag,           YoriLibCollectReparseTag,
         SdirCompareReparseTag,           NULL,                          SdirGenerateReparseTag,
         "reparse tag"},
 
 #ifdef UNICODE
     {OPT_OS(FtStreamCount),              _T("sc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayStreamCount,          SdirCollectStreamCount,
+        SdirDisplayStreamCount,          YoriLibCollectStreamCount,
         SdirCompareStreamCount,          NULL,                          SdirGenerateStreamCount,
         "stream count"},
 #endif
@@ -4072,32 +2916,32 @@ SdirOptions[] = {
         "summary"},
 
     {OPT_OS(FtShortName),                _T("sn"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
-        SdirDisplayShortName,            SdirCollectShortName,
+        SdirDisplayShortName,            YoriLibCollectShortName,
         SdirCompareShortName,            NULL,                          SdirGenerateShortName,
         "short name"},
 
     {OPT_OS(FtSubsystem),                _T("ss"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplaySubsystem,            SdirCollectSubsystem,
+        SdirDisplaySubsystem,            YoriLibCollectSubsystem,
         SdirCompareSubsystem,            NULL,                          SdirGenerateSubsystem,
         "subsystem"},
 
     {OPT_OS(FtUsn),                      _T("us"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayUsn,                  SdirCollectUsn,
+        SdirDisplayUsn,                  YoriLibCollectUsn,
         SdirCompareUsn,                  NULL,                          SdirGenerateUsn,
         "USN"},
 
     {OPT_OS(FtVersion),                  _T("vr"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayVersion,              SdirCollectVersion,
+        SdirDisplayVersion,              YoriLibCollectVersion,
         SdirCompareVersion,              NULL,                          SdirGenerateVersion,
         "version"},
 
     {OPT_OS(FtWriteDate),                _T("wd"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
-        SdirDisplayFileWriteDate,        SdirCollectWriteTime,
+        SdirDisplayFileWriteDate,        YoriLibCollectWriteTime,
         SdirCompareWriteDate,            NULL,                          SdirGenerateWriteDate,
         "write date"},
 
     {OPT_OS(FtWriteTime),                _T("wt"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
-        SdirDisplayFileWriteTime,        SdirCollectWriteTime,
+        SdirDisplayFileWriteTime,        YoriLibCollectWriteTime,
         SdirCompareWriteTime,            NULL,                          SdirGenerateWriteTime,
         "write time"},
 };

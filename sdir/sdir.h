@@ -76,584 +76,9 @@ typedef LONGLONG SDIR_FILESIZE;
  */
 #define SdirFileSizeFromLargeInt(Li) ((Li)->QuadPart)
 
-#ifndef FILE_ATTRIBUTE_SPARSE_FILE
-/**
- Specifies the value for a file that is sparse if the compilation environment
- doesn't provide it.
- */
-#define FILE_ATTRIBUTE_SPARSE_FILE        (0x200)
-#endif
-
-#ifndef FILE_ATTRIBUTE_COMPRESSED
-/**
- Specifies the value for a file that has been compressed if the compilation
- environment doesn't provide it.
- */
-#define FILE_ATTRIBUTE_COMPRESSED         (0x800)
-#endif
-
-#ifndef FILE_ATTRIBUTE_OFFLINE
-/**
- Specifies the value for a file that is on slow storage if the compilation
- environment doesn't provide it.
- */
-#define FILE_ATTRIBUTE_OFFLINE           (0x1000)
-#endif
-
-#ifndef FILE_ATTRIBUTE_ENCRYPTED
-/**
- Specifies the value for a file that has been encrypted if the compilation
- environment doesn't provide it.
- */
-#define FILE_ATTRIBUTE_ENCRYPTED         (0x4000)
-#endif
-
-#ifndef FILE_ATTRIBUTE_INTEGRITY_STREAM
-/**
- Specifies the value for a file subject to CRC integrity detection if the
- compilation environment doesn't provide it.
- */
-#define FILE_ATTRIBUTE_INTEGRITY_STREAM  (0x8000)
-#endif
-
-#ifndef FILE_FLAG_OPEN_NO_RECALL
-/**
- Specifies the value for opening a file without recalling from slow storage
- if the compilation environment doesn't provide it.
- */
-#define FILE_FLAG_OPEN_NO_RECALL         (0x00100000)
-#endif
-
-#ifndef FSCTL_GET_COMPRESSION
-/**
- Specifies the FSCTL_GET_RETRIEVAL_POINTERS numerical representation if the
- compilation environment doesn't provide it.
- */
-#define FSCTL_GET_COMPRESSION           CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 15, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
-/**
- Specifies the identifier for a file not subject to NTFS compression.
- */
-#define COMPRESSION_FORMAT_NONE         (0x0000)
-
-/**
- Specifies the identifier for a file compressed with NTFS LZNT1 algorithm.
- */
-#define COMPRESSION_FORMAT_LZNT1        (0x0002)
-#endif
-
-#ifndef FSCTL_GET_RETRIEVAL_POINTERS
-/**
- Specifies the FSCTL_GET_RETRIEVAL_POINTERS numerical representation if the
- compilation environment doesn't provide it.
- */
-#define FSCTL_GET_RETRIEVAL_POINTERS     CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 28,  METHOD_NEITHER, FILE_ANY_ACCESS)
-
-/**
- Specifies information required to request file fragmentation information.
- */
-typedef struct {
-
-    /**
-     Specifies the starting offset within the file where fragment information
-     is requested.
-     */
-    LARGE_INTEGER StartingVcn;
-
-} STARTING_VCN_INPUT_BUFFER;
-
-/**
- Pointer to information required to request file fragmentation information.
- */
-typedef STARTING_VCN_INPUT_BUFFER *PSTARTING_VCN_INPUT_BUFFER;
-
-/**
- A buffer returned when enumerating file fragments.  Defined here for when
- the compilation environment doesn't define it.
- */
-typedef struct RETRIEVAL_POINTERS_BUFFER {
-
-    /**
-     The number of extents/fragments.
-     */
-    DWORD ExtentCount;
-
-    /**
-     The file offset corresponding to the information that this structure
-     describes.
-     */
-    LARGE_INTEGER StartingVcn;
-
-    /**
-     An array of extents returned as part of this query.  The IOCTL result
-     indicates how many array entries must be present.
-     */
-    struct {
-
-        /**
-         Indicates the file offset described by the next entry in this array
-         (ie., not this one.)
-         */
-        LARGE_INTEGER NextVcn;
-
-        /**
-         Indicates the volume offset described by this entry in the array.
-         */
-        LARGE_INTEGER Lcn;
-    } Extents[1];
-
-} RETRIEVAL_POINTERS_BUFFER, *PRETRIEVAL_POINTERS_BUFFER;
-#endif
-
-#ifndef FSCTL_QUERY_ALLOCATED_RANGES
-/**
- Specifies the FSCTL_QUERY_ALLOCATED_RANGES numerical representation if the
- compilation environment doesn't provide it.
- */
-#define FSCTL_QUERY_ALLOCATED_RANGES    CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 51,  METHOD_NEITHER, FILE_READ_DATA)
-
-/**
- Specifies a single range of the file that is currently allocated.
- */
-typedef struct _FILE_ALLOCATED_RANGE_BUFFER {
-
-    /**
-     The beginning of the range, in bytes.
-     */
-    LARGE_INTEGER FileOffset;
-
-    /**
-     The length of the range, in bytes.
-     */
-    LARGE_INTEGER Length;
-
-} FILE_ALLOCATED_RANGE_BUFFER, *PFILE_ALLOCATED_RANGE_BUFFER;
-
-#endif
-
-#ifndef FSCTL_GET_OBJECT_ID
-/**
- Specifies the FSCTL_GET_OBJECT_ID numerical representation if the
- compilation environment doesn't provide it.
- */
-#define FSCTL_GET_OBJECT_ID             CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 39, METHOD_BUFFERED, FILE_ANY_ACCESS)
-
-/**
- Information about a file's object ID if the compilation environment doesn't
- provide it.
- */
-typedef struct _FILE_OBJECTID_BUFFER {
-
-    /**
-     The object ID of the file (really a GUID.)
-     */
-    BYTE  ObjectId[16];
-
-    /**
-     The extended object ID information (three GUIDs specifying volume and
-     other things we don't care about.)
-     */
-    BYTE  ExtendedInfo[48];
-
-} FILE_OBJECTID_BUFFER, *PFILE_OBJECTID_BUFFER;
-#endif
-
-#ifndef FSCTL_READ_FILE_USN_DATA
-
-/**
- Specifies the FSCTL_READ_FILE_USN_DATA numerical representation if the
- compilation environment doesn't provide it.
- */
-#define FSCTL_READ_FILE_USN_DATA         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 58,  METHOD_NEITHER, FILE_ANY_ACCESS)
-#endif
-
-#ifndef FSCTL_GET_EXTERNAL_BACKING
-
-/**
- Specifies the FSCTL_GET_EXTERNAL_BACKING numerical representation if the
- compilation environment doesn't provide it.
- */
-#define FSCTL_GET_EXTERNAL_BACKING       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 196, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#endif
-
-#ifndef WOF_PROVIDER_WIM
-
-/**
- Identifies the WIM provider within WOF.
- */
-#define WOF_PROVIDER_WIM                 (0x0001)
-
-/**
- Information about a file whose contents are provided via WOF.
- */
-typedef struct _WOF_EXTERNAL_INFO {
-
-    /**
-     The version for this structure.
-     */
-    DWORD Version;
-
-    /**
-     Indicates the sub provider that provides file data for this file.
-     */
-    DWORD Provider;
-} WOF_EXTERNAL_INFO, *PWOF_EXTERNAL_INFO;
-
-/**
- Indicates the number of bytes used for the hash identifying files within
- a WIM.  This is 20 bytes (SHA1.)
- */
-#define WIM_PROVIDER_HASH_SIZE           20
-
-/**
- Information about a WOF WIM backed file.
- */
-typedef struct _WIM_PROVIDER_EXTERNAL_INFO {
-
-    /**
-     The version for this structure.
-     */
-    DWORD Version;
-
-    /**
-     Flags associated with this file.
-     */
-    DWORD Flags;
-
-    /**
-     Identifier for the WIM file that provides data for this file.
-     */
-    LARGE_INTEGER DataSourceId;
-
-    /**
-     Hash identifying the contents of this file from within the WIM.
-     */
-    BYTE  ResourceHash[WIM_PROVIDER_HASH_SIZE];
-} WIM_PROVIDER_EXTERNAL_INFO, *PWIM_PROVIDER_EXTERNAL_INFO;
-#endif
-
-#ifndef WOF_PROVIDER_FILE
-
-/**
- Identifier for individual file compression with WOF.
- */
-#define WOF_PROVIDER_FILE                   (0x0002)
-
-/**
- Identifier for a file compressed via WOF with XPress 4Kb chunk size
- compression.
- */
-#define FILE_PROVIDER_COMPRESSION_XPRESS4K  (0x0000)
-
-/**
- Identifier for a file compressed via WOF with LZX 32Kb chunk size
- compression.
- */
-#define FILE_PROVIDER_COMPRESSION_LZX       (0x0001)
-
-/**
- Identifier for a file compressed via WOF with XPress 8Kb chunk size
- compression.
- */
-#define FILE_PROVIDER_COMPRESSION_XPRESS8K  (0x0002)
-
-/**
- Identifier for a file compressed via WOF with XPress 16Kb chunk size
- compression.
- */
-#define FILE_PROVIDER_COMPRESSION_XPRESS16K (0x0003)
-
-/**
- Information about a WOF individually compressed file.
- */
-typedef struct _FILE_PROVIDER_EXTERNAL_INFO {
-
-    /**
-     The version of this structure.
-     */
-    DWORD Version;
-
-    /**
-     The algorithm used for compressing this WOF individually compressed file.
-     */
-    DWORD Algorithm;
-
-    /**
-     Flags for individual WOF compressed files.
-     */
-    DWORD Flags;
-} FILE_PROVIDER_EXTERNAL_INFO, *PFILE_PROVIDER_EXTERNAL_INFO;
-
-#endif
-
-//
-//  These were added in Vista but because they're not preprocessor
-//  they're very hard to test for, so we test for something else
-//
-
-#ifndef GetFinalPathNameByHandle
-
-/**
- A structure describing file information, provided here for when the
- compilation environment doesn't provide it.
- */
-typedef struct _FILE_STANDARD_INFO {
-
-    /**
-     The file system's allocation size fo the file, in bytes.
-     */
-    LARGE_INTEGER AllocationSize;
-
-    /**
-     The file size, in bytes.
-     */
-    LARGE_INTEGER EndOfFile;
-
-    /**
-     The number of hardlinks on the file.
-     */
-    DWORD NumberOfLinks;
-
-    /**
-     TRUE if the file is awaiting deletion (which is hard since we opened
-     it somehow.)
-     */
-    BOOLEAN DeletePending;
-
-    /**
-     TRUE if the file is a directory.
-     */
-    BOOLEAN Directory;
-} FILE_STANDARD_INFO, *PFILE_STANDARD_INFO;
-
-/**
- The identifier of the request type that returns the above structure.
- */
-#define FileStandardInfo    (0x000000001)
-#endif
-
-#ifndef IMAGE_FILE_MACHINE_AMD64
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is for an AMD64 NT based machine.
- */
-#define IMAGE_FILE_MACHINE_AMD64   0x8664
-#endif
-
-#ifndef IMAGE_FILE_MACHINE_ARMNT
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is for an ARM32 NT based machine.
- */
-#define IMAGE_FILE_MACHINE_ARMNT   0x01c4
-#endif
-
-#ifndef IMAGE_FILE_MACHINE_ARM64
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is for an ARM64 machine.
- */
-#define IMAGE_FILE_MACHINE_ARM64   0xAA64
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_NATIVE_WINDOWS
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is a native NT application.
- */
-#define IMAGE_SUBSYSTEM_NATIVE_WINDOWS 8
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_WINDOWS_CE_GUI
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is a Windows CE GUI application.
- */
-#define IMAGE_SUBSYSTEM_WINDOWS_CE_GUI 9
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_EFI_APPLICATION
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is an EFI application.
- */
-#define IMAGE_SUBSYSTEM_EFI_APPLICATION 10
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is an EFI boot service driver.
- */
-#define IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER 11
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is an EFI runtime driver.
- */
-#define IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER 12
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_EFI_ROM
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is an EFI ROM.
- */
-#define IMAGE_SUBSYSTEM_EFI_ROM 13
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_XBOX
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is for an XBox.
- */
-#define IMAGE_SUBSYSTEM_XBOX 14
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is a Windows Boot Application.
- */
-#define IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION 16
-#endif
-
-#ifndef IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG
-/**
- If the compilation environment doesn't provide it, the value for an
- executable file that is an XBox Code Catalog.
- */
-#define IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG 17
-#endif
-
 //
 //  File size lengths
 //
-
-/**
- The maximum stream name length in characters.  This is from
- WIN32_FIND_STREAM_DATA.
- */
-#define SDIR_MAX_STREAM_NAME          (MAX_PATH + 36)
-
-/**
- The maximum file name size in characters, exclusive of path.  This is from
- WIN32_FIND_DATA.
- */
-#define SDIR_MAX_FILE_NAME            (MAX_PATH)
-
-/**
- The maximum size of a file name followed by a stream name in characters.
- */
-#define SDIR_MAX_FILE_AND_STREAM_NAME (SDIR_MAX_FILE_NAME + SDIR_MAX_STREAM_NAME)
-
-/**
- A USN record, provided for environments where the compiler doesn't define
- it.
- */
-typedef struct {
-
-    /**
-     Specifies the offset in bytes from the beginning of this record to the
-     next record in any list.  Zero indicates the end of the list.
-     */
-    DWORD          RecordLength;
-
-    /**
-     Specifies the major version of the USN structure.
-     */
-    WORD           MajorVersion;
-
-    /**
-     Specifies the minor version of the USN structure.
-     */
-    WORD           MinorVersion;
-
-    /**
-     Specifies the file's file ID.
-     */
-    DWORDLONG      FileReferenceNumber;
-
-    /**
-     Specifies the parent directory's file ID.
-     */
-    DWORDLONG      ParentFileReferenceNumber;
-
-    /**
-     Specifies the USN associated with this change.
-     */
-    LARGE_INTEGER  Usn;
-
-    /**
-     Specifies the time the record was generated, in NT units.
-     */
-    LARGE_INTEGER  TimeStamp;
-
-    /**
-     Specifies the set of changes that happened to the file.
-     */
-    DWORD          Reason;
-
-    /**
-     Specifies whether the record was a result of background processing
-     of some type of user actions.
-     */
-    DWORD          SourceInfo;
-
-    /**
-     Specifies the file's security information at the time the record was
-     generated.
-     */
-    DWORD          SecurityId;
-
-    /**
-     Specifies file attributes at the time the record was generated.
-     */
-    DWORD          FileAttributes;
-
-    /**
-     Specifies the length of the file name, in bytes (not characters.)
-     */
-    WORD           FileNameLength;
-
-    /**
-     Specifies the offset in bytes from the beginning of this structure
-     to the file name.
-     */
-    WORD           FileNameOffset;
-
-    /**
-     Specifies an array of characters corresponding to a file's name,
-     not including any parent directory.
-     */
-    WCHAR          FileName[1];
-
-} SDIR_USN_RECORD;
-
-/**
- A pointer to a USN record, provided for environments where the compiler
- doesn't define it.
- */
-typedef SDIR_USN_RECORD *PSDIR_USN_RECORD;
-
-/**
- A structure returned by FindFirstStreamNameW.  Supplied for when the
- compilation environment doesn't provide it.
- */
-typedef struct _SDIR_WIN32_FIND_STREAM_DATA {
-
-    /**
-     The length of the stream, in bytes.
-     */
-    LARGE_INTEGER StreamSize;
-
-    /**
-     The stream name in a NULL terminated string.
-     */
-    WCHAR cStreamName[SDIR_MAX_STREAM_NAME];
-} SDIR_WIN32_FIND_STREAM_DATA, *PSDIR_WIN32_FIND_STREAM_DATA;
 
 /**
  A mapping structure between file attributes and letters to display.
@@ -764,178 +189,6 @@ typedef struct _SDIR_FMTCHAR {
 #define SDIR_ATTRIBUTE_ONECOLOR_MASK    0x0F
 
 /**
- The set of compression algorithms known to this program.  The order
- corresponds to sort order.
- */
-enum {
-    SdirCompressionNone = 0,
-    SdirCompressionWofFileUnknown,
-    SdirCompressionLznt,
-    SdirCompressionLzx,
-    SdirCompressionNtfsUnknown,
-    SdirCompressionWim,
-    SdirCompressionWofUnknown,
-    SdirCompressionXpress4k,
-    SdirCompressionXpress8k,
-    SdirCompressionXpress16k
-} SdirCompressionAlgorithms;
-
-/**
- Information about a single file.  This is typically only partially populated
- depending on the information of interest to the user.
- */
-typedef struct _SDIR_DIRENT {
-
-    /**
-     The file system's identifier for the file.
-     */
-    LARGE_INTEGER FileId;
-
-    /**
-     The size of the file when rounded up to the next file system allocation
-     unit.
-     */
-    LARGE_INTEGER AllocationSize;
-
-    /**
-     The logical length of the file.
-     */
-    LARGE_INTEGER FileSize;
-
-    /**
-     The amount of space on disk used by the file.
-     */
-    LARGE_INTEGER CompressedFileSize;
-
-    /**
-     The file's USN.
-     */
-    LARGE_INTEGER Usn;
-
-    /**
-     The executable file version.
-     */
-    LARGE_INTEGER FileVersion;
-
-    /**
-     Flags describing extra information about the executable file version.
-     */
-    DWORD         FileVersionFlags;
-
-    /**
-     The high word of the executable's minimum OS version.
-     */
-    WORD          OsVersionHigh;
-
-    /**
-     The low word of the executable's minimum OS version.
-     */
-    WORD          OsVersionLow;
-
-    /**
-     The time and date of when the file was read.
-     */
-    SYSTEMTIME    AccessTime;
-
-    /**
-     The time and date of when the file was created.
-     */
-    SYSTEMTIME    CreateTime;
-
-    /**
-     The time and date of when the file was last written to.
-     */
-    SYSTEMTIME    WriteTime;
-
-    /**
-     The object ID on the file (this is really a GUID.)
-     */
-    BYTE          ObjectId[16];
-
-    /**
-     The number of hardlinks on the file.
-     */
-    DWORD         LinkCount;
-
-    /**
-     The number of named streams on the file.
-     */
-    DWORD         StreamCount;
-
-    /**
-     The reparse tag attached to the file.
-     */
-    DWORD         ReparseTag;
-
-    /**
-     The file's attributes.
-     */
-    DWORD         FileAttributes;
-
-    /**
-     An integer representation of the compression algorithm used to compress
-     the file.
-     */
-    DWORD         CompressionAlgorithm;
-
-    /**
-     The number of fragments used to store the file.
-     */
-    LARGE_INTEGER FragmentCount;
-
-    /**
-     The number of allocated ranges in the file.
-     */
-    LARGE_INTEGER AllocatedRangeCount;
-
-    /**
-     The access that the current user has to the file.
-     */
-    ACCESS_MASK   EffectivePermissions;
-
-    /**
-     The color attributes to use to display the file.
-     */
-    YORILIB_COLOR_ATTRIBUTES RenderAttributes;
-
-    /**
-     The executable's target CPU.
-     */
-    WORD          Architecture;
-
-    /**
-     The executable's target subsystem.
-     */
-    WORD          Subsystem;
-
-    /**
-     A string description of the file's owner.
-     */
-    TCHAR         Owner[17];
-
-    /**
-     The number of characters in the file name.
-     */
-    DWORD         FileNameLengthInChars;
-
-    /**
-     The short file name (8.3 compliant.)
-     */
-    TCHAR         ShortFileName[14];
-
-    /**
-     The file name, possibly including stream information.  This should really
-     be SDIR_MAX_FILE_AND_STREAM_NAME characters.
-     */
-    TCHAR         FileName[SDIR_MAX_FILE_NAME];
-
-    /**
-     Pointer to the extension within the file name string.
-     */
-    TCHAR *       Extension;
-} SDIR_DIRENT, *PSDIR_DIRENT;
-
-/**
  Specifies a pointer to a function which can be used to disable Wow64
  redirection.
  */
@@ -945,13 +198,13 @@ typedef BOOL (WINAPI * DISABLE_WOW_REDIRECT_FN)(PVOID*);
  Specifies a pointer to a function which can enumerate named streams on a
  file.
  */
-typedef HANDLE (WINAPI * FIND_FIRST_STREAM_FN)(LPCTSTR, DWORD, PSDIR_WIN32_FIND_STREAM_DATA, DWORD);
+typedef HANDLE (WINAPI * FIND_FIRST_STREAM_FN)(LPCTSTR, DWORD, PWIN32_FIND_STREAM_DATA, DWORD);
 
 /**
  Specifies a pointer to a function which can enumerate named streams on a
  file.
  */
-typedef BOOL (WINAPI * FIND_NEXT_STREAM_FN)(HANDLE, PSDIR_WIN32_FIND_STREAM_DATA);
+typedef BOOL (WINAPI * FIND_NEXT_STREAM_FN)(HANDLE, PWIN32_FIND_STREAM_DATA);
 
 /**
  Specifies a pointer to a function which can return the compressed file size
@@ -993,25 +246,25 @@ typedef BOOL  (WINAPI * VER_QUERY_VALUE_FN)(const LPVOID, LPTSTR, LPVOID *, PUIN
  Specifies a pointer to a function which can return the amount of characters
  needed to display a piece of file metadata.
  */
-typedef DWORD (* SDIR_METADATA_WIDTH_FN)(PSDIR_FMTCHAR, YORILIB_COLOR_ATTRIBUTES, PSDIR_DIRENT);
+typedef DWORD (* SDIR_METADATA_WIDTH_FN)(PSDIR_FMTCHAR, YORILIB_COLOR_ATTRIBUTES, PYORI_FILE_INFO);
 
 /**
  Specifies a pointer to a function which can compare two directory entries
  in some fashion.
  */
-typedef DWORD (* SDIR_COMPARE_FN)(PSDIR_DIRENT, PSDIR_DIRENT);
+typedef DWORD (* SDIR_COMPARE_FN)(PYORI_FILE_INFO, PYORI_FILE_INFO);
 
 /**
  Specifies a pointer to a function which can collect file information from
  the disk or file system for some particular piece of data.
  */
-typedef BOOL (* SDIR_COLLECT_FN)(PSDIR_DIRENT, PWIN32_FIND_DATA, LPCTSTR);
+typedef BOOL (* SDIR_COLLECT_FN)(PYORI_FILE_INFO, PWIN32_FIND_DATA, PYORI_STRING);
 
 /**
  Specifies a pointer to a function which can generate in memory file
  information from a user provided string.
  */
-typedef BOOL (* SDIR_GENERATE_FROM_STRING_FN)(PSDIR_DIRENT, LPCTSTR);
+typedef BOOL (* SDIR_GENERATE_FROM_STRING_FN)(PYORI_FILE_INFO, LPCTSTR);
 
 
 /**
@@ -1709,20 +962,20 @@ SdirDisplaySummary(
 
 BOOL
 SdirCollectSummary(
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     );
 
 ULONG
 SdirDisplayShortName (
     PSDIR_FMTCHAR Buffer,
     __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PSDIR_DIRENT Entry
+    __in PYORI_FILE_INFO Entry
     );
 
 DWORD
 SdirCompareFileName (
-    __in PSDIR_DIRENT Left,
-    __in PSDIR_DIRENT Right
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     );
 
 /**
@@ -1751,7 +1004,7 @@ SdirParseMetadataAttributeString();
 
 BOOL
 SdirApplyAttribute(
-    __in PSDIR_DIRENT DirEnt,
+    __in PYORI_FILE_INFO DirEnt,
     __out PYORILIB_COLOR_ATTRIBUTES Attribute
     );
 

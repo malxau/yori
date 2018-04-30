@@ -119,6 +119,218 @@ typedef struct _YORI_HASH_TABLE {
     PYORI_HASH_BUCKET Buckets;
 } YORI_HASH_TABLE, *PYORI_HASH_TABLE;
 
+#pragma pack(push, 1)
+
+/**
+ A structure defining Win32 color information combined with extra information
+ describing things other than explicit colors like transparent, inversion,
+ etc.
+ */
+typedef struct _YORILIB_COLOR_ATTRIBUTES {
+
+    /**
+     Extra information specifying how to determine the correct color.
+     */
+    UCHAR Ctrl;
+
+    /**
+     An explicitly specified color.
+     */
+    UCHAR Win32Attr;
+} YORILIB_COLOR_ATTRIBUTES, *PYORILIB_COLOR_ATTRIBUTES;
+
+/**
+ A single entry mapping a string into a color.
+ */
+typedef struct _YORILIB_ATTRIBUTE_COLOR_STRING {
+
+    /**
+     The string to match against.
+     */
+    LPTSTR String;
+
+    /**
+     The color to use.
+     */
+    YORILIB_COLOR_ATTRIBUTES Attr;
+} YORILIB_ATTRIBUTE_COLOR_STRING, *PYORILIB_ATTRIBUTE_COLOR_STRING;
+
+#pragma pack(pop)
+
+/**
+ The set of compression algorithms known to this program.  The order
+ corresponds to sort order.
+ */
+enum {
+    YoriLibCompressionNone = 0,
+    YoriLibCompressionWofFileUnknown,
+    YoriLibCompressionLznt,
+    YoriLibCompressionLzx,
+    YoriLibCompressionNtfsUnknown,
+    YoriLibCompressionWim,
+    YoriLibCompressionWofUnknown,
+    YoriLibCompressionXpress4k,
+    YoriLibCompressionXpress8k,
+    YoriLibCompressionXpress16k
+} YoriLibCompressionAlgorithms;
+
+/**
+ Information about a single file.  This is typically only partially populated
+ depending on the information of interest to the user.  Note this is expected
+ to change over time and should not be used across any dynamic interface.
+ */
+typedef struct _YORI_FILE_INFO {
+
+    /**
+     The file system's identifier for the file.
+     */
+    LARGE_INTEGER FileId;
+
+    /**
+     The size of the file when rounded up to the next file system allocation
+     unit.
+     */
+    LARGE_INTEGER AllocationSize;
+
+    /**
+     The logical length of the file.
+     */
+    LARGE_INTEGER FileSize;
+
+    /**
+     The amount of space on disk used by the file.
+     */
+    LARGE_INTEGER CompressedFileSize;
+
+    /**
+     The file's USN.
+     */
+    LARGE_INTEGER Usn;
+
+    /**
+     The executable file version.
+     */
+    LARGE_INTEGER FileVersion;
+
+    /**
+     Flags describing extra information about the executable file version.
+     */
+    DWORD         FileVersionFlags;
+
+    /**
+     The high word of the executable's minimum OS version.
+     */
+    WORD          OsVersionHigh;
+
+    /**
+     The low word of the executable's minimum OS version.
+     */
+    WORD          OsVersionLow;
+
+    /**
+     The time and date of when the file was read.
+     */
+    SYSTEMTIME    AccessTime;
+
+    /**
+     The time and date of when the file was created.
+     */
+    SYSTEMTIME    CreateTime;
+
+    /**
+     The time and date of when the file was last written to.
+     */
+    SYSTEMTIME    WriteTime;
+
+    /**
+     The object ID on the file (this is really a GUID.)
+     */
+    BYTE          ObjectId[16];
+
+    /**
+     The number of hardlinks on the file.
+     */
+    DWORD         LinkCount;
+
+    /**
+     The number of named streams on the file.
+     */
+    DWORD         StreamCount;
+
+    /**
+     The reparse tag attached to the file.
+     */
+    DWORD         ReparseTag;
+
+    /**
+     The file's attributes.
+     */
+    DWORD         FileAttributes;
+
+    /**
+     An integer representation of the compression algorithm used to compress
+     the file.
+     */
+    DWORD         CompressionAlgorithm;
+
+    /**
+     The number of fragments used to store the file.
+     */
+    LARGE_INTEGER FragmentCount;
+
+    /**
+     The number of allocated ranges in the file.
+     */
+    LARGE_INTEGER AllocatedRangeCount;
+
+    /**
+     The access that the current user has to the file.
+     */
+    ACCESS_MASK   EffectivePermissions;
+
+    /**
+     The color attributes to use to display the file.
+     */
+    YORILIB_COLOR_ATTRIBUTES RenderAttributes;
+
+    /**
+     The executable's target CPU.
+     */
+    WORD          Architecture;
+
+    /**
+     The executable's target subsystem.
+     */
+    WORD          Subsystem;
+
+    /**
+     A string description of the file's owner.
+     */
+    TCHAR         Owner[17];
+
+    /**
+     The number of characters in the file name.
+     */
+    DWORD         FileNameLengthInChars;
+
+    /**
+     The short file name (8.3 compliant.)
+     */
+    TCHAR         ShortFileName[14];
+
+    /**
+     The file name, possibly including stream information.  This should really
+     be MAX_FILE_AND_STREAM_NAME characters.  Note this refers to file name
+     only, not path.
+     */
+    TCHAR         FileName[MAX_PATH];
+
+    /**
+     Pointer to the extension within the file name string.
+     */
+    TCHAR *       Extension;
+} YORI_FILE_INFO, *PYORI_FILE_INFO;
+
 /**
  Adds a specified number of bytes to a pointer value and returns the
  added value.
@@ -227,45 +439,8 @@ YoriLibExpandCommandVariables(
 
 // *** COLOR.C ***
 
-#pragma pack(push, 1)
-
-/**
- A structure defining Win32 color information combined with extra information
- describing things other than explicit colors like transparent, inversion,
- etc.
- */
-typedef struct _YORILIB_COLOR_ATTRIBUTES {
-
-    /**
-     Extra information specifying how to determine the correct color.
-     */
-    UCHAR Ctrl;
-
-    /**
-     An explicitly specified color.
-     */
-    UCHAR Win32Attr;
-} YORILIB_COLOR_ATTRIBUTES, *PYORILIB_COLOR_ATTRIBUTES;
-
-/**
- A single entry mapping a string into a color.
- */
-typedef struct _YORILIB_ATTRIBUTE_COLOR_STRING {
-
-    /**
-     The string to match against.
-     */
-    LPTSTR String;
-
-    /**
-     The color to use.
-     */
-    YORILIB_COLOR_ATTRIBUTES Attr;
-} YORILIB_ATTRIBUTE_COLOR_STRING, *PYORILIB_ATTRIBUTE_COLOR_STRING;
 
 extern YORILIB_ATTRIBUTE_COLOR_STRING ColorString[];
-
-#pragma pack(pop)
 
 /**
  A flag defining inversion in the Ctrl member of YORILIB_COLOR_ATTRIBUTES.
@@ -459,6 +634,182 @@ YoriLibForEachFile(
     __in PVOID Context
     );
 
+// *** FILEINFO.C ***
+
+BOOL
+YoriLibCollectAccessTime (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectAllocatedRangeCount (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectAllocationSize (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectArch (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectCompressionAlgorithm (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectCompressedFileSize (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectCreateTime (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectEffectivePermissions (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectFileAttributes (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectFileExtension (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectFileId (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectFileName (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectFileSize (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectFragmentCount (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectLinkCount (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectObjectId (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectOsVersion (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectOwner (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectReparseTag (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectShortName (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectSubsystem (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectStreamCount (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectUsn (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectVersion (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectWriteTime(
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
 
 // *** FULLPATH.C ***
 
