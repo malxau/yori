@@ -127,6 +127,11 @@ AcquireMutex(
     WaitForSingleObject(Mutex, INFINITE);
 }
 
+/**
+ Free structures associated with a single input stream.
+
+ @param ThisBuffer Pointer to the single stream's buffers to deallocate.
+ */
 VOID
 YoriShFreeProcessBuffer(
     __in PYORI_PROCESS_BUFFER ThisBuffer
@@ -317,6 +322,13 @@ YoriShCmdBufferPump(
     return 0;
 }
 
+/**
+ Allocate and initialize a buffer for a single input stream.
+
+ @param Buffer Pointer to the buffer to allocate structures for.
+
+ @return TRUE if the buffer is successfully initialized, FALSE if it is not.
+ */
 BOOL
 YoriShAllocateSingleProcessBuffer(
     __out PYORI_PROCESS_BUFFER Buffer
@@ -652,6 +664,17 @@ YoriShGetProcessErrorBuffer(
     return Result;
 }
 
+/**
+ Either check whether a single input stream has completed or wait for it to
+ complete.
+
+ @param ThisBuffer Pointer to the single input stream to check.
+
+ @param TeardownAll If TRUE, wait for the buffer to complete; if FALSE, check
+        whether it has completed without waiting.
+
+ @return TRUE to indicate the input stream has completed, FALSE if it has not.
+ */
 BOOL
 YoriShTeardownSingleProcessBuffer(
     __in PYORI_PROCESS_BUFFER ThisBuffer,
