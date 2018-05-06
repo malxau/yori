@@ -635,15 +635,34 @@ YoriShFileTabCompletionCallback(
         Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
     } else {
         YORI_STRING StringToFinalSlash;
-        YORI_STRING FilenameOnly;
+        YORI_STRING SearchAfterFinalSlash;
+        YORI_STRING LongFileName;
+        YORI_STRING ShortFileName;
+        PYORI_STRING FileNameToUse = NULL;
 
-        YoriLibConstantString(&FilenameOnly, FileInfo->cFileName);
+        YoriLibConstantString(&LongFileName, FileInfo->cFileName);
+        YoriLibConstantString(&ShortFileName, FileInfo->cAlternateFileName);
+
+        if (ShortFileName.LengthInChars == 0) {
+            FileNameToUse = &LongFileName;
+        } else {
+            YoriLibConstantString(&SearchAfterFinalSlash, &Context->SearchString[Context->CharsToFinalSlash]);
+            ASSERT(SearchAfterFinalSlash.LengthInChars > 0);
+            if (YoriLibDoesFileMatchExpression(&LongFileName, &SearchAfterFinalSlash)) {
+                FileNameToUse = &LongFileName;
+            } else if (YoriLibDoesFileMatchExpression(&ShortFileName, &SearchAfterFinalSlash)) {
+                FileNameToUse = &ShortFileName;
+            } else {
+                ASSERT(FALSE);
+                FileNameToUse = &LongFileName;
+            }
+        }
 
         //
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Context->CharsToFinalSlash + FilenameOnly.LengthInChars + Context->Suffix.LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Context->CharsToFinalSlash + FileNameToUse->LengthInChars + Context->Suffix.LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -662,7 +681,7 @@ YoriShFileTabCompletionCallback(
         StringToFinalSlash.LengthInChars = Context->CharsToFinalSlash;
 
 
-        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y%y"), &Context->Prefix, &StringToFinalSlash, &FilenameOnly, &Context->Suffix);
+        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y%y"), &Context->Prefix, &StringToFinalSlash, FileNameToUse, &Context->Suffix);
 
         Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
     }

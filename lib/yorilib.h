@@ -634,6 +634,12 @@ YoriLibForEachFile(
     __in PVOID Context
     );
 
+BOOL
+YoriLibDoesFileMatchExpression (
+    __in PYORI_STRING FileName,
+    __in PYORI_STRING Wildcard
+    );
+
 // *** FILEINFO.C ***
 
 BOOL

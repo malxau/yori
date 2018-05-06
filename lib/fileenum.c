@@ -615,4 +615,115 @@ YoriLibForEachFile(
     return TRUE;
 }
 
+/**
+ Compare a file name against a wildcard criteria to see if it matches.
+
+ @param FileName The file name to compare.
+ 
+ @param Wildcard The string that may contain wildcards to compare against.
+
+ @return TRUE to indicate a match, FALSE to indicate no match.
+ */
+BOOL
+YoriLibDoesFileMatchExpression (
+    __in PYORI_STRING FileName,
+    __in PYORI_STRING Wildcard
+    )
+{
+    DWORD FileIndex, WildIndex;
+
+    TCHAR CompareFile;
+    TCHAR CompareWild;
+
+    FileIndex = 0;
+    WildIndex = 0;
+
+    while (FileIndex < FileName->LengthInChars && WildIndex < Wildcard->LengthInChars) {
+
+        CompareFile = YoriLibUpcaseChar(FileName->StartOfString[FileIndex]);
+        CompareWild = YoriLibUpcaseChar(Wildcard->StartOfString[WildIndex]);
+
+        FileIndex++;
+        WildIndex++;
+
+        if (CompareWild == '?') {
+
+            //
+            //  '?' matches with everything.  We've already advanced to the next
+            //  char, so continue.
+            //
+
+        } else if (CompareWild == '*') {
+
+            //
+            //  Skip over repeated wildcards.
+            //
+
+            while (WildIndex < Wildcard->LengthInChars) {
+                CompareWild = YoriLibUpcaseChar(Wildcard->StartOfString[WildIndex]);
+                if (CompareWild != '*' && CompareWild != '?') {
+                    break;
+                }
+                WildIndex++;
+            }
+
+            //
+            //  If we're at the end of the string, consisting entirely of
+            //  wildcards, then any file name ending would match.
+            //
+
+            if (WildIndex == Wildcard->LengthInChars) {
+                return TRUE;
+            }
+
+            //
+            //  If there's a literal after the wildcard, look forward in the
+            //  file name to see if it's there.
+            //
+
+            while (FileIndex < FileName->LengthInChars) {
+                CompareFile = YoriLibUpcaseChar(FileName->StartOfString[FileIndex]);
+                if (CompareFile == CompareWild) {
+                    break;
+                }
+                FileIndex++;
+            }
+
+            //
+            //  There is a literal after the wild but it wasn't found in the
+            //  file name.  This is not a match.
+            //
+
+            if (FileIndex == FileName->LengthInChars) {
+                return FALSE;
+            }
+
+        } else {
+            if (CompareFile != CompareWild) {
+                return FALSE;
+            }
+        }
+    }
+
+    //
+    //  Skip over repeated wildcards.
+    //
+
+    while (WildIndex < Wildcard->LengthInChars) {
+        ASSERT(FileIndex == FileName->LengthInChars);
+        CompareWild = YoriLibUpcaseChar(Wildcard->StartOfString[WildIndex]);
+        if (CompareWild != '*' && CompareWild != '?') {
+            break;
+        }
+        WildIndex++;
+    }
+
+    if (FileIndex == FileName->LengthInChars && WildIndex == Wildcard->LengthInChars) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+
 // vim:sw=4:ts=4:et:
