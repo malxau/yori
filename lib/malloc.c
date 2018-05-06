@@ -114,7 +114,7 @@ YoriLibMalloc(
     Alloc = HeapAlloc(GetProcessHeap(), 0, Bytes);
     return Alloc;
 #else
-    DWORD TotalPagesNeeded = (Bytes + sizeof(YORI_SPECIAL_HEAP_HEADER) + 2 * PAGE_SIZE) / PAGE_SIZE;
+    DWORD TotalPagesNeeded = (Bytes + sizeof(YORI_SPECIAL_HEAP_HEADER) + 2 * PAGE_SIZE - 1) / PAGE_SIZE;
     PYORI_SPECIAL_HEAP_HEADER Header;
     PYORI_SPECIAL_HEAP_HEADER Commit;
     DWORD OldAccess;
@@ -144,6 +144,7 @@ YoriLibMalloc(
 
     Header->PagesInAllocation = TotalPagesNeeded;
     Header->OffsetToData = (TotalPagesNeeded - 1) * PAGE_SIZE - Bytes;
+    ASSERT(Header->OffsetToData < (PAGE_SIZE + sizeof(YORI_SPECIAL_HEAP_HEADER)));
 #ifdef CaptureStackBackTrace
     CaptureStackBackTrace(1, sizeof(Header->AllocateStack)/sizeof(Header->AllocateStack[0]), Header->AllocateStack, NULL);
 #endif
