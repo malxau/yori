@@ -376,6 +376,11 @@ Section "tee"
   File "bin\${PACKARCH}\tee.exe"
 SectionEnd
 
+Section "touch"
+  SetOutPath "$INSTDIR"
+  File "bin\${PACKARCH}\touch.exe"
+SectionEnd
+
 Section "which"
   SetOutPath "$INSTDIR"
   File "bin\${PACKARCH}\which.exe"
@@ -401,6 +406,7 @@ Section "Debugging Support"
   File "sym\${PACKARCH}\sdir.pdb"
   File "sym\${PACKARCH}\tail.pdb"
   File "sym\${PACKARCH}\tee.pdb"
+  File "sym\${PACKARCH}\touch.pdb"
   File "sym\${PACKARCH}\which.pdb"
 SectionEnd
 !ENDIF
@@ -594,6 +600,8 @@ Section "Uninstall"
   Delete $INSTDIR\tee.pdb
   Delete $INSTDIR\ytitle.exe
   Delete $INSTDIR\ytitle.pdb
+  Delete $INSTDIR\touch.exe
+  Delete $INSTDIR\touch.pdb
   Delete $INSTDIR\true.com
   Delete $INSTDIR\true.pdb
   Delete $INSTDIR\ytype.exe

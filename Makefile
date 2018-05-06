@@ -90,6 +90,7 @@ DIRS=crt       \
      tail      \
      tee       \
      title     \
+     touch     \
      type      \
      vol       \
      which     \
