@@ -66,6 +66,12 @@ ClmpHelp()
 DWORD GlobalExitCode = 0;
 
 /**
+ A mutex to use to synchronize output so only one line of output is being
+ rendered at a time.
+ */
+HANDLE hOutputMutex;
+
+/**
  Information about a pipe and a buffer attached to that pipe for reading
  data being output by a child process.
  */
@@ -77,21 +83,14 @@ typedef struct _CLMP_PIPE_BUFFER {
     HANDLE Pipe;
 
     /**
-     A data buffer describing data that has been previously read from the
-     pipe.
+     A handle to the thread processing this stream.
      */
-    PUCHAR ReadBuffer;
+    HANDLE hPumpThread;
 
     /**
-     The number of bytes in ReadBuffer.
+     The flags to use when outputting anything from this stream.
      */
-    DWORD  ReadBufferSize;
-
-    /**
-     A pointless variable declared to make this structure have 8 byte
-     alignment.
-     */
-    DWORD  AlignmentPadding;
+    DWORD OutputFlags;
 } CLMP_PIPE_BUFFER, *PCLMP_PIPE_BUFFER;
 
 /**
@@ -117,150 +116,44 @@ typedef struct _CLMP_PROCESS_INFO {
 } CLMP_PROCESS_INFO, *PCLMP_PROCESS_INFO;
 
 /**
- Take the output from a single process and output it from this process.
+ A worker thread function that fetches entire lines from an input stream,
+ and writes them to the current process output stream, with synchronization
+ to ensure that each line is written as a line.
 
- @param Process The process to collect and relay output from.
+ @param Param Pointer to a CLMP_PIPE_BUFFER structure indicating a single
+        input stream to process.
 
- @param Final TRUE if the process has finished and no further data can
-        arrive.  FALSE if the process is still executing.
+ @return Exit code for the thread.
  */
-VOID
-ProcessSinglePipeOutput (
-    __in PCLMP_PROCESS_INFO Process,
-    __in BOOL Final
+DWORD WINAPI
+ClmpPumpSingleStream(
+    __in LPVOID Param
     )
 {
-    DWORD BytesToRead = 0;
-    DWORD BytesToAllocate;
-    DWORD PipeNum;
-    PCLMP_PIPE_BUFFER Pipe;
-    HANDLE OutHandle;
+    PCLMP_PIPE_BUFFER Buffer = (PCLMP_PIPE_BUFFER)Param;
+    PVOID LineContext = NULL;
+    YORI_STRING LineString;
 
-    //
-    //  Each outstanding process has two handles to read from: one
-    //  corresponding to its standard output, the other to standard
-    //  error.  We read from each and write to the corresponding
-    //  handle from this process.
-    //
-    //  If this seems like a lot of work, the reason is because we
-    //  want to write line-by-line to ensure we don't get garbage
-    //  output caused by racing child processes.  It also allows us
-    //  to give the user more information about what's failing.
-    //
+    YoriLibInitEmptyString(&LineString);
 
-    for (PipeNum = 0; PipeNum < sizeof(Process->Pipes)/sizeof(Process->Pipes[0]); PipeNum++) {
-
-        Pipe = &Process->Pipes[PipeNum];
-        if (PipeNum == 0) {
-            OutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-        } else {
-            OutHandle = GetStdHandle(STD_ERROR_HANDLE);
+    while (TRUE) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, Buffer->Pipe)) {
+            break;
         }
 
         //
-        //  Check if we have an initialized process and if we have data to read.
+        //  Synchronize with other things writing to output
         //
 
-        if (Pipe->Pipe != NULL) {
-
-            BytesToRead = 0;
-            PeekNamedPipe( Pipe->Pipe, NULL, 0, NULL, &BytesToRead, NULL );
-
-            if (BytesToRead != 0) {
-
-                PUCHAR NewBuffer;
-                DWORD  BytesRead;
-                DWORD  ThisChar;
-
-                //
-                //  We allocate a buffer for any leftover data (that didn't have a \n)
-                //  plus whatever new data we have now.  Copy forward the old data and
-                //  read the new data.
-                //
-
-                BytesToAllocate = Pipe->ReadBufferSize + BytesToRead;
-
-                NewBuffer = YoriLibMalloc(BytesToAllocate);
-
-                if (Pipe->ReadBufferSize) {
-                    memcpy(NewBuffer, Pipe->ReadBuffer, Pipe->ReadBufferSize);
-                }
-
-                ReadFile(Pipe->Pipe, NewBuffer + Pipe->ReadBufferSize, BytesToRead, &BytesRead, NULL);
-
-                //
-                //  Go look for \n's now.  If we find one, send that data to the correct
-                //  handle for this process, and continue searching for more.
-                //
-
-                for (ThisChar = 0; ThisChar < BytesToAllocate; ThisChar++) {
-
-                    if (NewBuffer[ThisChar] == '\n') {
-
-                        WriteFile(OutHandle, NewBuffer, ThisChar + 1, &BytesRead, NULL);
-                        memmove(NewBuffer, NewBuffer + ThisChar + 1, BytesToAllocate - ThisChar - 1);
-                        BytesToAllocate -= ThisChar + 1;
-                        ThisChar = 0;
-                    }
-                }
-
-                //
-                //  If we had any previous leftover data, it's moot now.  Tear down
-                //  that buffer.
-                //
-
-                if (Pipe->ReadBuffer != NULL) {
-                    YoriLibFree(Pipe->ReadBuffer);
-                    Pipe->ReadBuffer = NULL;
-                    Pipe->ReadBufferSize = 0;
-                }
-
-                //
-                //  If we still have data, either carry it over or if the process is
-                //  dead just write what we have.  If we don't have data, tear down
-                //  our buffer.
-                //
-
-                if (BytesToAllocate > 0) {
-                    if (Final) {
-                        WriteFile(OutHandle, NewBuffer, BytesToAllocate, &BytesRead, NULL);
-                        YoriLibFree(NewBuffer);
-                    } else {
-                        Pipe->ReadBuffer = NewBuffer;
-                        Pipe->ReadBufferSize = BytesToAllocate;
-                    }
-                } else {
-                    YoriLibFree(NewBuffer);
-                }
-            }
-        }
+        WaitForSingleObject(hOutputMutex, INFINITE);
+        YoriLibOutput(Buffer->OutputFlags, _T("%y\n"), &LineString);
+        ReleaseMutex(hOutputMutex);
     }
-}
 
-/**
- Collect any output from any process and write it as output from this
- process.  This is done to ensure that output from this process is at
- least consistent at the line level.
+    YoriLibLineReadClose(LineContext);
+    YoriLibFreeStringContents(&LineString);
 
- @param Processes An array of processes to collect output from.
-
- @param NumberProcesses The number of processes in the array.
- */
-VOID
-ProcessPipeOutput (
-    PCLMP_PROCESS_INFO Processes,
-    DWORD NumberProcesses
-    )
-{
-    DWORD i;
-
-    //
-    //  Look for outstanding data in any process and write it out.
-    //  
-
-    for (i = 0; i < NumberProcesses; i++) {
-        ProcessSinglePipeOutput( &Processes[i], FALSE );
-    }
+    return 0;
 }
 
 /**
@@ -269,75 +162,52 @@ ProcessPipeOutput (
  @param Process The process to wait for.
  */
 VOID
-WaitOnProcess (
+ClmpWaitOnProcess (
     __in PCLMP_PROCESS_INFO Process
     )
 {
     DWORD ExitCode;
     DWORD PipeNum;
+    DWORD WaitResult;
 
-    while (Process->WindowsProcessInfo.hProcess != NULL) {
-
-        HANDLE WaitHandles[3];
-        DWORD  HandleNum;
-
-        //
-        //  We want to wait for the process to tear down, but we also need
-        //  to break out if the process is generating output that we need
-        //  to handle, lest we might prevent it from tearing down.
-        //
-
-        WaitHandles[0] = Process->WindowsProcessInfo.hProcess;
-        WaitHandles[1] = Process->Pipes[0].Pipe;
-        WaitHandles[2] = Process->Pipes[1].Pipe;
-
-        if (WaitHandles[2] == NULL && WaitHandles[1] == NULL) {
-            HandleNum = 1;
-        } else {
-            HandleNum = 3;
-        }
-
-        HandleNum = WaitForMultipleObjects(HandleNum, WaitHandles, FALSE, INFINITE);
-        if (HandleNum > WAIT_OBJECT_0 && HandleNum <= WAIT_OBJECT_0 + 2) {
-            ProcessSinglePipeOutput(Process, FALSE);
-        } else {
-            ProcessSinglePipeOutput(Process, TRUE);
-            GetExitCodeProcess( Process->WindowsProcessInfo.hProcess, &ExitCode );
-
-            //
-            //  If a child failed and the parent is still going, fail with
-            //  the same code.
-            //
-
-            if (ExitCode != 0 && GlobalExitCode == 0) {
-                GlobalExitCode = ExitCode;
-            }
-
-            //
-            //  Clean up and tear down so the process slot can be reused as
-            //  necessary.
-            //
-
-            CloseHandle(Process->WindowsProcessInfo.hProcess);
-            CloseHandle(Process->WindowsProcessInfo.hThread);
-        
-            Process->WindowsProcessInfo.hProcess = NULL;
-            Process->WindowsProcessInfo.hThread = NULL;
-
-            for (PipeNum = 0; PipeNum < sizeof(Process->Pipes)/sizeof(Process->Pipes[0]); PipeNum++) {
-
-                CloseHandle(Process->Pipes[PipeNum].Pipe);
-
-                Process->Pipes[PipeNum].Pipe = NULL;
-
-                if (Process->Pipes[PipeNum].ReadBuffer) {
-                    YoriLibFree(Process->Pipes[PipeNum].ReadBuffer);
-                    Process->Pipes[PipeNum].ReadBuffer = NULL;
-                }
-                Process->Pipes[PipeNum].ReadBufferSize = 0;
-            }
-        }
+    if (Process->WindowsProcessInfo.hProcess != NULL) {
+        WaitResult = WaitForSingleObject(Process->WindowsProcessInfo.hProcess, INFINITE);
+        ASSERT(WaitResult == WAIT_OBJECT_0);
     }
+
+    for (PipeNum = 0; PipeNum < sizeof(Process->Pipes)/sizeof(Process->Pipes[0]); PipeNum++) {
+        if (Process->Pipes[PipeNum].hPumpThread != NULL) {
+            WaitResult = WaitForSingleObject(Process->Pipes[PipeNum].hPumpThread, INFINITE);
+            ASSERT(WaitResult == WAIT_OBJECT_0);
+        }
+
+        CloseHandle(Process->Pipes[PipeNum].hPumpThread);
+        Process->Pipes[PipeNum].hPumpThread = NULL;
+        CloseHandle(Process->Pipes[PipeNum].Pipe);
+        Process->Pipes[PipeNum].Pipe = NULL;
+    }
+
+    GetExitCodeProcess(Process->WindowsProcessInfo.hProcess, &ExitCode);
+
+    //
+    //  If a child failed and the parent is still going, fail with
+    //  the same code.
+    //
+
+    if (ExitCode != 0 && GlobalExitCode == 0) {
+        GlobalExitCode = ExitCode;
+    }
+
+    //
+    //  Clean up and tear down so the process slot can be reused as
+    //  necessary.
+    //
+
+    CloseHandle(Process->WindowsProcessInfo.hProcess);
+    CloseHandle(Process->WindowsProcessInfo.hThread);
+
+    Process->WindowsProcessInfo.hProcess = NULL;
+    Process->WindowsProcessInfo.hThread = NULL;
 }
 
 /**
@@ -488,6 +358,12 @@ ymain(
 
     ZeroMemory(ProcessInfo, sizeof(CLMP_PROCESS_INFO) * NumberProcesses);
 
+    hOutputMutex = CreateMutex(NULL, FALSE, NULL);
+    if (hOutputMutex == NULL) {
+        YoriLibFree(ProcessInfo);
+        return EXIT_FAILURE;
+    }
+
     //
     //  Scan again looking for source files, and spawn one child
     //  process per argument found, combined with the command
@@ -501,20 +377,13 @@ ymain(
             DWORD MyProcess = CurrentProcess;
             SECURITY_ATTRIBUTES SecurityAttributes;
             HANDLE WriteOutPipe, WriteErrPipe;
+            DWORD ThreadId;
 
             YoriLibSPrintf(szCmdComplete, _T("%s %y"), szCmdCommon, &ArgV[i]);
-            ZeroMemory( &StartupInfo, sizeof(StartupInfo) );
+            ZeroMemory(&StartupInfo, sizeof(StartupInfo));
             StartupInfo.cb = sizeof(StartupInfo);
 
             MyProcess %= NumberProcesses;
-
-            //
-            //  Look for pending output in any process.  This is a little
-            //  gratuitous, but a child may block waiting for us if we don't,
-            //  so do it now.
-            //
-
-            ProcessPipeOutput(ProcessInfo, NumberProcesses);
 
             //
             //  If we've run out of processors, wait for the next child
@@ -522,7 +391,7 @@ ymain(
             //
 
             if (CurrentProcess >= NumberProcesses) {
-                WaitOnProcess( &ProcessInfo[MyProcess] );
+                ClmpWaitOnProcess(&ProcessInfo[MyProcess]);
                 if (GlobalExitCode) {
                     goto drain;
                 }
@@ -533,7 +402,7 @@ ymain(
             //  standard output and standard error handles to be inherited.
             //
 
-            ZeroMemory( &SecurityAttributes, sizeof(SecurityAttributes) );
+            ZeroMemory(&SecurityAttributes, sizeof(SecurityAttributes));
 
             SecurityAttributes.nLength = sizeof(SecurityAttributes);
             SecurityAttributes.bInheritHandle = TRUE;
@@ -542,14 +411,30 @@ ymain(
             //  Create the aforementioned handles.
             //
 
-            if (!CreatePipe( &ProcessInfo[MyProcess].Pipes[0].Pipe, &WriteOutPipe, &SecurityAttributes, 0)) {
+            if (!CreatePipe(&ProcessInfo[MyProcess].Pipes[0].Pipe, &WriteOutPipe, &SecurityAttributes, 0)) {
 
                 GlobalExitCode = EXIT_FAILURE;
                 goto drain;
             }
 
-            if (!CreatePipe( &ProcessInfo[MyProcess].Pipes[1].Pipe, &WriteErrPipe, &SecurityAttributes, 0)) {
+            if (!CreatePipe(&ProcessInfo[MyProcess].Pipes[1].Pipe, &WriteErrPipe, &SecurityAttributes, 0)) {
 
+                GlobalExitCode = EXIT_FAILURE;
+                goto drain;
+            }
+
+            ProcessInfo[MyProcess].Pipes[0].OutputFlags = YORI_LIB_OUTPUT_STDOUT;
+
+            ProcessInfo[MyProcess].Pipes[0].hPumpThread = CreateThread(NULL, 0, ClmpPumpSingleStream, &ProcessInfo[MyProcess].Pipes[0], 0, &ThreadId);
+            if (ProcessInfo[MyProcess].Pipes[0].hPumpThread == NULL) {
+                GlobalExitCode = EXIT_FAILURE;
+                goto drain;
+            }
+
+            ProcessInfo[MyProcess].Pipes[1].OutputFlags = YORI_LIB_OUTPUT_STDERR;
+
+            ProcessInfo[MyProcess].Pipes[1].hPumpThread = CreateThread(NULL, 0, ClmpPumpSingleStream, &ProcessInfo[MyProcess].Pipes[1], 0, &ThreadId);
+            if (ProcessInfo[MyProcess].Pipes[1].hPumpThread == NULL) {
                 GlobalExitCode = EXIT_FAILURE;
                 goto drain;
             }
@@ -571,7 +456,7 @@ ymain(
                 StartupInfo.hStdError = WriteErrPipe;
             }
 
-            if (!CreateProcess( NULL, szCmdComplete, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo )) {
+            if (!CreateProcess(NULL, szCmdComplete, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
                 GlobalExitCode = EXIT_FAILURE;
                 goto drain;
             }
@@ -593,10 +478,10 @@ ymain(
         STARTUPINFO StartupInfo;
         DWORD MyProcess = CurrentProcess;
 
-        ZeroMemory( &StartupInfo, sizeof(StartupInfo) );
+        ZeroMemory(&StartupInfo, sizeof(StartupInfo));
         StartupInfo.cb = sizeof(StartupInfo);
 
-        if (!CreateProcess( NULL, szCmdCommon, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo )) {
+        if (!CreateProcess(NULL, szCmdCommon, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
             return EXIT_FAILURE;
         }
 
@@ -617,7 +502,7 @@ drain:
     do {
         CurrentProcess--;
 
-        WaitOnProcess( &ProcessInfo[CurrentProcess] );
+        ClmpWaitOnProcess(&ProcessInfo[CurrentProcess]);
 
     } while (CurrentProcess > 0);
 
