@@ -1030,4 +1030,243 @@ YoriLibFindRightMostCharacter(
     return NULL;
 }
 
+/**
+ Parse a string containing hex digits and generate a string that encodes each
+ two hex digits into a byte.
+
+ @param String Pointer to the string to parse.
+
+ @param Buffer Pointer to a buffer to populate with a string representation of
+        the hex characters.  Note this string is always 8 bit, not TCHARs.
+
+ @param BufferSize Specifies the length of Buffer, in bytes.
+
+ @return TRUE to indicate parse success, FALSE to indicate failure.  Failure
+         occurs if the input stream is not compliant hex, or is not aligned in
+         two character pairs.
+ */
+BOOL
+YoriLibStringToHexBuffer(
+    __in PYORI_STRING String,
+    __out PUCHAR Buffer,
+    __in DWORD BufferSize
+    )
+{
+    UCHAR DestChar;
+    TCHAR SourceChar;
+    DWORD Offset;
+    DWORD Digit;
+    DWORD StrIndex;
+
+    //
+    //  Loop through the output string
+    //
+
+    StrIndex = 0;
+    for (Offset = 0; Offset < BufferSize; Offset++) {
+
+        DestChar = 0;
+        Digit = 0;
+
+        //
+        //  So long as we have a valid character, populate thischar.  Do this exactly
+        //  twice, so we have one complete byte.
+        //
+
+        while (Digit < 2 && StrIndex < String->LengthInChars) {
+
+            SourceChar = String->StartOfString[StrIndex];
+
+            if ((SourceChar >= '0' && SourceChar <= '9') ||
+                (SourceChar >= 'a' && SourceChar <= 'f') ||
+                (SourceChar >= 'A' && SourceChar <= 'F')) {
+
+                DestChar *= 16;
+                if (SourceChar >= '0' && SourceChar <= '9') {
+                    DestChar = (UCHAR)(DestChar + SourceChar - '0');
+                } else if (SourceChar >= 'a' && SourceChar <= 'f') {
+                    DestChar = (UCHAR)(DestChar + SourceChar - 'a' + 10);
+                } else if (SourceChar >= 'A' && SourceChar <= 'F') {
+                    DestChar = (UCHAR)(DestChar + SourceChar - 'A' + 10);
+                }
+
+                StrIndex++;
+                Digit++;
+            } else {
+                break;
+            }
+        }
+
+        //
+        //  If we did actually get two input chars, output the byte and go back for
+        //  more.  Otherwise, the input doesn't match the output requirement
+        //
+
+        if (Digit == 2) {
+            Buffer[Offset] = DestChar;
+        } else {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/**
+ Parse a string specifying a file size and return a 64 bit unsigned integer
+ from the result.  This function can parse prefixed hex or decimal inputs, and
+ understands file size qualifiers (k, m, g et al.)
+
+ @param String Pointer to the string to parse.
+
+ @return The parsed, 64 bit unsigned integer value from the string.
+ */
+LARGE_INTEGER
+YoriLibStringToFileSize(
+    __in PYORI_STRING String
+    )
+{
+    TCHAR Suffixes[] = {'b', 'k', 'm', 'g', 't'};
+    DWORD SuffixLevel = 0;
+    LARGE_INTEGER FileSize;
+    DWORD i;
+    DWORD CharsConsumed;
+
+    if (!YoriLibStringToNumber(String, TRUE, &FileSize.QuadPart, &CharsConsumed)) {
+        return FileSize;
+    }
+
+    if (CharsConsumed < String->LengthInChars) {
+        TCHAR SuffixChar = String->StartOfString[CharsConsumed];
+
+        for (i = 0; i < sizeof(Suffixes)/sizeof(Suffixes[0]); i++) {
+            if (SuffixChar == Suffixes[i] || SuffixChar == (Suffixes[i] + 'A' - 'a')) {
+                SuffixLevel = i;
+                break;
+            }
+        }
+
+        while(SuffixLevel) {
+
+            FileSize.HighPart = (FileSize.HighPart << 10) + (FileSize.LowPart >> 22);
+            FileSize.LowPart = (FileSize.LowPart << 10);
+
+            SuffixLevel--;
+        }
+    }
+
+    return FileSize;
+}
+
+/**
+ Parse a string specifying a file date and return a timestamp from the result.
+
+ @param String Pointer to the string to parse.
+
+ @param Date On successful completion, updated to point to a timestamp.
+
+ @return TRUE to indicate success, FALSE to indicate parse failure.
+ */
+BOOL
+YoriLibStringToDate(
+    __in PYORI_STRING String,
+    __out LPSYSTEMTIME Date
+    )
+{
+    YORI_STRING Substring;
+    DWORD CharsConsumed;
+    LONGLONG llTemp;
+
+    YoriLibInitEmptyString(&Substring);
+    Substring.StartOfString = String->StartOfString;
+    Substring.LengthInChars = String->LengthInChars;
+
+    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+        return FALSE;
+    }
+
+    Date->wYear = (WORD)llTemp;
+    if (Date->wYear < 100) {
+        Date->wYear += 2000;
+    }
+
+    if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '/') {
+        Substring.LengthInChars -= CharsConsumed + 1;
+        Substring.StartOfString += CharsConsumed + 1;
+
+        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+            return FALSE;
+        }
+
+        Date->wMonth = (WORD)llTemp;
+
+        if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '/') {
+            Substring.LengthInChars -= CharsConsumed + 1;
+            Substring.StartOfString += CharsConsumed + 1;
+    
+            if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+                return FALSE;
+            }
+
+            Date->wDay = (WORD)llTemp;
+        }
+    }
+
+    return TRUE;
+}
+
+/**
+ Parse a string specifying a file time and return a timestamp from the result.
+
+ @param String Pointer to the string to parse.
+
+ @param Date On successful completion, updated to point to a timestamp.
+
+ @return TRUE to indicate success, FALSE to indicate parse failure.
+ */
+BOOL
+YoriLibStringToTime(
+    __in PYORI_STRING String,
+    __out LPSYSTEMTIME Date
+    )
+{
+    YORI_STRING Substring;
+    DWORD CharsConsumed;
+    LONGLONG llTemp;
+
+    YoriLibInitEmptyString(&Substring);
+    Substring.StartOfString = String->StartOfString;
+    Substring.LengthInChars = String->LengthInChars;
+
+    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+        return FALSE;
+    }
+
+    Date->wHour = (WORD)llTemp;
+
+    if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == ':') {
+        Substring.LengthInChars -= CharsConsumed + 1;
+        Substring.StartOfString += CharsConsumed + 1;
+
+        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+            return FALSE;
+        }
+
+        Date->wMinute = (WORD)llTemp;
+
+        if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == ':') {
+            Substring.LengthInChars -= CharsConsumed + 1;
+            Substring.StartOfString += CharsConsumed + 1;
+    
+            if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+                return FALSE;
+            }
+
+            Date->wSecond = (WORD)llTemp;
+        }
+    }
+
+    return TRUE;
+}
+
+
 // vim:sw=4:ts=4:et:

@@ -999,224 +999,6 @@ SdirCollectSummary(
 //  below functions implement these.
 //
 
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for last access date.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateAccessDate(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    return SdirStringToDate(String, &Entry->AccessTime);
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for last access time.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateAccessTime(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    return SdirStringToTime(String, &Entry->AccessTime);
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for the number of allocated ranges.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateAllocatedRangeCount(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->AllocatedRangeCount = SdirStringToNum64(String, NULL);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's allocation size.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateAllocationSize(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->AllocationSize = SdirStringToFileSize(String);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for an executable's CPU architecture.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateArch(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    if (_tcsicmp(String, _T("None")) == 0) {
-        Entry->Architecture = 0;
-    } else if (_tcsicmp(String, _T("i386")) == 0) {
-        Entry->Architecture = IMAGE_FILE_MACHINE_I386;
-    } else if (_tcsicmp(String, _T("amd64")) == 0) {
-        Entry->Architecture = IMAGE_FILE_MACHINE_AMD64;
-    } else if (_tcsicmp(String, _T("arm")) == 0) {
-        Entry->Architecture = IMAGE_FILE_MACHINE_ARMNT;
-    } else if (_tcsicmp(String, _T("arm64")) == 0) {
-        Entry->Architecture = IMAGE_FILE_MACHINE_ARM64;
-    } else {
-        return FALSE;
-    }
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's compression algorithm.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateCompressionAlgorithm(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    if (_tcsicmp(String, _T("None")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionNone;
-    } else if (_tcsicmp(String, _T("LZNT")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionLznt;
-    } else if (_tcsicmp(String, _T("NTFS")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionNtfsUnknown;
-    } else if (_tcsicmp(String, _T("WIM")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionWim;
-    } else if (_tcsicmp(String, _T("LZX")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionLzx;
-    } else if (_tcsicmp(String, _T("Xp4")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionXpress4k;
-    } else if (_tcsicmp(String, _T("Xp8")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionXpress8k;
-    } else if (_tcsicmp(String, _T("Xp16")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionXpress16k;
-    } else if (_tcsicmp(String, _T("File")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionWofFileUnknown;
-    } else if (_tcsicmp(String, _T("Wof")) == 0) {
-        Entry->CompressionAlgorithm = YoriLibCompressionWofUnknown;
-    } else {
-        return FALSE;
-    }
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's compressed file size.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateCompressedFileSize(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->CompressedFileSize = SdirStringToFileSize(String);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's creation date.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateCreateDate(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    return SdirStringToDate(String, &Entry->CreateTime);
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's creation time.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateCreateTime(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    return SdirStringToTime(String, &Entry->CreateTime);
-}
 
 /**
  Parse a NULL terminated string and populate a directory entry to facilitate
@@ -1232,22 +1014,23 @@ SdirGenerateCreateTime(
 BOOL
 SdirGenerateEffectivePermissions(
     __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
+    __in PYORI_STRING String
     )
 {
     DWORD i;
+    DWORD StringIndex = 0;
 
     Entry->FileAttributes = 0;
 
-    while (*String) {
+    while (StringIndex < String->LengthInChars) {
 
         for (i = 0; i < SdirGetNumPermissionPairs(); i++) {
-            if (*String == PermissionPairs[i].DisplayLetter) {
+            if (String->StartOfString[StringIndex] == PermissionPairs[i].DisplayLetter) {
                 Entry->EffectivePermissions |= PermissionPairs[i].FileAttribute;
             }
         }
 
-        String++;
+        StringIndex++;
     }
     return TRUE;
 }
@@ -1266,435 +1049,26 @@ SdirGenerateEffectivePermissions(
 BOOL
 SdirGenerateFileAttributes(
     __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
+    __in PYORI_STRING String
     )
 {
     DWORD i;
+    DWORD StringIndex = 0;
 
     Entry->FileAttributes = 0;
 
-    while (*String) {
+    while (StringIndex < String->LengthInChars) {
 
         for (i = 0; i < SdirGetNumAttrPairs(); i++) {
-            if (*String == AttrPairs[i].DisplayLetter) {
+            if (String->StartOfString[StringIndex] == AttrPairs[i].DisplayLetter) {
                 Entry->FileAttributes |= AttrPairs[i].FileAttribute;
             }
         }
 
-        String++;
+        StringIndex++;
     }
     return TRUE;
 }
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's extension.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateFileExtension(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    //
-    //  Since we have one dirent per comparison, just shove the extension in
-    //  the file name buffer and point the extension to it.  This buffer can't
-    //  be used for anything else anyway.
-    //
-
-    YoriLibSPrintfS(Entry->FileName, sizeof(Entry->FileName)/sizeof(Entry->FileName[0]), _T("%s"), String);
-    Entry->FileName[sizeof(Entry->FileName)/sizeof(Entry->FileName[0]) - 1] = '\0';
-    Entry->Extension = Entry->FileName;
-
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's name.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateFileName(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->FileNameLengthInChars = YoriLibSPrintfS(Entry->FileName, sizeof(Entry->FileName)/sizeof(Entry->FileName[0]), _T("%s"), String);
-    Entry->FileName[sizeof(Entry->FileName)/sizeof(Entry->FileName[0]) - 1] = '\0';
-
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's size.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateFileSize(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->FileSize = SdirStringToFileSize(String);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's fragment count.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateFragmentCount(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->FragmentCount = SdirStringToNum64(String, NULL);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's link count.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateLinkCount(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->LinkCount = SdirStringToNum32(String, NULL);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's object ID.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateObjectId(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    UCHAR Buffer[16];
-    if (SdirStringToHexBuffer(String, (PUCHAR)&Buffer, sizeof(Buffer))) {
-        memcpy(Entry->ObjectId, Buffer, sizeof(Buffer));
-    }
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for an executable's minimum OS version.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateOsVersion(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    LPCTSTR endptr = NULL;
-
-    Entry->OsVersionHigh = (WORD)SdirStringToNum32(String, &endptr);
-
-    if (*endptr == '.') {
-        Entry->OsVersionLow = (WORD)SdirStringToNum32(endptr+1, NULL);
-    }
-
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's owner.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateOwner(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    YoriLibSPrintfS(Entry->Owner, sizeof(Entry->Owner)/sizeof(Entry->Owner[0]), _T("%s"), String);
-    Entry->Owner[sizeof(Entry->Owner)/sizeof(Entry->Owner[0]) - 1] = '\0';
-
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's reparse tag.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateReparseTag(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->ReparseTag = SdirStringToNum32(String, NULL);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's short file name.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateShortName(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    YoriLibSPrintfS(Entry->ShortFileName, sizeof(Entry->ShortFileName)/sizeof(Entry->ShortFileName[0]), _T("%s"), String);
-    Entry->ShortFileName[sizeof(Entry->ShortFileName)/sizeof(Entry->ShortFileName[0]) - 1] = '\0';
-
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for an executable's target subsystem.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateSubsystem (
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    if (_tcsicmp(String, _T("None")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_UNKNOWN;
-    } else if (_tcsicmp(String, _T("NT")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_NATIVE;
-    } else if (_tcsicmp(String, _T("GUI")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_GUI;
-    } else if (_tcsicmp(String, _T("Cons")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CUI;
-    } else if (_tcsicmp(String, _T("OS/2")) == 0 || _tcsicmp(String, _T("OS2")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_OS2_CUI;
-    } else if (_tcsicmp(String, _T("Posx")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_POSIX_CUI;
-    } else if (_tcsicmp(String, _T("w9x")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_NATIVE_WINDOWS;
-    } else if (_tcsicmp(String, _T("CE")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_CE_GUI;
-    } else if (_tcsicmp(String, _T("EFIa")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_APPLICATION;
-    } else if (_tcsicmp(String, _T("EFIb")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER;
-    } else if (_tcsicmp(String, _T("EFId")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER;
-    } else if (_tcsicmp(String, _T("EFIr")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_EFI_ROM;
-    } else if (_tcsicmp(String, _T("Xbox")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_XBOX;
-    } else if (_tcsicmp(String, _T("Xbcc")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG;
-    } else if (_tcsicmp(String, _T("Boot")) == 0) {
-        Entry->Subsystem = IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION;
-    } else {
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's stream count.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateStreamCount(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->StreamCount = SdirStringToNum32(String, NULL);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's USN.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateUsn(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    Entry->Usn = SdirStringToNum64(String, NULL);
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for an executable's version.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateVersion(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    LARGE_INTEGER Version = {0};
-    LPCTSTR endptr = NULL;
-
-    Version.HighPart = SdirStringToNum32(String, &endptr)<<16;
-
-    if (*endptr == '.') {
-        Version.HighPart = Version.HighPart + (WORD)SdirStringToNum32(endptr+1, &endptr);
-
-        if (*endptr == '.') {
-            Version.LowPart = SdirStringToNum32(endptr+1, &endptr)<<16;
-            if (*endptr == '.') {
-                Version.LowPart = Version.LowPart + (WORD)SdirStringToNum32(endptr+1, NULL);
-            }
-        }
-    }
-
-    Entry->FileVersion = Version;
-
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's write date.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateWriteDate(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    return SdirStringToDate(String, &Entry->WriteTime);
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's write time.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateWriteTime(
-    __inout PYORI_FILE_INFO Entry,
-    __in LPCTSTR String
-    )
-{
-    return SdirStringToTime(String, &Entry->WriteTime);
-}
-
 
 //
 //  Specific formatting and sizing callbacks for each supported piece of file metadata.
@@ -2773,27 +2147,27 @@ SdirOptions[] = {
 
     {OPT_OS(FtAllocatedRangeCount),      _T("ac"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayAllocatedRangeCount,  YoriLibCollectAllocatedRangeCount,
-        SdirCompareAllocatedRangeCount,  NULL,                          SdirGenerateAllocatedRangeCount,
+        SdirCompareAllocatedRangeCount,  NULL,                          YoriLibGenerateAllocatedRangeCount,
         "allocated range count"},
 
     {OPT_OS(FtAccessDate),               _T("ad"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
         SdirDisplayFileAccessDate,       YoriLibCollectAccessTime,
-        SdirCompareAccessDate,           NULL,                          SdirGenerateAccessDate,
+        SdirCompareAccessDate,           NULL,                          YoriLibGenerateAccessDate,
         "access date"},
 
     {OPT_OS(FtArch),                     _T("ar"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
         SdirDisplayArch,                 YoriLibCollectArch,
-        SdirCompareArch,                 NULL,                          SdirGenerateArch,
+        SdirCompareArch,                 NULL,                          YoriLibGenerateArch,
         "CPU architecture"},
 
     {OPT_OS(FtAllocationSize),           _T("as"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
         SdirDisplayAllocationSize,       YoriLibCollectAllocationSize,
-        SdirCompareAllocationSize,       NULL,                          SdirGenerateAllocationSize,
+        SdirCompareAllocationSize,       NULL,                          YoriLibGenerateAllocationSize,
         "allocation size"},
 
     {OPT_OS(FtAccessTime),               _T("at"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
         SdirDisplayFileAccessTime,       YoriLibCollectAccessTime,
-        SdirCompareAccessTime,           NULL,                          SdirGenerateAccessTime,
+        SdirCompareAccessTime,           NULL,                          YoriLibGenerateAccessTime,
         "access time"},
 
     {OPT_OS(FtBriefAlternate),           _T("ba"), {0, 0, BACKGROUND_BLUE},
@@ -2803,22 +2177,22 @@ SdirOptions[] = {
 
     {OPT_OS(FtCompressionAlgorithm),     _T("ca"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayCompressionAlgorithm, YoriLibCollectCompressionAlgorithm,
-        SdirCompareCompressionAlgorithm, NULL,                          SdirGenerateCompressionAlgorithm,
+        SdirCompareCompressionAlgorithm, NULL,                          YoriLibGenerateCompressionAlgorithm,
         "compression algorithm"},
     
     {OPT_OS(FtCreateDate),               _T("cd"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayFileCreateDate,       YoriLibCollectCreateTime,
-        SdirCompareCreateDate,           NULL,                          SdirGenerateCreateDate,
+        SdirCompareCreateDate,           NULL,                          YoriLibGenerateCreateDate,
         "create date"},
 
     {OPT_OS(FtCompressedFileSize),       _T("cs"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
         SdirDisplayCompressedFileSize,   YoriLibCollectCompressedFileSize,
-        SdirCompareCompressedFileSize,   NULL,                          SdirGenerateCompressedFileSize,
+        SdirCompareCompressedFileSize,   NULL,                          YoriLibGenerateCompressedFileSize,
         "compressed size"},
 
     {OPT_OS(FtCreateTime),               _T("ct"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayFileCreateTime,       YoriLibCollectCreateTime,
-        SdirCompareCreateTime,           NULL,                          SdirGenerateCreateTime,
+        SdirCompareCreateTime,           NULL,                          YoriLibGenerateCreateTime,
         "create time"},
 
     {OPT_OS(FtEffectivePermissions),     _T("ep"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
@@ -2838,12 +2212,12 @@ SdirOptions[] = {
 
     {OPT_OS(FtFragmentCount),            _T("fc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayFragmentCount,        YoriLibCollectFragmentCount,
-        SdirCompareFragmentCount,        NULL,                          SdirGenerateFragmentCount,
+        SdirCompareFragmentCount,        NULL,                          YoriLibGenerateFragmentCount,
         "fragment count"},
 
     {OPT_OS(FtFileExtension),            _T("fe"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_FIXED_COLOR, 0, 0},
         NULL,                            YoriLibCollectFileExtension,
-        SdirCompareFileExtension,        NULL,                          SdirGenerateFileExtension,
+        SdirCompareFileExtension,        NULL,                          YoriLibGenerateFileExtension,
         "file extension"},
 
     {OPT_OS(FtFileId),                   _T("fi"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
@@ -2853,12 +2227,12 @@ SdirOptions[] = {
 
     {OPT_OS(FtFileName),                 _T("fn"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
         NULL,                            YoriLibCollectFileName,
-        SdirCompareFileName,             SdirBitwiseFileName,           SdirGenerateFileName,
+        SdirCompareFileName,             SdirBitwiseFileName,           YoriLibGenerateFileName,
         "file name"},
 
     {OPT_OS(FtFileSize),                 _T("fs"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
         SdirDisplayFileSize,             YoriLibCollectFileSize,
-        SdirCompareFileSize,             NULL,                          SdirGenerateFileSize,
+        SdirCompareFileSize,             NULL,                          YoriLibGenerateFileSize,
         "file size"},
 
     {OPT_OS(FtGrid),                     _T("gr"), {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
@@ -2868,7 +2242,7 @@ SdirOptions[] = {
 
     {OPT_OS(FtLinkCount),                _T("lc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayLinkCount,            YoriLibCollectLinkCount,
-        SdirCompareLinkCount,            NULL,                          SdirGenerateLinkCount,
+        SdirCompareLinkCount,            NULL,                          YoriLibGenerateLinkCount,
         "link count"},
 
     {OPT_OS(FtNumberFiles),              _T("nf"), {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_INTENSITY},
@@ -2885,28 +2259,28 @@ SdirOptions[] = {
 
     {OPT_OS(FtObjectId),                _T("oi"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayObjectId,             YoriLibCollectObjectId,
-        SdirCompareObjectId,             NULL,                          SdirGenerateObjectId,
+        SdirCompareObjectId,             NULL,                          YoriLibGenerateObjectId,
         "object id"},
 
     {OPT_OS(FtOsVersion),                _T("os"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayOsVersion,            YoriLibCollectOsVersion,
-        SdirCompareOsVersion,            NULL,                          SdirGenerateOsVersion,
+        SdirCompareOsVersion,            NULL,                          YoriLibGenerateOsVersion,
         "minimum OS version"},
 
     {OPT_OS(FtOwner),                    _T("ow"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayOwner,                YoriLibCollectOwner,
-        SdirCompareOwner,                NULL,                          SdirGenerateOwner,
+        SdirCompareOwner,                NULL,                          YoriLibGenerateOwner,
         "owner"},
 
     {OPT_OS(FtReparseTag),               _T("rt"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayReparseTag,           YoriLibCollectReparseTag,
-        SdirCompareReparseTag,           NULL,                          SdirGenerateReparseTag,
+        SdirCompareReparseTag,           NULL,                          YoriLibGenerateReparseTag,
         "reparse tag"},
 
 #ifdef UNICODE
     {OPT_OS(FtStreamCount),              _T("sc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayStreamCount,          YoriLibCollectStreamCount,
-        SdirCompareStreamCount,          NULL,                          SdirGenerateStreamCount,
+        SdirCompareStreamCount,          NULL,                          YoriLibGenerateStreamCount,
         "stream count"},
 #endif
 
@@ -2917,32 +2291,32 @@ SdirOptions[] = {
 
     {OPT_OS(FtShortName),                _T("sn"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
         SdirDisplayShortName,            YoriLibCollectShortName,
-        SdirCompareShortName,            NULL,                          SdirGenerateShortName,
+        SdirCompareShortName,            NULL,                          YoriLibGenerateShortName,
         "short name"},
 
     {OPT_OS(FtSubsystem),                _T("ss"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplaySubsystem,            YoriLibCollectSubsystem,
-        SdirCompareSubsystem,            NULL,                          SdirGenerateSubsystem,
+        SdirCompareSubsystem,            NULL,                          YoriLibGenerateSubsystem,
         "subsystem"},
 
     {OPT_OS(FtUsn),                      _T("us"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayUsn,                  YoriLibCollectUsn,
-        SdirCompareUsn,                  NULL,                          SdirGenerateUsn,
+        SdirCompareUsn,                  NULL,                          YoriLibGenerateUsn,
         "USN"},
 
     {OPT_OS(FtVersion),                  _T("vr"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayVersion,              YoriLibCollectVersion,
-        SdirCompareVersion,              NULL,                          SdirGenerateVersion,
+        SdirCompareVersion,              NULL,                          YoriLibGenerateVersion,
         "version"},
 
     {OPT_OS(FtWriteDate),                _T("wd"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
         SdirDisplayFileWriteDate,        YoriLibCollectWriteTime,
-        SdirCompareWriteDate,            NULL,                          SdirGenerateWriteDate,
+        SdirCompareWriteDate,            NULL,                          YoriLibGenerateWriteDate,
         "write date"},
 
     {OPT_OS(FtWriteTime),                _T("wt"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
         SdirDisplayFileWriteTime,        YoriLibCollectWriteTime,
-        SdirCompareWriteTime,            NULL,                          SdirGenerateWriteTime,
+        SdirCompareWriteTime,            NULL,                          YoriLibGenerateWriteTime,
         "write time"},
 };
 

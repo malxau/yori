@@ -161,6 +161,7 @@ SdirPopulateApplyEntry(
     )
 {
     PSDIR_FEATURE Feature;
+    YORI_STRING YsCriteria;
 
     //
     //  Based on the operator, fill in the truth table.  We'll
@@ -227,7 +228,8 @@ SdirPopulateApplyEntry(
     //  next entry, clobbering this structure again.
     //
 
-    if (!SdirOptions[FeatureNumber].GenerateFromStringFn(&ThisApply->CompareEntry, Criteria)) {
+    YoriLibConstantString(&YsCriteria, Criteria);
+    if (!SdirOptions[FeatureNumber].GenerateFromStringFn(&ThisApply->CompareEntry, &YsCriteria)) {
         SdirWriteString(_T("Could not parse evalutation criteria in: "));
         return FALSE;
     }

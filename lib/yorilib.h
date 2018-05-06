@@ -817,6 +817,156 @@ YoriLibCollectWriteTime(
     __in PYORI_STRING FullPath
     );
 
+BOOL
+YoriLibGenerateAccessDate(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateAccessTime(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateAllocatedRangeCount(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateAllocationSize(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateArch(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateCompressionAlgorithm(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateCompressedFileSize(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateCreateDate(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateCreateTime(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateFileExtension(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateFileName(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateFileSize(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateFragmentCount(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateLinkCount(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateObjectId(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateOsVersion(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateOwner(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateReparseTag(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateShortName(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateSubsystem (
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateStreamCount(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateUsn(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateVersion(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateWriteDate(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateWriteTime(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
 // *** FULLPATH.C ***
 
 /**
@@ -1544,6 +1694,30 @@ LPTSTR
 YoriLibFindRightMostCharacter(
     __in PYORI_STRING String,
     __in TCHAR CharToFind
+    );
+
+BOOL
+YoriLibStringToHexBuffer(
+    __in PYORI_STRING String,
+    __out PUCHAR Buffer,
+    __in DWORD BufferSize
+    );
+
+LARGE_INTEGER
+YoriLibStringToFileSize(
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibStringToDate(
+    __in PYORI_STRING String,
+    __out LPSYSTEMTIME Date
+    );
+
+BOOL
+YoriLibStringToTime(
+    __in PYORI_STRING String,
+    __out LPSYSTEMTIME Date
     );
 
 #undef  _tcscpy

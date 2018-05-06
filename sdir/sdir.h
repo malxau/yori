@@ -264,7 +264,7 @@ typedef BOOL (* SDIR_COLLECT_FN)(PYORI_FILE_INFO, PWIN32_FIND_DATA, PYORI_STRING
  Specifies a pointer to a function which can generate in memory file
  information from a user provided string.
  */
-typedef BOOL (* SDIR_GENERATE_FROM_STRING_FN)(PYORI_FILE_INFO, LPCTSTR);
+typedef BOOL (* SDIR_GENERATE_FROM_STRING_FN)(PYORI_FILE_INFO, PYORI_STRING);
 
 
 /**
@@ -1100,14 +1100,6 @@ BOOL
 SdirStringToTime(
     __in LPCTSTR str,
     __out LPSYSTEMTIME date
-    );
-
-BOOL
-SdirCopyFileName(
-    __out LPTSTR Dest,
-    __in LPCTSTR Src,
-    __in DWORD MaxLength,
-    __out_opt PDWORD ValidCharCount
     );
 
 ULONG

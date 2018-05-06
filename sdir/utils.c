@@ -442,52 +442,6 @@ SdirStringToTime(
     return TRUE;
 }
 
-/**
- Copy a file name from one buffer to another, sanitizing unprintable
- characters into ?'s.
-
- @param Dest Pointer to the string to copy the file name to.
-
- @param Src Pointer to the string to copy the file name from.
-
- @param MaxLength Specifies the size of dest, in bytes.  No characters will be
-        written beyond this value (ie., this value includes space for NULL.)
-
- @param ValidCharCount Optionally points to an integer to populate with the
-        number of characters read from the source.  This can be less than the
-        length of the source is MaxLength is reached.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCopyFileName(
-    __out LPTSTR Dest,
-    __in LPCTSTR Src,
-    __in DWORD MaxLength,
-    __out_opt PDWORD ValidCharCount
-    )
-{
-    DWORD Index;
-    DWORD Length = MaxLength - 1;
-
-    for (Index = 0; Index < Length; Index++) {
-        if (Src[Index] == 0) {
-            break;
-        } else if (Src[Index] < 32) {
-            Dest[Index] = '?';
-        } else {
-            Dest[Index] = Src[Index];
-        }
-    }
-    Dest[Index] = '\0';
-
-    if (ValidCharCount != NULL) {
-        *ValidCharCount = Index;
-    }
-
-    return TRUE;
-}
-
 //
 //  Formatting support.  Generic routines used across different types of data.
 //
