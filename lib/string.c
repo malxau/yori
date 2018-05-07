@@ -1164,23 +1164,29 @@ YoriLibStringToFileSize(
 
  @param Date On successful completion, updated to point to a timestamp.
 
+ @param CharsConsumed Optionally points to a value to update with the number of
+        characters consumed from String to generate the requested output.
+
  @return TRUE to indicate success, FALSE to indicate parse failure.
  */
 BOOL
 YoriLibStringToDate(
     __in PYORI_STRING String,
-    __out LPSYSTEMTIME Date
+    __out LPSYSTEMTIME Date,
+    __out_opt PDWORD CharsConsumed
     )
 {
     YORI_STRING Substring;
-    DWORD CharsConsumed;
+    DWORD CurrentCharsConsumed;
+    DWORD TotalCharsConsumed;
     LONGLONG llTemp;
 
     YoriLibInitEmptyString(&Substring);
     Substring.StartOfString = String->StartOfString;
     Substring.LengthInChars = String->LengthInChars;
+    TotalCharsConsumed = 0;
 
-    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CurrentCharsConsumed)) {
         return FALSE;
     }
 
@@ -1189,26 +1195,34 @@ YoriLibStringToDate(
         Date->wYear += 2000;
     }
 
-    if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '/') {
-        Substring.LengthInChars -= CharsConsumed + 1;
-        Substring.StartOfString += CharsConsumed + 1;
+    TotalCharsConsumed += CurrentCharsConsumed;
 
-        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+    if (CurrentCharsConsumed < Substring.LengthInChars && Substring.StartOfString[CurrentCharsConsumed] == '/') {
+        Substring.LengthInChars -= CurrentCharsConsumed + 1;
+        Substring.StartOfString += CurrentCharsConsumed + 1;
+
+        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CurrentCharsConsumed)) {
             return FALSE;
         }
 
         Date->wMonth = (WORD)llTemp;
+        TotalCharsConsumed += CurrentCharsConsumed + 1;
 
-        if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '/') {
-            Substring.LengthInChars -= CharsConsumed + 1;
-            Substring.StartOfString += CharsConsumed + 1;
+        if (CurrentCharsConsumed < Substring.LengthInChars && Substring.StartOfString[CurrentCharsConsumed] == '/') {
+            Substring.LengthInChars -= CurrentCharsConsumed + 1;
+            Substring.StartOfString += CurrentCharsConsumed + 1;
     
-            if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+            if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CurrentCharsConsumed)) {
                 return FALSE;
             }
 
             Date->wDay = (WORD)llTemp;
+            TotalCharsConsumed += CurrentCharsConsumed + 1;
         }
+    }
+
+    if (CharsConsumed != NULL) {
+        *CharsConsumed = TotalCharsConsumed;
     }
 
     return TRUE;
@@ -1262,6 +1276,44 @@ YoriLibStringToTime(
             }
 
             Date->wSecond = (WORD)llTemp;
+        }
+    }
+
+    return TRUE;
+}
+
+/**
+ Parse a string specifying a file date and time and return a timestamp from
+ the result.
+
+ @param String Pointer to the string to parse.
+
+ @param Date On successful completion, updated to point to a timestamp.
+
+ @return TRUE to indicate success, FALSE to indicate parse failure.
+ */
+BOOL
+YoriLibStringToDateTime(
+    __in PYORI_STRING String,
+    __out LPSYSTEMTIME Date
+    )
+{
+    YORI_STRING Substring;
+    DWORD CharsConsumed;
+
+    if (!YoriLibStringToDate(String, Date, &CharsConsumed)) {
+        return FALSE;
+    }
+
+    Substring.StartOfString = String->StartOfString;
+    Substring.LengthInChars = String->LengthInChars;
+
+    if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == ':') {
+        Substring.StartOfString += CharsConsumed + 1;
+        Substring.LengthInChars -= CharsConsumed + 1;
+
+        if (!YoriLibStringToTime(&Substring, Date)) {
+            return FALSE;
         }
     }
 

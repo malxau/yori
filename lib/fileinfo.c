@@ -1473,7 +1473,7 @@ YoriLibGenerateAccessDate(
     __in PYORI_STRING String
     )
 {
-    return YoriLibStringToDate(String, &Entry->AccessTime);
+    return YoriLibStringToDate(String, &Entry->AccessTime, NULL);
 }
 
 /**
@@ -1651,7 +1651,7 @@ YoriLibGenerateCreateDate(
     __in PYORI_STRING String
     )
 {
-    return YoriLibStringToDate(String, &Entry->CreateTime);
+    return YoriLibStringToDate(String, &Entry->CreateTime, NULL);
 }
 
 /**
@@ -2120,7 +2120,7 @@ YoriLibGenerateWriteDate(
     __in PYORI_STRING String
     )
 {
-    return YoriLibStringToDate(String, &Entry->WriteTime);
+    return YoriLibStringToDate(String, &Entry->WriteTime, NULL);
 }
 
 /**

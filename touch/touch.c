@@ -35,10 +35,15 @@ CHAR strHelpText[] =
         "\n"
         "Create files or update timestamps.\n"
         "\n"
-        "TOUCH [-b] [-s] [<file>...]\n"
+        "TOUCH [-a] [-b] [-c] [-f size] [-s] [-t <date and time>] [-w] <file>...\n"
         "\n"
+        "   -a             Update last access time\n"
         "   -b             Use basic search criteria for files only\n"
-        "   -s             Process files from all subdirectories\n";
+        "   -c             Update create time\n"
+        "   -f             Create new file with specified file size\n"
+        "   -s             Process files from all subdirectories\n"
+        "   -t             Specify the timestamp to set\n"
+        "   -w             Update write time\n";
 
 /**
  Display usage text to the user.
@@ -48,7 +53,7 @@ TouchHelp()
 {
     YORI_STRING License;
 
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
+    YoriLibMitLicenseText(_T("2018"), &License);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Touch %i.%i\n"), TOUCH_VER_MAJOR, TOUCH_VER_MINOR);
 #if YORI_BUILD_ID
@@ -79,6 +84,11 @@ typedef struct _TOUCH_CONTEXT {
      Specifies the new write time to apply to each file.
      */
     FILETIME NewWriteTime;
+
+    /**
+     File size for newly created files.
+     */
+    LARGE_INTEGER NewFileSize;
 
     /**
      Counts the number of files processed in an enumerate.  If this is zero,
@@ -113,14 +123,20 @@ TouchFileFoundCallback(
     )
 {
     HANDLE FileHandle;
+    DWORD DesiredAccess;
 
     UNREFERENCED_PARAMETER(Depth);
     UNREFERENCED_PARAMETER(FileInfo);
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
+    DesiredAccess = GENERIC_READ | FILE_WRITE_ATTRIBUTES;
+    if (FileInfo == NULL) {
+        DesiredAccess |= GENERIC_WRITE;
+    }
+
     FileHandle = CreateFile(FilePath->StartOfString,
-                            GENERIC_READ | FILE_WRITE_ATTRIBUTES,
+                            DesiredAccess,
                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                             NULL,
                             OPEN_ALWAYS,
@@ -136,6 +152,22 @@ TouchFileFoundCallback(
     }
 
     TouchContext->FilesFoundThisArg++;
+
+    if (FileInfo == NULL) {
+        if (TouchContext->NewFileSize.QuadPart != 0) {
+            SetFilePointer(FileHandle, TouchContext->NewFileSize.LowPart, &TouchContext->NewFileSize.HighPart, FILE_BEGIN);
+            if (!SetEndOfFile(FileHandle)) {
+                DWORD LastError = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("touch: setting file size of %y failed: %s"), FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+
+                //
+                //  Intentional fallout
+                //
+            }
+        }
+    }
 
     if (!SetFileTime(FileHandle, &TouchContext->NewCreationTime, &TouchContext->NewAccessTime, &TouchContext->NewWriteTime)) {
         DWORD LastError = GetLastError();
@@ -174,10 +206,15 @@ ymain(
     DWORD MatchFlags;
     BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
+    BOOL UpdateLastAccess = FALSE;
+    BOOL UpdateCreationTime = FALSE;
+    BOOL UpdateWriteTime = FALSE;
+    FILETIME TimestampToUse;
     TOUCH_CONTEXT TouchContext;
     YORI_STRING Arg;
 
     ZeroMemory(&TouchContext, sizeof(TouchContext));
+    GetSystemTimeAsFileTime(&TimestampToUse);
 
     for (i = 1; i < ArgC; i++) {
 
@@ -189,11 +226,40 @@ ymain(
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 TouchHelp();
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+                UpdateLastAccess = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                UpdateCreationTime = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+                if (i + 1 < ArgC) {
+                    TouchContext.NewFileSize = YoriLibStringToFileSize(&ArgV[i + 1]);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+                if (i + 1 < ArgC) {
+                    SYSTEMTIME NewTime;
+                    FILETIME LocalNewTime;
+                    ZeroMemory(&NewTime, sizeof(NewTime));
+                    if (YoriLibStringToDateTime(&ArgV[i + 1], &NewTime)) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Setting time to %i/%i/%i:%i:%i:%i\n"), NewTime.wYear, NewTime.wMonth, NewTime.wDay, NewTime.wHour, NewTime.wMinute, NewTime.wSecond);
+                        if (!SystemTimeToFileTime(&NewTime, &LocalNewTime) || !LocalFileTimeToFileTime(&LocalNewTime, &TimestampToUse)) {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not parse time: %y\n"), &ArgV[i + 1]);
+                        }
+                        ArgumentUnderstood = TRUE;
+                    }
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+                UpdateWriteTime = TRUE;
                 ArgumentUnderstood = TRUE;
             }
         } else {
@@ -207,12 +273,30 @@ ymain(
         }
     }
 
-    TouchContext.NewCreationTime.dwLowDateTime = (DWORD)-1;
-    TouchContext.NewCreationTime.dwHighDateTime = (DWORD)-1;
-    TouchContext.NewAccessTime.dwLowDateTime = (DWORD)-1;
-    TouchContext.NewAccessTime.dwHighDateTime = (DWORD)-1;
+    if (!UpdateLastAccess && !UpdateCreationTime && !UpdateWriteTime) {
+        UpdateWriteTime = TRUE;
+    }
 
-    GetSystemTimeAsFileTime(&TouchContext.NewWriteTime);
+    if (UpdateLastAccess) {
+        TouchContext.NewAccessTime = TimestampToUse;
+    } else {
+        TouchContext.NewAccessTime.dwLowDateTime = (DWORD)-1;
+        TouchContext.NewAccessTime.dwHighDateTime = (DWORD)-1;
+    }
+
+    if (UpdateCreationTime) {
+        TouchContext.NewCreationTime = TimestampToUse;
+    } else {
+        TouchContext.NewCreationTime.dwLowDateTime = (DWORD)-1;
+        TouchContext.NewCreationTime.dwHighDateTime = (DWORD)-1;
+    }
+
+    if (UpdateWriteTime) {
+        TouchContext.NewWriteTime = TimestampToUse;
+    } else {
+        TouchContext.NewWriteTime.dwLowDateTime = (DWORD)-1;
+        TouchContext.NewWriteTime.dwHighDateTime = (DWORD)-1;
+    }
 
     //
     //  If no file name is specified, use stdin; otherwise open
@@ -230,9 +314,9 @@ ymain(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
-    
+
             TouchContext.FilesFoundThisArg = 0;
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, TouchFileFoundCallback, &TouchContext);
             if (TouchContext.FilesFoundThisArg == 0) {

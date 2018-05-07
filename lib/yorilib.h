@@ -1711,11 +1711,18 @@ YoriLibStringToFileSize(
 BOOL
 YoriLibStringToDate(
     __in PYORI_STRING String,
-    __out LPSYSTEMTIME Date
+    __out LPSYSTEMTIME Date,
+    __out_opt PDWORD CharsConsumed
     );
 
 BOOL
 YoriLibStringToTime(
+    __in PYORI_STRING String,
+    __out LPSYSTEMTIME Date
+    );
+
+BOOL
+YoriLibStringToDateTime(
     __in PYORI_STRING String,
     __out LPSYSTEMTIME Date
     );
