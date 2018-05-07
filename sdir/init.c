@@ -400,11 +400,13 @@ SdirParseOpt (
                 }
             }
         } else if (Opt[1] == 's') {
+            YORI_STRING YsSize;
             LARGE_INTEGER FileSize;
             if (Opts->BriefRecurseDepth == 0) {
                 Opts->BriefRecurseDepth = UINT_MAX;
             }
-            FileSize = SdirStringToFileSize(&Opt[2]);
+            YoriLibConstantString(&YsSize, &Opt[2]);
+            FileSize = YoriLibStringToFileSize(&YsSize);
             Opts->BriefRecurseSize = SdirFileSizeFromLargeInt(&FileSize);
             OptParsed = TRUE;
 

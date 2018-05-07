@@ -1072,36 +1072,6 @@ SdirStringToNum32(
     __out_opt LPCTSTR* endptr
     );
 
-LARGE_INTEGER
-SdirStringToNum64(
-    __in LPCTSTR str,
-    __out_opt LPCTSTR* endptr
-    );
-
-BOOL
-SdirStringToHexBuffer(
-    __in LPCTSTR str,
-    __out PUCHAR buffer,
-    __in DWORD size
-    );
-
-LARGE_INTEGER
-SdirStringToFileSize(
-    __in LPCTSTR str
-    );
-
-BOOL
-SdirStringToDate(
-    __in LPCTSTR str,
-    __out LPSYSTEMTIME date
-    );
-
-BOOL
-SdirStringToTime(
-    __in LPCTSTR str,
-    __out LPSYSTEMTIME date
-    );
-
 ULONG
 SdirDisplayGenericSize(
     __out_ecount(6) PSDIR_FMTCHAR Buffer,
