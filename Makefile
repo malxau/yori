@@ -63,6 +63,7 @@ DIRS=crt       \
      echo      \
      erase     \
      expr      \
+     finfo     \
      for       \
      fscmp     \
      get       \

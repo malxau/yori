@@ -316,6 +316,11 @@ Section "get"
   File "bin\${PACKARCH}\yget.exe"
 SectionEnd
 
+Section "finfo"
+  SetOutPath "$INSTDIR"
+  File "bin\${PACKARCH}\finfo.exe"
+SectionEnd
+
 Section "grpcmp"
   SetOutPath "$INSTDIR"
   File "bin\${PACKARCH}\grpcmp.exe"
@@ -393,6 +398,7 @@ Section "Debugging Support"
   File "sym\${PACKARCH}\yclip.pdb"
   File "sym\${PACKARCH}\cshot.pdb"
   File "sym\${PACKARCH}\cvtvt.pdb"
+  File "sym\${PACKARCH}\finfo.pdb"
   File "sym\${PACKARCH}\yget.pdb"
   File "sym\${PACKARCH}\grpcmp.pdb"
   File "sym\${PACKARCH}\yhelp.pdb"
@@ -546,6 +552,8 @@ Section "Uninstall"
   Delete $INSTDIR\yerase.pdb
   Delete $INSTDIR\yexpr.exe
   Delete $INSTDIR\yexpr.pdb
+  Delete $INSTDIR\finfo.exe
+  Delete $INSTDIR\finfo.pdb
   Delete $INSTDIR\yfor.exe
   Delete $INSTDIR\yfor.pdb
   Delete $INSTDIR\fscmp.exe
