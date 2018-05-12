@@ -1433,7 +1433,7 @@ YoriShPerformArgumentTabCompletion(
     //
 
     if (FoundInSubstring) {
-        ASSERT(CommandCharOffset > StartingOffset);
+        ASSERT(CommandCharOffset >= StartingOffset);
         if (!YoriShParseCmdlineToCmdContext(&BackquoteSubstring, CommandCharOffset - StartingOffset, &CmdContext)) {
             return;
         }
@@ -1464,8 +1464,6 @@ YoriShPerformArgumentTabCompletion(
         return;
     }
 
-    ASSERT(CurrentExecContext != NULL);
-
     if (!ActiveExecContextArg) {
 
         //
@@ -1485,6 +1483,8 @@ YoriShPerformArgumentTabCompletion(
         CompletionAction.CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
         YoriLibInitializeListHead(&CompletionAction.List);
     } else {
+
+        ASSERT(CurrentExecContext != NULL);
 
         //
         //  The active argument is for the program.  Resolve the program
