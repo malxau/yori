@@ -30,29 +30,6 @@
 #include "yoripch.h"
 #include "yorilib.h"
 
-/**
- Specifies a pointer to a function which can enumerate named streams on a
- file.
- */
-typedef HANDLE (WINAPI * PFIND_FIRST_STREAM_FN)(LPCTSTR, DWORD, PWIN32_FIND_STREAM_DATA, DWORD);
-
-/**
- Specifies a pointer to a function which can enumerate named streams on a
- file.
- */
-typedef BOOL (WINAPI * PFIND_NEXT_STREAM_FN)(HANDLE, PWIN32_FIND_STREAM_DATA);
-
-/**
- Specifies a pointer to a function which can return the compressed file size
- for a file.
- */
-typedef DWORD (WINAPI * PGET_COMPRESSED_FILE_SIZE_FN)(LPCTSTR, LPDWORD);
-
-/**
- Specifies a pointer to a function which can return extra information about
- an opened file.
- */
-typedef BOOL (WINAPI * PGET_FILE_INFORMATION_BY_HANDLE_EX_FN)(HANDLE, ULONG, PVOID, DWORD);
 
 /**
  Prototype for the GetFileVersionInfoSize function.
@@ -252,11 +229,6 @@ YoriLibCollectAllocatedRangeCount (
 }
 
 /**
- Pointer to the kernel32!GetFileInformationByHandleEx export.
- */
-PGET_FILE_INFORMATION_BY_HANDLE_EX_FN pGetFileInformationByHandleEx;
-
-/**
  Collect information from a directory enumerate and full file name relating
  to the allocation size.
 
@@ -279,13 +251,7 @@ YoriLibCollectAllocationSize (
 
     ASSERT(YoriLibIsStringNullTerminated(FullPath));
 
-    if (pGetFileInformationByHandleEx == NULL) {
-        HANDLE hKernel;
-        hKernel = GetModuleHandle(_T("KERNEL32"));
-        pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX_FN)GetProcAddress(hKernel, "GetFileInformationByHandleEx");
-    }
-
-    if (pGetFileInformationByHandleEx) {
+    if (Kernel32.pGetFileInformationByHandleEx) {
 
         HANDLE hFile;
 
@@ -300,7 +266,7 @@ YoriLibCollectAllocationSize (
         if (hFile != INVALID_HANDLE_VALUE) {
             FILE_STANDARD_INFO StandardInfo;
     
-            if (pGetFileInformationByHandleEx(hFile, FileStandardInfo, &StandardInfo, sizeof(StandardInfo))) {
+            if (Kernel32.pGetFileInformationByHandleEx(hFile, FileStandardInfo, &StandardInfo, sizeof(StandardInfo))) {
                 Entry->AllocationSize = StandardInfo.AllocationSize;
                 RealAllocSize = TRUE;
             }
@@ -549,11 +515,6 @@ YoriLibCollectCompressionAlgorithm (
 }
 
 /**
- Pointer to the kernel32!GetCompressedFileSizeW export.
- */
-PGET_COMPRESSED_FILE_SIZE_FN pGetCompressedFileSizeW;
-
-/**
  Collect information from a directory enumerate and full file name relating
  to the file's compression size.
 
@@ -576,14 +537,8 @@ YoriLibCollectCompressedFileSize (
     Entry->CompressedFileSize.LowPart = FindData->nFileSizeLow;
     Entry->CompressedFileSize.HighPart = FindData->nFileSizeHigh;
 
-    if (pGetCompressedFileSizeW == NULL) {
-        HANDLE hKernel;
-        hKernel = GetModuleHandle(_T("KERNEL32"));
-        pGetCompressedFileSizeW = (PGET_COMPRESSED_FILE_SIZE_FN)GetProcAddress(hKernel, "GetCompressedFileSizeW");
-    }
-
-    if (pGetCompressedFileSizeW) {
-        Entry->CompressedFileSize.LowPart = pGetCompressedFileSizeW(FullPath->StartOfString, (PDWORD)&Entry->CompressedFileSize.HighPart);
+    if (Kernel32.pGetCompressedFileSizeW) {
+        Entry->CompressedFileSize.LowPart = Kernel32.pGetCompressedFileSizeW(FullPath->StartOfString, (PDWORD)&Entry->CompressedFileSize.HighPart);
 
         if (Entry->CompressedFileSize.LowPart == INVALID_FILE_SIZE) {
             Entry->CompressedFileSize.LowPart = FindData->nFileSizeLow;
@@ -1230,16 +1185,6 @@ YoriLibCollectSubsystem (
 }
 
 /**
- Pointer to the kernel32!FindFirstStreamW export.
- */
-PFIND_FIRST_STREAM_FN pFindFirstStreamW;
-
-/**
- Pointer to the kernel32!FindNextStreamW export.
- */
-PFIND_NEXT_STREAM_FN pFindNextStreamW;
-
-/**
  Collect information from a directory enumerate and full file name relating
  to the file's stream count.
 
@@ -1266,26 +1211,19 @@ YoriLibCollectStreamCount (
 
     Entry->StreamCount = 0;
     
-    if (pFindFirstStreamW == NULL || pFindNextStreamW == NULL) {
-        HANDLE hKernel;
-        hKernel = GetModuleHandle(_T("KERNEL32"));
-        pFindFirstStreamW = (PFIND_FIRST_STREAM_FN)GetProcAddress(hKernel, "FindFirstStreamW");
-        pFindNextStreamW = (PFIND_NEXT_STREAM_FN)GetProcAddress(hKernel, "FindNextStreamW");
-    }
-
     //
     //  These APIs are Unicode only.  We could do an ANSI to Unicode thunk here, but
     //  since Unicode is the default build and ANSI is only useful for older systems
     //  (where this API won't exist) there doesn't seem much point.
     //
 
-    if (pFindFirstStreamW && pFindNextStreamW) {
-        hFind = pFindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
+    if (Kernel32.pFindFirstStreamW != NULL && Kernel32.pFindNextStreamW != NULL) {
+        hFind = Kernel32.pFindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
         if (hFind != INVALID_HANDLE_VALUE) {
 
             do {
                 Entry->StreamCount++;
-            } while (pFindNextStreamW(hFind, &FindStreamData));
+            } while (Kernel32.pFindNextStreamW(hFind, &FindStreamData));
         }
 
         FindClose(hFind);

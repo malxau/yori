@@ -158,16 +158,6 @@ typedef struct _DIR_CONTEXT {
      */
     LONGLONG FileSizeInThisDir;
 
-    /**
-     Pointer to a function to find the first stream on a file.
-     */
-    FIND_FIRST_STREAM_FN FindFirstStreamW;
-
-    /**
-     Pointer to a function to find the next stream on a file.
-     */
-    FIND_NEXT_STREAM_FN FindNextStreamW;
-
 } DIR_CONTEXT, *PDIR_CONTEXT;
 
 /**
@@ -428,9 +418,9 @@ DirFileFoundCallback(
 
         if (DirContext->DisplayStreams) {
             HANDLE hFind;
-            DIR_WIN32_FIND_STREAM_DATA FindStreamData;
+            WIN32_FIND_STREAM_DATA FindStreamData;
 
-            hFind = DirContext->FindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
+            hFind = Kernel32.pFindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
             if (hFind != INVALID_HANDLE_VALUE) {
                 do {
                     if (_tcscmp(FindStreamData.cStreamName, L"::$DATA") != 0) {
@@ -444,7 +434,7 @@ DirFileFoundCallback(
                             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%18s%y %s%s\n"), _T(""), &SizeString, FileInfo->cFileName, FindStreamData.cStreamName);
                         }
                     }
-                } while (DirContext->FindNextStreamW(hFind, &FindStreamData));
+                } while (Kernel32.pFindNextStreamW(hFind, &FindStreamData));
                 FindClose(hFind);
             }
         }
@@ -519,11 +509,7 @@ ymain(
     }
 
     if (DirContext.DisplayStreams) {
-        HANDLE hKernel32;
-        hKernel32 = GetModuleHandle(_T("KERNEL32"));
-        DirContext.FindFirstStreamW = (FIND_FIRST_STREAM_FN)GetProcAddress(hKernel32, "FindFirstStreamW");
-        DirContext.FindNextStreamW = (FIND_NEXT_STREAM_FN)GetProcAddress(hKernel32, "FindNextStreamW");
-        if (DirContext.FindFirstStreamW == NULL || DirContext.FindNextStreamW == NULL) {
+        if (Kernel32.pFindFirstStreamW == NULL || Kernel32.pFindNextStreamW == NULL) {
             DirContext.DisplayStreams = FALSE;
         }
     }

@@ -195,36 +195,6 @@ typedef struct _SDIR_FMTCHAR {
 typedef BOOL (WINAPI * DISABLE_WOW_REDIRECT_FN)(PVOID*);
 
 /**
- Specifies a pointer to a function which can enumerate named streams on a
- file.
- */
-typedef HANDLE (WINAPI * FIND_FIRST_STREAM_FN)(LPCTSTR, DWORD, PWIN32_FIND_STREAM_DATA, DWORD);
-
-/**
- Specifies a pointer to a function which can enumerate named streams on a
- file.
- */
-typedef BOOL (WINAPI * FIND_NEXT_STREAM_FN)(HANDLE, PWIN32_FIND_STREAM_DATA);
-
-/**
- Specifies a pointer to a function which can return the compressed file size
- for a file.
- */
-typedef DWORD (WINAPI * GET_COMPRESSED_FILE_SIZE_FN)(LPCTSTR, LPDWORD);
-
-/**
- Specifies a pointer to a function which can return disk free space without
- depending on the program providing 64 bit math.
- */
-typedef BOOL (WINAPI * GET_DISK_FREE_SPACE_EX_FN)(LPCTSTR, PLARGE_INTEGER, PLARGE_INTEGER, PLARGE_INTEGER);
-
-/**
- Specifies a pointer to a function which can return extra information about
- an opened file.
- */
-typedef BOOL (WINAPI * GET_FILE_INFORMATION_BY_HANDLE_EX_FN)(HANDLE, ULONG, PVOID, DWORD);
-
-/**
  Specifies a pointer to a function which can return version information about
  executable files.
  */
@@ -685,31 +655,6 @@ typedef struct _SDIR_OPTS {
      and criteria to apply to determine which should be displayed first.
      */
     SDIR_COMPARE    Sort[8];
-
-    /**
-     Pointer to the FindFirstStream function from kernel32.dll.
-     */
-    FIND_FIRST_STREAM_FN                 FindFirstStreamW;
-
-    /**
-     Pointer to the FindNextStream function from kernel32.dll.
-     */
-    FIND_NEXT_STREAM_FN                  FindNextStreamW;
-
-    /**
-     Pointer to the GetCompressedFileSize function from kernel32.dll.
-     */
-    GET_COMPRESSED_FILE_SIZE_FN          GetCompressedFileSize;
-
-    /**
-     Pointer to the GetDiskFreeSpaceEx function from kernel32.dll.
-     */
-    GET_DISK_FREE_SPACE_EX_FN            GetDiskFreeSpaceEx;
-
-    /**
-     Pointer to the GetFileInformationByHandleEx function from kernel32.dll.
-     */
-    GET_FILE_INFORMATION_BY_HANDLE_EX_FN GetFileInformationByHandleEx;
 
     /**
      Pointer to the GetFileVersionInfo function from version.dll.

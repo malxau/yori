@@ -16,6 +16,7 @@ OBJS=\
 	 color.obj    \
 	 cshot.obj    \
 	 debug.obj    \
+	 dyld.obj     \
 	 env.obj      \
 	 ep_yori.obj  \
 	 fileenum.obj \

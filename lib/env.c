@@ -28,26 +28,6 @@
 #include <yorilib.h>
 
 /**
- Prototype for the FreeEnvironmentStringsW function.
- */
-typedef BOOL FREE_ENVIRONMENT_STRINGSW(LPTSTR);
-
-/**
- Prototype for a pointer to the FreeEnvironmentStringsW function.
- */
-typedef FREE_ENVIRONMENT_STRINGSW *PFREE_ENVIRONMENT_STRINGSW;
-
-/**
- Prototype for the GetEnvironmentStringsW function.
- */
-typedef LPTSTR GET_ENVIRONMENT_STRINGSW();
-
-/**
- Prototype for a pointer to the GetEnvironmentStringsW function.
- */
-typedef GET_ENVIRONMENT_STRINGSW *PGET_ENVIRONMENT_STRINGSW;
-
-/**
  An implementation of GetEnvironmentStrings that can do appropriate dances
  to work with versions of Windows supporting free, and versions that don't
  support free, as well as those with a W suffix and those without.
@@ -64,8 +44,6 @@ YoriLibGetEnvironmentStrings(
 {
     LPTSTR OsEnvStrings;
     LPSTR OsEnvStringsA;
-    PFREE_ENVIRONMENT_STRINGSW pFreeEnvironmentStringsW;
-    PGET_ENVIRONMENT_STRINGSW pGetEnvironmentStringsW;
     DWORD CharCount;
 
     //
@@ -73,32 +51,32 @@ YoriLibGetEnvironmentStrings(
     //  exist (NT 3.1) we need to upconvert to Unicode.
     //
 
-    pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(GetModuleHandle(_T("KERNEL32.DLL")), "GetEnvironmentStringsW");
-    pFreeEnvironmentStringsW = (PFREE_ENVIRONMENT_STRINGSW)GetProcAddress(GetModuleHandle(_T("KERNEL32.DLL")), "FreeEnvironmentStringsW");
-
-    if (pGetEnvironmentStringsW != NULL) {
-        OsEnvStrings = pGetEnvironmentStringsW();
+    if (Kernel32.pGetEnvironmentStringsW != NULL) {
+        OsEnvStrings = Kernel32.pGetEnvironmentStringsW();
         for (CharCount = 0; OsEnvStrings[CharCount] != '\0' || OsEnvStrings[CharCount + 1] != '\0'; CharCount++);
 
         CharCount += 2;
         if (!YoriLibAllocateString(EnvStrings, CharCount)) {
-            if (pFreeEnvironmentStringsW) {
-                pFreeEnvironmentStringsW(OsEnvStrings);
+            if (Kernel32.pFreeEnvironmentStringsW) {
+                Kernel32.pFreeEnvironmentStringsW(OsEnvStrings);
             }
             return FALSE;
         }
 
         memcpy(EnvStrings->StartOfString, OsEnvStrings, CharCount * sizeof(TCHAR));
 
-        if (pFreeEnvironmentStringsW) {
-            pFreeEnvironmentStringsW(OsEnvStrings);
+        if (Kernel32.pFreeEnvironmentStringsW) {
+            Kernel32.pFreeEnvironmentStringsW(OsEnvStrings);
         }
 
         return TRUE;
     }
 
-    pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(GetModuleHandle(_T("KERNEL32.DLL")), "GetEnvironmentStrings");
-    OsEnvStringsA = (LPSTR)pGetEnvironmentStringsW();
+    if (Kernel32.pGetEnvironmentStrings == NULL) {
+        return FALSE;
+    }
+
+    OsEnvStringsA = Kernel32.pGetEnvironmentStrings();
 
     for (CharCount = 0; OsEnvStringsA[CharCount] != '\0' || OsEnvStringsA[CharCount + 1] != '\0'; CharCount++);
 

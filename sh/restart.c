@@ -77,11 +77,7 @@ YoriShGetTempPath(
 BOOL
 YoriShSaveRestartState()
 {
-    HANDLE hKernel;
-    PREGISTER_APPLICATION_RESTART pRegisterApplicationRestart;
-    PGET_CONSOLE_SCREEN_BUFFER_INFO_EX pGetConsoleScreenBufferInfoEx;
     YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenBufferInfo;
-    PGET_CURRENT_CONSOLE_FONT_EX pGetCurrentConsoleFontEx;
     YORI_CONSOLE_FONT_INFOEX FontInfo;
 
     YORI_STRING WriteBuffer;
@@ -90,8 +86,6 @@ YoriShSaveRestartState()
     YORI_STRING Env;
     DWORD Count;
 
-    hKernel = GetModuleHandle(_T("KERNEL32"));
-
     //
     //  The restart APIs are available in Vista+.  By happy coincidence, so
     //  is GetConsoleScreenBufferInfoEx, so if either don't exist, just give
@@ -99,18 +93,10 @@ YoriShSaveRestartState()
     //  console state.
     //
 
-    pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(hKernel, "RegisterApplicationRestart");
-    if (pRegisterApplicationRestart == NULL) {
-        return FALSE;
-    }
+    if (Kernel32.pRegisterApplicationRestart == NULL ||
+        Kernel32.pGetConsoleScreenBufferInfoEx == NULL ||
+        Kernel32.pGetCurrentConsoleFontEx == NULL) {
 
-    pGetConsoleScreenBufferInfoEx = (PGET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "GetConsoleScreenBufferInfoEx");
-    if (pGetConsoleScreenBufferInfoEx == NULL) {
-        return FALSE;
-    }
-
-    pGetCurrentConsoleFontEx = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "GetCurrentConsoleFontEx");
-    if (pGetCurrentConsoleFontEx == NULL) {
         return FALSE;
     }
 
@@ -147,7 +133,7 @@ YoriShSaveRestartState()
     ZeroMemory(&ScreenBufferInfo, sizeof(ScreenBufferInfo));
     ScreenBufferInfo.cbSize = sizeof(ScreenBufferInfo);
 
-    if (!pGetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo)) {
+    if (!Kernel32.pGetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo)) {
         return FALSE;
     }
 
@@ -202,7 +188,7 @@ YoriShSaveRestartState()
 
     ZeroMemory(&FontInfo, sizeof(FontInfo));
     FontInfo.cbSize = sizeof(FontInfo);
-    if (pGetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo)) {
+    if (Kernel32.pGetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo)) {
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.nFont);
         WritePrivateProfileString(_T("Window"), _T("FontIndex"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.dwFontSize.X);
@@ -342,7 +328,7 @@ YoriShSaveRestartState()
     if (!YoriShProcessRegisteredForRestart) {
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("-restart %x"), GetCurrentProcessId());
 
-        pRegisterApplicationRestart(WriteBuffer.StartOfString, 0);
+        Kernel32.pRegisterApplicationRestart(WriteBuffer.StartOfString, 0);
         YoriShProcessRegisteredForRestart = TRUE;
     }
 
@@ -367,22 +353,13 @@ YoriShLoadSavedRestartState(
 {
     YORI_STRING RestartFileName;
     YORI_STRING ReadBuffer;
-    PSET_CONSOLE_SCREEN_BUFFER_INFO_EX pSetConsoleScreenBufferInfoEx;
     YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenBufferInfo;
-    PSET_CURRENT_CONSOLE_FONT_EX pSetCurrentConsoleFontEx;
-    HANDLE hKernel;
     DWORD Count;
     YORI_CONSOLE_FONT_INFOEX FontInfo;
 
-    hKernel = GetModuleHandle(_T("KERNEL32"));
+    if (Kernel32.pSetConsoleScreenBufferInfoEx == NULL ||
+        Kernel32.pSetCurrentConsoleFontEx == NULL) {
 
-    pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "SetConsoleScreenBufferInfoEx");
-    if (pSetConsoleScreenBufferInfoEx == NULL) {
-        return FALSE;
-    }
-
-    pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "SetCurrentConsoleFontEx");
-    if (pSetCurrentConsoleFontEx == NULL) {
         return FALSE;
     }
 
@@ -457,10 +434,10 @@ YoriShLoadSavedRestartState(
     GetPrivateProfileString(_T("Window"), _T("FontName"), _T(""), FontInfo.FaceName, sizeof(FontInfo.FaceName)/sizeof(FontInfo.FaceName[0]), RestartFileName.StartOfString);
 
     if (FontInfo.dwFontSize.X > 0 && FontInfo.dwFontSize.Y > 0 && FontInfo.FontWeight > 0) {
-        pSetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo);
+        Kernel32.pSetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo);
     }
 
-    pSetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo);
+    Kernel32.pSetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo);
 
     //
     //  Read and populate the window title

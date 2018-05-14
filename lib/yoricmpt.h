@@ -797,9 +797,196 @@ typedef struct _YORI_CONSOLE_SCREEN_BUFFER_INFOEX {
 } YORI_CONSOLE_SCREEN_BUFFER_INFOEX, *PYORI_CONSOLE_SCREEN_BUFFER_INFOEX;
 
 /**
+ Structure to change basic information about a job.
+ */
+typedef struct _YORI_JOB_BASIC_LIMIT_INFORMATION {
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    LARGE_INTEGER Unused1;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    LARGE_INTEGER Unused2;
+
+    /**
+     Indicates which fields should be interpreted when setting information on
+     a job.
+     */
+    DWORD Flags;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    SIZE_T Unused3;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    SIZE_T Unused4;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    DWORD Unused5;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    SIZE_T Unused6;
+
+    /**
+     The base process priority to assign to the job.
+     */
+    DWORD Priority;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    DWORD Unused7;
+} YORI_JOB_BASIC_LIMIT_INFORMATION, *PYORI_JOB_BASIC_LIMIT_INFORMATION;
+
+/**
+ A prototype for the AddConsoleAliasW function.
+ */
+typedef
+BOOL WINAPI
+ADD_CONSOLE_ALIASW(LPCTSTR, LPCTSTR, LPCTSTR);
+
+/**
+ A prototype for a pointer to the AddConsoleAliasW function.
+ */
+typedef ADD_CONSOLE_ALIASW *PADD_CONSOLE_ALIASW;
+
+/**
+ A prototype for the AssignProcessToJobObject function.
+ */
+typedef
+BOOL WINAPI
+ASSIGN_PROCESS_TO_JOB_OBJECT(HANDLE, HANDLE);
+
+/**
+ A prototype for a pointer to the AssignProcessToJobObject function.
+ */
+typedef ASSIGN_PROCESS_TO_JOB_OBJECT *PASSIGN_PROCESS_TO_JOB_OBJECT;
+
+/**
+ A prototype for the CreateHardLinkW function.
+ */
+typedef
+BOOL
+WINAPI
+CREATE_HARD_LINKW(LPWSTR, LPWSTR, PVOID);
+
+/**
+ A prototype for a pointer to the CreateHardLinkW function.
+ */
+typedef CREATE_HARD_LINKW *PCREATE_HARD_LINKW;
+
+/**
+ A prototype for the CreateJobObjectW function.
+ */
+typedef
+HANDLE WINAPI
+CREATE_JOB_OBJECTW(LPSECURITY_ATTRIBUTES, LPCWSTR);
+
+/**
+ A prototype for a pointer to the CreateJobObjectW function.
+ */
+typedef CREATE_JOB_OBJECTW *PCREATE_JOB_OBJECTW;
+
+/**
+ A prototype for the CreateSymbolicLinkW function.
+ */
+typedef
+BOOL WINAPI
+CREATE_SYMBOLIC_LINKW(LPTSTR, LPTSTR, DWORD);
+
+/**
+ A prototype for a pointer to the CreateSymbolicLinkW function.
+ */
+typedef CREATE_SYMBOLIC_LINKW *PCREATE_SYMBOLIC_LINKW;
+
+/**
+ A prototype for the FindFirstStreamW function.
+ */
+typedef
+HANDLE WINAPI 
+FIND_FIRST_STREAMW(LPCWSTR, DWORD, PWIN32_FIND_STREAM_DATA, DWORD);
+
+/**
+ A prototype for a pointer to the FindFirstStreamW function.
+ */
+typedef FIND_FIRST_STREAMW *PFIND_FIRST_STREAMW;
+
+/**
+ A prototype for the FindNextStreamW function.
+ */
+typedef
+BOOL WINAPI 
+FIND_NEXT_STREAMW(HANDLE, PWIN32_FIND_STREAM_DATA);
+
+/**
+ A prototype for a pointer to the FindNextStreamW function.
+ */
+typedef FIND_NEXT_STREAMW *PFIND_NEXT_STREAMW;
+
+/**
+ A prototype for the FreeEnvironmentStringsW function.
+ */
+typedef
+BOOL WINAPI
+FREE_ENVIRONMENT_STRINGSW(LPWSTR);
+
+/**
+ Prototype for a pointer to the FreeEnvironmentStringsW function.
+ */
+typedef FREE_ENVIRONMENT_STRINGSW *PFREE_ENVIRONMENT_STRINGSW;
+
+/**
+ A prototype for the GetCompressedFileSizeW function.
+ */
+typedef
+DWORD WINAPI
+GET_COMPRESSED_FILE_SIZEW(LPCWSTR, LPDWORD);
+
+/**
+ A prototype for a pointer to the GetCompressedFileSizeW function.
+ */
+typedef GET_COMPRESSED_FILE_SIZEW *PGET_COMPRESSED_FILE_SIZEW;
+
+/**
+ A prototype for the GetConsoleAliasesLengthW function.
+ */
+typedef
+DWORD WINAPI
+GET_CONSOLE_ALIASES_LENGTHW(LPTSTR);
+
+/**
+ A prototype for a pointer to the GetConsoleAliasesLengthW function.
+ */
+typedef GET_CONSOLE_ALIASES_LENGTHW *PGET_CONSOLE_ALIASES_LENGTHW;
+
+/**
+ A prototype for the GetConsoleAliasesW function.
+ */
+typedef
+DWORD WINAPI
+GET_CONSOLE_ALIASESW(LPTSTR, DWORD, LPTSTR);
+
+/**
+ A prototype for a pointer to the GetConsoleAliasesW function.
+ */
+typedef GET_CONSOLE_ALIASESW *PGET_CONSOLE_ALIASESW;
+
+/**
  A prototype for the GetConsoleScreenBufferEx function.
  */
-typedef BOOL WINAPI GET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
+typedef
+BOOL WINAPI
+GET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
 
 /**
  A prototype for a pointer to the GetConsoleScreenBufferEx function.
@@ -810,7 +997,8 @@ typedef GET_CONSOLE_SCREEN_BUFFER_INFO_EX *PGET_CONSOLE_SCREEN_BUFFER_INFO_EX;
  A prototype for the GetCurrentConsoleFontEx function.
  */
 typedef
-BOOL WINAPI GET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX);
+BOOL WINAPI
+GET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX);
 
 /**
  A prototype for a pointer to the GetCurrentConsoleFontEx function.
@@ -818,9 +1006,59 @@ BOOL WINAPI GET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX)
 typedef GET_CURRENT_CONSOLE_FONT_EX *PGET_CURRENT_CONSOLE_FONT_EX;
 
 /**
+ A prototype for the GetDiskFreeSpaceExW function.
+ */
+typedef
+BOOL WINAPI 
+GET_DISK_FREE_SPACE_EXW(LPCWSTR, PLARGE_INTEGER, PLARGE_INTEGER, PLARGE_INTEGER);
+
+/**
+ A prototype for a pointer to the GetDiskFreeSpaceExW function.
+ */
+typedef GET_DISK_FREE_SPACE_EXW *PGET_DISK_FREE_SPACE_EXW;
+
+/**
+ A prototype for the GetEnvironmentStrings function.
+ */
+typedef
+LPSTR WINAPI 
+GET_ENVIRONMENT_STRINGS();
+
+/**
+ A prototype for a pointer to the GetEnvironmentStrings function.
+ */
+typedef GET_ENVIRONMENT_STRINGS *PGET_ENVIRONMENT_STRINGS;
+
+/**
+ A prototype for the GetEnvironmentStringsW function.
+ */
+typedef
+LPWSTR WINAPI 
+GET_ENVIRONMENT_STRINGSW();
+
+/**
+ A prototype for a pointer to the GetEnvironmentStringsW function.
+ */
+typedef GET_ENVIRONMENT_STRINGSW *PGET_ENVIRONMENT_STRINGSW;
+
+/**
+ A prototype for the GetFileInformationByHandleEx function.
+ */
+typedef
+BOOL WINAPI
+GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, ULONG, PVOID, DWORD);
+
+/**
+ A prototype for a pointer to the GetFileInformationByHandleEx function.
+ */
+typedef GET_FILE_INFORMATION_BY_HANDLE_EX *PGET_FILE_INFORMATION_BY_HANDLE_EX;
+
+/**
  A prototype for the RegisterApplicationRestart function.
  */
-typedef LONG WINAPI REGISTER_APPLICATION_RESTART(LPCWSTR, DWORD);
+typedef
+LONG WINAPI
+REGISTER_APPLICATION_RESTART(LPCWSTR, DWORD);
 
 /**
  A prototype for a pointer to the RegisterApplicationRestart function.
@@ -830,7 +1068,9 @@ typedef REGISTER_APPLICATION_RESTART *PREGISTER_APPLICATION_RESTART;
 /**
  A prototype for the SetConsoleScreenBufferEx function.
  */
-typedef BOOL WINAPI SET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
+typedef
+BOOL WINAPI
+SET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
 
 /**
  A prototype for a pointer to the the SetConsoleScreenBufferEx function.
@@ -841,13 +1081,155 @@ typedef SET_CONSOLE_SCREEN_BUFFER_INFO_EX *PSET_CONSOLE_SCREEN_BUFFER_INFO_EX;
  A prototype for the SetCurrentConsoleFontEx function.
  */
 typedef
-BOOL WINAPI SET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX);
+BOOL WINAPI
+SET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX);
 
 /**
  A prototype for a pointer to the SetCurrentConsoleFontEx function.
  */
 typedef SET_CURRENT_CONSOLE_FONT_EX *PSET_CURRENT_CONSOLE_FONT_EX;
 
+/**
+ A prototype for the SetInformationJobObject function.
+ */
+typedef
+BOOL WINAPI
+SET_INFORMATION_JOB_OBJECT(HANDLE, DWORD, PVOID, DWORD);
 
+/**
+ A prototype for a pointer to the SetInformationJobObject function.
+ */
+typedef SET_INFORMATION_JOB_OBJECT *PSET_INFORMATION_JOB_OBJECT;
+
+/**
+ A prototype for the Wow64DisableWow64FsRedirection function.
+ */
+typedef
+BOOL WINAPI
+WOW64_DISABLE_WOW64_FS_REDIRECTION(PVOID*);
+
+/**
+ A prototype for a pointer to the Wow64DisableWow64FsRedirection function.
+ */
+typedef WOW64_DISABLE_WOW64_FS_REDIRECTION *PWOW64_DISABLE_WOW64_FS_REDIRECTION;
+
+/**
+ A structure containing optional function pointers to kernel32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_KERNEL32_FUNCTIONS {
+
+    /**
+     If it's available on the current system, a pointer to AddConsoleAliasW.
+     */
+    PADD_CONSOLE_ALIASW pAddConsoleAliasW;
+
+    /**
+     If it's available on the current system, a pointer to AssignProcessToJobObject.
+     */
+    PASSIGN_PROCESS_TO_JOB_OBJECT pAssignProcessToJobObject;
+
+    /**
+     If it's available on the current system, a pointer to CreateHardLinkW.
+     */
+    PCREATE_HARD_LINKW pCreateHardLinkW;
+
+    /**
+     If it's available on the current system, a pointer to CreateJobObjectW.
+     */
+    PCREATE_JOB_OBJECTW pCreateJobObjectW;
+
+    /**
+     If it's available on the current system, a pointer to CreateSymbolicLinkW.
+     */
+    PCREATE_SYMBOLIC_LINKW pCreateSymbolicLinkW;
+
+    /**
+     If it's available on the current system, a pointer to FindFirstStreamW.
+     */
+    PFIND_FIRST_STREAMW pFindFirstStreamW;
+
+    /**
+     If it's available on the current system, a pointer to FindNextStreamW.
+     */
+    PFIND_NEXT_STREAMW pFindNextStreamW;
+
+    /**
+     If it's available on the current system, a pointer to FreeEnvironmentStringsW.
+     */
+    PFREE_ENVIRONMENT_STRINGSW pFreeEnvironmentStringsW;
+
+    /**
+     If it's available on the current system, a pointer to GetCompressedFileSizeW.
+     */
+    PGET_COMPRESSED_FILE_SIZEW pGetCompressedFileSizeW;
+
+    /**
+     If it's available on the current system, a pointer to GetConsoleScreenBufferInfoEx.
+     */
+    PGET_CONSOLE_SCREEN_BUFFER_INFO_EX pGetConsoleScreenBufferInfoEx;
+
+    /**
+     If it's available on the current system, a pointer to GetConsoleAliasesLengthW.
+     */
+    PGET_CONSOLE_ALIASES_LENGTHW pGetConsoleAliasesLengthW;
+
+    /**
+     If it's available on the current system, a pointer to GetConsoleAliasesW.
+     */
+    PGET_CONSOLE_ALIASESW pGetConsoleAliasesW;
+
+    /**
+     If it's available on the current system, a pointer to GetCurrentConsoleFontEx.
+     */
+    PGET_CURRENT_CONSOLE_FONT_EX pGetCurrentConsoleFontEx;
+
+    /**
+     If it's available on the current system, a pointer to GetDiskFreeSpaceExW.
+     */
+    PGET_DISK_FREE_SPACE_EXW pGetDiskFreeSpaceExW;
+
+    /**
+     If it's available on the current system, a pointer to GetEnvironmentStrings.
+     */
+    PGET_ENVIRONMENT_STRINGS pGetEnvironmentStrings;
+
+    /**
+     If it's available on the current system, a pointer to GetEnvironmentStringsW.
+     */
+    PGET_ENVIRONMENT_STRINGSW pGetEnvironmentStringsW;
+
+    /**
+     If it's available on the current system, a pointer to GetFileInformationByHandleEx.
+     */
+    PGET_FILE_INFORMATION_BY_HANDLE_EX pGetFileInformationByHandleEx;
+
+    /**
+     If it's available on the current system, a pointer to RegisterApplicationRestart.
+     */
+    PREGISTER_APPLICATION_RESTART pRegisterApplicationRestart;
+
+    /**
+     If it's available on the current system, a pointer to SetConsoleScreenBufferInfoEx.
+     */
+    PSET_CONSOLE_SCREEN_BUFFER_INFO_EX pSetConsoleScreenBufferInfoEx;
+
+    /**
+     If it's available on the current system, a pointer to SetCurrentConsoleFontEx.
+     */
+    PSET_CURRENT_CONSOLE_FONT_EX pSetCurrentConsoleFontEx;
+
+    /**
+     If it's available on the current system, a pointer to SetInformationJobObject.
+     */
+    PSET_INFORMATION_JOB_OBJECT pSetInformationJobObject;
+
+    /**
+     If it's available on the current system, a pointer to Wow64DisableWow64FsRedirection.
+     */
+    PWOW64_DISABLE_WOW64_FS_REDIRECTION pWow64DisableWow64FsRedirection;
+} YORI_KERNEL32_FUNCTIONS, *PYORI_KERNEL32_FUNCTIONS;
+
+extern YORI_KERNEL32_FUNCTIONS Kernel32;
 
 // vim:sw=4:ts=4:et:

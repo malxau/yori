@@ -58,8 +58,6 @@ SdirAppInitialize()
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    HANDLE hKernel32 = GetModuleHandle(_T("KERNEL32"));
-    DISABLE_WOW_REDIRECT_FN DisableWow = (DISABLE_WOW_REDIRECT_FN)GetProcAddress(hKernel32, "Wow64DisableWow64FsRedirection");
     HANDLE ProcessToken;
     DWORD CurrentMode;
 
@@ -153,9 +151,9 @@ SdirAppInitialize()
     //  because we want people to be able to enumerate those paths
     //
 
-    if (DisableWow) {
+    if (Kernel32.pWow64DisableWow64FsRedirection) {
         PVOID DontCare;
-        DisableWow(&DontCare);
+        Kernel32.pWow64DisableWow64FsRedirection(&DontCare);
     }
 
     //
@@ -177,21 +175,6 @@ SdirAppInitialize()
         AdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL);
         CloseHandle(ProcessToken);
     }
-
-    //
-    //  Try to locate FindFirstStream functions if they exist
-    //
-
-    Opts->FindFirstStreamW = (FIND_FIRST_STREAM_FN)GetProcAddress(hKernel32, "FindFirstStreamW");
-    Opts->FindNextStreamW = (FIND_NEXT_STREAM_FN)GetProcAddress(hKernel32, "FindNextStreamW");
-#ifdef UNICODE
-    Opts->GetCompressedFileSize = (GET_COMPRESSED_FILE_SIZE_FN)GetProcAddress(hKernel32, "GetCompressedFileSizeW");
-    Opts->GetDiskFreeSpaceEx = (GET_DISK_FREE_SPACE_EX_FN)GetProcAddress(hKernel32, "GetDiskFreeSpaceExW");
-#else
-    Opts->GetCompressedFileSize = (GET_COMPRESSED_FILE_SIZE_FN)GetProcAddress(hKernel32, "GetCompressedFileSizeA");
-    Opts->GetDiskFreeSpaceEx = (GET_DISK_FREE_SPACE_EX_FN)GetProcAddress(hKernel32, "GetDiskFreeSpaceExA");
-#endif
-    Opts->GetFileInformationByHandleEx = (GET_FILE_INFORMATION_BY_HANDLE_EX_FN)GetProcAddress(hKernel32, "GetFileInformationByHandleEx");
 
     //
     //  Grab the version of the running OS so we can highlight binaries that
@@ -715,6 +698,10 @@ SdirInit(
     __in_ecount(argc) LPTSTR argv[]
     )
 {
+    if (!YoriLibLoadKernel32Functions()) {
+        return FALSE;
+    }
+
     if (!SdirAppInitialize()) {
         return FALSE;
     }

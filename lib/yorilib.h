@@ -561,6 +561,11 @@ YoriLibDbgRealAssert(
 #define ASSERT(x)
 #endif
 
+// *** DYLD.C ***
+
+BOOL
+YoriLibLoadKernel32Functions();
+
 // *** FILEENUM.C ***
 
 /**

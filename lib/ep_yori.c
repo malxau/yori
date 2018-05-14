@@ -194,6 +194,8 @@ VOID __cdecl CONSOLE_CRT_ENTRYPOINT()
     DWORD Index;
     DWORD ExitCode;
 
+    YoriLibLoadKernel32Functions();
+
     ArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), &ArgC);
     if (ArgV == NULL) {
         ExitProcess(EXIT_FAILURE);

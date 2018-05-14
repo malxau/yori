@@ -39,11 +39,6 @@ PYORI_STRING SearchFor = NULL;
 LPTSTR SearchVar = _T("PATH");
 
 /**
- Prototype to a pointer to a function to disable WOW64 redirection.
- */
-typedef BOOL (WINAPI * DISABLE_WOW_REDIRECT_FN)(PVOID*);
-
-/**
  Usage text for this application.
  */
 const
@@ -150,8 +145,6 @@ ymain (
     )
 {
     YORI_STRING FoundPath;
-    HANDLE hKernel32 = GetModuleHandle(_T("KERNEL32"));
-    DISABLE_WOW_REDIRECT_FN DisableWow = (DISABLE_WOW_REDIRECT_FN)GetProcAddress(hKernel32, "Wow64DisableWow64FsRedirection");
     BOOL Result = FALSE;
 
     if (!WhichParseArgs(ArgC, ArgV)) {
@@ -165,9 +158,11 @@ ymain (
     //  in place.
     //
 
-    if (DisableWow && _tcsicmp(SearchVar, _T("PATH")) == 0) {
+    if (Kernel32.pWow64DisableWow64FsRedirection &&
+        _tcsicmp(SearchVar, _T("PATH")) == 0) {
+
         PVOID DontCare;
-        DisableWow(&DontCare);
+        Kernel32.pWow64DisableWow64FsRedirection(&DontCare);
     }
 
     YoriLibInitEmptyString(&FoundPath);

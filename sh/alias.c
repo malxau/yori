@@ -71,57 +71,6 @@ YORI_LIST_ENTRY YoriShAliasesList;
 PYORI_HASH_TABLE YoriShAliasesHash;
 
 /**
- Prototype for a function to the length of get aliases in the console for a
- particular application.
- */
-typedef DWORD GET_CONSOLE_ALIASES_LENGTHW(LPTSTR);
-
-/**
- Prototype for a pointer to a function to the length of get aliases in the
- console for a particular application.
- */
-typedef GET_CONSOLE_ALIASES_LENGTHW *PGET_CONSOLE_ALIASES_LENGTHW;
-
-/**
- Prototype for a function to get aliases from the console for a particular
- application.
- */
-typedef DWORD GET_CONSOLE_ALIASESW(LPTSTR, DWORD, LPTSTR);
-
-/**
- Prototype for a pointer to a function to get aliases from the console
- for a particular application.
- */
-typedef GET_CONSOLE_ALIASESW *PGET_CONSOLE_ALIASESW;
-
-/**
- Prototype for a function to add an alias with the console.
- */
-typedef BOOL ADD_CONSOLE_ALIASW(LPCTSTR, LPCTSTR, LPCTSTR);
-
-/**
- Prototype for a pointer to a function to add an alias with the console.
- */
-typedef ADD_CONSOLE_ALIASW *PADD_CONSOLE_ALIASW;
-
-/**
- Pointer to a function to obtain the length of alisaes in the console for
- a particular application.
- */
-PGET_CONSOLE_ALIASES_LENGTHW pGetConsoleAliasesLengthW;
-
-/**
- Pointer to a function to get aliases from from the console for a particular
- application.
- */
-PGET_CONSOLE_ALIASESW pGetConsoleAliasesW;
-
-/**
- Pointer to a function to add an alias with the console.
- */
-PADD_CONSOLE_ALIASW pAddConsoleAliasW;
-
-/**
  The app name to use when asking conhost for alias information.  Note this
  really has nothing to do with the actual binary name.
  */
@@ -160,8 +109,8 @@ YoriShDeleteAlias(
 
     ExistingAlias = HashEntry->Context;
 
-    if (!ExistingAlias->Internal && pAddConsoleAliasW) {
-        pAddConsoleAliasW(ExistingAlias->Alias.StartOfString, NULL, ALIAS_APP_NAME);
+    if (!ExistingAlias->Internal && Kernel32.pAddConsoleAliasW) {
+        Kernel32.pAddConsoleAliasW(ExistingAlias->Alias.StartOfString, NULL, ALIAS_APP_NAME);
     }
     YoriLibRemoveListItem(&ExistingAlias->ListEntry);
     YoriLibFreeStringContents(&ExistingAlias->Alias);
@@ -230,8 +179,8 @@ YoriShAddAlias(
     NewAlias->Alias.StartOfString[AliasNameLengthInChars] = '\0';
     NewAlias->Value.StartOfString[ValueNameLengthInChars] = '\0';
 
-    if (!Internal && pAddConsoleAliasW) {
-        pAddConsoleAliasW(NewAlias->Alias.StartOfString, NewAlias->Value.StartOfString, ALIAS_APP_NAME);
+    if (!Internal && Kernel32.pAddConsoleAliasW) {
+        Kernel32.pAddConsoleAliasW(NewAlias->Alias.StartOfString, NewAlias->Value.StartOfString, ALIAS_APP_NAME);
     }
 
     YoriLibAppendList(&YoriShAliasesList, &NewAlias->ListEntry);
@@ -589,7 +538,6 @@ YoriShLoadSystemAliases(
     __in BOOL ImportFromCmd
     )
 {
-    HANDLE hKernel;
     DWORD LengthRequired;
     DWORD LengthReturned;
     LPTSTR AliasBuffer;
@@ -599,16 +547,10 @@ YoriShLoadSystemAliases(
     DWORD VarLen;
     DWORD BytesConsumed;
 
-    hKernel = GetModuleHandle(_T("KERNEL32"));
-    if (hKernel == NULL) {
-        return FALSE;
-    }
+    if (Kernel32.pAddConsoleAliasW == NULL ||
+        Kernel32.pGetConsoleAliasesW == NULL ||
+        Kernel32.pGetConsoleAliasesLengthW == NULL) {
 
-    pAddConsoleAliasW = (PADD_CONSOLE_ALIASW)GetProcAddress(hKernel, "AddConsoleAliasW");
-    pGetConsoleAliasesW = (PGET_CONSOLE_ALIASESW)GetProcAddress(hKernel, "GetConsoleAliasesW");
-    pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(hKernel, "GetConsoleAliasesLengthW");
-
-    if (pAddConsoleAliasW == NULL || pGetConsoleAliasesW == NULL || pGetConsoleAliasesLengthW == NULL) {
         return FALSE;
     }
 
@@ -618,7 +560,7 @@ YoriShLoadSystemAliases(
         AppName = ALIAS_APP_NAME;
     }
 
-    LengthRequired = pGetConsoleAliasesLengthW(AppName);
+    LengthRequired = Kernel32.pGetConsoleAliasesLengthW(AppName);
     if (LengthRequired == 0) {
         return TRUE;
     }
@@ -628,7 +570,7 @@ YoriShLoadSystemAliases(
         return FALSE;
     }
 
-    LengthReturned = pGetConsoleAliasesW(AliasBuffer, LengthRequired, AppName);
+    LengthReturned = Kernel32.pGetConsoleAliasesW(AliasBuffer, LengthRequired, AppName);
     if (LengthReturned == 0 || LengthReturned > LengthRequired) {
         YoriLibFree(AliasBuffer);
         return FALSE;

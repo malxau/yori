@@ -359,7 +359,9 @@ SdirItemFoundCallback(
     UNREFERENCED_PARAMETER(Depth);
 
 #if defined(UNICODE)
-    if (Opts->FindFirstStreamW && (Opts->FtNamedStreams.Flags & SDIR_FEATURE_DISPLAY)) {
+    if (Kernel32.pFindFirstStreamW != NULL &&
+        (Opts->FtNamedStreams.Flags & SDIR_FEATURE_DISPLAY)) {
+
         HANDLE hStreamFind;
         WIN32_FIND_STREAM_DATA FindStreamData;
         WIN32_FIND_DATA BogusFindData;
@@ -375,7 +377,7 @@ SdirItemFoundCallback(
         //  Look for any named streams
         //
 
-        hStreamFind = Opts->FindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
+        hStreamFind = Kernel32.pFindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
         if (hStreamFind != INVALID_HANDLE_VALUE) {
 
             if (!YoriLibAllocateString(&StreamFullPath, FullPath->LengthInChars + YORI_LIB_MAX_STREAM_NAME)) {
@@ -420,7 +422,7 @@ SdirItemFoundCallback(
                     SdirUpdateFindDataFromFileInformation(&BogusFindData, StreamFullPath.StartOfString);
                     SdirAddToCollection(&BogusFindData, &StreamFullPath);
                 }
-            } while (Opts->FindNextStreamW(hStreamFind, &FindStreamData));
+            } while (Kernel32.pFindNextStreamW(hStreamFind, &FindStreamData));
 
             //
             //  MSFIX Keep this on the context so we can reuse it
@@ -494,8 +496,8 @@ SdirEnumeratePath (
         //
 
         if (Summary->VolumeSize.QuadPart == 0 &&
-            (Opts->GetDiskFreeSpaceEx == NULL ||
-             !Opts->GetDiskFreeSpaceEx(Opts->ParentName.StartOfString, &Junk, &Summary->VolumeSize, &Summary->FreeSize))) {
+            (Kernel32.pGetDiskFreeSpaceExW == NULL ||
+             !Kernel32.pGetDiskFreeSpaceExW(Opts->ParentName.StartOfString, &Junk, &Summary->VolumeSize, &Summary->FreeSize))) {
 
             if (!SdirPopulateSummaryWithGetDiskFreeSpace(Opts->ParentName.StartOfString, Summary)) {
 

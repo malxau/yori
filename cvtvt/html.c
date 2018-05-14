@@ -64,16 +64,7 @@ BOOL
 CvtvtCaptureConsoleFont()
 {
     HANDLE hConsole;
-    HMODULE hKernel;
-    PGET_CURRENT_CONSOLE_FONT_EX GetCurrentConsoleFontExFn;
-
-    hKernel = GetModuleHandle(_T("KERNEL32"));
-    if (hKernel == NULL) {
-        return FALSE;
-    }
-
-    GetCurrentConsoleFontExFn = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "GetCurrentConsoleFontEx");
-    if (GetCurrentConsoleFontExFn == NULL) {
+    if (Kernel32.pGetCurrentConsoleFontEx == NULL) {
         return FALSE;
     }
 
@@ -91,7 +82,7 @@ CvtvtCaptureConsoleFont()
 
     CvtvtFontInfo.cbSize = sizeof(CvtvtFontInfo);
 
-    if (!GetCurrentConsoleFontExFn(hConsole, FALSE, &CvtvtFontInfo)) {
+    if (!Kernel32.pGetCurrentConsoleFontEx(hConsole, FALSE, &CvtvtFontInfo)) {
         CloseHandle(hConsole);
         return FALSE;
     }
