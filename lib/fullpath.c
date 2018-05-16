@@ -831,84 +831,6 @@ YoriLibGetFullPathNameReturnAllocation(
     return TRUE;
 }
 
-/**
- Prototype for the ShGetSpecialFolderPathW function.
- */
-typedef LONG WINAPI SH_GET_SPECIAL_FOLDER_PATHW(HWND, LPWSTR, INT, BOOL);
-
-/**
- Prototype for a pointer to the ShGetSpecialFolderPathW function.
- */
-typedef SH_GET_SPECIAL_FOLDER_PATHW *PSH_GET_SPECIAL_FOLDER_PATHW;
-
-#ifndef CSIDL_APPDATA
-/**
- The identifier of the AppData directory to ShGetSpecialFolderPath.
- */
-#define CSIDL_APPDATA 0x001a
-#endif
-#ifndef CSIDL_LOCALAPPDATA
-/**
- The identifier of the AppData local directory to ShGetSpecialFolderPath.
- */
-#define CSIDL_LOCALAPPDATA 0x001c
-#endif
-#ifndef CSIDL_DESKTOPDIRECTORY
-/**
- The identifier of the Desktop directory to ShGetSpecialFolderPath.
- */
-#define CSIDL_DESKTOPDIRECTORY 0x0010
-#endif
-#ifndef CSIDL_PERSONAL
-/**
- The identifier of the Documents directory to ShGetSpecialFolderPath.
- */
-#define CSIDL_PERSONAL 0x0005
-#endif
-#ifndef CSIDL_PROGRAMS
-/**
- The identifier of the Start Menu Programs directory to ShGetSpecialFolderPath.
- */
-#define CSIDL_PROGRAMS 0x0002
-#endif
-#ifndef CSIDL_STARTMENU
-/**
- The identifier of the Start Menu directory to ShGetSpecialFolderPath.
- */
-#define CSIDL_STARTMENU 0x000b
-#endif
-#ifndef CSIDL_STARTUP
-/**
- The identifier of the Start Menu startup directory to ShGetSpecialFolderPath.
- */
-#define CSIDL_STARTUP 0x0007
-#endif
-
-/**
- Prototype for a function to get a known folder path with a Vista+ API.
- */
-typedef LONG SH_GET_KNOWN_FOLDER_PATH(CONST GUID *, DWORD, HANDLE, PWSTR *);
-
-/**
- Prototype for a pointer to a function to get a known folder path with
- a Vista+ API.
- */
-typedef SH_GET_KNOWN_FOLDER_PATH *PSH_GET_KNOWN_FOLDER_PATH;
-
-/**
- Prototype for a function to free COM memory.
- */
-typedef VOID CO_TASK_MEM_FREE(PVOID);
-
-/**
- Prototype for a pointer to a function to free COM memory.
- */
-typedef CO_TASK_MEM_FREE *PCO_TASK_MEM_FREE;
-
-/**
- GUID to fetch the downloads folder on Vista+.
- */
-const GUID FOLDERID_Downloads = { 0x374de290, 0x123f, 0x4565, { 0x91, 0x64, 0x39, 0xc4, 0x92, 0x5e, 0x46, 0x7b } };
 
 /**
  Convert a specified shell folder, by a known folder GUID, into its string
@@ -927,59 +849,33 @@ YoriLibExpandShellDirectoryGuid(
     __inout PYORI_STRING ExpandedSymbol
     )
 {
-    HANDLE hShell;
-    HANDLE hOle32;
     PWSTR ExpandedString;
-    PSH_GET_KNOWN_FOLDER_PATH pGetKnownFolderPath;
-    PCO_TASK_MEM_FREE pCoTaskMemFree;
     DWORD LocationLength;
 
-    hShell = LoadLibrary(_T("SHELL32.DLL"));
-    if (hShell == NULL) {
+    YoriLibLoadShell32Functions();
+    YoriLibLoadOle32Functions();
+
+    if (Shell32.pSHGetKnownFolderPath == NULL ||
+        Ole32.pCoTaskMemFree == NULL) {
         return FALSE;
     }
 
-    hOle32 = LoadLibrary(_T("OLE32.DLL"));
-    if (hOle32 == NULL) {
-        FreeLibrary(hShell);
-        return FALSE;
-    }
 
-    pGetKnownFolderPath = (PSH_GET_KNOWN_FOLDER_PATH)GetProcAddress(hShell, "SHGetKnownFolderPath");
-    if (pGetKnownFolderPath == NULL) {
-        FreeLibrary(hShell);
-        FreeLibrary(hOle32);
-        return FALSE;
-    }
-
-    pCoTaskMemFree = (PCO_TASK_MEM_FREE)GetProcAddress(hOle32, "CoTaskMemFree");
-    if (pCoTaskMemFree == NULL) {
-        FreeLibrary(hShell);
-        FreeLibrary(hOle32);
-        return FALSE;
-    }
-
-    if (pGetKnownFolderPath(FolderType, 0, NULL, &ExpandedString) != 0) {
-        FreeLibrary(hShell);
-        FreeLibrary(hOle32);
+    if (Shell32.pSHGetKnownFolderPath(FolderType, 0, NULL, &ExpandedString) != 0) {
         return FALSE;
     }
 
     LocationLength = _tcslen(ExpandedString);
 
     if (!YoriLibAllocateString(ExpandedSymbol, LocationLength + 1)) {
-        pCoTaskMemFree(ExpandedString);
-        FreeLibrary(hShell);
-        FreeLibrary(hOle32);
+        Ole32.pCoTaskMemFree(ExpandedString);
         return FALSE;
     }
 
     memcpy(ExpandedSymbol->StartOfString, ExpandedString, (LocationLength + 1) * sizeof(TCHAR));
     ExpandedSymbol->LengthInChars = LocationLength;
 
-    pCoTaskMemFree(ExpandedString);
-    FreeLibrary(hShell);
-    FreeLibrary(hOle32);
+    Ole32.pCoTaskMemFree(ExpandedString);
     return TRUE;
 }
 
@@ -1000,17 +896,8 @@ YoriLibExpandShellDirectory(
     __inout PYORI_STRING ExpandedSymbol
     )
 {
-    HANDLE hShell;
-    PSH_GET_SPECIAL_FOLDER_PATHW GetSpecialFolderPathW;
-
-    hShell = LoadLibrary(_T("SHELL32.DLL"));
-    if (hShell == NULL) {
-        return FALSE;
-    }
-
-    GetSpecialFolderPathW = (PSH_GET_SPECIAL_FOLDER_PATHW)GetProcAddress(hShell, "SHGetSpecialFolderPathW");
-    if (GetSpecialFolderPathW == NULL) {
-        FreeLibrary(hShell);
+    YoriLibLoadShell32Functions();
+    if (Shell32.pSHGetSpecialFolderPathW == NULL) {
         return FALSE;
     }
 
@@ -1020,15 +907,13 @@ YoriLibExpandShellDirectory(
 
     ExpandedSymbol->StartOfString[0] = '\0';
 
-    if (GetSpecialFolderPathW(NULL, ExpandedSymbol->StartOfString, FolderType, FALSE) < 0) {
+    if (Shell32.pSHGetSpecialFolderPathW(NULL, ExpandedSymbol->StartOfString, FolderType, FALSE) < 0) {
         YoriLibFreeStringContents(ExpandedSymbol);
-        FreeLibrary(hShell);
         return FALSE;
     }
 
     ExpandedSymbol->LengthInChars = _tcslen(ExpandedSymbol->StartOfString);
 
-    FreeLibrary(hShell);
     return TRUE;
 }
 

@@ -1283,21 +1283,6 @@ YoriLibCollectUsn (
 }
 
 /**
- Pointer to the version!GetFileVersionInfoSizeW export.
- */
-PGET_FILE_VERSION_INFO_SIZEW_FN pGetFileVersionInfoSize;
-
-/**
- Pointer to the version!GetFileVersionInfoW export.
- */
-PGET_FILE_VERSION_INFOW_FN pGetFileVersionInfo;
-
-/**
- Pointer to the version!VerQueryValueW export.
- */
-PVER_QUERY_VALUEW_FN pVerQueryValue;
-
-/**
  Collect information from a directory enumerate and full file name relating
  to the executable's version resource.
 
@@ -1327,29 +1312,21 @@ YoriLibCollectVersion (
     Entry->FileVersion.QuadPart = 0;
     Entry->FileVersionFlags = 0;
 
-    if (pGetFileVersionInfoSize == NULL) {
-        HINSTANCE hVerDll;
+    YoriLibLoadVersionFunctions();
 
-        hVerDll = LoadLibrary(_T("VERSION.DLL"));
-        pGetFileVersionInfoSize = (PGET_FILE_VERSION_INFO_SIZEW_FN)GetProcAddress(hVerDll, "GetFileVersionInfoSizeW");
-        pGetFileVersionInfo = (PGET_FILE_VERSION_INFOW_FN)GetProcAddress(hVerDll, "GetFileVersionInfoW");
-        pVerQueryValue = (PVER_QUERY_VALUEW_FN)GetProcAddress(hVerDll, "VerQueryValueW");
+    if (Version.pGetFileVersionInfoSizeW == NULL ||
+        Version.pGetFileVersionInfoW == NULL ||
+        Version.pVerQueryValueW == NULL) {
 
-        if (pGetFileVersionInfoSize == NULL ||
-            pGetFileVersionInfo == NULL ||
-            pVerQueryValue == NULL) {
-
-            FreeLibrary(hVerDll);
-            return TRUE;
-        }
+        return TRUE;
     }
 
-    VerSize = pGetFileVersionInfoSize(FullPath->StartOfString, &Junk);
+    VerSize = Version.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
 
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
-        if (pGetFileVersionInfo(FullPath->StartOfString, 0, VerSize, Buffer)) {
-            if (pVerQueryValue(Buffer, _T("\\"), (PVOID*)&RootBlock, (PUINT)&Junk)) {
+        if (Version.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
+            if (Version.pVerQueryValueW(Buffer, _T("\\"), (PVOID*)&RootBlock, (PUINT)&Junk)) {
                 Entry->FileVersion.HighPart = RootBlock->dwFileVersionMS;
                 Entry->FileVersion.LowPart = RootBlock->dwFileVersionLS;
                 Entry->FileVersionFlags = RootBlock->dwFileFlags & RootBlock->dwFileFlagsMask;

@@ -28,5 +28,5 @@ compile: $(OBJS)
 
 scut.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib uuid.lib shell32.lib ole32.lib -version:$(SCUT_VER_MAJOR).$(SCUT_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib uuid.lib ole32.lib -version:$(SCUT_VER_MAJOR).$(SCUT_VER_MINOR) $(LINKPDB) -out:$@
 

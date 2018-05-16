@@ -848,6 +848,285 @@ typedef struct _YORI_JOB_BASIC_LIMIT_INFORMATION {
     DWORD Unused7;
 } YORI_JOB_BASIC_LIMIT_INFORMATION, *PYORI_JOB_BASIC_LIMIT_INFORMATION;
 
+#ifndef SE_ERR_SHARE
+/**
+ A sharing violation occurred.
+ */
+#define SE_ERR_SHARE                    26
+#endif
+
+#ifndef SE_ERR_ASSOCINCOMPLETE
+/**
+ The file name association is incomplete.
+ */
+#define SE_ERR_ASSOCINCOMPLETE          27
+#endif
+
+#ifndef SE_ERR_DDETIMEOUT
+/**
+ A DDE timeout error occurred.
+ */
+#define SE_ERR_DDETIMEOUT               28
+#endif
+
+#ifndef SE_ERR_DDEFAIL
+/**
+ The DDE transaction failed.
+ */
+#define SE_ERR_DDEFAIL                  29
+#endif
+
+#ifndef SE_ERR_DDEBUSY
+/**
+ The DDE server is busy.
+ */
+#define SE_ERR_DDEBUSY                  30
+#endif
+
+#ifndef SE_ERR_NOASSOC
+/**
+ There is no application associated with the file.
+ */
+#define SE_ERR_NOASSOC                  31
+#endif
+
+/**
+ Command to the shell to delete an object.
+ */
+#define YORI_SHFILEOP_DELETE              0x003
+
+/**
+ Flag to the shell to avoid UI.
+ */
+#define YORI_SHFILEOP_FLAG_SILENT         0x004
+
+/**
+ Flag to the shell to suppress confirmation.
+ */
+#define YORI_SHFILEOP_FLAG_NOCONFIRMATION 0x010
+
+/**
+ Flag to the shell to place objects in the recycle bin.
+ */
+#define YORI_SHFILEOP_FLAG_ALLOWUNDO      0x040
+
+/**
+ Flag to the shell to suppress errors.
+ */
+#define YORI_SHFILEOP_FLAG_NOERRORUI      0x400
+
+/**
+ Shell defined structure describing a file operation.
+ */
+typedef struct _YORI_SHFILEOP {
+
+    /**
+     hWnd to use for UI, which we don't have an don't want.
+     */
+    HWND hWndIgnored;
+
+    /**
+     The function requested from the shell.
+     */
+    UINT Function;
+
+    /**
+     A NULL terminated list of NULL terminated strings of files to operate
+     on.
+     */
+    LPCTSTR Source;
+
+    /**
+     Another NULL terminated list of NULL terminated strings, which is not
+     used in this program.
+     */
+    LPCTSTR Dest;
+
+    /**
+     Flags for the operation.
+     */
+    DWORD Flags;
+
+    /**
+     Set to TRUE if the operation was cancelled.
+     */
+    BOOL Aborted;
+
+    /**
+     Shell voodoo.  No seriously, who comes up with this stuff?
+     */
+    PVOID NameMappings;
+
+    /**
+     A title that would be used by some types of UI, but not other types of
+     UI, which we don't have and don't want.
+     */
+    LPCTSTR ProgressTitle;
+} YORI_SHFILEOP, *PYORI_SHFILEOP;
+
+#ifndef CSIDL_APPDATA
+/**
+ The identifier of the AppData directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_APPDATA 0x001a
+#endif
+#ifndef CSIDL_LOCALAPPDATA
+/**
+ The identifier of the AppData local directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_LOCALAPPDATA 0x001c
+#endif
+#ifndef CSIDL_DESKTOPDIRECTORY
+/**
+ The identifier of the Desktop directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_DESKTOPDIRECTORY 0x0010
+#endif
+#ifndef CSIDL_PERSONAL
+/**
+ The identifier of the Documents directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_PERSONAL 0x0005
+#endif
+#ifndef CSIDL_PROGRAMS
+/**
+ The identifier of the Start Menu Programs directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_PROGRAMS 0x0002
+#endif
+#ifndef CSIDL_STARTMENU
+/**
+ The identifier of the Start Menu directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_STARTMENU 0x000b
+#endif
+#ifndef CSIDL_STARTUP
+/**
+ The identifier of the Start Menu startup directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_STARTUP 0x0007
+#endif
+
+extern const GUID FOLDERID_Downloads;
+
+/**
+ The definition of SHELLEXECUTEINFO so we can use it without a
+ compile time dependency on NT4+, or bringing in all of the shell headers.
+ */
+typedef struct _YORI_SHELLEXECUTEINFO {
+    /**
+     The number of bytes in this structure.
+     */
+    DWORD cbSize;
+
+    /**
+     The features we're using.
+     */
+    DWORD fMask;
+
+    /**
+     Our window handle, if we had one.
+     */
+    HWND hWnd;
+
+    /**
+     A shell verb, if we knew what to use it for.
+     */
+    LPCTSTR lpVerb;
+
+    /**
+     The program we're trying to launch.
+     */
+    LPCTSTR lpFile;
+
+    /**
+     The arguments supplied to the program.
+     */
+    LPCTSTR lpParameters;
+
+    /**
+     The initial directory for the program, if we didn't want to use the
+     current directory that the user gave us.
+     */
+    LPCTSTR lpDirectory;
+
+    /**
+     The form to display the process child window in, if it is a GUI process.
+     */
+    int nShow;
+
+    /**
+     Mislabelled error code, carried forward from 16 bit land for no apparent
+     reason since this function doesn't exist there.
+     */
+    HINSTANCE hInstApp;
+
+    /**
+     Some shell crap.
+     */
+    LPVOID lpIDList;
+
+    /**
+     More shell crap.
+     */
+    LPCTSTR lpClass;
+
+    /**
+     Is there an end to the shell crap?
+     */
+    HKEY hKeyClass;
+
+    /**
+     A hotkey? We just launched the thing. I'd understand associating a hotkey
+     with something that might get launched, but associating it after we
+     launched it? What on earth could possibly come from this?
+     */
+    DWORD dwHotKey;
+
+    /**
+     Not something of interest to command prompts.
+     */
+    HANDLE hIcon;
+
+    /**
+     Something we really care about! If process launch succeeds, this gets
+     populated with a process handle, which we can wait on, and that's kind
+     of desirable.
+     */
+    HANDLE hProcess;
+} YORI_SHELLEXECUTEINFO, *PYORI_SHELLEXECUTEINFO;
+
+#ifndef SEE_MASK_NOCLOSEPROCESS
+/**
+ Return the process handle where possible.
+ */
+#define SEE_MASK_NOCLOSEPROCESS (0x00000040)
+#endif
+
+#ifndef SEE_MASK_FLAG_NO_UI
+/**
+ Don't display UI in the context of our command prompt.
+ */
+#define SEE_MASK_FLAG_NO_UI     (0x00000400)
+#endif
+
+#ifndef SEE_MASK_UNICODE
+/**
+ We're supplying Unicode parameters.
+ */
+#define SEE_MASK_UNICODE        (0x00004000)
+#endif
+
+#ifndef SEE_MASK_NOZONECHECKS
+/**
+ No, just no.  Yes, it came from the Internet, just like everything else.
+ The user shouldn't see random complaints because that fairly obvious fact
+ was tracked by IE vs. when it wasn't.
+ */
+#define SEE_MASK_NOZONECHECKS   (0x00800000)
+#endif
+
+
 /**
  A prototype for the AddConsoleAliasW function.
  */
@@ -1231,5 +1510,264 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
 } YORI_KERNEL32_FUNCTIONS, *PYORI_KERNEL32_FUNCTIONS;
 
 extern YORI_KERNEL32_FUNCTIONS Kernel32;
+
+/**
+ A prototype for the CoTaskMemFree function.
+ */
+typedef
+VOID WINAPI
+CO_TASK_MEM_FREE(PVOID);
+
+/**
+ A prototype for a pointer to the CoTaskMemFree function.
+ */
+typedef CO_TASK_MEM_FREE *PCO_TASK_MEM_FREE;
+
+/**
+ A structure containing optional function pointers to ole32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_OLE32_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to CoTaskMemFree.
+     */
+    PCO_TASK_MEM_FREE pCoTaskMemFree;
+} YORI_OLE32_FUNCTIONS, *PYORI_OLE32_FUNCTIONS;
+
+extern YORI_OLE32_FUNCTIONS Ole32;
+
+/**
+ A prototype for the SHFileOperationW function.
+ */
+typedef
+int WINAPI
+SH_FILE_OPERATIONW(PYORI_SHFILEOP);
+
+/**
+ A prototype for a pointer to the SHFileOperationW function.
+ */
+typedef SH_FILE_OPERATIONW *PSH_FILE_OPERATIONW;
+
+/**
+ A prototype for the SHGetKnownFolderPath function.
+ */
+typedef
+LONG WINAPI
+SH_GET_KNOWN_FOLDER_PATH(CONST GUID *, DWORD, HANDLE, PWSTR *);
+
+/**
+ A prototype for a pointer to the SHGetKnownFolderPath function.
+ */
+typedef SH_GET_KNOWN_FOLDER_PATH *PSH_GET_KNOWN_FOLDER_PATH;
+
+/**
+ A prototype for the SHGetSpecialFolderPathW function.
+ */
+typedef
+LONG WINAPI
+SH_GET_SPECIAL_FOLDER_PATHW(HWND, LPWSTR, INT, BOOL);
+
+/**
+ A prototype for a pointer to the SHGetSpecialFolderPathW function.
+ */
+typedef SH_GET_SPECIAL_FOLDER_PATHW *PSH_GET_SPECIAL_FOLDER_PATHW;
+
+/**
+ A prototype for the ShellExecuteExW function.
+ */
+typedef
+BOOL WINAPI
+SHELL_EXECUTE_EXW(PYORI_SHELLEXECUTEINFO);
+
+/**
+ A prototype for a pointer to the ShellExecuteExW function.
+ */
+typedef SHELL_EXECUTE_EXW *PSHELL_EXECUTE_EXW;
+
+/**
+ A prototype for the ShellExecuteW function.
+ */
+typedef
+HINSTANCE WINAPI
+SHELL_EXECUTEW(HWND, LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, INT);
+
+/**
+ A prototype for a pointer to the ShellExecuteW function.
+ */
+typedef SHELL_EXECUTEW *PSHELL_EXECUTEW;
+
+/**
+ A structure containing optional function pointers to shell32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_SHELL32_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to SHFileOperationW.
+     */
+    PSH_FILE_OPERATIONW pSHFileOperationW;
+
+    /**
+     If it's available on the current system, a pointer to SHGetKnownFolderPath.
+     */
+    PSH_GET_KNOWN_FOLDER_PATH pSHGetKnownFolderPath;
+
+    /**
+     If it's available on the current system, a pointer to SHGetSpecialFolderPathW.
+     */
+    PSH_GET_SPECIAL_FOLDER_PATHW pSHGetSpecialFolderPathW;
+
+    /**
+     If it's available on the current system, a pointer to ShellExecuteExW.
+     */
+    PSHELL_EXECUTE_EXW pShellExecuteExW;
+
+    /**
+     If it's available on the current system, a pointer to ShellExecuteW.
+     */
+    PSHELL_EXECUTEW pShellExecuteW;
+} YORI_SHELL32_FUNCTIONS, *PYORI_SHELL32_FUNCTIONS;
+
+extern YORI_SHELL32_FUNCTIONS Shell32;
+
+/**
+ A prototype for the CloseClipboard function.
+ */
+typedef
+BOOL WINAPI
+CLOSE_CLIPBOARD();
+
+/**
+ A prototype for a pointer to the CloseClipboard function.
+ */
+typedef CLOSE_CLIPBOARD *PCLOSE_CLIPBOARD;
+
+/**
+ A prototype for the GetClipboardData function.
+ */
+typedef
+HANDLE WINAPI
+GET_CLIPBOARD_DATA(UINT);
+
+/**
+ A prototype for a pointer to the GetClipboardData function.
+ */
+typedef GET_CLIPBOARD_DATA *PGET_CLIPBOARD_DATA;
+
+/**
+ A prototype for the OpenClipboard function.
+ */
+typedef
+BOOL WINAPI
+OPEN_CLIPBOARD();
+
+/**
+ A prototype for a pointer to the OpenClipboard function.
+ */
+typedef OPEN_CLIPBOARD *POPEN_CLIPBOARD;
+
+/**
+ A structure containing optional function pointers to user32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_USER32_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to CloseClipboard.
+     */
+    PCLOSE_CLIPBOARD pCloseClipboard;
+
+    /**
+     If it's available on the current system, a pointer to GetClipboardData.
+     */
+    PGET_CLIPBOARD_DATA pGetClipboardData;
+
+    /**
+     If it's available on the current system, a pointer to OpenClipboard.
+     */
+    POPEN_CLIPBOARD pOpenClipboard;
+} YORI_USER32_FUNCTIONS, *PYORI_USER32_FUNCTIONS;
+
+extern YORI_USER32_FUNCTIONS User32;
+
+/**
+ A prototype for the GetFileVersionInfoSizeW function.
+ */
+typedef
+DWORD WINAPI
+GET_FILE_VERSION_INFO_SIZEW(LPWSTR, LPDWORD);
+
+/**
+ A prototype for a pointer to the GetFileVersionInfoSizeW function.
+ */
+typedef GET_FILE_VERSION_INFO_SIZEW *PGET_FILE_VERSION_INFO_SIZEW;
+
+/**
+ A prototype for the GetFileVersionInfoW function.
+ */
+typedef
+BOOL WINAPI
+GET_FILE_VERSION_INFOW(LPWSTR, DWORD, DWORD, LPVOID);
+
+/**
+ A prototype for a pointer to the GetFileVersionInfoW function.
+ */
+typedef GET_FILE_VERSION_INFOW *PGET_FILE_VERSION_INFOW;
+
+/**
+ A prototype for the VerQueryValueW function.
+ */
+typedef
+BOOL WINAPI
+VER_QUERY_VALUEW(CONST LPVOID, LPWSTR, LPVOID *, PUINT);
+
+/**
+ A prototype for a pointer to the VerQueryValueW function.
+ */
+typedef VER_QUERY_VALUEW *PVER_QUERY_VALUEW;
+
+/**
+ A structure containing optional function pointers to version.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_VERSION_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to GetFileVersionInfoSizeW.
+     */
+    PGET_FILE_VERSION_INFO_SIZEW pGetFileVersionInfoSizeW;
+
+    /**
+     If it's available on the current system, a pointer to GetFileVersionInfoW.
+     */
+    PGET_FILE_VERSION_INFOW pGetFileVersionInfoW;
+
+    /**
+     If it's available on the current system, a pointer to VerQueryValueW.
+     */
+    PVER_QUERY_VALUEW pVerQueryValueW;
+} YORI_VERSION_FUNCTIONS, *PYORI_VERSION_FUNCTIONS;
+
+extern YORI_VERSION_FUNCTIONS Version;
+
+
 
 // vim:sw=4:ts=4:et:

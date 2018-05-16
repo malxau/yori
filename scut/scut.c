@@ -26,7 +26,6 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include <shellapi.h>
 
 #pragma warning(disable: 4226)
 
@@ -707,7 +706,7 @@ ymain(
         (void **)&scut);
 
     if (!SUCCEEDED(hRes)) {
-        YoriLibOutput( YORI_LIB_OUTPUT_STDERR,
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
             _T("CoCreateInstance failure: %x\n"),
             (int)hRes);
         goto Exit;
@@ -715,7 +714,7 @@ ymain(
 
     hRes = scut->Vtbl->QueryInterface(scut, &IID_IPersistFile, (void **)&savedfile);
     if (!SUCCEEDED(hRes)) {
-        YoriLibOutput( YORI_LIB_OUTPUT_STDERR,
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
             _T("QueryInstance IPersistFile failure: %x\n"),
             (int)hRes);
         goto Exit;
@@ -726,7 +725,7 @@ ymain(
         op == ScutOperationDump) {
         hRes = savedfile->Vtbl->Load(savedfile, szFile.StartOfString, TRUE);
         if (!SUCCEEDED(hRes)) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("Load failure: %x\n"), (int)hRes);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Load failure: %x\n"), (int)hRes);
             goto Exit;
         }
     }
@@ -745,49 +744,49 @@ ymain(
 
     if (szTarget) {
         if (scut->Vtbl->SetPath(scut, szTarget) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("SetPath failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetPath failure\n"));
             goto Exit;
         }
     }
 
     if (szArgs) {
         if (scut->Vtbl->SetArguments(scut, szArgs) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("SetArguments failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetArguments failure\n"));
             goto Exit;
         }
     }
 
     if (szDesc) {
         if (scut->Vtbl->SetDescription(scut, szDesc) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("SetDescription failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetDescription failure\n"));
             goto Exit;
         }
     }
 
     if (wHotkey != (WORD)-1) {
         if (scut->Vtbl->SetHotkey(scut, wHotkey) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("SetHotkey failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetHotkey failure\n"));
             goto Exit;
         }
     }
 
     if (szIcon.StartOfString) {
         if (scut->Vtbl->SetIconLocation(scut, szIcon.StartOfString, wIcon) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("SetIconLocation failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetIconLocation failure\n"));
             goto Exit;
         }
     }
 
     if (wShow != (WORD)-1) {
         if (scut->Vtbl->SetShowCmd(scut, wShow) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("SetShowCmd failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetShowCmd failure\n"));
             goto Exit;
         }
     }
 
     if (szWorkingDir.StartOfString) {
         if (scut->Vtbl->SetWorkingDirectory(scut, szWorkingDir.StartOfString) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("SetWorkingDirectory failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("SetWorkingDirectory failure\n"));
             goto Exit;
         }
     }
@@ -796,7 +795,7 @@ ymain(
         op == ScutOperationCreate) {
         hRes = savedfile->Vtbl->Save(savedfile, szFile.StartOfString, TRUE);
         if (!SUCCEEDED(hRes)) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("Save failure: %x\n"), (int)hRes);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Save failure: %x\n"), (int)hRes);
             goto Exit;
         }
     } else if (op == ScutOperationExec) {
@@ -806,30 +805,37 @@ ymain(
         INT nShow;
         HINSTANCE hApp;
         if (scut->Vtbl->GetWorkingDirectory(scut, szDir, MAX_PATH) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetWorkingDirectory failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("GetWorkingDirectory failure\n"));
             goto Exit;
         }
         if (scut->Vtbl->GetArguments(scut, szArgsBuf,MAX_PATH) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetArguments failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("GetArguments failure\n"));
             goto Exit;
         }
         if (scut->Vtbl->GetPath(scut, szFileBuf, MAX_PATH, NULL, 0) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetPath failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("GetPath failure\n"));
             goto Exit;
         }
         if (scut->Vtbl->GetShowCmd(scut, &nShow) != NOERROR) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR, _T("GetShowCmd failure\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("GetShowCmd failure\n"));
             goto Exit;
         }
 
-        hApp = ShellExecute(NULL,
+        YoriLibLoadShell32Functions();
+
+        if (Shell32.pShellExecuteW == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecuteW export not found\n"));
+            goto Exit;
+        }
+
+        hApp = Shell32.pShellExecuteW(NULL,
             NULL,
             szFileBuf,
             szArgsBuf,
             szDir,
             nShow);
         if ((ULONG_PTR)hApp <= 32) {
-            YoriLibOutput( YORI_LIB_OUTPUT_STDERR,
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
                 _T("ShellExecute failure: %i\n"),
                 (int)(ULONG_PTR)hApp);
             goto Exit;

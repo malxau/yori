@@ -43,35 +43,6 @@ DWORD CachedMinorOsVersion;
  */
 DWORD CachedBuildNumber;
 
-/**
- Prototype for the GetFileVersionInfoSize function.
- */
-typedef DWORD WINAPI GET_FILE_VERSION_INFO_SIZEW_FN(LPWSTR, LPDWORD);
-
-/**
- Pointer to the GetFileVersionInfoSize function.
- */
-typedef GET_FILE_VERSION_INFO_SIZEW_FN *PGET_FILE_VERSION_INFO_SIZEW_FN;
-
-/**
- Prototype for the GetFileVersionInfo function.
- */
-typedef BOOL WINAPI GET_FILE_VERSION_INFOW_FN(LPWSTR, DWORD, DWORD, LPVOID);
-
-/**
- Pointer to the GetFileVersionInfo function.
- */
-typedef GET_FILE_VERSION_INFOW_FN *PGET_FILE_VERSION_INFOW_FN;
-
-/**
- Prototype for the VerQueryValue function.
- */
-typedef BOOL WINAPI VER_QUERY_VALUEW_FN(CONST LPVOID, LPWSTR, LPVOID *, PUINT);
-
-/**
- Pointer to the VerQueryValue function.
- */
-typedef VER_QUERY_VALUEW_FN *PVER_QUERY_VALUEW_FN;
 
 /**
  Return Windows version numbers.
@@ -121,21 +92,13 @@ YoriLibGetOsVersion(
         DWORD Kernel32FileNameLength;
         DWORD VerSize;
         DWORD Junk;
-        PGET_FILE_VERSION_INFO_SIZEW_FN GetFileVersionInfoSizeFn;
-        PGET_FILE_VERSION_INFOW_FN GetFileVersionInfoFn;
-        PVER_QUERY_VALUEW_FN VerQueryValueFn;
-        HINSTANCE hVerDll;
 
-        hVerDll = LoadLibrary(_T("VERSION.DLL"));
-        GetFileVersionInfoSizeFn = (PGET_FILE_VERSION_INFO_SIZEW_FN)GetProcAddress(hVerDll, "GetFileVersionInfoSizeW");
-        GetFileVersionInfoFn = (PGET_FILE_VERSION_INFOW_FN)GetProcAddress(hVerDll, "GetFileVersionInfoW");
-        VerQueryValueFn = (PVER_QUERY_VALUEW_FN)GetProcAddress(hVerDll, "VerQueryValueW");
+	YoriLibLoadVersionFunctions();
 
-        if (GetFileVersionInfoSizeFn == NULL ||
-            GetFileVersionInfoFn == NULL ||
-            VerQueryValueFn == NULL) {
+        if (Version.pGetFileVersionInfoSizeW == NULL ||
+            Version.pGetFileVersionInfoW == NULL ||
+            Version.pVerQueryValueW == NULL) {
 
-            FreeLibrary(hVerDll);
             return;
         }
 
@@ -143,29 +106,25 @@ YoriLibGetOsVersion(
         Kernel32FileNameLength = SystemFileNameLength + sizeof("\\KERNEL32.DLL");
         Kernel32FileName = YoriLibMalloc(Kernel32FileNameLength * sizeof(TCHAR));
         if (Kernel32FileName == NULL) {
-            FreeLibrary(hVerDll);
             return;
         }
 
         GetSystemDirectory(Kernel32FileName, SystemFileNameLength);
         _tcscpy(&Kernel32FileName[SystemFileNameLength - 1], _T("\\KERNEL32.DLL"));
 
-        VerSize = GetFileVersionInfoSizeFn(Kernel32FileName, &Junk);
+        VerSize = Version.pGetFileVersionInfoSizeW(Kernel32FileName, &Junk);
         if (VerSize == 0) {
-            FreeLibrary(hVerDll);
             YoriLibFree(Kernel32FileName);
             return;
         }
 
         VerBuffer = YoriLibMalloc(VerSize);
         if (VerBuffer == NULL) {
-            FreeLibrary(hVerDll);
             YoriLibFree(Kernel32FileName);
             return;
         }
 
-        if (!GetFileVersionInfoFn(Kernel32FileName, 0, VerSize, VerBuffer)) {
-            FreeLibrary(hVerDll);
+        if (!Version.pGetFileVersionInfoW(Kernel32FileName, 0, VerSize, VerBuffer)) {
             YoriLibFree(VerBuffer);
             YoriLibFree(Kernel32FileName);
             return;
@@ -173,9 +132,8 @@ YoriLibGetOsVersion(
 
         YoriLibFree(Kernel32FileName);
 
-        if (!VerQueryValueFn(VerBuffer, _T("\\"), &FixedVerInfo, (PUINT)&Junk)) {
+        if (!Version.pVerQueryValueW(VerBuffer, _T("\\"), &FixedVerInfo, (PUINT)&Junk)) {
             YoriLibFree(VerBuffer);
-            FreeLibrary(hVerDll);
             return;
         }
 
@@ -188,7 +146,6 @@ YoriLibGetOsVersion(
         *BuildNumber = CachedBuildNumber;
 
         YoriLibFree(VerBuffer);
-        FreeLibrary(hVerDll);
     } else {
         CachedMajorOsVersion = LOBYTE(LOWORD(RawVersion));
         CachedMinorOsVersion = HIBYTE(LOWORD(RawVersion));

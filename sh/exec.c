@@ -467,133 +467,6 @@ YoriShWaitForProcessToTerminate(
 }
 
 /**
- The definition of SHELLEXECUTEINFO so we can use it without a
- compile time dependency on NT4+, or bringing in all of the shell headers.
- */
-typedef struct _YORI_SHELLEXECUTEINFO {
-    /**
-     The number of bytes in this structure.
-     */
-    DWORD cbSize;
-
-    /**
-     The features we're using.
-     */
-    DWORD fMask;
-
-    /**
-     Our window handle, if we had one.
-     */
-    HWND hWnd;
-
-    /**
-     A shell verb, if we knew what to use it for.
-     */
-    LPCTSTR lpVerb;
-
-    /**
-     The program we're trying to launch.
-     */
-    LPCTSTR lpFile;
-
-    /**
-     The arguments supplied to the program.
-     */
-    LPCTSTR lpParameters;
-
-    /**
-     The initial directory for the program, if we didn't want to use the
-     current directory that the user gave us.
-     */
-    LPCTSTR lpDirectory;
-
-    /**
-     The form to display the process child window in, if it is a GUI process.
-     */
-    int nShow;
-
-    /**
-     Mislabelled error code, carried forward from 16 bit land for no apparent
-     reason since this function doesn't exist there.
-     */
-    HINSTANCE hInstApp;
-
-    /**
-     Some shell crap.
-     */
-    LPVOID lpIDList;
-
-    /**
-     More shell crap.
-     */
-    LPCTSTR lpClass;
-
-    /**
-     Is there an end to the shell crap?
-     */
-    HKEY hKeyClass;
-
-    /**
-     A hotkey? We just launched the thing. I'd understand associating a hotkey
-     with something that might get launched, but associating it after we
-     launched it? What on earth could possibly come from this?
-     */
-    DWORD dwHotKey;
-
-    /**
-     Not something of interest to command prompts.
-     */
-    HANDLE hIcon;
-
-    /**
-     Something we really care about! If process launch succeeds, this gets
-     populated with a process handle, which we can wait on, and that's kind
-     of desirable.
-     */
-    HANDLE hProcess;
-} YORI_SHELLEXECUTEINFO, *PYORI_SHELLEXECUTEINFO;
-
-#ifndef SEE_MASK_NOCLOSEPROCESS
-/**
- Return the process handle where possible.
- */
-#define SEE_MASK_NOCLOSEPROCESS (0x00000040)
-#endif
-
-#ifndef SEE_MASK_FLAG_NO_UI
-/**
- Don't display UI in the context of our command prompt.
- */
-#define SEE_MASK_FLAG_NO_UI     (0x00000400)
-#endif
-
-#ifndef SEE_MASK_UNICODE
-/**
- We're supplying Unicode parameters.
- */
-#define SEE_MASK_UNICODE        (0x00004000)
-#endif
-
-#ifndef SEE_MASK_NOZONECHECKS
-/**
- No, just no.  Yes, it came from the Internet, just like everything else.
- The user shouldn't see random complaints because that fairly obvious fact
- was tracked by IE vs. when it wasn't.
- */
-#define SEE_MASK_NOZONECHECKS   (0x00800000)
-#endif
-
-/**
- Prototype for the ShellExecuteEx function.
- */
-typedef BOOL WINAPI SHELL_EXECUTE_EXW(PYORI_SHELLEXECUTEINFO);
-
-/**
- Pointer to the ShellExecuteEx function.
- */
-typedef SHELL_EXECUTE_EXW *PSHELL_EXECUTE_EXW;
-
-/**
  Try to launch a single program via ShellExecuteEx rather than CreateProcess.
  This is used when CreateProcess said elevation is needed, and that requires
  UI, so we need to call a function that can support UI...except since Win7
@@ -621,13 +494,8 @@ YoriShExecViaShellExecute(
     YORI_CMD_CONTEXT ArgContext;
     YORI_SHELLEXECUTEINFO sei;
     YORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
-    PSHELL_EXECUTE_EXW ShellExecuteExFn;
-    HMODULE hShell32;
 
-    hShell32 = LoadLibrary(_T("SHELL32.DLL"));
-    if (hShell32 == NULL) {
-        return FALSE;
-    }
+    YoriLibLoadShell32Functions();
 
     //
     //  This really shouldn't fail.  We're only here because a process
@@ -635,10 +503,8 @@ YoriShExecViaShellExecute(
     //  better be there too.
     //
 
-    ShellExecuteExFn = (PSHELL_EXECUTE_EXW)GetProcAddress(hShell32, "ShellExecuteExW");
-    ASSERT(ShellExecuteExFn != NULL);
-    if (ShellExecuteExFn == NULL) {
-        FreeLibrary(hShell32);
+    ASSERT(Shell32.pShellExecuteExW != NULL);
+    if (Shell32.pShellExecuteExW == NULL) {
         return FALSE;
     }
 
@@ -660,7 +526,7 @@ YoriShExecViaShellExecute(
     ZeroMemory(ProcessInfo, sizeof(PROCESS_INFORMATION));
 
     YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
-    if (!ShellExecuteExFn(&sei)) {
+    if (!Shell32.pShellExecuteExW(&sei)) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriShRevertRedirection(&PreviousRedirectContext);
@@ -669,14 +535,12 @@ YoriShExecViaShellExecute(
         }
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecuteEx failed (%i): %s"), LastError, ErrText);
         YoriLibFreeWinErrorText(ErrText);
-        FreeLibrary(hShell32);
         return FALSE;
     }
     YoriShRevertRedirection(&PreviousRedirectContext);
     if (Args != NULL) {
         YoriLibDereference(Args);
     }
-    FreeLibrary(hShell32);
 
     ProcessInfo->hProcess = sei.hProcess;
     return TRUE;

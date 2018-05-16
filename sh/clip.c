@@ -27,36 +27,6 @@
 #include "yori.h"
 
 /**
- Prototype of a function to get data currently on the clipboard.
- */
-typedef HANDLE WINAPI GET_CLIPBOARD_DATA(UINT);
-
-/**
- Prototype of a pointer to a function to get data currently on the clipboard.
- */
-typedef GET_CLIPBOARD_DATA *PGET_CLIPBOARD_DATA;
-
-/**
- Prototype of a function to open the clipboard.
- */
-typedef BOOL WINAPI OPEN_CLIPBOARD();
-
-/**
- Prototype of a pointer to a function to open the clipboard.
- */
-typedef OPEN_CLIPBOARD *POPEN_CLIPBOARD;
-
-/**
- Prototype of a function to close the clipboard.
- */
-typedef BOOL WINAPI CLOSE_CLIPBOARD();
-
-/**
- Prototype of a pointer to a function to close the clipboard.
- */
-typedef CLOSE_CLIPBOARD *PCLOSE_CLIPBOARD;
-
-/**
  Retrieve any text from the clipboard and output it into a Yori string.
 
  @param Buffer The string to populate with the contents of the clipboard.
@@ -73,25 +43,12 @@ YoriShPasteText(
     HANDLE hMem;
     LPWSTR pMem;
     DWORD StringLength;
-    HANDLE hUser;
-    POPEN_CLIPBOARD pOpenClipboard;
-    PGET_CLIPBOARD_DATA pGetClipboardData;
-    PCLOSE_CLIPBOARD pCloseClipboard;
 
-    hUser = LoadLibrary(_T("USER32.DLL"));
-    if (hUser == NULL) {
-        return FALSE;
-    }
+    YoriLibLoadUser32Functions();
 
-    pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(hUser, "OpenClipboard");
-    pGetClipboardData = (PGET_CLIPBOARD_DATA)GetProcAddress(hUser, "GetClipboardData");
-    pCloseClipboard = (PCLOSE_CLIPBOARD)GetProcAddress(hUser, "CloseClipboard");
-
-    if (pOpenClipboard == NULL ||
-        pGetClipboardData == NULL ||
-        pCloseClipboard == NULL) {
-
-        FreeLibrary(hUser);
+    if (User32.pOpenClipboard == NULL ||
+        User32.pGetClipboardData == NULL ||
+        User32.pCloseClipboard == NULL) {
         return FALSE;
     }
 
@@ -99,15 +56,13 @@ YoriShPasteText(
     //  Open the clipboard and fetch its contents.
     //
 
-    if (!pOpenClipboard(NULL)) {
-        FreeLibrary(hUser);
+    if (!User32.pOpenClipboard(NULL)) {
         return FALSE;
     }
 
-    hMem = pGetClipboardData(CF_UNICODETEXT);
+    hMem = User32.pGetClipboardData(CF_UNICODETEXT);
     if (hMem == NULL) {
-        pCloseClipboard();
-        FreeLibrary(hUser);
+        User32.pCloseClipboard();
         return FALSE;
     }
 
@@ -137,8 +92,7 @@ YoriShPasteText(
         }
     }
 
-    pCloseClipboard();
-    FreeLibrary(hUser);
+    User32.pCloseClipboard();
     return TRUE;
 }
 

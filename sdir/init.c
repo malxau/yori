@@ -194,52 +194,6 @@ SdirAppInitialize()
 }
 
 /**
- Load version functions.  These are in a DLL that is not usually used, so
- they're demand loaded if the user wants to display that information so we can
- avoid loading the DLL in regular cases.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirLoadVerFunctions()
-{
-    HANDLE hVerDll;
-
-    hVerDll = LoadLibrary(_T("VERSION.DLL"));
-    if (hVerDll == NULL) {
-        return FALSE;
-    }
-
-#ifdef UNICODE
-    Opts->GetFileVersionInfoSize = (GET_FILE_VERSION_INFO_SIZE_FN)GetProcAddress(hVerDll, "GetFileVersionInfoSizeW");
-    Opts->GetFileVersionInfo = (GET_FILE_VERSION_INFO_FN)GetProcAddress(hVerDll, "GetFileVersionInfoW");
-    Opts->VerQueryValue = (VER_QUERY_VALUE_FN)GetProcAddress(hVerDll, "VerQueryValueW");
-#else
-    Opts->GetFileVersionInfoSize = (GET_FILE_VERSION_INFO_SIZE_FN)GetProcAddress(hVerDll, "GetFileVersionInfoSizeA");
-    Opts->GetFileVersionInfo = (GET_FILE_VERSION_INFO_FN)GetProcAddress(hVerDll, "GetFileVersionInfoA");
-    Opts->VerQueryValue = (VER_QUERY_VALUE_FN)GetProcAddress(hVerDll, "VerQueryValueA");
-#endif
-
-    //
-    //  If we failed to load all functions, close up and say we couldn't
-    //  load any.
-    //
-
-    if (Opts->GetFileVersionInfoSize == NULL ||
-        Opts->GetFileVersionInfo == NULL ||
-        Opts->VerQueryValue == NULL) {
-
-        FreeLibrary(hVerDll);
-        Opts->GetFileVersionInfoSize = NULL;
-        Opts->GetFileVersionInfo = NULL;
-        Opts->VerQueryValue = NULL;
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-/**
  After command line options have been processed, initialize in memory state
  to ensure we can fulfil the user's requests.
 

@@ -27,96 +27,6 @@
 #include <yoripch.h>
 #include <yorilib.h>
 
-/**
- Command to the shell to delete an object.
- */
-#define YORILIB_SHFILEOP_DELETE              0x003
-
-/**
- Flag to the shell to avoid UI.
- */
-#define YORILIB_SHFILEOP_FLAG_SILENT         0x004
-
-/**
- Flag to the shell to suppress confirmation.
- */
-#define YORILIB_SHFILEOP_FLAG_NOCONFIRMATION 0x010
-
-/**
- Flag to the shell to place objects in the recycle bin.
- */
-#define YORILIB_SHFILEOP_FLAG_ALLOWUNDO      0x040
-
-/**
- Flag to the shell to suppress errors.
- */
-#define YORILIB_SHFILEOP_FLAG_NOERRORUI      0x400
-
-/**
- Shell defined structure describing a file operation.
- */
-typedef struct _YORILIB_SHFILEOP {
-
-    /**
-     hWnd to use for UI, which we don't have an don't want.
-     */
-    HWND hWndIgnored;
-
-    /**
-     The function requested from the shell.
-     */
-    UINT Function;
-
-    /**
-     A NULL terminated list of NULL terminated strings of files to operate
-     on.
-     */
-    LPCTSTR Source;
-
-    /**
-     Another NULL terminated list of NULL terminated strings, which is not
-     used in this program.
-     */
-    LPCTSTR Dest;
-
-    /**
-     Flags for the operation.
-     */
-    DWORD Flags;
-
-    /**
-     Set to TRUE if the operation was cancelled.
-     */
-    BOOL Aborted;
-
-    /**
-     Shell voodoo.  No seriously, who comes up with this stuff?
-     */
-    PVOID NameMappings;
-
-    /**
-     A title that would be used by some types of UI, but not other types of
-     UI, which we don't have and don't want.
-     */
-    LPCTSTR ProgressTitle;
-} YORILIB_SHFILEOP, *PYORILIB_SHFILEOP;
-
-/**
- Function definition for ShFileOperationW.
- */
-typedef int (WINAPI * SH_FILE_OPERATION_FN)(PYORILIB_SHFILEOP);
-
-/**
- TRUE once this module has attempted to locate ShFileOperationW.  FALSE if it
- has not yet been searched for.
- */
-BOOLEAN YoriLibProbedForShFileOperation = FALSE;
-
-/**
- Pointer to ShFileOperationW.
- */
-SH_FILE_OPERATION_FN YoriLibShFileOperationW = NULL;
-
 
 /**
  Attempt to send an object to the recycle bin.
@@ -130,30 +40,18 @@ YoriLibRecycleBinFile(
     __in PYORI_STRING FilePath
     )
 {
-    YORILIB_SHFILEOP FileOp;
+    YORI_SHFILEOP FileOp;
     YORI_STRING FilePathWithDoubleNull;
     INT Result;
 
-    //
-    //  If we haven't tried to load Shell yet, do it now.
-    //
-
-    if (!YoriLibProbedForShFileOperation) {
-        HMODULE hShell;
-
-        YoriLibProbedForShFileOperation = TRUE;
-        hShell = LoadLibrary(_T("SHELL32.DLL"));
-        if (hShell != NULL) {
-            YoriLibShFileOperationW = (SH_FILE_OPERATION_FN)GetProcAddress(hShell, "SHFileOperationW");
-        }
-    }
+    YoriLibLoadShell32Functions();
 
     //
     //  If loading shell failed or we couldn't find the function, recycling
     //  won't happen.
     //
 
-    if (YoriLibShFileOperationW == NULL) {
+    if (Shell32.pSHFileOperationW == NULL) {
         return FALSE;
     }
 
@@ -182,11 +80,11 @@ YoriLibRecycleBinFile(
     //
 
     ZeroMemory(&FileOp, sizeof(FileOp));
-    FileOp.Function = YORILIB_SHFILEOP_DELETE;
+    FileOp.Function = YORI_SHFILEOP_DELETE;
     FileOp.Source = FilePathWithDoubleNull.StartOfString;
-    FileOp.Flags = YORILIB_SHFILEOP_FLAG_SILENT|YORILIB_SHFILEOP_FLAG_NOCONFIRMATION|YORILIB_SHFILEOP_FLAG_ALLOWUNDO|YORILIB_SHFILEOP_FLAG_NOERRORUI;
+    FileOp.Flags = YORI_SHFILEOP_FLAG_SILENT|YORI_SHFILEOP_FLAG_NOCONFIRMATION|YORI_SHFILEOP_FLAG_ALLOWUNDO|YORI_SHFILEOP_FLAG_NOERRORUI;
 
-    Result = YoriLibShFileOperationW(&FileOp);
+    Result = Shell32.pSHFileOperationW(&FileOp);
     YoriLibFreeStringContents(&FilePathWithDoubleNull);
 
     if (Result == 0) {

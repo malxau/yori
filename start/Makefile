@@ -21,5 +21,5 @@ compile: $(OBJS)
 
 ystart.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) shell32.lib $(CRTLIB) ..\lib\yorilib.lib -version:$(START_VER_MAJOR).$(START_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(START_VER_MAJOR).$(START_VER_MINOR) $(LINKPDB) -out:$@
 

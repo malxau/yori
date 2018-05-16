@@ -656,21 +656,6 @@ typedef struct _SDIR_OPTS {
      */
     SDIR_COMPARE    Sort[8];
 
-    /**
-     Pointer to the GetFileVersionInfo function from version.dll.
-     */
-    GET_FILE_VERSION_INFO_FN             GetFileVersionInfo;
-
-    /**
-     Pointer to the GetFileVersionInfoSize function from version.dll.
-     */
-    GET_FILE_VERSION_INFO_SIZE_FN        GetFileVersionInfoSize;
-
-    /**
-     Pointer to the VerQueryValue function from version.dll.
-     */
-    VER_QUERY_VALUE_FN                   VerQueryValue;
-
 } SDIR_OPTS, *PSDIR_OPTS;
 #pragma pack(pop)
 
@@ -962,9 +947,6 @@ SdirInit(
     __in int argc,
     __in_ecount(argc) LPTSTR argv[]
     );
-
-BOOL
-SdirLoadVerFunctions();
 
 //
 //  Functions from sdir.c

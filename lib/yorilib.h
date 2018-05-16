@@ -566,6 +566,18 @@ YoriLibDbgRealAssert(
 BOOL
 YoriLibLoadKernel32Functions();
 
+BOOL
+YoriLibLoadOle32Functions();
+
+BOOL
+YoriLibLoadShell32Functions();
+
+BOOL
+YoriLibLoadUser32Functions();
+
+BOOL
+YoriLibLoadVersionFunctions();
+
 // *** FILEENUM.C ***
 
 /**

@@ -1,7 +1,7 @@
 /**
  * @file start/start.c
  *
- * Yori shell child process priority tool
+ * Yori shell start process via shell tool
  *
  * Copyright (c) 2017 Malcolm J. Smith
  *
@@ -26,7 +26,6 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include <shellapi.h>
 
 /**
  Help text to display to the user.
@@ -86,8 +85,13 @@ StartShellExecute(
         ASSERT(YoriLibIsStringNullTerminated(&Args));
     }
 
+    YoriLibLoadShell32Functions();
+    if (Shell32.pShellExecuteW == NULL) {
+        return FALSE;
+    }
+
     ASSERT(YoriLibIsStringNullTerminated(&ArgV[0]));
-    hInst = ShellExecute(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, SW_SHOWNORMAL);
+    hInst = Shell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, SW_SHOWNORMAL);
 
     if ((DWORD_PTR)hInst >= 32) {
         return TRUE;
