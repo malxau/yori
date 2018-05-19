@@ -823,12 +823,12 @@ ymain(
 
         YoriLibLoadShell32Functions();
 
-        if (Shell32.pShellExecuteW == NULL) {
+        if (DllShell32.pShellExecuteW == NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecuteW export not found\n"));
             goto Exit;
         }
 
-        hApp = Shell32.pShellExecuteW(NULL,
+        hApp = DllShell32.pShellExecuteW(NULL,
             NULL,
             szFileBuf,
             szArgsBuf,

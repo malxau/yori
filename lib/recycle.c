@@ -51,7 +51,7 @@ YoriLibRecycleBinFile(
     //  won't happen.
     //
 
-    if (Shell32.pSHFileOperationW == NULL) {
+    if (DllShell32.pSHFileOperationW == NULL) {
         return FALSE;
     }
 
@@ -84,7 +84,7 @@ YoriLibRecycleBinFile(
     FileOp.Source = FilePathWithDoubleNull.StartOfString;
     FileOp.Flags = YORI_SHFILEOP_FLAG_SILENT|YORI_SHFILEOP_FLAG_NOCONFIRMATION|YORI_SHFILEOP_FLAG_ALLOWUNDO|YORI_SHFILEOP_FLAG_NOERRORUI;
 
-    Result = Shell32.pSHFileOperationW(&FileOp);
+    Result = DllShell32.pSHFileOperationW(&FileOp);
     YoriLibFreeStringContents(&FilePathWithDoubleNull);
 
     if (Result == 0) {

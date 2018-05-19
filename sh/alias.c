@@ -109,8 +109,8 @@ YoriShDeleteAlias(
 
     ExistingAlias = HashEntry->Context;
 
-    if (!ExistingAlias->Internal && Kernel32.pAddConsoleAliasW) {
-        Kernel32.pAddConsoleAliasW(ExistingAlias->Alias.StartOfString, NULL, ALIAS_APP_NAME);
+    if (!ExistingAlias->Internal && DllKernel32.pAddConsoleAliasW) {
+        DllKernel32.pAddConsoleAliasW(ExistingAlias->Alias.StartOfString, NULL, ALIAS_APP_NAME);
     }
     YoriLibRemoveListItem(&ExistingAlias->ListEntry);
     YoriLibFreeStringContents(&ExistingAlias->Alias);
@@ -179,8 +179,8 @@ YoriShAddAlias(
     NewAlias->Alias.StartOfString[AliasNameLengthInChars] = '\0';
     NewAlias->Value.StartOfString[ValueNameLengthInChars] = '\0';
 
-    if (!Internal && Kernel32.pAddConsoleAliasW) {
-        Kernel32.pAddConsoleAliasW(NewAlias->Alias.StartOfString, NewAlias->Value.StartOfString, ALIAS_APP_NAME);
+    if (!Internal && DllKernel32.pAddConsoleAliasW) {
+        DllKernel32.pAddConsoleAliasW(NewAlias->Alias.StartOfString, NewAlias->Value.StartOfString, ALIAS_APP_NAME);
     }
 
     YoriLibAppendList(&YoriShAliasesList, &NewAlias->ListEntry);
@@ -547,9 +547,9 @@ YoriShLoadSystemAliases(
     DWORD VarLen;
     DWORD BytesConsumed;
 
-    if (Kernel32.pAddConsoleAliasW == NULL ||
-        Kernel32.pGetConsoleAliasesW == NULL ||
-        Kernel32.pGetConsoleAliasesLengthW == NULL) {
+    if (DllKernel32.pAddConsoleAliasW == NULL ||
+        DllKernel32.pGetConsoleAliasesW == NULL ||
+        DllKernel32.pGetConsoleAliasesLengthW == NULL) {
 
         return FALSE;
     }
@@ -560,7 +560,7 @@ YoriShLoadSystemAliases(
         AppName = ALIAS_APP_NAME;
     }
 
-    LengthRequired = Kernel32.pGetConsoleAliasesLengthW(AppName);
+    LengthRequired = DllKernel32.pGetConsoleAliasesLengthW(AppName);
     if (LengthRequired == 0) {
         return TRUE;
     }
@@ -570,7 +570,7 @@ YoriShLoadSystemAliases(
         return FALSE;
     }
 
-    LengthReturned = Kernel32.pGetConsoleAliasesW(AliasBuffer, LengthRequired, AppName);
+    LengthReturned = DllKernel32.pGetConsoleAliasesW(AliasBuffer, LengthRequired, AppName);
     if (LengthReturned == 0 || LengthReturned > LengthRequired) {
         YoriLibFree(AliasBuffer);
         return FALSE;

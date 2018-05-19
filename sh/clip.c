@@ -46,9 +46,9 @@ YoriShPasteText(
 
     YoriLibLoadUser32Functions();
 
-    if (User32.pOpenClipboard == NULL ||
-        User32.pGetClipboardData == NULL ||
-        User32.pCloseClipboard == NULL) {
+    if (DllUser32.pOpenClipboard == NULL ||
+        DllUser32.pGetClipboardData == NULL ||
+        DllUser32.pCloseClipboard == NULL) {
         return FALSE;
     }
 
@@ -56,13 +56,13 @@ YoriShPasteText(
     //  Open the clipboard and fetch its contents.
     //
 
-    if (!User32.pOpenClipboard(NULL)) {
+    if (!DllUser32.pOpenClipboard(NULL)) {
         return FALSE;
     }
 
-    hMem = User32.pGetClipboardData(CF_UNICODETEXT);
+    hMem = DllUser32.pGetClipboardData(CF_UNICODETEXT);
     if (hMem == NULL) {
-        User32.pCloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
@@ -92,7 +92,7 @@ YoriShPasteText(
         }
     }
 
-    User32.pCloseClipboard();
+    DllUser32.pCloseClipboard();
     return TRUE;
 }
 

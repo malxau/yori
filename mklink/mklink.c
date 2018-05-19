@@ -83,12 +83,12 @@ MklinkCreateHardLink(
     DWORD LastError;
     LPTSTR ErrText;
 
-    if (Kernel32.pCreateHardLinkW == NULL) {
+    if (DllKernel32.pCreateHardLinkW == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: create hard link failed: CreateHardLinkW export not found\n"));
         return FALSE;
     }
 
-    if (!Kernel32.pCreateHardLinkW(NewLink, ExistingFile, NULL)) {
+    if (!DllKernel32.pCreateHardLinkW(NewLink, ExistingFile, NULL)) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: create hard link failed: %s"), ErrText);
@@ -122,12 +122,12 @@ MklinkCreateSymbolicLink(
     DWORD LastError;
     LPTSTR ErrText;
 
-    if (Kernel32.pCreateSymbolicLinkW == NULL) {
+    if (DllKernel32.pCreateSymbolicLinkW == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: create symbolic link failed: CreateSymbolicLinkW export not found"));
         return FALSE;
     }
 
-    if (!Kernel32.pCreateSymbolicLinkW(NewLink, ExistingFile, Flags)) {
+    if (!DllKernel32.pCreateSymbolicLinkW(NewLink, ExistingFile, Flags)) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: create symbolic link failed: %s"), ErrText);

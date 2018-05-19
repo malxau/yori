@@ -86,12 +86,12 @@ StartShellExecute(
     }
 
     YoriLibLoadShell32Functions();
-    if (Shell32.pShellExecuteW == NULL) {
+    if (DllShell32.pShellExecuteW == NULL) {
         return FALSE;
     }
 
     ASSERT(YoriLibIsStringNullTerminated(&ArgV[0]));
-    hInst = Shell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, SW_SHOWNORMAL);
+    hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, SW_SHOWNORMAL);
 
     if ((DWORD_PTR)hInst >= 32) {
         return TRUE;

@@ -64,7 +64,7 @@ BOOL
 CvtvtCaptureConsoleFont()
 {
     HANDLE hConsole;
-    if (Kernel32.pGetCurrentConsoleFontEx == NULL) {
+    if (DllKernel32.pGetCurrentConsoleFontEx == NULL) {
         return FALSE;
     }
 
@@ -82,7 +82,7 @@ CvtvtCaptureConsoleFont()
 
     CvtvtFontInfo.cbSize = sizeof(CvtvtFontInfo);
 
-    if (!Kernel32.pGetCurrentConsoleFontEx(hConsole, FALSE, &CvtvtFontInfo)) {
+    if (!DllKernel32.pGetCurrentConsoleFontEx(hConsole, FALSE, &CvtvtFontInfo)) {
         CloseHandle(hConsole);
         return FALSE;
     }

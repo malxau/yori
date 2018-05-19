@@ -31,7 +31,7 @@
  A structure containing pointers to kernel32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
-YORI_KERNEL32_FUNCTIONS Kernel32;
+YORI_KERNEL32_FUNCTIONS DllKernel32;
 
 /**
  Load pointers to all optional kernel32.dll functions.  Because kernel32.dll is
@@ -48,28 +48,28 @@ YoriLibLoadKernel32Functions()
     if (hKernel == NULL) {
         return FALSE;
     }
-    Kernel32.pAddConsoleAliasW = (PADD_CONSOLE_ALIASW)GetProcAddress(hKernel, "AddConsoleAliasW");
-    Kernel32.pAssignProcessToJobObject = (PASSIGN_PROCESS_TO_JOB_OBJECT)GetProcAddress(hKernel, "AssignProcessToJobObject");
-    Kernel32.pCreateHardLinkW = (PCREATE_HARD_LINKW)GetProcAddress(hKernel, "CreateHardLinkW");
-    Kernel32.pCreateJobObjectW = (PCREATE_JOB_OBJECTW)GetProcAddress(hKernel, "CreateJobObjectW");
-    Kernel32.pCreateSymbolicLinkW = (PCREATE_SYMBOLIC_LINKW)GetProcAddress(hKernel, "CreateSymbolicLinkW");
-    Kernel32.pFindFirstStreamW = (PFIND_FIRST_STREAMW)GetProcAddress(hKernel, "FindFirstStreamW");
-    Kernel32.pFindNextStreamW = (PFIND_NEXT_STREAMW)GetProcAddress(hKernel, "FindNextStreamW");
-    Kernel32.pFreeEnvironmentStringsW = (PFREE_ENVIRONMENT_STRINGSW)GetProcAddress(hKernel, "FreeEnvironmentStringsW");
-    Kernel32.pGetCompressedFileSizeW = (PGET_COMPRESSED_FILE_SIZEW)GetProcAddress(hKernel, "GetCompressedFileSizeW");
-    Kernel32.pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(hKernel, "GetConsoleAliasesLengthW");
-    Kernel32.pGetConsoleAliasesW = (PGET_CONSOLE_ALIASESW)GetProcAddress(hKernel, "GetConsoleAliasesW");
-    Kernel32.pGetConsoleScreenBufferInfoEx = (PGET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "GetConsoleScreenBufferInfoEx");
-    Kernel32.pGetCurrentConsoleFontEx = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "GetCurrentConsoleFontEx");
-    Kernel32.pGetDiskFreeSpaceExW = (PGET_DISK_FREE_SPACE_EXW)GetProcAddress(hKernel, "GetDiskFreeSpaceExW");
-    Kernel32.pGetEnvironmentStrings = (PGET_ENVIRONMENT_STRINGS)GetProcAddress(hKernel, "GetEnvironmentStrings");
-    Kernel32.pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(hKernel, "GetEnvironmentStringsW");
-    Kernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(hKernel, "GetFileInformationByHandleEx");
-    Kernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(hKernel, "RegisterApplicationRestart");
-    Kernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "SetConsoleScreenBufferInfoEx");
-    Kernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "SetCurrentConsoleFontEx");
-    Kernel32.pSetInformationJobObject = (PSET_INFORMATION_JOB_OBJECT)GetProcAddress(hKernel, "SetInformationJobObject");
-    Kernel32.pWow64DisableWow64FsRedirection = (PWOW64_DISABLE_WOW64_FS_REDIRECTION)GetProcAddress(hKernel, "Wow64DisableWow64FsRedirection");
+    DllKernel32.pAddConsoleAliasW = (PADD_CONSOLE_ALIASW)GetProcAddress(hKernel, "AddConsoleAliasW");
+    DllKernel32.pAssignProcessToJobObject = (PASSIGN_PROCESS_TO_JOB_OBJECT)GetProcAddress(hKernel, "AssignProcessToJobObject");
+    DllKernel32.pCreateHardLinkW = (PCREATE_HARD_LINKW)GetProcAddress(hKernel, "CreateHardLinkW");
+    DllKernel32.pCreateJobObjectW = (PCREATE_JOB_OBJECTW)GetProcAddress(hKernel, "CreateJobObjectW");
+    DllKernel32.pCreateSymbolicLinkW = (PCREATE_SYMBOLIC_LINKW)GetProcAddress(hKernel, "CreateSymbolicLinkW");
+    DllKernel32.pFindFirstStreamW = (PFIND_FIRST_STREAMW)GetProcAddress(hKernel, "FindFirstStreamW");
+    DllKernel32.pFindNextStreamW = (PFIND_NEXT_STREAMW)GetProcAddress(hKernel, "FindNextStreamW");
+    DllKernel32.pFreeEnvironmentStringsW = (PFREE_ENVIRONMENT_STRINGSW)GetProcAddress(hKernel, "FreeEnvironmentStringsW");
+    DllKernel32.pGetCompressedFileSizeW = (PGET_COMPRESSED_FILE_SIZEW)GetProcAddress(hKernel, "GetCompressedFileSizeW");
+    DllKernel32.pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(hKernel, "GetConsoleAliasesLengthW");
+    DllKernel32.pGetConsoleAliasesW = (PGET_CONSOLE_ALIASESW)GetProcAddress(hKernel, "GetConsoleAliasesW");
+    DllKernel32.pGetConsoleScreenBufferInfoEx = (PGET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "GetConsoleScreenBufferInfoEx");
+    DllKernel32.pGetCurrentConsoleFontEx = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "GetCurrentConsoleFontEx");
+    DllKernel32.pGetDiskFreeSpaceExW = (PGET_DISK_FREE_SPACE_EXW)GetProcAddress(hKernel, "GetDiskFreeSpaceExW");
+    DllKernel32.pGetEnvironmentStrings = (PGET_ENVIRONMENT_STRINGS)GetProcAddress(hKernel, "GetEnvironmentStrings");
+    DllKernel32.pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(hKernel, "GetEnvironmentStringsW");
+    DllKernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(hKernel, "GetFileInformationByHandleEx");
+    DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(hKernel, "RegisterApplicationRestart");
+    DllKernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "SetConsoleScreenBufferInfoEx");
+    DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "SetCurrentConsoleFontEx");
+    DllKernel32.pSetInformationJobObject = (PSET_INFORMATION_JOB_OBJECT)GetProcAddress(hKernel, "SetInformationJobObject");
+    DllKernel32.pWow64DisableWow64FsRedirection = (PWOW64_DISABLE_WOW64_FS_REDIRECTION)GetProcAddress(hKernel, "Wow64DisableWow64FsRedirection");
 
     return TRUE;
 }
@@ -78,7 +78,7 @@ YoriLibLoadKernel32Functions()
  A structure containing pointers to ole32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
-YORI_OLE32_FUNCTIONS Ole32;
+YORI_OLE32_FUNCTIONS DllOle32;
 
 /**
  Load pointers to all optional ole32.dll functions.
@@ -89,16 +89,16 @@ BOOL
 YoriLibLoadOle32Functions()
 {
 
-    if (Ole32.hDll != NULL) {
+    if (DllOle32.hDll != NULL) {
         return TRUE;
     }
 
-    Ole32.hDll = LoadLibrary(_T("OLE32.DLL"));
-    if (Ole32.hDll == NULL) {
+    DllOle32.hDll = LoadLibrary(_T("OLE32.DLL"));
+    if (DllOle32.hDll == NULL) {
         return FALSE;
     }
 
-    Ole32.pCoTaskMemFree = (PCO_TASK_MEM_FREE)GetProcAddress(Ole32.hDll, "CoTaskMemFree");
+    DllOle32.pCoTaskMemFree = (PCO_TASK_MEM_FREE)GetProcAddress(DllOle32.hDll, "CoTaskMemFree");
 
     return TRUE;
 }
@@ -112,7 +112,7 @@ const GUID FOLDERID_Downloads = { 0x374de290, 0x123f, 0x4565, { 0x91, 0x64, 0x39
  A structure containing pointers to shell32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
-YORI_SHELL32_FUNCTIONS Shell32;
+YORI_SHELL32_FUNCTIONS DllShell32;
 
 /**
  Load pointers to all optional shell32.dll functions.
@@ -123,27 +123,27 @@ BOOL
 YoriLibLoadShell32Functions()
 {
 
-    if (Shell32.hDll != NULL) {
+    if (DllShell32.hDll != NULL) {
         return TRUE;
     }
 
-    Shell32.hDll = LoadLibrary(_T("SHELL32.DLL"));
-    if (Shell32.hDll == NULL) {
+    DllShell32.hDll = LoadLibrary(_T("SHELL32.DLL"));
+    if (DllShell32.hDll == NULL) {
         return FALSE;
     }
 
-    Shell32.pSHFileOperationW = (PSH_FILE_OPERATIONW)GetProcAddress(Shell32.hDll, "SHFileOperationW");
-    Shell32.pSHGetKnownFolderPath = (PSH_GET_KNOWN_FOLDER_PATH)GetProcAddress(Shell32.hDll, "SHGetKnownFolderPath");
-    Shell32.pSHGetSpecialFolderPathW = (PSH_GET_SPECIAL_FOLDER_PATHW)GetProcAddress(Shell32.hDll, "SHGetSpecialFolderPathW");
-    Shell32.pShellExecuteExW = (PSHELL_EXECUTE_EXW)GetProcAddress(Shell32.hDll, "ShellExecuteExW");
-    Shell32.pShellExecuteW = (PSHELL_EXECUTEW)GetProcAddress(Shell32.hDll, "ShellExecuteW");
+    DllShell32.pSHFileOperationW = (PSH_FILE_OPERATIONW)GetProcAddress(DllShell32.hDll, "SHFileOperationW");
+    DllShell32.pSHGetKnownFolderPath = (PSH_GET_KNOWN_FOLDER_PATH)GetProcAddress(DllShell32.hDll, "SHGetKnownFolderPath");
+    DllShell32.pSHGetSpecialFolderPathW = (PSH_GET_SPECIAL_FOLDER_PATHW)GetProcAddress(DllShell32.hDll, "SHGetSpecialFolderPathW");
+    DllShell32.pShellExecuteExW = (PSHELL_EXECUTE_EXW)GetProcAddress(DllShell32.hDll, "ShellExecuteExW");
+    DllShell32.pShellExecuteW = (PSHELL_EXECUTEW)GetProcAddress(DllShell32.hDll, "ShellExecuteW");
     return TRUE;
 }
 /**
  A structure containing pointers to version.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
-YORI_USER32_FUNCTIONS User32;
+YORI_USER32_FUNCTIONS DllUser32;
 
 /**
  Load pointers to all optional user32.dll functions.
@@ -153,18 +153,18 @@ YORI_USER32_FUNCTIONS User32;
 BOOL
 YoriLibLoadUser32Functions()
 {
-    if (User32.hDll != NULL) {
+    if (DllUser32.hDll != NULL) {
         return TRUE;
     }
 
-    User32.hDll = LoadLibrary(_T("USER32.DLL"));
-    if (User32.hDll == NULL) {
+    DllUser32.hDll = LoadLibrary(_T("USER32.DLL"));
+    if (DllUser32.hDll == NULL) {
         return FALSE;
     }
 
-    User32.pCloseClipboard = (PCLOSE_CLIPBOARD)GetProcAddress(User32.hDll, "CloseClipboard");
-    User32.pGetClipboardData = (PGET_CLIPBOARD_DATA)GetProcAddress(User32.hDll, "GetClipboardData");
-    User32.pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(User32.hDll, "OpenClipboard");
+    DllUser32.pCloseClipboard = (PCLOSE_CLIPBOARD)GetProcAddress(DllUser32.hDll, "CloseClipboard");
+    DllUser32.pGetClipboardData = (PGET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "GetClipboardData");
+    DllUser32.pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(DllUser32.hDll, "OpenClipboard");
 
 
     return TRUE;
@@ -175,7 +175,7 @@ YoriLibLoadUser32Functions()
  A structure containing pointers to version.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
-YORI_VERSION_FUNCTIONS Version;
+YORI_VERSION_FUNCTIONS DllVersion;
 
 /**
  Load pointers to all optional version.dll functions.
@@ -186,18 +186,18 @@ BOOL
 YoriLibLoadVersionFunctions()
 {
 
-    if (Version.hDll != NULL) {
+    if (DllVersion.hDll != NULL) {
         return TRUE;
     }
 
-    Version.hDll = LoadLibrary(_T("VERSION.DLL"));
-    if (Version.hDll == NULL) {
+    DllVersion.hDll = LoadLibrary(_T("VERSION.DLL"));
+    if (DllVersion.hDll == NULL) {
         return FALSE;
     }
 
-    Version.pGetFileVersionInfoSizeW = (PGET_FILE_VERSION_INFO_SIZEW)GetProcAddress(Version.hDll, "GetFileVersionInfoSizeW");
-    Version.pGetFileVersionInfoW = (PGET_FILE_VERSION_INFOW)GetProcAddress(Version.hDll, "GetFileVersionInfoW");
-    Version.pVerQueryValueW = (PVER_QUERY_VALUEW)GetProcAddress(Version.hDll, "VerQueryValueW");
+    DllVersion.pGetFileVersionInfoSizeW = (PGET_FILE_VERSION_INFO_SIZEW)GetProcAddress(DllVersion.hDll, "GetFileVersionInfoSizeW");
+    DllVersion.pGetFileVersionInfoW = (PGET_FILE_VERSION_INFOW)GetProcAddress(DllVersion.hDll, "GetFileVersionInfoW");
+    DllVersion.pVerQueryValueW = (PVER_QUERY_VALUEW)GetProcAddress(DllVersion.hDll, "VerQueryValueW");
 
     return TRUE;
 }

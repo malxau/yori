@@ -251,7 +251,7 @@ YoriLibCollectAllocationSize (
 
     ASSERT(YoriLibIsStringNullTerminated(FullPath));
 
-    if (Kernel32.pGetFileInformationByHandleEx) {
+    if (DllKernel32.pGetFileInformationByHandleEx) {
 
         HANDLE hFile;
 
@@ -266,7 +266,7 @@ YoriLibCollectAllocationSize (
         if (hFile != INVALID_HANDLE_VALUE) {
             FILE_STANDARD_INFO StandardInfo;
     
-            if (Kernel32.pGetFileInformationByHandleEx(hFile, FileStandardInfo, &StandardInfo, sizeof(StandardInfo))) {
+            if (DllKernel32.pGetFileInformationByHandleEx(hFile, FileStandardInfo, &StandardInfo, sizeof(StandardInfo))) {
                 Entry->AllocationSize = StandardInfo.AllocationSize;
                 RealAllocSize = TRUE;
             }
@@ -537,8 +537,8 @@ YoriLibCollectCompressedFileSize (
     Entry->CompressedFileSize.LowPart = FindData->nFileSizeLow;
     Entry->CompressedFileSize.HighPart = FindData->nFileSizeHigh;
 
-    if (Kernel32.pGetCompressedFileSizeW) {
-        Entry->CompressedFileSize.LowPart = Kernel32.pGetCompressedFileSizeW(FullPath->StartOfString, (PDWORD)&Entry->CompressedFileSize.HighPart);
+    if (DllKernel32.pGetCompressedFileSizeW) {
+        Entry->CompressedFileSize.LowPart = DllKernel32.pGetCompressedFileSizeW(FullPath->StartOfString, (PDWORD)&Entry->CompressedFileSize.HighPart);
 
         if (Entry->CompressedFileSize.LowPart == INVALID_FILE_SIZE) {
             Entry->CompressedFileSize.LowPart = FindData->nFileSizeLow;
@@ -1217,13 +1217,13 @@ YoriLibCollectStreamCount (
     //  (where this API won't exist) there doesn't seem much point.
     //
 
-    if (Kernel32.pFindFirstStreamW != NULL && Kernel32.pFindNextStreamW != NULL) {
-        hFind = Kernel32.pFindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
+    if (DllKernel32.pFindFirstStreamW != NULL && DllKernel32.pFindNextStreamW != NULL) {
+        hFind = DllKernel32.pFindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
         if (hFind != INVALID_HANDLE_VALUE) {
 
             do {
                 Entry->StreamCount++;
-            } while (Kernel32.pFindNextStreamW(hFind, &FindStreamData));
+            } while (DllKernel32.pFindNextStreamW(hFind, &FindStreamData));
         }
 
         FindClose(hFind);
@@ -1314,19 +1314,19 @@ YoriLibCollectVersion (
 
     YoriLibLoadVersionFunctions();
 
-    if (Version.pGetFileVersionInfoSizeW == NULL ||
-        Version.pGetFileVersionInfoW == NULL ||
-        Version.pVerQueryValueW == NULL) {
+    if (DllVersion.pGetFileVersionInfoSizeW == NULL ||
+        DllVersion.pGetFileVersionInfoW == NULL ||
+        DllVersion.pVerQueryValueW == NULL) {
 
         return TRUE;
     }
 
-    VerSize = Version.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
+    VerSize = DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
 
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
-        if (Version.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
-            if (Version.pVerQueryValueW(Buffer, _T("\\"), (PVOID*)&RootBlock, (PUINT)&Junk)) {
+        if (DllVersion.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
+            if (DllVersion.pVerQueryValueW(Buffer, _T("\\"), (PVOID*)&RootBlock, (PUINT)&Junk)) {
                 Entry->FileVersion.HighPart = RootBlock->dwFileVersionMS;
                 Entry->FileVersion.LowPart = RootBlock->dwFileVersionLS;
                 Entry->FileVersionFlags = RootBlock->dwFileFlags & RootBlock->dwFileFlagsMask;
@@ -1965,7 +1965,7 @@ YoriLibGenerateVersion(
     __in PYORI_STRING String
     )
 {
-    LARGE_INTEGER Version = {0};
+    LARGE_INTEGER FileVersion = {0};
     YORI_STRING Substring;
     DWORD CharsConsumed;
     LONGLONG llTemp;
@@ -1978,7 +1978,7 @@ YoriLibGenerateVersion(
         return FALSE;
     }
 
-    Version.HighPart = (DWORD)llTemp << 16;
+    FileVersion.HighPart = (DWORD)llTemp << 16;
 
     if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '.') {
         Substring.LengthInChars -= CharsConsumed + 1;
@@ -1988,7 +1988,7 @@ YoriLibGenerateVersion(
             return FALSE;
         }
 
-        Version.HighPart = Version.HighPart + (WORD)llTemp;
+        FileVersion.HighPart = FileVersion.HighPart + (WORD)llTemp;
 
         if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '.') {
             Substring.LengthInChars -= CharsConsumed + 1;
@@ -1998,7 +1998,7 @@ YoriLibGenerateVersion(
                 return FALSE;
             }
 
-            Version.LowPart = (DWORD)llTemp << 16;
+            FileVersion.LowPart = (DWORD)llTemp << 16;
 
             if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '.') {
                 Substring.LengthInChars -= CharsConsumed + 1;
@@ -2008,13 +2008,13 @@ YoriLibGenerateVersion(
                     return FALSE;
                 }
 
-                Version.LowPart = Version.LowPart + (WORD)llTemp;
+                FileVersion.LowPart = FileVersion.LowPart + (WORD)llTemp;
             }
 
         }
     }
 
-    Entry->FileVersion = Version;
+    Entry->FileVersion = FileVersion;
     return TRUE;
 }
 

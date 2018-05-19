@@ -93,9 +93,9 @@ YoriShSaveRestartState()
     //  console state.
     //
 
-    if (Kernel32.pRegisterApplicationRestart == NULL ||
-        Kernel32.pGetConsoleScreenBufferInfoEx == NULL ||
-        Kernel32.pGetCurrentConsoleFontEx == NULL) {
+    if (DllKernel32.pRegisterApplicationRestart == NULL ||
+        DllKernel32.pGetConsoleScreenBufferInfoEx == NULL ||
+        DllKernel32.pGetCurrentConsoleFontEx == NULL) {
 
         return FALSE;
     }
@@ -133,7 +133,7 @@ YoriShSaveRestartState()
     ZeroMemory(&ScreenBufferInfo, sizeof(ScreenBufferInfo));
     ScreenBufferInfo.cbSize = sizeof(ScreenBufferInfo);
 
-    if (!Kernel32.pGetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo)) {
+    if (!DllKernel32.pGetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo)) {
         return FALSE;
     }
 
@@ -188,7 +188,7 @@ YoriShSaveRestartState()
 
     ZeroMemory(&FontInfo, sizeof(FontInfo));
     FontInfo.cbSize = sizeof(FontInfo);
-    if (Kernel32.pGetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo)) {
+    if (DllKernel32.pGetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo)) {
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.nFont);
         WritePrivateProfileString(_T("Window"), _T("FontIndex"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.dwFontSize.X);
@@ -328,7 +328,7 @@ YoriShSaveRestartState()
     if (!YoriShProcessRegisteredForRestart) {
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("-restart %x"), GetCurrentProcessId());
 
-        Kernel32.pRegisterApplicationRestart(WriteBuffer.StartOfString, 0);
+        DllKernel32.pRegisterApplicationRestart(WriteBuffer.StartOfString, 0);
         YoriShProcessRegisteredForRestart = TRUE;
     }
 
@@ -357,8 +357,8 @@ YoriShLoadSavedRestartState(
     DWORD Count;
     YORI_CONSOLE_FONT_INFOEX FontInfo;
 
-    if (Kernel32.pSetConsoleScreenBufferInfoEx == NULL ||
-        Kernel32.pSetCurrentConsoleFontEx == NULL) {
+    if (DllKernel32.pSetConsoleScreenBufferInfoEx == NULL ||
+        DllKernel32.pSetCurrentConsoleFontEx == NULL) {
 
         return FALSE;
     }
@@ -434,10 +434,10 @@ YoriShLoadSavedRestartState(
     GetPrivateProfileString(_T("Window"), _T("FontName"), _T(""), FontInfo.FaceName, sizeof(FontInfo.FaceName)/sizeof(FontInfo.FaceName[0]), RestartFileName.StartOfString);
 
     if (FontInfo.dwFontSize.X > 0 && FontInfo.dwFontSize.Y > 0 && FontInfo.FontWeight > 0) {
-        Kernel32.pSetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo);
+        DllKernel32.pSetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo);
     }
 
-    Kernel32.pSetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo);
+    DllKernel32.pSetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo);
 
     //
     //  Read and populate the window title

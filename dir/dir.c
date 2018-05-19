@@ -420,7 +420,7 @@ DirFileFoundCallback(
             HANDLE hFind;
             WIN32_FIND_STREAM_DATA FindStreamData;
 
-            hFind = Kernel32.pFindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
+            hFind = DllKernel32.pFindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
             if (hFind != INVALID_HANDLE_VALUE) {
                 do {
                     if (_tcscmp(FindStreamData.cStreamName, L"::$DATA") != 0) {
@@ -434,7 +434,7 @@ DirFileFoundCallback(
                             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%18s%y %s%s\n"), _T(""), &SizeString, FileInfo->cFileName, FindStreamData.cStreamName);
                         }
                     }
-                } while (Kernel32.pFindNextStreamW(hFind, &FindStreamData));
+                } while (DllKernel32.pFindNextStreamW(hFind, &FindStreamData));
                 FindClose(hFind);
             }
         }
@@ -509,7 +509,7 @@ ymain(
     }
 
     if (DirContext.DisplayStreams) {
-        if (Kernel32.pFindFirstStreamW == NULL || Kernel32.pFindNextStreamW == NULL) {
+        if (DllKernel32.pFindFirstStreamW == NULL || DllKernel32.pFindNextStreamW == NULL) {
             DirContext.DisplayStreams = FALSE;
         }
     }

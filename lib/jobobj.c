@@ -38,10 +38,10 @@ HANDLE
 YoriLibCreateJobObject(
     )
 {
-    if (Kernel32.pCreateJobObjectW == NULL) {
+    if (DllKernel32.pCreateJobObjectW == NULL) {
         return NULL;
     }
-    return Kernel32.pCreateJobObjectW(NULL, NULL);
+    return DllKernel32.pCreateJobObjectW(NULL, NULL);
 }
 
 /**
@@ -56,10 +56,10 @@ YoriLibAssignProcessToJobObject(
     __in HANDLE hProcess
     )
 {
-    if (Kernel32.pAssignProcessToJobObject == NULL) {
+    if (DllKernel32.pAssignProcessToJobObject == NULL) {
         return FALSE;
     }
-    return Kernel32.pAssignProcessToJobObject(hJob, hProcess);
+    return DllKernel32.pAssignProcessToJobObject(hJob, hProcess);
 }
 
 /**
@@ -75,13 +75,13 @@ YoriLibLimitJobObjectPriority(
     )
 {
     YORI_JOB_BASIC_LIMIT_INFORMATION LimitInfo;
-    if (Kernel32.pSetInformationJobObject == NULL) {
+    if (DllKernel32.pSetInformationJobObject == NULL) {
         return FALSE;
     }
     ZeroMemory(&LimitInfo, sizeof(LimitInfo));
     LimitInfo.Flags = 0x20;
     LimitInfo.Priority = Priority;
-    return Kernel32.pSetInformationJobObject(hJob, 2, &LimitInfo, sizeof(LimitInfo));
+    return DllKernel32.pSetInformationJobObject(hJob, 2, &LimitInfo, sizeof(LimitInfo));
 }
 
 // vim:sw=4:ts=4:et:

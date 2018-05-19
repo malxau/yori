@@ -158,11 +158,11 @@ ymain (
     //  in place.
     //
 
-    if (Kernel32.pWow64DisableWow64FsRedirection &&
+    if (DllKernel32.pWow64DisableWow64FsRedirection &&
         _tcsicmp(SearchVar, _T("PATH")) == 0) {
 
         PVOID DontCare;
-        Kernel32.pWow64DisableWow64FsRedirection(&DontCare);
+        DllKernel32.pWow64DisableWow64FsRedirection(&DontCare);
     }
 
     YoriLibInitEmptyString(&FoundPath);

@@ -95,9 +95,9 @@ YoriLibGetOsVersion(
 
 	YoriLibLoadVersionFunctions();
 
-        if (Version.pGetFileVersionInfoSizeW == NULL ||
-            Version.pGetFileVersionInfoW == NULL ||
-            Version.pVerQueryValueW == NULL) {
+        if (DllVersion.pGetFileVersionInfoSizeW == NULL ||
+            DllVersion.pGetFileVersionInfoW == NULL ||
+            DllVersion.pVerQueryValueW == NULL) {
 
             return;
         }
@@ -112,7 +112,7 @@ YoriLibGetOsVersion(
         GetSystemDirectory(Kernel32FileName, SystemFileNameLength);
         _tcscpy(&Kernel32FileName[SystemFileNameLength - 1], _T("\\KERNEL32.DLL"));
 
-        VerSize = Version.pGetFileVersionInfoSizeW(Kernel32FileName, &Junk);
+        VerSize = DllVersion.pGetFileVersionInfoSizeW(Kernel32FileName, &Junk);
         if (VerSize == 0) {
             YoriLibFree(Kernel32FileName);
             return;
@@ -124,7 +124,7 @@ YoriLibGetOsVersion(
             return;
         }
 
-        if (!Version.pGetFileVersionInfoW(Kernel32FileName, 0, VerSize, VerBuffer)) {
+        if (!DllVersion.pGetFileVersionInfoW(Kernel32FileName, 0, VerSize, VerBuffer)) {
             YoriLibFree(VerBuffer);
             YoriLibFree(Kernel32FileName);
             return;
@@ -132,7 +132,7 @@ YoriLibGetOsVersion(
 
         YoriLibFree(Kernel32FileName);
 
-        if (!Version.pVerQueryValueW(VerBuffer, _T("\\"), &FixedVerInfo, (PUINT)&Junk)) {
+        if (!DllVersion.pVerQueryValueW(VerBuffer, _T("\\"), &FixedVerInfo, (PUINT)&Junk)) {
             YoriLibFree(VerBuffer);
             return;
         }

@@ -503,8 +503,8 @@ YoriShExecViaShellExecute(
     //  better be there too.
     //
 
-    ASSERT(Shell32.pShellExecuteExW != NULL);
-    if (Shell32.pShellExecuteExW == NULL) {
+    ASSERT(DllShell32.pShellExecuteExW != NULL);
+    if (DllShell32.pShellExecuteExW == NULL) {
         return FALSE;
     }
 
@@ -526,7 +526,7 @@ YoriShExecViaShellExecute(
     ZeroMemory(ProcessInfo, sizeof(PROCESS_INFORMATION));
 
     YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
-    if (!Shell32.pShellExecuteExW(&sei)) {
+    if (!DllShell32.pShellExecuteExW(&sei)) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriShRevertRedirection(&PreviousRedirectContext);

@@ -51,32 +51,32 @@ YoriLibGetEnvironmentStrings(
     //  exist (NT 3.1) we need to upconvert to Unicode.
     //
 
-    if (Kernel32.pGetEnvironmentStringsW != NULL) {
-        OsEnvStrings = Kernel32.pGetEnvironmentStringsW();
+    if (DllKernel32.pGetEnvironmentStringsW != NULL) {
+        OsEnvStrings = DllKernel32.pGetEnvironmentStringsW();
         for (CharCount = 0; OsEnvStrings[CharCount] != '\0' || OsEnvStrings[CharCount + 1] != '\0'; CharCount++);
 
         CharCount += 2;
         if (!YoriLibAllocateString(EnvStrings, CharCount)) {
-            if (Kernel32.pFreeEnvironmentStringsW) {
-                Kernel32.pFreeEnvironmentStringsW(OsEnvStrings);
+            if (DllKernel32.pFreeEnvironmentStringsW) {
+                DllKernel32.pFreeEnvironmentStringsW(OsEnvStrings);
             }
             return FALSE;
         }
 
         memcpy(EnvStrings->StartOfString, OsEnvStrings, CharCount * sizeof(TCHAR));
 
-        if (Kernel32.pFreeEnvironmentStringsW) {
-            Kernel32.pFreeEnvironmentStringsW(OsEnvStrings);
+        if (DllKernel32.pFreeEnvironmentStringsW) {
+            DllKernel32.pFreeEnvironmentStringsW(OsEnvStrings);
         }
 
         return TRUE;
     }
 
-    if (Kernel32.pGetEnvironmentStrings == NULL) {
+    if (DllKernel32.pGetEnvironmentStrings == NULL) {
         return FALSE;
     }
 
-    OsEnvStringsA = Kernel32.pGetEnvironmentStrings();
+    OsEnvStringsA = DllKernel32.pGetEnvironmentStrings();
 
     for (CharCount = 0; OsEnvStringsA[CharCount] != '\0' || OsEnvStringsA[CharCount + 1] != '\0'; CharCount++);
 

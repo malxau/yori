@@ -855,27 +855,27 @@ YoriLibExpandShellDirectoryGuid(
     YoriLibLoadShell32Functions();
     YoriLibLoadOle32Functions();
 
-    if (Shell32.pSHGetKnownFolderPath == NULL ||
-        Ole32.pCoTaskMemFree == NULL) {
+    if (DllShell32.pSHGetKnownFolderPath == NULL ||
+        DllOle32.pCoTaskMemFree == NULL) {
         return FALSE;
     }
 
 
-    if (Shell32.pSHGetKnownFolderPath(FolderType, 0, NULL, &ExpandedString) != 0) {
+    if (DllShell32.pSHGetKnownFolderPath(FolderType, 0, NULL, &ExpandedString) != 0) {
         return FALSE;
     }
 
     LocationLength = _tcslen(ExpandedString);
 
     if (!YoriLibAllocateString(ExpandedSymbol, LocationLength + 1)) {
-        Ole32.pCoTaskMemFree(ExpandedString);
+        DllOle32.pCoTaskMemFree(ExpandedString);
         return FALSE;
     }
 
     memcpy(ExpandedSymbol->StartOfString, ExpandedString, (LocationLength + 1) * sizeof(TCHAR));
     ExpandedSymbol->LengthInChars = LocationLength;
 
-    Ole32.pCoTaskMemFree(ExpandedString);
+    DllOle32.pCoTaskMemFree(ExpandedString);
     return TRUE;
 }
 
@@ -897,7 +897,7 @@ YoriLibExpandShellDirectory(
     )
 {
     YoriLibLoadShell32Functions();
-    if (Shell32.pSHGetSpecialFolderPathW == NULL) {
+    if (DllShell32.pSHGetSpecialFolderPathW == NULL) {
         return FALSE;
     }
 
@@ -907,7 +907,7 @@ YoriLibExpandShellDirectory(
 
     ExpandedSymbol->StartOfString[0] = '\0';
 
-    if (Shell32.pSHGetSpecialFolderPathW(NULL, ExpandedSymbol->StartOfString, FolderType, FALSE) < 0) {
+    if (DllShell32.pSHGetSpecialFolderPathW(NULL, ExpandedSymbol->StartOfString, FolderType, FALSE) < 0) {
         YoriLibFreeStringContents(ExpandedSymbol);
         return FALSE;
     }

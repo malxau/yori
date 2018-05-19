@@ -1509,7 +1509,7 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
     PWOW64_DISABLE_WOW64_FS_REDIRECTION pWow64DisableWow64FsRedirection;
 } YORI_KERNEL32_FUNCTIONS, *PYORI_KERNEL32_FUNCTIONS;
 
-extern YORI_KERNEL32_FUNCTIONS Kernel32;
+extern YORI_KERNEL32_FUNCTIONS DllKernel32;
 
 /**
  A prototype for the CoTaskMemFree function.
@@ -1539,7 +1539,7 @@ typedef struct _YORI_OLE32_FUNCTIONS {
     PCO_TASK_MEM_FREE pCoTaskMemFree;
 } YORI_OLE32_FUNCTIONS, *PYORI_OLE32_FUNCTIONS;
 
-extern YORI_OLE32_FUNCTIONS Ole32;
+extern YORI_OLE32_FUNCTIONS DllOle32;
 
 /**
  A prototype for the SHFileOperationW function.
@@ -1637,7 +1637,7 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
     PSHELL_EXECUTEW pShellExecuteW;
 } YORI_SHELL32_FUNCTIONS, *PYORI_SHELL32_FUNCTIONS;
 
-extern YORI_SHELL32_FUNCTIONS Shell32;
+extern YORI_SHELL32_FUNCTIONS DllShell32;
 
 /**
  A prototype for the CloseClipboard function.
@@ -1701,7 +1701,7 @@ typedef struct _YORI_USER32_FUNCTIONS {
     POPEN_CLIPBOARD pOpenClipboard;
 } YORI_USER32_FUNCTIONS, *PYORI_USER32_FUNCTIONS;
 
-extern YORI_USER32_FUNCTIONS User32;
+extern YORI_USER32_FUNCTIONS DllUser32;
 
 /**
  A prototype for the GetFileVersionInfoSizeW function.
@@ -1766,7 +1766,7 @@ typedef struct _YORI_VERSION_FUNCTIONS {
     PVER_QUERY_VALUEW pVerQueryValueW;
 } YORI_VERSION_FUNCTIONS, *PYORI_VERSION_FUNCTIONS;
 
-extern YORI_VERSION_FUNCTIONS Version;
+extern YORI_VERSION_FUNCTIONS DllVersion;
 
 
 

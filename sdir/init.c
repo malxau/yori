@@ -151,9 +151,9 @@ SdirAppInitialize()
     //  because we want people to be able to enumerate those paths
     //
 
-    if (Kernel32.pWow64DisableWow64FsRedirection) {
+    if (DllKernel32.pWow64DisableWow64FsRedirection) {
         PVOID DontCare;
-        Kernel32.pWow64DisableWow64FsRedirection(&DontCare);
+        DllKernel32.pWow64DisableWow64FsRedirection(&DontCare);
     }
 
     //
