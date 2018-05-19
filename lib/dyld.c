@@ -75,6 +75,34 @@ YoriLibLoadKernel32Functions()
 }
 
 /**
+ A structure containing pointers to advapi32.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
+
+/**
+ Load pointers to all optional advapi32.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadAdvApi32Functions()
+{
+    if (DllAdvApi32.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllAdvApi32.hDll = LoadLibrary(_T("ADVAPI32.DLL"));
+    if (DllAdvApi32.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllAdvApi32.pSetNamedSecurityInfoW = (PSET_NAMED_SECURITY_INFOW)GetProcAddress(DllAdvApi32.hDll, "SetNamedSecurityInfoW");
+
+    return TRUE;
+}
+
+/**
  A structure containing pointers to ole32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
@@ -139,8 +167,9 @@ YoriLibLoadShell32Functions()
     DllShell32.pShellExecuteW = (PSHELL_EXECUTEW)GetProcAddress(DllShell32.hDll, "ShellExecuteW");
     return TRUE;
 }
+
 /**
- A structure containing pointers to version.dll functions that can be used if
+ A structure containing pointers to user32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
 YORI_USER32_FUNCTIONS DllUser32;
@@ -163,13 +192,14 @@ YoriLibLoadUser32Functions()
     }
 
     DllUser32.pCloseClipboard = (PCLOSE_CLIPBOARD)GetProcAddress(DllUser32.hDll, "CloseClipboard");
+    DllUser32.pEmptyClipboard = (PEMPTY_CLIPBOARD)GetProcAddress(DllUser32.hDll, "EmptyClipboard");
     DllUser32.pGetClipboardData = (PGET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "GetClipboardData");
     DllUser32.pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(DllUser32.hDll, "OpenClipboard");
-
+    DllUser32.pRegisterClipboardFormatW = (PREGISTER_CLIPBOARD_FORMATW)GetProcAddress(DllUser32.hDll, "RegisterClipboardFormatW");
+    DllUser32.pSetClipboardData = (PSET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "SetClipboardData");
 
     return TRUE;
 }
-
 
 /**
  A structure containing pointers to version.dll functions that can be used if

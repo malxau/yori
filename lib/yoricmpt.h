@@ -848,6 +848,22 @@ typedef struct _YORI_JOB_BASIC_LIMIT_INFORMATION {
     DWORD Unused7;
 } YORI_JOB_BASIC_LIMIT_INFORMATION, *PYORI_JOB_BASIC_LIMIT_INFORMATION;
 
+#ifndef UNPROTECTED_DACL_SECURITY_INFORMATION
+/**
+ A private definition of this OS value in case the compilation environment
+ doesn't define it.
+ */
+#define UNPROTECTED_DACL_SECURITY_INFORMATION (0x20000000)
+#endif
+
+#ifndef SE_FILE_OBJECT
+/**
+ A private definition of this OS value in case the compilation environment
+ doesn't define it.
+ */
+#define SE_FILE_OBJECT 1
+#endif
+
 #ifndef SE_ERR_SHARE
 /**
  A sharing violation occurred.
@@ -1125,7 +1141,6 @@ typedef struct _YORI_SHELLEXECUTEINFO {
  */
 #define SEE_MASK_NOZONECHECKS   (0x00800000)
 #endif
-
 
 /**
  A prototype for the AddConsoleAliasW function.
@@ -1512,6 +1527,37 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
 extern YORI_KERNEL32_FUNCTIONS DllKernel32;
 
 /**
+ A prototype for the SetNamedSecurityInfoW API.
+ */
+typedef
+DWORD WINAPI
+SET_NAMED_SECURITY_INFOW(LPWSTR, DWORD, SECURITY_INFORMATION, PSID, PSID, PACL, PACL);
+
+/**
+ A prototype for a pointer to the SetNamedSecurityInfoW API.
+ */
+typedef SET_NAMED_SECURITY_INFOW *PSET_NAMED_SECURITY_INFOW;
+
+/**
+ A structure containing optional function pointers to advapi32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_ADVAPI32_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to SetNamedSecurityInfoW.
+     */
+    PSET_NAMED_SECURITY_INFOW pSetNamedSecurityInfoW;
+
+} YORI_ADVAPI32_FUNCTIONS, *PYORI_ADVAPI32_FUNCTIONS;
+
+extern YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
+
+/**
  A prototype for the CoTaskMemFree function.
  */
 typedef
@@ -1652,6 +1698,18 @@ CLOSE_CLIPBOARD();
 typedef CLOSE_CLIPBOARD *PCLOSE_CLIPBOARD;
 
 /**
+ A prototype for the EmptyClipboard function.
+ */
+typedef
+BOOL WINAPI
+EMPTY_CLIPBOARD();
+
+/**
+ A prototype for a pointer to the EmptyClipboard function.
+ */
+typedef EMPTY_CLIPBOARD *PEMPTY_CLIPBOARD;
+
+/**
  A prototype for the GetClipboardData function.
  */
 typedef
@@ -1676,6 +1734,30 @@ OPEN_CLIPBOARD();
 typedef OPEN_CLIPBOARD *POPEN_CLIPBOARD;
 
 /**
+ A prototype for the RegisterClipboardFormatW function.
+ */
+typedef
+UINT WINAPI
+REGISTER_CLIPBOARD_FORMATW(LPCWSTR);
+
+/**
+ A prototype for a pointer to the RegisterClipboardFormatW function.
+ */
+typedef REGISTER_CLIPBOARD_FORMATW *PREGISTER_CLIPBOARD_FORMATW;
+
+/**
+ A prototype for the SetClipboardData function.
+ */
+typedef
+HANDLE WINAPI
+SET_CLIPBOARD_DATA(UINT, HANDLE);
+
+/**
+ A prototype for a pointer to the SetClipboardData function.
+ */
+typedef SET_CLIPBOARD_DATA *PSET_CLIPBOARD_DATA;
+
+/**
  A structure containing optional function pointers to user32.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -1691,6 +1773,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PCLOSE_CLIPBOARD pCloseClipboard;
 
     /**
+     If it's available on the current system, a pointer to EmptyClipboard.
+     */
+    PEMPTY_CLIPBOARD pEmptyClipboard;
+
+    /**
      If it's available on the current system, a pointer to GetClipboardData.
      */
     PGET_CLIPBOARD_DATA pGetClipboardData;
@@ -1699,6 +1786,16 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to OpenClipboard.
      */
     POPEN_CLIPBOARD pOpenClipboard;
+
+    /**
+     If it's available on the current system, a pointer to RegisterClipboardFormatW.
+     */
+    POPEN_CLIPBOARD pRegisterClipboardFormatW;
+
+    /**
+     If it's available on the current system, a pointer to SetClipboardData.
+     */
+    PSET_CLIPBOARD_DATA pSetClipboardData;
 } YORI_USER32_FUNCTIONS, *PYORI_USER32_FUNCTIONS;
 
 extern YORI_USER32_FUNCTIONS DllUser32;

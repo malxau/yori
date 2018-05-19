@@ -242,38 +242,38 @@ ClipCopyAsHtml(
     //  Send the buffer to the clipboard.
     //
 
-    if (!OpenClipboard(NULL)) {
+    if (!DllUser32.pOpenClipboard(NULL)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
         return FALSE;
     }
 
-    if (!EmptyClipboard()) {
+    if (!DllUser32.pEmptyClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not empty clipboard: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
-    ClipFmt = RegisterClipboardFormat(_T("HTML Format"));
+    ClipFmt = DllUser32.pRegisterClipboardFormatW(_T("HTML Format"));
     if (ClipFmt == 0) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not register clipboard format: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
-    if (SetClipboardData(ClipFmt, hMem) == NULL) {
+    if (DllUser32.pSetClipboardData(ClipFmt, hMem) == NULL) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not set clipboard data: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
-    CloseClipboard();
+    DllUser32.pCloseClipboard();
     GlobalFree(hMem);
     return TRUE;
 }
@@ -371,7 +371,7 @@ ClipCopyAsText(
     //  Send the buffer to the clipboard.
     //
 
-    if (!OpenClipboard(NULL)) {
+    if (!DllUser32.pOpenClipboard(NULL)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
@@ -379,25 +379,25 @@ ClipCopyAsText(
         return FALSE;
     }
 
-    if (!EmptyClipboard()) {
+    if (!DllUser32.pEmptyClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not empty clipboard: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         GlobalFree(hMem);
         return FALSE;
     }
 
-    if (SetClipboardData(CF_UNICODETEXT, hMem) == NULL) {
+    if (DllUser32.pSetClipboardData(CF_UNICODETEXT, hMem) == NULL) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not set clipboard data: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         GlobalFree(hMem);
         return FALSE;
     }
 
-    CloseClipboard();
+    DllUser32.pCloseClipboard();
     GlobalFree(hMem);
     return TRUE;
 }
@@ -425,19 +425,19 @@ ClipPasteText(
     //  Open the clipboard and fetch its contents.
     //
 
-    if (!OpenClipboard(NULL)) {
+    if (!DllUser32.pOpenClipboard(NULL)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
         return FALSE;
     }
 
-    hMem = GetClipboardData(CF_UNICODETEXT);
+    hMem = DllUser32.pGetClipboardData(CF_UNICODETEXT);
     if (hMem == NULL) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not get clipboard data: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
@@ -447,7 +447,7 @@ ClipPasteText(
     YoriLibOutputToDevice(hFile, 0, _T("%s"), pMem);
     GlobalUnlock(hMem);
 
-    CloseClipboard();
+    DllUser32.pCloseClipboard();
     return TRUE;
 }
 
@@ -473,19 +473,19 @@ ClipPreserveText(
     //  Open the clipboard and fetch its contents.
     //
 
-    if (!OpenClipboard(NULL)) {
+    if (!DllUser32.pOpenClipboard(NULL)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
         return FALSE;
     }
 
-    hMem = GetClipboardData(CF_UNICODETEXT);
+    hMem = DllUser32.pGetClipboardData(CF_UNICODETEXT);
     if (hMem == NULL) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not get clipboard data: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
@@ -493,27 +493,27 @@ ClipPreserveText(
     BufferSize = (DWORD)GlobalSize(hMem);
     pMem = GlobalLock(hMem);
 
-    if (!EmptyClipboard()) {
+    if (!DllUser32.pEmptyClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not empty clipboard: %s\n"), ErrText);
         GlobalUnlock(hMem);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
-    if (SetClipboardData(CF_UNICODETEXT, hMem) == NULL) {
+    if (DllUser32.pSetClipboardData(CF_UNICODETEXT, hMem) == NULL) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not set clipboard data: %s\n"), ErrText);
         GlobalUnlock(hMem);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
     GlobalUnlock(hMem);
 
-    CloseClipboard();
+    DllUser32.pCloseClipboard();
     return TRUE;
 }
 
@@ -533,22 +533,22 @@ ClipEmptyClipboard(
     //  Open and empty the clipboard.
     //
 
-    if (!OpenClipboard(NULL)) {
+    if (!DllUser32.pOpenClipboard(NULL)) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
         return FALSE;
     }
 
-    if (!EmptyClipboard()) {
+    if (!DllUser32.pEmptyClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not empty clipboard: %s\n"), ErrText);
-        CloseClipboard();
+        DllUser32.pCloseClipboard();
         return FALSE;
     }
 
-    CloseClipboard();
+    DllUser32.pCloseClipboard();
     return TRUE;
 }
 
@@ -675,6 +675,8 @@ ymain(
             }
         }
     }
+
+    YoriLibLoadUser32Functions();
 
     if (Empty) {
         if (!ClipEmptyClipboard()) {

@@ -60,36 +60,6 @@ MoveHelp()
     return TRUE;
 }
 
-/**
- Prototype for the SetNamedSecurityInfoW API.
- */
-typedef DWORD WINAPI SET_NAMED_SECURITY_INFOW(LPTSTR, DWORD, SECURITY_INFORMATION, PSID, PSID, PACL, PACL);
-
-/**
- Prototype for a pointer to the SetNamedSecurityInfoW API.
- */
-typedef SET_NAMED_SECURITY_INFOW *PSET_NAMED_SECURITY_INFOW;
-
-/**
- Pointer to the SetNamedSecurityInfoW.
- */
-PSET_NAMED_SECURITY_INFOW pSetNamedSecurityInfo;
-
-#ifndef UNPROTECTED_DACL_SECURITY_INFORMATION
-/**
- A private definition of this OS value in case the compilation environment
- doesn't define it.
- */
-#define UNPROTECTED_DACL_SECURITY_INFORMATION (0x20000000)
-#endif
-
-#ifndef SE_FILE_OBJECT
-/**
- A private definition of this OS value in case the compilation environment
- doesn't define it.
- */
-#define SE_FILE_OBJECT 1
-#endif
 
 /**
  A context passed between each source file match when moving multiple
@@ -198,10 +168,10 @@ MoveFileFoundCallback(
         //  This function should exist on NT4+
         //
 
-        ASSERT(pSetNamedSecurityInfo != NULL);
+        ASSERT(DllAdvApi32.pSetNamedSecurityInfoW != NULL);
 
-        if (pSetNamedSecurityInfo != NULL) {
-            pSetNamedSecurityInfo(FullDest.StartOfString, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, &EmptyAcl, NULL);
+        if (DllAdvApi32.pSetNamedSecurityInfoW != NULL) {
+            DllAdvApi32.pSetNamedSecurityInfoW(FullDest.StartOfString, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, &EmptyAcl, NULL);
         }
     }
     MoveContext->FilesMoved++;
@@ -232,7 +202,6 @@ ymain(
     DWORD MatchFlags;
     DWORD i;
     MOVE_CONTEXT MoveContext;
-    HANDLE hAdvApi;
     BOOL AllocatedDest;
     BOOL BasicEnumeration;
     YORI_STRING Arg;
@@ -287,11 +256,7 @@ ymain(
     MoveContext.FilesMoved = 0;
     FilesProcessed = 0;
 
-    hAdvApi = LoadLibrary(_T("ADVAPI32.DLL"));
-    if (hAdvApi != NULL) {
-        pSetNamedSecurityInfo = (PSET_NAMED_SECURITY_INFOW)GetProcAddress(hAdvApi, "SetNamedSecurityInfoW");
-        FreeLibrary(hAdvApi);
-    }
+    YoriLibLoadAdvApi32Functions();
 
     for (i = 1; i < ArgC; i++) {
         if (!YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {

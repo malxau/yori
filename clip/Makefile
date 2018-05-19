@@ -21,5 +21,5 @@ compile: $(OBJS)
 
 yclip.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) user32.lib $(CRTLIB) ..\lib\yorilib.lib -version:$(CLIP_VER_MAJOR).$(CLIP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CLIP_VER_MAJOR).$(CLIP_VER_MINOR) $(LINKPDB) -out:$@
 

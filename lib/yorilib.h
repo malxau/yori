@@ -567,6 +567,9 @@ BOOL
 YoriLibLoadKernel32Functions();
 
 BOOL
+YoriLibLoadAdvApi32Functions();
+
+BOOL
 YoriLibLoadOle32Functions();
 
 BOOL
