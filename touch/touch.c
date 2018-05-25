@@ -209,12 +209,14 @@ ymain(
     BOOL UpdateLastAccess = FALSE;
     BOOL UpdateCreationTime = FALSE;
     BOOL UpdateWriteTime = FALSE;
+    SYSTEMTIME CurrentSystemTime;
     FILETIME TimestampToUse;
     TOUCH_CONTEXT TouchContext;
     YORI_STRING Arg;
 
     ZeroMemory(&TouchContext, sizeof(TouchContext));
-    GetSystemTimeAsFileTime(&TimestampToUse);
+    GetSystemTime(&CurrentSystemTime);
+    SystemTimeToFileTime(&CurrentSystemTime, &TimestampToUse);
 
     for (i = 1; i < ArgC; i++) {
 

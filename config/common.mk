@@ -219,7 +219,7 @@ writeconfigcache:
 
 !IF "$(WRITECONFIGCACHEFILE)"==""
 clean:
-	@erase if.com >NUL 2>NUL
+	-@erase if.com >NUL 2>NUL
 	@if exist *.exe erase *.exe
 	@if exist *.com erase *.com
 	@if exist *.obj erase *.obj

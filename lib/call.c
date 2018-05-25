@@ -742,7 +742,7 @@ YoriCallPipeJobOutput(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
-        pYoriApiPipeJobOutput = (PYORI_API_GET_JOB_OUTPUT)GetProcAddress(hYori, "YoriApiPipeJobOutput");
+        pYoriApiPipeJobOutput = (PYORI_API_PIPE_JOB_OUTPUT)GetProcAddress(hYori, "YoriApiPipeJobOutput");
         if (pYoriApiPipeJobOutput == NULL) {
             return 0;
         }
