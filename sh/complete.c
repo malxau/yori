@@ -751,6 +751,14 @@ typedef struct _YORI_TAB_FILE_HEURISTIC_MATCH {
 } YORI_TAB_FILE_HEURISTIC_MATCH, *PYORI_TAB_FILE_HEURISTIC_MATCH;
 
 /**
+ A list of strings which if found indicate no further file name matching
+ should take place.
+ */
+YORI_TAB_FILE_HEURISTIC_MATCH YoriShTabHeuristicMismatches[] = {
+    {_T("://"), 0}
+};
+
+/**
  A list of strings which may, heuristically, indicate a good place to look for
  file names.
  */
@@ -898,37 +906,64 @@ YoriShPerformFileTabCompletion(
     //
 
     if (EnumContext.FilesFound == 0) {
-        DWORD Count = sizeof(YoriShTabHeuristicMatches)/sizeof(YoriShTabHeuristicMatches[0]);
+        DWORD MatchCount = sizeof(YoriShTabHeuristicMatches)/sizeof(YoriShTabHeuristicMatches[0]);
+        DWORD MismatchCount = sizeof(YoriShTabHeuristicMismatches)/sizeof(YoriShTabHeuristicMismatches[0]);
+        DWORD AllocCount;
         DWORD Index;
         DWORD StringOffsetOfMatch;
         PYORI_STRING MatchArray;
         PYORI_STRING FoundMatch;
 
-        MatchArray = YoriLibMalloc(sizeof(YORI_STRING) * Count);
+        AllocCount = MatchCount;
+        if (AllocCount < MismatchCount) {
+            AllocCount = MismatchCount;
+        }
+
+        MatchArray = YoriLibMalloc(sizeof(YORI_STRING) * AllocCount);
         if (MatchArray == NULL) {
             YoriLibFreeStringContents(&SearchString);
             return;
         }
 
-        for (Index = 0; Index < Count; Index++) {
+        //
+        //  First check for any mismatch, indicating we shouldn't try for
+        //  a heuristic match.
+        //
+
+        for (Index = 0; Index < MismatchCount; Index++) {
+            YoriLibConstantString(&MatchArray[Index], YoriShTabHeuristicMismatches[Index].MatchString);
+        }
+
+        FoundMatch = YoriLibFindFirstMatchingSubstring(&SearchString, MismatchCount, MatchArray, &StringOffsetOfMatch);
+        if (FoundMatch != NULL) {
+            YoriLibFree(MatchArray);
+            YoriLibFreeStringContents(&SearchString);
+            return;
+        }
+
+        //
+        //  Now look for any heuristic matches.
+        //
+
+        for (Index = 0; Index < MatchCount; Index++) {
             YoriLibConstantString(&MatchArray[Index], YoriShTabHeuristicMatches[Index].MatchString);
         }
 
-        FoundMatch = YoriLibFindFirstMatchingSubstring(&SearchString, Count, MatchArray, &StringOffsetOfMatch);
+        FoundMatch = YoriLibFindFirstMatchingSubstring(&SearchString, MatchCount, MatchArray, &StringOffsetOfMatch);
         if (FoundMatch == NULL) {
             YoriLibFree(MatchArray);
             YoriLibFreeStringContents(&SearchString);
             return;
         }
 
-        for (Index = 0; Index < Count; Index++) {
+        for (Index = 0; Index < MatchCount; Index++) {
             if (FoundMatch->StartOfString == MatchArray[Index].StartOfString) {
                 break;
             }
         }
 
-        if (Index == Count) {
-            ASSERT(Index != Count);
+        if (Index == MatchCount) {
+            ASSERT(Index != MatchCount);
             YoriLibFree(MatchArray);
             YoriLibFreeStringContents(&SearchString);
             return;
