@@ -71,6 +71,7 @@ PRINTF_FN(
     BOOL leftalign;
     BOOL short_prefix;
     BOOL long_prefix;
+    BOOL longlong_prefix;
     BOOL truncated_due_to_space;
     DWORD element_len;
 
@@ -82,6 +83,7 @@ PRINTF_FN(
             leadingzero = FALSE;
             leftalign = FALSE;
             long_prefix = FALSE;
+            longlong_prefix = FALSE;
             short_prefix = FALSE;
             element_len = 0;
 
@@ -100,6 +102,9 @@ PRINTF_FN(
             if (szFmt[src_offset] == 'h') {
                 short_prefix = TRUE;
                 src_offset++;
+            } else if (szFmt[src_offset] == 'l' && szFmt[src_offset + 1] == 'l') {
+                longlong_prefix = TRUE;
+                src_offset += 2;
             } else if (szFmt[src_offset] == 'l') {
                 long_prefix = TRUE;
                 src_offset++;
@@ -107,6 +112,10 @@ PRINTF_FN(
 
             if (element_len == 0) {
                 element_len = (DWORD) -1;
+            }
+
+            if (szFmt[src_offset] == 'p' && sizeof(PVOID) == sizeof(DWORDLONG)) {
+                longlong_prefix = TRUE;
             }
 
             switch(szFmt[src_offset]) {
@@ -287,7 +296,8 @@ PRINTF_FN(
                 case 'd':
                 case 'i':
                 case 'x':
-                    {
+                case 'p':
+                    if (!longlong_prefix) {
                         DWORD num, tempnum;
                         DWORD divisor, digits;
                         DWORD radix = 10;
@@ -297,7 +307,7 @@ PRINTF_FN(
                         //  base 16
                         //
 
-                        if (szFmt[src_offset] == 'x') {
+                        if (szFmt[src_offset] == 'x' || szFmt[src_offset] == 'p') {
                             radix = 16;
                         }
 
@@ -358,6 +368,85 @@ PRINTF_FN(
 
                         } while(digits > 0);
 
+                    } else {
+                        DWORDLONG num, tempnum;
+                        DWORD digits;
+                        DWORD digitcount;
+                        DWORD radix = 10;
+
+                        //
+                        //  If we're %i we're base 10, if we're %x we're
+                        //  base 16
+                        //
+
+                        if (szFmt[src_offset] == 'x' || szFmt[src_offset] == 'p') {
+                            radix = 16;
+                        }
+
+                        num = va_arg(marker, DWORDLONG);
+
+                        //
+                        //  Count the number of digits we have in the user's
+                        //  input.  Stop if we hit the format specifier.
+                        //  Code below will preserve low order values.
+                        //
+
+                        digits = 1;
+                        tempnum = num;
+                        while (tempnum > radix - 1) {
+                            tempnum = tempnum / radix;
+                            digits++;
+                        }
+
+                        //
+                        //  If the field specifier is larger, pad it with
+                        //  either a zero or space depending on the format
+                        //
+
+                        if (element_len != (DWORD)-1) {
+                            if (digits > element_len) {
+                                tempnum = digits - element_len;
+                                while (tempnum > 0) {
+                                    num = num / radix;
+                                    digits--;
+                                }
+                            } else if (digits < element_len) {
+                                tempnum = element_len - digits;
+                                while (tempnum > 0) {
+                                    if (!PRINTF_DESTLENGTH()) {
+                                        truncated_due_to_space = TRUE;
+                                        break;
+                                    }
+                                    if (leadingzero) {
+                                        PRINTF_PUSHCHAR('0');
+                                    } else {
+                                        PRINTF_PUSHCHAR(' ');
+                                    }
+                                    tempnum--;
+                                }
+                            }
+                        }
+
+                        do {
+                            tempnum = num;
+                            for (digitcount = 1; digitcount < digits; digitcount++) {
+                                tempnum = tempnum / radix;
+                            }
+                            tempnum = tempnum % radix;
+
+                            if (!PRINTF_DESTLENGTH()) {
+                                truncated_due_to_space = TRUE;
+                                break;
+                            }
+
+                            if (tempnum > 9) {
+                                PRINTF_PUSHCHAR((UCHAR)(tempnum + 'a' - 10));
+                            } else {
+                                PRINTF_PUSHCHAR((UCHAR)(tempnum + '0'));
+                            }
+
+                            digits--;
+                        } while (digits > 0);
                     }
                     break;
                 default:
