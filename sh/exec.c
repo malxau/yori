@@ -26,6 +26,18 @@
 
 #include "yori.h"
 
+#if DBG
+/**
+ If TRUE, use verbose output when invoking processes under a debugger.
+ */
+#define YORI_SH_DEBUG_DEBUGGER 1
+#else
+/**
+ If TRUE, use verbose output when invoking processes under a debugger.
+ */
+#define YORI_SH_DEBUG_DEBUGGER 0
+#endif
+
 /**
  Capture the current handles used for stdin/stdout/stderr.
 
@@ -298,6 +310,405 @@ YoriShInitializeRedirection(
     return TRUE;
 }
 
+/**
+ The smallest unit of memory that can have protection applied.  It's not
+ super critical that this match the system page size - this is used to
+ request smaller memory reads from the target.  So long as the system page
+ size is a multiple of this value, the logic will still be correct.
+ */
+#define YORI_SH_MEMORY_PROTECTION_SIZE (4096)
+
+/**
+ Given a process that has finished execution, locate the environment block
+ within the process and extract it into a string in the currently executing
+ process.
+
+ @param ProcessHandle The handle of the child process whose environment is
+        requested.
+
+ @param EnvString On successful completion, a newly allocated string
+        containing the child process environment.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShSuckEnv(
+    __in HANDLE ProcessHandle,
+    __out PYORI_STRING EnvString
+    )
+{
+    PROCESS_BASIC_INFORMATION BasicInfo;
+
+    LONG Status;
+    DWORD dwBytesReturned;
+    SIZE_T BytesReturned;
+    DWORD EnvironmentBlockPageOffset;
+    DWORD CharsToMask;
+    PVOID ProcessParamsBlockToRead;
+    PVOID EnvironmentBlockToRead;
+    BOOL TargetProcess32BitPeb;
+
+    if (DllNtDll.pNtQueryInformationProcess == NULL) {
+        return FALSE;
+    }
+
+    TargetProcess32BitPeb = YoriLibDoesProcessHave32BitPeb(ProcessHandle);
+
+    Status = DllNtDll.pNtQueryInformationProcess(ProcessHandle, 0, &BasicInfo, sizeof(BasicInfo), &dwBytesReturned);
+    if (Status != 0) {
+        return FALSE;
+    }
+
+#if YORI_SH_DEBUG_DEBUGGER
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Peb at %p, Target %i bit PEB\n"), BasicInfo.PebBaseAddress, TargetProcess32BitPeb?32:64);
+#endif
+
+    if (TargetProcess32BitPeb) {
+        YORI_LIB_PEB32 ProcessPeb;
+
+        if (!ReadProcessMemory(ProcessHandle, BasicInfo.PebBaseAddress, &ProcessPeb, sizeof(ProcessPeb), &BytesReturned)) {
+            return FALSE;
+        }
+
+#if YORI_SH_DEBUG_DEBUGGER
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters offset %x\n"), FIELD_OFFSET(YORI_LIB_PEB32, ProcessParameters));
+#endif
+
+        ProcessParamsBlockToRead = (PVOID)(ULONG_PTR)ProcessPeb.ProcessParameters;
+
+    } else {
+        YORI_LIB_PEB64 ProcessPeb;
+
+        if (!ReadProcessMemory(ProcessHandle, BasicInfo.PebBaseAddress, &ProcessPeb, sizeof(ProcessPeb), &BytesReturned)) {
+            return FALSE;
+        }
+
+#if YORI_SH_DEBUG_DEBUGGER
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters offset %x\n"), FIELD_OFFSET(YORI_LIB_PEB64, ProcessParameters));
+#endif
+
+        ProcessParamsBlockToRead = (PVOID)(ULONG_PTR)ProcessPeb.ProcessParameters;
+    }
+
+#if YORI_SH_DEBUG_DEBUGGER
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters at %p\n"), ProcessParamsBlockToRead);
+#endif
+
+    if (TargetProcess32BitPeb) {
+        YORI_LIB_PROCESS_PARAMETERS32 ProcessParameters;
+
+        if (!ReadProcessMemory(ProcessHandle, ProcessParamsBlockToRead, &ProcessParameters, sizeof(ProcessParameters), &BytesReturned)) {
+            return FALSE;
+        }
+
+        EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
+        EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (DWORD)ProcessParameters.EnvironmentBlock;
+    } else {
+        YORI_LIB_PROCESS_PARAMETERS64 ProcessParameters;
+
+        if (!ReadProcessMemory(ProcessHandle, ProcessParamsBlockToRead, &ProcessParameters, sizeof(ProcessParameters), &BytesReturned)) {
+            return FALSE;
+        }
+
+        EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
+        EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (DWORD)ProcessParameters.EnvironmentBlock;
+    }
+
+    CharsToMask = EnvironmentBlockPageOffset / sizeof(TCHAR);
+#if YORI_SH_DEBUG_DEBUGGER
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvironmentBlock at %p PageOffset %04x CharsToMask %04x\n"), EnvironmentBlockToRead, EnvironmentBlockPageOffset, CharsToMask);
+#endif
+
+    //
+    //  Attempt to read 64Kb of environment minus the offset from the
+    //  page containing the environment.  This occurs because older
+    //  versions of Windows don't record how large the block is.  As
+    //  a result, this may be truncated, which is acceptable.
+    //
+
+    if (!YoriLibAllocateString(EnvString, 32 * 1024 - CharsToMask)) {
+        return FALSE;
+    }
+
+    //
+    //  Loop issuing reads and decreasing the read size by one page each
+    //  time if reads are failing due to invalid memory on the target
+    //
+
+    do {
+
+        if (!ReadProcessMemory(ProcessHandle, EnvironmentBlockToRead, EnvString->StartOfString, EnvString->LengthAllocated * sizeof(TCHAR), &BytesReturned)) {
+            DWORD Err = GetLastError();
+            if (Err != ERROR_PARTIAL_COPY && Err != ERROR_NOACCESS) {
+#if YORI_SH_DEBUG_DEBUGGER
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ReadProcessMemory returned error %08x BytesReturned %i\n"), Err, BytesReturned);
+#endif
+                YoriLibFreeStringContents(EnvString);
+                return FALSE;
+            }
+
+            if (EnvString->LengthAllocated * sizeof(TCHAR) < YORI_SH_MEMORY_PROTECTION_SIZE) {
+#if YORI_SH_DEBUG_DEBUGGER
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ReadProcessMemory failed to read less than a page\n"));
+#endif
+                YoriLibFreeStringContents(EnvString);
+                return FALSE;
+            }
+
+            EnvString->LengthAllocated -= YORI_SH_MEMORY_PROTECTION_SIZE / sizeof(TCHAR);
+        } else {
+            break;
+        }
+
+    } while (TRUE);
+
+    if (!YoriLibAreEnvironmentStringsValid(EnvString)) {
+#if YORI_SH_DEBUG_DEBUGGER
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvString not valid\n"));
+#endif
+        YoriLibFreeStringContents(EnvString);
+        return FALSE;
+    }
+
+#if YORI_SH_DEBUG_DEBUGGER
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvString has %i chars\n"), EnvString->LengthInChars);
+#endif
+
+    if (EnvString->LengthInChars <= 2) {
+#if YORI_SH_DEBUG_DEBUGGER
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvString is empty\n"));
+#endif
+        YoriLibFreeStringContents(EnvString);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ A wrapper around CreateProcess that sets up redirection and launches a
+ process.  The point of this function is that it can be called from the
+ main thread or from a debugging thread.
+
+ @param ExecContext Pointer to the ExecContext to attempt to launch via
+        CreateProcess.
+
+ @return Win32 error code, meaning zero indicates success.
+ */
+DWORD
+YoriShCreateProcess(
+    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    )
+{
+    LPTSTR CmdLine;
+    PROCESS_INFORMATION ProcessInfo;
+    STARTUPINFO StartupInfo;
+    YORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    DWORD CreationFlags = 0;
+
+    ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+
+    CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, TRUE, NULL, NULL);
+    if (CmdLine == NULL) {
+        return ERROR_OUTOFMEMORY;
+    }
+
+    memset(&StartupInfo, 0, sizeof(StartupInfo));
+    StartupInfo.cb = sizeof(StartupInfo);
+
+    if (ExecContext->RunOnSecondConsole) {
+        CreationFlags |= CREATE_NEW_CONSOLE;
+    }
+
+    if (ExecContext->CaptureEnvironmentOnExit) {
+        CreationFlags |= DEBUG_PROCESS;
+    }
+
+    CreationFlags |= CREATE_NEW_PROCESS_GROUP;
+
+    YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
+
+    if (!CreateProcess(NULL, CmdLine, NULL, NULL, TRUE, CreationFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+        DWORD LastError = GetLastError();
+        YoriShRevertRedirection(&PreviousRedirectContext);
+        YoriLibDereference(CmdLine);
+        return LastError;
+    } else {
+        YoriShRevertRedirection(&PreviousRedirectContext);
+    }
+
+    ASSERT(ExecContext->hProcess == NULL);
+    ExecContext->hProcess = ProcessInfo.hProcess;
+    ExecContext->hPrimaryThread = ProcessInfo.hThread;
+    ExecContext->dwProcessId = ProcessInfo.dwProcessId;
+
+    YoriLibDereference(CmdLine);
+
+    return NO_ERROR;
+}
+
+/**
+ Cleanup the ExecContext if the process failed to launch.
+
+ @param ExecContext Pointer to the ExecContext to clean up.
+ */
+VOID
+YoriShCleanupFailedProcessLaunch(
+    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    )
+{
+    if (ExecContext->StdOutType == StdOutTypePipe &&
+        ExecContext->NextProgram != NULL &&
+        ExecContext->NextProgram->StdInType == StdInTypePipe) {
+
+        CloseHandle(ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess);
+        ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess = NULL;
+        ExecContext->NextProgramType = NextProgramExecNever;
+    }
+}
+
+/**
+ Start buffering process output if the process is configured for it.
+
+ @param ExecContext Pointer to the ExecContext to set up buffers for.
+ */
+VOID
+YoriShCommenceProcessBuffersIfNeeded(
+    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    )
+{
+    //
+    //  If we're buffering output, start that process now.  If it succeeds,
+    //  the pipe is owned by the buffer pump and shouldn't be torn down
+    //  when the ExecContext is.
+    //
+
+    if (ExecContext->StdOutType == StdOutTypeBuffer ||
+        ExecContext->StdErrType == StdErrTypeBuffer) {
+
+        if (ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
+            ASSERT(ExecContext->StdErrType != StdErrTypeBuffer);
+            if (YoriShAppendToExistingProcessBuffer(ExecContext)) {
+                ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
+            } else {
+                ExecContext->StdOut.Buffer.ProcessBuffers = NULL;
+            }
+        } else {
+            if (YoriShCreateNewProcessBuffer(ExecContext)) {
+                ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
+                ExecContext->StdErr.Buffer.PipeFromProcess = NULL;
+            }
+        }
+    }
+}
+
+/**
+ Pump debug messages from a child process, and when the child process has
+ completed execution, extract its environment and apply it to the currently
+ executing process.
+
+ @param Context Pointer to the exec context for the child process.
+
+ @return Not meaningful.
+ */
+DWORD WINAPI
+YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
+    __in PVOID Context
+    )
+{
+    PYORI_SINGLE_EXEC_CONTEXT ExecContext = (PYORI_SINGLE_EXEC_CONTEXT)Context;
+    PVOID DllNamePtr;
+    TCHAR DllName[64];
+    DWORD Err;
+
+    Err = YoriShCreateProcess(ExecContext);
+    if (Err != NO_ERROR) {
+        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed (%i): %s"), Err, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        YoriShCleanupFailedProcessLaunch(ExecContext);
+        return 0;
+    }
+
+    YoriShCommenceProcessBuffersIfNeeded(ExecContext);
+
+    while (TRUE) {
+        DEBUG_EVENT DbgEvent;
+        DWORD dwContinueStatus;
+
+        ZeroMemory(&DbgEvent, sizeof(DbgEvent));
+        if (!WaitForDebugEvent(&DbgEvent, INFINITE)) {
+            break;
+        }
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("DbgEvent Pid %x Tid %x Event %x\n"), DbgEvent.dwProcessId, DbgEvent.dwThreadId, DbgEvent.dwDebugEventCode);
+
+        dwContinueStatus = DBG_CONTINUE;
+
+        switch(DbgEvent.dwDebugEventCode) {
+            case CREATE_PROCESS_DEBUG_EVENT:
+                CloseHandle(DbgEvent.u.CreateProcessInfo.hFile);
+                break;
+            case LOAD_DLL_DEBUG_EVENT:
+                if (DbgEvent.u.LoadDll.lpImageName != NULL) {
+                    SIZE_T BytesReturned;
+                    if (ReadProcessMemory(ExecContext->hProcess, DbgEvent.u.LoadDll.lpImageName, &DllNamePtr, sizeof(DllNamePtr), &BytesReturned)) {
+                        if (ReadProcessMemory(ExecContext->hProcess, DllNamePtr, &DllName, sizeof(DllName), &BytesReturned)) {
+                            if (DbgEvent.u.LoadDll.fUnicode) {
+                                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Dll loaded: %s\n"), DllName);
+                            } else {
+                                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Dll loaded: %hs\n"), DllName);
+                            }
+                        }
+                    }
+                }
+                CloseHandle(DbgEvent.u.LoadDll.hFile);
+                break;
+            case EXCEPTION_DEBUG_EVENT:
+
+                //
+                //  Wow64 processes throw a breakpoint once 32 bit code starts
+                //  running, and the debugger is expected to handle it.  The
+                //  two codes are for breakpoint and x86 breakpoint
+                //
+
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ExceptionCode %x\n"), DbgEvent.u.Exception.ExceptionRecord.ExceptionCode);
+                dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
+
+                if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
+
+                    dwContinueStatus = DBG_CONTINUE;
+                }
+
+                if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001F) {
+
+                    dwContinueStatus = DBG_CONTINUE;
+                }
+
+                break;
+        }
+
+        if (DbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT &&
+            DbgEvent.dwProcessId == ExecContext->dwProcessId) {
+
+            YORI_STRING EnvString;
+            if (YoriShSuckEnv(ExecContext->hProcess, &EnvString)) {
+                YoriLibSetEnvironmentStrings(&EnvString);
+                YoriLibFreeStringContents(&EnvString);
+            }
+        }
+
+        ContinueDebugEvent(DbgEvent.dwProcessId, DbgEvent.dwThreadId, dwContinueStatus);
+        if (DbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT &&
+            DbgEvent.dwProcessId == ExecContext->dwProcessId) {
+            break;
+        }
+    }
+
+    WaitForSingleObject(ExecContext->hProcess, INFINITE);
+    return 0;
+}
+
 
 /**
  Wait for a process to terminate.  This is also a good opportunity for Yori
@@ -306,17 +717,10 @@ YoriShInitializeRedirection(
 
  @param ExecContext Pointer to the context used to invoke the process, which
         includes information about whether it should be cancelled.
-
- @param hProcess The process to wait for.
-
- @param dwProcessId The process ID, which for some unknowable reason is used
-        rather than the handle to send Ctrl+C signals to.
  */
 VOID
 YoriShWaitForProcessToTerminate(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
-    __in HANDLE hProcess,
-    __in DWORD dwProcessId
+    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     HANDLE WaitOn[3];
@@ -329,6 +733,7 @@ YoriShWaitForProcessToTerminate(
     DWORD CtrlBCount = 0;
     DWORD Delay;
     BOOL CtrlBFoundThisPass;
+    HANDLE hDebugPumpThread = NULL;
 
     //
     //  By this point redirection has been established and then reverted.
@@ -337,7 +742,18 @@ YoriShWaitForProcessToTerminate(
 
     YoriLibCancelEnable();
 
-    WaitOn[0] = hProcess;
+    if (ExecContext->CaptureEnvironmentOnExit) {
+        DWORD ThreadId;
+        hDebugPumpThread = CreateThread(NULL, 0, YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit, ExecContext, 0, &ThreadId);
+        if (hDebugPumpThread == NULL) {
+            YoriLibCancelIgnore();
+            return;
+        }
+
+        WaitOn[0] = hDebugPumpThread;
+    } else {
+        WaitOn[0] = ExecContext->hProcess;
+    }
     WaitOn[1] = YoriLibCancelGetEvent();
     WaitOn[2] = GetStdHandle(STD_INPUT_HANDLE);
 
@@ -374,12 +790,20 @@ YoriShWaitForProcessToTerminate(
         //  If the user has hit Ctrl+C or Ctrl+Break, request the process
         //  to clean up gracefully and unwind.  Later on we'll try to kill
         //  all processes in the exec plan, so we don't need to try too hard
-        //  at this point.
+        //  at this point.  If the process doesn't exist, which happens when
+        //  we're trying to launch it as a debuggee, wait a bit to see if it
+        //  comes into existence.  If launching it totally failed, the debug
+        //  thread will terminate and we'll exit; if it succeeds, we'll get
+        //  to cancel it again here.
         //
 
         if (Result == (WAIT_OBJECT_0 + 1)) {
-            GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, dwProcessId);
-            break;
+            if (ExecContext->dwProcessId != 0) {
+                GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, ExecContext->dwProcessId);
+                break;
+            } else {
+                Sleep(50);
+            }
         }
 
         if (WaitForSingleObject(WaitOn[2], 0) == WAIT_TIMEOUT) {
@@ -561,12 +985,8 @@ YoriShExecuteSingleProgram(
     __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
-    LPTSTR CmdLine;
     PROCESS_INFORMATION ProcessInfo;
-    STARTUPINFO StartupInfo;
-    YORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     DWORD ExitCode = 0;
-    DWORD CreationFlags = 0;
     LPTSTR szExt;
     BOOLEAN ExecProcess = TRUE;
     BOOLEAN LaunchFailed = FALSE;
@@ -591,6 +1011,9 @@ YoriShExecuteSingleProgram(
                    YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
             ExecProcess = FALSE;
             YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
+            if (ExecContext->WaitForCompletion) {
+                ExecContext->CaptureEnvironmentOnExit = TRUE;
+            }
             ExitCode = YoriShBuckPass(ExecContext, 2, _T("cmd.exe"), _T("/c"));
         } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
             LaunchViaShellExecute = TRUE;
@@ -602,37 +1025,18 @@ YoriShExecuteSingleProgram(
 
         ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
 
-        if (!LaunchViaShellExecute) {
-            CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, TRUE, NULL, NULL);
-            if (CmdLine == NULL) {
-                return 1;
-            }
-    
-            memset(&StartupInfo, 0, sizeof(StartupInfo));
-            StartupInfo.cb = sizeof(StartupInfo);
-    
-            if (ExecContext->RunOnSecondConsole) {
-                CreationFlags |= CREATE_NEW_CONSOLE;
-            }
-            CreationFlags |= CREATE_NEW_PROCESS_GROUP;
-    
-            YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
-    
-            if (!CreateProcess(NULL, CmdLine, NULL, NULL, TRUE, CreationFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
-                DWORD LastError = GetLastError();
-                YoriShRevertRedirection(&PreviousRedirectContext);
-                YoriLibDereference(CmdLine);
-                if (LastError == ERROR_ELEVATION_REQUIRED) {
+        if (!LaunchViaShellExecute && !ExecContext->CaptureEnvironmentOnExit) {
+            DWORD Err = YoriShCreateProcess(ExecContext);
+
+            if (Err != NO_ERROR) {
+                if (Err == ERROR_ELEVATION_REQUIRED) {
                     LaunchViaShellExecute = TRUE;
                 } else {
-                    LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed (%i): %s"), LastError, ErrText);
+                    LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed (%i): %s"), Err, ErrText);
                     YoriLibFreeWinErrorText(ErrText);
                     LaunchFailed = TRUE;
                 }
-            } else {
-                YoriShRevertRedirection(&PreviousRedirectContext);
-                YoriLibDereference(CmdLine);
             }
         }
 
@@ -643,41 +1047,14 @@ YoriShExecuteSingleProgram(
         }
 
         if (LaunchFailed) {
-            if (ExecContext->StdOutType == StdOutTypePipe &&
-                ExecContext->NextProgram != NULL &&
-                ExecContext->NextProgram->StdInType == StdInTypePipe) {
-
-                CloseHandle(ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess);
-                ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess = NULL;
-                ExecContext->NextProgramType = NextProgramExecNever;
-            }
-
+            YoriShCleanupFailedProcessLaunch(ExecContext);
             return 1;
         }
 
-        //
-        //  If we're buffering output, start that process now.  If it succeeds,
-        //  the pipe is owned by the buffer pump and shouldn't be torn down
-        //  when the ExecContext is.
-        //
-
-        if (ExecContext->StdOutType == StdOutTypeBuffer ||
-            ExecContext->StdErrType == StdErrTypeBuffer) {
-
-            if (ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
-                ASSERT(ExecContext->StdErrType != StdErrTypeBuffer);
-                if (YoriShAppendToExistingProcessBuffer(ExecContext)) {
-                    ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
-                } else {
-                    ExecContext->StdOut.Buffer.ProcessBuffers = NULL;
-                }
-            } else {
-                if (YoriShCreateNewProcessBuffer(ExecContext)) {
-                    ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
-                    ExecContext->StdErr.Buffer.PipeFromProcess = NULL;
-                }
-            }
+        if (!ExecContext->CaptureEnvironmentOnExit) {
+            YoriShCommenceProcessBuffersIfNeeded(ExecContext);
         }
+
 
         //
         //  We may not have a process handle but still be successful if
@@ -687,22 +1064,22 @@ YoriShExecuteSingleProgram(
         //  things, but there's not much we can do about it from here.
         //
 
-        if (ProcessInfo.hProcess != NULL) {
+        if (ProcessInfo.hProcess != NULL || ExecContext->CaptureEnvironmentOnExit) {
             ASSERT(ExecContext->hProcess == NULL);
             ExecContext->hProcess = ProcessInfo.hProcess;
+            ExecContext->hPrimaryThread = ProcessInfo.hThread;
             ExecContext->dwProcessId = ProcessInfo.dwProcessId;
             if (ExecContext->WaitForCompletion) {
-                YoriShWaitForProcessToTerminate(ExecContext, ProcessInfo.hProcess, ProcessInfo.dwProcessId);
-                GetExitCodeProcess(ProcessInfo.hProcess, &ExitCode);
+                YoriShWaitForProcessToTerminate(ExecContext);
+                GetExitCodeProcess(ExecContext->hProcess, &ExitCode);
             } else if (ExecContext->StdOutType != StdOutTypePipe) {
+                ASSERT(!ExecContext->CaptureEnvironmentOnExit);
                 if (YoriShCreateNewJob(ExecContext, ProcessInfo.hProcess, ProcessInfo.dwProcessId)) {
                     ExecContext->dwProcessId = 0;
                     ExecContext->hProcess = NULL;
                 }
             }
-        }
-
-        if (ProcessInfo.hThread != NULL) {
+        } else if (ProcessInfo.hThread != NULL) {
             CloseHandle(ProcessInfo.hThread);
         }
     }
@@ -753,6 +1130,11 @@ YoriShCancelExecPlan(
         }
         ExecContext = ExecContext->NextProgram;
     }
+
+    //
+    //  MSFIX If any of these have threads pumping debug messages, wait
+    //  for those to unwind
+    //
 }
 
 

@@ -220,7 +220,6 @@ YoriShBuckPass (
 
     if (ExecAsBuiltin) {
         ExitCode = YoriShBuiltIn(ExecContext);
-
     } else {
         ExitCode = YoriShExecuteSingleProgram(ExecContext);
     }

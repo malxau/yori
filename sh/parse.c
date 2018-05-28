@@ -1295,6 +1295,10 @@ YoriShFreeExecContext(
         CloseHandle(ExecContext->hProcess);
         ExecContext->hProcess = NULL;
     }
+    if (ExecContext->hPrimaryThread != NULL) {
+        CloseHandle(ExecContext->hPrimaryThread);
+        ExecContext->hPrimaryThread = NULL;
+    }
 }
 
 /**

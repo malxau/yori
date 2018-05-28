@@ -564,6 +564,9 @@ YoriLibDbgRealAssert(
 // *** DYLD.C ***
 
 BOOL
+YoriLibLoadNtDllFunctions();
+
+BOOL
 YoriLibLoadKernel32Functions();
 
 BOOL
@@ -1263,6 +1266,16 @@ YoriLibGetOsVersion(
     __out PDWORD BuildNumber
     );
 
+BOOL
+YoriLibIsProcess32Bit(
+    __in HANDLE ProcessHandle
+    );
+
+BOOL
+YoriLibDoesProcessHave32BitPeb(
+    __in HANDLE ProcessHandle
+    );
+
 // *** RECYCLE.C ***
 
 BOOL
@@ -1539,11 +1552,21 @@ YoriLibYPrintf(
     ...
     );
 
-// *** SET.C ***
+// *** ENV.C ***
 
 BOOL
 YoriLibGetEnvironmentStrings(
     __out PYORI_STRING EnvStrings
+    );
+
+BOOL
+YoriLibSetEnvironmentStrings(
+    __in PYORI_STRING NewEnv
+    );
+
+BOOL
+YoriLibAreEnvironmentStringsValid(
+    __inout PYORI_STRING EnvStrings
     );
 
 // *** STRING.C ***

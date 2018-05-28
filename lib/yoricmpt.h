@@ -39,7 +39,6 @@
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
-
 #ifndef DWORD_PTR
 #ifndef _WIN64
 
@@ -64,6 +63,117 @@ typedef ULONG ULONG_PTR;
 typedef ULONG SIZE_T;
 #endif
 #endif
+
+/**
+ A structure that is returned by NtQueryInformationProcess describing
+ information about a process, including the location of its PEB.
+ */
+typedef struct _PROCESS_BASIC_INFORMATION {
+    /**
+     Ignored for alignment.
+     */
+    PVOID Reserved1;
+
+    /**
+     Pointer to the PEB within the target process address space.
+     */
+    PVOID PebBaseAddress;
+
+    /**
+     Ignored for alignment.
+     */
+    PVOID Reserved2[4];
+} PROCESS_BASIC_INFORMATION, *PPROCESS_BASIC_INFORMATION;
+
+/**
+ The size of a 32 bit pointer.
+ */
+typedef DWORD YORI_LIB_PTR32;
+
+/**
+ A structure corresponding to process parameters in a 32 bit child process.
+ */
+typedef struct _YORI_LIB_PROCESS_PARAMETERS32 {
+    /**
+     Ignored for alignment.
+     */
+    DWORD Ignored1[10];
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored2[8];
+
+    /**
+     Pointer to the process environment block.
+     */
+    YORI_LIB_PTR32 EnvironmentBlock;
+} YORI_LIB_PROCESS_PARAMETERS32, *PYORI_LIB_PROCESS_PARAMETERS32;
+
+/**
+ A structure corresponding to a PEB in a 32 bit child process.
+ */
+typedef struct _YORI_LIB_PEB32 {
+    /**
+     Ignored for alignment.
+     */
+    DWORD Flags;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored[3];
+
+    /**
+     Pointer to the process parameters.
+     */
+    PYORI_LIB_PROCESS_PARAMETERS32 ProcessParameters;
+} YORI_LIB_PEB32, *PYORI_LIB_PEB32;
+
+/**
+ The size of a 64 bit pointer.
+ */
+typedef LONGLONG YORI_LIB_PTR64;
+
+/**
+ A structure corresponding to process parameters in a 64 bit child process.
+ */
+typedef struct _YORI_LIB_PROCESS_PARAMETERS64 {
+    /**
+     Ignored for alignment.
+     */
+    DWORD Ignored1[16];
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR64 Ignored2[8];
+
+    /**
+     Pointer to the process environment block.
+     */
+    YORI_LIB_PTR64 EnvironmentBlock;
+} YORI_LIB_PROCESS_PARAMETERS64, *PYORI_LIB_PROCESS_PARAMETERS64;
+
+/**
+ A structure corresponding to a PEB in a 64 bit child process.
+ */
+typedef struct _YORI_LIB_PEB64 {
+    /**
+     Ignored for alignment.
+     */
+    DWORD Flags[2];
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR64 Ignored[3];
+
+    /**
+     Pointer to the process parameters.
+     */
+    PYORI_LIB_PROCESS_PARAMETERS64 ProcessParameters;
+} YORI_LIB_PEB64, *PYORI_LIB_PEB64;
 
 #ifndef FSCTL_SET_REPARSE_POINT
 
@@ -1143,6 +1253,33 @@ typedef struct _YORI_SHELLEXECUTEINFO {
 #endif
 
 /**
+ A prototype for the NtQueryInformationProcess function..
+ */
+typedef 
+LONG WINAPI
+NT_QUERY_INFORMATION_PROCESS(HANDLE, DWORD, PVOID, DWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the NtQueryInformationProcess function.
+ */
+typedef NT_QUERY_INFORMATION_PROCESS *PNT_QUERY_INFORMATION_PROCESS;
+
+/**
+ A structure containing optional function pointers to ntdll.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_NTDLL_FUNCTIONS {
+
+    /**
+     If it's available on the current system, a pointer to
+     NtQueryInformationProcess.
+     */
+    PNT_QUERY_INFORMATION_PROCESS pNtQueryInformationProcess;
+} YORI_NTDLL_FUNCTIONS, *PYORI_NTDLL_FUNCTIONS;
+
+extern YORI_NTDLL_FUNCTIONS DllNtDll;
+
+/**
  A prototype for the AddConsoleAliasW function.
  */
 typedef
@@ -1348,6 +1485,18 @@ GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, ULONG, PVOID, DWORD);
 typedef GET_FILE_INFORMATION_BY_HANDLE_EX *PGET_FILE_INFORMATION_BY_HANDLE_EX;
 
 /**
+ A prototype for the IsWow64Process function.
+ */
+typedef
+BOOL WINAPI
+IS_WOW64_PROCESS(HANDLE, PBOOL);
+
+/**
+ A prototype for a pointer to the IsWow64Process function.
+ */
+typedef IS_WOW64_PROCESS *PIS_WOW64_PROCESS;
+
+/**
  A prototype for the RegisterApplicationRestart function.
  */
 typedef
@@ -1497,6 +1646,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetFileInformationByHandleEx.
      */
     PGET_FILE_INFORMATION_BY_HANDLE_EX pGetFileInformationByHandleEx;
+
+    /**
+     If it's available on the current system, a pointer to IsWow64Process.
+     */
+    PIS_WOW64_PROCESS pIsWow64Process;
 
     /**
      If it's available on the current system, a pointer to RegisterApplicationRestart.

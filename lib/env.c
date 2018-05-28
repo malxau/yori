@@ -89,4 +89,112 @@ YoriLibGetEnvironmentStrings(
     return TRUE;
 }
 
+/**
+ Apply an environment block into the running process.  Variables not explicitly
+ included in this block are discarded.
+
+ @param NewEnv Pointer to the new environment block to apply.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibSetEnvironmentStrings(
+    __in PYORI_STRING NewEnv
+    )
+{
+    YORI_STRING CurrentEnvironment;
+    LPTSTR ThisVar;
+    LPTSTR ThisValue;
+    DWORD VarLen;
+
+    //
+    //  Query the current environment and delete everything in it.
+    //
+
+    if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
+        return FALSE;
+    }
+    ThisVar = CurrentEnvironment.StartOfString;
+    while (*ThisVar != '\0') {
+        VarLen = _tcslen(ThisVar);
+
+        //
+        //  We know there's at least one char.  Skip it if it's equals since
+        //  that's how drive current directories are recorded.
+        //
+
+        ThisValue = _tcschr(&ThisVar[1], '=');
+        if (ThisValue != NULL) {
+            ThisValue[0] = '\0';
+            SetEnvironmentVariable(ThisVar, NULL);
+        }
+
+        ThisVar += VarLen;
+        ThisVar++;
+    }
+    YoriLibFreeStringContents(&CurrentEnvironment);
+
+    //
+    //  Now load the new environment.
+    //
+
+    ThisVar = NewEnv->StartOfString;
+    while (*ThisVar != '\0') {
+        VarLen = _tcslen(ThisVar);
+
+        //
+        //  We know there's at least one char.  Skip it if it's equals since
+        //  that's how drive current directories are recorded.
+        //
+
+        ThisValue = _tcschr(&ThisVar[1], '=');
+        if (ThisValue != NULL) {
+            ThisValue[0] = '\0';
+            ThisValue++;
+            SetEnvironmentVariable(ThisVar, ThisValue);
+        }
+
+        ThisVar += VarLen;
+        ThisVar++;
+    }
+
+    return TRUE;
+}
+
+/**
+ Returns TRUE if a set of environment strings are double NULL terminated within
+ the bounds of the allocation, and populates LengthInChars to encompass the
+ double terminator.  If no double terminator is found within the allocation,
+ returns FALSE.
+
+ @param EnvStrings Pointer to the environment strings to validate.
+
+ @return TRUE to indicate the environment strings are valid, FALSE if they are
+         not.
+ */
+BOOL
+YoriLibAreEnvironmentStringsValid(
+    __inout PYORI_STRING EnvStrings
+    )
+{
+    DWORD Index;
+
+    if (EnvStrings->LengthAllocated < 2) {
+        return FALSE;
+    }
+
+    for (Index = 0; Index < EnvStrings->LengthAllocated - 1; Index++) {
+        if (EnvStrings->StartOfString[Index] == '\0' &&
+            EnvStrings->StartOfString[Index + 1] == '\0') {
+
+            EnvStrings->LengthInChars = Index + 1;
+
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+
 // vim:sw=4:ts=4:et:

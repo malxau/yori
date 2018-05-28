@@ -194,6 +194,11 @@ typedef struct _YORI_SINGLE_EXEC_CONTEXT {
     HANDLE hProcess;
 
     /**
+     Handle to the primary thread of the child process.
+     */
+    HANDLE hPrimaryThread;
+
+    /**
      The process identifier of the child process if it has been launched.
      For some reason some APIs want this and others want the handle.
      */
@@ -221,6 +226,12 @@ typedef struct _YORI_SINGLE_EXEC_CONTEXT {
      console.
      */
     BOOLEAN RunOnSecondConsole;
+
+    /**
+     TRUE if the environment should be reloaded from the process on
+     termination.  This implies WaitForCompletion is TRUE.
+     */
+    BOOLEAN CaptureEnvironmentOnExit;
 
 } YORI_SINGLE_EXEC_CONTEXT, *PYORI_SINGLE_EXEC_CONTEXT;
 

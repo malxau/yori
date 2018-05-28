@@ -28,6 +28,31 @@
 #include "yorilib.h"
 
 /**
+ A structure containing pointers to ntdll.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_NTDLL_FUNCTIONS DllNtDll;
+
+/**
+ Load pointers to all optional ntdll.dll functions.  Because ntdll.dll is
+ effectively mandatory in any Win32 process, this uses GetModuleHandle rather
+ than LoadLibrary and pointers are valid for the lifetime of the process.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadNtDllFunctions()
+{
+    HANDLE hNtDll;
+    hNtDll = GetModuleHandle(_T("NTDLL"));
+    if (hNtDll == NULL) {
+        return FALSE;
+    }
+    DllNtDll.pNtQueryInformationProcess = (PNT_QUERY_INFORMATION_PROCESS)GetProcAddress(hNtDll, "NtQueryInformationProcess");
+    return TRUE;
+}
+
+/**
  A structure containing pointers to kernel32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
@@ -65,6 +90,7 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pGetEnvironmentStrings = (PGET_ENVIRONMENT_STRINGS)GetProcAddress(hKernel, "GetEnvironmentStrings");
     DllKernel32.pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(hKernel, "GetEnvironmentStringsW");
     DllKernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(hKernel, "GetFileInformationByHandleEx");
+    DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(hKernel, "IsWow64Process");
     DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(hKernel, "RegisterApplicationRestart");
     DllKernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "SetConsoleScreenBufferInfoEx");
     DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "SetCurrentConsoleFontEx");

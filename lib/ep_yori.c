@@ -194,6 +194,7 @@ VOID __cdecl CONSOLE_CRT_ENTRYPOINT()
     DWORD Index;
     DWORD ExitCode;
 
+    YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
 
     ArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), &ArgC);
