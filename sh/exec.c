@@ -752,6 +752,7 @@ YoriShWaitForProcessToTerminate(
 
         WaitOn[0] = hDebugPumpThread;
     } else {
+        ASSERT(ExecContext->hProcess != NULL);
         WaitOn[0] = ExecContext->hProcess;
     }
     WaitOn[1] = YoriLibCancelGetEvent();
@@ -985,7 +986,6 @@ YoriShExecuteSingleProgram(
     __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
-    PROCESS_INFORMATION ProcessInfo;
     DWORD ExitCode = 0;
     LPTSTR szExt;
     BOOLEAN ExecProcess = TRUE;
@@ -1023,8 +1023,6 @@ YoriShExecuteSingleProgram(
 
     if (ExecProcess) {
 
-        ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
-
         if (!LaunchViaShellExecute && !ExecContext->CaptureEnvironmentOnExit) {
             DWORD Err = YoriShCreateProcess(ExecContext);
 
@@ -1041,8 +1039,16 @@ YoriShExecuteSingleProgram(
         }
 
         if (LaunchViaShellExecute) {
+            PROCESS_INFORMATION ProcessInfo;
+
+            ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+
             if (!YoriShExecViaShellExecute(ExecContext, &ProcessInfo)) {
                 LaunchFailed = TRUE;
+            } else {
+                ExecContext->hProcess = ProcessInfo.hProcess;
+                ExecContext->hPrimaryThread = ProcessInfo.hThread;
+                ExecContext->dwProcessId = ProcessInfo.dwProcessId;
             }
         }
 
@@ -1064,23 +1070,17 @@ YoriShExecuteSingleProgram(
         //  things, but there's not much we can do about it from here.
         //
 
-        if (ProcessInfo.hProcess != NULL || ExecContext->CaptureEnvironmentOnExit) {
-            ASSERT(ExecContext->hProcess == NULL);
-            ExecContext->hProcess = ProcessInfo.hProcess;
-            ExecContext->hPrimaryThread = ProcessInfo.hThread;
-            ExecContext->dwProcessId = ProcessInfo.dwProcessId;
+        if (ExecContext->hProcess != NULL || ExecContext->CaptureEnvironmentOnExit) {
             if (ExecContext->WaitForCompletion) {
                 YoriShWaitForProcessToTerminate(ExecContext);
                 GetExitCodeProcess(ExecContext->hProcess, &ExitCode);
             } else if (ExecContext->StdOutType != StdOutTypePipe) {
                 ASSERT(!ExecContext->CaptureEnvironmentOnExit);
-                if (YoriShCreateNewJob(ExecContext, ProcessInfo.hProcess, ProcessInfo.dwProcessId)) {
+                if (YoriShCreateNewJob(ExecContext, ExecContext->hProcess, ExecContext->dwProcessId)) {
                     ExecContext->dwProcessId = 0;
                     ExecContext->hProcess = NULL;
                 }
             }
-        } else if (ProcessInfo.hThread != NULL) {
-            CloseHandle(ProcessInfo.hThread);
         }
     }
     return ExitCode;
