@@ -1286,6 +1286,18 @@ YoriShFreeExecContext(
     __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
+
+    //
+    //  If the process was being debugged, the debugger thread should
+    //  have torn down before we tear down the context it uses.
+    //
+
+    if (ExecContext->hDebuggerThread != NULL) {
+        ASSERT(WaitForSingleObject(ExecContext->hDebuggerThread, 0) == WAIT_OBJECT_0);
+        CloseHandle(ExecContext->hDebuggerThread);
+        ExecContext->hDebuggerThread = NULL;
+    }
+
     YoriShFreeCmdContext(&ExecContext->CmdToExec);
 
     YoriShExecContextCleanupStdIn(ExecContext);

@@ -199,6 +199,11 @@ typedef struct _YORI_SINGLE_EXEC_CONTEXT {
     HANDLE hPrimaryThread;
 
     /**
+     Handle to a debugger thread, if the child process is being debugged.
+     */
+    HANDLE hDebuggerThread;
+
+    /**
      The process identifier of the child process if it has been launched.
      For some reason some APIs want this and others want the handle.
      */

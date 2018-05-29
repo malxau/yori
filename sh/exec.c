@@ -30,7 +30,7 @@
 /**
  If TRUE, use verbose output when invoking processes under a debugger.
  */
-#define YORI_SH_DEBUG_DEBUGGER 1
+#define YORI_SH_DEBUG_DEBUGGER 0
 #else
 /**
  If TRUE, use verbose output when invoking processes under a debugger.
@@ -617,8 +617,6 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     )
 {
     PYORI_SINGLE_EXEC_CONTEXT ExecContext = (PYORI_SINGLE_EXEC_CONTEXT)Context;
-    PVOID DllNamePtr;
-    TCHAR DllName[64];
     DWORD Err;
 
     Err = YoriShCreateProcess(ExecContext);
@@ -641,7 +639,9 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
             break;
         }
 
+#if YORI_SH_DEBUG_DEBUGGER
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("DbgEvent Pid %x Tid %x Event %x\n"), DbgEvent.dwProcessId, DbgEvent.dwThreadId, DbgEvent.dwDebugEventCode);
+#endif
 
         dwContinueStatus = DBG_CONTINUE;
 
@@ -650,8 +650,12 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
                 CloseHandle(DbgEvent.u.CreateProcessInfo.hFile);
                 break;
             case LOAD_DLL_DEBUG_EVENT:
+#if YORI_SH_DEBUG_DEBUGGER
                 if (DbgEvent.u.LoadDll.lpImageName != NULL) {
                     SIZE_T BytesReturned;
+                    PVOID DllNamePtr;
+                    TCHAR DllName[128];
+
                     if (ReadProcessMemory(ExecContext->hProcess, DbgEvent.u.LoadDll.lpImageName, &DllNamePtr, sizeof(DllNamePtr), &BytesReturned)) {
                         if (ReadProcessMemory(ExecContext->hProcess, DllNamePtr, &DllName, sizeof(DllName), &BytesReturned)) {
                             if (DbgEvent.u.LoadDll.fUnicode) {
@@ -662,6 +666,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
                         }
                     }
                 }
+#endif
                 CloseHandle(DbgEvent.u.LoadDll.hFile);
                 break;
             case EXCEPTION_DEBUG_EVENT:
@@ -672,7 +677,9 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
                 //  two codes are for breakpoint and x86 breakpoint
                 //
 
+#if YORI_SH_DEBUG_DEBUGGER
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ExceptionCode %x\n"), DbgEvent.u.Exception.ExceptionRecord.ExceptionCode);
+#endif
                 dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
 
                 if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
@@ -733,7 +740,6 @@ YoriShWaitForProcessToTerminate(
     DWORD CtrlBCount = 0;
     DWORD Delay;
     BOOL CtrlBFoundThisPass;
-    HANDLE hDebugPumpThread = NULL;
 
     //
     //  By this point redirection has been established and then reverted.
@@ -744,13 +750,13 @@ YoriShWaitForProcessToTerminate(
 
     if (ExecContext->CaptureEnvironmentOnExit) {
         DWORD ThreadId;
-        hDebugPumpThread = CreateThread(NULL, 0, YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit, ExecContext, 0, &ThreadId);
-        if (hDebugPumpThread == NULL) {
+        ExecContext->hDebuggerThread = CreateThread(NULL, 0, YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit, ExecContext, 0, &ThreadId);
+        if (ExecContext->hDebuggerThread == NULL) {
             YoriLibCancelIgnore();
             return;
         }
 
-        WaitOn[0] = hDebugPumpThread;
+        WaitOn[0] = ExecContext->hDebuggerThread;
     } else {
         ASSERT(ExecContext->hProcess != NULL);
         WaitOn[0] = ExecContext->hProcess;
@@ -1132,9 +1138,18 @@ YoriShCancelExecPlan(
     }
 
     //
-    //  MSFIX If any of these have threads pumping debug messages, wait
-    //  for those to unwind
+    //  Loop waiting for any debugger threads to terminate.  These are
+    //  referencing the ExecContext so it's important that they're
+    //  terminated before we start freeing them.
     //
+
+    ExecContext = ExecPlan->FirstCmd;
+    while (ExecContext != NULL) {
+        if (ExecContext->hDebuggerThread != NULL) {
+            WaitForSingleObject(ExecContext->hDebuggerThread, INFINITE);
+        }
+        ExecContext = ExecContext->NextProgram;
+    }
 }
 
 
