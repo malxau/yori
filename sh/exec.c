@@ -521,7 +521,7 @@ YoriShCreateProcess(
     }
 
     if (ExecContext->CaptureEnvironmentOnExit) {
-        CreationFlags |= DEBUG_PROCESS;
+        CreationFlags |= DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS;
     }
 
     CreationFlags |= CREATE_NEW_PROCESS_GROUP;
