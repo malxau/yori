@@ -932,6 +932,10 @@ YoriShGetExpression(
                     } else if (KeyCode == VK_RIGHT) {
                         YoriShMoveCursorToNextArgument(&Buffer);
                     } else if (KeyCode == VK_UP) {
+                        if (Buffer.SuggestionString.LengthInChars > 0) {
+                            YoriShClearTabCompletionMatches(&Buffer);
+                            YoriLibFreeStringContents(&Buffer.SuggestionString);
+                        }
                         YoriShTabCompletion(&Buffer, FALSE, TRUE);
                     }
                 } else if (CtrlMask == LEFT_ALT_PRESSED || CtrlMask == RIGHT_ALT_PRESSED ||

@@ -151,6 +151,8 @@ YoriShPerformHistoryTabCompletion(
             //  Append to the list.
             //
 
+            YoriShAddMatchToTabContext(TabContext, NULL, Match);
+
         }
         ListEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, ListEntry);
     }
