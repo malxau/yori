@@ -4,12 +4,13 @@ M2:
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text
  - Ctrl+R
+ - Ctrl+Z
  - Isolate aliases during call
 
 M3:
 
- - Take sdir file attribute logic into yorilib, make findfiles, improve if
- - Xargs
+ - Have find apply file criteria
+ - Cal
  - Z
  - Pager
  - Split sdir brief recurse into standalone du
