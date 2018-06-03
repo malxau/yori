@@ -3,7 +3,7 @@
  *
  * Yori OS version query routines
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,6 +43,139 @@ DWORD CachedMinorOsVersion;
  */
 DWORD CachedBuildNumber;
 
+#if _WIN64
+/**
+ On 64 bit builds, the current process PEB is 64 bit.
+ */
+#define PYORI_LIB_PEB_NATIVE PYORI_LIB_PEB64
+#else
+/**
+ On 32 bit builds, the current process PEB is 32 bit.
+ */
+#define PYORI_LIB_PEB_NATIVE PYORI_LIB_PEB32
+#endif
+
+/**
+ Try to obtain Windows version numbers from the PEB directly.
+
+ @param MajorVersion On successful completion, updated to contain the Windows
+        major version number.
+
+ @param MinorVersion On successful completion, updated to contain the Windows
+        minor version number.
+
+ @param BuildNumber On successful completion, updated to contain the Windows
+        build number.
+ */
+BOOL
+YoriLibGetOsVersionFromPeb(
+    __out PDWORD MajorVersion,
+    __out PDWORD MinorVersion,
+    __out PDWORD BuildNumber
+    )
+{
+    PYORI_LIB_PEB_NATIVE Peb;
+    LONG Status;
+    PROCESS_BASIC_INFORMATION BasicInfo;
+    DWORD dwBytesReturned;
+
+    if (DllNtDll.pNtQueryInformationProcess == NULL) {
+        return FALSE;
+    }
+
+    Status = DllNtDll.pNtQueryInformationProcess(GetCurrentProcess(), 0, &BasicInfo, sizeof(BasicInfo), &dwBytesReturned);
+    if (Status != 0) {
+        return FALSE;
+    }
+
+    Peb = (PYORI_LIB_PEB_NATIVE)BasicInfo.PebBaseAddress;
+
+    *MajorVersion = Peb->OSMajorVersion;
+    *MinorVersion = Peb->OSMinorVersion;
+    *BuildNumber = Peb->OSBuildNumber;
+
+    return TRUE;
+}
+
+/**
+ Try to obtain Windows version numbers from version resources.
+
+ @param MajorVersion On successful completion, updated to contain the Windows
+        major version number.
+
+ @param MinorVersion On successful completion, updated to contain the Windows
+        minor version number.
+
+ @param BuildNumber On successful completion, updated to contain the Windows
+        build number.
+ */
+BOOL
+YoriLibGetOsVersionFromResource(
+    __out PDWORD MajorVersion,
+    __out PDWORD MinorVersion,
+    __out PDWORD BuildNumber
+    )
+{
+    LPTSTR Kernel32FileName;
+    VS_FIXEDFILEINFO * FixedVerInfo;
+    PVOID VerBuffer;
+    DWORD SystemFileNameLength;
+    DWORD Kernel32FileNameLength;
+    DWORD VerSize;
+    DWORD Junk;
+
+    YoriLibLoadVersionFunctions();
+
+    if (DllVersion.pGetFileVersionInfoSizeW == NULL ||
+        DllVersion.pGetFileVersionInfoW == NULL ||
+        DllVersion.pVerQueryValueW == NULL) {
+
+        return FALSE;
+    }
+
+    SystemFileNameLength = GetSystemDirectory(NULL, 0);
+    Kernel32FileNameLength = SystemFileNameLength + sizeof("\\KERNEL32.DLL");
+    Kernel32FileName = YoriLibMalloc(Kernel32FileNameLength * sizeof(TCHAR));
+    if (Kernel32FileName == NULL) {
+        return FALSE;
+    }
+
+    GetSystemDirectory(Kernel32FileName, SystemFileNameLength);
+    _tcscpy(&Kernel32FileName[SystemFileNameLength - 1], _T("\\KERNEL32.DLL"));
+
+    VerSize = DllVersion.pGetFileVersionInfoSizeW(Kernel32FileName, &Junk);
+    if (VerSize == 0) {
+        YoriLibFree(Kernel32FileName);
+        return FALSE;
+    }
+
+    VerBuffer = YoriLibMalloc(VerSize);
+    if (VerBuffer == NULL) {
+        YoriLibFree(Kernel32FileName);
+        return FALSE;
+    }
+
+    if (!DllVersion.pGetFileVersionInfoW(Kernel32FileName, 0, VerSize, VerBuffer)) {
+        YoriLibFree(VerBuffer);
+        YoriLibFree(Kernel32FileName);
+        return FALSE;
+    }
+
+    YoriLibFree(Kernel32FileName);
+
+    if (!DllVersion.pVerQueryValueW(VerBuffer, _T("\\"), &FixedVerInfo, (PUINT)&Junk)) {
+        YoriLibFree(VerBuffer);
+        return FALSE;
+    }
+
+    *MajorVersion = HIWORD(FixedVerInfo->dwProductVersionMS);
+    *MinorVersion = LOWORD(FixedVerInfo->dwProductVersionMS);
+    *BuildNumber = HIWORD(FixedVerInfo->dwProductVersionLS);
+
+    YoriLibFree(VerBuffer);
+    return TRUE;
+}
+
 
 /**
  Return Windows version numbers.
@@ -64,6 +197,9 @@ YoriLibGetOsVersion(
     )
 {
     DWORD RawVersion;
+    DWORD LocalMajorVersion;
+    DWORD LocalMinorVersion;
+    DWORD LocalBuildNumber;
 
     if (CachedMajorOsVersion != 0) {
         *MajorVersion = CachedMajorOsVersion;
@@ -72,11 +208,22 @@ YoriLibGetOsVersion(
         return;
     }
 
-    RawVersion = GetVersion();
+    if (DllKernel32.pGetVersionExW != NULL) {
+        YORI_OS_VERSION_INFO OsVersionInfo;
+        ZeroMemory(&OsVersionInfo, sizeof(OsVersionInfo));
+        OsVersionInfo.dwOsVersionInfoSize = sizeof(OsVersionInfo);
+        DllKernel32.pGetVersionExW(&OsVersionInfo);
 
-    *MajorVersion = LOBYTE(LOWORD(RawVersion));
-    *MinorVersion = HIBYTE(LOWORD(RawVersion));
-    *BuildNumber = HIWORD(RawVersion);
+        LocalMajorVersion = OsVersionInfo.dwMajorVersion;
+        LocalMinorVersion = OsVersionInfo.dwMinorVersion;
+        LocalBuildNumber = OsVersionInfo.dwBuildNumber;
+    } else {
+        RawVersion = GetVersion();
+
+        LocalMajorVersion = LOBYTE(LOWORD(RawVersion));
+        LocalMinorVersion = HIBYTE(LOWORD(RawVersion));
+        LocalBuildNumber = HIWORD(RawVersion);
+    }
 
     //
     //  On good versions of Windows, we stop here.  On broken versions of
@@ -84,73 +231,22 @@ YoriLibGetOsVersion(
     //  a much more expensive mechanism.
     //
 
-    if (*BuildNumber >= 9200) {
-        LPTSTR Kernel32FileName;
-        VS_FIXEDFILEINFO * FixedVerInfo;
-        PVOID VerBuffer;
-        DWORD SystemFileNameLength;
-        DWORD Kernel32FileNameLength;
-        DWORD VerSize;
-        DWORD Junk;
+    if (LocalMajorVersion == 6 &&
+        LocalMinorVersion == 2 &&
+        LocalBuildNumber == 9200) {
 
-	YoriLibLoadVersionFunctions();
-
-        if (DllVersion.pGetFileVersionInfoSizeW == NULL ||
-            DllVersion.pGetFileVersionInfoW == NULL ||
-            DllVersion.pVerQueryValueW == NULL) {
-
-            return;
+        if (!YoriLibGetOsVersionFromPeb(&LocalMajorVersion, &LocalMinorVersion, &LocalBuildNumber)) {
+            YoriLibGetOsVersionFromResource(&LocalMajorVersion, &LocalMinorVersion, &LocalBuildNumber);
         }
-
-        SystemFileNameLength = GetSystemDirectory(NULL, 0);
-        Kernel32FileNameLength = SystemFileNameLength + sizeof("\\KERNEL32.DLL");
-        Kernel32FileName = YoriLibMalloc(Kernel32FileNameLength * sizeof(TCHAR));
-        if (Kernel32FileName == NULL) {
-            return;
-        }
-
-        GetSystemDirectory(Kernel32FileName, SystemFileNameLength);
-        _tcscpy(&Kernel32FileName[SystemFileNameLength - 1], _T("\\KERNEL32.DLL"));
-
-        VerSize = DllVersion.pGetFileVersionInfoSizeW(Kernel32FileName, &Junk);
-        if (VerSize == 0) {
-            YoriLibFree(Kernel32FileName);
-            return;
-        }
-
-        VerBuffer = YoriLibMalloc(VerSize);
-        if (VerBuffer == NULL) {
-            YoriLibFree(Kernel32FileName);
-            return;
-        }
-
-        if (!DllVersion.pGetFileVersionInfoW(Kernel32FileName, 0, VerSize, VerBuffer)) {
-            YoriLibFree(VerBuffer);
-            YoriLibFree(Kernel32FileName);
-            return;
-        }
-
-        YoriLibFree(Kernel32FileName);
-
-        if (!DllVersion.pVerQueryValueW(VerBuffer, _T("\\"), &FixedVerInfo, (PUINT)&Junk)) {
-            YoriLibFree(VerBuffer);
-            return;
-        }
-
-        CachedMajorOsVersion = HIWORD(FixedVerInfo->dwProductVersionMS);
-        CachedMinorOsVersion = LOWORD(FixedVerInfo->dwProductVersionMS);
-        CachedBuildNumber = HIWORD(FixedVerInfo->dwProductVersionLS);
-
-        *MajorVersion = CachedMajorOsVersion;
-        *MinorVersion = CachedMinorOsVersion;
-        *BuildNumber = CachedBuildNumber;
-
-        YoriLibFree(VerBuffer);
-    } else {
-        CachedMajorOsVersion = LOBYTE(LOWORD(RawVersion));
-        CachedMinorOsVersion = HIBYTE(LOWORD(RawVersion));
-        CachedBuildNumber = HIWORD(RawVersion);
     }
+
+    CachedMajorOsVersion = LocalMajorVersion;
+    CachedMinorOsVersion = LocalMinorVersion;
+    CachedBuildNumber = LocalBuildNumber;
+
+    *MajorVersion = LocalMajorVersion;
+    *MinorVersion = LocalMinorVersion;
+    *BuildNumber = LocalBuildNumber;
 }
 
 /**

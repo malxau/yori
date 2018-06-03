@@ -128,6 +128,37 @@ typedef struct _YORI_LIB_PEB32 {
      Pointer to the process parameters.
      */
     PYORI_LIB_PROCESS_PARAMETERS32 ProcessParameters;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored2[17];
+
+    /**
+     Ignored for alignment.
+     */
+    DWORD Ignored3[19];
+
+    /**
+     The major OS version to report to the application.
+     */
+    DWORD OSMajorVersion;
+
+    /**
+     The minor OS version to report to the application.
+     */
+    DWORD OSMinorVersion;
+
+    /**
+     The build number to report to the application.
+     */
+    WORD OSBuildNumber;
+
+    /**
+     The servicing number.
+     */
+    WORD OSCSDVersion;
+
 } YORI_LIB_PEB32, *PYORI_LIB_PEB32;
 
 /**
@@ -173,7 +204,73 @@ typedef struct _YORI_LIB_PEB64 {
      Pointer to the process parameters.
      */
     PYORI_LIB_PROCESS_PARAMETERS64 ProcessParameters;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR64 Ignored2[17];
+
+    /**
+     Ignored for alignment.
+     */
+    DWORD Ignored3[26];
+
+    /**
+     The major OS version to report to the application.
+     */
+    DWORD OSMajorVersion;
+
+    /**
+     The minor OS version to report to the application.
+     */
+    DWORD OSMinorVersion;
+
+    /**
+     The build number to report to the application.
+     */
+    WORD OSBuildNumber;
+
+    /**
+     The servicing number.
+     */
+    WORD OSCSDVersion;
 } YORI_LIB_PEB64, *PYORI_LIB_PEB64;
+
+/**
+ An implementation of the OSVERSIONINFO structure.
+ */
+typedef struct _YORI_OS_VERSION_INFO {
+
+    /**
+     The size of the structure in bytes.
+     */
+    DWORD dwOsVersionInfoSize;
+
+    /**
+     On successful completion, the major version of the operating system.
+     */
+    DWORD dwMajorVersion;
+
+    /**
+     On successful completion, the minor version of the operating system.
+     */
+    DWORD dwMinorVersion;
+
+    /**
+     On successful completion, the build number of the operating system.
+     */
+    DWORD dwBuildNumber;
+
+    /**
+     On successful completion, the type of the operating system.
+     */
+    DWORD dwPlatformId;
+
+    /**
+     On successful completion, the servicing state of the operating system.
+     */
+    TCHAR szCSDVersion[128];
+} YORI_OS_VERSION_INFO, *PYORI_OS_VERSION_INFO;
 
 #ifndef FSCTL_SET_REPARSE_POINT
 
@@ -1485,6 +1582,18 @@ GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, ULONG, PVOID, DWORD);
 typedef GET_FILE_INFORMATION_BY_HANDLE_EX *PGET_FILE_INFORMATION_BY_HANDLE_EX;
 
 /**
+ A prototype for the GetVersionExW function.
+ */
+typedef
+BOOL WINAPI
+GET_VERSION_EXW(PYORI_OS_VERSION_INFO);
+
+/**
+ A prototype for a pointer to the GetVersionExW function.
+ */
+typedef GET_VERSION_EXW *PGET_VERSION_EXW;
+
+/**
  A prototype for the IsWow64Process function.
  */
 typedef
@@ -1646,6 +1755,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetFileInformationByHandleEx.
      */
     PGET_FILE_INFORMATION_BY_HANDLE_EX pGetFileInformationByHandleEx;
+
+    /**
+     If it's available on the current system, a pointer to GetVersionExW.
+     */
+    PGET_VERSION_EXW pGetVersionExW;
 
     /**
      If it's available on the current system, a pointer to IsWow64Process.
