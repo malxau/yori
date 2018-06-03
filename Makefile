@@ -84,6 +84,7 @@ DIRS=crt       \
      rmdir     \
      scut      \
      sdir      \
+     setver    \
      sleep     \
      split     \
      start     \

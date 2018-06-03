@@ -371,6 +371,11 @@ Section "sdir"
   File "bin\${PACKARCH}\sdir.exe"
 SectionEnd
 
+Section "setver"
+  SetOutPath "$INSTDIR"
+  File "bin\${PACKARCH}\setver.exe"
+SectionEnd
+
 Section "tail"
   SetOutPath "$INSTDIR"
   File "bin\${PACKARCH}\tail.exe"
@@ -410,6 +415,7 @@ Section "Debugging Support"
   File "sym\${PACKARCH}\readline.pdb"
   File "sym\${PACKARCH}\scut.pdb"
   File "sym\${PACKARCH}\sdir.pdb"
+  File "sym\${PACKARCH}\setver.pdb"
   File "sym\${PACKARCH}\tail.pdb"
   File "sym\${PACKARCH}\tee.pdb"
   File "sym\${PACKARCH}\touch.pdb"
@@ -594,6 +600,8 @@ Section "Uninstall"
   Delete $INSTDIR\scut.pdb
   Delete $INSTDIR\sdir.exe
   Delete $INSTDIR\sdir.pdb
+  Delete $INSTDIR\setver.exe
+  Delete $INSTDIR\setver.pdb
   Delete $INSTDIR\sleep.exe
   Delete $INSTDIR\sleep.pdb
   Delete $INSTDIR\ysplit.exe
