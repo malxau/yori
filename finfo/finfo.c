@@ -41,25 +41,6 @@ CHAR strHelpText[] =
         "   -f             Specify a custom format string\n"
         "   -s             Process files from all subdirectories\n";
 
-/**
- Display usage text to the user.
- */
-BOOL
-FInfoHelp()
-{
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FInfo %i.%i\n"), FINFO_VER_MAJOR, FINFO_VER_MINOR);
-#if YORI_BUILD_ID
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
-#endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
-    return TRUE;
-}
 
 
 /**
@@ -1187,7 +1168,7 @@ typedef struct _FINFO_KNOWN_VARIABLE {
     /**
      A NULL terminated string corresponding to the name of the variable.
      */
-    LPTSTR VariableName;
+    TCHAR VariableName[24];
 
     /**
      Pointer to a function which can obtain the variable contents from
@@ -1200,6 +1181,11 @@ typedef struct _FINFO_KNOWN_VARIABLE {
      an output string.
      */
     PFINFO_OUTPUT_FN OutputFn;
+
+    /**
+     Help text string.
+     */
+    TCHAR Help[64];
 } FINFO_KNOWN_VARIABLE, *PFINFO_KNOWN_VARIABLE;
 
 /**
@@ -1207,48 +1193,157 @@ typedef struct _FINFO_KNOWN_VARIABLE {
  output information for those variables.
  */
 FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
-    {_T("ACCESSDATE_YEAR"),    YoriLibCollectAccessTime,            FInfoOutputAccessDateYear},
-    {_T("ACCESSDATE_MON"),     YoriLibCollectAccessTime,            FInfoOutputAccessDateMon},
-    {_T("ACCESSDATE_DAY"),     YoriLibCollectAccessTime,            FInfoOutputAccessDateDay},
-    {_T("ACCESSTIME_HOUR"),    YoriLibCollectAccessTime,            FInfoOutputAccessTimeHour},
-    {_T("ACCESSTIME_MIN"),     YoriLibCollectAccessTime,            FInfoOutputAccessTimeMin},
-    {_T("ACCESSTIME_SEC"),     YoriLibCollectAccessTime,            FInfoOutputAccessTimeSec},
-    {_T("ALLOCRANGECOUNT"),    YoriLibCollectAllocatedRangeCount,   FInfoOutputAllocatedRangeCount},
-    {_T("ALLOCSIZE"),          YoriLibCollectAllocationSize,        FInfoOutputAllocationSize},
-    {_T("ALLOCSIZE_HEX"),      YoriLibCollectAllocationSize,        FInfoOutputAllocationSizeHex},
-    {_T("COMPRESSEDSIZE"),     YoriLibCollectCompressedFileSize,    FInfoOutputCompressedSize},
-    {_T("COMPRESSEDSIZE_HEX"), YoriLibCollectCompressedFileSize,    FInfoOutputCompressedSizeHex},
-    {_T("CREATEDATE_YEAR"),    YoriLibCollectCreateTime,            FInfoOutputCreateDateYear},
-    {_T("CREATEDATE_MON"),     YoriLibCollectCreateTime,            FInfoOutputCreateDateMon},
-    {_T("CREATEDATE_DAY"),     YoriLibCollectCreateTime,            FInfoOutputCreateDateDay},
-    {_T("CREATETIME_HOUR"),    YoriLibCollectCreateTime,            FInfoOutputCreateTimeHour},
-    {_T("CREATETIME_MIN"),     YoriLibCollectCreateTime,            FInfoOutputCreateTimeMin},
-    {_T("CREATETIME_SEC"),     YoriLibCollectCreateTime,            FInfoOutputCreateTimeSec},
-    {_T("EXT"),                YoriLibCollectFileName,              FInfoOutputExt},
-    {_T("FILEID"),             YoriLibCollectFileId,                FInfoOutputFileId},
-    {_T("FILEID_HEX"),         YoriLibCollectFileId,                FInfoOutputFileIdHex},
-    {_T("FILEVERSTRING"),      YoriLibCollectFileVersionString,     FInfoOutputFileVersionString},
-    {_T("FRAGMENTCOUNT"),      YoriLibCollectFragmentCount,         FInfoOutputFragmentCount},
-    {_T("LINKCOUNT"),          YoriLibCollectLinkCount,             FInfoOutputLinkCount},
-    {_T("NAME"),               YoriLibCollectFileName,              FInfoOutputName},
-    {_T("OSVERMAJOR"),         YoriLibCollectOsVersion,             FInfoOutputOsVerMajor},
-    {_T("OSVERMINOR"),         YoriLibCollectOsVersion,             FInfoOutputOsVerMinor},
-    {_T("OWNER"),              YoriLibCollectOwner,                 FInfoOutputOwner},
-    {_T("PRODUCTVERSTRING"),   YoriLibCollectProductVersionString,  FInfoOutputProductVersionString},
-    {_T("REPARSETAG"),         YoriLibCollectReparseTag,            FInfoOutputReparseTag},
-    {_T("REPARSETAG_HEX"),     YoriLibCollectReparseTag,            FInfoOutputReparseTagHex},
-    {_T("SIZE"),               YoriLibCollectFileSize,              FInfoOutputSize},
-    {_T("SHORTNAME"),          YoriLibCollectShortName,             FInfoOutputShortName},
-    {_T("STREAMCOUNT"),        YoriLibCollectStreamCount,           FInfoOutputStreamCount},
-    {_T("USN"),                YoriLibCollectUsn,                   FInfoOutputUsn},
-    {_T("USN_HEX"),            YoriLibCollectUsn,                   FInfoOutputUsnHex},
-    {_T("WRITEDATE_YEAR"),     YoriLibCollectWriteTime,             FInfoOutputWriteDateYear},
-    {_T("WRITEDATE_MON"),      YoriLibCollectWriteTime,             FInfoOutputWriteDateMon},
-    {_T("WRITEDATE_DAY"),      YoriLibCollectWriteTime,             FInfoOutputWriteDateDay},
-    {_T("WRITETIME_HOUR"),     YoriLibCollectWriteTime,             FInfoOutputWriteTimeHour},
-    {_T("WRITETIME_MIN"),      YoriLibCollectWriteTime,             FInfoOutputWriteTimeMin},
-    {_T("WRITETIME_SEC"),      YoriLibCollectWriteTime,             FInfoOutputWriteTimeSec}
+    {_T("ACCESSDATE_YEAR"),    YoriLibCollectAccessTime,            FInfoOutputAccessDateYear,
+     _T("The year when the file was last read.")},
+
+    {_T("ACCESSDATE_MON"),     YoriLibCollectAccessTime,            FInfoOutputAccessDateMon,
+     _T("The month when the file was last read.")},
+
+    {_T("ACCESSDATE_DAY"),     YoriLibCollectAccessTime,            FInfoOutputAccessDateDay,
+     _T("The day when the file was last read.")},
+
+    {_T("ACCESSTIME_HOUR"),    YoriLibCollectAccessTime,            FInfoOutputAccessTimeHour,
+     _T("The hour when the file was last read.")},
+
+    {_T("ACCESSTIME_MIN"),     YoriLibCollectAccessTime,            FInfoOutputAccessTimeMin,
+     _T("The minute when the file was last read.")},
+
+    {_T("ACCESSTIME_SEC"),     YoriLibCollectAccessTime,            FInfoOutputAccessTimeSec,
+     _T("The second when the file was last read.")},
+
+    {_T("ALLOCRANGECOUNT"),    YoriLibCollectAllocatedRangeCount,   FInfoOutputAllocatedRangeCount,
+     _T("The number of allocated ranges in the file.")},
+
+    {_T("ALLOCSIZE"),          YoriLibCollectAllocationSize,        FInfoOutputAllocationSize,
+     _T("The number of allocated bytes in the file in decimal.")},
+
+    {_T("ALLOCSIZE_HEX"),      YoriLibCollectAllocationSize,        FInfoOutputAllocationSizeHex,
+     _T("The number of allocated bytes in the file in hex.")},
+
+    {_T("COMPRESSEDSIZE"),     YoriLibCollectCompressedFileSize,    FInfoOutputCompressedSize,
+     _T("The number of compressed bytes in the file in decimal.")},
+
+    {_T("COMPRESSEDSIZE_HEX"), YoriLibCollectCompressedFileSize,    FInfoOutputCompressedSizeHex,
+     _T("The number of compressed bytes in the file in hex.")},
+
+    {_T("CREATEDATE_YEAR"),    YoriLibCollectCreateTime,            FInfoOutputCreateDateYear,
+     _T("The year when the file was created.")},
+
+    {_T("CREATEDATE_MON"),     YoriLibCollectCreateTime,            FInfoOutputCreateDateMon,
+     _T("The month when the file was created.")},
+
+    {_T("CREATEDATE_DAY"),     YoriLibCollectCreateTime,            FInfoOutputCreateDateDay,
+     _T("The day when the file was created.")},
+
+    {_T("CREATETIME_HOUR"),    YoriLibCollectCreateTime,            FInfoOutputCreateTimeHour,
+     _T("The hour when the file was created.")},
+
+    {_T("CREATETIME_MIN"),     YoriLibCollectCreateTime,            FInfoOutputCreateTimeMin,
+     _T("The minute when the file was created.")},
+
+    {_T("CREATETIME_SEC"),     YoriLibCollectCreateTime,            FInfoOutputCreateTimeSec,
+     _T("The second when the file was created.")},
+
+    {_T("EXT"),                YoriLibCollectFileName,              FInfoOutputExt,
+     _T("The file extension.")},
+
+    {_T("FILEID"),             YoriLibCollectFileId,                FInfoOutputFileId,
+     _T("The file ID in decimal.")},
+
+    {_T("FILEID_HEX"),         YoriLibCollectFileId,                FInfoOutputFileIdHex,
+     _T("The file ID in hex.")},
+
+    {_T("FILEVERSTRING"),      YoriLibCollectFileVersionString,     FInfoOutputFileVersionString,
+     _T("The file version string.")},
+
+    {_T("FRAGMENTCOUNT"),      YoriLibCollectFragmentCount,         FInfoOutputFragmentCount,
+     _T("The number of extents in the file.")},
+
+    {_T("LINKCOUNT"),          YoriLibCollectLinkCount,             FInfoOutputLinkCount,
+     _T("The number of hardlinks on the file.")},
+
+    {_T("NAME"),               YoriLibCollectFileName,              FInfoOutputName,
+     _T("The file name.")},
+
+    {_T("OSVERMAJOR"),         YoriLibCollectOsVersion,             FInfoOutputOsVerMajor,
+     _T("The minimum major OS version required by the program.")},
+
+    {_T("OSVERMINOR"),         YoriLibCollectOsVersion,             FInfoOutputOsVerMinor,
+     _T("The minimum minor OS version required by the program.")},
+
+    {_T("OWNER"),              YoriLibCollectOwner,                 FInfoOutputOwner,
+     _T("The owner of the file.")},
+
+    {_T("PRODUCTVERSTRING"),   YoriLibCollectProductVersionString,  FInfoOutputProductVersionString,
+     _T("The product version string.")},
+
+    {_T("REPARSETAG"),         YoriLibCollectReparseTag,            FInfoOutputReparseTag,
+     _T("The reparse tag in decimal.")},
+
+    {_T("REPARSETAG_HEX"),     YoriLibCollectReparseTag,            FInfoOutputReparseTagHex,
+     _T("The reparse tag in hex.")},
+
+    {_T("SIZE"),               YoriLibCollectFileSize,              FInfoOutputSize,
+     _T("The file size in bytes.")},
+
+    {_T("SHORTNAME"),          YoriLibCollectShortName,             FInfoOutputShortName,
+     _T("The short file name.")},
+
+    {_T("STREAMCOUNT"),        YoriLibCollectStreamCount,           FInfoOutputStreamCount,
+     _T("The number of named streams on the file.")},
+
+    {_T("USN"),                YoriLibCollectUsn,                   FInfoOutputUsn,
+     _T("The USN on the file in decimal.")},
+
+    {_T("USN_HEX"),            YoriLibCollectUsn,                   FInfoOutputUsnHex,
+     _T("The USN on the file in hex.")},
+
+    {_T("WRITEDATE_YEAR"),     YoriLibCollectWriteTime,             FInfoOutputWriteDateYear,
+     _T("The year when the file was last written to.")},
+
+    {_T("WRITEDATE_MON"),      YoriLibCollectWriteTime,             FInfoOutputWriteDateMon,
+     _T("The month when the file was last written to.")},
+
+    {_T("WRITEDATE_DAY"),      YoriLibCollectWriteTime,             FInfoOutputWriteDateDay,
+     _T("The day when the file was last written to.")},
+
+    {_T("WRITETIME_HOUR"),     YoriLibCollectWriteTime,             FInfoOutputWriteTimeHour,
+     _T("The hour when the file was last written to.")},
+
+    {_T("WRITETIME_MIN"),      YoriLibCollectWriteTime,             FInfoOutputWriteTimeMin,
+     _T("The minute when the file was last written to.")},
+
+    {_T("WRITETIME_SEC"),      YoriLibCollectWriteTime,             FInfoOutputWriteTimeSec,
+     _T("The second when the file was last written to.")}
 };
+
+/**
+ Display usage text to the user.
+ */
+BOOL
+FInfoHelp()
+{
+    YORI_STRING License;
+    DWORD Count;
+    TCHAR NameWithQualifiers[32];
+
+    YoriLibMitLicenseText(_T("2018"), &License);
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FInfo %i.%i\n"), FINFO_VER_MAJOR, FINFO_VER_MINOR);
+#if YORI_BUILD_ID
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
+#endif
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Format specifiers are:\n\n"));
+    for (Count = 0; Count < sizeof(FInfoKnownVariables)/sizeof(FInfoKnownVariables[0]); Count++) {
+        YoriLibSPrintfS(NameWithQualifiers, sizeof(NameWithQualifiers)/sizeof(NameWithQualifiers[0]), _T("$%s$"), FInfoKnownVariables[Count].VariableName);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-20s %s\n"), NameWithQualifiers, FInfoKnownVariables[Count].Help);
+    }
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
+    YoriLibFreeStringContents(&License);
+    return TRUE;
+}
 
 /**
  Expand any variables in the format string of information to display for each
