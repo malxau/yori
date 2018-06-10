@@ -494,6 +494,11 @@ typedef struct _SDIR_OPTS {
     SDIR_FEATURE    FtFileSize;
 
     /**
+     The volatile configuration for the file's version string.
+     */
+    SDIR_FEATURE    FtFileVersionString;
+
+    /**
      The volatile configuration for the file's fragmentation.
      */
     SDIR_FEATURE    FtFragmentCount;
@@ -532,6 +537,11 @@ typedef struct _SDIR_OPTS {
      The volatile configuration for the file's owner.
      */
     SDIR_FEATURE    FtOwner;
+
+    /**
+     The volatile configuration for the file's product version string.
+     */
+    SDIR_FEATURE    FtProductVersionString;
 
     /**
      The volatile configuration for the file's reparse tag.

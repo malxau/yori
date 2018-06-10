@@ -634,6 +634,33 @@ FInfoOutputFileIdHex(
 }
 
 /**
+ Output the file version string.
+
+ @param Context Pointer to context about the file, including previously
+        obtained information to satisfy the output request.
+
+ @param OutputString Pointer to a string to populate with the contents of
+        the variable.
+
+ @return The number of characters populated into the variable, or the number
+         of characters required to successfully populate the contents into
+         the variable.
+ */
+DWORD
+FInfoOutputFileVersionString(
+    __in PFINFO_CONTEXT Context,
+    __inout PYORI_STRING OutputString
+    )
+{
+    DWORD FileVersionLength = _tcslen(Context->Entry.FileVersionString);
+    if (OutputString->LengthAllocated >= FileVersionLength) {
+        memcpy(OutputString->StartOfString, Context->Entry.FileVersionString, FileVersionLength * sizeof(TCHAR));
+        OutputString->LengthInChars = FileVersionLength;
+    }
+    return FileVersionLength;
+}
+
+/**
  Output the fragment count.
 
  @param Context Pointer to context about the file, including previously
@@ -777,10 +804,37 @@ FInfoOutputOwner(
 {
     DWORD OwnerLength = _tcslen(Context->Entry.Owner);
     if (OutputString->LengthAllocated >= OwnerLength) {
-        memcpy(OutputString->StartOfString, Context->Entry.FileName, OwnerLength * sizeof(TCHAR));
+        memcpy(OutputString->StartOfString, Context->Entry.Owner, OwnerLength * sizeof(TCHAR));
         OutputString->LengthInChars = OwnerLength;
     }
     return OwnerLength;
+}
+
+/**
+ Output the product version.
+
+ @param Context Pointer to context about the file, including previously
+        obtained information to satisfy the output request.
+
+ @param OutputString Pointer to a string to populate with the contents of
+        the variable.
+
+ @return The number of characters populated into the variable, or the number
+         of characters required to successfully populate the contents into
+         the variable.
+ */
+DWORD
+FInfoOutputProductVersionString(
+    __in PFINFO_CONTEXT Context,
+    __inout PYORI_STRING OutputString
+    )
+{
+    DWORD ProductVersionLength = _tcslen(Context->Entry.ProductVersionString);
+    if (OutputString->LengthAllocated >= ProductVersionLength) {
+        memcpy(OutputString->StartOfString, Context->Entry.ProductVersionString, ProductVersionLength * sizeof(TCHAR));
+        OutputString->LengthInChars = ProductVersionLength;
+    }
+    return ProductVersionLength;
 }
 
 /**
@@ -1173,12 +1227,14 @@ FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
     {_T("EXT"),                YoriLibCollectFileName,              FInfoOutputExt},
     {_T("FILEID"),             YoriLibCollectFileId,                FInfoOutputFileId},
     {_T("FILEID_HEX"),         YoriLibCollectFileId,                FInfoOutputFileIdHex},
+    {_T("FILEVERSTRING"),      YoriLibCollectFileVersionString,     FInfoOutputFileVersionString},
     {_T("FRAGMENTCOUNT"),      YoriLibCollectFragmentCount,         FInfoOutputFragmentCount},
     {_T("LINKCOUNT"),          YoriLibCollectLinkCount,             FInfoOutputLinkCount},
     {_T("NAME"),               YoriLibCollectFileName,              FInfoOutputName},
     {_T("OSVERMAJOR"),         YoriLibCollectOsVersion,             FInfoOutputOsVerMajor},
     {_T("OSVERMINOR"),         YoriLibCollectOsVersion,             FInfoOutputOsVerMinor},
     {_T("OWNER"),              YoriLibCollectOwner,                 FInfoOutputOwner},
+    {_T("PRODUCTVERSTRING"),   YoriLibCollectProductVersionString,  FInfoOutputProductVersionString},
     {_T("REPARSETAG"),         YoriLibCollectReparseTag,            FInfoOutputReparseTag},
     {_T("REPARSETAG_HEX"),     YoriLibCollectReparseTag,            FInfoOutputReparseTagHex},
     {_T("SIZE"),               YoriLibCollectFileSize,              FInfoOutputSize},

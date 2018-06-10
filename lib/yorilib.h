@@ -309,6 +309,18 @@ typedef struct _YORI_FILE_INFO {
     TCHAR         Owner[17];
 
     /**
+     A string containing the file version string text from the version
+     resource.
+     */
+    TCHAR         FileVersionString[49];
+
+    /**
+     A string containing the product version string text from the version
+     resource.
+     */
+    TCHAR         ProductVersionString[49];
+
+    /**
      The number of characters in the file name.
      */
     DWORD         FileNameLengthInChars;
@@ -757,6 +769,13 @@ YoriLibCollectFileSize (
     );
 
 BOOL
+YoriLibCollectFileVersionString (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
 YoriLibCollectFragmentCount (
     __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
@@ -786,6 +805,13 @@ YoriLibCollectOsVersion (
 
 BOOL
 YoriLibCollectOwner (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibCollectProductVersionString (
     __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
     __in PYORI_STRING FullPath
@@ -913,6 +939,12 @@ YoriLibGenerateFileSize(
     );
 
 BOOL
+YoriLibGenerateFileVersionString(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
 YoriLibGenerateFragmentCount(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
@@ -938,6 +970,12 @@ YoriLibGenerateOsVersion(
 
 BOOL
 YoriLibGenerateOwner(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateProductVersionString(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
     );
