@@ -122,6 +122,8 @@ TypeProcessStream(
             if (LineString.LengthInChars == 0 || !GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo) || ScreenInfo.dwCursorPosition.X != 0) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
             }
+        } else {
+            break;
         }
     }
 
