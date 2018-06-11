@@ -72,6 +72,62 @@ YoriShHelp()
 }
 
 /**
+ A structure defining an initial mapping of alias to value.
+ */
+typedef struct _YORI_SH_DEFAULT_ALIAS_ENTRY {
+
+    /**
+     The initial alias name.
+     */
+    LPTSTR Alias;
+
+    /**
+     The initial value.
+     */
+    LPTSTR Value;
+} YORI_SH_DEFAULT_ALIAS_ENTRY, *PYORI_SH_DEFAULT_ALIAS_ENTRY;
+
+/**
+ A table of initial alias to value mappings to populate.
+ */
+YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[] = {
+    {_T("cd"),       _T("chdir $*$")},
+    {_T("clip"),     _T("yclip $*$")},
+    {_T("cls"),      _T("ycls $*$")},
+    {_T("copy"),     _T("ycopy $*$")},
+    {_T("cut"),      _T("ycut $*$")},
+    {_T("date"),     _T("ydate $*$")},
+    {_T("del"),      _T("yerase $*$")},
+    {_T("dir"),      _T("ydir $*$")},
+    {_T("echo"),     _T("yecho $*$")},
+    {_T("erase"),    _T("yerase $*$")},
+    {_T("expr"),     _T("yexpr $*$")},
+    {_T("for"),      _T("yfor $*$")},
+    {_T("head"),     _T("ytype -h $*$")},
+    {_T("help"),     _T("yhelp -h $*$")},
+    {_T("htmlclip"), _T("yclip -h $*$")},
+    {_T("md"),       _T("ymkdir $*$")},
+    {_T("mkdir"),    _T("ymkdir $*$")},
+    {_T("mklink"),   _T("ymklink $*$")},
+    {_T("move"),     _T("ymove $*$")},
+    {_T("paste"),    _T("yclip -p $*$")},
+    {_T("path"),     _T("ypath $*$")},
+    {_T("pause"),    _T("ypause $*$")},
+    {_T("pwd"),      _T("ypath . $*$")},
+    {_T("rd"),       _T("yrmdir $*$")},
+    {_T("ren"),      _T("ymove $*$")},
+    {_T("rename"),   _T("ymove $*$")},
+    {_T("rmdir"),    _T("yrmdir $*$")},
+    {_T("start"),    _T("ystart $*$")},
+    {_T("split"),    _T("ysplit $*$")},
+    {_T("time"),     _T("ydate -t $*$")},
+    {_T("title"),    _T("ytitle $*$")},
+    {_T("type"),     _T("ytype $*$")},
+    {_T("vol"),      _T("yvol $*$")},
+    {_T("?"),        _T("yexpr $*$")}
+};
+
+/**
  Initialize the console and populate the shell's environment with default
  values.
  */
@@ -81,6 +137,7 @@ YoriShInit()
     TCHAR Letter;
     TCHAR AliasName[3];
     TCHAR AliasValue[16];
+    DWORD Count;
     YORI_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
 
     //
@@ -150,6 +207,10 @@ YoriShInit()
         YoriLibFreeStringContents(&ModuleName);
     }
 
+    //
+    //  Add .YS1 to PATHEXT if it's not there already.
+    //
+
     if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("PATHEXT"), NULL, 0) == 0) {
         SetEnvironmentVariable(_T("PATHEXT"), _T(".YS1;.COM;.EXE;.CMD;.BAT"));
     } else {
@@ -161,41 +222,13 @@ YoriShInit()
     YoriLibCancelEnable();
     YoriLibCancelIgnore();
 
-    YoriShAddAliasLiteral(_T("cd"),       _T("chdir $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("clip"),     _T("yclip $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("cls"),      _T("ycls $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("copy"),     _T("ycopy $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("cut"),      _T("ycut $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("date"),     _T("ydate $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("del"),      _T("yerase $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("dir"),      _T("ydir $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("echo"),     _T("yecho $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("erase"),    _T("yerase $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("expr"),     _T("yexpr $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("for"),      _T("yfor $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("head"),     _T("ytype -h $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("help"),     _T("yhelp -h $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("htmlclip"), _T("yclip -h $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("md"),       _T("ymkdir $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("mkdir"),    _T("ymkdir $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("mklink"),   _T("ymklink $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("move"),     _T("ymove $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("paste"),    _T("yclip -p $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("path"),     _T("ypath $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("pause"),    _T("ypause $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("pwd"),      _T("ypath . $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("rd"),       _T("yrmdir $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("ren"),      _T("ymove $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("rename"),   _T("ymove $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("rmdir"),    _T("yrmdir $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("start"),    _T("ystart $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("split"),    _T("ysplit $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("time"),     _T("ydate -t $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("title"),    _T("ytitle $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("type"),     _T("ytype $*$"), TRUE);
-    YoriShAddAliasLiteral(_T("vol"),      _T("yvol $*$"), TRUE);
+    //
+    //  Register any builtin aliases, including drive letter colon commands.
+    //
 
-    YoriShAddAliasLiteral(_T("?"),        _T("yexpr $*$"), TRUE);
+    for (Count = 0; Count < sizeof(YoriShDefaultAliasEntries)/sizeof(YoriShDefaultAliasEntries[0]); Count++) {
+        YoriShAddAliasLiteral(YoriShDefaultAliasEntries[Count].Alias, YoriShDefaultAliasEntries[Count].Value, TRUE);
+    }
 
     AliasName[1] = ':';
     AliasName[2] = '\0';
@@ -208,6 +241,10 @@ YoriShInit()
 
         YoriShAddAliasLiteral(AliasName, AliasValue, TRUE);
     }
+
+    //
+    //  Load aliases registered with conhost.
+    //
 
     YoriShLoadSystemAliases(TRUE);
     YoriShLoadSystemAliases(FALSE);
