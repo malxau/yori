@@ -309,16 +309,16 @@ typedef struct _YORI_FILE_INFO {
     TCHAR         Owner[17];
 
     /**
+     A string containing the file description string text from the version
+     resource.
+     */
+    TCHAR         Description[65];
+
+    /**
      A string containing the file version string text from the version
      resource.
      */
-    TCHAR         FileVersionString[49];
-
-    /**
-     A string containing the product version string text from the version
-     resource.
-     */
-    TCHAR         ProductVersionString[49];
+    TCHAR         FileVersionString[33];
 
     /**
      The number of characters in the file name.
@@ -727,6 +727,13 @@ YoriLibCollectCreateTime (
     );
 
 BOOL
+YoriLibCollectDescription (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
 YoriLibCollectEffectivePermissions (
     __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
@@ -805,13 +812,6 @@ YoriLibCollectOsVersion (
 
 BOOL
 YoriLibCollectOwner (
-    __inout PYORI_FILE_INFO Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in PYORI_STRING FullPath
-    );
-
-BOOL
-YoriLibCollectProductVersionString (
     __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
     __in PYORI_STRING FullPath
@@ -921,6 +921,12 @@ YoriLibGenerateCreateTime(
     );
 
 BOOL
+YoriLibGenerateDescription(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
 YoriLibGenerateFileExtension(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
@@ -970,12 +976,6 @@ YoriLibGenerateOsVersion(
 
 BOOL
 YoriLibGenerateOwner(
-    __inout PYORI_FILE_INFO Entry,
-    __in PYORI_STRING String
-    );
-
-BOOL
-YoriLibGenerateProductVersionString(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
     );

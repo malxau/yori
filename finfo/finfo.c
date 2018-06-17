@@ -537,6 +537,32 @@ FInfoOutputCreateTimeSec(
     return 2;
 }
 
+/**
+ Output the file description from the version resource.
+
+ @param Context Pointer to context about the file, including previously
+        obtained information to satisfy the output request.
+
+ @param OutputString Pointer to a string to populate with the contents of
+        the variable.
+
+ @return The number of characters populated into the variable, or the number
+         of characters required to successfully populate the contents into
+         the variable.
+ */
+DWORD
+FInfoOutputDescription(
+    __in PFINFO_CONTEXT Context,
+    __inout PYORI_STRING OutputString
+    )
+{
+    DWORD DescriptionLength = _tcslen(Context->Entry.Description);
+    if (OutputString->LengthAllocated >= DescriptionLength) {
+        memcpy(OutputString->StartOfString, Context->Entry.Description, DescriptionLength * sizeof(TCHAR));
+        OutputString->LengthInChars = DescriptionLength;
+    }
+    return DescriptionLength;
+}
 
 /**
  Output the file extension.
@@ -789,33 +815,6 @@ FInfoOutputOwner(
         OutputString->LengthInChars = OwnerLength;
     }
     return OwnerLength;
-}
-
-/**
- Output the product version.
-
- @param Context Pointer to context about the file, including previously
-        obtained information to satisfy the output request.
-
- @param OutputString Pointer to a string to populate with the contents of
-        the variable.
-
- @return The number of characters populated into the variable, or the number
-         of characters required to successfully populate the contents into
-         the variable.
- */
-DWORD
-FInfoOutputProductVersionString(
-    __in PFINFO_CONTEXT Context,
-    __inout PYORI_STRING OutputString
-    )
-{
-    DWORD ProductVersionLength = _tcslen(Context->Entry.ProductVersionString);
-    if (OutputString->LengthAllocated >= ProductVersionLength) {
-        memcpy(OutputString->StartOfString, Context->Entry.ProductVersionString, ProductVersionLength * sizeof(TCHAR));
-        OutputString->LengthInChars = ProductVersionLength;
-    }
-    return ProductVersionLength;
 }
 
 /**
@@ -1244,6 +1243,9 @@ FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
     {_T("CREATETIME_SEC"),     YoriLibCollectCreateTime,            FInfoOutputCreateTimeSec,
      _T("The second when the file was created.")},
 
+    {_T("DESCRIPTION"),        YoriLibCollectDescription,           FInfoOutputDescription,
+     _T("The executable's description.")},
+
     {_T("EXT"),                YoriLibCollectFileName,              FInfoOutputExt,
      _T("The file extension.")},
 
@@ -1273,9 +1275,6 @@ FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
 
     {_T("OWNER"),              YoriLibCollectOwner,                 FInfoOutputOwner,
      _T("The owner of the file.")},
-
-    {_T("PRODUCTVERSTRING"),   YoriLibCollectProductVersionString,  FInfoOutputProductVersionString,
-     _T("The product version string.")},
 
     {_T("REPARSETAG"),         YoriLibCollectReparseTag,            FInfoOutputReparseTag,
      _T("The reparse tag in decimal.")},

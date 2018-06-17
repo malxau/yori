@@ -548,6 +548,70 @@ YoriLibCollectCreateTime (
 
 /**
  Collect information from a directory enumerate and full file name relating
+ to the executable's version resource's file description.
+
+ @param Entry The directory entry to populate.
+
+ @param FindData The directory enumeration information.
+
+ @param FullPath Pointer to a string to the full file name.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibCollectDescription (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    )
+{
+    DWORD Junk;
+    PVOID Buffer;
+    DWORD VerSize;
+    PWORD TranslationBlock;
+
+    UNREFERENCED_PARAMETER(FindData);
+    ASSERT(YoriLibIsStringNullTerminated(FullPath));
+
+    Entry->Description[0] = '\0';
+
+    YoriLibLoadVersionFunctions();
+
+    if (DllVersion.pGetFileVersionInfoSizeW == NULL ||
+        DllVersion.pGetFileVersionInfoW == NULL ||
+        DllVersion.pVerQueryValueW == NULL) {
+
+        return TRUE;
+    }
+
+    VerSize = DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
+
+    Buffer = YoriLibMalloc(VerSize);
+    if (Buffer != NULL) {
+        if (DllVersion.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
+            if (DllVersion.pVerQueryValueW(Buffer, _T("\\VarFileInfo\\Translation"), (PVOID*)&TranslationBlock, (PUINT)&Junk) && sizeof(Junk) >= 2 * sizeof(WORD)) {
+
+                TCHAR LanguageBlockToFind[sizeof("\\StringFileInfo\\01234567\\FileDescription")];
+                LPTSTR Description;
+
+                YoriLibSPrintf(LanguageBlockToFind, _T("\\StringFileInfo\\%04x%04x\\FileDescription"), TranslationBlock[0], TranslationBlock[1]);
+                if (DllVersion.pVerQueryValueW(Buffer, LanguageBlockToFind, (PVOID*)&Description, (PUINT)&Junk)) {
+                    DWORD BytesToCopy = Junk * sizeof(TCHAR);
+                    if (BytesToCopy > sizeof(Entry->Description) - sizeof(TCHAR)) {
+                        BytesToCopy = sizeof(Entry->Description) - sizeof(TCHAR);
+                    }
+                    memcpy(Entry->Description, Description, BytesToCopy);
+                    Entry->Description[BytesToCopy / sizeof(TCHAR)] = '\0';
+                }
+            }
+        }
+        YoriLibFree(Buffer);
+    }
+    return TRUE;
+}
+
+/**
+ Collect information from a directory enumerate and full file name relating
  to the file's effective permissions.
 
  @param Entry The directory entry to populate.
@@ -1121,70 +1185,6 @@ YoriLibCollectOwner (
 
 /**
  Collect information from a directory enumerate and full file name relating
- to the executable's version resource's product version string.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriLibCollectProductVersionString (
-    __inout PYORI_FILE_INFO Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in PYORI_STRING FullPath
-    )
-{
-    DWORD Junk;
-    PVOID Buffer;
-    DWORD VerSize;
-    PWORD TranslationBlock;
-
-    UNREFERENCED_PARAMETER(FindData);
-    ASSERT(YoriLibIsStringNullTerminated(FullPath));
-
-    Entry->ProductVersionString[0] = '\0';
-
-    YoriLibLoadVersionFunctions();
-
-    if (DllVersion.pGetFileVersionInfoSizeW == NULL ||
-        DllVersion.pGetFileVersionInfoW == NULL ||
-        DllVersion.pVerQueryValueW == NULL) {
-
-        return TRUE;
-    }
-
-    VerSize = DllVersion.pGetFileVersionInfoSizeW(FullPath->StartOfString, &Junk);
-
-    Buffer = YoriLibMalloc(VerSize);
-    if (Buffer != NULL) {
-        if (DllVersion.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
-            if (DllVersion.pVerQueryValueW(Buffer, _T("\\VarFileInfo\\Translation"), (PVOID*)&TranslationBlock, (PUINT)&Junk) && sizeof(Junk) >= 2 * sizeof(WORD)) {
-
-                TCHAR LanguageBlockToFind[sizeof("\\StringFileInfo\\01234567\\ProductVersion")];
-                LPTSTR ProductVersionString;
-
-                YoriLibSPrintf(LanguageBlockToFind, _T("\\StringFileInfo\\%04x%04x\\ProductVersion"), TranslationBlock[0], TranslationBlock[1]);
-                if (DllVersion.pVerQueryValueW(Buffer, LanguageBlockToFind, (PVOID*)&ProductVersionString, (PUINT)&Junk)) {
-                    DWORD BytesToCopy = Junk * sizeof(TCHAR);
-                    if (BytesToCopy > sizeof(Entry->ProductVersionString) - sizeof(TCHAR)) {
-                        BytesToCopy = sizeof(Entry->ProductVersionString) - sizeof(TCHAR);
-                    }
-                    memcpy(Entry->ProductVersionString, ProductVersionString, BytesToCopy);
-                    Entry->ProductVersionString[BytesToCopy / sizeof(TCHAR)] = '\0';
-                }
-            }
-        }
-        YoriLibFree(Buffer);
-    }
-    return TRUE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
  to the file's reparse tag.
 
  @param Entry The directory entry to populate.
@@ -1688,6 +1688,30 @@ YoriLibGenerateCreateTime(
 
 /**
  Parse a string and populate a directory entry to facilitate
+ comparisons for a file's version description.
+
+ @param Entry The directory entry to populate from the string.
+
+ @param String Pointer to a string to use to populate the
+        directory entry.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGenerateDescription(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    )
+{
+    YoriLibSPrintfS(Entry->Description, sizeof(Entry->Description)/sizeof(Entry->Description[0]), _T("%y"), String);
+    Entry->Description[sizeof(Entry->Description)/sizeof(Entry->Description[0]) - 1] = '\0';
+
+    return TRUE;
+}
+
+
+/**
+ Parse a string and populate a directory entry to facilitate
  comparisons for a file's extension.
 
  @param Entry The directory entry to populate from the string.
@@ -1917,29 +1941,6 @@ YoriLibGenerateOwner(
 {
     YoriLibSPrintfS(Entry->Owner, sizeof(Entry->Owner)/sizeof(Entry->Owner[0]), _T("%y"), String);
     Entry->Owner[sizeof(Entry->Owner)/sizeof(Entry->Owner[0]) - 1] = '\0';
-
-    return TRUE;
-}
-
-/**
- Parse a string and populate a directory entry to facilitate
- comparisons for a file's product version string.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriLibGenerateProductVersionString(
-    __inout PYORI_FILE_INFO Entry,
-    __in PYORI_STRING String
-    )
-{
-    YoriLibSPrintfS(Entry->ProductVersionString, sizeof(Entry->ProductVersionString)/sizeof(Entry->ProductVersionString[0]), _T("%y"), String);
-    Entry->ProductVersionString[sizeof(Entry->ProductVersionString)/sizeof(Entry->ProductVersionString[0]) - 1] = '\0';
 
     return TRUE;
 }

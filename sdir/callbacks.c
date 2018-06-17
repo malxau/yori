@@ -283,6 +283,26 @@ SdirCompareCreateTime (
 }
 
 /**
+ Compare two directory entry file description strings.
+
+ @param Left The first file description string to compare.
+
+ @param Right The second file description string to compare.
+
+ @return SDIR_LESS_THAN if the first is less than the second,
+         SDIR_GREATER_THAN if the first is greater than the second,
+         SDIR_EQUAL if the two are the same.
+ */
+DWORD
+SdirCompareDescription (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return SdirCompareString(Left->Description, Right->Description);
+}
+
+/**
  Compare two directory entry effective permissions.
 
  @param Left The first set of permissions to compare.
@@ -554,26 +574,6 @@ SdirCompareOwner (
     )
 {
     return SdirCompareString(Left->Owner, Right->Owner);
-}
-
-/**
- Compare two directory entry product version strings.
-
- @param Left The first product version string to compare.
-
- @param Right The second product version string to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareProductVersionString (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareString(Left->ProductVersionString, Right->ProductVersionString);
 }
 
 /**
@@ -1384,6 +1384,46 @@ SdirDisplayCompressedFileSize (
 
 /**
  Take the data inside a directory entry, convert it to a formatted string, and
+ output the result to a buffer for a file's description.
+
+ @param Buffer The formatted string to be updated to contain the information.
+        If not specified, the length of characters needed to hold the result
+        is returned.
+
+ @param Attributes The color to use when writing the formatted data to the
+        string.
+
+ @param Entry The directory entry containing the information to write.
+
+ @return The number of characters written to the buffer, or the number of
+         characters required to hold the data if the buffer is not present.
+ */
+ULONG
+SdirDisplayDescription (
+    PSDIR_FMTCHAR Buffer,
+    __in YORILIB_COLOR_ATTRIBUTES Attributes,
+    __in PYORI_FILE_INFO Entry
+    )
+{
+    ULONG CurrentChar = 0;
+    DWORD ShortLength;
+
+    if (Buffer) {
+        SdirPasteStrAndPad(&Buffer[CurrentChar], NULL, Attributes, 0, 1);
+    }
+    CurrentChar++;
+
+    if (Buffer) {
+        ShortLength = (DWORD)_tcslen(Entry->Description);
+
+        SdirPasteStrAndPad(&Buffer[CurrentChar], Entry->Description, Attributes, ShortLength, sizeof(Entry->Description)/sizeof(Entry->Description[0]) - 1);
+    }
+    CurrentChar += sizeof(Entry->Description)/sizeof(Entry->Description[0]) - 1;
+    return CurrentChar;
+}
+
+/**
+ Take the data inside a directory entry, convert it to a formatted string, and
  output the result to a buffer for a file's effective permissions.
 
  @param Buffer The formatted string to be updated to contain the information.
@@ -1817,46 +1857,6 @@ SdirDisplayOwner (
         SdirPasteStrAndPad(&Buffer[CurrentChar], Entry->Owner, Attributes, ShortLength, sizeof(Entry->Owner)/sizeof(Entry->Owner[0]) - 1);
     }
     CurrentChar += sizeof(Entry->Owner)/sizeof(Entry->Owner[0]) - 1;
-    return CurrentChar;
-}
-
-/**
- Take the data inside a directory entry, convert it to a formatted string, and
- output the result to a buffer for a file's product version string.
-
- @param Buffer The formatted string to be updated to contain the information.
-        If not specified, the length of characters needed to hold the result
-        is returned.
-
- @param Attributes The color to use when writing the formatted data to the
-        string.
-
- @param Entry The directory entry containing the information to write.
-
- @return The number of characters written to the buffer, or the number of
-         characters required to hold the data if the buffer is not present.
- */
-ULONG
-SdirDisplayProductVersionString (
-    PSDIR_FMTCHAR Buffer,
-    __in YORILIB_COLOR_ATTRIBUTES Attributes,
-    __in PYORI_FILE_INFO Entry
-    )
-{
-    ULONG CurrentChar = 0;
-    DWORD ShortLength;
-
-    if (Buffer) {
-        SdirPasteStrAndPad(&Buffer[CurrentChar], NULL, Attributes, 0, 1);
-    }
-    CurrentChar++;
-
-    if (Buffer) {
-        ShortLength = (DWORD)_tcslen(Entry->ProductVersionString);
-
-        SdirPasteStrAndPad(&Buffer[CurrentChar], Entry->ProductVersionString, Attributes, ShortLength, sizeof(Entry->ProductVersionString)/sizeof(Entry->ProductVersionString[0]) - 1);
-    }
-    CurrentChar += sizeof(Entry->ProductVersionString)/sizeof(Entry->ProductVersionString[0]) - 1;
     return CurrentChar;
 }
 
@@ -2316,6 +2316,11 @@ SdirOptions[] = {
         SdirCompareCreateTime,           NULL,                          YoriLibGenerateCreateTime,
         "create time"},
 
+    {OPT_OS(FtDescription),              _T("de"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayDescription,          YoriLibCollectDescription,
+        SdirCompareDescription,          NULL,                          YoriLibGenerateDescription,
+        "description"},
+
     {OPT_OS(FtEffectivePermissions),     _T("ep"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayEffectivePermissions, SdirCollectEffectivePermissions,
         SdirCompareEffectivePermissions, SdirBitwiseEffectivePermissions, SdirGenerateEffectivePermissions,
@@ -2397,11 +2402,6 @@ SdirOptions[] = {
         SdirDisplayOwner,                YoriLibCollectOwner,
         SdirCompareOwner,                NULL,                          YoriLibGenerateOwner,
         "owner"},
-
-    {OPT_OS(FtProductVersionString),     _T("pv"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayProductVersionString, YoriLibCollectProductVersionString,
-        SdirCompareProductVersionString, NULL,                          YoriLibGenerateProductVersionString,
-        "product version string"},
 
     {OPT_OS(FtReparseTag),               _T("rt"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
         SdirDisplayReparseTag,           YoriLibCollectReparseTag,
@@ -2491,8 +2491,8 @@ SdirExec[] = {
     {OPT_OS(FtOsVersion),            SdirDisplayOsVersion},
     {OPT_OS(FtArch),                 SdirDisplayArch},
     {OPT_OS(FtSubsystem),            SdirDisplaySubsystem},
+    {OPT_OS(FtDescription),          SdirDisplayDescription},
     {OPT_OS(FtFileVersionString),    SdirDisplayFileVersionString},
-    {OPT_OS(FtProductVersionString), SdirDisplayProductVersionString},
     {OPT_OS(FtCompressionAlgorithm), SdirDisplayCompressionAlgorithm},
     {OPT_OS(FtFragmentCount),        SdirDisplayFragmentCount},
     {OPT_OS(FtAllocatedRangeCount),  SdirDisplayAllocatedRangeCount},

@@ -458,6 +458,11 @@ typedef struct _SDIR_OPTS {
     SDIR_FEATURE    FtCreateTime;
 
     /**
+     The volatile configuration for the executable's description.
+     */
+    SDIR_FEATURE    FtDescription;
+
+    /**
      The volatile configuration for how to display errors.
      */
     SDIR_FEATURE    FtError;
@@ -537,11 +542,6 @@ typedef struct _SDIR_OPTS {
      The volatile configuration for the file's owner.
      */
     SDIR_FEATURE    FtOwner;
-
-    /**
-     The volatile configuration for the file's product version string.
-     */
-    SDIR_FEATURE    FtProductVersionString;
 
     /**
      The volatile configuration for the file's reparse tag.
