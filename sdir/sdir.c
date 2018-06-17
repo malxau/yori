@@ -333,7 +333,7 @@ typedef struct _SDIR_ITEM_FOUND_CONTEXT {
 } SDIR_ITEM_FOUND_CONTEXT, *PSDIR_ITEM_FOUND_CONTEXT;
 
 /**
- A callback invoked by @ref SdirEnumeratePath for every file found.
+ A callback invoked by @ref SdirEnumeratePathWithDepth for every file found.
 
  @param FullPath Pointer to a full, escaped path to the file.
 
@@ -451,11 +451,14 @@ SdirItemFoundCallback(
 
  @param FindStr The compound directory/wildcard pattern to enumerate.
 
+ @param Depth Recursion depth.  If nonzero, this implies basic enumeration.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirEnumeratePath (
-    __in LPCTSTR FindStr
+SdirEnumeratePathWithDepth (
+    __in LPCTSTR FindStr,
+    __in DWORD Depth
     )
 {
     LPTSTR FinalPart;
@@ -465,6 +468,7 @@ SdirEnumeratePath (
     PYORI_FILE_INFO * NewSdirDirSorted;
     SDIR_ITEM_FOUND_CONTEXT ItemFoundContext;
     YORI_STRING YsFindStr;
+    DWORD MatchFlags;
 
     //
     //  At this point we should have a directory and an enumeration criteria.
@@ -631,8 +635,20 @@ SdirEnumeratePath (
         //
 
         ItemFoundContext.ItemsFound = 0;
+        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES;
+
+        //
+        //  MSFIX This isn't really correct without a major refactor.  What
+        //  we want is to allow full expansion of the search criteria but
+        //  basic expansion of the search path, since it was the result of
+        //  a prior enumerate.
+        //
+
+        if (Depth > 0) {
+            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        }
         if (!YoriLibForEachFile(&YsFindStr,
-                                YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES,
+                                MatchFlags,
                                 0,
                                 SdirItemFoundCallback,
                                 &ItemFoundContext)) {
@@ -661,6 +677,24 @@ SdirEnumeratePath (
     } while (SdirDirCollectionCurrent >= SdirAllocatedDirents);
 
     return TRUE;
+}
+
+/**
+ Enumerate all of the files in a given single directory/wildcard pattern,
+ and populate the results into the global SdirAllocatedDirents array.
+ This is a trivial wrapper around SdirEnumeratePathWithDepth to maintain
+ a function signature.
+
+ @param FindStr The compound directory/wildcard pattern to enumerate.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SdirEnumeratePath (
+    __in LPCTSTR FindStr
+    )
+{
+    return SdirEnumeratePathWithDepth(FindStr, 0);
 }
 
 
@@ -1113,7 +1147,6 @@ SdirForEachPathSpec (
                 YoriLibFreeStringContents(&FindStr);
                 return FALSE;
             }
-
         }
     }
 
@@ -1465,7 +1498,7 @@ SdirEnumerateAndDisplaySubtree (
 
             EnumerateUserSpecified = TRUE;
 
-            if (!SdirEnumeratePath( NextSubDir )) {
+            if (!SdirEnumeratePathWithDepth(NextSubDir, Depth)) {
                 DWORD Err = GetLastError();
                 if (SdirIsReportableError(Err)) {
 
@@ -1501,7 +1534,7 @@ SdirEnumerateAndDisplaySubtree (
             return FALSE;
         }
 
-        if (!SdirEnumeratePath( NextSubDir )) {
+        if (!SdirEnumeratePathWithDepth(NextSubDir, Depth)) {
             DWORD Err = GetLastError();
             if (SdirIsReportableError(Err)) {
 

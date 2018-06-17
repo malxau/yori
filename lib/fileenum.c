@@ -423,7 +423,7 @@ YoriLibForEachFileEnum(
                         ForEachContext->RecurseCriteria.StartOfString[ForEachContext->RecurseCriteria.LengthInChars] = '\0';
                     }
 
-                    if (!YoriLibForEachFile(&ForEachContext->RecurseCriteria, MatchFlags, Depth + 1, Callback, Context)) {
+                    if (!YoriLibForEachFileEnum(&ForEachContext->RecurseCriteria, MatchFlags, Depth + 1, Callback, Context)) {
                         Result = FALSE;
                         break;
                     }
