@@ -352,9 +352,10 @@ SdirItemFoundCallback(
     __in PYORI_STRING FullPath,
     __in PWIN32_FIND_DATA FindData,
     __in DWORD Depth,
-    __in PSDIR_ITEM_FOUND_CONTEXT Context
+    __in PVOID Context
     )
 {
+    PSDIR_ITEM_FOUND_CONTEXT ItemContext = (PSDIR_ITEM_FOUND_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -439,7 +440,7 @@ SdirItemFoundCallback(
 #if defined(UNICODE)
     }
 #endif
-    Context->ItemsFound++;
+    ItemContext->ItemsFound++;
     return TRUE;
 }
 
