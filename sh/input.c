@@ -821,10 +821,6 @@ YoriShGetExpression(
                     } else if (Char == 27) {
                         YoriShClearInput(&Buffer);
                     } else if (Char == '\t') {
-                        if (Buffer.SuggestionString.LengthInChars > 0) {
-                            YoriShClearTabCompletionMatches(&Buffer);
-                            YoriLibFreeStringContents(&Buffer.SuggestionString);
-                        }
                         if ((CtrlMask & SHIFT_PRESSED) == 0) {
                             YoriShTabCompletion(&Buffer, 0);
                         } else {
@@ -863,20 +859,12 @@ YoriShGetExpression(
                             YoriLibFreeStringContents(&ClipboardData);
                         }
                     } else if (KeyCode == VK_TAB) {
-                        if (Buffer.SuggestionString.LengthInChars > 0) {
-                            YoriShClearTabCompletionMatches(&Buffer);
-                            YoriLibFreeStringContents(&Buffer.SuggestionString);
-                        }
                         YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
                     }
                 } else if (CtrlMask == (RIGHT_CTRL_PRESSED | SHIFT_PRESSED) ||
                            CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||
                            CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED)) {
                     if (KeyCode == VK_TAB) {
-                        if (Buffer.SuggestionString.LengthInChars > 0) {
-                            YoriShClearTabCompletionMatches(&Buffer);
-                            YoriLibFreeStringContents(&Buffer.SuggestionString);
-                        }
                         YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
                     }
                 } else if (CtrlMask == ENHANCED_KEY) {
@@ -950,16 +938,8 @@ YoriShGetExpression(
                     } else if (KeyCode == VK_RIGHT) {
                         YoriShMoveCursorToNextArgument(&Buffer);
                     } else if (KeyCode == VK_UP) {
-                        if (Buffer.SuggestionString.LengthInChars > 0) {
-                            YoriShClearTabCompletionMatches(&Buffer);
-                            YoriLibFreeStringContents(&Buffer.SuggestionString);
-                        }
                         YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
                     } else if (KeyCode == VK_DOWN) {
-                        if (Buffer.SuggestionString.LengthInChars > 0) {
-                            YoriShClearTabCompletionMatches(&Buffer);
-                            YoriLibFreeStringContents(&Buffer.SuggestionString);
-                        }
                         YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
                     }
                 } else if (CtrlMask == LEFT_ALT_PRESSED || CtrlMask == RIGHT_ALT_PRESSED ||

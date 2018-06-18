@@ -371,6 +371,13 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
     DWORD CurrentArgLength;
 
     /**
+     Indicates the TabFlags passed when building any match list.  This is
+     used to detect a later, incompatible set of flags that implies the
+     list should be reconstructed.
+     */
+    DWORD TabFlagsUsedCreatingList;
+
+    /**
      Indicates which data source to search through.
      */
     enum {

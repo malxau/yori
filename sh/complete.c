@@ -1599,23 +1599,30 @@ YoriShPerformArgumentTabCompletion(
 
  @param CmdContext Pointer to the parsed command context.
 
- @param ExpandFullPath If TRUE, the path should be expanded to contain a fully
-        specified path.  If FALSE, a minimal or relative path should be used.
-
- @param SearchHistory Specifies that tab completion should search through
-        command history for matches rather than executable matches.
+ @param TabFlags Specifies the tab behavior to exercise, including whether
+        to include full path or relative path, whether to match command
+        history or files and arguments.
  */
 VOID
 YoriShPopulateTabCompletionMatches(
     __inout PYORI_INPUT_BUFFER Buffer,
     __inout PYORI_CMD_CONTEXT CmdContext,
-    __in BOOL ExpandFullPath,
-    __in BOOL SearchHistory
+    __in DWORD TabFlags
     )
 {
     YORI_STRING CurrentArgString;
     DWORD SearchLength;
     BOOL KeepSorted;
+    BOOL SearchHistory = FALSE;
+    BOOL ExpandFullPath = FALSE;
+
+    if ((TabFlags & YORI_SH_TAB_COMPLETE_FULL_PATH) != 0) {
+        ExpandFullPath = TRUE;
+    }
+
+    if ((TabFlags & YORI_SH_TAB_COMPLETE_HISTORY) != 0) {
+        SearchHistory = TRUE;
+    }
 
     YoriLibInitEmptyString(&CurrentArgString);
 
@@ -1665,6 +1672,8 @@ YoriShPopulateTabCompletionMatches(
     } else {
         YoriShPerformFileTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE, TRUE, KeepSorted);
     }
+
+    Buffer->TabContext.TabFlagsUsedCreatingList = TabFlags;
 }
 
 /**
@@ -1697,6 +1706,13 @@ YoriShClearTabCompletionMatches(
 }
 
 /**
+ A subset of flags that determine the composition of the match set.  If these
+ flags change between two calls to YoriShTabCompletion, it implies the existing
+ results are stale and invalid.
+ */
+#define YORI_SH_TAB_COMPLETE_COMPAT_MASK (YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_HISTORY)
+
+/**
  Perform tab completion processing.  On error the buffer is left unchanged.
 
  @param Buffer Pointer to the current input context.
@@ -1716,7 +1732,6 @@ YoriShTabCompletion(
     PYORI_LIST_ENTRY ListEntry;
     PYORI_TAB_COMPLETE_MATCH Match;
 
-    Buffer->TabContext.TabCount++;
     if (Buffer->String.LengthInChars == 0) {
         return;
     }
@@ -1730,6 +1745,24 @@ YoriShTabCompletion(
     }
 
     //
+    //  If there's an existing list, check that it's a list for the same
+    //  type of query as the current one.  If it's a different query,
+    //  throw it away and start over.
+    //
+
+    if (Buffer->TabContext.MatchList.Next != NULL) {
+        if ((TabFlags & YORI_SH_TAB_COMPLETE_COMPAT_MASK) != Buffer->TabContext.TabFlagsUsedCreatingList) {
+            if (Buffer->SuggestionString.LengthInChars > 0) {
+                YoriLibFreeStringContents(&Buffer->SuggestionString);
+            }
+            YoriShClearTabCompletionMatches(Buffer);
+            Buffer->PriorTabCount = 0;
+        }
+    }
+
+    Buffer->TabContext.TabCount++;
+
+    //
     //  If we're searching for the first time, set up the search
     //  criteria and populate the list of matches.
     //
@@ -1737,8 +1770,7 @@ YoriShTabCompletion(
     if (Buffer->TabContext.TabCount == 1 && Buffer->TabContext.MatchList.Next == NULL) {
         YoriShPopulateTabCompletionMatches(Buffer,
                                            &CmdContext,
-                                           ((TabFlags & YORI_SH_TAB_COMPLETE_FULL_PATH) != 0)?TRUE:FALSE,
-                                           ((TabFlags & YORI_SH_TAB_COMPLETE_HISTORY) != 0)?TRUE:FALSE);
+                                           TabFlags & YORI_SH_TAB_COMPLETE_COMPAT_MASK);
     }
 
     //
@@ -2076,7 +2108,7 @@ YoriShCompleteSuggestion(
     //  criteria and populate the list of matches.
     //
 
-    YoriShPopulateTabCompletionMatches(Buffer, &CmdContext, FALSE, FALSE);
+    YoriShPopulateTabCompletionMatches(Buffer, &CmdContext, 0);
 
     //
     //  Check if we have any match.  If we do, try to use it.  If not, leave
