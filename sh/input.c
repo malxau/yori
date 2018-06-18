@@ -1001,7 +1001,9 @@ YoriShGetExpression(
                     }
                 }
 
-                if (KeyCode != VK_SHIFT) {
+                if (KeyCode != VK_SHIFT &&
+                    KeyCode != VK_CONTROL) {
+
                     YoriShPostKeyPress(&Buffer);
                 }
             } else if (InputRecord->EventType == KEY_EVENT) {
@@ -1058,7 +1060,8 @@ YoriShGetExpression(
 
         SuggestionPopulated = FALSE;
         if (Buffer.SuggestionString.LengthInChars > 0 ||
-            Buffer.DelayBeforeSuggesting == 0) {
+            Buffer.DelayBeforeSuggesting == 0 ||
+            Buffer.TabContext.TabCount != 0) {
 
             SuggestionPopulated = TRUE;
         }
