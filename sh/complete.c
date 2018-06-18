@@ -1329,7 +1329,7 @@ YoriShResolveTabCompletionActionForExecutable(
         return FALSE;
     }
 
-    CompletionExpression.LengthInChars = YoriLibSPrintf(CompletionExpression.StartOfString, _T("%y %i %y"), &FoundCompletionScript, CurrentArg, &ArgToComplete);
+    CompletionExpression.LengthInChars = YoriLibSPrintf(CompletionExpression.StartOfString, _T("\"%y\" %i %y"), &FoundCompletionScript, CurrentArg, &ArgToComplete);
 
     YoriLibFreeStringContents(&FoundCompletionScript);
 
