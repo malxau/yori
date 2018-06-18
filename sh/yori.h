@@ -726,11 +726,28 @@ YoriShClearTabCompletionMatches(
     __inout PYORI_INPUT_BUFFER Buffer
     );
 
+/**
+ If this flag is set, completion should match the full path rather than a
+ relative file name.
+ */
+#define YORI_SH_TAB_COMPLETE_FULL_PATH      (0x00000001)
+
+/**
+ If this flag is set, completion should match command history rather than
+ files or arguments.
+ */
+#define YORI_SH_TAB_COMPLETE_HISTORY        (0x00000002)
+
+/**
+ If this flag is set, completion should navigate backwards through the list
+ of matches.
+ */
+#define YORI_SH_TAB_COMPLETE_BACKWARDS      (0x00000004)
+
 VOID
 YoriShTabCompletion(
     __inout PYORI_INPUT_BUFFER Buffer,
-    __in BOOL ExpandFullPath,
-    __in BOOL SearchHistory
+    __in DWORD TabFlags
     );
 
 VOID

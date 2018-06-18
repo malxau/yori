@@ -1701,17 +1701,15 @@ YoriShClearTabCompletionMatches(
 
  @param Buffer Pointer to the current input context.
 
- @param ExpandFullPath If TRUE, the path should be expanded to contain a fully
-        specified path.  If FALSE, a minimal or relative path should be used.
-
- @param SearchHistory Specifies that tab completion should search through
-        command history for matches rather than executable matches.
+ @param TabFlags Specifies the tab behavior to exercise, including whether
+        to include full path or relative path, whether to match command
+        history or files and arguments, and the direction to navigate through
+        any matches.
  */
 VOID
 YoriShTabCompletion(
     __inout PYORI_INPUT_BUFFER Buffer,
-    __in BOOL ExpandFullPath,
-    __in BOOL SearchHistory
+    __in DWORD TabFlags
     )
 {
     YORI_CMD_CONTEXT CmdContext;
@@ -1737,7 +1735,10 @@ YoriShTabCompletion(
     //
 
     if (Buffer->TabContext.TabCount == 1 && Buffer->TabContext.MatchList.Next == NULL) {
-        YoriShPopulateTabCompletionMatches(Buffer, &CmdContext, ExpandFullPath, SearchHistory);
+        YoriShPopulateTabCompletionMatches(Buffer,
+                                           &CmdContext,
+                                           ((TabFlags & YORI_SH_TAB_COMPLETE_FULL_PATH) != 0)?TRUE:FALSE,
+                                           ((TabFlags & YORI_SH_TAB_COMPLETE_HISTORY) != 0)?TRUE:FALSE);
     }
 
     //
@@ -1745,10 +1746,19 @@ YoriShTabCompletion(
     //  the buffer unchanged.
     //
 
-    ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, &Buffer->TabContext.PreviousMatch->ListEntry);
-    if (ListEntry == NULL) {
-        if (Buffer->TabContext.TabCount != 1) {
-            ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+    if ((TabFlags & YORI_SH_TAB_COMPLETE_BACKWARDS) == 0) {
+        ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, &Buffer->TabContext.PreviousMatch->ListEntry);
+        if (ListEntry == NULL) {
+            if (Buffer->TabContext.TabCount != 1) {
+                ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+            }
+        }
+    } else {
+        ListEntry = YoriLibGetPreviousListEntry(&Buffer->TabContext.MatchList, &Buffer->TabContext.PreviousMatch->ListEntry);
+        if (ListEntry == NULL) {
+            if (Buffer->TabContext.TabCount != 1) {
+                ListEntry = YoriLibGetPreviousListEntry(&Buffer->TabContext.MatchList, NULL);
+            }
         }
     }
     if (ListEntry == NULL) {

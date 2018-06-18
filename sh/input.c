@@ -821,7 +821,15 @@ YoriShGetExpression(
                     } else if (Char == 27) {
                         YoriShClearInput(&Buffer);
                     } else if (Char == '\t') {
-                        YoriShTabCompletion(&Buffer, FALSE, FALSE);
+                        if (Buffer.SuggestionString.LengthInChars > 0) {
+                            YoriShClearTabCompletionMatches(&Buffer);
+                            YoriLibFreeStringContents(&Buffer.SuggestionString);
+                        }
+                        if ((CtrlMask & SHIFT_PRESSED) == 0) {
+                            YoriShTabCompletion(&Buffer, 0);
+                        } else {
+                            YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_BACKWARDS);
+                        }
                     } else if (Char == '\b') {
                         YoriShBackspace(&Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
                     } else if (Char == '\0') {
@@ -859,7 +867,17 @@ YoriShGetExpression(
                             YoriShClearTabCompletionMatches(&Buffer);
                             YoriLibFreeStringContents(&Buffer.SuggestionString);
                         }
-                        YoriShTabCompletion(&Buffer, TRUE, FALSE);
+                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
+                    }
+                } else if (CtrlMask == (RIGHT_CTRL_PRESSED | SHIFT_PRESSED) ||
+                           CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||
+                           CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED)) {
+                    if (KeyCode == VK_TAB) {
+                        if (Buffer.SuggestionString.LengthInChars > 0) {
+                            YoriShClearTabCompletionMatches(&Buffer);
+                            YoriLibFreeStringContents(&Buffer.SuggestionString);
+                        }
+                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
                     }
                 } else if (CtrlMask == ENHANCED_KEY) {
                     PYORI_LIST_ENTRY NewEntry = NULL;
@@ -936,7 +954,13 @@ YoriShGetExpression(
                             YoriShClearTabCompletionMatches(&Buffer);
                             YoriLibFreeStringContents(&Buffer.SuggestionString);
                         }
-                        YoriShTabCompletion(&Buffer, FALSE, TRUE);
+                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
+                    } else if (KeyCode == VK_DOWN) {
+                        if (Buffer.SuggestionString.LengthInChars > 0) {
+                            YoriShClearTabCompletionMatches(&Buffer);
+                            YoriLibFreeStringContents(&Buffer.SuggestionString);
+                        }
+                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
                     }
                 } else if (CtrlMask == LEFT_ALT_PRESSED || CtrlMask == RIGHT_ALT_PRESSED ||
                            CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY) ||
@@ -977,7 +1001,9 @@ YoriShGetExpression(
                     }
                 }
 
-                YoriShPostKeyPress(&Buffer);
+                if (KeyCode != VK_SHIFT) {
+                    YoriShPostKeyPress(&Buffer);
+                }
             } else if (InputRecord->EventType == KEY_EVENT) {
                 ASSERT(!InputRecord->Event.KeyEvent.bKeyDown);
 
