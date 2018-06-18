@@ -14,6 +14,6 @@ HTML_OUTPUT            = html
 HTML_FILE_EXTENSION    = .html
 GENERATE_HTMLHELP      = YES
 CHM_FILE               = Yoricode.chm
-HHC_LOCATION           = "C:\Program Files\Html Help Workshop\hhc.exe"
+HHC_LOCATION           = "C:\Program Files (x86)\Html Help Workshop\hhc.exe"
 SEARCHENGINE           = NO
 GENERATE_LATEX         = NO
