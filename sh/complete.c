@@ -1638,25 +1638,36 @@ YoriShPopulateTabCompletionMatches(
     if (CmdContext->CurrentArg < CmdContext->ArgC) {
         memcpy(&CurrentArgString, &CmdContext->ArgV[CmdContext->CurrentArg], sizeof(YORI_STRING));
     }
-    SearchLength = CurrentArgString.LengthInChars + 1;
-    if (!YoriLibAllocateString(&Buffer->TabContext.SearchString, SearchLength + 1)) {
-        return;
+
+    if (SearchHistory) {
+        SearchLength = Buffer->String.LengthInChars + 1;
+        if (!YoriLibAllocateString(&Buffer->TabContext.SearchString, SearchLength + 1)) {
+            return;
+        }
+
+        KeepSorted = TRUE;
+
+        Buffer->TabContext.SearchString.LengthInChars = YoriLibSPrintfS(Buffer->TabContext.SearchString.StartOfString, SearchLength + 1, _T("%y*"), &Buffer->String);
+    } else {
+        SearchLength = CurrentArgString.LengthInChars + 1;
+        if (!YoriLibAllocateString(&Buffer->TabContext.SearchString, SearchLength + 1)) {
+            return;
+        }
+
+        KeepSorted = TRUE;
+
+        Buffer->TabContext.SearchString.LengthInChars = YoriLibSPrintfS(Buffer->TabContext.SearchString.StartOfString, SearchLength + 1, _T("%y*"), &CurrentArgString);
     }
 
-    KeepSorted = TRUE;
+    if (SearchHistory) {
+        Buffer->TabContext.SearchType = YoriTabCompleteSearchHistory;
 
-    Buffer->TabContext.SearchString.LengthInChars = YoriLibSPrintfS(Buffer->TabContext.SearchString.StartOfString, SearchLength + 1, _T("%y*"), &CurrentArgString);
+    } else if (CmdContext->CurrentArg == 0) {
 
-    if (CmdContext->CurrentArg == 0) {
-
-        if (SearchHistory) {
-            Buffer->TabContext.SearchType = YoriTabCompleteSearchHistory;
-        } else {
-            YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE);
-            Buffer->TabContext.SearchType = YoriTabCompleteSearchFiles;
-            if (YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL) != NULL) {
-                KeepSorted = FALSE;
-            }
+        YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE);
+        Buffer->TabContext.SearchType = YoriTabCompleteSearchFiles;
+        if (YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL) != NULL) {
+            KeepSorted = FALSE;
         }
 
     } else {
