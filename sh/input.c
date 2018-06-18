@@ -507,9 +507,9 @@ YoriShMoveCursorToPriorArgument(
     )
 {
     YORI_CMD_CONTEXT CmdContext;
-    LPTSTR NewString;
-    DWORD BeginCurrentArg;
-    DWORD EndCurrentArg;
+    LPTSTR NewString = NULL;
+    DWORD BeginCurrentArg = 0;
+    DWORD EndCurrentArg = 0;
     DWORD NewStringLen;
 
     if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
@@ -522,10 +522,32 @@ YoriShMoveCursorToPriorArgument(
     }
 
     if (CmdContext.CurrentArg > 0) {
-        CmdContext.CurrentArg--;
+
+        //
+        //  If we're on the final argument but not at the first letter, go to
+        //  the beginning of the current argument.
+        //
+        //  MSFIX This is relying on the current string offset being compared
+        //  against the new string offset, which is not guaranteed to be
+        //  correct.  Doing this properly requires parser support to indicate
+        //  "current position within argument."
+        //
+
+        if (CmdContext.CurrentArg < CmdContext.ArgC) {
+            NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+            if (Buffer->CurrentOffset <= BeginCurrentArg) {
+                YoriLibDereference(NewString);
+                NewString = NULL;
+                CmdContext.CurrentArg--;
+            }
+        } else {
+            CmdContext.CurrentArg--;
+        }
     }
 
-    NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+    if (NewString == NULL) {
+        NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+    }
 
     if (NewString != NULL) {
         NewStringLen = _tcslen(NewString);
