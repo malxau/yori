@@ -617,7 +617,12 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     )
 {
     PYORI_SINGLE_EXEC_CONTEXT ExecContext = (PYORI_SINGLE_EXEC_CONTEXT)Context;
+    YORI_STRING OriginalAliases;
     DWORD Err;
+    BOOL HaveOriginalAliases;
+
+    YoriLibInitEmptyString(&OriginalAliases);
+    HaveOriginalAliases = YoriShGetSystemAliasStrings(TRUE, &OriginalAliases);
 
     Err = YoriShCreateProcess(ExecContext);
     if (Err != NO_ERROR) {
@@ -625,6 +630,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed (%i): %s"), Err, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriShCleanupFailedProcessLaunch(ExecContext);
+        YoriLibFreeStringContents(&OriginalAliases);
         return 0;
     }
 
@@ -713,6 +719,14 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     }
 
     WaitForSingleObject(ExecContext->hProcess, INFINITE);
+    if (HaveOriginalAliases) {
+        YORI_STRING NewAliases;
+        if (YoriShGetSystemAliasStrings(TRUE, &NewAliases)) {
+            YoriShMergeChangedAliasStrings(TRUE, &OriginalAliases, &NewAliases);
+            YoriLibFreeStringContents(&NewAliases);
+        }
+        YoriLibFreeStringContents(&OriginalAliases);
+    }
     return 0;
 }
 

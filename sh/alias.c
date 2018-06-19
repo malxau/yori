@@ -524,6 +524,233 @@ YoriShImportAliasValue(
 }
 
 /**
+ Return a NULL terminated list of alias strings from the console host.
+
+ @param LoadFromCmd If TRUE, the alias strings for CMD are loaded.  If FALSE,
+        the alias strings for Yori are loaded.
+
+ @param AliasBuffer On successful completion, updated to point to a newly
+        allocated set of alias strings.  This should be freed with @ref
+        YoriLibFreeStringContents .
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShGetSystemAliasStrings(
+    __in BOOL LoadFromCmd,
+    __out PYORI_STRING AliasBuffer
+    )
+{
+    LPTSTR AppName;
+    DWORD LengthRequired;
+
+    YoriLibInitEmptyString(AliasBuffer);
+
+    if (DllKernel32.pAddConsoleAliasW == NULL ||
+        DllKernel32.pGetConsoleAliasesW == NULL ||
+        DllKernel32.pGetConsoleAliasesLengthW == NULL) {
+
+        return FALSE;
+    }
+
+    if (LoadFromCmd) {
+        AppName = ALIAS_IMPORT_APP_NAME;
+    } else {
+        AppName = ALIAS_APP_NAME;
+    }
+
+    LengthRequired = DllKernel32.pGetConsoleAliasesLengthW(AppName);
+    if (LengthRequired == 0) {
+        return TRUE;
+    }
+
+    if (!YoriLibAllocateString(AliasBuffer, (LengthRequired + 1) / sizeof(TCHAR))) {
+        return FALSE;
+    }
+
+    AliasBuffer->LengthInChars = DllKernel32.pGetConsoleAliasesW(AliasBuffer->StartOfString, AliasBuffer->LengthAllocated * sizeof(TCHAR), AppName);
+    AliasBuffer->LengthInChars = AliasBuffer->LengthInChars / sizeof(TCHAR);
+    if (AliasBuffer->LengthInChars == 0 || AliasBuffer->LengthInChars > AliasBuffer->LengthAllocated) {
+        YoriLibFreeStringContents(AliasBuffer);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Find an alias with a specified name within a list of NULL terminated strings.
+
+ @param AliasStrings The list of strings to search through.
+
+ @param AliasName The name of the alias to find.
+
+ @param AliasValue On successful completion, this is updated to point to the
+        value of the found match.  Note this value is not referenced.
+
+ @return TRUE to indicate a match was found, FALSE to indicate it was not.
+ */
+BOOL
+YoriShFindAliasWithinStrings(
+    __in PYORI_STRING AliasStrings,
+    __in PYORI_STRING AliasName,
+    __out PYORI_STRING AliasValue
+    )
+{
+    DWORD CharsConsumed;
+    YORI_STRING FoundAliasName;
+    YORI_STRING FoundAliasValue;
+
+    YoriLibInitEmptyString(&FoundAliasName);
+    YoriLibInitEmptyString(&FoundAliasValue);
+
+    CharsConsumed = 0;
+    while (CharsConsumed < AliasStrings->LengthInChars && CharsConsumed < AliasStrings->LengthAllocated) {
+        FoundAliasName.StartOfString = &AliasStrings->StartOfString[CharsConsumed];
+        FoundAliasName.LengthInChars = 0;
+        while (FoundAliasName.StartOfString[FoundAliasName.LengthInChars] != '\0' &&
+               FoundAliasName.StartOfString[FoundAliasName.LengthInChars] != '=') {
+
+            FoundAliasName.LengthInChars++;
+        }
+
+        CharsConsumed += FoundAliasName.LengthInChars + 1;
+
+        if (FoundAliasName.StartOfString[FoundAliasName.LengthInChars] == '=') {
+            FoundAliasValue.LengthInChars = 0;
+            FoundAliasValue.StartOfString = &FoundAliasName.StartOfString[FoundAliasName.LengthInChars + 1];
+            while (FoundAliasValue.StartOfString[FoundAliasValue.LengthInChars] != '\0') {
+                FoundAliasValue.LengthInChars++;
+            }
+
+            CharsConsumed += FoundAliasValue.LengthInChars + 1;
+        }
+
+        if (YoriLibCompareStringInsensitive(AliasName, &FoundAliasName) == 0) {
+            memcpy(AliasValue, &FoundAliasValue, sizeof(YORI_STRING));
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
+ Incorporate changes into the current set of aliases.  This function scans
+ two NULL terminated lists of aliases to find changes in the new set over
+ the old set and incorporate those into the current environment.
+
+ @param MergeFromCmd If TRUE, these alias lists are treated as CMD format
+        and need to be migrated in order to incorporate them into Yori.
+
+ @param OldStrings Pointer to the original NULL terminated list of aliases.
+
+ @param NewStrings Pointer to the new NULL terminated list of aliases.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShMergeChangedAliasStrings(
+    __in BOOL MergeFromCmd,
+    __in PYORI_STRING OldStrings,
+    __in PYORI_STRING NewStrings
+    )
+{
+    DWORD CharsConsumed;
+    YORI_STRING FoundAliasName;
+    YORI_STRING FoundAliasValue;
+    YORI_STRING OldAliasValue;
+
+    YoriLibInitEmptyString(&FoundAliasName);
+    YoriLibInitEmptyString(&FoundAliasValue);
+
+    //
+    //  Navigate through the new alias strings.
+    //
+
+    CharsConsumed = 0;
+    while (CharsConsumed < NewStrings->LengthInChars && CharsConsumed < NewStrings->LengthAllocated) {
+        FoundAliasName.StartOfString = &NewStrings->StartOfString[CharsConsumed];
+        FoundAliasName.LengthInChars = 0;
+        while (FoundAliasName.StartOfString[FoundAliasName.LengthInChars] != '\0' &&
+               FoundAliasName.StartOfString[FoundAliasName.LengthInChars] != '=') {
+
+            FoundAliasName.LengthInChars++;
+        }
+
+        CharsConsumed += FoundAliasName.LengthInChars + 1;
+
+        if (FoundAliasName.StartOfString[FoundAliasName.LengthInChars] == '=') {
+            FoundAliasValue.LengthInChars = 0;
+            FoundAliasValue.StartOfString = &FoundAliasName.StartOfString[FoundAliasName.LengthInChars + 1];
+            while (FoundAliasValue.StartOfString[FoundAliasValue.LengthInChars] != '\0') {
+                FoundAliasValue.LengthInChars++;
+            }
+
+            CharsConsumed += FoundAliasValue.LengthInChars + 1;
+
+            //
+            //  Now we've found something, check its state in the old
+            //  alias strings.  If it's not there or changed, add it now.
+            //
+
+            if (!YoriShFindAliasWithinStrings(OldStrings, &FoundAliasName, &OldAliasValue) ||
+                YoriLibCompareString(&FoundAliasValue, &OldAliasValue) != 0) {
+                if (MergeFromCmd) {
+                    LPTSTR MigratedAlias;
+                    YORI_STRING YsMigratedAlias;
+                    if (YoriShImportAliasValue(FoundAliasValue.StartOfString, &MigratedAlias)) {
+                        YoriLibConstantString(&YsMigratedAlias, MigratedAlias);
+                        YoriShAddAlias(&FoundAliasName, &YsMigratedAlias, FALSE);
+                        YoriLibDereference(MigratedAlias);
+                    }
+                } else {
+                    YoriShAddAlias(&FoundAliasName, &FoundAliasValue, FALSE);
+                }
+            }
+        }
+    }
+
+    //
+    //  Navigate through the old alias strings.
+    //
+
+    CharsConsumed = 0;
+    while (CharsConsumed < OldStrings->LengthInChars && CharsConsumed < OldStrings->LengthAllocated) {
+        FoundAliasName.StartOfString = &OldStrings->StartOfString[CharsConsumed];
+        FoundAliasName.LengthInChars = 0;
+        while (FoundAliasName.StartOfString[FoundAliasName.LengthInChars] != '\0' &&
+               FoundAliasName.StartOfString[FoundAliasName.LengthInChars] != '=') {
+
+            FoundAliasName.LengthInChars++;
+        }
+
+        CharsConsumed += FoundAliasName.LengthInChars + 1;
+
+        if (FoundAliasName.StartOfString[FoundAliasName.LengthInChars] == '=') {
+            FoundAliasValue.LengthInChars = 0;
+            FoundAliasValue.StartOfString = &FoundAliasName.StartOfString[FoundAliasName.LengthInChars + 1];
+            while (FoundAliasValue.StartOfString[FoundAliasValue.LengthInChars] != '\0') {
+                FoundAliasValue.LengthInChars++;
+            }
+
+            CharsConsumed += FoundAliasValue.LengthInChars + 1;
+
+            //
+            //  Now we've found something, check its state in the new
+            //  alias strings.  If it's not there, delete it.
+            //
+
+            if (!YoriShFindAliasWithinStrings(NewStrings, &FoundAliasName, &OldAliasValue)) {
+                YoriShDeleteAlias(&FoundAliasName);
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+/**
  Load aliases from the console and incorporate those into the shell's internal
  alias system.  This allows aliases to be inherited across subshells.
 
@@ -538,49 +765,21 @@ YoriShLoadSystemAliases(
     __in BOOL ImportFromCmd
     )
 {
-    DWORD LengthRequired;
-    DWORD LengthReturned;
-    LPTSTR AliasBuffer;
+    YORI_STRING AliasBuffer;
     LPTSTR ThisVar;
     LPTSTR Value;
-    LPTSTR AppName;
     DWORD VarLen;
-    DWORD BytesConsumed;
+    DWORD CharsConsumed;
 
-    if (DllKernel32.pAddConsoleAliasW == NULL ||
-        DllKernel32.pGetConsoleAliasesW == NULL ||
-        DllKernel32.pGetConsoleAliasesLengthW == NULL) {
-
+    if (!YoriShGetSystemAliasStrings(ImportFromCmd, &AliasBuffer)) {
         return FALSE;
     }
 
-    if (ImportFromCmd) {
-        AppName = ALIAS_IMPORT_APP_NAME;
-    } else {
-        AppName = ALIAS_APP_NAME;
-    }
-
-    LengthRequired = DllKernel32.pGetConsoleAliasesLengthW(AppName);
-    if (LengthRequired == 0) {
-        return TRUE;
-    }
-
-    AliasBuffer = YoriLibMalloc(LengthRequired);
-    if (AliasBuffer == NULL) {
-        return FALSE;
-    }
-
-    LengthReturned = DllKernel32.pGetConsoleAliasesW(AliasBuffer, LengthRequired, AppName);
-    if (LengthReturned == 0 || LengthReturned > LengthRequired) {
-        YoriLibFree(AliasBuffer);
-        return FALSE;
-    }
-
-    ThisVar = AliasBuffer;
-    BytesConsumed = 0;
-    while (BytesConsumed < LengthReturned && BytesConsumed < LengthRequired) {
+    ThisVar = AliasBuffer.StartOfString;
+    CharsConsumed = 0;
+    while (CharsConsumed < AliasBuffer.LengthInChars && CharsConsumed < AliasBuffer.LengthAllocated) {
         VarLen = _tcslen(ThisVar);
-        BytesConsumed += VarLen * sizeof(TCHAR);
+        CharsConsumed += VarLen;
         Value = _tcschr(ThisVar, '=');
         if (Value) {
             *Value = '\0';
@@ -599,10 +798,10 @@ YoriShLoadSystemAliases(
         }
         ThisVar += VarLen;
         ThisVar++;
-        BytesConsumed += sizeof(TCHAR);
+        CharsConsumed++;
     }
 
-    YoriLibFree(AliasBuffer);
+    YoriLibFreeStringContents(&AliasBuffer);
     return TRUE;
 }
 

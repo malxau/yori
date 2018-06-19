@@ -619,7 +619,22 @@ YoriShGetAliasStrings(
     );
 
 BOOL
-YoriShLoadSystemAliases();
+YoriShLoadSystemAliases(
+    __in BOOL ImportFromCmd
+    );
+
+BOOL
+YoriShMergeChangedAliasStrings(
+    __in BOOL MergeFromCmd,
+    __in PYORI_STRING OldStrings,
+    __in PYORI_STRING NewStrings
+    );
+
+BOOL
+YoriShGetSystemAliasStrings(
+    __in BOOL LoadFromCmd,
+    __out PYORI_STRING AliasBuffer
+    );
 
 // *** BUILTIN.C ***
 
