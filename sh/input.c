@@ -291,15 +291,11 @@ YoriShEnsureStringHasEnoughCharacters(
  @param Buffer The input buffer to apply new characters to.
 
  @param String A yori string to enter into the buffer.
-
- @param InsertMode If TRUE, the string should be inserted into the buffer;
-        if FALSE, the string should be overwritten into the buffer.
  */
 VOID
 YoriShAddYoriStringToInput(
     __inout PYORI_INPUT_BUFFER Buffer,
-    __in PYORI_STRING String,
-    __in BOOLEAN InsertMode
+    __in PYORI_STRING String
     )
 {
     BOOL KeepSuggestions;
@@ -333,7 +329,7 @@ YoriShAddYoriStringToInput(
     //  the data.
     //
 
-    if (InsertMode) {
+    if (Buffer->InsertMode) {
         if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, Buffer->String.LengthInChars + String->LengthInChars)) {
             return;
         }
@@ -393,21 +389,17 @@ YoriShAddYoriStringToInput(
  @param Buffer The input buffer context.
 
  @param String the NULL terminated string to append.
-
- @param InsertMode TRUE if the text should be inserted into the buffer,
-        FALSE if it should be overwritten into the buffer.
  */
 VOID
 YoriShAddCStringToInput(
     __inout PYORI_INPUT_BUFFER Buffer,
-    __in LPTSTR String,
-    __in BOOLEAN InsertMode
+    __in LPTSTR String
     )
 {
     YORI_STRING YoriString;
 
     YoriLibConstantString(&YoriString, String);
-    YoriShAddYoriStringToInput(Buffer, &YoriString, InsertMode);
+    YoriShAddYoriStringToInput(Buffer, &YoriString);
 }
 
 
@@ -689,7 +681,7 @@ YoriShHotkey(
     }
 
     YoriShClearInput(Buffer);
-    YoriShAddCStringToInput(Buffer, CmdLine, TRUE);
+    YoriShAddCStringToInput(Buffer, CmdLine);
     YoriLibDereference(CmdLine);
     return TRUE;
 }
@@ -752,6 +744,277 @@ YoriShConfigureSuggestionSettings(
 }
 
 /**
+ Perform processing related to when a key is pressed.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessKeyDown(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __out PBOOL TerminateInput
+    )
+{
+    DWORD CtrlMask;
+    TCHAR Char;
+    DWORD Count;
+    WORD KeyCode;
+    WORD ScanCode;
+
+    *TerminateInput = FALSE;
+    YoriShPrepareForNextKey(Buffer);
+
+    Char = InputRecord->Event.KeyEvent.uChar.UnicodeChar;
+    CtrlMask = InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED | RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | ENHANCED_KEY | SHIFT_PRESSED);
+    KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
+    ScanCode = InputRecord->Event.KeyEvent.wVirtualScanCode;
+
+    if (KeyCode >= VK_F1 && KeyCode <= VK_F12) {
+        if (YoriShHotkey(Buffer, KeyCode, CtrlMask)) {
+            YoriShDisplayAfterKeyPress(Buffer);
+            *TerminateInput = TRUE;
+            return TRUE;
+        }
+    }
+
+    if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
+
+        if (Char == '\r') {
+            YoriShDisplayAfterKeyPress(Buffer);
+            *TerminateInput = TRUE;
+            return TRUE;
+        } else if (Char == 27) {
+            YoriShClearInput(Buffer);
+        } else if (Char == '\t') {
+            if ((CtrlMask & SHIFT_PRESSED) == 0) {
+                YoriShTabCompletion(Buffer, 0);
+            } else {
+                YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_BACKWARDS);
+            }
+        } else if (Char == '\b') {
+            YoriShBackspace(Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
+        } else if (Char == '\0') {
+        } else {
+            for (Count = 0; Count < InputRecord->Event.KeyEvent.wRepeatCount; Count++) {
+                TCHAR StringChar[2];
+                StringChar[0] = Char;
+                StringChar[1] = '\0';
+                YoriShAddCStringToInput(Buffer, StringChar);
+            }
+        }
+    } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
+               CtrlMask == LEFT_CTRL_PRESSED ||
+               CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) {
+        if (KeyCode == 'C') {
+            YoriShClearInput(Buffer);
+            YoriShDisplayAfterKeyPress(Buffer);
+            *TerminateInput = TRUE;
+            return TRUE;
+        } else if (KeyCode == 'E') {
+            TCHAR StringChar[2];
+            StringChar[0] = 27;
+            StringChar[1] = '\0';
+            YoriShAddCStringToInput(Buffer, StringChar);
+        } else if (KeyCode == 'V') {
+            YORI_STRING ClipboardData;
+            YoriLibInitEmptyString(&ClipboardData);
+            if (YoriShPasteText(&ClipboardData)) {
+                YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                YoriLibFreeStringContents(&ClipboardData);
+            }
+        } else if (KeyCode == VK_TAB) {
+            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
+        }
+    } else if (CtrlMask == (RIGHT_CTRL_PRESSED | SHIFT_PRESSED) ||
+               CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||
+               CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED)) {
+        if (KeyCode == VK_TAB) {
+            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
+        }
+    } else if (CtrlMask == ENHANCED_KEY) {
+        PYORI_LIST_ENTRY NewEntry = NULL;
+        PYORI_HISTORY_ENTRY HistoryEntry;
+        if (KeyCode == VK_UP) {
+            NewEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, Buffer->HistoryEntryToUse);
+            if (NewEntry != NULL) {
+                Buffer->HistoryEntryToUse = NewEntry;
+                HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_HISTORY_ENTRY, ListEntry);
+                YoriShClearInput(Buffer);
+                YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
+            }
+        } else if (KeyCode == VK_DOWN) {
+            if (Buffer->HistoryEntryToUse != NULL) {
+                NewEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, Buffer->HistoryEntryToUse);
+            }
+            if (NewEntry != NULL) {
+                Buffer->HistoryEntryToUse = NewEntry;
+                HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_HISTORY_ENTRY, ListEntry);
+                YoriShClearInput(Buffer);
+                YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
+            }
+        } else if (KeyCode == VK_LEFT) {
+            if (Buffer->CurrentOffset > 0) {
+                Buffer->CurrentOffset--;
+            }
+        } else if (KeyCode == VK_RIGHT) {
+            if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
+                Buffer->CurrentOffset++;
+            }
+        } else if (KeyCode == VK_INSERT) {
+            Buffer->CursorInfo.bVisible = TRUE;
+            if (Buffer->InsertMode) {
+                Buffer->InsertMode = FALSE;
+                Buffer->CursorInfo.dwSize = 100;
+            } else {
+                Buffer->InsertMode = TRUE;
+                Buffer->CursorInfo.dwSize = 20;
+            }
+            SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &Buffer->CursorInfo);
+        } else if (KeyCode == VK_HOME) {
+            Buffer->CurrentOffset = 0;
+        } else if (KeyCode == VK_END) {
+            Buffer->CurrentOffset = Buffer->String.LengthInChars;
+        } else if (KeyCode == VK_DELETE) {
+
+            Count = InputRecord->Event.KeyEvent.wRepeatCount;
+            if (Count + Buffer->CurrentOffset > Buffer->String.LengthInChars) {
+                Count = Buffer->String.LengthInChars - Buffer->CurrentOffset;
+            }
+
+            Buffer->CurrentOffset += Count;
+
+            YoriShBackspace(Buffer, Count);
+
+        } else if (KeyCode == VK_RETURN) {
+            YoriShDisplayAfterKeyPress(Buffer);
+            *TerminateInput = TRUE;
+            return TRUE;
+        }
+    } else if (CtrlMask == (RIGHT_CTRL_PRESSED | ENHANCED_KEY) ||
+               CtrlMask == (LEFT_CTRL_PRESSED | ENHANCED_KEY) ||
+               CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | ENHANCED_KEY)) {
+
+        if (KeyCode == VK_LEFT) {
+            YoriShMoveCursorToPriorArgument(Buffer);
+        } else if (KeyCode == VK_RIGHT) {
+            YoriShMoveCursorToNextArgument(Buffer);
+        } else if (KeyCode == VK_UP) {
+            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
+        } else if (KeyCode == VK_DOWN) {
+            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
+        }
+    } else if (CtrlMask == LEFT_ALT_PRESSED || CtrlMask == RIGHT_ALT_PRESSED ||
+               CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY) ||
+               CtrlMask == (RIGHT_ALT_PRESSED | ENHANCED_KEY)) {
+        if (KeyCode >= '0' && KeyCode <= '9') {
+            if (KeyCode == '0' && Buffer->NumericKeyValue == 0 && !Buffer->NumericKeyAnsiMode) {
+                Buffer->NumericKeyAnsiMode = TRUE;
+            } else {
+                Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + KeyCode - '0';
+            }
+        } else if (KeyCode >= VK_NUMPAD0 && KeyCode <= VK_NUMPAD9) {
+            if (KeyCode == VK_NUMPAD0 && Buffer->NumericKeyValue == 0 && !Buffer->NumericKeyAnsiMode) {
+                Buffer->NumericKeyAnsiMode = TRUE;
+            } else {
+                Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + KeyCode - VK_NUMPAD0;
+            }
+        } else if (ScanCode >= 0x47 && ScanCode <= 0x49) {
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + ScanCode - 0x47 + 7;
+        } else if (ScanCode >= 0x4b && ScanCode <= 0x4d) {
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + ScanCode - 0x4b + 4;
+        } else if (ScanCode >= 0x4f && ScanCode <= 0x51) {
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + ScanCode - 0x4f + 1;
+        } else if (ScanCode == 0x52) {
+            if (Buffer->NumericKeyValue == 0 && !Buffer->NumericKeyAnsiMode) {
+                Buffer->NumericKeyAnsiMode = TRUE;
+            } else {
+                Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10;
+            }
+        }
+    } else if (CtrlMask == (SHIFT_PRESSED | ENHANCED_KEY)) {
+        if (KeyCode == VK_INSERT) {
+            YORI_STRING ClipboardData;
+            YoriLibInitEmptyString(&ClipboardData);
+            if (YoriShPasteText(&ClipboardData)) {
+                YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                YoriLibFreeStringContents(&ClipboardData);
+            }
+        }
+    }
+
+    if (KeyCode != VK_SHIFT &&
+        KeyCode != VK_CONTROL) {
+
+        YoriShPostKeyPress(Buffer);
+    }
+
+    return TRUE;
+}
+
+
+/**
+ Perform processing related to when a key is released.  This is only used for
+ Alt+Number numerical key sequences.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessKeyUp(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __out PBOOL TerminateInput
+    )
+{
+    BOOL KeyPressGenerated = FALSE;
+
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    if ((InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
+        Buffer->NumericKeyValue != 0) {
+
+        CHAR SmallKeyValue = (CHAR)Buffer->NumericKeyValue;
+        TCHAR HostKeyValue[2];
+
+        HostKeyValue[0] = HostKeyValue[1] = 0;
+
+        MultiByteToWideChar(Buffer->NumericKeyAnsiMode?CP_ACP:CP_OEMCP,
+                            0,
+                            &SmallKeyValue,
+                            1,
+                            HostKeyValue,
+                            1);
+
+        if (HostKeyValue != 0) {
+            YoriShPrepareForNextKey(Buffer);
+            YoriShAddCStringToInput(Buffer, HostKeyValue);
+            YoriShPostKeyPress(Buffer);
+            KeyPressGenerated = TRUE;
+        }
+
+        Buffer->NumericKeyValue = 0;
+        Buffer->NumericKeyAnsiMode = FALSE;
+    }
+
+    return KeyPressGenerated;
+}
+
+/**
  Get a new expression from the user through the console.
 
  @param Expression On successful completion, updated to point to the
@@ -768,22 +1031,19 @@ YoriShGetExpression(
     DWORD ActuallyRead = 0;
     DWORD CurrentRecordIndex = 0;
     DWORD err;
-    PYORI_LIST_ENTRY HistoryEntryToUse = NULL;
-    BOOLEAN InsertMode = TRUE;
-    CONSOLE_CURSOR_INFO CursorInfo;
     INPUT_RECORD InputRecords[20];
     PINPUT_RECORD InputRecord;
     BOOL KeyPressFound;
-    DWORD NumericKeyValue = 0;
-    BOOL NumericKeyAnsiMode = FALSE;
+    BOOL TerminateInput;
     BOOL RestartStateSaved = FALSE;
     BOOL SuggestionPopulated = FALSE;
 
-    CursorInfo.bVisible = TRUE;
-    CursorInfo.dwSize = 20;
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &CursorInfo);
 
     ZeroMemory(&Buffer, sizeof(Buffer));
+    Buffer.InsertMode = TRUE;
+    Buffer.CursorInfo.bVisible = TRUE;
+    Buffer.CursorInfo.dwSize = 20;
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &Buffer.CursorInfo);
 
     if (!YoriLibAllocateString(&Buffer.String, 256)) {
         return FALSE;
@@ -802,240 +1062,28 @@ YoriShGetExpression(
         for (CurrentRecordIndex = 0; CurrentRecordIndex < ActuallyRead; CurrentRecordIndex++) {
 
             InputRecord = &InputRecords[CurrentRecordIndex];
+            TerminateInput = FALSE;
 
             if (InputRecord->EventType == KEY_EVENT &&
                 InputRecord->Event.KeyEvent.bKeyDown) {
-    
-                DWORD CtrlMask;
-                TCHAR Char;
-                DWORD Count;
-                WORD KeyCode;
-                WORD ScanCode;
-    
-                KeyPressFound = TRUE;
-                YoriShPrepareForNextKey(&Buffer);
-        
-                Char = InputRecord->Event.KeyEvent.uChar.UnicodeChar;
-                CtrlMask = InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED | RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | ENHANCED_KEY | SHIFT_PRESSED);
-                KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
-                ScanCode = InputRecord->Event.KeyEvent.wVirtualScanCode;
-    
-                if (KeyCode >= VK_F1 && KeyCode <= VK_F12) {
-                    if (YoriShHotkey(&Buffer, KeyCode, CtrlMask)) {
-                        YoriShDisplayAfterKeyPress(&Buffer);
-                        YoriShTerminateInput(&Buffer);
-                        ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
-                        YoriShAddToHistory(&Buffer.String);
-                        memcpy(Expression, &Buffer.String, sizeof(YORI_STRING));
-                        return TRUE;
-                    }
-                }
-    
-                if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
-        
-                    if (Char == '\r') {
-                        YoriShDisplayAfterKeyPress(&Buffer);
-                        YoriShTerminateInput(&Buffer);
-                        YoriShAddToHistory(&Buffer.String);
-                        ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
-                        memcpy(Expression, &Buffer.String, sizeof(YORI_STRING));
-                        return TRUE;
-                    } else if (Char == 27) {
-                        YoriShClearInput(&Buffer);
-                    } else if (Char == '\t') {
-                        if ((CtrlMask & SHIFT_PRESSED) == 0) {
-                            YoriShTabCompletion(&Buffer, 0);
-                        } else {
-                            YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_BACKWARDS);
-                        }
-                    } else if (Char == '\b') {
-                        YoriShBackspace(&Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
-                    } else if (Char == '\0') {
-                    } else {
-                        for (Count = 0; Count < InputRecord->Event.KeyEvent.wRepeatCount; Count++) {
-                            TCHAR StringChar[2];
-                            StringChar[0] = Char;
-                            StringChar[1] = '\0';
-                            YoriShAddCStringToInput(&Buffer, StringChar, InsertMode);
-                        }
-                    }
-                } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
-                           CtrlMask == LEFT_CTRL_PRESSED ||
-                           CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) {
-                    if (KeyCode == 'C') {
-                        YoriShClearInput(&Buffer);
-                        YoriShTerminateInput(&Buffer);
-                        ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
-                        memcpy(Expression, &Buffer.String, sizeof(YORI_STRING));
-                        return TRUE;
-                    } else if (KeyCode == 'E') {
-                        TCHAR StringChar[2];
-                        StringChar[0] = 27;
-                        StringChar[1] = '\0';
-                        YoriShAddCStringToInput(&Buffer, StringChar, InsertMode);
-                    } else if (KeyCode == 'V') {
-                        YORI_STRING ClipboardData;
-                        YoriLibInitEmptyString(&ClipboardData);
-                        if (YoriShPasteText(&ClipboardData)) {
-                            YoriShAddYoriStringToInput(&Buffer, &ClipboardData, InsertMode);
-                            YoriLibFreeStringContents(&ClipboardData);
-                        }
-                    } else if (KeyCode == VK_TAB) {
-                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
-                    }
-                } else if (CtrlMask == (RIGHT_CTRL_PRESSED | SHIFT_PRESSED) ||
-                           CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||
-                           CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED)) {
-                    if (KeyCode == VK_TAB) {
-                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
-                    }
-                } else if (CtrlMask == ENHANCED_KEY) {
-                    PYORI_LIST_ENTRY NewEntry = NULL;
-                    PYORI_HISTORY_ENTRY HistoryEntry;
-                    if (KeyCode == VK_UP) {
-                        NewEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, HistoryEntryToUse);
-                        if (NewEntry != NULL) {
-                            HistoryEntryToUse = NewEntry;
-                            HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_HISTORY_ENTRY, ListEntry);
-                            YoriShClearInput(&Buffer);
-                            YoriShAddYoriStringToInput(&Buffer, &HistoryEntry->CmdLine, InsertMode);
-                        }
-                    } else if (KeyCode == VK_DOWN) {
-                        if (HistoryEntryToUse != NULL) {
-                            NewEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, HistoryEntryToUse);
-                        }
-                        if (NewEntry != NULL) {
-                            HistoryEntryToUse = NewEntry;
-                            HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_HISTORY_ENTRY, ListEntry);
-                            YoriShClearInput(&Buffer);
-                            YoriShAddYoriStringToInput(&Buffer, &HistoryEntry->CmdLine, InsertMode);
-                        }
-                    } else if (KeyCode == VK_LEFT) {
-                        if (Buffer.CurrentOffset > 0) {
-                            Buffer.CurrentOffset--;
-                        }
-                    } else if (KeyCode == VK_RIGHT) {
-                        if (Buffer.CurrentOffset < Buffer.String.LengthInChars) {
-                            Buffer.CurrentOffset++;
-                        }
-                    } else if (KeyCode == VK_INSERT) {
-                        CursorInfo.bVisible = TRUE;
-                        if (InsertMode) {
-                            InsertMode = FALSE;
-                            CursorInfo.dwSize = 100;
-                        } else {
-                            InsertMode = TRUE;
-                            CursorInfo.dwSize = 20;
-                        }
-                        SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &CursorInfo);
-                    } else if (KeyCode == VK_HOME) {
-                        Buffer.CurrentOffset = 0;
-                    } else if (KeyCode == VK_END) {
-                        Buffer.CurrentOffset = Buffer.String.LengthInChars;
-                    } else if (KeyCode == VK_DELETE) {
-    
-                        Count = InputRecord->Event.KeyEvent.wRepeatCount;
-                        if (Count + Buffer.CurrentOffset > Buffer.String.LengthInChars) {
-                            Count = Buffer.String.LengthInChars - Buffer.CurrentOffset;
-                        }
-    
-                        Buffer.CurrentOffset += Count;
-                        
-                        YoriShBackspace(&Buffer, Count);
-                        
-                    } else if (KeyCode == VK_RETURN) {
-                        YoriShDisplayAfterKeyPress(&Buffer);
-                        YoriShTerminateInput(&Buffer);
-                        ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
-                        YoriShAddToHistory(&Buffer.String);
-                        memcpy(Expression, &Buffer.String, sizeof(YORI_STRING));
-                        return TRUE;
-                    }
-                } else if (CtrlMask == (RIGHT_CTRL_PRESSED | ENHANCED_KEY) ||
-                           CtrlMask == (LEFT_CTRL_PRESSED | ENHANCED_KEY) ||
-                           CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | ENHANCED_KEY)) {
-    
-                    if (KeyCode == VK_LEFT) {
-                        YoriShMoveCursorToPriorArgument(&Buffer);
-                    } else if (KeyCode == VK_RIGHT) {
-                        YoriShMoveCursorToNextArgument(&Buffer);
-                    } else if (KeyCode == VK_UP) {
-                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
-                    } else if (KeyCode == VK_DOWN) {
-                        YoriShTabCompletion(&Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
-                    }
-                } else if (CtrlMask == LEFT_ALT_PRESSED || CtrlMask == RIGHT_ALT_PRESSED ||
-                           CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY) ||
-                           CtrlMask == (RIGHT_ALT_PRESSED | ENHANCED_KEY)) {
-                    if (KeyCode >= '0' && KeyCode <= '9') {
-                        if (KeyCode == '0' && NumericKeyValue == 0 && !NumericKeyAnsiMode) {
-                            NumericKeyAnsiMode = TRUE;
-                        } else {
-                            NumericKeyValue = NumericKeyValue * 10 + KeyCode - '0';
-                        }
-                    } else if (KeyCode >= VK_NUMPAD0 && KeyCode <= VK_NUMPAD9) {
-                        if (KeyCode == VK_NUMPAD0 && NumericKeyValue == 0 && !NumericKeyAnsiMode) {
-                            NumericKeyAnsiMode = TRUE;
-                        } else {
-                            NumericKeyValue = NumericKeyValue * 10 + KeyCode - VK_NUMPAD0;
-                        }
-                    } else if (ScanCode >= 0x47 && ScanCode <= 0x49) {
-                        NumericKeyValue = NumericKeyValue * 10 + ScanCode - 0x47 + 7;
-                    } else if (ScanCode >= 0x4b && ScanCode <= 0x4d) {
-                        NumericKeyValue = NumericKeyValue * 10 + ScanCode - 0x4b + 4;
-                    } else if (ScanCode >= 0x4f && ScanCode <= 0x51) {
-                        NumericKeyValue = NumericKeyValue * 10 + ScanCode - 0x4f + 1;
-                    } else if (ScanCode == 0x52) {
-                        if (NumericKeyValue == 0 && !NumericKeyAnsiMode) {
-                            NumericKeyAnsiMode = TRUE;
-                        } else {
-                            NumericKeyValue = NumericKeyValue * 10;
-                        }
-                    }
-                } else if (CtrlMask == (SHIFT_PRESSED | ENHANCED_KEY)) {
-                    if (KeyCode == VK_INSERT) {
-                        YORI_STRING ClipboardData;
-                        YoriLibInitEmptyString(&ClipboardData);
-                        if (YoriShPasteText(&ClipboardData)) {
-                            YoriShAddYoriStringToInput(&Buffer, &ClipboardData, InsertMode);
-                            YoriLibFreeStringContents(&ClipboardData);
-                        }
-                    }
-                }
 
-                if (KeyCode != VK_SHIFT &&
-                    KeyCode != VK_CONTROL) {
+                KeyPressFound |= YoriShProcessKeyDown(&Buffer, InputRecord, &TerminateInput);
 
-                    YoriShPostKeyPress(&Buffer);
-                }
             } else if (InputRecord->EventType == KEY_EVENT) {
                 ASSERT(!InputRecord->Event.KeyEvent.bKeyDown);
 
-                if ((InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
-                    NumericKeyValue != 0) {
+                KeyPressFound |= YoriShProcessKeyUp(&Buffer, InputRecord, &TerminateInput);
 
-                    CHAR SmallKeyValue = (CHAR)NumericKeyValue;
-                    TCHAR HostKeyValue[2];
+            }
 
-                    HostKeyValue[0] = HostKeyValue[1] = 0;
-
-                    MultiByteToWideChar(NumericKeyAnsiMode?CP_ACP:CP_OEMCP,
-                                        0,
-                                        &SmallKeyValue,
-                                        1,
-                                        HostKeyValue,
-                                        1);
-
-                    if (HostKeyValue != 0) {
-                        YoriShPrepareForNextKey(&Buffer);
-                        YoriShAddCStringToInput(&Buffer, HostKeyValue, InsertMode);
-                        YoriShPostKeyPress(&Buffer);
-                        KeyPressFound = TRUE;
-                    }
-
-                    NumericKeyValue = 0;
-                    NumericKeyAnsiMode = FALSE;
+            if (TerminateInput) {
+                YoriShTerminateInput(&Buffer);
+                ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
+                if (Buffer.String.LengthInChars > 0) {
+                    YoriShAddToHistory(&Buffer.String);
                 }
+                memcpy(Expression, &Buffer.String, sizeof(YORI_STRING));
+                return TRUE;
             }
         }
         if (KeyPressFound) {

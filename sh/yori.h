@@ -465,6 +465,35 @@ typedef struct _YORI_INPUT_BUFFER {
     DWORD DirtyLength;
 
     /**
+     TRUE if the input should be in insert mode, FALSE if it should be
+     overwrite mode.
+     */
+    BOOL InsertMode;
+
+    /**
+     Information about how to display the cursor.
+     */
+    CONSOLE_CURSOR_INFO CursorInfo;
+
+    /**
+     Pointer to the currently selected history entry when navigating through
+     history.
+     */
+    PYORI_LIST_ENTRY HistoryEntryToUse;
+
+    /**
+     When inputting a character by value, the current value that has been
+     accumulated (since this requires multiple key events.)
+     */
+    DWORD NumericKeyValue;
+
+    /**
+     If TRUE, the numeric value refers to an ANSI character; if FALSE it
+     refers to an ASCII character.
+     */
+    BOOL NumericKeyAnsiMode;
+
+    /**
      Delay before suggesting values in milliseconds.
      */
     DWORD DelayBeforeSuggesting;
