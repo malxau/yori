@@ -1126,6 +1126,16 @@ YoriLibHashRemoveByKey(
     __in PYORI_STRING KeyString
     );
 
+// *** HEXDUMP.C ***
+
+BOOL
+YoriLibHexDump(
+    __in LPCSTR Buffer,
+    __in DWORD BufferLength,
+    __in DWORD BytesPerWord,
+    __in DWORD DumpFlags
+    );
+
 // *** ICONV.C ***
 
 #ifndef CP_UTF16
@@ -1605,6 +1615,13 @@ YoriLibSetEnvironmentStrings(
 BOOL
 YoriLibAreEnvironmentStringsValid(
     __inout PYORI_STRING EnvStrings
+    );
+
+BOOL
+YoriLibAreAnsiEnvironmentStringsValid(
+    __in PUCHAR AnsiEnvStringBuffer,
+    __in DWORD BufferLength,
+    __out PYORI_STRING UnicodeStrings
     );
 
 // *** STRING.C ***

@@ -23,6 +23,7 @@ OBJS=\
 	 fileinfo.obj \
 	 fullpath.obj \
 	 hash.obj     \
+	 hexdump.obj  \
 	 iconv.obj    \
 	 jobobj.obj   \
 	 license.obj  \

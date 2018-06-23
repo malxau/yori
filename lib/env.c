@@ -196,5 +196,56 @@ YoriLibAreEnvironmentStringsValid(
     return FALSE;
 }
 
+/**
+ Checks if ANSI environment strings are double NULL terminated within
+ the bounds of the allocation.  If so, allocates a new Yori string to describe
+ the Unicode form of the environment block and populates it with the correct
+ length of the buffer.
+
+ @param AnsiEnvStringBuffer Pointer to the environment strings to validate.
+
+ @param BufferLength Number of bytes in the environment string allocation.
+
+ @param UnicodeStrings On successful completion, updated to point to a newly
+        allocated set of Unicode strings for the block.
+
+ @return TRUE to indicate the environment strings are valid and could be
+         converted to Unicode, FALSE if invalid or not convertible.
+ */
+BOOL
+YoriLibAreAnsiEnvironmentStringsValid(
+    __in PUCHAR AnsiEnvStringBuffer,
+    __in DWORD BufferLength,
+    __out PYORI_STRING UnicodeStrings
+    )
+{
+    DWORD Index;
+
+    YoriLibInitEmptyString(UnicodeStrings);
+
+    if (BufferLength < 2) {
+        return FALSE;
+    }
+
+    for (Index = 0; Index < BufferLength - 1; Index++) {
+        if (AnsiEnvStringBuffer[Index] == '\0' &&
+            AnsiEnvStringBuffer[Index + 1] == '\0') {
+
+            if (!YoriLibAllocateString(UnicodeStrings, Index + 2)) {
+                return FALSE;
+            }
+
+            MultiByteToWideChar(CP_ACP, 0, AnsiEnvStringBuffer, Index + 2, UnicodeStrings->StartOfString, Index + 2);
+
+            UnicodeStrings->LengthInChars = Index + 2;
+
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+
 
 // vim:sw=4:ts=4:et:

@@ -347,6 +347,9 @@ YoriShSuckEnv(
     PVOID ProcessParamsBlockToRead;
     PVOID EnvironmentBlockToRead;
     BOOL TargetProcess32BitPeb;
+    DWORD OsVerMajor;
+    DWORD OsVerMinor;
+    DWORD OsBuildNumber;
 
     if (DllNtDll.pNtQueryInformationProcess == NULL) {
         return FALSE;
@@ -371,6 +374,8 @@ YoriShSuckEnv(
         }
 
 #if YORI_SH_DEBUG_DEBUGGER
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Peb contents:\n"));
+        YoriLibHexDump((PUCHAR)&ProcessPeb, BytesReturned, sizeof(DWORD), 0);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters offset %x\n"), FIELD_OFFSET(YORI_LIB_PEB32, ProcessParameters));
 #endif
 
@@ -400,6 +405,11 @@ YoriShSuckEnv(
         if (!ReadProcessMemory(ProcessHandle, ProcessParamsBlockToRead, &ProcessParameters, sizeof(ProcessParameters), &BytesReturned)) {
             return FALSE;
         }
+
+#if YORI_SH_DEBUG_DEBUGGER
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters contents:\n"));
+        YoriLibHexDump((PUCHAR)&ProcessParameters, BytesReturned, sizeof(DWORD), 0);
+#endif
 
         EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
         EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (DWORD)ProcessParameters.EnvironmentBlock;
@@ -457,17 +467,45 @@ YoriShSuckEnv(
 
             EnvString->LengthAllocated -= YORI_SH_MEMORY_PROTECTION_SIZE / sizeof(TCHAR);
         } else {
+
+#if YORI_SH_DEBUG_DEBUGGER
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Environment contents:\n"));
+            YoriLibHexDump(EnvironmentBlockToRead, BytesReturned, sizeof(UCHAR), 0);
+#endif
             break;
         }
 
     } while (TRUE);
 
-    if (!YoriLibAreEnvironmentStringsValid(EnvString)) {
+    //
+    //  NT 3.1 describes the environment block in ANSI.  Although people love
+    //  to criticize it, this is probably the worst quirk I've found in it
+    //  yet.
+    //
+
+    YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
+
+    if (OsVerMajor == 3 && OsVerMinor == 10) {
+        YORI_STRING UnicodeEnvString;
+
+        if (!YoriLibAreAnsiEnvironmentStringsValid((PUCHAR)EnvString->StartOfString, EnvString->LengthAllocated, &UnicodeEnvString)) {
 #if YORI_SH_DEBUG_DEBUGGER
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvString not valid\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvString not valid\n"));
 #endif
+            YoriLibFreeStringContents(EnvString);
+            return FALSE;
+        }
+
         YoriLibFreeStringContents(EnvString);
-        return FALSE;
+        memcpy(EnvString, &UnicodeEnvString, sizeof(YORI_STRING));
+    } else {
+        if (!YoriLibAreEnvironmentStringsValid(EnvString)) {
+#if YORI_SH_DEBUG_DEBUGGER
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvString not valid\n"));
+#endif
+            YoriLibFreeStringContents(EnvString);
+            return FALSE;
+        }
     }
 
 #if YORI_SH_DEBUG_DEBUGGER
