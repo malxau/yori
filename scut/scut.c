@@ -460,7 +460,7 @@ ScutHelp()
 
  @param VariableName The variable name to expand.
 
- @param scut Pointer to an IShellLinkW interface that can supply the data
+ @param Context Pointer to an IShellLinkW interface that can supply the data
         to populate.
  
  @return The number of characters successfully populated, or the number of
@@ -471,13 +471,14 @@ DWORD
 ScutExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in IShellLinkW * scut
+    __in PVOID Context
     )
 {
     TCHAR szTemp[MAX_PATH];
     DWORD CharsNeeded;
     int   wTemp = 0;
     BOOL  Numeric = FALSE;
+    IShellLinkW * scut = (IShellLinkW *)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("TARGET")) == 0) {
         if (scut->Vtbl->GetPath(scut, szTemp, MAX_PATH, NULL, 0) != NOERROR) {

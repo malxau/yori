@@ -109,7 +109,7 @@ typedef struct _TOUCH_CONTEXT {
 
  @param Depth Specifies the recursion depth.  Ignored in this application.
 
- @param TouchContext Pointer to the touch context structure indicating the
+ @param Context Pointer to the touch context structure indicating the
         action to perform and populated with the file and line count found.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -119,11 +119,12 @@ TouchFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PTOUCH_CONTEXT TouchContext
+    __in PVOID Context
     )
 {
     HANDLE FileHandle;
     DWORD DesiredAccess;
+    PTOUCH_CONTEXT TouchContext = (PTOUCH_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
     UNREFERENCED_PARAMETER(FileInfo);
