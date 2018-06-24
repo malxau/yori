@@ -355,7 +355,7 @@ YoriShPostCommand()
     YoriLibCancelEnable();
     YoriLibCancelIgnore();
     YoriLibCancelReset();
-    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), 0);
+    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_MOUSE_INPUT);
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 }
 

@@ -494,6 +494,11 @@ typedef struct _YORI_INPUT_BUFFER {
     BOOL NumericKeyAnsiMode;
 
     /**
+     The last known bitmask of mouse button state.
+     */
+    DWORD PreviousMouseButtonState;
+
+    /**
      Delay before suggesting values in milliseconds.
      */
     DWORD DelayBeforeSuggesting;

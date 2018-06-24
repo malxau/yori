@@ -106,6 +106,62 @@ YoriShDetermineCellLocationIfMoved(
 }
 
 /**
+ Determine the offset within the input buffer of specified X,Y coordinates
+ relative to the console screen buffer.
+
+ @param Buffer The current input buffer.
+
+ @param TargetCoordinates The coordinates to check against the input buffer.
+
+ @param StringOffset On successful completion, updated to point to the
+        location within the string of the coordinates.  Note this can point
+        to one past the length of the string.
+
+ @return TRUE to indicate the specified coordinates are within the string
+         range, FALSE to indicate the coordinates are not within the string.
+ */
+BOOL
+YoriShStringOffsetFromCoordinates(
+    __in PYORI_INPUT_BUFFER Buffer,
+    __in COORD TargetCoordinates,
+    __out PDWORD StringOffset
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE ConsoleHandle;
+    DWORD StartOfString;
+    DWORD CursorPosition;
+    DWORD TargetPosition;
+
+    UNREFERENCED_PARAMETER(TargetCoordinates);
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    TargetPosition = TargetCoordinates.Y * ScreenInfo.dwSize.X + TargetCoordinates.X;
+    CursorPosition = ScreenInfo.dwCursorPosition.Y * ScreenInfo.dwSize.X + ScreenInfo.dwCursorPosition.X;
+
+    if (Buffer->PreviousCurrentOffset > CursorPosition) {
+        return FALSE;
+    }
+    StartOfString = CursorPosition - Buffer->PreviousCurrentOffset;
+
+    if (TargetPosition < StartOfString) {
+        return FALSE;
+    }
+
+    if (TargetPosition > StartOfString + Buffer->String.LengthInChars) {
+        return FALSE;
+    }
+
+    *StringOffset = TargetPosition - StartOfString;
+    return TRUE;
+}
+
+/**
  Move the cursor from its current position.  Note the input value is signed,
  as this routine can move forwards (positive values) or backwards (negative
  values.)
@@ -1015,6 +1071,73 @@ YoriShProcessKeyUp(
 }
 
 /**
+ Perform processing related to when a mouse button is pressed.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsPressed A bit mask of buttons that were just pressed.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessMouseButtonDown(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsPressed,
+    __out PBOOL TerminateInput
+    )
+{
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
+        DWORD StringOffset;
+        if (YoriShStringOffsetFromCoordinates(Buffer, InputRecord->Event.MouseEvent.dwMousePosition, &StringOffset)) {
+            Buffer->CurrentOffset = StringOffset;
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
+ Perform processing related to when a mouse button is released.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsReleased A bit mask of buttons that were just released.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessMouseButtonUp(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsReleased,
+    __out PBOOL TerminateInput
+    )
+{
+    UNREFERENCED_PARAMETER(Buffer);
+    UNREFERENCED_PARAMETER(InputRecord);
+    UNREFERENCED_PARAMETER(ButtonsReleased);
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    return FALSE;
+}
+
+/**
  Get a new expression from the user through the console.
 
  @param Expression On successful completion, updated to point to the
@@ -1064,16 +1187,25 @@ YoriShGetExpression(
             InputRecord = &InputRecords[CurrentRecordIndex];
             TerminateInput = FALSE;
 
-            if (InputRecord->EventType == KEY_EVENT &&
-                InputRecord->Event.KeyEvent.bKeyDown) {
+            if (InputRecord->EventType == KEY_EVENT) {
 
-                KeyPressFound |= YoriShProcessKeyDown(&Buffer, InputRecord, &TerminateInput);
+                if (InputRecord->Event.KeyEvent.bKeyDown) {
+                    KeyPressFound |= YoriShProcessKeyDown(&Buffer, InputRecord, &TerminateInput);
+                } else {
+                    KeyPressFound |= YoriShProcessKeyUp(&Buffer, InputRecord, &TerminateInput);
+                }
+            } else if (InputRecord->EventType == MOUSE_EVENT) {
+                if (InputRecord->Event.MouseEvent.dwEventFlags == 0) {
+                    DWORD ButtonsPressed = InputRecord->Event.MouseEvent.dwButtonState - (Buffer.PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
+                    DWORD ButtonsReleased = Buffer.PreviousMouseButtonState - (Buffer.PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
 
-            } else if (InputRecord->EventType == KEY_EVENT) {
-                ASSERT(!InputRecord->Event.KeyEvent.bKeyDown);
-
-                KeyPressFound |= YoriShProcessKeyUp(&Buffer, InputRecord, &TerminateInput);
-
+                    if (ButtonsPressed > 0) {
+                        KeyPressFound |= YoriShProcessMouseButtonDown(&Buffer, InputRecord, ButtonsPressed, &TerminateInput);
+                    } else if (ButtonsReleased > 0) {
+                        KeyPressFound |= YoriShProcessMouseButtonUp(&Buffer, InputRecord, ButtonsReleased, &TerminateInput);
+                    }
+                    Buffer.PreviousMouseButtonState = InputRecord->Event.MouseEvent.dwButtonState;
+                }
             }
 
             if (TerminateInput) {
