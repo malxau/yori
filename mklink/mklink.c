@@ -57,7 +57,7 @@ MklinkHelp()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s"), &License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
     YoriLibFreeStringContents(&License);
     return TRUE;
 }
