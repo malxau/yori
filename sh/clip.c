@@ -67,6 +67,10 @@ YoriShPasteText(
     }
 
     pMem = GlobalLock(hMem);
+    if (pMem == NULL) {
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
     StringLength = _tcslen(pMem);
 
     if (StringLength >= Buffer->LengthAllocated) {
@@ -93,6 +97,70 @@ YoriShPasteText(
     }
 
     DllUser32.pCloseClipboard();
+    return TRUE;
+}
+
+/**
+ Copy a Yori string into the clipboard in text format only.
+
+ @param Buffer The string to populate into the clipboard.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShCopyText(
+    __inout PYORI_STRING Buffer
+    )
+{
+    HANDLE hMem;
+    HANDLE hClip;
+    LPWSTR pMem;
+
+    YoriLibLoadUser32Functions();
+
+    if (DllUser32.pOpenClipboard == NULL ||
+        DllUser32.pEmptyClipboard == NULL ||
+        DllUser32.pSetClipboardData == NULL ||
+        DllUser32.pCloseClipboard == NULL) {
+        return FALSE;
+    }
+
+    //
+    //  Open the clipboard and empty its contents.
+    //
+
+    if (!DllUser32.pOpenClipboard(NULL)) {
+        return FALSE;
+    }
+
+    DllUser32.pEmptyClipboard();
+
+    hMem = GlobalAlloc(GMEM_MOVEABLE, Buffer->LengthInChars * sizeof(TCHAR));
+    if (hMem == NULL) {
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    pMem = GlobalLock(hMem);
+    if (pMem == NULL) {
+        GlobalFree(hMem);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    memcpy(pMem, Buffer->StartOfString, Buffer->LengthInChars * sizeof(TCHAR));
+    GlobalUnlock(hMem);
+    pMem = NULL;
+
+    hClip = DllUser32.pSetClipboardData(CF_UNICODETEXT, hMem);
+    if (hClip == NULL) {
+        DllUser32.pCloseClipboard();
+        GlobalFree(hMem);
+        return FALSE;
+    }
+
+    DllUser32.pCloseClipboard();
+    GlobalFree(hMem);
     return TRUE;
 }
 

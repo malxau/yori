@@ -499,6 +499,32 @@ typedef struct _YORI_INPUT_BUFFER {
     DWORD PreviousMouseButtonState;
 
     /**
+     The coordinates where a selection started from.
+     */
+    COORD InitialSelectionPoint;
+
+    /**
+     The region that was selected on the last rendering pass.
+     */
+    SMALL_RECT PreviousSelection;
+
+    /**
+     The region that is selected on the next rendering pass.
+     */
+    SMALL_RECT CurrentSelection;
+
+    /**
+     An array of character attributes corresponding to the previous
+     selection.
+     */
+    PWORD PreviousSelectionAttributes;
+
+    /**
+     The size of the PreviousSelectionAttributes allocation.
+     */
+    DWORD PreviousSelectionAttributesSize;
+
+    /**
      Delay before suggesting values in milliseconds.
      */
     DWORD DelayBeforeSuggesting;
@@ -715,6 +741,11 @@ YoriShBuiltinUnregisterAll(
     );
 
 // *** CLIP.C ***
+
+BOOL
+YoriShCopyText(
+    __inout PYORI_STRING Buffer
+    );
 
 BOOL
 YoriShPasteText(
