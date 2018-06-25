@@ -268,7 +268,7 @@ YoriShClearPreviousSelectionDisplay(
 
     AttributeReadPoint = Buffer->PreviousSelectionAttributes;
 
-    LineLength = Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1;
+    LineLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1);
 
     for (LineIndex = Buffer->PreviousSelection.Top; LineIndex <= Buffer->PreviousSelection.Bottom; LineIndex++) {
         StartPoint.X = Buffer->PreviousSelection.Left;
@@ -336,7 +336,7 @@ YoriShDrawCurrentSelectionDisplay(
     }
 
     AttributeWritePoint = Buffer->PreviousSelectionAttributes;
-    LineLength = Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1;
+    LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
 
     for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
         StartPoint.X = Buffer->CurrentSelection.Left;
@@ -710,8 +710,8 @@ YoriShCopySelectionIfPresent(
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    LineLength = Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1;
-    LineCount = Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1;
+    LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
+    LineCount = (SHORT)(Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
 
     if (!YoriLibAllocateString(&TextToCopy, (LineLength + 2) * LineCount)) {
         return FALSE;
