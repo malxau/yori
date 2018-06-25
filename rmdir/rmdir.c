@@ -38,6 +38,7 @@ CHAR strHelpText[] =
         "RMDIR [-b] [-r] [-s] <dir> [<dir>...]\n"
         "\n"
         "   -b             Use basic search criteria for directories only\n"
+        "   -l             Delete links without contents\n"
         "   -r             Send directories to the recycle bin\n"
         "   -s             Remove all contents of each directory\n";
 
@@ -197,6 +198,7 @@ ymain(
     BOOL ArgumentUnderstood;
     BOOL Recursive;
     BOOL BasicEnumeration;
+    BOOL DeleteLinks;
     DWORD MatchFlags;
     DWORD StartArg = 0;
     DWORD i;
@@ -207,6 +209,7 @@ ymain(
 
     Recursive = FALSE;
     BasicEnumeration = FALSE;
+    DeleteLinks = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -220,6 +223,9 @@ ymain(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                DeleteLinks = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("q")) == 0) {
                 ArgumentUnderstood = TRUE;
@@ -256,6 +262,9 @@ ymain(
     }
     if (BasicEnumeration) {
         MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+    }
+    if (DeleteLinks) {
+        MatchFlags |= YORILIB_FILEENUM_NO_LINK_TRAVERSE;
     }
 
     for (i = StartArg; i < ArgC; i++) {
