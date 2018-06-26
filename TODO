@@ -1,7 +1,6 @@
 
  - Support input from devices other than consoles
  - Improve rendering selection performance
- - Double click to select
  - Query popup color for selection where possible
 
 M2:

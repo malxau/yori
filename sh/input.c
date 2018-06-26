@@ -1492,6 +1492,126 @@ YoriShProcessMouseButtonUp(
 }
 
 /**
+ Return TRUE if the character should be considered a break character when the
+ user double clicks to select.  Break characters are never themselves selected.
+
+ @param Char The character to test for whether it is a break character.
+
+ @return TRUE if the character is a break character, FALSE if it should be
+         selected.
+ */
+BOOL
+YoriShIsSelectionDoubleClickBreakChar(
+    __in TCHAR Char
+    )
+{
+    if (Char == ' ' ||
+        Char == '>' ||
+        Char == '<' ||
+        Char == '|' ||
+        Char == 0x2502) {  // Aka Unicode full vertical line (used by sdir)
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+
+/**
+ Perform processing related to when a mouse is double clicked.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsPressed A bit mask of buttons that were just pressed.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessMouseDoubleClick(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsPressed,
+    __out PBOOL TerminateInput
+    )
+{
+    BOOL BufferChanged = FALSE;
+    HANDLE ConsoleHandle;
+    COORD ReadPoint;
+    TCHAR ReadChar;
+    DWORD CharsRead;
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
+        SHORT StartOffset;
+        SHORT EndOffset;
+        CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+        if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+            return FALSE;
+        }
+
+        BufferChanged = YoriShClearSelection(Buffer);
+
+        ReadChar = ' ';
+        ReadPoint.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
+        ReadPoint.X = InputRecord->Event.MouseEvent.dwMousePosition.X;
+
+        //
+        //  If the user double clicked on a break char, do nothing.
+        //
+
+        ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
+        if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
+            return FALSE;
+        }
+
+        //
+        //  Nagivate left to find beginning of line or next break char.
+        //
+
+        for (StartOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; StartOffset > 0; StartOffset--) {
+            ReadPoint.X = StartOffset - 1;
+            ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
+            if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
+                break;
+            }
+        }
+
+        //
+        //  Navigate right to find end of line or next break char.
+        //
+
+        for (EndOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; EndOffset < ScreenInfo.dwSize.X - 1; EndOffset++) {
+            ReadPoint.X = EndOffset + 1;
+            ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
+            if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
+                break;
+            }
+        }
+
+        Buffer->CurrentSelection.Top = ReadPoint.Y;
+        Buffer->CurrentSelection.Bottom = ReadPoint.Y;
+        Buffer->CurrentSelection.Left = StartOffset;
+        Buffer->CurrentSelection.Right = EndOffset;
+
+        BufferChanged = TRUE;
+
+    }
+
+    return BufferChanged;
+}
+
+/**
  Perform processing related to a mouse move event.
 
  @param Buffer Pointer to the input buffer to update.
@@ -1612,6 +1732,9 @@ YoriShGetExpression(
                 Buffer.PreviousMouseButtonState = InputRecord->Event.MouseEvent.dwButtonState;
                 if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_MOVED) {
                     ReDisplayRequired |= YoriShProcessMouseMove(&Buffer, InputRecord, &TerminateInput);
+                }
+                if (InputRecord->Event.MouseEvent.dwEventFlags & DOUBLE_CLICK) {
+                    ReDisplayRequired |= YoriShProcessMouseDoubleClick(&Buffer, InputRecord, ButtonsPressed, &TerminateInput);
                 }
             } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
                 ReDisplayRequired |= YoriShClearSelection(&Buffer);
