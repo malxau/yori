@@ -1580,7 +1580,7 @@ YoriShProcessMouseDoubleClick(
         //
 
         for (StartOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; StartOffset > 0; StartOffset--) {
-            ReadPoint.X = StartOffset - 1;
+            ReadPoint.X = (SHORT)(StartOffset - 1);
             ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
             if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
                 break;
@@ -1592,7 +1592,7 @@ YoriShProcessMouseDoubleClick(
         //
 
         for (EndOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; EndOffset < ScreenInfo.dwSize.X - 1; EndOffset++) {
-            ReadPoint.X = EndOffset + 1;
+            ReadPoint.X = (SHORT)(EndOffset + 1);
             ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
             if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
                 break;
@@ -1652,6 +1652,73 @@ YoriShProcessMouseMove(
 
         return TRUE;
     }
+
+    return FALSE;
+}
+
+/**
+ Perform processing related to when a mouse wheel is scrolled.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsPressed A bit mask of buttons that were just pressed.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShProcessMouseScroll(
+    __inout PYORI_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsPressed,
+    __out PBOOL TerminateInput
+    )
+{
+    HANDLE ConsoleHandle;
+    SHORT Direction;
+    SHORT LinesToScroll;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    UNREFERENCED_PARAMETER(Buffer);
+    UNREFERENCED_PARAMETER(ButtonsPressed);
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    Direction = HIWORD(InputRecord->Event.MouseEvent.dwButtonState);
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    if (Direction > 0) {
+        LinesToScroll = (SHORT)(Direction / 0x20);
+        if (ScreenInfo.srWindow.Top > 0) {
+            if (ScreenInfo.srWindow.Top > LinesToScroll) {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top - LinesToScroll);
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - LinesToScroll);
+            } else {
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
+                ScreenInfo.srWindow.Top = 0;
+            }
+        }
+    } else if (Direction < 0) {
+        LinesToScroll = (SHORT)(0 - (Direction / 0x20));
+        if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - 1) {
+            if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - LinesToScroll - 1) {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + LinesToScroll);
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom + LinesToScroll);
+            } else {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + (ScreenInfo.dwSize.Y - ScreenInfo.srWindow.Bottom - 1));
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.dwSize.Y - 1);
+            }
+        }
+    }
+
+    SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
 
     return FALSE;
 }
@@ -1733,8 +1800,13 @@ YoriShGetExpression(
                 if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_MOVED) {
                     ReDisplayRequired |= YoriShProcessMouseMove(&Buffer, InputRecord, &TerminateInput);
                 }
+
                 if (InputRecord->Event.MouseEvent.dwEventFlags & DOUBLE_CLICK) {
                     ReDisplayRequired |= YoriShProcessMouseDoubleClick(&Buffer, InputRecord, ButtonsPressed, &TerminateInput);
+                }
+
+                if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
+                    ReDisplayRequired |= YoriShProcessMouseScroll(&Buffer, InputRecord, ButtonsPressed, &TerminateInput);
                 }
             } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
                 ReDisplayRequired |= YoriShClearSelection(&Buffer);
