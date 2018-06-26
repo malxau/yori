@@ -1,3 +1,9 @@
+
+ - Support input from devices other than consoles
+ - Improve rendering selection performance
+ - Double click to select
+ - Query popup color for selection where possible
+
 M2:
 
  - Merge sdir recursion root and criteria arguments

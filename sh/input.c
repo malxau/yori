@@ -736,7 +736,7 @@ YoriShCopySelectionIfPresent(
         TextWritePoint++;
     }
 
-    TextToCopy.LengthInChars = (LineLength + 2) * LineCount;
+    TextToCopy.LengthInChars = (LineLength + 2) * LineCount - 2;
 
     if (YoriShCopyText(&TextToCopy)) {
         YoriLibFreeStringContents(&TextToCopy);
@@ -1613,6 +1613,8 @@ YoriShGetExpression(
                 if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_MOVED) {
                     ReDisplayRequired |= YoriShProcessMouseMove(&Buffer, InputRecord, &TerminateInput);
                 }
+            } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
+                ReDisplayRequired |= YoriShClearSelection(&Buffer);
             }
 
             if (TerminateInput) {

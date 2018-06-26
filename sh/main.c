@@ -336,8 +336,7 @@ YoriShParseArgs(
 }
 
 /**
- Reset the console after one process has finished in preparation for the next
- command.
+ Reset the console after one process has finished.
  */
 VOID
 YoriShPostCommand()
@@ -351,14 +350,20 @@ YoriShPostCommand()
     if (ScreenInfo.dwCursorPosition.X != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
     }
+}
 
+/**
+ Prepare the console for entry of the next command.
+ */
+VOID
+YoriShPreCommand()
+{
     YoriLibCancelEnable();
     YoriLibCancelIgnore();
     YoriLibCancelReset();
-    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_MOUSE_INPUT);
+    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 }
-
 
 /**
  The entrypoint function for Yori.
@@ -394,6 +399,7 @@ ymain (
                 break;
             }
             YoriShDisplayPrompt();
+            YoriShPreCommand();
             if (!YoriShGetExpression(&CurrentExpression)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Failed to read expression!"));
                 continue;

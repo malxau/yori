@@ -135,7 +135,7 @@ YoriShCopyText(
 
     DllUser32.pEmptyClipboard();
 
-    hMem = GlobalAlloc(GMEM_MOVEABLE, Buffer->LengthInChars * sizeof(TCHAR));
+    hMem = GlobalAlloc(GMEM_MOVEABLE, (Buffer->LengthInChars + 1) * sizeof(TCHAR));
     if (hMem == NULL) {
         DllUser32.pCloseClipboard();
         return FALSE;
@@ -149,6 +149,7 @@ YoriShCopyText(
     }
 
     memcpy(pMem, Buffer->StartOfString, Buffer->LengthInChars * sizeof(TCHAR));
+    pMem[Buffer->LengthInChars] = '\0';
     GlobalUnlock(hMem);
     pMem = NULL;
 
