@@ -1,7 +1,7 @@
 
  - Support input from devices other than consoles
- - Improve rendering selection performance
  - Query popup color for selection where possible
+ - Scroll the window when we select to the window edge
 
 M2:
 

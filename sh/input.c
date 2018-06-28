@@ -237,6 +237,28 @@ YoriShIsSelectionActive(
 }
 
 /**
+ Returns TRUE if a previous selection region is active, and FALSE if it
+ is not.
+
+ @param Buffer The input buffer describing the current selection state.
+
+ @return TRUE if a current selection is active, FALSE if it is not.
+ */
+BOOL
+YoriShIsPreviousSelectionActive(
+    __inout PYORI_INPUT_BUFFER Buffer
+    )
+{
+    if (Buffer->PreviousSelection.Left == Buffer->PreviousSelection.Right &&
+        Buffer->PreviousSelection.Top == Buffer->PreviousSelection.Bottom) {
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
  Redraw any cells covered by a previous selection, restoring their original
  character attributes.
 
@@ -357,6 +379,201 @@ YoriShDrawCurrentSelectionDisplay(
 }
 
 /**
+ Draw the selection highlight around the current selection, and save off the
+ character attributes of the text underneath the selection.
+
+ @param Buffer The input buffer to display the selection for.
+ */
+VOID
+YoriShDrawCurrentSelectionOverPreviousSelection(
+    __in PYORI_INPUT_BUFFER Buffer
+    )
+{
+    SHORT LineIndex;
+    SHORT LineLength;
+    SHORT RunLength;
+    HANDLE ConsoleHandle;
+    COORD StartPoint;
+    DWORD BufferOffset;
+    DWORD CharsWritten;
+    DWORD RequiredLength;
+    PWORD AttributeWritePoint;
+    PWORD NewPreviousSelectionAttributes;
+    WORD SelectionAttribute;
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    ASSERT(YoriShIsPreviousSelectionActive(Buffer) && YoriShIsSelectionActive(Buffer));
+
+    RequiredLength = (Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1) * (Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
+
+    NewPreviousSelectionAttributes = YoriLibMalloc(RequiredLength * sizeof(WORD));
+
+    //
+    //  MSFIX Handle this failure by skipping tons of save logic?
+    //
+
+    if (NewPreviousSelectionAttributes == NULL) {
+        return;
+    }
+
+    LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
+
+    //
+    //  Walk through all of the new selection to save off attributes for it
+    //
+
+    SelectionAttribute = 0x1e;
+    AttributeWritePoint = NewPreviousSelectionAttributes;
+    for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
+
+        if (LineIndex < Buffer->PreviousSelection.Top ||
+            LineIndex > Buffer->PreviousSelection.Bottom) {
+
+            StartPoint.X = Buffer->CurrentSelection.Left;
+            StartPoint.Y = LineIndex;
+
+            ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
+            AttributeWritePoint += LineLength;
+
+            FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, LineLength, StartPoint, &CharsWritten);
+
+        } else {
+
+            if (Buffer->CurrentSelection.Left < Buffer->PreviousSelection.Left) {
+
+                StartPoint.X = Buffer->CurrentSelection.Left;
+                StartPoint.Y = LineIndex;
+
+                RunLength = (SHORT)(Buffer->PreviousSelection.Left - Buffer->CurrentSelection.Left);
+                if (LineLength < RunLength) {
+                    RunLength = LineLength;
+                }
+
+                ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                AttributeWritePoint += RunLength;
+
+                FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, RunLength, StartPoint, &CharsWritten);
+
+            }
+
+            if (Buffer->CurrentSelection.Right >= Buffer->PreviousSelection.Left &&
+                Buffer->CurrentSelection.Left <= Buffer->PreviousSelection.Right) {
+
+                StartPoint.X = (SHORT)(Buffer->CurrentSelection.Left - Buffer->PreviousSelection.Left);
+                RunLength = LineLength;
+                if (StartPoint.X < 0) {
+                    RunLength = (SHORT)(RunLength + StartPoint.X);
+                    StartPoint.X = 0;
+                }
+                if (StartPoint.X + RunLength > Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1) {
+                    RunLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1 - StartPoint.X);
+                }
+
+                StartPoint.Y = (SHORT)(LineIndex - Buffer->PreviousSelection.Top);
+
+                BufferOffset = (Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1) * StartPoint.Y + StartPoint.X;
+
+                //
+                //  MSFIX Assume earlier allocation is there
+                //
+
+                memcpy(AttributeWritePoint, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength * sizeof(WORD));
+                AttributeWritePoint += RunLength;
+            }
+
+            if (Buffer->CurrentSelection.Right > Buffer->PreviousSelection.Right) {
+
+                //
+                //  Read from max of PreviousLeft or CurrentRight
+                //  Fill as selected
+                //
+
+                StartPoint.X = (SHORT)(Buffer->PreviousSelection.Right + 1);
+                if (Buffer->CurrentSelection.Left > StartPoint.X) {
+                    StartPoint.X = Buffer->CurrentSelection.Left;
+                    RunLength = LineLength;
+                } else {
+                    RunLength = (SHORT)(Buffer->CurrentSelection.Right - StartPoint.X + 1);
+                }
+                StartPoint.Y = LineIndex;
+
+                ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                AttributeWritePoint += RunLength;
+
+                FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, RunLength, StartPoint, &CharsWritten);
+            }
+        }
+    }
+
+    LineLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1);
+
+    for (LineIndex = Buffer->PreviousSelection.Top; LineIndex <= Buffer->PreviousSelection.Bottom; LineIndex++) {
+
+        if (LineIndex < Buffer->CurrentSelection.Top ||
+            LineIndex > Buffer->CurrentSelection.Bottom) {
+
+            StartPoint.X = Buffer->PreviousSelection.Left;
+            StartPoint.Y = LineIndex;
+            RunLength = LineLength;
+
+            BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
+
+            //
+            //  MSFIX Assuming earlier allocation succeeded
+            //
+
+            WriteConsoleOutputAttribute(ConsoleHandle, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength, StartPoint, &CharsWritten);
+
+        } else {
+
+            if (Buffer->PreviousSelection.Left < Buffer->CurrentSelection.Left) {
+
+                StartPoint.X = Buffer->PreviousSelection.Left;
+                StartPoint.Y = LineIndex;
+                RunLength = LineLength;
+                if (Buffer->CurrentSelection.Left - Buffer->PreviousSelection.Left < RunLength) {
+                    RunLength = (SHORT)(Buffer->CurrentSelection.Left - Buffer->PreviousSelection.Left);
+                }
+
+                BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
+
+                WriteConsoleOutputAttribute(ConsoleHandle, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength, StartPoint, &CharsWritten);
+
+            }
+
+            if (Buffer->PreviousSelection.Right > Buffer->CurrentSelection.Right) {
+
+                BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
+                StartPoint.Y = LineIndex;
+
+                if (Buffer->PreviousSelection.Left > Buffer->CurrentSelection.Right) {
+                    StartPoint.X = Buffer->PreviousSelection.Left;
+                    RunLength = LineLength;
+                } else {
+                    RunLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->CurrentSelection.Right);
+                    StartPoint.X = (SHORT)(Buffer->CurrentSelection.Right + 1);
+                    BufferOffset += Buffer->CurrentSelection.Right - Buffer->PreviousSelection.Left + 1;
+                }
+
+                WriteConsoleOutputAttribute(ConsoleHandle, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength, StartPoint, &CharsWritten);
+
+                //
+                //  Restore from max of PreviousLeft or CurrentRight + 1
+                //
+            }
+        }
+    }
+
+    if (Buffer->PreviousSelectionAttributes != NULL) {
+        YoriLibFree(Buffer->PreviousSelectionAttributes);
+    }
+
+    Buffer->PreviousSelectionAttributes = NewPreviousSelectionAttributes;
+    Buffer->PreviousSelectionAttributesSize = RequiredLength;
+}
+
+/**
  After a key has been pressed and processed, display the resulting buffer.
 
  @param Buffer Pointer to the input buffer to display.
@@ -382,8 +599,12 @@ YoriShDisplayAfterKeyPress(
     FillPosition.X = 0;
     FillPosition.Y = 0;
 
-    YoriShClearPreviousSelectionDisplay(Buffer);
-    YoriShDrawCurrentSelectionDisplay(Buffer);
+    if (YoriShIsPreviousSelectionActive(Buffer) && YoriShIsSelectionActive(Buffer)) {
+        YoriShDrawCurrentSelectionOverPreviousSelection(Buffer);
+    } else {
+        YoriShClearPreviousSelectionDisplay(Buffer);
+        YoriShDrawCurrentSelectionDisplay(Buffer);
+    }
     Buffer->PreviousSelection.Left = Buffer->CurrentSelection.Left;
     Buffer->PreviousSelection.Top = Buffer->CurrentSelection.Top;
     Buffer->PreviousSelection.Right = Buffer->CurrentSelection.Right;
