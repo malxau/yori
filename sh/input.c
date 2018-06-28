@@ -259,6 +259,82 @@ YoriShIsPreviousSelectionActive(
 }
 
 /**
+ Update a range of console cells with specified attributes.  If the attributes
+ don't exist due to allocation failure, use a default attribute for the
+ entire range.
+
+ @param ConsoleHandle Handle to the console.
+
+ @param AttributeArray If specified, pointer to an array of attributes to
+        apply.  If not specified, DefaultAttribute is used instead.
+
+ @param DefaultAttribute The attribute to use for the range if AttributeArray
+        is NULL.
+
+ @param Length The number of cells to update.
+
+ @param StartPoint The coordinates in the console buffer to start updating
+        from.
+
+ @param CharsWritten On successful completion, updated to contain the number
+        of characters updated in the console.
+ */
+VOID
+YoriShDisplayAttributes(
+    __in HANDLE ConsoleHandle,
+    __in_opt PWORD AttributeArray,
+    __in WORD DefaultAttribute,
+    __in DWORD Length,
+    __in COORD StartPoint,
+    __out LPDWORD CharsWritten
+    )
+{
+    if (AttributeArray) {
+        WriteConsoleOutputAttribute(ConsoleHandle, AttributeArray, Length, StartPoint, CharsWritten);
+    } else {
+        FillConsoleOutputAttribute(ConsoleHandle, DefaultAttribute, Length, StartPoint, CharsWritten);
+    }
+}
+
+
+/**
+ Allocate an attribute buffer, or reallocate one if it's already allocated,
+ to contain the specified number of elements.
+
+ @param AttributeBuffer Pointer to the attribute buffer to allocate or
+        reallocate.
+
+ @param RequiredLength Specifies the number of cells to allocate.
+
+ @return TRUE if allocation succeeded, FALSE if it did not.
+ */
+BOOL
+YoriShReallocateAttributeArray(
+    __in PYORI_SH_PREVIOUS_SELECTION_BUFFER AttributeBuffer,
+    __in DWORD RequiredLength
+    )
+{
+    if (AttributeBuffer->AttributeArray != NULL) {
+        YoriLibFree(AttributeBuffer->AttributeArray);
+        AttributeBuffer->AttributeArray = NULL;
+    }
+
+    //
+    //  Allocate more than we strictly need so as to reduce the number of
+    //  reallocations
+    //
+
+    AttributeBuffer->AttributeArray = YoriLibMalloc(RequiredLength * sizeof(WORD));
+    if (AttributeBuffer->AttributeArray != NULL) {
+        AttributeBuffer->BufferSize = RequiredLength;
+        return TRUE;
+    } else {
+        AttributeBuffer->BufferSize = 0;
+        return FALSE;
+    }
+}
+
+/**
  Redraw any cells covered by a previous selection, restoring their original
  character attributes.
 
@@ -275,6 +351,7 @@ YoriShClearPreviousSelectionDisplay(
     COORD StartPoint;
     DWORD CharsWritten;
     PWORD AttributeReadPoint;
+    PYORI_SH_PREVIOUS_SELECTION_BUFFER ActiveAttributes;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -282,13 +359,19 @@ YoriShClearPreviousSelectionDisplay(
     //  If there was no previous selection, clearing it is easy
     //
 
-    if (Buffer->PreviousSelection.Left == Buffer->PreviousSelection.Right &&
-        Buffer->PreviousSelection.Top == Buffer->PreviousSelection.Bottom) {
-
+    if (!YoriShIsPreviousSelectionActive(Buffer)) {
         return;
     }
 
-    AttributeReadPoint = Buffer->PreviousSelectionAttributes;
+    //
+    //  Grab a pointer to the previous selection attributes.  Note the
+    //  actual buffer can be NULL if there was an allocation failure
+    //  when selecting.  In that case attributes are restored to a
+    //  default color.
+    //
+
+    ActiveAttributes = &Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex];
+    AttributeReadPoint = ActiveAttributes->AttributeArray;
 
     LineLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1);
 
@@ -296,11 +379,10 @@ YoriShClearPreviousSelectionDisplay(
         StartPoint.X = Buffer->PreviousSelection.Left;
         StartPoint.Y = LineIndex;
 
+        YoriShDisplayAttributes(ConsoleHandle, AttributeReadPoint, 0x07, LineLength, StartPoint, &CharsWritten);
+
         if (AttributeReadPoint) {
-            WriteConsoleOutputAttribute(ConsoleHandle, AttributeReadPoint, LineLength, StartPoint, &CharsWritten);
             AttributeReadPoint += LineLength;
-        } else {
-            FillConsoleOutputAttribute(ConsoleHandle, 0x07, LineLength, StartPoint, &CharsWritten);
         }
     }
 }
@@ -323,6 +405,7 @@ YoriShDrawCurrentSelectionDisplay(
     DWORD CharsWritten;
     DWORD RequiredLength;
     PWORD AttributeWritePoint;
+    PYORI_SH_PREVIOUS_SELECTION_BUFFER ActiveAttributes;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -337,27 +420,24 @@ YoriShDrawCurrentSelectionDisplay(
 
     RequiredLength = (Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1) * (Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
 
-    if (Buffer->PreviousSelectionAttributesSize < RequiredLength) {
-        if (Buffer->PreviousSelectionAttributes != NULL) {
-            YoriLibFree(Buffer->PreviousSelectionAttributes);
-            Buffer->PreviousSelectionAttributes = NULL;
-        }
+    ActiveAttributes = &Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex];
+
+    if (ActiveAttributes->BufferSize < RequiredLength) {
 
         //
         //  Allocate more than we strictly need so as to reduce the number of
         //  reallocations
         //
 
-        RequiredLength *= 2;
-        Buffer->PreviousSelectionAttributes = YoriLibMalloc(RequiredLength * sizeof(WORD));
-        if (Buffer->PreviousSelectionAttributes != NULL) {
-            Buffer->PreviousSelectionAttributesSize = RequiredLength;
-        } else {
-            Buffer->PreviousSelectionAttributesSize = 0;
-        }
+        RequiredLength = RequiredLength * 2;
+        YoriShReallocateAttributeArray(ActiveAttributes, RequiredLength);
     }
 
-    AttributeWritePoint = Buffer->PreviousSelectionAttributes;
+    //
+    //  Note this can be NULL on allocation failure
+    //
+
+    AttributeWritePoint = ActiveAttributes->AttributeArray;
     LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
 
     for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
@@ -395,37 +475,50 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
     HANDLE ConsoleHandle;
     COORD StartPoint;
     DWORD BufferOffset;
+    PWORD BufferPointer;
     DWORD CharsWritten;
     DWORD RequiredLength;
     PWORD AttributeWritePoint;
-    PWORD NewPreviousSelectionAttributes;
+    PYORI_SH_PREVIOUS_SELECTION_BUFFER NewAttributes;
+    PYORI_SH_PREVIOUS_SELECTION_BUFFER OldAttributes;
+    DWORD NewAttributeIndex;
     WORD SelectionAttribute;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     ASSERT(YoriShIsPreviousSelectionActive(Buffer) && YoriShIsSelectionActive(Buffer));
 
+    //
+    //  Find the buffers that are not the ones that currently contain the
+    //  attributes of selected cells.  We'll fill that buffer with updated
+    //  information, typically drawn from the currently active buffer.
+    //
+
+    NewAttributeIndex = (Buffer->CurrentPreviousSelectionIndex + 1) % 2;
+    NewAttributes = &Buffer->PreviousSelectionBuffer[NewAttributeIndex];
+    OldAttributes = &Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex];
+
     RequiredLength = (Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1) * (Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
 
-    NewPreviousSelectionAttributes = YoriLibMalloc(RequiredLength * sizeof(WORD));
-
-    //
-    //  MSFIX Handle this failure by skipping tons of save logic?
-    //
-
-    if (NewPreviousSelectionAttributes == NULL) {
-        return;
+    if (RequiredLength > NewAttributes->BufferSize) {
+        RequiredLength = RequiredLength * 2;
+        YoriShReallocateAttributeArray(NewAttributes, RequiredLength);
     }
 
     LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
 
     //
-    //  Walk through all of the new selection to save off attributes for it
+    //  Walk through all of the new selection to save off attributes for it,
+    //  and update the console to have selection color
     //
 
     SelectionAttribute = 0x1e;
-    AttributeWritePoint = NewPreviousSelectionAttributes;
+    AttributeWritePoint = NewAttributes->AttributeArray;
     for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
+
+        //
+        //  An entire line wasn't previously selected
+        //
 
         if (LineIndex < Buffer->PreviousSelection.Top ||
             LineIndex > Buffer->PreviousSelection.Bottom) {
@@ -433,12 +526,19 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
             StartPoint.X = Buffer->CurrentSelection.Left;
             StartPoint.Y = LineIndex;
 
-            ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
-            AttributeWritePoint += LineLength;
+            if (AttributeWritePoint != NULL) {
+                ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
+                AttributeWritePoint += LineLength;
+            }
 
             FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, LineLength, StartPoint, &CharsWritten);
 
         } else {
+
+            //
+            //  A set of characters to the left of the previous selection
+            //  that are now selected
+            //
 
             if (Buffer->CurrentSelection.Left < Buffer->PreviousSelection.Left) {
 
@@ -450,12 +550,20 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
                     RunLength = LineLength;
                 }
 
-                ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
-                AttributeWritePoint += RunLength;
+                if (AttributeWritePoint != NULL) {
+                    ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                    AttributeWritePoint += RunLength;
+                }
 
                 FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, RunLength, StartPoint, &CharsWritten);
 
             }
+
+            //
+            //  A set of characters were previously selected.  These
+            //  attributes need to be migrated to the new buffer, but
+            //  the console state is already correct
+            //
 
             if (Buffer->CurrentSelection.Right >= Buffer->PreviousSelection.Left &&
                 Buffer->CurrentSelection.Left <= Buffer->PreviousSelection.Right) {
@@ -474,20 +582,21 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
 
                 BufferOffset = (Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1) * StartPoint.Y + StartPoint.X;
 
-                //
-                //  MSFIX Assume earlier allocation is there
-                //
+                if (AttributeWritePoint != NULL) {
+                    if (OldAttributes->AttributeArray != NULL) {
+                        memcpy(AttributeWritePoint, &OldAttributes->AttributeArray[BufferOffset], RunLength * sizeof(WORD));
+                    }
 
-                memcpy(AttributeWritePoint, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength * sizeof(WORD));
-                AttributeWritePoint += RunLength;
+                    AttributeWritePoint += RunLength;
+                }
             }
 
-            if (Buffer->CurrentSelection.Right > Buffer->PreviousSelection.Right) {
+            //
+            //  A set of characters to the right of the previous selection
+            //  that are now selected
+            //
 
-                //
-                //  Read from max of PreviousLeft or CurrentRight
-                //  Fill as selected
-                //
+            if (Buffer->CurrentSelection.Right > Buffer->PreviousSelection.Right) {
 
                 StartPoint.X = (SHORT)(Buffer->PreviousSelection.Right + 1);
                 if (Buffer->CurrentSelection.Left > StartPoint.X) {
@@ -498,17 +607,29 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
                 }
                 StartPoint.Y = LineIndex;
 
-                ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
-                AttributeWritePoint += RunLength;
+                if (AttributeWritePoint != NULL) {
+                    ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                    AttributeWritePoint += RunLength;
+                }
 
                 FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, RunLength, StartPoint, &CharsWritten);
             }
         }
     }
 
+    //
+    //  Go through the old selection looking for regions that are no longer
+    //  selected, and restore their attributes into the console
+    //
+
     LineLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1);
 
     for (LineIndex = Buffer->PreviousSelection.Top; LineIndex <= Buffer->PreviousSelection.Bottom; LineIndex++) {
+
+        //
+        //  A line was previously selected and no longer is.  Restore the
+        //  saved attributes.
+        //
 
         if (LineIndex < Buffer->CurrentSelection.Top ||
             LineIndex > Buffer->CurrentSelection.Bottom) {
@@ -517,15 +638,21 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
             StartPoint.Y = LineIndex;
             RunLength = LineLength;
 
-            BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
+            if (OldAttributes->AttributeArray != NULL) {
+                BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
+                BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
+            } else {
+                BufferPointer = NULL;
+            }
 
-            //
-            //  MSFIX Assuming earlier allocation succeeded
-            //
-
-            WriteConsoleOutputAttribute(ConsoleHandle, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength, StartPoint, &CharsWritten);
+            YoriShDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
 
         } else {
+
+            //
+            //  A region to the left of the currently selected region was
+            //  previously selected.  Restore the saved attributes.
+            //
 
             if (Buffer->PreviousSelection.Left < Buffer->CurrentSelection.Left) {
 
@@ -536,11 +663,21 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
                     RunLength = (SHORT)(Buffer->CurrentSelection.Left - Buffer->PreviousSelection.Left);
                 }
 
-                BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
+                if (OldAttributes->AttributeArray != NULL) {
+                    BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
+                    BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
+                } else {
+                    BufferPointer = NULL;
+                }
 
-                WriteConsoleOutputAttribute(ConsoleHandle, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength, StartPoint, &CharsWritten);
+                YoriShDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
 
             }
+
+            //
+            //  A region to the right of the current selection was previously
+            //  selected.  Restore the saved attributes.
+            //
 
             if (Buffer->PreviousSelection.Right > Buffer->CurrentSelection.Right) {
 
@@ -556,21 +693,19 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
                     BufferOffset += Buffer->CurrentSelection.Right - Buffer->PreviousSelection.Left + 1;
                 }
 
-                WriteConsoleOutputAttribute(ConsoleHandle, &Buffer->PreviousSelectionAttributes[BufferOffset], RunLength, StartPoint, &CharsWritten);
+                if (OldAttributes->AttributeArray != NULL) {
+                    BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
+                } else {
+                    BufferPointer = NULL;
+                }
 
-                //
-                //  Restore from max of PreviousLeft or CurrentRight + 1
-                //
+                YoriShDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
             }
         }
     }
 
-    if (Buffer->PreviousSelectionAttributes != NULL) {
-        YoriLibFree(Buffer->PreviousSelectionAttributes);
-    }
-
-    Buffer->PreviousSelectionAttributes = NewPreviousSelectionAttributes;
-    Buffer->PreviousSelectionAttributesSize = RequiredLength;
+    ASSERT(Buffer->CurrentPreviousSelectionIndex != NewAttributeIndex);
+    Buffer->CurrentPreviousSelectionIndex = NewAttributeIndex;
 }
 
 /**
@@ -724,14 +859,17 @@ YoriShTerminateInput(
     __inout PYORI_INPUT_BUFFER Buffer
     )
 {
+    DWORD Index;
     YoriShDisplayAfterKeyPress(Buffer);
     YoriShPostKeyPress(Buffer);
     YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriShClearTabCompletionMatches(Buffer);
-    if (Buffer->PreviousSelectionAttributes) {
-        YoriLibFree(Buffer->PreviousSelectionAttributes);
-        Buffer->PreviousSelectionAttributes = NULL;
-        Buffer->PreviousSelectionAttributesSize = 0;
+    for (Index = 0; Index < 2; Index++) {
+        if (Buffer->PreviousSelectionBuffer[Index].AttributeArray) {
+            YoriLibFree(Buffer->PreviousSelectionBuffer[Index].AttributeArray);
+            Buffer->PreviousSelectionBuffer[Index].AttributeArray = NULL;
+            Buffer->PreviousSelectionBuffer[Index].BufferSize = 0;
+        }
     }
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
@@ -2043,6 +2181,7 @@ YoriShGetExpression(
                 return TRUE;
             }
         }
+
         if (ReDisplayRequired) {
             YoriShDisplayAfterKeyPress(&Buffer);
         }
