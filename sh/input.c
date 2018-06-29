@@ -745,79 +745,90 @@ YoriShDisplayAfterKeyPress(
     Buffer->PreviousSelection.Right = Buffer->CurrentSelection.Right;
     Buffer->PreviousSelection.Bottom = Buffer->CurrentSelection.Bottom;
 
-    // MSFIX Error handling
-    hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    GetConsoleScreenBufferInfo(hConsole, &ScreenInfo);
-
     //
-    //  Calculate the number of characters truncated from the currently
-    //  displayed buffer.
+    //  Re-render the text if part of the input string has changed,
+    //  or if the location of the cursor in the input string has changed
     //
 
-    if (Buffer->PreviousCharsDisplayed > Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars) {
-        NumberToFill = Buffer->PreviousCharsDisplayed - Buffer->String.LengthInChars - Buffer->SuggestionString.LengthInChars;
-    }
+    if (Buffer->DirtyBeginOffset != 0 || Buffer->DirtyLength != 0 ||
+        Buffer->SuggestionDirty ||
+        Buffer->PreviousCurrentOffset != Buffer->CurrentOffset) {
 
-    //
-    //  Calculate the locations to write both the new text as well as where
-    //  to erase any previous test.
-    //
-    //  Calculate where the buffer will end and discard the result; this is
-    //  done to ensure the screen buffer is scrolled so the whole output
-    //  has somewhere to go.
-    //
+        // MSFIX Error handling
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        GetConsoleScreenBufferInfo(hConsole, &ScreenInfo);
 
-    if (Buffer->DirtyBeginOffset < Buffer->String.LengthInChars && Buffer->DirtyLength > 0) {
-        if (Buffer->DirtyBeginOffset + Buffer->DirtyLength > Buffer->String.LengthInChars) {
-            NumberToWrite = Buffer->String.LengthInChars - Buffer->DirtyBeginOffset;
-        } else {
-            NumberToWrite = Buffer->DirtyLength;
+        //
+        //  Calculate the number of characters truncated from the currently
+        //  displayed buffer.
+        //
+
+        if (Buffer->PreviousCharsDisplayed > Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars) {
+            NumberToFill = Buffer->PreviousCharsDisplayed - Buffer->String.LengthInChars - Buffer->SuggestionString.LengthInChars;
         }
-        YoriShDetermineCellLocationIfMoved((-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset + NumberToWrite);
-        WritePosition = YoriShDetermineCellLocationIfMoved((-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset);
+
+        //
+        //  Calculate the locations to write both the new text as well as where
+        //  to erase any previous test.
+        //
+        //  Calculate where the buffer will end and discard the result; this is
+        //  done to ensure the screen buffer is scrolled so the whole output
+        //  has somewhere to go.
+        //
+
+        if (Buffer->DirtyBeginOffset < Buffer->String.LengthInChars && Buffer->DirtyLength > 0) {
+            if (Buffer->DirtyBeginOffset + Buffer->DirtyLength > Buffer->String.LengthInChars) {
+                NumberToWrite = Buffer->String.LengthInChars - Buffer->DirtyBeginOffset;
+            } else {
+                NumberToWrite = Buffer->DirtyLength;
+            }
+            YoriShDetermineCellLocationIfMoved((-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset + NumberToWrite);
+            WritePosition = YoriShDetermineCellLocationIfMoved((-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset);
+        }
+
+        if (Buffer->SuggestionString.LengthInChars > 0) {
+            YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars);
+            SuggestionPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars);
+        }
+
+        if (NumberToFill) {
+            YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill);
+            FillPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars);
+        }
+
+        //
+        //  Now that we know where the text should go, advance the cursor
+        //  and render the text.
+        //
+
+        YoriShMoveCursor(Buffer->CurrentOffset - Buffer->PreviousCurrentOffset);
+
+        if (NumberToWrite) {
+            WriteConsoleOutputCharacter(hConsole, &Buffer->String.StartOfString[Buffer->DirtyBeginOffset], NumberToWrite, WritePosition, &NumberWritten);
+            FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
+        }
+
+        if (Buffer->SuggestionString.LengthInChars > 0) {
+            WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+            FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+        }
+
+        //
+        //  If there are additional cells to empty due to truncation, display
+        //  those now.
+        //
+
+        if (NumberToFill) {
+            FillConsoleOutputCharacter(hConsole, ' ', NumberToFill, FillPosition, &NumberWritten);
+            FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToFill, FillPosition, &NumberWritten);
+        }
+
+        Buffer->PreviousCurrentOffset = Buffer->CurrentOffset;
+        Buffer->PreviousCharsDisplayed = Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars;
+        Buffer->DirtyBeginOffset = 0;
+        Buffer->DirtyLength = 0;
+        Buffer->SuggestionDirty = FALSE;
     }
-
-    if (Buffer->SuggestionString.LengthInChars > 0) {
-        YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars);
-        SuggestionPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars);
-    }
-
-    if (NumberToFill) {
-        YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill);
-        FillPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars);
-    }
-
-    //
-    //  Now that we know where the text should go, advance the cursor
-    //  and render the text.
-    //
-
-    YoriShMoveCursor(Buffer->CurrentOffset - Buffer->PreviousCurrentOffset);
-
-    if (NumberToWrite) {
-        WriteConsoleOutputCharacter(hConsole, &Buffer->String.StartOfString[Buffer->DirtyBeginOffset], NumberToWrite, WritePosition, &NumberWritten);
-        FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
-    }
-
-    if (Buffer->SuggestionString.LengthInChars > 0) {
-        WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
-        FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
-    }
-
-    //
-    //  If there are additional cells to empty due to truncation, display
-    //  those now.
-    //
-
-    if (NumberToFill) {
-        FillConsoleOutputCharacter(hConsole, ' ', NumberToFill, FillPosition, &NumberWritten);
-        FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToFill, FillPosition, &NumberWritten);
-    }
-
-    Buffer->PreviousCurrentOffset = Buffer->CurrentOffset;
-    Buffer->PreviousCharsDisplayed = Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars;
-    Buffer->DirtyBeginOffset = 0;
-    Buffer->DirtyLength = 0;
 }
 
 /**
@@ -896,6 +907,9 @@ YoriShClearSelection(
     Buffer->CurrentSelection.Top = 0;
     Buffer->CurrentSelection.Bottom = 0;
 
+    Buffer->PeriodicScrollAmount.X = 0;
+    Buffer->PeriodicScrollAmount.Y = 0;
+
     if (Buffer->CurrentSelection.Left != Buffer->PreviousSelection.Left ||
         Buffer->CurrentSelection.Right != Buffer->PreviousSelection.Right ||
         Buffer->CurrentSelection.Top != Buffer->PreviousSelection.Top ||
@@ -968,6 +982,7 @@ YoriShBackspace(
     Buffer->CurrentOffset -= CountToUse;
     Buffer->String.LengthInChars -= CountToUse;
 
+    Buffer->SuggestionDirty = TRUE;
     YoriLibFreeStringContents(&Buffer->SuggestionString);
 }
 
@@ -1158,6 +1173,7 @@ YoriShAddYoriStringToInput(
     } else {
         YoriShTrimSuggestionList(Buffer, String);
     }
+    Buffer->SuggestionDirty = TRUE;
 
     //
     //  If we're inserting, shuffle the data; if we're overwriting, clobber
@@ -1855,10 +1871,18 @@ YoriShProcessMouseButtonUp(
     __out PBOOL TerminateInput
     )
 {
-    UNREFERENCED_PARAMETER(Buffer);
     UNREFERENCED_PARAMETER(InputRecord);
-    UNREFERENCED_PARAMETER(ButtonsReleased);
     UNREFERENCED_PARAMETER(TerminateInput);
+
+    //
+    //  If the left mouse button was released and periodic scrolling was in
+    //  effect, stop it now.
+    //
+
+    if (ButtonsReleased & FROM_LEFT_1ST_BUTTON_PRESSED) {
+        Buffer->PeriodicScrollAmount.X = 0;
+        Buffer->PeriodicScrollAmount.Y = 0;
+    }
 
     return FALSE;
 }
@@ -1984,6 +2008,83 @@ YoriShProcessMouseDoubleClick(
 }
 
 /**
+ If the user is holding down the mouse button and trying to select a region
+ that is off the screen, this routine is called periodically to move the
+ window within the buffer to allow the selection to take place.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+YoriShPeriodicScroll(
+    __inout PYORI_INPUT_BUFFER Buffer
+    )
+{
+    HANDLE ConsoleHandle;
+    SHORT CellsToScroll;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    if (Buffer->PeriodicScrollAmount.Y < 0) {
+        CellsToScroll = 0 - Buffer->PeriodicScrollAmount.Y;
+        if (ScreenInfo.srWindow.Top > 0) {
+            if (ScreenInfo.srWindow.Top > CellsToScroll) {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top - CellsToScroll);
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - CellsToScroll);
+            } else {
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
+                ScreenInfo.srWindow.Top = 0;
+            }
+        }
+    } else if (Buffer->PeriodicScrollAmount.Y > 0) {
+        CellsToScroll = Buffer->PeriodicScrollAmount.Y;
+        if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - 1) {
+            if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - CellsToScroll - 1) {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + CellsToScroll);
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom + CellsToScroll);
+            } else {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + (ScreenInfo.dwSize.Y - ScreenInfo.srWindow.Bottom - 1));
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.dwSize.Y - 1);
+            }
+        }
+    }
+
+    if (Buffer->PeriodicScrollAmount.X < 0) {
+        CellsToScroll = 0 - Buffer->PeriodicScrollAmount.X;
+        if (ScreenInfo.srWindow.Left > 0) {
+            if (ScreenInfo.srWindow.Left > CellsToScroll) {
+                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left - CellsToScroll);
+                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - CellsToScroll);
+            } else {
+                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left);
+                ScreenInfo.srWindow.Left = 0;
+            }
+        }
+    } else if (Buffer->PeriodicScrollAmount.X > 0) {
+        CellsToScroll = Buffer->PeriodicScrollAmount.X;
+        if (ScreenInfo.srWindow.Right < ScreenInfo.dwSize.X - 1) {
+            if (ScreenInfo.srWindow.Right < ScreenInfo.dwSize.X - CellsToScroll - 1) {
+                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + CellsToScroll);
+                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right + CellsToScroll);
+            } else {
+                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + (ScreenInfo.dwSize.X - ScreenInfo.srWindow.Right - 1));
+                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.dwSize.X - 1);
+            }
+        }
+    }
+
+    SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
+
+    return FALSE;
+}
+
+/**
  Perform processing related to a mouse move event.
 
  @param Buffer Pointer to the input buffer to update.
@@ -2006,6 +2107,15 @@ YoriShProcessMouseMove(
     UNREFERENCED_PARAMETER(TerminateInput);
 
     if (InputRecord->Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) {
+        CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+        HANDLE ConsoleHandle;
+
+        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+            return FALSE;
+        }
+
         if (Buffer->InitialSelectionPoint.X < InputRecord->Event.MouseEvent.dwMousePosition.X) {
             Buffer->CurrentSelection.Left = Buffer->InitialSelectionPoint.X;
             Buffer->CurrentSelection.Right = InputRecord->Event.MouseEvent.dwMousePosition.X;
@@ -2021,6 +2131,38 @@ YoriShProcessMouseMove(
             Buffer->CurrentSelection.Top = InputRecord->Event.MouseEvent.dwMousePosition.Y;
             Buffer->CurrentSelection.Bottom = Buffer->InitialSelectionPoint.Y;
         }
+
+        //
+        //  Assume that the mouse move is inside the window, so periodic
+        //  scrolling is off.
+        //
+
+        Buffer->PeriodicScrollAmount.X = 0;
+        Buffer->PeriodicScrollAmount.Y = 0;
+
+        //
+        //  Check if it's outside the window and the extent of that
+        //  distance to see which periodic scrolling may be enabled.
+        //
+
+        if (InputRecord->Event.MouseEvent.dwMousePosition.X < ScreenInfo.srWindow.Left) {
+            Buffer->PeriodicScrollAmount.X = InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Left;
+        } else if (InputRecord->Event.MouseEvent.dwMousePosition.X > ScreenInfo.srWindow.Right) {
+            Buffer->PeriodicScrollAmount.X = InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Right;
+        }
+
+        if (InputRecord->Event.MouseEvent.dwMousePosition.Y < ScreenInfo.srWindow.Top) {
+            Buffer->PeriodicScrollAmount.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Top;
+        } else if (InputRecord->Event.MouseEvent.dwMousePosition.Y > ScreenInfo.srWindow.Bottom) {
+            Buffer->PeriodicScrollAmount.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Bottom;
+        }
+
+        //
+        //  Do one scroll immediately.  This allows the user to force scrolling
+        //  by moving the mouse outside the window.
+        //
+
+        YoriShPeriodicScroll(Buffer);
 
         return TRUE;
     }
@@ -2095,6 +2237,8 @@ YoriShProcessMouseScroll(
     return FALSE;
 }
 
+
+
 /**
  Get a new expression from the user through the console.
 
@@ -2156,7 +2300,9 @@ YoriShGetExpression(
                 if (ReDisplayRequired) {
                     YoriShClearSelection(&Buffer);
                 }
+
             } else if (InputRecord->EventType == MOUSE_EVENT) {
+
                 DWORD ButtonsPressed = InputRecord->Event.MouseEvent.dwButtonState - (Buffer.PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
                 DWORD ButtonsReleased = Buffer.PreviousMouseButtonState - (Buffer.PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
 
@@ -2180,7 +2326,9 @@ YoriShGetExpression(
                 if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
                     ReDisplayRequired |= YoriShProcessMouseScroll(&Buffer, InputRecord, ButtonsPressed, &TerminateInput);
                 }
+
             } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
+
                 ReDisplayRequired |= YoriShClearSelection(&Buffer);
             }
 
@@ -2226,7 +2374,17 @@ YoriShGetExpression(
         }
         err = WAIT_OBJECT_0;
         while (TRUE) {
-            if (!SuggestionPopulated) {
+            if (Buffer.PeriodicScrollAmount.X != 0 ||
+                Buffer.PeriodicScrollAmount.Y != 0) {
+
+                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 250);
+                if (err == WAIT_OBJECT_0) {
+                    break;
+                }
+                if (err == WAIT_TIMEOUT) {
+                    YoriShPeriodicScroll(&Buffer);
+                }
+            } else if (!SuggestionPopulated) {
                 err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), Buffer.DelayBeforeSuggesting);
                 if (err == WAIT_OBJECT_0) {
                     break;
@@ -2235,6 +2393,7 @@ YoriShGetExpression(
                     ASSERT(!SuggestionPopulated);
                     YoriShCompleteSuggestion(&Buffer);
                     SuggestionPopulated = TRUE;
+                    Buffer.SuggestionDirty = TRUE;
                     if (Buffer.SuggestionString.LengthInChars > 0) {
                         YoriShDisplayAfterKeyPress(&Buffer);
                     }

@@ -523,6 +523,14 @@ typedef struct _YORI_INPUT_BUFFER {
     COORD InitialSelectionPoint;
 
     /**
+     If the mouse has left the screen, this records the extent of that
+     departure.  This means values can be negative (indicating mouse is
+     to the left or top of the screen), or positive (indicating right
+     or bottom.)
+     */
+    COORD PeriodicScrollAmount;
+
+    /**
      The region that was selected on the last rendering pass.
      */
     SMALL_RECT PreviousSelection;
@@ -559,9 +567,15 @@ typedef struct _YORI_INPUT_BUFFER {
     YORI_TAB_COMPLETE_CONTEXT TabContext;
 
     /**
+     Set to TRUE if the suggestion string has changed and requires
+     redisplay.
+     */
+    BOOL SuggestionDirty;
+
+    /**
      The currently active suggestion string.
      */
-     YORI_STRING SuggestionString;
+    YORI_STRING SuggestionString;
 } YORI_INPUT_BUFFER, *PYORI_INPUT_BUFFER;
 
 /**
