@@ -1088,14 +1088,27 @@ YoriShCopySelectionIfPresent(
         //
 
         ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
-        TextWritePoint += LineLength;
+        while (CharsWritten > 0) {
+            if (TextWritePoint[CharsWritten - 1] != ' ') {
+                break;
+            }
+            CharsWritten--;
+        }
+        TextWritePoint += CharsWritten;
         TextWritePoint[0] = '\r';
         TextWritePoint++;
         TextWritePoint[0] = '\n';
         TextWritePoint++;
     }
 
-    TextToCopy.LengthInChars = (LineLength + 2) * LineCount - 2;
+    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
+
+    //
+    //  Remove the final CRLF
+    //
+    if (TextToCopy.LengthInChars >= 2) {
+        TextToCopy.LengthInChars -= 2;
+    }
 
     if (YoriShCopyText(&TextToCopy)) {
         YoriLibFreeStringContents(&TextToCopy);
