@@ -388,6 +388,35 @@ YoriShClearPreviousSelectionDisplay(
 }
 
 /**
+ Return the selection color to use.  On Vista and newer systems this is the
+ console popup color, which is what quickedit would do.  On older systems it
+ is currently hardcoded to Yellow on Blue.
+
+ @param ConsoleHandle Handle to the console output device.
+
+ @return The color to use for selection.
+ */
+WORD
+YoriShGetSelectionColor(
+    __in HANDLE ConsoleHandle
+    )
+{
+    WORD SelectionColor;
+
+    SelectionColor = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+    if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
+        YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenInfo;
+        ZeroMemory(&ScreenInfo, sizeof(ScreenInfo));
+        ScreenInfo.cbSize = sizeof(ScreenInfo);
+        if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfo)) {
+            SelectionColor = ScreenInfo.wPopupAttributes;
+        }
+    }
+
+    return SelectionColor;
+}
+
+/**
  Draw the selection highlight around the current selection, and save off the
  character attributes of the text underneath the selection.
 
@@ -405,6 +434,7 @@ YoriShDrawCurrentSelectionDisplay(
     DWORD CharsWritten;
     DWORD RequiredLength;
     PWORD AttributeWritePoint;
+    WORD SelectionColor;
     PYORI_SH_PREVIOUS_SELECTION_BUFFER ActiveAttributes;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -440,21 +470,18 @@ YoriShDrawCurrentSelectionDisplay(
     AttributeWritePoint = ActiveAttributes->AttributeArray;
     LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
 
+    SelectionColor = YoriShGetSelectionColor(ConsoleHandle);
+
     for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
         StartPoint.X = Buffer->CurrentSelection.Left;
         StartPoint.Y = LineIndex;
-
-        //
-        //  MSFIX should query the popup color; this appears to only be
-        //  available via GetConsoleScreenBufferInfoEx, aka Vista+.
-        //
 
         if (AttributeWritePoint != NULL) {
             ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
             AttributeWritePoint += LineLength;
         }
 
-        FillConsoleOutputAttribute(ConsoleHandle, 0x1e, LineLength, StartPoint, &CharsWritten);
+        FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
     }
 }
 
@@ -482,7 +509,7 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
     PYORI_SH_PREVIOUS_SELECTION_BUFFER NewAttributes;
     PYORI_SH_PREVIOUS_SELECTION_BUFFER OldAttributes;
     DWORD NewAttributeIndex;
-    WORD SelectionAttribute;
+    WORD SelectionColor;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -512,7 +539,7 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
     //  and update the console to have selection color
     //
 
-    SelectionAttribute = 0x1e;
+    SelectionColor = YoriShGetSelectionColor(ConsoleHandle);
     AttributeWritePoint = NewAttributes->AttributeArray;
     for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
 
@@ -531,7 +558,7 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
                 AttributeWritePoint += LineLength;
             }
 
-            FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, LineLength, StartPoint, &CharsWritten);
+            FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
 
         } else {
 
@@ -555,7 +582,7 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
                     AttributeWritePoint += RunLength;
                 }
 
-                FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, RunLength, StartPoint, &CharsWritten);
+                FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
 
             }
 
@@ -612,7 +639,7 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
                     AttributeWritePoint += RunLength;
                 }
 
-                FillConsoleOutputAttribute(ConsoleHandle, SelectionAttribute, RunLength, StartPoint, &CharsWritten);
+                FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
             }
         }
     }
@@ -2032,7 +2059,7 @@ YoriShPeriodicScroll(
     }
 
     if (Buffer->PeriodicScrollAmount.Y < 0) {
-        CellsToScroll = 0 - Buffer->PeriodicScrollAmount.Y;
+        CellsToScroll = (SHORT)(0 - Buffer->PeriodicScrollAmount.Y);
         if (ScreenInfo.srWindow.Top > 0) {
             if (ScreenInfo.srWindow.Top > CellsToScroll) {
                 ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top - CellsToScroll);
@@ -2056,7 +2083,7 @@ YoriShPeriodicScroll(
     }
 
     if (Buffer->PeriodicScrollAmount.X < 0) {
-        CellsToScroll = 0 - Buffer->PeriodicScrollAmount.X;
+        CellsToScroll = (SHORT)(0 - Buffer->PeriodicScrollAmount.X);
         if (ScreenInfo.srWindow.Left > 0) {
             if (ScreenInfo.srWindow.Left > CellsToScroll) {
                 ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left - CellsToScroll);
@@ -2146,15 +2173,15 @@ YoriShProcessMouseMove(
         //
 
         if (InputRecord->Event.MouseEvent.dwMousePosition.X < ScreenInfo.srWindow.Left) {
-            Buffer->PeriodicScrollAmount.X = InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Left;
+            Buffer->PeriodicScrollAmount.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Left);
         } else if (InputRecord->Event.MouseEvent.dwMousePosition.X > ScreenInfo.srWindow.Right) {
-            Buffer->PeriodicScrollAmount.X = InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Right;
+            Buffer->PeriodicScrollAmount.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Right);
         }
 
         if (InputRecord->Event.MouseEvent.dwMousePosition.Y < ScreenInfo.srWindow.Top) {
-            Buffer->PeriodicScrollAmount.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Top;
+            Buffer->PeriodicScrollAmount.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Top);
         } else if (InputRecord->Event.MouseEvent.dwMousePosition.Y > ScreenInfo.srWindow.Bottom) {
-            Buffer->PeriodicScrollAmount.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Bottom;
+            Buffer->PeriodicScrollAmount.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Bottom);
         }
 
         //
@@ -2162,7 +2189,11 @@ YoriShProcessMouseMove(
         //  by moving the mouse outside the window.
         //
 
-        YoriShPeriodicScroll(Buffer);
+        if (Buffer->PeriodicScrollAmount.X != 0 ||
+            Buffer->PeriodicScrollAmount.Y != 0) {
+
+            YoriShPeriodicScroll(Buffer);
+        }
 
         return TRUE;
     }
