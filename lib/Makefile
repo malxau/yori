@@ -12,9 +12,11 @@ DEBUG=0
 OBJS=\
 	 call.obj     \
 	 cancel.obj   \
+	 clip.obj     \
 	 cmdline.obj  \
 	 color.obj    \
 	 cshot.obj    \
+	 cvthtml.obj  \
 	 debug.obj    \
 	 dyld.obj     \
 	 env.obj      \

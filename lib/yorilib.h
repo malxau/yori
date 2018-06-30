@@ -403,6 +403,14 @@ YoriLibCancelReset();
 HANDLE
 YoriLibCancelGetEvent();
 
+// *** CLIP.C ***
+
+BOOL
+YoriLibBuildHtmlClipboardBuffer(
+    __in PYORI_STRING TextToCopy,
+    __out PHANDLE HandleForClipboard
+    );
+
 // *** CMDLINE.C ***
 
 BOOL
@@ -537,6 +545,54 @@ YoriLibRewriteConsoleContents(
     __in HANDLE hTarget,
     __in DWORD LineCount,
     __in DWORD SkipCount
+    );
+
+BOOL
+YoriLibGenerateVtStringFromConsoleBuffers(
+    __inout PYORI_STRING String,
+    __in COORD BufferSize,
+    __in LPWSTR CharBuffer,
+    __in PWORD AttrBuffer
+    );
+
+// *** CVTHTML.C ***
+
+BOOL
+YoriLibHtmlGenerateInitialString(
+    __inout PYORI_STRING TextString
+    );
+
+BOOL
+YoriLibHtmlGenerateEndString(
+    __inout PYORI_STRING TextString
+    );
+
+BOOL
+YoriLibHtmlGenerateTextString(
+    __inout PYORI_STRING TextString,
+    __out PDWORD BufferSizeNeeded,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    );
+
+BOOL
+YoriLibHtmlGenerateEscapeString(
+    __inout PYORI_STRING TextString,
+    __out PDWORD BufferSizeNeeded,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    );
+
+BOOL
+YoriLibHtmlSetVersion(
+    __in DWORD HtmlVersion
+    );
+
+BOOL
+YoriLibHtmlConvertToHtmlFromVt(
+    __in PYORI_STRING VtText,
+    __inout PYORI_STRING HtmlText,
+    __in DWORD HtmlVersion
     );
 
 // *** DEBUG.C ***
@@ -1459,6 +1515,12 @@ BOOL
 YoriLibVtSetConsoleTextAttributeOnDevice(
     __in HANDLE hOut,
     __in DWORD Flags,
+    __in WORD Attribute
+    );
+
+BOOL
+YoriLibVtStringForTextAttribute(
+    __inout PYORI_STRING String,
     __in WORD Attribute
     );
 

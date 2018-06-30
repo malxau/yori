@@ -64,6 +64,13 @@ typedef ULONG SIZE_T;
 #endif
 #endif
 
+#ifndef MOUSE_WHEELED
+/**
+ Definition for mouse wheel support for compilers that don't contain it.
+ */
+#define MOUSE_WHEELED 0x0004
+#endif
+
 /**
  A structure that is returned by NtQueryInformationProcess describing
  information about a process, including the location of its PEB.

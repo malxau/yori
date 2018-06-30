@@ -109,7 +109,7 @@ YoriShPasteText(
  */
 BOOL
 YoriShCopyText(
-    __inout PYORI_STRING Buffer
+    __in PYORI_STRING Buffer
     )
 {
     HANDLE hMem;
@@ -164,5 +164,103 @@ YoriShCopyText(
     GlobalFree(hMem);
     return TRUE;
 }
+
+/**
+ Copy a Yori text string into the clipboard along with an HTML representation
+ of the same string.
+
+ @param TextVersion The string to populate into the clipboard in text format.
+
+ @param HtmlVersion The string to populate into the clipboard in HTML format.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShCopyTextAndHtml(
+    __in PYORI_STRING TextVersion,
+    __in PYORI_STRING HtmlVersion
+    )
+{
+    HANDLE hText;
+    HANDLE hHtml;
+    HANDLE hClip;
+    LPWSTR pMem;
+    UINT HtmlFmt;
+
+    YoriLibLoadUser32Functions();
+
+    if (DllUser32.pOpenClipboard == NULL ||
+        DllUser32.pEmptyClipboard == NULL ||
+        DllUser32.pRegisterClipboardFormatW == NULL ||
+        DllUser32.pSetClipboardData == NULL ||
+        DllUser32.pCloseClipboard == NULL) {
+        return FALSE;
+    }
+
+    //
+    //  Open the clipboard and empty its contents.
+    //
+
+    if (!DllUser32.pOpenClipboard(NULL)) {
+        return FALSE;
+    }
+
+    hText = GlobalAlloc(GMEM_MOVEABLE, (TextVersion->LengthInChars + 1) * sizeof(TCHAR));
+    if (hText == NULL) {
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    pMem = GlobalLock(hText);
+    if (pMem == NULL) {
+        GlobalFree(hText);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    memcpy(pMem, TextVersion->StartOfString, TextVersion->LengthInChars * sizeof(TCHAR));
+    pMem[TextVersion->LengthInChars] = '\0';
+    GlobalUnlock(hText);
+    pMem = NULL;
+
+    if (!YoriLibBuildHtmlClipboardBuffer(HtmlVersion, &hHtml)) {
+        GlobalFree(hText);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    DllUser32.pEmptyClipboard();
+
+    HtmlFmt = DllUser32.pRegisterClipboardFormatW(_T("HTML Format"));
+    if (HtmlFmt == 0) {
+        GlobalFree(hText);
+        GlobalFree(hHtml);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    hClip = DllUser32.pSetClipboardData(CF_UNICODETEXT, hText);
+    if (hClip == NULL) {
+        DllUser32.pCloseClipboard();
+        GlobalFree(hHtml);
+        GlobalFree(hText);
+        return FALSE;
+    }
+
+    hClip = DllUser32.pSetClipboardData(HtmlFmt, hHtml);
+    if (hClip == NULL) {
+        DllUser32.pCloseClipboard();
+        GlobalFree(hHtml);
+        GlobalFree(hText);
+        return FALSE;
+    }
+
+    DllUser32.pCloseClipboard();
+    GlobalFree(hText);
+    GlobalFree(hHtml);
+    return TRUE;
+}
+
+// vim:sw=4:ts=4:et:
 
 // vim:sw=4:ts=4:et:

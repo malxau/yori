@@ -781,6 +781,12 @@ YoriShCopyText(
     );
 
 BOOL
+YoriShCopyTextAndHtml(
+    __in PYORI_STRING TextVersion,
+    __in PYORI_STRING HtmlVersion
+    );
+
+BOOL
 YoriShPasteText(
     __inout PYORI_STRING Buffer
     );

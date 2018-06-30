@@ -929,6 +929,50 @@ YoriLibOutputToDevice(
      ((COL) & FOREGROUND_GREEN?2:0)|   \
      ((COL) & FOREGROUND_RED?1:0))
 
+
+/**
+ Generate a string that is the VT100 representation for the specified Win32
+ attribute.
+
+ @param String On successful completion, updated to contain the VT100
+        representation for the attribute.  This string can be reallocated
+        within this routine.
+
+ @param Attribute The attribute to convert to a VT100 escape sequence.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibVtStringForTextAttribute(
+    __inout PYORI_STRING String,
+    __in WORD Attribute
+    )
+{
+    CHAR  AnsiForeground;
+    CHAR  AnsiBackground;
+
+    if (String->LengthAllocated < sizeof("E[0;999;999;1m")) {
+        YoriLibFreeStringContents(String);
+        if (!YoriLibAllocateString(String, sizeof("E0;999;999;1m"))) {
+            return FALSE;
+        }
+    }
+
+    AnsiForeground = (CHAR)YoriLibWindowsToAnsi(Attribute&7);
+    AnsiBackground = (CHAR)YoriLibWindowsToAnsi((Attribute>>4)&7);
+
+    String->LengthInChars = YoriLibSPrintfS(String->StartOfString,
+                                            String->LengthAllocated,
+                                            _T("%c[0;%i;%i%sm"),
+                                            27,
+                                            (Attribute & BACKGROUND_INTENSITY)?100+AnsiBackground:40+AnsiBackground,
+                                            30+AnsiForeground,
+                                            (Attribute & FOREGROUND_INTENSITY)?_T(";1"):_T("")
+                                            );
+
+    return TRUE;
+}
+
 /**
  Change the console to output a specified Win32 color code by emitting an
  ANSI escape sequence and processing it if the output device is a console,
@@ -949,32 +993,29 @@ YoriLibVtSetConsoleTextAttributeOnDevice(
     __in WORD Attribute
     )
 {
-    TCHAR OutputString[128];
-    DWORD Length = 0;
+    TCHAR OutputStringBuffer[sizeof("E[0;999;999;1m")];
+    YORI_STRING OutputString;
 
-    CHAR  AnsiForeground;
-    CHAR  AnsiBackground;
+    YoriLibInitEmptyString(&OutputString);
+    OutputString.StartOfString = OutputStringBuffer;
+    OutputString.LengthAllocated = sizeof(OutputStringBuffer)/sizeof(OutputStringBuffer[0]);
 
-    OutputString[0] = '\0';
+    //
+    //  Because the buffer is on the stack, this call shouldn't
+    //  fail.
+    //
 
-    AnsiForeground = (CHAR)YoriLibWindowsToAnsi(Attribute&7);
-    AnsiBackground = (CHAR)YoriLibWindowsToAnsi((Attribute>>4)&7);
-
-    Length = YoriLibSPrintfS(OutputString,
-                             sizeof(OutputString)/sizeof(OutputString[0]),
-                             _T("%c[0;%i;%i%sm"),
-                             27,
-                             (Attribute & BACKGROUND_INTENSITY)?100+AnsiBackground:40+AnsiBackground,
-                             30+AnsiForeground,
-                             (Attribute & FOREGROUND_INTENSITY)?_T(";1"):_T("")
-                             );
+    if (!YoriLibVtStringForTextAttribute(&OutputString, Attribute)) {
+        ASSERT(FALSE);
+        return FALSE;
+    }
 
     //
     //  Now that we've generated the string, output it in the
     //  correct form for the device.
     //
 
-    return YoriLibOutputToDevice(hOut, Flags, OutputString);
+    return YoriLibOutputToDevice(hOut, Flags, OutputString.StartOfString);
 }
 
 /**

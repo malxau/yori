@@ -1,7 +1,7 @@
 /**
- * @file cshot/cshot.c
+ * @file lib/cshot.c
  *
- * Yori shell cshot
+ * Yori lib capture console text and reformat it
  *
  * Copyright (c) 2017-2018 Malcolm J. Smith
  *
@@ -148,6 +148,116 @@ YoriLibRewriteConsoleContents(
     }
 
     YoriLibFree(ReadBuffer);
+    return TRUE;
+}
+
+/**
+ Convert a two dimensional array of characters and attributes into a single
+ VT100 stream that describes the characters and attributes.
+
+ @param String On successful completion, updated to contain the VT100 string.
+        This string may be reallocated within this routine.
+
+ @param BufferSize Specifies the dimensions of the array.  Both buffers are
+        expected to contain X*Y elements.
+
+ @param CharBuffer Pointer to the buffer containing text.
+
+ @param AttrBuffer Pointer to the buffer containing attributes.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGenerateVtStringFromConsoleBuffers(
+    __inout PYORI_STRING String,
+    __in COORD BufferSize,
+    __in LPWSTR CharBuffer,
+    __in PWORD AttrBuffer
+    )
+{
+    DWORD BufferSizeNeeded;
+    SHORT LineIndex;
+    SHORT CharIndex;
+    WORD LastAttribute;
+    TCHAR EscapeStringBuffer[sizeof("E[0;999;999;1m")];
+    YORI_STRING EscapeString;
+
+    //
+    //  A temporary string to hold a single Vt escape sequence
+    //
+
+    YoriLibInitEmptyString(&EscapeString);
+    EscapeString.StartOfString = EscapeStringBuffer;
+    EscapeString.LengthAllocated = sizeof(EscapeStringBuffer)/sizeof(EscapeStringBuffer[0]);
+
+    //
+    //  We'll need a buffer that's at least big enough to hold all the text
+    //  with some newlines and a terminator
+    //
+
+    BufferSizeNeeded = (BufferSize.X + 2) * BufferSize.Y + 1;
+
+    //
+    //  Now go through the attributes and add in the size of any escapes
+    //  needed
+    //
+
+    LastAttribute = AttrBuffer[0];
+    YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+    BufferSizeNeeded += EscapeString.LengthInChars;
+
+    for (LineIndex = 0; LineIndex < BufferSize.Y; LineIndex++) {
+        for (CharIndex = 0; CharIndex < BufferSize.X; CharIndex++) {
+            if (AttrBuffer[LineIndex * BufferSize.X + CharIndex] != LastAttribute) {
+                LastAttribute = AttrBuffer[LineIndex * BufferSize.X + CharIndex];
+                YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+                BufferSizeNeeded += EscapeString.LengthInChars;
+            }
+        }
+    }
+
+    //
+    //  Allocate a buffer of sufficient size if it's not allocated already
+    //
+
+    if (String->LengthAllocated < BufferSizeNeeded) {
+        YoriLibFreeStringContents(String);
+        if (!YoriLibAllocateString(String, BufferSizeNeeded)) {
+            return FALSE;
+        }
+    }
+
+    //
+    //  Go through again populating both text and escapes into the output
+    //  buffer
+    //
+
+    String->LengthInChars = 0;
+    LastAttribute = AttrBuffer[0];
+    YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+
+    memcpy(&String->StartOfString[String->LengthInChars], EscapeString.StartOfString, EscapeString.LengthInChars * sizeof(TCHAR));
+    String->LengthInChars += EscapeString.LengthInChars;
+
+    for (LineIndex = 0; LineIndex < BufferSize.Y; LineIndex++) {
+        for (CharIndex = 0; CharIndex < BufferSize.X; CharIndex++) {
+            if (AttrBuffer[LineIndex * BufferSize.X + CharIndex] != LastAttribute) {
+                LastAttribute = AttrBuffer[LineIndex * BufferSize.X + CharIndex];
+                YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+                memcpy(&String->StartOfString[String->LengthInChars], EscapeString.StartOfString, EscapeString.LengthInChars * sizeof(TCHAR));
+                String->LengthInChars += EscapeString.LengthInChars;
+            }
+            String->StartOfString[String->LengthInChars] = CharBuffer[LineIndex * BufferSize.X + CharIndex];
+            String->LengthInChars++;
+        }
+
+        String->StartOfString[String->LengthInChars] = '\r';
+        String->StartOfString[String->LengthInChars + 1] = '\n';
+        String->LengthInChars += 2;
+    }
+
+    ASSERT(EscapeString.StartOfString == EscapeStringBuffer);
+
     return TRUE;
 }
 

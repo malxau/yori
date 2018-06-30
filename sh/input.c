@@ -1093,6 +1093,8 @@ YoriShCopySelectionIfPresent(
     )
 {
     YORI_STRING TextToCopy;
+    YORI_STRING VtText;
+    YORI_STRING HtmlText;
     SHORT LineLength;
     SHORT LineCount;
     SHORT LineIndex;
@@ -1109,6 +1111,32 @@ YoriShCopySelectionIfPresent(
         return FALSE;
     }
 
+    //
+    //  We want to get the attributes for rich text copy.  Rather than reinvent
+    //  that wheel, force the console to re-render if it's stale and use the
+    //  saved attribute buffer.
+    //
+    
+    if (Buffer->CurrentSelection.Left != Buffer->PreviousSelection.Left ||
+        Buffer->CurrentSelection.Right != Buffer->PreviousSelection.Right ||
+        Buffer->CurrentSelection.Top != Buffer->PreviousSelection.Top ||
+        Buffer->CurrentSelection.Bottom != Buffer->PreviousSelection.Bottom) {
+
+        YoriShDisplayAfterKeyPress(Buffer);
+    }
+
+    //
+    //  If there was an allocation failure collecting attributes, stop.
+    //
+
+    if (Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex].AttributeArray == NULL) {
+        return FALSE;
+    }
+
+    //
+    //  Allocate a buffer to hold the text.  Add two chars per line for newlines.
+    //
+
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
@@ -1118,16 +1146,46 @@ YoriShCopySelectionIfPresent(
         return FALSE;
     }
 
-    TextWritePoint = TextToCopy.StartOfString;
+    //
+    //  In the first pass, copy all of the text, including trailing spaces.
+    //  This version will be used to construct the rich text form.
+    //
 
+    TextWritePoint = TextToCopy.StartOfString;
     for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
         StartPoint.X = Buffer->CurrentSelection.Left;
         StartPoint.Y = LineIndex;
 
-        //
-        //  MSFIX should query the popup color; this appears to only be
-        //  available via GetConsoleScreenBufferInfoEx, aka Vista+.
-        //
+        ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
+
+        TextWritePoint += LineLength;
+    }
+
+    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
+
+    StartPoint.X = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
+    StartPoint.Y = (SHORT)(Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
+
+    //
+    //  Combine the captured text with previously saved attributes into a
+    //  VT100 stream.  This will turn into HTML.
+    //
+
+    YoriLibInitEmptyString(&VtText);
+    if (!YoriLibGenerateVtStringFromConsoleBuffers(&VtText, StartPoint, TextToCopy.StartOfString, Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex].AttributeArray)) {
+        YoriLibFreeStringContents(&TextToCopy);
+        return FALSE;
+    }
+
+    //
+    //  In the second pass, copy all of the text, truncating trailing spaces.
+    //  This version will be used to construct the plain text form.
+    //
+
+    TextWritePoint = TextToCopy.StartOfString;
+    for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
+        StartPoint.X = Buffer->CurrentSelection.Left;
+        StartPoint.Y = LineIndex;
 
         ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
         while (CharsWritten > 0) {
@@ -1137,26 +1195,48 @@ YoriShCopySelectionIfPresent(
             CharsWritten--;
         }
         TextWritePoint += CharsWritten;
+
         TextWritePoint[0] = '\r';
         TextWritePoint++;
         TextWritePoint[0] = '\n';
         TextWritePoint++;
     }
 
-    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
-
     //
     //  Remove the final CRLF
     //
+
     if (TextToCopy.LengthInChars >= 2) {
         TextToCopy.LengthInChars -= 2;
     }
 
-    if (YoriShCopyText(&TextToCopy)) {
+    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
+
+    //
+    //  Convert the VT100 form into HTML, and free it
+    //
+
+    YoriLibInitEmptyString(&HtmlText);
+    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, 4)) {
+        YoriLibFreeStringContents(&VtText);
         YoriLibFreeStringContents(&TextToCopy);
+        YoriLibFreeStringContents(&HtmlText);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&VtText);
+
+    //
+    //  Copy both HTML form and plain text form to the clipboard
+    //
+
+    if (YoriShCopyTextAndHtml(&TextToCopy, &HtmlText)) {
+        YoriLibFreeStringContents(&TextToCopy);
+        YoriLibFreeStringContents(&HtmlText);
         return TRUE;
     }
 
+    YoriLibFreeStringContents(&HtmlText);
     YoriLibFreeStringContents(&TextToCopy);
     return FALSE;
 }
