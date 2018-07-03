@@ -548,14 +548,15 @@ YoriShForwardProcessBufferToNextProcess(
  */
 VOID
 YoriShDereferenceProcessBuffer(
-    __in PYORI_BUFFERED_PROCESS ThisBuffer
+    __in PVOID ThisBuffer
     )
 {
-    ThisBuffer->ReferenceCount--;
+    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    ThisBufferNonOpaque->ReferenceCount--;
 
-    if (ThisBuffer->ReferenceCount == 0) {
-        YoriLibRemoveListItem(&ThisBuffer->ListEntry);
-        YoriShFreeProcessBuffers(ThisBuffer);
+    if (ThisBufferNonOpaque->ReferenceCount == 0) {
+        YoriLibRemoveListItem(&ThisBufferNonOpaque->ListEntry);
+        YoriShFreeProcessBuffers(ThisBufferNonOpaque);
     }
 }
 
@@ -566,11 +567,12 @@ YoriShDereferenceProcessBuffer(
  */
 VOID
 YoriShReferenceProcessBuffer(
-    __in PYORI_BUFFERED_PROCESS ThisBuffer
+    __in PVOID ThisBuffer
     )
 {
-    ASSERT(ThisBuffer->ReferenceCount > 0);
-    ThisBuffer->ReferenceCount++;
+    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    ASSERT(ThisBufferNonOpaque->ReferenceCount > 0);
+    ThisBufferNonOpaque->ReferenceCount++;
 }
 
 /**
@@ -632,12 +634,13 @@ YoriShGetProcessBuffer(
  */
 BOOL
 YoriShGetProcessOutputBuffer(
-    __in PYORI_BUFFERED_PROCESS ThisBuffer,
+    __in PVOID ThisBuffer,
     __out PYORI_STRING String
     )
 {
     BOOL Result;
-    Result = YoriShGetProcessBuffer(&ThisBuffer->OutputBuffer, String);
+    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    Result = YoriShGetProcessBuffer(&ThisBufferNonOpaque->OutputBuffer, String);
     return Result;
 }
 
@@ -655,12 +658,13 @@ YoriShGetProcessOutputBuffer(
  */
 BOOL
 YoriShGetProcessErrorBuffer(
-    __in PYORI_BUFFERED_PROCESS ThisBuffer,
+    __in PVOID ThisBuffer,
     __out PYORI_STRING String
     )
 {
     BOOL Result;
-    Result = YoriShGetProcessBuffer(&ThisBuffer->ErrorBuffer, String);
+    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    Result = YoriShGetProcessBuffer(&ThisBufferNonOpaque->ErrorBuffer, String);
     return Result;
 }
 
@@ -769,17 +773,18 @@ YoriShScanProcessBuffersForTeardown(
  */
 BOOL
 YoriShWaitForProcessBufferToFinalize(
-    __in PYORI_BUFFERED_PROCESS ThisBuffer
+    __in PVOID ThisBuffer
     )
 {
-    if (ThisBuffer->OutputBuffer.hPumpThread != NULL) {
-        if (WaitForSingleObject(ThisBuffer->OutputBuffer.hPumpThread, INFINITE) != WAIT_OBJECT_0) {
+    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    if (ThisBufferNonOpaque->OutputBuffer.hPumpThread != NULL) {
+        if (WaitForSingleObject(ThisBufferNonOpaque->OutputBuffer.hPumpThread, INFINITE) != WAIT_OBJECT_0) {
             ASSERT(FALSE);
             return FALSE;
         }
     }
-    if (ThisBuffer->ErrorBuffer.hPumpThread != NULL) {
-        if (WaitForSingleObject(ThisBuffer->ErrorBuffer.hPumpThread, INFINITE) != WAIT_OBJECT_0) {
+    if (ThisBufferNonOpaque->ErrorBuffer.hPumpThread != NULL) {
+        if (WaitForSingleObject(ThisBufferNonOpaque->ErrorBuffer.hPumpThread, INFINITE) != WAIT_OBJECT_0) {
             ASSERT(FALSE);
             return FALSE;
         }
@@ -801,7 +806,7 @@ YoriShWaitForProcessBufferToFinalize(
  */
 BOOL
 YoriShPipeProcessBuffers(
-    __in PYORI_BUFFERED_PROCESS ThisBuffer,
+    __in PVOID ThisBuffer,
     __in HANDLE hPipeOutput,
     __in HANDLE hPipeErrors
     )
@@ -809,6 +814,7 @@ YoriShPipeProcessBuffers(
     BOOL HaveOutput;
     BOOL HaveErrors;
     BOOL Collision;
+    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
 
     HaveOutput = FALSE;
     HaveErrors = FALSE;
@@ -819,7 +825,7 @@ YoriShPipeProcessBuffers(
     //
 
     if (hPipeOutput != NULL) {
-        if (ThisBuffer->OutputBuffer.Buffer != NULL) {
+        if (ThisBufferNonOpaque->OutputBuffer.Buffer != NULL) {
             HaveOutput = TRUE;
         } else {
             return FALSE;
@@ -827,7 +833,7 @@ YoriShPipeProcessBuffers(
     }
 
     if (hPipeErrors != NULL) {
-        if (ThisBuffer->ErrorBuffer.Buffer != NULL) {
+        if (ThisBufferNonOpaque->ErrorBuffer.Buffer != NULL) {
             HaveErrors = TRUE;
         } else {
             return FALSE;
@@ -835,10 +841,10 @@ YoriShPipeProcessBuffers(
     }
 
     if (HaveOutput) {
-        AcquireMutex(ThisBuffer->OutputBuffer.Mutex);
+        AcquireMutex(ThisBufferNonOpaque->OutputBuffer.Mutex);
     }
     if (HaveErrors) {
-        AcquireMutex(ThisBuffer->ErrorBuffer.Mutex);
+        AcquireMutex(ThisBufferNonOpaque->ErrorBuffer.Mutex);
     }
 
     //
@@ -848,25 +854,25 @@ YoriShPipeProcessBuffers(
     Collision = FALSE;
 
     if (HaveOutput) {
-        if (ThisBuffer->OutputBuffer.hMirror != NULL ||
-            ThisBuffer->OutputBuffer.hSource == NULL) {
+        if (ThisBufferNonOpaque->OutputBuffer.hMirror != NULL ||
+            ThisBufferNonOpaque->OutputBuffer.hSource == NULL) {
             Collision = TRUE;
         }
     }
 
     if (HaveErrors) {
-        if (ThisBuffer->ErrorBuffer.hMirror != NULL ||
-            ThisBuffer->ErrorBuffer.hSource == NULL) {
+        if (ThisBufferNonOpaque->ErrorBuffer.hMirror != NULL ||
+            ThisBufferNonOpaque->ErrorBuffer.hSource == NULL) {
             Collision = TRUE;
         }
     }
 
     if (Collision) {
         if (HaveOutput) {
-            ReleaseMutex(ThisBuffer->OutputBuffer.Mutex);
+            ReleaseMutex(ThisBufferNonOpaque->OutputBuffer.Mutex);
         }
         if (HaveErrors) {
-            ReleaseMutex(ThisBuffer->ErrorBuffer.Mutex);
+            ReleaseMutex(ThisBufferNonOpaque->ErrorBuffer.Mutex);
         }
         return FALSE;
     }
@@ -876,20 +882,20 @@ YoriShPipeProcessBuffers(
     //
 
     if (HaveOutput) {
-        ThisBuffer->OutputBuffer.hMirror = hPipeOutput;
-        ASSERT(ThisBuffer->OutputBuffer.BytesSent == 0);
+        ThisBufferNonOpaque->OutputBuffer.hMirror = hPipeOutput;
+        ASSERT(ThisBufferNonOpaque->OutputBuffer.BytesSent == 0);
     }
 
     if (HaveErrors) {
-        ThisBuffer->ErrorBuffer.hMirror = hPipeErrors;
-        ASSERT(ThisBuffer->ErrorBuffer.BytesSent == 0);
+        ThisBufferNonOpaque->ErrorBuffer.hMirror = hPipeErrors;
+        ASSERT(ThisBufferNonOpaque->ErrorBuffer.BytesSent == 0);
     }
 
     if (HaveOutput) {
-        ReleaseMutex(ThisBuffer->OutputBuffer.Mutex);
+        ReleaseMutex(ThisBufferNonOpaque->OutputBuffer.Mutex);
     }
     if (HaveErrors) {
-        ReleaseMutex(ThisBuffer->ErrorBuffer.Mutex);
+        ReleaseMutex(ThisBufferNonOpaque->ErrorBuffer.Mutex);
     }
 
     return TRUE;

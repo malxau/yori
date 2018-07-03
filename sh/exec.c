@@ -924,6 +924,11 @@ YoriShWaitForProcessToTerminate(
                         CtrlBFoundThisPass = TRUE;
                         break;
                     }
+                } else if (InputRecords[Count].EventType == FOCUS_EVENT &&
+                           !InputRecords[Count].Event.FocusEvent.bSetFocus) {
+
+                    ExecContext->TaskCompletionDisplayed = TRUE;
+                    YoriShSetWindowState(YORI_SH_TASK_IN_PROGRESS);
                 }
             }
 
@@ -1255,6 +1260,10 @@ YoriShExecExecPlan(
             g_ErrorLevel = YoriShBuiltIn(ExecContext);
         }
 
+        if (ExecContext->TaskCompletionDisplayed) {
+            ExecPlan->TaskCompletionDisplayed = TRUE;
+        }
+
         //
         //  If the program output back to a shell owned buffer and we waited
         //  for it to complete, we can use the same buffer for later commands
@@ -1323,6 +1332,12 @@ YoriShExecExecPlan(
 
     if (YoriLibIsOperationCancelled()) {
         YoriShCancelExecPlan(ExecPlan);
+    } else if (ExecPlan->TaskCompletionDisplayed) {
+        if (g_ErrorLevel == 0) {
+            YoriShSetWindowState(YORI_SH_TASK_SUCCESS);
+        } else {
+            YoriShSetWindowState(YORI_SH_TASK_FAILED);
+        }
     }
 }
 

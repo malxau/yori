@@ -64,6 +64,11 @@ typedef ULONG SIZE_T;
 #endif
 #endif
 
+/**
+ Define the error type for HRESULT.
+ */
+typedef long HRESULT;
+
 #ifndef MOUSE_WHEELED
 /**
  Definition for mouse wheel support for compilers that don't contain it.
@@ -1356,6 +1361,35 @@ typedef struct _YORI_SHELLEXECUTEINFO {
 #define SEE_MASK_NOZONECHECKS   (0x00800000)
 #endif
 
+#ifndef STDMETHODCALLTYPE
+
+/**
+ Define the Windows standard calling convention if it hasn't been defined
+ already.
+ */
+#define STDMETHODCALLTYPE __stdcall
+#endif
+
+/**
+ Standard COM QueryInterface method.
+ */
+typedef HRESULT STDMETHODCALLTYPE IUnknown_QueryInterface (PVOID This, const GUID * riid, LPVOID * ppvObj);
+
+/**
+ Standard COM AddRef method.
+ */
+typedef ULONG STDMETHODCALLTYPE IUnknown_AddRef (PVOID This);
+
+/**
+ Standard COM Release method.
+ */
+typedef ULONG STDMETHODCALLTYPE IUnknown_Release (PVOID This);
+
+/**
+ The in process type identifier when instantiating objects.
+ */
+#define CLSCTX_INPROC_SERVER 0x1
+
 /**
  A prototype for the NtQueryInformationProcess function..
  */
@@ -1532,6 +1566,18 @@ GET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
  A prototype for a pointer to the GetConsoleScreenBufferEx function.
  */
 typedef GET_CONSOLE_SCREEN_BUFFER_INFO_EX *PGET_CONSOLE_SCREEN_BUFFER_INFO_EX;
+
+/**
+ A prototype for the GetConsoleWindow function.
+ */
+typedef
+HWND WINAPI
+GET_CONSOLE_WINDOW();
+
+/**
+ A prototype for a pointer to the GetConsoleWindow function.
+ */
+typedef GET_CONSOLE_WINDOW *PGET_CONSOLE_WINDOW;
 
 /**
  A prototype for the GetCurrentConsoleFontEx function.
@@ -1749,6 +1795,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
     PGET_CONSOLE_ALIASESW pGetConsoleAliasesW;
 
     /**
+     If it's available on the current system, a pointer to GetConsoleWindow.
+     */
+    PGET_CONSOLE_WINDOW pGetConsoleWindow;
+
+    /**
      If it's available on the current system, a pointer to GetCurrentConsoleFontEx.
      */
     PGET_CURRENT_CONSOLE_FONT_EX pGetCurrentConsoleFontEx;
@@ -1843,6 +1894,30 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
 extern YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
 
 /**
+ A prototype for the CoCreateInstance function.
+ */
+typedef
+HRESULT WINAPI
+CO_CREATE_INSTANCE(CONST GUID *, LPVOID, DWORD, CONST GUID *, LPVOID *);
+
+/**
+ A prototype for a pointer to the CoCreateInstance function.
+ */
+typedef CO_CREATE_INSTANCE *PCO_CREATE_INSTANCE;
+
+/**
+ A prototype for the CoInitialize function.
+ */
+typedef
+HRESULT WINAPI
+CO_INITIALIZE(LPVOID);
+
+/**
+ A prototype for a pointer to the CoInitialize function.
+ */
+typedef CO_INITIALIZE *PCO_INITIALIZE;
+
+/**
  A prototype for the CoTaskMemFree function.
  */
 typedef
@@ -1863,6 +1938,16 @@ typedef struct _YORI_OLE32_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to CoCreateInstance.
+     */
+    PCO_CREATE_INSTANCE pCoCreateInstance;
+
+    /**
+     If it's available on the current system, a pointer to CoInitialize.
+     */
+    PCO_INITIALIZE pCoInitialize;
 
     /**
      If it's available on the current system, a pointer to CoTaskMemFree.

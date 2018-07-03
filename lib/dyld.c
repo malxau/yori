@@ -92,6 +92,7 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(DllKernel32.hDll, "GetConsoleAliasesLengthW");
     DllKernel32.pGetConsoleAliasesW = (PGET_CONSOLE_ALIASESW)GetProcAddress(DllKernel32.hDll, "GetConsoleAliasesW");
     DllKernel32.pGetConsoleScreenBufferInfoEx = (PGET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(DllKernel32.hDll, "GetConsoleScreenBufferInfoEx");
+    DllKernel32.pGetConsoleWindow = (PGET_CONSOLE_WINDOW)GetProcAddress(DllKernel32.hDll, "GetConsoleWindow");
     DllKernel32.pGetCurrentConsoleFontEx = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "GetCurrentConsoleFontEx");
     DllKernel32.pGetDiskFreeSpaceExW = (PGET_DISK_FREE_SPACE_EXW)GetProcAddress(DllKernel32.hDll, "GetDiskFreeSpaceExW");
     DllKernel32.pGetEnvironmentStrings = (PGET_ENVIRONMENT_STRINGS)GetProcAddress(DllKernel32.hDll, "GetEnvironmentStrings");
@@ -160,6 +161,8 @@ YoriLibLoadOle32Functions()
         return FALSE;
     }
 
+    DllOle32.pCoCreateInstance = (PCO_CREATE_INSTANCE)GetProcAddress(DllOle32.hDll, "CoCreateInstance");
+    DllOle32.pCoInitialize = (PCO_INITIALIZE)GetProcAddress(DllOle32.hDll, "CoInitialize");
     DllOle32.pCoTaskMemFree = (PCO_TASK_MEM_FREE)GetProcAddress(DllOle32.hDll, "CoTaskMemFree");
 
     return TRUE;

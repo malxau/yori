@@ -30,39 +30,9 @@
 #pragma warning(disable: 4226)
 
 /**
- Define the error type for HRESULT.
+ A declaration for a GUID defining the shell file API interface.
  */
-typedef long HRESULT;
-
-#ifndef STDMETHODCALLTYPE
-
-/**
- Define the Windows standard calling convention if it hasn't been defined
- already.
- */
-#define STDMETHODCALLTYPE __stdcall
-#endif
-
-/**
- Standard COM QueryInterface method.
- */
-typedef HRESULT STDMETHODCALLTYPE IUnknown_QueryInterface (PVOID This, const GUID * riid, LPVOID * ppvObj);
-
-/**
- Standard COM AddRef method.
- */
-typedef ULONG STDMETHODCALLTYPE IUnknown_AddRef (PVOID This);
-
-/**
- Standard COM Release method.
- */
-typedef ULONG STDMETHODCALLTYPE IUnknown_Release (PVOID This);
-
-/**
- A declaration for a GUID stored elsewhere defining the shell file API
- interface.
- */
-extern const GUID IID_IPersistFile;
+const GUID IID_IPersistFile = { 0x0000010BL, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 } };
 
 /**
  The IPersistFile interface, composed of a pointer to a set of functions.
@@ -389,20 +359,6 @@ struct IShellLinkWVtbl {
     IShellLink_SetPath * SetPath;
 };
 
-/**
- The in process type identifier when instantiating objects.
- */
-#define CLSCTX_INPROC_SERVER 0x1
-
-/**
- A declaration for CoInitialize since we don't have COM headers.
- */
-DECLSPEC_IMPORT HRESULT WINAPI CoInitialize(LPVOID pvReserved);
-
-/**
- A declaration for CoCreateInstance since we don't have COM headers.
- */
-DECLSPEC_IMPORT HRESULT WINAPI CoCreateInstance(const GUID * rclsid, LPVOID pUnkOuter, DWORD dwClsContext, const GUID * riid, LPVOID * ppv);
 
 /**
  A list of operations supported by scut.
@@ -694,30 +650,28 @@ ymain(
         YoriLibConstantString(&YsFormatString, FormatString);
     }
 
-    hRes = CoInitialize(NULL);
+    YoriLibLoadOle32Functions();
+    if (DllOle32.pCoCreateInstance == NULL || DllOle32.pCoInitialize == NULL) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("COM not found\n"));
+        goto Exit;
+    }
+
+    hRes = DllOle32.pCoInitialize(NULL);
     if (!SUCCEEDED(hRes)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CoInitialize failure: %x\n"), (int)hRes);
         goto Exit;
     }
 
-    hRes = CoCreateInstance(&CLSID_ShellLink,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        &IID_IShellLinkW,
-        (void **)&scut);
+    hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&scut);
 
     if (!SUCCEEDED(hRes)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
-            _T("CoCreateInstance failure: %x\n"),
-            (int)hRes);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CoCreateInstance failure: %x\n"), (int)hRes);
         goto Exit;
     }
 
     hRes = scut->Vtbl->QueryInterface(scut, &IID_IPersistFile, (void **)&savedfile);
     if (!SUCCEEDED(hRes)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
-            _T("QueryInstance IPersistFile failure: %x\n"),
-            (int)hRes);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("QueryInstance IPersistFile failure: %x\n"), (int)hRes);
         goto Exit;
     }
 
@@ -829,16 +783,9 @@ ymain(
             goto Exit;
         }
 
-        hApp = DllShell32.pShellExecuteW(NULL,
-            NULL,
-            szFileBuf,
-            szArgsBuf,
-            szDir,
-            nShow);
+        hApp = DllShell32.pShellExecuteW(NULL, NULL, szFileBuf, szArgsBuf, szDir, nShow);
         if ((ULONG_PTR)hApp <= 32) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
-                _T("ShellExecute failure: %i\n"),
-                (int)(ULONG_PTR)hApp);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecute failure: %i\n"), (int)(ULONG_PTR)hApp);
             goto Exit;
         }
     }

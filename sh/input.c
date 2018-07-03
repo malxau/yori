@@ -2441,6 +2441,10 @@ YoriShGetExpression(
             } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
 
                 ReDisplayRequired |= YoriShClearSelection(&Buffer);
+            } else if (InputRecord->EventType == FOCUS_EVENT) {
+                if (InputRecord->Event.FocusEvent.bSetFocus) {
+                    YoriShSetWindowState(YORI_SH_TASK_COMPLETE);
+                }
             }
 
             if (TerminateInput) {

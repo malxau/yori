@@ -1,5 +1,5 @@
-/*
- * YORI.H
+/**
+ * @file sh/yori.h
  *
  * Yori shell master header file
  *
@@ -238,6 +238,13 @@ typedef struct _YORI_SINGLE_EXEC_CONTEXT {
      */
     BOOLEAN CaptureEnvironmentOnExit;
 
+    /**
+     TRUE if the process was being waited upon and the user switched
+     windows, triggering the shell to indicate completion in the
+     taskbar.
+     */
+    BOOLEAN TaskCompletionDisplayed;
+
 } YORI_SINGLE_EXEC_CONTEXT, *PYORI_SINGLE_EXEC_CONTEXT;
 
 /**
@@ -299,6 +306,14 @@ typedef struct _YORI_EXEC_PLAN {
      The total number of programs in the program list.
      */
     ULONG NumberCommands;
+
+    /**
+     TRUE if the process was being waited upon and the user switched
+     windows, triggering the shell to indicate completion in the
+     taskbar.
+     */
+    BOOLEAN TaskCompletionDisplayed;
+
 } YORI_EXEC_PLAN, *PYORI_EXEC_PLAN;
 
 /**
@@ -708,7 +723,7 @@ YoriShClearAllAliases();
 BOOL
 YoriShGetAliasStrings(
     __in BOOL IncludeInternal,
-    __in PYORI_STRING AliasStrings
+    __inout PYORI_STRING AliasStrings
     );
 
 BOOL
@@ -777,7 +792,7 @@ YoriShBuiltinUnregisterAll(
 
 BOOL
 YoriShCopyText(
-    __inout PYORI_STRING Buffer
+    __in PYORI_STRING Buffer
     );
 
 BOOL
@@ -831,7 +846,9 @@ YoriShGetProcessErrorBuffer(
     );
 
 BOOL
-YoriShScanProcessBuffersForTeardown();
+YoriShScanProcessBuffersForTeardown(
+    __in BOOL TeardownAll
+    );
 
 BOOL
 YoriShWaitForProcessBufferToFinalize(
@@ -1154,6 +1171,33 @@ YoriShLoadSavedRestartState(
 VOID
 YoriShDiscardSavedRestartState(
     __in_opt PYORI_STRING ProcessId
+    );
+
+// *** WINDOW.C ***
+
+/**
+ Indicates the task has succeeded and the taskbar button should be green.
+ */
+#define YORI_SH_TASK_SUCCESS     0x01
+
+/**
+ Indicates the task has failed and the taskbar button should be red.
+ */
+#define YORI_SH_TASK_FAILED      0x02
+
+/**
+ Indicates the task is in progress and the taskbar button should be yellow.
+ */
+#define YORI_SH_TASK_IN_PROGRESS 0x03
+
+/**
+ Indicates the task is complete and the taskbar button should be normal.
+ */
+#define YORI_SH_TASK_COMPLETE    0x04
+
+BOOL
+YoriShSetWindowState(
+    __in DWORD State
     );
 
 #ifndef ERROR_ELEVATION_REQUIRED
