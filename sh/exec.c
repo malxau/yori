@@ -790,8 +790,10 @@ YoriShWaitForProcessToTerminate(
     DWORD RecordsRead;
     DWORD Count;
     DWORD CtrlBCount = 0;
+    DWORD LoseFocusCount = 0;
     DWORD Delay;
-    BOOL CtrlBFoundThisPass;
+    BOOLEAN CtrlBFoundThisPass;
+    BOOLEAN LoseFocusFoundThisPass;
 
     //
     //  By this point redirection has been established and then reverted.
@@ -867,6 +869,7 @@ YoriShWaitForProcessToTerminate(
 
         if (WaitForSingleObject(WaitOn[2], 0) == WAIT_TIMEOUT) {
             CtrlBCount = 0;
+            LoseFocusCount = 0;
             Delay = INFINITE;
             continue;
         }
@@ -911,6 +914,7 @@ YoriShWaitForProcessToTerminate(
         if (PeekConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, RecordsAllocated, &RecordsRead) && RecordsRead > 0) {
 
             CtrlBFoundThisPass = FALSE;
+            LoseFocusFoundThisPass = FALSE;
 
             for (Count = 0; Count < RecordsRead; Count++) {
 
@@ -927,23 +931,36 @@ YoriShWaitForProcessToTerminate(
                 } else if (InputRecords[Count].EventType == FOCUS_EVENT &&
                            !InputRecords[Count].Event.FocusEvent.bSetFocus) {
 
-                    ExecContext->TaskCompletionDisplayed = TRUE;
-                    YoriShSetWindowState(YORI_SH_TASK_IN_PROGRESS);
+                    LoseFocusFoundThisPass = TRUE;
+
                 }
             }
+
+            Delay = 100;
 
             if (CtrlBFoundThisPass) {
                 if (CtrlBCount < 3) {
                     CtrlBCount++;
                     Delay = 30;
                     continue;
+                } else {
+                    break;
                 }
-                break;
             } else {
                 CtrlBCount = 0;
             }
 
-            Delay = 100;
+            if (LoseFocusFoundThisPass) {
+                if (LoseFocusCount < 3) {
+                    LoseFocusCount++;
+                    Delay = 30;
+                } else {
+                    ExecContext->TaskCompletionDisplayed = TRUE;
+                    YoriShSetWindowState(YORI_SH_TASK_IN_PROGRESS);
+                }
+            } else {
+                LoseFocusCount = 0;
+            }
         }
     }
 
