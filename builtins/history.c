@@ -85,6 +85,9 @@ YoriCmd_HISTORY(
     LPTSTR ThisVar;
     DWORD VarLen;
 
+    YoriLibLoadNtDllFunctions();
+    YoriLibLoadKernel32Functions();
+
     for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;

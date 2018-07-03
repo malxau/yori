@@ -88,6 +88,9 @@ YoriCmd_COLOR(
     DWORD StartArg;
     YORI_STRING Arg;
 
+    YoriLibLoadNtDllFunctions();
+    YoriLibLoadKernel32Functions();
+
     Default = FALSE;
     Fullscreen = FALSE;
     StartArg = 0;

@@ -1375,6 +1375,11 @@ typedef NT_QUERY_INFORMATION_PROCESS *PNT_QUERY_INFORMATION_PROCESS;
 typedef struct _YORI_NTDLL_FUNCTIONS {
 
     /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
      If it's available on the current system, a pointer to
      NtQueryInformationProcess.
      */
@@ -1677,6 +1682,11 @@ typedef WOW64_DISABLE_WOW64_FS_REDIRECTION *PWOW64_DISABLE_WOW64_FS_REDIRECTION;
  functions which programs can operate without having hard dependencies on.
  */
 typedef struct _YORI_KERNEL32_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
 
     /**
      If it's available on the current system, a pointer to AddConsoleAliasW.

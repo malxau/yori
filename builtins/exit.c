@@ -46,6 +46,8 @@ YoriCmd_EXIT(
 {
     UNREFERENCED_PARAMETER(ArgC);
     UNREFERENCED_PARAMETER(ArgV);
+    YoriLibLoadNtDllFunctions();
+    YoriLibLoadKernel32Functions();
     YoriCallExitProcess(EXIT_SUCCESS);
     return EXIT_SUCCESS;
 }

@@ -43,12 +43,15 @@ YORI_NTDLL_FUNCTIONS DllNtDll;
 BOOL
 YoriLibLoadNtDllFunctions()
 {
-    HANDLE hNtDll;
-    hNtDll = GetModuleHandle(_T("NTDLL"));
-    if (hNtDll == NULL) {
+    if (DllNtDll.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllNtDll.hDll = GetModuleHandle(_T("NTDLL"));
+    if (DllNtDll.hDll == NULL) {
         return FALSE;
     }
-    DllNtDll.pNtQueryInformationProcess = (PNT_QUERY_INFORMATION_PROCESS)GetProcAddress(hNtDll, "NtQueryInformationProcess");
+    DllNtDll.pNtQueryInformationProcess = (PNT_QUERY_INFORMATION_PROCESS)GetProcAddress(DllNtDll.hDll, "NtQueryInformationProcess");
     return TRUE;
 }
 
@@ -68,35 +71,39 @@ YORI_KERNEL32_FUNCTIONS DllKernel32;
 BOOL
 YoriLibLoadKernel32Functions()
 {
-    HANDLE hKernel;
-    hKernel = GetModuleHandle(_T("KERNEL32"));
-    if (hKernel == NULL) {
+    if (DllKernel32.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllKernel32.hDll = GetModuleHandle(_T("KERNEL32"));
+    if (DllKernel32.hDll == NULL) {
         return FALSE;
     }
-    DllKernel32.pAddConsoleAliasW = (PADD_CONSOLE_ALIASW)GetProcAddress(hKernel, "AddConsoleAliasW");
-    DllKernel32.pAssignProcessToJobObject = (PASSIGN_PROCESS_TO_JOB_OBJECT)GetProcAddress(hKernel, "AssignProcessToJobObject");
-    DllKernel32.pCreateHardLinkW = (PCREATE_HARD_LINKW)GetProcAddress(hKernel, "CreateHardLinkW");
-    DllKernel32.pCreateJobObjectW = (PCREATE_JOB_OBJECTW)GetProcAddress(hKernel, "CreateJobObjectW");
-    DllKernel32.pCreateSymbolicLinkW = (PCREATE_SYMBOLIC_LINKW)GetProcAddress(hKernel, "CreateSymbolicLinkW");
-    DllKernel32.pFindFirstStreamW = (PFIND_FIRST_STREAMW)GetProcAddress(hKernel, "FindFirstStreamW");
-    DllKernel32.pFindNextStreamW = (PFIND_NEXT_STREAMW)GetProcAddress(hKernel, "FindNextStreamW");
-    DllKernel32.pFreeEnvironmentStringsW = (PFREE_ENVIRONMENT_STRINGSW)GetProcAddress(hKernel, "FreeEnvironmentStringsW");
-    DllKernel32.pGetCompressedFileSizeW = (PGET_COMPRESSED_FILE_SIZEW)GetProcAddress(hKernel, "GetCompressedFileSizeW");
-    DllKernel32.pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(hKernel, "GetConsoleAliasesLengthW");
-    DllKernel32.pGetConsoleAliasesW = (PGET_CONSOLE_ALIASESW)GetProcAddress(hKernel, "GetConsoleAliasesW");
-    DllKernel32.pGetConsoleScreenBufferInfoEx = (PGET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "GetConsoleScreenBufferInfoEx");
-    DllKernel32.pGetCurrentConsoleFontEx = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "GetCurrentConsoleFontEx");
-    DllKernel32.pGetDiskFreeSpaceExW = (PGET_DISK_FREE_SPACE_EXW)GetProcAddress(hKernel, "GetDiskFreeSpaceExW");
-    DllKernel32.pGetEnvironmentStrings = (PGET_ENVIRONMENT_STRINGS)GetProcAddress(hKernel, "GetEnvironmentStrings");
-    DllKernel32.pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(hKernel, "GetEnvironmentStringsW");
-    DllKernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(hKernel, "GetFileInformationByHandleEx");
-    DllKernel32.pGetVersionExW = (PGET_VERSION_EXW)GetProcAddress(hKernel, "GetVersionExW");
-    DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(hKernel, "IsWow64Process");
-    DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(hKernel, "RegisterApplicationRestart");
-    DllKernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(hKernel, "SetConsoleScreenBufferInfoEx");
-    DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(hKernel, "SetCurrentConsoleFontEx");
-    DllKernel32.pSetInformationJobObject = (PSET_INFORMATION_JOB_OBJECT)GetProcAddress(hKernel, "SetInformationJobObject");
-    DllKernel32.pWow64DisableWow64FsRedirection = (PWOW64_DISABLE_WOW64_FS_REDIRECTION)GetProcAddress(hKernel, "Wow64DisableWow64FsRedirection");
+
+    DllKernel32.pAddConsoleAliasW = (PADD_CONSOLE_ALIASW)GetProcAddress(DllKernel32.hDll, "AddConsoleAliasW");
+    DllKernel32.pAssignProcessToJobObject = (PASSIGN_PROCESS_TO_JOB_OBJECT)GetProcAddress(DllKernel32.hDll, "AssignProcessToJobObject");
+    DllKernel32.pCreateHardLinkW = (PCREATE_HARD_LINKW)GetProcAddress(DllKernel32.hDll, "CreateHardLinkW");
+    DllKernel32.pCreateJobObjectW = (PCREATE_JOB_OBJECTW)GetProcAddress(DllKernel32.hDll, "CreateJobObjectW");
+    DllKernel32.pCreateSymbolicLinkW = (PCREATE_SYMBOLIC_LINKW)GetProcAddress(DllKernel32.hDll, "CreateSymbolicLinkW");
+    DllKernel32.pFindFirstStreamW = (PFIND_FIRST_STREAMW)GetProcAddress(DllKernel32.hDll, "FindFirstStreamW");
+    DllKernel32.pFindNextStreamW = (PFIND_NEXT_STREAMW)GetProcAddress(DllKernel32.hDll, "FindNextStreamW");
+    DllKernel32.pFreeEnvironmentStringsW = (PFREE_ENVIRONMENT_STRINGSW)GetProcAddress(DllKernel32.hDll, "FreeEnvironmentStringsW");
+    DllKernel32.pGetCompressedFileSizeW = (PGET_COMPRESSED_FILE_SIZEW)GetProcAddress(DllKernel32.hDll, "GetCompressedFileSizeW");
+    DllKernel32.pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(DllKernel32.hDll, "GetConsoleAliasesLengthW");
+    DllKernel32.pGetConsoleAliasesW = (PGET_CONSOLE_ALIASESW)GetProcAddress(DllKernel32.hDll, "GetConsoleAliasesW");
+    DllKernel32.pGetConsoleScreenBufferInfoEx = (PGET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(DllKernel32.hDll, "GetConsoleScreenBufferInfoEx");
+    DllKernel32.pGetCurrentConsoleFontEx = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "GetCurrentConsoleFontEx");
+    DllKernel32.pGetDiskFreeSpaceExW = (PGET_DISK_FREE_SPACE_EXW)GetProcAddress(DllKernel32.hDll, "GetDiskFreeSpaceExW");
+    DllKernel32.pGetEnvironmentStrings = (PGET_ENVIRONMENT_STRINGS)GetProcAddress(DllKernel32.hDll, "GetEnvironmentStrings");
+    DllKernel32.pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(DllKernel32.hDll, "GetEnvironmentStringsW");
+    DllKernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(DllKernel32.hDll, "GetFileInformationByHandleEx");
+    DllKernel32.pGetVersionExW = (PGET_VERSION_EXW)GetProcAddress(DllKernel32.hDll, "GetVersionExW");
+    DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(DllKernel32.hDll, "IsWow64Process");
+    DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(DllKernel32.hDll, "RegisterApplicationRestart");
+    DllKernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(DllKernel32.hDll, "SetConsoleScreenBufferInfoEx");
+    DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "SetCurrentConsoleFontEx");
+    DllKernel32.pSetInformationJobObject = (PSET_INFORMATION_JOB_OBJECT)GetProcAddress(DllKernel32.hDll, "SetInformationJobObject");
+    DllKernel32.pWow64DisableWow64FsRedirection = (PWOW64_DISABLE_WOW64_FS_REDIRECTION)GetProcAddress(DllKernel32.hDll, "Wow64DisableWow64FsRedirection");
 
     return TRUE;
 }

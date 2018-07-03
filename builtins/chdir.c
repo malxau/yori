@@ -86,6 +86,9 @@ YoriCmd_CHDIR(
     DWORD StartArg = 0;
     YORI_STRING Arg;
 
+    YoriLibLoadNtDllFunctions();
+    YoriLibLoadKernel32Functions();
+
     for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;

@@ -202,6 +202,9 @@ YoriCmd_PUSHD(
     YORI_STRING ChdirCmd;
     YORI_STRING Arg;
 
+    YoriLibLoadNtDllFunctions();
+    YoriLibLoadKernel32Functions();
+
     for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
