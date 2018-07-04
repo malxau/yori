@@ -1312,7 +1312,7 @@ YoriCmd_YS(
 
     YsFreeScript(&Script);
 
-    return EXIT_SUCCESS;
+    return YoriCallGetErrorLevel();
 }
 
 // vim:sw=4:ts=4:et:

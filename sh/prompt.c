@@ -134,6 +134,7 @@ YoriShDisplayPrompt()
     YORI_STRING PromptAfterEnvExpansion;
     YORI_STRING DisplayString;
     PYORI_STRING StringToUse;
+    DWORD SavedErrorLevel = g_ErrorLevel;
 
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0);
     if (EnvVarLength > 0) {
@@ -285,6 +286,14 @@ YoriShDisplayPrompt()
             YoriLibFreeStringContents(&PromptVar);
         }
     }
+
+    //
+    //  Restore the error level since the prompt or title may execute
+    //  commands which alter it.
+    //
+
+    g_ErrorLevel = SavedErrorLevel;
+
     return TRUE;
 }
 

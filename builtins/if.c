@@ -150,9 +150,11 @@ YoriCmd_IF(
     YORI_STRING TrueCommand;
     YORI_STRING FalseCommand;
     YORI_STRING Arg;
+    DWORD SavedErrorLevel;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
+    SavedErrorLevel = YoriCallGetErrorLevel();
 
     for (i = 1; i < ArgC; i++) {
 
@@ -262,9 +264,8 @@ YoriCmd_IF(
     }
 
     YoriLibFreeStringContents(&TestCommand);
-
     YoriLibFreeStringContents(&CmdLine);
-    return EXIT_SUCCESS;
+    return SavedErrorLevel;
 }
 
 // vim:sw=4:ts=4:et:
