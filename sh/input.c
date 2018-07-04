@@ -1432,7 +1432,6 @@ YoriShAddCStringToInput(
 }
 
 
-
 /**
  Move the current cursor offset within the buffer to the argument before the
  one that is selected.  This requires parsing the arguments and moving the
@@ -1560,6 +1559,83 @@ YoriShMoveCursorToNextArgument(
     }
 
     YoriShFreeCmdContext(&CmdContext);
+}
+
+/**
+ Delete the current argument from the buffer.
+
+ @param Buffer Pointer to the current input buffer context.
+ */
+VOID
+YoriShDeleteArgument(
+    __in PYORI_INPUT_BUFFER Buffer
+    )
+{
+    YORI_CMD_CONTEXT CmdContext;
+    YORI_CMD_CONTEXT NewCmdContext;
+    DWORD SrcArg;
+    DWORD DestArg;
+    LPTSTR NewString = NULL;
+    DWORD NewStringLen;
+    DWORD BeginCurrentArg;
+    DWORD EndCurrentArg;
+
+    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
+        return;
+    }
+
+    if (CmdContext.ArgC == 0 || CmdContext.CurrentArg >= CmdContext.ArgC) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    memcpy(&NewCmdContext, &CmdContext, sizeof(CmdContext));
+    NewCmdContext.MemoryToFree = YoriLibReferencedMalloc((CmdContext.ArgC - 1) * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    if (NewCmdContext.MemoryToFree == NULL) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    NewCmdContext.ArgC = CmdContext.ArgC - 1;
+    NewCmdContext.ArgV = NewCmdContext.MemoryToFree;
+    NewCmdContext.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(NewCmdContext.ArgV, NewCmdContext.ArgC * sizeof(YORI_STRING));
+
+
+    DestArg = 0;
+    for (SrcArg = 0; SrcArg < CmdContext.ArgC; SrcArg++) {
+        if (SrcArg != CmdContext.CurrentArg) {
+            YoriShCopyArg(&CmdContext, SrcArg, &NewCmdContext, DestArg);
+            DestArg++;
+        }
+    }
+
+    if (CmdContext.CurrentArg > 0) {
+        NewCmdContext.CurrentArg--;
+    }
+
+    NewString = YoriShBuildCmdlineFromCmdContext(&NewCmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+    if (NewString != NULL) {
+        NewStringLen = _tcslen(NewString);
+        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewStringLen)) {
+            return;
+        }
+        YoriLibYPrintf(&Buffer->String, _T("%s"), NewString);
+        Buffer->CurrentOffset = EndCurrentArg + 1;
+        if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
+            Buffer->CurrentOffset = Buffer->String.LengthInChars;
+        }
+        YoriLibDereference(NewString);
+
+        Buffer->SuggestionDirty = TRUE;
+        YoriLibFreeStringContents(&Buffer->SuggestionString);
+        YoriShClearTabCompletionMatches(Buffer);
+
+        Buffer->DirtyBeginOffset = 0;
+        Buffer->DirtyLength = Buffer->String.LengthInChars;
+    }
+
+    YoriShFreeCmdContext(&CmdContext);
+    YoriShFreeCmdContext(&NewCmdContext);
 }
 
 /**
@@ -1817,6 +1893,10 @@ YoriShProcessKeyDown(
             }
         } else if (KeyCode == VK_TAB) {
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
+        } else if (KeyCode == '\b') {
+            if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
+                YoriShDeleteArgument(Buffer);
+            }
         }
     } else if (CtrlMask == (RIGHT_CTRL_PRESSED | SHIFT_PRESSED) ||
                CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||
