@@ -342,11 +342,21 @@ VOID
 YoriShPostCommand()
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE ConsoleHandle;
 
-    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("GetConsoleScreenBufferInfo failed with %i\n"), GetLastError());
     }
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m"), 27);
+    if (ScreenInfo.srWindow.Left > 0) {
+        SHORT CharsToMoveLeft;
+        CharsToMoveLeft = ScreenInfo.srWindow.Left;
+        ScreenInfo.srWindow.Left = 0;
+        ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - CharsToMoveLeft);
+        SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
+    }
     if (ScreenInfo.dwCursorPosition.X != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
     }
