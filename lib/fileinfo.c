@@ -364,6 +364,33 @@ YoriLibCapturePeHeaders (
 }
 
 /**
+ Returns TRUE if the executable is a GUI executable.  If it's not a PE, or
+ any error occurs, or it's any other subsystem, it's assumed to not be 
+ a GUI executable.
+
+ @param FullPath Path to the executable file to check for whether it's
+        GUI.
+
+ @return TRUE if the executable is GUI, FALSE if it is not or indeterminate.
+ */
+BOOL
+YoriLibIsExecutableGui(
+    __in PYORI_STRING FullPath
+    )
+{
+    YORILIB_PE_HEADERS PeHeaders;
+
+    ASSERT(YoriLibIsStringNullTerminated(FullPath));
+
+    if (YoriLibCapturePeHeaders(FullPath, &PeHeaders)) {
+        if (PeHeaders.OptionalHeader.Subsystem == IMAGE_SUBSYSTEM_WINDOWS_GUI) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/**
  Collect information from a directory enumerate and full file name relating
  to the executable's architecture.
 
@@ -649,15 +676,26 @@ YoriLibCollectEffectivePermissions (
 
     ASSERT(YoriLibIsStringNullTerminated(FullPath));
 
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pGetFileSecurityW == NULL ||
+        DllAdvApi32.pImpersonateSelf == NULL ||
+        DllAdvApi32.pOpenThreadToken == NULL ||
+        DllAdvApi32.pAccessCheck == NULL ||
+        DllAdvApi32.pRevertToSelf == NULL) {
+
+        return FALSE;
+    }
+
     Entry->EffectivePermissions = 0;
 
     SecurityDescriptor = LocalSecurityDescriptor;
 
-    if (!GetFileSecurity(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(LocalSecurityDescriptor), &dwSdRequired)) {
+    if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(LocalSecurityDescriptor), &dwSdRequired)) {
         if (dwSdRequired != 0) {
             SecurityDescriptor = YoriLibMalloc(dwSdRequired);
     
-            if (!GetFileSecurity(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, dwSdRequired, &dwSdRequired)) {
+            if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, dwSdRequired, &dwSdRequired)) {
                 goto Exit;
             }
         } else {
@@ -665,20 +703,20 @@ YoriLibCollectEffectivePermissions (
         }
     }
 
-    if (!ImpersonateSelf(SecurityIdentification)) {
+    if (!DllAdvApi32.pImpersonateSelf(SecurityIdentification)) {
         goto Exit;
     }
-    if (!OpenThreadToken(GetCurrentThread(), TOKEN_READ, TRUE, &TokenHandle)) {
-        RevertToSelf();
+    if (!DllAdvApi32.pOpenThreadToken(GetCurrentThread(), TOKEN_READ, TRUE, &TokenHandle)) {
+        DllAdvApi32.pRevertToSelf();
         goto Exit;
     }
 
-    AccessCheck((PSECURITY_DESCRIPTOR)SecurityDescriptor, TokenHandle, MAXIMUM_ALLOWED, &Mapping, &Privilege, &PrivilegeLength, &Entry->EffectivePermissions, &AccessGranted);
+    DllAdvApi32.pAccessCheck((PSECURITY_DESCRIPTOR)SecurityDescriptor, TokenHandle, MAXIMUM_ALLOWED, &Mapping, &Privilege, &PrivilegeLength, &Entry->EffectivePermissions, &AccessGranted);
 
 Exit:
     if (TokenHandle != NULL) {
         CloseHandle(TokenHandle);
-        RevertToSelf();
+        DllAdvApi32.pRevertToSelf();
     }
     if (SecurityDescriptor != NULL && SecurityDescriptor != LocalSecurityDescriptor) {
         YoriLibFree(SecurityDescriptor);
@@ -1168,12 +1206,21 @@ YoriLibCollectOwner (
     UNREFERENCED_PARAMETER(FindData);
     ASSERT(YoriLibIsStringNullTerminated(FullPath));
 
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pGetFileSecurityW == NULL ||
+        DllAdvApi32.pGetSecurityDescriptorOwner == NULL ||
+        DllAdvApi32.pLookupAccountSidW == NULL) {
+
+        return FALSE;
+    }
+
     UserName[0] = '\0';
     Entry->Owner[0] = '\0';
 
-    if (GetFileSecurity(FullPath->StartOfString, OWNER_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(SecurityDescriptor), &dwSdRequired)) {
-        if (GetSecurityDescriptorOwner((PSECURITY_DESCRIPTOR)SecurityDescriptor, &pOwnerSid, &OwnerDefaulted)) {
-            if (LookupAccountSid(NULL, pOwnerSid, UserName, &NameLength, DomainName, &DomainLength, &eUse)) {
+    if (DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(SecurityDescriptor), &dwSdRequired)) {
+        if (DllAdvApi32.pGetSecurityDescriptorOwner((PSECURITY_DESCRIPTOR)SecurityDescriptor, &pOwnerSid, &OwnerDefaulted)) {
+            if (DllAdvApi32.pLookupAccountSidW(NULL, pOwnerSid, UserName, &NameLength, DomainName, &DomainLength, &eUse)) {
                 UserName[sizeof(Entry->Owner) - 1] = '\0';
                 memcpy(Entry->Owner, UserName, sizeof(Entry->Owner));
             }

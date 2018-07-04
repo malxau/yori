@@ -734,6 +734,11 @@ YoriLibDoesFileMatchExpression (
 // *** FILEINFO.C ***
 
 BOOL
+YoriLibIsExecutableGui(
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
 YoriLibCollectAccessTime (
     __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,

@@ -23,5 +23,5 @@ compile: $(OBJS)
 
 sdir.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(ENTRY) $(OBJS) $(LIBS) $(CRTLIB) advapi32.lib ..\lib\yorilib.lib -version:$(SDIR_VER_MAJOR).$(SDIR_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(ENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SDIR_VER_MAJOR).$(SDIR_VER_MINOR) $(LINKPDB) -out:$@
 

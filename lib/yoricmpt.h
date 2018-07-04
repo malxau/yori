@@ -1863,14 +1863,170 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
 extern YORI_KERNEL32_FUNCTIONS DllKernel32;
 
 /**
- A prototype for the SetNamedSecurityInfoW API.
+ A prototype for the AccessCheck function.
+ */
+typedef
+BOOL WINAPI
+ACCESS_CHECK(PSECURITY_DESCRIPTOR, HANDLE, DWORD, PGENERIC_MAPPING, PPRIVILEGE_SET, LPDWORD, LPDWORD, LPBOOL);
+
+/**
+ A prototype for a pointer to the AccessCheck function.
+ */
+typedef ACCESS_CHECK *PACCESS_CHECK;
+
+/**
+ A prototype for the AdjustTokenPrivileges function.
+ */
+typedef
+BOOL WINAPI
+ADJUST_TOKEN_PRIVILEGES(HANDLE, BOOL, PTOKEN_PRIVILEGES, DWORD, PTOKEN_PRIVILEGES, PDWORD);
+
+/**
+ A prototype for a pointer to the AdjustTokenPrivileges function.
+ */
+typedef ADJUST_TOKEN_PRIVILEGES *PADJUST_TOKEN_PRIVILEGES;
+
+/**
+ Prototype for the CheckTokenMembership function.
+ */
+typedef
+BOOL WINAPI
+CHECK_TOKEN_MEMBERSHIP(HANDLE, PSID, PBOOL);
+
+/**
+ Prototype for a pointer to the CheckTokenMembership function.
+ */
+typedef CHECK_TOKEN_MEMBERSHIP *PCHECK_TOKEN_MEMBERSHIP;
+
+/**
+ A prototype for the GetFileSecurityW function.
+ */
+typedef
+BOOL WINAPI
+GET_FILE_SECURITYW(LPCWSTR, SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, DWORD, LPDWORD);
+
+/**
+ Prototype for a pointer to the GetFileSecurityW function.
+ */
+typedef GET_FILE_SECURITYW *PGET_FILE_SECURITYW;
+
+/**
+ A prototype for the GetSecurityDescriptorOwner function.
+ */
+typedef
+BOOL WINAPI
+GET_SECURITY_DESCRIPTOR_OWNER(PSECURITY_DESCRIPTOR, PSID, LPBOOL);
+
+/**
+ Prototype for a pointer to the GetSecurityDescriptorOwner function.
+ */
+typedef GET_SECURITY_DESCRIPTOR_OWNER *PGET_SECURITY_DESCRIPTOR_OWNER;
+
+/**
+ A prototype for the ImpersonateSelf function.
+ */
+typedef
+BOOL WINAPI
+IMPERSONATE_SELF(SECURITY_IMPERSONATION_LEVEL);
+
+/**
+ A prototype for a pointer to the ImpersonateSelf function.
+ */
+typedef IMPERSONATE_SELF *PIMPERSONATE_SELF;
+
+/**
+ A prototype for the InitializeAcl function.
+ */
+typedef
+BOOL WINAPI
+INITIALIZE_ACL(PACL, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the InitializeAcl function.
+ */
+typedef INITIALIZE_ACL *PINITIALIZE_ACL;
+
+/**
+ A prototype for the LookupAccountNameW function.
+ */
+typedef
+BOOL WINAPI
+LOOKUP_ACCOUNT_NAMEW(LPCWSTR, LPCWSTR, PSID, LPDWORD, LPWSTR, LPDWORD, PSID_NAME_USE);
+
+/**
+ A prototype for a pointer to the LookupAccountNameW function.
+ */
+typedef LOOKUP_ACCOUNT_NAMEW *PLOOKUP_ACCOUNT_NAMEW;
+
+/**
+ A prototype for the LookupAccountSidW function.
+ */
+typedef
+BOOL WINAPI
+LOOKUP_ACCOUNT_SIDW(LPCWSTR, PSID, LPWSTR, LPDWORD, LPWSTR, LPDWORD, PSID_NAME_USE);
+
+/**
+ A prototype for a pointer to the LookupAccountSidW function.
+ */
+typedef LOOKUP_ACCOUNT_SIDW *PLOOKUP_ACCOUNT_SIDW;
+
+/**
+ A prototype for the LookupPrivilegeValueW function.
+ */
+typedef
+BOOL WINAPI
+LOOKUP_PRIVILEGE_VALUEW(LPCWSTR, LPCWSTR, PLUID);
+
+/**
+ A prototype for a pointer to the LookupPrivilegeValueW function.
+ */
+typedef LOOKUP_PRIVILEGE_VALUEW *PLOOKUP_PRIVILEGE_VALUEW;
+
+/**
+ A prototype for the OpenProcessToken function.
+ */
+typedef
+BOOL WINAPI
+OPEN_PROCESS_TOKEN(HANDLE, DWORD, PHANDLE);
+
+/**
+ A prototype for a pointer to the OpenProcessToken function.
+ */
+typedef OPEN_PROCESS_TOKEN *POPEN_PROCESS_TOKEN;
+
+/**
+ A prototype for the OpenThreadToken function.
+ */
+typedef
+BOOL WINAPI
+OPEN_THREAD_TOKEN(HANDLE, DWORD, BOOL, PHANDLE);
+
+/**
+ A prototype for a pointer to the OpenThreadToken function.
+ */
+typedef OPEN_THREAD_TOKEN *POPEN_THREAD_TOKEN;
+
+/**
+ A prototype for the RevertToSelf function.
+ */
+typedef
+BOOL WINAPI
+REVERT_TO_SELF();
+
+/**
+ A prototype for a pointer to the RevertToSelf function.
+ */
+typedef REVERT_TO_SELF *PREVERT_TO_SELF;
+
+/**
+ A prototype for the SetNamedSecurityInfoW function.
  */
 typedef
 DWORD WINAPI
 SET_NAMED_SECURITY_INFOW(LPWSTR, DWORD, SECURITY_INFORMATION, PSID, PSID, PACL, PACL);
 
 /**
- A prototype for a pointer to the SetNamedSecurityInfoW API.
+ A prototype for a pointer to the SetNamedSecurityInfoW function.
  */
 typedef SET_NAMED_SECURITY_INFOW *PSET_NAMED_SECURITY_INFOW;
 
@@ -1883,6 +2039,71 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to AccessCheck.
+     */
+    PACCESS_CHECK pAccessCheck;
+
+    /**
+     If it's available on the current system, a pointer to AdjustTokenPrivileges.
+     */
+    PADJUST_TOKEN_PRIVILEGES pAdjustTokenPrivileges;
+
+    /**
+     If it's available on the current system, a pointer to CheckTokenMembership.
+     */
+    PCHECK_TOKEN_MEMBERSHIP pCheckTokenMembership;
+
+    /**
+     If it's available on the current system, a pointer to GetFileSecurityW.
+     */
+    PGET_FILE_SECURITYW pGetFileSecurityW;
+
+    /**
+     If it's available on the current system, a pointer to GetSecurityDescriptorOwner.
+     */
+    PGET_SECURITY_DESCRIPTOR_OWNER pGetSecurityDescriptorOwner;
+
+    /**
+     If it's available on the current system, a pointer to ImpersonateSelf.
+     */
+    PIMPERSONATE_SELF pImpersonateSelf;
+
+    /**
+     If it's available on the current system, a pointer to InitializeAcl.
+     */
+    PINITIALIZE_ACL pInitializeAcl;
+
+    /**
+     If it's available on the current system, a pointer to LookupAccountNameW.
+     */
+    PLOOKUP_ACCOUNT_NAMEW pLookupAccountNameW;
+
+    /**
+     If it's available on the current system, a pointer to LookupAccountSidW.
+     */
+    PLOOKUP_ACCOUNT_SIDW pLookupAccountSidW;
+
+    /**
+     If it's available on the current system, a pointer to LookupPrivilegeValueW.
+     */
+    PLOOKUP_PRIVILEGE_VALUEW pLookupPrivilegeValueW;
+
+    /**
+     If it's available on the current system, a pointer to OpenProcessToken.
+     */
+    POPEN_PROCESS_TOKEN pOpenProcessToken;
+
+    /**
+     If it's available on the current system, a pointer to OpenThreadToken.
+     */
+    POPEN_THREAD_TOKEN pOpenThreadToken;
+
+    /**
+     If it's available on the current system, a pointer to RevertToSelf.
+     */
+    PREVERT_TO_SELF pRevertToSelf;
 
     /**
      If it's available on the current system, a pointer to SetNamedSecurityInfoW.

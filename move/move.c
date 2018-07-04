@@ -162,15 +162,19 @@ MoveFileFoundCallback(
 
     if (OsMajor >= 5) {
         ACL EmptyAcl = {0};
-        InitializeAcl(&EmptyAcl, sizeof(EmptyAcl), ACL_REVISION);
 
         //
         //  This function should exist on NT4+
         //
 
-        ASSERT(DllAdvApi32.pSetNamedSecurityInfoW != NULL);
+        ASSERT(DllAdvApi32.pSetNamedSecurityInfoW != NULL &&
+               DllAdvApi32.pInitializeAcl != NULL);
 
-        if (DllAdvApi32.pSetNamedSecurityInfoW != NULL) {
+
+        if (DllAdvApi32.pInitializeAcl != NULL &&
+            DllAdvApi32.pSetNamedSecurityInfoW != NULL) {
+
+            DllAdvApi32.pInitializeAcl(&EmptyAcl, sizeof(EmptyAcl), ACL_REVISION);
             DllAdvApi32.pSetNamedSecurityInfoW(FullDest.StartOfString, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, &EmptyAcl, NULL);
         }
     }

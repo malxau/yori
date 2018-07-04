@@ -21,5 +21,5 @@ compile: $(OBJS)
 
 grpcmp.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib advapi32.lib -version:$(GRPCMP_VER_MAJOR).$(GRPCMP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(GRPCMP_VER_MAJOR).$(GRPCMP_VER_MINOR) $(LINKPDB) -out:$@
 

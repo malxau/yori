@@ -21,5 +21,5 @@ compile: $(OBJS)
 
 ymove.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) advapi32.lib ..\lib\yorilib.lib -version:$(MOVE_VER_MAJOR).$(MOVE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(MOVE_VER_MAJOR).$(MOVE_VER_MINOR) $(LINKPDB) -out:$@
 

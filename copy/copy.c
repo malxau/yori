@@ -376,18 +376,26 @@ CopyEnableSymlinkPrivilege()
     LUID SymlinkLuid;
     HANDLE TokenHandle;
 
-    if (!LookupPrivilegeValue(NULL, SE_CREATE_SYMBOLIC_LINK_NAME, &SymlinkLuid)) {
+    YoriLibLoadAdvApi32Functions();
+    if (DllAdvApi32.pLookupPrivilegeValueW == NULL ||
+        DllAdvApi32.pOpenProcessToken == NULL ||
+        DllAdvApi32.pAdjustTokenPrivileges == NULL) {
+
         return FALSE;
     }
 
-    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &TokenHandle)) {
+    if (!DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_CREATE_SYMBOLIC_LINK_NAME, &SymlinkLuid)) {
+        return FALSE;
+    }
+
+    if (!DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &TokenHandle)) {
         return FALSE;
     }
 
     TokenPrivileges.PrivilegeCount = 1;
     TokenPrivileges.Privileges[0].Luid = SymlinkLuid;
     TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    if (!AdjustTokenPrivileges(TokenHandle, FALSE, &TokenPrivileges, 0, NULL, 0)) {
+    if (!DllAdvApi32.pAdjustTokenPrivileges(TokenHandle, FALSE, &TokenPrivileges, 0, NULL, 0)) {
         CloseHandle(TokenHandle);
         return FALSE;
     }

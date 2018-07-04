@@ -21,5 +21,5 @@ compile: $(OBJS)
 
 finfo.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) advapi32.lib ..\lib\yorilib.lib -version:$(FINFO_VER_MAJOR).$(FINFO_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(FINFO_VER_MAJOR).$(FINFO_VER_MINOR) $(LINKPDB) -out:$@
 

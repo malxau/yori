@@ -156,23 +156,28 @@ SdirAppInitialize()
         DllKernel32.pWow64DisableWow64FsRedirection(&DontCare);
     }
 
+    YoriLibLoadAdvApi32Functions();
+
     //
     //  Attempt to enable backup privilege.  This allows us to enumerate and recurse
     //  through objects which normally ACLs would prevent.
     //
 
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &ProcessToken)) {
+    if (DllAdvApi32.pOpenProcessToken != NULL &&
+        DllAdvApi32.pLookupPrivilegeValueW != NULL &&
+        DllAdvApi32.pAdjustTokenPrivileges != NULL &&
+        DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &ProcessToken)) {
         struct {
             TOKEN_PRIVILEGES TokenPrivileges;
             LUID_AND_ATTRIBUTES BackupPrivilege;
         } PrivilegesToChange;
 
-        LookupPrivilegeValue(NULL, SE_BACKUP_NAME, &PrivilegesToChange.TokenPrivileges.Privileges[0].Luid);
+        DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_BACKUP_NAME, &PrivilegesToChange.TokenPrivileges.Privileges[0].Luid);
 
         PrivilegesToChange.TokenPrivileges.PrivilegeCount = 1;
         PrivilegesToChange.TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-        AdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL);
+        DllAdvApi32.pAdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL);
         CloseHandle(ProcessToken);
     }
 

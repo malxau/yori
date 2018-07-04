@@ -955,8 +955,10 @@ YoriShWaitForProcessToTerminate(
                     LoseFocusCount++;
                     Delay = 30;
                 } else {
-                    ExecContext->TaskCompletionDisplayed = TRUE;
-                    YoriShSetWindowState(YORI_SH_TASK_IN_PROGRESS);
+                    if (!YoriLibIsExecutableGui(&ExecContext->CmdToExec.ArgV[0])) {
+                        ExecContext->TaskCompletionDisplayed = TRUE;
+                        YoriShSetWindowState(YORI_SH_TASK_IN_PROGRESS);
+                    }
                 }
             } else {
                 LoseFocusCount = 0;

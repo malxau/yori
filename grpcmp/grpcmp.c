@@ -58,16 +58,6 @@ GrpcmpHelp()
 }
 
 /**
- Prototype for the CheckTokenMembership function.
- */
-typedef BOOL WINAPI CHECK_TOKEN_MEMBERSHIP_FN(HANDLE, PSID, PBOOL);
-
-/**
- Prototype for a pointer to the CheckTokenMembership function.
- */
-typedef CHECK_TOKEN_MEMBERSHIP_FN *PCHECK_TOKEN_MEMBERSHIP_FN;
-
-/**
  The main entrypoint for the grpcmp cmdlet.
 
  @param ArgC The number of arguments.
@@ -95,8 +85,6 @@ ymain(
     DWORD i;
     SID_NAME_USE Use;
     BOOL IsMember = FALSE;
-    HANDLE hAdvApi = GetModuleHandle(_T("ADVAPI32"));
-    PCHECK_TOKEN_MEMBERSHIP_FN CheckTokenMembershipFn;
     YORI_STRING Arg;
 
     StartArg = 0;
@@ -132,10 +120,19 @@ ymain(
         return EXIT_FAILURE;
     }
 
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pLookupAccountNameW == NULL ||
+        DllAdvApi32.pCheckTokenMembership == NULL) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("grpcmp: OS functionality not available\n"));
+        return EXIT_FAILURE;
+    }
+
     SidSize = sizeof(Sid);
     DomainNameSize = sizeof(Domain);
 
-    if (!LookupAccountName(NULL, ArgV[StartArg].StartOfString, &Sid, &SidSize, Domain, &DomainNameSize, &Use)) {
+    if (!DllAdvApi32.pLookupAccountNameW(NULL, ArgV[StartArg].StartOfString, &Sid, &SidSize, Domain, &DomainNameSize, &Use)) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("grpcmp: could not find group: %s"), ErrText);
@@ -148,13 +145,7 @@ ymain(
         return EXIT_FAILURE;
     }
 
-    CheckTokenMembershipFn = (PCHECK_TOKEN_MEMBERSHIP_FN)GetProcAddress(hAdvApi, "CheckTokenMembership");
-    if (CheckTokenMembershipFn == NULL) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("grpcmp: OS functionality not available\n"));
-        return EXIT_FAILURE;
-    }
-
-    if (CheckTokenMembershipFn(NULL, &Sid.Sid, &IsMember)) {
+    if (DllAdvApi32.pCheckTokenMembership(NULL, &Sid.Sid, &IsMember)) {
         if (IsMember) {
             return EXIT_SUCCESS;
         }
