@@ -39,6 +39,21 @@
 #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
 #endif
 
+#ifndef ENABLE_QUICK_EDIT_MODE
+/**
+ Mouse selection capability owned by the console.
+ */
+#define ENABLE_QUICK_EDIT_MODE 0x0040
+#endif
+
+#ifndef ENABLE_EXTENDED_FLAGS
+/**
+ Allow SetConsoleMode to alter QuickEdit behavior.
+ */
+#define ENABLE_EXTENDED_FLAGS 0x0080
+#endif
+
+
 #ifndef DWORD_PTR
 #ifndef _WIN64
 

@@ -887,6 +887,76 @@ YoriShEnsureStringHasEnoughCharacters(
 }
 
 /**
+ When YORIQUICKEDIT is set, disable the console's QuickEdit capabilities and
+ allow Yori to process mouse input so it can use its internal QuickEdit
+ support.
+
+ @param Buffer Pointer to the input buffer which indicates whether this
+        behavior is requested.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShConfigureMouseForPrompt(
+    __in PYORI_INPUT_BUFFER Buffer
+    )
+{
+    HANDLE ConsoleHandle;
+    DWORD ConsoleMode;
+    if (!Buffer->YoriQuickEdit) {
+        return TRUE;
+    }
+
+    ConsoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+    if (!GetConsoleMode(ConsoleHandle, &ConsoleMode)) {
+        return FALSE;
+    }
+
+    //
+    //  Set the same input settings as the base settings, but clear the
+    //  extended settings.  We have no way to query these (sigh) but
+    //  this has the effect of turning off console's quickedit.
+    //
+
+    SetConsoleMode(ConsoleHandle, ConsoleMode | ENABLE_EXTENDED_FLAGS);
+    return TRUE;
+}
+
+/**
+ When YORIQUICKEDIT is set, enable the console's QuickEdit capabilities to
+ allow QuickEdit to be used with external programs.
+
+ @param Buffer Pointer to the input buffer which indicates whether this
+        behavior is requested.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShConfigureMouseForPrograms(
+    __in PYORI_INPUT_BUFFER Buffer
+    )
+{
+    HANDLE ConsoleHandle;
+    DWORD ConsoleMode;
+    if (!Buffer->YoriQuickEdit) {
+        return TRUE;
+    }
+
+    ConsoleHandle = GetStdHandle(STD_INPUT_HANDLE);
+    if (!GetConsoleMode(ConsoleHandle, &ConsoleMode)) {
+        return FALSE;
+    }
+
+    //
+    //  Set the same input settings as the base settings, but add in console
+    //  QuickEdit.
+    //
+
+    SetConsoleMode(ConsoleHandle, ConsoleMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS);
+    return TRUE;
+}
+
+/**
  NULL terminate the input buffer, and display a carriage return, in preparation
  for parsing and executing the input.
 
@@ -911,6 +981,7 @@ YoriShTerminateInput(
     }
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
+    YoriShConfigureMouseForPrograms(Buffer);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 }
 
@@ -1571,7 +1642,7 @@ YoriShHotkey(
         to values found in the environment.
  */
 VOID
-YoriShConfigureSuggestionSettings(
+YoriShConfigureInputSettings(
     __in PYORI_INPUT_BUFFER Buffer
     )
 {
@@ -1579,6 +1650,7 @@ YoriShConfigureSuggestionSettings(
     YORI_STRING EnvVar;
     LONGLONG llTemp;
     DWORD CharsConsumed;
+    TCHAR EnvVarBuffer[10];
 
     //
     //  Default to suggesting in 400ms after seeing 2 chars in an arg.
@@ -1586,20 +1658,28 @@ YoriShConfigureSuggestionSettings(
 
     Buffer->DelayBeforeSuggesting = 400;
     Buffer->MinimumCharsInArgBeforeSuggesting = 2;
+    Buffer->YoriQuickEdit = FALSE;
 
     //
     //  Check the environment to see if the user wants to override the
     //  suggestion delay.  Note a value of zero disables the feature.
     //
 
+    YoriLibInitEmptyString(&EnvVar);
+    EnvVar.StartOfString = EnvVarBuffer;
+    EnvVar.LengthAllocated = sizeof(EnvVarBuffer)/sizeof(EnvVarBuffer[0]);
+
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), NULL, 0);
     if (EnvVarLength > 0) {
-        if (YoriLibAllocateString(&EnvVar, EnvVarLength)) {
+        if (EnvVarLength > EnvVar.LengthAllocated) {
+            YoriLibFreeStringContents(&EnvVar);
+            YoriLibAllocateString(&EnvVar, EnvVarLength);
+        }
+        if (EnvVarLength <= EnvVar.LengthAllocated) {
             EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), EnvVar.StartOfString, EnvVar.LengthAllocated);
             if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                 Buffer->DelayBeforeSuggesting = (ULONG)llTemp;
             }
-            YoriLibFreeStringContents(&EnvVar);
         }
     }
 
@@ -1610,14 +1690,41 @@ YoriShConfigureSuggestionSettings(
 
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), NULL, 0);
     if (EnvVarLength > 0) {
-        if (YoriLibAllocateString(&EnvVar, EnvVarLength)) {
+        if (EnvVarLength > EnvVar.LengthAllocated) {
+            YoriLibFreeStringContents(&EnvVar);
+            YoriLibAllocateString(&EnvVar, EnvVarLength);
+        }
+        if (EnvVarLength <= EnvVar.LengthAllocated) {
             EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), EnvVar.StartOfString, EnvVar.LengthAllocated);
             if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                 Buffer->MinimumCharsInArgBeforeSuggesting = (ULONG)llTemp;
             }
-            YoriLibFreeStringContents(&EnvVar);
         }
     }
+
+    //
+    //  Check the environment to see if the user wants to use Yori's mouse
+    //  input support at the prompt and console QuickEdit when running
+    //  applications.
+    //
+
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), NULL, 0);
+    if (EnvVarLength > 0) {
+        if (EnvVarLength > EnvVar.LengthAllocated) {
+            YoriLibFreeStringContents(&EnvVar);
+            YoriLibAllocateString(&EnvVar, EnvVarLength);
+        }
+        if (EnvVarLength <= EnvVar.LengthAllocated) {
+            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), EnvVar.StartOfString, EnvVar.LengthAllocated);
+            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                if (llTemp == 1) {
+                    Buffer->YoriQuickEdit = TRUE;
+                }
+            }
+        }
+    }
+
+    YoriLibFreeStringContents(&EnvVar);
 }
 
 /**
@@ -2385,7 +2492,8 @@ YoriShGetExpression(
         return FALSE;
     }
 
-    YoriShConfigureSuggestionSettings(&Buffer);
+    YoriShConfigureInputSettings(&Buffer);
+    YoriShConfigureMouseForPrompt(&Buffer);
 
     while (TRUE) {
 
@@ -2544,6 +2652,7 @@ YoriShGetExpression(
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error reading from console %i handle %08x\n"), err, GetStdHandle(STD_INPUT_HANDLE));
 
+    YoriShTerminateInput(&Buffer);
     YoriLibFreeStringContents(&Buffer.String);
     return FALSE;
 }

@@ -577,6 +577,12 @@ typedef struct _YORI_INPUT_BUFFER {
     DWORD MinimumCharsInArgBeforeSuggesting;
 
     /**
+     Set to TRUE to disable the console's quickedit before inputting
+     commands and enable it before executing them.
+     */
+    BOOL YoriQuickEdit;
+
+    /**
      Extra information specific to tab completion processing.
      */
     YORI_TAB_COMPLETE_CONTEXT TabContext;
