@@ -245,6 +245,13 @@ typedef struct _YORI_SINGLE_EXEC_CONTEXT {
      */
     BOOLEAN TaskCompletionDisplayed;
 
+    /**
+     Set to TRUE to indicate the process should not attempt to display task
+     completion because it is believed to not be an active background
+     process.
+     */
+    BOOLEAN SuppressTaskCompletion;
+
 } YORI_SINGLE_EXEC_CONTEXT, *PYORI_SINGLE_EXEC_CONTEXT;
 
 /**

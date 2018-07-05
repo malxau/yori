@@ -932,7 +932,6 @@ YoriShWaitForProcessToTerminate(
                            !InputRecords[Count].Event.FocusEvent.bSetFocus) {
 
                     LoseFocusFoundThisPass = TRUE;
-
                 }
             }
 
@@ -955,7 +954,10 @@ YoriShWaitForProcessToTerminate(
                     LoseFocusCount++;
                     Delay = 30;
                 } else {
-                    if (!YoriLibIsExecutableGui(&ExecContext->CmdToExec.ArgV[0])) {
+                    if (!ExecContext->SuppressTaskCompletion &&
+                        !ExecContext->TaskCompletionDisplayed &&
+                        !YoriLibIsExecutableGui(&ExecContext->CmdToExec.ArgV[0])) {
+
                         ExecContext->TaskCompletionDisplayed = TRUE;
                         YoriShSetWindowState(YORI_SH_TASK_IN_PROGRESS);
                     }
@@ -1099,6 +1101,7 @@ YoriShExecuteSingleProgram(
             ExitCode = YoriShBuckPass(ExecContext, 2, _T("cmd.exe"), _T("/c"));
         } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
             LaunchViaShellExecute = TRUE;
+            ExecContext->SuppressTaskCompletion = TRUE;
         }
     }
 

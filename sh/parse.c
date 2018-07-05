@@ -1137,6 +1137,7 @@ YoriShParseCmdContextToExecContext(
     ExecContext->WaitForCompletion = TRUE;
     ExecContext->RunOnSecondConsole = FALSE;
     ExecContext->TaskCompletionDisplayed = FALSE;
+    ExecContext->SuppressTaskCompletion = FALSE;
 
     //
     //  First, count the number of arguments that will be consumed by this
