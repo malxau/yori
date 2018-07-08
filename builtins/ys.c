@@ -36,11 +36,11 @@ CHAR strYsHelpText[] =
         "\n"
         "Execute a script in Yori.\n"
         "\n"
-        "YS <script>\n"
+        "YS [-license] <script>\n"
         "\n"
         "Yori scripts are different to CMD scripts.  Notable changes include:\n"
         " 1. Parameters are referred to as %1%, %2%, ... rather than %1, %2 ...\n"
-        " 2. Call :label will isolate state.  To return, use 'return' rather\n"
+        " 2. Call label will isolate state.  To return, use 'return' rather\n"
         "    than 'exit /b'.\n"
         " 3. The script name and location is in %~SCRIPTNAME%.  Use the path command\n"
         "    to decompose into parts.\n";
@@ -53,7 +53,7 @@ CHAR strCallHelpText[] =
         "\n"
         "Call a subroutine.\n"
         "\n"
-        "CALL <label>\n";
+        "CALL [-license] <label>\n";
 
 /**
  Help text to display to the user.
@@ -63,7 +63,7 @@ CHAR strGotoHelpText[] =
         "\n"
         "Goto a label in a script.\n"
         "\n"
-        "GOTO <label>\n";
+        "GOTO [-license] <label>\n";
 
 /**
  Help text to display to the user.
@@ -73,7 +73,7 @@ CHAR strIncludeHelpText[] =
         "\n"
         "Include a script within another script.\n"
         "\n"
-        "INCLUDE <file>\n";
+        "INCLUDE [-license] <file>\n";
 
 /**
  Help text to display to the user.
@@ -84,7 +84,7 @@ CHAR strReturnHelpText[] =
         "Return from a subroutine. All environment variables are reset\n"
         "except for those listed following the return statement.\n"
         "\n"
-        "RETURN <exitcode> [<variables to preserve>]\n";
+        "RETURN [-license] <exitcode> [<variables to preserve>]\n";
 
 /**
  Help text to display to the user.
@@ -94,7 +94,7 @@ CHAR strShiftHelpText[] =
         "\n"
         "Shift command arguments left by one.\n"
         "\n"
-        "SHIFT\n";
+        "SHIFT [-license]\n";
 
 /**
  Display usage text to the user.
@@ -102,23 +102,17 @@ CHAR strShiftHelpText[] =
 BOOL
 YsHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strYsHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strYsHelpText);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\nHelp for commands available within scripts:\n"));
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strCallHelpText);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strGotoHelpText);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strIncludeHelpText);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strReturnHelpText);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strShiftHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
     return TRUE;
 }
 
@@ -128,17 +122,11 @@ YsHelp()
 BOOL
 CallHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strCallHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strCallHelpText);
     return TRUE;
 }
 
@@ -148,17 +136,11 @@ CallHelp()
 BOOL
 GotoHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strGotoHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strGotoHelpText);
     return TRUE;
 }
 
@@ -168,17 +150,11 @@ GotoHelp()
 BOOL
 IncludeHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strIncludeHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strIncludeHelpText);
     return TRUE;
 }
 
@@ -188,17 +164,11 @@ IncludeHelp()
 BOOL
 ReturnHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strReturnHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strReturnHelpText);
     return TRUE;
 }
 
@@ -208,17 +178,11 @@ ReturnHelp()
 BOOL
 ShiftHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strShiftHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strShiftHelpText);
     return TRUE;
 }
 
@@ -515,6 +479,9 @@ YoriCmd_RETURN(
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 ReturnHelp();
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
+                return EXIT_SUCCESS;
             }
         } else {
             StartArg = i;
@@ -683,6 +650,9 @@ YoriCmd_CALL(
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 CallHelp();
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
+                return EXIT_SUCCESS;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -790,6 +760,9 @@ YoriCmd_GOTO(
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 GotoHelp();
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
+                return EXIT_SUCCESS;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -851,6 +824,9 @@ YoriCmd_INCLUDE(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 IncludeHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {
@@ -938,6 +914,9 @@ YoriCmd_SHIFT(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 ShiftHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         }
@@ -1249,6 +1228,9 @@ YoriCmd_YS(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 YsHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {

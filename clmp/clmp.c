@@ -4,7 +4,7 @@
  * Multi processor support for older versions of Visual C++ that don't implement
  * it natively.
  *
- * Copyright (c) 2015-2017 Malcolm J. Smith
+ * Copyright (c) 2015-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,6 +36,8 @@ CHAR strHelpText[] =
         "\n"
         "Multi process compiler wrapper\n"
         "\n"
+        "CLMP [-license] [-MP[n]] <arguments to CL>\n"
+        "\n"
         "   -MP[n]         Use up to 'n' processes for compilation\n";
 
 /**
@@ -44,18 +46,12 @@ CHAR strHelpText[] =
 BOOL
 ClmpHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2015-2017"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Clmp %i.%i\n"), CLMP_VER_MAJOR, CLMP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
     return TRUE;
 }
 
@@ -262,6 +258,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("?"), 1) == 0) {
                 ClmpHelp();
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2015-2018"));
+                return EXIT_SUCCESS;
             }
 
             //

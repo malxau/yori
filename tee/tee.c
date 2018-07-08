@@ -1,7 +1,7 @@
 /**
  * @file tee/tee.c
  *
- * Yori shell display command line output
+ * Yori shell output to a file and stdout
  *
  * Copyright (c) 2017-2018 Malcolm J. Smith
  *
@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Output the contents of standard input to standard output and a file.\n"
         "\n"
-        "TEE [-a] <file>\n"
+        "TEE [-license] [-a] <file>\n"
         "\n"
         "   -a             Append to the file\n";
 
@@ -45,17 +45,11 @@ CHAR strHelpText[] =
 BOOL
 TeeHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Tee %i.%i\n"), TEE_VER_MAJOR, TEE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -152,6 +146,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 TeeHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 Append = TRUE;

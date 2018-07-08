@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Captures previous output on the console and outputs to standard output.\n"
         "\n"
-        "CSHOT [-s num] [-c num]\n"
+        "CSHOT [-license] [-s num] [-c num]\n"
         "\n"
         "   -c             The number of lines to capture\n"
         "   -s             The number of lines to skip\n";
@@ -46,17 +46,11 @@ CHAR strHelpText[] =
 BOOL
 CshotHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cshot %i.%i\n"), CSHOT_VER_MAJOR, CSHOT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -92,6 +86,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 CshotHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {

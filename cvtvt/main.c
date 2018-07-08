@@ -34,7 +34,7 @@ CHAR strHelpText[] =
         "\n"
         "Converts text with VT100 color escapes into another format.\n"
         "\n"
-        "CVTVT [Options] [-exec binary|filename]\n"
+        "CVTVT [-license] [Options] [-exec binary|filename]\n"
         "\n"
         " Options include:\n"
         "   -exec binary   Run process and pipe its output into cvtvt\n"
@@ -47,23 +47,16 @@ CHAR strHelpText[] =
         " input.\n";
 
 /**
- Display help text and license for this application.
+ Display help text for this application.
  */
 BOOL
 CvtvtUsage()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2015-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cvtvt %i.%i\n"), CVTVT_VER_MAJOR, CVTVT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
-
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -147,6 +140,9 @@ ymain(
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 ArgParsed = TRUE;
                 DisplayUsage = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2015-2018"));
+                return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("exec")) == 0) {
                 ArgParsed = TRUE;
                 ExecMode = TRUE;

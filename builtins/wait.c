@@ -3,7 +3,7 @@
  *
  * Yori shell wait for jobs
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ CHAR strWaitHelpText[] =
         "\n"
         "Wait for one job or all jobs to finish executing.\n"
         "\n"
-        "WAIT [<id>]\n";
+        "WAIT [-license] [<id>]\n";
 
 /**
  Display usage text to the user.
@@ -44,17 +44,11 @@ CHAR strWaitHelpText[] =
 BOOL
 WaitHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Wait %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strWaitHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strWaitHelpText);
     return TRUE;
 }
 
@@ -92,6 +86,9 @@ YoriCmd_WAIT(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 WaitHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {

@@ -36,7 +36,7 @@ CHAR strFgHelpText[] =
         "\n"
         "Display the output of a job in the foreground.\n"
         "\n"
-        "FG <id>\n";
+        "FG [-license] <id>\n";
 
 /**
  Display usage text to the user.
@@ -44,17 +44,11 @@ CHAR strFgHelpText[] =
 BOOL
 FgHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Fg %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strFgHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strFgHelpText);
     return TRUE;
 }
 
@@ -92,6 +86,9 @@ YoriCmd_FG(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 FgHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {

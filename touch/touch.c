@@ -35,7 +35,8 @@ CHAR strHelpText[] =
         "\n"
         "Create files or update timestamps.\n"
         "\n"
-        "TOUCH [-a] [-b] [-c] [-f size] [-s] [-t <date and time>] [-w] <file>...\n"
+        "TOUCH [-license] [-a] [-b] [-c] [-f size] [-s] [-t <date and time>]\n"
+        "      [-w] <file>...\n"
         "\n"
         "   -a             Update last access time\n"
         "   -b             Use basic search criteria for files only\n"
@@ -51,17 +52,11 @@ CHAR strHelpText[] =
 BOOL
 TouchHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Touch %i.%i\n"), TOUCH_VER_MAJOR, TOUCH_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -228,6 +223,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 TouchHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 UpdateLastAccess = TRUE;

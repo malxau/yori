@@ -3,7 +3,7 @@
  *
  * Yori shell environment variable control
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,6 +35,7 @@ CHAR strSetHelpText[] =
         "\n"
         "Displays or updates environment variables.\n"
         "\n"
+        "SET -license\n"
         "SET [<variable prefix to display>]\n"
         "SET [-i | -r] <variable>=<value>\n"
         "SET <variable to delete>=\n"
@@ -48,17 +49,11 @@ CHAR strSetHelpText[] =
 BOOL
 SetHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Set %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strSetHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strSetHelpText);
     return TRUE;
 }
 
@@ -97,6 +92,9 @@ YoriCmd_SET(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 SetHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 if (!RemoveComponent) {

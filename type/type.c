@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Output the contents of one or more files.\n"
         "\n"
-        "TYPE [-b] [-s] [-h <num>] [<file>...]\n"
+        "TYPE [-license] [-b] [-s] [-h <num>] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -h <num>       Display <num> lines from the beginning of each file\n"
@@ -47,17 +47,11 @@ CHAR strHelpText[] =
 BOOL
 TypeHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Type %i.%i\n"), TYPE_VER_MAJOR, TYPE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -222,6 +216,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 TypeHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;

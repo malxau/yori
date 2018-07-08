@@ -1,7 +1,7 @@
 /**
  * @file scut/scut.c
  *
- * SCUT - A command line tool to manipulate shortcuts
+ * A command line tool to manipulate shortcuts
  *
  * Copyright (c) 2004-2018 Malcolm Smith
  *
@@ -379,6 +379,7 @@ CHAR strScutHelpText[] =
         "\n"
         "Create, modify, display or execute Window shortcuts.\n"
         "\n"
+        "SCUT -license\n"
         "SCUT -create|-modify <filename> [-target target] [-args args]\n"
         "     [-desc description] [-hotkey hotkey]\n"
         "     [-iconpath filename [-iconindex index]] [-show showcmd]\n"
@@ -393,17 +394,11 @@ CHAR strScutHelpText[] =
 VOID
 ScutHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2004-2018"), &License);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Scut %i.%i\n"), SCUT_VER_MAJOR, SCUT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strScutHelpText);
-
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strScutHelpText);
 }
 
 /**
@@ -553,6 +548,10 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 ScutHelp();
+                ExitCode = EXIT_SUCCESS;
+                goto Exit;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2004-2018"));
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (i + 1 >= ArgC) {

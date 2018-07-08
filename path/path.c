@@ -1,9 +1,9 @@
 /**
  * @file path/path.c
  *
- * Yori shell display command line output
+ * Yori shell display file name components
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Converts relative paths into decomposable full paths.\n"
         "\n"
-        "PATH [-e] [-f <fmtstring>] <path>\n"
+        "PATH [-license] [-e] [-f <fmtstring>] <path>\n"
         "\n"
         "   -e             Use an escaped long path\n"
         "\n"
@@ -55,17 +55,11 @@ CHAR strHelpText[] =
 BOOL
 PathHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Path %i.%i\n"), PATH_VER_MAJOR, PATH_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -225,6 +219,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 PathHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 UseLongPath = TRUE;

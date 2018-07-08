@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Compare two integer values.\n"
         "\n"
-        "INTCMP [--] <string><operator><string>\n"
+        "INTCMP [-license] [--] <string><operator><string>\n"
         "\n"
         "   --             Treat all further arguments as comparison parameters\n"
         "\n"
@@ -53,17 +53,11 @@ CHAR strHelpText[] =
 BOOL
 IntCmpHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("IntCmp %i.%i\n"), INTCMP_VER_MAJOR, INTCMP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -142,6 +136,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 IntCmpHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 if (i + 1 < ArgC) {

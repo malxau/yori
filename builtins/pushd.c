@@ -36,7 +36,7 @@ CHAR strPushdHelpText[] =
         "\n"
         "Push the current directory onto a stack and change to a new directory.\n"
         "\n"
-        "PUSHD <directory>\n";
+        "PUSHD [-license] <directory>\n";
 
 /**
  Display usage text to the user.
@@ -44,17 +44,11 @@ CHAR strPushdHelpText[] =
 BOOL
 PushdHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PushD %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strPushdHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strPushdHelpText);
     return TRUE;
 }
 
@@ -66,7 +60,7 @@ CHAR strPopdHelpText[] =
         "\n"
         "Pop a previous current directory from the stack.\n"
         "\n"
-        "POPD\n";
+        "POPD [-license]\n";
 
 /**
  Display usage text to the user.
@@ -74,17 +68,11 @@ CHAR strPopdHelpText[] =
 BOOL
 PopdHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PopD %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strPopdHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strPopdHelpText);
     return TRUE;
 }
 
@@ -141,6 +129,9 @@ YoriCmd_POPD(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 PopdHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             }
         }
@@ -214,6 +205,9 @@ YoriCmd_PUSHD(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 PushdHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             }
         } else {

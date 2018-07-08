@@ -3,7 +3,7 @@
  *
  * Yori shell start process via shell tool
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Ask the shell to open a file.\n"
         "\n"
-        "START <file>\n";
+        "START [-license] <file>\n";
 
 /**
  Display usage text to the user.
@@ -43,17 +43,11 @@ CHAR strHelpText[] =
 BOOL
 StartHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Start %i.%i\n"), START_VER_MAJOR, START_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -162,6 +156,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 StartHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {

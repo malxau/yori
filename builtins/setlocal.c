@@ -36,7 +36,7 @@ CHAR strSetlocalHelpText[] =
         "\n"
         "Push the current directory and environment onto a saved stack.\n"
         "\n"
-        "SETLOCAL\n";
+        "SETLOCAL [-license]\n";
 
 /**
  Display usage text to the user.
@@ -44,17 +44,11 @@ CHAR strSetlocalHelpText[] =
 BOOL
 SetlocalHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Setlocal %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strSetlocalHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strSetlocalHelpText);
     return TRUE;
 }
 
@@ -66,7 +60,7 @@ CHAR strEndlocalHelpText[] =
         "\n"
         "Pop a previous saved environment from the stack.\n"
         "\n"
-        "ENDLOCAL\n";
+        "ENDLOCAL [-license]\n";
 
 /**
  Display usage text to the user.
@@ -74,17 +68,11 @@ CHAR strEndlocalHelpText[] =
 BOOL
 EndlocalHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Endlocal %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strEndlocalHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strEndlocalHelpText);
     return TRUE;
 }
 
@@ -152,6 +140,9 @@ YoriCmd_ENDLOCAL(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 EndlocalHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             }
         }
@@ -287,6 +278,9 @@ YoriCmd_SETLOCAL(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 SetlocalHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             }
         }

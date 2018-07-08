@@ -51,7 +51,13 @@ typedef BOOL (WINAPI * DISABLE_WOW_REDIRECT_FN)(PVOID*);
 const
 CHAR strHelpText[] =
         "\n"
-        ;
+        "Start a Yori shell instance.\n"
+        "\n"
+        "YORI [-license] [-c <cmd>] [-k <cmd>]\n"
+        "\n"
+        "   -license       Display license text\n"
+        "   -c <cmd>       Execute command and terminate the shell\n"
+        "   -k <cmd>       Execute command and continue as an interactive shell\n";
 
 /**
  Display usage text to the user.
@@ -59,15 +65,11 @@ CHAR strHelpText[] =
 BOOL
 YoriShHelp()
 {
-    YORI_STRING License;
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Yori %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -290,6 +292,11 @@ YoriShParseArgs(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 YoriShHelp();
+                *TerminateApp = TRUE;
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
+                *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {

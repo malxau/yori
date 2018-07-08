@@ -35,8 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Inputs a line and sends it to output.\n"
         "\n"
-        "READLINE\n"
-        "\n";
+        "READLINE [-license]\n";
 
 /**
  Display usage text to the user.
@@ -44,17 +43,11 @@ CHAR strHelpText[] =
 BOOL
 ReadLineHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ReadLine %i.%i\n"), READLINE_VER_MAJOR, READLINE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -90,6 +83,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 ReadLineHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             }
         } else {

@@ -36,6 +36,7 @@ CHAR strAliasHelpText[] =
         "\n"
         "Displays or updates command aliases.\n"
         "\n"
+        "ALIAS -license\n"
         "ALIAS [<alias>=<value>]\n"
         "ALIAS <alias to delete>=\n";
 
@@ -45,17 +46,11 @@ CHAR strAliasHelpText[] =
 BOOL
 AliasHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Alias %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strAliasHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strAliasHelpText);
     return TRUE;
 }
 
@@ -92,6 +87,9 @@ YoriCmd_ALIAS(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 AliasHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {

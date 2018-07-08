@@ -36,7 +36,7 @@ CHAR strHistoryHelpText[] =
         "\n"
         "Displays recent command history.\n"
         "\n"
-        "HISTORY [-n lines]\n"
+        "HISTORY [-license] [-n lines]\n"
         "\n"
         "   -n             The number of lines of history to output\n";
 
@@ -46,17 +46,11 @@ CHAR strHistoryHelpText[] =
 BOOL
 HistoryHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("History %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHistoryHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHistoryHelpText);
     return TRUE;
 }
 
@@ -97,6 +91,9 @@ YoriCmd_HISTORY(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 HistoryHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 if (ArgC > i + 1) {

@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Compare two strings.\n"
         "\n"
-        "STRCMP [-i] [--] <string><operator><string>\n"
+        "STRCMP [-license] [-i] [--] <string><operator><string>\n"
         "\n"
         "   --             Treat all further arguments as comparison parameters\n"
         "   -i             Match case insensitively\n"
@@ -50,17 +50,11 @@ CHAR strHelpText[] =
 BOOL
 StrCmpHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("StrCmp %i.%i\n"), STRCMP_VER_MAJOR, STRCMP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -119,6 +113,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 StrCmpHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 MatchInsensitive = TRUE;

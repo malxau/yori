@@ -35,13 +35,11 @@ CHAR strHelpText[] =
         "\n"
         "Output information about file metadata.\n"
         "\n"
-        "FINFO [-b] [-f fmt] [-s] <file>...\n"
+        "FINFO [-license] [-b] [-f fmt] [-s] <file>...\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -f             Specify a custom format string\n"
         "   -s             Process files from all subdirectories\n";
-
-
 
 /**
  Context passed to the callback which is invoked for each file found.
@@ -1322,11 +1320,8 @@ FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
 BOOL
 FInfoHelp()
 {
-    YORI_STRING License;
     DWORD Count;
     TCHAR NameWithQualifiers[32];
-
-    YoriLibMitLicenseText(_T("2018"), &License);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FInfo %i.%i\n"), FINFO_VER_MAJOR, FINFO_VER_MINOR);
 #if YORI_BUILD_ID
@@ -1338,9 +1333,6 @@ FInfoHelp()
         YoriLibSPrintfS(NameWithQualifiers, sizeof(NameWithQualifiers)/sizeof(NameWithQualifiers[0]), _T("$%s$"), FInfoKnownVariables[Count].VariableName);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-20s %s\n"), NameWithQualifiers, FInfoKnownVariables[Count].Help);
     }
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
     return TRUE;
 }
 
@@ -1483,6 +1475,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 FInfoHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;

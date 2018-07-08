@@ -3,7 +3,7 @@
  *
  * Yori shell version display
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,7 +36,7 @@ CHAR strVerHelpText[] =
         "\n"
         "Outputs the Yori version in a specified format.\n"
         "\n"
-        "VER [<fmt>]\n"
+        "VER [-license] [<fmt>]\n"
         "\n"
         "Format specifiers are:\n"
         "   $LIBMAJOR$     The YoriLib major version with leading zero\n"
@@ -55,17 +55,11 @@ CHAR strVerHelpText[] =
 BOOL
 VerHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ver %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strVerHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strVerHelpText);
     return TRUE;
 }
 
@@ -227,6 +221,9 @@ YoriCmd_VER(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 VerHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {

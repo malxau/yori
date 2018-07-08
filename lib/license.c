@@ -61,7 +61,9 @@ CHAR strMitLicenseTextPart2[] =
 
 
 /**
- Return the MIT license text into a caller allocated buffer.
+ Return the MIT license text into a buffer that is allocated within this
+ routine.  The caller should free this buffer with
+ @ref YoriLibFreeStringContents .
 
  @param CopyrightYear The copyright years to include, as a string.
 
@@ -82,6 +84,28 @@ YoriLibMitLicenseText(
     }
         
     return FALSE;
+}
+
+/**
+ Write the MIT license text to stdout.
+
+ @param CopyrightYear The copyright years to include, as a string.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibDisplayMitLicense(
+    __in LPTSTR CopyrightYear
+    )
+{
+    YORI_STRING License;
+    if (!YoriLibMitLicenseText(CopyrightYear, &License)) {
+        return FALSE;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
+    YoriLibFreeStringContents(&License);
+    return TRUE;
 }
 
 // vim:sw=4:ts=4:et:

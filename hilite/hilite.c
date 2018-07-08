@@ -33,11 +33,11 @@
 const
 CHAR strHelpText[] =
         "\n"
-        "Output the contents of one or more files with highlight on lines"
+        "Output the contents of one or more files with highlight on lines\n"
         "matching specified criteria.\n"
         "\n"
-        "HILITE [-b] [-c <string> <color>] [-h <string> <color>] [-i] [-s]\n"
-        "       [-t <string> <color>] [<file>...]\n"
+        "HILITE [-license] [-b] [-c <string> <color>] [-h <string> <color>]\n"
+        "       [-i] [-s] [-t <string> <color>] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Highlight lines containing <string> with <color>\n"
@@ -52,17 +52,11 @@ CHAR strHelpText[] =
 BOOL
 HiliteHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Hilite %i.%i\n"), HILITE_VER_MAJOR, HILITE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -347,6 +341,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 HiliteHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;

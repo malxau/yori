@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Delete one or more files.\n"
         "\n"
-        "ERASE [-b] [-r] [-s] <file> [<file>...]\n"
+        "ERASE [-license] [-b] [-r] [-s] <file> [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -r             Send files to the recycle bin\n"
@@ -47,17 +47,11 @@ CHAR strHelpText[] =
 BOOL
 EraseHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Erase %i.%i\n"), ERASE_VER_MAJOR, ERASE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -190,6 +184,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 EraseHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;

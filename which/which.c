@@ -4,7 +4,7 @@
  * Small minicrt wrapper app that searches the path or other environment
  * variable looking for the first matching file.
  *
- * Copyright (c) 2014-2015 Malcolm J. Smith
+ * Copyright (c) 2014-2018 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,7 +47,7 @@ CHAR strUsageText[] =
      "Searches a semicolon delimited environment variable for a file.  When\n"
      "searching PATH, also applies PATHEXT executable extension matching.\n"
      "\n"
-     "WHICH [-p <variable>] <file>\n"
+     "WHICH [-license] [-p <variable>] <file>\n"
      "\n"
      "   -p var Indicates the environment variable to search.  If not specified, use PATH\n"
      "\n"
@@ -60,7 +60,7 @@ CHAR strUsageText[] =
      "\n"
      " If PATHEXT not defined, defaults to .COM, .EXE, .BAT and .CMD\n"
      " If file extension not specified and var not specified, searches for files\n"
-     "  ending in extensions in PATHEXT\n\n";
+     "  ending in extensions in PATHEXT\n";
 
 /**
  Display usage text to the user.
@@ -68,18 +68,12 @@ CHAR strUsageText[] =
 VOID
 WhichUsage()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2014-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Which %i.%i\n"), WHICH_VER_MAJOR, WHICH_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strUsageText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
 }
 
 /**
@@ -104,8 +98,11 @@ WhichParseArgs(
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             BOOL Parsed = FALSE;
 
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0 &&
-                ArgC > i + 1) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2014-2018"));
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0 &&
+                       ArgC > i + 1) {
 
                 i++;
                 SearchVar = ArgV[i].StartOfString;

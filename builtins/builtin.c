@@ -36,7 +36,7 @@ CHAR strBuiltinHelpText[] =
         "\n"
         "Executes a command explicitly as a builtin.\n"
         "\n"
-        "BUILTIN <cmd>\n";
+        "BUILTIN [-license] <cmd>\n";
 
 /**
  Display usage text to the user.
@@ -44,17 +44,11 @@ CHAR strBuiltinHelpText[] =
 BOOL
 BuiltinHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Builtin %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strBuiltinHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strBuiltinHelpText);
     return TRUE;
 }
 
@@ -93,6 +87,9 @@ YoriCmd_BUILTIN(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 BuiltinHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             }
         } else {

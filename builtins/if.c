@@ -37,7 +37,7 @@ CHAR strIfHelpText[] =
         "\n"
         "Execute a command to evaluate a condition.\n"
         "\n"
-        "IF <test cmd>; <true cmd>; <false cmd>\n";
+        "IF [-license] <test cmd>; <true cmd>; <false cmd>\n";
 
 /**
  Display usage text to the user.
@@ -45,17 +45,11 @@ CHAR strIfHelpText[] =
 BOOL
 IfHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("If %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strIfHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strIfHelpText);
     return TRUE;
 }
 
@@ -164,6 +158,9 @@ YoriCmd_IF(
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 IfHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             }
         } else {

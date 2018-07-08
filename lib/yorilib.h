@@ -1286,6 +1286,11 @@ YoriLibMitLicenseText(
     __out PYORI_STRING String
     );
 
+BOOL
+YoriLibDisplayMitLicense(
+    __in LPTSTR CopyrightYear
+    );
+
 // *** LINEREAD.C ***
 
 PVOID

@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Split a file into pieces.\n"
         "\n"
-        "SPLIT [-l n | -b n] [-p <prefix>] [<file>]\n"
+        "SPLIT [-license] [-l n | -b n] [-p <prefix>] [<file>]\n"
         "\n"
         "   -b             Use <n> bytes per part\n"
         "   -l             Use <n> number of lines per part\n"
@@ -47,17 +47,11 @@ CHAR strHelpText[] =
 BOOL
 SplitHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Split %i.%i\n"), SPLIT_VER_MAJOR, SPLIT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -273,6 +267,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 SplitHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 if (ArgC > i + 1) {

@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Convert the character encoding of one or more files.\n"
         "\n"
-        "ICONV [-b] [-s] [-e <encoding] [-i encoding] [<file>...]\n"
+        "ICONV [-license] [-b] [-s] [-e <encoding] [-i encoding] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -e <encoding>  Specifies the new encoding to use\n"
@@ -48,17 +48,11 @@ CHAR strHelpText[] =
 BOOL
 IconvHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Iconv %i.%i\n"), ICONV_VER_MAJOR, ICONV_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -246,6 +240,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 IconvHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;

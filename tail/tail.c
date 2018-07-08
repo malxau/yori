@@ -37,7 +37,7 @@ CHAR strHelpText[] =
         "\n"
         "Output the final lines of one or more files.\n"
         "\n"
-        "TAIL [-b] [-s] [-n count] [-c line] [<file>...]\n"
+        "TAIL [-license] [-b] [-s] [-n count] [-c line] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Specify a line to display context around instead of EOF\n"
@@ -50,17 +50,11 @@ CHAR strHelpText[] =
 BOOL
 TailHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2017-2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Tail %i.%i\n"), TAIL_VER_MAJOR, TAIL_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -247,6 +241,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 TailHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;

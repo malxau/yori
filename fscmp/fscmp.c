@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Test for file system conditions.\n"
         "\n"
-        "FSCMP [-b] [-d | -e | -f | -l] <file>\n"
+        "FSCMP [-license] [-b] [-d | -e | -f | -l] <file>\n"
         "\n"
         "   -b             Use basic search criteria\n"
         "   -d             Test if directory exists\n"
@@ -49,17 +49,11 @@ CHAR strHelpText[] =
 BOOL
 FsCmpHelp()
 {
-    YORI_STRING License;
-
-    YoriLibMitLicenseText(_T("2018"), &License);
-
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FsCmp %i.%i\n"), FSCMP_VER_MAJOR, FSCMP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &License);
-    YoriLibFreeStringContents(&License);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
     return TRUE;
 }
 
@@ -182,6 +176,9 @@ ymain(
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 FsCmpHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicExpansion = TRUE;
