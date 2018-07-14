@@ -6,4 +6,8 @@ cache.mk
 **/*.obj
 **/*.pdb
 doc/**
+beta/**
+bin/**
+sym/**
+out/**
 !crt/i386/*.obj
