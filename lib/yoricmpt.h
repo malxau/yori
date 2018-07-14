@@ -1082,6 +1082,222 @@ typedef struct _YORI_JOB_BASIC_LIMIT_INFORMATION {
     DWORD Unused7;
 } YORI_JOB_BASIC_LIMIT_INFORMATION, *PYORI_JOB_BASIC_LIMIT_INFORMATION;
 
+#ifndef DIAMONDAPI
+/**
+ If not defined by the compilation environment, the calling convention used
+ by the Cabinet APIs.
+ */
+#define DIAMONDAPI __cdecl
+#endif
+
+/**
+ A prototype for FDICreate's allocation callback.
+ */
+typedef
+LPVOID DIAMONDAPI
+CAB_CB_ALLOC(ULONG);
+
+/**
+ A prototype for a pointer to FDICreate's allocation callback.
+ */
+typedef CAB_CB_ALLOC *PCAB_CB_ALLOC;
+
+/**
+ A prototype for FDICreate's free callback.
+ */
+typedef
+VOID DIAMONDAPI
+CAB_CB_FREE(LPVOID);
+
+/**
+ A prototype for a pointer to FDICreate's free callback.
+ */
+typedef CAB_CB_FREE *PCAB_CB_FREE;
+
+/**
+ A prototype for FDICreate's file open callback.
+ */
+typedef
+DWORD_PTR DIAMONDAPI
+CAB_CB_FILE_OPEN(LPSTR, INT, INT);
+
+/**
+ A prototype for a pointer to FDICreate's file open callback.
+ */
+typedef CAB_CB_FILE_OPEN *PCAB_CB_FILE_OPEN;
+
+/**
+ A prototype for FDICreate's file read callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FILE_READ(DWORD_PTR, LPVOID, DWORD);
+
+/**
+ A prototype for a pointer to FDICreate's file read callback.
+ */
+typedef CAB_CB_FILE_READ *PCAB_CB_FILE_READ;
+
+/**
+ A prototype for FDICreate's file write callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FILE_WRITE(DWORD_PTR, LPVOID, DWORD);
+
+/**
+ A prototype for a pointer to FDICreate's file write callback.
+ */
+typedef CAB_CB_FILE_WRITE *PCAB_CB_FILE_WRITE;
+
+/**
+ A prototype for FDICreate's file close callback.
+ */
+typedef
+INT DIAMONDAPI
+CAB_CB_FILE_CLOSE(DWORD_PTR);
+
+/**
+ A prototype for a pointer to FDICreate's file close callback.
+ */
+typedef CAB_CB_FILE_CLOSE *PCAB_CB_FILE_CLOSE;
+
+/**
+ A prototype for FDICreate's file seek callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FILE_SEEK(DWORD_PTR, DWORD, INT);
+
+/**
+ A prototype for a pointer to FDICreate's file seek callback.
+ */
+typedef CAB_CB_FILE_SEEK *PCAB_CB_FILE_SEEK;
+
+/**
+ The set of notification types that FDICopy can invoke its notification
+ callback with.
+ */
+typedef enum _CAB_CB_NOTIFYTYPE {
+    YoriLibCabNotifyCabinetInfo,
+    YoriLibCabNotifyPartialFile,
+    YoriLibCabNotifyCopyFile,
+    YoriLibCabNotifyCloseFile,
+    YoriLibCabNotifyNextCabinet,
+    YoriLibCabNotifyEnumerate
+} CAB_CB_NOTIFYTYPE;
+
+/**
+ A structure of data that FDICopy invokes its notification callback with.
+ */
+typedef struct _CAB_CB_NOTIFICATION {
+    /**
+     The meaning of this field depends on the type of notification, and the
+     documentation is awful.
+     */
+    DWORD StructureSize;
+
+    /**
+     The meaning of this field depends on the type of notification, and the
+     documentation is awful.
+     */
+    LPSTR String1;
+
+    /**
+     The meaning of this field depends on the type of notification, and the
+     documentation is awful.
+     */
+    LPSTR String2;
+
+    /**
+     The meaning of this field depends on the type of notification, and the
+     documentation is awful.
+     */
+    LPSTR String3;
+
+    /**
+     This is a pointer to the context supplied to FDICopy.
+     */
+    LPVOID Context;
+
+    /**
+     The file handle being operated on.  This is used when opening or closing
+     target files.
+     */
+    DWORD_PTR FileHandle;
+
+    /**
+     File date in MSDOS format.
+     */
+    USHORT TinyDate;
+
+    /**
+     File time in MSDOS format.
+     */
+    USHORT TinyTime;
+
+    /**
+     File attributes in MSDOS format.
+     */
+    USHORT HalfAttributes;
+
+    /**
+     An identifier for which set of Cabinets is being used, which would be
+     meaningful if this feature were being used.
+     */
+    USHORT CabSetId;
+
+    /**
+     The number of Cabinets in the set, which would be meaningful if
+     multi-Cab sets still made any sense.
+     */
+    USHORT CabinetsInSetCount;
+
+    /**
+     Indicates the folder within the Cabinet.
+     */
+    USHORT CabinetFolderCount;
+
+    /**
+     Error code.
+     */
+    DWORD FdiError;
+} CAB_CB_NOTIFICATION, *PCAB_CB_NOTIFICATION;
+
+/**
+ A prototype for FDICopy's notification callback.
+ */
+typedef
+DWORD_PTR DIAMONDAPI
+CAB_CB_NOTIFY(CAB_CB_NOTIFYTYPE, PCAB_CB_NOTIFICATION);
+
+/**
+ A prototype for a pointer to FDICopy's notification callback.
+ */
+typedef CAB_CB_NOTIFY *PCAB_CB_NOTIFY;
+
+/**
+ A structure describing error conditions encountered in FCI or FDI operations.
+ */
+typedef struct _CAB_CB_ERROR {
+    /**
+     FCI/FDI error code.
+     */
+    INT ErrorCode;
+
+    /**
+     Probably C run time error code of whatever C runtime that Cabinet.dll
+     happens to use.
+     */
+    INT ErrorType;
+
+    /**
+     Set to TRUE if an error occurred.
+     */
+    BOOL ErrorPresent;
+} CAB_CB_ERROR, *PCAB_CB_ERROR;
+
+
 #ifndef UNPROTECTED_DACL_SECURITY_INFORMATION
 /**
  A private definition of this OS value in case the compilation environment
@@ -2130,6 +2346,70 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
 extern YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
 
 /**
+ A prototype for the FDICreate function.
+ */
+typedef
+LPVOID DIAMONDAPI
+CAB_FDI_CREATE(PCAB_CB_ALLOC, PCAB_CB_FREE, PCAB_CB_FILE_OPEN, PCAB_CB_FILE_READ, PCAB_CB_FILE_WRITE, PCAB_CB_FILE_CLOSE, PCAB_CB_FILE_SEEK, INT, PCAB_CB_ERROR);
+
+/**
+ A prototype for a pointer to the FDICreate function.
+ */
+typedef CAB_FDI_CREATE *PCAB_FDI_CREATE;
+
+/**
+ A prototype for the FDICopy function.
+ */
+typedef
+LPVOID DIAMONDAPI
+CAB_FDI_COPY(LPVOID, LPSTR, LPSTR, INT, PCAB_CB_NOTIFY, LPVOID, LPVOID);
+
+/**
+ A prototype for a pointer to the FDICopy function.
+ */
+typedef CAB_FDI_COPY *PCAB_FDI_COPY;
+
+/**
+ A prototype for the FDIDestroy function.
+ */
+typedef
+BOOL DIAMONDAPI
+CAB_FDI_DESTROY(LPVOID);
+
+/**
+ A prototype for a pointer to the FDIDestroy function.
+ */
+typedef CAB_FDI_DESTROY *PCAB_FDI_DESTROY;
+
+/**
+ A structure containing optional function pointers to cabinet.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_CABINET_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to FDICreate.
+     */
+    PCAB_FDI_CREATE pFdiCreate;
+
+    /**
+     If it's available on the current system, a pointer to FDICopy.
+     */
+    PCAB_FDI_COPY pFdiCopy;
+
+    /**
+     If it's available on the current system, a pointer to FDIDestroy.
+     */
+    PCAB_FDI_DESTROY pFdiDestroy;
+} YORI_CABINET_FUNCTIONS, *PYORI_CABINET_FUNCTIONS;
+
+extern YORI_CABINET_FUNCTIONS DllCabinet;
+
+/**
  A prototype for the CoCreateInstance function.
  */
 typedef
@@ -2470,7 +2750,6 @@ typedef struct _YORI_VERSION_FUNCTIONS {
 } YORI_VERSION_FUNCTIONS, *PYORI_VERSION_FUNCTIONS;
 
 extern YORI_VERSION_FUNCTIONS DllVersion;
-
 
 
 // vim:sw=4:ts=4:et:

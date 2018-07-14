@@ -383,6 +383,14 @@ YORI_CMD_BUILTIN (
  */
 typedef YORI_CMD_BUILTIN *PYORI_CMD_BUILTIN;
 
+// *** CABINET.C ***
+
+BOOL
+YoriLibExtractCab(
+    __in PYORI_STRING CabFileName,
+    __in PYORI_STRING TargetDirectory
+    );
+
 // *** CANCEL.C ***
 
 BOOL
@@ -639,6 +647,9 @@ YoriLibLoadKernel32Functions();
 
 BOOL
 YoriLibLoadAdvApi32Functions();
+
+BOOL
+YoriLibLoadCabinetFunctions();
 
 BOOL
 YoriLibLoadOle32Functions();

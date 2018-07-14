@@ -151,6 +151,35 @@ YoriLibLoadAdvApi32Functions()
 }
 
 /**
+ A structure containing pointers to cabinet.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_CABINET_FUNCTIONS DllCabinet;
+
+/**
+ Load pointers to all optional cabinet.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadCabinetFunctions()
+{
+    if (DllCabinet.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllCabinet.hDll = LoadLibrary(_T("CABINET.DLL"));
+    if (DllCabinet.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllCabinet.pFdiCreate = (PCAB_FDI_CREATE)GetProcAddress(DllCabinet.hDll, "FDICreate");
+    DllCabinet.pFdiCopy = (PCAB_FDI_COPY)GetProcAddress(DllCabinet.hDll, "FDICopy");
+    DllCabinet.pFdiDestroy = (PCAB_FDI_DESTROY)GetProcAddress(DllCabinet.hDll, "FDIDestroy");
+    return TRUE;
+}
+
+/**
  A structure containing pointers to ole32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */

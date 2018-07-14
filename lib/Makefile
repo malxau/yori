@@ -10,6 +10,7 @@ install:
 DEBUG=0
 
 OBJS=\
+	 cabinet.obj  \
 	 call.obj     \
 	 cancel.obj   \
 	 clip.obj     \
