@@ -823,21 +823,26 @@ YoriShDisplayAfterKeyPress(
             FillPosition = YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars);
         }
 
-        //
-        //  Now that we know where the text should go, advance the cursor
-        //  and render the text.
-        //
+        if (NumberToWrite > 0 ||
+            Buffer->SuggestionString.LengthInChars > 0 ||
+            Buffer->CurrentOffset != Buffer->PreviousCurrentOffset) {
 
-        YoriShMoveCursor(Buffer->CurrentOffset - Buffer->PreviousCurrentOffset);
+            //
+            //  Now that we know where the text should go, advance the cursor
+            //  and render the text.
+            //
 
-        if (NumberToWrite) {
-            WriteConsoleOutputCharacter(hConsole, &Buffer->String.StartOfString[Buffer->DirtyBeginOffset], NumberToWrite, WritePosition, &NumberWritten);
-            FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
-        }
+            YoriShMoveCursor(Buffer->CurrentOffset - Buffer->PreviousCurrentOffset);
 
-        if (Buffer->SuggestionString.LengthInChars > 0) {
-            WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
-            FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+            if (NumberToWrite) {
+                WriteConsoleOutputCharacter(hConsole, &Buffer->String.StartOfString[Buffer->DirtyBeginOffset], NumberToWrite, WritePosition, &NumberWritten);
+                FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
+            }
+
+            if (Buffer->SuggestionString.LengthInChars > 0) {
+                WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+                FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+            }
         }
 
         //
@@ -1187,7 +1192,7 @@ YoriShCopySelectionIfPresent(
     //  that wheel, force the console to re-render if it's stale and use the
     //  saved attribute buffer.
     //
-    
+
     if (Buffer->CurrentSelection.Left != Buffer->PreviousSelection.Left ||
         Buffer->CurrentSelection.Right != Buffer->PreviousSelection.Right ||
         Buffer->CurrentSelection.Top != Buffer->PreviousSelection.Top ||
