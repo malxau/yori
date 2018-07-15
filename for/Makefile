@@ -1,9 +1,14 @@
 
-link: yfor.exe
+MODULES=\
+	for.com
+
+link: yfor.exe $(MODULES) compile
 
 install:
 	@copy yfor.exe $(BINDIR) >NUL
 	@if exist yfor.pdb copy yfor.pdb $(SYMDIR) >NUL
+	@for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL
+	@for %%i in ($(MODULES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
 
 !INCLUDE "..\config\common.mk"
 
@@ -14,12 +19,26 @@ LINKPDB=/Pdb:yfor.pdb
 
 CFLAGS=$(CFLAGS) -DFOR_VER_MAJOR=$(FOR_VER_MAJOR) -DFOR_VER_MINOR=$(FOR_VER_MINOR)
 
-OBJS=\
-	 for.obj        \
+BIN_OBJS=\
+	for.obj        \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	mod_for.obj    \
 
-yfor.exe: $(OBJS) 
+compile: $(BIN_OBJS) $(MOD_OBJS) builtins.lib
+
+yfor.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(FOR_VER_MAJOR).$(FOR_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(FOR_VER_MAJOR).$(FOR_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_for.obj: for.c
+	@echo $@
+	@cl -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ for.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
+
+for.com: $(MOD_OBJS)
+	@echo $@
+	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -def:for.def -out:$@

@@ -97,6 +97,7 @@ Section /o "Modular"
   File "bin\${PACKARCH}\modules\exit.com"
   File "bin\${PACKARCH}\modules\false.com"
   File "bin\${PACKARCH}\modules\fg.com"
+  File "bin\${PACKARCH}\modules\for.com"
   File "bin\${PACKARCH}\modules\history.com"
   File "bin\${PACKARCH}\modules\if.com"
   File "bin\${PACKARCH}\modules\job.com"
@@ -122,6 +123,7 @@ Section /o "Modular Debugging Support"
   File "sym\${PACKARCH}\exit.pdb"
   File "sym\${PACKARCH}\false.pdb"
   File "sym\${PACKARCH}\fg.pdb"
+  File "sym\${PACKARCH}\for.pdb"
   File "sym\${PACKARCH}\history.pdb"
   File "sym\${PACKARCH}\if.pdb"
   File "sym\${PACKARCH}\job.pdb"
@@ -179,11 +181,6 @@ SectionEnd
 Section "expr"
   SetOutPath "$INSTDIR"
   File "bin\${PACKARCH}\yexpr.exe"
-SectionEnd
-
-Section "for"
-  SetOutPath "$INSTDIR"
-  File "bin\${PACKARCH}\yfor.exe"
 SectionEnd
 
 Section "fscmp"
@@ -273,7 +270,6 @@ Section "Debugging Support"
   File "sym\${PACKARCH}\yecho.pdb"
   File "sym\${PACKARCH}\yerase.pdb"
   File "sym\${PACKARCH}\yexpr.pdb"
-  File "sym\${PACKARCH}\yfor.pdb"
   File "sym\${PACKARCH}\fscmp.pdb"
   File "sym\${PACKARCH}\intcmp.pdb"
   File "sym\${PACKARCH}\ymkdir.pdb"
@@ -432,12 +428,18 @@ Section /o "clmp"
   SetOutPath "$INSTDIR"
   File "bin\${PACKARCH}\clmp.exe"
 SectionEnd
+
+Section /o "for"
+  SetOutPath "$INSTDIR"
+  File "bin\${PACKARCH}\yfor.exe"
+SectionEnd
 !ENDIF
 
 !IFDEF SHIPPDB
 Section /o "Debugging Support"
   SetOutPath "$INSTDIR"
   File "sym\${PACKARCH}\clmp.pdb"
+  File "sym\${PACKARCH}\yfor.pdb"
 SectionEnd
 !ENDIF
 
@@ -513,6 +515,8 @@ Section "Uninstall"
   Delete $INSTDIR\false.pdb
   Delete $INSTDIR\fg.com
   Delete $INSTDIR\fg.pdb
+  Delete $INSTDIR\for.com
+  Delete $INSTDIR\for.pdb
   Delete $INSTDIR\history.com
   Delete $INSTDIR\history.pdb
   Delete $INSTDIR\if.com

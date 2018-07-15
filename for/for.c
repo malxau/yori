@@ -26,12 +26,15 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#ifdef YORI_BUILTIN
+#include <yoricall.h>
+#endif
 
 /**
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strForHelpText[] =
         "Enumerates through a list of strings or files.\n"
         "\n"
         "FOR [-license] [-b] [-c] [-d] [-p n] <var> in (<list>) do <cmd>\n"
@@ -52,7 +55,7 @@ ForHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strForHelpText);
     return TRUE;
 }
 
@@ -147,7 +150,8 @@ ForExecuteCommand(
     __in PFOR_EXEC_CONTEXT ExecContext
     )
 {
-    DWORD ArgsNeeded = ExecContext->ArgC + 2;
+    DWORD ArgsNeeded = ExecContext->ArgC;
+    DWORD PrefixArgCount;
     DWORD FoundOffset;
     DWORD Count;
     DWORD SubstitutesFound;
@@ -161,6 +165,19 @@ ForExecuteCommand(
 
     YoriLibInitEmptyString(&CmdLine);
 
+#ifdef YORI_BUILTIN
+    if (!ExecContext->InvokeCmd &&
+        ExecContext->TargetConcurrentCount == 1) {
+        PrefixArgCount = 0;
+    } else {
+        PrefixArgCount = 2;
+    }
+#else
+    PrefixArgCount = 2;
+#endif
+
+    ArgsNeeded += PrefixArgCount;
+
     NewArgArray = YoriLibMalloc(ArgsNeeded * sizeof(YORI_STRING));
     if (NewArgArray == NULL) {
         return;
@@ -172,12 +189,14 @@ ForExecuteCommand(
     //  MSFIX Should use a YORISPEC environment for this
     //
 
-    if (ExecContext->InvokeCmd) {
-        YoriLibConstantString(&NewArgArray[0], _T("cmd.exe"));
-    } else {
-        YoriLibConstantString(&NewArgArray[0], _T("yori.exe"));
+    if (PrefixArgCount > 0) {
+        if (ExecContext->InvokeCmd) {
+            YoriLibConstantString(&NewArgArray[0], _T("cmd.exe"));
+        } else {
+            YoriLibConstantString(&NewArgArray[0], _T("yori.exe"));
+        }
+        YoriLibConstantString(&NewArgArray[1], _T("/c"));
     }
-    YoriLibConstantString(&NewArgArray[1], _T("/c"));
 
     for (Count = 0; Count < ExecContext->ArgC; Count++) {
         YoriLibInitEmptyString(&OldArg);
@@ -192,13 +211,13 @@ ForExecuteCommand(
         }
 
         ArgLengthNeeded = ExecContext->ArgV[Count].LengthInChars + SubstitutesFound * Match->LengthInChars - SubstitutesFound * ExecContext->SubstituteVariable->LengthInChars + 1;
-        if (!YoriLibAllocateString(&NewArgArray[Count + 2], ArgLengthNeeded)) {
+        if (!YoriLibAllocateString(&NewArgArray[Count + PrefixArgCount], ArgLengthNeeded)) {
             goto Cleanup;
         }
 
         YoriLibInitEmptyString(&NewArgWritePoint);
-        NewArgWritePoint.StartOfString = NewArgArray[Count + 2].StartOfString;
-        NewArgWritePoint.LengthAllocated = NewArgArray[Count + 2].LengthAllocated;
+        NewArgWritePoint.StartOfString = NewArgArray[Count + PrefixArgCount].StartOfString;
+        NewArgWritePoint.LengthAllocated = NewArgArray[Count + PrefixArgCount].LengthAllocated;
 
         YoriLibInitEmptyString(&OldArg);
         OldArg.StartOfString = ExecContext->ArgV[Count].StartOfString;
@@ -221,9 +240,9 @@ ForExecuteCommand(
                 NewArgWritePoint.LengthAllocated -= OldArg.LengthInChars;
                 NewArgWritePoint.StartOfString[0] = '\0';
                 
-                NewArgArray[Count + 2].LengthInChars = (DWORD)(NewArgWritePoint.StartOfString - NewArgArray[Count + 2].StartOfString);
-                ASSERT(NewArgArray[Count + 2].LengthInChars < NewArgArray[Count + 2].LengthAllocated);
-                ASSERT(YoriLibIsStringNullTerminated(&NewArgArray[Count + 2]));
+                NewArgArray[Count + PrefixArgCount].LengthInChars = (DWORD)(NewArgWritePoint.StartOfString - NewArgArray[Count + PrefixArgCount].StartOfString);
+                ASSERT(NewArgArray[Count + PrefixArgCount].LengthInChars < NewArgArray[Count + PrefixArgCount].LengthAllocated);
+                ASSERT(YoriLibIsStringNullTerminated(&NewArgArray[Count + PrefixArgCount]));
                 break;
             }
         }
@@ -232,6 +251,13 @@ ForExecuteCommand(
     if (!YoriLibBuildCmdlineFromArgcArgv(ArgsNeeded, NewArgArray, TRUE, &CmdLine)) {
         goto Cleanup;
     }
+
+#ifdef YORI_BUILTIN
+    if (PrefixArgCount == 0) {
+        YoriCallExecuteExpression(&CmdLine);
+        goto Cleanup;
+    }
+#endif
 
     memset(&StartupInfo, 0, sizeof(StartupInfo));
     StartupInfo.cb = sizeof(StartupInfo);
@@ -255,7 +281,7 @@ ForExecuteCommand(
 
 Cleanup:
 
-    for (Count = 2; Count < ArgsNeeded; Count++) {
+    for (Count = PrefixArgCount; Count < ArgsNeeded; Count++) {
         YoriLibFreeStringContents(&NewArgArray[Count]);
     }
 
@@ -295,6 +321,12 @@ ForFileFoundCallback(
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+#define ENTRYPOINT YoriCmd_FOR
+#else
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The main entrypoint for the for cmdlet.
 
@@ -306,7 +338,7 @@ ForFileFoundCallback(
          could not be launched.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

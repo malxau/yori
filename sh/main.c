@@ -104,7 +104,6 @@ YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[] = {
     {_T("echo"),     _T("yecho $*$")},
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},
-    {_T("for"),      _T("yfor $*$")},
     {_T("head"),     _T("ytype -h $*$")},
     {_T("help"),     _T("yhelp -h $*$")},
     {_T("htmlclip"), _T("yclip -h $*$")},
