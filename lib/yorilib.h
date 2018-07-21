@@ -445,6 +445,12 @@ YoriLibBuildCmdlineFromArgcArgv(
     __out PYORI_STRING CmdLine
     );
 
+PYORI_STRING
+YoriLibCmdlineToArgcArgv(
+    __in LPTSTR szCmdLine,
+    __out PDWORD argc
+    );
+
 /**
  A prototype for a callback function to invoke for variable expansion.
  */
