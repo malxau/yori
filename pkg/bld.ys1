@@ -1,0 +1,91 @@
+setlocal
+set BLDID=`date`
+
+set ARCH=win32
+cl /? 2>&1 | findstr /C:"for x64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=amd64
+cl /? 2>&1 | findstr /C:"for AMD64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=amd64
+cl /? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=arm64
+
+pushd ..
+
+set BINPKGS=yori-modular yori-core yori-typical yori-extra yori-ypm
+
+set YORI_VER_MAJOR=`findstr YORI_BASE_VER_MAJOR= config\ver.inc|cut -d = -f 1`
+set YORI_VER_MINOR=`findstr YORI_BASE_VER_MINOR= config\ver.inc|cut -d = -f 1`
+if strcmp %BLDID%==0; set BUILDSTRING=%YORI_VER_MAJOR%.%YORI_VER_MINOR%; set BUILDSTRING=%YORI_VER_MAJOR%.%YORI_VER_MINOR%.%BLDID%
+if strcmp %BLDID%==0; set UPGRADEPATH=http://www.malsmith.net/download/?obj=yori/latest-stable; set UPGRADEPATH=http://www.malsmith.net/download/?obj=yori/latest-daily
+set SOURCEPATH=http://www.malsmith.net/download/?obj=yori/%BUILDSTRING%
+
+set OUTDIR=%CD%\pkg\out
+
+echo *** Cleaning tree
+nmake /nologo clean >NUL
+
+echo *** Building debug
+nmake /nologo PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+
+REM This is a bad idea.  We should really generate setups from the hosted
+REM file tree to ensure the binaries in the setup are available/servicable
+REM from the web.
+
+echo *** Generating debug installer
+
+mkdir %OUTDIR% >NUL 2>&1
+echo [Package] >%OUTDIR%\pkginfo.ini
+echo Version=%YORI_VER_MAJOR%.%YORI_VER_MINOR%.%BLDID% >>%OUTDIR%\pkginfo.ini
+echo Architecture=%ARCH% >>%OUTDIR%\pkginfo.ini
+echo SourcePath=%SOURCEPATH%/yori-source.cab >>%OUTDIR%\pkginfo.ini
+
+if fscmp -d pkg\%ARCH%-dbg; rd /s pkg\%ARCH%-dbg
+mkdir pkg\%ARCH%-dbg
+move bin\%ARCH% pkg\%ARCH%-dbg\bin
+move sym\%ARCH% pkg\%ARCH%-dbg\sym
+makensis /V2 /DDBG=1 /DSHIPPDB=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
+makensis /V2 /DDBG=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
+makensis /V2 /DDBG=1 /DSYMONLY=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
+pushd pkg\%ARCH%-dbg\bin
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ..\..\bld-pkg.ys1 %%i %%i-dbg 1
+popd
+pushd pkg\%ARCH%-dbg\sym
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ..\..\bld-pkg.ys1 %%i-pdb %%i-dbg-pdb 0
+popd
+
+echo *** Cleaning tree
+nmake /nologo clean >NUL
+
+echo *** Building retail
+nmake /nologo PDB=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+
+wait
+
+echo *** Generating retail installer
+if fscmp -d pkg\%ARCH%; rd /s pkg\%ARCH%
+mkdir pkg\%ARCH%
+move bin\%ARCH% pkg\%ARCH%\bin
+move sym\%ARCH% pkg\%ARCH%\sym
+makensis /V2 /DSHIPPDB=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
+makensis /V2 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
+makensis /V2 /DSYMONLY=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
+pushd pkg\%ARCH%\bin
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ..\..\bld-pkg.ys1 %%i %%i 1
+popd
+pushd pkg\%ARCH%\sym
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ..\..\bld-pkg.ys1 %%i-pdb %%i-pdb 0
+popd
+findstr /v Architecture= %OUTDIR%\pkginfo.ini >pkginfo.ini
+echo Architecture=noarch >>pkginfo.ini
+echo Name=yori-completion >>pkginfo.ini
+echo UpgradePath=%UPGRADEPATH%/yori-completion-noarch.cab >>pkginfo.ini
+cabarc -p N %OUTDIR%\yori-completion-noarch.cab completion\* pkginfo.ini >NUL
+erase pkginfo.ini
+
+echo *** Cleaning tree
+
+nmake /nologo clean >NUL
+
+wait
+popd
+endlocal

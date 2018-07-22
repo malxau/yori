@@ -385,10 +385,33 @@ typedef YORI_CMD_BUILTIN *PYORI_CMD_BUILTIN;
 
 // *** CABINET.C ***
 
+/**
+ A prototype for a function to call on each file found within the cab.
+ */
+typedef
+BOOL
+YORI_LIB_CAB_EXPAND_FILE_CALLBACK(
+    __in PYORI_STRING FullPathName,
+    __in PYORI_STRING FileNameFromCab,
+    __in PVOID UserContext
+    );
+
+/**
+ A pointer to a function to call on each file found within the cab.
+ */
+typedef YORI_LIB_CAB_EXPAND_FILE_CALLBACK *PYORI_LIB_CAB_EXPAND_FILE_CALLBACK;
+
 BOOL
 YoriLibExtractCab(
     __in PYORI_STRING CabFileName,
-    __in PYORI_STRING TargetDirectory
+    __in PYORI_STRING TargetDirectory,
+    __in BOOL IncludeAllByDefault,
+    __in DWORD NumberFilesToExclude,
+    __in_opt PYORI_STRING FilesToExclude,
+    __in DWORD NumberFilesToInclude,
+    __in_opt PYORI_STRING FilesToInclude,
+    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback,
+    __in_opt PVOID UserContext
     );
 
 // *** CANCEL.C ***

@@ -1,5 +1,8 @@
 
  - Support input from devices other than consoles
+ - $() backquote form
+ - Fix builtin for's argument expansion somehow
+ - When terminating input, clear suggestion on display
 
 M2:
 

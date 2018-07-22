@@ -96,6 +96,7 @@ DIRS=crt       \
      type      \
      vol       \
      which     \
+     ypm       \
 
 all.real: writeconfigcache
 	@$(CURRENTTIME)
@@ -117,7 +118,8 @@ clean:
 	@if exist $(WRITECONFIGCACHEFILE) erase $(WRITECONFIGCACHEFILE)
 
 distclean: clean
-	@for %%i in (beta out doc bin sym) do @if exist %%i $(RMDIR) /s/q %%i
+	@for /D %%i in (pkg\*) do @if exist %%i $(RMDIR) /s/q %%i
+	@for %%i in (beta doc bin sym) do @if exist %%i $(RMDIR) /s/q %%i
 
 help:
 	@echo "DEBUG=[0|1] - If set, will compile debug build without optimization and with instrumentation"

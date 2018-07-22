@@ -28,6 +28,53 @@
 #include <yorilib.h>
 
 /**
+ Context information to pass around as files are being expanded.
+ */
+typedef struct _YORI_LIB_CAB_EXPAND_CONTEXT {
+
+    /**
+     The directory to expand files into.
+     */
+    PYORI_STRING TargetDirectory;
+
+    /**
+     If TRUE, all files not matching any list below are expanded.  If not,
+     only files explicitly listed are expanded.
+     */
+    BOOL DefaultInclude;
+
+    /**
+     The number of files in the FilesToInclude array.
+     */
+    DWORD NumberFilesToInclude;
+
+    /**
+     An array of strings corresponding to files that should be expanded.
+     */
+    PYORI_STRING FilesToInclude;
+
+    /**
+     The number of files in the FilesToExclude array.
+     */
+    DWORD NumberFilesToExclude;
+
+    /**
+     An array of strings corresponding to files that should not be expanded.
+     */
+    PYORI_STRING FilesToExclude;
+
+    /**
+     A user specified callback to provide notification for a given file.
+     */
+    PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback;
+
+    /**
+     Context information to pass to the user specified callback.
+     */
+    PVOID UserContext;
+} YORI_LIB_CAB_EXPAND_CONTEXT, *PYORI_LIB_CAB_EXPAND_CONTEXT;
+
+/**
  A callback invoked during FDICopy to allocate memory.
 
  @param Bytes The number of bytes to allocate.
@@ -138,42 +185,126 @@ YoriLibCabFileOpen(
 }
 
 /**
- Open a new file being extracted from a Cabinet.  This implies the file is
- being opened for write.  Create a single parent directory if it doesn't
- exist yet, and if the file exists already, try to move it out of the way
- and attempt to delete it.  Note that for running executables this case is
- very common.
+ Combine a parent directory with the CAB's ANSI relative file name (sigh) and
+ output the combined path and Unicode form of the relative file name.
 
- @param ParentDirectory Pointer to a string describing the directory to place
-        the files.
+ @param ParentDirectory Pointer to the parent directory to place files.
 
- @param FileName Pointer to a NULL terminated ANSI string (sigh) indicating
-        the file name to create.
+ @param FileName Pointer to a NULL terminated ANSI string for the name of the
+        object within the CAB.
 
- @return Handle to the opened file, or INVALID_HANDLE_VALUE on failure.
+ @param FullPathName If specified, points to a Yori string to receive the
+        full path name.  The memory is allocated in this routine and returned
+        with a reference.
+
+ @param FileNameOnly If specified, points to a Yori string to receive the
+        file name without parent path.  The memory is allocated in this
+        routine and is returned with a reference.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
  */
-DWORD_PTR
-YoriLibCabFileOpenForExtract(
+BOOL
+YoriLibCabBuildFileNames(
     __in PYORI_STRING ParentDirectory,
-    __in LPSTR FileName
+    __in LPSTR FileName,
+    __out_opt PYORI_STRING FullPathName,
+    __out_opt PYORI_STRING FileNameOnly
     )
 {
     DWORD NameLengthInChars = strlen(FileName);
     YORI_STRING FullPath;
-    HANDLE hFile;
-    DWORD Err;
+    DWORD ExtraChars;
 
     if (!YoriLibAllocateString(&FullPath, ParentDirectory->LengthInChars + 1 + NameLengthInChars + 1)) {
-        return (DWORD_PTR)INVALID_HANDLE_VALUE;
+        return FALSE;
     }
 
     if (ParentDirectory->LengthInChars >= 1 &&
         ParentDirectory->StartOfString[ParentDirectory->LengthInChars - 1] == '\\') {
 
         FullPath.LengthInChars = YoriLibSPrintf(FullPath.StartOfString, _T("%y%hs"), ParentDirectory, FileName);
+        ExtraChars = 0;
     } else {
         FullPath.LengthInChars = YoriLibSPrintf(FullPath.StartOfString, _T("%y\\%hs"), ParentDirectory, FileName);
+        ExtraChars = 1;
     }
+
+    if (FullPathName != NULL) {
+        YoriLibCloneString(FullPathName, &FullPath);
+    }
+
+    if (FileNameOnly != NULL) {
+        YoriLibCloneString(FileNameOnly, &FullPath);
+        FileNameOnly->StartOfString += ParentDirectory->LengthInChars + ExtraChars;
+        FileNameOnly->LengthInChars -= ParentDirectory->LengthInChars + ExtraChars;
+    }
+
+    YoriLibFreeStringContents(&FullPath);
+
+    return TRUE;
+}
+
+/**
+ Return TRUE to indicate a specified file should be expanded, or FALSE if
+ it should not be.
+
+ @param FileName Pointer to a string containing the relative file name within
+        the CAB (ie., no destination path.)
+
+ @param ExpandContext Pointer to the expand context containing the set of
+        files to include or exclude.
+
+ @return TRUE to indicate a file should be expanded, or FALSE if it should
+         not be.
+ */
+BOOL
+YoriLibCabShouldIncludeFile(
+    __in PYORI_STRING FileName,
+    __in PYORI_LIB_CAB_EXPAND_CONTEXT ExpandContext
+    )
+{
+    BOOL IncludeFile = ExpandContext->DefaultInclude;
+    DWORD Count;
+
+    if (IncludeFile) {
+        for (Count = 0; Count < ExpandContext->NumberFilesToExclude; Count++) {
+            if (YoriLibCompareStringInsensitive(FileName, &ExpandContext->FilesToExclude[Count]) == 0) {
+                IncludeFile = FALSE;
+                break;
+            }
+        }
+    }
+
+    if (!IncludeFile) {
+        for (Count = 0; Count < ExpandContext->NumberFilesToInclude; Count++) {
+            if (YoriLibCompareStringInsensitive(FileName, &ExpandContext->FilesToInclude[Count]) == 0) {
+                IncludeFile = TRUE;
+                break;
+            }
+        }
+    }
+
+    return IncludeFile;
+}
+
+/**
+ Open a new file being extracted from a Cabinet.  This implies the file is
+ being opened for write.  Create a single parent directory if it doesn't
+ exist yet, and if the file exists already, try to move it out of the way
+ and attempt to delete it.  Note that for running executables this case is
+ very common.
+
+ @param FullPath Pointer to a string describing the file to open.
+
+ @return Handle to the opened file, or INVALID_HANDLE_VALUE on failure.
+ */
+DWORD_PTR
+YoriLibCabFileOpenForExtract(
+    __in PYORI_STRING FullPath
+    )
+{
+    HANDLE hFile;
+    DWORD Err;
 
     while (TRUE) {
 
@@ -181,7 +312,7 @@ YoriLibCabFileOpenForExtract(
         //  Try to open the target file
         //
 
-        hFile = CreateFile(FullPath.StartOfString,
+        hFile = CreateFile(FullPath->StartOfString,
                            GENERIC_READ | GENERIC_WRITE,
                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                            NULL,
@@ -203,20 +334,20 @@ YoriLibCabFileOpenForExtract(
         if (Err == ERROR_PATH_NOT_FOUND) {
             LPTSTR LastSep;
 
-            LastSep = YoriLibFindRightMostCharacter(&FullPath, '\\');
+            LastSep = YoriLibFindRightMostCharacter(FullPath, '\\');
             if (LastSep == NULL) {
                 break;
             }
 
             *LastSep = '\0';
 
-            if (!CreateDirectory(FullPath.StartOfString, NULL)) {
+            if (!CreateDirectory(FullPath->StartOfString, NULL)) {
                 break;
             }
 
             *LastSep = '\\';
 
-            hFile = CreateFile(FullPath.StartOfString,
+            hFile = CreateFile(FullPath->StartOfString,
                                GENERIC_READ | GENERIC_WRITE,
                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                NULL,
@@ -234,17 +365,17 @@ YoriLibCabFileOpenForExtract(
 
             YORI_STRING NewName;
 
-            if (!YoriLibAllocateString(&NewName, FullPath.LengthInChars + sizeof(".old"))) {
+            if (!YoriLibAllocateString(&NewName, FullPath->LengthInChars + sizeof(".old"))) {
                 break;
             }
 
-            NewName.LengthInChars = YoriLibSPrintf(NewName.StartOfString, _T("%y.old"), &FullPath);
-            if (!MoveFileEx(FullPath.StartOfString, NewName.StartOfString, MOVEFILE_REPLACE_EXISTING)) {
+            NewName.LengthInChars = YoriLibSPrintf(NewName.StartOfString, _T("%y.old"), FullPath);
+            if (!MoveFileEx(FullPath->StartOfString, NewName.StartOfString, MOVEFILE_REPLACE_EXISTING)) {
                 YoriLibFreeStringContents(&NewName);
                 break;
             }
 
-            hFile = CreateFile(FullPath.StartOfString,
+            hFile = CreateFile(FullPath->StartOfString,
                                GENERIC_READ | GENERIC_WRITE,
                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                NULL,
@@ -253,7 +384,7 @@ YoriLibCabFileOpenForExtract(
                                NULL);
 
             if (hFile == INVALID_HANDLE_VALUE) {
-                MoveFileEx(NewName.StartOfString, FullPath.StartOfString, MOVEFILE_REPLACE_EXISTING);
+                MoveFileEx(NewName.StartOfString, FullPath->StartOfString, MOVEFILE_REPLACE_EXISTING);
             } else {
                 HANDLE hDeadFile;
 
@@ -281,7 +412,6 @@ YoriLibCabFileOpenForExtract(
         }
     }
 
-    YoriLibFreeStringContents(&FullPath);
     return (DWORD_PTR)hFile;
 }
 
@@ -417,10 +547,31 @@ YoriLibCabNotify(
     FILETIME TimeToSet;
     LARGE_INTEGER liTemp;
     TIME_ZONE_INFORMATION Tzi;
+    PYORI_LIB_CAB_EXPAND_CONTEXT ExpandContext;
+    YORI_STRING FullPath;
+    YORI_STRING FileName;
+    DWORD_PTR Handle;
 
     switch(NotifyType) {
         case YoriLibCabNotifyCopyFile:
-            return YoriLibCabFileOpenForExtract((PYORI_STRING)Notification->Context, Notification->String1);
+            ExpandContext = (PYORI_LIB_CAB_EXPAND_CONTEXT)Notification->Context;
+            if (!YoriLibCabBuildFileNames(ExpandContext->TargetDirectory, Notification->String1, &FullPath, &FileName)) {
+                return (DWORD_PTR)INVALID_HANDLE_VALUE;
+            }
+            if (YoriLibCabShouldIncludeFile(&FileName, ExpandContext)) {
+                if (ExpandContext->UserCallback == NULL ||
+                    ExpandContext->UserCallback(&FullPath, &FileName, ExpandContext->UserContext)) {
+
+                    Handle = YoriLibCabFileOpenForExtract(&FullPath);
+                } else {
+                    Handle = 0;
+                }
+            } else {
+                Handle = 0;
+            }
+            YoriLibFreeStringContents(&FullPath);
+            YoriLibFreeStringContents(&FileName);
+            return Handle;
         case YoriLibCabNotifyCloseFile:
             GetTimeZoneInformation(&Tzi);
 
@@ -464,12 +615,37 @@ YoriLibCabNotify(
  @param TargetDirectory Pointer to the name of the directory to extract
         into.
 
+ @param IncludeAllByDefault If TRUE, files not listed in the below arrays
+        are expanded.  If FALSE, only files explicitly listed are expanded.
+
+ @param NumberFilesToInclude The number of files in the FilesToInclude array.
+
+ @param FilesToInclude An array of strings corresponding to files that should
+        be expanded.
+
+ @param NumberFilesToExclude The number of files in the FilesToExclude array.
+
+ @param FilesToExclude An array of strings corresponding to files that should
+        not be expanded.
+
+ @param UserCallback Optionally points to a a function to invoke for each file
+        processed as part of extracting the CAB.
+
+ @param UserContext Optionally points to context to pass to UserCallback.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibExtractCab(
     __in PYORI_STRING CabFileName,
-    __in PYORI_STRING TargetDirectory
+    __in PYORI_STRING TargetDirectory,
+    __in BOOL IncludeAllByDefault,
+    __in DWORD NumberFilesToExclude,
+    __in_opt PYORI_STRING FilesToExclude,
+    __in DWORD NumberFilesToInclude,
+    __in_opt PYORI_STRING FilesToInclude,
+    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback,
+    __in_opt PVOID UserContext
     )
 {
     YORI_STRING FullCabFileName;
@@ -483,6 +659,7 @@ YoriLibExtractCab(
     LPSTR AnsiCabParentDirectory;
     BOOL DefaultUsed = FALSE;
     BOOL Result = FALSE;
+    YORI_LIB_CAB_EXPAND_CONTEXT ExpandContext;
 
     YoriLibLoadCabinetFunctions();
     if (DllCabinet.pFdiCreate == NULL ||
@@ -494,6 +671,14 @@ YoriLibExtractCab(
     YoriLibInitEmptyString(&FullTargetDirectory);
     AnsiCabParentDirectory = NULL;
     hFdi = NULL;
+    ZeroMemory(&ExpandContext, sizeof(ExpandContext));
+    ExpandContext.DefaultInclude = IncludeAllByDefault;
+    ExpandContext.NumberFilesToInclude = NumberFilesToInclude;
+    ExpandContext.NumberFilesToExclude = NumberFilesToExclude;
+    ExpandContext.FilesToInclude = FilesToInclude;
+    ExpandContext.FilesToExclude = FilesToExclude;
+    ExpandContext.UserCallback = UserCallback;
+    ExpandContext.UserContext = UserContext;
 
     if (!YoriLibUserStringToSingleFilePath(CabFileName, FALSE, &FullCabFileName)) {
         return FALSE;
@@ -554,13 +739,15 @@ YoriLibExtractCab(
         goto Exit;
     }
 
+    ExpandContext.TargetDirectory = &FullTargetDirectory;
+
     if (!DllCabinet.pFdiCopy(hFdi,
                              AnsiCabFileName,
                              AnsiCabParentDirectory,
                              0,
                              YoriLibCabNotify,
                              NULL,
-                             &FullTargetDirectory)) {
+                             &ExpandContext)) {
         goto Exit;
     }
 
