@@ -973,9 +973,12 @@ YoriShTerminateInput(
     )
 {
     DWORD Index;
+    if (Buffer->SuggestionString.LengthInChars > 0) {
+        Buffer->SuggestionDirty = TRUE;
+    }
+    YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriShDisplayAfterKeyPress(Buffer);
     YoriShPostKeyPress(Buffer);
-    YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriShClearTabCompletionMatches(Buffer);
     for (Index = 0; Index < 2; Index++) {
         if (Buffer->PreviousSelectionBuffer[Index].AttributeArray) {
