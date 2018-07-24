@@ -248,6 +248,9 @@ YoriShExecuteInProc(
     YORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     BOOLEAN WasPipe = FALSE;
     PYORI_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
+    LPTSTR CmdLine;
+    PYORI_STRING ArgV;
+    DWORD ArgC;
     DWORD Count;
     DWORD ExitCode = 0;
 
@@ -267,6 +270,38 @@ YoriShExecuteInProc(
     }
 
     YoriShRemoveEscapesFromCmdContext(CmdContext);
+
+    //
+    //  Check if an argument isn't quoted but requires quotes.  This implies
+    //  something happened outside the user's immediate control, such as
+    //  environment variable expansion.  When this occurs, reprocess the
+    //  command back to a string form and recompose into ArgC/ArgV using the
+    //  same routines as would occur for an external process.
+    //
+
+    ArgC = CmdContext->ArgC;
+    ArgV = CmdContext->ArgV;
+
+    for (Count = 0; Count < CmdContext->ArgC; Count++) {
+        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[Count]));
+        if (!CmdContext->ArgContexts[Count].Quoted &&
+            YoriLibCheckIfArgNeedsQuotes(&CmdContext->ArgV[Count]) &&
+            ArgV == CmdContext->ArgV) {
+
+            CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, TRUE, NULL, NULL);
+            if (CmdLine == NULL) {
+                return ERROR_OUTOFMEMORY;
+            }
+
+            ArgV = YoriLibCmdlineToArgcArgv(CmdLine, &ArgC);
+            YoriLibDereference(CmdLine);
+
+            if (ArgV == NULL) {
+                return ERROR_OUTOFMEMORY;
+            }
+        }
+    }
+
     YoriShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
 
     //
@@ -289,11 +324,7 @@ YoriShExecuteInProc(
         }
     }
 
-    for (Count = 0; Count < CmdContext->ArgC; Count++) {
-        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[Count]));
-    }
-
-    ExitCode = Fn(CmdContext->ArgC, CmdContext->ArgV);
+    ExitCode = Fn(ArgC, ArgV);
     YoriShRevertRedirection(&PreviousRedirectContext);
 
     if (WasPipe) {
@@ -316,6 +347,13 @@ YoriShExecuteInProc(
 
             YoriShWaitForProcessBufferToFinalize(ExecContext->StdErr.Buffer.ProcessBuffers);
         }
+    }
+
+    if (ArgV != CmdContext->ArgV) {
+        for (Count = 0; Count < ArgC; Count++) {
+            YoriLibFreeStringContents(&ArgV[Count]);
+        }
+        YoriLibDereference(ArgV);
     }
 
     return ExitCode;
