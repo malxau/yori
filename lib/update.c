@@ -293,6 +293,9 @@ YoriLibUpdateBinaryFromUrl(
     HINSTANCE hWinInet = NULL;
     DWORD dwError;
     YoriLibUpdError Return = YoriLibUpdErrorSuccess;
+    LPTSTR StartOfHost;
+    LPTSTR EndOfHost;
+    YORI_STRING HostHeader;
 
     PINTERNET_OPEN InetOpen;
     PINTERNET_OPEN_URL InetOpenUrl;
@@ -350,14 +353,35 @@ YoriLibUpdateBinaryFromUrl(
     }
 
     //
+    //  Newer versions of Windows will add a Host: header.  Old versions send
+    //  an HTTP 1.1 request without one, which Apache doesn't like.
+    //
+
+    YoriLibInitEmptyString(&HostHeader);
+    StartOfHost = _tcsstr(Url, _T("://"));
+    if (StartOfHost != NULL) {
+        StartOfHost += 3;
+        EndOfHost = _tcschr(StartOfHost, '/');
+        if (EndOfHost != NULL) {
+            YORI_STRING HostName;
+            YoriLibInitEmptyString(&HostName);
+            HostName.StartOfString = StartOfHost;
+            HostName.LengthInChars = (DWORD)(EndOfHost - StartOfHost);
+            YoriLibYPrintf(&HostHeader, _T("Host: %y\r\n"), &HostName);
+        }
+    }
+
+    //
     //  Request the desired URL and check the status is HTTP success.
     //
 
-    NewBinary = InetOpenUrl(hInternet, Url, NULL, 0, 0, 0);
+    NewBinary = InetOpenUrl(hInternet, Url, HostHeader.StartOfString, HostHeader.LengthInChars, 0, 0);
     if (NewBinary == NULL) {
+        YoriLibFreeStringContents(&HostHeader);
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
     }
+    YoriLibFreeStringContents(&HostHeader);
 
     ErrorBufferSize = sizeof(dwError);
     ActualBinarySize = 0;
