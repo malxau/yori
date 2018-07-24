@@ -342,6 +342,98 @@ YoriShParseArgs(
 }
 
 /**
+ If the user hasn't suppressed warning displays, display warnings for the age
+ of the program and suboptimal architecture.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShDisplayWarnings()
+{
+    DWORD EnvVarLength;
+    YORI_STRING ModuleName;
+
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NULL, 0);
+    if (EnvVarLength > 0) {
+        YORI_STRING NoWarningsVar;
+        if (!YoriLibAllocateString(&NoWarningsVar, EnvVarLength + 1)) {
+            return FALSE;
+        }
+
+        NoWarningsVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NoWarningsVar.StartOfString, NoWarningsVar.LengthAllocated);
+        if (EnvVarLength < NoWarningsVar.LengthAllocated &&
+            YoriLibCompareStringWithLiteral(&NoWarningsVar, _T("1")) == 0) {
+
+            YoriLibFreeStringContents(&NoWarningsVar);
+            return TRUE;
+        }
+        YoriLibFreeStringContents(&NoWarningsVar);
+    }
+
+    //
+    //  Unlike most other Win32 APIs, this one has no way to indicate
+    //  how much space it needs.  We can be wasteful here though, since
+    //  it'll be freed immediately.
+    //
+
+    if (!YoriLibAllocateString(&ModuleName, 32768)) {
+        return FALSE;
+    }
+
+    ModuleName.LengthInChars = GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
+    if (ModuleName.LengthInChars > 0 && ModuleName.LengthInChars < ModuleName.LengthAllocated) {
+        HANDLE ExeHandle;
+
+        ExeHandle = CreateFile(ModuleName.StartOfString,
+                               FILE_READ_ATTRIBUTES,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_ATTRIBUTE_NORMAL,
+                               NULL);
+        if (ExeHandle != INVALID_HANDLE_VALUE) {
+            FILETIME CreationTime;
+            FILETIME AccessTime;
+            FILETIME WriteTime;
+            SYSTEMTIME Now;
+            FILETIME FtNow;
+            LARGE_INTEGER liWriteTime;
+            LARGE_INTEGER liNow;
+
+            GetFileTime(ExeHandle, &CreationTime, &AccessTime, &WriteTime);
+            GetSystemTime(&Now);
+            SystemTimeToFileTime(&Now, &FtNow);
+            liNow.LowPart = FtNow.dwLowDateTime;
+            liNow.HighPart = FtNow.dwHighDateTime;
+            liWriteTime.LowPart = WriteTime.dwLowDateTime;
+            liWriteTime.HighPart = WriteTime.dwHighDateTime;
+
+            liNow.QuadPart = liNow.QuadPart / (10 * 1000 * 1000);
+            liNow.QuadPart = liNow.QuadPart / (60 * 60 * 24);
+            liWriteTime.QuadPart = liWriteTime.QuadPart / (10 * 1000 * 1000);
+            liWriteTime.QuadPart = liWriteTime.QuadPart / (60 * 60 * 24);
+
+            if (liNow.QuadPart > liWriteTime.QuadPart &&
+                liWriteTime.QuadPart + 60 < liNow.QuadPart) {
+
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This build of Yori is %lli days old.  Run ypm -u to upgrade."), liNow.QuadPart - liWriteTime.QuadPart);
+            }
+        }
+    }
+
+    if (DllKernel32.pIsWow64Process != NULL) {
+        BOOL IsWow = FALSE;
+        if (DllKernel32.pIsWow64Process(GetCurrentProcess(), &IsWow) && IsWow) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This a 32 bit version of Yori on a 64 bit system.  Use the 64 bit version.\n"));
+        }
+    }
+
+    YoriLibFreeStringContents(&ModuleName);
+    return TRUE;
+}
+
+
+/**
  Reset the console after one process has finished.
  */
 VOID
@@ -404,6 +496,7 @@ ymain (
 
     if (!TerminateApp) {
 
+        YoriShDisplayWarnings();
         YoriShLoadHistoryFromFile();
 
         while(TRUE) {
