@@ -2187,29 +2187,30 @@ YoriShProcessMouseButtonUp(
 }
 
 /**
- Return TRUE if the character should be considered a break character when the
- user double clicks to select.  Break characters are never themselves selected.
+ Return the set of characters that should be considered break characters when
+ the user double clicks to select.  Break characters are never themselves
+ selected.
 
- @param Char The character to test for whether it is a break character.
+ @param BreakChars On successful completion, populated with a set of
+        characters that should be considered break characters.
 
- @return TRUE if the character is a break character, FALSE if it should be
-         selected.
+ @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriShIsSelectionDoubleClickBreakChar(
-    __in TCHAR Char
+YoriShGetSelectionDoubleClickBreakChars(
+    __out PYORI_STRING BreakChars
     )
 {
-    if (Char == ' ' ||
-        Char == '>' ||
-        Char == '<' ||
-        Char == '|' ||
-        Char == 0x2502) {  // Aka Unicode full vertical line (used by sdir)
+    YoriLibInitEmptyString(BreakChars);
+    if (!YoriShAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars) || BreakChars->LengthInChars == 0) {
 
-        return TRUE;
+        //
+        //  0x2502 is Unicode full vertical line (used by sdir)
+        //
+
+        YoriLibConstantString(BreakChars, _T(" '<>|\x2502"));
     }
-
-    return FALSE;
+    return TRUE;
 }
 
 
@@ -2250,10 +2251,12 @@ YoriShProcessMouseDoubleClick(
         SHORT StartOffset;
         SHORT EndOffset;
         CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+        YORI_STRING BreakChars;
 
         if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
             return FALSE;
         }
+        YoriShGetSelectionDoubleClickBreakChars(&BreakChars);
 
         BufferChanged = YoriShClearSelection(Buffer);
 
@@ -2266,7 +2269,8 @@ YoriShProcessMouseDoubleClick(
         //
 
         ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
-        if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
+        if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+            YoriLibFreeStringContents(&BreakChars);
             return FALSE;
         }
 
@@ -2277,7 +2281,7 @@ YoriShProcessMouseDoubleClick(
         for (StartOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; StartOffset > 0; StartOffset--) {
             ReadPoint.X = (SHORT)(StartOffset - 1);
             ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
-            if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
+            if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
                 break;
             }
         }
@@ -2289,7 +2293,7 @@ YoriShProcessMouseDoubleClick(
         for (EndOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; EndOffset < ScreenInfo.dwSize.X - 1; EndOffset++) {
             ReadPoint.X = (SHORT)(EndOffset + 1);
             ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
-            if (YoriShIsSelectionDoubleClickBreakChar(ReadChar)) {
+            if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
                 break;
             }
         }
@@ -2300,6 +2304,7 @@ YoriShProcessMouseDoubleClick(
         Buffer->CurrentSelection.Right = EndOffset;
 
         BufferChanged = TRUE;
+        YoriLibFreeStringContents(&BreakChars);
 
     }
 
