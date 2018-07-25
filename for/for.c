@@ -322,8 +322,14 @@ ForFileFoundCallback(
 }
 
 #ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
 #define ENTRYPOINT YoriCmd_FOR
 #else
+/**
+ The main entrypoint for the for standalone application.
+ */
 #define ENTRYPOINT ymain
 #endif
 
