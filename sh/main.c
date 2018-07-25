@@ -424,7 +424,7 @@ YoriShDisplayWarnings()
     if (DllKernel32.pIsWow64Process != NULL) {
         BOOL IsWow = FALSE;
         if (DllKernel32.pIsWow64Process(GetCurrentProcess(), &IsWow) && IsWow) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This a 32 bit version of Yori on a 64 bit system.  Use the 64 bit version.\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This a 32 bit version of Yori on a 64 bit system.\n   Run 'ypm -a amd64 -u' to switch to the 64 bit version.\n"));
         }
     }
 

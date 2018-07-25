@@ -35,12 +35,13 @@ CHAR strHelpText[] =
         "\n"
         "Installs or upgrades packages.\n"
         "\n"
-        "YPM [-license] [-d <pkg>] [-i <file>] [-l] [-u]\n"
+        "YPM [-license] [-d <pkg>] [-i <file>] [-l] [[-a <arch>] -u [<pkg>]]\n"
         "\n"
+        "   -a             Specify a CPU architecture to upgrade to\n"
         "   -d             Delete an installed package\n"
         "   -i             Install a package from a specified file or URL\n"
         "   -l             List all currently installed packages\n"
-        "   -u             Upgrade all currently installed packages\n";
+        "   -u             Upgrade a package or all currently installed packages\n";
 
 /**
  Display usage text to the user.
@@ -675,12 +676,99 @@ YpmListInstalledPackages()
 }
 
 /**
+ Given a package name of an installed package and an existing upgrade path for
+ the current architecture, try to munge a path for a new architecture.  This
+ routine intentionally leaves "noarch" packages alone, because there's never
+ a need to get a different type of noarch package.
+
+ @param PackageName The name of an installed package.
+
+ @param NewArchitecture The new architecture to apply.
+
+ @param PkgIniFile Path to the system global store of installed packages.
+
+ @param UpgradePath On input, refers to a fully qualified upgrade path for
+        the package.  On successful completion, this is updated to contain
+        a path for the new architecture.  Note this modification is performed
+        on the existing allocation; the assumption is the caller needs to
+        have a pessimistically sized buffer to read from the INI file, and
+        any modifications made need to fit in the same limits anyway.
+
+ @return TRUE to indicate the path was successfully updated to the new
+         architecture; FALSE if it was not updated.
+ */
+BOOL
+YpmBuildUpgradeLocationForNewArchitecture(
+    __in PYORI_STRING PackageName,
+    __in PYORI_STRING NewArchitecture,
+    __in PYORI_STRING PkgIniFile,
+    __inout PYORI_STRING UpgradePath
+    )
+{
+    YORI_STRING IniValue;
+    YORI_STRING ExistingArchAndExtension;
+
+    if (!YoriLibAllocateString(&IniValue, YPM_MAX_FIELD_LENGTH)) {
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("Architecture"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    if (UpgradePath->LengthInChars < IniValue.LengthInChars + sizeof(".cab") - 1) {
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&ExistingArchAndExtension);
+    ExistingArchAndExtension.LengthInChars = sizeof(".cab") - 1;
+    ExistingArchAndExtension.StartOfString = &UpgradePath->StartOfString[UpgradePath->LengthInChars - ExistingArchAndExtension.LengthInChars];
+
+    if (YoriLibCompareStringWithLiteralInsensitive(&ExistingArchAndExtension, _T(".cab")) != 0) {
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    ExistingArchAndExtension.StartOfString -= IniValue.LengthInChars;
+    ExistingArchAndExtension.LengthInChars = IniValue.LengthInChars;
+
+    if (YoriLibCompareStringInsensitive(&ExistingArchAndExtension, &IniValue) != 0) {
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    if (YoriLibCompareStringWithLiteralInsensitive(&ExistingArchAndExtension, _T("noarch")) == 0) {
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    if (UpgradePath->LengthInChars - IniValue.LengthInChars + NewArchitecture->LengthInChars < UpgradePath->LengthAllocated) {
+        YoriLibSPrintf(ExistingArchAndExtension.StartOfString, _T("%y.cab"), NewArchitecture);
+        UpgradePath->LengthInChars = UpgradePath->LengthInChars - IniValue.LengthInChars + NewArchitecture->LengthInChars;
+
+        YoriLibFreeStringContents(&IniValue);
+        return TRUE;
+    }
+
+    YoriLibFreeStringContents(&IniValue);
+    return FALSE;
+}
+
+/**
  Upgrade all installed packages in the system.
+
+ @param NewArchitecture Optionally points to the new architecture to apply.
+        If not specified, the current architecture is retained.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmUpgradeInstalledPackages()
+YpmUpgradeInstalledPackages(
+    __in_opt PYORI_STRING NewArchitecture
+    )
 {
     YORI_STRING PkgIniFile;
     YORI_STRING InstalledSection;
@@ -722,12 +810,13 @@ YpmUpgradeInstalledPackages()
         PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
         UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradePath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
         if (UpgradePath.LengthInChars > 0) {
+            if (NewArchitecture != NULL) {
+                YpmBuildUpgradeLocationForNewArchitecture(&PkgNameOnly, NewArchitecture, &PkgIniFile, &UpgradePath);
+            }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &UpgradePath);
             if (!YpmInstallPackage(&UpgradePath, NULL, TRUE)) {
                 break;
             }
-        } else {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("GetPrivateProfileString Error %i\n"), GetLastError());
         }
         ThisLine += LineLength;
         ThisLine++;
@@ -738,6 +827,65 @@ YpmUpgradeInstalledPackages()
     YoriLibFreeStringContents(&UpgradePath);
 
     return TRUE;
+}
+
+/**
+ Upgrade a single package installed on the system.
+
+ @param PackageName The name of the package to upgrade.
+
+ @param NewArchitecture Optionally points to the new architecture to apply.
+        If not specified, the current architecture is retained.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmUpgradeSinglePackage(
+    __in PYORI_STRING PackageName,
+    __in_opt PYORI_STRING NewArchitecture
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING IniValue;
+    BOOL Result;
+
+    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YPM_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify an upgrade path\n"), PackageName);
+        return FALSE;
+    }
+
+    if (NewArchitecture != NULL) {
+        YpmBuildUpgradeLocationForNewArchitecture(PackageName, NewArchitecture, &PkgIniFile, &IniValue);
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &IniValue);
+    Result = YpmInstallPackage(&IniValue, NULL, TRUE);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&IniValue);
+
+    return Result;
 }
 
 
@@ -771,8 +919,9 @@ ymain(
 {
     BOOL ArgumentUnderstood;
     DWORD i;
-    DWORD StartArg = 1;
+    DWORD StartArg = 0;
     YORI_STRING Arg;
+    PYORI_STRING NewArch = NULL;
     YPM_OPERATION Op;
 
     Op = YpmOpNone;
@@ -790,6 +939,12 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+                if (i + 1 < ArgC) {
+                    NewArch = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 Op = YpmOpDeleteInstalled;
                 ArgumentUnderstood = TRUE;
@@ -824,22 +979,25 @@ ymain(
     }
 
     if (Op == YpmOpInstall) {
-        i = StartArg;
-        if (i + 1 > ArgC) {
+        if (StartArg == 0 || StartArg >= ArgC) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing argument\n"));
             return EXIT_FAILURE;
         }
 
-        if (i + 1 < ArgC) {
-            YpmInstallPackage(&ArgV[i], &ArgV[i + 1], FALSE);
-        } else {
+        for (i = StartArg; i < ArgC; i++) {
             YpmInstallPackage(&ArgV[i], NULL, FALSE);
         }
 
     } else if (Op == YpmOpListPackages) {
         YpmListInstalledPackages();
     } else if (Op == YpmOpUpgradeInstalled) {
-        YpmUpgradeInstalledPackages();
+        if (StartArg == 0 || StartArg >= ArgC) {
+            YpmUpgradeInstalledPackages(NewArch);
+        } else {
+            for (i = StartArg; i < ArgC; i++) {
+                YpmUpgradeSinglePackage(&ArgV[i], NewArch);
+            }
+        }
     } else if (Op == YpmOpDeleteInstalled) {
         i = StartArg;
         if (i + 1 > ArgC) {
