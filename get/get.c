@@ -112,7 +112,7 @@ ymain(
 
     ExistingUrlName = ArgV[StartArg].StartOfString;
 
-    YoriLibSPrintf(szAgent, _T("YGet %i.%i\n"), GET_VER_MAJOR, GET_VER_MINOR);
+    YoriLibSPrintf(szAgent, _T("YGet %i.%i\r\n"), GET_VER_MAJOR, GET_VER_MINOR);
     Error = YoriLibUpdateBinaryFromUrl(ExistingUrlName, NewFileName.StartOfString, szAgent);
     YoriLibFreeStringContents(&NewFileName);
     if (Error != YoriLibUpdErrorSuccess) {
