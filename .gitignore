@@ -9,5 +9,8 @@ doc/**
 beta/**
 bin/**
 sym/**
-out/**
+pkg/out/**
+pkg/amd64/**
+pkg/win32/**
+pkg/arm64/**
 !crt/i386/*.obj
