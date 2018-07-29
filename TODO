@@ -1,24 +1,21 @@
-
  - Support input from devices other than consoles
  - $() backquote form
- - Fix builtin for's argument expansion somehow
- - When terminating input, clear suggestion on display
-
-M2:
-
+ - ShellExecute URLs
+ - Search on input string
+ - Ini tool to help the build process
+ - Allow multiple iterations of upgrade when files in use
+ - Ypm enumerate packages from online repositories
+ - Ypm "mirror" (search/replace) support
+ - Simple search/replace on text streams (mini-sed)
+ - Exclude files from copy/move
  - Merge sdir recursion root and criteria arguments
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text
  - Ctrl+R
  - Ctrl+Z
  - Isolate aliases during call
-
-M3:
-
  - Have find apply file criteria
  - Cal
  - Z
  - Pager
  - Split sdir brief recurse into standalone du
- - Installer/updater
-
