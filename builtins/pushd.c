@@ -242,12 +242,12 @@ YoriCmd_PUSHD(
     //  path parsing and will handle things like drive switching consistently.
     //
 
-    if (!YoriLibAllocateString(&ChdirCmd, 6 + ArgV[StartArg].LengthInChars + 1)) {
+    if (!YoriLibAllocateString(&ChdirCmd, 8 + ArgV[StartArg].LengthInChars + 1)) {
         YoriLibFree(NewStackEntry);
         return EXIT_FAILURE;
     }
 
-    ChdirCmd.LengthInChars = YoriLibSPrintf(ChdirCmd.StartOfString, _T("CHDIR %y"), &ArgV[StartArg]);
+    ChdirCmd.LengthInChars = YoriLibSPrintf(ChdirCmd.StartOfString, _T("CHDIR \"%y\""), &ArgV[StartArg]);
     YoriCallExecuteExpression(&ChdirCmd);
     YoriLibFreeStringContents(&ChdirCmd);
 
