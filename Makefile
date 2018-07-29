@@ -71,6 +71,7 @@ DIRS=crt       \
      help      \
      hilite    \
      iconv     \
+     initool   \
      intcmp    \
      lines     \
      mkdir     \
