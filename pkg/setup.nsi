@@ -42,7 +42,7 @@ InstallDir $PROGRAMFILES32\bin
 !ENDIF
 
 ; The file to write
-OutFile "out\yori-${PACKARCH}-installer-${BUILDDATE}${DBGSUFFIX}${PDBSUFFIX}${SYMONLYSUFFIX}.exe"
+OutFile "out\${PACKARCH}\yori-${PACKARCH}-installer-${BUILDDATE}${DBGSUFFIX}${PDBSUFFIX}${SYMONLYSUFFIX}.exe"
 
 
 ; Registry key to check for directory (so if you install again, it will 
@@ -262,6 +262,7 @@ Section
   File "${PACKARCH}${DBGSUFFIX}\bin\yhelp.exe"
   File "${PACKARCH}${DBGSUFFIX}\bin\hilite.exe"
   File "${PACKARCH}${DBGSUFFIX}\bin\iconv.exe"
+  File "${PACKARCH}${DBGSUFFIX}\bin\initool.exe"
   File "${PACKARCH}${DBGSUFFIX}\bin\lines.exe"
   File "${PACKARCH}${DBGSUFFIX}\bin\nice.exe"
   File "${PACKARCH}${DBGSUFFIX}\bin\osver.exe"
@@ -305,6 +306,7 @@ Section "Useful commands"
   File "${PACKARCH}${DBGSUFFIX}\sym\yhelp.pdb"
   File "${PACKARCH}${DBGSUFFIX}\sym\hilite.pdb"
   File "${PACKARCH}${DBGSUFFIX}\sym\iconv.pdb"
+  File "${PACKARCH}${DBGSUFFIX}\sym\initool.pdb"
   File "${PACKARCH}${DBGSUFFIX}\sym\lines.pdb"
   File "${PACKARCH}${DBGSUFFIX}\sym\nice.pdb"
   File "${PACKARCH}${DBGSUFFIX}\sym\osver.pdb"
@@ -521,6 +523,8 @@ Section "Uninstall"
   Delete $INSTDIR\hilite.pdb
   Delete $INSTDIR\iconv.exe
   Delete $INSTDIR\iconv.pdb
+  Delete $INSTDIR\initool.exe
+  Delete $INSTDIR\initool.pdb
   Delete $INSTDIR\intcmp.exe
   Delete $INSTDIR\intcmp.pdb
   Delete $INSTDIR\lines.exe

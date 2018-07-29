@@ -1,5 +1,14 @@
 setlocal
+
+REM 
+REM Set build ID.  For release builds, this needs to be zero.
+REM
+
 set BLDID=`date`
+
+REM
+REM Determine architecture by looking at compiler output.
+REM
 
 set ARCH=win32
 cl /? 2>&1 | findstr /C:"for x64" >NUL 2>&1
@@ -12,6 +21,11 @@ if intcmp %ERRORLEVEL%==0;set ARCH=arm64
 pushd ..
 
 set BINPKGS=yori-modular yori-core yori-typical yori-extra yori-ypm
+
+REM
+REM Extract Yori version from ver.inc and generate string containing the
+REM version
+REM
 
 set YORI_VER_MAJOR=`findstr YORI_BASE_VER_MAJOR= config\ver.inc|cut -d = -f 1`
 set YORI_VER_MINOR=`findstr YORI_BASE_VER_MINOR= config\ver.inc|cut -d = -f 1`
@@ -34,6 +48,7 @@ REM from the web.
 echo *** Generating debug installer
 
 mkdir %OUTDIR% >NUL 2>&1
+mkdir %OUTDIR%\%ARCH% >NUL 2>&1
 echo [Package] >%OUTDIR%\pkginfo.ini
 echo Version=%YORI_VER_MAJOR%.%YORI_VER_MINOR%.%BLDID% >>%OUTDIR%\pkginfo.ini
 echo Architecture=%ARCH% >>%OUTDIR%\pkginfo.ini
@@ -75,12 +90,28 @@ popd
 pushd pkg\%ARCH%\sym
 yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ..\..\bld-pkg.ys1 %%i-pdb %%i-pdb 0
 popd
+
+REM
+REM Generate yori-completion which is special because it's architecture
+REM agnostic
+REM
+
 findstr /v Architecture= %OUTDIR%\pkginfo.ini >pkginfo.ini
 echo Architecture=noarch >>pkginfo.ini
 echo Name=yori-completion >>pkginfo.ini
 echo UpgradePath=%UPGRADEPATH%/yori-completion-noarch.cab >>pkginfo.ini
 cabarc -p N %OUTDIR%\yori-completion-noarch.cab completion\* pkginfo.ini >NUL
 erase pkginfo.ini
+
+REM
+REM Generate pkglist.ini so that tools can find packages provided by this
+REM directory
+REM
+
+pushd pkg
+yfor %%i in (%BINPKGS%) do bld-pkglist %%i %ARCH% ^& bld-pkglist %%i-pdb %ARCH% ^& bld-pkglist %%i-dbg %ARCH% ^& bld-pkglist %%i-dbg-pdb %ARCH%
+bld-pkglist yori-completion noarch
+popd
 
 echo *** Cleaning tree
 

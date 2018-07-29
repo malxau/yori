@@ -1,0 +1,7 @@
+setlocal
+set PKGNAME=%1%
+set PKGARCH=%2%
+initool -w %OUTDIR%\pkglist.ini Provides %PKGNAME% %BUILDSTRING%
+initool -w %OUTDIR%\pkglist.ini %PKGNAME% Version %BUILDSTRING%
+initool -w %OUTDIR%\pkglist.ini %PKGNAME% %PKGARCH% %PKGNAME%.cab
+endlocal
