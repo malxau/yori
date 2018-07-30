@@ -6,7 +6,6 @@
  - Ypm enumerate packages from online repositories
  - Ypm "mirror" (search/replace) support
  - Simple search/replace on text streams (mini-sed)
- - Exclude files from copy/move
  - Merge sdir recursion root and criteria arguments
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text

@@ -51,13 +51,14 @@ CHAR strHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
-        "COPY [-license] [-b] [-l] [-s] [-v] <src>\n"
-        "COPY [-license] [-b] [-l] [-s] [-v] <src> [<src> ...] <dest>\n"
+        "COPY [-license] [-b] [-l] [-s] [-v] [-x exclude] <src>\n"
+        "COPY [-license] [-b] [-l] [-s] [-v] [-x exclude] <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -l             Copy links as links rather than contents\n"
         "   -s             Copy subdirectories as well as files\n"
-        "   -v             Verbose output\n";
+        "   -v             Verbose output\n"
+        "   -x             Exclude files matching specified pattern\n";
 
 /**
  Display usage text to the user.
@@ -73,6 +74,11 @@ CopyHelp()
     return TRUE;
 }
 
+typedef struct _COPY_EXCLUDE_ITEM {
+    YORI_LIST_ENTRY ExcludeList;
+    YORI_STRING ExcludeCriteria;
+} COPY_EXCLUDE_ITEM, *PCOPY_EXCLUDE_ITEM;
+
 /**
  A context passed between each source file match when copying multiple
  files.
@@ -82,6 +88,11 @@ typedef struct _COPY_CONTEXT {
      Path to the destination for the copy operation.
      */
     YORI_STRING Dest;
+
+    /**
+     Files matching any of the exclude rules will not be copied.
+     */
+    YORI_LIST_ENTRY ExcludeList;
 
     /**
      The file system attributes of the destination.  Used to determine if
@@ -107,6 +118,66 @@ typedef struct _COPY_CONTEXT {
      */
     BOOL Verbose;
 } COPY_CONTEXT, *PCOPY_CONTEXT;
+
+BOOL
+CopyAddExclude(
+    __in PCOPY_CONTEXT CopyContext,
+    __in PYORI_STRING NewCriteria
+    )
+{
+    PCOPY_EXCLUDE_ITEM ExcludeItem;
+    ExcludeItem = YoriLibReferencedMalloc(sizeof(COPY_EXCLUDE_ITEM) + (NewCriteria->LengthInChars + 1) * sizeof(TCHAR));
+
+    if (ExcludeItem == NULL) {
+        return FALSE;
+    }
+
+    ZeroMemory(ExcludeItem, sizeof(COPY_EXCLUDE_ITEM));
+    ExcludeItem->ExcludeCriteria.StartOfString = (LPTSTR)(ExcludeItem + 1);
+    ExcludeItem->ExcludeCriteria.LengthInChars = NewCriteria->LengthInChars;
+    ExcludeItem->ExcludeCriteria.LengthAllocated = NewCriteria->LengthInChars + 1;
+    memcpy(ExcludeItem->ExcludeCriteria.StartOfString, NewCriteria->StartOfString, ExcludeItem->ExcludeCriteria.LengthInChars * sizeof(TCHAR));
+    ExcludeItem->ExcludeCriteria.StartOfString[ExcludeItem->ExcludeCriteria.LengthInChars] = '\0';
+    YoriLibAppendList(&CopyContext->ExcludeList, &ExcludeItem->ExcludeList);
+    return TRUE;
+}
+
+VOID
+CopyFreeExcludes(
+    __in PCOPY_CONTEXT CopyContext
+    )
+{
+    PCOPY_EXCLUDE_ITEM ExcludeItem;
+    PYORI_LIST_ENTRY ListEntry;
+
+    ListEntry = YoriLibGetNextListEntry(&CopyContext->ExcludeList, NULL);
+    while (ListEntry != NULL) {
+        ExcludeItem = CONTAINING_RECORD(ListEntry, COPY_EXCLUDE_ITEM, ExcludeList);
+        YoriLibRemoveListItem(&ExcludeItem->ExcludeList);
+        YoriLibDereference(ExcludeItem);
+        ListEntry = YoriLibGetNextListEntry(&CopyContext->ExcludeList, NULL);
+    }
+}
+
+BOOL
+CopyShouldExclude(
+    __in PCOPY_CONTEXT CopyContext,
+    __in PYORI_STRING RelativeSourcePath
+    )
+{
+    PCOPY_EXCLUDE_ITEM ExcludeItem;
+    PYORI_LIST_ENTRY ListEntry;
+
+    ListEntry = YoriLibGetNextListEntry(&CopyContext->ExcludeList, NULL);
+    while (ListEntry != NULL) {
+        ExcludeItem = CONTAINING_RECORD(ListEntry, COPY_EXCLUDE_ITEM, ExcludeList);
+        if (YoriLibDoesFileMatchExpression(RelativeSourcePath, &ExcludeItem->ExcludeCriteria)) {
+            return TRUE;
+        }
+        ListEntry = YoriLibGetNextListEntry(&CopyContext->ExcludeList, ListEntry);
+    }
+    return FALSE;
+}
 
 
 /**
@@ -276,39 +347,69 @@ CopyFileFoundCallback(
     )
 {
     PCOPY_CONTEXT CopyContext = (PCOPY_CONTEXT)Context;
+    YORI_STRING RelativePathFromSource;
     YORI_STRING FullDest;
+    YORI_STRING HumanSourcePath;
+    YORI_STRING HumanDestPath;
+    PYORI_STRING SourceNameToDisplay;
+    PYORI_STRING DestNameToDisplay;
+    DWORD SlashesFound;
+    DWORD Index;
 
-    ASSERT(FilePath->StartOfString[FilePath->LengthInChars] == '\0');
+    ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
     YoriLibInitEmptyString(&FullDest);
+    YoriLibInitEmptyString(&RelativePathFromSource);
+    YoriLibInitEmptyString(&HumanSourcePath);
+    YoriLibInitEmptyString(&HumanDestPath);
+    SourceNameToDisplay = FilePath;
+
+    SlashesFound = 0;
+    for (Index = FilePath->LengthInChars; Index > 0; Index--) {
+        if (FilePath->StartOfString[Index - 1] == '\\') {
+            SlashesFound++;
+            if (SlashesFound == Depth + 1) {
+                break;
+            }
+        }
+    }
+
+    ASSERT(Index > 0);
+    ASSERT(SlashesFound == Depth + 1);
+
+    RelativePathFromSource.StartOfString = &FilePath->StartOfString[Index];
+    RelativePathFromSource.LengthInChars = FilePath->LengthInChars - Index;
+
+    //
+    //  Check if the user wanted to exclude this file
+    //
+
+    if (CopyShouldExclude(CopyContext, &RelativePathFromSource)) {
+
+        if (CopyContext->Verbose) {
+            if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
+                SourceNameToDisplay = &HumanSourcePath;
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Skipping %y\n"), SourceNameToDisplay);
+            YoriLibFreeStringContents(&HumanSourcePath);
+        }
+
+        return TRUE;
+    }
+
+    //
+    //  If the target is a directory, construct a full path to the object
+    //  within the target's directory tree.  Otherwise, the target is just
+    //  a regular file with no path.
+    //
 
     if (CopyContext->DestAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         YORI_STRING DestWithFile;
-        YORI_STRING TrailingPath;
-        DWORD SlashesFound;
-        DWORD Index;
 
-        SlashesFound = 0;
-        for (Index = FilePath->LengthInChars; Index > 0; Index--) {
-            if (FilePath->StartOfString[Index - 1] == '\\') {
-                SlashesFound++;
-                if (SlashesFound == Depth + 1) {
-                    break;
-                }
-            }
-        }
-
-        ASSERT(Index > 0);
-        ASSERT(SlashesFound == Depth + 1);
-
-        YoriLibInitEmptyString(&TrailingPath);
-        TrailingPath.StartOfString = &FilePath->StartOfString[Index];
-        TrailingPath.LengthInChars = FilePath->LengthInChars - Index;
-
-        if (!YoriLibAllocateString(&DestWithFile, CopyContext->Dest.LengthInChars + 1 + TrailingPath.LengthInChars + 1)) {
+        if (!YoriLibAllocateString(&DestWithFile, CopyContext->Dest.LengthInChars + 1 + RelativePathFromSource.LengthInChars + 1)) {
             return FALSE;
         }
-        DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%y"), &CopyContext->Dest, &TrailingPath);
+        DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%y"), &CopyContext->Dest, &RelativePathFromSource);
         if (!YoriLibGetFullPathNameReturnAllocation(&DestWithFile, TRUE, &FullDest, NULL)) {
             return FALSE;
         }
@@ -324,8 +425,16 @@ CopyFileFoundCallback(
         }
     }
 
+    DestNameToDisplay = &FullDest;
+
     if (CopyContext->Verbose) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Copying %y to %s\n"), FilePath, FullDest.StartOfString);
+        if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
+            SourceNameToDisplay = &HumanSourcePath;
+        }
+        if (YoriLibUnescapePath(&FullDest, &HumanDestPath)) {
+            DestNameToDisplay = &HumanDestPath;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Copying %y to %y\n"), SourceNameToDisplay, DestNameToDisplay);
     }
 
     if (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT &&
@@ -347,13 +456,25 @@ CopyFileFoundCallback(
         if (!CopyFile(FilePath->StartOfString, FullDest.StartOfString, FALSE)) {
             DWORD LastError = GetLastError();
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y: %s"), FilePath, ErrText);
+            if (SourceNameToDisplay != &HumanSourcePath) {
+                if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
+                    SourceNameToDisplay = &HumanSourcePath;
+                }
+            }
+            if (DestNameToDisplay != &HumanDestPath) {
+                if (YoriLibUnescapePath(&FullDest, &HumanDestPath)) {
+                    DestNameToDisplay = &HumanDestPath;
+                }
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
             YoriLibFreeWinErrorText(ErrText);
         }
     }
 
     CopyContext->FilesCopied++;
     YoriLibFreeStringContents(&FullDest);
+    YoriLibFreeStringContents(&HumanSourcePath);
+    YoriLibFreeStringContents(&HumanDestPath);
     return TRUE;
 }
 
@@ -417,6 +538,7 @@ ymain(
     DWORD FilesProcessed;
     DWORD FileCount;
     DWORD LastFileArg = 0;
+    DWORD FirstFileArg = 0;
     DWORD MatchFlags;
     BOOL AllocatedDest;
     BOOL BasicEnumeration;
@@ -431,6 +553,8 @@ ymain(
     AllocatedDest = FALSE;
     BasicEnumeration = FALSE;
     ZeroMemory(&CopyContext, sizeof(CopyContext));
+
+    YoriLibInitializeListHead(&CopyContext.ExcludeList);
 
     for (i = 1; i < ArgC; i++) {
 
@@ -457,11 +581,20 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
                 CopyContext.Verbose = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("x")) == 0) {
+                if (i + 1 < ArgC) {
+                    CopyAddExclude(&CopyContext, &ArgV[i + 1]);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             }
         } else {
             ArgumentUnderstood = TRUE;
             FileCount++;
             LastFileArg = i;
+            if (FirstFileArg == 0) {
+                FirstFileArg = i;
+            }
         }
 
         if (!ArgumentUnderstood) {
@@ -471,12 +604,14 @@ ymain(
 
     if (FileCount == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: argument missing\n"));
+        CopyFreeExcludes(&CopyContext);
         return EXIT_FAILURE;
     } else if (FileCount == 1) {
         YoriLibConstantString(&CopyContext.Dest, _T("."));
     } else {
         if (!YoriLibUserStringToSingleFilePath(&ArgV[LastFileArg], TRUE, &CopyContext.Dest)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &ArgV[LastFileArg]);
+            CopyFreeExcludes(&CopyContext);
             return EXIT_FAILURE;
         }
         AllocatedDest = TRUE;
@@ -499,6 +634,7 @@ ymain(
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %y: %s"), &CopyContext.Dest, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
+                CopyFreeExcludes(&CopyContext);
                 return EXIT_FAILURE;
             }
             CopyContext.DestAttributes = GetFileAttributes(CopyContext.Dest.StartOfString);
@@ -512,7 +648,7 @@ ymain(
 
     FilesProcessed = 0;
 
-    for (i = 1; i < ArgC; i++) {
+    for (i = FirstFileArg; i <= LastFileArg; i++) {
         if (!YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
             if (BasicEnumeration) {
@@ -543,6 +679,7 @@ ymain(
     if (AllocatedDest) {
         YoriLibFreeStringContents(&CopyContext.Dest);
     }
+    CopyFreeExcludes(&CopyContext);
 
     return Result;
 }
