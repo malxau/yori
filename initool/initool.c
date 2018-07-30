@@ -36,8 +36,16 @@ CHAR strHelpText[] =
         "Query or set values in INI files.\n"
         "\n"
         "INITOOL [-license]\n"
+        "INITOOL -d <file> <section> [<key>]\n"
+        "INITOOL -l <file> <section>\n"
+        "INITOOL -r <file> <section> <key>\n"
+        "INITOOL -s <file>\n"
         "INITOOL -w <file> <section> <key> <value>\n"
         "\n"
+        "   -d             Delete a specified key from an INI file\n"
+        "   -l             List key/value pairs in a specified section from an INI file\n"
+        "   -r             Read a specified key from an INI file\n"
+        "   -s             List sections in an INI file\n"
         "   -w             Write a specified value to an INI file\n";
 
 /**
@@ -51,6 +59,158 @@ IniToolHelp()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    return TRUE;
+}
+
+/**
+ Delete a value from an INI file.
+
+ @param UserFileName Pointer to the file name of the INI file.
+
+ @param Section Pointer to the section within the INI file to update.
+
+ @param Key Pointer to the key part of the key value pair.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+IniToolDeleteFromIniFile(
+    __in PYORI_STRING UserFileName,
+    __in PYORI_STRING Section,
+    __in_opt PYORI_STRING Key
+    )
+{
+    YORI_STRING RealFileName;
+
+    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+        return FALSE;
+    }
+
+    if (!WritePrivateProfileString(Section->StartOfString, (Key != NULL)?Key->StartOfString:NULL, NULL, RealFileName.StartOfString)) {
+        YoriLibFreeStringContents(&RealFileName);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&RealFileName);
+    return TRUE;
+}
+
+/**
+ List a section from an INI file and write it to standard output.
+
+ @param UserFileName Pointer to the file name of the INI file.
+
+ @param Section Pointer to the section within the INI file to read.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+IniToolListSectionFromIniFile(
+    __in PYORI_STRING UserFileName,
+    __in PYORI_STRING Section
+    )
+{
+    YORI_STRING RealFileName;
+    YORI_STRING Value;
+    LPTSTR ThisVar;
+
+    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&Value, 64 * 1024)) {
+        YoriLibFreeStringContents(&RealFileName);
+        return FALSE;
+    }
+
+    Value.LengthInChars = GetPrivateProfileSection(Section->StartOfString, Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    ThisVar = Value.StartOfString;
+    while (*ThisVar != '\0') {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
+
+        ThisVar += _tcslen(ThisVar);
+        ThisVar++;
+    }
+
+    YoriLibFreeStringContents(&RealFileName);
+    YoriLibFreeStringContents(&Value);
+    return TRUE;
+}
+
+/**
+ List sections from an INI file and write them to standard output.
+
+ @param UserFileName Pointer to the file name of the INI file.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+IniToolListSectionsFromIniFile(
+    __in PYORI_STRING UserFileName
+    )
+{
+    YORI_STRING RealFileName;
+    YORI_STRING Value;
+    LPTSTR ThisVar;
+
+    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&Value, 64 * 1024)) {
+        YoriLibFreeStringContents(&RealFileName);
+        return FALSE;
+    }
+
+    Value.LengthInChars = GetPrivateProfileSectionNames(Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    ThisVar = Value.StartOfString;
+    while (*ThisVar != '\0') {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
+
+        ThisVar += _tcslen(ThisVar);
+        ThisVar++;
+    }
+
+    YoriLibFreeStringContents(&RealFileName);
+    YoriLibFreeStringContents(&Value);
+    return TRUE;
+}
+
+/**
+ Read a value from an INI file and write it to standard output.
+
+ @param UserFileName Pointer to the file name of the INI file.
+
+ @param Section Pointer to the section within the INI file to read.
+
+ @param Key Pointer to the key part of the key value pair.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+IniToolReadFromIniFile(
+    __in PYORI_STRING UserFileName,
+    __in PYORI_STRING Section,
+    __in PYORI_STRING Key
+    )
+{
+    YORI_STRING RealFileName;
+    YORI_STRING Value;
+
+    if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&Value, 16 * 1024)) {
+        YoriLibFreeStringContents(&RealFileName);
+        return FALSE;
+    }
+
+    Value.LengthInChars = GetPrivateProfileString(Section->StartOfString, Key->StartOfString, _T(""), Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Value);
+
+    YoriLibFreeStringContents(&RealFileName);
+    YoriLibFreeStringContents(&Value);
     return TRUE;
 }
 
@@ -95,7 +255,11 @@ IniToolWriteToIniFile(
  */
 typedef enum _INITOOL_OPERATION {
     IniToolOpNone = 0,
-    IniToolOpWriteValue = 1
+    IniToolOpWriteValue = 1,
+    IniToolOpReadValue = 2,
+    IniToolOpDeleteValue = 3,
+    IniToolOpListSection = 4,
+    IniToolOpListSections = 5
 } INITOOL_OPERATION;
 
 
@@ -136,6 +300,18 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                Op = IniToolOpDeleteValue;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                Op = IniToolOpListSection;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                Op = IniToolOpReadValue;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                Op = IniToolOpListSections;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
                 Op = IniToolOpWriteValue;
                 ArgumentUnderstood = TRUE;
@@ -167,6 +343,49 @@ ymain(
         }
 
         if (!IniToolWriteToIniFile(&ArgV[StartArg], &ArgV[StartArg + 1], &ArgV[StartArg + 2], &ArgV[StartArg + 3])) {
+            return EXIT_FAILURE;
+        }
+    } else if (Op == IniToolOpReadValue) {
+        if (StartArg == 0 || StartArg + 3 > ArgC) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("initool: missing argument\n"));
+            return EXIT_FAILURE;
+        }
+
+        if (!IniToolReadFromIniFile(&ArgV[StartArg], &ArgV[StartArg + 1], &ArgV[StartArg + 2])) {
+            return EXIT_FAILURE;
+        }
+    } else if (Op == IniToolOpDeleteValue) {
+        if (StartArg == 0 || StartArg + 2 > ArgC) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("initool: missing argument\n"));
+            return EXIT_FAILURE;
+        }
+
+        if (StartArg + 2 < ArgC) {
+
+            if (!IniToolDeleteFromIniFile(&ArgV[StartArg], &ArgV[StartArg + 1], &ArgV[StartArg + 2])) {
+                return EXIT_FAILURE;
+            }
+        } else {
+            if (!IniToolDeleteFromIniFile(&ArgV[StartArg], &ArgV[StartArg + 1], NULL)) {
+                return EXIT_FAILURE;
+            }
+        }
+    } else if (Op == IniToolOpListSection) {
+        if (StartArg == 0 || StartArg + 2 > ArgC) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("initool: missing argument\n"));
+            return EXIT_FAILURE;
+        }
+
+        if (!IniToolListSectionFromIniFile(&ArgV[StartArg], &ArgV[StartArg + 1])) {
+            return EXIT_FAILURE;
+        }
+    } else if (Op == IniToolOpListSections) {
+        if (StartArg == 0 || StartArg + 1 > ArgC) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("initool: missing argument\n"));
+            return EXIT_FAILURE;
+        }
+
+        if (!IniToolListSectionsFromIniFile(&ArgV[StartArg])) {
             return EXIT_FAILURE;
         }
     }

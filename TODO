@@ -2,7 +2,6 @@
  - $() backquote form
  - ShellExecute URLs
  - Search on input string
- - Ini tool to help the build process
  - Allow multiple iterations of upgrade when files in use
  - Ypm enumerate packages from online repositories
  - Ypm "mirror" (search/replace) support
