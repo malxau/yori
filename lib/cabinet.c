@@ -72,6 +72,13 @@ typedef struct _YORI_LIB_CAB_EXPAND_CONTEXT {
      Context information to pass to the user specified callback.
      */
     PVOID UserContext;
+
+    /**
+     Optionally points to a string to populate with error information to
+     display to a user.
+     */
+    PYORI_STRING ErrorString;
+
 } YORI_LIB_CAB_EXPAND_CONTEXT, *PYORI_LIB_CAB_EXPAND_CONTEXT;
 
 /**
@@ -296,15 +303,19 @@ YoriLibCabShouldIncludeFile(
 
  @param FullPath Pointer to a string describing the file to open.
 
+ @param ErrorString Optionally points to a string to populate with information
+        about any error encountered in the extraction process.
+
  @return Handle to the opened file, or INVALID_HANDLE_VALUE on failure.
  */
 DWORD_PTR
 YoriLibCabFileOpenForExtract(
-    __in PYORI_STRING FullPath
+    __in PYORI_STRING FullPath,
+    __out_opt PYORI_STRING ErrorString
     )
 {
     HANDLE hFile;
-    DWORD Err;
+    DWORD Err = 0;
 
     while (TRUE) {
 
@@ -354,6 +365,10 @@ YoriLibCabFileOpenForExtract(
                                CREATE_NEW,
                                FILE_ATTRIBUTE_NORMAL,
                                NULL);
+
+            if (hFile == INVALID_HANDLE_VALUE) {
+                Err = GetLastError();
+            }
 
             break;
 
@@ -426,6 +441,7 @@ YoriLibCabFileOpenForExtract(
                                NULL);
 
             if (hFile == INVALID_HANDLE_VALUE) {
+                Err = GetLastError();
                 MoveFileEx(NewName.StartOfString, FullPath->StartOfString, MOVEFILE_REPLACE_EXISTING);
             } else {
 
@@ -450,6 +466,13 @@ YoriLibCabFileOpenForExtract(
             YoriLibFreeStringContents(&NewName);
             break;
         }
+    }
+
+    if (hFile == INVALID_HANDLE_VALUE && ErrorString != NULL) {
+        LPTSTR ErrText;
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibYPrintf(ErrorString, _T("Error opening %y: %s"), FullPath, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
     }
 
     return (DWORD_PTR)hFile;
@@ -596,13 +619,16 @@ YoriLibCabNotify(
         case YoriLibCabNotifyCopyFile:
             ExpandContext = (PYORI_LIB_CAB_EXPAND_CONTEXT)Notification->Context;
             if (!YoriLibCabBuildFileNames(ExpandContext->TargetDirectory, Notification->String1, &FullPath, &FileName)) {
+                if (ExpandContext->ErrorString != NULL) {
+                    YoriLibYPrintf(ExpandContext->ErrorString, _T("Could not build file name for directory %y CAB name %hs"), ExpandContext->TargetDirectory, Notification->String1);
+                }
                 return (DWORD_PTR)INVALID_HANDLE_VALUE;
             }
             if (YoriLibCabShouldIncludeFile(&FileName, ExpandContext)) {
                 if (ExpandContext->UserCallback == NULL ||
                     ExpandContext->UserCallback(&FullPath, &FileName, ExpandContext->UserContext)) {
 
-                    Handle = YoriLibCabFileOpenForExtract(&FullPath);
+                    Handle = YoriLibCabFileOpenForExtract(&FullPath, ExpandContext->ErrorString);
                 } else {
                     Handle = 0;
                 }
@@ -673,6 +699,9 @@ YoriLibCabNotify(
 
  @param UserContext Optionally points to context to pass to UserCallback.
 
+ @param ErrorString Optionally points to a string to populate with information
+        about any error encountered in the extraction process.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
@@ -685,7 +714,8 @@ YoriLibExtractCab(
     __in DWORD NumberFilesToInclude,
     __in_opt PYORI_STRING FilesToInclude,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback,
-    __in_opt PVOID UserContext
+    __in_opt PVOID UserContext,
+    __out_opt PYORI_STRING ErrorString
     )
 {
     YORI_STRING FullCabFileName;
@@ -704,6 +734,10 @@ YoriLibExtractCab(
     YoriLibLoadCabinetFunctions();
     if (DllCabinet.pFdiCreate == NULL ||
         DllCabinet.pFdiCopy == NULL) {
+
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Cabinet.dll not loaded or expected functions not found"));
+        }
         return FALSE;
     }
 
@@ -719,12 +753,19 @@ YoriLibExtractCab(
     ExpandContext.FilesToExclude = FilesToExclude;
     ExpandContext.UserCallback = UserCallback;
     ExpandContext.UserContext = UserContext;
+    ExpandContext.ErrorString = ErrorString;
 
     if (!YoriLibUserStringToSingleFilePath(CabFileName, FALSE, &FullCabFileName)) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Cannot convert %y to full path"), CabFileName);
+        }
         return FALSE;
     }
 
     if (!YoriLibUserStringToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Cannot convert %y to full path"), TargetDirectory);
+        }
         return FALSE;
     }
 
@@ -734,6 +775,9 @@ YoriLibExtractCab(
 
     FinalBackslash = YoriLibFindRightMostCharacter(&FullCabFileName, '\\');
     if (FinalBackslash == NULL) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Cannot find final seperator in %y"), &FullCabFileName);
+        }
         goto Exit;
     }
 
@@ -748,26 +792,41 @@ YoriLibExtractCab(
 
     AnsiCabParentDirectory = YoriLibMalloc(CabParentDirectory.LengthInChars + 1 + CabFileNameOnly.LengthInChars + 1);
     if (AnsiCabParentDirectory == NULL) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Allocation failure"));
+        }
         goto Exit;
     }
 
     AnsiCabFileName = AnsiCabParentDirectory + CabParentDirectory.LengthInChars + 1;
 
     if (WideCharToMultiByte(CP_ACP, 0, CabParentDirectory.StartOfString, CabParentDirectory.LengthInChars, AnsiCabParentDirectory, CabParentDirectory.LengthInChars + 1, NULL, &DefaultUsed) != (INT)(CabParentDirectory.LengthInChars)) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabParentDirectory);
+        }
         goto Exit;
     }
 
     if (DefaultUsed) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabParentDirectory);
+        }
         goto Exit;
     }
 
     AnsiCabParentDirectory[CabParentDirectory.LengthInChars] = '\0';
 
     if (WideCharToMultiByte(CP_ACP, 0, CabFileNameOnly.StartOfString, CabFileNameOnly.LengthInChars, AnsiCabFileName, CabFileNameOnly.LengthInChars + 1, NULL, &DefaultUsed) != (INT)(CabFileNameOnly.LengthInChars)) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabFileNameOnly);
+        }
         goto Exit;
     }
 
     if (DefaultUsed) {
+        if (ErrorString != NULL) {
+            YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabFileNameOnly);
+        }
         goto Exit;
     }
 
@@ -776,6 +835,9 @@ YoriLibExtractCab(
     hFdi = DllCabinet.pFdiCreate(YoriLibCabAlloc, YoriLibCabFree, YoriLibCabFileOpen, YoriLibCabFileRead, YoriLibCabFileWrite, YoriLibCabFileClose, YoriLibCabFileSeek, -1, &CabErrors);
 
     if (hFdi == NULL) {
+        if (ErrorString != NULL && ErrorString->LengthInChars == 0) {
+            YoriLibYPrintf(ErrorString, _T("Error %i in pFdiCreate"), GetLastError());
+        }
         goto Exit;
     }
 
@@ -788,6 +850,9 @@ YoriLibExtractCab(
                              YoriLibCabNotify,
                              NULL,
                              &ExpandContext)) {
+        if (ErrorString != NULL && ErrorString->LengthInChars == 0) {
+            YoriLibYPrintf(ErrorString, _T("Error %i in pFdiCopy"), GetLastError());
+        }
         goto Exit;
     }
 

@@ -411,7 +411,8 @@ YoriLibExtractCab(
     __in DWORD NumberFilesToInclude,
     __in_opt PYORI_STRING FilesToInclude,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback,
-    __in_opt PVOID UserContext
+    __in_opt PVOID UserContext,
+    __out_opt PYORI_STRING ErrorString
     );
 
 // *** CANCEL.C ***

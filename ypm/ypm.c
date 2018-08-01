@@ -481,6 +481,7 @@ YpmInstallPackage(
     YORI_STRING UpgradePath;
     YORI_STRING SourcePath;
     YORI_STRING SymbolPath;
+    YORI_STRING ErrorString;
     YPM_INSTALL_PKG_CONTEXT InstallContext;
 
     BOOL Result = FALSE;
@@ -528,8 +529,10 @@ YpmInstallPackage(
     //  Extract pkginfo.ini to the temporary directory
     //
 
-    if (!YoriLibExtractCab(&PackageFile, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y\n"), &PackageFile);
+    YoriLibInitEmptyString(&ErrorString);
+    if (!YoriLibExtractCab(&PackageFile, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, &ErrorString)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y: %y\n"), &PackageFile, ErrorString);
+        YoriLibFreeStringContents(&ErrorString);
         goto Exit;
     }
 
@@ -585,9 +588,10 @@ YpmInstallPackage(
     InstallContext.IniFileName = &PkgIniFile;
     InstallContext.PackageName = &PackageName;
     InstallContext.NumberFiles = 0;
-    if (!YoriLibExtractCab(&PackageFile, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YpmInstallPackageFileCallback, &InstallContext)) {
+    if (!YoriLibExtractCab(&PackageFile, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YpmInstallPackageFileCallback, &InstallContext, &ErrorString)) {
         WritePrivateProfileString(_T("Installed"), PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y\n"), &PackageFile);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y: %y\n"), &PackageFile, ErrorString);
+        YoriLibFreeStringContents(&ErrorString);
         goto Exit;
     }
 
@@ -777,6 +781,8 @@ YpmUpgradeInstalledPackages(
     YORI_STRING PkgNameOnly;
     YORI_STRING UpgradePath;
     DWORD LineLength;
+    DWORD TotalCount;
+    DWORD CurrentIndex;
 
     if (!YpmGetPackageIniFile(&PkgIniFile)) {
         return FALSE;
@@ -798,6 +804,17 @@ YpmUpgradeInstalledPackages(
     YoriLibInitEmptyString(&PkgNameOnly);
     ThisLine = InstalledSection.StartOfString;
 
+    TotalCount = 0;
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        TotalCount++;
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    CurrentIndex = 0;
+    ThisLine = InstalledSection.StartOfString;
+
     while (*ThisLine != '\0') {
         LineLength = _tcslen(ThisLine);
         PkgNameOnly.StartOfString = ThisLine;
@@ -808,15 +825,17 @@ YpmUpgradeInstalledPackages(
             PkgNameOnly.LengthInChars = LineLength;
         }
         PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
+        CurrentIndex++;
         UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradePath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
         if (UpgradePath.LengthInChars > 0) {
             if (NewArchitecture != NULL) {
                 YpmBuildUpgradeLocationForNewArchitecture(&PkgNameOnly, NewArchitecture, &PkgIniFile, &UpgradePath);
             }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &UpgradePath);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Upgrading %y (%i/%i), downloading %y...\n"), &PkgNameOnly, CurrentIndex, TotalCount, &UpgradePath);
             if (!YpmInstallPackage(&UpgradePath, NULL, TRUE)) {
                 break;
             }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
         ThisLine += LineLength;
         ThisLine++;
