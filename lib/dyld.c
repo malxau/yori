@@ -173,6 +173,11 @@ YoriLibLoadCabinetFunctions()
         return FALSE;
     }
 
+    DllCabinet.pFciAddFile = (PCAB_FCI_ADD_FILE)GetProcAddress(DllCabinet.hDll, "FCIAddFile");
+    DllCabinet.pFciCreate = (PCAB_FCI_CREATE)GetProcAddress(DllCabinet.hDll, "FCICreate");
+    DllCabinet.pFciDestroy = (PCAB_FCI_DESTROY)GetProcAddress(DllCabinet.hDll, "FCIDestroy");
+    DllCabinet.pFciFlushCabinet = (PCAB_FCI_FLUSH_CABINET)GetProcAddress(DllCabinet.hDll, "FCIFlushCabinet");
+    DllCabinet.pFciFlushFolder = (PCAB_FCI_FLUSH_FOLDER)GetProcAddress(DllCabinet.hDll, "FCIFlushFolder");
     DllCabinet.pFdiCreate = (PCAB_FDI_CREATE)GetProcAddress(DllCabinet.hDll, "FDICreate");
     DllCabinet.pFdiCopy = (PCAB_FDI_COPY)GetProcAddress(DllCabinet.hDll, "FDICopy");
     DllCabinet.pFdiDestroy = (PCAB_FDI_DESTROY)GetProcAddress(DllCabinet.hDll, "FDIDestroy");

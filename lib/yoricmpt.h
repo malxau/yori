@@ -1119,78 +1119,78 @@ typedef CAB_CB_FREE *PCAB_CB_FREE;
  */
 typedef
 DWORD_PTR DIAMONDAPI
-CAB_CB_FILE_OPEN(LPSTR, INT, INT);
+CAB_CB_FDI_FILE_OPEN(LPSTR, INT, INT);
 
 /**
  A prototype for a pointer to FDICreate's file open callback.
  */
-typedef CAB_CB_FILE_OPEN *PCAB_CB_FILE_OPEN;
+typedef CAB_CB_FDI_FILE_OPEN *PCAB_CB_FDI_FILE_OPEN;
 
 /**
  A prototype for FDICreate's file read callback.
  */
 typedef
 DWORD DIAMONDAPI
-CAB_CB_FILE_READ(DWORD_PTR, LPVOID, DWORD);
+CAB_CB_FDI_FILE_READ(DWORD_PTR, LPVOID, DWORD);
 
 /**
  A prototype for a pointer to FDICreate's file read callback.
  */
-typedef CAB_CB_FILE_READ *PCAB_CB_FILE_READ;
+typedef CAB_CB_FDI_FILE_READ *PCAB_CB_FDI_FILE_READ;
 
 /**
  A prototype for FDICreate's file write callback.
  */
 typedef
 DWORD DIAMONDAPI
-CAB_CB_FILE_WRITE(DWORD_PTR, LPVOID, DWORD);
+CAB_CB_FDI_FILE_WRITE(DWORD_PTR, LPVOID, DWORD);
 
 /**
  A prototype for a pointer to FDICreate's file write callback.
  */
-typedef CAB_CB_FILE_WRITE *PCAB_CB_FILE_WRITE;
+typedef CAB_CB_FDI_FILE_WRITE *PCAB_CB_FDI_FILE_WRITE;
 
 /**
  A prototype for FDICreate's file close callback.
  */
 typedef
 INT DIAMONDAPI
-CAB_CB_FILE_CLOSE(DWORD_PTR);
+CAB_CB_FDI_FILE_CLOSE(DWORD_PTR);
 
 /**
  A prototype for a pointer to FDICreate's file close callback.
  */
-typedef CAB_CB_FILE_CLOSE *PCAB_CB_FILE_CLOSE;
+typedef CAB_CB_FDI_FILE_CLOSE *PCAB_CB_FDI_FILE_CLOSE;
 
 /**
  A prototype for FDICreate's file seek callback.
  */
 typedef
 DWORD DIAMONDAPI
-CAB_CB_FILE_SEEK(DWORD_PTR, DWORD, INT);
+CAB_CB_FDI_FILE_SEEK(DWORD_PTR, DWORD, INT);
 
 /**
  A prototype for a pointer to FDICreate's file seek callback.
  */
-typedef CAB_CB_FILE_SEEK *PCAB_CB_FILE_SEEK;
+typedef CAB_CB_FDI_FILE_SEEK *PCAB_CB_FDI_FILE_SEEK;
 
 /**
  The set of notification types that FDICopy can invoke its notification
  callback with.
  */
-typedef enum _CAB_CB_NOTIFYTYPE {
+typedef enum _CAB_CB_FDI_NOTIFYTYPE {
     YoriLibCabNotifyCabinetInfo,
     YoriLibCabNotifyPartialFile,
     YoriLibCabNotifyCopyFile,
     YoriLibCabNotifyCloseFile,
     YoriLibCabNotifyNextCabinet,
     YoriLibCabNotifyEnumerate
-} CAB_CB_NOTIFYTYPE;
+} CAB_CB_FDI_NOTIFYTYPE;
 
 /**
  A structure of data that FDICopy invokes its notification callback with.
  */
-typedef struct _CAB_CB_NOTIFICATION {
+typedef struct _CAB_CB_FDI_NOTIFICATION {
     /**
      The meaning of this field depends on the type of notification, and the
      documentation is awful.
@@ -1262,19 +1262,240 @@ typedef struct _CAB_CB_NOTIFICATION {
      Error code.
      */
     DWORD FdiError;
-} CAB_CB_NOTIFICATION, *PCAB_CB_NOTIFICATION;
+} CAB_CB_FDI_NOTIFICATION, *PCAB_CB_FDI_NOTIFICATION;
 
 /**
  A prototype for FDICopy's notification callback.
  */
 typedef
 DWORD_PTR DIAMONDAPI
-CAB_CB_NOTIFY(CAB_CB_NOTIFYTYPE, PCAB_CB_NOTIFICATION);
+CAB_CB_FDI_NOTIFY(CAB_CB_FDI_NOTIFYTYPE, PCAB_CB_FDI_NOTIFICATION);
 
 /**
  A prototype for a pointer to FDICopy's notification callback.
  */
-typedef CAB_CB_NOTIFY *PCAB_CB_NOTIFY;
+typedef CAB_CB_FDI_NOTIFY *PCAB_CB_FDI_NOTIFY;
+
+/**
+ A structure that describes a CAB file and its characteristics for the
+ Cabinet API.
+ */
+typedef struct _CAB_FCI_CONTEXT {
+
+    /**
+     The maximum amount of size for a given cabinet.
+     */
+    DWORD SizeAvailable;
+
+    /**
+     The maximum amount of size for a given folder within a cabinet.
+     */
+    DWORD ThresholdForNextFolder;
+
+    /**
+     The amount of space to reserve in a CAB header.
+     */
+    DWORD ReserveCfHeader;
+
+    /**
+     The amount of space to reserve in a CAB folder header.
+     */
+    DWORD ReserveCfFolder;
+
+    /**
+     The amount of space to reserve in a CAB data block (file?)
+     */
+    DWORD ReserveCfData;
+
+    /**
+     The cabinet number in a cabinet chain.
+     */
+    DWORD CabNumber;
+
+    /**
+     The disk number when splitting across disks.
+     */
+    DWORD DiskNumber;
+
+    /**
+     Fail if a block cannot be compressed.
+     */
+    DWORD FailOnIncompressible;
+
+    /**
+     The set ID, presumably to distinguish multiple cabinet chains.
+     */
+    WORD SetId;
+
+    /**
+     The name of the disk.  Note NULL terminated ANSI.  Also note this
+     structure is paired with what cabinet.dll expects, so the size here
+     is not changeable.
+     */
+    CHAR DiskName[256];
+
+    /**
+     The name of the cabinet.  Note NULL terminated ANSI.  Also note this
+     structure is paired with what cabinet.dll expects, so the size here
+     is not changeable.
+     */
+    CHAR CabName[256];
+
+    /**
+     The path to the cabinet.  Note NULL terminated ANSI.  Also note this
+     structure is paired with what cabinet.dll expects, so the size here
+     is not changeable.
+     */
+    CHAR CabPath[256];
+} CAB_FCI_CONTEXT, *PCAB_FCI_CONTEXT;
+
+/**
+ A value to pass to FCIAddFile to request no compression.
+ */
+#define CAB_FCI_ALGORITHM_NONE (0x0000)
+
+/**
+ A value to pass to FCIAddFile to request MSZIP (old, lightweight)
+ compression.
+ */
+#define CAB_FCI_ALGORITHM_MSZIP (0x0001)
+
+/**
+ A value to pass to FCIAddFile to request LZX (aggressive) compression.
+ */
+#define CAB_FCI_ALGORITHM_LZX (0x1503)
+
+/**
+ A prototype for FCICreate's file placed callback.
+ */
+typedef
+DWORD_PTR DIAMONDAPI
+CAB_CB_FCI_FILE_PLACED(PCAB_FCI_CONTEXT, LPSTR, DWORD, BOOL, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's file placed callback.
+ */
+typedef CAB_CB_FCI_FILE_PLACED *PCAB_CB_FCI_FILE_PLACED;
+
+/**
+ A prototype for FCICreate's file open callback.
+ */
+typedef
+DWORD_PTR DIAMONDAPI
+CAB_CB_FCI_FILE_OPEN(LPSTR, INT, INT, PINT, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's file open callback.
+ */
+typedef CAB_CB_FCI_FILE_OPEN *PCAB_CB_FCI_FILE_OPEN;
+
+/**
+ A prototype for FCICreate's file read callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FCI_FILE_READ(DWORD_PTR, LPVOID, DWORD, PINT, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's file read callback.
+ */
+typedef CAB_CB_FCI_FILE_READ *PCAB_CB_FCI_FILE_READ;
+
+/**
+ A prototype for FCICreate's file write callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FCI_FILE_WRITE(DWORD_PTR, LPVOID, DWORD, PINT, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's file write callback.
+ */
+typedef CAB_CB_FCI_FILE_WRITE *PCAB_CB_FCI_FILE_WRITE;
+
+/**
+ A prototype for FCICreate's file close callback.
+ */
+typedef
+INT DIAMONDAPI
+CAB_CB_FCI_FILE_CLOSE(DWORD_PTR, PINT, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's file close callback.
+ */
+typedef CAB_CB_FCI_FILE_CLOSE *PCAB_CB_FCI_FILE_CLOSE;
+
+/**
+ A prototype for FCICreate's file seek callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FCI_FILE_SEEK(DWORD_PTR, DWORD, INT, PINT, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's file seek callback.
+ */
+typedef CAB_CB_FCI_FILE_SEEK *PCAB_CB_FCI_FILE_SEEK;
+
+/**
+ A prototype for FCICreate's file delete callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FCI_FILE_DELETE(LPSTR, PINT, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's file delete callback.
+ */
+typedef CAB_CB_FCI_FILE_DELETE *PCAB_CB_FCI_FILE_DELETE;
+
+/**
+ A prototype for FCICreate's temporary file callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FCI_GET_TEMP_FILE(LPSTR, INT, PVOID);
+
+/**
+ A prototype for a pointer to FCICreate's temporary file callback.
+ */
+typedef CAB_CB_FCI_GET_TEMP_FILE *PCAB_CB_FCI_GET_TEMP_FILE;
+
+/**
+ A prototype for FCIAddFile's get next cabinet callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FCI_GET_NEXT_CABINET(PCAB_FCI_CONTEXT, DWORD, PVOID);
+
+/**
+ A prototype for a pointer to FCIAddFile's get next cabinet callback.
+ */
+typedef CAB_CB_FCI_GET_NEXT_CABINET *PCAB_CB_FCI_GET_NEXT_CABINET;
+
+/**
+ A prototype for FCIAddFile's status callback.
+ */
+typedef
+DWORD DIAMONDAPI
+CAB_CB_FCI_STATUS(DWORD, DWORD, DWORD, PVOID);
+
+/**
+ A prototype for a pointer to FCIAddFile's status callback.
+ */
+typedef CAB_CB_FCI_STATUS *PCAB_CB_FCI_STATUS;
+
+/**
+ A prototype for FCIAddFile's get open info callback.
+ */
+typedef
+DWORD_PTR DIAMONDAPI
+CAB_CB_FCI_GET_OPEN_INFO(LPSTR, PWORD, PWORD, PWORD, PINT, PVOID);
+
+/**
+ A prototype for a pointer to FCIAddFile's status callback.
+ */
+typedef CAB_CB_FCI_GET_OPEN_INFO *PCAB_CB_FCI_GET_OPEN_INFO;
 
 /**
  A structure describing error conditions encountered in FCI or FDI operations.
@@ -2350,7 +2571,7 @@ extern YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
  */
 typedef
 LPVOID DIAMONDAPI
-CAB_FDI_CREATE(PCAB_CB_ALLOC, PCAB_CB_FREE, PCAB_CB_FILE_OPEN, PCAB_CB_FILE_READ, PCAB_CB_FILE_WRITE, PCAB_CB_FILE_CLOSE, PCAB_CB_FILE_SEEK, INT, PCAB_CB_ERROR);
+CAB_FDI_CREATE(PCAB_CB_ALLOC, PCAB_CB_FREE, PCAB_CB_FDI_FILE_OPEN, PCAB_CB_FDI_FILE_READ, PCAB_CB_FDI_FILE_WRITE, PCAB_CB_FDI_FILE_CLOSE, PCAB_CB_FDI_FILE_SEEK, INT, PCAB_CB_ERROR);
 
 /**
  A prototype for a pointer to the FDICreate function.
@@ -2362,7 +2583,7 @@ typedef CAB_FDI_CREATE *PCAB_FDI_CREATE;
  */
 typedef
 LPVOID DIAMONDAPI
-CAB_FDI_COPY(LPVOID, LPSTR, LPSTR, INT, PCAB_CB_NOTIFY, LPVOID, LPVOID);
+CAB_FDI_COPY(LPVOID, LPSTR, LPSTR, INT, PCAB_CB_FDI_NOTIFY, LPVOID, LPVOID);
 
 /**
  A prototype for a pointer to the FDICopy function.
@@ -2382,6 +2603,66 @@ CAB_FDI_DESTROY(LPVOID);
 typedef CAB_FDI_DESTROY *PCAB_FDI_DESTROY;
 
 /**
+ A prototype for the FCICreate function.
+ */
+typedef
+LPVOID DIAMONDAPI
+CAB_FCI_CREATE(PCAB_CB_ERROR, PCAB_CB_FCI_FILE_PLACED, PCAB_CB_ALLOC, PCAB_CB_FREE, PCAB_CB_FCI_FILE_OPEN, PCAB_CB_FCI_FILE_READ, PCAB_CB_FCI_FILE_WRITE, PCAB_CB_FCI_FILE_CLOSE, PCAB_CB_FCI_FILE_SEEK, PCAB_CB_FCI_FILE_DELETE, PCAB_CB_FCI_GET_TEMP_FILE, PCAB_FCI_CONTEXT, PVOID);
+
+/**
+ A prototype for a pointer to the FCICreate function.
+ */
+typedef CAB_FCI_CREATE *PCAB_FCI_CREATE;
+
+/**
+ A prototype for the FCIAddFile function.
+ */
+typedef
+BOOL DIAMONDAPI
+CAB_FCI_ADD_FILE(PCAB_FCI_CONTEXT, LPSTR, LPSTR, BOOL, PCAB_CB_FCI_GET_NEXT_CABINET, PCAB_CB_FCI_STATUS, PCAB_CB_FCI_GET_OPEN_INFO, WORD);
+
+/**
+ A prototype for a pointer to the FCIAddFile function.
+ */
+typedef CAB_FCI_ADD_FILE *PCAB_FCI_ADD_FILE;
+
+/**
+ A prototype for the FCIFlushCabinet function.
+ */
+typedef
+BOOL DIAMONDAPI
+CAB_FCI_FLUSH_CABINET(PCAB_FCI_CONTEXT, BOOL, PCAB_CB_FCI_GET_NEXT_CABINET, PCAB_CB_FCI_STATUS);
+
+/**
+ A prototype for a pointer to the FCIFlushCabinet function.
+ */
+typedef CAB_FCI_FLUSH_CABINET *PCAB_FCI_FLUSH_CABINET;
+
+/**
+ A prototype for the FCIFlushFolder function.
+ */
+typedef
+BOOL DIAMONDAPI
+CAB_FCI_FLUSH_FOLDER(PCAB_FCI_CONTEXT, PCAB_CB_FCI_GET_NEXT_CABINET, PCAB_CB_FCI_STATUS);
+
+/**
+ A prototype for a pointer to the FCIFlushFolder function.
+ */
+typedef CAB_FCI_FLUSH_FOLDER *PCAB_FCI_FLUSH_FOLDER;
+
+/**
+ A prototype for the FCIDestroy function.
+ */
+typedef
+BOOL DIAMONDAPI
+CAB_FCI_DESTROY(PCAB_FCI_CONTEXT);
+
+/**
+ A prototype for a pointer to the FCIDestroy function.
+ */
+typedef CAB_FCI_DESTROY *PCAB_FCI_DESTROY;
+
+/**
  A structure containing optional function pointers to cabinet.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -2390,6 +2671,31 @@ typedef struct _YORI_CABINET_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to FCIAddFile.
+     */
+    PCAB_FCI_ADD_FILE pFciAddFile;
+
+    /**
+     If it's available on the current system, a pointer to FCICreate.
+     */
+    PCAB_FCI_CREATE pFciCreate;
+
+    /**
+     If it's available on the current system, a pointer to FCIDestroy.
+     */
+    PCAB_FCI_DESTROY pFciDestroy;
+
+    /**
+     If it's available on the current system, a pointer to FCIFlushCabinet.
+     */
+    PCAB_FCI_FLUSH_CABINET pFciFlushCabinet;
+
+    /**
+     If it's available on the current system, a pointer to FCIFlushFolder.
+     */
+    PCAB_FCI_FLUSH_FOLDER pFciFlushFolder;
 
     /**
      If it's available on the current system, a pointer to FDICreate.

@@ -415,6 +415,24 @@ YoriLibExtractCab(
     __out_opt PYORI_STRING ErrorString
     );
 
+BOOL
+YoriLibCreateCab(
+    __in PYORI_STRING CabFileName,
+    __out PVOID * Handle
+    );
+
+BOOL
+YoriLibAddFileToCab(
+    __in PVOID Handle,
+    __in PYORI_STRING FileNameOnDisk,
+    __in PYORI_STRING FileNameInCab
+    );
+
+VOID
+YoriLibCloseCab(
+    __in PVOID Handle
+    );
+
 // *** CANCEL.C ***
 
 BOOL

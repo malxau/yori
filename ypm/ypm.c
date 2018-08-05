@@ -38,6 +38,7 @@ CHAR strHelpText[] =
         "YPM [-license] [-d <pkg>] [-i <file>] [-l] [[-a <arch>] -u [<pkg>]]\n"
         "\n"
         "   -a             Specify a CPU architecture to upgrade to\n"
+        "   -c             Create a package\n"
         "   -d             Delete an installed package\n"
         "   -i             Install a package from a specified file or URL\n"
         "   -l             List all currently installed packages\n"
@@ -907,6 +908,169 @@ YpmUpgradeSinglePackage(
     return Result;
 }
 
+/**
+ Creates a binary (installable) package.  This could be architecture specific
+ or architecture neutral.
+
+ @param FileName The name of the CAB file to create.
+
+ @param PackageName The name of the package described by the CAB file.
+
+ @param Version The version of the package.
+
+ @param Architecture The architecture of the package.
+
+ @param FileListFile A pointer to a file name whose contents describe the list
+        of files that should be included in the package.  This file contains
+        one file per line, no wildcards.
+
+ @param UpgradePath Optionally points to a URL to upgrade to the latest
+        version of the package from.  If not specified, no UpgradePath is
+        included in the package.
+
+ @param SourcePath Optionally points to a URL to download source code for the
+        package.  If not specified, no SourcePath is included in the package.
+
+ @param SymbolPath Optionally points to a URL to download debugging symbols
+        for the package.  If not specified, no SourcePath is included in the
+        package.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmCreateBinaryPackage(
+    __in PYORI_STRING FileName,
+    __in PYORI_STRING PackageName,
+    __in PYORI_STRING Version,
+    __in PYORI_STRING Architecture,
+    __in PYORI_STRING FileListFile,
+    __in_opt PYORI_STRING UpgradePath,
+    __in_opt PYORI_STRING SourcePath,
+    __in_opt PYORI_STRING SymbolPath
+    )
+{
+    YORI_STRING TempPath;
+    YORI_STRING TempFile;
+    YORI_STRING PkgInfoName;
+    YORI_STRING LineString;
+    PVOID LineContext = NULL;
+    HANDLE FileListSource;
+
+    PVOID CabHandle;
+
+    UNREFERENCED_PARAMETER(FileListFile);
+
+    //
+    //  Query for a temporary directory
+    //
+
+    TempPath.LengthAllocated = GetTempPath(0, NULL);
+    if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated)) {
+        return FALSE;
+    }
+    TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
+
+    if (!YoriLibAllocateString(&TempFile, TempPath.LengthAllocated + MAX_PATH)) {
+        YoriLibFreeStringContents(&TempPath);
+        return FALSE;
+    }
+
+    //
+    //  Generate a temporary file name to stage pkginfo.ini in to
+    //
+
+    if (GetTempFileName(TempPath.StartOfString, _T("ypm"), 0, TempFile.StartOfString) == 0) {
+        YoriLibFreeStringContents(&TempPath);
+        YoriLibFreeStringContents(&TempFile);
+        return FALSE;
+    }
+
+    TempFile.LengthInChars = _tcslen(TempFile.StartOfString);
+    YoriLibFreeStringContents(&TempPath);
+
+    WritePrivateProfileString(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
+    WritePrivateProfileString(_T("Package"), _T("Architecture"), Architecture->StartOfString, TempFile.StartOfString);
+    WritePrivateProfileString(_T("Package"), _T("Version"), Version->StartOfString, TempFile.StartOfString);
+    if (UpgradePath != NULL) {
+        WritePrivateProfileString(_T("Package"), _T("UpgradePath"), UpgradePath->StartOfString, TempFile.StartOfString);
+    }
+    if (SourcePath != NULL) {
+        WritePrivateProfileString(_T("Package"), _T("SourcePath"), SourcePath->StartOfString, TempFile.StartOfString);
+    }
+    if (SymbolPath != NULL) {
+        WritePrivateProfileString(_T("Package"), _T("SymbolPath"), SymbolPath->StartOfString, TempFile.StartOfString);
+    }
+
+    //
+    //  MSFIX UserPath conversion
+    //
+
+    FileListSource = CreateFile(FileListFile->StartOfString,
+                                GENERIC_READ,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL,
+                                NULL);
+
+    if (FileListSource == INVALID_HANDLE_VALUE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: Cannot open %y\n"), FileListFile);
+        DeleteFile(TempFile.StartOfString);
+        YoriLibFreeStringContents(&TempFile);
+        return FALSE;
+    }
+
+    if (!YoriLibCreateCab(FileName, &CabHandle)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibCreateCab failure\n"));
+        DeleteFile(TempFile.StartOfString);
+        YoriLibFreeStringContents(&TempFile);
+        CloseHandle(FileListSource);
+        return FALSE;
+    }
+    YoriLibConstantString(&PkgInfoName, _T("pkginfo.ini"));
+    if (!YoriLibAddFileToCab(CabHandle, &TempFile, &PkgInfoName)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab failure\n"));
+        DeleteFile(TempFile.StartOfString);
+        YoriLibFreeStringContents(&TempFile);
+        YoriLibCloseCab(CabHandle);
+        CloseHandle(FileListSource);
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&LineString);
+    while(TRUE) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, FileListSource)) {
+            break;
+        }
+        if (!YoriLibAddFileToCab(CabHandle, &LineString, &LineString)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab cannot add %y\n"), &LineString);
+            DeleteFile(TempFile.StartOfString);
+            YoriLibFreeStringContents(&TempFile);
+            YoriLibCloseCab(CabHandle);
+            YoriLibLineReadClose(LineContext);
+            YoriLibFreeStringContents(&LineString);
+            CloseHandle(FileListSource);
+            return FALSE;
+        }
+
+    }
+
+    YoriLibLineReadClose(LineContext);
+    CloseHandle(FileListSource);
+    YoriLibFreeStringContents(&LineString);
+
+    if (!YoriLibCloseCab(CabHandle)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab failure\n"));
+        DeleteFile(TempFile.StartOfString);
+        YoriLibFreeStringContents(&TempFile);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&TempFile);
+
+    return TRUE;
+}
+
 
 /**
  A list of operations that the tool can perform.
@@ -916,7 +1080,8 @@ typedef enum _YPM_OPERATION {
     YpmOpInstall = 1,
     YpmOpListPackages = 2,
     YpmOpUpgradeInstalled = 3,
-    YpmOpDeleteInstalled = 4
+    YpmOpDeleteInstalled = 4,
+    YpmOpCreatePackage = 5
 } YPM_OPERATION;
 
 
@@ -940,7 +1105,14 @@ ymain(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
+    PYORI_STRING NewFileName = NULL;
+    PYORI_STRING NewVersion = NULL;
     PYORI_STRING NewArch = NULL;
+    PYORI_STRING NewName = NULL;
+    PYORI_STRING SourcePath = NULL;
+    PYORI_STRING UpgradePath = NULL;
+    PYORI_STRING SymbolPath = NULL;
+    PYORI_STRING FileList = NULL;
     YPM_OPERATION Op;
 
     Op = YpmOpNone;
@@ -964,18 +1136,53 @@ ymain(
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                if (i + 4 < ArgC) {
+                    NewFileName = &ArgV[i + 1];
+                    NewName = &ArgV[i + 2];
+                    NewVersion = &ArgV[i + 3];
+                    NewArch = &ArgV[i + 4];
+                    i += 4;
+                    ArgumentUnderstood = TRUE;
+                    Op = YpmOpCreatePackage;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 Op = YpmOpDeleteInstalled;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filelist")) == 0) {
+                if (i + 1 < ArgC) {
+                    FileList = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 Op = YpmOpInstall;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 Op = YpmOpListPackages;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("sourcepath")) == 0) {
+                if (i + 1 < ArgC) {
+                    SourcePath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("symbolpath")) == 0) {
+                if (i + 1 < ArgC) {
+                    SymbolPath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
                 Op = YpmOpUpgradeInstalled;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradepath")) == 0) {
+                if (i + 1 < ArgC) {
+                    UpgradePath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
@@ -1024,6 +1231,29 @@ ymain(
             return EXIT_FAILURE;
         }
         YpmDeletePackage(&ArgV[i]);
+    } else if (Op == YpmOpCreatePackage) {
+        i = StartArg;
+        if (NewFileName == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file name\n"));
+            return EXIT_FAILURE;
+        }
+        if (NewName == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing name\n"));
+            return EXIT_FAILURE;
+        }
+        if (NewVersion == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing version\n"));
+            return EXIT_FAILURE;
+        }
+        if (NewArch == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing architecture\n"));
+            return EXIT_FAILURE;
+        }
+        if (FileList == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file list\n"));
+            return EXIT_FAILURE;
+        }
+        YpmCreateBinaryPackage(NewFileName, NewName, NewVersion, NewArch, FileList, UpgradePath, SourcePath, SymbolPath);
     }
 
     return EXIT_SUCCESS;

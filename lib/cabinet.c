@@ -112,6 +112,44 @@ YoriLibCabFree(
 }
 
 /**
+ Notification that a file has been placed into a CAB when compressing new
+ files.
+
+ @param CabContext Pointer to the cabinet structure which can be populated
+        with new information.
+
+ @param FileNameInCab Pointer to an ANSI NULL terminated string indicating
+        the file that was placed in the CAB.
+
+ @param FileLength Indicates the length of the file placed into the CAB,
+        in bytes.
+
+ @param Continuation TRUE if the file has been split into segments and this
+        is a subsequent segment.
+
+ @param Context Pointer to user context, currently ignored.
+
+ @return Zero to indicate success.
+ */
+DWORD_PTR DIAMONDAPI
+YoriLibCabFciFilePlaced(
+    __in PCAB_FCI_CONTEXT CabContext,
+    __in LPSTR FileNameInCab,
+    __in DWORD FileLength,
+    __in BOOL Continuation,
+    __in PVOID Context
+    )
+{
+    UNREFERENCED_PARAMETER(CabContext);
+    UNREFERENCED_PARAMETER(FileNameInCab);
+    UNREFERENCED_PARAMETER(FileLength);
+    UNREFERENCED_PARAMETER(Continuation);
+    UNREFERENCED_PARAMETER(Context);
+
+    return 0;
+}
+
+/**
  Bits indicating a file should be opened read only.
  */
 #define YORI_LIB_CAB_OPEN_READONLY   (0x0000)
@@ -132,7 +170,7 @@ YoriLibCabFree(
 #define YORI_LIB_CAB_OPEN_MASK       (0x0003)
 
 /**
- A callback invoked during FDICopy to open a file.  Note that this is used
+ A callback invoked during FCI to open a file.  Note that this is used
  on the same file multiple times and thus requires sharing with previous
  opens.
  
@@ -144,13 +182,20 @@ YoriLibCabFree(
 
  @param PMode No idea (per MSDN.)
 
+ @param Err Optionally points to an integer which could be populated with
+        extra error information.
+
+ @param Context Optionally points to user context, which is currently unused.
+
  @return File handle.
  */
 DWORD_PTR DIAMONDAPI
-YoriLibCabFileOpen(
+YoriLibCabFciFileOpen(
     __in LPSTR FileName,
     __in INT OFlag,
-    __in INT PMode
+    __in INT PMode,
+    __inout_opt PINT Err,
+    __inout_opt PVOID Context
     )
 {
     HANDLE hFile;
@@ -160,6 +205,8 @@ YoriLibCabFileOpen(
     DWORD OpenType = ((DWORD)OFlag & YORI_LIB_CAB_OPEN_MASK);
 
     UNREFERENCED_PARAMETER(PMode);
+    UNREFERENCED_PARAMETER(Err);
+    UNREFERENCED_PARAMETER(Context);
 
     switch(OpenType) {
         case YORI_LIB_CAB_OPEN_READONLY:
@@ -190,6 +237,32 @@ YoriLibCabFileOpen(
                         NULL);
     return (DWORD_PTR)hFile;
 }
+
+/**
+ A callback invoked during FDICopy to open a file.  Note that this is used
+ on the same file multiple times and thus requires sharing with previous
+ opens.
+ 
+ @param FileName A NULL terminated ANSI (sigh) string indicating the file
+        name.
+
+ @param OFlag The open flags, apparently modelled on the CRT but don't
+        really match those values.
+
+ @param PMode No idea (per MSDN.)
+
+ @return File handle.
+ */
+DWORD_PTR DIAMONDAPI
+YoriLibCabFdiFileOpen(
+    __in LPSTR FileName,
+    __in INT OFlag,
+    __in INT PMode
+    )
+{
+    return YoriLibCabFciFileOpen(FileName, OFlag, PMode, NULL, NULL);
+}
+
 
 /**
  Combine a parent directory with the CAB's ANSI relative file name (sigh) and
@@ -488,16 +561,25 @@ YoriLibCabFileOpenForExtract(
 
  @param ByteCount The number of bytes to read.
 
+ @param Err Optionally points to an integer which could be populated with
+        extra error information.
+
+ @param Context Optionally points to user context, which is currently unused.
+
  @return The number of bytes actually read or -1 on failure.
  */
 DWORD DIAMONDAPI
-YoriLibCabFileRead(
+YoriLibCabFciFileRead(
     __in DWORD_PTR FileHandle,
     __out PVOID Buffer,
-    __in DWORD ByteCount
+    __in DWORD ByteCount,
+    __inout_opt PINT Err,
+    __inout_opt PVOID Context
     )
 {
     DWORD BytesRead;
+    UNREFERENCED_PARAMETER(Err);
+    UNREFERENCED_PARAMETER(Context);
     if (!ReadFile((HANDLE)FileHandle,
                   Buffer,
                   ByteCount,
@@ -507,6 +589,68 @@ YoriLibCabFileRead(
     }
 
     return BytesRead;
+}
+
+/**
+ A callback invoked during FDICopy to read from a file.  Note that these
+ callbacks always refer to the "current file position".
+ 
+ @param FileHandle The file to read from.
+ 
+ @param Buffer Pointer to a block of memory to place read data.
+
+ @param ByteCount The number of bytes to read.
+
+ @return The number of bytes actually read or -1 on failure.
+ */
+DWORD DIAMONDAPI
+YoriLibCabFdiFileRead(
+    __in DWORD_PTR FileHandle,
+    __out PVOID Buffer,
+    __in DWORD ByteCount
+    )
+{
+    return YoriLibCabFciFileRead(FileHandle, Buffer, ByteCount, NULL, NULL);
+}
+
+/**
+ A callback invoked during FDICopy to write to file.  Note that these
+ callbacks always refer to the "current file position".
+ 
+ @param FileHandle The file to write to.
+ 
+ @param Buffer Pointer to a block of memory containing data to write.
+
+ @param ByteCount The number of bytes to write.
+
+ @param Err Optionally points to an integer which could be populated with
+        extra error information.
+
+ @param Context Optionally points to user context, which is currently unused.
+
+ @return The number of bytes actually written or -1 on failure.
+ */
+DWORD DIAMONDAPI
+YoriLibCabFciFileWrite(
+    __in DWORD_PTR FileHandle,
+    __in PVOID Buffer,
+    __in DWORD ByteCount,
+    __inout_opt PINT Err,
+    __inout_opt PVOID Context
+    )
+{
+    DWORD BytesWritten;
+    UNREFERENCED_PARAMETER(Err);
+    UNREFERENCED_PARAMETER(Context);
+    if (!WriteFile((HANDLE)FileHandle,
+                   Buffer,
+                   ByteCount,
+                   &BytesWritten,
+                   NULL)) {
+        return (DWORD)-1;
+    }
+
+    return BytesWritten;
 }
 
 /**
@@ -522,22 +666,39 @@ YoriLibCabFileRead(
  @return The number of bytes actually written or -1 on failure.
  */
 DWORD DIAMONDAPI
-YoriLibCabFileWrite(
+YoriLibCabFdiFileWrite(
     __in DWORD_PTR FileHandle,
     __in PVOID Buffer,
     __in DWORD ByteCount
     )
 {
-    DWORD BytesWritten;
-    if (!WriteFile((HANDLE)FileHandle,
-                   Buffer,
-                   ByteCount,
-                   &BytesWritten,
-                   NULL)) {
-        return (DWORD)-1;
-    }
+    return YoriLibCabFciFileWrite(FileHandle, Buffer, ByteCount, NULL, NULL);
+}
 
-    return BytesWritten;
+/**
+ A callback invoked during FDICopy to close a file.
+ 
+ @param FileHandle The file to close.
+
+ @param Err Optionally points to an integer which could be populated with
+        extra error information.
+
+ @param Context Optionally points to user context, which is currently unused.
+
+ @return Zero for success, nonzero to indicate an error.
+ */
+INT DIAMONDAPI
+YoriLibCabFciFileClose(
+    __in DWORD_PTR FileHandle,
+    __inout_opt PINT Err,
+    __inout_opt PVOID Context
+    )
+{
+    UNREFERENCED_PARAMETER(Err);
+    UNREFERENCED_PARAMETER(Context);
+
+    CloseHandle((HANDLE)FileHandle);
+    return 0;
 }
 
 /**
@@ -548,14 +709,50 @@ YoriLibCabFileWrite(
  @return Zero for success, nonzero to indicate an error.
  */
 INT DIAMONDAPI
-YoriLibCabFileClose(
+YoriLibCabFdiFileClose(
     __in DWORD_PTR FileHandle
     )
 {
-    CloseHandle((HANDLE)FileHandle);
-    return 0;
+    return YoriLibCabFciFileClose(FileHandle, NULL, NULL);
 }
 
+/**
+ A callback invoked during FDICopy to change current file position.
+ 
+ @param FileHandle The file to set current position on.
+
+ @param DistanceToMove The number of bytes to move.
+
+ @param SeekType The origin of the move.
+
+ @param Err Optionally points to an integer which could be populated with
+        extra error information.
+
+ @param Context Optionally points to user context, which is currently unused.
+
+ @return The new file position.
+ */
+DWORD DIAMONDAPI
+YoriLibCabFciFileSeek(
+    __in DWORD_PTR FileHandle,
+    __in DWORD DistanceToMove,
+    __in INT SeekType,
+    __inout_opt PINT Err,
+    __inout_opt PVOID Context
+    )
+{
+    DWORD NewPosition;
+
+    UNREFERENCED_PARAMETER(Err);
+    UNREFERENCED_PARAMETER(Context);
+
+    NewPosition = SetFilePointer((HANDLE)FileHandle,
+                                 DistanceToMove,
+                                 NULL,
+                                 SeekType);
+
+    return NewPosition;
+}
 
 /**
  A callback invoked during FDICopy to change current file position.
@@ -569,21 +766,195 @@ YoriLibCabFileClose(
  @return The new file position.
  */
 DWORD DIAMONDAPI
-YoriLibCabFileSeek(
+YoriLibCabFdiFileSeek(
     __in DWORD_PTR FileHandle,
     __in DWORD DistanceToMove,
     __in INT SeekType
     )
 {
-    DWORD NewPosition;
-
-    NewPosition = SetFilePointer((HANDLE)FileHandle,
-                                 DistanceToMove,
-                                 NULL,
-                                 SeekType);
-
-    return NewPosition;
+    return YoriLibCabFciFileSeek(FileHandle, DistanceToMove, SeekType, NULL, NULL);
 }
+
+/**
+ A callback to delete a file when creating a CAB.  This is used for temporary
+ files.
+
+ @param FileName An ANSI NULL terminated string indicating the file to delete.
+
+ @param Err Optionally points to an integer which could be populated with
+        extra error information.
+
+ @param Context Optionally points to user context, which is currently unused.
+
+ @return Zero to indicate success.  This is speculation since I haven't found
+         this documented, but it appears to work.
+ */
+INT DIAMONDAPI
+YoriLibCabFciFileDelete(
+    __in LPSTR FileName,
+    __inout_opt PINT Err,
+    __inout_opt PVOID Context
+    )
+{
+    UNREFERENCED_PARAMETER(Err);
+    UNREFERENCED_PARAMETER(Context);
+    DeleteFileA(FileName);
+    return 0;
+}
+
+/**
+ Return a temporary file name.  Cabinet invokes this with a 256 byte buffer
+ (ie., less than MAX_PATH) so this routine constructs the temporary name on
+ the stack and copies back the result.
+
+ @param FileName On successful completion, updated to contain a new temporary
+        file name.  Note this is a NULL terminated ANSI string.
+
+ @param FileNameLength Indicates the size of the FileName buffer.
+
+ @param Context Optionally points to caller supplied context.  This is
+        currently unused.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL DIAMONDAPI
+YoriLibCabFciGetTempFile(
+    __in LPSTR FileName,
+    __in INT FileNameLength,
+    __inout_opt PVOID Context
+    )
+{
+    CHAR TempPath[MAX_PATH];
+    CHAR LocalTempFile[MAX_PATH];
+    DWORD BytesToCopy = MAX_PATH;
+
+    UNREFERENCED_PARAMETER(Context);
+
+    GetTempPathA(sizeof(TempPath), TempPath);
+    GetTempFileNameA(TempPath, "YRI", 0, LocalTempFile);
+    if (FileNameLength < MAX_PATH) {
+        BytesToCopy = FileNameLength;
+    }
+    memcpy(FileName, LocalTempFile, BytesToCopy);
+    FileName[FileNameLength - 1] = '\0';
+    return TRUE;
+}
+
+/**
+ Called when creating a CAB to request a new CAB file and information about it.
+ Because this package is trying to only generate single CAB files (not chains)
+ this routine should never be invoked and isn't really handled.
+
+ @param CabContext Pointer to the previous cab information.  This could be
+        updated as needed to describe the next one.
+
+ @param SizeOfLastCab The size of the last CAB file, in bytes.
+
+ @param Context Optionally points to caller supplied context.  This is
+        currently unused.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL DIAMONDAPI
+YoriLibCabFciGetNextCabinet(
+    __in PCAB_FCI_CONTEXT CabContext,
+    __in DWORD SizeOfLastCab,
+    __inout_opt PVOID Context
+    )
+{
+    UNREFERENCED_PARAMETER(CabContext);
+    UNREFERENCED_PARAMETER(SizeOfLastCab);
+    UNREFERENCED_PARAMETER(Context);
+
+    ASSERT(FALSE);
+
+    return TRUE;
+}
+
+/**
+ A callback function that is called to indicate progress through compressing
+ files into a CAB.
+
+ @param StatusType The type of notification.  When this is 2, it's requesting
+        the final size of the CAB file to create.
+
+ @param Value1 Type-specific data.
+
+ @param Value2 Type-specific data.  When StatusType is 2, this contains the
+        current size of the CAB file.
+
+ @param Context Pointer to user supplied context, currently unused.
+
+ @return Typically zero for success, or the size of the CAB file to create
+         when StatusType is 2.
+ */
+DWORD DIAMONDAPI
+YoriLibCabFciStatus(
+    __in DWORD StatusType,
+    __in DWORD Value1,
+    __in DWORD Value2,
+    __inout_opt PVOID Context
+    )
+{
+    UNREFERENCED_PARAMETER(Value1);
+    UNREFERENCED_PARAMETER(Context);
+
+    if (StatusType == 2) {
+        return Value2;
+    }
+
+    return 0;
+}
+
+/**
+ Open a file for read for the purpose of adding it to a CAB, and return
+ metadata about the file being opened.
+
+ @param FileName An ANSI NULL-terminated string describing the file to open.
+
+ @param Date On successful completion, updated to point to the MS-DOS 16 bit
+        date stamp for the file.
+
+ @param Time On successful completion, updated to point to the MS-DOS 16 bit
+        time stamp for the file.
+
+ @param Attributes On successful completion, updated to point to the MS-DOS
+        16 bit file attributes for the file.
+
+ @param Err Updated to contain extra error information on failure.
+
+ @param Context Pointer to user context, currently unused.
+
+ @return A file handle.
+ */
+DWORD_PTR DIAMONDAPI
+YoriLibCabFciGetOpenInfo(
+    __in LPSTR FileName,
+    __out PWORD Date,
+    __out PWORD Time,
+    __out PWORD Attributes,
+    __inout_opt PINT Err,
+    __inout_opt PVOID Context
+    )
+{
+    DWORD_PTR Handle;
+    BY_HANDLE_FILE_INFORMATION FileInfo;
+
+    UNREFERENCED_PARAMETER(Err);
+    UNREFERENCED_PARAMETER(Context);
+
+    Handle = YoriLibCabFdiFileOpen(FileName, YORI_LIB_CAB_OPEN_READONLY, 0);
+    if (Handle == (DWORD_PTR)INVALID_HANDLE_VALUE) {
+        return Handle;
+    }
+
+    GetFileInformationByHandle((HANDLE)Handle, &FileInfo);
+    *Attributes = (WORD)(FileInfo.dwFileAttributes & 0xFFFF);
+    FileTimeToDosDateTime(&FileInfo.ftLastWriteTime, Date, Time);
+
+    return Handle;
+}
+
 
 /**
  A callback invoked during FDICopy to indicate events and state encountered
@@ -603,8 +974,8 @@ YoriLibCabFileSeek(
  */
 DWORD_PTR DIAMONDAPI
 YoriLibCabNotify(
-    __in CAB_CB_NOTIFYTYPE NotifyType,
-    __in PCAB_CB_NOTIFICATION Notification
+    __in CAB_CB_FDI_NOTIFYTYPE NotifyType,
+    __in PCAB_CB_FDI_NOTIFICATION Notification
     )
 {
     FILETIME TimeToSet;
@@ -667,7 +1038,7 @@ YoriLibCabNotify(
             //  MSFIX Need to apply DOS attributes
             //
 
-            YoriLibCabFileClose(Notification->FileHandle);
+            YoriLibCabFdiFileClose(Notification->FileHandle);
             return 1;
     }
     return 0;
@@ -832,7 +1203,7 @@ YoriLibExtractCab(
 
     AnsiCabFileName[CabFileNameOnly.LengthInChars] = '\0';
 
-    hFdi = DllCabinet.pFdiCreate(YoriLibCabAlloc, YoriLibCabFree, YoriLibCabFileOpen, YoriLibCabFileRead, YoriLibCabFileWrite, YoriLibCabFileClose, YoriLibCabFileSeek, -1, &CabErrors);
+    hFdi = DllCabinet.pFdiCreate(YoriLibCabAlloc, YoriLibCabFree, YoriLibCabFdiFileOpen, YoriLibCabFdiFileRead, YoriLibCabFdiFileWrite, YoriLibCabFdiFileClose, YoriLibCabFdiFileSeek, -1, &CabErrors);
 
     if (hFdi == NULL) {
         if (ErrorString != NULL && ErrorString->LengthInChars == 0) {
@@ -869,6 +1240,194 @@ Exit:
         YoriLibFree(AnsiCabParentDirectory);
     }
     return Result;
+}
+
+/**
+ A structure owned by this module for each CAB file being created.  This is
+ the nonopaque form of a handle returned from @ref YoriLibCreateCab .
+ */
+typedef struct _YORI_CAB_HANDLE {
+
+    /**
+     A description of the CAB file being constructed.
+     */
+    CAB_FCI_CONTEXT CompressContext;
+
+    /**
+     Memory allocated to retrieve errors that occur during compression.
+     */
+    CAB_CB_ERROR Err;
+
+    /**
+     A handle returned from FCICreate that is used by the cabinet API for
+     future operations on the CAB.
+     */
+    PVOID FciHandle;
+} YORI_CAB_HANDLE, *PYORI_CAB_HANDLE;
+
+/**
+ Create a new CAB file.  Files can be added to it with
+ @ref YoriLibAddFileToCab .
+
+ @param CabFileName The file name of the CAB to create on disk.  Note that
+        due to limitations of the Cabinet API, this must be capable of being
+        converted to ANSI losslessly.
+
+ @param Handle On successful completion, this is updated to contain an opaque
+        handle that can be used in @ref YoriLibAddFileToCab or
+        @ref YoriLibCloseCab .
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibCreateCab(
+    __in PYORI_STRING CabFileName,
+    __out PVOID * Handle
+    )
+{
+    PYORI_CAB_HANDLE CabHandle;
+    BOOL DefaultUsed = FALSE;
+
+    YoriLibLoadCabinetFunctions();
+    if (DllCabinet.pFciCreate == NULL ||
+        DllCabinet.pFciAddFile == NULL) {
+
+        return FALSE;
+    }
+
+    CabHandle = YoriLibReferencedMalloc(sizeof(YORI_CAB_HANDLE));
+    if (CabHandle == NULL) {
+        return FALSE;
+    }
+
+    ZeroMemory(CabHandle, sizeof(YORI_CAB_HANDLE));
+
+    //
+    //  We don't want to split data across multiple CABs.  This feature
+    //  was for floppy disks.  Today, set the maximum size to as large
+    //  as is possible.
+    //
+
+    CabHandle->CompressContext.SizeAvailable = 0x7FFFF000;
+    CabHandle->CompressContext.ThresholdForNextFolder = 0x7FFFF000;
+
+    if (WideCharToMultiByte(CP_ACP, 0, CabFileName->StartOfString, CabFileName->LengthInChars, CabHandle->CompressContext.CabPath, sizeof(CabHandle->CompressContext.CabPath), NULL, &DefaultUsed) != (INT)(CabFileName->LengthInChars)) {
+        YoriLibDereference(CabHandle);
+        return FALSE;
+    }
+
+    if (DefaultUsed) {
+        YoriLibDereference(CabHandle);
+        return FALSE;
+    }
+
+    CabHandle->FciHandle = DllCabinet.pFciCreate(&CabHandle->Err, YoriLibCabFciFilePlaced, YoriLibCabAlloc, YoriLibCabFree, YoriLibCabFciFileOpen, YoriLibCabFciFileRead, YoriLibCabFciFileWrite, YoriLibCabFciFileClose, YoriLibCabFciFileSeek, YoriLibCabFciFileDelete, YoriLibCabFciGetTempFile, &CabHandle->CompressContext, NULL);
+
+    if (CabHandle->FciHandle == NULL) {
+        YoriLibDereference(CabHandle);
+        return FALSE;
+    }
+
+    *Handle = CabHandle;
+    return TRUE;
+}
+
+/**
+ Add a file to a CAB file.
+
+ @param Handle The opaque handle returned from @ref YoriLibCreateCab.
+
+ @param FileNameOnDisk The path to the file on disk.  Note that due to
+        limitations of the Cabinet API, this must be capable of being
+        converted to ANSI losslessly.
+
+ @param FileNameInCab The path to record the file as within the CAB.
+        Note that due to limitations of the Cabinet API, this must be
+        capable of being converted to ANSI losslessly.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibAddFileToCab(
+    __in PVOID Handle,
+    __in PYORI_STRING FileNameOnDisk,
+    __in PYORI_STRING FileNameInCab
+    )
+{
+    PYORI_CAB_HANDLE CabHandle = (PYORI_CAB_HANDLE)Handle;
+
+    LPSTR FileNameOnDiskAnsi;
+    LPSTR FileNameInCabAnsi;
+    BOOL DefaultUsed;
+    BOOL Result;
+
+    FileNameOnDiskAnsi = YoriLibMalloc(FileNameOnDisk->LengthInChars + 1);
+    if (FileNameOnDiskAnsi == NULL) {
+        return FALSE;
+    }
+
+    if (WideCharToMultiByte(CP_ACP, 0, FileNameOnDisk->StartOfString, FileNameOnDisk->LengthInChars, FileNameOnDiskAnsi, FileNameOnDisk->LengthInChars, NULL, &DefaultUsed) != (INT)(FileNameOnDisk->LengthInChars)) {
+        YoriLibFree(FileNameOnDiskAnsi);
+        return FALSE;
+    }
+
+    if (DefaultUsed) {
+        YoriLibFree(FileNameOnDiskAnsi);
+        return FALSE;
+    }
+
+    FileNameOnDiskAnsi[FileNameOnDisk->LengthInChars] = '\0';
+
+    FileNameInCabAnsi = YoriLibMalloc(FileNameInCab->LengthInChars + 1);
+    if (FileNameInCabAnsi == NULL) {
+        YoriLibFree(FileNameOnDiskAnsi);
+        return FALSE;
+    }
+
+    if (WideCharToMultiByte(CP_ACP, 0, FileNameInCab->StartOfString, FileNameInCab->LengthInChars, FileNameInCabAnsi, FileNameInCab->LengthInChars, NULL, &DefaultUsed) != (INT)(FileNameInCab->LengthInChars)) {
+        YoriLibFree(FileNameOnDiskAnsi);
+        YoriLibFree(FileNameInCabAnsi);
+        return FALSE;
+    }
+
+    if (DefaultUsed) {
+        YoriLibFree(FileNameOnDiskAnsi);
+        YoriLibFree(FileNameInCabAnsi);
+        return FALSE;
+    }
+
+    FileNameInCabAnsi[FileNameInCab->LengthInChars] = '\0';
+
+    Result = DllCabinet.pFciAddFile(CabHandle->FciHandle, FileNameOnDiskAnsi, FileNameInCabAnsi, FALSE, YoriLibCabFciGetNextCabinet, YoriLibCabFciStatus, YoriLibCabFciGetOpenInfo, CAB_FCI_ALGORITHM_MSZIP);
+
+    YoriLibFree(FileNameOnDiskAnsi);
+    YoriLibFree(FileNameInCabAnsi);
+    return Result;
+}
+
+/**
+ Complete the creation of a new CAB file.
+
+ @param Handle The opaque handle returned from @ref YoriLibCreateCab.
+ */
+VOID
+YoriLibCloseCab(
+    __in PVOID Handle
+    )
+{
+    PYORI_CAB_HANDLE CabHandle = (PYORI_CAB_HANDLE)Handle;
+
+    if (DllCabinet.pFciFlushFolder) {
+        DllCabinet.pFciFlushFolder(CabHandle->FciHandle, YoriLibCabFciGetNextCabinet, YoriLibCabFciStatus);
+    }
+    if (DllCabinet.pFciFlushCabinet) {
+        DllCabinet.pFciFlushCabinet(CabHandle->FciHandle, FALSE, YoriLibCabFciGetNextCabinet, YoriLibCabFciStatus);
+    }
+    if (DllCabinet.pFciDestroy) {
+        DllCabinet.pFciDestroy(CabHandle->FciHandle);
+    }
+
+    YoriLibDereference(CabHandle);
 }
 
 

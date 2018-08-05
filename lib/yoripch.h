@@ -129,6 +129,11 @@
 #define __inout
 
 /**
+ SAL annotation for an optional value populated on input and updated on output.
+ */
+#define __inout_opt
+
+/**
  SAL annotation describing an input buffer with a specified number of
  elements.
  */
