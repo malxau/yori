@@ -15,6 +15,9 @@ LINKPDB=/Pdb:ypm.pdb
 CFLAGS=$(CFLAGS) -DYPM_VER_MAJOR=$(YPM_VER_MAJOR) -DYPM_VER_MINOR=$(YPM_VER_MINOR)
 
 OBJS=\
+	 create.obj      \
+	 install.obj     \
+	 util.obj        \
 	 ypm.obj         \
 
 compile: $(OBJS)
