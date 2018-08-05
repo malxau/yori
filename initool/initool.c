@@ -153,6 +153,10 @@ IniToolListSectionsFromIniFile(
     YORI_STRING Value;
     LPTSTR ThisVar;
 
+    if (DllKernel32.pGetPrivateProfileSectionNamesW == NULL) {
+        return FALSE;
+    }
+
     if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
@@ -162,7 +166,7 @@ IniToolListSectionsFromIniFile(
         return FALSE;
     }
 
-    Value.LengthInChars = GetPrivateProfileSectionNames(Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    Value.LengthInChars = DllKernel32.pGetPrivateProfileSectionNamesW(Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
     ThisVar = Value.StartOfString;
     while (*ThisVar != '\0') {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);

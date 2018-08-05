@@ -2092,6 +2092,18 @@ GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, ULONG, PVOID, DWORD);
 typedef GET_FILE_INFORMATION_BY_HANDLE_EX *PGET_FILE_INFORMATION_BY_HANDLE_EX;
 
 /**
+ A prototype for the GetPrivateProfileSectionNamesW function.
+ */
+typedef
+DWORD WINAPI
+GET_PRIVATE_PROFILE_SECTION_NAMESW(LPWSTR, DWORD, LPCWSTR);
+
+/**
+ A prototype for a pointer to the GetPrivateProfileSectionNamesW function.
+ */
+typedef GET_PRIVATE_PROFILE_SECTION_NAMESW *PGET_PRIVATE_PROFILE_SECTION_NAMESW;
+
+/**
  A prototype for the GetVersionExW function.
  */
 typedef
@@ -2275,6 +2287,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetFileInformationByHandleEx.
      */
     PGET_FILE_INFORMATION_BY_HANDLE_EX pGetFileInformationByHandleEx;
+
+    /**
+     If it's available on the current system, a pointer to GetPrivateProfileSectionNamesW.
+     */
+    PGET_PRIVATE_PROFILE_SECTION_NAMESW pGetPrivateProfileSectionNamesW;
 
     /**
      If it's available on the current system, a pointer to GetVersionExW.
