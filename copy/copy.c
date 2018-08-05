@@ -74,8 +74,20 @@ CopyHelp()
     return TRUE;
 }
 
+/**
+ A single item to exclude.  Note this can refer to multiple files.
+ */
 typedef struct _COPY_EXCLUDE_ITEM {
+
+    /**
+     List of items to exclude.
+     */
     YORI_LIST_ENTRY ExcludeList;
+
+    /**
+     A string describing the object to exclude, which may include
+     wildcards.
+     */
     YORI_STRING ExcludeCriteria;
 } COPY_EXCLUDE_ITEM, *PCOPY_EXCLUDE_ITEM;
 
@@ -119,6 +131,17 @@ typedef struct _COPY_CONTEXT {
     BOOL Verbose;
 } COPY_CONTEXT, *PCOPY_CONTEXT;
 
+/**
+ Add a new exclude criteria to the list.
+
+ @param CopyContext Pointer to the copy context to populate with a new
+        exclude criteria.
+
+ @param NewCriteria Pointer to the new criteria to add, which may include
+        wildcards.
+ 
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
 BOOL
 CopyAddExclude(
     __in PCOPY_CONTEXT CopyContext,
@@ -142,6 +165,12 @@ CopyAddExclude(
     return TRUE;
 }
 
+/**
+ Free all previously added exclude criteria.
+
+ @param CopyContext Pointer to the copy context to free all exclude criteria
+        from.
+ */
 VOID
 CopyFreeExcludes(
     __in PCOPY_CONTEXT CopyContext
@@ -159,6 +188,18 @@ CopyFreeExcludes(
     }
 }
 
+/**
+ Returns TRUE to indicate that an object should be excluded based on the
+ exclude criteria, or FALSE if it should be included.
+
+ @param CopyContext Pointer to the copy context to check the new object
+        against.
+
+ @param RelativeSourcePath Pointer to a string describing the file relative
+        to the root of the source of the copy operation.
+
+ @return TRUE to exclude the file, FALSE to include it.
+ */
 BOOL
 CopyShouldExclude(
     __in PCOPY_CONTEXT CopyContext,
@@ -178,7 +219,6 @@ CopyShouldExclude(
     }
     return FALSE;
 }
-
 
 /**
  Copy a single file from the source to the target by preserving its link
