@@ -35,10 +35,18 @@ CHAR strHelpText[] =
         "\n"
         "Installs or upgrades packages.\n"
         "\n"
-        "YPM [-license] [-d <pkg>] [-i <file>] [-l] [[-a <arch>] -u [<pkg>]]\n"
+        "YPM [-license]\n"
+        "YPM -c <file> <pkgname> <version> <arch> -filelist <file> [-upgradepath <path>]\n"
+        "       [-sourcepath <path>] [-symbolpath <path>]\n"
+        "YPM -cs <file> <pkgname> <version> -filepath <directory>\n"
+        "YPM -d <pkg>\n"
+        "YPM -i <file>\n"
+        "YPM -l\n"
+        "YPM [-a <arch>] -u [<pkg>]\n"
         "\n"
         "   -a             Specify a CPU architecture to upgrade to\n"
-        "   -c             Create a package\n"
+        "   -c             Create a binary package\n"
+        "   -cs            Create a source package\n"
         "   -d             Delete an installed package\n"
         "   -i             Install a package from a specified file or URL\n"
         "   -l             List all currently installed packages\n"
@@ -532,7 +540,7 @@ YpmInstallPackage(
 
     YoriLibInitEmptyString(&ErrorString);
     if (!YoriLibExtractCab(&PackageFile, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, &ErrorString)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y: %y\n"), &PackageFile, ErrorString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y: %y\n"), &PackageFile, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
         goto Exit;
     }
@@ -591,7 +599,7 @@ YpmInstallPackage(
     InstallContext.NumberFiles = 0;
     if (!YoriLibExtractCab(&PackageFile, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YpmInstallPackageFileCallback, &InstallContext, &ErrorString)) {
         WritePrivateProfileString(_T("Installed"), PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y: %y\n"), &PackageFile, ErrorString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y: %y\n"), &PackageFile, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
         goto Exit;
     }
@@ -958,8 +966,6 @@ YpmCreateBinaryPackage(
 
     PVOID CabHandle;
 
-    UNREFERENCED_PARAMETER(FileListFile);
-
     //
     //  Query for a temporary directory
     //
@@ -1058,16 +1064,391 @@ YpmCreateBinaryPackage(
     YoriLibLineReadClose(LineContext);
     CloseHandle(FileListSource);
     YoriLibFreeStringContents(&LineString);
+    YoriLibCloseCab(CabHandle);
+    DeleteFile(TempFile.StartOfString);
+    YoriLibFreeStringContents(&TempFile);
 
-    if (!YoriLibCloseCab(CabHandle)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab failure\n"));
-        DeleteFile(TempFile.StartOfString);
+    return TRUE;
+}
+
+/**
+ A single item to exclude or include.  Note this can refer to multiple files.
+ */
+typedef struct _YPM_MATCH_ITEM {
+
+    /**
+     List of items to match.
+     */
+    YORI_LIST_ENTRY MatchList;
+
+    /**
+     A string describing the object to match, which may include
+     wildcards.
+     */
+    YORI_STRING MatchCriteria;
+} YPM_MATCH_ITEM, *PYPM_MATCH_ITEM;
+
+/**
+ Context passed between the source package creation operation and every file
+ found while creating the source package.
+ */
+typedef struct _YPM_CREATE_SOURCE_CONTEXT {
+
+    /**
+     A handle to the Cabinet being created.
+     */
+    PVOID CabHandle;
+
+    /**
+     Pointer to the name of the package.
+     */
+    PYORI_STRING PackageName;
+
+    /**
+     Pointer to the version of the package.
+     */
+    PYORI_STRING PackageVersion;
+
+    /**
+     A list of criteria to exclude.
+     */
+    YORI_LIST_ENTRY ExcludeList;
+
+    /**
+     A list of criteria to include, even if they have been excluded by the
+     ExcludeList.
+     */
+    YORI_LIST_ENTRY IncludeList;
+} YPM_CREATE_SOURCE_CONTEXT, *PYPM_CREATE_SOURCE_CONTEXT;
+
+/**
+ Add a new match criteria to the list.
+
+ @param List Pointer to the list to add the match criteria to.
+
+ @param NewCriteria Pointer to the new criteria to add, which may include
+        wildcards.
+ 
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmCreateSourceAddMatch(
+    __in PYORI_LIST_ENTRY List,
+    __in PYORI_STRING NewCriteria
+    )
+{
+    PYPM_MATCH_ITEM MatchItem;
+    MatchItem = YoriLibReferencedMalloc(sizeof(YPM_MATCH_ITEM) + (NewCriteria->LengthInChars + 1) * sizeof(TCHAR));
+
+    if (MatchItem == NULL) {
+        return FALSE;
+    }
+
+    ZeroMemory(MatchItem, sizeof(YPM_MATCH_ITEM));
+    MatchItem->MatchCriteria.StartOfString = (LPTSTR)(MatchItem + 1);
+    MatchItem->MatchCriteria.LengthInChars = NewCriteria->LengthInChars;
+    MatchItem->MatchCriteria.LengthAllocated = NewCriteria->LengthInChars + 1;
+    memcpy(MatchItem->MatchCriteria.StartOfString, NewCriteria->StartOfString, MatchItem->MatchCriteria.LengthInChars * sizeof(TCHAR));
+    MatchItem->MatchCriteria.StartOfString[MatchItem->MatchCriteria.LengthInChars] = '\0';
+    YoriLibAppendList(List, &MatchItem->MatchList);
+    return TRUE;
+}
+
+/**
+ Free all previously added exclude or include criteria.
+
+ @param CreateSourceContext Pointer to the create source context to free all
+        exclude or include criteria from.
+ */
+VOID
+YpmCreateSourceFreeMatchLists(
+    __in PYPM_CREATE_SOURCE_CONTEXT CreateSourceContext
+    )
+{
+    PYPM_MATCH_ITEM MatchItem;
+    PYORI_LIST_ENTRY ListEntry;
+
+    ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->ExcludeList, NULL);
+    while (ListEntry != NULL) {
+        MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+        YoriLibRemoveListItem(&MatchItem->MatchList);
+        YoriLibDereference(MatchItem);
+        ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->ExcludeList, NULL);
+    }
+
+    ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->IncludeList, NULL);
+    while (ListEntry != NULL) {
+        MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+        YoriLibRemoveListItem(&MatchItem->MatchList);
+        YoriLibDereference(MatchItem);
+        ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->IncludeList, NULL);
+    }
+}
+
+/**
+ Returns TRUE to indicate that an object should be excluded based on the
+ exclude criteria, or FALSE if it should be included.
+
+ @param CreateSourceContext Pointer to the create source context to check the
+        new object against.
+
+ @param RelativeSourcePath Pointer to a string describing the file relative
+        to the root of the source of the create operation.
+
+ @return TRUE to exclude the file, FALSE to include it.
+ */
+BOOL
+YpmCreateSourceShouldExclude(
+    __in PYPM_CREATE_SOURCE_CONTEXT CreateSourceContext,
+    __in PYORI_STRING RelativeSourcePath
+    )
+{
+    PYPM_MATCH_ITEM MatchItem;
+    PYORI_LIST_ENTRY ListEntry;
+
+    ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->ExcludeList, NULL);
+    while (ListEntry != NULL) {
+        MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+        if (YoriLibDoesFileMatchExpression(RelativeSourcePath, &MatchItem->MatchCriteria)) {
+
+            ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->IncludeList, NULL);
+            while (ListEntry != NULL) {
+                MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+                if (YoriLibDoesFileMatchExpression(RelativeSourcePath, &MatchItem->MatchCriteria)) {
+                    return FALSE;
+                }
+                ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->IncludeList, ListEntry);
+            }
+            return TRUE;
+        }
+        ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->ExcludeList, ListEntry);
+    }
+    return FALSE;
+}
+
+/**
+ A callback that is invoked when a file is found within the tree root that is
+ being turned into a source package.
+
+ @param FilePath Pointer to the file path that was found.
+
+ @param FileInfo Information about the file.
+
+ @param Depth Indicates the recursion depth.  Used to determine the relative
+        path to check if an object should be included or excluded.
+
+ @param Context Pointer to a context block specifying the destination of 
+        package.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+YpmCreateSourceFileFoundCallback(
+    __in PYORI_STRING FilePath,
+    __in PWIN32_FIND_DATA FileInfo,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PYPM_CREATE_SOURCE_CONTEXT CreateSourceContext = (PYPM_CREATE_SOURCE_CONTEXT)Context;
+    YORI_STRING RelativePathFromSource;
+    YORI_STRING PathInCab;
+    DWORD SlashesFound;
+    DWORD Index;
+
+    UNREFERENCED_PARAMETER(FileInfo);
+
+    YoriLibInitEmptyString(&RelativePathFromSource);
+
+    SlashesFound = 0;
+    for (Index = FilePath->LengthInChars; Index > 0; Index--) {
+        if (FilePath->StartOfString[Index - 1] == '\\') {
+            SlashesFound++;
+            if (SlashesFound == Depth + 1) {
+                break;
+            }
+        }
+    }
+
+    ASSERT(Index > 0);
+    ASSERT(SlashesFound == Depth + 1);
+
+    RelativePathFromSource.StartOfString = &FilePath->StartOfString[Index];
+    RelativePathFromSource.LengthInChars = FilePath->LengthInChars - Index;
+
+    //
+    //  Skip any object starting with .git or .svn
+    //
+
+    if (YoriLibCompareStringWithLiteralCount(&RelativePathFromSource, _T(".git"), sizeof(".git") - 1) == 0 ||
+        YoriLibCompareStringWithLiteralCount(&RelativePathFromSource, _T(".svn"), sizeof(".svn") - 1) == 0) {
+
+        return TRUE;
+    }
+
+    //
+    //  Skip anything .gitinclude said should be skipped
+    //
+
+    if (YpmCreateSourceShouldExclude(CreateSourceContext, &RelativePathFromSource)) {
+        return TRUE;
+    }
+
+    YoriLibInitEmptyString(&PathInCab);
+    YoriLibYPrintf(&PathInCab, _T("src\\%y-%y\\%y"), CreateSourceContext->PackageName, CreateSourceContext->PackageVersion, &RelativePathFromSource);
+
+    if (!YoriLibAddFileToCab(CreateSourceContext->CabHandle, FilePath, &PathInCab)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab cannot add %y\n"), &RelativePathFromSource);
+    }
+    YoriLibFreeStringContents(&PathInCab);
+
+    return TRUE;
+}
+
+/**
+ Creates a source package.  This is intrinsically architecture neutral and is
+ comprised of a directory tree rather than a file list.
+
+ @param FileName The name of the CAB file to create.
+
+ @param PackageName The name of the package described by the CAB file.
+
+ @param Version The version of the package.
+
+ @param FileRoot A pointer to a file tree root that contains the source tree.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmCreateSourcePackage(
+    __in PYORI_STRING FileName,
+    __in PYORI_STRING PackageName,
+    __in PYORI_STRING Version,
+    __in PYORI_STRING FileRoot
+    )
+{
+    YORI_STRING TempPath;
+    YORI_STRING TempFile;
+    YORI_STRING PkgInfoName;
+    YORI_STRING ExcludeFilePath;
+    YPM_CREATE_SOURCE_CONTEXT CreateSourceContext;
+
+    ZeroMemory(&CreateSourceContext, sizeof(CreateSourceContext));
+    YoriLibInitializeListHead(&CreateSourceContext.ExcludeList);
+    YoriLibInitializeListHead(&CreateSourceContext.IncludeList);
+
+    //
+    //  Query for a temporary directory
+    //
+
+    TempPath.LengthAllocated = GetTempPath(0, NULL);
+    if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated)) {
+        return FALSE;
+    }
+    TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
+
+    if (!YoriLibAllocateString(&TempFile, TempPath.LengthAllocated + MAX_PATH)) {
+        YoriLibFreeStringContents(&TempPath);
+        return FALSE;
+    }
+
+    //
+    //  Generate a temporary file name to stage pkginfo.ini in to
+    //
+
+    if (GetTempFileName(TempPath.StartOfString, _T("ypm"), 0, TempFile.StartOfString) == 0) {
+        YoriLibFreeStringContents(&TempPath);
         YoriLibFreeStringContents(&TempFile);
         return FALSE;
     }
 
+    TempFile.LengthInChars = _tcslen(TempFile.StartOfString);
+    YoriLibFreeStringContents(&TempPath);
+
+    WritePrivateProfileString(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
+    WritePrivateProfileString(_T("Package"), _T("Version"), Version->StartOfString, TempFile.StartOfString);
+    WritePrivateProfileString(_T("Package"), _T("Architecture"), _T("noarch"), TempFile.StartOfString);
+
+    if (!YoriLibCreateCab(FileName, &CreateSourceContext.CabHandle)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibCreateCab failure\n"));
+        DeleteFile(TempFile.StartOfString);
+        YoriLibFreeStringContents(&TempFile);
+        return FALSE;
+    }
+    YoriLibConstantString(&PkgInfoName, _T("pkginfo.ini"));
+    if (!YoriLibAddFileToCab(CreateSourceContext.CabHandle, &TempFile, &PkgInfoName)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab failure\n"));
+        DeleteFile(TempFile.StartOfString);
+        YoriLibFreeStringContents(&TempFile);
+        YoriLibCloseCab(CreateSourceContext.CabHandle);
+        return FALSE;
+    }
+
+    DeleteFile(TempFile.StartOfString);
     YoriLibFreeStringContents(&TempFile);
 
+    YoriLibInitEmptyString(&ExcludeFilePath);
+    YoriLibYPrintf(&ExcludeFilePath, _T("%y\\.gitignore"), FileRoot);
+    if (ExcludeFilePath.StartOfString != NULL) {
+        HANDLE ExcludeFileHandle;
+        YORI_STRING LineString;
+        PVOID LineContext = NULL;
+        DWORD Index;
+
+        ExcludeFileHandle = CreateFile(ExcludeFilePath.StartOfString,
+                                       GENERIC_READ,
+                                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                       NULL,
+                                       OPEN_EXISTING,
+                                       FILE_ATTRIBUTE_NORMAL,
+                                       NULL);
+    
+        if (ExcludeFileHandle != INVALID_HANDLE_VALUE) {
+            YoriLibInitEmptyString(&LineString);
+            while(TRUE) {
+                if (!YoriLibReadLineToString(&LineString, &LineContext, ExcludeFileHandle)) {
+                    break;
+                }
+
+                if (LineString.LengthInChars > 0) {
+
+                    for (Index = 0; Index < LineString.LengthInChars; Index++) {
+                        if (YoriLibIsSep(LineString.StartOfString[Index])) {
+                            LineString.StartOfString[Index] = '\\';
+                        }
+                    }
+
+                    if (LineString.StartOfString[0] == '!') {
+                        LineString.StartOfString++;
+                        LineString.LengthInChars--;
+                        if (LineString.LengthInChars > 0) {
+                            YpmCreateSourceAddMatch(&CreateSourceContext.IncludeList, &LineString);
+                        }
+                        LineString.StartOfString--;
+                        LineString.LengthInChars++;
+                    } else {
+                        YpmCreateSourceAddMatch(&CreateSourceContext.ExcludeList, &LineString);
+                    }
+                }
+            }
+            YoriLibLineReadClose(LineContext);
+            YoriLibFreeStringContents(&LineString);
+            CloseHandle(ExcludeFileHandle);
+        }
+    }
+    YoriLibFreeStringContents(&ExcludeFilePath);
+
+    CreateSourceContext.PackageName = PackageName;
+    CreateSourceContext.PackageVersion = Version;
+
+    YoriLibForEachFile(FileRoot,
+                       YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS | YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_NO_LINK_TRAVERSE,
+                       0,
+                       YpmCreateSourceFileFoundCallback,
+                       &CreateSourceContext);
+
+    YoriLibCloseCab(CreateSourceContext.CabHandle);
+    YpmCreateSourceFreeMatchLists(&CreateSourceContext);
     return TRUE;
 }
 
@@ -1081,7 +1462,8 @@ typedef enum _YPM_OPERATION {
     YpmOpListPackages = 2,
     YpmOpUpgradeInstalled = 3,
     YpmOpDeleteInstalled = 4,
-    YpmOpCreatePackage = 5
+    YpmOpCreateBinaryPackage = 5,
+    YpmOpCreateSourcePackage = 6
 } YPM_OPERATION;
 
 
@@ -1113,6 +1495,7 @@ ymain(
     PYORI_STRING UpgradePath = NULL;
     PYORI_STRING SymbolPath = NULL;
     PYORI_STRING FileList = NULL;
+    PYORI_STRING FilePath = NULL;
     YPM_OPERATION Op;
 
     Op = YpmOpNone;
@@ -1144,8 +1527,16 @@ ymain(
                     NewArch = &ArgV[i + 4];
                     i += 4;
                     ArgumentUnderstood = TRUE;
-                    Op = YpmOpCreatePackage;
+                    Op = YpmOpCreateBinaryPackage;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("cs")) == 0) {
+                if (i + 3 < ArgC) {
+                    NewFileName = &ArgV[i + 1];
+                    NewName = &ArgV[i + 2];
+                    NewVersion = &ArgV[i + 3];
+                    i += 3;
                     ArgumentUnderstood = TRUE;
+                    Op = YpmOpCreateSourcePackage;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 Op = YpmOpDeleteInstalled;
@@ -1153,6 +1544,12 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filelist")) == 0) {
                 if (i + 1 < ArgC) {
                     FileList = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filepath")) == 0) {
+                if (i + 1 < ArgC) {
+                    FilePath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
@@ -1231,29 +1628,20 @@ ymain(
             return EXIT_FAILURE;
         }
         YpmDeletePackage(&ArgV[i]);
-    } else if (Op == YpmOpCreatePackage) {
-        i = StartArg;
-        if (NewFileName == NULL) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file name\n"));
-            return EXIT_FAILURE;
-        }
-        if (NewName == NULL) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing name\n"));
-            return EXIT_FAILURE;
-        }
-        if (NewVersion == NULL) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing version\n"));
-            return EXIT_FAILURE;
-        }
-        if (NewArch == NULL) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing architecture\n"));
-            return EXIT_FAILURE;
-        }
+    } else if (Op == YpmOpCreateBinaryPackage) {
+        ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL && NewArch != NULL);
         if (FileList == NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file list\n"));
             return EXIT_FAILURE;
         }
         YpmCreateBinaryPackage(NewFileName, NewName, NewVersion, NewArch, FileList, UpgradePath, SourcePath, SymbolPath);
+    } else if (Op == YpmOpCreateSourcePackage) {
+        ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL);
+        if (FilePath == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file tree root\n"));
+            return EXIT_FAILURE;
+        }
+        YpmCreateSourcePackage(NewFileName, NewName, NewVersion, FilePath);
     }
 
     return EXIT_SUCCESS;

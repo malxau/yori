@@ -368,6 +368,63 @@ YoriLibCabShouldIncludeFile(
 }
 
 /**
+ Create a directory, and any parent directories that do not yet exist.
+ Note that this routine temporarily alters the DirName buffer - it is not
+ const, but will be restored to original contents on exit.
+
+ @param DirName The directory to create.
+ */
+VOID
+YoriLibCreateDirectoryAndParents(
+    __in PYORI_STRING DirName
+    )
+{
+    DWORD MaxIndex = DirName->LengthInChars - 1;
+    DWORD Err;
+    DWORD SepIndex = MaxIndex;
+    BOOL StartedSucceeding = FALSE;
+
+    while (TRUE) {
+        if (!CreateDirectory(DirName->StartOfString, NULL)) {
+            Err = GetLastError();
+            if (Err == ERROR_PATH_NOT_FOUND && !StartedSucceeding) {
+
+                //
+                //  MSFIX Check for truncation beyond \\?\ or \\?\UNC\ ?
+                //
+
+                for (;!YoriLibIsSep(DirName->StartOfString[SepIndex]) && SepIndex > 0; SepIndex--) {
+                }
+
+                if (!YoriLibIsSep(DirName->StartOfString[SepIndex])) {
+                    return;
+                }
+
+                DirName->StartOfString[SepIndex] = '\0';
+                DirName->LengthInChars = SepIndex;
+                continue;
+
+            } else {
+                return;
+            }
+        } else {
+            StartedSucceeding = TRUE;
+            if (SepIndex < MaxIndex) {
+                ASSERT(DirName->StartOfString[SepIndex] == '\0');
+
+                DirName->StartOfString[SepIndex] = '\\';
+                for (;DirName->StartOfString[SepIndex] != '\0' && SepIndex <= MaxIndex; SepIndex++);
+                DirName->LengthInChars = SepIndex;
+                continue;
+            } else {
+                return;
+            }
+        }
+    }
+}
+
+
+/**
  Open a new file being extracted from a Cabinet.  This implies the file is
  being opened for write.  Create a single parent directory if it doesn't
  exist yet, and if the file exists already, try to move it out of the way
@@ -417,6 +474,7 @@ YoriLibCabFileOpenForExtract(
 
         if (Err == ERROR_PATH_NOT_FOUND) {
             LPTSTR LastSep;
+            DWORD OldLength = FullPath->LengthInChars;
 
             LastSep = YoriLibFindRightMostCharacter(FullPath, '\\');
             if (LastSep == NULL) {
@@ -424,11 +482,11 @@ YoriLibCabFileOpenForExtract(
             }
 
             *LastSep = '\0';
+            FullPath->LengthInChars = (DWORD)(LastSep - FullPath->StartOfString);
 
-            if (!CreateDirectory(FullPath->StartOfString, NULL)) {
-                break;
-            }
+            YoriLibCreateDirectoryAndParents(FullPath);
 
+            FullPath->LengthInChars = OldLength;
             *LastSep = '\\';
 
             hFile = CreateFile(FullPath->StartOfString,

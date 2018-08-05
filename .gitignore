@@ -1,4 +1,5 @@
 cache.mk
+**/*.cab
 **/*.com
 **/*.exe
 **/*.exp

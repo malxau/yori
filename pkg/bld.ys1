@@ -38,6 +38,9 @@ set OUTDIR=%CD%\pkg\out
 echo *** Cleaning tree
 nmake /nologo clean >NUL
 
+mkdir %OUTDIR% >NUL 2>&1
+mkdir %OUTDIR%\%ARCH% >NUL 2>&1
+
 echo *** Building debug
 nmake /nologo PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
 
@@ -47,8 +50,7 @@ REM from the web.
 
 echo *** Generating debug installer
 
-mkdir %OUTDIR% >NUL 2>&1
-mkdir %OUTDIR%\%ARCH% >NUL 2>&1
+ypm -cs %OUTDIR%\yori-source.cab yori-source %BUILDSTRING% -filepath . &
 
 if fscmp -d pkg\%ARCH%-dbg; rd /s pkg\%ARCH%-dbg
 mkdir pkg\%ARCH%-dbg
