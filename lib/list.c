@@ -162,4 +162,23 @@ YoriLibGetPreviousListEntry(
     }
 }
 
+/**
+ Returns TRUE if a list contains no elements.
+
+ @param ListHead Pointer to the beginning of the list.
+
+ @return TRUE if the list contains no elements, FALSE if it contains at least
+         one element.
+ */
+BOOL
+YoriLibIsListEmpty(
+    __in PYORI_LIST_ENTRY ListHead
+    )
+{
+    if (ListHead->Next == NULL || ListHead->Next == ListHead) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 // vim:sw=4:ts=4:et:

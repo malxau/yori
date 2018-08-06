@@ -1400,6 +1400,11 @@ YoriLibGetPreviousListEntry(
     __in_opt PYORI_LIST_ENTRY PreviousEntry
     );
 
+BOOL
+YoriLibIsListEmpty(
+    __in PYORI_LIST_ENTRY ListHead
+    );
+
 // *** MALLOC.C ***
 
 PVOID

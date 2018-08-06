@@ -17,6 +17,7 @@ CFLAGS=$(CFLAGS) -DYPM_VER_MAJOR=$(YPM_VER_MAJOR) -DYPM_VER_MINOR=$(YPM_VER_MINO
 OBJS=\
 	 create.obj      \
 	 install.obj     \
+	 remote.obj      \
 	 util.obj        \
 	 ypm.obj         \
 

@@ -53,6 +53,11 @@ YpmGetPackageInfo(
     );
 
 BOOL
+YpmIsPathRemote(
+    __in PYORI_STRING PackagePath
+    );
+
+BOOL
 YpmPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __out PYORI_STRING LocalPath,
@@ -101,3 +106,6 @@ YpmUpgradeSinglePackage(
     __in PYORI_STRING PackageName,
     __in_opt PYORI_STRING NewArchitecture
     );
+
+BOOL
+YpmDisplayAvailableRemotePackages();

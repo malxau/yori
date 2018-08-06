@@ -124,7 +124,8 @@ typedef enum _YPM_OPERATION {
     YpmOpUpgradeInstalled = 3,
     YpmOpDeleteInstalled = 4,
     YpmOpCreateBinaryPackage = 5,
-    YpmOpCreateSourcePackage = 6
+    YpmOpCreateSourcePackage = 6,
+    YpmOpRemoteList = 7
 } YPM_OPERATION;
 
 
@@ -220,6 +221,9 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 Op = YpmOpListPackages;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rl")) == 0) {
+                Op = YpmOpRemoteList;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("sourcepath")) == 0) {
                 if (i + 1 < ArgC) {
                     SourcePath = &ArgV[i + 1];
@@ -303,6 +307,8 @@ ymain(
             return EXIT_FAILURE;
         }
         YpmCreateSourcePackage(NewFileName, NewName, NewVersion, FilePath);
+    } else if (Op == YpmOpRemoteList) {
+        YpmDisplayAvailableRemotePackages();
     }
 
     return EXIT_SUCCESS;
