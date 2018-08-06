@@ -43,6 +43,8 @@ CHAR strHelpText[] =
         "YPM -d <pkg>\n"
         "YPM -i <file>\n"
         "YPM -l\n"
+        "YPM -ri [-a <arch>] [-v <version>] <pkgname>...\n"
+        "YPM -rl\n"
         "YPM [-a <arch>] -u [<pkg>]\n"
         "\n"
         "   -a             Specify a CPU architecture to upgrade to\n"
@@ -51,6 +53,8 @@ CHAR strHelpText[] =
         "   -d             Delete an installed package\n"
         "   -i             Install a package from a specified file or URL\n"
         "   -l             List all currently installed packages\n"
+        "   -ri            Install packages from remote servers\n"
+        "   -rl            List available packages on remote servers\n"
         "   -u             Upgrade a package or all currently installed packages\n";
 
 /**
@@ -125,7 +129,8 @@ typedef enum _YPM_OPERATION {
     YpmOpDeleteInstalled = 4,
     YpmOpCreateBinaryPackage = 5,
     YpmOpCreateSourcePackage = 6,
-    YpmOpRemoteList = 7
+    YpmOpRemoteList = 7,
+    YpmOpInstallRemote = 8
 } YPM_OPERATION;
 
 
@@ -221,6 +226,9 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 Op = YpmOpListPackages;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ri")) == 0) {
+                Op = YpmOpInstallRemote;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rl")) == 0) {
                 Op = YpmOpRemoteList;
                 ArgumentUnderstood = TRUE;
@@ -242,6 +250,12 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradepath")) == 0) {
                 if (i + 1 < ArgC) {
                     UpgradePath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+                if (i + 1 < ArgC) {
+                    NewVersion = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
@@ -309,6 +323,16 @@ ymain(
         YpmCreateSourcePackage(NewFileName, NewName, NewVersion, FilePath);
     } else if (Op == YpmOpRemoteList) {
         YpmDisplayAvailableRemotePackages();
+    } else if (Op == YpmOpInstallRemote) {
+        DWORD PkgCount;
+        DWORD SuccessCount;
+        PkgCount = ArgC - StartArg;
+        if (PkgCount == 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing package name\n"));
+            return EXIT_FAILURE;
+        }
+        SuccessCount = YpmInstallRemotePackages(&ArgV[StartArg], PkgCount, NewVersion, NewArch);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i packages installed (%i not installed)\n"), SuccessCount, PkgCount - SuccessCount);
     }
 
     return EXIT_SUCCESS;

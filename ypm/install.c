@@ -57,7 +57,7 @@ YpmDeletePackage(
 
     IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
     if (IniValue.LengthInChars == 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not an installed package\n"), &PackageName);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not an installed package\n"), PackageName);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         return FALSE;
@@ -65,7 +65,7 @@ YpmDeletePackage(
 
     FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile.StartOfString);
     if (FileCount == 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y contains nothing to remove\n"), &PackageName);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y contains nothing to remove\n"), PackageName);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         return FALSE;

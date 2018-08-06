@@ -109,3 +109,11 @@ YpmUpgradeSinglePackage(
 
 BOOL
 YpmDisplayAvailableRemotePackages();
+
+DWORD
+YpmInstallRemotePackages(
+    __in PYORI_STRING PackageNames,
+    __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING MatchVersion,
+    __in_opt PYORI_STRING MatchArch
+    );

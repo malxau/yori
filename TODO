@@ -2,7 +2,6 @@
  - $() backquote form
  - ShellExecute URLs
  - Search on input string
- - Ypm enumerate packages from online repositories
  - Ypm "mirror" (search/replace) support
  - Simple search/replace on text streams (mini-sed)
  - Ypm download symbols/source

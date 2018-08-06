@@ -102,6 +102,7 @@ REM
 pushd pkg
 yfor %%i in (%BINPKGS%) do bld-pkglist %%i %ARCH% ^& bld-pkglist %%i-pdb %ARCH% ^& bld-pkglist %%i-dbg %ARCH% ^& bld-pkglist %%i-dbg-pdb %ARCH%
 bld-pkglist yori-completion noarch
+bld-pkglist yori-source noarch
 popd
 
 echo *** Cleaning tree

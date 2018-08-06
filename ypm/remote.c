@@ -428,43 +428,48 @@ Exit:
 }
 
 /**
- Query all of the known sources for available packages and display them on
- the console.
+ Examine the currently configured set of sources, query each of those
+ including any sources they refer to, and build a complete list of packages
+ found from all sources.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @param SourcesList On successful completion, populated with a list of sources
+        that were referenced.
+
+ @param PackageList On successful completion, populated with a list of
+        packages that were found.
+
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOL
-YpmDisplayAvailableRemotePackages()
+YpmCollectAllSourcesAndPackages(
+    __out PYORI_LIST_ENTRY SourcesList,
+    __out PYORI_LIST_ENTRY PackageList
+    )
 {
-    YORI_LIST_ENTRY SourcesList;
+    YORI_STRING PackagesIni;
     PYORI_LIST_ENTRY SourceEntry;
     PYPM_REMOTE_SOURCE Source;
-    YORI_LIST_ENTRY PackageList;
-    PYORI_LIST_ENTRY PackageEntry;
-    PYPM_REMOTE_PACKAGE Package;
-    YORI_STRING PackagesIni;
 
-
-    YoriLibInitializeListHead(&PackageList);
-    YoriLibInitializeListHead(&SourcesList);
+    YoriLibInitializeListHead(PackageList);
+    YoriLibInitializeListHead(SourcesList);
 
     if (!YpmGetPackageIniFile(&PackagesIni)) {
         return FALSE;
     }
 
-    YpmCollectSourcesFromIni(&PackagesIni, &SourcesList);
+    YpmCollectSourcesFromIni(&PackagesIni, SourcesList);
     YoriLibFreeStringContents(&PackagesIni);
 
     //
     //  If the INI file provides no place to search, default to malsmith.net
     //
 
-    if (YoriLibIsListEmpty(&SourcesList)) {
+    if (YoriLibIsListEmpty(SourcesList)) {
         YORI_STRING DummySource;
         YoriLibConstantString(&DummySource, _T("http://www.malsmith.net"));
         Source = YpmAllocateRemoteSource(&DummySource);
         if (Source != NULL) {
-            YoriLibAppendList(&SourcesList, &Source->SourceList);
+            YoriLibAppendList(SourcesList, &Source->SourceList);
         }
     }
 
@@ -474,13 +479,76 @@ YpmDisplayAvailableRemotePackages()
     //
 
     SourceEntry = NULL;
-    SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+    SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     while (SourceEntry != NULL) {
         Source = CONTAINING_RECORD(SourceEntry, YPM_REMOTE_SOURCE, SourceList);
-        YpmCollectPackagesFromSource(Source, &PackageList, &SourcesList);
-        SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+        YpmCollectPackagesFromSource(Source, PackageList, SourcesList);
+        SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     }
 
+    return TRUE;
+}
+
+/**
+ Free a list of packages and/or sources.
+
+ @param SourcesList The list of sources to free.
+
+ @param PackageList The list of packages to free.
+ */
+VOID
+YpmFreeAllSourcesAndPackages(
+    __in_opt PYORI_LIST_ENTRY SourcesList,
+    __in_opt PYORI_LIST_ENTRY PackageList
+    )
+{
+    PYORI_LIST_ENTRY SourceEntry;
+    PYPM_REMOTE_SOURCE Source;
+    PYORI_LIST_ENTRY PackageEntry;
+    PYPM_REMOTE_PACKAGE Package;
+
+    if (PackageList != NULL) {
+        PackageEntry = NULL;
+        PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
+        while (PackageEntry != NULL) {
+            Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+            PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
+            YoriLibRemoveListItem(&Package->PackageList);
+            YpmFreeRemotePackage(Package);
+        }
+    }
+
+    //
+    //  Free the sources.
+    //
+
+    if (SourcesList != NULL) {
+        SourceEntry = NULL;
+        SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
+        while (SourceEntry != NULL) {
+            Source = CONTAINING_RECORD(SourceEntry, YPM_REMOTE_SOURCE, SourceList);
+            SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
+            YoriLibRemoveListItem(&Source->SourceList);
+            YpmFreeRemoteSource(Source);
+        }
+    }
+}
+
+/**
+ Query all of the known sources for available packages and display them on
+ the console.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmDisplayAvailableRemotePackages()
+{
+    YORI_LIST_ENTRY SourcesList;
+    YORI_LIST_ENTRY PackageList;
+    PYORI_LIST_ENTRY PackageEntry;
+    PYPM_REMOTE_PACKAGE Package;
+
+    YpmCollectAllSourcesAndPackages(&SourcesList, &PackageList);
 
     //
     //  Display the packages we found.
@@ -490,37 +558,205 @@ YpmDisplayAvailableRemotePackages()
     PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
     while (PackageEntry != NULL) {
         Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y %y %y\n"), Package->PackageName, Package->Version, Package->Architecture, Package->InstallUrl);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y %y %y\n"), &Package->PackageName, &Package->Version, &Package->Architecture, &Package->InstallUrl);
         PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
     }
 
-    //
-    //  Free the packages now we've displayed them.
-    //
-
-    PackageEntry = NULL;
-    PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
-    while (PackageEntry != NULL) {
-        Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
-        PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
-        YoriLibRemoveListItem(&Package->PackageList);
-        YpmFreeRemotePackage(Package);
-    }
-
-    //
-    //  Free the sources.
-    //
-
-    SourceEntry = NULL;
-    SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
-    while (SourceEntry != NULL) {
-        Source = CONTAINING_RECORD(SourceEntry, YPM_REMOTE_SOURCE, SourceList);
-        SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
-        YoriLibRemoveListItem(&Source->SourceList);
-        YpmFreeRemoteSource(Source);
-    }
+    YpmFreeAllSourcesAndPackages(&SourcesList, &PackageList);
 
     return TRUE;
+}
+
+/**
+ Process a list of packages which match a given package name and desired
+ version, and install the package with the matching architecture if it is
+ found.
+
+ @param PackageList The list of packages to walk through.
+
+ @param Architecture The architecture to find.
+
+ @param Installed On successful completion, set to TRUE to indicate the
+        package was successfully installed.
+
+ @return TRUE to indicate a package matching the requested architecture
+         was found.  Note that the Installed value needs to be consulted
+         to check if it could be installed successfully.
+ */
+BOOL
+YpmInstallRemotePackageMatchingArchitecture(
+    __in PYORI_LIST_ENTRY PackageList,
+    __in PYORI_STRING Architecture,
+    __in PBOOL Installed
+    )
+{
+    PYORI_LIST_ENTRY PackageEntry;
+    PYPM_REMOTE_PACKAGE Package;
+
+    PackageEntry = NULL;
+    PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
+    while (PackageEntry != NULL) {
+        Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+        PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
+        if (YoriLibCompareStringInsensitive(Architecture, &Package->Architecture) == 0) {
+            if (YpmInstallPackage(&Package->InstallUrl, NULL, TRUE)) {
+                *Installed = TRUE;
+                return TRUE;
+            } else {
+                *Installed = FALSE;
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+/**
+ Install packages from remote source by name, optionally with version and
+ architecture.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+DWORD
+YpmInstallRemotePackages(
+    __in PYORI_STRING PackageNames,
+    __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING MatchVersion,
+    __in_opt PYORI_STRING MatchArch
+    )
+{
+    YORI_LIST_ENTRY SourcesList;
+    YORI_LIST_ENTRY PackageList;
+    YORI_LIST_ENTRY PackagesMatchingName;
+    YORI_LIST_ENTRY PackagesMatchingVersion;
+    PYORI_LIST_ENTRY PackageEntry;
+    PYPM_REMOTE_PACKAGE Package;
+    DWORD PkgIndex;
+    PYORI_STRING LookingForVersion;
+    DWORD InstallCount = 0;
+    BOOL PkgInstalled;
+
+    YpmCollectAllSourcesAndPackages(&SourcesList, &PackageList);
+
+    for (PkgIndex = 0; PkgIndex < PackageNameCount; PkgIndex++) {
+        YoriLibInitializeListHead(&PackagesMatchingName);
+        YoriLibInitializeListHead(&PackagesMatchingVersion);
+
+        //
+        //  Find all packages matching the specified name.
+        //
+
+        PackageEntry = NULL;
+        PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
+        while (PackageEntry != NULL) {
+            Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+            PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
+            if (YoriLibCompareStringInsensitive(&PackageNames[PkgIndex], &Package->PackageName) == 0) {
+                YoriLibRemoveListItem(&Package->PackageList);
+                YoriLibAppendList(&PackagesMatchingName, &Package->PackageList);
+            }
+        }
+
+        //
+        //  If a version wasn't specified, find the highest match
+        //
+
+        LookingForVersion = NULL;
+        if (MatchVersion != NULL) {
+            LookingForVersion = MatchVersion;
+        } else {
+            PackageEntry = NULL;
+            PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
+            while (PackageEntry != NULL) {
+                Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+                PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
+                if (LookingForVersion == NULL ||
+                    YoriLibCompareStringInsensitive(&Package->Version, LookingForVersion) > 0) {
+
+                    LookingForVersion = &Package->Version;
+                }
+            }
+        }
+
+        //
+        //  If we couldn't find any version, we don't have the package.
+        //
+
+        if (LookingForVersion == NULL) {
+            YpmFreeAllSourcesAndPackages(NULL, &PackagesMatchingName);
+            continue;
+        }
+
+        //
+        //  Scan through the name matches and migrate the version matches.
+        //  Free everything else.
+        //
+
+        PackageEntry = NULL;
+        PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
+        while (PackageEntry != NULL) {
+            Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+            PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
+            if (YoriLibCompareStringInsensitive(LookingForVersion, &Package->Version) == 0) {
+                YoriLibRemoveListItem(&Package->PackageList);
+                YoriLibAppendList(&PackagesMatchingVersion, &Package->PackageList);
+            }
+        }
+
+        YpmFreeAllSourcesAndPackages(NULL, &PackagesMatchingName);
+
+        //
+        //  If the user requested an arch, go look if we found it.  If not,
+        //  try to determine the "best" arch from what we've found.
+        //
+
+        PkgInstalled = FALSE;
+        if (MatchArch != NULL) {
+            YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, MatchArch, &PkgInstalled);
+
+            if (PkgInstalled) {
+                InstallCount++;
+            }
+        } else {
+            BOOL WantAmd64;
+            YORI_STRING YsArch;
+#ifdef _WIN64
+            WantAmd64 = TRUE;
+#else
+            WantAmd64 = FALSE;
+            if (DllKernel32.pIsWow64Process) {
+                DllKernel32.pIsWow64Process(GetCurrentProcess(), &WantAmd64);
+            }
+#endif
+
+            YoriLibConstantString(&YsArch, _T("amd64"));
+            if (WantAmd64 && YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, &PkgInstalled)) {
+                if (PkgInstalled) {
+                    InstallCount++;
+                }
+            } else {
+                YoriLibConstantString(&YsArch, _T("win32"));
+                if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, &PkgInstalled)) {
+                    if (PkgInstalled) {
+                        InstallCount++;
+                    }
+                } else {
+                    YoriLibConstantString(&YsArch, _T("noarch"));
+                    if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, &PkgInstalled)) {
+                        if (PkgInstalled) {
+                            InstallCount++;
+                        }
+                    }
+                }
+            }
+        }
+
+        YpmFreeAllSourcesAndPackages(NULL, &PackagesMatchingVersion);
+    }
+
+    YpmFreeAllSourcesAndPackages(&SourcesList, &PackageList);
+
+    return InstallCount;
 }
 
 // vim:sw=4:ts=4:et:
