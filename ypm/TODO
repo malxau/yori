@@ -1,4 +1,3 @@
  - Document mirrors/sources since they're otherwise invisible
- - Ypm download symbols/source
  - Ypm figure out how to use backticks - don't use newlines when sending to pipes?
  - Ysetup

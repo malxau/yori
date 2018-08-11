@@ -353,7 +353,7 @@ YpmInstallPackage(
             YoriLibFreeStringContents(&CurrentlyInstalledVersion);
             Result = TRUE;
             goto Exit;
-        } else {
+        } else if (CurrentlyInstalledVersion.LengthInChars > 0) {
             YpmDeletePackage(&PackageName);
 
         }
@@ -644,6 +644,256 @@ YpmUpgradeSinglePackage(
 
     if (NewArchitecture != NULL) {
         YpmBuildUpgradeLocationForNewArchitecture(PackageName, NewArchitecture, &PkgIniFile, &IniValue);
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &IniValue);
+    Result = YpmInstallPackage(&IniValue, NULL, TRUE);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&IniValue);
+
+    return Result;
+}
+
+/**
+ Install source for all installed packages in the system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmInstallSourceForInstalledPackages(
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+    YORI_STRING SourcePath;
+    DWORD LineLength;
+
+    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&InstalledSection, 64 * 1024)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&SourcePath, YPM_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&InstalledSection);
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    ThisLine = InstalledSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+        } else {
+            PkgNameOnly.LengthInChars = LineLength;
+        }
+        PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
+        SourcePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("SourcePath"), _T(""), SourcePath.StartOfString, SourcePath.LengthAllocated, PkgIniFile.StartOfString);
+        if (SourcePath.LengthInChars > 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing source for %y, downloading %y...\n"), &PkgNameOnly, &SourcePath);
+            if (!YpmInstallPackage(&SourcePath, NULL, TRUE)) {
+                break;
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&InstalledSection);
+    YoriLibFreeStringContents(&SourcePath);
+
+    return TRUE;
+}
+
+/**
+ Install source for a single package installed on the system.
+
+ @param PackageName The name of the package to obtain source for.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmInstallSourceForSinglePackage(
+    __in PYORI_STRING PackageName
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING IniValue;
+    BOOL Result;
+
+    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YPM_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SourcePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify a source path\n"), PackageName);
+        return FALSE;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &IniValue);
+    Result = YpmInstallPackage(&IniValue, NULL, TRUE);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&IniValue);
+
+    return Result;
+}
+
+/**
+ Install symbols for all installed packages in the system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmInstallSymbolsForInstalledPackages(
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+    YORI_STRING SymbolPath;
+    DWORD LineLength;
+
+    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&InstalledSection, 64 * 1024)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&SymbolPath, YPM_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&InstalledSection);
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    ThisLine = InstalledSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+        } else {
+            PkgNameOnly.LengthInChars = LineLength;
+        }
+        PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
+        SymbolPath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("SymbolPath"), _T(""), SymbolPath.StartOfString, SymbolPath.LengthAllocated, PkgIniFile.StartOfString);
+        if (SymbolPath.LengthInChars > 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing symbols for %y, downloading %y...\n"), &PkgNameOnly, &SymbolPath);
+            if (!YpmInstallPackage(&SymbolPath, NULL, TRUE)) {
+                break;
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&InstalledSection);
+    YoriLibFreeStringContents(&SymbolPath);
+
+    return TRUE;
+}
+
+/**
+ Install symbols for a single package installed on the system.
+
+ @param PackageName The name of the package to obtain source for.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YpmInstallSymbolForSinglePackage(
+    __in PYORI_STRING PackageName
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING IniValue;
+    BOOL Result;
+
+    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YPM_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify a source path\n"), PackageName);
+        return FALSE;
     }
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &IniValue);

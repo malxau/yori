@@ -109,6 +109,24 @@ YpmUpgradeSinglePackage(
     );
 
 BOOL
+YpmInstallSourceForInstalledPackages(
+    );
+
+BOOL
+YpmInstallSourceForSinglePackage(
+    __in PYORI_STRING PackageName
+    );
+
+BOOL
+YpmInstallSymbolsForInstalledPackages(
+    );
+
+BOOL
+YpmInstallSymbolForSinglePackage(
+    __in PYORI_STRING PackageName
+    );
+
+BOOL
 YpmDisplayAvailableRemotePackages();
 
 DWORD

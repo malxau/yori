@@ -45,6 +45,8 @@ CHAR strHelpText[] =
         "YPM -l\n"
         "YPM -ri [-a <arch>] [-v <version>] <pkgname>...\n"
         "YPM -rl\n"
+        "YPM -src [<pkg>]\n"
+        "YPM -sym [<pkg>]\n"
         "YPM [-a <arch>] -u [<pkg>]\n"
         "\n"
         "   -a             Specify a CPU architecture to upgrade to\n"
@@ -55,6 +57,8 @@ CHAR strHelpText[] =
         "   -l             List all currently installed packages\n"
         "   -ri            Install packages from remote servers\n"
         "   -rl            List available packages on remote servers\n"
+        "   -src           Install source for specified package or all packages\n"
+        "   -sym           Install debug symbols for specified package or all packages\n"
         "   -u             Upgrade a package or all currently installed packages\n";
 
 /**
@@ -130,7 +134,9 @@ typedef enum _YPM_OPERATION {
     YpmOpCreateBinaryPackage = 5,
     YpmOpCreateSourcePackage = 6,
     YpmOpRemoteList = 7,
-    YpmOpInstallRemote = 8
+    YpmOpInstallRemote = 8,
+    YpmOpInstallSource = 9,
+    YpmOpInstallSymbol = 10
 } YPM_OPERATION;
 
 
@@ -238,6 +244,12 @@ ymain(
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("src")) == 0) {
+                Op = YpmOpInstallSource;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("sym")) == 0) {
+                Op = YpmOpInstallSymbol;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("symbolpath")) == 0) {
                 if (i + 1 < ArgC) {
                     SymbolPath = &ArgV[i + 1];
@@ -335,6 +347,22 @@ ymain(
         }
         SuccessCount = YpmInstallRemotePackages(&ArgV[StartArg], PkgCount, NewVersion, NewArch);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i packages installed (%i not installed)\n"), SuccessCount, PkgCount - SuccessCount);
+    } else if (Op == YpmOpInstallSource) {
+        if (StartArg == 0 || StartArg >= ArgC) {
+            YpmInstallSourceForInstalledPackages();
+        } else {
+            for (i = StartArg; i < ArgC; i++) {
+                YpmInstallSourceForSinglePackage(&ArgV[i]);
+            }
+        }
+    } else if (Op == YpmOpInstallSymbol) {
+        if (StartArg == 0 || StartArg >= ArgC) {
+            YpmInstallSymbolsForInstalledPackages();
+        } else {
+            for (i = StartArg; i < ArgC; i++) {
+                YpmInstallSymbolForSinglePackage(&ArgV[i]);
+            }
+        }
     }
 
     return EXIT_SUCCESS;
