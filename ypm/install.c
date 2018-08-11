@@ -29,6 +29,67 @@
 #include "ypm.h"
 
 /**
+ Delete a file that was installed by a package.  If it works, try to delete
+ the parent directory.  The file system will fail this if the directory
+ still has files in it.  If it succeeds, keep moving through the parents to
+ see what can be removed.
+
+ @param FilePath Pointer to the file to remove.
+
+ @return TRUE if one or more objects were successfully scheduled for deletion.
+ */
+BOOL
+YpmDeleteInstalledPackageFile(
+    __in PYORI_STRING FilePath
+    )
+{
+    DWORD Index;
+    DWORD RetryCount = 0;
+    BOOL FileDeleted = FALSE;
+
+    if (FilePath->LengthInChars == 0) {
+        return FALSE;
+    }
+
+    //
+    //  Retry a few times in case the file is transiently in use.
+    //
+
+    for (RetryCount = 0; RetryCount < 3; RetryCount++) {
+        if (DeleteFile(FilePath->StartOfString)) {
+            FileDeleted = TRUE;
+            break;
+        }
+        Sleep(50);
+    }
+
+    if (!FileDeleted) {
+        return FALSE;
+    }
+
+    for (Index = FilePath->LengthInChars - 1; Index > 0; Index--) {
+
+        //
+        //  If we find a seperator, turn it into a NULL and try to remove the
+        //  directory.  If it fails (eg. the directory has files in it), stop.
+        //  If it succeeds, put back the seperator and look for the next
+        //  parent.
+        //
+
+        if (YoriLibIsSep(FilePath->StartOfString[Index])) {
+            FilePath->StartOfString[Index] = '\0';
+            if (!RemoveDirectory(FilePath->StartOfString)) {
+                FilePath->StartOfString[Index] = '\\';
+                return TRUE;
+            }
+            FilePath->StartOfString[Index] = '\\';
+        }
+    }
+
+    return TRUE;
+}
+
+/**
  Delete a specified package from the system.
 
  @return TRUE to indicate success, FALSE to indicate failure.
@@ -91,7 +152,7 @@ YpmDeletePackage(
         IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
         if (IniValue.LengthInChars > 0) {
             YoriLibYPrintf(&FileToDelete, _T("%y\\%y"), &AppPath, &IniValue);
-            DeleteFile(FileToDelete.StartOfString);
+            YpmDeleteInstalledPackageFile(&FileToDelete);
         }
 
         WritePrivateProfileString(PackageName->StartOfString, FileIndexString, NULL, PkgIniFile.StartOfString);
@@ -303,11 +364,20 @@ YpmInstallPackage(
 
 
     //
+    //  Before starting, indicate that the package is installed with a
+    //  version of zero.  This ensures that if anything goes wrong, an
+    //  upgrade will detect a new version and will retry.
+    //
+
+    WritePrivateProfileString(_T("Installed"), PackageName.StartOfString, _T("0"), PkgIniFile.StartOfString);
+    if (UpgradePath.LengthInChars > 0) {
+        WritePrivateProfileString(PackageName.StartOfString, _T("UpgradePath"), UpgradePath.StartOfString, PkgIniFile.StartOfString);
+    }
+
+    //
     //  Extract the package contents, without pkginfo.ini, to the desired
     //  location
     //
-
-    WritePrivateProfileString(_T("Installed"), PackageName.StartOfString, PackageVersion.StartOfString, PkgIniFile.StartOfString);
 
     InstallContext.IniFileName = &PkgIniFile;
     InstallContext.PackageName = &PackageName;
@@ -334,6 +404,7 @@ YpmInstallPackage(
     YoriLibSPrintf(FileIndexString, _T("%i"), InstallContext.NumberFiles);
 
     WritePrivateProfileString(PackageName.StartOfString, _T("FileCount"), FileIndexString, PkgIniFile.StartOfString);
+    WritePrivateProfileString(_T("Installed"), PackageName.StartOfString, PackageVersion.StartOfString, PkgIniFile.StartOfString);
 
     Result = TRUE;
 

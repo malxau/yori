@@ -1,6 +1,4 @@
  - Document mirrors/sources since they're otherwise invisible
  - Ypm download symbols/source
- - Ypm delete empty directories
  - Ypm figure out how to use backticks - don't use newlines when sending to pipes?
- - Ypm leave failed upgrade packages as installed with version=0 to facilitate retry
  - Ysetup
