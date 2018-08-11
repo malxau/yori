@@ -436,6 +436,10 @@ Exit:
  including any sources they refer to, and build a complete list of packages
  found from all sources.
 
+ @param NewDirectory Optionally specifies an install directory.  If not
+        specified, the directory of the currently running application is
+        used.
+
  @param SourcesList On successful completion, populated with a list of sources
         that were referenced.
 
@@ -446,6 +450,7 @@ Exit:
  */
 BOOL
 YpmCollectAllSourcesAndPackages(
+    __in_opt PYORI_STRING NewDirectory,
     __out PYORI_LIST_ENTRY SourcesList,
     __out PYORI_LIST_ENTRY PackageList
     )
@@ -457,7 +462,7 @@ YpmCollectAllSourcesAndPackages(
     YoriLibInitializeListHead(PackageList);
     YoriLibInitializeListHead(SourcesList);
 
-    if (!YpmGetPackageIniFile(&PackagesIni)) {
+    if (!YpmGetPackageIniFile(NewDirectory, &PackagesIni)) {
         return FALSE;
     }
 
@@ -552,7 +557,7 @@ YpmDisplayAvailableRemotePackages()
     PYORI_LIST_ENTRY PackageEntry;
     PYPM_REMOTE_PACKAGE Package;
 
-    YpmCollectAllSourcesAndPackages(&SourcesList, &PackageList);
+    YpmCollectAllSourcesAndPackages(NULL, &SourcesList, &PackageList);
 
     //
     //  Display the packages we found.
@@ -578,6 +583,10 @@ YpmDisplayAvailableRemotePackages()
 
  @param PackageList The list of packages to walk through.
 
+ @param NewDirectory Optionally specifies an install directory.  If not
+        specified, the directory of the currently running application is
+        used.
+
  @param Architecture The architecture to find.
 
  @param Installed On successful completion, set to TRUE to indicate the
@@ -590,6 +599,7 @@ YpmDisplayAvailableRemotePackages()
 BOOL
 YpmInstallRemotePackageMatchingArchitecture(
     __in PYORI_LIST_ENTRY PackageList,
+    __in PYORI_STRING NewDirectory,
     __in PYORI_STRING Architecture,
     __in PBOOL Installed
     )
@@ -603,7 +613,7 @@ YpmInstallRemotePackageMatchingArchitecture(
         Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
         PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
         if (YoriLibCompareStringInsensitive(Architecture, &Package->Architecture) == 0) {
-            if (YpmInstallPackage(&Package->InstallUrl, NULL, TRUE)) {
+            if (YpmInstallPackage(&Package->InstallUrl, NewDirectory, TRUE)) {
                 *Installed = TRUE;
                 return TRUE;
             } else {
@@ -619,12 +629,28 @@ YpmInstallRemotePackageMatchingArchitecture(
  Install packages from remote source by name, optionally with version and
  architecture.
 
+ @param PackageNames Pointer to an array of one or more package names.
+
+ @param PackageNameCount The number of elements in the PackageName array.
+
+ @param NewDirectory Optionally specifies an install directory.  If not
+        specified, the directory of the currently running application is
+        used.
+
+ @param MatchVersion Optionally specifies a version of the packages to
+        install.  If not specified, the latest version is used.
+
+ @param MatchArch Optionally specifies the architecture of the packages to
+        install.  If not specified, determined from the host operaitng
+        system.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 DWORD
 YpmInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
     __in_opt PYORI_STRING MatchArch
     )
@@ -640,7 +666,7 @@ YpmInstallRemotePackages(
     DWORD InstallCount = 0;
     BOOL PkgInstalled;
 
-    YpmCollectAllSourcesAndPackages(&SourcesList, &PackageList);
+    YpmCollectAllSourcesAndPackages(NewDirectory, &SourcesList, &PackageList);
 
     for (PkgIndex = 0; PkgIndex < PackageNameCount; PkgIndex++) {
         YoriLibInitializeListHead(&PackagesMatchingName);
@@ -716,7 +742,7 @@ YpmInstallRemotePackages(
 
         PkgInstalled = FALSE;
         if (MatchArch != NULL) {
-            YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, MatchArch, &PkgInstalled);
+            YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, MatchArch, &PkgInstalled);
 
             if (PkgInstalled) {
                 InstallCount++;
@@ -734,19 +760,19 @@ YpmInstallRemotePackages(
 #endif
 
             YoriLibConstantString(&YsArch, _T("amd64"));
-            if (WantAmd64 && YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, &PkgInstalled)) {
+            if (WantAmd64 && YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
                 if (PkgInstalled) {
                     InstallCount++;
                 }
             } else {
                 YoriLibConstantString(&YsArch, _T("win32"));
-                if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, &PkgInstalled)) {
+                if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
                     if (PkgInstalled) {
                         InstallCount++;
                     }
                 } else {
                     YoriLibConstantString(&YsArch, _T("noarch"));
-                    if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, &PkgInstalled)) {
+                    if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
                         if (PkgInstalled) {
                             InstallCount++;
                         }

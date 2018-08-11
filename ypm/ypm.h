@@ -38,6 +38,7 @@ YpmGetApplicationDirectory(
 
 BOOL
 YpmGetPackageIniFile(
+    __in_opt PYORI_STRING InstallDirectory,
     __out PYORI_STRING IniFileName
     );
 
@@ -87,6 +88,7 @@ YpmCreateSourcePackage(
 
 BOOL
 YpmDeletePackage(
+    __in_opt PYORI_STRING TargetDirectory,
     __in PYORI_STRING PackageName
     );
 
@@ -133,6 +135,7 @@ DWORD
 YpmInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
+    __in PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
     __in_opt PYORI_STRING MatchArch
     );

@@ -89,7 +89,7 @@ YpmListInstalledPackages()
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
     }
 
@@ -319,7 +319,7 @@ ymain(
             return EXIT_FAILURE;
         }
         for (i = StartArg; i < ArgC; i++) {
-            YpmDeletePackage(&ArgV[i]);
+            YpmDeletePackage(NULL, &ArgV[i]);
         }
     } else if (Op == YpmOpCreateBinaryPackage) {
         ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL && NewArch != NULL);
@@ -345,7 +345,7 @@ ymain(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing package name\n"));
             return EXIT_FAILURE;
         }
-        SuccessCount = YpmInstallRemotePackages(&ArgV[StartArg], PkgCount, NewVersion, NewArch);
+        SuccessCount = YpmInstallRemotePackages(&ArgV[StartArg], PkgCount, NULL, NewVersion, NewArch);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i packages installed (%i not installed)\n"), SuccessCount, PkgCount - SuccessCount);
     } else if (Op == YpmOpInstallSource) {
         if (StartArg == 0 || StartArg >= ArgC) {

@@ -77,13 +77,25 @@ YpmGetApplicationDirectory(
  */
 BOOL
 YpmGetPackageIniFile(
+    __in_opt PYORI_STRING InstallDirectory,
     __out PYORI_STRING IniFileName
     )
 {
     YORI_STRING AppDirectory;
 
-    if (!YpmGetApplicationDirectory(&AppDirectory)) {
-        return FALSE;
+    YoriLibInitEmptyString(&AppDirectory);
+
+    if (InstallDirectory == NULL) {
+        if (!YpmGetApplicationDirectory(&AppDirectory)) {
+            return FALSE;
+        }
+    } else {
+        if (!YoriLibAllocateString(&AppDirectory, InstallDirectory->LengthInChars + MAX_PATH)) {
+            return FALSE;
+        }
+        memcpy(AppDirectory.StartOfString, InstallDirectory->StartOfString, InstallDirectory->LengthInChars * sizeof(TCHAR));
+        AppDirectory.StartOfString[InstallDirectory->LengthInChars] = '\0';
+        AppDirectory.LengthInChars = InstallDirectory->LengthInChars;
     }
 
     if (AppDirectory.LengthAllocated - AppDirectory.LengthInChars < sizeof("\\packages.ini")) {

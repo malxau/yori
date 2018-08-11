@@ -92,10 +92,17 @@ YpmDeleteInstalledPackageFile(
 /**
  Delete a specified package from the system.
 
+ @param TargetDirectory Pointer to a string specifying the directory
+        containing the package.  If NULL, the directory containing the ypm
+        application is used.
+
+ @param PackageName Specifies the package name to delete.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YpmDeletePackage(
+    __in_opt PYORI_STRING TargetDirectory,
     __in PYORI_STRING PackageName
     )
 {
@@ -107,7 +114,7 @@ YpmDeletePackage(
     DWORD FileIndex;
     TCHAR FileIndexString[16];
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
         return FALSE;
     }
 
@@ -290,7 +297,7 @@ YpmInstallPackage(
     //  Create path to system packages.ini
     //
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
         goto Exit;
     }
 
@@ -354,7 +361,7 @@ YpmInstallPackage(
             Result = TRUE;
             goto Exit;
         } else if (CurrentlyInstalledVersion.LengthInChars > 0) {
-            YpmDeletePackage(&PackageName);
+            YpmDeletePackage(TargetDirectory, &PackageName);
 
         }
         YoriLibFreeStringContents(&CurrentlyInstalledVersion);
@@ -532,7 +539,7 @@ YpmUpgradeInstalledPackages(
     DWORD TotalCount;
     DWORD CurrentIndex;
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
     }
 
@@ -616,7 +623,7 @@ YpmUpgradeSinglePackage(
     YORI_STRING IniValue;
     BOOL Result;
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
     }
 
@@ -672,7 +679,7 @@ YpmInstallSourceForInstalledPackages(
     YORI_STRING SourcePath;
     DWORD LineLength;
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
     }
 
@@ -745,7 +752,7 @@ YpmInstallSourceForSinglePackage(
     YORI_STRING IniValue;
     BOOL Result;
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
     }
 
@@ -797,7 +804,7 @@ YpmInstallSymbolsForInstalledPackages(
     YORI_STRING SymbolPath;
     DWORD LineLength;
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
     }
 
@@ -870,7 +877,7 @@ YpmInstallSymbolForSinglePackage(
     YORI_STRING IniValue;
     BOOL Result;
 
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
     }
 
