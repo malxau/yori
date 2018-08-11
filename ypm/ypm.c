@@ -306,7 +306,9 @@ ymain(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing argument\n"));
             return EXIT_FAILURE;
         }
-        YpmDeletePackage(&ArgV[i]);
+        for (i = StartArg; i < ArgC; i++) {
+            YpmDeletePackage(&ArgV[i]);
+        }
     } else if (Op == YpmOpCreateBinaryPackage) {
         ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL && NewArch != NULL);
         if (FileList == NULL) {

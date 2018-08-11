@@ -207,11 +207,120 @@ YpmIsPathRemote(
 }
 
 /**
+ Expand a user specified package path into a full path if local, and compare
+ the full path or URL against any mirrors in the INI file to determine if
+ the path should be adjusted to refer to a mirrored location.
+
+ @param PackagePath Pointer to a string referring to the package which can
+        be local or remote.
+
+ @param IniFilePath Pointer to a string containing a path to the package INI
+        file.
+
+ @param MirroredPath On successful completion, updated to refer to a
+        substituted path from the user's mirrors list or to the full path of
+        a local package.
+
+ @return TRUE to indicate a substitution was performed, FALSE on error or
+         if no substitution exists.
+ */
+BOOL
+YpmConvertUserPackagePathToMirroredPath(
+    __in PYORI_STRING PackagePath,
+    __in PYORI_STRING IniFilePath,
+    __out PYORI_STRING MirroredPath
+    )
+{
+    YORI_STRING IniSection;
+    YORI_STRING HumanFullPath;
+    YORI_STRING Find;
+    YORI_STRING Replace;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    BOOL Result = FALSE;
+    BOOL ReturnHumanPathIfNoMirrorFound = FALSE;
+
+    YoriLibInitEmptyString(&IniSection);
+    YoriLibInitEmptyString(&HumanFullPath);
+    YoriLibInitEmptyString(MirroredPath);
+    YoriLibInitEmptyString(&Find);
+    YoriLibInitEmptyString(&Replace);
+
+    if (!YoriLibAllocateString(&IniSection, 64 * 1024)) {
+        goto Exit;
+    }
+
+    if (!YpmIsPathRemote(PackagePath)) {
+        if (!YoriLibUserStringToSingleFilePath(PackagePath, FALSE, &HumanFullPath)) {
+            goto Exit;
+        }
+        ReturnHumanPathIfNoMirrorFound = TRUE;
+    } else {
+        YoriLibCloneString(&HumanFullPath, PackagePath);
+    }
+
+    IniSection.LengthInChars = GetPrivateProfileSection(_T("Mirrors"), IniSection.StartOfString, IniSection.LengthAllocated, IniFilePath->StartOfString);
+
+    ThisLine = IniSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        Find.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals == NULL) {
+            ThisLine += _tcslen(ThisLine);
+            ThisLine++;
+            continue;
+        }
+
+        Find.LengthInChars = (DWORD)(Equals - ThisLine);
+        Replace.StartOfString = Equals + 1;
+        Replace.LengthInChars = _tcslen(Replace.StartOfString);
+
+        ThisLine += Find.LengthInChars + 1 + Replace.LengthInChars + 1;
+
+        Equals[0] = '\0';
+
+        if (YoriLibCompareStringInsensitiveCount(&Find, &HumanFullPath, Find.LengthInChars) == 0) {
+            YORI_STRING SubstringToKeep;
+            YoriLibInitEmptyString(&SubstringToKeep);
+            SubstringToKeep.StartOfString = &HumanFullPath.StartOfString[Find.LengthInChars];
+            SubstringToKeep.LengthInChars = HumanFullPath.LengthInChars - Find.LengthInChars;
+            YoriLibYPrintf(MirroredPath, _T("%y%y"), &Replace, &SubstringToKeep);
+            if (MirroredPath->StartOfString != NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Converting %y to %y\n"), &HumanFullPath, MirroredPath);
+                Result = TRUE;
+            }
+            goto Exit;
+        }
+
+    }
+
+    //
+    //  This doesn't really belong here, but since we've already converted the
+    //  user string to a full path we can return it so the caller doesn't have
+    //  to do it again
+    //
+
+    if (ReturnHumanPathIfNoMirrorFound) {
+        YoriLibCloneString(MirroredPath, &HumanFullPath);
+        Result = TRUE;
+    }
+
+Exit:
+    YoriLibFreeStringContents(&IniSection);
+    YoriLibFreeStringContents(&HumanFullPath);
+    return Result;
+}
+
+/**
  Download a remote package into a temporary location and return the
  temporary location to allow for subsequent processing.
 
  @param PackagePath Pointer to a string referring to the package which can
         be local or remote.
+
+ @param IniFilePath Pointer to a string containing a path to the package INI
+        file.
 
  @param LocalPath On successful completion, populated with a string containing
         a fully qualified local path to the package.
@@ -225,11 +334,26 @@ YpmIsPathRemote(
 BOOL
 YpmPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
+    __in PYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
     __out PBOOL DeleteWhenFinished
     )
 {
-    if (YpmIsPathRemote(PackagePath)) {
+    YORI_STRING MirroredPath;
+    BOOL Result = FALSE;
+
+    YoriLibInitEmptyString(&MirroredPath);
+
+    //
+    //  See if there's a mirror for the package.  If anything goes wrong in
+    //  this process, just keep using the original path.
+    //
+
+    if (!YpmConvertUserPackagePathToMirroredPath(PackagePath, IniFilePath, &MirroredPath)) {
+        YoriLibCloneString(&MirroredPath, PackagePath);
+    }
+
+    if (YpmIsPathRemote(&MirroredPath)) {
 
         YORI_STRING TempPath;
         YORI_STRING TempFileName;
@@ -243,7 +367,7 @@ YpmPackagePathToLocalPath(
 
         TempPath.LengthAllocated = GetTempPath(0, NULL);
         if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated)) {
-            return FALSE;
+            goto Exit;
         }
         TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
 
@@ -255,7 +379,7 @@ YpmPackagePathToLocalPath(
         if (GetTempFileName(TempPath.StartOfString, _T("ypm"), 0, TempFileName.StartOfString) == 0) {
             YoriLibFreeStringContents(&TempPath);
             YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+            goto Exit;
         }
 
         TempFileName.LengthInChars = _tcslen(TempFileName.StartOfString);
@@ -265,10 +389,10 @@ YpmPackagePathToLocalPath(
         if (UserAgent.StartOfString == NULL) {
             YoriLibFreeStringContents(&TempPath);
             YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+            goto Exit;
         }
 
-        Error = YoriLibUpdateBinaryFromUrl(PackagePath->StartOfString, TempFileName.StartOfString, UserAgent.StartOfString);
+        Error = YoriLibUpdateBinaryFromUrl(MirroredPath.StartOfString, TempFileName.StartOfString, UserAgent.StartOfString);
 
         if (Error != YoriLibUpdErrorSuccess) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Network result: %s\n"), YoriLibUpdateErrorString(Error));
@@ -279,17 +403,23 @@ YpmPackagePathToLocalPath(
 
         if (Error != YoriLibUpdErrorSuccess) {
             YoriLibFreeStringContents(&TempFileName);
-            return FALSE;
+            goto Exit;
         }
 
         memcpy(LocalPath, &TempFileName, sizeof(YORI_STRING));
         *DeleteWhenFinished = TRUE;
-        return TRUE;
+        Result = TRUE;
 
     } else {
         *DeleteWhenFinished = FALSE;
-        return YoriLibUserStringToSingleFilePath(PackagePath, FALSE, LocalPath);
+        YoriLibCloneString(LocalPath, &MirroredPath);
+        Result = TRUE;
     }
+
+Exit:
+
+    YoriLibFreeStringContents(&MirroredPath);
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:

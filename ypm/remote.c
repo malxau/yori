@@ -326,6 +326,9 @@ Exit:
 
  @param Source Pointer to the source of the repository.
 
+ @param PackagesIni Pointer to a string containing a path to the package INI
+        file.
+
  @param PackageList Pointer to a list to update with any new packages found.
 
  @param SourcesList Pointer to a list of sources to update with any new
@@ -336,6 +339,7 @@ Exit:
 BOOL
 YpmCollectPackagesFromSource(
     __in PYPM_REMOTE_SOURCE Source,
+    __in PYORI_STRING PackagesIni,
     __inout PYORI_LIST_ENTRY PackageList,
     __inout PYORI_LIST_ENTRY SourcesList
     )
@@ -358,7 +362,7 @@ YpmCollectPackagesFromSource(
     YoriLibInitEmptyString(&IniValue);
     YoriLibInitEmptyString(&PkgVersion);
 
-    if (!YpmPackagePathToLocalPath(&Source->SourcePkgList, &LocalPath, &DeleteWhenFinished)) {
+    if (!YpmPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished)) {
         goto Exit;
     }
 
@@ -482,7 +486,7 @@ YpmCollectAllSourcesAndPackages(
     SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     while (SourceEntry != NULL) {
         Source = CONTAINING_RECORD(SourceEntry, YPM_REMOTE_SOURCE, SourceList);
-        YpmCollectPackagesFromSource(Source, PackageList, SourcesList);
+        YpmCollectPackagesFromSource(Source, &PackagesIni, PackageList, SourcesList);
         SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     }
 

@@ -105,6 +105,8 @@ YpmDeletePackage(
     WritePrivateProfileString(PackageName->StartOfString, _T("Version"), NULL, PkgIniFile.StartOfString);
     WritePrivateProfileString(_T("Installed"), PackageName->StartOfString, NULL, PkgIniFile.StartOfString);
 
+    WritePrivateProfileString(PackageName->StartOfString, NULL, NULL, PkgIniFile.StartOfString);
+
 
     YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&IniValue);
@@ -223,7 +225,15 @@ YpmInstallPackage(
     YoriLibInitEmptyString(&SymbolPath);
     YoriLibInitEmptyString(&PackageFile);
 
-    if (!YpmPackagePathToLocalPath(PackagePath, &PackageFile, &DeleteLocalFile)) {
+    //
+    //  Create path to system packages.ini
+    //
+
+    if (!YpmGetPackageIniFile(&PkgIniFile)) {
+        goto Exit;
+    }
+
+    if (!YpmPackagePathToLocalPath(PackagePath, &PkgIniFile, &PackageFile, &DeleteLocalFile)) {
         goto Exit;
     }
 
@@ -255,14 +265,6 @@ YpmInstallPackage(
     if (!YoriLibExtractCab(&PackageFile, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, &ErrorString)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibExtractCab failed on %y: %y\n"), &PackageFile, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
-        goto Exit;
-    }
-
-    //
-    //  Create path to system packages.ini
-    //
-
-    if (!YpmGetPackageIniFile(&PkgIniFile)) {
         goto Exit;
     }
 
