@@ -1,5 +1,5 @@
 /**
- * @file ypm/util.c
+ * @file pkglib/util.c
  *
  * Yori package manager helper functions
  *
@@ -26,7 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include "ypm.h"
+#include "yoripkg.h"
 
 /**
  Return a fully qualified path to the directory containing the program.
@@ -37,7 +37,7 @@
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmGetApplicationDirectory(
+YoriPkgGetApplicationDirectory(
     __out PYORI_STRING AppDirectory
     )
 {
@@ -76,7 +76,7 @@ YpmGetApplicationDirectory(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmGetPackageIniFile(
+YoriPkgGetPackageIniFile(
     __in_opt PYORI_STRING InstallDirectory,
     __out PYORI_STRING IniFileName
     )
@@ -86,7 +86,7 @@ YpmGetPackageIniFile(
     YoriLibInitEmptyString(&AppDirectory);
 
     if (InstallDirectory == NULL) {
-        if (!YpmGetApplicationDirectory(&AppDirectory)) {
+        if (!YoriPkgGetApplicationDirectory(&AppDirectory)) {
             return FALSE;
         }
     } else {
@@ -138,7 +138,7 @@ YpmGetPackageIniFile(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmGetPackageInfo(
+YoriPkgGetPackageInfo(
     __in PYORI_STRING IniPath,
     __out PYORI_STRING PackageName,
     __out PYORI_STRING PackageVersion,
@@ -149,7 +149,7 @@ YpmGetPackageInfo(
     )
 {
     YORI_STRING TempBuffer;
-    DWORD MaxFieldSize = YPM_MAX_FIELD_LENGTH;
+    DWORD MaxFieldSize = YORIPKG_MAX_FIELD_LENGTH;
 
     if (!YoriLibAllocateString(&TempBuffer, 6 * MaxFieldSize)) {
         return FALSE;
@@ -204,7 +204,7 @@ YpmGetPackageInfo(
  @return TRUE if the path is an Internet path, FALSE if it is a local path.
  */
 BOOL
-YpmIsPathRemote(
+YoriPkgIsPathRemote(
     __in PYORI_STRING PackagePath
     )
 {
@@ -237,7 +237,7 @@ YpmIsPathRemote(
          if no substitution exists.
  */
 BOOL
-YpmConvertUserPackagePathToMirroredPath(
+YoriPkgConvertUserPackagePathToMirroredPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,
     __out PYORI_STRING MirroredPath
@@ -262,7 +262,7 @@ YpmConvertUserPackagePathToMirroredPath(
         goto Exit;
     }
 
-    if (!YpmIsPathRemote(PackagePath)) {
+    if (!YoriPkgIsPathRemote(PackagePath)) {
         if (!YoriLibUserStringToSingleFilePath(PackagePath, FALSE, &HumanFullPath)) {
             goto Exit;
         }
@@ -344,7 +344,7 @@ Exit:
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmPackagePathToLocalPath(
+YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
@@ -361,11 +361,11 @@ YpmPackagePathToLocalPath(
     //  this process, just keep using the original path.
     //
 
-    if (!YpmConvertUserPackagePathToMirroredPath(PackagePath, IniFilePath, &MirroredPath)) {
+    if (!YoriPkgConvertUserPackagePathToMirroredPath(PackagePath, IniFilePath, &MirroredPath)) {
         YoriLibCloneString(&MirroredPath, PackagePath);
     }
 
-    if (YpmIsPathRemote(&MirroredPath)) {
+    if (YoriPkgIsPathRemote(&MirroredPath)) {
 
         YORI_STRING TempPath;
         YORI_STRING TempFileName;

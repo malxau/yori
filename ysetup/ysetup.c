@@ -26,7 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include "ypm.h"
+#include <yoripkg.h>
 
 /**
  Help text to display to the user.
@@ -44,7 +44,7 @@ CHAR strHelpText[] =
 BOOL
 YsetupHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ysetup %i.%i\n"), YPM_VER_MAJOR, YPM_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ysetup %i.%i\n"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -117,7 +117,7 @@ ymain(
     YoriLibConstantString(&PkgNames[1], _T("yori-core"));
     YoriLibConstantString(&PkgNames[2], _T("yori-typical"));
 
-    SuccessCount = YpmInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), DirectoryToUse, NULL, NULL);
+    SuccessCount = YoriPkgInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), DirectoryToUse, NULL, NULL);
 
     YoriLibFreeStringContents(&NewDirectory);
 

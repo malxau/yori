@@ -81,6 +81,7 @@ DIRS=crt       \
      osver     \
      path      \
      pause     \
+     pkglib    \
      readline  \
      rmdir     \
      scut      \
@@ -98,6 +99,7 @@ DIRS=crt       \
      vol       \
      which     \
      ypm       \
+     ysetup    \
 
 all.real: writeconfigcache
 	@$(CURRENTTIME)

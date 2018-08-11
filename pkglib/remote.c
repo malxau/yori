@@ -1,5 +1,5 @@
 /**
- * @file ypm/remote.c
+ * @file pkglib/remote.c
  *
  * Yori package manager remote source query and search
  *
@@ -26,13 +26,13 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include "ypm.h"
+#include "yoripkg.h"
 
 
 /**
  Information about a single package that was found on the remote source.
  */
-typedef struct _YPM_REMOTE_PACKAGE {
+typedef struct _YORIPKG_REMOTE_PACKAGE {
 
     /**
      A list of packages that have currently been discovered.
@@ -58,12 +58,12 @@ typedef struct _YPM_REMOTE_PACKAGE {
      A fully qualified path name or URL that contains the package.
      */
     YORI_STRING InstallUrl;
-} YPM_REMOTE_PACKAGE, *PYPM_REMOTE_PACKAGE;
+} YORIPKG_REMOTE_PACKAGE, *PYORIPKG_REMOTE_PACKAGE;
 
 /**
  Information about a single remote source that contains a set of packages.
  */
-typedef struct _YPM_REMOTE_SOURCE {
+typedef struct _YORIPKG_REMOTE_SOURCE {
 
     /**
      The links between all of the remote sources.
@@ -79,7 +79,7 @@ typedef struct _YPM_REMOTE_SOURCE {
      The path to the pkglist.ini file within the remote source.
      */
     YORI_STRING SourcePkgList;
-} YPM_REMOTE_SOURCE, *PYPM_REMOTE_SOURCE;
+} YORIPKG_REMOTE_SOURCE, *PYORIPKG_REMOTE_SOURCE;
 
 /**
  Allocate and populate a remote source object.
@@ -88,18 +88,18 @@ typedef struct _YPM_REMOTE_SOURCE {
         a local path.
 
  @return Pointer to the source object.  This can be freed with
-         @ref YpmFreeRemoteSource .  This will be NULL on allocation failure.
+         @ref YoriPkgFreeRemoteSource .  This will be NULL on allocation failure.
 
  */
-PYPM_REMOTE_SOURCE
-YpmAllocateRemoteSource(
+PYORIPKG_REMOTE_SOURCE
+YoriPkgAllocateRemoteSource(
     __in PYORI_STRING RemoteSourceUrl
     )
 {
-    PYPM_REMOTE_SOURCE RemoteSource;
+    PYORIPKG_REMOTE_SOURCE RemoteSource;
     DWORD SizeToAllocate;
 
-    SizeToAllocate = sizeof(YPM_REMOTE_SOURCE) +
+    SizeToAllocate = sizeof(YORIPKG_REMOTE_SOURCE) +
                      (2 * (RemoteSourceUrl->LengthInChars + 1)) * sizeof(TCHAR) +
                      sizeof("/pkglist.ini") * sizeof(TCHAR);
 
@@ -125,7 +125,7 @@ YpmAllocateRemoteSource(
     YoriLibReference(RemoteSource);
     RemoteSource->SourcePkgList.MemoryToFree = RemoteSource;
     RemoteSource->SourcePkgList.StartOfString = (LPTSTR)YoriLibAddToPointer(RemoteSource->SourceRootUrl.StartOfString, (RemoteSource->SourceRootUrl.LengthInChars + 1) * sizeof(TCHAR));
-    if (YpmIsPathRemote(&RemoteSource->SourceRootUrl)) {
+    if (YoriPkgIsPathRemote(&RemoteSource->SourceRootUrl)) {
         RemoteSource->SourcePkgList.LengthInChars = YoriLibSPrintf(RemoteSource->SourcePkgList.StartOfString, _T("%y/pkglist.ini"), &RemoteSource->SourceRootUrl);
     } else {
         RemoteSource->SourcePkgList.LengthInChars = YoriLibSPrintf(RemoteSource->SourcePkgList.StartOfString, _T("%y\\pkglist.ini"), &RemoteSource->SourceRootUrl);
@@ -137,13 +137,13 @@ YpmAllocateRemoteSource(
 
 /**
  Frees a remote source object previously allocated with
- @ref YpmAllocateRemoteSource .
+ @ref YoriPkgAllocateRemoteSource .
 
  @param Source Pointer to the remote source object to free.
  */
 VOID
-YpmFreeRemoteSource(
-    __in PYPM_REMOTE_SOURCE Source
+YoriPkgFreeRemoteSource(
+    __in PYORIPKG_REMOTE_SOURCE Source
     )
 {
     YoriLibFreeStringContents(&Source->SourcePkgList);
@@ -166,11 +166,11 @@ YpmFreeRemoteSource(
         SourceRootUrl.
 
  @return Pointer to the package object.  This can be freed with
-         @ref YpmFreeRemotePackage .  This will be NULL on allocation failure.
+         @ref YoriPkgFreeRemotePackage .  This will be NULL on allocation failure.
 
  */
-PYPM_REMOTE_PACKAGE
-YpmAllocateRemotePackage(
+PYORIPKG_REMOTE_PACKAGE
+YoriPkgAllocateRemotePackage(
     __in PYORI_STRING PackageName,
     __in PYORI_STRING Version,
     __in PYORI_STRING Architecture,
@@ -178,11 +178,11 @@ YpmAllocateRemotePackage(
     __in PYORI_STRING RelativePackageUrl
     )
 {
-    PYPM_REMOTE_PACKAGE Package;
+    PYORIPKG_REMOTE_PACKAGE Package;
     LPTSTR WritePtr;
     DWORD SizeToAllocate;
 
-    SizeToAllocate = sizeof(YPM_REMOTE_PACKAGE) + (PackageName->LengthInChars + 1 + Version->LengthInChars + 1 + Architecture->LengthInChars + 1 + SourceRootUrl->LengthInChars + 1 + RelativePackageUrl->LengthInChars + 1) * sizeof(TCHAR);
+    SizeToAllocate = sizeof(YORIPKG_REMOTE_PACKAGE) + (PackageName->LengthInChars + 1 + Version->LengthInChars + 1 + Architecture->LengthInChars + 1 + SourceRootUrl->LengthInChars + 1 + RelativePackageUrl->LengthInChars + 1) * sizeof(TCHAR);
     Package = YoriLibReferencedMalloc(SizeToAllocate);
 
     if (Package == NULL) {
@@ -225,7 +225,7 @@ YpmAllocateRemotePackage(
     YoriLibReference(Package);
     Package->InstallUrl.MemoryToFree = Package;
     Package->InstallUrl.StartOfString = WritePtr;
-    if (YpmIsPathRemote(SourceRootUrl)) {
+    if (YoriPkgIsPathRemote(SourceRootUrl)) {
         Package->InstallUrl.LengthInChars = YoriLibSPrintf(Package->InstallUrl.StartOfString, _T("%y/%y"), SourceRootUrl, RelativePackageUrl);
     } else {
         Package->InstallUrl.LengthInChars = YoriLibSPrintf(Package->InstallUrl.StartOfString, _T("%y\\%y"), SourceRootUrl, RelativePackageUrl);
@@ -238,13 +238,13 @@ YpmAllocateRemotePackage(
 
 /**
  Frees a remote package object previously allocated with
- @ref YpmAllocateRemotePackage .
+ @ref YoriPkgAllocateRemotePackage .
 
  @param Package Pointer to the remote package object to free.
  */
 VOID
-YpmFreeRemotePackage(
-    __in PYPM_REMOTE_PACKAGE Package
+YoriPkgFreeRemotePackage(
+    __in PYORIPKG_REMOTE_PACKAGE Package
     )
 {
     YoriLibFreeStringContents(&Package->PackageName);
@@ -268,7 +268,7 @@ YpmFreeRemotePackage(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmCollectSourcesFromIni(
+YoriPkgCollectSourcesFromIni(
     __in PYORI_STRING IniPath,
     __inout PYORI_LIST_ENTRY SourcesList
     )
@@ -277,16 +277,16 @@ YpmCollectSourcesFromIni(
     YORI_STRING IniKey;
     DWORD Index;
     BOOL Result = FALSE;
-    PYPM_REMOTE_SOURCE Source;
+    PYORIPKG_REMOTE_SOURCE Source;
 
     YoriLibInitEmptyString(&IniValue);
     YoriLibInitEmptyString(&IniKey);
 
-    if (!YoriLibAllocateString(&IniValue, YPM_MAX_FIELD_LENGTH)) {
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&IniKey, YPM_MAX_FIELD_LENGTH)) {
+    if (!YoriLibAllocateString(&IniKey, YORIPKG_MAX_FIELD_LENGTH)) {
         goto Exit;
     }
 
@@ -298,7 +298,7 @@ YpmCollectSourcesFromIni(
             break;
         }
 
-        Source = YpmAllocateRemoteSource(&IniValue);
+        Source = YoriPkgAllocateRemoteSource(&IniValue);
         if (Source == NULL) {
             goto Exit;
         }
@@ -337,8 +337,8 @@ Exit:
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmCollectPackagesFromSource(
-    __in PYPM_REMOTE_SOURCE Source,
+YoriPkgCollectPackagesFromSource(
+    __in PYORIPKG_REMOTE_SOURCE Source,
     __in PYORI_STRING PackagesIni,
     __inout PYORI_LIST_ENTRY PackageList,
     __inout PYORI_LIST_ENTRY SourcesList
@@ -362,7 +362,7 @@ YpmCollectPackagesFromSource(
     YoriLibInitEmptyString(&IniValue);
     YoriLibInitEmptyString(&PkgVersion);
 
-    if (!YpmPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished)) {
+    if (!YoriPkgPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished)) {
         goto Exit;
     }
 
@@ -370,11 +370,11 @@ YpmCollectPackagesFromSource(
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&PkgVersion, YPM_MAX_FIELD_LENGTH)) {
+    if (!YoriLibAllocateString(&PkgVersion, YORIPKG_MAX_FIELD_LENGTH)) {
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&IniValue, YPM_MAX_FIELD_LENGTH)) {
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         goto Exit;
     }
 
@@ -404,8 +404,8 @@ YpmCollectPackagesFromSource(
                 YoriLibConstantString(&Architecture, KnownArchitectures[ArchIndex]);
                 IniValue.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, Architecture.StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, LocalPath.StartOfString);
                 if (IniValue.LengthInChars > 0) {
-                    PYPM_REMOTE_PACKAGE Package;
-                    Package = YpmAllocateRemotePackage(&PkgNameOnly, &PkgVersion, &Architecture, &Source->SourceRootUrl, &IniValue);
+                    PYORIPKG_REMOTE_PACKAGE Package;
+                    Package = YoriPkgAllocateRemotePackage(&PkgNameOnly, &PkgVersion, &Architecture, &Source->SourceRootUrl, &IniValue);
                     if (Package != NULL) {
                         YoriLibAppendList(PackageList, &Package->PackageList);
                     }
@@ -414,7 +414,7 @@ YpmCollectPackagesFromSource(
         }
     }
 
-    if (!YpmCollectSourcesFromIni(&LocalPath, SourcesList)) {
+    if (!YoriPkgCollectSourcesFromIni(&LocalPath, SourcesList)) {
         goto Exit;
     }
 
@@ -449,7 +449,7 @@ Exit:
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOL
-YpmCollectAllSourcesAndPackages(
+YoriPkgCollectAllSourcesAndPackages(
     __in_opt PYORI_STRING NewDirectory,
     __out PYORI_LIST_ENTRY SourcesList,
     __out PYORI_LIST_ENTRY PackageList
@@ -457,16 +457,16 @@ YpmCollectAllSourcesAndPackages(
 {
     YORI_STRING PackagesIni;
     PYORI_LIST_ENTRY SourceEntry;
-    PYPM_REMOTE_SOURCE Source;
+    PYORIPKG_REMOTE_SOURCE Source;
 
     YoriLibInitializeListHead(PackageList);
     YoriLibInitializeListHead(SourcesList);
 
-    if (!YpmGetPackageIniFile(NewDirectory, &PackagesIni)) {
+    if (!YoriPkgGetPackageIniFile(NewDirectory, &PackagesIni)) {
         return FALSE;
     }
 
-    YpmCollectSourcesFromIni(&PackagesIni, SourcesList);
+    YoriPkgCollectSourcesFromIni(&PackagesIni, SourcesList);
     YoriLibFreeStringContents(&PackagesIni);
 
     //
@@ -476,7 +476,7 @@ YpmCollectAllSourcesAndPackages(
     if (YoriLibIsListEmpty(SourcesList)) {
         YORI_STRING DummySource;
         YoriLibConstantString(&DummySource, _T("http://www.malsmith.net"));
-        Source = YpmAllocateRemoteSource(&DummySource);
+        Source = YoriPkgAllocateRemoteSource(&DummySource);
         if (Source != NULL) {
             YoriLibAppendList(SourcesList, &Source->SourceList);
         }
@@ -490,8 +490,8 @@ YpmCollectAllSourcesAndPackages(
     SourceEntry = NULL;
     SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     while (SourceEntry != NULL) {
-        Source = CONTAINING_RECORD(SourceEntry, YPM_REMOTE_SOURCE, SourceList);
-        YpmCollectPackagesFromSource(Source, &PackagesIni, PackageList, SourcesList);
+        Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+        YoriPkgCollectPackagesFromSource(Source, &PackagesIni, PackageList, SourcesList);
         SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     }
 
@@ -506,24 +506,24 @@ YpmCollectAllSourcesAndPackages(
  @param PackageList The list of packages to free.
  */
 VOID
-YpmFreeAllSourcesAndPackages(
+YoriPkgFreeAllSourcesAndPackages(
     __in_opt PYORI_LIST_ENTRY SourcesList,
     __in_opt PYORI_LIST_ENTRY PackageList
     )
 {
     PYORI_LIST_ENTRY SourceEntry;
-    PYPM_REMOTE_SOURCE Source;
+    PYORIPKG_REMOTE_SOURCE Source;
     PYORI_LIST_ENTRY PackageEntry;
-    PYPM_REMOTE_PACKAGE Package;
+    PYORIPKG_REMOTE_PACKAGE Package;
 
     if (PackageList != NULL) {
         PackageEntry = NULL;
         PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
         while (PackageEntry != NULL) {
-            Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+            Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
             PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
             YoriLibRemoveListItem(&Package->PackageList);
-            YpmFreeRemotePackage(Package);
+            YoriPkgFreeRemotePackage(Package);
         }
     }
 
@@ -535,10 +535,10 @@ YpmFreeAllSourcesAndPackages(
         SourceEntry = NULL;
         SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
         while (SourceEntry != NULL) {
-            Source = CONTAINING_RECORD(SourceEntry, YPM_REMOTE_SOURCE, SourceList);
+            Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
             SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
             YoriLibRemoveListItem(&Source->SourceList);
-            YpmFreeRemoteSource(Source);
+            YoriPkgFreeRemoteSource(Source);
         }
     }
 }
@@ -550,14 +550,14 @@ YpmFreeAllSourcesAndPackages(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmDisplayAvailableRemotePackages()
+YoriPkgDisplayAvailableRemotePackages()
 {
     YORI_LIST_ENTRY SourcesList;
     YORI_LIST_ENTRY PackageList;
     PYORI_LIST_ENTRY PackageEntry;
-    PYPM_REMOTE_PACKAGE Package;
+    PYORIPKG_REMOTE_PACKAGE Package;
 
-    YpmCollectAllSourcesAndPackages(NULL, &SourcesList, &PackageList);
+    YoriPkgCollectAllSourcesAndPackages(NULL, &SourcesList, &PackageList);
 
     //
     //  Display the packages we found.
@@ -566,12 +566,12 @@ YpmDisplayAvailableRemotePackages()
     PackageEntry = NULL;
     PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
     while (PackageEntry != NULL) {
-        Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+        Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y %y %y\n"), &Package->PackageName, &Package->Version, &Package->Architecture, &Package->InstallUrl);
         PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
     }
 
-    YpmFreeAllSourcesAndPackages(&SourcesList, &PackageList);
+    YoriPkgFreeAllSourcesAndPackages(&SourcesList, &PackageList);
 
     return TRUE;
 }
@@ -597,7 +597,7 @@ YpmDisplayAvailableRemotePackages()
          to check if it could be installed successfully.
  */
 BOOL
-YpmInstallRemotePackageMatchingArchitecture(
+YoriPkgInstallRemotePackageMatchingArchitecture(
     __in PYORI_LIST_ENTRY PackageList,
     __in PYORI_STRING NewDirectory,
     __in PYORI_STRING Architecture,
@@ -605,15 +605,15 @@ YpmInstallRemotePackageMatchingArchitecture(
     )
 {
     PYORI_LIST_ENTRY PackageEntry;
-    PYPM_REMOTE_PACKAGE Package;
+    PYORIPKG_REMOTE_PACKAGE Package;
 
     PackageEntry = NULL;
     PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
     while (PackageEntry != NULL) {
-        Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+        Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
         PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
         if (YoriLibCompareStringInsensitive(Architecture, &Package->Architecture) == 0) {
-            if (YpmInstallPackage(&Package->InstallUrl, NewDirectory, TRUE)) {
+            if (YoriPkgInstallPackage(&Package->InstallUrl, NewDirectory, TRUE)) {
                 *Installed = TRUE;
                 return TRUE;
             } else {
@@ -647,7 +647,7 @@ YpmInstallRemotePackageMatchingArchitecture(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 DWORD
-YpmInstallRemotePackages(
+YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
     __in_opt PYORI_STRING NewDirectory,
@@ -660,13 +660,13 @@ YpmInstallRemotePackages(
     YORI_LIST_ENTRY PackagesMatchingName;
     YORI_LIST_ENTRY PackagesMatchingVersion;
     PYORI_LIST_ENTRY PackageEntry;
-    PYPM_REMOTE_PACKAGE Package;
+    PYORIPKG_REMOTE_PACKAGE Package;
     DWORD PkgIndex;
     PYORI_STRING LookingForVersion;
     DWORD InstallCount = 0;
     BOOL PkgInstalled;
 
-    YpmCollectAllSourcesAndPackages(NewDirectory, &SourcesList, &PackageList);
+    YoriPkgCollectAllSourcesAndPackages(NewDirectory, &SourcesList, &PackageList);
 
     for (PkgIndex = 0; PkgIndex < PackageNameCount; PkgIndex++) {
         YoriLibInitializeListHead(&PackagesMatchingName);
@@ -679,7 +679,7 @@ YpmInstallRemotePackages(
         PackageEntry = NULL;
         PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
         while (PackageEntry != NULL) {
-            Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+            Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
             PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
             if (YoriLibCompareStringInsensitive(&PackageNames[PkgIndex], &Package->PackageName) == 0) {
                 YoriLibRemoveListItem(&Package->PackageList);
@@ -698,7 +698,7 @@ YpmInstallRemotePackages(
             PackageEntry = NULL;
             PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
             while (PackageEntry != NULL) {
-                Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+                Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
                 PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
                 if (LookingForVersion == NULL ||
                     YoriLibCompareStringInsensitive(&Package->Version, LookingForVersion) > 0) {
@@ -713,7 +713,7 @@ YpmInstallRemotePackages(
         //
 
         if (LookingForVersion == NULL) {
-            YpmFreeAllSourcesAndPackages(NULL, &PackagesMatchingName);
+            YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingName);
             continue;
         }
 
@@ -725,7 +725,7 @@ YpmInstallRemotePackages(
         PackageEntry = NULL;
         PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
         while (PackageEntry != NULL) {
-            Package = CONTAINING_RECORD(PackageEntry, YPM_REMOTE_PACKAGE, PackageList);
+            Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
             PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingName, PackageEntry);
             if (YoriLibCompareStringInsensitive(LookingForVersion, &Package->Version) == 0) {
                 YoriLibRemoveListItem(&Package->PackageList);
@@ -733,7 +733,7 @@ YpmInstallRemotePackages(
             }
         }
 
-        YpmFreeAllSourcesAndPackages(NULL, &PackagesMatchingName);
+        YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingName);
 
         //
         //  If the user requested an arch, go look if we found it.  If not,
@@ -742,7 +742,7 @@ YpmInstallRemotePackages(
 
         PkgInstalled = FALSE;
         if (MatchArch != NULL) {
-            YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, MatchArch, &PkgInstalled);
+            YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, MatchArch, &PkgInstalled);
 
             if (PkgInstalled) {
                 InstallCount++;
@@ -760,19 +760,19 @@ YpmInstallRemotePackages(
 #endif
 
             YoriLibConstantString(&YsArch, _T("amd64"));
-            if (WantAmd64 && YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
+            if (WantAmd64 && YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
                 if (PkgInstalled) {
                     InstallCount++;
                 }
             } else {
                 YoriLibConstantString(&YsArch, _T("win32"));
-                if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
+                if (YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
                     if (PkgInstalled) {
                         InstallCount++;
                     }
                 } else {
                     YoriLibConstantString(&YsArch, _T("noarch"));
-                    if (YpmInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
+                    if (YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
                         if (PkgInstalled) {
                             InstallCount++;
                         }
@@ -781,10 +781,10 @@ YpmInstallRemotePackages(
             }
         }
 
-        YpmFreeAllSourcesAndPackages(NULL, &PackagesMatchingVersion);
+        YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingVersion);
     }
 
-    YpmFreeAllSourcesAndPackages(&SourcesList, &PackageList);
+    YoriPkgFreeAllSourcesAndPackages(&SourcesList, &PackageList);
 
     return InstallCount;
 }

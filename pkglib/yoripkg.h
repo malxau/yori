@@ -1,7 +1,7 @@
 /**
- * @file ypm/ypm.h
+ * @file pkglib/yoripkg.h
  *
- * Master header for Yori package manager
+ * Master header for Yori package routines
  *
  * Copyright (c) 2018 Malcolm J. Smith
  *
@@ -29,21 +29,21 @@
  about telling us how much space we need, so this is the size we allocate
  and the effective limit.
  */
-#define YPM_MAX_FIELD_LENGTH (256)
+#define YORIPKG_MAX_FIELD_LENGTH (256)
 
 BOOL
-YpmGetApplicationDirectory(
+YoriPkgGetApplicationDirectory(
     __out PYORI_STRING AppDirectory
     );
 
 BOOL
-YpmGetPackageIniFile(
+YoriPkgGetPackageIniFile(
     __in_opt PYORI_STRING InstallDirectory,
     __out PYORI_STRING IniFileName
     );
 
 BOOL
-YpmGetPackageInfo(
+YoriPkgGetPackageInfo(
     __in PYORI_STRING IniPath,
     __out PYORI_STRING PackageName,
     __out PYORI_STRING PackageVersion,
@@ -54,12 +54,12 @@ YpmGetPackageInfo(
     );
 
 BOOL
-YpmIsPathRemote(
+YoriPkgIsPathRemote(
     __in PYORI_STRING PackagePath
     );
 
 BOOL
-YpmPackagePathToLocalPath(
+YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
@@ -67,7 +67,7 @@ YpmPackagePathToLocalPath(
     );
 
 BOOL
-YpmCreateBinaryPackage(
+YoriPkgCreateBinaryPackage(
     __in PYORI_STRING FileName,
     __in PYORI_STRING PackageName,
     __in PYORI_STRING Version,
@@ -79,7 +79,7 @@ YpmCreateBinaryPackage(
     );
 
 BOOL
-YpmCreateSourcePackage(
+YoriPkgCreateSourcePackage(
     __in PYORI_STRING FileName,
     __in PYORI_STRING PackageName,
     __in PYORI_STRING Version,
@@ -87,55 +87,58 @@ YpmCreateSourcePackage(
     );
 
 BOOL
-YpmDeletePackage(
+YoriPkgDeletePackage(
     __in_opt PYORI_STRING TargetDirectory,
     __in PYORI_STRING PackageName
     );
 
 BOOL
-YpmInstallPackage(
+YoriPkgInstallPackage(
     __in PYORI_STRING PackagePath,
     __in_opt PYORI_STRING TargetDirectory,
     __in BOOL UpgradeOnly
     );
 
 BOOL
-YpmUpgradeInstalledPackages(
+YoriPkgUpgradeInstalledPackages(
     __in_opt PYORI_STRING NewArchitecture
     );
 
 BOOL
-YpmUpgradeSinglePackage(
+YoriPkgUpgradeSinglePackage(
     __in PYORI_STRING PackageName,
     __in_opt PYORI_STRING NewArchitecture
     );
 
 BOOL
-YpmInstallSourceForInstalledPackages(
+YoriPkgInstallSourceForInstalledPackages(
     );
 
 BOOL
-YpmInstallSourceForSinglePackage(
+YoriPkgInstallSourceForSinglePackage(
     __in PYORI_STRING PackageName
     );
 
 BOOL
-YpmInstallSymbolsForInstalledPackages(
+YoriPkgInstallSymbolsForInstalledPackages(
     );
 
 BOOL
-YpmInstallSymbolForSinglePackage(
+YoriPkgInstallSymbolForSinglePackage(
     __in PYORI_STRING PackageName
     );
 
 BOOL
-YpmDisplayAvailableRemotePackages();
+YoriPkgDisplayAvailableRemotePackages();
 
 DWORD
-YpmInstallRemotePackages(
+YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
     __in PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
     __in_opt PYORI_STRING MatchArch
     );
+
+BOOL
+YoriPkgListInstalledPackages();

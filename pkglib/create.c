@@ -1,5 +1,5 @@
 /**
- * @file ypm/create.c
+ * @file pkglib/create.c
  *
  * Yori shell create packages
  *
@@ -26,7 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include "ypm.h"
+#include "yoripkg.h"
 
 /**
  Creates a binary (installable) package.  This could be architecture specific
@@ -58,7 +58,7 @@
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmCreateBinaryPackage(
+YoriPkgCreateBinaryPackage(
     __in PYORI_STRING FileName,
     __in PYORI_STRING PackageName,
     __in PYORI_STRING Version,
@@ -132,14 +132,14 @@ YpmCreateBinaryPackage(
                                 NULL);
 
     if (FileListSource == INVALID_HANDLE_VALUE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: Cannot open %y\n"), FileListFile);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Cannot open %y\n"), FileListFile);
         DeleteFile(TempFile.StartOfString);
         YoriLibFreeStringContents(&TempFile);
         return FALSE;
     }
 
     if (!YoriLibCreateCab(FileName, &CabHandle)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibCreateCab failure\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibCreateCab failure\n"));
         DeleteFile(TempFile.StartOfString);
         YoriLibFreeStringContents(&TempFile);
         CloseHandle(FileListSource);
@@ -147,7 +147,7 @@ YpmCreateBinaryPackage(
     }
     YoriLibConstantString(&PkgInfoName, _T("pkginfo.ini"));
     if (!YoriLibAddFileToCab(CabHandle, &TempFile, &PkgInfoName)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab failure\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibAddFileToCab failure\n"));
         DeleteFile(TempFile.StartOfString);
         YoriLibFreeStringContents(&TempFile);
         YoriLibCloseCab(CabHandle);
@@ -161,7 +161,7 @@ YpmCreateBinaryPackage(
             break;
         }
         if (!YoriLibAddFileToCab(CabHandle, &LineString, &LineString)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab cannot add %y\n"), &LineString);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibAddFileToCab cannot add %y\n"), &LineString);
             DeleteFile(TempFile.StartOfString);
             YoriLibFreeStringContents(&TempFile);
             YoriLibCloseCab(CabHandle);
@@ -186,7 +186,7 @@ YpmCreateBinaryPackage(
 /**
  A single item to exclude or include.  Note this can refer to multiple files.
  */
-typedef struct _YPM_MATCH_ITEM {
+typedef struct _YORIPKG_MATCH_ITEM {
 
     /**
      List of items to match.
@@ -198,13 +198,13 @@ typedef struct _YPM_MATCH_ITEM {
      wildcards.
      */
     YORI_STRING MatchCriteria;
-} YPM_MATCH_ITEM, *PYPM_MATCH_ITEM;
+} YORIPKG_MATCH_ITEM, *PYORIPKG_MATCH_ITEM;
 
 /**
  Context passed between the source package creation operation and every file
  found while creating the source package.
  */
-typedef struct _YPM_CREATE_SOURCE_CONTEXT {
+typedef struct _YORIPKG_CREATE_SOURCE_CONTEXT {
 
     /**
      A handle to the Cabinet being created.
@@ -231,7 +231,7 @@ typedef struct _YPM_CREATE_SOURCE_CONTEXT {
      ExcludeList.
      */
     YORI_LIST_ENTRY IncludeList;
-} YPM_CREATE_SOURCE_CONTEXT, *PYPM_CREATE_SOURCE_CONTEXT;
+} YORIPKG_CREATE_SOURCE_CONTEXT, *PYORIPKG_CREATE_SOURCE_CONTEXT;
 
 /**
  Add a new match criteria to the list.
@@ -244,19 +244,19 @@ typedef struct _YPM_CREATE_SOURCE_CONTEXT {
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmCreateSourceAddMatch(
+YoriPkgCreateSourceAddMatch(
     __in PYORI_LIST_ENTRY List,
     __in PYORI_STRING NewCriteria
     )
 {
-    PYPM_MATCH_ITEM MatchItem;
-    MatchItem = YoriLibReferencedMalloc(sizeof(YPM_MATCH_ITEM) + (NewCriteria->LengthInChars + 1) * sizeof(TCHAR));
+    PYORIPKG_MATCH_ITEM MatchItem;
+    MatchItem = YoriLibReferencedMalloc(sizeof(YORIPKG_MATCH_ITEM) + (NewCriteria->LengthInChars + 1) * sizeof(TCHAR));
 
     if (MatchItem == NULL) {
         return FALSE;
     }
 
-    ZeroMemory(MatchItem, sizeof(YPM_MATCH_ITEM));
+    ZeroMemory(MatchItem, sizeof(YORIPKG_MATCH_ITEM));
     MatchItem->MatchCriteria.StartOfString = (LPTSTR)(MatchItem + 1);
     MatchItem->MatchCriteria.LengthInChars = NewCriteria->LengthInChars;
     MatchItem->MatchCriteria.LengthAllocated = NewCriteria->LengthInChars + 1;
@@ -273,16 +273,16 @@ YpmCreateSourceAddMatch(
         exclude or include criteria from.
  */
 VOID
-YpmCreateSourceFreeMatchLists(
-    __in PYPM_CREATE_SOURCE_CONTEXT CreateSourceContext
+YoriPkgCreateSourceFreeMatchLists(
+    __in PYORIPKG_CREATE_SOURCE_CONTEXT CreateSourceContext
     )
 {
-    PYPM_MATCH_ITEM MatchItem;
+    PYORIPKG_MATCH_ITEM MatchItem;
     PYORI_LIST_ENTRY ListEntry;
 
     ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->ExcludeList, NULL);
     while (ListEntry != NULL) {
-        MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+        MatchItem = CONTAINING_RECORD(ListEntry, YORIPKG_MATCH_ITEM, MatchList);
         YoriLibRemoveListItem(&MatchItem->MatchList);
         YoriLibDereference(MatchItem);
         ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->ExcludeList, NULL);
@@ -290,7 +290,7 @@ YpmCreateSourceFreeMatchLists(
 
     ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->IncludeList, NULL);
     while (ListEntry != NULL) {
-        MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+        MatchItem = CONTAINING_RECORD(ListEntry, YORIPKG_MATCH_ITEM, MatchList);
         YoriLibRemoveListItem(&MatchItem->MatchList);
         YoriLibDereference(MatchItem);
         ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->IncludeList, NULL);
@@ -310,22 +310,22 @@ YpmCreateSourceFreeMatchLists(
  @return TRUE to exclude the file, FALSE to include it.
  */
 BOOL
-YpmCreateSourceShouldExclude(
-    __in PYPM_CREATE_SOURCE_CONTEXT CreateSourceContext,
+YoriPkgCreateSourceShouldExclude(
+    __in PYORIPKG_CREATE_SOURCE_CONTEXT CreateSourceContext,
     __in PYORI_STRING RelativeSourcePath
     )
 {
-    PYPM_MATCH_ITEM MatchItem;
+    PYORIPKG_MATCH_ITEM MatchItem;
     PYORI_LIST_ENTRY ListEntry;
 
     ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->ExcludeList, NULL);
     while (ListEntry != NULL) {
-        MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+        MatchItem = CONTAINING_RECORD(ListEntry, YORIPKG_MATCH_ITEM, MatchList);
         if (YoriLibDoesFileMatchExpression(RelativeSourcePath, &MatchItem->MatchCriteria)) {
 
             ListEntry = YoriLibGetNextListEntry(&CreateSourceContext->IncludeList, NULL);
             while (ListEntry != NULL) {
-                MatchItem = CONTAINING_RECORD(ListEntry, YPM_MATCH_ITEM, MatchList);
+                MatchItem = CONTAINING_RECORD(ListEntry, YORIPKG_MATCH_ITEM, MatchList);
                 if (YoriLibDoesFileMatchExpression(RelativeSourcePath, &MatchItem->MatchCriteria)) {
                     return FALSE;
                 }
@@ -355,14 +355,14 @@ YpmCreateSourceShouldExclude(
  @return TRUE to continute enumerating, FALSE to abort.
  */
 BOOL
-YpmCreateSourceFileFoundCallback(
+YoriPkgCreateSourceFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
 {
-    PYPM_CREATE_SOURCE_CONTEXT CreateSourceContext = (PYPM_CREATE_SOURCE_CONTEXT)Context;
+    PYORIPKG_CREATE_SOURCE_CONTEXT CreateSourceContext = (PYORIPKG_CREATE_SOURCE_CONTEXT)Context;
     YORI_STRING RelativePathFromSource;
     YORI_STRING PathInCab;
     DWORD SlashesFound;
@@ -402,7 +402,7 @@ YpmCreateSourceFileFoundCallback(
     //  Skip anything .gitinclude said should be skipped
     //
 
-    if (YpmCreateSourceShouldExclude(CreateSourceContext, &RelativePathFromSource)) {
+    if (YoriPkgCreateSourceShouldExclude(CreateSourceContext, &RelativePathFromSource)) {
         return TRUE;
     }
 
@@ -410,7 +410,7 @@ YpmCreateSourceFileFoundCallback(
     YoriLibYPrintf(&PathInCab, _T("src\\%y-%y\\%y"), CreateSourceContext->PackageName, CreateSourceContext->PackageVersion, &RelativePathFromSource);
 
     if (!YoriLibAddFileToCab(CreateSourceContext->CabHandle, FilePath, &PathInCab)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab cannot add %y\n"), &RelativePathFromSource);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibAddFileToCab cannot add %y\n"), &RelativePathFromSource);
     }
     YoriLibFreeStringContents(&PathInCab);
 
@@ -432,7 +432,7 @@ YpmCreateSourceFileFoundCallback(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YpmCreateSourcePackage(
+YoriPkgCreateSourcePackage(
     __in PYORI_STRING FileName,
     __in PYORI_STRING PackageName,
     __in PYORI_STRING Version,
@@ -443,7 +443,7 @@ YpmCreateSourcePackage(
     YORI_STRING TempFile;
     YORI_STRING PkgInfoName;
     YORI_STRING ExcludeFilePath;
-    YPM_CREATE_SOURCE_CONTEXT CreateSourceContext;
+    YORIPKG_CREATE_SOURCE_CONTEXT CreateSourceContext;
 
     ZeroMemory(&CreateSourceContext, sizeof(CreateSourceContext));
     YoriLibInitializeListHead(&CreateSourceContext.ExcludeList);
@@ -482,14 +482,14 @@ YpmCreateSourcePackage(
     WritePrivateProfileString(_T("Package"), _T("Architecture"), _T("noarch"), TempFile.StartOfString);
 
     if (!YoriLibCreateCab(FileName, &CreateSourceContext.CabHandle)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibCreateCab failure\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibCreateCab failure\n"));
         DeleteFile(TempFile.StartOfString);
         YoriLibFreeStringContents(&TempFile);
         return FALSE;
     }
     YoriLibConstantString(&PkgInfoName, _T("pkginfo.ini"));
     if (!YoriLibAddFileToCab(CreateSourceContext.CabHandle, &TempFile, &PkgInfoName)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: YoriLibAddFileToCab failure\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibAddFileToCab failure\n"));
         DeleteFile(TempFile.StartOfString);
         YoriLibFreeStringContents(&TempFile);
         YoriLibCloseCab(CreateSourceContext.CabHandle);
@@ -534,12 +534,12 @@ YpmCreateSourcePackage(
                         LineString.StartOfString++;
                         LineString.LengthInChars--;
                         if (LineString.LengthInChars > 0) {
-                            YpmCreateSourceAddMatch(&CreateSourceContext.IncludeList, &LineString);
+                            YoriPkgCreateSourceAddMatch(&CreateSourceContext.IncludeList, &LineString);
                         }
                         LineString.StartOfString--;
                         LineString.LengthInChars++;
                     } else {
-                        YpmCreateSourceAddMatch(&CreateSourceContext.ExcludeList, &LineString);
+                        YoriPkgCreateSourceAddMatch(&CreateSourceContext.ExcludeList, &LineString);
                     }
                 }
             }
@@ -556,11 +556,11 @@ YpmCreateSourcePackage(
     YoriLibForEachFile(FileRoot,
                        YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS | YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_NO_LINK_TRAVERSE,
                        0,
-                       YpmCreateSourceFileFoundCallback,
+                       YoriPkgCreateSourceFileFoundCallback,
                        &CreateSourceContext);
 
     YoriLibCloseCab(CreateSourceContext.CabHandle);
-    YpmCreateSourceFreeMatchLists(&CreateSourceContext);
+    YoriPkgCreateSourceFreeMatchLists(&CreateSourceContext);
     return TRUE;
 }
 

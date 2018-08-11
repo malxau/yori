@@ -26,7 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include "ypm.h"
+#include <yoripkg.h>
 
 /**
  Help text to display to the user.
@@ -72,53 +72,6 @@ YpmHelp()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
-    return TRUE;
-}
-
-/**
- List all installed packages in the system.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YpmListInstalledPackages()
-{
-    YORI_STRING PkgIniFile;
-    YORI_STRING InstalledSection;
-    LPTSTR ThisLine;
-    LPTSTR Equals;
-    YORI_STRING PkgNameOnly;
-
-    if (!YpmGetPackageIniFile(NULL, &PkgIniFile)) {
-        return FALSE;
-    }
-
-    if (!YoriLibAllocateString(&InstalledSection, 64 * 1024)) {
-        YoriLibFreeStringContents(&PkgIniFile);
-        return FALSE;
-    }
-
-    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
-
-    YoriLibInitEmptyString(&PkgNameOnly);
-    ThisLine = InstalledSection.StartOfString;
-
-    while (*ThisLine != '\0') {
-        PkgNameOnly.StartOfString = ThisLine;
-        Equals = _tcschr(ThisLine, '=');
-        if (Equals != NULL) {
-            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
-        } else {
-            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &PkgNameOnly);
-        ThisLine += _tcslen(ThisLine);
-        ThisLine++;
-    }
-
-    YoriLibFreeStringContents(&PkgIniFile);
-    YoriLibFreeStringContents(&InstalledSection);
-
     return TRUE;
 }
 
@@ -299,17 +252,17 @@ ymain(
         }
 
         for (i = StartArg; i < ArgC; i++) {
-            YpmInstallPackage(&ArgV[i], NULL, FALSE);
+            YoriPkgInstallPackage(&ArgV[i], NULL, FALSE);
         }
 
     } else if (Op == YpmOpListPackages) {
-        YpmListInstalledPackages();
+        YoriPkgListInstalledPackages();
     } else if (Op == YpmOpUpgradeInstalled) {
         if (StartArg == 0 || StartArg >= ArgC) {
-            YpmUpgradeInstalledPackages(NewArch);
+            YoriPkgUpgradeInstalledPackages(NewArch);
         } else {
             for (i = StartArg; i < ArgC; i++) {
-                YpmUpgradeSinglePackage(&ArgV[i], NewArch);
+                YoriPkgUpgradeSinglePackage(&ArgV[i], NewArch);
             }
         }
     } else if (Op == YpmOpDeleteInstalled) {
@@ -319,7 +272,7 @@ ymain(
             return EXIT_FAILURE;
         }
         for (i = StartArg; i < ArgC; i++) {
-            YpmDeletePackage(NULL, &ArgV[i]);
+            YoriPkgDeletePackage(NULL, &ArgV[i]);
         }
     } else if (Op == YpmOpCreateBinaryPackage) {
         ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL && NewArch != NULL);
@@ -327,16 +280,16 @@ ymain(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file list\n"));
             return EXIT_FAILURE;
         }
-        YpmCreateBinaryPackage(NewFileName, NewName, NewVersion, NewArch, FileList, UpgradePath, SourcePath, SymbolPath);
+        YoriPkgCreateBinaryPackage(NewFileName, NewName, NewVersion, NewArch, FileList, UpgradePath, SourcePath, SymbolPath);
     } else if (Op == YpmOpCreateSourcePackage) {
         ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL);
         if (FilePath == NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file tree root\n"));
             return EXIT_FAILURE;
         }
-        YpmCreateSourcePackage(NewFileName, NewName, NewVersion, FilePath);
+        YoriPkgCreateSourcePackage(NewFileName, NewName, NewVersion, FilePath);
     } else if (Op == YpmOpRemoteList) {
-        YpmDisplayAvailableRemotePackages();
+        YoriPkgDisplayAvailableRemotePackages();
     } else if (Op == YpmOpInstallRemote) {
         DWORD PkgCount;
         DWORD SuccessCount;
@@ -345,22 +298,22 @@ ymain(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing package name\n"));
             return EXIT_FAILURE;
         }
-        SuccessCount = YpmInstallRemotePackages(&ArgV[StartArg], PkgCount, NULL, NewVersion, NewArch);
+        SuccessCount = YoriPkgInstallRemotePackages(&ArgV[StartArg], PkgCount, NULL, NewVersion, NewArch);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i packages installed (%i not installed)\n"), SuccessCount, PkgCount - SuccessCount);
     } else if (Op == YpmOpInstallSource) {
         if (StartArg == 0 || StartArg >= ArgC) {
-            YpmInstallSourceForInstalledPackages();
+            YoriPkgInstallSourceForInstalledPackages();
         } else {
             for (i = StartArg; i < ArgC; i++) {
-                YpmInstallSourceForSinglePackage(&ArgV[i]);
+                YoriPkgInstallSourceForSinglePackage(&ArgV[i]);
             }
         }
     } else if (Op == YpmOpInstallSymbol) {
         if (StartArg == 0 || StartArg >= ArgC) {
-            YpmInstallSymbolsForInstalledPackages();
+            YoriPkgInstallSymbolsForInstalledPackages();
         } else {
             for (i = StartArg; i < ArgC; i++) {
-                YpmInstallSymbolForSinglePackage(&ArgV[i]);
+                YoriPkgInstallSymbolForSinglePackage(&ArgV[i]);
             }
         }
     }
