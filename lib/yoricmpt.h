@@ -631,6 +631,15 @@ typedef USN_RECORD *PUSN_RECORD;
 #define FSCTL_GET_EXTERNAL_BACKING       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 196, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #endif
 
+#ifndef FSCTL_SET_EXTERNAL_BACKING
+
+/**
+ Specifies the FSCTL_SET_EXTERNAL_BACKING numerical representation if the
+ compilation environment doesn't provide it.
+ */
+#define FSCTL_SET_EXTERNAL_BACKING       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 195, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#endif
+
 #ifndef WOF_PROVIDER_WIM
 
 /**

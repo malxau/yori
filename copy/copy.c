@@ -51,10 +51,13 @@ CHAR strHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
-        "COPY [-license] [-b] [-l] [-s] [-v] [-x exclude] <src>\n"
-        "COPY [-license] [-b] [-l] [-s] [-v] [-x exclude] <src> [<src> ...] <dest>\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-v] [-x exclude] <src>\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-v] [-x exclude]\n"
+        "      <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -c             Compress targets with specified algorithm.  Options are:\n"
+        "                    lzx, ntfs, xp4k, xp8k, xp16k\n"
         "   -l             Copy links as links rather than contents\n"
         "   -s             Copy subdirectories as well as files\n"
         "   -v             Verbose output\n"
@@ -118,6 +121,18 @@ typedef struct _COPY_CONTEXT {
      a second object over the top of an earlier copied file.
      */
     DWORD FilesCopied;
+
+    /**
+     If the target should be written as compressed, this specifies the
+     compression algorithm.  This contains any WOF algorithm in the 
+     high 16 bits and NTFS algorithm in the low 16 bits.
+     */
+    DWORD DestCompressionAlgorithm;
+
+    /**
+     If TRUE, targets should be compressed.
+     */
+    BOOL CompressDest;
 
     /**
      If TRUE, links are copied as links rather than having their contents
@@ -362,6 +377,97 @@ CopyAsLink(
 }
 
 /**
+ Compress a given file with a specified algorithm.  This routine will skip
+ small files that do not benefit from compression.
+
+ @param FileName Pointer to the file name to compress.
+
+ @param CompressionAlgorithm The compression algorithm to use.  Note this can
+        be an NTFS algorithm or a WOF algorithm (in the high 16 bits.)
+
+ @return TRUE to indicate the file was successfully compressed, FALSE if it
+         was not.
+ */
+BOOL
+CopyCompressTarget(
+    __in PYORI_STRING FileName,
+    __in DWORD CompressionAlgorithm
+    )
+{
+    HANDLE DestFileHandle;
+    DWORD BytesReturned;
+    BOOL Result = FALSE;
+    BY_HANDLE_FILE_INFORMATION FileInfo;
+
+    DestFileHandle = CreateFile(FileName->StartOfString,
+                                FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
+                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                0,
+                                NULL);
+
+    if (DestFileHandle == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    //
+    //  File system compression works by storing the data in fewer allocation
+    //  units.  What this means is for files that are very small the
+    //  possibility and quantity of allocation units reclaimed can't justify
+    //  the overhead, so just skip them.
+    //
+
+    if (!GetFileInformationByHandle(DestFileHandle, &FileInfo)) {
+        goto Exit;
+    }
+
+    if (FileInfo.nFileSizeHigh == 0 &&
+        FileInfo.nFileSizeLow < 10 * 1024) {
+
+        goto Exit;
+    }
+
+    if (CompressionAlgorithm & 0xffff) {
+        USHORT Algorithm = (USHORT)CompressionAlgorithm;
+
+        Result = DeviceIoControl(DestFileHandle,
+                                 FSCTL_SET_COMPRESSION,
+                                 &Algorithm,
+                                 sizeof(Algorithm),
+                                 NULL,
+                                 0,
+                                 &BytesReturned,
+                                 NULL);
+
+    } else {
+        struct {
+            WOF_EXTERNAL_INFO WofInfo;
+            FILE_PROVIDER_EXTERNAL_INFO FileInfo;
+        } CompressInfo;
+
+        ZeroMemory(&CompressInfo, sizeof(CompressInfo));
+        CompressInfo.WofInfo.Version = 1;
+        CompressInfo.WofInfo.Provider = WOF_PROVIDER_FILE;
+        CompressInfo.FileInfo.Version = 1;
+        CompressInfo.FileInfo.Algorithm = (CompressionAlgorithm >> 16);
+
+        Result = DeviceIoControl(DestFileHandle,
+                                 FSCTL_SET_EXTERNAL_BACKING,
+                                 &CompressInfo,
+                                 sizeof(CompressInfo),
+                                 NULL,
+                                 0,
+                                 &BytesReturned,
+                                 NULL);
+    }
+
+Exit:
+    CloseHandle(DestFileHandle);
+    return Result;
+}
+
+/**
  A callback that is invoked when a file is found that matches a search criteria
  specified in the set of strings to enumerate.
 
@@ -509,6 +615,11 @@ CopyFileFoundCallback(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
             YoriLibFreeWinErrorText(ErrText);
         }
+
+        if (CopyContext->CompressDest) {
+
+            CopyCompressTarget(&FullDest, CopyContext->DestCompressionAlgorithm);
+        }
     }
 
     CopyContext->FilesCopied++;
@@ -611,6 +722,27 @@ ymain(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:lzx")) == 0) {
+                CopyContext.DestCompressionAlgorithm = (FILE_PROVIDER_COMPRESSION_LZX << 16);
+                CopyContext.CompressDest = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:ntfs")) == 0) {
+                CopyContext.DestCompressionAlgorithm = COMPRESSION_FORMAT_DEFAULT;
+                CopyContext.CompressDest = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xpress")) == 0 ||
+                       YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xp4k")) == 0) {
+                CopyContext.DestCompressionAlgorithm = (FILE_PROVIDER_COMPRESSION_XPRESS4K << 16);
+                CopyContext.CompressDest = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xp8k")) == 0) {
+                CopyContext.DestCompressionAlgorithm = (FILE_PROVIDER_COMPRESSION_XPRESS8K << 16);
+                CopyContext.CompressDest = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:xp16k")) == 0) {
+                CopyContext.DestCompressionAlgorithm = (FILE_PROVIDER_COMPRESSION_XPRESS16K << 16);
+                CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 CopyContext.CopyAsLinks = TRUE;
