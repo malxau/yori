@@ -1,5 +1,5 @@
 /**
- * @file lib/util.c
+ * @file /lib/util.c
  *
  * Yori trivial utility routines
  *

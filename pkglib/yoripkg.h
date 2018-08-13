@@ -135,7 +135,7 @@ DWORD
 YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
-    __in PYORI_STRING NewDirectory,
+    __in_opt PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
     __in_opt PYORI_STRING MatchArch
     );

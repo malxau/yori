@@ -1,5 +1,5 @@
 /**
- * @file ypm/ysetup.c
+ * @file ysetup/ysetup.c
  *
  * Yori shell bootstrap installer
  *

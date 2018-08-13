@@ -70,6 +70,10 @@ YoriPkgGetApplicationDirectory(
 /**
  Return a fully qualified path to the global package INI file.
 
+ @param InstallDirectory Optionally specifies an install directory.  If not
+        specified, the directory of the currently running application is
+        used.  The INI file is always in this directory if it is specified.
+
  @param IniFileName On successful completion, populated with a path to the
         package INI file.
 
