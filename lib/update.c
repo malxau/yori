@@ -377,6 +377,8 @@ YoriLibUpdateBinaryFromUrl(
 
     NewBinary = InetOpenUrl(hInternet, Url, HostHeader.StartOfString, HostHeader.LengthInChars, 0, 0);
     if (NewBinary == NULL) {
+        dwError = GetLastError();
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("InetOpenUrl returned %i looking for %s\n"), dwError, Url);
         YoriLibFreeStringContents(&HostHeader);
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
@@ -387,11 +389,14 @@ YoriLibUpdateBinaryFromUrl(
     ActualBinarySize = 0;
     dwError = 0;
     if (!HttpQueryInfo(NewBinary, 0x20000013, &dwError, &ErrorBufferSize, &ActualBinarySize)) {
+        dwError = GetLastError();
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("HttpQueryInfo returned %i looking for %s\n"), dwError, Url);
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
     }
 
     if (dwError != 200) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("HttpQueryInfo indicated HTTP response of %i for %s\n"), dwError, Url);
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
     }

@@ -131,4 +131,60 @@ YoriLibFreeWinErrorText(
     }
 }
 
+/**
+ Create a directory, and any parent directories that do not yet exist.
+ Note that this routine temporarily alters the DirName buffer - it is not
+ const, but will be restored to original contents on exit.
+
+ @param DirName The directory to create.
+ */
+BOOL
+YoriLibCreateDirectoryAndParents(
+    __in PYORI_STRING DirName
+    )
+{
+    DWORD MaxIndex = DirName->LengthInChars - 1;
+    DWORD Err;
+    DWORD SepIndex = MaxIndex;
+    BOOL StartedSucceeding = FALSE;
+
+    while (TRUE) {
+        if (!CreateDirectory(DirName->StartOfString, NULL)) {
+            Err = GetLastError();
+            if (Err == ERROR_PATH_NOT_FOUND && !StartedSucceeding) {
+
+                //
+                //  MSFIX Check for truncation beyond \\?\ or \\?\UNC\ ?
+                //
+
+                for (;!YoriLibIsSep(DirName->StartOfString[SepIndex]) && SepIndex > 0; SepIndex--) {
+                }
+
+                if (!YoriLibIsSep(DirName->StartOfString[SepIndex])) {
+                    return FALSE;
+                }
+
+                DirName->StartOfString[SepIndex] = '\0';
+                DirName->LengthInChars = SepIndex;
+                continue;
+
+            } else {
+                return FALSE;
+            }
+        } else {
+            StartedSucceeding = TRUE;
+            if (SepIndex < MaxIndex) {
+                ASSERT(DirName->StartOfString[SepIndex] == '\0');
+
+                DirName->StartOfString[SepIndex] = '\\';
+                for (;DirName->StartOfString[SepIndex] != '\0' && SepIndex <= MaxIndex; SepIndex++);
+                DirName->LengthInChars = SepIndex;
+                continue;
+            } else {
+                return TRUE;
+            }
+        }
+    }
+}
+
 // vim:sw=4:ts=4:et:

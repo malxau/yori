@@ -14,12 +14,22 @@ CFLAGS=$(CFLAGS) /Fdysetup.pdb
 LINKPDB=/Pdb:ysetup.pdb
 !ENDIF
 
+LIBS=$(LIBS) user32.lib
+LDFLAGS_NT4UP=$(LDFLAGS:3.10=4.0)
+
 OBJS=\
+	 resource.obj    \
 	 ysetup.obj      \
 
 compile: $(OBJS)
 
+resource.obj: resource.rc
+	@echo resource.rc
+	@rc -r resource.rc
+	@if exist resource.obj erase resource.obj
+	@if not exist resource.obj ren resource.res resource.obj
+
 ysetup.exe: $(OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib ..\pkglib\yoripkg.lib -version:$(YSETUP_VER_MAJOR).$(YSETUP_VER_MINOR) $(LINKPDB_YSETUP) -out:$@
+	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib ..\pkglib\yoripkg.lib -version:$(YSETUP_VER_MAJOR).$(YSETUP_VER_MINOR) $(LINKPDB_YSETUP) -out:$@
 

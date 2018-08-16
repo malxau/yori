@@ -140,5 +140,13 @@ YoriPkgInstallRemotePackages(
     __in_opt PYORI_STRING MatchArch
     );
 
+DWORD
+YoriPkgGetRemotePackageUrls(
+    __in PYORI_STRING PackageNames,
+    __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING NewDirectory,
+    __out PYORI_STRING * PackageUrls
+    );
+
 BOOL
 YoriPkgListInstalledPackages();

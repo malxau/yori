@@ -578,30 +578,24 @@ YoriPkgDisplayAvailableRemotePackages()
 
 /**
  Process a list of packages which match a given package name and desired
- version, and install the package with the matching architecture if it is
- found.
+ version, find any with the matching architecture and if it is found, insert
+ it into the list of matches.
 
  @param PackageList The list of packages to walk through.
 
- @param NewDirectory Optionally specifies an install directory.  If not
-        specified, the directory of the currently running application is
-        used.
-
  @param Architecture The architecture to find.
 
- @param Installed On successful completion, set to TRUE to indicate the
-        package was successfully installed.
+ @param MatchingPackages On successful completion, updated to include the
+        URL for the architecture of the package.
 
  @return TRUE to indicate a package matching the requested architecture
-         was found.  Note that the Installed value needs to be consulted
-         to check if it could be installed successfully.
+         was found.
  */
 BOOL
-YoriPkgInstallRemotePackageMatchingArchitecture(
+YoriPkgFindRemotePackageMatchingArchitecture(
     __in PYORI_LIST_ENTRY PackageList,
-    __in PYORI_STRING NewDirectory,
     __in PYORI_STRING Architecture,
-    __in PBOOL Installed
+    __inout PYORI_LIST_ENTRY MatchingPackages
     )
 {
     PYORI_LIST_ENTRY PackageEntry;
@@ -613,13 +607,9 @@ YoriPkgInstallRemotePackageMatchingArchitecture(
         Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
         PackageEntry = YoriLibGetNextListEntry(PackageList, PackageEntry);
         if (YoriLibCompareStringInsensitive(Architecture, &Package->Architecture) == 0) {
-            if (YoriPkgInstallPackage(&Package->InstallUrl, NewDirectory, TRUE)) {
-                *Installed = TRUE;
-                return TRUE;
-            } else {
-                *Installed = FALSE;
-                return TRUE;
-            }
+            YoriLibRemoveListItem(&Package->PackageList);
+            YoriLibAppendList(MatchingPackages, &Package->PackageList);
+            return TRUE;
         }
     }
     return FALSE;
@@ -644,15 +634,20 @@ YoriPkgInstallRemotePackageMatchingArchitecture(
         install.  If not specified, determined from the host operaitng
         system.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @param PackagesMatchingCriteria A pre initialized list to update with
+        matching package URLs.
+
+ @return The number of matching packages returned.  Typically success means
+         this is equal to PackageNameCount.
  */
 DWORD
-YoriPkgInstallRemotePackages(
+YoriPkgFindRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
     __in_opt PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
-    __in_opt PYORI_STRING MatchArch
+    __in_opt PYORI_STRING MatchArch,
+    __inout PYORI_LIST_ENTRY PackagesMatchingCriteria
     )
 {
     YORI_LIST_ENTRY SourcesList;
@@ -742,9 +737,7 @@ YoriPkgInstallRemotePackages(
 
         PkgInstalled = FALSE;
         if (MatchArch != NULL) {
-            YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, MatchArch, &PkgInstalled);
-
-            if (PkgInstalled) {
+            if (YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, MatchArch, PackagesMatchingCriteria)) {
                 InstallCount++;
             }
         } else {
@@ -760,22 +753,16 @@ YoriPkgInstallRemotePackages(
 #endif
 
             YoriLibConstantString(&YsArch, _T("amd64"));
-            if (WantAmd64 && YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
-                if (PkgInstalled) {
-                    InstallCount++;
-                }
+            if (WantAmd64 && YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, PackagesMatchingCriteria)) {
+                InstallCount++;
             } else {
                 YoriLibConstantString(&YsArch, _T("win32"));
-                if (YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
-                    if (PkgInstalled) {
-                        InstallCount++;
-                    }
+                if (YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, PackagesMatchingCriteria)) {
+                    InstallCount++;
                 } else {
                     YoriLibConstantString(&YsArch, _T("noarch"));
-                    if (YoriPkgInstallRemotePackageMatchingArchitecture(&PackagesMatchingVersion, NewDirectory, &YsArch, &PkgInstalled)) {
-                        if (PkgInstalled) {
-                            InstallCount++;
-                        }
+                    if (YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, PackagesMatchingCriteria)) {
+                        InstallCount++;
                     }
                 }
             }
@@ -788,5 +775,154 @@ YoriPkgInstallRemotePackages(
 
     return InstallCount;
 }
+
+/**
+ Install packages from remote source by name, optionally with version and
+ architecture.
+
+ @param PackageNames Pointer to an array of one or more package names.
+
+ @param PackageNameCount The number of elements in the PackageName array.
+
+ @param NewDirectory Optionally specifies an install directory.  If not
+        specified, the directory of the currently running application is
+        used.
+
+ @param MatchVersion Optionally specifies a version of the packages to
+        install.  If not specified, the latest version is used.
+
+ @param MatchArch Optionally specifies the architecture of the packages to
+        install.  If not specified, determined from the host operaitng
+        system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+DWORD
+YoriPkgInstallRemotePackages(
+    __in PYORI_STRING PackageNames,
+    __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING NewDirectory,
+    __in_opt PYORI_STRING MatchVersion,
+    __in_opt PYORI_STRING MatchArch
+    )
+{
+    DWORD MatchingPackageCount;
+    DWORD InstallCount;
+    YORI_LIST_ENTRY PackagesMatchingCriteria;
+    PYORI_LIST_ENTRY PackageEntry;
+    PYORIPKG_REMOTE_PACKAGE Package;
+
+    YoriLibInitializeListHead(&PackagesMatchingCriteria);
+
+    MatchingPackageCount = YoriPkgFindRemotePackages(PackageNames,
+                                                     PackageNameCount,
+                                                     NewDirectory,
+                                                     MatchVersion,
+                                                     MatchArch,
+                                                     &PackagesMatchingCriteria);
+
+    InstallCount = 0;
+    PackageEntry = NULL;
+    PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
+    while (PackageEntry != NULL) {
+        Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
+        PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
+        if (YoriPkgInstallPackage(&Package->InstallUrl, NewDirectory, TRUE)) {
+            InstallCount++;
+        }
+    }
+
+    YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingCriteria);
+
+    return InstallCount;
+}
+
+/**
+ Return the remote package URLs for a specified set of packages.
+
+ @param PackageNames Pointer to an array of one or more package names.
+
+ @param PackageNameCount The number of elements in the PackageName array.
+
+ @param NewDirectory Optionally specifies an install directory.  If not
+        specified, the directory of the currently running application is
+        used.
+
+ @param PackageUrls On successful completion, updated to point to an array of
+        YORI_STRINGs containing URLs for the packages.
+
+ @return The number of package URLs returned.  Typically success means this
+         is equal to PackageNameCount.
+ */
+DWORD
+YoriPkgGetRemotePackageUrls(
+    __in PYORI_STRING PackageNames,
+    __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING NewDirectory,
+    __out PYORI_STRING * PackageUrls
+    )
+{
+    DWORD MatchingPackageCount;
+    YORI_LIST_ENTRY PackagesMatchingCriteria;
+    PYORI_LIST_ENTRY PackageEntry;
+    PYORIPKG_REMOTE_PACKAGE Package;
+    DWORD CharsNeeded;
+    PYORI_STRING LocalPackageUrls;
+    LPTSTR WritePtr;
+    DWORD PkgIndex;
+
+    YoriLibInitializeListHead(&PackagesMatchingCriteria);
+
+    MatchingPackageCount = YoriPkgFindRemotePackages(PackageNames,
+                                                     PackageNameCount,
+                                                     NewDirectory,
+                                                     NULL,
+                                                     NULL,
+                                                     &PackagesMatchingCriteria);
+
+    CharsNeeded = 0;
+    PackageEntry = NULL;
+    PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
+    while (PackageEntry != NULL) {
+        Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
+        PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
+        CharsNeeded += Package->InstallUrl.LengthInChars + 1;
+    }
+
+    LocalPackageUrls = YoriLibReferencedMalloc(CharsNeeded * sizeof(TCHAR) + MatchingPackageCount * sizeof(YORI_STRING));
+    if (LocalPackageUrls == NULL) {
+        YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingCriteria);
+        return 0;
+    }
+
+    WritePtr = (LPTSTR)(LocalPackageUrls + MatchingPackageCount);
+
+    PkgIndex = 0;
+    PackageEntry = NULL;
+    PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
+    while (PackageEntry != NULL) {
+        Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
+        PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
+        YoriLibInitEmptyString(&LocalPackageUrls[PkgIndex]);
+
+        YoriLibReference(LocalPackageUrls);
+        LocalPackageUrls[PkgIndex].MemoryToFree = LocalPackageUrls;
+        LocalPackageUrls[PkgIndex].StartOfString = WritePtr;
+        LocalPackageUrls[PkgIndex].LengthInChars = Package->InstallUrl.LengthInChars;
+        LocalPackageUrls[PkgIndex].LengthAllocated = LocalPackageUrls[PkgIndex].LengthInChars + 1;
+        memcpy(WritePtr, Package->InstallUrl.StartOfString, Package->InstallUrl.LengthInChars * sizeof(TCHAR));
+        WritePtr[Package->InstallUrl.LengthInChars] = '\0';
+        WritePtr += Package->InstallUrl.LengthAllocated;
+        PkgIndex++;
+    }
+
+    ASSERT(PkgIndex == MatchingPackageCount);
+    YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingCriteria);
+    *PackageUrls = LocalPackageUrls;
+
+    return PkgIndex;
+}
+
+// vim:sw=4:ts=4:et:
 
 // vim:sw=4:ts=4:et:

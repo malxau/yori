@@ -267,7 +267,7 @@ ymain(
         }
     } else if (Op == YpmOpDeleteInstalled) {
         i = StartArg;
-        if (i + 1 > ArgC) {
+        if (StartArg == 0 || StartArg >= ArgC) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing argument\n"));
             return EXIT_FAILURE;
         }

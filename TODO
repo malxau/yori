@@ -3,7 +3,9 @@
  - ShellExecute URLs
  - Search on input string
  - Simple search/replace on text streams (mini-sed)
- - Copy make target compressed
+ - Multithreaded copy compression
+ - If that works, ycompact that uses it
+ - Generic cab compress + uncompress
  - Merge sdir recursion root and criteria arguments
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text

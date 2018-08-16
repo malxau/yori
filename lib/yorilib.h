@@ -2041,4 +2041,9 @@ YoriLibFreeWinErrorText(
     __in LPTSTR ErrText
     );
 
+BOOL
+YoriLibCreateDirectoryAndParents(
+    __in PYORI_STRING DirName
+    );
+
 // vim:sw=4:ts=4:et:

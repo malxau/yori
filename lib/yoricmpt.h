@@ -637,7 +637,7 @@ typedef USN_RECORD *PUSN_RECORD;
  Specifies the FSCTL_SET_EXTERNAL_BACKING numerical representation if the
  compilation environment doesn't provide it.
  */
-#define FSCTL_SET_EXTERNAL_BACKING       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 195, METHOD_BUFFERED, FILE_SPECIAL_ACCESS)
+#define FSCTL_SET_EXTERNAL_BACKING       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 195, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #endif
 
 #ifndef WOF_PROVIDER_WIM
@@ -1090,6 +1090,30 @@ typedef struct _YORI_JOB_BASIC_LIMIT_INFORMATION {
      */
     DWORD Unused7;
 } YORI_JOB_BASIC_LIMIT_INFORMATION, *PYORI_JOB_BASIC_LIMIT_INFORMATION;
+
+#ifndef WM_SETICON
+/**
+ A definition for WM_SETICON if it is not defined by the current compilation
+ environment.
+ */
+#define WM_SETICON (0x0080)
+#endif
+
+#ifndef ICON_SMALL
+/**
+ A definition for a small icon in WM_SETICON if it is not defined by the
+ current compilation environment.
+ */
+#define ICON_SMALL 0
+#endif
+
+#ifndef ICON_BIG
+/**
+ A definition for a big icon in WM_SETICON if it is not defined by the
+ current compilation environment.
+ */
+#define ICON_BIG 1
+#endif
 
 #ifndef DIAMONDAPI
 /**
@@ -1821,6 +1845,57 @@ typedef struct _YORI_SHELLEXECUTEINFO {
  */
 #define SEE_MASK_NOZONECHECKS   (0x00800000)
 #endif
+
+/**
+ A structure to pass to SHBrowseForFolder.
+ */
+typedef struct _YORI_BROWSEINFO {
+
+    /**
+     Parent HWND for the child dialog.
+     */
+    HWND hWndOwner;
+
+    /**
+     A PIDL for the root of the tree.  We currently only use NULL so this
+     doesn't need to be defined accurately.
+     */
+    PVOID PidlRoot;
+
+    /**
+     On successful completion, updated with the display name of the selected
+     object.
+     */
+    LPTSTR DisplayName;
+
+    /**
+     A string to display at the top of the dialog.
+     */
+    LPCTSTR Title;
+
+    /**
+     Flags controlling the behavior of the dialog.
+     */
+    UINT Flags;
+
+    /**
+     A callback function to be invoked on certain events, not currently
+     used.
+     */
+    PVOID CallbackFn;
+
+    /**
+     lParam to pass to the dialog on initialization.
+     */
+    LPARAM lParam;
+
+    /**
+     On successful completion, updated to contain the index of the object's icon.
+     */
+    INT ImageIndex;
+} YORI_BROWSEINFO, *PYORI_BROWSEINFO;
+
+
 
 #ifndef STDMETHODCALLTYPE
 
@@ -2806,6 +2881,18 @@ typedef struct _YORI_OLE32_FUNCTIONS {
 extern YORI_OLE32_FUNCTIONS DllOle32;
 
 /**
+ A prototype for the SHBrowseForFolderW function.
+ */
+typedef
+PVOID WINAPI
+SH_BROWSE_FOR_FOLDERW(PYORI_BROWSEINFO);
+
+/**
+ A prototype for a pointer to the SHBrowseForFolderW function.
+ */
+typedef SH_BROWSE_FOR_FOLDERW *PSH_BROWSE_FOR_FOLDERW;
+
+/**
  A prototype for the SHFileOperationW function.
  */
 typedef
@@ -2828,6 +2915,18 @@ SH_GET_KNOWN_FOLDER_PATH(CONST GUID *, DWORD, HANDLE, PWSTR *);
  A prototype for a pointer to the SHGetKnownFolderPath function.
  */
 typedef SH_GET_KNOWN_FOLDER_PATH *PSH_GET_KNOWN_FOLDER_PATH;
+
+/**
+ A prototype for the SHGetPathFromIDListW function.
+ */
+typedef
+LONG WINAPI
+SH_GET_PATH_FROM_ID_LISTW(PVOID, LPWSTR);
+
+/**
+ A prototype for a pointer to the SHGetPathFromIDListW function.
+ */
+typedef SH_GET_PATH_FROM_ID_LISTW *PSH_GET_PATH_FROM_ID_LISTW;
 
 /**
  A prototype for the SHGetSpecialFolderPathW function.
@@ -2876,6 +2975,11 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
     HINSTANCE hDll;
 
     /**
+     If it's available on the current system, a pointer to SHBrowseForFolderW.
+     */
+    PSH_BROWSE_FOR_FOLDERW pSHBrowseForFolderW;
+
+    /**
      If it's available on the current system, a pointer to SHFileOperationW.
      */
     PSH_FILE_OPERATIONW pSHFileOperationW;
@@ -2884,6 +2988,11 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
      If it's available on the current system, a pointer to SHGetKnownFolderPath.
      */
     PSH_GET_KNOWN_FOLDER_PATH pSHGetKnownFolderPath;
+
+    /**
+     If it's available on the current system, a pointer to SHGetPathFromIDListW.
+     */
+    PSH_GET_PATH_FROM_ID_LISTW pSHGetPathFromIDListW;
 
     /**
      If it's available on the current system, a pointer to SHGetSpecialFolderPathW.

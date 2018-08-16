@@ -50,7 +50,7 @@ REM from the web.
 
 echo *** Generating debug installer
 
-ypm -cs %OUTDIR%\yori-source.cab yori-source %BUILDSTRING% -filepath . &
+ypm -cs %OUTDIR%\yori-source-noarch.cab yori-source %BUILDSTRING% -filepath . &
 
 if fscmp -d pkg\%ARCH%-dbg; rd /s pkg\%ARCH%-dbg
 mkdir pkg\%ARCH%-dbg
@@ -59,10 +59,10 @@ move sym\%ARCH% pkg\%ARCH%-dbg\sym
 makensis /V2 /DDBG=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
 makensis /V2 /DDBG=1 /DSYMONLY=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
 pushd pkg\%ARCH%-dbg\bin
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-%ARCH%.cab %%i-dbg %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source.cab -symbolpath %SOURCEPATH%/%%i-dbg-pdb-%ARCH%.cab -filelist ..\..\%%i.lst
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-%ARCH%.cab %%i-dbg %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-dbg-pdb-%ARCH%.cab -filelist ..\..\%%i.lst
 popd
 pushd pkg\%ARCH%-dbg\sym
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-pdb-%ARCH%.cab %%i-dbg-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source.cab -filelist ..\..\%%i-pdb.lst
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-pdb-%ARCH%.cab %%i-dbg-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -filelist ..\..\%%i-pdb.lst
 popd
 
 echo *** Cleaning tree
@@ -81,10 +81,10 @@ move sym\%ARCH% pkg\%ARCH%\sym
 makensis /V2 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
 makensis /V2 /DSYMONLY=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
 pushd pkg\%ARCH%\bin
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-%ARCH%.cab %%i %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source.cab -symbolpath %SOURCEPATH%/%%i-pdb-%ARCH%.cab -filelist ..\..\%%i.lst
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-%ARCH%.cab %%i %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-pdb-%ARCH%.cab -filelist ..\..\%%i.lst
 popd
 pushd pkg\%ARCH%\sym
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-pdb-%ARCH%.cab %%i-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source.cab -filelist ..\..\%%i-pdb.lst
+yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-pdb-%ARCH%.cab %%i-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -filelist ..\..\%%i-pdb.lst
 popd
 
 REM
@@ -92,7 +92,7 @@ REM Generate yori-completion which is special because it's architecture
 REM agnostic
 REM
 
-ypm -c %OUTDIR%\yori-completion-noarch.cab yori-completion %BUILDSTRING% noarch -upgradepath %UPGRADEPATH%/yori-completion-noarch.cab -sourcepath %SOURCEPATH%/yori-source.cab -filelist pkg\yori-completion.lst
+ypm -c %OUTDIR%\yori-completion-noarch.cab yori-completion %BUILDSTRING% noarch -upgradepath %UPGRADEPATH%/yori-completion-noarch.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -filelist pkg\yori-completion.lst
 
 REM
 REM Generate pkglist.ini so that tools can find packages provided by this
