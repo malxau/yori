@@ -56,8 +56,6 @@ if fscmp -d pkg\%ARCH%-dbg; rd /s pkg\%ARCH%-dbg
 mkdir pkg\%ARCH%-dbg
 move bin\%ARCH% pkg\%ARCH%-dbg\bin
 move sym\%ARCH% pkg\%ARCH%-dbg\sym
-makensis /V2 /DDBG=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
-makensis /V2 /DDBG=1 /DSYMONLY=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
 pushd pkg\%ARCH%-dbg\bin
 yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-%ARCH%.cab %%i-dbg %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-dbg-pdb-%ARCH%.cab -filelist ..\..\%%i.lst
 popd
@@ -78,8 +76,6 @@ if fscmp -d pkg\%ARCH%; rd /s pkg\%ARCH%
 mkdir pkg\%ARCH%
 move bin\%ARCH% pkg\%ARCH%\bin
 move sym\%ARCH% pkg\%ARCH%\sym
-makensis /V2 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
-makensis /V2 /DSYMONLY=1 /DPACKARCH=%ARCH% /DYORI_BUILD_STRING=%BUILDSTRING% /DYORI_SOURCE_PATH=%SOURCEPATH% /DYORI_UPGRADE_PATH=%UPGRADEPATH% pkg\setup.nsi &
 pushd pkg\%ARCH%\bin
 yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-%ARCH%.cab %%i %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-pdb-%ARCH%.cab -filelist ..\..\%%i.lst
 popd
