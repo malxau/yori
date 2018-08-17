@@ -81,6 +81,76 @@ SetupInstallToDirectory(
     return FALSE;
 }
 
+/**
+ Append a new path component to an existing registry path.
+
+ @param hRootKey The root of the registry hive to update.
+
+ @param SubKey The sub key to update.
+
+ @param ValueName The name of the value to update.
+
+ @param PathToAdd The path that should be added to the specified value.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SetupAppendPath(
+    __in HKEY hRootKey,
+    __in LPTSTR SubKey,
+    __in LPTSTR ValueName,
+    __in PYORI_STRING PathToAdd
+    )
+{
+    HKEY hKey;
+    DWORD Err;
+    DWORD Disposition;
+    DWORD LengthRequired;
+    YORI_STRING ExistingValue;
+
+    Err = RegCreateKeyEx(hRootKey, SubKey, 0, NULL, 0, KEY_SET_VALUE | KEY_QUERY_VALUE, NULL, &hKey, &Disposition);
+    if (Err != ERROR_SUCCESS) {
+        return FALSE;
+    }
+
+    LengthRequired = 0;
+    YoriLibInitEmptyString(&ExistingValue);
+    Err = RegQueryValueEx(hKey, ValueName, NULL, NULL, NULL, &LengthRequired);
+    if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
+        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + PathToAdd->LengthInChars + 1)) {
+            RegCloseKey(hKey);
+            return FALSE;
+        }
+
+        Err = RegQueryValueEx(hKey, ValueName, NULL, NULL, (LPBYTE)ExistingValue.StartOfString, &LengthRequired);
+        if (Err != ERROR_SUCCESS) {
+            YoriLibFreeStringContents(&ExistingValue);
+            RegCloseKey(hKey);
+            return FALSE;
+        }
+
+        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+
+        if (!YoriLibAddEnvironmentComponentToString(&ExistingValue, PathToAdd, TRUE)) {
+            YoriLibFreeStringContents(&ExistingValue);
+            RegCloseKey(hKey);
+            return FALSE;
+        }
+
+        Err = RegSetValueEx(hKey, ValueName, 0, REG_EXPAND_SZ, (LPBYTE)ExistingValue.StartOfString, (ExistingValue.LengthInChars + 1) * sizeof(TCHAR));
+        RegCloseKey(hKey);
+        YoriLibFreeStringContents(&ExistingValue);
+    } else {
+        Err = RegSetValueEx(hKey, ValueName, 0, REG_EXPAND_SZ, (LPBYTE)PathToAdd->StartOfString, (PathToAdd->LengthInChars + 1) * sizeof(TCHAR));
+        RegCloseKey(hKey);
+    }
+
+    if (Err == ERROR_SUCCESS) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 
 /**
  Install the user specified set of packages and options from the dialog.
@@ -112,12 +182,30 @@ SetupInstallSelectedFromDialog(
     //  Query the install directory and attempt to create it
     //
 
-    LengthNeeded = SendDlgItemMessage(hDlg, IDC_INSTALLDIR, WM_GETTEXTLENGTH, 0, 0);
+    LengthNeeded = (DWORD)SendDlgItemMessage(hDlg, IDC_INSTALLDIR, WM_GETTEXTLENGTH, 0, 0);
     if (!YoriLibAllocateString(&InstallDir, LengthNeeded + 1)) {
         MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
         return FALSE;
     }
     InstallDir.LengthInChars = GetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString, InstallDir.LengthAllocated);
+
+
+    //
+    //  Truncate trailing seperators
+    //
+
+    while (InstallDir.LengthInChars > 0 &&
+           YoriLibIsSep(InstallDir.StartOfString[InstallDir.LengthInChars - 1])) {
+
+        InstallDir.StartOfString[InstallDir.LengthInChars - 1] = '\0';
+        InstallDir.LengthInChars--;
+    }
+
+    if (InstallDir.LengthInChars == 0) {
+        MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
+        YoriLibFreeStringContents(&InstallDir);
+        return FALSE;
+    }
 
     YoriLibCreateDirectoryAndParents(&InstallDir);
 
@@ -216,6 +304,87 @@ SetupInstallSelectedFromDialog(
         }
     }
 
+    SetDlgItemText(hDlg, IDC_STATUS, _T("Applying installation options..."));
+
+    //
+    //  Create shortcuts if requested
+    //
+
+    if (IsDlgButtonChecked(hDlg, IDC_DESKTOP_SHORTCUT) ||
+        IsDlgButtonChecked(hDlg, IDC_START_SHORTCUT)) {
+
+        YORI_STRING YoriExeFullPath;
+        YORI_STRING ShortcutNameFullPath;
+        YORI_STRING RelativeShortcutName;
+        YORI_STRING Description;
+
+        YoriLibInitEmptyString(&YoriExeFullPath);
+        YoriLibInitEmptyString(&ShortcutNameFullPath);
+        YoriLibConstantString(&Description, _T("Yori"));
+
+        YoriLibYPrintf(&YoriExeFullPath, _T("%y\\yori.exe"), &InstallDir);
+        if (YoriExeFullPath.StartOfString == NULL) {
+            MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
+            goto Exit;
+        }
+
+        if (IsDlgButtonChecked(hDlg, IDC_DESKTOP_SHORTCUT)) {
+            YoriLibConstantString(&RelativeShortcutName, _T("~Desktop\\Yori.lnk"));
+            if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath)) {
+                YoriLibFreeStringContents(&YoriExeFullPath);
+                MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
+                goto Exit;
+            }
+            if (!YoriLibCreateShortcut(&ShortcutNameFullPath, &YoriExeFullPath, NULL, &Description, NULL, NULL, 0, 0, 0, TRUE, TRUE)) {
+                YoriLibFreeStringContents(&YoriExeFullPath);
+                YoriLibFreeStringContents(&ShortcutNameFullPath);
+                MessageBox(hDlg, _T("Failed to create desktop shortcut."), _T("Installation failed."), MB_ICONSTOP);
+                goto Exit;
+            }
+
+            YoriLibFreeStringContents(&ShortcutNameFullPath);
+        }
+
+        if (IsDlgButtonChecked(hDlg, IDC_DESKTOP_SHORTCUT)) {
+            YoriLibConstantString(&RelativeShortcutName, _T("~Programs\\Yori.lnk"));
+            if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath)) {
+                YoriLibFreeStringContents(&YoriExeFullPath);
+                MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
+                goto Exit;
+            }
+            if (!YoriLibCreateShortcut(&ShortcutNameFullPath, &YoriExeFullPath, NULL, &Description, NULL, NULL, 0, 0, 0, TRUE, TRUE)) {
+                YoriLibFreeStringContents(&YoriExeFullPath);
+                YoriLibFreeStringContents(&ShortcutNameFullPath);
+                MessageBox(hDlg, _T("Failed to create start menu shortcut."), _T("Installation failed."), MB_ICONSTOP);
+                goto Exit;
+            }
+
+            YoriLibFreeStringContents(&ShortcutNameFullPath);
+        }
+
+        YoriLibFreeStringContents(&YoriExeFullPath);
+    }
+
+    //
+    //  Update paths if requested
+    //
+
+    if (IsDlgButtonChecked(hDlg, IDC_USER_PATH)) {
+        SetupAppendPath(HKEY_CURRENT_USER, _T("Environment"), _T("Path"), &InstallDir);
+    }
+
+    if (IsDlgButtonChecked(hDlg, IDC_SYSTEM_PATH)) {
+        SetupAppendPath(HKEY_LOCAL_MACHINE, _T("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"), _T("Path"), &InstallDir);
+    }
+
+    if (IsDlgButtonChecked(hDlg, IDC_USER_PATH) ||
+        IsDlgButtonChecked(hDlg, IDC_SYSTEM_PATH)) {
+
+        DWORD_PTR NotifyResult;
+        SendMessageTimeout(HWND_BROADCAST, WM_WININICHANGE, 0, (LPARAM)_T("Environment"), SMTO_NORMAL, 200, &NotifyResult);
+    }
+
+    SetDlgItemText(hDlg, IDC_STATUS, _T("Installation complete."));
     MessageBox(hDlg, _T("Installation complete."), _T("Installation complete."), MB_ICONINFORMATION);
     Result = TRUE;
 Exit:
@@ -224,6 +393,7 @@ Exit:
     }
     YoriLibDereference(PackageUrls);
     YoriLibFreeStringContents(&InstallDir);
+    YoriLibFreeStringContents(&StatusText);
     YoriLibFree(PkgNames);
     return Result;
 }

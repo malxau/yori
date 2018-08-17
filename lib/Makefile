@@ -38,6 +38,7 @@ OBJS=\
 	 path.obj     \
 	 printf.obj   \
 	 printfa.obj  \
+	 scut.obj     \
 	 string.obj   \
 	 update.obj   \
 	 util.obj     \

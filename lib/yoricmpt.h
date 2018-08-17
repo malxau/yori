@@ -1927,6 +1927,321 @@ typedef ULONG STDMETHODCALLTYPE IUnknown_Release (PVOID This);
 #define CLSCTX_INPROC_SERVER 0x1
 
 /**
+ The IPersistFile interface, composed of a pointer to a set of functions.
+ */
+typedef struct IPersistFile {
+
+    /**
+     The function pointer table associated with this object.
+     */
+     struct IPersistFileVtbl *Vtbl;
+} IPersistFile;
+
+/**
+ Indicates the GUID of the class implementing the functionality.
+ */
+typedef HRESULT STDMETHODCALLTYPE IPersistFile_GetClassID (IPersistFile * This, GUID *pClassID);
+
+/**
+ Indicates whether the object has been modified since it was last written
+ to disk.
+ */
+typedef HRESULT STDMETHODCALLTYPE IPersistFile_IsDirty (IPersistFile * This);
+
+/**
+ Load the object from disk.
+ */
+typedef HRESULT STDMETHODCALLTYPE IPersistFile_Load (IPersistFile * This, LPCWSTR pszFileName, DWORD dwMode);
+
+/**
+ Save the object to disk.
+ */
+typedef HRESULT STDMETHODCALLTYPE IPersistFile_Save (IPersistFile * This, LPCWSTR pszFileName, BOOL fRemember);
+
+/**
+ Indicate that a save has completed and the object can be modified again.
+ */
+typedef HRESULT STDMETHODCALLTYPE IPersistFile_SaveCompleted (IPersistFile * This, LPCWSTR pszFileName);
+
+/**
+ Get the current file name associated with the object.
+ */
+typedef HRESULT STDMETHODCALLTYPE IPersistFile_GetCurFile (IPersistFile * This, LPCWSTR *ppszFileName);
+    
+
+/**
+ A set of functions defined by the IPersistFile interface.
+ */
+typedef struct IPersistFileVtbl {
+
+    /**
+     Standard COM QueryInterface method.
+     */
+    IUnknown_QueryInterface * QueryInterface;
+
+    /**
+     Standard COM AddRef method.
+     */
+    IUnknown_AddRef * AddRef;
+
+    /**
+     Standard COM Release method.
+     */
+    IUnknown_Release * Release;
+    
+    /**
+     Indicates the GUID of the class implementing the functionality.
+     */
+    IPersistFile_GetClassID * GetClassID;
+
+    /**
+     Indicates whether the object has been modified since it was last written
+     to disk.
+     */
+    IPersistFile_IsDirty * IsDirty;
+
+    /**
+     Load the object from disk.
+     */
+    IPersistFile_Load * Load;
+
+    /**
+     Save the object to disk.
+     */
+    IPersistFile_Save * Save;
+
+    /**
+     Indicate that a save has completed and the object can be modified again.
+     */
+    IPersistFile_SaveCompleted * SaveCompleted;
+
+    /**
+     Get the current file name associated with the object.
+     */
+    IPersistFile_GetCurFile * GetCurFile;
+    
+} IPersistFileVtbl;
+
+/**
+ An instance of the IShellLink interface, consisting only of function pointers.
+ */
+typedef struct IShellLinkW {
+
+    /**
+     The function pointer table associated with this object.
+     */
+    struct IShellLinkWVtbl * Vtbl;
+} IShellLinkW;
+
+typedef struct IShellLinkWVtbl IShellLinkWVtbl;
+
+/**
+ Get the path to the target on a shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetPath (IShellLinkW * This, LPWSTR pszFile, int cchMaxPath, WIN32_FIND_DATAW *pfd, DWORD fFlags);
+
+/**
+ Get a PIDL associated with a shortcut.  Used for shortcuts to objects
+ other than files, and not used by this application.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetIDList (IShellLinkW * This, PVOID ppidl);
+
+/**
+ Set a PIDL to associate with a shortcut.  Used for shortcuts to objects
+ other than files, and not used by this application.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetIDList (IShellLinkW * This, PVOID pidl);
+
+/**
+ Get the description associated with the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetDescription (IShellLinkW * This, LPWSTR pszName, int cchMaxName);
+
+/**
+ Set a description to be associated with the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetDescription (IShellLinkW * This, LPCWSTR pszName);
+
+/**
+ Get the directory to make current when launching from the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetWorkingDirectory (IShellLinkW * This, LPWSTR pszDir, int cchMaxPath);
+
+/**
+ Set the directory to make current when launching from the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetWorkingDirectory (IShellLinkW * This, LPCWSTR pszDir);
+
+/**
+ Get the arguments (parameters) to pass to the object pointed to by the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetArguments (IShellLinkW * This, LPWSTR pszArgs, int cchMaxPath);
+
+/**
+ Set the arguments (parameters) to pass to the object pointed to by the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetArguments (IShellLinkW * This, LPCWSTR pszArgs);
+
+/**
+ Get the hotkey associated with the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetHotkey (IShellLinkW * This, WORD *pwHotkey);
+
+/**
+ Set the hotkey associated with the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetHotkey (IShellLinkW * This, WORD wHotkey);
+
+/**
+ Get the window display state to use when launching from the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetShowCmd (IShellLinkW * This, int *piShowCmd);
+
+/**
+ Set the window display state to use when launching from the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetShowCmd (IShellLinkW * This, int iShowCmd);
+
+/**
+ Get the location of the icon to use in the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_GetIconLocation (IShellLinkW * This, LPWSTR pszIconPath, int cchIconPath, int *piIcon);
+
+/**
+ Set the location of the icon to use in the shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetIconLocation (IShellLinkW * This, LPCWSTR pszIconPath, int iIcon);
+
+/**
+ Set a relative path on a shortcut.  Not used by this application.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetRelativePath (IShellLinkW * This, LPCWSTR pszPathRel, DWORD dwReserved);
+
+/**
+ Resolve a shell link (useful if the target has moved.)  Not used by this application.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_Resolve (IShellLinkW * This, HWND hwnd, DWORD fFlags);
+
+/**
+ Set the path to the target in a shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLink_SetPath (IShellLinkW * This, LPCWSTR pszFile);
+
+/**
+ A set of functions defined by the IShellLink interface.
+ */
+struct IShellLinkWVtbl {
+
+    /**
+     Standard COM QueryInterface method.
+     */
+    IUnknown_QueryInterface * QueryInterface;
+
+    /**
+     Standard COM AddRef method.
+     */
+    IUnknown_AddRef * AddRef;
+
+    /**
+     Standard COM Release method.
+     */
+    IUnknown_Release * Release;
+    
+
+    /**
+     Get the path to the target on a shortcut.
+     */
+    IShellLink_GetPath * GetPath;
+
+    /**
+     Get a PIDL associated with a shortcut.  Used for shortcuts to objects
+     other than files, and not used by this application.
+     */
+    IShellLink_GetIDList * GetIDList;
+
+    /**
+     Set a PIDL to associate with a shortcut.  Used for shortcuts to objects
+     other than files, and not used by this application.
+     */
+    IShellLink_SetIDList * SetIDList;
+
+    /**
+     Get the description associated with the shortcut.
+     */
+    IShellLink_GetDescription * GetDescription;
+
+    /**
+     Set a description to be associated with the shortcut.
+     */
+    IShellLink_SetDescription * SetDescription;
+
+    /**
+     Get the directory to make current when launching from the shortcut.
+     */
+    IShellLink_GetWorkingDirectory * GetWorkingDirectory;
+
+    /**
+     Set the directory to make current when launching from the shortcut.
+     */
+    IShellLink_SetWorkingDirectory * SetWorkingDirectory;
+
+    /**
+     Get the arguments (parameters) to pass to the object pointed to by the shortcut.
+     */
+    IShellLink_GetArguments * GetArguments;
+
+    /**
+     Set the arguments (parameters) to pass to the object pointed to by the shortcut.
+     */
+    IShellLink_SetArguments * SetArguments;
+
+    /**
+     Get the hotkey associated with the shortcut.
+     */
+    IShellLink_GetHotkey * GetHotkey;
+
+    /**
+     Set the hotkey associated with the shortcut.
+     */
+    IShellLink_SetHotkey * SetHotkey;
+
+    /**
+     Get the window display state to use when launching from the shortcut.
+     */
+    IShellLink_GetShowCmd * GetShowCmd;
+
+    /**
+     Set the window display state to use when launching from the shortcut.
+     */
+    IShellLink_SetShowCmd * SetShowCmd;
+
+    /**
+     Get the location of the icon to use in the shortcut.
+     */
+    IShellLink_GetIconLocation * GetIconLocation;
+
+    /**
+     Set the location of the icon to use in the shortcut.
+     */
+    IShellLink_SetIconLocation * SetIconLocation;
+
+    /**
+     Set a relative path on a shortcut.  Not used by this application.
+     */
+    IShellLink_SetRelativePath * SetRelativePath;
+
+    /**
+     Resolve a shell link (useful if the target has moved.)  Not used by this application.
+     */
+    IShellLink_Resolve * Resolve;
+
+    /**
+     Set the path to the target in a shortcut.
+     */
+    IShellLink_SetPath * SetPath;
+};
+
+/**
  A prototype for the NtQueryInformationProcess function..
  */
 typedef 

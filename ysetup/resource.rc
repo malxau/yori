@@ -31,7 +31,7 @@ FONT 8, "MS Sans Serif"
     CONTROL "Install source code", IDC_SOURCE,"Button",BS_CHECKBOX,240, 126, 120, 10
     CONTROL "Install debugging symbols", IDC_SYMBOLS,"Button",BS_CHECKBOX,240, 145, 120, 10
 
-    LTEXT "Please select installation options", IDC_STATUS, 12, 180, 380, 20
+    LTEXT "Please select installation options", IDC_STATUS, 12, 177, 380, 19
 
     DEFPUSHBUTTON "Install", IDC_OK, 8, 198, 50, 14
     PUSHBUTTON "Cancel", IDC_CANCEL, 68, 198, 50, 14

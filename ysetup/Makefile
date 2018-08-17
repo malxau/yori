@@ -14,7 +14,9 @@ CFLAGS=$(CFLAGS) /Fdysetup.pdb
 LINKPDB=/Pdb:ysetup.pdb
 !ENDIF
 
-LIBS=$(LIBS) user32.lib
+# This needs UI, Cabinet, WinInet, Shortcuts...realistically, pre-NT4
+# won't work here
+LIBS=$(LIBS) user32.lib advapi32.lib
 LDFLAGS_NT4UP=$(LDFLAGS:3.10=4.0)
 
 OBJS=\

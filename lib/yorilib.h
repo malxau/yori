@@ -1651,6 +1651,13 @@ YoriLibLocateExecutableInPath(
     );
 
 BOOL
+YoriLibAddEnvironmentComponentToString(
+    __inout PYORI_STRING ExistingString,
+    __in PYORI_STRING NewComponent,
+    __in BOOL InsertAtFront
+    );
+
+BOOL
 YoriLibAddEnvironmentComponent(
     __in LPTSTR EnvironmentVariable,
     __in PYORI_STRING NewComponent,
@@ -1758,6 +1765,23 @@ YoriLibAreAnsiEnvironmentStringsValid(
     __in PUCHAR AnsiEnvStringBuffer,
     __in DWORD BufferLength,
     __out PYORI_STRING UnicodeStrings
+    );
+
+// *** SCUT.C ***
+
+BOOL
+YoriLibCreateShortcut(
+    __in PYORI_STRING ShortcutFileName,
+    __in_opt PYORI_STRING Target,
+    __in_opt PYORI_STRING Arguments,
+    __in_opt PYORI_STRING Description,
+    __in_opt PYORI_STRING WorkingDir,
+    __in_opt PYORI_STRING IconPath,
+    __in DWORD IconIndex,
+    __in DWORD ShowState,
+    __in WORD Hotkey,
+    __in BOOL MergeWithExisting,
+    __in BOOL CreateNewIfNeeded
     );
 
 // *** STRING.C ***
