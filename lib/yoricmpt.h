@@ -3328,6 +3328,36 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
 extern YORI_SHELL32_FUNCTIONS DllShell32;
 
 /**
+ A prototype for the SHGetFolderPathW function.
+ */
+typedef
+HRESULT WINAPI
+SH_GET_FOLDER_PATHW(HWND, INT, HANDLE, DWORD, LPTSTR);
+
+/**
+ A prototype for a pointer to the SHGetFolderPathW function.
+ */
+typedef SH_GET_FOLDER_PATHW *PSH_GET_FOLDER_PATHW;
+
+/**
+ A structure containing optional function pointers to shfolder.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_SHFOLDER_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to SHGetFolderPathW.
+     */
+    PSH_GET_FOLDER_PATHW pSHGetFolderPathW;
+} YORI_SHFOLDER_FUNCTIONS, *PYORI_SHFOLDER_FUNCTIONS;
+
+extern YORI_SHFOLDER_FUNCTIONS DllShfolder;
+
+/**
  A prototype for the CloseClipboard function.
  */
 typedef

@@ -294,6 +294,34 @@ YoriLibLoadShell32Functions()
 }
 
 /**
+ A structure containing pointers to shfolder.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_SHFOLDER_FUNCTIONS DllShfolder;
+
+/**
+ Load pointers to all optional shfolder.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadShfolderFunctions()
+{
+
+    if (DllShfolder.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllShfolder.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("SHFOLDER.DLL"));
+    if (DllShfolder.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllShfolder.pSHGetFolderPathW = (PSH_GET_FOLDER_PATHW)GetProcAddress(DllShfolder.hDll, "SHGetFolderPathW");
+    return TRUE;
+}
+
+/**
  A structure containing pointers to user32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */

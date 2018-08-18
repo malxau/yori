@@ -898,7 +898,10 @@ YoriLibExpandShellDirectory(
 {
     YoriLibLoadShell32Functions();
     if (DllShell32.pSHGetSpecialFolderPathW == NULL) {
-        return FALSE;
+        YoriLibLoadShfolderFunctions();
+        if (DllShfolder.pSHGetFolderPathW == NULL) {
+            return FALSE;
+        }
     }
 
     if (!YoriLibAllocateString(ExpandedSymbol, MAX_PATH)) {
@@ -907,9 +910,16 @@ YoriLibExpandShellDirectory(
 
     ExpandedSymbol->StartOfString[0] = '\0';
 
-    if (DllShell32.pSHGetSpecialFolderPathW(NULL, ExpandedSymbol->StartOfString, FolderType, FALSE) < 0) {
-        YoriLibFreeStringContents(ExpandedSymbol);
-        return FALSE;
+    if (DllShell32.pSHGetSpecialFolderPathW != NULL) {
+        if (DllShell32.pSHGetSpecialFolderPathW(NULL, ExpandedSymbol->StartOfString, FolderType, FALSE) < 0) {
+            YoriLibFreeStringContents(ExpandedSymbol);
+            return FALSE;
+        }
+    } else {
+        if (!SUCCEEDED(DllShfolder.pSHGetFolderPathW(NULL, FolderType, NULL, 0, ExpandedSymbol->StartOfString))) {
+            YoriLibFreeStringContents(ExpandedSymbol);
+            return FALSE;
+        }
     }
 
     ExpandedSymbol->LengthInChars = _tcslen(ExpandedSymbol->StartOfString);

@@ -706,6 +706,9 @@ BOOL
 YoriLibLoadShell32Functions();
 
 BOOL
+YoriLibLoadShfolderFunctions();
+
+BOOL
 YoriLibLoadUser32Functions();
 
 BOOL
