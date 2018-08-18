@@ -96,6 +96,11 @@ YORI_LIST_ENTRY ActiveAllocationsList;
  */
 PYORI_SPECIAL_HEAP_HEADER RecentlyFreed[8];
 
+/**
+ A handle to a mutex to synchronize the debug heap.
+ */
+HANDLE DbgHeapMutex;
+
 #endif
 
 /**
@@ -118,6 +123,14 @@ YoriLibMalloc(
     PYORI_SPECIAL_HEAP_HEADER Header;
     PYORI_SPECIAL_HEAP_HEADER Commit;
     DWORD OldAccess;
+
+    if (DbgHeapMutex == NULL) {
+        DbgHeapMutex = CreateMutex(NULL, FALSE, NULL);
+    }
+
+    if (DbgHeapMutex == NULL) {
+        return NULL;
+    }
 
     if (ActiveAllocationsList.Next == NULL) {
         YoriLibInitializeListHead(&ActiveAllocationsList);
@@ -149,9 +162,11 @@ YoriLibMalloc(
     CaptureStackBackTrace(1, sizeof(Header->AllocateStack)/sizeof(Header->AllocateStack[0]), Header->AllocateStack, NULL);
 #endif
 
+    WaitForSingleObject(DbgHeapMutex, INFINITE);
     NumberAllocated++;
     BytesCurrentlyAllocated += Bytes;
     YoriLibAppendList(&ActiveAllocationsList, &Header->ListEntry);
+    ReleaseMutex(DbgHeapMutex);
 
     return (PUCHAR)Header + Header->OffsetToData;
 #endif
@@ -189,6 +204,9 @@ YoriLibFree(
     }
 
     BytesToFree = (Header->PagesInAllocation - 1) * PAGE_SIZE - Header->OffsetToData;
+
+    WaitForSingleObject(DbgHeapMutex, INFINITE);
+
     MyEntry = NumberFreed % (sizeof(RecentlyFreed)/sizeof(RecentlyFreed[0]));
     NumberFreed++;
     BytesCurrentlyAllocated -= BytesToFree;
@@ -216,6 +234,8 @@ YoriLibFree(
     }
 
     RecentlyFreed[MyEntry] = Header;
+
+    ReleaseMutex(DbgHeapMutex);
 
 #endif
 }
