@@ -95,6 +95,22 @@ typedef struct _COPY_EXCLUDE_ITEM {
 } COPY_EXCLUDE_ITEM, *PCOPY_EXCLUDE_ITEM;
 
 /**
+ A single item to compress.
+ */
+typedef struct _COPY_PENDING_COMPRESS {
+
+    /**
+     A list of files requiring compression.
+     */
+    YORI_LIST_ENTRY CompressList;
+
+    /**
+     A handle to the file to compress.
+     */
+    HANDLE hFile;
+} COPY_PENDING_COMPRESS, *PCOPY_PENDING_COMPRESS;
+
+/**
  A context passed between each source file match when copying multiple
  files.
  */
@@ -108,6 +124,43 @@ typedef struct _COPY_CONTEXT {
      Files matching any of the exclude rules will not be copied.
      */
     YORI_LIST_ENTRY ExcludeList;
+
+    /**
+     The list of files requiring compression.
+     */
+    YORI_LIST_ENTRY CompressList;
+
+    /**
+     A mutex to synchronize the list of files requiring compression.
+     */
+    HANDLE CompressListMutex;
+
+    /**
+     An event signalled when there is a file to be compressed inserted into
+     the list.
+     */
+    HANDLE CompressWorkerWaitEvent;
+
+    /**
+     An event signalled when compression threads should complete outstanding
+     work then terminate.
+     */
+    HANDLE CompressWorkerShutdownEvent;
+
+    /**
+     An array of handles to threads allocated to compress file contents.
+     */
+    HANDLE CompressThreads[4];
+
+    /**
+     The number of threads allocated to compress file contents.
+     */
+    DWORD CompressThreadsAllocated;
+
+    /**
+     The number of items currently queued in the list.
+     */
+    DWORD CompressItemsQueued;
 
     /**
      The file system attributes of the destination.  Used to determine if
@@ -377,27 +430,152 @@ CopyAsLink(
 }
 
 /**
+ Compress a single file.  This can be called on worker threads, or occasionally
+ on the main thread if the worker threads are backlogged.
+
+ @param PendingCompress Pointer to the object that needs to be compressed.
+        This structure is deallocated within this function.
+
+ @param CompressionAlgorithm Specifies the compression algorithm to compress
+        the file with.
+ 
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+CopyCompressSingleFile(
+    __in PCOPY_PENDING_COMPRESS PendingCompress,
+    __in DWORD CompressionAlgorithm
+    )
+{
+    DWORD BytesReturned;
+    BOOL Result = FALSE;
+
+    if (CompressionAlgorithm & 0xffff) {
+        USHORT Algorithm = (USHORT)CompressionAlgorithm;
+
+        Result = DeviceIoControl(PendingCompress->hFile,
+                                 FSCTL_SET_COMPRESSION,
+                                 &Algorithm,
+                                 sizeof(Algorithm),
+                                 NULL,
+                                 0,
+                                 &BytesReturned,
+                                 NULL);
+
+    } else {
+        struct {
+            WOF_EXTERNAL_INFO WofInfo;
+            FILE_PROVIDER_EXTERNAL_INFO FileInfo;
+        } CompressInfo;
+
+        ZeroMemory(&CompressInfo, sizeof(CompressInfo));
+        CompressInfo.WofInfo.Version = 1;
+        CompressInfo.WofInfo.Provider = WOF_PROVIDER_FILE;
+        CompressInfo.FileInfo.Version = 1;
+        CompressInfo.FileInfo.Algorithm = (CompressionAlgorithm >> 16);
+
+        Result = DeviceIoControl(PendingCompress->hFile,
+                                 FSCTL_SET_EXTERNAL_BACKING,
+                                 &CompressInfo,
+                                 sizeof(CompressInfo),
+                                 NULL,
+                                 0,
+                                 &BytesReturned,
+                                 NULL);
+    }
+
+    CloseHandle(PendingCompress->hFile);
+    YoriLibFree(PendingCompress);
+    return Result;
+
+}
+
+/**
+ A background thread which will attempt to compress any items that it finds on
+ a list of files requiring compression.
+
+ @param Context Pointer to the copy context.
+
+ @return TRUE to indicate success, FALSE to indicate one or more compression
+         operations failed.
+ */
+DWORD WINAPI
+CopyCompressWorker(
+    __in LPVOID Context
+    )
+{
+    PCOPY_CONTEXT CopyContext = (PCOPY_CONTEXT)Context;
+    DWORD FoundEvent;
+    PCOPY_PENDING_COMPRESS PendingCompress;
+    BOOL Result = TRUE;
+
+    while (TRUE) {
+
+        //
+        //  Wait for an indication of more work or shutdown.
+        //
+
+        FoundEvent = WaitForMultipleObjects(2, &CopyContext->CompressWorkerWaitEvent, FALSE, INFINITE);
+
+        //
+        //  Process any queued work.
+        //
+
+        while (TRUE) {
+            WaitForSingleObject(CopyContext->CompressListMutex, INFINITE);
+            if (!YoriLibIsListEmpty(&CopyContext->CompressList)) {
+                PendingCompress = CONTAINING_RECORD(CopyContext->CompressList.Next, COPY_PENDING_COMPRESS, CompressList);
+                ASSERT(CopyContext->CompressItemsQueued > 0);
+                CopyContext->CompressItemsQueued--;
+                YoriLibRemoveListItem(&PendingCompress->CompressList);
+                ReleaseMutex(CopyContext->CompressListMutex);
+
+                if (!CopyCompressSingleFile(PendingCompress, CopyContext->DestCompressionAlgorithm)) {
+                    Result = FALSE;
+                }
+
+            } else {
+                ASSERT(CopyContext->CompressItemsQueued == 0);
+                ReleaseMutex(CopyContext->CompressListMutex);
+                break;
+            }
+        }
+
+        //
+        //  If shutdown was requested, terminate the thread.
+        //
+
+        if (FoundEvent == (WAIT_OBJECT_0 + 1)) {
+            break;
+        }
+    }
+
+    return Result;
+}
+
+/**
  Compress a given file with a specified algorithm.  This routine will skip
  small files that do not benefit from compression.
 
- @param FileName Pointer to the file name to compress.
+ @param CopyContext Pointer to the copy context specifying where to queue
+        compression tasks and which compression algorithm to use.
 
- @param CompressionAlgorithm The compression algorithm to use.  Note this can
-        be an NTFS algorithm or a WOF algorithm (in the high 16 bits.)
+ @param FileName Pointer to the file name to compress.
 
  @return TRUE to indicate the file was successfully compressed, FALSE if it
          was not.
  */
 BOOL
 CopyCompressTarget(
-    __in PYORI_STRING FileName,
-    __in DWORD CompressionAlgorithm
+    __in PCOPY_CONTEXT CopyContext,
+    __in PYORI_STRING FileName
     )
 {
     HANDLE DestFileHandle;
-    DWORD BytesReturned;
+    DWORD ThreadId;
     BOOL Result = FALSE;
     BY_HANDLE_FILE_INFORMATION FileInfo;
+    PCOPY_PENDING_COMPRESS PendingCompress;
 
     DestFileHandle = CreateFile(FileName->StartOfString,
                                 FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
@@ -428,42 +606,60 @@ CopyCompressTarget(
         goto Exit;
     }
 
-    if (CompressionAlgorithm & 0xffff) {
-        USHORT Algorithm = (USHORT)CompressionAlgorithm;
+    PendingCompress = YoriLibMalloc(sizeof(COPY_PENDING_COMPRESS));
+    if (PendingCompress == NULL) {
+        goto Exit;
+    }
 
-        Result = DeviceIoControl(DestFileHandle,
-                                 FSCTL_SET_COMPRESSION,
-                                 &Algorithm,
-                                 sizeof(Algorithm),
-                                 NULL,
-                                 0,
-                                 &BytesReturned,
-                                 NULL);
+    PendingCompress->hFile = DestFileHandle;
+    DestFileHandle = NULL;
+    WaitForSingleObject(CopyContext->CompressListMutex, INFINITE);
+    if (CopyContext->CompressThreadsAllocated == 0 ||
+        (CopyContext->CompressItemsQueued > 4 && CopyContext->CompressThreadsAllocated < sizeof(CopyContext->CompressThreads)/sizeof(CopyContext->CompressThreads[0]))) {
 
-    } else {
-        struct {
-            WOF_EXTERNAL_INFO WofInfo;
-            FILE_PROVIDER_EXTERNAL_INFO FileInfo;
-        } CompressInfo;
+        CopyContext->CompressThreads[CopyContext->CompressThreadsAllocated] = CreateThread(NULL, 0, CopyCompressWorker, CopyContext, 0, &ThreadId);
+        if (CopyContext->CompressThreads[CopyContext->CompressThreadsAllocated] != NULL) {
+            CopyContext->CompressThreadsAllocated++;
+            if (CopyContext->Verbose) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Created compression thread %i\n"), CopyContext->CompressThreadsAllocated);
+            }
+        }
+    }
 
-        ZeroMemory(&CompressInfo, sizeof(CompressInfo));
-        CompressInfo.WofInfo.Version = 1;
-        CompressInfo.WofInfo.Provider = WOF_PROVIDER_FILE;
-        CompressInfo.FileInfo.Version = 1;
-        CompressInfo.FileInfo.Algorithm = (CompressionAlgorithm >> 16);
+    if (CopyContext->CompressThreadsAllocated > 0 &&
+        CopyContext->CompressItemsQueued <= 6) {
 
-        Result = DeviceIoControl(DestFileHandle,
-                                 FSCTL_SET_EXTERNAL_BACKING,
-                                 &CompressInfo,
-                                 sizeof(CompressInfo),
-                                 NULL,
-                                 0,
-                                 &BytesReturned,
-                                 NULL);
+        YoriLibAppendList(&CopyContext->CompressList, &PendingCompress->CompressList);
+        CopyContext->CompressItemsQueued++;
+        PendingCompress = NULL;
+    }
+
+    ReleaseMutex(CopyContext->CompressListMutex);
+
+    SetEvent(CopyContext->CompressWorkerWaitEvent);
+
+    Result = TRUE;
+
+    //
+    //  If the threads in the pool are all busy (we have more than 6 items
+    //  waiting) do the compression on the main thread.  This is mainly done
+    //  to prevent the main thread from continuing to pile in more items
+    //  that the pool can't get to.
+    //
+
+    if (PendingCompress != NULL) {
+        if (CopyContext->Verbose) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Compressing %y on main thread for back pressure\n"), FileName);
+        }
+        if (!CopyCompressSingleFile(PendingCompress, CopyContext->DestCompressionAlgorithm)) {
+            Result = FALSE;
+        }
     }
 
 Exit:
-    CloseHandle(DestFileHandle);
+    if (DestFileHandle != NULL) {
+        CloseHandle(DestFileHandle);
+    }
     return Result;
 }
 
@@ -618,7 +814,7 @@ CopyFileFoundCallback(
 
         if (CopyContext->CompressDest) {
 
-            CopyCompressTarget(&FullDest, CopyContext->DestCompressionAlgorithm);
+            CopyCompressTarget(CopyContext, &FullDest);
         }
     }
 
@@ -670,6 +866,76 @@ CopyEnableSymlinkPrivilege()
 }
 
 /**
+ Free the structures allocated within a copy context.  The structure itself
+ is on the stack and is not freed.  This will wait for any outstanding
+ compression work to complete.
+
+ @param CopyContext Pointer to the context to free.
+ */
+VOID
+CopyFreeCopyContext(
+    __in PCOPY_CONTEXT CopyContext
+    )
+{
+    if (CopyContext->CompressThreadsAllocated > 0) {
+        DWORD Index;
+        SetEvent(CopyContext->CompressWorkerShutdownEvent);
+        WaitForMultipleObjects(CopyContext->CompressThreadsAllocated, CopyContext->CompressThreads, TRUE, INFINITE);
+        for (Index = 0; Index < CopyContext->CompressThreadsAllocated; Index++) {
+            CloseHandle(CopyContext->CompressThreads[Index]);
+            CopyContext->CompressThreads[Index] = NULL;
+        }
+        ASSERT(YoriLibIsListEmpty(&CopyContext->CompressList));
+    }
+    if (CopyContext->CompressWorkerWaitEvent != NULL) {
+        CloseHandle(CopyContext->CompressWorkerWaitEvent);
+        CopyContext->CompressWorkerWaitEvent = NULL;
+    }
+    if (CopyContext->CompressWorkerShutdownEvent != NULL) {
+        CloseHandle(CopyContext->CompressWorkerShutdownEvent);
+        CopyContext->CompressWorkerShutdownEvent = NULL;
+    }
+    if (CopyContext->CompressListMutex != NULL) {
+        CloseHandle(CopyContext->CompressListMutex);
+        CopyContext->CompressListMutex = NULL;
+    }
+    YoriLibFreeStringContents(&CopyContext->Dest);
+    CopyFreeExcludes(CopyContext);
+}
+
+/**
+ Set up the copy context to contain support for the compression thread pool.
+
+ @param CopyContext Pointer to the copy context.
+
+ @return TRUE if the context was successfully initialized for compression,
+         FALSE if it was not.
+ */
+BOOL
+CopyEnableCompressionSupport(
+    __in PCOPY_CONTEXT CopyContext
+    )
+{
+    YoriLibInitializeListHead(&CopyContext->CompressList);
+    CopyContext->CompressWorkerWaitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (CopyContext->CompressWorkerWaitEvent == NULL) {
+        return FALSE;
+    }
+
+    CopyContext->CompressWorkerShutdownEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (CopyContext->CompressWorkerShutdownEvent == NULL) {
+        return FALSE;
+    }
+
+    CopyContext->CompressListMutex = CreateMutex(NULL, FALSE, NULL);
+    if (CopyContext->CompressListMutex == NULL) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
  The main entrypoint for the copy cmdlet.
 
  @param ArgC The number of arguments.
@@ -691,7 +957,6 @@ ymain(
     DWORD LastFileArg = 0;
     DWORD FirstFileArg = 0;
     DWORD MatchFlags;
-    BOOL AllocatedDest;
     BOOL BasicEnumeration;
     BOOL Recursive;
     DWORD i;
@@ -701,7 +966,6 @@ ymain(
 
     FileCount = 0;
     Recursive = FALSE;
-    AllocatedDest = FALSE;
     BasicEnumeration = FALSE;
     ZeroMemory(&CopyContext, sizeof(CopyContext));
 
@@ -776,17 +1040,16 @@ ymain(
 
     if (FileCount == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: argument missing\n"));
-        CopyFreeExcludes(&CopyContext);
+        CopyFreeCopyContext(&CopyContext);
         return EXIT_FAILURE;
     } else if (FileCount == 1) {
         YoriLibConstantString(&CopyContext.Dest, _T("."));
     } else {
         if (!YoriLibUserStringToSingleFilePath(&ArgV[LastFileArg], TRUE, &CopyContext.Dest)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &ArgV[LastFileArg]);
-            CopyFreeExcludes(&CopyContext);
+            CopyFreeCopyContext(&CopyContext);
             return EXIT_FAILURE;
         }
-        AllocatedDest = TRUE;
         FileCount--;
     }
 
@@ -806,7 +1069,7 @@ ymain(
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %y: %s"), &CopyContext.Dest, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
-                CopyFreeExcludes(&CopyContext);
+                CopyFreeCopyContext(&CopyContext);
                 return EXIT_FAILURE;
             }
             CopyContext.DestAttributes = GetFileAttributes(CopyContext.Dest.StartOfString);
@@ -814,6 +1077,13 @@ ymain(
 
         if (CopyContext.DestAttributes == 0xFFFFFFFF) {
             CopyContext.DestAttributes = 0;
+        }
+    }
+
+    if (CopyContext.CompressDest) {
+        if (!CopyEnableCompressionSupport(&CopyContext)) {
+            CopyFreeCopyContext(&CopyContext);
+            return EXIT_FAILURE;
         }
     }
     CopyContext.FilesCopied = 0;
@@ -848,10 +1118,7 @@ ymain(
         Result = EXIT_FAILURE;
     }
 
-    if (AllocatedDest) {
-        YoriLibFreeStringContents(&CopyContext.Dest);
-    }
-    CopyFreeExcludes(&CopyContext);
+    CopyFreeCopyContext(&CopyContext);
 
     return Result;
 }
