@@ -60,7 +60,7 @@ YoriPkgDeleteInstalledPackageFile(
             FileDeleted = TRUE;
             break;
         }
-        Sleep(50);
+        Sleep(20);
     }
 
     if (!FileDeleted) {

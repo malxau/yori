@@ -30,6 +30,12 @@
 #include "resource.h"
 
 /**
+ HWND_BROADCAST casts an integer to a pointer, which in 64 bit means
+ increasing the size.
+ */
+#pragma warning(disable: 4306)
+
+/**
  Help text to display to the user.
  */
 const
@@ -65,7 +71,7 @@ SetupInstallToDirectory(
     __in PYORI_STRING InstallDirectory
     )
 {
-    YORI_STRING PkgNames[3];
+    YORI_STRING PkgNames[4];
     DWORD SuccessCount = 0;
 
     YoriLibCreateDirectoryAndParents(InstallDirectory);
@@ -73,6 +79,7 @@ SetupInstallToDirectory(
     YoriLibConstantString(&PkgNames[0], _T("yori-ypm"));
     YoriLibConstantString(&PkgNames[1], _T("yori-core"));
     YoriLibConstantString(&PkgNames[2], _T("yori-typical"));
+    YoriLibConstantString(&PkgNames[3], _T("yori-completion"));
 
     SuccessCount = YoriPkgInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), InstallDirectory, NULL, NULL);
     if (SuccessCount == 3) {
@@ -170,6 +177,7 @@ SetupInstallSelectedFromDialog(
     PYORI_STRING PkgNames;
     PYORI_STRING PackageUrls;
     DWORD PkgCount;
+    DWORD PkgIndex;
     DWORD PkgUrlCount;
     BOOL Result = FALSE;
     enum {
@@ -228,6 +236,8 @@ SetupInstallSelectedFromDialog(
         PkgCount *= 2;
     }
 
+    PkgCount++;
+
     if (IsDlgButtonChecked(hDlg, IDC_SOURCE)) {
         PkgCount++;
     }
@@ -252,27 +262,37 @@ SetupInstallSelectedFromDialog(
         YoriLibConstantString(&PkgNames[1], _T("yori-ypm-pdb"));
         YoriLibConstantString(&PkgNames[2], _T("yori-core"));
         YoriLibConstantString(&PkgNames[3], _T("yori-core-pdb"));
+        PkgIndex = 4;
         if (InstallType >= InstallTypeTypical) {
             YoriLibConstantString(&PkgNames[4], _T("yori-typical"));
             YoriLibConstantString(&PkgNames[5], _T("yori-typical-pdb"));
+            PkgIndex = 6;
         }
         if (InstallType >= InstallTypeComplete) {
             YoriLibConstantString(&PkgNames[6], _T("yori-extra"));
             YoriLibConstantString(&PkgNames[7], _T("yori-extra-pdb"));
+            PkgIndex = 8;
         }
     } else {
         YoriLibConstantString(&PkgNames[0], _T("yori-ypm"));
         YoriLibConstantString(&PkgNames[1], _T("yori-core"));
+        PkgIndex = 2;
         if (InstallType >= InstallTypeTypical) {
             YoriLibConstantString(&PkgNames[2], _T("yori-typical"));
+            PkgIndex = 3;
         }
         if (InstallType >= InstallTypeComplete) {
             YoriLibConstantString(&PkgNames[3], _T("yori-extra"));
+            PkgIndex = 4;
         }
     }
 
+    YoriLibConstantString(&PkgNames[PkgIndex], _T("yori-completion"));
+    PkgIndex++;
+
     if (IsDlgButtonChecked(hDlg, IDC_SOURCE)) {
-        YoriLibConstantString(&PkgNames[PkgCount - 1], _T("yori-source"));
+        YoriLibConstantString(&PkgNames[PkgIndex], _T("yori-source"));
+        PkgIndex++;
     }
 
     //
@@ -281,7 +301,7 @@ SetupInstallSelectedFromDialog(
 
     YoriLibInitEmptyString(&StatusText);
     SetDlgItemText(hDlg, IDC_STATUS, _T("Obtaining package URLs..."));
-    PkgUrlCount = YoriPkgGetRemotePackageUrls(PkgNames, PkgCount, &InstallDir, &PackageUrls);
+    PkgUrlCount = YoriPkgGetRemotePackageUrls(PkgNames, PkgIndex, &InstallDir, &PackageUrls);
 
     if (PkgUrlCount != PkgCount) {
         MessageBox(hDlg, _T("Could not locate selected package files."), _T("Installation failed."), MB_ICONSTOP);
