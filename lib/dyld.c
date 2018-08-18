@@ -28,6 +28,44 @@
 #include "yorilib.h"
 
 /**
+ Load a DLL from the System32 directory.
+
+ @param DllName Pointer to the name of the DLL to load.
+
+ @return Module to the DLL, or NULL on failure.
+ */
+HMODULE
+YoriLibLoadLibraryFromSystemDirectory(
+    __in LPCTSTR DllName
+    )
+{
+    DWORD LengthRequired;
+    YORI_STRING YsDllName;
+    YORI_STRING FullPath;
+    HMODULE DllModule;
+
+    YoriLibConstantString(&YsDllName, DllName);
+    LengthRequired = GetSystemDirectory(NULL, 0);
+
+    if (!YoriLibAllocateString(&FullPath, LengthRequired + 1 + YsDllName.LengthInChars + 1)) {
+        return NULL;
+    }
+
+    FullPath.LengthInChars = GetSystemDirectory(FullPath.StartOfString, LengthRequired);
+    if (FullPath.LengthInChars == 0) {
+        YoriLibFreeStringContents(&FullPath);
+        return NULL;
+    }
+
+    FullPath.LengthInChars += YoriLibSPrintf(&FullPath.StartOfString[FullPath.LengthInChars], _T("\\%y"), &YsDllName);
+
+    DllModule = LoadLibrary(FullPath.StartOfString);
+
+    YoriLibFreeStringContents(&FullPath);
+    return DllModule;
+}
+
+/**
  A structure containing pointers to ntdll.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
@@ -128,7 +166,7 @@ YoriLibLoadAdvApi32Functions()
         return TRUE;
     }
 
-    DllAdvApi32.hDll = LoadLibrary(_T("ADVAPI32.DLL"));
+    DllAdvApi32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("ADVAPI32.DLL"));
     if (DllAdvApi32.hDll == NULL) {
         return FALSE;
     }
@@ -169,7 +207,7 @@ YoriLibLoadCabinetFunctions()
         return TRUE;
     }
 
-    DllCabinet.hDll = LoadLibrary(_T("CABINET.DLL"));
+    DllCabinet.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("CABINET.DLL"));
     if (DllCabinet.hDll == NULL) {
         return FALSE;
     }
@@ -204,7 +242,7 @@ YoriLibLoadOle32Functions()
         return TRUE;
     }
 
-    DllOle32.hDll = LoadLibrary(_T("OLE32.DLL"));
+    DllOle32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("OLE32.DLL"));
     if (DllOle32.hDll == NULL) {
         return FALSE;
     }
@@ -240,7 +278,7 @@ YoriLibLoadShell32Functions()
         return TRUE;
     }
 
-    DllShell32.hDll = LoadLibrary(_T("SHELL32.DLL"));
+    DllShell32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("SHELL32.DLL"));
     if (DllShell32.hDll == NULL) {
         return FALSE;
     }
@@ -273,7 +311,7 @@ YoriLibLoadUser32Functions()
         return TRUE;
     }
 
-    DllUser32.hDll = LoadLibrary(_T("USER32.DLL"));
+    DllUser32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("USER32.DLL"));
     if (DllUser32.hDll == NULL) {
         return FALSE;
     }
@@ -307,7 +345,7 @@ YoriLibLoadVersionFunctions()
         return TRUE;
     }
 
-    DllVersion.hDll = LoadLibrary(_T("VERSION.DLL"));
+    DllVersion.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("VERSION.DLL"));
     if (DllVersion.hDll == NULL) {
         return FALSE;
     }
