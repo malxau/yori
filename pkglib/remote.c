@@ -125,7 +125,7 @@ YoriPkgAllocateRemoteSource(
     YoriLibReference(RemoteSource);
     RemoteSource->SourcePkgList.MemoryToFree = RemoteSource;
     RemoteSource->SourcePkgList.StartOfString = (LPTSTR)YoriLibAddToPointer(RemoteSource->SourceRootUrl.StartOfString, (RemoteSource->SourceRootUrl.LengthInChars + 1) * sizeof(TCHAR));
-    if (YoriPkgIsPathRemote(&RemoteSource->SourceRootUrl)) {
+    if (YoriLibIsPathUrl(&RemoteSource->SourceRootUrl)) {
         RemoteSource->SourcePkgList.LengthInChars = YoriLibSPrintf(RemoteSource->SourcePkgList.StartOfString, _T("%y/pkglist.ini"), &RemoteSource->SourceRootUrl);
     } else {
         RemoteSource->SourcePkgList.LengthInChars = YoriLibSPrintf(RemoteSource->SourcePkgList.StartOfString, _T("%y\\pkglist.ini"), &RemoteSource->SourceRootUrl);
@@ -225,7 +225,7 @@ YoriPkgAllocateRemotePackage(
     YoriLibReference(Package);
     Package->InstallUrl.MemoryToFree = Package;
     Package->InstallUrl.StartOfString = WritePtr;
-    if (YoriPkgIsPathRemote(SourceRootUrl)) {
+    if (YoriLibIsPathUrl(SourceRootUrl)) {
         Package->InstallUrl.LengthInChars = YoriLibSPrintf(Package->InstallUrl.StartOfString, _T("%y/%y"), SourceRootUrl, RelativePackageUrl);
     } else {
         Package->InstallUrl.LengthInChars = YoriLibSPrintf(Package->InstallUrl.StartOfString, _T("%y\\%y"), SourceRootUrl, RelativePackageUrl);

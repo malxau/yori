@@ -54,11 +54,6 @@ YoriPkgGetPackageInfo(
     );
 
 BOOL
-YoriPkgIsPathRemote(
-    __in PYORI_STRING PackagePath
-    );
-
-BOOL
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,

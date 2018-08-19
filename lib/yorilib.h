@@ -2009,11 +2009,6 @@ YoriLibStringToDateTime(
 // *** UPDATE.C ***
 
 /**
- If creating a build that supports updating, the root of the update site
- */
-#define YORI_UPDATE_SITE "http://www.malsmith.net/download/?obj="
-
-/**
  A set of error codes that can be returned from update attempts.
  */
 typedef enum {
@@ -2071,6 +2066,11 @@ YoriLibFreeWinErrorText(
 BOOL
 YoriLibCreateDirectoryAndParents(
     __in PYORI_STRING DirName
+    );
+
+BOOL
+YoriLibIsPathUrl(
+    __in PYORI_STRING PackagePath
     );
 
 // vim:sw=4:ts=4:et:

@@ -827,7 +827,7 @@ YoriShWaitForProcessToTerminate(
             Result = WaitForMultipleObjects(2, WaitOn, FALSE, Delay);
         }
         if (Result == WAIT_OBJECT_0) {
-            
+
             //
             //  Once the process has completed, if it's outputting to
             //  buffers, wait for the buffers to contain final data.
@@ -1076,35 +1076,39 @@ YoriShExecuteSingleProgram(
     BOOLEAN LaunchFailed = FALSE;
     BOOLEAN LaunchViaShellExecute = FALSE;
 
-    szExt = YoriLibFindRightMostCharacter(&ExecContext->CmdToExec.ArgV[0], '.');
-    if (szExt != NULL) {
-        YORI_STRING YsExt;
+    if (YoriLibIsPathUrl(&ExecContext->CmdToExec.ArgV[0])) {
+        LaunchViaShellExecute = TRUE;
+       ExecContext->SuppressTaskCompletion = TRUE;
+    } else {
+        szExt = YoriLibFindRightMostCharacter(&ExecContext->CmdToExec.ArgV[0], '.');
+        if (szExt != NULL) {
+            YORI_STRING YsExt;
 
-        YoriLibInitEmptyString(&YsExt);
-        YsExt.StartOfString = szExt;
-        YsExt.LengthInChars = ExecContext->CmdToExec.ArgV[0].LengthInChars - (DWORD)(szExt - ExecContext->CmdToExec.ArgV[0].StartOfString);
+            YoriLibInitEmptyString(&YsExt);
+            YsExt.StartOfString = szExt;
+            YsExt.LengthInChars = ExecContext->CmdToExec.ArgV[0].LengthInChars - (DWORD)(szExt - ExecContext->CmdToExec.ArgV[0].StartOfString);
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
-            if (YoriShExecuteNamedModuleInProc(ExecContext->CmdToExec.ArgV[0].StartOfString, ExecContext, &ExitCode)) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
+                if (YoriShExecuteNamedModuleInProc(ExecContext->CmdToExec.ArgV[0].StartOfString, ExecContext, &ExitCode)) {
+                    ExecProcess = FALSE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
                 ExecProcess = FALSE;
+                ExitCode = YoriShBuckPass(ExecContext, 1, _T("ys"));
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
+                       YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
+                ExecProcess = FALSE;
+                YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
+                if (ExecContext->WaitForCompletion) {
+                    ExecContext->CaptureEnvironmentOnExit = TRUE;
+                }
+                ExitCode = YoriShBuckPass(ExecContext, 2, _T("cmd.exe"), _T("/c"));
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
+                LaunchViaShellExecute = TRUE;
+                ExecContext->SuppressTaskCompletion = TRUE;
             }
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
-            ExecProcess = FALSE;
-            ExitCode = YoriShBuckPass(ExecContext, 1, _T("ys"));
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
-                   YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
-            ExecProcess = FALSE;
-            YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
-            if (ExecContext->WaitForCompletion) {
-                ExecContext->CaptureEnvironmentOnExit = TRUE;
-            }
-            ExitCode = YoriShBuckPass(ExecContext, 2, _T("cmd.exe"), _T("/c"));
-        } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
-            LaunchViaShellExecute = TRUE;
-            ExecContext->SuppressTaskCompletion = TRUE;
         }
     }
-
 
     if (ExecProcess) {
 
@@ -1267,19 +1271,23 @@ YoriShExecExecPlan(
 
             ExecContext->StdOut.Buffer.ProcessBuffers = PreviouslyObservedOutputBuffer;
         }
-    
+
         if (YoriLibIsOperationCancelled()) {
             break;
         }
 
-        if (!YoriShResolveCommandToExecutable(&ExecContext->CmdToExec, &ExecutableFound)) {
-            break;
-        }
-
-        if (ExecutableFound) {
+        if (YoriLibIsPathUrl(&ExecContext->CmdToExec.ArgV[0])) {
             g_ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
         } else {
-            g_ErrorLevel = YoriShBuiltIn(ExecContext);
+            if (!YoriShResolveCommandToExecutable(&ExecContext->CmdToExec, &ExecutableFound)) {
+                break;
+            }
+
+            if (ExecutableFound) {
+                g_ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
+            } else {
+                g_ErrorLevel = YoriShBuiltIn(ExecContext);
+            }
         }
 
         if (ExecContext->TaskCompletionDisplayed) {
@@ -1422,7 +1430,7 @@ YoriShExecuteExpressionAndCaptureOutput(
                 ExecContext->WaitForCompletion = TRUE;
             }
         }
-    
+
         ExecContext = ExecContext->NextProgram;
     }
 

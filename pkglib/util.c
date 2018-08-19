@@ -199,30 +199,6 @@ YoriPkgGetPackageInfo(
 }
 
 /**
- Returns TRUE if the specified path is an Internet path that requires wininet.
- Technically this can return FALSE for paths that are still remote (SMB paths),
- but those are functionally the same as local paths.
-
- @param PackagePath Pointer to the path to check.
-
- @return TRUE if the path is an Internet path, FALSE if it is a local path.
- */
-BOOL
-YoriPkgIsPathRemote(
-    __in PYORI_STRING PackagePath
-    )
-{
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(PackagePath, _T("http://"), sizeof("http://") - 1) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitiveCount(PackagePath, _T("https://"), sizeof("https://") - 1) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitiveCount(PackagePath, _T("ftp://"), sizeof("ftp://") - 1) == 0) {
-
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-/**
  Expand a user specified package path into a full path if local, and compare
  the full path or URL against any mirrors in the INI file to determine if
  the path should be adjusted to refer to a mirrored location.
@@ -266,7 +242,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
         goto Exit;
     }
 
-    if (!YoriPkgIsPathRemote(PackagePath)) {
+    if (!YoriLibIsPathUrl(PackagePath)) {
         if (!YoriLibUserStringToSingleFilePath(PackagePath, FALSE, &HumanFullPath)) {
             goto Exit;
         }
@@ -369,7 +345,7 @@ YoriPkgPackagePathToLocalPath(
         YoriLibCloneString(&MirroredPath, PackagePath);
     }
 
-    if (YoriPkgIsPathRemote(&MirroredPath)) {
+    if (YoriLibIsPathUrl(&MirroredPath)) {
 
         YORI_STRING TempPath;
         YORI_STRING TempFileName;
