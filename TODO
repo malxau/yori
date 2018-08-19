@@ -1,7 +1,6 @@
  - Support input from devices other than consoles
  - $() backquote form
  - Search on input string
- - Simple search/replace on text streams (mini-sed)
  - If multithreaded copy works, ycompact that uses it
  - Generic cab compress + uncompress
  - Merge sdir recursion root and criteria arguments

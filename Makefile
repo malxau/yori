@@ -83,6 +83,7 @@ DIRS=crt       \
      pause     \
      pkglib    \
      readline  \
+     repl      \
      rmdir     \
      scut      \
      sdir      \

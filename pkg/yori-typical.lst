@@ -12,6 +12,7 @@ lines.exe
 nice.exe
 osver.exe
 readline.exe
+repl.exe
 scut.exe
 sdir.exe
 setver.exe

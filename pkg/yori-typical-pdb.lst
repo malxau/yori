@@ -12,6 +12,7 @@ lines.pdb
 nice.pdb
 osver.pdb
 readline.pdb
+repl.pdb
 scut.pdb
 sdir.pdb
 setver.pdb

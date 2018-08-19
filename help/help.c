@@ -80,6 +80,7 @@ CHAR strHelpText1[] =
         "EXIT      Exits the shell\n"
         "EXPR      Evaluate simple arithmetic expressions\n"
         "FALSE     Return false\n"
+        "FINFO     Output information about file metadata\n"
         "FG        Display the output of a background job in the foreground\n"
         "FOR       Enumerates through a list of strings or files\n"
         "FSCMP     Test for file system conditions\n"
@@ -92,6 +93,7 @@ CHAR strHelpText1[] =
         "ICONV     Convert the character encoding of one or more files\n"
         "IF        Execute a command to evaluate a condition\n"
         "INCLUDE   Include a script within another script (only valid in scripts)\n"
+        "INITOOL   Query or set values in INI files\n"
         "INTCMP    Compare two integer values\n"
         "JOB       Displays or updates background job status\n"
         "LINES     Count the number of lines in one or more files";
@@ -119,6 +121,7 @@ CHAR strHelpText2[] =
         "SDIR      Enumerate directories with color in a compact form\n"
         "SET       Displays or updates environment variables\n"
         "SETLOCAL  Push the current directory and environment onto a saved stack\n"
+        "SETVER    Lie about Windows version and launch a program\n"
         "SHIFT     Shift command arguments left by one (only valid in scripts)\n"
         "SLEEP     Waits for a specified number of seconds\n"
         "SPLIT     Split a file into pieces\n"
@@ -127,6 +130,7 @@ CHAR strHelpText2[] =
         "TAIL      Output the final lines of one or more files\n"
         "TEE       Output the contents of standard input to standard output and a file\n"
         "TITLE     Set the console window title\n"
+        "TOUCH     Create a file or update its timestamps\n"
         "TRUE      Returns true\n"
         "TYPE      Output the contents of one or more files\n"
         "VER       Outputs the Yori version in a specified format\n"
@@ -134,6 +138,7 @@ CHAR strHelpText2[] =
         "WAIT      Wait for one background job or all jobs to finish executing\n"
         "WHICH     Searches a semicolon delimited environment variable for a file\n"
         "YORI      Launch the Yori shell\n"
+        "YPM       Install, uninstall, or update software packages\n"
         "YS        Executes a Yori script\n"
         ;
 
