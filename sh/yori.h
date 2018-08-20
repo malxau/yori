@@ -374,6 +374,16 @@ typedef struct _YORI_TAB_COMPLETE_MATCH {
 } YORI_TAB_COMPLETE_MATCH, *PYORI_TAB_COMPLETE_MATCH;
 
 /**
+ A set of tab completion match types that can be performed.
+ */
+typedef enum _YORI_TAB_COMPLETE_SEARCH_TYPE {
+    YoriTabCompleteSearchExecutables = 1,
+    YoriTabCompleteSearchFiles = 2,
+    YoriTabCompleteSearchHistory = 3,
+    YoriTabCompleteSearchArguments = 4
+} YORI_TAB_COMPLETE_SEARCH_TYPE;
+
+/**
  Information about the state of tab completion.
  */
 typedef struct _YORI_TAB_COMPLETE_CONTEXT {
@@ -402,12 +412,7 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
     /**
      Indicates which data source to search through.
      */
-    enum {
-        YoriTabCompleteSearchExecutables = 1,
-        YoriTabCompleteSearchFiles = 2,
-        YoriTabCompleteSearchHistory = 3,
-        YoriTabCompleteSearchArguments = 4
-    } SearchType;
+    YORI_TAB_COMPLETE_SEARCH_TYPE SearchType;
 
     /**
      TRUE if later compares should be case sensitive.  This is used when
@@ -1160,18 +1165,17 @@ YoriShResolveCommandToExecutable(
     );
 
 BOOL
-YoriShFindBackquoteSubstring(
-    __in PYORI_STRING String,
-    __in DWORD StartingOffset,
-    __in BOOL RequireTerminator,
-    __out PYORI_STRING Substring
-    );
-
-BOOL
 YoriShFindNextBackquoteSubstring(
     __in PYORI_STRING String,
     __out PYORI_STRING CurrentSubset,
     __out PDWORD CharsInPrefix
+    );
+
+BOOL
+YoriShFindBestBackquoteSubstringAtOffset(
+    __in PYORI_STRING String,
+    __in DWORD StringOffset,
+    __out PYORI_STRING CurrentSubset
     );
 
 // *** PROMPT.C ***

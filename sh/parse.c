@@ -1819,6 +1819,7 @@ YoriShTerminateMatchingBackquoteEntry(
                 //
 
                 Entry->Abandoned = TRUE;
+                Entry->String.LengthInChars = Offset - Entry->StartingOffset;
                 ASSERT(BackquoteContext->CurrentDepth > 0);
                 BackquoteContext->CurrentDepth--;
             }
@@ -1958,108 +1959,64 @@ YoriShFindNextBackquoteSubstring(
     return FALSE;
 }
 
-
 /**
- Find a yori string corresponding to the substring in another string that
- is delimited by backquotes.  The substring is not referenced.
+ Given a string and a current selected offset within the string, find the
+ "best" backquote substring for tab completion.  This means the innermost
+ level of nesting that overlaps with the current selected offset.
 
- @param String The larger string to search through.
+ @param String The entire string to parse for backquotes.
 
- @param StartingOffset The offset within the larger string to commence
-        searching.
+ @param StringOffset The current offset within the string, in characters.
 
- @param RequireTerminator If TRUE, only return a substring if both the
-        beginning and ending operators are found.  If FALSE, assume the absence
-        of an ending operator implies the substring operates to the end of the
-        parent string.
-
- @param Substring On successful completion, populated with the start and length
-        of the backquote delimited substring.
+ @param CurrentSubset On successful completion, updated to contain the best
+        substring to use for tab completion.  Note this shares an allocation
+        with String, is not referenced, and is not NULL terminated.
 
  @return TRUE if a substring was found, FALSE if it was not.
  */
 BOOL
-YoriShFindBackquoteSubstring(
+YoriShFindBestBackquoteSubstringAtOffset(
     __in PYORI_STRING String,
-    __in DWORD StartingOffset,
-    __in BOOL RequireTerminator,
-    __out PYORI_STRING Substring
+    __in DWORD StringOffset,
+    __out PYORI_STRING CurrentSubset
     )
 {
+    YORI_SH_BACKQUOTE_CONTEXT BackquoteContext;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_SH_BACKQUOTE_ENTRY BackquoteEntry;
+    DWORD SeekingDepth;
 
-    LPTSTR FirstBackQuote;
-    LPTSTR SecondBackQuote;
-    DWORD Index;
-
-    //
-    //  Look to see if backquotes are present and note their locations
-    //  if they are.
-    //
-
-    FirstBackQuote = NULL;
-    SecondBackQuote = NULL;
-    for (Index = StartingOffset; Index < String->LengthInChars; Index++) {
-
-        //
-        //  If it's an escape, advance to the next character and ignore
-        //  its value, then continue processing from the next next
-        //  character.
-        //
-
-        if (YoriLibIsEscapeChar(String->StartOfString[Index])) {
-            Index++;
-            if (Index >= String->LengthInChars) {
-                break;
-            } else {
-                continue;
-            }
-        }
-
-        //
-        //  MSFIX
-        //   - Check for $( or ` and remember which is found
-        //   - If `, look for next non-escaped `
-        //     - If $( is found, forget the `
-        //       - In this case, what should happen if it's not terminated?
-        //   - If $(, look for next non-escaped )
-        //     - If $( is found, forget the first $(
-        //       - In this case, what should happen if it's not terminated?
-        //     - If ` is found, forget the first $(
-        //       - In this case, what should happen if it's not terminated?
-        //
-
-        if (String->StartOfString[Index] == '`') {
-            if (FirstBackQuote == NULL) {
-                FirstBackQuote = &String->StartOfString[Index];
-            } else {
-                SecondBackQuote = &String->StartOfString[Index];
-                break;
-            }
-        }
-    }
-
-    if (RequireTerminator && SecondBackQuote == NULL) {
-        FirstBackQuote = NULL;
-    }
-
-    //
-    //  If there are no more backquotes, expansion is complete, so return
-    //  the result.
-    //
-
-    if (FirstBackQuote == NULL) {
+    if (!YoriShParseBackquoteSubstrings(String, &BackquoteContext)) {
         return FALSE;
     }
 
-    YoriLibInitEmptyString(Substring);
-    Substring->StartOfString = FirstBackQuote + 1;
-    if (SecondBackQuote != NULL) {
-        Substring->LengthInChars = (DWORD)(SecondBackQuote - FirstBackQuote - 1);
-    } else {
-        Substring->LengthInChars = String->LengthInChars - (DWORD)(FirstBackQuote - String->StartOfString) - 1;
+    for (SeekingDepth = BackquoteContext.MaxDepth; SeekingDepth > 0; SeekingDepth--) {
+
+        ListEntry = YoriLibGetNextListEntry(&BackquoteContext.MatchList, NULL);
+        while (ListEntry != NULL) {
+            BackquoteEntry = CONTAINING_RECORD(ListEntry, YORI_SH_BACKQUOTE_ENTRY, MatchList);
+
+            //
+            //  For tab completion, it doesn't matter if the substring is
+            //  terminated, abandoned or neither.  The assumption is that
+            //  substrings on the same depth can't overlap, so if we search
+            //  from the deepest level to the shallowest level, the first
+            //  overlapping range is the "right" one.
+            //
+
+            if (BackquoteEntry->TreeDepth == SeekingDepth &&
+                StringOffset >= BackquoteEntry->StartingOffset &&
+                StringOffset <= BackquoteEntry->StartingOffset + BackquoteEntry->String.LengthInChars) {
+                memcpy(CurrentSubset, &BackquoteEntry->String, sizeof(YORI_STRING));
+                YoriShFreeBackquoteContext(&BackquoteContext);
+                return TRUE;
+            }
+            ListEntry = YoriLibGetNextListEntry(&BackquoteContext.MatchList, ListEntry);
+        }
     }
 
-    return TRUE;
+    YoriShFreeBackquoteContext(&BackquoteContext);
+    return FALSE;
 }
 
 

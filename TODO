@@ -1,5 +1,4 @@
  - Support input from devices other than consoles
- - $() backquote form
  - Search on input string
  - If multithreaded copy works, ycompact that uses it
  - Generic cab compress + uncompress
