@@ -1243,11 +1243,6 @@ YoriLibAddEnvironmentComponent(
     EnvData.StartOfString[0] = '\0';
     EnvData.LengthInChars = GetEnvironmentVariable(EnvironmentVariable, EnvData.StartOfString, EnvData.LengthAllocated);
 
-    if (EnvData.LengthInChars == 0) {
-        YoriLibFreeStringContents(&EnvData);
-        return FALSE;
-    }
-
     if (!YoriLibAddEnvironmentComponentToString(&EnvData, NewComponent, InsertAtFront)) {
         YoriLibFreeStringContents(&EnvData);
         return TRUE;
