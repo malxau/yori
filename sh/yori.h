@@ -1167,6 +1167,13 @@ YoriShFindBackquoteSubstring(
     __out PYORI_STRING Substring
     );
 
+BOOL
+YoriShFindNextBackquoteSubstring(
+    __in PYORI_STRING String,
+    __out PYORI_STRING CurrentSubset,
+    __out PDWORD CharsInPrefix
+    );
+
 // *** PROMPT.C ***
 BOOL
 YoriShDisplayPrompt();

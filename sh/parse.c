@@ -1566,6 +1566,399 @@ YoriShResolveCommandToExecutable(
     return TRUE;
 }
 
+
+/**
+ A structure describing a single substring within a master string that is
+ encompassed by backquote operators.
+ */
+typedef struct _YORI_SH_BACKQUOTE_ENTRY {
+
+    /**
+     The links of all matches encountered while parsing the string.
+     */
+    YORI_LIST_ENTRY MatchList;
+
+    /**
+     The substring within the master string of this backquote pair.  This is
+     not referenced and is not NULL terminated.
+     */
+    YORI_STRING String;
+
+    /**
+     Indicates the starting offset from the master string, in characters.
+     This could also be calculated from the String value's StartOfString
+     member compared to the master string, but keeping it in integer form
+     is convenient.
+     */
+    DWORD StartingOffset;
+
+    /**
+     Indicates the level of nesting of this match.  Higher numbers indicate
+     more nesting and should be executed earlier.
+     */
+    DWORD TreeDepth;
+
+    /**
+     Set to TRUE if this is a new style entry, aka $(foo) form.  Matches
+     such as `foo` will have this be FALSE.
+     */
+    BOOL NewStyleMatch;
+
+    /**
+     Set to TRUE to indicate this entry has found an opening and closing
+     operator, and the string is updated to contain the contents in
+     between.
+     */
+    BOOL Terminated;
+
+    /**
+     Set to TRUE if this entry has been closed implicitly by encountering
+     an operator that fails to complete it.  In this state it is not
+     something that can be executed, but it is recorded for the benefit
+     of tab completion.
+     */
+    BOOL Abandoned;
+} YORI_SH_BACKQUOTE_ENTRY, *PYORI_SH_BACKQUOTE_ENTRY;
+
+
+/**
+ Conceptually a tree structured as a list of backquoted sequences discovered
+ within a flat string.  The depth of the tree corresponds to the level of
+ nesting; the first item of the deepest level is evaluated first, then
+ the next item at that level, working back through the levels until none
+ remains.
+ */
+typedef struct _YORI_SH_BACKQUOTE_CONTEXT {
+
+    /**
+     A list of elements within the tree.
+     */
+    YORI_LIST_ENTRY MatchList;
+
+    /**
+     The number of elements within the tree.
+     */
+    DWORD MatchCount;
+
+    /**
+     The maximum depth of any entry within the tree.
+     */
+    DWORD MaxDepth;
+
+    /**
+     The current depth of the tree (number of opens minus number of closes)
+     */
+    DWORD CurrentDepth;
+} YORI_SH_BACKQUOTE_CONTEXT, *PYORI_SH_BACKQUOTE_CONTEXT;
+
+/**
+ Free all entries within a backquote context structure and prepare it for
+ reuse.  Note this does not free the backquote context structure itself,
+ which is frequently on the stack.
+
+ @param BackquoteContext Pointer to the context to free all suballocations
+        from.
+ */
+VOID
+YoriShFreeBackquoteContext(
+    __in PYORI_SH_BACKQUOTE_CONTEXT BackquoteContext
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_SH_BACKQUOTE_ENTRY BackquoteEntry;
+
+    ListEntry = YoriLibGetNextListEntry(&BackquoteContext->MatchList, NULL);
+    while (ListEntry != NULL) {
+        BackquoteEntry = CONTAINING_RECORD(ListEntry, YORI_SH_BACKQUOTE_ENTRY, MatchList);
+        ASSERT(BackquoteContext->MatchCount > 0);
+        BackquoteContext->MatchCount--;
+        YoriLibRemoveListItem(&BackquoteEntry->MatchList);
+        YoriLibDereference(BackquoteEntry);
+        
+        ListEntry = YoriLibGetNextListEntry(&BackquoteContext->MatchList, NULL);
+    }
+
+    ASSERT(BackquoteContext->MatchCount == 0);
+    BackquoteContext->MaxDepth = 0;
+    BackquoteContext->CurrentDepth = 0;
+}
+
+/**
+ Allocate an entry that can describe a substring within the main string
+ representing the text between two backquote operators.
+
+ @param BackquoteContext Pointer to the backquote context describing the
+        set of things found in the string so far.  On success, the new
+        allocation will be linked into this structure.
+
+ @param CompleteString Pointer to the master string being parsed.
+
+ @param Offset Specifies the beginning of this substring from the master
+        string, in characters.
+
+ @param NewStyleMatch If TRUE, specifies that the substring takes $(foo) form.
+        If FALSE, the substring takes `foo` form.
+
+ @return On success, a pointer to the newly allocated entry.  On failure,
+         returns NULL.
+ */
+PYORI_SH_BACKQUOTE_ENTRY
+YoriShAllocateBackquoteEntry(
+    __in PYORI_SH_BACKQUOTE_CONTEXT BackquoteContext,
+    __in PYORI_STRING CompleteString,
+    __in DWORD Offset,
+    __in BOOL NewStyleMatch
+    )
+{
+    PYORI_SH_BACKQUOTE_ENTRY BackquoteEntry;
+
+    BackquoteEntry = YoriLibReferencedMalloc(sizeof(YORI_SH_BACKQUOTE_ENTRY));
+    if (BackquoteEntry == NULL) {
+        return NULL;
+    }
+
+    BackquoteContext->CurrentDepth++;
+    BackquoteContext->MatchCount++;
+
+    YoriLibInitializeListHead(&BackquoteEntry->MatchList);
+    YoriLibInitEmptyString(&BackquoteEntry->String);
+    BackquoteEntry->String.StartOfString = &CompleteString->StartOfString[Offset];
+    BackquoteEntry->String.LengthInChars = CompleteString->LengthInChars - Offset;
+    BackquoteEntry->NewStyleMatch = NewStyleMatch;
+    BackquoteEntry->TreeDepth = BackquoteContext->CurrentDepth;
+    BackquoteEntry->StartingOffset = Offset;
+    BackquoteEntry->Terminated = FALSE;
+    BackquoteEntry->Abandoned = FALSE;
+
+    if (BackquoteEntry->TreeDepth > BackquoteContext->MaxDepth) {
+        BackquoteContext->MaxDepth = BackquoteEntry->TreeDepth;
+    }
+
+    YoriLibAppendList(&BackquoteContext->MatchList, &BackquoteEntry->MatchList);
+
+    return BackquoteEntry;
+}
+
+/**
+ Indicate that a character was found which may indicate the termination of
+ a previously opened substring that requires execution.  Note that in the
+ case of the ` operator, it is ambiguous whether it represents the start or
+ the end of a substring, so this function is always called to determine
+ whether it is ending a previously opened substring, and if not, a new
+ substring is opened.
+
+ @param BackquoteContext Pointer to the context describing currently found
+        backquotes to check for a matching, non-terminated substring.
+
+ @param Offset The offset within the main string of the termination character.
+
+ @param NewStyleMatch TRUE if the operator is of $(foo) form; FALSE if it is
+        of `foo` form.  This is required to check which previously opened
+        substrings should be matched against the terminator.
+
+ @return If a matching substring was found, returns a pointer to the substring
+         entry.  If no matching substring was found, returns NULL.
+ */
+PYORI_SH_BACKQUOTE_ENTRY
+YoriShTerminateMatchingBackquoteEntry(
+    __in PYORI_SH_BACKQUOTE_CONTEXT BackquoteContext,
+    __in DWORD Offset,
+    __in BOOL NewStyleMatch
+    )
+{
+
+    //
+    //  Note this function wants to implicitly remove entries that were
+    //  not terminated by the found character.  For example, $(`) means
+    //  that the ` should be removed when ) is found, leaving ` as
+    //  something not currently active so the next character will reopen
+    //  it.
+    //
+
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_SH_BACKQUOTE_ENTRY Entry;
+
+    ListEntry = YoriLibGetPreviousListEntry(&BackquoteContext->MatchList, NULL);
+    while(ListEntry != NULL) {
+
+        Entry = CONTAINING_RECORD(ListEntry, YORI_SH_BACKQUOTE_ENTRY, MatchList);
+        if (!Entry->Terminated && !Entry->Abandoned) {
+            if (NewStyleMatch == Entry->NewStyleMatch) {
+
+                //
+                //  If a termination character was found that matches a non-
+                //  terminated opened substring, we have a match, so return
+                //  it.
+                //
+
+                Entry->Terminated = TRUE;
+                Entry->String.LengthInChars = Offset - Entry->StartingOffset;
+                ASSERT(BackquoteContext->CurrentDepth > 0);
+                BackquoteContext->CurrentDepth--;
+                return Entry;
+            } else if (!NewStyleMatch) {
+
+                //
+                //  If this character is ` but the previously non-terminated
+                //  substring is $(, this implies the beginning of a new
+                //  substring.
+                //
+
+                return NULL;
+            } else {
+
+                //
+                //  If this character is ) and the previously non-terminated
+                //  substring is `, this implies the earlier substring has
+                //  not been completed correctly.  This is a syntax error,
+                //  and it is handled by treating the ` as a literal character
+                //  and not attempting to execute any substring.  It is
+                //  retained in the structure for the benefit of tab
+                //  completion, which may want to reason about substrings that
+                //  are not yet complete.
+                //
+
+                Entry->Abandoned = TRUE;
+                ASSERT(BackquoteContext->CurrentDepth > 0);
+                BackquoteContext->CurrentDepth--;
+            }
+        }
+
+        ListEntry = YoriLibGetPreviousListEntry(&BackquoteContext->MatchList, ListEntry);
+    }
+
+    return NULL;
+}
+
+/**
+ Parse a master string into a tree structure of substrings which require
+ execution.
+
+ @param String Pointer to the master string.
+
+ @param BackquoteContext Pointer to a structure which will be populated within
+        this routine containing the set of substrings and their ranges.
+
+ @return TRUE if the master string has been successfully resolved to a series
+         of substrings; FALSE if an error occurred.
+ */
+BOOL
+YoriShParseBackquoteSubstrings(
+    __in PYORI_STRING String,
+    __out PYORI_SH_BACKQUOTE_CONTEXT BackquoteContext
+    )
+{
+    PYORI_SH_BACKQUOTE_ENTRY Entry;
+    DWORD Index;
+
+    YoriLibInitializeListHead(&BackquoteContext->MatchList);
+    BackquoteContext->MatchCount = 0;
+    BackquoteContext->MaxDepth = 0;
+    BackquoteContext->CurrentDepth = 0;
+
+    for (Index = 0; Index < String->LengthInChars; Index++) {
+
+        //
+        //  If it's an escape, advance to the next character and ignore
+        //  its value, then continue processing from the next next
+        //  character.
+        //
+
+        if (YoriLibIsEscapeChar(String->StartOfString[Index])) {
+            Index++;
+            if (Index >= String->LengthInChars) {
+                break;
+            } else {
+                continue;
+            }
+        }
+
+        if (String->StartOfString[Index] == '`') {
+            if (!YoriShTerminateMatchingBackquoteEntry(BackquoteContext, Index, FALSE)) {
+                Entry = YoriShAllocateBackquoteEntry(BackquoteContext, String, Index + 1, FALSE);
+                if (Entry == NULL) {
+                    break;
+                }
+
+            }
+        } else if (String->StartOfString[Index] == ')') {
+            YoriShTerminateMatchingBackquoteEntry(BackquoteContext, Index, TRUE);
+        } else if (String->StartOfString[Index] == '$' &&
+                   Index + 1 < String->LengthInChars &&
+                   String->StartOfString[Index + 1] == '(') {
+
+            Entry = YoriShAllocateBackquoteEntry(BackquoteContext, String, Index + 2, TRUE);
+            if (Entry == NULL) {
+                break;
+            }
+        }
+    }
+
+    if (Index == String->LengthInChars) {
+        return TRUE;
+    } else {
+        YoriShFreeBackquoteContext(BackquoteContext);
+        return FALSE;
+    }
+}
+
+
+/**
+ Search through a string and return the next backquote substring to execute.
+ If no backquote substrings requiring execution are found, this function
+ returns FALSE.
+
+ @param String Pointer to the string to process.
+
+ @param CurrentSubset On successful completion, updated to point to the next
+        substring to execute.
+
+ @param CharsInPrefix On successful completion, updated to indicate the number
+        of characters before the CurrentSubset were used to indicate its
+        commencement.  This allows the caller to regenerate a new string with
+        contents substituted.
+
+ @return TRUE if there is a substring to execute, FALSE if there is not.
+ */
+BOOL
+YoriShFindNextBackquoteSubstring(
+    __in PYORI_STRING String,
+    __out PYORI_STRING CurrentSubset,
+    __out PDWORD CharsInPrefix
+    )
+{
+    YORI_SH_BACKQUOTE_CONTEXT BackquoteContext;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_SH_BACKQUOTE_ENTRY BackquoteEntry;
+    DWORD SeekingDepth;
+    if (!YoriShParseBackquoteSubstrings(String, &BackquoteContext)) {
+        return FALSE;
+    }
+
+    for (SeekingDepth = BackquoteContext.MaxDepth; SeekingDepth > 0; SeekingDepth--) {
+
+        ListEntry = YoriLibGetNextListEntry(&BackquoteContext.MatchList, NULL);
+        while (ListEntry != NULL) {
+            BackquoteEntry = CONTAINING_RECORD(ListEntry, YORI_SH_BACKQUOTE_ENTRY, MatchList);
+            if (BackquoteEntry->Terminated && BackquoteEntry->TreeDepth == SeekingDepth) {
+                memcpy(CurrentSubset, &BackquoteEntry->String, sizeof(YORI_STRING));
+                if (BackquoteEntry->NewStyleMatch) {
+                    *CharsInPrefix = 2;
+                } else {
+                    *CharsInPrefix = 1;
+                }
+                YoriShFreeBackquoteContext(&BackquoteContext);
+                return TRUE;
+            }
+            ListEntry = YoriLibGetNextListEntry(&BackquoteContext.MatchList, ListEntry);
+        }
+    }
+
+    YoriShFreeBackquoteContext(&BackquoteContext);
+    return FALSE;
+}
+
+
 /**
  Find a yori string corresponding to the substring in another string that
  is delimited by backquotes.  The substring is not referenced.
@@ -1621,6 +2014,20 @@ YoriShFindBackquoteSubstring(
                 continue;
             }
         }
+
+        //
+        //  MSFIX
+        //   - Check for $( or ` and remember which is found
+        //   - If `, look for next non-escaped `
+        //     - If $( is found, forget the `
+        //       - In this case, what should happen if it's not terminated?
+        //   - If $(, look for next non-escaped )
+        //     - If $( is found, forget the first $(
+        //       - In this case, what should happen if it's not terminated?
+        //     - If ` is found, forget the first $(
+        //       - In this case, what should happen if it's not terminated?
+        //
+
         if (String->StartOfString[Index] == '`') {
             if (FirstBackQuote == NULL) {
                 FirstBackQuote = &String->StartOfString[Index];

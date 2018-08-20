@@ -1489,6 +1489,8 @@ YoriShExpandBackquotes(
     YORI_STRING TrailingPortion;
     YORI_STRING NewFullExpression;
 
+    DWORD CharsInBackquotePrefix;
+
     YoriLibInitEmptyString(&CurrentFullExpression);
     CurrentFullExpression.StartOfString = Expression->StartOfString;
     CurrentFullExpression.LengthInChars = Expression->LengthInChars;
@@ -1501,8 +1503,7 @@ YoriShExpandBackquotes(
         //  create commands that can nest further backticks?
         //
 
-
-        if (!YoriShFindBackquoteSubstring(&CurrentFullExpression, 0, TRUE, &CurrentExpressionSubset)) {
+        if (!YoriShFindNextBackquoteSubstring(&CurrentFullExpression, &CurrentExpressionSubset, &CharsInBackquotePrefix)) {
             break;
         }
 
@@ -1520,10 +1521,10 @@ YoriShExpandBackquotes(
         YoriLibInitEmptyString(&TrailingPortion);
 
         InitialPortion.StartOfString = CurrentFullExpression.StartOfString;
-        InitialPortion.LengthInChars = (DWORD)(CurrentExpressionSubset.StartOfString - CurrentFullExpression.StartOfString - 1);
+        InitialPortion.LengthInChars = (DWORD)(CurrentExpressionSubset.StartOfString - CurrentFullExpression.StartOfString - CharsInBackquotePrefix);
 
-        TrailingPortion.StartOfString = &CurrentFullExpression.StartOfString[InitialPortion.LengthInChars + CurrentExpressionSubset.LengthInChars + 2];
-        TrailingPortion.LengthInChars = CurrentFullExpression.LengthInChars - InitialPortion.LengthInChars - CurrentExpressionSubset.LengthInChars - 2;
+        TrailingPortion.StartOfString = &CurrentFullExpression.StartOfString[InitialPortion.LengthInChars + CurrentExpressionSubset.LengthInChars + 1 + CharsInBackquotePrefix];
+        TrailingPortion.LengthInChars = CurrentFullExpression.LengthInChars - InitialPortion.LengthInChars - CurrentExpressionSubset.LengthInChars - 1 - CharsInBackquotePrefix;
 
         if (!YoriLibAllocateString(&NewFullExpression, InitialPortion.LengthInChars + ProcessOutput.LengthInChars + TrailingPortion.LengthInChars + 1)) {
             YoriLibFreeStringContents(&CurrentFullExpression);

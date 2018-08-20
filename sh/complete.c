@@ -1445,6 +1445,13 @@ YoriShPerformArgumentTabCompletion(
     FoundInSubstring = FALSE;
     StartingOffset = 0;
     while(TRUE) {
+
+        //
+        //  MSFIX Need to rethink this for $( backquotes.  Here it's not
+        //  guaranteed that backquote regions can be determined by just
+        //  scanning forward.
+        //
+
         if (!YoriShFindBackquoteSubstring(RawCommandString, StartingOffset, FALSE, &BackquoteSubstring)) {
             break;
         }
