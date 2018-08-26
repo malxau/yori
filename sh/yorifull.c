@@ -122,6 +122,11 @@ YORI_CMD_BUILTIN YoriCmd_WAIT;
 YORI_CMD_BUILTIN YoriCmd_YS;
 
 /**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_Z;
+
+/**
  The list of builtin commands supported by this build of Yori.
  */
 CONST YORI_BUILTIN_NAME_MAPPING
@@ -145,6 +150,7 @@ YoriShBuiltins[] = {
                     {_T("VER"),       YoriCmd_VER},
                     {_T("WAIT"),      YoriCmd_WAIT},
                     {_T("YS"),        YoriCmd_YS},
+                    {_T("Z"),         YoriCmd_Z},
                     {NULL,            NULL}
                    };
 

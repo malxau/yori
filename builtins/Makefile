@@ -20,6 +20,7 @@ MODULES =  alias.com     \
            ver.com       \
            wait.com      \
            ys.com        \
+           z.com         \
 
 BUILTINS = alias.obj     \
            builtin.obj   \
@@ -39,6 +40,7 @@ BUILTINS = alias.obj     \
            ver.obj       \
            wait.obj      \
            ys.obj        \
+           z.obj         \
 
 link: compile $(MODULES)
 
