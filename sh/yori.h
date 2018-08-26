@@ -628,6 +628,7 @@ typedef struct _YORI_BUILTIN_NAME_MAPPING {
     PYORI_CMD_BUILTIN BuiltinFn;
 } YORI_BUILTIN_NAME_MAPPING, *PYORI_BUILTIN_NAME_MAPPING;
 
+
 /**
  A structure containing information about a currently loaded DLL.
  */
@@ -643,6 +644,11 @@ typedef struct _YORI_LOADED_MODULE {
      A string describing the DLL file name.
      */
     YORI_STRING DllName;
+
+    /**
+     A callback function to invoke on unload to facilitate cleanup.
+     */
+    PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify;
 
     /**
      The reference count of this module.
@@ -788,6 +794,11 @@ YoriShBuiltIn (
 BOOL
 YoriShExecuteBuiltinString(
     __in PYORI_STRING Expression
+    );
+
+BOOL
+YoriShSetUnloadRoutine(
+    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
     );
 
 BOOL

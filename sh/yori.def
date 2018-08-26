@@ -20,5 +20,6 @@ EXPORTS
     YoriApiPipeJobOutput
     YoriApiSetDefaultColor
     YoriApiSetJobPriority
+    YoriApiSetUnloadRoutine
     YoriApiTerminateJob
     YoriApiWaitForJob

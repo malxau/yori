@@ -106,6 +106,31 @@ typedef struct _SETLOCAL_STACK {
 YORI_LIST_ENTRY SetlocalStack;
 
 /**
+ Notification that the module is being unloaded or the shell is exiting,
+ used to indicate any pending stack should be cleaned up.
+ */
+VOID
+YORI_BUILTIN_FN
+SetlocalNotifyUnload()
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PSETLOCAL_STACK StackLocation;
+
+    if (SetlocalStack.Next == NULL) {
+        return;
+    }
+
+    ListEntry = YoriLibGetPreviousListEntry(&SetlocalStack, NULL);
+    while(ListEntry != NULL) {
+        StackLocation = CONTAINING_RECORD(ListEntry, SETLOCAL_STACK, StackLinks);
+        ListEntry = YoriLibGetPreviousListEntry(&SetlocalStack, ListEntry);
+        YoriLibRemoveListItem(&StackLocation->StackLinks);
+        YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
+        YoriLibFree(StackLocation);
+    }
+}
+
+/**
  Pop an environment onto the stack.  This function is only
  registered/available if the stack has something to pop.
 
@@ -317,6 +342,8 @@ YoriCmd_SETLOCAL(
             YoriLibFree(NewStackEntry);
             return EXIT_FAILURE;
         }
+
+        YoriCallSetUnloadRoutine(SetlocalNotifyUnload);
     }
 
     YoriLibAppendList(&SetlocalStack, &NewStackEntry->StackLinks);

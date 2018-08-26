@@ -134,6 +134,11 @@ YoriCallSetJobPriority(
     );
 
 BOOL
+YoriCallSetUnloadRoutine(
+    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
+    );
+
+BOOL
 YoriCallTerminateJob(
     __in DWORD JobId
     );

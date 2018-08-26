@@ -383,6 +383,21 @@ YORI_CMD_BUILTIN (
  */
 typedef YORI_CMD_BUILTIN *PYORI_CMD_BUILTIN;
 
+/**
+ A prototype for a function to invoke when the module is being unloaded from
+ the shell or if the shell is exiting.
+ */
+typedef
+VOID
+YORI_BUILTIN_FN
+YORI_BUILTIN_UNLOAD_NOTIFY();
+
+/**
+ A prototype for a pointer to a function to invoke when the module is being
+ unloaded from the shell or if the shell is exiting.
+ */
+typedef YORI_BUILTIN_UNLOAD_NOTIFY *PYORI_BUILTIN_UNLOAD_NOTIFY;
+
 // *** CABINET.C ***
 
 /**

@@ -36,7 +36,9 @@ CHAR strPushdHelpText[] =
         "\n"
         "Push the current directory onto a stack and change to a new directory.\n"
         "\n"
-        "PUSHD [-license] <directory>\n";
+        "PUSHD [-license] -l|<directory>\n"
+        "\n"
+        "   -l             List outstanding directories on the pushd stack\n";
 
 /**
  Display usage text to the user.
@@ -60,7 +62,9 @@ CHAR strPopdHelpText[] =
         "\n"
         "Pop a previous current directory from the stack.\n"
         "\n"
-        "POPD [-license]\n";
+        "POPD [-license] [-l]\n"
+        "\n"
+        "   -l             List outstanding directories on the pushd stack\n";
 
 /**
  Display usage text to the user.
@@ -100,6 +104,54 @@ typedef struct _PUSHD_STACK {
 YORI_LIST_ENTRY PushdStack;
 
 /**
+ Notification that the module is being unloaded or the shell is exiting,
+ used to indicate any pending stack should be cleaned up.
+ */
+VOID
+YORI_BUILTIN_FN
+PushdNotifyUnload()
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PPUSHD_STACK StackLocation;
+
+    if (PushdStack.Next == NULL) {
+        return;
+    }
+
+    ListEntry = YoriLibGetPreviousListEntry(&PushdStack, NULL);
+    while(ListEntry != NULL) {
+        StackLocation = CONTAINING_RECORD(ListEntry, PUSHD_STACK, StackLinks);
+        ListEntry = YoriLibGetPreviousListEntry(&PushdStack, ListEntry);
+        YoriLibRemoveListItem(&StackLocation->StackLinks);
+        YoriLibFree(StackLocation);
+    }
+}
+
+/**
+ Display any entries on the current pushd stack.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+PushdDisplayCurrentStack()
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PPUSHD_STACK StackLocation;
+
+    if (PushdStack.Next == NULL) {
+        return TRUE;
+    }
+
+    ListEntry = YoriLibGetPreviousListEntry(&PushdStack, NULL);
+    while(ListEntry != NULL) {
+        StackLocation = CONTAINING_RECORD(ListEntry, PUSHD_STACK, StackLinks);
+        ListEntry = YoriLibGetPreviousListEntry(&PushdStack, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &StackLocation->PreviousDirectory);
+    }
+    return TRUE;
+}
+
+/**
  The main entrypoint for the popd command.
 
  @param ArgC The number of arguments.
@@ -117,6 +169,7 @@ YoriCmd_POPD(
 {
     DWORD i;
     BOOL ArgumentUnderstood;
+    BOOL ListStack = FALSE;
     PYORI_LIST_ENTRY ListEntry;
     PPUSHD_STACK StackLocation;
     YORI_STRING Arg;
@@ -133,12 +186,22 @@ YoriCmd_POPD(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                ListStack = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         }
 
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (ListStack) {
+        if (PushdDisplayCurrentStack()) {
+            return EXIT_SUCCESS;
+        }
+        return EXIT_FAILURE;
     }
 
     if (PushdStack.Next == NULL) {
@@ -192,6 +255,7 @@ YoriCmd_PUSHD(
     DWORD CurrentDirectoryLength;
     YORI_STRING ChdirCmd;
     YORI_STRING Arg;
+    BOOL ListStack = FALSE;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -209,6 +273,9 @@ YoriCmd_PUSHD(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                ListStack = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -219,6 +286,13 @@ YoriCmd_PUSHD(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (ListStack) {
+        if (PushdDisplayCurrentStack()) {
+            return EXIT_SUCCESS;
+        }
+        return EXIT_FAILURE;
     }
 
     if (StartArg == 0) {
@@ -261,6 +335,8 @@ YoriCmd_PUSHD(
             YoriLibFree(NewStackEntry);
             return EXIT_FAILURE;
         }
+
+        YoriCallSetUnloadRoutine(PushdNotifyUnload);
     }
 
     YoriLibAppendList(&PushdStack, &NewStackEntry->StackLinks);

@@ -379,6 +379,21 @@ YoriApiSetJobPriority(
 }
 
 /**
+ Add a new function to invoke on shell exit or module unload.
+
+ @param UnloadNotify Pointer to the function to invoke.
+
+ @return TRUE if the callback was successfully added, FALSE if it was not.
+ */
+BOOL
+YoriApiSetUnloadRoutine(
+    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
+    )
+{
+    return YoriShSetUnloadRoutine(UnloadNotify);
+}
+
+/**
  Terminates a specified job.
 
  @param JobId The job to terminate.

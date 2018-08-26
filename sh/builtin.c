@@ -43,6 +43,32 @@ YORI_LIST_ENTRY YoriShBuiltinCallbacks;
 PYORI_HASH_TABLE YoriShBuiltinHash;
 
 /**
+ A list of unload functions to invoke.  These are only for code statically
+ linked into the shell executable, not loadable modules.  Once added, a
+ callback is never removed - the code is guaranteed to still exist, so the
+ worst case is calling something that has no work to do.
+ */
+YORI_LIST_ENTRY YoriShBuiltinUnloadCallbacks;
+
+/**
+ A single callback function to invoke on shell exit that is part of the
+ shell executable.
+ */
+typedef struct _YORI_SH_BUILTIN_UNLOAD_CALLBACK {
+
+    /**
+     A list of unload notifications to make within the shell executable.
+     This is paired with YoriShBuiltinUnloadCallbacks.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     Pointer to a function to call on shell exit.
+     */
+    PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify;
+} YORI_SH_BUILTIN_UNLOAD_CALLBACK, *PYORI_SH_BUILTIN_UNLOAD_CALLBACK;
+
+/**
  Load a DLL file into a loaded module object that can be referenced.
 
  @param DllName Pointer to a NULL terminated string of a DLL to load.
@@ -83,6 +109,7 @@ YoriShLoadDll(
     FoundEntry->DllName.LengthInChars = DllNameLength;
     memcpy(FoundEntry->DllName.StartOfString, DllName, DllNameLength * sizeof(TCHAR));
     FoundEntry->ReferenceCount = 1;
+    FoundEntry->UnloadNotify = NULL;
 
     FoundEntry->ModuleHandle = LoadLibrary(DllName);
     if (FoundEntry->ModuleHandle == NULL) {
@@ -114,6 +141,9 @@ YoriShReleaseDll(
     }
 
     YoriLibRemoveListItem(&LoadedModule->ListEntry);
+    if (LoadedModule->UnloadNotify != NULL) {
+        LoadedModule->UnloadNotify();
+    }
     if (LoadedModule->ModuleHandle != NULL) {
         FreeLibrary(LoadedModule->ModuleHandle);
     }
@@ -477,6 +507,60 @@ YoriShBuiltIn (
     return ExitCode;
 }
 
+
+/**
+ Add a new function to invoke on shell exit or module unload.
+
+ @param UnloadNotify Pointer to the function to invoke.
+
+ @return TRUE if the callback was successfully added, FALSE if it was not.
+ */
+BOOL
+YoriShSetUnloadRoutine(
+    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
+    )
+{
+    if (YoriShActiveModule != NULL) {
+
+        if (YoriShActiveModule->UnloadNotify == NULL) {
+            YoriShActiveModule->UnloadNotify = UnloadNotify;
+        }
+
+        if (YoriShActiveModule->UnloadNotify == UnloadNotify) {
+            return TRUE;
+        }
+
+        return FALSE;
+    } else {
+
+        PYORI_LIST_ENTRY ListEntry = NULL;
+        PYORI_SH_BUILTIN_UNLOAD_CALLBACK Callback;
+
+        if (YoriShBuiltinUnloadCallbacks.Next == NULL) {
+            YoriLibInitializeListHead(&YoriShBuiltinUnloadCallbacks);
+        }
+
+        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, NULL);
+        while (ListEntry != NULL) {
+            Callback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_UNLOAD_CALLBACK, ListEntry);
+            if (Callback->UnloadNotify == UnloadNotify) {
+                return TRUE;
+            }
+            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, ListEntry);
+        }
+
+        Callback = YoriLibMalloc(sizeof(YORI_SH_BUILTIN_UNLOAD_CALLBACK));
+        if (Callback == NULL) {
+            return FALSE;
+        }
+
+        Callback->UnloadNotify = UnloadNotify;
+        YoriLibAppendList(&YoriShBuiltinUnloadCallbacks, &Callback->ListEntry);
+    }
+
+    return FALSE;
+}
+
 /**
  Associate a new builtin command with a function pointer to be invoked when
  the command is specified.
@@ -589,27 +673,37 @@ YoriShBuiltinUnregisterAll(
 {
     PYORI_LIST_ENTRY ListEntry;
     PYORI_BUILTIN_CALLBACK Callback;
+    PYORI_SH_BUILTIN_UNLOAD_CALLBACK UnloadCallback;
 
-    if (YoriShBuiltinCallbacks.Next == NULL) {
-        return;
-    }
-
-    ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
-    while (ListEntry != NULL) {
-        Callback = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
-        YoriLibRemoveListItem(&Callback->ListEntry);
-        YoriLibHashRemoveByEntry(&Callback->HashEntry);
-        if (Callback->ReferencedModule != NULL) {
-            YoriShReleaseDll(Callback->ReferencedModule);
-            Callback->ReferencedModule = NULL;
-        }
-        YoriLibFreeStringContents(&Callback->BuiltinName);
-        YoriLibDereference(Callback);
+    if (YoriShBuiltinCallbacks.Next != NULL) {
         ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
+        while (ListEntry != NULL) {
+            Callback = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
+            YoriLibRemoveListItem(&Callback->ListEntry);
+            YoriLibHashRemoveByEntry(&Callback->HashEntry);
+            if (Callback->ReferencedModule != NULL) {
+                YoriShReleaseDll(Callback->ReferencedModule);
+                Callback->ReferencedModule = NULL;
+            }
+            YoriLibFreeStringContents(&Callback->BuiltinName);
+            YoriLibDereference(Callback);
+            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
+        }
     }
 
     if (YoriShBuiltinHash != NULL) {
         YoriLibFreeEmptyHashTable(YoriShBuiltinHash);
+    }
+
+    if (YoriShBuiltinUnloadCallbacks.Next != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, NULL);
+        while (ListEntry != NULL) {
+            UnloadCallback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_UNLOAD_CALLBACK, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, ListEntry);
+            YoriLibRemoveListItem(&UnloadCallback->ListEntry);
+            UnloadCallback->UnloadNotify();
+            YoriLibFree(UnloadCallback);
+        }
     }
 
     return;

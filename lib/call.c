@@ -838,6 +838,46 @@ YoriCallSetJobPriority(
 }
 
 /**
+ Prototype for the @ref YoriApiSetUnloadRoutine function.
+ */
+typedef BOOL YORI_API_SET_UNLOAD_ROUTINE(PYORI_BUILTIN_UNLOAD_NOTIFY);
+
+/**
+ Prototype for a pointer to the @ref YoriApiSetUnloadRoutine function.
+ */
+typedef YORI_API_SET_UNLOAD_ROUTINE *PYORI_API_SET_UNLOAD_ROUTINE;
+
+/**
+ Pointer to the @ref YoriApiSetUnloadRoutine function.
+ */
+PYORI_API_SET_UNLOAD_ROUTINE pYoriApiSetUnloadRoutine;
+
+/**
+ Sets the unload routine to invoke before unloading the module.
+
+ @param UnloadNotify The function to call before unloading the module.
+
+ @return TRUE to indicate that the notification function was registered,
+         FALSE if it was not.
+ */
+BOOL
+YoriCallSetUnloadRoutine(
+    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
+    )
+{
+    if (pYoriApiSetUnloadRoutine == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiSetUnloadRoutine = (PYORI_API_SET_UNLOAD_ROUTINE)GetProcAddress(hYori, "YoriApiSetUnloadRoutine");
+        if (pYoriApiSetUnloadRoutine == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiSetUnloadRoutine(UnloadNotify);
+}
+
+/**
  Prototype for the @ref YoriApiTerminateJob function.
  */
 typedef BOOL YORI_API_TERMINATE_JOB(DWORD);
