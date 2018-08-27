@@ -91,6 +91,14 @@ typedef long HRESULT;
 #define MOUSE_WHEELED 0x0004
 #endif
 
+#ifndef ERROR_ELEVATION_REQUIRED
+/**
+ Define for the error indicating than an executable needs to be launched with
+ ShellExecute so the user can be prompted for elevation.
+ */
+#define ERROR_ELEVATION_REQUIRED 740
+#endif
+
 /**
  A structure that is returned by NtQueryInformationProcess describing
  information about a process, including the location of its PEB.
