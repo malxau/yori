@@ -4,7 +4,9 @@ REM
 REM Set build ID.  For release builds, this needs to be zero.
 REM
 
-set BLDID=`date`
+set BLDID=
+if strcmp -i %1%!=official;set BLDID=`date`;set BLDID=0
+if strcmp %BLDID%==0;echo Building OFFICIAL build;echo Building DAILY build
 
 REM
 REM Determine architecture by looking at compiler output.
@@ -39,7 +41,6 @@ echo *** Cleaning tree
 nmake /nologo clean >NUL
 
 mkdir %OUTDIR% >NUL 2>&1
-mkdir %OUTDIR%\%ARCH% >NUL 2>&1
 
 echo *** Building debug
 nmake /nologo PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
@@ -82,6 +83,8 @@ popd
 pushd pkg\%ARCH%\sym
 yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-pdb-%ARCH%.cab %%i-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -filelist ..\..\%%i-pdb.lst
 popd
+
+if strcmp %ARCH%==win32;mkdir %OUTDIR%\%ARCH% ^& copy pkg\%ARCH%\bin\ysetup.exe %OUTDIR%\%ARCH% >NUL 2>&1
 
 REM
 REM Generate yori-completion which is special because it's architecture
