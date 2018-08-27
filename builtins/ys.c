@@ -991,7 +991,7 @@ YsExpandArgumentVariables(
         return StringLength;
     }
 
-    if (YoriLibStringToNumber(VariableName, TRUE, &ArgIndex, &CharsConsumed) && CharsConsumed > 0) {
+    if (YoriLibStringToNumber(VariableName, TRUE, &ArgIndex, &CharsConsumed) && CharsConsumed > 0 && CharsConsumed == VariableName->LengthInChars) {
         if (ArgIndex > 0 && ArgIndex + Context->ShiftCount < Context->ArgC) {
 
             StringLength = Context->ArgV[ArgIndex + Context->ShiftCount].LengthInChars;
@@ -1093,7 +1093,19 @@ YsExecuteScript(
                 break;
             }
 
-            LineWithArgumentsExpanded.LengthInChars--;
+            //
+            //  Lines are intentionally left with NULLs inside the string, so
+            //  we'd normally truncate these here.  When an incomplete command
+            //  expansion is used though, the NULL ends up in the variable name
+            //  so it can get truncated.  YoriLibExpandCommandVariables
+            //  also adds one, but it's not within the string, so check which
+            //  case we're in.
+            //
+
+            if (LineWithArgumentsExpanded.LengthInChars > 0 &&
+                LineWithArgumentsExpanded.StartOfString[LineWithArgumentsExpanded.LengthInChars - 1] == '\0') {
+                LineWithArgumentsExpanded.LengthInChars--;
+            }
             ASSERT(LineWithArgumentsExpanded.StartOfString[LineWithArgumentsExpanded.LengthInChars] == '\0');
 
             YoriCallExecuteExpression(&LineWithArgumentsExpanded);
