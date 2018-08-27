@@ -131,6 +131,32 @@ typedef struct _Z_SCOREBOARD_ENTRY {
 Z_RECENT_DIRECTORIES ZRecentDirectories;
 
 /**
+ Set to TRUE once the command has been invoked once to keep the module loaded.
+ */
+BOOL ZCallbacksRegistered;
+
+/**
+ Display the current known list of recent directories in order of most
+ recently used to least recently used with their corresponding hit count.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+ZListStack()
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PZ_RECENT_DIRECTORY FoundRecentDir;
+
+    ListEntry = YoriLibGetNextListEntry(&ZRecentDirectories.RecentDirList, NULL);
+    while (ListEntry != NULL) {
+        FoundRecentDir = CONTAINING_RECORD(ListEntry, Z_RECENT_DIRECTORY, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&ZRecentDirectories.RecentDirList, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y HitCount %i\n"), &FoundRecentDir->DirectoryName, FoundRecentDir->HitCount);
+    }
+    return TRUE;
+}
+
+/**
  Check the recent directories for a match to DirectoryName.  If a match is
  found, promote it to be the most recent entry and update its HitCount.
  If no match is found, add a new match, potentially evicting the least
@@ -229,11 +255,6 @@ ZAddDirectoryToRecent(
 
     return TRUE;
 }
-
-/**
- Set to TRUE once the command has been invoked once to keep the module loaded.
- */
-BOOL ZCallbacksRegistered;
 
 /**
  Called when the module is unloaded to clean up state.
@@ -518,6 +539,7 @@ YoriCmd_Z(
     PYORI_STRING UserSpecification;
     BOOL ArgumentUnderstood;
     BOOL Unload = FALSE;
+    BOOL ListStack = FALSE;
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
@@ -538,6 +560,9 @@ YoriCmd_Z(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                ListStack = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
                 Unload = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -551,6 +576,11 @@ YoriCmd_Z(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (ListStack) {
+        ZListStack();
+        return EXIT_SUCCESS;
     }
 
     if (Unload) {
