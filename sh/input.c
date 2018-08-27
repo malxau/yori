@@ -977,6 +977,7 @@ YoriShTerminateInput(
         Buffer->SuggestionDirty = TRUE;
     }
     YoriLibFreeStringContents(&Buffer->SuggestionString);
+    YoriLibFreeStringContents(&Buffer->SearchString);
     YoriShDisplayAfterKeyPress(Buffer);
     YoriShPostKeyPress(Buffer);
     YoriShClearTabCompletionMatches(Buffer);
@@ -1038,11 +1039,40 @@ YoriShClearInput(
     )
 {
     YoriLibFreeStringContents(&Buffer->SuggestionString);
+    YoriLibFreeStringContents(&Buffer->SearchString);
     YoriShClearTabCompletionMatches(Buffer);
     Buffer->String.LengthInChars = 0;
     Buffer->CurrentOffset = 0;
+    Buffer->SearchMode = FALSE;
     YoriShClearSelection(Buffer);
 }
+
+/**
+ Based on the search text entered so far, find the first match within the
+ main string and set the current offset to it.
+
+ @param Buffer Pointer to the input buffer to update.
+ */
+VOID
+YoriShUpdateSelectionWithSearchResult(
+    __inout PYORI_INPUT_BUFFER Buffer
+    )
+{
+    DWORD StringOffsetOfMatch;
+
+    //
+    //  MSFIX Would like to do something with selection for this, but that
+    //  implies having a selection that follows text around lines rather
+    //  than a rectangle
+    //
+
+    if (YoriLibFindFirstMatchingSubstringInsensitive(&Buffer->String, 1, &Buffer->SearchString, &StringOffsetOfMatch)) {
+        Buffer->CurrentOffset = StringOffsetOfMatch + Buffer->SearchString.LengthInChars;
+    } else {
+        Buffer->CurrentOffset = Buffer->PreSearchOffset;
+    }
+}
+
 
 /**
  Perform the necessary buffer transformations to implement backspace.
@@ -1060,6 +1090,26 @@ YoriShBackspace(
     DWORD CountToUse;
 
     CountToUse = Count;
+
+    //
+    //  When updating the search buffer, backspace can only remove from the
+    //  end.
+    //
+
+    if (Buffer->SearchMode) {
+        if (CountToUse > Buffer->SearchString.LengthInChars) {
+            CountToUse = Buffer->SearchString.LengthInChars;
+        }
+
+        Buffer->SearchString.LengthInChars -= CountToUse;
+
+        YoriShUpdateSelectionWithSearchResult(Buffer);
+        return;
+    }
+
+    //
+    //  On the regular buffer, we may have to shuffle characters around.
+    //
 
     if (Buffer->CurrentOffset < CountToUse) {
 
@@ -1340,17 +1390,20 @@ YoriShAddYoriStringToInput(
     //
 
     KeepSuggestions = FALSE;
-    YoriShOverwriteSelectionIfInInput(Buffer);
-    ASSERT(Buffer->String.LengthAllocated > Buffer->String.LengthInChars);
-    ASSERT(Buffer->String.LengthInChars >= Buffer->CurrentOffset);
 
-    //
-    //  If the characters are at the end of the string, see if a
-    //  current suggestion can be retained.
-    //
+    if (!Buffer->SearchMode) {
+        YoriShOverwriteSelectionIfInInput(Buffer);
+        ASSERT(Buffer->String.LengthAllocated > Buffer->String.LengthInChars);
+        ASSERT(Buffer->String.LengthInChars >= Buffer->CurrentOffset);
 
-    if (Buffer->String.LengthInChars == Buffer->CurrentOffset) {
-        KeepSuggestions = TRUE;
+        //
+        //  If the characters are at the end of the string, see if a
+        //  current suggestion can be retained.
+        //
+
+        if (Buffer->String.LengthInChars == Buffer->CurrentOffset) {
+            KeepSuggestions = TRUE;
+        }
     }
 
     if (!KeepSuggestions) {
@@ -1366,7 +1419,21 @@ YoriShAddYoriStringToInput(
     //  the data.
     //
 
-    if (Buffer->InsertMode) {
+    if (Buffer->SearchMode) {
+        if (Buffer->SearchString.MemoryToFree == NULL) {
+            if (!YoriLibAllocateString(&Buffer->SearchString, String->LengthInChars * 4)) {
+                return;
+            }
+        } else if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->SearchString, Buffer->SearchString.LengthInChars + String->LengthInChars)) {
+            return;
+        }
+
+        memcpy(&Buffer->SearchString.StartOfString[Buffer->SearchString.LengthInChars], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
+        Buffer->SearchString.LengthInChars += String->LengthInChars;
+
+        YoriShUpdateSelectionWithSearchResult(Buffer);
+
+    } else if (Buffer->InsertMode) {
         if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, Buffer->String.LengthInChars + String->LengthInChars)) {
             return;
         }
@@ -1855,12 +1922,23 @@ YoriShProcessKeyDown(
     if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
 
         if (Char == '\r') {
-            if (!YoriShCopySelectionIfPresent(Buffer)) {
-                *TerminateInput = TRUE;
+            if (Buffer->SearchMode) {
+                Buffer->SearchMode = FALSE;
+                YoriLibFreeStringContents(&Buffer->SearchString);
+            } else {
+                if (!YoriShCopySelectionIfPresent(Buffer)) {
+                    *TerminateInput = TRUE;
+                }
+                return TRUE;
             }
-            return TRUE;
         } else if (Char == 27) {
-            YoriShClearInput(Buffer);
+            if (Buffer->SearchMode) {
+                Buffer->SearchMode = FALSE;
+                Buffer->CurrentOffset = Buffer->PreSearchOffset;
+                YoriLibFreeStringContents(&Buffer->SearchString);
+            } else {
+                YoriShClearInput(Buffer);
+            }
         } else if (Char == '\t') {
             if ((CtrlMask & SHIFT_PRESSED) == 0) {
                 YoriShTabCompletion(Buffer, 0);
@@ -1899,6 +1977,9 @@ YoriShProcessKeyDown(
                 YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 YoriLibFreeStringContents(&ClipboardData);
             }
+        } else if (KeyCode == 0xBF) { // Aka VK_OEM_2, / or ? on US keyboards
+            Buffer->SearchMode = TRUE;
+            Buffer->PreSearchOffset = Buffer->CurrentOffset;
         } else if (KeyCode == VK_TAB) {
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
         } else if (KeyCode == '\b') {
@@ -1969,10 +2050,15 @@ YoriShProcessKeyDown(
             }
 
         } else if (KeyCode == VK_RETURN) {
-            if (!YoriShCopySelectionIfPresent(Buffer)) {
-                *TerminateInput = TRUE;
+            if (Buffer->SearchMode) {
+                Buffer->SearchMode = FALSE;
+                YoriLibFreeStringContents(&Buffer->SearchString);
+            } else {
+                if (!YoriShCopySelectionIfPresent(Buffer)) {
+                    *TerminateInput = TRUE;
+                }
+                return TRUE;
             }
-            return TRUE;
         }
     } else if (CtrlMask == (RIGHT_CTRL_PRESSED | ENHANCED_KEY) ||
                CtrlMask == (LEFT_CTRL_PRESSED | ENHANCED_KEY) ||
@@ -2308,7 +2394,6 @@ YoriShProcessMouseDoubleClick(
 
         BufferChanged = TRUE;
         YoriLibFreeStringContents(&BreakChars);
-
     }
 
     return BufferChanged;

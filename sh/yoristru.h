@@ -605,6 +605,25 @@ typedef struct _YORI_INPUT_BUFFER {
      The currently active suggestion string.
      */
     YORI_STRING SuggestionString;
+
+    /**
+     If TRUE, the search buffer is the active buffer where keystrokes and
+     backspace keys should be delivered to.  If FALSE, keystrokes are
+     added to the input buffer.
+     */
+    BOOL SearchMode;
+
+    /**
+     The offset as it was when the search operation started.  This is used
+     if no match is found or a search is cancelled.
+     */
+    DWORD PreSearchOffset;
+
+    /**
+     The current search string, when searching within the buffer itself.
+     */
+    YORI_STRING SearchString;
+
 } YORI_INPUT_BUFFER, *PYORI_INPUT_BUFFER;
 
 /**
