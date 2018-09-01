@@ -376,11 +376,16 @@ ZBuildScoreboardAndSelectBest(
     PYORI_LIST_ENTRY ListEntry;
     PZ_RECENT_DIRECTORY FoundRecentDir;
     YORI_STRING FinalComponent;
+    YORI_STRING TrailingPortion;
+    YORI_STRING StringToAdd;
     DWORD EntriesPopulated;
     DWORD Index;
     DWORD ScoreForThisEntry;
     DWORD BestScore;
     DWORD BestIndex;
+    DWORD OffsetOfMatch;
+    BOOL SeperatorBefore;
+    BOOL SeperatorAfter;
     BOOL AddThisEntry;
 
     //
@@ -427,9 +432,18 @@ ZBuildScoreboardAndSelectBest(
         //
 
         YoriLibInitEmptyString(&FinalComponent);
+        YoriLibInitEmptyString(&TrailingPortion);
         FinalComponent.StartOfString = YoriLibFindRightMostCharacter(&FoundRecentDir->DirectoryName, '\\');
+
+        if (FoundRecentDir->DirectoryName.LengthInChars >= UserSpecification->LengthInChars) {
+            TrailingPortion.StartOfString = &FoundRecentDir->DirectoryName.StartOfString[FoundRecentDir->DirectoryName.LengthInChars - UserSpecification->LengthInChars];
+            TrailingPortion.LengthInChars = UserSpecification->LengthInChars;
+        }
+        OffsetOfMatch = 0;
+
         //
         //  If it's a complete match of the final component, big bonus points.
+        //  If it's a match up to the end of the string, moderate bonus points.
         //  If it's somewhere in the final component, small bonus points.
         //
 
@@ -440,34 +454,72 @@ ZBuildScoreboardAndSelectBest(
             if (YoriLibCompareStringInsensitive(&FinalComponent, UserSpecification) == 0) {
                 ScoreForThisEntry += Z_MAX_RECENT_DIRS * 4;
                 AddThisEntry = TRUE;
-            } else if (YoriLibFindFirstMatchingSubstringInsensitive(&FinalComponent, 1, UserSpecification, NULL) != NULL) {
+            } else if (TrailingPortion.LengthInChars > 0 &&
+                       YoriLibCompareStringInsensitive(&TrailingPortion, UserSpecification) == 0) {
                 ScoreForThisEntry += Z_MAX_RECENT_DIRS * 2;
+                AddThisEntry = TRUE;
+            } else if (YoriLibFindFirstMatchingSubstringInsensitive(&FinalComponent, 1, UserSpecification, NULL) != NULL) {
+
+                ScoreForThisEntry += Z_MAX_RECENT_DIRS;
                 AddThisEntry = TRUE;
             }
         }
 
+        YoriLibInitEmptyString(&StringToAdd);
+        if (AddThisEntry) {
+            StringToAdd.StartOfString = FoundRecentDir->DirectoryName.StartOfString;
+            StringToAdd.LengthInChars = FoundRecentDir->DirectoryName.LengthInChars;
+        }
+
         //
         //  If it's in the string but not the final component, add it, but
-        //  no bonus points.
+        //  no bonus points.  If the user specification refers to a parent
+        //  component, add up to that component only.
         //
 
         if (!AddThisEntry &&
-            YoriLibFindFirstMatchingSubstringInsensitive(&FoundRecentDir->DirectoryName, 1, UserSpecification, NULL) != NULL) {
+            UserSpecification->LengthInChars > 0 &&
+            YoriLibFindFirstMatchingSubstringInsensitive(&FoundRecentDir->DirectoryName, 1, UserSpecification, &OffsetOfMatch) != NULL) {
+
+            SeperatorBefore = FALSE;
+            SeperatorAfter = FALSE;
+
+            if (OffsetOfMatch == 0 ||
+                YoriLibIsSep(UserSpecification->StartOfString[0]) ||
+                YoriLibIsSep(FoundRecentDir->DirectoryName.StartOfString[OffsetOfMatch - 1])) {
+                SeperatorBefore = TRUE;
+            }
+
+            if (OffsetOfMatch + UserSpecification->LengthInChars == FoundRecentDir->DirectoryName.LengthInChars ||
+                YoriLibIsSep(UserSpecification->StartOfString[UserSpecification->LengthInChars - 1]) ||
+                YoriLibIsSep(FoundRecentDir->DirectoryName.StartOfString[OffsetOfMatch + UserSpecification->LengthInChars])) {
+                SeperatorAfter = TRUE;
+            }
+
+            StringToAdd.StartOfString = FoundRecentDir->DirectoryName.StartOfString;
+            if (SeperatorBefore && SeperatorAfter) {
+                StringToAdd.LengthInChars = OffsetOfMatch + UserSpecification->LengthInChars;
+            } else {
+                StringToAdd.LengthInChars = FoundRecentDir->DirectoryName.LengthInChars;
+            }
             AddThisEntry = TRUE;
         }
 
         //
-        //  If the currently found directory matches the fully resolved user
-        //  specification, don't add it twice, just add the current score
-        //  to the initial one
+        //  If the currently found directory has already been added by the
+        //  fully resolved user specification or an earlier parent match,
+        //  don't add it twice, just add the current score to the initial one
         //
 
-        if (AddThisEntry &&
-            FullMatchToUserSpec->LengthInChars > 0 &&
-            YoriLibCompareStringInsensitive(FullMatchToUserSpec, &FoundRecentDir->DirectoryName) == 0) {
+        if (AddThisEntry) {
+            for (BestIndex = 0; BestIndex < EntriesPopulated; BestIndex++) {
+                if (YoriLibCompareStringInsensitive(&Entries[BestIndex].DirectoryName, &StringToAdd) == 0) {
 
-            Entries[0].Score += ScoreForThisEntry;
-            AddThisEntry = FALSE;
+                    Entries[BestIndex].Score += ScoreForThisEntry;
+                    AddThisEntry = FALSE;
+                    break;
+                }
+            }
         }
 
         //
@@ -475,11 +527,13 @@ ZBuildScoreboardAndSelectBest(
         //
 
         if (AddThisEntry) {
-            memcpy(&Entries[EntriesPopulated].DirectoryName, &FoundRecentDir->DirectoryName, sizeof(YORI_STRING));
+            memcpy(&Entries[EntriesPopulated].DirectoryName, &StringToAdd, sizeof(YORI_STRING));
             Entries[EntriesPopulated].Score = ScoreForThisEntry;
             EntriesPopulated++;
         }
-        Index--;
+        if (Index > 0) {
+            Index--;
+        }
     }
 
     //
@@ -507,10 +561,17 @@ ZBuildScoreboardAndSelectBest(
 
     //
     //  Return the highest score match as a referenced string, and free
-    //  the scoreboard.
+    //  the scoreboard.  Perform a new allocation for this to ensure it's
+    //  NULL terminated at the correct point.
     //
 
-    YoriLibCloneString(BestMatch, &Entries[BestIndex].DirectoryName);
+    if (!YoriLibAllocateString(BestMatch, Entries[BestIndex].DirectoryName.LengthInChars + 1)) {
+        return FALSE;
+    }
+    memcpy(BestMatch->StartOfString, Entries[BestIndex].DirectoryName.StartOfString, Entries[BestIndex].DirectoryName.LengthInChars * sizeof(TCHAR));
+    BestMatch->LengthInChars = Entries[BestIndex].DirectoryName.LengthInChars;
+    BestMatch->StartOfString[BestMatch->LengthInChars] = '\0';
+
     YoriLibFree(Entries);
     return TRUE;
 }
