@@ -22,6 +22,7 @@ OBJS=\
 	 dyld.obj     \
 	 env.obj      \
 	 ep_yori.obj  \
+	 filecomp.obj \
 	 fileenum.obj \
 	 fileinfo.obj \
 	 fullpath.obj \

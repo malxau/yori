@@ -729,6 +729,108 @@ YoriLibLoadUser32Functions();
 BOOL
 YoriLibLoadVersionFunctions();
 
+// *** FILECOMP.C ***
+
+/**
+ An algorithm that can be used to compress individual files.
+ */
+typedef union _YORILIB_COMPRESS_ALGORITHM {
+
+    /**
+     Individual algorithm types.  Note that if the NTFS algorithm is zero
+     it implies the WOF algorithm should be used, but the same is not true
+     in reverse since zero is a common WOF algorithm.
+     */
+    struct {
+        WORD NtfsAlgorithm;
+        WORD WofAlgorithm;
+    };
+
+    /**
+     A 32 bit value that spans the entire union above for easy initialization.
+     */
+    DWORD EntireAlgorithm;
+} YORILIB_COMPRESS_ALGORITHM;
+
+/**
+ Context describing a background pool of threads and list of work that can
+ compress individual files.
+ */
+typedef struct _YORILIB_COMPRESS_CONTEXT {
+    /**
+     The list of files requiring compression.
+     */
+    YORI_LIST_ENTRY PendingList;
+
+    /**
+     A mutex to synchronize the list of files requiring compression.
+     */
+    HANDLE Mutex;
+
+    /**
+     An event signalled when there is a file to be compressed inserted into
+     the list.
+     */
+    HANDLE WorkerWaitEvent;
+
+    /**
+     An event signalled when compression threads should complete outstanding
+     work then terminate.
+     */
+    HANDLE WorkerShutdownEvent;
+
+    /**
+     An array of handles to threads allocated to compress file contents.
+     */
+    PHANDLE Threads;
+
+    /**
+     If the target should be written as compressed, this specifies the
+     compression algorithm.
+     */
+    YORILIB_COMPRESS_ALGORITHM CompressionAlgorithm;
+
+    /**
+     The maximum number of compress threads.  This corresponds to the size of
+     the Threads array.
+     */
+    DWORD MaxThreads;
+
+    /**
+     The number of threads allocated to compress file contents.  This is
+     less than or equal to MaxThreads.
+     */
+    DWORD ThreadsAllocated;
+
+    /**
+     The number of items currently queued in the list.
+     */
+    DWORD ItemsQueued;
+
+    /**
+     If TRUE, output is generated describing thread creation and throttling.
+     */
+    BOOL Verbose;
+
+} YORILIB_COMPRESS_CONTEXT, *PYORILIB_COMPRESS_CONTEXT;
+
+BOOL
+YoriLibInitializeCompressContext(
+    __in PYORILIB_COMPRESS_CONTEXT CompressContext,
+    __in YORILIB_COMPRESS_ALGORITHM CompressionAlgorithm
+    );
+
+VOID
+YoriLibFreeCompressContext(
+    __in PYORILIB_COMPRESS_CONTEXT CompressContext
+    );
+
+BOOL
+YoriLibCompressFileInBackground(
+    __in PYORILIB_COMPRESS_CONTEXT CompressContext,
+    __in PYORI_STRING FileName
+    );
+
 // *** FILEENUM.C ***
 
 /**
