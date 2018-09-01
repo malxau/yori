@@ -150,10 +150,17 @@ typedef struct _COPY_CONTEXT {
     /**
      An array of handles to threads allocated to compress file contents.
      */
-    HANDLE CompressThreads[4];
+    PHANDLE CompressThreads;
 
     /**
-     The number of threads allocated to compress file contents.
+     The maximum number of compress threads.  This corresponds to the size of
+     the CompressThreads array.
+     */
+    DWORD MaxCompressThreads;
+
+    /**
+     The number of threads allocated to compress file contents.  This is
+     less than or equal to MaxCompressThreads.
      */
     DWORD CompressThreadsAllocated;
 
@@ -615,7 +622,8 @@ CopyCompressTarget(
     DestFileHandle = NULL;
     WaitForSingleObject(CopyContext->CompressListMutex, INFINITE);
     if (CopyContext->CompressThreadsAllocated == 0 ||
-        (CopyContext->CompressItemsQueued > 4 && CopyContext->CompressThreadsAllocated < sizeof(CopyContext->CompressThreads)/sizeof(CopyContext->CompressThreads[0]))) {
+        (CopyContext->CompressItemsQueued > CopyContext->CompressThreadsAllocated * 2 &&
+         CopyContext->CompressThreadsAllocated < CopyContext->MaxCompressThreads)) {
 
         CopyContext->CompressThreads[CopyContext->CompressThreadsAllocated] = CreateThread(NULL, 0, CopyCompressWorker, CopyContext, 0, &ThreadId);
         if (CopyContext->CompressThreads[CopyContext->CompressThreadsAllocated] != NULL) {
@@ -627,7 +635,7 @@ CopyCompressTarget(
     }
 
     if (CopyContext->CompressThreadsAllocated > 0 &&
-        CopyContext->CompressItemsQueued <= 6) {
+        CopyContext->CompressItemsQueued < CopyContext->MaxCompressThreads * 2) {
 
         YoriLibAppendList(&CopyContext->CompressList, &PendingCompress->CompressList);
         CopyContext->CompressItemsQueued++;
@@ -899,6 +907,10 @@ CopyFreeCopyContext(
         CloseHandle(CopyContext->CompressListMutex);
         CopyContext->CompressListMutex = NULL;
     }
+    if (CopyContext->CompressThreads != NULL) {
+        YoriLibFree(CopyContext->CompressThreads);
+        CopyContext->CompressThreads = NULL;
+    }
     YoriLibFreeStringContents(&CopyContext->Dest);
     CopyFreeExcludes(CopyContext);
 }
@@ -916,6 +928,20 @@ CopyEnableCompressionSupport(
     __in PCOPY_CONTEXT CopyContext
     )
 {
+    SYSTEM_INFO SystemInfo;
+    GetSystemInfo(&SystemInfo);
+
+    //
+    //  Use 1/3rd of the CPUs to initiate compression on.  The system can
+    //  compress chunks of data on background threads, so this is just
+    //  the number of threads initiating work.
+    //
+
+    CopyContext->MaxCompressThreads = SystemInfo.dwNumberOfProcessors / 3;
+    if (CopyContext->MaxCompressThreads < 1) {
+        CopyContext->MaxCompressThreads = 1;
+    }
+
     YoriLibInitializeListHead(&CopyContext->CompressList);
     CopyContext->CompressWorkerWaitEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (CopyContext->CompressWorkerWaitEvent == NULL) {
@@ -929,6 +955,11 @@ CopyEnableCompressionSupport(
 
     CopyContext->CompressListMutex = CreateMutex(NULL, FALSE, NULL);
     if (CopyContext->CompressListMutex == NULL) {
+        return FALSE;
+    }
+
+    CopyContext->CompressThreads = YoriLibMalloc(sizeof(HANDLE) * CopyContext->MaxCompressThreads);
+    if (CopyContext->CompressThreads == NULL) {
         return FALSE;
     }
 
