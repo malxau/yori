@@ -29,9 +29,9 @@
 #include <yorilib.h>
 
 /**
- A single item to compress.
+ A single item to compress or decompress.
  */
-typedef struct _YORILIB_PENDING_COMPRESS {
+typedef struct _YORILIB_PENDING_ACTION {
 
     /**
      A list of files requiring compression.
@@ -42,7 +42,14 @@ typedef struct _YORILIB_PENDING_COMPRESS {
      A handle to the file to compress.
      */
     HANDLE hFile;
-} YORILIB_PENDING_COMPRESS, *PYORILIB_PENDING_COMPRESS;
+
+    /**
+     If the file should be compressed, set to TRUE.  If the file should be
+     decompressed, set to FALSE.
+     */
+    BOOL Compress;
+
+} YORILIB_PENDING_ACTION, *PYORILIB_PENDING_ACTION;
 
 /**
  Set up the compress context to contain support for the compression thread pool.
@@ -149,7 +156,7 @@ YoriLibFreeCompressContext(
  Compress a single file.  This can be called on worker threads, or occasionally
  on the main thread if the worker threads are backlogged.
 
- @param PendingCompress Pointer to the object that needs to be compressed.
+ @param PendingAction Pointer to the object that needs to be compressed.
         This structure is deallocated within this function.
 
  @param CompressionAlgorithm Specifies the compression algorithm to compress
@@ -159,7 +166,7 @@ YoriLibFreeCompressContext(
  */
 BOOL
 YoriLibCompressSingleFile(
-    __in PYORILIB_PENDING_COMPRESS PendingCompress,
+    __in PYORILIB_PENDING_ACTION PendingAction,
     __in YORILIB_COMPRESS_ALGORITHM CompressionAlgorithm
     )
 {
@@ -169,7 +176,7 @@ YoriLibCompressSingleFile(
     if (CompressionAlgorithm.NtfsAlgorithm != 0) {
         USHORT Algorithm = (USHORT)CompressionAlgorithm.NtfsAlgorithm;
 
-        Result = DeviceIoControl(PendingCompress->hFile,
+        Result = DeviceIoControl(PendingAction->hFile,
                                  FSCTL_SET_COMPRESSION,
                                  &Algorithm,
                                  sizeof(Algorithm),
@@ -190,7 +197,7 @@ YoriLibCompressSingleFile(
         CompressInfo.FileInfo.Version = 1;
         CompressInfo.FileInfo.Algorithm = CompressionAlgorithm.WofAlgorithm;
 
-        Result = DeviceIoControl(PendingCompress->hFile,
+        Result = DeviceIoControl(PendingAction->hFile,
                                  FSCTL_SET_EXTERNAL_BACKING,
                                  &CompressInfo,
                                  sizeof(CompressInfo),
@@ -200,11 +207,61 @@ YoriLibCompressSingleFile(
                                  NULL);
     }
 
-    CloseHandle(PendingCompress->hFile);
-    YoriLibFree(PendingCompress);
+    CloseHandle(PendingAction->hFile);
+    YoriLibFree(PendingAction);
     return Result;
-
 }
+
+/**
+ Decompress a single file.  This can be called on worker threads, or
+ occasionally on the main thread if the worker threads are backlogged.
+
+ @param PendingAction Pointer to the object that needs to be decompressed.
+        This structure is deallocated within this function.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibDecompressSingleFile(
+    __in PYORILIB_PENDING_ACTION PendingAction
+    )
+{
+    DWORD BytesReturned;
+    BOOL GlobalResult = TRUE;
+    BOOL LocalResult;
+    USHORT Algorithm = 0;
+
+    LocalResult = DeviceIoControl(PendingAction->hFile,
+                                  FSCTL_SET_COMPRESSION,
+                                  &Algorithm,
+                                  sizeof(Algorithm),
+                                  NULL,
+                                  0,
+                                  &BytesReturned,
+                                  NULL);
+
+    if (!LocalResult) {
+        GlobalResult = FALSE;
+    }
+
+    LocalResult = DeviceIoControl(PendingAction->hFile,
+                                  FSCTL_DELETE_EXTERNAL_BACKING,
+                                  NULL,
+                                  0,
+                                  NULL,
+                                  0,
+                                  &BytesReturned,
+                                  NULL);
+
+    if (!LocalResult) {
+        GlobalResult = FALSE;
+    }
+
+    CloseHandle(PendingAction->hFile);
+    YoriLibFree(PendingAction);
+    return GlobalResult;
+}
+
 
 /**
  A background thread which will attempt to compress any items that it finds on
@@ -222,7 +279,7 @@ YoriLibCompressWorker(
 {
     PYORILIB_COMPRESS_CONTEXT CompressContext = (PYORILIB_COMPRESS_CONTEXT)Context;
     DWORD FoundEvent;
-    PYORILIB_PENDING_COMPRESS PendingCompress;
+    PYORILIB_PENDING_ACTION PendingAction;
     BOOL Result = TRUE;
 
     while (TRUE) {
@@ -240,14 +297,20 @@ YoriLibCompressWorker(
         while (TRUE) {
             WaitForSingleObject(CompressContext->Mutex, INFINITE);
             if (!YoriLibIsListEmpty(&CompressContext->PendingList)) {
-                PendingCompress = CONTAINING_RECORD(CompressContext->PendingList.Next, YORILIB_PENDING_COMPRESS, CompressList);
+                PendingAction = CONTAINING_RECORD(CompressContext->PendingList.Next, YORILIB_PENDING_ACTION, CompressList);
                 ASSERT(CompressContext->ItemsQueued > 0);
                 CompressContext->ItemsQueued--;
-                YoriLibRemoveListItem(&PendingCompress->CompressList);
+                YoriLibRemoveListItem(&PendingAction->CompressList);
                 ReleaseMutex(CompressContext->Mutex);
 
-                if (!YoriLibCompressSingleFile(PendingCompress, CompressContext->CompressionAlgorithm)) {
-                    Result = FALSE;
+                if (PendingAction->Compress) {
+                    if (!YoriLibCompressSingleFile(PendingAction, CompressContext->CompressionAlgorithm)) {
+                        Result = FALSE;
+                    }
+                } else {
+                    if (!YoriLibDecompressSingleFile(PendingAction)) {
+                        Result = FALSE;
+                    }
                 }
 
             } else {
@@ -270,6 +333,57 @@ YoriLibCompressWorker(
 }
 
 /**
+ Add a pending action to the queue of items to be performed by background
+ threads.  If the background threads already have an excessively large
+ queue of work, this function returns FALSE to indicate it should be
+ completed by the foreground thread.
+
+ @param CompressContext Pointer to the compress context describing the state
+        of background threads.
+
+ @param PendingAction Pointer to the action to perform.
+
+ @return TRUE if the action was queued to be processed by background threads,
+         or FALSE if it should be completed by the foreground thread.
+ */
+BOOL
+YoriLibAddToBackgroundCompressQueue(
+    __in PYORILIB_COMPRESS_CONTEXT CompressContext,
+    __in PYORILIB_PENDING_ACTION PendingAction
+    )
+{
+    BOOL Result = FALSE;
+    DWORD ThreadId;
+
+    WaitForSingleObject(CompressContext->Mutex, INFINITE);
+    if (CompressContext->ThreadsAllocated == 0 ||
+        (CompressContext->ItemsQueued > CompressContext->ThreadsAllocated * 2 &&
+         CompressContext->ThreadsAllocated < CompressContext->MaxThreads)) {
+
+        CompressContext->Threads[CompressContext->ThreadsAllocated] = CreateThread(NULL, 0, YoriLibCompressWorker, CompressContext, 0, &ThreadId);
+        if (CompressContext->Threads[CompressContext->ThreadsAllocated] != NULL) {
+            CompressContext->ThreadsAllocated++;
+            if (CompressContext->Verbose) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Created compression thread %i\n"), CompressContext->ThreadsAllocated);
+            }
+        }
+    }
+
+    if (CompressContext->ThreadsAllocated > 0 &&
+        CompressContext->ItemsQueued < CompressContext->MaxThreads * 2) {
+
+        YoriLibAppendList(&CompressContext->PendingList, &PendingAction->CompressList);
+        CompressContext->ItemsQueued++;
+        Result = TRUE;
+    }
+
+    ReleaseMutex(CompressContext->Mutex);
+
+    SetEvent(CompressContext->WorkerWaitEvent);
+    return Result;
+}
+
+/**
  Compress a given file with a specified algorithm.  This routine will skip
  small files that do not benefit from compression.
 
@@ -288,16 +402,22 @@ YoriLibCompressFileInBackground(
     )
 {
     HANDLE DestFileHandle;
-    DWORD ThreadId;
     BOOL Result = FALSE;
     BY_HANDLE_FILE_INFORMATION FileInfo;
-    PYORILIB_PENDING_COMPRESS PendingCompress;
+    PYORILIB_PENDING_ACTION PendingAction;
+    DWORD AccessRequired;
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
 
+    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE;
+    if (CompressContext->CompressionAlgorithm.NtfsAlgorithm != 0) {
+        AccessRequired |= FILE_WRITE_DATA;
+    }
+
+
     DestFileHandle = CreateFile(FileName->StartOfString,
-                                FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE,
-                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                AccessRequired,
+                                FILE_SHARE_READ|FILE_SHARE_DELETE,
                                 NULL,
                                 OPEN_EXISTING,
                                 0,
@@ -324,53 +444,33 @@ YoriLibCompressFileInBackground(
         goto Exit;
     }
 
-    PendingCompress = YoriLibMalloc(sizeof(YORILIB_PENDING_COMPRESS));
-    if (PendingCompress == NULL) {
+    PendingAction = YoriLibMalloc(sizeof(YORILIB_PENDING_ACTION));
+    if (PendingAction == NULL) {
         goto Exit;
     }
 
-    PendingCompress->hFile = DestFileHandle;
+    PendingAction->hFile = DestFileHandle;
+    PendingAction->Compress = TRUE;
     DestFileHandle = NULL;
-    WaitForSingleObject(CompressContext->Mutex, INFINITE);
-    if (CompressContext->ThreadsAllocated == 0 ||
-        (CompressContext->ItemsQueued > CompressContext->ThreadsAllocated * 2 &&
-         CompressContext->ThreadsAllocated < CompressContext->MaxThreads)) {
 
-        CompressContext->Threads[CompressContext->ThreadsAllocated] = CreateThread(NULL, 0, YoriLibCompressWorker, CompressContext, 0, &ThreadId);
-        if (CompressContext->Threads[CompressContext->ThreadsAllocated] != NULL) {
-            CompressContext->ThreadsAllocated++;
-            if (CompressContext->Verbose) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Created compression thread %i\n"), CompressContext->ThreadsAllocated);
-            }
-        }
+    if (YoriLibAddToBackgroundCompressQueue(CompressContext, PendingAction)) {
+        PendingAction = NULL;
     }
-
-    if (CompressContext->ThreadsAllocated > 0 &&
-        CompressContext->ItemsQueued < CompressContext->MaxThreads * 2) {
-
-        YoriLibAppendList(&CompressContext->PendingList, &PendingCompress->CompressList);
-        CompressContext->ItemsQueued++;
-        PendingCompress = NULL;
-    }
-
-    ReleaseMutex(CompressContext->Mutex);
-
-    SetEvent(CompressContext->WorkerWaitEvent);
 
     Result = TRUE;
 
     //
-    //  If the threads in the pool are all busy (we have more than 6 items
-    //  waiting) do the compression on the main thread.  This is mainly done
-    //  to prevent the main thread from continuing to pile in more items
-    //  that the pool can't get to.
+    //  If the threads in the pool are all busy (we have too many items
+    //  waiting) do the compression on the main thread.  This is mainly done to
+    //  prevent the main thread from continuing to pile in more items that the
+    //  pool can't get to.
     //
 
-    if (PendingCompress != NULL) {
+    if (PendingAction != NULL) {
         if (CompressContext->Verbose) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Compressing %y on main thread for back pressure\n"), FileName);
         }
-        if (!YoriLibCompressSingleFile(PendingCompress, CompressContext->CompressionAlgorithm)) {
+        if (!YoriLibCompressSingleFile(PendingAction, CompressContext->CompressionAlgorithm)) {
             Result = FALSE;
         }
     }
@@ -381,5 +481,83 @@ Exit:
     }
     return Result;
 }
+
+/**
+ Decompress a given file.
+
+ @param CompressContext Pointer to the compress context specifying where to
+        queue compression tasks.
+
+ @param FileName Pointer to the file name to compress.
+
+ @return TRUE to indicate the file was successfully queued for decompression,
+         FALSE if it was not.
+ */
+BOOL
+YoriLibDecompressFileInBackground(
+    __in PYORILIB_COMPRESS_CONTEXT CompressContext,
+    __in PYORI_STRING FileName
+    )
+{
+    HANDLE DestFileHandle;
+    BOOL Result = FALSE;
+    PYORILIB_PENDING_ACTION PendingAction;
+    DWORD AccessRequired;
+
+    ASSERT(YoriLibIsStringNullTerminated(FileName));
+
+    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | FILE_WRITE_DATA;
+
+    DestFileHandle = CreateFile(FileName->StartOfString,
+                                AccessRequired,
+                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                0,
+                                NULL);
+
+    if (DestFileHandle == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    PendingAction = YoriLibMalloc(sizeof(YORILIB_PENDING_ACTION));
+    if (PendingAction == NULL) {
+        goto Exit;
+    }
+
+    PendingAction->hFile = DestFileHandle;
+    PendingAction->Compress = FALSE;
+    DestFileHandle = NULL;
+
+    if (YoriLibAddToBackgroundCompressQueue(CompressContext, PendingAction)) {
+        PendingAction = NULL;
+    }
+
+    Result = TRUE;
+
+    //
+    //  If the threads in the pool are all busy (we have too many items
+    //  waiting) do the decompression on the main thread.  This is mainly done
+    //  to prevent the main thread from continuing to pile in more items that
+    //  the pool can't get to.
+    //
+
+    if (PendingAction != NULL) {
+        if (CompressContext->Verbose) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Decompressing %y on main thread for back pressure\n"), FileName);
+        }
+        if (!YoriLibDecompressSingleFile(PendingAction)) {
+            Result = FALSE;
+        }
+    }
+
+Exit:
+    if (DestFileHandle != NULL) {
+        CloseHandle(DestFileHandle);
+    }
+    return Result;
+}
+
+// vim:sw=4:ts=4:et:
 
 // vim:sw=4:ts=4:et:

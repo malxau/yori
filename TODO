@@ -1,5 +1,4 @@
  - Support input from devices other than consoles
- - If multithreaded copy works, ycompact that uses it
  - Merge sdir recursion root and criteria arguments
  - Allow child yori process to execute a plan in the background
  - Colorize help and error text

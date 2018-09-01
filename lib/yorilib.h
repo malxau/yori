@@ -831,6 +831,12 @@ YoriLibCompressFileInBackground(
     __in PYORI_STRING FileName
     );
 
+BOOL
+YoriLibDecompressFileInBackground(
+    __in PYORILIB_COMPRESS_CONTEXT CompressContext,
+    __in PYORI_STRING FileName
+    );
+
 // *** FILEENUM.C ***
 
 /**

@@ -67,6 +67,7 @@ CHAR strHelpText1[] =
         "CLMP      Multi process compiler wrapper\n"
         "CLS       Clears the console\n"
         "COLOR     Change the active color or all characters on the console\n"
+        "COMPACT   Compress or decompress individual files\n"
         "COPY      Copies one or more files\n"
         "CSHOT     Captures previous output on the console and outputs it\n"
         "CUT       Outputs a portion of an input buffer of text\n"

@@ -96,6 +96,7 @@ YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[] = {
     {_T("cd"),       _T("chdir $*$")},
     {_T("clip"),     _T("yclip $*$")},
     {_T("cls"),      _T("ycls $*$")},
+    {_T("compact"),  _T("ycompact $*$")},
     {_T("copy"),     _T("ycopy $*$")},
     {_T("cut"),      _T("ycut $*$")},
     {_T("date"),     _T("ydate $*$")},
