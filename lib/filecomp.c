@@ -420,7 +420,7 @@ YoriLibCompressFileInBackground(
                                 FILE_SHARE_READ|FILE_SHARE_DELETE,
                                 NULL,
                                 OPEN_EXISTING,
-                                0,
+                                FILE_FLAG_BACKUP_SEMANTICS,
                                 NULL);
 
     if (DestFileHandle == INVALID_HANDLE_VALUE) {
@@ -513,7 +513,7 @@ YoriLibDecompressFileInBackground(
                                 FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
                                 NULL,
                                 OPEN_EXISTING,
-                                0,
+                                FILE_FLAG_BACKUP_SEMANTICS,
                                 NULL);
 
     if (DestFileHandle == INVALID_HANDLE_VALUE) {
@@ -558,6 +558,59 @@ Exit:
     return Result;
 }
 
-// vim:sw=4:ts=4:et:
+/**
+ Return the version of WOF available on a specified path.  This will return
+ zero if WOF is not attached to the path, or does not support individual file
+ compression.
+
+ @param FileName The file path to check for WOF support.
+
+ @return The version of WOF, in GetVersion form.  Zero if WOF is not
+         available.
+ */
+DWORD
+YoriLibGetWofVersionAvailable(
+    __in PYORI_STRING FileName
+    )
+{
+    HANDLE FileHandle;
+    DWORD AccessRequired;
+    DWORD WofVersion;
+    DWORD BytesReturned;
+    WOF_EXTERNAL_INFO WofInfo;
+
+    ASSERT(YoriLibIsStringNullTerminated(FileName));
+
+    AccessRequired = FILE_READ_ATTRIBUTES | SYNCHRONIZE;
+
+    FileHandle = CreateFile(FileName->StartOfString,
+                            AccessRequired,
+                            FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_FLAG_BACKUP_SEMANTICS,
+                            NULL);
+
+    if (FileHandle == INVALID_HANDLE_VALUE) {
+        return 0;
+    }
+
+    WofInfo.Version = 1;
+    WofInfo.Provider = WOF_PROVIDER_FILE;
+
+    WofVersion = 0;
+    DeviceIoControl(FileHandle,
+                    FSCTL_GET_WOF_VERSION,
+                    &WofInfo,
+                    sizeof(WofInfo),
+                    &WofVersion,
+                    sizeof(WofVersion),
+                    &BytesReturned,
+                    NULL);
+
+    CloseHandle(FileHandle);
+    return WofVersion;
+}
+
 
 // vim:sw=4:ts=4:et:

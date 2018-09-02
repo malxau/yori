@@ -399,7 +399,7 @@ ymain(
 
         YoriLibInitEmptyString(&ErrorString);
 
-        if (!YoriLibExtractCab(CabFileName, &FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, &ErrorString)) {
+        if (!YoriLibExtractCab(CabFileName, &FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, NULL, &ErrorString)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), &CabFileName, &ErrorString);
             YoriLibFreeStringContents(&ErrorString);
             YoriLibFreeStringContents(&FullTargetDirectory);

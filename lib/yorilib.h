@@ -425,7 +425,8 @@ YoriLibExtractCab(
     __in_opt PYORI_STRING FilesToExclude,
     __in DWORD NumberFilesToInclude,
     __in_opt PYORI_STRING FilesToInclude,
-    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback,
+    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
+    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
     __out_opt PYORI_STRING ErrorString
     );
@@ -834,6 +835,11 @@ YoriLibCompressFileInBackground(
 BOOL
 YoriLibDecompressFileInBackground(
     __in PYORILIB_COMPRESS_CONTEXT CompressContext,
+    __in PYORI_STRING FileName
+    );
+
+DWORD
+YoriLibGetWofVersionAvailable(
     __in PYORI_STRING FileName
     );
 

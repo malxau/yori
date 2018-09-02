@@ -657,6 +657,14 @@ typedef USN_RECORD *PUSN_RECORD;
 #define FSCTL_DELETE_EXTERNAL_BACKING    CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 197, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #endif
 
+#ifndef FSCTL_GET_WOF_VERSION
+/**
+ Specifies the FSCTL_GET_WOF_VERSION numerical representation if the
+ compilation environment doesn't provide it.
+ */
+#define FSCTL_GET_WOF_VERSION            CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 218, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#endif
+
 #ifndef WOF_PROVIDER_WIM
 
 /**

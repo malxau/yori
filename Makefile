@@ -55,6 +55,7 @@ DIRS=crt       \
      clip      \
      clmp      \
      cls       \
+     compact   \
      copy      \
      cshot     \
      cut       \

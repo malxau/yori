@@ -205,6 +205,17 @@ typedef struct _YORIPKG_INSTALL_PKG_CONTEXT {
      incremented each time a file is found.
      */
     DWORD NumberFiles;
+
+    /**
+     If TRUE, files extracted from this package should be compressed.
+     */
+    BOOL CompressFiles;
+
+    /**
+     Context for background compression threads.
+     */
+    YORILIB_COMPRESS_CONTEXT CompressContext;
+
 } YORIPKG_INSTALL_PKG_CONTEXT, *PYORIPKG_INSTALL_PKG_CONTEXT;
 
 /**
@@ -235,6 +246,38 @@ YoriPkgInstallPackageFileCallback(
     YoriLibSPrintf(FileIndexString, _T("File%i"), InstallContext->NumberFiles);
 
     WritePrivateProfileString(InstallContext->PackageName->StartOfString, FileIndexString, RelativePath->StartOfString, InstallContext->IniFileName->StartOfString);
+    return TRUE;
+}
+
+/**
+ After a file has been extracted, this function is invoked to initiate
+ compress if that feature is available.
+
+ @param FullPath The full path name of the file on disk.
+
+ @param RelativePath The relative path name of the file as stored within the
+        package.
+
+ @param Context Pointer to the YORIPKG_INSTALL_PKG_CONTEXT structure.
+
+ @return TRUE, but this value is ignored since the file is already extracted.
+ */
+BOOL
+YoriPkgCompressPackageFileCallback(
+    __in PYORI_STRING FullPath,
+    __in PYORI_STRING RelativePath,
+    __in PVOID Context
+    )
+{
+    PYORIPKG_INSTALL_PKG_CONTEXT InstallContext = (PYORIPKG_INSTALL_PKG_CONTEXT)Context;
+
+    UNREFERENCED_PARAMETER(RelativePath);
+
+    if (!InstallContext->CompressFiles) {
+        return TRUE;
+    }
+
+    YoriLibCompressFileInBackground(&InstallContext->CompressContext, FullPath);
     return TRUE;
 }
 
@@ -279,6 +322,8 @@ YoriPkgInstallPackage(
     BOOL Result = FALSE;
     BOOL DeleteLocalFile = FALSE;
     TCHAR FileIndexString[16];
+
+    ZeroMemory(&InstallContext, sizeof(InstallContext));
 
     YoriLibConstantString(&PkgInfoFile, _T("pkginfo.ini"));
 
@@ -330,7 +375,7 @@ YoriPkgInstallPackage(
     //
 
     YoriLibInitEmptyString(&ErrorString);
-    if (!YoriLibExtractCab(&PackageFile, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, &ErrorString)) {
+    if (!YoriLibExtractCab(&PackageFile, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, NULL, &ErrorString)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), &PackageFile, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
         goto Exit;
@@ -381,6 +426,17 @@ YoriPkgInstallPackage(
         WritePrivateProfileString(PackageName.StartOfString, _T("UpgradePath"), UpgradePath.StartOfString, PkgIniFile.StartOfString);
     }
 
+    if (YoriLibGetWofVersionAvailable(&FullTargetDirectory)) {
+        YORILIB_COMPRESS_ALGORITHM CompressAlgorithm;
+        CompressAlgorithm.EntireAlgorithm = 0;
+        CompressAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS8K;
+        if (YoriLibInitializeCompressContext(&InstallContext.CompressContext, CompressAlgorithm)) {
+            InstallContext.CompressFiles = TRUE;
+        } else {
+            YoriLibFreeCompressContext(&InstallContext.CompressContext);
+        }
+    }
+
     //
     //  Extract the package contents, without pkginfo.ini, to the desired
     //  location
@@ -389,7 +445,7 @@ YoriPkgInstallPackage(
     InstallContext.IniFileName = &PkgIniFile;
     InstallContext.PackageName = &PackageName;
     InstallContext.NumberFiles = 0;
-    if (!YoriLibExtractCab(&PackageFile, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YoriPkgInstallPackageFileCallback, &InstallContext, &ErrorString)) {
+    if (!YoriLibExtractCab(&PackageFile, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YoriPkgInstallPackageFileCallback, YoriPkgCompressPackageFileCallback, &InstallContext, &ErrorString)) {
         WritePrivateProfileString(_T("Installed"), PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), &PackageFile, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
@@ -430,6 +486,9 @@ Exit:
         DeleteFile(PackageFile.StartOfString);
     }
     YoriLibFreeStringContents(&PackageFile);
+    if (InstallContext.CompressFiles) {
+        YoriLibFreeCompressContext(&InstallContext.CompressContext);
+    }
 
     return Result;
 }

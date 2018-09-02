@@ -66,7 +66,12 @@ typedef struct _YORI_LIB_CAB_EXPAND_CONTEXT {
     /**
      A user specified callback to provide notification for a given file.
      */
-    PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback;
+    PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback;
+
+    /**
+     A user specified callback to provide notification for a given file.
+     */
+    PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback;
 
     /**
      Context information to pass to the user specified callback.
@@ -997,8 +1002,8 @@ YoriLibCabNotify(
                 return (DWORD_PTR)INVALID_HANDLE_VALUE;
             }
             if (YoriLibCabShouldIncludeFile(&FileName, ExpandContext)) {
-                if (ExpandContext->UserCallback == NULL ||
-                    ExpandContext->UserCallback(&FullPath, &FileName, ExpandContext->UserContext)) {
+                if (ExpandContext->CommenceExtractCallback == NULL ||
+                    ExpandContext->CommenceExtractCallback(&FullPath, &FileName, ExpandContext->UserContext)) {
 
                     Handle = YoriLibCabFileOpenForExtract(&FullPath, ExpandContext->ErrorString);
                 } else {
@@ -1034,12 +1039,18 @@ YoriLibCabNotify(
             //
 
             SetFileTime((HANDLE)Notification->FileHandle, &TimeToSet, &TimeToSet, &TimeToSet);
-
-            //
-            //  MSFIX Need to apply DOS attributes
-            //
-
             YoriLibCabFdiFileClose(Notification->FileHandle);
+
+            ExpandContext = (PYORI_LIB_CAB_EXPAND_CONTEXT)Notification->Context;
+            if (YoriLibCabBuildFileNames(ExpandContext->TargetDirectory, Notification->String1, &FullPath, &FileName)) {
+                SetFileAttributes(FullPath.StartOfString, Notification->HalfAttributes);
+
+                if (ExpandContext->CompleteExtractCallback != NULL) {
+                    ExpandContext->CompleteExtractCallback(&FullPath, &FileName, ExpandContext->UserContext);
+                }
+                YoriLibFreeStringContents(&FullPath);
+                YoriLibFreeStringContents(&FileName);
+            }
             return 1;
     }
     return 0;
@@ -1066,10 +1077,18 @@ YoriLibCabNotify(
  @param FilesToExclude An array of strings corresponding to files that should
         not be expanded.
 
- @param UserCallback Optionally points to a a function to invoke for each file
-        processed as part of extracting the CAB.
+ @param CommenceExtractCallback Optionally points to a a function to invoke
+        for each file processed as part of extracting the CAB.  This function
+        is invoked before extract and gives the user a chance to skip
+        particular files.
 
- @param UserContext Optionally points to context to pass to UserCallback.
+ @param CompleteExtractCallback Optionally points to a a function to invoke
+        for each file processed as part of extracting the CAB.  This function
+        is invoked after extract and gives the user a chance to make extra
+        changes to files.
+
+ @param UserContext Optionally points to context to pass to
+        CommenceExtractCallback and CompleteExtractCallback.
 
  @param ErrorString Optionally points to a string to populate with information
         about any error encountered in the extraction process.
@@ -1085,7 +1104,8 @@ YoriLibExtractCab(
     __in_opt PYORI_STRING FilesToExclude,
     __in DWORD NumberFilesToInclude,
     __in_opt PYORI_STRING FilesToInclude,
-    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK UserCallback,
+    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
+    __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
     __out_opt PYORI_STRING ErrorString
     )
@@ -1123,7 +1143,8 @@ YoriLibExtractCab(
     ExpandContext.NumberFilesToExclude = NumberFilesToExclude;
     ExpandContext.FilesToInclude = FilesToInclude;
     ExpandContext.FilesToExclude = FilesToExclude;
-    ExpandContext.UserCallback = UserCallback;
+    ExpandContext.CommenceExtractCallback = CommenceExtractCallback;
+    ExpandContext.CompleteExtractCallback = CompleteExtractCallback;
     ExpandContext.UserContext = UserContext;
     ExpandContext.ErrorString = ErrorString;
 
