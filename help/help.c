@@ -84,6 +84,13 @@ CHAR strHelpText1[] =
         "FINFO     Output information about file metadata\n"
         "FG        Display the output of a background job in the foreground\n"
         "FOR       Enumerates through a list of strings or files\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpText2[] =
         "FSCMP     Test for file system conditions\n"
         "GET       Fetches objects from HTTP and stores them in local files\n"
         "GRPCMP    Returns true if the user is a member of the specified group\n"
@@ -97,13 +104,7 @@ CHAR strHelpText1[] =
         "INITOOL   Query or set values in INI files\n"
         "INTCMP    Compare two integer values\n"
         "JOB       Displays or updates background job status\n"
-        "LINES     Count the number of lines in one or more files";
-
-/**
- More text to display to the user about Yori and its tools.
- */
-const
-CHAR strHelpText2[] =
+        "LINES     Count the number of lines in one or more files\n"
         "MKDIR     Creates directories\n"
         "MKLINK    Creates hardlinks, symbolic links, or junctions\n"
         "MOVE      Moves or renames one or more files\n"
@@ -116,6 +117,13 @@ CHAR strHelpText2[] =
         "PUSHD     Push the current directory onto a stack and change to a new directory\n"
         "READLINE  Inputs a line and sends it to output\n"
         "REM       Ignore command\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpText3[] =
         "RETURN    Return from a subroutine (only valid after CALL)\n"
         "RMDIR     Removes directories\n"
         "SCUT      Create, modify, display or execute Windows shortcuts\n"
@@ -149,8 +157,9 @@ CHAR strHelpText2[] =
 BOOL
 HelpText()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText1);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText2);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText1);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText2);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText3);
     return TRUE;
 }
 
