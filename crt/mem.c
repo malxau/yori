@@ -93,7 +93,10 @@ mini_memmove(void * dest, const void * src, unsigned int len)
     char * char_src = (char *)src;
     char * char_dest = (char *)dest;
     if (char_dest > char_src) {
-        for (i = len; ; i--) {
+        if (len == 0) {
+            return dest;
+        }
+        for (i = len - 1; ; i--) {
             char_dest[i] = char_src[i];
             if (i==0) break;
         }

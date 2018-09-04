@@ -107,6 +107,7 @@ CHAR strHelpText2[] =
         "LINES     Count the number of lines in one or more files\n"
         "MKDIR     Creates directories\n"
         "MKLINK    Creates hardlinks, symbolic links, or junctions\n"
+        "MORE      Displays text one page at a time with scrolling\n"
         "MOVE      Moves or renames one or more files\n"
         "NICE      Runs a child program at low priority\n"
         "OSVER     Outputs the operating system version in a specified format\n"

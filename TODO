@@ -7,5 +7,4 @@
  - Isolate aliases during call
  - Have find apply file criteria
  - Cal
- - Pager
  - Split sdir brief recurse into standalone du

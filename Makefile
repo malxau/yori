@@ -78,6 +78,7 @@ DIRS=crt       \
      lines     \
      mkdir     \
      mklink    \
+     more      \
      move      \
      nice      \
      osver     \

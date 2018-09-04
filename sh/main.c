@@ -111,6 +111,7 @@ YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[] = {
     {_T("md"),       _T("ymkdir $*$")},
     {_T("mkdir"),    _T("ymkdir $*$")},
     {_T("mklink"),   _T("ymklink $*$")},
+    {_T("more"),     _T("ymore $*$")},
     {_T("move"),     _T("ymove $*$")},
     {_T("paste"),    _T("yclip -p $*$")},
     {_T("path"),     _T("ypath $*$")},
