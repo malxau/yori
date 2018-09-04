@@ -315,7 +315,6 @@ MoreGetNextLogicalLines(
     while(LinesRemaining > 0) {
         PMORE_PHYSICAL_LINE NextPhysicalLine;
         PYORI_LIST_ENTRY ListEntry;
-        DWORD LogicalLineCount;
 
         if (CurrentInputLine != NULL) {
             ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, &CurrentInputLine->PhysicalLine->LineList);
@@ -415,8 +414,18 @@ MoreDisplayPreviousLinesInViewport(
 {
     DWORD Index;
     DWORD LinesToPreserve;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+    COORD NewPosition;
+    DWORD NumberWritten;
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
 
     if (MoreContext->LinesInViewport > NewLineCount) {
+        SMALL_RECT RectToMove;
+        CHAR_INFO Fill;
+
         LinesToPreserve = MoreContext->LinesInViewport - NewLineCount;
 
         //
@@ -426,7 +435,36 @@ MoreDisplayPreviousLinesInViewport(
         memmove(&MoreContext->DisplayViewportLines[NewLineCount],
                 MoreContext->DisplayViewportLines,
                 (LinesToPreserve * sizeof(MORE_LOGICAL_LINE)));
+
+        //
+        //  Move the text we want to preserve
+        //
+
+        RectToMove.Top = (USHORT)(ScreenInfo.dwCursorPosition.Y - MoreContext->LinesInViewport);
+        RectToMove.Left = 0;
+        RectToMove.Right = (USHORT)(ScreenInfo.dwSize.X - 1);
+        RectToMove.Bottom = (USHORT)(RectToMove.Top + LinesToPreserve - 1);
+        NewPosition.X = 0;
+        NewPosition.Y = (USHORT)(RectToMove.Top + NewLineCount);
+        Fill.Char.UnicodeChar = ' ';
+        Fill.Attributes = YoriLibVtGetDefaultColor();
+        ScrollConsoleScreenBuffer(StdOutHandle, &RectToMove, NULL, NewPosition, &Fill);
     }
+
+    //
+    //  Clear the region we want to overwrite
+    //
+
+    NewPosition.X = 0;
+    NewPosition.Y = (USHORT)(ScreenInfo.dwCursorPosition.Y - MoreContext->LinesInViewport);
+    FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X * NewLineCount, NewPosition, &NumberWritten);
+    FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X * NewLineCount, NewPosition, &NumberWritten);
+
+    //
+    //  Set the cursor to the top of the viewport
+    //
+
+    SetConsoleCursorPosition(StdOutHandle, NewPosition);
 
     memcpy(MoreContext->DisplayViewportLines,
            NewLines,
@@ -437,18 +475,29 @@ MoreDisplayPreviousLinesInViewport(
         MoreContext->LinesInViewport = MoreContext->ViewportHeight;
     }
 
-    //
-    //  MSFIX This needs to use the console's scroll support
-    //
+    for (Index = 0; Index < NewLineCount; Index++) {
 
-    for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
-        ASSERT(MoreContext->DisplayViewportLines[Index].Line.LengthInChars <= MoreContext->ViewportWidth);
-        if (MoreContext->DisplayViewportLines[Index].Line.LengthInChars >= MoreContext->ViewportWidth) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
+        //
+        //  MSFIX Once we have nonprinting characters like VT, this needs
+        //  to be smarter to know whether the number of printing characters
+        //  reaches the end of the line
+        //
+
+        ASSERT(NewLines[Index].Line.LengthInChars <= MoreContext->ViewportWidth);
+        if (NewLines[Index].Line.LengthInChars >= MoreContext->ViewportWidth) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &NewLines[Index].Line);
         } else {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &NewLines[Index].Line);
         }
     }
+
+    //
+    //  Restore the cursor to the bottom of the viewport
+    //
+
+    NewPosition.X = 0;
+    NewPosition.Y = ScreenInfo.dwCursorPosition.Y;
+    SetConsoleCursorPosition(StdOutHandle, NewPosition);
 }
 
 
@@ -615,6 +664,11 @@ MoreMoveViewportDown(
     //
 
     LinesToPreserve = MoreContext->LinesInViewport - LinesReturned;
+
+    //
+    //  MSFIX When these are referenced, need to tear down overwritten
+    //  entries
+    //
 
     memmove(MoreContext->DisplayViewportLines,
             &MoreContext->DisplayViewportLines[LinesReturned],
