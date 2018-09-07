@@ -230,10 +230,12 @@ YoriShLoadHistoryFromFile()
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
         DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yori: open of %y failed: %s"), &FilePath, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
-        YoriLibFreeStringContents(&FilePath);
+        if (LastError != ERROR_FILE_NOT_FOUND) {
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yori: open of %y failed: %s"), &FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            YoriLibFreeStringContents(&FilePath);
+        }
         return FALSE;
     }
 
