@@ -87,6 +87,7 @@ StartShellExecute(
     ASSERT(YoriLibIsStringNullTerminated(&ArgV[0]));
     hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, SW_SHOWNORMAL);
 
+    YoriLibFreeStringContents(&Args);
     if ((DWORD_PTR)hInst >= 32) {
         return TRUE;
     }
