@@ -509,11 +509,15 @@ ymain (
             if (g_ExitProcess) {
                 break;
             }
+            YoriShPreCommand();
             YoriShDisplayPrompt();
             YoriShPreCommand();
             if (!YoriShGetExpression(&CurrentExpression)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Failed to read expression!"));
                 continue;
+            }
+            if (g_ExitProcess) {
+                break;
             }
             if (CurrentExpression.LengthInChars > 0) {
                 YoriShExecuteExpression(&CurrentExpression);

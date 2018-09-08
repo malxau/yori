@@ -42,6 +42,13 @@ DWORD YoriShCommandHistoryCount;
 DWORD YoriShCommandHistoryMax;
 
 /**
+ A lock around history updates.  History should really only be accessed
+ by a single thread, but when the app is being closed it can be
+ accessed by a background thread to write to disk.
+ */
+HANDLE YoriShHistoryLock;
+
+/**
  Set to TRUE once the history module has been initialized.
  */
 BOOL YoriShHistoryInitialized;
@@ -67,29 +74,34 @@ YoriShAddToHistory(
 
     LengthToAllocate = sizeof(YORI_HISTORY_ENTRY);
 
-    NewHistoryEntry = YoriLibMalloc(LengthToAllocate);
-    if (NewHistoryEntry == NULL) {
-        return FALSE;
-    }
+    if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
 
-    YoriLibCloneString(&NewHistoryEntry->CmdLine, NewCmd);
+        NewHistoryEntry = YoriLibMalloc(LengthToAllocate);
+        if (NewHistoryEntry == NULL) {
+            ReleaseMutex(YoriShHistoryLock);
+            return FALSE;
+        }
 
-    if (YoriShCommandHistory.Next == NULL) {
-        YoriLibInitializeListHead(&YoriShCommandHistory);
-    }
+        YoriLibCloneString(&NewHistoryEntry->CmdLine, NewCmd);
 
-    YoriLibAppendList(&YoriShCommandHistory, &NewHistoryEntry->ListEntry);
-    YoriShCommandHistoryCount++;
-    while (YoriShCommandHistoryCount > YoriShCommandHistoryMax) {
-        PYORI_LIST_ENTRY ListEntry;
-        PYORI_HISTORY_ENTRY OldHistoryEntry;
+        if (YoriShCommandHistory.Next == NULL) {
+            YoriLibInitializeListHead(&YoriShCommandHistory);
+        }
 
-        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
-        OldHistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
-        YoriLibRemoveListItem(ListEntry);
-        YoriLibFreeStringContents(&OldHistoryEntry->CmdLine);
-        YoriLibFree(OldHistoryEntry);
-        YoriShCommandHistoryCount--;
+        YoriLibAppendList(&YoriShCommandHistory, &NewHistoryEntry->ListEntry);
+        YoriShCommandHistoryCount++;
+        while (YoriShCommandHistoryCount > YoriShCommandHistoryMax) {
+            PYORI_LIST_ENTRY ListEntry;
+            PYORI_HISTORY_ENTRY OldHistoryEntry;
+
+            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
+            OldHistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            YoriLibRemoveListItem(ListEntry);
+            YoriLibFreeStringContents(&OldHistoryEntry->CmdLine);
+            YoriLibFree(OldHistoryEntry);
+            YoriShCommandHistoryCount--;
+        }
+        ReleaseMutex(YoriShHistoryLock);
     }
 
     return TRUE;
@@ -104,14 +116,17 @@ YoriShClearAllHistory()
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_HISTORY_ENTRY HistoryEntry;
 
-    ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
-    while (ListEntry != NULL) {
-        HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
-        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
-        YoriLibRemoveListItem(&HistoryEntry->ListEntry);
-        YoriLibFreeStringContents(&HistoryEntry->CmdLine);
-        YoriLibFree(HistoryEntry);
-        YoriShCommandHistoryCount--;
+    if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
+        while (ListEntry != NULL) {
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+            YoriLibRemoveListItem(&HistoryEntry->ListEntry);
+            YoriLibFreeStringContents(&HistoryEntry->CmdLine);
+            YoriLibFree(HistoryEntry);
+            YoriShCommandHistoryCount--;
+        }
+        ReleaseMutex(YoriShHistoryLock);
     }
 }
 
@@ -127,6 +142,14 @@ YoriShInitHistory()
     DWORD EnvVarLength;
 
     if (YoriShHistoryInitialized) {
+        return FALSE;
+    }
+
+    if (YoriShHistoryLock == NULL) {
+        YoriShHistoryLock = CreateMutex(NULL, FALSE, NULL);
+    }
+
+    if (YoriShHistoryLock == NULL) {
         return FALSE;
     }
 
@@ -196,7 +219,7 @@ YoriShLoadHistoryFromFile()
     //
     //  Check if there's a file to load saved history from.
     //
-    
+
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), NULL, 0);
     if (EnvVarLength == 0) {
         return TRUE;
@@ -284,7 +307,7 @@ YoriShSaveHistoryToFile()
     HANDLE FileHandle;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_HISTORY_ENTRY HistoryEntry;
-    
+
     FileNameLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), NULL, 0);
     if (FileNameLength == 0) {
         return TRUE;
@@ -331,13 +354,16 @@ YoriShSaveHistoryToFile()
     //  Search the list of history.
     //
 
-    ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
-    while (ListEntry != NULL) {
-        HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+    if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
+        while (ListEntry != NULL) {
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
 
-        YoriLibOutputToDevice(FileHandle, 0, _T("%y\n"), &HistoryEntry->CmdLine);
+            YoriLibOutputToDevice(FileHandle, 0, _T("%y\n"), &HistoryEntry->CmdLine);
 
-        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+        }
+        ReleaseMutex(YoriShHistoryLock);
     }
 
     CloseHandle(FileHandle);

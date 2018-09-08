@@ -962,6 +962,42 @@ YoriShConfigureMouseForPrograms(
 }
 
 /**
+ A handler to invoke when at the input prompt for Ctrl+C and app close
+ signals.  Generally, when inputting we want to ignore Ctrl+C etc and just
+ read them as keystrokes.  For app close however, we want to be able to save
+ state before terminating.  Frustratingly, this handler is invoked and all
+ other threads are immediately terminated, so any state must be saved
+ right here.
+
+ @param CtrlType Indicates the type of the control message.
+
+ @return FALSE to indicate that this handler performed no processing and the
+         signal should be sent to the next handler.  TRUE to indicate this
+         handler processed the signal and no other handler should be invoked.
+ */
+BOOL WINAPI
+YoriShAppCloseCtrlHandler(
+    __in DWORD CtrlType
+    )
+{
+    if (CtrlType == CTRL_CLOSE_EVENT ||
+        CtrlType == CTRL_LOGOFF_EVENT ||
+        CtrlType == CTRL_SHUTDOWN_EVENT) {
+
+        YoriShSaveHistoryToFile();
+        return FALSE;
+    }
+
+    if (CtrlType == CTRL_C_EVENT ||
+        CtrlType == CTRL_BREAK_EVENT) {
+
+        return TRUE;
+    }
+
+    return TRUE;
+}
+
+/**
  NULL terminate the input buffer, and display a carriage return, in preparation
  for parsing and executing the input.
 
@@ -978,6 +1014,7 @@ YoriShTerminateInput(
     }
     YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriLibFreeStringContents(&Buffer->SearchString);
+    SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, FALSE);
     YoriShDisplayAfterKeyPress(Buffer);
     YoriShPostKeyPress(Buffer);
     YoriShClearTabCompletionMatches(Buffer);
@@ -2672,6 +2709,7 @@ YoriShGetExpression(
 
     YoriShConfigureInputSettings(&Buffer);
     YoriShConfigureMouseForPrompt(&Buffer);
+    SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, TRUE);
 
     while (TRUE) {
 
