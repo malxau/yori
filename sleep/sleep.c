@@ -33,9 +33,11 @@
 const
 CHAR strHelpText[] =
         "\n"
-        "Waits for a specified number of seconds.\n"
+        "Waits for a specified amount of time.\n"
         "\n"
-        "SLEEP [-license] <seconds>\n";
+        "SLEEP [-license] <time>[<suffix>]\n"
+        "\n"
+        "Suffix can be \"s\" for seconds, \"m\" for minutes, \"ms\" for milliseconds.\n" ;
 
 /**
  Display usage text to the user.
@@ -71,7 +73,8 @@ ymain(
     DWORD StartArg;
     DWORD i;
     YORI_STRING Arg;
-    DWORD SecondsToSleep;
+    YORI_STRING Suffix;
+    DWORD TimeToSleep;
     LONGLONG llTemp;
     DWORD CharsConsumed;
 
@@ -113,9 +116,26 @@ ymain(
 
     llTemp = 0;
     YoriLibStringToNumber(&ArgV[StartArg], TRUE, &llTemp, &CharsConsumed);
-    SecondsToSleep = (DWORD)llTemp;
+    if (CharsConsumed < ArgV[StartArg].LengthInChars) {
+        YoriLibInitEmptyString(&Suffix);
+        Suffix.StartOfString = &ArgV[StartArg].StartOfString[CharsConsumed];
+        Suffix.LengthInChars = ArgV[StartArg].LengthInChars - CharsConsumed;
+        if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("ms")) == 0) {
+            TimeToSleep = (DWORD)llTemp;
+        } else if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("s")) == 0) {
+            TimeToSleep = (DWORD)llTemp * 1000;
+        } else if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("m")) == 0) {
+            TimeToSleep = (DWORD)llTemp * 1000 * 60;
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sleep: unknown suffix\n"));
+            return EXIT_FAILURE;
+        }
 
-    Sleep(SecondsToSleep * 1000);
+    } else {
+        TimeToSleep = (DWORD)llTemp * 1000;
+    }
+
+    Sleep(TimeToSleep);
 
     return EXIT_SUCCESS;
 }
