@@ -32,8 +32,6 @@
  of the length of the string or the viewport width.  In practice it can be
  a little more convoluted due to nonprinting characters.
 
- MSFIX This needs to handle VT100 chars, etc
-
  @param MoreContext Pointer to the more context containing the data to
         display.
 
@@ -42,12 +40,19 @@
         other logical lines have already been constructed from the previous
         characters.
 
+ @param ExplicitNewlineRequired On successful completion, set to TRUE if the
+        number of visible character cells consumed is less than an entire line
+        so an explicit newline is needed to move to the next line.  Set to
+        FALSE if the number of visible character cells is equal to the entire
+        line so that the display will move to the next line automatically.
+
  @return The number of characters within the next logical line.
  */
 DWORD
 MoreGetLogicalLineLength(
     __in PMORE_CONTEXT MoreContext,
-    __in PYORI_STRING PhysicalLineSubset
+    __in PYORI_STRING PhysicalLineSubset,
+    __out_opt PBOOL ExplicitNewlineRequired
     )
 {
     DWORD SourceIndex;
@@ -58,6 +63,10 @@ MoreGetLogicalLineLength(
 
     CharsInOutputBuffer = 0;
     CellsDisplayed = 0;
+
+    if (ExplicitNewlineRequired != NULL) {
+        *ExplicitNewlineRequired = TRUE;
+    }
 
     for (SourceIndex = 0; SourceIndex < PhysicalLineSubset->LengthInChars; ) {
 
@@ -97,6 +106,9 @@ MoreGetLogicalLineLength(
 
         ASSERT(CellsDisplayed <= MoreContext->ViewportWidth);
         if (CellsDisplayed == MoreContext->ViewportWidth) {
+            if (ExplicitNewlineRequired != NULL) {
+                *ExplicitNewlineRequired = TRUE;
+            }
             break;
         }
     }
@@ -131,7 +143,7 @@ MoreCountLogicalLinesOnPhysicalLine(
     Subset.StartOfString = PhysicalLine->LineContents.StartOfString;
     Subset.LengthInChars = PhysicalLine->LineContents.LengthInChars;
     while(TRUE) {
-        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset);
+        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, NULL);
         Subset.StartOfString += LogicalLineLength;
         Subset.LengthInChars -= LogicalLineLength;
         Count++;
@@ -201,6 +213,7 @@ MoreGenerateLogicalLinesFromPhysicalLine(
     DWORD LogicalLineLength;
     YORI_STRING Subset;
     PMORE_LOGICAL_LINE ThisLine;
+    BOOL ExplicitNewlineRequired;
 
     YoriLibInitEmptyString(&Subset);
     Subset.StartOfString = PhysicalLine->LineContents.StartOfString;
@@ -209,7 +222,7 @@ MoreGenerateLogicalLinesFromPhysicalLine(
         if (Count >= FirstLogicalLineIndex + NumberLogicalLines) {
             break;
         }
-        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset);
+        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, &ExplicitNewlineRequired);
         if (Count >= FirstLogicalLineIndex) {
             ThisLine = &OutputLines[Count - FirstLogicalLineIndex];
             ThisLine->PhysicalLine = PhysicalLine;
@@ -219,18 +232,7 @@ MoreGenerateLogicalLinesFromPhysicalLine(
             YoriLibInitEmptyString(&ThisLine->Line);
             ThisLine->Line.StartOfString = Subset.StartOfString;
             ThisLine->Line.LengthInChars = LogicalLineLength;
-
-            //
-            //  MSFIX Once we have nonprinting characters like VT, this needs
-            //  to be smarter to know whether the number of printing characters
-            //  reaches the end of the line
-            //
-
-            if (ThisLine->Line.LengthInChars == MoreContext->ViewportWidth) {
-                ThisLine->ExplicitNewlineRequired = FALSE;
-            } else {
-                ThisLine->ExplicitNewlineRequired = TRUE;
-            }
+            ThisLine->ExplicitNewlineRequired = ExplicitNewlineRequired;
 
             YoriLibReference(ThisLine->PhysicalLine);
             ThisLine->Line.MemoryToFree = ThisLine->PhysicalLine;
@@ -504,10 +506,23 @@ MoreDisplayNewLinesInViewport(
 {
     DWORD Index;
     DWORD FirstLineToDisplay;
+    DWORD LinesToPreserve;
+    DWORD LineIndexToPreserve;
 
-    //
-    //  MSFIX This function should own scrolling.
-    //
+    ASSERT(NewLineCount <= MoreContext->ViewportHeight);
+
+    if (MoreContext->LinesInViewport + NewLineCount > MoreContext->ViewportHeight) {
+
+        LinesToPreserve = MoreContext->LinesInViewport - NewLineCount;
+        LineIndexToPreserve = MoreContext->LinesInViewport + NewLineCount - MoreContext->ViewportHeight;
+
+        for (Index = 0; Index < LinesToPreserve; Index++) {
+            MoreMoveLogicalLine(&MoreContext->DisplayViewportLines[Index],
+                                &MoreContext->DisplayViewportLines[LineIndexToPreserve + Index]);
+        }
+
+        MoreContext->LinesInViewport = MoreContext->ViewportHeight - NewLineCount;
+    }
 
     ASSERT(MoreContext->LinesInViewport + NewLineCount <= MoreContext->ViewportHeight);
 
@@ -517,6 +532,10 @@ MoreDisplayNewLinesInViewport(
 
     FirstLineToDisplay = MoreContext->LinesInViewport;
     MoreContext->LinesInViewport += NewLineCount;
+    MoreContext->LinesInPage += NewLineCount;
+    if (MoreContext->LinesInPage > MoreContext->LinesInViewport) {
+        MoreContext->LinesInPage = MoreContext->LinesInViewport;
+    }
 
     if (MoreContext->DebugDisplay) {
         MoreDegenerateDisplay(MoreContext);
@@ -686,7 +705,7 @@ MoreAddNewLinesToViewport(
         CurrentLine = &MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1];
     }
 
-    LinesDesired = MoreContext->ViewportHeight - MoreContext->LinesInViewport;
+    LinesDesired = MoreContext->ViewportHeight - MoreContext->LinesInPage;
 
     LinesReturned = MoreGetNextLogicalLines(MoreContext, CurrentLine, LinesDesired, MoreContext->StagingViewportLines);
 
@@ -772,8 +791,6 @@ MoreMoveViewportDown(
     PMORE_LOGICAL_LINE CurrentLine;
     DWORD LinesReturned;
     DWORD CappedLinesToMove;
-    DWORD LinesToPreserve;
-    DWORD Index;
 
     CappedLinesToMove = LinesToMove;
 
@@ -818,22 +835,6 @@ MoreMoveViewportDown(
         return;
     }
 
-    //
-    //  MSFIX Scrolling should move to the helper function
-    //
-
-    LinesToPreserve = MoreContext->LinesInViewport - LinesReturned;
-
-    //
-    //  Dereference the lines we're about to overwrite
-    //
-
-    for (Index = 0; Index < LinesToPreserve; Index++) {
-        MoreMoveLogicalLine(&MoreContext->DisplayViewportLines[Index],
-                            &MoreContext->DisplayViewportLines[LinesReturned + Index]);
-    }
-
-    MoreContext->LinesInViewport -= LinesReturned;
 
     MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
 }
@@ -875,6 +876,7 @@ MoreProcessKeyDown(
         if (Char == 'q' || Char == 'Q') {
             *Terminate = TRUE;
         } else if (Char == ' ') {
+            MoreContext->LinesInPage = 0;
             MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
         }
     } else if (CtrlMask == ENHANCED_KEY) {
@@ -883,6 +885,7 @@ MoreProcessKeyDown(
         } else if (KeyCode == VK_UP) {
             MoreMoveViewportUp(MoreContext, 1);
         } else if (KeyCode == VK_NEXT) {
+            MoreContext->LinesInPage = 0;
             MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
         } else if (KeyCode == VK_PRIOR) {
             MoreMoveViewportUp(MoreContext, MoreContext->ViewportHeight);
@@ -923,7 +926,7 @@ MoreViewportDisplay(
         //  ingested.
         //
 
-        if (MoreContext->LinesInViewport == MoreContext->ViewportHeight) {
+        if (MoreContext->LinesInPage == MoreContext->ViewportHeight) {
             WaitForNewLines = FALSE;
         } else {
             WaitForNewLines = TRUE;

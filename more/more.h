@@ -151,12 +151,15 @@ typedef struct _MORE_CONTEXT {
      Specifies the number of lines within DisplayViewportLines that are
      currently populated with data.  Since population is a process, this
      starts at zero and counts up to ViewportHeight.
-
-     MSFIX This needs to get split so we can describe "N lines in buffer"
-     as distinct from "awaiting N logical lines before prompting for
-     another key."  Seems like we want LinesInPage or similar.
      */
     DWORD LinesInViewport;
+
+    /**
+     The number of lines that have been displayed as part of a single page.
+     If the user hits space or similar, this value is reset such that
+     another ViewportHeight number of lines is processed.
+     */
+    DWORD LinesInPage;
 
     /**
      The number of command line arguments to use as input.  This can be zero
