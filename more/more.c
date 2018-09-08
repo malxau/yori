@@ -34,9 +34,10 @@ CHAR strHelpText[] =
         "\n"
         "Output the contents of one or more files with paging and scrolling.\n"
         "\n"
-        "MORE [-license] [-b] [-s] [<file>...]\n"
+        "MORE [-license] [-b] [-dd] [-s] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -dd            Use the debug display\n"
         "   -s             Process files from all subdirectories\n";
 
 /**
@@ -75,6 +76,7 @@ ymain(
     BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
     BOOL InitComplete;
+    BOOL DebugDisplay = FALSE;
     MORE_CONTEXT MoreContext;
     YORI_STRING Arg;
 
@@ -95,6 +97,9 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("dd")) == 0) {
+                DebugDisplay = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -111,9 +116,9 @@ ymain(
     }
 
     if (StartArg == 0) {
-        InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration);
+        InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay);
     } else {
-        InitComplete = MoreInitContext(&MoreContext, ArgC-StartArg, &ArgV[StartArg], Recursive, BasicEnumeration);
+        InitComplete = MoreInitContext(&MoreContext, ArgC-StartArg, &ArgV[StartArg], Recursive, BasicEnumeration, DebugDisplay);
     }
 
     if (!InitComplete) {

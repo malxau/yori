@@ -75,6 +75,13 @@ typedef struct _MORE_LOGICAL_LINE {
     DWORD PhysicalLineCharacterOffset;
 
     /**
+     If TRUE, a newline should be displayed after this string.  If FALSE, the
+     string covers the entire viewport width and will implicitly move to the
+     new line.
+     */
+    BOOL ExplicitNewlineRequired;
+
+    /**
      The string representation of the logical line.
      */
     YORI_STRING Line;
@@ -158,6 +165,11 @@ typedef struct _MORE_CONTEXT {
     DWORD InputSourceCount;
 
     /**
+     The number of spaces to display for every tab.
+     */
+    DWORD TabWidth;
+
+    /**
      Pointer to an array of length InputSourceCount for file specifications
      to process.
      */
@@ -181,6 +193,14 @@ typedef struct _MORE_CONTEXT {
     BOOL BasicEnumeration;
 
     /**
+     TRUE if the display should be the debug version which clears the screen
+     and dumps the internal buffer on any display change.  This helps to
+     clarify the state of the system, but is much slower than just telling
+     the console about changes and moving things in the console buffer.
+     */
+    BOOL DebugDisplay;
+
+    /**
      Records the total number of files processed.
      */
     DWORDLONG FilesFound;
@@ -198,7 +218,8 @@ MoreInitContext(
     __in DWORD ArgCount,
     __in PYORI_STRING ArgStrings,
     __in BOOL Recursive,
-    __in BOOL BasicEnumeration
+    __in BOOL BasicEnumeration,
+    __in BOOL DebugDisplay
     );
 
 VOID

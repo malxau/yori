@@ -46,6 +46,10 @@ MoreProcessStream(
     PVOID LineContext = NULL;
     YORI_STRING LineString;
     PMORE_PHYSICAL_LINE NewLine;
+    DWORD TabCount;
+    DWORD CharIndex;
+    DWORD DestIndex;
+    DWORD BytesRequired;
 
     YoriLibInitEmptyString(&LineString);
 
@@ -57,7 +61,29 @@ MoreProcessStream(
             break;
         }
 
-        NewLine = YoriLibReferencedMalloc(sizeof(MORE_PHYSICAL_LINE) + (LineString.LengthInChars + 1) * sizeof(TCHAR));
+        //
+        //  Count the number of tabs.  These are replaced at ingestion time, 
+        //  since the width can't change while the program is running and to
+        //  save the complexity of accounting for carryover spaces due to tab
+        //  expansion at end of logical line
+        //
+
+        TabCount = 0;
+        for (CharIndex = 0; CharIndex < LineString.LengthInChars; CharIndex++) {
+            if (LineString.StartOfString[CharIndex] == '\t') {
+                TabCount++;
+            }
+        }
+
+        //
+        //  We need space for the structure, all characters in the source, a NULL,
+        //  and since tabs will be replaced with spaces the number of spaces per
+        //  tab minus one (for the tab character being removed.)
+        //
+
+        BytesRequired = sizeof(MORE_PHYSICAL_LINE) + (LineString.LengthInChars + TabCount * (MoreContext->TabWidth - 1) + 1) * sizeof(TCHAR);
+
+        NewLine = YoriLibReferencedMalloc(BytesRequired);
 
         //
         //  MSFIX What to do on out of memory?  This tool can actually run
@@ -71,11 +97,22 @@ MoreProcessStream(
         NewLine->LineNumber = MoreContext->LineCount + 1;
         YoriLibReference(NewLine);
         NewLine->LineContents.MemoryToFree = NewLine;
-        NewLine->LineContents.LengthInChars = LineString.LengthInChars;
-        NewLine->LineContents.LengthAllocated = LineString.LengthInChars + 1;
         NewLine->LineContents.StartOfString = (LPTSTR)(NewLine + 1);
-        memcpy(NewLine->LineContents.StartOfString, LineString.StartOfString, LineString.LengthInChars * sizeof(TCHAR));
-        NewLine->LineContents.StartOfString[NewLine->LineContents.LengthInChars] = '\0';
+
+        for (CharIndex = 0, DestIndex = 0; CharIndex < LineString.LengthInChars; CharIndex++) {
+            if (LineString.StartOfString[CharIndex] == '\t') {
+                for (BytesRequired = 0; BytesRequired < MoreContext->TabWidth; BytesRequired++) {
+                    NewLine->LineContents.StartOfString[DestIndex] = ' ';
+                    DestIndex++;
+                }
+            } else {
+                NewLine->LineContents.StartOfString[DestIndex] = LineString.StartOfString[CharIndex];
+                DestIndex++;
+            }
+        }
+        NewLine->LineContents.StartOfString[DestIndex] = '\0';
+        NewLine->LineContents.LengthInChars = DestIndex;
+        NewLine->LineContents.LengthAllocated = DestIndex + 1;
 
         WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
         MoreContext->LineCount++;

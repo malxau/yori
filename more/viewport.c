@@ -32,7 +32,7 @@
  of the length of the string or the viewport width.  In practice it can be
  a little more convoluted due to nonprinting characters.
 
- MSFIX This needs to handle tabs, VT100 chars, etc
+ MSFIX This needs to handle VT100 chars, etc
 
  @param MoreContext Pointer to the more context containing the data to
         display.
@@ -50,10 +50,58 @@ MoreGetLogicalLineLength(
     __in PYORI_STRING PhysicalLineSubset
     )
 {
-    if (PhysicalLineSubset->LengthInChars > MoreContext->ViewportWidth) {
-        return MoreContext->ViewportWidth;
+    DWORD SourceIndex;
+    DWORD CharsInOutputBuffer;
+    DWORD CellsDisplayed;
+    YORI_STRING EscapeSubset;
+    DWORD EndOfEscape;
+
+    CharsInOutputBuffer = 0;
+    CellsDisplayed = 0;
+
+    for (SourceIndex = 0; SourceIndex < PhysicalLineSubset->LengthInChars; ) {
+
+        //
+        //  If the string is <ESC>[, then treat it as an escape sequence.
+        //  Look for the final letter after any numbers or semicolon.
+        //
+
+        if (PhysicalLineSubset->LengthInChars > SourceIndex + 2 &&
+            PhysicalLineSubset->StartOfString[SourceIndex] == 27 &&
+            PhysicalLineSubset->StartOfString[SourceIndex + 1] == '[') {
+
+            YoriLibInitEmptyString(&EscapeSubset);
+            EscapeSubset.StartOfString = &PhysicalLineSubset->StartOfString[SourceIndex + 2];
+            EscapeSubset.LengthInChars = PhysicalLineSubset->LengthInChars - SourceIndex - 2;
+            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+
+            //
+            //  Count everything as consuming the source and needing buffer
+            //  space in the destination but consuming no display cells.  This
+            //  may include the final letter, if we found one.
+            //
+
+            if (PhysicalLineSubset->LengthInChars > SourceIndex + 2 + EndOfEscape) {
+                CharsInOutputBuffer += 3 + EndOfEscape;
+                SourceIndex += 3 + EndOfEscape;
+            } else {
+                CharsInOutputBuffer += 2 + EndOfEscape;
+                SourceIndex += 2 + EndOfEscape;
+            }
+
+        } else {
+            CharsInOutputBuffer++;
+            CellsDisplayed++;
+            SourceIndex++;
+        }
+
+        ASSERT(CellsDisplayed <= MoreContext->ViewportWidth);
+        if (CellsDisplayed == MoreContext->ViewportWidth) {
+            break;
+        }
     }
-    return PhysicalLineSubset->LengthInChars;
+
+    return SourceIndex;
 }
 
 /**
@@ -93,6 +141,30 @@ MoreCountLogicalLinesOnPhysicalLine(
     }
 
     return Count;
+}
+
+/**
+ Move a logical line from one memory location to another.  Logical lines
+ are referenced, so the move implies dereferencing anything being overwritten,
+ and transferring the data with its existing reference, zeroing out the
+ source as it should no longer be dereferenced.
+
+ @param Dest Pointer to the destination of the move.
+
+ @param Src Pointer to the source of the move.
+ */
+VOID
+MoreMoveLogicalLine(
+    __in PMORE_LOGICAL_LINE Dest,
+    __in PMORE_LOGICAL_LINE Src
+    )
+{
+    ASSERT(Dest != Src);
+    if (Dest->Line.MemoryToFree != NULL) {
+        YoriLibFreeStringContents(&Dest->Line);
+    }
+    memcpy(Dest, Src, sizeof(MORE_LOGICAL_LINE));
+    ZeroMemory(Src, sizeof(MORE_LOGICAL_LINE));
 }
 
 /**
@@ -144,17 +216,24 @@ MoreGenerateLogicalLinesFromPhysicalLine(
             ThisLine->LogicalLineIndex = Count;
             ThisLine->PhysicalLineCharacterOffset = CharIndex;
 
-            //
-            //  MSFIX This needs to be referenced so that a logical line can
-            //  be constructed that's not identical to a subset of the
-            //  physical line.  This is desired for tab expansion (so we know
-            //  how many spaces a tab represents), and searching where we
-            //  might want to insert more formatting
-            //
-
             YoriLibInitEmptyString(&ThisLine->Line);
             ThisLine->Line.StartOfString = Subset.StartOfString;
             ThisLine->Line.LengthInChars = LogicalLineLength;
+
+            //
+            //  MSFIX Once we have nonprinting characters like VT, this needs
+            //  to be smarter to know whether the number of printing characters
+            //  reaches the end of the line
+            //
+
+            if (ThisLine->Line.LengthInChars == MoreContext->ViewportWidth) {
+                ThisLine->ExplicitNewlineRequired = FALSE;
+            } else {
+                ThisLine->ExplicitNewlineRequired = TRUE;
+            }
+
+            YoriLibReference(ThisLine->PhysicalLine);
+            ThisLine->Line.MemoryToFree = ThisLine->PhysicalLine;
         }
 
 
@@ -317,6 +396,7 @@ MoreGetNextLogicalLines(
         PYORI_LIST_ENTRY ListEntry;
 
         if (CurrentInputLine != NULL) {
+            ASSERT(CurrentInputLine->PhysicalLine != NULL);
             ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, &CurrentInputLine->PhysicalLine->LineList);
         } else {
             ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
@@ -349,6 +429,60 @@ MoreGetNextLogicalLines(
 }
 
 /**
+ Clear the screen and write out the display buffer.  This is slow because it
+ doesn't take advantage of console scrolling, but it allows verification of
+ the memory buffer.
+
+ @param MoreContext Pointer to the more context specifying the data to
+        display.
+ */
+VOID
+MoreDegenerateDisplay(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    DWORD Index;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+    COORD NewPosition;
+    DWORD NumberWritten;
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    //
+    //  Clear the region we want to overwrite
+    //
+
+    NewPosition.X = 0;
+    NewPosition.Y = 0;
+
+    FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X * MoreContext->LinesInViewport, NewPosition, &NumberWritten);
+    FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X * MoreContext->LinesInViewport, NewPosition, &NumberWritten);
+
+    //
+    //  Set the cursor to the top of the viewport
+    //
+
+    SetConsoleCursorPosition(StdOutHandle, NewPosition);
+
+    for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
+
+
+        if (Index % 2 != 0) {
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x17);
+        } else {
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x7);
+        }
+        if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
+        }
+    }
+}
+
+/**
  Given the current display buffer and a specified number of new lines to
  display after the current display buffer, update the display buffer and
  the actual display.
@@ -369,6 +503,7 @@ MoreDisplayNewLinesInViewport(
     )
 {
     DWORD Index;
+    DWORD FirstLineToDisplay;
 
     //
     //  MSFIX This function should own scrolling.
@@ -376,18 +511,22 @@ MoreDisplayNewLinesInViewport(
 
     ASSERT(MoreContext->LinesInViewport + NewLineCount <= MoreContext->ViewportHeight);
 
-    memcpy(&MoreContext->DisplayViewportLines[MoreContext->LinesInViewport],
-           NewLines,
-           sizeof(MORE_LOGICAL_LINE) * NewLineCount);
+    for (Index = 0; Index < NewLineCount; Index++) {
+        MoreMoveLogicalLine(&MoreContext->DisplayViewportLines[MoreContext->LinesInViewport + Index], &NewLines[Index]);
+    }
 
+    FirstLineToDisplay = MoreContext->LinesInViewport;
     MoreContext->LinesInViewport += NewLineCount;
 
-    for (Index = 0; Index < NewLineCount; Index++) {
-        ASSERT(NewLines[Index].Line.LengthInChars <= MoreContext->ViewportWidth);
-        if (NewLines[Index].Line.LengthInChars >= MoreContext->ViewportWidth) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &NewLines[Index].Line);
-        } else {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &NewLines[Index].Line);
+    if (MoreContext->DebugDisplay) {
+        MoreDegenerateDisplay(MoreContext);
+    } else {
+        for (Index = FirstLineToDisplay; Index < FirstLineToDisplay + NewLineCount; Index++) {
+            if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
+            }
         }
     }
 }
@@ -416,88 +555,107 @@ MoreDisplayPreviousLinesInViewport(
     DWORD LinesToPreserve;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE StdOutHandle;
+    DWORD OldLinesInViewport;
     COORD NewPosition;
     DWORD NumberWritten;
+    SMALL_RECT RectToMove;
+    CHAR_INFO Fill;
 
     StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
 
+    OldLinesInViewport = MoreContext->LinesInViewport;
+
+    //
+    //  If there are lines to retain, move them down in the buffer.
+    //
+
     if (MoreContext->LinesInViewport > NewLineCount) {
-        SMALL_RECT RectToMove;
-        CHAR_INFO Fill;
 
         LinesToPreserve = MoreContext->LinesInViewport - NewLineCount;
 
-        //
-        //  MSFIX When these are referenced, we need to tear them down here
-        //
-
-        memmove(&MoreContext->DisplayViewportLines[NewLineCount],
-                MoreContext->DisplayViewportLines,
-                (LinesToPreserve * sizeof(MORE_LOGICAL_LINE)));
-
-        //
-        //  Move the text we want to preserve
-        //
-
-        RectToMove.Top = (USHORT)(ScreenInfo.dwCursorPosition.Y - MoreContext->LinesInViewport);
-        RectToMove.Left = 0;
-        RectToMove.Right = (USHORT)(ScreenInfo.dwSize.X - 1);
-        RectToMove.Bottom = (USHORT)(RectToMove.Top + LinesToPreserve - 1);
-        NewPosition.X = 0;
-        NewPosition.Y = (USHORT)(RectToMove.Top + NewLineCount);
-        Fill.Char.UnicodeChar = ' ';
-        Fill.Attributes = YoriLibVtGetDefaultColor();
-        ScrollConsoleScreenBuffer(StdOutHandle, &RectToMove, NULL, NewPosition, &Fill);
+        for (Index = LinesToPreserve; Index > 0; Index--) {
+            MoreMoveLogicalLine(&MoreContext->DisplayViewportLines[Index + NewLineCount - 1],
+                                &MoreContext->DisplayViewportLines[Index - 1]);
+        }
     }
 
     //
-    //  Clear the region we want to overwrite
+    //  Add new lines to the top of the buffer.
     //
 
-    NewPosition.X = 0;
-    NewPosition.Y = (USHORT)(ScreenInfo.dwCursorPosition.Y - MoreContext->LinesInViewport);
-    FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X * NewLineCount, NewPosition, &NumberWritten);
-    FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X * NewLineCount, NewPosition, &NumberWritten);
+    for (Index = 0; Index < NewLineCount; Index++) {
+        MoreMoveLogicalLine(&MoreContext->DisplayViewportLines[Index],
+                            &NewLines[Index]);
+    }
 
     //
-    //  Set the cursor to the top of the viewport
+    //  If the buffer has more lines as a result, update the number of
+    //  lines.
     //
-
-    SetConsoleCursorPosition(StdOutHandle, NewPosition);
-
-    memcpy(MoreContext->DisplayViewportLines,
-           NewLines,
-           sizeof(MORE_LOGICAL_LINE) * NewLineCount);
 
     MoreContext->LinesInViewport += NewLineCount;
     if (MoreContext->LinesInViewport > MoreContext->ViewportHeight) {
         MoreContext->LinesInViewport = MoreContext->ViewportHeight;
     }
 
-    for (Index = 0; Index < NewLineCount; Index++) {
+    if (MoreContext->DebugDisplay) {
+        MoreDegenerateDisplay(MoreContext);
+    } else {
 
-        //
-        //  MSFIX Once we have nonprinting characters like VT, this needs
-        //  to be smarter to know whether the number of printing characters
-        //  reaches the end of the line
-        //
+        if (OldLinesInViewport > NewLineCount) {
 
-        ASSERT(NewLines[Index].Line.LengthInChars <= MoreContext->ViewportWidth);
-        if (NewLines[Index].Line.LengthInChars >= MoreContext->ViewportWidth) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &NewLines[Index].Line);
-        } else {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &NewLines[Index].Line);
+            LinesToPreserve = OldLinesInViewport - NewLineCount;
+
+            //
+            //  Move the text we want to preserve in the display
+            //
+
+            RectToMove.Top = (USHORT)(ScreenInfo.dwCursorPosition.Y - OldLinesInViewport);
+            RectToMove.Left = 0;
+            RectToMove.Right = (USHORT)(ScreenInfo.dwSize.X - 1);
+            RectToMove.Bottom = (USHORT)(RectToMove.Top + LinesToPreserve - 1);
+            NewPosition.X = 0;
+            NewPosition.Y = (USHORT)(RectToMove.Top + NewLineCount);
+            Fill.Char.UnicodeChar = ' ';
+            Fill.Attributes = YoriLibVtGetDefaultColor();
+            ScrollConsoleScreenBuffer(StdOutHandle, &RectToMove, NULL, NewPosition, &Fill);
         }
+
+        //
+        //  Clear the region we want to overwrite
+        //
+
+        NewPosition.X = 0;
+        NewPosition.Y = (USHORT)(ScreenInfo.dwCursorPosition.Y - OldLinesInViewport);
+        FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X * NewLineCount, NewPosition, &NumberWritten);
+        FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X * NewLineCount, NewPosition, &NumberWritten);
+
+        //
+        //  Set the cursor to the top of the viewport
+        //
+
+        SetConsoleCursorPosition(StdOutHandle, NewPosition);
+
+        for (Index = 0; Index < NewLineCount; Index++) {
+
+            if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
+            }
+        }
+
+        //
+        //  Restore the cursor to the bottom of the viewport
+        //  MSFIX This may be wrong if we scrolled text down; the new location
+        //  may be lower than the old one
+        //
+
+        NewPosition.X = 0;
+        NewPosition.Y = ScreenInfo.dwCursorPosition.Y;
+        SetConsoleCursorPosition(StdOutHandle, NewPosition);
     }
-
-    //
-    //  Restore the cursor to the bottom of the viewport
-    //
-
-    NewPosition.X = 0;
-    NewPosition.Y = ScreenInfo.dwCursorPosition.Y;
-    SetConsoleCursorPosition(StdOutHandle, NewPosition);
 }
 
 
@@ -615,6 +773,7 @@ MoreMoveViewportDown(
     DWORD LinesReturned;
     DWORD CappedLinesToMove;
     DWORD LinesToPreserve;
+    DWORD Index;
 
     CappedLinesToMove = LinesToMove;
 
@@ -666,13 +825,13 @@ MoreMoveViewportDown(
     LinesToPreserve = MoreContext->LinesInViewport - LinesReturned;
 
     //
-    //  MSFIX When these are referenced, need to tear down overwritten
-    //  entries
+    //  Dereference the lines we're about to overwrite
     //
 
-    memmove(MoreContext->DisplayViewportLines,
-            &MoreContext->DisplayViewportLines[LinesReturned],
-            (LinesToPreserve * sizeof(MORE_LOGICAL_LINE)));
+    for (Index = 0; Index < LinesToPreserve; Index++) {
+        MoreMoveLogicalLine(&MoreContext->DisplayViewportLines[Index],
+                            &MoreContext->DisplayViewportLines[LinesReturned + Index]);
+    }
 
     MoreContext->LinesInViewport -= LinesReturned;
 
@@ -746,13 +905,16 @@ MoreViewportDisplay(
     )
 {
     HANDLE ObjectsToWaitFor[3];
-    HANDLE StdInHandle;
+    HANDLE InHandle;
     DWORD WaitObject;
     DWORD HandleCountToWait;
     BOOL WaitForIngestThread = TRUE;
     BOOL WaitForNewLines = TRUE;
 
-    StdInHandle = GetStdHandle(STD_INPUT_HANDLE);
+    InHandle = CreateFile(_T("CONIN$"), GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    if (InHandle == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
 
     while(TRUE) {
 
@@ -768,7 +930,7 @@ MoreViewportDisplay(
         }
 
         HandleCountToWait = 0;
-        ObjectsToWaitFor[HandleCountToWait++] = StdInHandle;
+        ObjectsToWaitFor[HandleCountToWait++] = InHandle;
         if (WaitForNewLines) {
             ObjectsToWaitFor[HandleCountToWait++] = MoreContext->PhysicalLineAvailableEvent;
         }
@@ -803,14 +965,14 @@ MoreViewportDisplay(
                 WaitForIngestThread = FALSE;
                 ReleaseMutex(MoreContext->PhysicalLineMutex);
             }
-        } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == StdInHandle) {
+        } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == InHandle) {
             INPUT_RECORD InputRecords[20];
             PINPUT_RECORD InputRecord;
             DWORD ActuallyRead;
             DWORD CurrentIndex;
             BOOL Terminate = FALSE;
 
-            if (!ReadConsoleInput(StdInHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
+            if (!ReadConsoleInput(InHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
                 break;
             }
 
@@ -828,6 +990,8 @@ MoreViewportDisplay(
             }
         }
     }
+
+    CloseHandle(InHandle);
     return TRUE;
 }
 

@@ -46,6 +46,11 @@
  @param BasicEnumeration TRUE if enumeration should not expand {}, [], or
         similar operators.  FALSE if these should be expanded.
 
+ @param DebugDisplay TRUE if the program should use the debug display which
+        clears the screen and writes internal buffers on each change.  This
+        is much slower than just telling the console about changes but helps
+        to debug the state of the program.
+
  @return TRUE to indicate successful completion, meaning a background thread
          is executing and this should be drained with @ref MoreGracefulExit.
          FALSE to indicate initialization was unsuccessful, and the
@@ -57,7 +62,8 @@ MoreInitContext(
     __in DWORD ArgCount,
     __in PYORI_STRING ArgStrings,
     __in BOOL Recursive,
-    __in BOOL BasicEnumeration
+    __in BOOL BasicEnumeration,
+    __in BOOL DebugDisplay
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
@@ -67,6 +73,8 @@ MoreInitContext(
 
     MoreContext->Recursive = Recursive;
     MoreContext->BasicEnumeration = BasicEnumeration;
+    MoreContext->DebugDisplay = DebugDisplay;
+    MoreContext->TabWidth = 4;
 
     YoriLibInitializeListHead(&MoreContext->PhysicalLineList);
     MoreContext->PhysicalLineMutex = CreateMutex(NULL, FALSE, NULL);
@@ -95,11 +103,14 @@ MoreInitContext(
     if (MoreContext->DisplayViewportLines == NULL) {
         return FALSE;
     }
+    ZeroMemory(MoreContext->DisplayViewportLines, sizeof(MORE_LOGICAL_LINE) * MoreContext->ViewportHeight);
 
     MoreContext->StagingViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * MoreContext->ViewportHeight);
     if (MoreContext->StagingViewportLines == NULL) {
         return FALSE;
     }
+
+    ZeroMemory(MoreContext->StagingViewportLines, sizeof(MORE_LOGICAL_LINE) * MoreContext->ViewportHeight);
 
     MoreContext->InputSourceCount = ArgCount;
     MoreContext->InputSources = ArgStrings;
@@ -168,8 +179,13 @@ MoreGracefulExit(
 {
     PYORI_LIST_ENTRY ListEntry;
     PMORE_PHYSICAL_LINE PhysicalLine;
+    DWORD Index;
+
     SetEvent(MoreContext->ShutdownEvent);
     WaitForSingleObject(MoreContext->IngestThread, INFINITE);
+    for (Index = 0; Index < MoreContext->ViewportHeight; Index++) {
+        YoriLibFreeStringContents(&MoreContext->DisplayViewportLines[Index].Line);
+    }
     ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
     while (ListEntry != NULL) {
         PhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
@@ -178,6 +194,7 @@ MoreGracefulExit(
         YoriLibDereference(PhysicalLine);
         ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
     }
+
     MoreCleanupContext(MoreContext);
 }
 
