@@ -500,6 +500,7 @@ MoreDrawStatusLine(
     ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, NULL);
     LastPhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
     TotalLines = LastPhysicalLine->LineNumber;
+    MoreContext->TotalLinesInViewportStatus = TotalLines;
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 
     //
@@ -1054,13 +1055,10 @@ MoreProcessKeyDown(
  in size.
 
  @param MoreContext Pointer to the current state of the data and display.
-
- @param InputRecord Pointer to the input record describing the change.
  */
 VOID
 MoreProcessResizeViewport(
-    __inout PMORE_CONTEXT MoreContext,
-    __in PINPUT_RECORD InputRecord
+    __inout PMORE_CONTEXT MoreContext
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
@@ -1069,56 +1067,140 @@ MoreProcessResizeViewport(
     PMORE_LOGICAL_LINE NewStagingViewportLines;
     PMORE_PHYSICAL_LINE FirstPhysicalLine;
     DWORD NewViewportHeight;
+    DWORD NewViewportWidth;
     DWORD OldLinesInViewport;
     DWORD Index;
     PMORE_LOGICAL_LINE OldDisplayViewportLines;
     PMORE_LOGICAL_LINE OldStagingViewportLines;
 
-    UNREFERENCED_PARAMETER(InputRecord);
-
     StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
 
     NewViewportHeight = ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top;
-    NewDisplayViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
-    if (NewDisplayViewportLines == NULL) {
+    MoreGetViewportDimensions(&ScreenInfo, &NewViewportWidth, &NewViewportHeight);
+
+    if (!MoreAllocateViewportStructures(NewViewportWidth, NewViewportHeight, &NewDisplayViewportLines, &NewStagingViewportLines)) {
         return;
-    }
-
-    NewStagingViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
-    if (NewStagingViewportLines == NULL) {
-        YoriLibFree(NewDisplayViewportLines);
-        return;
-    }
-
-    ZeroMemory(NewDisplayViewportLines, sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
-    ZeroMemory(NewStagingViewportLines, sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
-
-    FirstPhysicalLine = NULL;
-    if (MoreContext->LinesInViewport > 0) {
-        FirstPhysicalLine = MoreContext->DisplayViewportLines[0].PhysicalLine;
     }
 
     OldLinesInViewport = MoreContext->LinesInViewport;
     OldStagingViewportLines = MoreContext->StagingViewportLines;
     OldDisplayViewportLines = MoreContext->DisplayViewportLines;
 
-    MoreContext->LinesInPage = 0;
-    MoreContext->LinesInViewport = 0;
-    MoreContext->DisplayViewportLines = NewDisplayViewportLines;
-    MoreContext->StagingViewportLines = NewStagingViewportLines;
-    MoreContext->ViewportHeight = NewViewportHeight;
-    MoreContext->ViewportWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
+    if (NewViewportWidth == MoreContext->ViewportWidth) {
+        if (NewViewportHeight > MoreContext->ViewportHeight) {
+            memcpy(NewDisplayViewportLines, MoreContext->DisplayViewportLines, MoreContext->ViewportHeight * sizeof(MORE_LOGICAL_LINE));
+            MoreContext->ViewportHeight = NewViewportHeight;
+            MoreContext->DisplayViewportLines = NewDisplayViewportLines;
+            MoreContext->StagingViewportLines = NewStagingViewportLines;
+            MoreClearStatusLine(MoreContext);
+            MoreAddNewLinesToViewport(MoreContext);
+        } else {
+            COORD NewCursorPosition;
+            SMALL_RECT NewWindow;
+            DWORD NumberWritten;
 
-    MoreRegenerateViewport(MoreContext, FirstPhysicalLine);
+            MoreClearStatusLine(MoreContext);
+            NewCursorPosition.X = 0;
+            NewCursorPosition.Y = (USHORT)((DWORD)ScreenInfo.dwCursorPosition.Y + NewViewportHeight - MoreContext->ViewportHeight);
 
-    YoriLibFree(OldStagingViewportLines);
+            NewWindow.Left = 0;
+            NewWindow.Right = (USHORT)MoreContext->ViewportWidth - 1;
+            NewWindow.Top = (USHORT)(NewCursorPosition.Y - NewViewportHeight);
+            NewWindow.Bottom = NewCursorPosition.Y;
 
-    for (Index = 0; Index < OldLinesInViewport; Index++) {
-        YoriLibFreeStringContents(&OldDisplayViewportLines[Index].Line);
+            memcpy(NewDisplayViewportLines, MoreContext->DisplayViewportLines, NewViewportHeight * sizeof(MORE_LOGICAL_LINE));
+
+            if (OldLinesInViewport > NewViewportHeight) {
+                for (Index = NewViewportHeight; Index < OldLinesInViewport; Index++) {
+                    YoriLibFreeStringContents(&OldDisplayViewportLines[Index].Line);
+                }
+                FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X * (OldLinesInViewport - NewViewportHeight + 1), NewCursorPosition, &NumberWritten);
+                FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X * (OldLinesInViewport - NewViewportHeight + 1), NewCursorPosition, &NumberWritten);
+            }
+
+            MoreContext->ViewportHeight = NewViewportHeight;
+            MoreContext->DisplayViewportLines = NewDisplayViewportLines;
+            MoreContext->StagingViewportLines = NewStagingViewportLines;
+
+            if (MoreContext->LinesInViewport > MoreContext->ViewportHeight) {
+                MoreContext->LinesInViewport = MoreContext->ViewportHeight;
+            }
+
+            if (MoreContext->LinesInPage > MoreContext->ViewportHeight) {
+                MoreContext->LinesInPage = MoreContext->ViewportHeight;
+            }
+            SetConsoleCursorPosition(StdOutHandle, NewCursorPosition);
+            MoreClearStatusLine(MoreContext);
+            MoreDrawStatusLine(MoreContext);
+            SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), TRUE, &NewWindow);
+        }
+    } else {
+        FirstPhysicalLine = NULL;
+        if (MoreContext->LinesInViewport > 0) {
+            FirstPhysicalLine = MoreContext->DisplayViewportLines[0].PhysicalLine;
+        }
+    
+        MoreContext->LinesInPage = 0;
+        MoreContext->LinesInViewport = 0;
+        MoreContext->DisplayViewportLines = NewDisplayViewportLines;
+        MoreContext->StagingViewportLines = NewStagingViewportLines;
+        MoreContext->ViewportHeight = NewViewportHeight;
+        MoreContext->ViewportWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
+    
+        MoreRegenerateViewport(MoreContext, FirstPhysicalLine);
+    
+        for (Index = 0; Index < OldLinesInViewport; Index++) {
+            YoriLibFreeStringContents(&OldDisplayViewportLines[Index].Line);
+        }
     }
 
+    YoriLibFree(OldStagingViewportLines);
     YoriLibFree(OldDisplayViewportLines);
+}
+
+/**
+ Check if the number of lines in the window has changed.  The console has
+ buffer size but not window size notifications, so this is effectively polled.
+ If the size has changed, recalculate the viewport for the new display.
+
+ @param MoreContext Pointer to the more context specifying the data and number
+        of lines available.
+ */
+VOID
+MoreCheckForWindowSizeChange(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    if ((DWORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top) != MoreContext->ViewportHeight ||
+        (DWORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1) != MoreContext->ViewportWidth) {
+
+        MoreProcessResizeViewport(MoreContext);
+    }
+}
+
+/**
+ Check if the number of lines available has changed since the status line was
+ last drawn.  If it has, clear the status line and redraw it.
+
+ @param MoreContext Pointer to the more context specifying the data and number
+        of lines available.
+ */
+VOID
+MoreCheckForStatusLineChange(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    if (MoreContext->TotalLinesInViewportStatus != MoreContext->LineCount) {
+        MoreClearStatusLine(MoreContext);
+        MoreDrawStatusLine(MoreContext);
+    }
 }
 
 /**
@@ -1175,58 +1257,66 @@ MoreViewportDisplay(
             ObjectsToWaitFor[HandleCountToWait++] = MoreContext->IngestThread;
         }
 
-        WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, INFINITE);
-        if (WaitObject < WAIT_OBJECT_0 || WaitObject >= WAIT_OBJECT_0 + HandleCountToWait) {
-            break;
-        }
-        if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == MoreContext->PhysicalLineAvailableEvent) {
+        WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, 500);
 
-            MoreAddNewLinesToViewport(MoreContext);
-
-        } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == MoreContext->IngestThread) {
-
-            WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
-
-            //
-            //  If the ingest thread has found zero lines and terminated, we
-            //  don't really need a UI.  The onus is on the ingest thread to
-            //  tell the user what went wrong.  Once we've seen it find
-            //  anything at all, we'll do UI and wait for the user to
-            //  indicate not to.
-            //
-
-            if (MoreContext->LineCount == 0) {
-                ReleaseMutex(MoreContext->PhysicalLineMutex);
-                break;
-            } else {
-                WaitForIngestThread = FALSE;
-                ReleaseMutex(MoreContext->PhysicalLineMutex);
-            }
-        } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == InHandle) {
-            INPUT_RECORD InputRecords[20];
-            PINPUT_RECORD InputRecord;
-            DWORD ActuallyRead;
-            DWORD CurrentIndex;
-            BOOL Terminate = FALSE;
-
-            if (!ReadConsoleInput(InHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
+        if (WaitObject == WAIT_TIMEOUT) {
+            MoreCheckForWindowSizeChange(MoreContext);
+            MoreCheckForStatusLineChange(MoreContext);
+        } else {
+            if (WaitObject < WAIT_OBJECT_0 || WaitObject >= WAIT_OBJECT_0 + HandleCountToWait) {
                 break;
             }
-
-            for (CurrentIndex = 0; CurrentIndex < ActuallyRead; CurrentIndex++) {
-                InputRecord = &InputRecords[CurrentIndex];
-                if (InputRecord->EventType == KEY_EVENT &&
-                    InputRecord->Event.KeyEvent.bKeyDown) {
-
-                    MoreProcessKeyDown(MoreContext, InputRecord, &Terminate);
-                } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
-                    MoreProcessResizeViewport(MoreContext, InputRecord);
+            if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == MoreContext->PhysicalLineAvailableEvent) {
+    
+                MoreAddNewLinesToViewport(MoreContext);
+    
+            } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == MoreContext->IngestThread) {
+    
+                WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+    
+                //
+                //  If the ingest thread has found zero lines and terminated, we
+                //  don't really need a UI.  The onus is on the ingest thread to
+                //  tell the user what went wrong.  Once we've seen it find
+                //  anything at all, we'll do UI and wait for the user to
+                //  indicate not to.
+                //
+    
+                if (MoreContext->LineCount == 0) {
+                    ReleaseMutex(MoreContext->PhysicalLineMutex);
+                    break;
+                } else {
+                    WaitForIngestThread = FALSE;
+                    ReleaseMutex(MoreContext->PhysicalLineMutex);
                 }
-            }
-
-            if (Terminate) {
-                MoreClearStatusLine(MoreContext);
-                break;
+            } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == InHandle) {
+                INPUT_RECORD InputRecords[20];
+                PINPUT_RECORD InputRecord;
+                DWORD ActuallyRead;
+                DWORD CurrentIndex;
+                BOOL Terminate = FALSE;
+    
+                if (!ReadConsoleInput(InHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
+                    break;
+                }
+    
+                MoreCheckForWindowSizeChange(MoreContext);
+    
+                for (CurrentIndex = 0; CurrentIndex < ActuallyRead; CurrentIndex++) {
+                    InputRecord = &InputRecords[CurrentIndex];
+                    if (InputRecord->EventType == KEY_EVENT &&
+                        InputRecord->Event.KeyEvent.bKeyDown) {
+    
+                        MoreProcessKeyDown(MoreContext, InputRecord, &Terminate);
+                    } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
+                        MoreProcessResizeViewport(MoreContext);
+                    }
+                }
+    
+                if (Terminate) {
+                    MoreClearStatusLine(MoreContext);
+                    break;
+                }
             }
         }
     }

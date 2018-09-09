@@ -26,6 +26,73 @@
 
 #include "more.h"
 
+
+/**
+ Given a console state, return the width and height of the viewport area.
+
+ @param ScreenInfo Pointer to the console state, as returned from
+        GetConsoleScreenBufferInfo.
+
+ @param ViewportWidth On successful completion, populated with the new width
+        of the viewport.
+
+ @param ViewportHeight On successful completion, populated with the new height
+        of the viewport.
+ */
+VOID
+MoreGetViewportDimensions(
+    __in PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
+    __out PDWORD ViewportWidth,
+    __out PDWORD ViewportHeight
+    )
+{
+    *ViewportWidth = (DWORD)(ScreenInfo->srWindow.Right - ScreenInfo->srWindow.Left + 1);
+    *ViewportHeight = (DWORD)(ScreenInfo->srWindow.Bottom - ScreenInfo->srWindow.Top);
+}
+
+/**
+ Given console dimensions, allocate viewport structures.
+
+ @param ViewportWidth The width of the viewport structures to allocate.
+
+ @param ViewportHeight The height of the viewport structures to allocate.
+
+ @param DisplayViewportLines On successful completion, populated with a zeroed
+        array of viewport lines to display.
+
+ @param StagingViewportLines On successful completion, populated with a zeroed
+        array of viewport lines to use as staging.
+
+ @return TRUE to indicate success, meaning both structures are allocated and
+         returned.  FALSE if neither are being returned.
+ */
+BOOL
+MoreAllocateViewportStructures(
+    __in DWORD ViewportWidth,
+    __in DWORD ViewportHeight,
+    __out PMORE_LOGICAL_LINE * DisplayViewportLines,
+    __out PMORE_LOGICAL_LINE * StagingViewportLines
+    )
+{
+
+    UNREFERENCED_PARAMETER(ViewportWidth);
+
+    *DisplayViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * ViewportHeight);
+    if (*DisplayViewportLines == NULL) {
+        return FALSE;
+    }
+    ZeroMemory(*DisplayViewportLines, sizeof(MORE_LOGICAL_LINE) * ViewportHeight);
+
+    *StagingViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * ViewportHeight);
+    if (*StagingViewportLines == NULL) {
+        YoriLibFree(*DisplayViewportLines);
+        return FALSE;
+    }
+
+    ZeroMemory(*StagingViewportLines, sizeof(MORE_LOGICAL_LINE) * ViewportHeight);
+    return TRUE;
+}
+
 /**
  Initialize a MoreContext with settings indicating where the data should come
  from, and launch a background thread to commence ingesting the data.
@@ -96,21 +163,12 @@ MoreInitContext(
         return FALSE;
     }
 
-    MoreContext->ViewportWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
-    MoreContext->ViewportHeight = ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top;
+    MoreGetViewportDimensions(&ScreenInfo, &MoreContext->ViewportWidth, &MoreContext->ViewportHeight);
 
-    MoreContext->DisplayViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * MoreContext->ViewportHeight);
-    if (MoreContext->DisplayViewportLines == NULL) {
-        return FALSE;
-    }
-    ZeroMemory(MoreContext->DisplayViewportLines, sizeof(MORE_LOGICAL_LINE) * MoreContext->ViewportHeight);
-
-    MoreContext->StagingViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * MoreContext->ViewportHeight);
-    if (MoreContext->StagingViewportLines == NULL) {
+    if (!MoreAllocateViewportStructures(MoreContext->ViewportWidth, MoreContext->ViewportHeight, &MoreContext->DisplayViewportLines, &MoreContext->StagingViewportLines)) {
         return FALSE;
     }
 
-    ZeroMemory(MoreContext->StagingViewportLines, sizeof(MORE_LOGICAL_LINE) * MoreContext->ViewportHeight);
 
     MoreContext->InputSourceCount = ArgCount;
     MoreContext->InputSources = ArgStrings;

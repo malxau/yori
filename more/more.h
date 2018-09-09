@@ -150,6 +150,12 @@ typedef struct _MORE_CONTEXT {
     DWORD LinesInViewport;
 
     /**
+     Specifies the total number of ingested lines when the status line was
+     last calculated.
+     */
+    DWORDLONG TotalLinesInViewportStatus;
+
+    /**
      The number of lines that have been displayed as part of a single page.
      If the user hits space or similar, this value is reset such that
      another ViewportHeight number of lines is processed.
@@ -209,6 +215,21 @@ typedef struct _MORE_CONTEXT {
     DWORDLONG LineCount;
 
 } MORE_CONTEXT, *PMORE_CONTEXT;
+
+VOID
+MoreGetViewportDimensions(
+    __in PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
+    __out PDWORD ViewportWidth,
+    __out PDWORD ViewportHeight
+    );
+
+BOOL
+MoreAllocateViewportStructures(
+    __in DWORD ViewportWidth,
+    __in DWORD ViewportHeight,
+    __out PMORE_LOGICAL_LINE * DisplayViewportLines,
+    __out PMORE_LOGICAL_LINE * StagingViewportLines
+    );
 
 BOOL
 MoreInitContext(
