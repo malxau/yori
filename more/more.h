@@ -130,11 +130,6 @@ typedef struct _MORE_CONTEXT {
 
 
     /**
-     Pointer to the first physical line being displayed within the viewport.
-     */
-    PMORE_PHYSICAL_LINE ViewportFirstPhysicalLine;
-
-    /**
      An array of size ViewportHeight of lines currently displayed.  Note these
      refer to the strings in the PhysicalLineList.
      */

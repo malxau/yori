@@ -906,7 +906,7 @@ MoreMoveViewportDown(
     }
 
     if (CappedLinesToMove > MoreContext->LinesInViewport) {
-        CappedLinesToMove = MoreContext->LinesInViewport - 1;
+        CappedLinesToMove = MoreContext->LinesInViewport;
     }
 
     if (CappedLinesToMove == 0) {
@@ -937,6 +937,58 @@ MoreMoveViewportDown(
         return;
     }
 
+    MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
+}
+
+/**
+ Regenerate new logical lines into the viewport based on the e next line
+ of data is rendered at the bottom of the screen.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @param FirstPhysicalLine Pointer to the first physical line to display on
+        the first line of the regenerated display.
+ */
+VOID
+MoreRegenerateViewport(
+    __inout PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_PHYSICAL_LINE FirstPhysicalLine
+    )
+{
+    DWORD LinesReturned;
+    DWORD CappedLinesToMove;
+    MORE_LOGICAL_LINE CurrentLogicalLine;
+    MORE_LOGICAL_LINE PreviousLogicalLine;
+    PMORE_LOGICAL_LINE LineToFollow;
+
+    ZeroMemory(&CurrentLogicalLine, sizeof(CurrentLogicalLine));
+    ZeroMemory(&PreviousLogicalLine, sizeof(PreviousLogicalLine));
+    CurrentLogicalLine.PhysicalLine = FirstPhysicalLine;
+    CappedLinesToMove = MoreContext->ViewportHeight;
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+
+    if (FirstPhysicalLine != NULL &&
+        MoreGetPreviousLogicalLines(MoreContext, &CurrentLogicalLine, 1, &PreviousLogicalLine)) {
+
+        LineToFollow = &PreviousLogicalLine;
+    } else {
+        LineToFollow = NULL;
+    }
+
+    LinesReturned = MoreGetNextLogicalLines(MoreContext, LineToFollow, CappedLinesToMove, MoreContext->StagingViewportLines);
+
+    if (LineToFollow != NULL) {
+        YoriLibFreeStringContents(&LineToFollow->Line);
+    }
+
+    ASSERT(LinesReturned <= CappedLinesToMove);
+
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    if (LinesReturned == 0) {
+        return;
+    }
 
     MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
 }
@@ -998,6 +1050,78 @@ MoreProcessKeyDown(
 }
 
 /**
+ Reallocate display buffers and regenerate display if the window has changed
+ in size.
+
+ @param MoreContext Pointer to the current state of the data and display.
+
+ @param InputRecord Pointer to the input record describing the change.
+ */
+VOID
+MoreProcessResizeViewport(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+    PMORE_LOGICAL_LINE NewDisplayViewportLines;
+    PMORE_LOGICAL_LINE NewStagingViewportLines;
+    PMORE_PHYSICAL_LINE FirstPhysicalLine;
+    DWORD NewViewportHeight;
+    DWORD OldLinesInViewport;
+    DWORD Index;
+    PMORE_LOGICAL_LINE OldDisplayViewportLines;
+    PMORE_LOGICAL_LINE OldStagingViewportLines;
+
+    UNREFERENCED_PARAMETER(InputRecord);
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    NewViewportHeight = ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top;
+    NewDisplayViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
+    if (NewDisplayViewportLines == NULL) {
+        return;
+    }
+
+    NewStagingViewportLines = YoriLibMalloc(sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
+    if (NewStagingViewportLines == NULL) {
+        YoriLibFree(NewDisplayViewportLines);
+        return;
+    }
+
+    ZeroMemory(NewDisplayViewportLines, sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
+    ZeroMemory(NewStagingViewportLines, sizeof(MORE_LOGICAL_LINE) * NewViewportHeight);
+
+    FirstPhysicalLine = NULL;
+    if (MoreContext->LinesInViewport > 0) {
+        FirstPhysicalLine = MoreContext->DisplayViewportLines[0].PhysicalLine;
+    }
+
+    OldLinesInViewport = MoreContext->LinesInViewport;
+    OldStagingViewportLines = MoreContext->StagingViewportLines;
+    OldDisplayViewportLines = MoreContext->DisplayViewportLines;
+
+    MoreContext->LinesInPage = 0;
+    MoreContext->LinesInViewport = 0;
+    MoreContext->DisplayViewportLines = NewDisplayViewportLines;
+    MoreContext->StagingViewportLines = NewStagingViewportLines;
+    MoreContext->ViewportHeight = NewViewportHeight;
+    MoreContext->ViewportWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
+
+    MoreRegenerateViewport(MoreContext, FirstPhysicalLine);
+
+    YoriLibFree(OldStagingViewportLines);
+
+    for (Index = 0; Index < OldLinesInViewport; Index++) {
+        YoriLibFreeStringContents(&OldDisplayViewportLines[Index].Line);
+    }
+
+    YoriLibFree(OldDisplayViewportLines);
+}
+
+/**
  Manage the console display of the more application.
 
  @param MoreContext Pointer to the context describing the data to display.
@@ -1020,6 +1144,14 @@ MoreViewportDisplay(
     if (InHandle == INVALID_HANDLE_VALUE) {
         return FALSE;
     }
+
+    SetConsoleMode(InHandle, ENABLE_WINDOW_INPUT);
+
+    //
+    //  MSFIX Check if output is not a console and fail
+    //
+
+    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
 
     while(TRUE) {
 
@@ -1087,6 +1219,8 @@ MoreViewportDisplay(
                     InputRecord->Event.KeyEvent.bKeyDown) {
 
                     MoreProcessKeyDown(MoreContext, InputRecord, &Terminate);
+                } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
+                    MoreProcessResizeViewport(MoreContext, InputRecord);
                 }
             }
 
