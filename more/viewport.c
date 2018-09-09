@@ -107,7 +107,7 @@ MoreGetLogicalLineLength(
         ASSERT(CellsDisplayed <= MoreContext->ViewportWidth);
         if (CellsDisplayed == MoreContext->ViewportWidth) {
             if (ExplicitNewlineRequired != NULL) {
-                *ExplicitNewlineRequired = TRUE;
+                *ExplicitNewlineRequired = FALSE;
             }
             break;
         }
@@ -431,6 +431,99 @@ MoreGetNextLogicalLines(
 }
 
 /**
+ Clear any previously drawn status line.
+
+ @param MoreContext Pointer to the current data, including physical lines and
+        populated viewport lines.
+ */
+VOID
+MoreClearStatusLine(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+    COORD ClearPosition;
+    DWORD NumberWritten;
+
+    UNREFERENCED_PARAMETER(MoreContext);
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    //
+    //  Clear the region we want to overwrite
+    //
+
+    ClearPosition.X = 0;
+    ClearPosition.Y = ScreenInfo.dwCursorPosition.Y;
+
+    FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X, ClearPosition, &NumberWritten);
+    FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X, ClearPosition, &NumberWritten);
+
+    SetConsoleCursorPosition(StdOutHandle, ClearPosition);
+}
+
+/**
+ Draw the status line indicating the lines currently displayed and percentage
+ complete.
+
+ @param MoreContext Pointer to the current data, including physical lines and
+        populated viewport lines.
+ */
+VOID
+MoreDrawStatusLine(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    DWORDLONG FirstViewportLine;
+    DWORDLONG LastViewportLine;
+    DWORDLONG TotalLines;
+    PYORI_LIST_ENTRY ListEntry;
+    PMORE_PHYSICAL_LINE LastPhysicalLine;
+    BOOL PageFull;
+
+    //
+    //  If the screen isn't full, there's no point displaying status
+    //
+
+    if (MoreContext->LinesInViewport < MoreContext->ViewportHeight) {
+        return;
+    }
+
+    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+
+    FirstViewportLine = MoreContext->DisplayViewportLines[0].PhysicalLine->LineNumber;
+    LastViewportLine = MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1].PhysicalLine->LineNumber;
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+    ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, NULL);
+    LastPhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
+    TotalLines = LastPhysicalLine->LineNumber;
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    //
+    //  MSFIX Need to cap this at ViewportWidth - 1 somehow
+    //
+
+    if (MoreContext->LinesInViewport == MoreContext->LinesInPage) {
+        PageFull = TRUE;
+    } else {
+        PageFull = FALSE;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                  _T(" --- %s --- (%lli-%lli of %lli, %i%%)"),
+                  PageFull?_T("More"):_T("Awaiting data"),
+                  FirstViewportLine,
+                  LastViewportLine,
+                  TotalLines,
+                  LastViewportLine * 100 / TotalLines);
+
+    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
+}
+
+/**
  Clear the screen and write out the display buffer.  This is slow because it
  doesn't take advantage of console scrolling, but it allows verification of
  the memory buffer.
@@ -448,6 +541,8 @@ MoreDegenerateDisplay(
     HANDLE StdOutHandle;
     COORD NewPosition;
     DWORD NumberWritten;
+
+    MoreClearStatusLine(MoreContext);
 
     StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
@@ -482,6 +577,8 @@ MoreDegenerateDisplay(
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
         }
     }
+
+    MoreDrawStatusLine(MoreContext);
 }
 
 /**
@@ -540,6 +637,7 @@ MoreDisplayNewLinesInViewport(
     if (MoreContext->DebugDisplay) {
         MoreDegenerateDisplay(MoreContext);
     } else {
+        MoreClearStatusLine(MoreContext);
         for (Index = FirstLineToDisplay; Index < FirstLineToDisplay + NewLineCount; Index++) {
             if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
@@ -547,6 +645,7 @@ MoreDisplayNewLinesInViewport(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
             }
         }
+        MoreDrawStatusLine(MoreContext);
     }
 }
 
@@ -622,6 +721,8 @@ MoreDisplayPreviousLinesInViewport(
         MoreDegenerateDisplay(MoreContext);
     } else {
 
+        MoreClearStatusLine(MoreContext);
+
         if (OldLinesInViewport > NewLineCount) {
 
             LinesToPreserve = OldLinesInViewport - NewLineCount;
@@ -674,6 +775,7 @@ MoreDisplayPreviousLinesInViewport(
         NewPosition.X = 0;
         NewPosition.Y = ScreenInfo.dwCursorPosition.Y;
         SetConsoleCursorPosition(StdOutHandle, NewPosition);
+        MoreDrawStatusLine(MoreContext);
     }
 }
 
@@ -989,6 +1091,7 @@ MoreViewportDisplay(
             }
 
             if (Terminate) {
+                MoreClearStatusLine(MoreContext);
                 break;
             }
         }
