@@ -751,6 +751,9 @@ ymain(
             CopyFreeCopyContext(&CopyContext);
             return EXIT_FAILURE;
         }
+        if (CopyContext.Verbose) {
+            CopyContext.CompressContext.Verbose = TRUE;
+        }
     }
     CopyContext.FilesCopied = 0;
 

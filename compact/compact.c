@@ -251,6 +251,10 @@ ymain(
         return EXIT_FAILURE;
     }
 
+    if (CompactContext.Verbose) {
+        CompactContext.CompressContext.Verbose = TRUE;
+    }
+
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
     if (Recursive) {
         MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN;

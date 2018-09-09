@@ -39,9 +39,9 @@ typedef struct _YORILIB_PENDING_ACTION {
     YORI_LIST_ENTRY CompressList;
 
     /**
-     A handle to the file to compress.
+     The file name to compress.
      */
-    HANDLE hFile;
+    YORI_STRING FileName;
 
     /**
      If the file should be compressed, set to TRUE.  If the file should be
@@ -74,12 +74,14 @@ YoriLibInitializeCompressContext(
     CompressContext->CompressionAlgorithm = CompressionAlgorithm;
 
     //
-    //  Use 1/3rd of the CPUs to initiate compression on.  The system can
-    //  compress chunks of data on background threads, so this is just
-    //  the number of threads initiating work.
+    //  Create threads equal to the number of CPUs.  The system can compress
+    //  chunks of data on background threads, so this is just the number of
+    //  threads initiating work.  Unfortunately, the call to CreateFile
+    //  after copy has a tendency to block, so we need this to be part of
+    //  the threadpool to prevent bottlenecking the copy.
     //
 
-    CompressContext->MaxThreads = SystemInfo.dwNumberOfProcessors / 3;
+    CompressContext->MaxThreads = SystemInfo.dwNumberOfProcessors;
     if (CompressContext->MaxThreads < 1) {
         CompressContext->MaxThreads = 1;
     }
@@ -170,13 +172,53 @@ YoriLibCompressSingleFile(
     __in YORILIB_COMPRESS_ALGORITHM CompressionAlgorithm
     )
 {
+    HANDLE DestFileHandle;
+    DWORD AccessRequired;
+    BY_HANDLE_FILE_INFORMATION FileInfo;
     DWORD BytesReturned;
     BOOL Result = FALSE;
+
+    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE;
+    if (CompressionAlgorithm.NtfsAlgorithm != 0) {
+        AccessRequired |= FILE_WRITE_DATA;
+    }
+
+
+    DestFileHandle = CreateFile(PendingAction->FileName.StartOfString,
+                                AccessRequired,
+                                FILE_SHARE_READ|FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL);
+
+    if (DestFileHandle == INVALID_HANDLE_VALUE) {
+        YoriLibFree(PendingAction);
+        return FALSE;
+    }
+
+    //
+    //  File system compression works by storing the data in fewer allocation
+    //  units.  What this means is for files that are very small the
+    //  possibility and quantity of allocation units reclaimed can't justify
+    //  the overhead, so just skip them.
+    //
+
+    if (!GetFileInformationByHandle(DestFileHandle, &FileInfo)) {
+        goto Exit;
+    }
+
+    if (FileInfo.nFileSizeHigh == 0 &&
+        FileInfo.nFileSizeLow < 10 * 1024) {
+
+        goto Exit;
+    }
+
 
     if (CompressionAlgorithm.NtfsAlgorithm != 0) {
         USHORT Algorithm = (USHORT)CompressionAlgorithm.NtfsAlgorithm;
 
-        Result = DeviceIoControl(PendingAction->hFile,
+        Result = DeviceIoControl(DestFileHandle,
                                  FSCTL_SET_COMPRESSION,
                                  &Algorithm,
                                  sizeof(Algorithm),
@@ -197,7 +239,7 @@ YoriLibCompressSingleFile(
         CompressInfo.FileInfo.Version = 1;
         CompressInfo.FileInfo.Algorithm = CompressionAlgorithm.WofAlgorithm;
 
-        Result = DeviceIoControl(PendingAction->hFile,
+        Result = DeviceIoControl(DestFileHandle,
                                  FSCTL_SET_EXTERNAL_BACKING,
                                  &CompressInfo,
                                  sizeof(CompressInfo),
@@ -207,7 +249,10 @@ YoriLibCompressSingleFile(
                                  NULL);
     }
 
-    CloseHandle(PendingAction->hFile);
+Exit:
+    if (DestFileHandle != NULL) {
+        CloseHandle(DestFileHandle);
+    }
     YoriLibFree(PendingAction);
     return Result;
 }
@@ -226,12 +271,29 @@ YoriLibDecompressSingleFile(
     __in PYORILIB_PENDING_ACTION PendingAction
     )
 {
-    DWORD BytesReturned;
     BOOL GlobalResult = TRUE;
+    DWORD BytesReturned;
+    DWORD AccessRequired;
     BOOL LocalResult;
     USHORT Algorithm = 0;
+    HANDLE DestFileHandle;
 
-    LocalResult = DeviceIoControl(PendingAction->hFile,
+    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | FILE_WRITE_DATA;
+
+    DestFileHandle = CreateFile(PendingAction->FileName.StartOfString,
+                                AccessRequired,
+                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL);
+
+    if (DestFileHandle == INVALID_HANDLE_VALUE) {
+        YoriLibFree(PendingAction);
+        return FALSE;
+    }
+
+    LocalResult = DeviceIoControl(DestFileHandle,
                                   FSCTL_SET_COMPRESSION,
                                   &Algorithm,
                                   sizeof(Algorithm),
@@ -244,7 +306,7 @@ YoriLibDecompressSingleFile(
         GlobalResult = FALSE;
     }
 
-    LocalResult = DeviceIoControl(PendingAction->hFile,
+    LocalResult = DeviceIoControl(DestFileHandle,
                                   FSCTL_DELETE_EXTERNAL_BACKING,
                                   NULL,
                                   0,
@@ -257,7 +319,7 @@ YoriLibDecompressSingleFile(
         GlobalResult = FALSE;
     }
 
-    CloseHandle(PendingAction->hFile);
+    CloseHandle(DestFileHandle);
     YoriLibFree(PendingAction);
     return GlobalResult;
 }
@@ -401,57 +463,21 @@ YoriLibCompressFileInBackground(
     __in PYORI_STRING FileName
     )
 {
-    HANDLE DestFileHandle;
-    BOOL Result = FALSE;
-    BY_HANDLE_FILE_INFORMATION FileInfo;
     PYORILIB_PENDING_ACTION PendingAction;
-    DWORD AccessRequired;
+    BOOL Result = FALSE;
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
 
-    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE;
-    if (CompressContext->CompressionAlgorithm.NtfsAlgorithm != 0) {
-        AccessRequired |= FILE_WRITE_DATA;
-    }
-
-
-    DestFileHandle = CreateFile(FileName->StartOfString,
-                                AccessRequired,
-                                FILE_SHARE_READ|FILE_SHARE_DELETE,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_FLAG_BACKUP_SEMANTICS,
-                                NULL);
-
-    if (DestFileHandle == INVALID_HANDLE_VALUE) {
-        return FALSE;
-    }
-
-    //
-    //  File system compression works by storing the data in fewer allocation
-    //  units.  What this means is for files that are very small the
-    //  possibility and quantity of allocation units reclaimed can't justify
-    //  the overhead, so just skip them.
-    //
-
-    if (!GetFileInformationByHandle(DestFileHandle, &FileInfo)) {
-        goto Exit;
-    }
-
-    if (FileInfo.nFileSizeHigh == 0 &&
-        FileInfo.nFileSizeLow < 10 * 1024) {
-
-        goto Exit;
-    }
-
-    PendingAction = YoriLibMalloc(sizeof(YORILIB_PENDING_ACTION));
+    PendingAction = YoriLibMalloc(sizeof(YORILIB_PENDING_ACTION) + (FileName->LengthInChars + 1) * sizeof(TCHAR));
     if (PendingAction == NULL) {
         goto Exit;
     }
-
-    PendingAction->hFile = DestFileHandle;
     PendingAction->Compress = TRUE;
-    DestFileHandle = NULL;
+    YoriLibInitEmptyString(&PendingAction->FileName);
+    PendingAction->FileName.StartOfString = (LPTSTR)(PendingAction + 1);
+    PendingAction->FileName.LengthInChars = FileName->LengthInChars;
+    PendingAction->FileName.LengthAllocated = FileName->LengthInChars + 1;
+    memcpy(PendingAction->FileName.StartOfString, FileName->StartOfString, (FileName->LengthInChars + 1) * sizeof(TCHAR));
 
     if (YoriLibAddToBackgroundCompressQueue(CompressContext, PendingAction)) {
         PendingAction = NULL;
@@ -476,9 +502,6 @@ YoriLibCompressFileInBackground(
     }
 
 Exit:
-    if (DestFileHandle != NULL) {
-        CloseHandle(DestFileHandle);
-    }
     return Result;
 }
 
@@ -499,35 +522,21 @@ YoriLibDecompressFileInBackground(
     __in PYORI_STRING FileName
     )
 {
-    HANDLE DestFileHandle;
-    BOOL Result = FALSE;
     PYORILIB_PENDING_ACTION PendingAction;
-    DWORD AccessRequired;
+    BOOL Result = FALSE;
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
 
-    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | FILE_WRITE_DATA;
-
-    DestFileHandle = CreateFile(FileName->StartOfString,
-                                AccessRequired,
-                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_FLAG_BACKUP_SEMANTICS,
-                                NULL);
-
-    if (DestFileHandle == INVALID_HANDLE_VALUE) {
-        return FALSE;
-    }
-
-    PendingAction = YoriLibMalloc(sizeof(YORILIB_PENDING_ACTION));
+    PendingAction = YoriLibMalloc(sizeof(YORILIB_PENDING_ACTION) + (FileName->LengthInChars + 1) * sizeof(TCHAR));
     if (PendingAction == NULL) {
         goto Exit;
     }
-
-    PendingAction->hFile = DestFileHandle;
     PendingAction->Compress = FALSE;
-    DestFileHandle = NULL;
+    YoriLibInitEmptyString(&PendingAction->FileName);
+    PendingAction->FileName.StartOfString = (LPTSTR)(PendingAction + 1);
+    PendingAction->FileName.LengthInChars = FileName->LengthInChars;
+    PendingAction->FileName.LengthAllocated = FileName->LengthInChars + 1;
+    memcpy(PendingAction->FileName.StartOfString, FileName->StartOfString, (FileName->LengthInChars + 1) * sizeof(TCHAR));
 
     if (YoriLibAddToBackgroundCompressQueue(CompressContext, PendingAction)) {
         PendingAction = NULL;
@@ -552,9 +561,6 @@ YoriLibDecompressFileInBackground(
     }
 
 Exit:
-    if (DestFileHandle != NULL) {
-        CloseHandle(DestFileHandle);
-    }
     return Result;
 }
 
