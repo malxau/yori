@@ -97,6 +97,7 @@ YoriLibOutputTextToMultibyteDevice(
     )
 {
     DWORD  BytesTransferred;
+    BOOL Result;
 
 #ifdef UNICODE
     {
@@ -118,19 +119,20 @@ YoriLibOutputTextToMultibyteDevice(
                                    ansi_buf,
                                    AnsiBytesNeeded);
 
-            WriteFile(hOutput, ansi_buf, AnsiBytesNeeded, &BytesTransferred, NULL);
+            Result = WriteFile(hOutput, ansi_buf, AnsiBytesNeeded, &BytesTransferred, NULL);
 
             if (ansi_buf != ansi_stack_buf) {
                 YoriLibFree(ansi_buf);
             }
         } else {
+            Result = FALSE;
             BufferLength = 0;
         }
     }
 #else
-    WriteFile(hOutput,StringBuffer,BufferLength*sizeof(TCHAR),&BytesTransferred,NULL);
+    Result = WriteFile(hOutput,StringBuffer,BufferLength*sizeof(TCHAR),&BytesTransferred,NULL);
 #endif
-    return TRUE;
+    return Result;
 }
 
 /**

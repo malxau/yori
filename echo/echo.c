@@ -74,6 +74,7 @@ ymain(
     BOOL ArgumentUnderstood;
     BOOL NewLine = TRUE;
     BOOL StdErr = FALSE;
+    BOOL Result;
     DWORD OutputFlags;
     DWORD i;
     DWORD StartArg = 1;
@@ -122,21 +123,32 @@ ymain(
         OutputFlags = YORI_LIB_OUTPUT_STDOUT;
     }
 
+    Result = TRUE;
+
     do {
         if (i < ArgC) {
-            YoriLibOutput(OutputFlags, _T("%y"), &ArgV[i]);
+            if (!YoriLibOutput(OutputFlags, _T("%y"), &ArgV[i])) {
+                Result = FALSE;
+            }
             if (i + 1 < ArgC) {
-                YoriLibOutput(OutputFlags, _T(" "));
+                if (!YoriLibOutput(OutputFlags, _T(" "))) {
+                    Result = FALSE;
+                }
             }
         }
         i++;
     } while (i < ArgC);
 
     if (NewLine) {
-        YoriLibOutput(OutputFlags, _T("\n"));
+        if (!YoriLibOutput(OutputFlags, _T("\n"))) {
+            Result = FALSE;
+        }
     }
 
-    return EXIT_SUCCESS;
+    if (Result) {
+        return EXIT_SUCCESS;
+    }
+    return EXIT_FAILURE;
 }
 
 // vim:sw=4:ts=4:et:
