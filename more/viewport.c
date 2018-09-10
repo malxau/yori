@@ -482,6 +482,8 @@ MoreDrawStatusLine(
     PYORI_LIST_ENTRY ListEntry;
     PMORE_PHYSICAL_LINE LastPhysicalLine;
     BOOL PageFull;
+    BOOL ThreadActive;
+    LPTSTR StringToDisplay;
 
     //
     //  If the screen isn't full, there's no point displaying status
@@ -507,15 +509,30 @@ MoreDrawStatusLine(
     //  MSFIX Need to cap this at ViewportWidth - 1 somehow
     //
 
+    ASSERT(MoreContext->LinesInPage <= MoreContext->LinesInViewport);
     if (MoreContext->LinesInViewport == MoreContext->LinesInPage) {
         PageFull = TRUE;
     } else {
         PageFull = FALSE;
     }
 
+    if (WaitForSingleObject(MoreContext->IngestThread, 0) == WAIT_OBJECT_0) {
+        ThreadActive = FALSE;
+    } else {
+        ThreadActive = TRUE;
+    }
+
+    if (!ThreadActive && TotalLines == LastViewportLine) {
+        StringToDisplay = _T("End");
+    } else if (!PageFull) {
+        StringToDisplay = _T("Awaiting data");
+    } else {
+        StringToDisplay = _T("More");
+    }
+
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
                   _T(" --- %s --- (%lli-%lli of %lli, %i%%)"),
-                  PageFull?_T("More"):_T("Awaiting data"),
+                  StringToDisplay,
                   FirstViewportLine,
                   LastViewportLine,
                   TotalLines,
@@ -566,12 +583,12 @@ MoreDegenerateDisplay(
 
     for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
 
-
         if (Index % 2 != 0) {
             YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x17);
         } else {
             YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x7);
         }
+
         if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
         } else {
@@ -580,6 +597,61 @@ MoreDegenerateDisplay(
     }
 
     MoreDrawStatusLine(MoreContext);
+}
+
+/**
+ Output a series of lines.  This function will attempt to group the series of
+ lines into a single operation so the console only needs to scroll once.  If
+ that fails, it falls back to line by line display.
+
+ @param FirstLine Pointer to the first line in an array of lines to display.
+
+ @param LineCount The number of lines to display.
+ */
+VOID
+MoreOutputSeriesOfLines(
+    __in PMORE_LOGICAL_LINE FirstLine,
+    __in DWORD LineCount
+    )
+{
+    DWORD Index;
+    DWORD CharsRequired;
+    YORI_STRING CombinedBuffer;
+
+    CharsRequired = 0;
+    for (Index = 0; Index < LineCount; Index++) {
+        if (FirstLine[Index].ExplicitNewlineRequired) {
+            CharsRequired += FirstLine[Index].Line.LengthInChars + 1;
+        } else {
+            CharsRequired += FirstLine[Index].Line.LengthInChars;
+        }
+    }
+
+    CharsRequired++;
+
+    if (YoriLibAllocateString(&CombinedBuffer, CharsRequired)) {
+        CharsRequired = 0;
+        for (Index = 0; Index < LineCount; Index++) {
+            memcpy(&CombinedBuffer.StartOfString[CharsRequired], FirstLine[Index].Line.StartOfString, FirstLine[Index].Line.LengthInChars * sizeof(TCHAR));
+            CharsRequired += FirstLine[Index].Line.LengthInChars;
+            if (FirstLine[Index].ExplicitNewlineRequired) {
+                CombinedBuffer.StartOfString[CharsRequired] = '\n';
+                CharsRequired++;
+            }
+        }
+        CombinedBuffer.StartOfString[CharsRequired] = '\0';
+        CombinedBuffer.LengthInChars = CharsRequired;
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &CombinedBuffer);
+        YoriLibFreeStringContents(&CombinedBuffer);
+    } else {
+        for (Index = 0; Index < LineCount; Index++) {
+            if (FirstLine[Index].ExplicitNewlineRequired) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &FirstLine[Index].Line);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &FirstLine[Index].Line);
+            }
+        }
+    }
 }
 
 /**
@@ -639,13 +711,7 @@ MoreDisplayNewLinesInViewport(
         MoreDegenerateDisplay(MoreContext);
     } else {
         MoreClearStatusLine(MoreContext);
-        for (Index = FirstLineToDisplay; Index < FirstLineToDisplay + NewLineCount; Index++) {
-            if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
-            } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
-            }
-        }
+        MoreOutputSeriesOfLines(&MoreContext->DisplayViewportLines[FirstLineToDisplay], NewLineCount);
         MoreDrawStatusLine(MoreContext);
     }
 }
@@ -717,6 +783,7 @@ MoreDisplayPreviousLinesInViewport(
     if (MoreContext->LinesInViewport > MoreContext->ViewportHeight) {
         MoreContext->LinesInViewport = MoreContext->ViewportHeight;
     }
+    MoreContext->LinesInPage = MoreContext->LinesInViewport;
 
     if (MoreContext->DebugDisplay) {
         MoreDegenerateDisplay(MoreContext);
@@ -758,19 +825,10 @@ MoreDisplayPreviousLinesInViewport(
 
         SetConsoleCursorPosition(StdOutHandle, NewPosition);
 
-        for (Index = 0; Index < NewLineCount; Index++) {
-
-            if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
-            } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
-            }
-        }
+        MoreOutputSeriesOfLines(MoreContext->DisplayViewportLines, NewLineCount);
 
         //
         //  Restore the cursor to the bottom of the viewport
-        //  MSFIX This may be wrong if we scrolled text down; the new location
-        //  may be lower than the old one
         //
 
         NewPosition.X = 0;
@@ -797,9 +855,8 @@ MoreAddNewLinesToViewport(
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
     //
-    //  MSFIX Need to preserve the previous logical line explicitly, outside
-    //  of the viewport, so we can move to "next page", have an empty
-    //  viewport, yet resume correctly
+    //  Resume after the previous line, or the first physical line if there
+    //  is no previous line
     //
 
     if (MoreContext->LinesInViewport == 0) {
@@ -855,12 +912,6 @@ MoreMoveViewportUp(
 
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
-    //
-    //  MSFIX Need to preserve the previous logical line explicitly, outside
-    //  of the viewport, so we can move to "next page", have an empty
-    //  viewport, yet resume correctly
-    //
-
     CurrentLine = MoreContext->DisplayViewportLines;
 
     LinesReturned = MoreGetPreviousLogicalLines(MoreContext, CurrentLine, CappedLinesToMove, MoreContext->StagingViewportLines);
@@ -897,11 +948,6 @@ MoreMoveViewportDown(
 
     CappedLinesToMove = LinesToMove;
 
-    //
-    //  Preserve at least one line in the viewport to work around the
-    //  MSFIX comment below
-    //
-
     if (MoreContext->LinesInViewport == 0) {
         return;
     }
@@ -915,12 +961,6 @@ MoreMoveViewportDown(
     }
 
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
-
-    //
-    //  MSFIX Need to preserve the previous logical line explicitly, outside
-    //  of the viewport, so we can move to "next page", have an empty
-    //  viewport, yet resume correctly
-    //
 
     if (MoreContext->LinesInViewport == 0) {
         CurrentLine = NULL;
@@ -1105,7 +1145,7 @@ MoreProcessResizeViewport(
             NewCursorPosition.Y = (USHORT)((DWORD)ScreenInfo.dwCursorPosition.Y + NewViewportHeight - MoreContext->ViewportHeight);
 
             NewWindow.Left = 0;
-            NewWindow.Right = (USHORT)MoreContext->ViewportWidth - 1;
+            NewWindow.Right = (USHORT)(MoreContext->ViewportWidth - 1);
             NewWindow.Top = (USHORT)(NewCursorPosition.Y - NewViewportHeight);
             NewWindow.Bottom = NewCursorPosition.Y;
 
@@ -1140,16 +1180,16 @@ MoreProcessResizeViewport(
         if (MoreContext->LinesInViewport > 0) {
             FirstPhysicalLine = MoreContext->DisplayViewportLines[0].PhysicalLine;
         }
-    
+
         MoreContext->LinesInPage = 0;
         MoreContext->LinesInViewport = 0;
         MoreContext->DisplayViewportLines = NewDisplayViewportLines;
         MoreContext->StagingViewportLines = NewStagingViewportLines;
         MoreContext->ViewportHeight = NewViewportHeight;
         MoreContext->ViewportWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
-    
+
         MoreRegenerateViewport(MoreContext, FirstPhysicalLine);
-    
+
         for (Index = 0; Index < OldLinesInViewport; Index++) {
             YoriLibFreeStringContents(&OldDisplayViewportLines[Index].Line);
         }
@@ -1229,10 +1269,6 @@ MoreViewportDisplay(
 
     SetConsoleMode(InHandle, ENABLE_WINDOW_INPUT);
 
-    //
-    //  MSFIX Check if output is not a console and fail
-    //
-
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
 
     while(TRUE) {
@@ -1267,13 +1303,13 @@ MoreViewportDisplay(
                 break;
             }
             if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == MoreContext->PhysicalLineAvailableEvent) {
-    
+
                 MoreAddNewLinesToViewport(MoreContext);
-    
+
             } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == MoreContext->IngestThread) {
-    
+
                 WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
-    
+
                 //
                 //  If the ingest thread has found zero lines and terminated, we
                 //  don't really need a UI.  The onus is on the ingest thread to
@@ -1281,7 +1317,7 @@ MoreViewportDisplay(
                 //  anything at all, we'll do UI and wait for the user to
                 //  indicate not to.
                 //
-    
+
                 if (MoreContext->LineCount == 0) {
                     ReleaseMutex(MoreContext->PhysicalLineMutex);
                     break;
@@ -1295,24 +1331,24 @@ MoreViewportDisplay(
                 DWORD ActuallyRead;
                 DWORD CurrentIndex;
                 BOOL Terminate = FALSE;
-    
+
                 if (!ReadConsoleInput(InHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
                     break;
                 }
-    
+
                 MoreCheckForWindowSizeChange(MoreContext);
-    
+
                 for (CurrentIndex = 0; CurrentIndex < ActuallyRead; CurrentIndex++) {
                     InputRecord = &InputRecords[CurrentIndex];
                     if (InputRecord->EventType == KEY_EVENT &&
                         InputRecord->Event.KeyEvent.bKeyDown) {
-    
+
                         MoreProcessKeyDown(MoreContext, InputRecord, &Terminate);
                     } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
                         MoreProcessResizeViewport(MoreContext);
                     }
                 }
-    
+
                 if (Terminate) {
                     MoreClearStatusLine(MoreContext);
                     break;

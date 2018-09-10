@@ -73,6 +73,7 @@ ymain(
     BOOL ArgumentUnderstood;
     DWORD i;
     DWORD StartArg = 0;
+    DWORD CurrentMode;
     BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
     BOOL InitComplete;
@@ -115,6 +116,11 @@ ymain(
         }
     }
 
+    if (!GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &CurrentMode)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("more: output is not interactive console\n"));
+        return EXIT_FAILURE;
+    }
+
     if (StartArg == 0) {
         InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay);
     } else {
@@ -123,6 +129,7 @@ ymain(
 
     if (!InitComplete) {
         MoreCleanupContext(&MoreContext);
+        return EXIT_FAILURE;
     }
 
     MoreViewportDisplay(&MoreContext);
