@@ -1,3 +1,7 @@
+ - Calculate start color of each physical + logical line in more
+ - Search in more
+ - Selection in more?
+ - Make selection use RTF
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments
  - Allow child yori process to execute a plan in the background
