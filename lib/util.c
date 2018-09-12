@@ -169,6 +169,9 @@ YoriLibCreateDirectoryAndParents(
                 continue;
 
             } else {
+                if (Err == ERROR_ALREADY_EXISTS) {
+                    return TRUE;
+                }
                 return FALSE;
             }
         } else {

@@ -215,7 +215,11 @@ SetupInstallSelectedFromDialog(
         return FALSE;
     }
 
-    YoriLibCreateDirectoryAndParents(&InstallDir);
+    if (!YoriLibCreateDirectoryAndParents(&InstallDir)) {
+        MessageBox(hDlg, _T("Failed to create installation directory.  If installing into a system location, you may want to run the installer as Administrator."), _T("Installation failed."), MB_ICONSTOP);
+        YoriLibFreeStringContents(&InstallDir);
+        return FALSE;
+    }
 
     //
     //  Count the number of packages we want to install
@@ -419,6 +423,90 @@ Exit:
 }
 
 /**
+ The default application install directory, under Program Files.
+ */
+#define SETUP_APP_DIR "\\Yori"
+
+/**
+ The default application install directory, under Program Files, as Unicode.
+ */
+#define TSETUP_APP_DIR _T("\\Yori")
+
+/**
+ Return the default installation directory.  This is normally
+ "C:\Program Files\Yori" but the path can be reconfigured.
+
+ @param InstallDir On successful completion, populated with the default
+        install path.
+
+ @return TRUE to indicate successful completion, FALSE on error.
+ */
+BOOL
+SetupGetDefaultInstallDir(
+    __out PYORI_STRING InstallDir
+    )
+{
+    HKEY hKey;
+    DWORD SizeNeeded;
+    DWORD RegType;
+
+    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion"), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+        YoriLibConstantString(InstallDir, _T("C:\\Program Files"));
+        return TRUE;
+    }
+
+    if (RegQueryValueEx(hKey, _T("ProgramW6432Dir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
+        if (!YoriLibAllocateString(InstallDir, SizeNeeded/sizeof(TCHAR) + sizeof(SETUP_APP_DIR))) {
+            goto ReturnDefault;
+        }
+
+        SizeNeeded = InstallDir->LengthAllocated * sizeof(TCHAR);
+        if (RegQueryValueEx(hKey, _T("ProgramW6432Dir"), NULL, &RegType, (LPBYTE)InstallDir->StartOfString, &SizeNeeded) == ERROR_SUCCESS) {
+            if (RegType != REG_SZ && RegType != REG_EXPAND_SZ) {
+                goto ReturnDefault;
+            }
+            InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
+            if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
+                memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
+                InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
+            } else {
+                InstallDir->StartOfString[InstallDir->LengthInChars] = '\0';
+            }
+        }
+        RegCloseKey(hKey);
+        return TRUE;
+    }
+
+    if (RegQueryValueEx(hKey, _T("ProgramFilesDir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
+        if (!YoriLibAllocateString(InstallDir, SizeNeeded/sizeof(TCHAR) + sizeof("\\Yori"))) {
+            goto ReturnDefault;
+        }
+
+        SizeNeeded = InstallDir->LengthAllocated * sizeof(TCHAR);
+        if (RegQueryValueEx(hKey, _T("ProgramFilesDir"), NULL, &RegType, (LPBYTE)InstallDir->StartOfString, &SizeNeeded) == ERROR_SUCCESS) {
+            if (RegType != REG_SZ && RegType != REG_EXPAND_SZ) {
+                goto ReturnDefault;
+            }
+            InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
+            if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
+                memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
+                InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
+            } else {
+                InstallDir->StartOfString[InstallDir->LengthInChars] = '\0';
+            }
+        }
+        RegCloseKey(hKey);
+        return TRUE;
+    }
+
+
+ReturnDefault:
+    YoriLibConstantString(InstallDir, _T("C:\\Program Files") TSETUP_APP_DIR);
+    RegCloseKey(hKey);
+    return TRUE;
+}
+
+/**
  The DialogProc for the setup dialog box.
 
  @param hDlg Specifies the hWnd of the dialog box.
@@ -521,7 +609,7 @@ SetupUiDialogProc(
             SetWindowPos(hDlg, HWND_TOP, rcNew.left, rcNew.top, 0, 0, SWP_NOSIZE);
 
             YoriLibInitEmptyString(&InstallDir);
-            YoriPkgGetApplicationDirectory(&InstallDir);
+            SetupGetDefaultInstallDir(&InstallDir);
             SetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
             YoriLibFreeStringContents(&InstallDir);
             CheckDlgButton(hDlg, IDC_TYPICAL, TRUE);
@@ -540,6 +628,7 @@ SetupUiDialogProc(
 BOOL
 SetupDisplayUi()
 {
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
 
     //
     //  Initialize COM for the benefit of the shell's browse for folder
@@ -551,7 +640,11 @@ SetupDisplayUi()
         DllOle32.pCoInitialize(NULL);
     }
 
-    //FreeConsole();
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
+        if (ScreenInfo.dwCursorPosition.X == 0 && ScreenInfo.dwCursorPosition.Y == 0) {
+            FreeConsole();
+        }
+    }
 
     DialogBox(NULL, MAKEINTRESOURCE(SETUPDIALOG), NULL, (DLGPROC)SetupUiDialogProc);
     return TRUE;
