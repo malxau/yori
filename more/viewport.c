@@ -1324,6 +1324,9 @@ MoreViewportDisplay(
                 } else {
                     WaitForIngestThread = FALSE;
                     ReleaseMutex(MoreContext->PhysicalLineMutex);
+                    if (MoreContext->LinesInPage < MoreContext->ViewportHeight) {
+                        break;
+                    }
                 }
             } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == InHandle) {
                 INPUT_RECORD InputRecords[20];

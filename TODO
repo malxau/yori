@@ -2,6 +2,10 @@
  - Search in more
  - Selection in more?
  - Make selection use RTF
+ - Sync
+ - Hexdump
+ - Fix ypm mirror support
+ - General MSFIX review
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments
  - Allow child yori process to execute a plan in the background

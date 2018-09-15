@@ -49,7 +49,12 @@ MoreProcessStream(
     DWORD TabCount;
     DWORD CharIndex;
     DWORD DestIndex;
+    DWORD TabIndex;
     DWORD BytesRequired;
+    PUCHAR Buffer = NULL;
+    DWORD BytesRemainingInBuffer = 0;
+    DWORD BufferOffset = 0;
+    DWORD Alignment;
 
     YoriLibInitEmptyString(&LineString);
 
@@ -83,25 +88,48 @@ MoreProcessStream(
 
         BytesRequired = sizeof(MORE_PHYSICAL_LINE) + (LineString.LengthInChars + TabCount * (MoreContext->TabWidth - 1) + 1) * sizeof(TCHAR);
 
-        NewLine = YoriLibReferencedMalloc(BytesRequired);
-
         //
-        //  MSFIX What to do on out of memory?  This tool can actually run
-        //  out
+        //  If we need a buffer, allocate a buffer that typically has space for
+        //  multiple lines
         //
 
-        if (NewLine == NULL) {
-            break;
+        if (Buffer == NULL || BytesRequired > BytesRemainingInBuffer) {
+            if (Buffer != NULL) {
+                YoriLibDereference(Buffer);
+            }
+            BytesRemainingInBuffer = 64 * 1024;
+            if (BytesRequired > BytesRemainingInBuffer) {
+                BytesRemainingInBuffer = BytesRequired;
+            }
+            BufferOffset = 0;
+
+            //
+            //  MSFIX What to do on out of memory?  This tool can actually run
+            //  out
+            //
+
+            Buffer = YoriLibReferencedMalloc(BytesRemainingInBuffer);
+            if (Buffer == NULL) {
+                break;
+            }
         }
 
+        //
+        //  Write this line into the current buffer
+        //
+
+        NewLine = (PMORE_PHYSICAL_LINE)YoriLibAddToPointer(Buffer, BufferOffset);
+
+        YoriLibReference(Buffer);
+        NewLine->MemoryToFree = Buffer;
         NewLine->LineNumber = MoreContext->LineCount + 1;
-        YoriLibReference(NewLine);
-        NewLine->LineContents.MemoryToFree = NewLine;
+        YoriLibReference(Buffer);
+        NewLine->LineContents.MemoryToFree = Buffer;
         NewLine->LineContents.StartOfString = (LPTSTR)(NewLine + 1);
 
         for (CharIndex = 0, DestIndex = 0; CharIndex < LineString.LengthInChars; CharIndex++) {
             if (LineString.StartOfString[CharIndex] == '\t') {
-                for (BytesRequired = 0; BytesRequired < MoreContext->TabWidth; BytesRequired++) {
+                for (TabIndex = 0; TabIndex < MoreContext->TabWidth; TabIndex++) {
                     NewLine->LineContents.StartOfString[DestIndex] = ' ';
                     DestIndex++;
                 }
@@ -114,6 +142,25 @@ MoreProcessStream(
         NewLine->LineContents.LengthInChars = DestIndex;
         NewLine->LineContents.LengthAllocated = DestIndex + 1;
 
+        BufferOffset += BytesRequired;
+        BytesRemainingInBuffer -= BytesRequired;
+
+        //
+        //  Align the buffer to 8 bytes.  There's no length checking because
+        //  the allocation is assumed to be aligned to 8 bytes.
+        //
+
+        Alignment = BufferOffset % 8;
+        if (Alignment > 0) {
+            Alignment = 8 - Alignment;
+            BufferOffset += Alignment;
+            BytesRemainingInBuffer -= Alignment;
+        }
+
+        //
+        //  Insert the new line into the list
+        //
+
         WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
         MoreContext->LineCount++;
         YoriLibAppendList(&MoreContext->PhysicalLineList, &NewLine->LineList);
@@ -124,7 +171,10 @@ MoreProcessStream(
         if (WaitForSingleObject(MoreContext->ShutdownEvent, 0) == WAIT_OBJECT_0) {
             break;
         }
+    }
 
+    if (Buffer != NULL) {
+        YoriLibDereference(Buffer);
     }
 
     YoriLibLineReadClose(LineContext);

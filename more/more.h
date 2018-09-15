@@ -40,6 +40,11 @@ typedef struct _MORE_PHYSICAL_LINE {
     YORI_LIST_ENTRY LineList;
 
     /**
+     Pointer to the referenced allocation that contains this physical line.
+     */
+    PVOID MemoryToFree;
+
+    /**
      The number of this physical line within the input stream.  The first
      line is zero.
      */

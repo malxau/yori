@@ -249,7 +249,7 @@ MoreGracefulExit(
         PhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
         YoriLibRemoveListItem(ListEntry);
         YoriLibFreeStringContents(&PhysicalLine->LineContents);
-        YoriLibDereference(PhysicalLine);
+        YoriLibDereference(PhysicalLine->MemoryToFree);
         ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
     }
 
