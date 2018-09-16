@@ -55,10 +55,12 @@ MoreProcessStream(
     DWORD BytesRemainingInBuffer = 0;
     DWORD BufferOffset = 0;
     DWORD Alignment;
+    WORD PreviousColor;
 
     YoriLibInitEmptyString(&LineString);
 
     MoreContext->FilesFound++;
+    PreviousColor = MoreContext->InitialColor;
 
     while (TRUE) {
 
@@ -122,12 +124,42 @@ MoreProcessStream(
 
         YoriLibReference(Buffer);
         NewLine->MemoryToFree = Buffer;
+        NewLine->InitialColor = PreviousColor;
         NewLine->LineNumber = MoreContext->LineCount + 1;
         YoriLibReference(Buffer);
         NewLine->LineContents.MemoryToFree = Buffer;
         NewLine->LineContents.StartOfString = (LPTSTR)(NewLine + 1);
 
         for (CharIndex = 0, DestIndex = 0; CharIndex < LineString.LengthInChars; CharIndex++) {
+            //
+            //  If the string is <ESC>[, then treat it as an escape sequence.
+            //  Look for the final letter after any numbers or semicolon.
+            //
+    
+            if (LineString.LengthInChars > CharIndex + 2 &&
+                LineString.StartOfString[CharIndex] == 27 &&
+                LineString.StartOfString[CharIndex + 1] == '[') {
+    
+                YORI_STRING EscapeSubset;
+                DWORD EndOfEscape;
+    
+                YoriLibInitEmptyString(&EscapeSubset);
+                EscapeSubset.StartOfString = &LineString.StartOfString[CharIndex + 2];
+                EscapeSubset.LengthInChars = LineString.LengthInChars - CharIndex - 2;
+                EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+    
+                //
+                //  Count everything as consuming the source and needing buffer
+                //  space in the destination but consuming no display cells.  This
+                //  may include the final letter, if we found one.
+                //
+    
+                if (LineString.LengthInChars > CharIndex + 2 + EndOfEscape) {
+                    EscapeSubset.StartOfString -= 2;
+                    EscapeSubset.LengthInChars = EndOfEscape + 3;
+                    YoriLibVtFinalColorFromSequence(PreviousColor, &EscapeSubset, &PreviousColor);
+                }
+            }
             if (LineString.StartOfString[CharIndex] == '\t') {
                 for (TabIndex = 0; TabIndex < MoreContext->TabWidth; TabIndex++) {
                     NewLine->LineContents.StartOfString[DestIndex] = ' ';

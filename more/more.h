@@ -45,6 +45,11 @@ typedef struct _MORE_PHYSICAL_LINE {
     PVOID MemoryToFree;
 
     /**
+     The color attribute to display at the beginning of the line.
+     */
+    WORD InitialColor;
+
+    /**
      The number of this physical line within the input stream.  The first
      line is zero.
      */
@@ -78,6 +83,11 @@ typedef struct _MORE_LOGICAL_LINE {
      string represented by this logical line.
      */
     DWORD PhysicalLineCharacterOffset;
+
+    /**
+     The color attribute to display at the beginning of the line.
+     */
+    WORD InitialColor;
 
     /**
      If TRUE, a newline should be displayed after this string.  If FALSE, the
@@ -177,6 +187,11 @@ typedef struct _MORE_CONTEXT {
      The number of spaces to display for every tab.
      */
     DWORD TabWidth;
+
+    /**
+     The color attribute to display at the beginning of the application.
+     */
+    WORD InitialColor;
 
     /**
      Pointer to an array of length InputSourceCount for file specifications

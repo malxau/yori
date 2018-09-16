@@ -1760,6 +1760,13 @@ YoriLibVtSetDefaultColor(
 WORD
 YoriLibVtGetDefaultColor();
 
+BOOL
+YoriLibVtFinalColorFromSequence(
+    __in WORD InitialColor,
+    __in PYORI_STRING EscapeSequence,
+    __out PWORD FinalColor
+    );
+
 // *** PATH.C ***
 
 /**

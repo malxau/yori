@@ -307,41 +307,33 @@ YoriLibConsoleProcessAndIgnoreEscape(
 #endif
 
 /**
- A callback function to receive an escape and translate it into the
- appropriate Win32 console action.
- 
- @param hOutput Handle to the output console.
+ Given a starting color and a VT sequence which may change it, generate the
+ final color.  Both colors are in Win32 attribute form.
 
- @param StringBuffer Pointer to a buffer describing the escape.
+ @param InitialColor The starting color, in Win32 form.
 
- @param BufferLength The number of characters in the escape.
+ @param EscapeSequence The VT100 sequence to apply to the starting color.
 
- @return TRUE for success, FALSE for failure.
+ @param FinalColor On successful completion, updated to contain the final
+        color.
+
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOL
-YoriLibConsoleProcessAndOutputEscape(
-    __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+YoriLibVtFinalColorFromSequence(
+    __in WORD InitialColor,
+    __in PYORI_STRING EscapeSequence,
+    __out PWORD FinalColor
     )
 {
-    LPTSTR CurrentPoint = StringBuffer;
+    LPTSTR CurrentPoint = EscapeSequence->StartOfString;
     DWORD CurrentOffset = 0;
-    WORD  NewColor;
     DWORD RemainingLength;
+    WORD  NewColor;
     YORI_STRING SearchString;
-    CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
 
-    ConsoleInfo.wAttributes = DEFAULT_COLOR;
-    GetConsoleScreenBufferInfo(hOutput, &ConsoleInfo);
-    NewColor = ConsoleInfo.wAttributes;
-
-    if (!YoriLibVtResetColorSet) {
-        YoriLibVtResetColor = ConsoleInfo.wAttributes;
-        YoriLibVtResetColorSet = TRUE;
-    }
-
-    RemainingLength = BufferLength;
+    RemainingLength = EscapeSequence->LengthInChars;
+    NewColor = InitialColor;
 
     //
     //  We expect an escape initiator (two chars) and a 'm' for color
@@ -349,8 +341,8 @@ YoriLibConsoleProcessAndOutputEscape(
     //  is redundant.
     //
 
-    if (BufferLength >= 3 &&
-        CurrentPoint[BufferLength - 1] == 'm') {
+    if (EscapeSequence->LengthInChars >= 3 &&
+        CurrentPoint[EscapeSequence->LengthInChars - 1] == 'm') {
 
         DWORD code;
         BOOLEAN NewUnderline = FALSE;
@@ -430,6 +422,50 @@ YoriLibConsoleProcessAndOutputEscape(
         if (NewUnderline) {
             NewColor |= COMMON_LVB_UNDERSCORE;
         }
+    }
+
+    *FinalColor = NewColor;
+
+    return TRUE;
+}
+
+/**
+ A callback function to receive an escape and translate it into the
+ appropriate Win32 console action.
+ 
+ @param hOutput Handle to the output console.
+
+ @param StringBuffer Pointer to a buffer describing the escape.
+
+ @param BufferLength The number of characters in the escape.
+
+ @return TRUE for success, FALSE for failure.
+ */
+BOOL
+YoriLibConsoleProcessAndOutputEscape(
+    __in HANDLE hOutput,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
+    YORI_STRING EscapeCode;
+    WORD NewColor;
+
+    ConsoleInfo.wAttributes = DEFAULT_COLOR;
+    GetConsoleScreenBufferInfo(hOutput, &ConsoleInfo);
+    NewColor = ConsoleInfo.wAttributes;
+
+    if (!YoriLibVtResetColorSet) {
+        YoriLibVtResetColor = ConsoleInfo.wAttributes;
+        YoriLibVtResetColorSet = TRUE;
+    }
+
+    YoriLibInitEmptyString(&EscapeCode);
+    EscapeCode.StartOfString = StringBuffer;
+    EscapeCode.LengthInChars = BufferLength;
+
+    if (YoriLibVtFinalColorFromSequence(NewColor, &EscapeCode, &NewColor)) {
 
         SetConsoleTextAttribute(hOutput, NewColor);
     }

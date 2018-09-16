@@ -142,6 +142,7 @@ MoreInitContext(
     MoreContext->BasicEnumeration = BasicEnumeration;
     MoreContext->DebugDisplay = DebugDisplay;
     MoreContext->TabWidth = 4;
+    MoreContext->InitialColor = YoriLibVtGetDefaultColor();
 
     YoriLibInitializeListHead(&MoreContext->PhysicalLineList);
     MoreContext->PhysicalLineMutex = CreateMutex(NULL, FALSE, NULL);

@@ -40,6 +40,11 @@
         other logical lines have already been constructed from the previous
         characters.
 
+ @param InitialColor The starting color, in Win32 form.
+
+ @param FinalColor On successful completion, updated to contain the final
+        color.
+
  @param ExplicitNewlineRequired On successful completion, set to TRUE if the
         number of visible character cells consumed is less than an entire line
         so an explicit newline is needed to move to the next line.  Set to
@@ -52,6 +57,8 @@ DWORD
 MoreGetLogicalLineLength(
     __in PMORE_CONTEXT MoreContext,
     __in PYORI_STRING PhysicalLineSubset,
+    __in WORD InitialColor,
+    __out_opt PWORD FinalColor,
     __out_opt PBOOL ExplicitNewlineRequired
     )
 {
@@ -60,6 +67,7 @@ MoreGetLogicalLineLength(
     DWORD CellsDisplayed;
     YORI_STRING EscapeSubset;
     DWORD EndOfEscape;
+    WORD CurrentColor = InitialColor;
 
     CharsInOutputBuffer = 0;
     CellsDisplayed = 0;
@@ -93,6 +101,12 @@ MoreGetLogicalLineLength(
             if (PhysicalLineSubset->LengthInChars > SourceIndex + 2 + EndOfEscape) {
                 CharsInOutputBuffer += 3 + EndOfEscape;
                 SourceIndex += 3 + EndOfEscape;
+
+                if (FinalColor != NULL) {
+                    EscapeSubset.StartOfString -= 2;
+                    EscapeSubset.LengthInChars = EndOfEscape + 3;
+                    YoriLibVtFinalColorFromSequence(CurrentColor, &EscapeSubset, &CurrentColor);
+                }
             } else {
                 CharsInOutputBuffer += 2 + EndOfEscape;
                 SourceIndex += 2 + EndOfEscape;
@@ -111,6 +125,10 @@ MoreGetLogicalLineLength(
             }
             break;
         }
+    }
+
+    if (FinalColor != NULL) {
+        *FinalColor = CurrentColor;
     }
 
     return SourceIndex;
@@ -143,7 +161,7 @@ MoreCountLogicalLinesOnPhysicalLine(
     Subset.StartOfString = PhysicalLine->LineContents.StartOfString;
     Subset.LengthInChars = PhysicalLine->LineContents.LengthInChars;
     while(TRUE) {
-        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, NULL);
+        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, 0, NULL, NULL);
         Subset.StartOfString += LogicalLineLength;
         Subset.LengthInChars -= LogicalLineLength;
         Count++;
@@ -214,6 +232,8 @@ MoreGenerateLogicalLinesFromPhysicalLine(
     YORI_STRING Subset;
     PMORE_LOGICAL_LINE ThisLine;
     BOOL ExplicitNewlineRequired;
+    WORD InitialColor = PhysicalLine->InitialColor;
+    WORD NewColor;
 
     YoriLibInitEmptyString(&Subset);
     Subset.StartOfString = PhysicalLine->LineContents.StartOfString;
@@ -222,10 +242,11 @@ MoreGenerateLogicalLinesFromPhysicalLine(
         if (Count >= FirstLogicalLineIndex + NumberLogicalLines) {
             break;
         }
-        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, &ExplicitNewlineRequired);
+        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, InitialColor, &NewColor, &ExplicitNewlineRequired);
         if (Count >= FirstLogicalLineIndex) {
             ThisLine = &OutputLines[Count - FirstLogicalLineIndex];
             ThisLine->PhysicalLine = PhysicalLine;
+            ThisLine->InitialColor = InitialColor;
             ThisLine->LogicalLineIndex = Count;
             ThisLine->PhysicalLineCharacterOffset = CharIndex;
 
@@ -234,11 +255,11 @@ MoreGenerateLogicalLinesFromPhysicalLine(
             ThisLine->Line.LengthInChars = LogicalLineLength;
             ThisLine->ExplicitNewlineRequired = ExplicitNewlineRequired;
 
-            YoriLibReference(ThisLine->PhysicalLine);
-            ThisLine->Line.MemoryToFree = ThisLine->PhysicalLine;
+            YoriLibReference(ThisLine->PhysicalLine->MemoryToFree);
+            ThisLine->Line.MemoryToFree = ThisLine->PhysicalLine->MemoryToFree;
         }
 
-
+        InitialColor = NewColor;
         Subset.StartOfString += LogicalLineLength;
         Subset.LengthInChars -= LogicalLineLength;
         Count++;
@@ -583,11 +604,7 @@ MoreDegenerateDisplay(
 
     for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
 
-        if (Index % 2 != 0) {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x17);
-        } else {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x7);
-        }
+        YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialColor);
 
         if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
@@ -617,13 +634,20 @@ MoreOutputSeriesOfLines(
     DWORD Index;
     DWORD CharsRequired;
     YORI_STRING CombinedBuffer;
+    YORI_STRING VtAttribute;
+    TCHAR VtAttributeBuffer[32];
+
+    YoriLibInitEmptyString(&VtAttribute);
+    VtAttribute.StartOfString = VtAttributeBuffer;
+    VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(TCHAR);
 
     CharsRequired = 0;
     for (Index = 0; Index < LineCount; Index++) {
+        YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialColor);
+        CharsRequired += VtAttribute.LengthInChars;
+        CharsRequired += FirstLine[Index].Line.LengthInChars;
         if (FirstLine[Index].ExplicitNewlineRequired) {
-            CharsRequired += FirstLine[Index].Line.LengthInChars + 1;
-        } else {
-            CharsRequired += FirstLine[Index].Line.LengthInChars;
+            CharsRequired += 1;
         }
     }
 
@@ -632,6 +656,9 @@ MoreOutputSeriesOfLines(
     if (YoriLibAllocateString(&CombinedBuffer, CharsRequired)) {
         CharsRequired = 0;
         for (Index = 0; Index < LineCount; Index++) {
+            YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialColor);
+            memcpy(&CombinedBuffer.StartOfString[CharsRequired], VtAttribute.StartOfString, VtAttribute.LengthInChars * sizeof(TCHAR));
+            CharsRequired += VtAttribute.LengthInChars;
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], FirstLine[Index].Line.StartOfString, FirstLine[Index].Line.LengthInChars * sizeof(TCHAR));
             CharsRequired += FirstLine[Index].Line.LengthInChars;
             if (FirstLine[Index].ExplicitNewlineRequired) {
@@ -645,6 +672,7 @@ MoreOutputSeriesOfLines(
         YoriLibFreeStringContents(&CombinedBuffer);
     } else {
         for (Index = 0; Index < LineCount; Index++) {
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FirstLine[Index].InitialColor);
             if (FirstLine[Index].ExplicitNewlineRequired) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &FirstLine[Index].Line);
             } else {
