@@ -2,7 +2,7 @@
  - Search in more
  - Selection in more?
  - Make selection use RTF
- - Fix ypm mirror support
+ - Hexdiff
  - General MSFIX review
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments
@@ -13,4 +13,7 @@
  - Isolate aliases during call
  - Have find apply file criteria
  - Cal
+ - Port pcre
+ - Use regex in hilite
+ - Case statement in ys
  - Split sdir brief recurse into standalone du

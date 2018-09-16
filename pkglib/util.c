@@ -231,6 +231,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
     LPTSTR Equals;
     BOOL Result = FALSE;
     BOOL ReturnHumanPathIfNoMirrorFound = FALSE;
+    DWORD Index;
 
     YoriLibInitEmptyString(&IniSection);
     YoriLibInitEmptyString(&HumanFullPath);
@@ -265,6 +266,19 @@ YoriPkgConvertUserPackagePathToMirroredPath(
         }
 
         Find.LengthInChars = (DWORD)(Equals - ThisLine);
+
+        //
+        //  In order to allow '=' to be in the find/replace strings, which are
+        //  not describable in an INI file, interpret '%' as '='.
+        //
+
+        for (Index = 0; Index < Find.LengthInChars; Index++) {
+            if (Find.StartOfString[Index] == '%') {
+                Find.StartOfString[Index] = '=';
+            }
+        }
+
+
         Replace.StartOfString = Equals + 1;
         Replace.LengthInChars = _tcslen(Replace.StartOfString);
 
@@ -277,6 +291,18 @@ YoriPkgConvertUserPackagePathToMirroredPath(
             YoriLibInitEmptyString(&SubstringToKeep);
             SubstringToKeep.StartOfString = &HumanFullPath.StartOfString[Find.LengthInChars];
             SubstringToKeep.LengthInChars = HumanFullPath.LengthInChars - Find.LengthInChars;
+
+            //
+            //  In order to allow '=' to be in the find/replace strings, which are
+            //  not describable in an INI file, interpret '%' as '='.
+            //
+
+            for (Index = 0; Index < Replace.LengthInChars; Index++) {
+                if (Replace.StartOfString[Index] == '%') {
+                    Replace.StartOfString[Index] = '=';
+                }
+            }
+
             YoriLibYPrintf(MirroredPath, _T("%y%y"), &Replace, &SubstringToKeep);
             if (MirroredPath->StartOfString != NULL) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Converting %y to %y\n"), &HumanFullPath, MirroredPath);
