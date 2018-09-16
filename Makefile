@@ -98,6 +98,7 @@ DIRS=crt       \
      split     \
      start     \
      strcmp    \
+     sync      \
      tail      \
      tee       \
      title     \

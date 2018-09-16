@@ -20,6 +20,7 @@ repl.exe
 scut.exe
 sdir.exe
 setver.exe
+sync.exe
 tail.exe
 tee.exe
 touch.exe

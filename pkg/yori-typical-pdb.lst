@@ -20,6 +20,7 @@ repl.pdb
 scut.pdb
 sdir.pdb
 setver.pdb
+sync.pdb
 tail.pdb
 tee.pdb
 touch.pdb

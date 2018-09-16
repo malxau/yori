@@ -138,6 +138,7 @@ CHAR strHelpText3[] =
         "SPLIT     Split a file into pieces\n"
         "START     Ask the shell to open a file\n"
         "STRCMP    Compare two strings\n"
+        "SYNC      Flush a file, directory or volume\n"
         "TAIL      Output the final lines of one or more files\n"
         "TEE       Output the contents of standard input to standard output and a file\n"
         "TITLE     Set the console window title\n"
