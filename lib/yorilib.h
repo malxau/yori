@@ -1380,9 +1380,25 @@ YoriLibHashRemoveByKey(
 
 // *** HEXDUMP.C ***
 
+/**
+ If set, display the characters as well as the hex values.
+ */
+#define YORI_LIB_HEX_FLAG_DISPLAY_CHARS        (0x00000001)
+
+/**
+ If set, display the buffer offset as a 32 bit value.
+ */
+#define YORI_LIB_HEX_FLAG_DISPLAY_OFFSET       (0x00000002)
+
+/**
+ If set, display the buffer offset as a 64 bit value.
+ */
+#define YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET (0x00000004)
+
 BOOL
 YoriLibHexDump(
     __in LPCSTR Buffer,
+    __in LONGLONG StartOfBufferOffset,
     __in DWORD BufferLength,
     __in DWORD BytesPerWord,
     __in DWORD DumpFlags

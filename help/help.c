@@ -96,6 +96,7 @@ CHAR strHelpText2[] =
         "GRPCMP    Returns true if the user is a member of the specified group\n"
         "GOTO      Goto a label in a script\n"
         "HELP      Displays this help text\n"
+        "HEXDUMP   Display a stream of data as hex\n"
         "HILITE    Output the contents of one or more files with highlight on lines\n"
         "            matching specified criteria\n"
         "ICONV     Convert the character encoding of one or more files\n"

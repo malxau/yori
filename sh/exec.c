@@ -30,7 +30,7 @@
 /**
  If TRUE, use verbose output when invoking processes under a debugger.
  */
-#define YORI_SH_DEBUG_DEBUGGER 0
+#define YORI_SH_DEBUG_DEBUGGER 1
 #else
 /**
  If TRUE, use verbose output when invoking processes under a debugger.
@@ -375,7 +375,12 @@ YoriShSuckEnv(
 
 #if YORI_SH_DEBUG_DEBUGGER
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Peb contents:\n"));
-        YoriLibHexDump((PUCHAR)&ProcessPeb, BytesReturned, sizeof(DWORD), 0);
+        YoriLibHexDump((PUCHAR)&ProcessPeb,
+                       0,
+                       (DWORD)BytesReturned,
+                       sizeof(DWORD), 
+                       YORI_LIB_HEX_FLAG_DISPLAY_OFFSET);
+
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters offset %x\n"), FIELD_OFFSET(YORI_LIB_PEB32, ProcessParameters));
 #endif
 
@@ -408,7 +413,11 @@ YoriShSuckEnv(
 
 #if YORI_SH_DEBUG_DEBUGGER
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters contents:\n"));
-        YoriLibHexDump((PUCHAR)&ProcessParameters, BytesReturned, sizeof(DWORD), 0);
+        YoriLibHexDump((PUCHAR)&ProcessParameters,
+                       0,
+                       (DWORD)BytesReturned,
+                       sizeof(DWORD),
+                       YORI_LIB_HEX_FLAG_DISPLAY_OFFSET);
 #endif
 
         EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
@@ -470,7 +479,11 @@ YoriShSuckEnv(
 
 #if YORI_SH_DEBUG_DEBUGGER
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Environment contents:\n"));
-            YoriLibHexDump(EnvironmentBlockToRead, BytesReturned, sizeof(UCHAR), 0);
+            YoriLibHexDump(EnvironmentBlockToRead,
+                           0,
+                           (DWORD)BytesReturned,
+                           sizeof(UCHAR),
+                           YORI_LIB_HEX_FLAG_DISPLAY_OFFSET | YORI_LIB_HEX_FLAG_DISPLAY_CHARS);
 #endif
             break;
         }

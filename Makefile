@@ -22,6 +22,7 @@ MODDIR=bin\$(ARCH)\modules
 BUILD=$(MAKE) -nologo DEBUG=$(DEBUG) PDB=$(PDB) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=..\$(BINDIR) SYMDIR=..\$(SYMDIR) MODDIR=..\$(MODDIR)
 
 FOR=for
+FOR_ST=for
 MKDIR=mkdir
 RMDIR=rmdir
 STARTCMD=
@@ -34,6 +35,7 @@ all: all.real
 
 !IF [yfor.exe -? >NUL 2>&1]==0
 FOR=yfor -c -p %NUMBER_OF_PROCESSORS%
+FOR_ST=yfor -c
 STARTCMD="
 !ENDIF
 !IF [ydate.exe -? >NUL 2>&1]==0
@@ -71,6 +73,7 @@ DIRS=crt       \
      get       \
      grpcmp    \
      help      \
+	 hexdump   \
      hilite    \
      iconv     \
      initool   \
@@ -121,12 +124,12 @@ beta: all.real
 clean:
 	@$(FOR) %%i in ($(DIRS)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) PROBECOMPILER=0 PROBELINKER=0 clean & cd ..$(STARTCMD)
 	@if exist *~ erase *~
-	@for /D %%i in ($(MODDIR) $(BINDIR) $(SYMDIR)) do @if exist %%i $(RMDIR) /s/q %%i
+	@$(FOR_ST) /D %%i in ($(MODDIR) $(BINDIR) $(SYMDIR)) do @if exist %%i $(RMDIR) /s/q %%i
 	@if exist $(WRITECONFIGCACHEFILE) erase $(WRITECONFIGCACHEFILE)
 
 distclean: clean
-	@for /D %%i in (pkg\*) do @if exist %%i $(RMDIR) /s/q %%i
-	@for %%i in (beta doc bin sym) do @if exist %%i $(RMDIR) /s/q %%i
+	@$(FOR_ST) /D %%i in (pkg\*) do @if exist %%i $(RMDIR) /s/q %%i
+	@$(FOR_ST) %%i in (beta doc bin sym) do @if exist %%i $(RMDIR) /s/q %%i
 
 help:
 	@echo "DEBUG=[0|1] - If set, will compile debug build without optimization and with instrumentation"
