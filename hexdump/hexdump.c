@@ -37,10 +37,11 @@ CHAR strHelpText[] =
         "\n"
         "Output the contents of one or more files in hex.\n"
         "\n"
-        "HEXDUMP [-license] [-b] [-g1|-g2|-g4|-g8] [-hc] [-ho]\n"
+        "HEXDUMP [-license] [-b] [-d] [-g1|-g2|-g4|-g8] [-hc] [-ho]\n"
         "        [-l length] [-o offset] [-s] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -d             Display the differences between two files\n"
         "   -g             Number of bytes per display group\n"
         "   -hc            Hide character display\n"
         "   -ho            Hide offset within buffer\n"
@@ -252,6 +253,253 @@ HexDumpFileFoundCallback(
     return TRUE;
 }
 
+/**
+ Context corresponding to a single source when displaying differences
+ between two sources.
+ */
+typedef struct _HEXDUMP_ONE_OBJECT {
+
+    /**
+     A full path expanded for this source.
+     */
+    YORI_STRING FullFileName;
+
+    /**
+     A handle to the source of this data.
+     */
+    HANDLE FileHandle;
+
+    /**
+     A buffer to hold data read from this source.
+     */
+    PUCHAR Buffer;
+
+    /**
+     The number of bytes read from this source.
+     */
+    DWORD BytesReturned;
+
+    /**
+     Set to TRUE if a read operation from this source has failed.
+     */
+    BOOL ReadFailed;
+} HEXDUMP_ONE_OBJECT, *PHEXDUMP_ONE_OBJECT;
+
+/**
+ Display the differences between two files in hex form.
+
+ @param FileA The name of the first file, without any full path expansion.
+
+ @param FileB The name of the second file, without any full path expansion.
+
+ @param HexDumpContext Pointer to the context indicating display parameters.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+HexDumpDisplayDiff(
+    __in PYORI_STRING FileA,
+    __in PYORI_STRING FileB,
+    __in PHEXDUMP_CONTEXT HexDumpContext
+    )
+{
+    HEXDUMP_ONE_OBJECT Objects[2];
+    DWORD BufferSize;
+    DWORD BufferOffset;
+    DWORD LengthToDisplay;
+    DWORD LengthThisLine;
+    DWORD DisplayFlags;
+    LARGE_INTEGER StreamOffset;
+    DWORD Count;
+    BOOL Result = FALSE;
+    BOOL LineDifference;
+
+    BufferSize = 64 * 1024;
+    DisplayFlags = 0;
+    if (!HexDumpContext->HideOffset) {
+        DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET;
+    }
+    if (!HexDumpContext->HideCharacters) {
+        DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_CHARS;
+    }
+    StreamOffset.QuadPart = HexDumpContext->OffsetToDisplay;
+
+    ZeroMemory(Objects, sizeof(Objects));
+
+    for (Count = 0; Count < sizeof(Objects)/sizeof(Objects[0]); Count++) {
+
+        //
+        //  Resolve the file to a full path
+        //
+
+        YoriLibInitEmptyString(&Objects[Count].FullFileName);
+        if (Count == 0) {
+            if (!YoriLibUserStringToSingleFilePath(FileA, TRUE, &Objects[Count].FullFileName)) {
+                goto Exit;
+            }
+        } else {
+            if (!YoriLibUserStringToSingleFilePath(FileB, TRUE, &Objects[Count].FullFileName)) {
+                goto Exit;
+            }
+        }
+
+        //
+        //  Open each file
+        //
+
+        Objects[Count].FileHandle = CreateFile(Objects[Count].FullFileName.StartOfString,
+                                               GENERIC_READ,
+                                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                               NULL,
+                                               OPEN_EXISTING,
+                                               FILE_ATTRIBUTE_NORMAL,
+                                               NULL);
+
+        if (Objects[Count].FileHandle == NULL || Objects[Count].FileHandle == INVALID_HANDLE_VALUE) {
+            DWORD LastError = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), &Objects[Count].FullFileName, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            goto Exit;
+        }
+
+        //
+        //  Allocate a read buffer for the file
+        //
+
+        Objects[Count].Buffer = YoriLibMalloc(BufferSize);
+        if (Objects[Count].Buffer == NULL) {
+            goto Exit;
+        }
+
+        //
+        //  Seek to the requested offset in the file.  Note that in the diff
+        //  case we have files, so seeking is valid.
+        //
+
+        SetFilePointer(Objects[Count].FileHandle, StreamOffset.LowPart, &StreamOffset.HighPart, FILE_BEGIN);
+        if (GetLastError() != NO_ERROR) {
+            DWORD LastError = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: seek of %y failed: %s"), &Objects[Count].FullFileName, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            goto Exit;
+        }
+    }
+
+    while (TRUE) {
+
+        //
+        //  Read from each file
+        //
+
+        for (Count = 0; Count < sizeof(Objects)/sizeof(Objects[0]); Count++) {
+            Objects[Count].ReadFailed = FALSE;
+            Objects[Count].BytesReturned = 0;
+            if (!ReadFile(Objects[Count].FileHandle, Objects[Count].Buffer, BufferSize, &Objects[Count].BytesReturned, NULL)) {
+                Objects[Count].ReadFailed = TRUE;
+            } else if (Objects[Count].BytesReturned == 0) {
+                Objects[Count].ReadFailed = TRUE;
+            }
+        }
+
+        //
+        //  If either read failed, we are done.
+        //  MSFIX This should probably display everything from the source
+        //  which succeeded the read
+        //
+
+        if (Objects[0].ReadFailed || Objects[1].ReadFailed) {
+            break;
+        }
+
+        //
+        //  Display the minimum of what was read between the two
+        //
+
+        if (Objects[0].BytesReturned < Objects[1].BytesReturned) {
+            LengthToDisplay = Objects[0].BytesReturned;
+        } else {
+            LengthToDisplay = Objects[1].BytesReturned;
+        }
+
+        //
+        //  Truncate the display to the range the user requested
+        //
+
+        if (HexDumpContext->LengthToDisplay != 0) {
+            if (StreamOffset.QuadPart + LengthToDisplay >= HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay) {
+                LengthToDisplay = (DWORD)(HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay - StreamOffset.QuadPart);
+                if (LengthToDisplay == 0) {
+                    break;
+                }
+            }
+        }
+
+        BufferOffset = 0;
+
+        while(LengthToDisplay > 0) {
+
+            //
+            //  Check each line to see if it's different
+            //
+
+            LineDifference = FALSE;
+            if (LengthToDisplay >= 16) {
+                LengthThisLine = 16;
+            } else {
+                LengthThisLine = LengthToDisplay;
+            }
+            if (memcmp(&Objects[0].Buffer[BufferOffset], &Objects[1].Buffer[BufferOffset], LengthThisLine) != 0) {
+                LineDifference = TRUE;
+            }
+
+            //
+            //  If it's different, display it
+            //
+
+            if (LineDifference) {
+                if (!YoriLibHexDump(&Objects[0].Buffer[BufferOffset], StreamOffset.QuadPart + BufferOffset, LengthThisLine, HexDumpContext->BytesPerGroup, DisplayFlags)) {
+                    break;
+                }
+
+                if (!YoriLibHexDump(&Objects[1].Buffer[BufferOffset], StreamOffset.QuadPart + BufferOffset, LengthThisLine, HexDumpContext->BytesPerGroup, DisplayFlags)) {
+                    break;
+                }
+            }
+
+            //
+            //  Move to the next line
+            //
+
+            LengthToDisplay -= LengthThisLine;
+            BufferOffset += LengthThisLine;
+        }
+
+        if (Objects[0].BytesReturned != Objects[1].BytesReturned) {
+            break;
+        }
+    }
+
+Exit:
+
+    //
+    //  Clean up state from each source
+    //
+
+    for (Count = 0; Count < sizeof(Objects)/sizeof(Objects[0]); Count++) {
+        if (Objects[Count].FileHandle != NULL && Objects[Count].FileHandle != INVALID_HANDLE_VALUE) {
+            CloseHandle(Objects[Count].FileHandle);
+        }
+        if (Objects[Count].Buffer != NULL) {
+            YoriLibFree(Objects[Count].Buffer);
+        }
+        YoriLibFreeStringContents(&Objects[Count].FullFileName);
+    }
+
+    return Result;
+}
+
 
 /**
  The main entrypoint for the hexdump cmdlet.
@@ -276,6 +524,7 @@ ymain(
     DWORD CharsConsumed;
     BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
+    BOOL DiffMode = FALSE;
     HEXDUMP_CONTEXT HexDumpContext;
     YORI_STRING Arg;
 
@@ -297,6 +546,9 @@ ymain(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                DiffMode = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g1")) == 0) {
                 HexDumpContext.BytesPerGroup = 1;
@@ -343,6 +595,18 @@ ymain(
         }
     }
 
+    if (DiffMode) {
+        if (StartArg == 0 || StartArg + 2 > ArgC) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: insufficient arguments\n"));
+            return EXIT_FAILURE;
+        }
+
+        if (!HexDumpDisplayDiff(&ArgV[StartArg], &ArgV[StartArg + 1], &HexDumpContext)) {
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+    }
+
     //
     //  If no file name is specified, use stdin; otherwise open
     //  the file and use that
@@ -365,9 +629,9 @@ ymain(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
-    
+
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, HexDumpFileFoundCallback, &HexDumpContext);
         }
     }
