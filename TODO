@@ -1,6 +1,8 @@
  - Search in more
  - Selection in more?
  - Make selection use RTF
+ - Improve hexdiff display, display trailing data
+ - Ypm support for replacing a package with a different name
  - General MSFIX review
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments

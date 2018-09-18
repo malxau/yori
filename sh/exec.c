@@ -30,7 +30,7 @@
 /**
  If TRUE, use verbose output when invoking processes under a debugger.
  */
-#define YORI_SH_DEBUG_DEBUGGER 1
+#define YORI_SH_DEBUG_DEBUGGER 0
 #else
 /**
  If TRUE, use verbose output when invoking processes under a debugger.
@@ -479,7 +479,7 @@ YoriShSuckEnv(
 
 #if YORI_SH_DEBUG_DEBUGGER
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Environment contents:\n"));
-            YoriLibHexDump(EnvironmentBlockToRead,
+            YoriLibHexDump(EnvString->StartOfString,
                            0,
                            (DWORD)BytesReturned,
                            sizeof(UCHAR),
