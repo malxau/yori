@@ -55,6 +55,12 @@
         for the package.  If not specified, no SourcePath is included in the
         package.
 
+ @param Replaces Pointer to an array of strings containing package names that
+        this package should replace.  If this package should not replace
+        packages with other names, this can be NULL.
+
+ @param ReplaceCount Specifies the number of elements in the Replaces array.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
@@ -66,7 +72,9 @@ YoriPkgCreateBinaryPackage(
     __in PYORI_STRING FileListFile,
     __in_opt PYORI_STRING UpgradePath,
     __in_opt PYORI_STRING SourcePath,
-    __in_opt PYORI_STRING SymbolPath
+    __in_opt PYORI_STRING SymbolPath,
+    __in_opt PYORI_STRING Replaces,
+    __in DWORD ReplaceCount
     )
 {
     YORI_STRING TempPath;
@@ -75,6 +83,7 @@ YoriPkgCreateBinaryPackage(
     YORI_STRING LineString;
     PVOID LineContext = NULL;
     HANDLE FileListSource;
+    DWORD Count;
 
     PVOID CabHandle;
 
@@ -117,6 +126,10 @@ YoriPkgCreateBinaryPackage(
     }
     if (SymbolPath != NULL) {
         WritePrivateProfileString(_T("Package"), _T("SymbolPath"), SymbolPath->StartOfString, TempFile.StartOfString);
+    }
+
+    for (Count = 0; Count < ReplaceCount; Count++) {
+        WritePrivateProfileString(_T("Replaces"), Replaces[Count].StartOfString, _T("1"), TempFile.StartOfString);
     }
 
     //

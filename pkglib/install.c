@@ -98,12 +98,16 @@ YoriPkgDeleteInstalledPackageFile(
 
  @param PackageName Specifies the package name to delete.
 
+ @param WarnIfNotInstalled If TRUE, display to the console indication if the
+        package is not installed.  If FALSE, silently fail the operation.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriPkgDeletePackage(
     __in_opt PYORI_STRING TargetDirectory,
-    __in PYORI_STRING PackageName
+    __in PYORI_STRING PackageName,
+    __in BOOL WarnIfNotInstalled
     )
 {
     YORI_STRING PkgIniFile;
@@ -125,7 +129,9 @@ YoriPkgDeletePackage(
 
     IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
     if (IniValue.LengthInChars == 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not an installed package\n"), PackageName);
+        if (WarnIfNotInstalled) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not an installed package\n"), PackageName);
+        }
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         return FALSE;
@@ -292,16 +298,12 @@ YoriPkgCompressPackageFileCallback(
         install the package.  If NULL, the directory containing the
         application is used.
 
- @param UpgradeOnly If TRUE, a package is only installed if the supplied
-        package is a different version to the one currently installed
-
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriPkgInstallPackage(
     __in PYORI_STRING PackagePath,
-    __in_opt PYORI_STRING TargetDirectory,
-    __in BOOL UpgradeOnly
+    __in_opt PYORI_STRING TargetDirectory
     )
 {
     YORI_STRING PkgInfoFile;
@@ -392,24 +394,66 @@ YoriPkgInstallPackage(
         goto Exit;
     }
 
-    if (UpgradeOnly) {
-        YORI_STRING CurrentlyInstalledVersion;
-        if (!YoriLibAllocateString(&CurrentlyInstalledVersion, YORIPKG_MAX_FIELD_LENGTH)) {
+    {
+        YORI_STRING ReplacesList;
+        YORI_STRING PkgToDelete;
+        DWORD LineLength;
+        LPTSTR ThisLine;
+        LPTSTR Equals;
+
+        //
+        //  Check if a different version of the package being installed
+        //  is already present.  If it is, we need to delete it.
+        //
+
+        if (!YoriLibAllocateString(&PkgToDelete, YORIPKG_MAX_FIELD_LENGTH)) {
             goto Exit;
         }
 
-        CurrentlyInstalledVersion.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName.StartOfString, _T(""), CurrentlyInstalledVersion.StartOfString, CurrentlyInstalledVersion.LengthAllocated, PkgIniFile.StartOfString);
+        PkgToDelete.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName.StartOfString, _T(""), PkgToDelete.StartOfString, PkgToDelete.LengthAllocated, PkgIniFile.StartOfString);
 
-        if (YoriLibCompareString(&CurrentlyInstalledVersion, &PackageVersion) == 0) {
+        //
+        //  If the version being installed is already there, we're done.
+        //
+
+        if (YoriLibCompareString(&PkgToDelete, &PackageVersion) == 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y version %y is already installed\n"), &PackageName, &PackageVersion);
-            YoriLibFreeStringContents(&CurrentlyInstalledVersion);
+            YoriLibFreeStringContents(&PkgToDelete);
             Result = TRUE;
             goto Exit;
-        } else if (CurrentlyInstalledVersion.LengthInChars > 0) {
-            YoriPkgDeletePackage(TargetDirectory, &PackageName);
-
+        } else if (PkgToDelete.LengthInChars > 0) {
+            YoriPkgDeletePackage(TargetDirectory, &PackageName, FALSE);
         }
-        YoriLibFreeStringContents(&CurrentlyInstalledVersion);
+
+        YoriLibFreeStringContents(&PkgToDelete);
+        YoriLibInitEmptyString(&PkgToDelete);
+
+        //
+        //  Walk through any packages that this package replaces and delete
+        //  them
+        //
+
+        if (!YoriLibAllocateString(&ReplacesList, YORIPKG_MAX_SECTION_LENGTH)) {
+            goto Exit;
+        }
+
+        ReplacesList.LengthInChars = GetPrivateProfileSection(_T("Replaces"), ReplacesList.StartOfString, ReplacesList.LengthAllocated, TempPath.StartOfString);
+        ThisLine = ReplacesList.StartOfString;
+
+        while (*ThisLine != '\0') {
+            LineLength = _tcslen(ThisLine);
+            PkgToDelete.StartOfString = ThisLine;
+            Equals = _tcschr(ThisLine, '=');
+            if (Equals != NULL) {
+                PkgToDelete.LengthInChars = (DWORD)(Equals - ThisLine);
+            } else {
+                PkgToDelete.LengthInChars = LineLength;
+            }
+            PkgToDelete.StartOfString[PkgToDelete.LengthInChars] = '\0';
+            YoriPkgDeletePackage(TargetDirectory, &PkgToDelete, FALSE);
+            ThisLine += LineLength + 1;
+        }
+        YoriLibFreeStringContents(&ReplacesList);
     }
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing package %y version %y\n"), &PackageName, &PackageVersion);
@@ -602,7 +646,7 @@ YoriPkgUpgradeInstalledPackages(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&InstalledSection, 64 * 1024)) {
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
@@ -646,7 +690,7 @@ YoriPkgUpgradeInstalledPackages(
                 YoriPkgBuildUpgradeLocationForNewArchitecture(&PkgNameOnly, NewArchitecture, &PkgIniFile, &UpgradePath);
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Upgrading %y (%i/%i), downloading %y...\n"), &PkgNameOnly, CurrentIndex, TotalCount, &UpgradePath);
-            if (!YoriPkgInstallPackage(&UpgradePath, NULL, TRUE)) {
+            if (!YoriPkgInstallPackage(&UpgradePath, NULL)) {
                 break;
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
@@ -713,7 +757,7 @@ YoriPkgUpgradeSinglePackage(
     }
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &IniValue);
-    Result = YoriPkgInstallPackage(&IniValue, NULL, TRUE);
+    Result = YoriPkgInstallPackage(&IniValue, NULL);
 
     YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&IniValue);
@@ -742,7 +786,7 @@ YoriPkgInstallSourceForInstalledPackages(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&InstalledSection, 64 * 1024)) {
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
@@ -779,7 +823,7 @@ YoriPkgInstallSourceForInstalledPackages(
         SourcePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("SourcePath"), _T(""), SourcePath.StartOfString, SourcePath.LengthAllocated, PkgIniFile.StartOfString);
         if (SourcePath.LengthInChars > 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing source for %y, downloading %y...\n"), &PkgNameOnly, &SourcePath);
-            if (!YoriPkgInstallPackage(&SourcePath, NULL, TRUE)) {
+            if (!YoriPkgInstallPackage(&SourcePath, NULL)) {
                 break;
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
@@ -838,7 +882,7 @@ YoriPkgInstallSourceForSinglePackage(
     }
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &IniValue);
-    Result = YoriPkgInstallPackage(&IniValue, NULL, TRUE);
+    Result = YoriPkgInstallPackage(&IniValue, NULL);
 
     YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&IniValue);
@@ -867,7 +911,7 @@ YoriPkgInstallSymbolsForInstalledPackages(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&InstalledSection, 64 * 1024)) {
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
@@ -904,7 +948,7 @@ YoriPkgInstallSymbolsForInstalledPackages(
         SymbolPath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("SymbolPath"), _T(""), SymbolPath.StartOfString, SymbolPath.LengthAllocated, PkgIniFile.StartOfString);
         if (SymbolPath.LengthInChars > 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing symbols for %y, downloading %y...\n"), &PkgNameOnly, &SymbolPath);
-            if (!YoriPkgInstallPackage(&SymbolPath, NULL, TRUE)) {
+            if (!YoriPkgInstallPackage(&SymbolPath, NULL)) {
                 break;
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
@@ -963,7 +1007,7 @@ YoriPkgInstallSymbolForSinglePackage(
     }
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &IniValue);
-    Result = YoriPkgInstallPackage(&IniValue, NULL, TRUE);
+    Result = YoriPkgInstallPackage(&IniValue, NULL);
 
     YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&IniValue);
@@ -989,7 +1033,7 @@ YoriPkgListInstalledPackages()
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&InstalledSection, 64 * 1024)) {
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }

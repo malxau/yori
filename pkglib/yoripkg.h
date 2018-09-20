@@ -31,6 +31,13 @@
  */
 #define YORIPKG_MAX_FIELD_LENGTH (256)
 
+/**
+ The maximum length of a section in an INI file.  The APIs aren't very good
+ about telling us how much space we need, so this is the size we allocate
+ and the effective limit.
+ */
+#define YORIPKG_MAX_SECTION_LENGTH (64 * 1024)
+
 BOOL
 YoriPkgGetApplicationDirectory(
     __out PYORI_STRING AppDirectory
@@ -70,7 +77,9 @@ YoriPkgCreateBinaryPackage(
     __in PYORI_STRING FileListFile,
     __in_opt PYORI_STRING UpgradePath,
     __in_opt PYORI_STRING SourcePath,
-    __in_opt PYORI_STRING SymbolPath
+    __in_opt PYORI_STRING SymbolPath,
+    __in_opt PYORI_STRING Replaces,
+    __in DWORD ReplaceCount
     );
 
 BOOL
@@ -84,14 +93,14 @@ YoriPkgCreateSourcePackage(
 BOOL
 YoriPkgDeletePackage(
     __in_opt PYORI_STRING TargetDirectory,
-    __in PYORI_STRING PackageName
+    __in PYORI_STRING PackageName,
+    __in BOOL WarnIfNotInstalled
     );
 
 BOOL
 YoriPkgInstallPackage(
     __in PYORI_STRING PackagePath,
-    __in_opt PYORI_STRING TargetDirectory,
-    __in BOOL UpgradeOnly
+    __in_opt PYORI_STRING TargetDirectory
     );
 
 BOOL

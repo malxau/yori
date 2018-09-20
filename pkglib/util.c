@@ -239,7 +239,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
     YoriLibInitEmptyString(&Find);
     YoriLibInitEmptyString(&Replace);
 
-    if (!YoriLibAllocateString(&IniSection, 64 * 1024)) {
+    if (!YoriLibAllocateString(&IniSection, YORIPKG_MAX_SECTION_LENGTH)) {
         goto Exit;
     }
 

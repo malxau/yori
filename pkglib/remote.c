@@ -366,7 +366,7 @@ YoriPkgCollectPackagesFromSource(
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&ProvidesSection, 64 * 1024)) {
+    if (!YoriLibAllocateString(&ProvidesSection, YORIPKG_MAX_SECTION_LENGTH)) {
         goto Exit;
     }
 
@@ -827,7 +827,7 @@ YoriPkgInstallRemotePackages(
     while (PackageEntry != NULL) {
         Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
         PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
-        if (YoriPkgInstallPackage(&Package->InstallUrl, NewDirectory, TRUE)) {
+        if (YoriPkgInstallPackage(&Package->InstallUrl, NewDirectory)) {
             InstallCount++;
         }
     }

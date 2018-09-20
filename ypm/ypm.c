@@ -38,7 +38,7 @@ CHAR strHelpText[] =
         "\n"
         "YPM [-license]\n"
         "YPM -c <file> <pkgname> <version> <arch> -filelist <file> [-upgradepath <path>]\n"
-        "       [-sourcepath <path>] [-symbolpath <path>]\n"
+        "       [-sourcepath <path>] [-symbolpath <path>] [-replaces <packages>]\n"
         "YPM -cs <file> <pkgname> <version> -filepath <directory>\n"
         "YPM -d <pkg>\n"
         "YPM -i <file>\n"
@@ -122,6 +122,8 @@ ymain(
     PYORI_STRING SymbolPath = NULL;
     PYORI_STRING FileList = NULL;
     PYORI_STRING FilePath = NULL;
+    PYORI_STRING Replaces = NULL;
+    DWORD ReplaceCount = 0;
     YPM_OPERATION Op;
 
     Op = YpmOpNone;
@@ -185,6 +187,20 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 Op = YpmOpListPackages;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("replaces")) == 0) {
+                if (Op == YpmOpCreateBinaryPackage &&
+                    i + 1 < ArgC) {
+
+                    ArgumentUnderstood = TRUE;
+                    Replaces = &ArgV[i + 1];
+
+                    while (i + 1 < ArgC &&
+                           !YoriLibIsCommandLineOption(&ArgV[i + 1], &Arg)) {
+
+                        ReplaceCount++;
+                        i++;
+                    }
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ri")) == 0) {
                 Op = YpmOpInstallRemote;
                 ArgumentUnderstood = TRUE;
@@ -252,7 +268,7 @@ ymain(
         }
 
         for (i = StartArg; i < ArgC; i++) {
-            YoriPkgInstallPackage(&ArgV[i], NULL, FALSE);
+            YoriPkgInstallPackage(&ArgV[i], NULL);
         }
 
     } else if (Op == YpmOpListPackages) {
@@ -272,7 +288,7 @@ ymain(
             return EXIT_FAILURE;
         }
         for (i = StartArg; i < ArgC; i++) {
-            YoriPkgDeletePackage(NULL, &ArgV[i]);
+            YoriPkgDeletePackage(NULL, &ArgV[i], TRUE);
         }
     } else if (Op == YpmOpCreateBinaryPackage) {
         ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL && NewArch != NULL);
@@ -280,7 +296,7 @@ ymain(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file list\n"));
             return EXIT_FAILURE;
         }
-        YoriPkgCreateBinaryPackage(NewFileName, NewName, NewVersion, NewArch, FileList, UpgradePath, SourcePath, SymbolPath);
+        YoriPkgCreateBinaryPackage(NewFileName, NewName, NewVersion, NewArch, FileList, UpgradePath, SourcePath, SymbolPath, Replaces, ReplaceCount);
     } else if (Op == YpmOpCreateSourcePackage) {
         ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL);
         if (FilePath == NULL) {
