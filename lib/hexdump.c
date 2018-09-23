@@ -40,19 +40,25 @@
 
  @param BytesToDisplay Number of bytes to display, can be equal to or less
         than YORI_LIB_HEXDUMP_BYTES_PER_LINE.
+
+ @param HilightBits The set of bytes that should be hilighted.  This is
+        a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
+        order bit corresponds to the first byte.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexByteLine(
     __in LPCSTR Buffer,
-    __in DWORD BytesToDisplay
+    __in DWORD BytesToDisplay,
+    __in DWORD HilightBits
     )
 {
     UCHAR WordToDisplay = 0;
     DWORD WordIndex;
     BOOL DisplayWord;
     DWORD ByteIndex;
+    DWORD CurrentBit = (0x1 << (YORI_LIB_HEXDUMP_BYTES_PER_LINE - sizeof(WordToDisplay)));
 
     if (BytesToDisplay > YORI_LIB_HEXDUMP_BYTES_PER_LINE) {
         return FALSE;
@@ -61,7 +67,7 @@ YoriLibHexByteLine(
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
         if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("| "));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
         WordToDisplay = 0;
@@ -70,16 +76,21 @@ YoriLibHexByteLine(
         for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
             if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
                 DisplayWord = TRUE;
-                WordToDisplay = (UCHAR)(WordToDisplay << 8);
-                WordToDisplay = (UCHAR)(WordToDisplay + Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex]);
+                WordToDisplay = (UCHAR)(WordToDisplay + (Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8)));
             }
         }
-        
+
         if (DisplayWord) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02x "), WordToDisplay);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("%c[0%sm%02x "),
+                          27,
+                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                          WordToDisplay);
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("   "));
         }
+
+        CurrentBit = CurrentBit >> sizeof(WordToDisplay);
     }
 
     return TRUE;
@@ -93,19 +104,25 @@ YoriLibHexByteLine(
 
  @param BytesToDisplay Number of bytes to display, can be equal to or less
         than YORI_LIB_HEXDUMP_BYTES_PER_LINE.
+
+ @param HilightBits The set of bytes that should be hilighted.  This is
+        a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
+        order bit corresponds to the first byte.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexWordLine(
     __in LPCSTR Buffer,
-    __in DWORD BytesToDisplay
+    __in DWORD BytesToDisplay,
+    __in DWORD HilightBits
     )
 {
     WORD WordToDisplay = 0;
     DWORD WordIndex;
     BOOL DisplayWord;
     DWORD ByteIndex;
+    DWORD CurrentBit = (0x3 << (YORI_LIB_HEXDUMP_BYTES_PER_LINE - sizeof(WordToDisplay)));
 
     if (BytesToDisplay > YORI_LIB_HEXDUMP_BYTES_PER_LINE) {
         return FALSE;
@@ -114,7 +131,7 @@ YoriLibHexWordLine(
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
         if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("| "));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
         WordToDisplay = 0;
@@ -123,16 +140,21 @@ YoriLibHexWordLine(
         for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
             if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
                 DisplayWord = TRUE;
-                WordToDisplay = (WORD)(WordToDisplay << 8);
-                WordToDisplay = (WORD)(WordToDisplay + Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex]);
+                WordToDisplay = (WORD)(WordToDisplay + (Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8)));
             }
         }
-        
+
         if (DisplayWord) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04x "), WordToDisplay);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("%c[0%sm%04x "),
+                          27,
+                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                          WordToDisplay);
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("     "));
         }
+
+        CurrentBit = CurrentBit >> sizeof(WordToDisplay);
     }
 
     return TRUE;
@@ -147,19 +169,25 @@ YoriLibHexWordLine(
 
  @param BytesToDisplay Number of bytes to display, can be equal to or less
         than YORI_LIB_HEXDUMP_BYTES_PER_LINE.
+
+ @param HilightBits The set of bytes that should be hilighted.  This is
+        a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
+        order bit corresponds to the first byte.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexDwordLine(
     __in LPCSTR Buffer,
-    __in DWORD BytesToDisplay
+    __in DWORD BytesToDisplay,
+    __in DWORD HilightBits
     )
 {
     DWORD WordToDisplay = 0;
     DWORD WordIndex;
     BOOL DisplayWord;
     DWORD ByteIndex;
+    DWORD CurrentBit = (0xf << (YORI_LIB_HEXDUMP_BYTES_PER_LINE - sizeof(WordToDisplay)));
 
     if (BytesToDisplay > YORI_LIB_HEXDUMP_BYTES_PER_LINE) {
         return FALSE;
@@ -168,7 +196,7 @@ YoriLibHexDwordLine(
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
         if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("| "));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
         WordToDisplay = 0;
@@ -177,16 +205,21 @@ YoriLibHexDwordLine(
         for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
             if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
                 DisplayWord = TRUE;
-                WordToDisplay = WordToDisplay << 8;
-                WordToDisplay = WordToDisplay + Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex];
+                WordToDisplay = WordToDisplay + ((DWORD)Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8));
             }
         }
-        
+
         if (DisplayWord) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%08x "), WordToDisplay);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("%c[0%sm%08x "),
+                          27,
+                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                          WordToDisplay);
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("         "));
         }
+
+        CurrentBit = CurrentBit >> sizeof(WordToDisplay);
     }
 
     return TRUE;
@@ -200,19 +233,25 @@ YoriLibHexDwordLine(
 
  @param BytesToDisplay Number of bytes to display, can be equal to or less
         than YORI_LIB_HEXDUMP_BYTES_PER_LINE.
+
+ @param HilightBits The set of bytes that should be hilighted.  This is
+        a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
+        order bit corresponds to the first byte.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexDwordLongLine(
     __in LPCSTR Buffer,
-    __in DWORD BytesToDisplay
+    __in DWORD BytesToDisplay,
+    __in DWORD HilightBits
     )
 {
     DWORDLONG WordToDisplay = 0;
     DWORD WordIndex;
     BOOL DisplayWord;
     DWORD ByteIndex;
+    DWORD CurrentBit = (0xff << (YORI_LIB_HEXDUMP_BYTES_PER_LINE - sizeof(WordToDisplay)));
 
     if (BytesToDisplay > YORI_LIB_HEXDUMP_BYTES_PER_LINE) {
         return FALSE;
@@ -221,7 +260,7 @@ YoriLibHexDwordLongLine(
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
         if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("| "));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
         WordToDisplay = 0;
@@ -230,28 +269,30 @@ YoriLibHexDwordLongLine(
         for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
             if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
                 DisplayWord = TRUE;
-                WordToDisplay = WordToDisplay << 8;
-                WordToDisplay = WordToDisplay + Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex];
+                WordToDisplay = WordToDisplay + ((DWORDLONG)Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8));
             }
         }
-        
+
         if (DisplayWord) {
             LARGE_INTEGER DisplayWord;
             DisplayWord.QuadPart = WordToDisplay;
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%08x`%08x "), DisplayWord.HighPart, DisplayWord.LowPart);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("%c[0%sm%08x`%08x "),
+                          27,
+                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                          DisplayWord.HighPart,
+                          DisplayWord.LowPart);
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("                  "));
         }
+        CurrentBit = CurrentBit >> sizeof(WordToDisplay);
     }
 
     return TRUE;
 }
 
 /**
- Display a buffer in hex format.  This routine is currently
- very limited and only supports one byte printing with chars
- and four byte printing without chars, and four byte printing
- assumes alignment.
+ Display a buffer in hex format.
  
  @param Buffer Pointer to the buffer to display.
 
@@ -281,11 +322,8 @@ YoriLibHexDump(
     DWORD LineIndex;
     DWORD WordIndex;
     DWORD BytesToDisplay;
-    DWORD BytesRemaining;
     CHAR CharToDisplay;
     LARGE_INTEGER DisplayBufferOffset;
-
-    BytesRemaining = BufferLength;
 
     if (BytesPerWord != 1 && BytesPerWord != 2 && BytesPerWord != 4 && BytesPerWord != 8) {
         return FALSE;
@@ -322,13 +360,13 @@ YoriLibHexDump(
         //
 
         if (BytesPerWord == 1) {
-            YoriLibHexByteLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay);
+            YoriLibHexByteLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
         } else if (BytesPerWord == 2) {
-            YoriLibHexWordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay);
+            YoriLibHexWordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
         } else if (BytesPerWord == 4) {
-            YoriLibHexDwordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay);
+            YoriLibHexDwordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
         } else if (BytesPerWord == 8) {
-            YoriLibHexDwordLongLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay);
+            YoriLibHexDwordLongLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
         }
 
         //
@@ -352,6 +390,172 @@ YoriLibHexDump(
         }
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+    }
+
+    return TRUE;
+}
+
+/**
+ Display two buffers side by side in hex format.
+
+ @param StartOfBufferOffset If the buffer displayed to this call is part of
+        a larger logical stream of data, this value indicates the offset of
+        this buffer within the larger logical stream.  This is used for
+        display only.
+ 
+ @param Buffer1 Pointer to the first buffer to display.
+
+ @param Buffer1Length The length of the first buffer, in bytes.
+
+ @param Buffer2 Pointer to the second buffer to display.
+
+ @param Buffer2Length The length of the second buffer, in bytes.
+
+ @param BytesPerWord The number of bytes to display at a time.
+
+ @param DumpFlags Flags for the operation.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibHexDiff(
+    __in LONGLONG StartOfBufferOffset,
+    __in LPCSTR Buffer1,
+    __in DWORD Buffer1Length,
+    __in LPCSTR Buffer2,
+    __in DWORD Buffer2Length,
+    __in DWORD BytesPerWord,
+    __in DWORD DumpFlags
+    )
+{
+    DWORD LineCount;
+    DWORD LineIndex;
+    DWORD WordIndex;
+    DWORD BufferIndex;
+    DWORD BytesToDisplay;
+    DWORD HilightBits;
+    DWORD CurrentBit;
+    CHAR CharToDisplay;
+    LARGE_INTEGER DisplayBufferOffset;
+    LPCSTR BufferToDisplay;
+    LPCSTR Buffers[2];
+    DWORD BufferLengths[2];
+
+    if (BytesPerWord != 1 && BytesPerWord != 2 && BytesPerWord != 4 && BytesPerWord != 8) {
+        return FALSE;
+    }
+
+    DisplayBufferOffset.QuadPart = StartOfBufferOffset;
+
+    if (Buffer1Length > Buffer2Length) {
+        LineCount = (Buffer1Length + YORI_LIB_HEXDUMP_BYTES_PER_LINE - 1) / YORI_LIB_HEXDUMP_BYTES_PER_LINE;
+    } else {
+        LineCount = (Buffer2Length + YORI_LIB_HEXDUMP_BYTES_PER_LINE - 1) / YORI_LIB_HEXDUMP_BYTES_PER_LINE;
+    }
+
+    Buffers[0] = Buffer1;
+    Buffers[1] = Buffer2;
+    BufferLengths[0] = Buffer1Length;
+    BufferLengths[1] = Buffer2Length;
+
+    for (LineIndex = 0; LineIndex < LineCount; LineIndex++) {
+
+        //
+        //  If the caller requested to display the buffer offset for each
+        //  line, display it
+        //
+
+        if (DumpFlags & YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%08x`%08x: "), DisplayBufferOffset.HighPart, DisplayBufferOffset.LowPart);
+            DisplayBufferOffset.QuadPart += YORI_LIB_HEXDUMP_BYTES_PER_LINE;
+        } else if (DumpFlags & YORI_LIB_HEX_FLAG_DISPLAY_OFFSET) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%08x: "), DisplayBufferOffset.LowPart);
+            DisplayBufferOffset.QuadPart += YORI_LIB_HEXDUMP_BYTES_PER_LINE;
+        }
+
+
+        //
+        //  For this line, calculate a set of bits corresponding to bytes
+        //  that are different
+        //
+
+        HilightBits = 0;
+        for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE; WordIndex++) {
+            HilightBits = HilightBits << 1;
+            BytesToDisplay = LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE + WordIndex;
+            if (BufferLengths[0] > BytesToDisplay && BufferLengths[1] > BytesToDisplay) {
+                if (Buffers[0][BytesToDisplay] != Buffers[1][BytesToDisplay]) {
+                    HilightBits = HilightBits | 1;
+                }
+            } else {
+                HilightBits = HilightBits | 1;
+            }
+        }
+
+        for (BufferIndex = 0; BufferIndex < 2; BufferIndex++) {
+
+            //
+            //  Figure out how many hex bytes can be displayed on this line
+            //
+
+            if (LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE >= BufferLengths[BufferIndex]) {
+                BytesToDisplay = 0;
+                BufferToDisplay = NULL;
+            } else {
+                BytesToDisplay = BufferLengths[BufferIndex] - LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE;
+                BufferToDisplay = &Buffers[BufferIndex][LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE];
+                if (BytesToDisplay > YORI_LIB_HEXDUMP_BYTES_PER_LINE) {
+                    BytesToDisplay = YORI_LIB_HEXDUMP_BYTES_PER_LINE;
+                }
+            }
+
+
+            //
+            //  Depending on the requested display format, display the data.
+            //
+
+            if (BytesPerWord == 1) {
+                YoriLibHexByteLine(BufferToDisplay, BytesToDisplay, HilightBits);
+            } else if (BytesPerWord == 2) {
+                YoriLibHexWordLine(BufferToDisplay, BytesToDisplay, HilightBits);
+            } else if (BytesPerWord == 4) {
+                YoriLibHexDwordLine(BufferToDisplay, BytesToDisplay, HilightBits);
+            } else if (BytesPerWord == 8) {
+                YoriLibHexDwordLongLine(BufferToDisplay, BytesToDisplay, HilightBits);
+            }
+
+            //
+            //  If the caller requested characters after the hex output, display
+            //  it.
+            //
+
+            if (DumpFlags & YORI_LIB_HEX_FLAG_DISPLAY_CHARS) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                CurrentBit = (0x1 << (YORI_LIB_HEXDUMP_BYTES_PER_LINE - sizeof(CharToDisplay)));
+                for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE; WordIndex++) {
+                    if (WordIndex < BytesToDisplay) {
+                        CharToDisplay = BufferToDisplay[WordIndex];
+                        if (CharToDisplay < 32) {
+                            CharToDisplay = '.';
+                        }
+                    } else {
+                        CharToDisplay = ' ';
+                    }
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                                  _T("%c[0%sm%c"),
+                                  27,
+                                  (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                                  CharToDisplay);
+                    CurrentBit = CurrentBit >> sizeof(CharToDisplay);
+                }
+            }
+
+            if (BufferIndex == 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m | "), 27);
+            }
+        }
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m\n"), 27);
     }
 
     return TRUE;

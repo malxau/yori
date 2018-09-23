@@ -1404,6 +1404,17 @@ YoriLibHexDump(
     __in DWORD DumpFlags
     );
 
+BOOL
+YoriLibHexDiff(
+    __in LONGLONG StartOfBufferOffset,
+    __in LPCSTR Buffer1,
+    __in DWORD Buffer1Length,
+    __in LPCSTR Buffer2,
+    __in DWORD Buffer2Length,
+    __in DWORD BytesPerWord,
+    __in DWORD DumpFlags
+    );
+
 // *** ICONV.C ***
 
 #ifndef CP_UTF16

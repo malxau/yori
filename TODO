@@ -1,7 +1,6 @@
  - Search in more
  - Selection in more?
  - Make selection use RTF
- - Improve hexdiff display, display trailing data
  - General MSFIX review
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments

@@ -283,6 +283,13 @@ typedef struct _HEXDUMP_ONE_OBJECT {
      Set to TRUE if a read operation from this source has failed.
      */
     BOOL ReadFailed;
+
+    /**
+     The number of bytes to display for a given line from this
+     buffer.  This is recalculated for each line based on the source's
+     buffer length.
+     */
+    DWORD DisplayLength;
 } HEXDUMP_ONE_OBJECT, *PHEXDUMP_ONE_OBJECT;
 
 /**
@@ -398,26 +405,25 @@ HexDumpDisplayDiff(
             Objects[Count].BytesReturned = 0;
             if (!ReadFile(Objects[Count].FileHandle, Objects[Count].Buffer, BufferSize, &Objects[Count].BytesReturned, NULL)) {
                 Objects[Count].ReadFailed = TRUE;
+                Objects[Count].BytesReturned = 0;
             } else if (Objects[Count].BytesReturned == 0) {
                 Objects[Count].ReadFailed = TRUE;
             }
         }
 
         //
-        //  If either read failed, we are done.
-        //  MSFIX This should probably display everything from the source
-        //  which succeeded the read
+        //  If we've finished both sources, we are done.
         //
 
-        if (Objects[0].ReadFailed || Objects[1].ReadFailed) {
+        if (Objects[0].ReadFailed && Objects[1].ReadFailed) {
             break;
         }
 
         //
-        //  Display the minimum of what was read between the two
+        //  Display the maximum of what was read between the two
         //
 
-        if (Objects[0].BytesReturned < Objects[1].BytesReturned) {
+        if (Objects[0].BytesReturned > Objects[1].BytesReturned) {
             LengthToDisplay = Objects[0].BytesReturned;
         } else {
             LengthToDisplay = Objects[1].BytesReturned;
@@ -450,7 +456,19 @@ HexDumpDisplayDiff(
             } else {
                 LengthThisLine = LengthToDisplay;
             }
-            if (memcmp(&Objects[0].Buffer[BufferOffset], &Objects[1].Buffer[BufferOffset], LengthThisLine) != 0) {
+            for (Count = 0; Count < sizeof(Objects)/sizeof(Objects[0]); Count++) {
+                Objects[Count].DisplayLength = LengthThisLine;
+                if (BufferOffset + LengthThisLine > Objects[Count].BytesReturned) {
+                    LineDifference = TRUE;
+                    Objects[Count].DisplayLength = 0;
+                    if (Objects[Count].BytesReturned > BufferOffset) {
+                        Objects[Count].DisplayLength = Objects[0].BytesReturned - BufferOffset;
+                    }
+                }
+            }
+
+            if (!LineDifference &&
+                memcmp(&Objects[0].Buffer[BufferOffset], &Objects[1].Buffer[BufferOffset], LengthThisLine) != 0) {
                 LineDifference = TRUE;
             }
 
@@ -459,11 +477,13 @@ HexDumpDisplayDiff(
             //
 
             if (LineDifference) {
-                if (!YoriLibHexDump(&Objects[0].Buffer[BufferOffset], StreamOffset.QuadPart + BufferOffset, LengthThisLine, HexDumpContext->BytesPerGroup, DisplayFlags)) {
-                    break;
-                }
-
-                if (!YoriLibHexDump(&Objects[1].Buffer[BufferOffset], StreamOffset.QuadPart + BufferOffset, LengthThisLine, HexDumpContext->BytesPerGroup, DisplayFlags)) {
+                if (!YoriLibHexDiff(StreamOffset.QuadPart + BufferOffset,
+                                    &Objects[0].Buffer[BufferOffset],
+                                    Objects[0].DisplayLength,
+                                    &Objects[1].Buffer[BufferOffset],
+                                    Objects[1].DisplayLength,
+                                    HexDumpContext->BytesPerGroup,
+                                    DisplayFlags)) {
                     break;
                 }
             }
@@ -474,10 +494,17 @@ HexDumpDisplayDiff(
 
             LengthToDisplay -= LengthThisLine;
             BufferOffset += LengthThisLine;
-        }
-
-        if (Objects[0].BytesReturned != Objects[1].BytesReturned) {
-            break;
+            /*
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("LengthToDisplay %i LengthThisLine %i BufferOffset %i BR1 %i BR2 %i B1DL %i B2DL %i\n"),
+                          LengthToDisplay,
+                          LengthThisLine,
+                          BufferOffset,
+                          Objects[0].BytesReturned,
+                          Objects[1].BytesReturned,
+                          Buffer1DisplayLength,
+                          Buffer2DisplayLength);
+                          */
         }
     }
 
