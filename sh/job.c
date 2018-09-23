@@ -119,7 +119,7 @@ YORI_LIST_ENTRY JobList;
  */
 BOOL
 YoriShCreateNewJob(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __in HANDLE hProcess,
     __in DWORD dwProcessId
     )

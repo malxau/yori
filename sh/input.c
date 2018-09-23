@@ -122,7 +122,7 @@ YoriShDetermineCellLocationIfMoved(
  */
 BOOL
 YoriShStringOffsetFromCoordinates(
-    __in PYORI_INPUT_BUFFER Buffer,
+    __in PYORI_SH_INPUT_BUFFER Buffer,
     __in COORD TargetCoordinates,
     __out PDWORD StringOffset
     )
@@ -186,7 +186,7 @@ YoriShMoveCursor(
  */
 VOID
 YoriShPrepareForNextKey(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     Buffer->PriorTabCount = Buffer->TabContext.TabCount;
@@ -199,7 +199,7 @@ YoriShPrepareForNextKey(
  */
 VOID
 YoriShPostKeyPress(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     //
@@ -224,7 +224,7 @@ YoriShPostKeyPress(
  */
 BOOL
 YoriShIsSelectionActive(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     if (Buffer->CurrentSelection.Left == Buffer->CurrentSelection.Right &&
@@ -246,7 +246,7 @@ YoriShIsSelectionActive(
  */
 BOOL
 YoriShIsPreviousSelectionActive(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     if (Buffer->PreviousSelection.Left == Buffer->PreviousSelection.Right &&
@@ -342,7 +342,7 @@ YoriShReallocateAttributeArray(
  */
 VOID
 YoriShClearPreviousSelectionDisplay(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     SHORT LineIndex;
@@ -424,7 +424,7 @@ YoriShGetSelectionColor(
  */
 VOID
 YoriShDrawCurrentSelectionDisplay(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     SHORT LineIndex;
@@ -493,7 +493,7 @@ YoriShDrawCurrentSelectionDisplay(
  */
 VOID
 YoriShDrawCurrentSelectionOverPreviousSelection(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     SHORT LineIndex;
@@ -742,7 +742,7 @@ YoriShDrawCurrentSelectionOverPreviousSelection(
  */
 VOID
 YoriShDisplayAfterKeyPress(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     DWORD NumberWritten;
@@ -752,6 +752,7 @@ YoriShDisplayAfterKeyPress(
     COORD FillPosition;
     COORD SuggestionPosition;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    WORD FillAttributes;
     HANDLE hConsole;
 
     WritePosition.X = 0;
@@ -783,7 +784,11 @@ YoriShDisplayAfterKeyPress(
 
         // MSFIX Error handling
         hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        GetConsoleScreenBufferInfo(hConsole, &ScreenInfo);
+        if (GetConsoleScreenBufferInfo(hConsole, &ScreenInfo)) {
+            FillAttributes = ScreenInfo.wAttributes;
+        } else {
+            FillAttributes = YoriLibVtGetDefaultColor();
+        }
 
         //
         //  Calculate the number of characters truncated from the currently
@@ -903,7 +908,7 @@ YoriShEnsureStringHasEnoughCharacters(
  */
 BOOL
 YoriShConfigureMouseForPrompt(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     HANDLE ConsoleHandle;
@@ -938,7 +943,7 @@ YoriShConfigureMouseForPrompt(
  */
 BOOL
 YoriShConfigureMouseForPrograms(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     HANDLE ConsoleHandle;
@@ -1005,7 +1010,7 @@ YoriShAppCloseCtrlHandler(
  */
 VOID
 YoriShTerminateInput(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     DWORD Index;
@@ -1043,7 +1048,7 @@ YoriShTerminateInput(
  */
 BOOL
 YoriShClearSelection(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     Buffer->CurrentSelection.Left = 0;
@@ -1072,7 +1077,7 @@ YoriShClearSelection(
  */
 VOID
 YoriShClearInput(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     YoriLibFreeStringContents(&Buffer->SuggestionString);
@@ -1092,7 +1097,7 @@ YoriShClearInput(
  */
 VOID
 YoriShUpdateSelectionWithSearchResult(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     DWORD StringOffsetOfMatch;
@@ -1120,7 +1125,7 @@ YoriShUpdateSelectionWithSearchResult(
  */
 VOID
 YoriShBackspace(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in DWORD Count
     )
 {
@@ -1191,7 +1196,7 @@ YoriShBackspace(
  */
 BOOL
 YoriShOverwriteSelectionIfInInput(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
 
@@ -1255,7 +1260,7 @@ YoriShOverwriteSelectionIfInInput(
  */
 BOOL
 YoriShCopySelectionIfPresent(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     YORI_STRING TextToCopy;
@@ -1416,7 +1421,7 @@ YoriShCopySelectionIfPresent(
  */
 VOID
 YoriShAddYoriStringToInput(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PYORI_STRING String
     )
 {
@@ -1533,7 +1538,7 @@ YoriShAddYoriStringToInput(
  */
 VOID
 YoriShAddCStringToInput(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in LPTSTR String
     )
 {
@@ -1554,10 +1559,10 @@ YoriShAddCStringToInput(
  */
 VOID
 YoriShMoveCursorToPriorArgument(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_CMD_CONTEXT CmdContext;
+    YORI_SH_CMD_CONTEXT CmdContext;
     LPTSTR NewString = NULL;
     DWORD BeginCurrentArg = 0;
     DWORD EndCurrentArg = 0;
@@ -1626,10 +1631,10 @@ YoriShMoveCursorToPriorArgument(
  */
 VOID
 YoriShMoveCursorToNextArgument(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_CMD_CONTEXT CmdContext;
+    YORI_SH_CMD_CONTEXT CmdContext;
     LPTSTR NewString;
     DWORD BeginCurrentArg;
     DWORD EndCurrentArg;
@@ -1680,11 +1685,11 @@ YoriShMoveCursorToNextArgument(
  */
 VOID
 YoriShDeleteArgument(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_CMD_CONTEXT CmdContext;
-    YORI_CMD_CONTEXT NewCmdContext;
+    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_SH_CMD_CONTEXT NewCmdContext;
     DWORD SrcArg;
     DWORD DestArg;
     LPTSTR NewString = NULL;
@@ -1702,7 +1707,7 @@ YoriShDeleteArgument(
     }
 
     memcpy(&NewCmdContext, &CmdContext, sizeof(CmdContext));
-    NewCmdContext.MemoryToFree = YoriLibReferencedMalloc((CmdContext.ArgC - 1) * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    NewCmdContext.MemoryToFree = YoriLibReferencedMalloc((CmdContext.ArgC - 1) * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
     if (NewCmdContext.MemoryToFree == NULL) {
         YoriShFreeCmdContext(&CmdContext);
         return;
@@ -1710,7 +1715,7 @@ YoriShDeleteArgument(
 
     NewCmdContext.ArgC = CmdContext.ArgC - 1;
     NewCmdContext.ArgV = NewCmdContext.MemoryToFree;
-    NewCmdContext.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(NewCmdContext.ArgV, NewCmdContext.ArgC * sizeof(YORI_STRING));
+    NewCmdContext.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(NewCmdContext.ArgV, NewCmdContext.ArgC * sizeof(YORI_STRING));
 
 
     DestArg = 0;
@@ -1768,7 +1773,7 @@ YoriShDeleteArgument(
  */
 BOOL
 YoriShHotkey(
-    __in PYORI_INPUT_BUFFER Buffer,
+    __in PYORI_SH_INPUT_BUFFER Buffer,
     __in WORD KeyCode,
     __in DWORD CtrlMask
     )
@@ -1777,7 +1782,7 @@ YoriShHotkey(
     DWORD FunctionIndex;
     TCHAR NewStringBuffer[32];
     YORI_STRING NewString;
-    YORI_CMD_CONTEXT CmdContext;
+    YORI_SH_CMD_CONTEXT CmdContext;
     LPTSTR CmdLine;
 
     if (CtrlMask & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) {
@@ -1831,7 +1836,7 @@ YoriShHotkey(
  */
 VOID
 YoriShConfigureInputSettings(
-    __in PYORI_INPUT_BUFFER Buffer
+    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     DWORD EnvVarLength;
@@ -1930,7 +1935,7 @@ YoriShConfigureInputSettings(
  */
 BOOL
 YoriShProcessKeyDown(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __out PBOOL TerminateInput
     )
@@ -2032,12 +2037,12 @@ YoriShProcessKeyDown(
         }
     } else if (CtrlMask == ENHANCED_KEY) {
         PYORI_LIST_ENTRY NewEntry = NULL;
-        PYORI_HISTORY_ENTRY HistoryEntry;
+        PYORI_SH_HISTORY_ENTRY HistoryEntry;
         if (KeyCode == VK_UP) {
             NewEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, Buffer->HistoryEntryToUse);
             if (NewEntry != NULL) {
                 Buffer->HistoryEntryToUse = NewEntry;
-                HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_HISTORY_ENTRY, ListEntry);
+                HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
                 YoriShClearInput(Buffer);
                 YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
             }
@@ -2047,7 +2052,7 @@ YoriShProcessKeyDown(
             }
             if (NewEntry != NULL) {
                 Buffer->HistoryEntryToUse = NewEntry;
-                HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_HISTORY_ENTRY, ListEntry);
+                HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
                 YoriShClearInput(Buffer);
                 YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
             }
@@ -2176,7 +2181,7 @@ YoriShProcessKeyDown(
  */
 BOOL
 YoriShProcessKeyUp(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __out PBOOL TerminateInput
     )
@@ -2231,7 +2236,7 @@ YoriShProcessKeyUp(
  */
 BOOL
 YoriShProcessMouseButtonDown(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
     __out PBOOL TerminateInput
@@ -2290,7 +2295,7 @@ YoriShProcessMouseButtonDown(
  */
 BOOL
 YoriShProcessMouseButtonUp(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsReleased,
     __out PBOOL TerminateInput
@@ -2357,7 +2362,7 @@ YoriShGetSelectionDoubleClickBreakChars(
  */
 BOOL
 YoriShProcessMouseDoubleClick(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
     __out PBOOL TerminateInput
@@ -2448,7 +2453,7 @@ YoriShProcessMouseDoubleClick(
  */
 BOOL
 YoriShPeriodicScroll(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     HANDLE ConsoleHandle;
@@ -2528,7 +2533,7 @@ YoriShPeriodicScroll(
  */
 BOOL
 YoriShProcessMouseMove(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __out PBOOL TerminateInput
     )
@@ -2620,7 +2625,7 @@ YoriShProcessMouseMove(
  */
 BOOL
 YoriShProcessMouseScroll(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
     __out PBOOL TerminateInput
@@ -2685,7 +2690,7 @@ YoriShGetExpression(
     __inout PYORI_STRING Expression
     )
 {
-    YORI_INPUT_BUFFER Buffer;
+    YORI_SH_INPUT_BUFFER Buffer;
     DWORD ActuallyRead = 0;
     DWORD CurrentRecordIndex = 0;
     DWORD err;

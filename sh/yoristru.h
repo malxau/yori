@@ -27,19 +27,19 @@
 /**
  Information about each argument in an enumerated list of arguments.
  */
-typedef struct _YORI_ARG_CONTEXT {
+typedef struct _YORI_SH_ARG_CONTEXT {
 
     /**
      TRUE if the argument is enclosed in quotes.
      */
     BOOL Quoted;
 
-} YORI_ARG_CONTEXT, *PYORI_ARG_CONTEXT;
+} YORI_SH_ARG_CONTEXT, *PYORI_SH_ARG_CONTEXT;
 
 /**
  A command line that has been broken up into a series of arguments.
  */
-typedef struct _YORI_CMD_CONTEXT {
+typedef struct _YORI_SH_CMD_CONTEXT {
 
     /**
      The number of arguments.
@@ -56,7 +56,7 @@ typedef struct _YORI_CMD_CONTEXT {
      An array of information about each argument, including the object that
      was referenced for each.
      */
-    PYORI_ARG_CONTEXT ArgContexts;
+    PYORI_SH_ARG_CONTEXT ArgContexts;
 
     /**
      When generating the command context, if a string offset is specified,
@@ -71,24 +71,24 @@ typedef struct _YORI_CMD_CONTEXT {
      the contents of each of the arguments also.
      */
     PVOID MemoryToFree;
-} YORI_CMD_CONTEXT, *PYORI_CMD_CONTEXT;
+} YORI_SH_CMD_CONTEXT, *PYORI_SH_CMD_CONTEXT;
 
 /**
  Information about how to execute a single program.  The program may be
  internal or external.
  */
-typedef struct _YORI_SINGLE_EXEC_CONTEXT {
+typedef struct _YORI_SH_SINGLE_EXEC_CONTEXT {
 
     /**
      The set of arguments to invoke the program with.
      */
-    YORI_CMD_CONTEXT CmdToExec;
+    YORI_SH_CMD_CONTEXT CmdToExec;
 
     /**
      Pointer to the next program in an execution chain or NULL if there is
      no next program.
      */
-    struct _YORI_SINGLE_EXEC_CONTEXT * NextProgram;
+    struct _YORI_SH_SINGLE_EXEC_CONTEXT * NextProgram;
 
     /**
      Specifies the type of the next program and the conditions under which
@@ -248,14 +248,14 @@ typedef struct _YORI_SINGLE_EXEC_CONTEXT {
      */
     BOOLEAN SuppressTaskCompletion;
 
-} YORI_SINGLE_EXEC_CONTEXT, *PYORI_SINGLE_EXEC_CONTEXT;
+} YORI_SH_SINGLE_EXEC_CONTEXT, *PYORI_SH_SINGLE_EXEC_CONTEXT;
 
 /**
  When programs are executed, they temporarily modify the stdin/stdout/stderr
  of the shell process.  This structure contains information needed to revert
  back to the previous behavior.
  */
-typedef struct _YORI_PREVIOUS_REDIRECT_CONTEXT {
+typedef struct _YORI_SH_PREVIOUS_REDIRECT_CONTEXT {
 
     /**
      TRUE if stdin needs to be reset.
@@ -292,18 +292,18 @@ typedef struct _YORI_PREVIOUS_REDIRECT_CONTEXT {
      A handle to the original stderr.
      */
     HANDLE StdError;
-} YORI_PREVIOUS_REDIRECT_CONTEXT, *PYORI_PREVIOUS_REDIRECT_CONTEXT;
+} YORI_SH_PREVIOUS_REDIRECT_CONTEXT, *PYORI_SH_PREVIOUS_REDIRECT_CONTEXT;
 
 /**
  A plan to execute multiple programs.
  */
-typedef struct _YORI_EXEC_PLAN {
+typedef struct _YORI_SH_EXEC_PLAN {
 
     /**
      Pointer to the first program to execute.  It will link to subsequent
      programs to execute.
      */
-    PYORI_SINGLE_EXEC_CONTEXT FirstCmd;
+    PYORI_SH_SINGLE_EXEC_CONTEXT FirstCmd;
 
     /**
      The total number of programs in the program list.
@@ -317,12 +317,12 @@ typedef struct _YORI_EXEC_PLAN {
      */
     BOOLEAN TaskCompletionDisplayed;
 
-} YORI_EXEC_PLAN, *PYORI_EXEC_PLAN;
+} YORI_SH_EXEC_PLAN, *PYORI_SH_EXEC_PLAN;
 
 /**
  Information about a previous command executed by the user.
  */
-typedef struct _YORI_HISTORY_ENTRY {
+typedef struct _YORI_SH_HISTORY_ENTRY {
 
     /**
      The links for this history entry.
@@ -333,7 +333,7 @@ typedef struct _YORI_HISTORY_ENTRY {
      The command that was executed by the user.
      */
     YORI_STRING CmdLine;
-} YORI_HISTORY_ENTRY, *PYORI_HISTORY_ENTRY;
+} YORI_SH_HISTORY_ENTRY, *PYORI_SH_HISTORY_ENTRY;
 
 /**
  List of command history.
@@ -348,17 +348,17 @@ extern DWORD YoriShCommandHistoryCount;
 /**
  Information about a single tab complete match.
  */
-typedef struct _YORI_TAB_COMPLETE_MATCH {
+typedef struct _YORI_SH_TAB_COMPLETE_MATCH {
 
     /**
      The list entry for this match.  Paired with @ref
-     YORI_TAB_COMPLETE_CONTEXT::MatchList .
+     YORI_SH_TAB_COMPLETE_CONTEXT::MatchList .
      */
     YORI_LIST_ENTRY ListEntry;
 
     /**
      The hash entry for this match.  Paired with @ref
-     YORI_TAB_COMPLETE_CONTEXT::MatchHashTable .
+     YORI_SH_TAB_COMPLETE_CONTEXT::MatchHashTable .
      */
     YORI_HASH_ENTRY HashEntry;
 
@@ -367,22 +367,22 @@ typedef struct _YORI_TAB_COMPLETE_MATCH {
      */
     YORI_STRING Value;
 
-} YORI_TAB_COMPLETE_MATCH, *PYORI_TAB_COMPLETE_MATCH;
+} YORI_SH_TAB_COMPLETE_MATCH, *PYORI_SH_TAB_COMPLETE_MATCH;
 
 /**
  A set of tab completion match types that can be performed.
  */
-typedef enum _YORI_TAB_COMPLETE_SEARCH_TYPE {
+typedef enum _YORI_SH_TAB_COMPLETE_SEARCH_TYPE {
     YoriTabCompleteSearchExecutables = 1,
     YoriTabCompleteSearchFiles = 2,
     YoriTabCompleteSearchHistory = 3,
     YoriTabCompleteSearchArguments = 4
-} YORI_TAB_COMPLETE_SEARCH_TYPE;
+} YORI_SH_TAB_COMPLETE_SEARCH_TYPE;
 
 /**
  Information about the state of tab completion.
  */
-typedef struct _YORI_TAB_COMPLETE_CONTEXT {
+typedef struct _YORI_SH_TAB_COMPLETE_CONTEXT {
 
     /**
      Indicates the number of times tab has been repeatedly pressed.  This
@@ -408,7 +408,7 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
     /**
      Indicates which data source to search through.
      */
-    YORI_TAB_COMPLETE_SEARCH_TYPE SearchType;
+    YORI_SH_TAB_COMPLETE_SEARCH_TYPE SearchType;
 
     /**
      TRUE if later compares should be case sensitive.  This is used when
@@ -431,7 +431,7 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
      Pointer to the previously returned match.  If the user repeatedly hits
      tab, we advance to the next match.
      */
-    PYORI_TAB_COMPLETE_MATCH PreviousMatch;
+    PYORI_SH_TAB_COMPLETE_MATCH PreviousMatch;
 
     /**
      The matching criteria that is being searched for.  This is typically
@@ -440,7 +440,7 @@ typedef struct _YORI_TAB_COMPLETE_CONTEXT {
      */
     YORI_STRING SearchString;
 
-} YORI_TAB_COMPLETE_CONTEXT, *PYORI_TAB_COMPLETE_CONTEXT;
+} YORI_SH_TAB_COMPLETE_CONTEXT, *PYORI_SH_TAB_COMPLETE_CONTEXT;
 
 /**
  A buffer containing an array of console character attributes, along
@@ -464,7 +464,7 @@ typedef struct _YORI_SH_PREVIOUS_SELECTION_BUFFER {
 /**
  The context of a line that is currently being entered by the user.
  */
-typedef struct _YORI_INPUT_BUFFER {
+typedef struct _YORI_SH_INPUT_BUFFER {
 
     /**
      Pointer to a string containing the text as being entered by the user.
@@ -593,7 +593,7 @@ typedef struct _YORI_INPUT_BUFFER {
     /**
      Extra information specific to tab completion processing.
      */
-    YORI_TAB_COMPLETE_CONTEXT TabContext;
+    YORI_SH_TAB_COMPLETE_CONTEXT TabContext;
 
     /**
      Set to TRUE if the suggestion string has changed and requires
@@ -624,13 +624,13 @@ typedef struct _YORI_INPUT_BUFFER {
      */
     YORI_STRING SearchString;
 
-} YORI_INPUT_BUFFER, *PYORI_INPUT_BUFFER;
+} YORI_SH_INPUT_BUFFER, *PYORI_SH_INPUT_BUFFER;
 
 /**
  A structure defining a mapping between a command name and a function to
  execute.  This is used to populate builtin commands.
  */
-typedef struct _YORI_BUILTIN_NAME_MAPPING {
+typedef struct _YORI_SH_BUILTIN_NAME_MAPPING {
 
     /**
      The command name.
@@ -641,13 +641,13 @@ typedef struct _YORI_BUILTIN_NAME_MAPPING {
      Pointer to the function to execute.
      */
     PYORI_CMD_BUILTIN BuiltinFn;
-} YORI_BUILTIN_NAME_MAPPING, *PYORI_BUILTIN_NAME_MAPPING;
+} YORI_SH_BUILTIN_NAME_MAPPING, *PYORI_SH_BUILTIN_NAME_MAPPING;
 
 
 /**
  A structure containing information about a currently loaded DLL.
  */
-typedef struct _YORI_LOADED_MODULE {
+typedef struct _YORI_SH_LOADED_MODULE {
 
     /**
      The entry for this loaded module on the list of actively loaded
@@ -674,12 +674,12 @@ typedef struct _YORI_LOADED_MODULE {
      A handle to the DLL.
      */
     HANDLE ModuleHandle;
-} YORI_LOADED_MODULE, *PYORI_LOADED_MODULE;
+} YORI_SH_LOADED_MODULE, *PYORI_SH_LOADED_MODULE;
 
 /**
  A structure containing an individual builtin callback.
  */
-typedef struct _YORI_BUILTIN_CALLBACK {
+typedef struct _YORI_SH_BUILTIN_CALLBACK {
 
     /**
      Links between the registered builtin callbacks.
@@ -706,9 +706,9 @@ typedef struct _YORI_BUILTIN_CALLBACK {
      This may be NULL if it's a function statically linked into the main
      executable.
      */
-    PYORI_LOADED_MODULE ReferencedModule;
+    PYORI_SH_LOADED_MODULE ReferencedModule;
 
-} YORI_BUILTIN_CALLBACK, *PYORI_BUILTIN_CALLBACK;
+} YORI_SH_BUILTIN_CALLBACK, *PYORI_SH_BUILTIN_CALLBACK;
 
 /**
  The exit code ("error level") of the previous process to complete.

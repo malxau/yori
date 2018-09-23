@@ -278,6 +278,9 @@ YoriPkgCollectSourcesFromIni(
     DWORD Index;
     BOOL Result = FALSE;
     PYORIPKG_REMOTE_SOURCE Source;
+    PYORIPKG_REMOTE_SOURCE ExistingSource;
+    PYORI_LIST_ENTRY ListEntry;
+    BOOL DuplicateFound;
 
     YoriLibInitEmptyString(&IniValue);
     YoriLibInitEmptyString(&IniKey);
@@ -303,11 +306,23 @@ YoriPkgCollectSourcesFromIni(
             goto Exit;
         }
 
-        //
-        //  MSFIX Check for duplicates/cycles?
-        //
+        DuplicateFound = FALSE;
 
-        YoriLibAppendList(SourcesList, &Source->SourceList);
+        ListEntry = YoriLibGetNextListEntry(SourcesList, NULL);
+        while (ListEntry != NULL) {
+            ExistingSource = CONTAINING_RECORD(ListEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+            if (YoriLibCompareStringInsensitive(&ExistingSource->SourceRootUrl, &Source->SourceRootUrl) == 0) {
+                DuplicateFound = TRUE;
+                break;
+            }
+            ListEntry = YoriLibGetNextListEntry(SourcesList, ListEntry);
+        }
+
+        if (DuplicateFound) {
+            YoriPkgFreeRemoteSource(Source);
+        } else {
+            YoriLibAppendList(SourcesList, &Source->SourceList);
+        }
 
         Index++;
     }

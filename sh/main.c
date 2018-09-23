@@ -141,7 +141,7 @@ YoriShInit()
     TCHAR AliasName[3];
     TCHAR AliasValue[16];
     DWORD Count;
-    YORI_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
+    YORI_SH_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
 
     //
     //  Translate the constant builtin function mapping into dynamic function

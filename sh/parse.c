@@ -161,7 +161,7 @@ BOOL
 YoriShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
     __in DWORD CurrentOffset,
-    __out PYORI_CMD_CONTEXT CmdContext
+    __out PYORI_SH_CMD_CONTEXT CmdContext
     )
 {
     DWORD ArgCount = 0;
@@ -387,7 +387,7 @@ YoriShParseCmdlineToCmdContext(
         return TRUE;
     }
 
-    CmdContext->MemoryToFree = YoriLibReferencedMalloc((ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT))) +
+    CmdContext->MemoryToFree = YoriLibReferencedMalloc((ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT))) +
                                                        (RequiredCharCount + ArgCount) * sizeof(TCHAR));
     if (CmdContext->MemoryToFree == NULL) {
         return FALSE;
@@ -395,7 +395,7 @@ YoriShParseCmdlineToCmdContext(
 
     CmdContext->ArgV = CmdContext->MemoryToFree;
 
-    CmdContext->ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, ArgCount * sizeof(YORI_STRING));
+    CmdContext->ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, ArgCount * sizeof(YORI_STRING));
     OutputString = (LPTSTR)(CmdContext->ArgContexts + ArgCount);
 
     ArgCount = 0;
@@ -632,7 +632,7 @@ YoriShParseCmdlineToCmdContext(
  */
 LPTSTR
 YoriShBuildCmdlineFromCmdContext(
-    __in PYORI_CMD_CONTEXT CmdContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __in BOOL RemoveEscapes,
     __out_opt PDWORD BeginCurrentArg,
     __out_opt PDWORD EndCurrentArg
@@ -715,7 +715,7 @@ YoriShBuildCmdlineFromCmdContext(
  */
 BOOL
 YoriShRemoveEscapesFromCmdContext(
-    __in PYORI_CMD_CONTEXT CmdContext
+    __in PYORI_SH_CMD_CONTEXT CmdContext
     )
 {
     DWORD ArgIndex;
@@ -788,9 +788,9 @@ YoriShRemoveEscapesFromCmdContext(
  */
 VOID
 YoriShCopyArg(
-    __in PYORI_CMD_CONTEXT SrcCmdContext,
+    __in PYORI_SH_CMD_CONTEXT SrcCmdContext,
     __in DWORD SrcArgument,
-    __in PYORI_CMD_CONTEXT DestCmdContext,
+    __in PYORI_SH_CMD_CONTEXT DestCmdContext,
     __in DWORD DestArgument
     )
 {
@@ -815,19 +815,19 @@ YoriShCopyArg(
  */
 BOOL
 YoriShCopyCmdContext(
-    __out PYORI_CMD_CONTEXT DestCmdContext,
-    __in PYORI_CMD_CONTEXT SrcCmdContext
+    __out PYORI_SH_CMD_CONTEXT DestCmdContext,
+    __in PYORI_SH_CMD_CONTEXT SrcCmdContext
     )
 {
     DWORD Count;
 
-    DestCmdContext->MemoryToFree = YoriLibReferencedMalloc(SrcCmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    DestCmdContext->MemoryToFree = YoriLibReferencedMalloc(SrcCmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
     if (DestCmdContext->MemoryToFree == NULL) {
         return FALSE;
     }
 
     DestCmdContext->ArgV = DestCmdContext->MemoryToFree;
-    DestCmdContext->ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(DestCmdContext->ArgV, SrcCmdContext->ArgC * sizeof(YORI_STRING));
+    DestCmdContext->ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(DestCmdContext->ArgV, SrcCmdContext->ArgC * sizeof(YORI_STRING));
 
     DestCmdContext->ArgC = SrcCmdContext->ArgC;
     DestCmdContext->CurrentArg = SrcCmdContext->CurrentArg;
@@ -852,7 +852,7 @@ YoriShCopyCmdContext(
  */
 VOID
 YoriShCheckIfArgNeedsQuotes(
-    __in PYORI_CMD_CONTEXT CmdContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __in DWORD ArgIndex
     )
 {
@@ -865,15 +865,15 @@ YoriShCheckIfArgNeedsQuotes(
 }
 
 /**
- Free the contents of a @ref YORI_CMD_CONTEXT .  The allocation containing
- the context is not freed, since that context is often on the stack or
- in another structure, and it is better left to the caller to clean up.
+ Free the contents of a @ref YORI_SH_CMD_CONTEXT .  The allocation containing
+ the context is not freed, since that context is often on the stack or in
+ another structure, and it is better left to the caller to clean up.
 
- @param CmdContext Pointer to the @ref YORI_CMD_CONTEXT to free.
+ @param CmdContext Pointer to the @ref YORI_SH_CMD_CONTEXT to free.
  */
 VOID
 YoriShFreeCmdContext(
-    __in PYORI_CMD_CONTEXT CmdContext
+    __in PYORI_SH_CMD_CONTEXT CmdContext
     )
 {
     DWORD Count;
@@ -895,7 +895,7 @@ YoriShFreeCmdContext(
  */
 VOID
 YoriShExecContextCleanupStdIn(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     switch(ExecContext->StdInType) {
@@ -919,7 +919,7 @@ YoriShExecContextCleanupStdIn(
  */
 VOID
 YoriShExecContextCleanupStdOut(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     switch(ExecContext->StdOutType) {
@@ -950,7 +950,7 @@ YoriShExecContextCleanupStdOut(
  */
 VOID
 YoriShExecContextCleanupStdErr(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     switch(ExecContext->StdErrType) {
@@ -1118,9 +1118,9 @@ YoriShCheckForDeviceNameAndDuplicate(
  */
 DWORD
 YoriShParseCmdContextToExecContext(
-    __in PYORI_CMD_CONTEXT CmdContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __in DWORD InitialArgument,
-    __out PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __out PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __out_opt PBOOL CurrentArgIsForProgram,
     __out_opt PDWORD CurrentArgIndex
     )
@@ -1130,7 +1130,7 @@ YoriShParseCmdContextToExecContext(
     DWORD ArgumentsConsumed = 0;
     PYORI_STRING ThisArg;
 
-    ZeroMemory(ExecContext, sizeof(YORI_SINGLE_EXEC_CONTEXT));
+    ZeroMemory(ExecContext, sizeof(YORI_SH_SINGLE_EXEC_CONTEXT));
     ExecContext->StdInType = StdInTypeDefault;
     ExecContext->StdOutType = StdOutTypeDefault;
     ExecContext->StdErrType = StdErrTypeDefault;
@@ -1154,13 +1154,13 @@ YoriShParseCmdContextToExecContext(
 
     ArgumentsConsumed = Count - InitialArgument;
 
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ArgumentsConsumed * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ArgumentsConsumed * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
     if (ExecContext->CmdToExec.MemoryToFree == NULL) {
         return 0;
     }
 
     ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
-    ExecContext->CmdToExec.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, ArgumentsConsumed * sizeof(YORI_STRING));
+    ExecContext->CmdToExec.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, ArgumentsConsumed * sizeof(YORI_STRING));
 
     //
     //  MSFIX This parsing logic is really lame.
@@ -1260,7 +1260,7 @@ YoriShParseCmdContextToExecContext(
         }
 
         if (!RemoveThisArg) {
-            PYORI_CMD_CONTEXT CmdToExec = &ExecContext->CmdToExec;
+            PYORI_SH_CMD_CONTEXT CmdToExec = &ExecContext->CmdToExec;
             YoriShCopyArg(CmdContext, Count, CmdToExec, CmdToExec->ArgC);
             if (CurrentArgIsForProgram != NULL) {
                 if (CmdContext->CurrentArg == Count) {
@@ -1276,8 +1276,8 @@ YoriShParseCmdContextToExecContext(
 }
 
 /**
- Frees any internal allocations in a @ref YORI_SINGLE_EXEC_CONTEXT .  Note it
- does not free the context itself, which is the caller's responsibility.
+ Frees any internal allocations in a @ref YORI_SH_SINGLE_EXEC_CONTEXT .  Note
+ it does not free the context itself, which is the caller's responsibility.
  This is done because it's frequently convenient to have context on the
  stack.
 
@@ -1285,7 +1285,7 @@ YoriShParseCmdContextToExecContext(
  */
 VOID
 YoriShFreeExecContext(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
 
@@ -1316,7 +1316,7 @@ YoriShFreeExecContext(
 }
 
 /**
- Frees any internal allocations in a @ref YORI_EXEC_PLAN .  Note it
+ Frees any internal allocations in a @ref YORI_SH_EXEC_PLAN .  Note it
  does not free the plan itself, which is the caller's responsibility.
  This is done because it's frequently convenient to have plan on the
  stack.
@@ -1325,11 +1325,11 @@ YoriShFreeExecContext(
  */
 VOID
 YoriShFreeExecPlan(
-    __in PYORI_EXEC_PLAN ExecPlan
+    __in PYORI_SH_EXEC_PLAN ExecPlan
     )
 {
-    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
-    PYORI_SINGLE_EXEC_CONTEXT NextExecContext;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
+    PYORI_SH_SINGLE_EXEC_CONTEXT NextExecContext;
 
     ExecContext = ExecPlan->FirstCmd;
 
@@ -1369,9 +1369,9 @@ YoriShFreeExecPlan(
  */
 BOOL
 YoriShParseCmdContextToExecPlan(
-    __in PYORI_CMD_CONTEXT CmdContext,
-    __out PYORI_EXEC_PLAN ExecPlan,
-    __out_opt PYORI_SINGLE_EXEC_CONTEXT* CurrentExecContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
+    __out PYORI_SH_EXEC_PLAN ExecPlan,
+    __out_opt PYORI_SH_SINGLE_EXEC_CONTEXT* CurrentExecContext,
     __out_opt PBOOL CurrentArgIsForProgram,
     __out_opt PDWORD CurrentArgIndex
     )
@@ -1379,18 +1379,18 @@ YoriShParseCmdContextToExecPlan(
     DWORD CurrentArg = 0;
     DWORD ArgsConsumed;
     DWORD ArgOfLastOperatorIndex = 0;
-    PYORI_SINGLE_EXEC_CONTEXT ThisProgram;
-    PYORI_SINGLE_EXEC_CONTEXT PreviousProgram = NULL;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ThisProgram;
+    PYORI_SH_SINGLE_EXEC_CONTEXT PreviousProgram = NULL;
     BOOL LocalCurrentArgIsForProgram;
     BOOL FoundProgramMatch;
     DWORD LocalCurrentArgIndex;
 
-    ZeroMemory(ExecPlan, sizeof(YORI_EXEC_PLAN));
+    ZeroMemory(ExecPlan, sizeof(YORI_SH_EXEC_PLAN));
     FoundProgramMatch = FALSE;
 
     while (CurrentArg < CmdContext->ArgC) {
 
-        ThisProgram = YoriLibMalloc(sizeof(YORI_SINGLE_EXEC_CONTEXT));
+        ThisProgram = YoriLibMalloc(sizeof(YORI_SH_SINGLE_EXEC_CONTEXT));
         if (ThisProgram == NULL) {
             YoriShFreeExecPlan(ExecPlan);
             return FALSE;
@@ -1544,7 +1544,7 @@ YoriShDoesExpressionSpecifyPath(
  */
 BOOL
 YoriShResolveCommandToExecutable(
-    __in PYORI_CMD_CONTEXT CmdContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __out PBOOL ExecutableFound
     )
 {

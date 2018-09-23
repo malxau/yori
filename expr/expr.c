@@ -185,24 +185,22 @@ ymain(
         return EXIT_FAILURE;
     }
 
-    //
-    //  MSFIX Evaluate entire line, not just one arg
-    //
-
-    YoriLibInitEmptyString(&RemainingString);
-    RemainingString.StartOfString = ArgV[StartArg].StartOfString;
-    RemainingString.LengthInChars = ArgV[StartArg].LengthInChars;
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &RemainingString)) {
+        return EXIT_FAILURE;
+    }
 
     ExprStringToNumber(&RemainingString, &Result, &CharsConsumed);
     RemainingString.StartOfString += CharsConsumed;
     RemainingString.LengthInChars -= CharsConsumed;
 
     while (RemainingString.LengthInChars > 0) {
+        YoriLibTrimSpaces(&RemainingString);
         ArgumentUnderstood = FALSE;
         switch(RemainingString.StartOfString[0]) {
             case '+':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 Result.Value += Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
@@ -212,6 +210,7 @@ ymain(
             case '*':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 Result.Value *= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
@@ -221,6 +220,7 @@ ymain(
             case '-':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 Result.Value -= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
@@ -230,6 +230,7 @@ ymain(
             case '/':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 Result.Value /= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
@@ -239,6 +240,7 @@ ymain(
             case '%':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 Result.Value %= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
@@ -248,6 +250,7 @@ ymain(
             case '<':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 Result.Value <<= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
@@ -257,6 +260,7 @@ ymain(
             case '>':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 Result.Value >>= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
@@ -266,6 +270,7 @@ ymain(
             case '^':
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
+                YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
                 {
                     EXPR_NUMBER Temp2 = Result;
@@ -278,7 +283,6 @@ ymain(
                 RemainingString.LengthInChars -= CharsConsumed;
                 ArgumentUnderstood = TRUE;
                 break;
-
         }
 
         if (!ArgumentUnderstood) {
@@ -286,6 +290,8 @@ ymain(
             break;
         }
     }
+
+    YoriLibFreeStringContents(&RemainingString);
 
     if (OutputHex) {
         ExprOutputNumber(Result, 16);

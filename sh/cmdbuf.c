@@ -358,7 +358,7 @@ YoriShAllocateSingleProcessBuffer(
  */
 BOOL
 YoriShCreateNewProcessBuffer(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     PYORI_BUFFERED_PROCESS ThisBuffer;
@@ -444,7 +444,7 @@ YoriShCreateNewProcessBuffer(
  */
 BOOL
 YoriShAppendToExistingProcessBuffer(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     PYORI_BUFFERED_PROCESS ThisBuffer;
@@ -496,7 +496,7 @@ YoriShAppendToExistingProcessBuffer(
  */
 BOOL
 YoriShForwardProcessBufferToNextProcess(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     PYORI_BUFFERED_PROCESS ThisBuffer = ExecContext->StdOut.Buffer.ProcessBuffers;

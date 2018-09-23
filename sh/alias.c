@@ -206,7 +206,7 @@ DWORD
 YoriShExpandAliasHelper(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in PYORI_CMD_CONTEXT CmdContext
+    __in PYORI_SH_CMD_CONTEXT CmdContext
     )
 {
     DWORD CmdIndex;
@@ -214,11 +214,11 @@ YoriShExpandAliasHelper(
 
     if (VariableName->LengthInChars == 1 && VariableName->StartOfString[0] == '*') {
         LPTSTR CmdLine;
-        YORI_CMD_CONTEXT ArgContext;
+        YORI_SH_CMD_CONTEXT ArgContext;
 
         ZeroMemory(&ArgContext, sizeof(ArgContext));
 
-        memcpy(&ArgContext, CmdContext, sizeof(YORI_CMD_CONTEXT));
+        memcpy(&ArgContext, CmdContext, sizeof(YORI_SH_CMD_CONTEXT));
 
         ArgContext.ArgC = ArgContext.ArgC - 1;
         ArgContext.ArgV = &ArgContext.ArgV[1];
@@ -258,10 +258,10 @@ YoriShExpandAliasHelper(
  */
 BOOL
 YoriShExpandAlias(
-    __inout PYORI_CMD_CONTEXT CmdContext
+    __inout PYORI_SH_CMD_CONTEXT CmdContext
     )
 {
-    YORI_CMD_CONTEXT NewCmdContext;
+    YORI_SH_CMD_CONTEXT NewCmdContext;
     YORI_STRING NewCmdString;
 
     PYORI_HASH_ENTRY HashEntry;
@@ -283,7 +283,7 @@ YoriShExpandAlias(
     if (NewCmdString.LengthInChars > 0) {
         if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, &NewCmdContext) && NewCmdContext.ArgC > 0) {
             YoriShFreeCmdContext(CmdContext);
-            memcpy(CmdContext, &NewCmdContext, sizeof(YORI_CMD_CONTEXT));
+            memcpy(CmdContext, &NewCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
             YoriLibFreeStringContents(&NewCmdString);
             return TRUE;
         }
@@ -310,7 +310,7 @@ YoriShExpandAliasFromString(
     __out PYORI_STRING ExpandedString
     )
 {
-    YORI_CMD_CONTEXT CmdContext;
+    YORI_SH_CMD_CONTEXT CmdContext;
     LPTSTR NewString;
 
     if (!YoriShParseCmdlineToCmdContext(CommandString, 0, &CmdContext)) {

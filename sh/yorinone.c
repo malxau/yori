@@ -29,7 +29,7 @@
 /**
  The list of builtin commands supported by this build of Yori.
  */
-CONST YORI_BUILTIN_NAME_MAPPING
+CONST YORI_SH_BUILTIN_NAME_MAPPING
 YoriShBuiltins[] = {
                     {NULL,            NULL}
                    };

@@ -81,6 +81,7 @@ YoriPkgCreateBinaryPackage(
     YORI_STRING TempFile;
     YORI_STRING PkgInfoName;
     YORI_STRING LineString;
+    YORI_STRING FullFileListFile;
     PVOID LineContext = NULL;
     HANDLE FileListSource;
     DWORD Count;
@@ -132,11 +133,12 @@ YoriPkgCreateBinaryPackage(
         WritePrivateProfileString(_T("Replaces"), Replaces[Count].StartOfString, _T("1"), TempFile.StartOfString);
     }
 
-    //
-    //  MSFIX UserPath conversion
-    //
+    if (!YoriLibUserStringToSingleFilePath(FileListFile, TRUE, &FullFileListFile)) {
+        YoriLibFreeStringContents(&TempFile);
+        return FALSE;
+    }
 
-    FileListSource = CreateFile(FileListFile->StartOfString,
+    FileListSource = CreateFile(FullFileListFile.StartOfString,
                                 GENERIC_READ,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                 NULL,
@@ -145,11 +147,14 @@ YoriPkgCreateBinaryPackage(
                                 NULL);
 
     if (FileListSource == INVALID_HANDLE_VALUE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Cannot open %y\n"), FileListFile);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Cannot open %y\n"), &FullFileListFile);
         DeleteFile(TempFile.StartOfString);
         YoriLibFreeStringContents(&TempFile);
+        YoriLibFreeStringContents(&FullFileListFile);
         return FALSE;
     }
+
+    YoriLibFreeStringContents(&FullFileListFile);
 
     if (!YoriLibCreateCab(FileName, &CabHandle)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibCreateCab failure\n"));

@@ -66,13 +66,13 @@ YoriShAddToHistory(
     )
 {
     DWORD LengthToAllocate;
-    PYORI_HISTORY_ENTRY NewHistoryEntry;
+    PYORI_SH_HISTORY_ENTRY NewHistoryEntry;
 
     if (NewCmd->LengthInChars == 0) {
         return TRUE;
     }
 
-    LengthToAllocate = sizeof(YORI_HISTORY_ENTRY);
+    LengthToAllocate = sizeof(YORI_SH_HISTORY_ENTRY);
 
     if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
 
@@ -92,10 +92,10 @@ YoriShAddToHistory(
         YoriShCommandHistoryCount++;
         while (YoriShCommandHistoryCount > YoriShCommandHistoryMax) {
             PYORI_LIST_ENTRY ListEntry;
-            PYORI_HISTORY_ENTRY OldHistoryEntry;
+            PYORI_SH_HISTORY_ENTRY OldHistoryEntry;
 
             ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
-            OldHistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            OldHistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             YoriLibRemoveListItem(ListEntry);
             YoriLibFreeStringContents(&OldHistoryEntry->CmdLine);
             YoriLibFree(OldHistoryEntry);
@@ -114,12 +114,12 @@ VOID
 YoriShClearAllHistory()
 {
     PYORI_LIST_ENTRY ListEntry = NULL;
-    PYORI_HISTORY_ENTRY HistoryEntry;
+    PYORI_SH_HISTORY_ENTRY HistoryEntry;
 
     if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
         ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
         while (ListEntry != NULL) {
-            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
             YoriLibRemoveListItem(&HistoryEntry->ListEntry);
             YoriLibFreeStringContents(&HistoryEntry->CmdLine);
@@ -306,7 +306,7 @@ YoriShSaveHistoryToFile()
     YORI_STRING FilePath;
     HANDLE FileHandle;
     PYORI_LIST_ENTRY ListEntry;
-    PYORI_HISTORY_ENTRY HistoryEntry;
+    PYORI_SH_HISTORY_ENTRY HistoryEntry;
 
     FileNameLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), NULL, 0);
     if (FileNameLength == 0) {
@@ -357,7 +357,7 @@ YoriShSaveHistoryToFile()
     if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
         ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
         while (ListEntry != NULL) {
-            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
 
             YoriLibOutputToDevice(FileHandle, 0, _T("%y\n"), &HistoryEntry->CmdLine);
 
@@ -393,7 +393,7 @@ YoriShGetHistoryStrings(
     DWORD CharsNeeded = 0;
     DWORD StringOffset;
     PYORI_LIST_ENTRY ListEntry = NULL;
-    PYORI_HISTORY_ENTRY HistoryEntry;
+    PYORI_SH_HISTORY_ENTRY HistoryEntry;
     PYORI_LIST_ENTRY StartReturningFrom = NULL;
 
     if (YoriShCommandHistory.Next != NULL) {
@@ -410,7 +410,7 @@ YoriShGetHistoryStrings(
 
         ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, StartReturningFrom);
         while (ListEntry != NULL) {
-            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             CharsNeeded += HistoryEntry->CmdLine.LengthInChars + 1;
             ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
         }
@@ -430,7 +430,7 @@ YoriShGetHistoryStrings(
     if (YoriShCommandHistory.Next != NULL) {
         ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, StartReturningFrom);
         while (ListEntry != NULL) {
-            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_HISTORY_ENTRY, ListEntry);
+            HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             memcpy(&HistoryStrings->StartOfString[StringOffset], HistoryEntry->CmdLine.StartOfString, HistoryEntry->CmdLine.LengthInChars * sizeof(TCHAR));
             StringOffset += HistoryEntry->CmdLine.LengthInChars;
             HistoryStrings->StartOfString[StringOffset] = '\0';

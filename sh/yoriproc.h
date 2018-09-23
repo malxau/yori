@@ -47,7 +47,7 @@ YoriShDeleteAlias(
 
 BOOL
 YoriShExpandAlias(
-    __inout PYORI_CMD_CONTEXT CmdContext
+    __inout PYORI_SH_CMD_CONTEXT CmdContext
     );
 
 BOOL
@@ -85,11 +85,11 @@ YoriShGetSystemAliasStrings(
 
 // *** BUILTIN.C ***
 
-extern CONST YORI_BUILTIN_NAME_MAPPING YoriShBuiltins[];
+extern CONST YORI_SH_BUILTIN_NAME_MAPPING YoriShBuiltins[];
 
 DWORD
 YoriShBuckPass (
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __in DWORD ExtraArgCount,
     ...
     );
@@ -97,13 +97,13 @@ YoriShBuckPass (
 BOOL
 YoriShExecuteNamedModuleInProc(
     __in LPTSTR ModuleFileName,
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __out PDWORD ExitCode
     );
 
 DWORD
 YoriShBuiltIn (
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 BOOL
@@ -154,17 +154,17 @@ YoriShPasteText(
 
 BOOL
 YoriShCreateNewProcessBuffer(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 BOOL
 YoriShAppendToExistingProcessBuffer(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 BOOL
 YoriShForwardProcessBufferToNextProcess(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 VOID
@@ -210,7 +210,7 @@ YoriShPipeProcessBuffers(
 
 VOID
 YoriShClearTabCompletionMatches(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     );
 
 /**
@@ -233,19 +233,19 @@ YoriShClearTabCompletionMatches(
 
 VOID
 YoriShTabCompletion(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in DWORD TabFlags
     );
 
 VOID
 YoriShTrimSuggestionList(
-    __inout PYORI_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PYORI_STRING NewString
     );
 
 VOID
 YoriShCompleteSuggestion(
-    __inout PYORI_INPUT_BUFFER Buffer
+    __inout PYORI_SH_INPUT_BUFFER Buffer
     );
 
 // *** ENV.C ***
@@ -285,19 +285,19 @@ YoriShExpandEnvironmentVariables(
 // *** EXEC.C ***
 BOOL
 YoriShInitializeRedirection(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __in BOOL PrepareForBuiltIn,
-    __out PYORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    __out PYORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
     );
 
 VOID
 YoriShRevertRedirection(
-    __in PYORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    __in PYORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
     );
 
 DWORD
 YoriShExecuteSingleProgram(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 BOOL
@@ -359,7 +359,7 @@ YoriShGetExpression(
 
 BOOL
 YoriShCreateNewJob(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __in HANDLE hProcess,
     __in DWORD dwProcessId
     );
@@ -419,12 +419,12 @@ BOOL
 YoriShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
     __in DWORD CurrentOffset,
-    __out PYORI_CMD_CONTEXT CmdContext
+    __out PYORI_SH_CMD_CONTEXT CmdContext
     );
 
 LPTSTR
 YoriShBuildCmdlineFromCmdContext(
-    __in PYORI_CMD_CONTEXT CmdContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __in BOOL RemoveEscapes,
     __out_opt PDWORD BeginCurrentArg,
     __out_opt PDWORD EndCurrentArg
@@ -432,49 +432,49 @@ YoriShBuildCmdlineFromCmdContext(
 
 BOOL
 YoriShRemoveEscapesFromCmdContext(
-    __in PYORI_CMD_CONTEXT CmdContext
+    __in PYORI_SH_CMD_CONTEXT CmdContext
     );
 
 VOID
 YoriShCopyArg(
-    __in PYORI_CMD_CONTEXT SrcCmdContext,
+    __in PYORI_SH_CMD_CONTEXT SrcCmdContext,
     __in DWORD SrcArgument,
-    __in PYORI_CMD_CONTEXT DestCmdContext,
+    __in PYORI_SH_CMD_CONTEXT DestCmdContext,
     __in DWORD DestArgument
     );
 
 BOOL
 YoriShCopyCmdContext(
-    __out PYORI_CMD_CONTEXT DestCmdContext,
-    __in PYORI_CMD_CONTEXT SrcCmdContext
+    __out PYORI_SH_CMD_CONTEXT DestCmdContext,
+    __in PYORI_SH_CMD_CONTEXT SrcCmdContext
     );
 
 VOID
 YoriShCheckIfArgNeedsQuotes(
-    __in PYORI_CMD_CONTEXT CmdContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __in DWORD ArgIndex
     );
 
 VOID
 YoriShFreeCmdContext(
-    __in PYORI_CMD_CONTEXT CmdContext
+    __in PYORI_SH_CMD_CONTEXT CmdContext
     );
 
 VOID
 YoriShFreeExecContext(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 VOID
 YoriShFreeExecPlan(
-    __in PYORI_EXEC_PLAN ExecPlan
+    __in PYORI_SH_EXEC_PLAN ExecPlan
     );
 
 BOOL
 YoriShParseCmdContextToExecPlan(
-    __in PYORI_CMD_CONTEXT CmdContext,
-    __out PYORI_EXEC_PLAN ExecPlan,
-    __out_opt PYORI_SINGLE_EXEC_CONTEXT* CurrentExecContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
+    __out PYORI_SH_EXEC_PLAN ExecPlan,
+    __out_opt PYORI_SH_SINGLE_EXEC_CONTEXT* CurrentExecContext,
     __out_opt PBOOL CurrentArgIsForProgram,
     __out_opt PDWORD CurrentArgIndex
     );
@@ -486,7 +486,7 @@ YoriShDoesExpressionSpecifyPath(
 
 BOOL
 YoriShResolveCommandToExecutable(
-    __in PYORI_CMD_CONTEXT CmdContext,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __out PBOOL ExecutableFound
     );
 

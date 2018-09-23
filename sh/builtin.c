@@ -76,19 +76,19 @@ typedef struct _YORI_SH_BUILTIN_UNLOAD_CALLBACK {
  @return Pointer a referenced loaded module.  This module is linked into
          the loaded module list.  NULL on failure.
  */
-PYORI_LOADED_MODULE
+PYORI_SH_LOADED_MODULE
 YoriShLoadDll(
     __in LPTSTR DllName
     )
 {
-    PYORI_LOADED_MODULE FoundEntry = NULL;
+    PYORI_SH_LOADED_MODULE FoundEntry = NULL;
     PYORI_LIST_ENTRY ListEntry;
     DWORD DllNameLength;
 
     if (YoriShLoadedModules.Next != NULL) {
         ListEntry = YoriLibGetNextListEntry(&YoriShLoadedModules, NULL);
         while (ListEntry != NULL) {
-            FoundEntry = CONTAINING_RECORD(ListEntry, YORI_LOADED_MODULE, ListEntry);
+            FoundEntry = CONTAINING_RECORD(ListEntry, YORI_SH_LOADED_MODULE, ListEntry);
             if (YoriLibCompareStringWithLiteralInsensitive(&FoundEntry->DllName, DllName) == 0) {
                 FoundEntry->ReferenceCount++;
                 return FoundEntry;
@@ -99,7 +99,7 @@ YoriShLoadDll(
     }
 
     DllNameLength = _tcslen(DllName);
-    FoundEntry = YoriLibMalloc(sizeof(YORI_LOADED_MODULE) + (DllNameLength + 1) * sizeof(TCHAR));
+    FoundEntry = YoriLibMalloc(sizeof(YORI_SH_LOADED_MODULE) + (DllNameLength + 1) * sizeof(TCHAR));
     if (FoundEntry == NULL) {
         return NULL;
     }
@@ -132,7 +132,7 @@ YoriShLoadDll(
  */
 VOID
 YoriShReleaseDll(
-    __in PYORI_LOADED_MODULE LoadedModule
+    __in PYORI_SH_LOADED_MODULE LoadedModule
     )
 {
     if (LoadedModule->ReferenceCount > 1) {
@@ -157,7 +157,7 @@ YoriShReleaseDll(
  */
 VOID
 YoriShReferenceDll(
-    __in PYORI_LOADED_MODULE LoadedModule
+    __in PYORI_SH_LOADED_MODULE LoadedModule
     )
 {
     ASSERT(LoadedModule->ReferenceCount > 0);
@@ -168,7 +168,7 @@ YoriShReferenceDll(
  Pointer to the active module, being the DLL that was most recently invoked
  by the shell.
  */
-PYORI_LOADED_MODULE YoriShActiveModule = NULL;
+PYORI_SH_LOADED_MODULE YoriShActiveModule = NULL;
 
 /**
  Invoke a different program to complete executing the command.  This may be
@@ -185,30 +185,30 @@ PYORI_LOADED_MODULE YoriShActiveModule = NULL;
  */
 DWORD
 YoriShBuckPass (
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __in DWORD ExtraArgCount,
     ...
     )
 {
-    YORI_CMD_CONTEXT OldCmdContext;
+    YORI_SH_CMD_CONTEXT OldCmdContext;
     DWORD ExitCode = 1;
     DWORD count;
     BOOL ExecAsBuiltin = FALSE;
     va_list marker;
 
-    memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_CMD_CONTEXT));
+    memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_SH_CMD_CONTEXT));
 
     ExecContext->CmdToExec.ArgC += ExtraArgCount;
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_ARG_CONTEXT)));
+    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
     if (ExecContext->CmdToExec.MemoryToFree == NULL) {
-        memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_CMD_CONTEXT));
+        memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
         return ExitCode;
     }
 
     ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
 
-    ExecContext->CmdToExec.ArgContexts = (PYORI_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
-    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
+    ExecContext->CmdToExec.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
+    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_SH_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
 
     va_start(marker, ExtraArgCount);
     for (count = 0; count < ExtraArgCount; count++) {
@@ -254,7 +254,7 @@ YoriShBuckPass (
         ExitCode = YoriShExecuteSingleProgram(ExecContext);
     }
     YoriShFreeCmdContext(&ExecContext->CmdToExec);
-    memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_CMD_CONTEXT));
+    memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
     
     return ExitCode;
 }
@@ -272,12 +272,12 @@ YoriShBuckPass (
 int
 YoriShExecuteInProc(
     __in PYORI_CMD_BUILTIN Fn,
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
-    YORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     BOOLEAN WasPipe = FALSE;
-    PYORI_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
+    PYORI_SH_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
     LPTSTR CmdLine;
     PYORI_STRING ArgV;
     DWORD ArgC;
@@ -405,12 +405,12 @@ YoriShExecuteInProc(
 BOOL
 YoriShExecuteNamedModuleInProc(
     __in LPTSTR ModuleFileName,
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __out PDWORD ExitCode
     )
 {
     PYORI_CMD_BUILTIN Main;
-    PYORI_LOADED_MODULE Module;
+    PYORI_SH_LOADED_MODULE Module;
 
     Module = YoriShLoadDll(ModuleFileName);
     if (Module == NULL) {
@@ -424,7 +424,7 @@ YoriShExecuteNamedModuleInProc(
     }
     
     if (Main) {
-        PYORI_LOADED_MODULE PreviousModule;
+        PYORI_SH_LOADED_MODULE PreviousModule;
 
         PreviousModule = YoriShActiveModule;
         YoriShActiveModule = Module;
@@ -448,26 +448,26 @@ YoriShExecuteNamedModuleInProc(
  */
 DWORD
 YoriShBuiltIn (
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     DWORD ExitCode = 1;
-    PYORI_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
+    PYORI_SH_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
     PYORI_CMD_BUILTIN BuiltInCmd = NULL;
-    PYORI_BUILTIN_CALLBACK CallbackEntry = NULL;
+    PYORI_SH_BUILTIN_CALLBACK CallbackEntry = NULL;
     PYORI_HASH_ENTRY HashEntry;
 
     if (YoriShBuiltinHash != NULL) {
         HashEntry = YoriLibHashLookupByKey(YoriShBuiltinHash, &CmdContext->ArgV[0]);
         if (HashEntry != NULL) {
-            CallbackEntry = (PYORI_BUILTIN_CALLBACK)HashEntry->Context;
+            CallbackEntry = (PYORI_SH_BUILTIN_CALLBACK)HashEntry->Context;
             BuiltInCmd = CallbackEntry->BuiltInFn;
         }
     }
 
     if (BuiltInCmd) {
-        PYORI_LOADED_MODULE PreviousModule;
-        PYORI_LOADED_MODULE HostingModule = NULL;
+        PYORI_SH_LOADED_MODULE PreviousModule;
+        PYORI_SH_LOADED_MODULE HostingModule = NULL;
 
         ASSERT(CallbackEntry != NULL);
 
@@ -577,7 +577,7 @@ YoriShBuiltinRegister(
     __in PYORI_CMD_BUILTIN CallbackFn
     )
 {
-    PYORI_BUILTIN_CALLBACK NewCallback;
+    PYORI_SH_BUILTIN_CALLBACK NewCallback;
     if (YoriShBuiltinCallbacks.Next == NULL) {
         YoriLibInitializeListHead(&YoriShBuiltinCallbacks);
     }
@@ -588,7 +588,7 @@ YoriShBuiltinRegister(
         }
     }
 
-    NewCallback = YoriLibReferencedMalloc(sizeof(YORI_BUILTIN_CALLBACK) + (BuiltinCmd->LengthInChars + 1) * sizeof(TCHAR));
+    NewCallback = YoriLibReferencedMalloc(sizeof(YORI_SH_BUILTIN_CALLBACK) + (BuiltinCmd->LengthInChars + 1) * sizeof(TCHAR));
     if (NewCallback == NULL) {
         return FALSE;
     }
@@ -635,7 +635,7 @@ YoriShBuiltinUnregister(
     __in PYORI_CMD_BUILTIN CallbackFn
     )
 {
-    PYORI_BUILTIN_CALLBACK Callback;
+    PYORI_SH_BUILTIN_CALLBACK Callback;
     PYORI_HASH_ENTRY HashEntry;
 
     UNREFERENCED_PARAMETER(CallbackFn);
@@ -648,7 +648,7 @@ YoriShBuiltinUnregister(
     if (YoriShBuiltinHash != NULL) {
         HashEntry = YoriLibHashRemoveByKey(YoriShBuiltinHash, BuiltinCmd);
         if (HashEntry != NULL) {
-            Callback = (PYORI_BUILTIN_CALLBACK)HashEntry->Context;
+            Callback = (PYORI_SH_BUILTIN_CALLBACK)HashEntry->Context;
             ASSERT(CallbackFn == Callback->BuiltInFn);
             YoriLibRemoveListItem(&Callback->ListEntry);
             if (Callback->ReferencedModule != NULL) {
@@ -672,13 +672,13 @@ YoriShBuiltinUnregisterAll(
     )
 {
     PYORI_LIST_ENTRY ListEntry;
-    PYORI_BUILTIN_CALLBACK Callback;
+    PYORI_SH_BUILTIN_CALLBACK Callback;
     PYORI_SH_BUILTIN_UNLOAD_CALLBACK UnloadCallback;
 
     if (YoriShBuiltinCallbacks.Next != NULL) {
         ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
         while (ListEntry != NULL) {
-            Callback = CONTAINING_RECORD(ListEntry, YORI_BUILTIN_CALLBACK, ListEntry);
+            Callback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_CALLBACK, ListEntry);
             YoriLibRemoveListItem(&Callback->ListEntry);
             YoriLibHashRemoveByEntry(&Callback->HashEntry);
             if (Callback->ReferencedModule != NULL) {
@@ -723,9 +723,9 @@ YoriShExecuteBuiltinString(
     __in PYORI_STRING Expression
     )
 {
-    YORI_EXEC_PLAN ExecPlan;
-    YORI_CMD_CONTEXT CmdContext;
-    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
+    YORI_SH_EXEC_PLAN ExecPlan;
+    YORI_SH_CMD_CONTEXT CmdContext;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
 
     //
     //  Parse the expression we're trying to execute.

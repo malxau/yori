@@ -45,7 +45,7 @@
  */
 VOID
 YoriShCaptureRedirectContext(
-    __out PYORI_PREVIOUS_REDIRECT_CONTEXT RedirectContext
+    __out PYORI_SH_PREVIOUS_REDIRECT_CONTEXT RedirectContext
     )
 {
     RedirectContext->ResetInput = FALSE;
@@ -72,10 +72,10 @@ YoriShCaptureRedirectContext(
  */
 VOID
 YoriShRevertRedirection(
-    __in PYORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    __in PYORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
     )
 {
-    YORI_PREVIOUS_REDIRECT_CONTEXT CurrentRedirectContext;
+    YORI_SH_PREVIOUS_REDIRECT_CONTEXT CurrentRedirectContext;
 
     SetConsoleCtrlHandler(NULL, TRUE);
 
@@ -121,9 +121,9 @@ YoriShRevertRedirection(
  */
 BOOL
 YoriShInitializeRedirection(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __in BOOL PrepareForBuiltIn,
-    __out PYORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    __out PYORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
     )
 {
     SECURITY_ATTRIBUTES InheritHandle;
@@ -548,13 +548,13 @@ YoriShSuckEnv(
  */
 DWORD
 YoriShCreateProcess(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     LPTSTR CmdLine;
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
-    YORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     DWORD CreationFlags = 0;
 
     ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
@@ -605,7 +605,7 @@ YoriShCreateProcess(
  */
 VOID
 YoriShCleanupFailedProcessLaunch(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     if (ExecContext->StdOutType == StdOutTypePipe &&
@@ -625,7 +625,7 @@ YoriShCleanupFailedProcessLaunch(
  */
 VOID
 YoriShCommenceProcessBuffersIfNeeded(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     //
@@ -667,7 +667,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     __in PVOID Context
     )
 {
-    PYORI_SINGLE_EXEC_CONTEXT ExecContext = (PYORI_SINGLE_EXEC_CONTEXT)Context;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext = (PYORI_SH_SINGLE_EXEC_CONTEXT)Context;
     YORI_STRING OriginalAliases;
     DWORD Err;
     BOOL HaveOriginalAliases;
@@ -792,7 +792,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
  */
 VOID
 YoriShWaitForProcessToTerminate(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     HANDLE WaitOn[3];
@@ -1008,14 +1008,14 @@ YoriShWaitForProcessToTerminate(
  */
 BOOL
 YoriShExecViaShellExecute(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __out PPROCESS_INFORMATION ProcessInfo
     )
 {
     LPTSTR Args = NULL;
-    YORI_CMD_CONTEXT ArgContext;
+    YORI_SH_CMD_CONTEXT ArgContext;
     YORI_SHELLEXECUTEINFO sei;
-    YORI_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
 
     YoriLibLoadShell32Functions();
 
@@ -1035,7 +1035,7 @@ YoriShExecViaShellExecute(
     sei.fMask = SEE_MASK_NOCLOSEPROCESS|SEE_MASK_FLAG_NO_UI|SEE_MASK_NOZONECHECKS|SEE_MASK_UNICODE;
     sei.lpFile = ExecContext->CmdToExec.ArgV[0].StartOfString;
     if (ExecContext->CmdToExec.ArgC > 1) {
-        memcpy(&ArgContext, &ExecContext->CmdToExec, sizeof(YORI_CMD_CONTEXT));
+        memcpy(&ArgContext, &ExecContext->CmdToExec, sizeof(YORI_SH_CMD_CONTEXT));
         ArgContext.ArgC--;
         ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
@@ -1080,7 +1080,7 @@ YoriShExecViaShellExecute(
  */
 DWORD
 YoriShExecuteSingleProgram(
-    __in PYORI_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     DWORD ExitCode = 0;
@@ -1196,10 +1196,10 @@ YoriShExecuteSingleProgram(
  */
 VOID
 YoriShCancelExecPlan(
-    __in PYORI_EXEC_PLAN ExecPlan
+    __in PYORI_SH_EXEC_PLAN ExecPlan
     )
 {
-    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
 
     //
     //  Loop and ask the processes nicely to terminate.
@@ -1261,11 +1261,11 @@ YoriShCancelExecPlan(
  */
 VOID
 YoriShExecExecPlan(
-    __in PYORI_EXEC_PLAN ExecPlan,
+    __in PYORI_SH_EXEC_PLAN ExecPlan,
     __out_opt PVOID * OutputBuffer
     )
 {
-    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
     PVOID PreviouslyObservedOutputBuffer = NULL;
     BOOL ExecutableFound;
 
@@ -1401,9 +1401,9 @@ YoriShExecuteExpressionAndCaptureOutput(
     __out PYORI_STRING ProcessOutput
     )
 {
-    YORI_EXEC_PLAN ExecPlan;
-    PYORI_SINGLE_EXEC_CONTEXT ExecContext;
-    YORI_CMD_CONTEXT CmdContext;
+    YORI_SH_EXEC_PLAN ExecPlan;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
+    YORI_SH_CMD_CONTEXT CmdContext;
     PVOID OutputBuffer;
 
     //
@@ -1578,8 +1578,8 @@ YoriShExecuteExpression(
     __in PYORI_STRING Expression
     )
 {
-    YORI_EXEC_PLAN ExecPlan;
-    YORI_CMD_CONTEXT CmdContext;
+    YORI_SH_EXEC_PLAN ExecPlan;
+    YORI_SH_CMD_CONTEXT CmdContext;
     YORI_STRING CurrentFullExpression;
 
     //

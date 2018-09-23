@@ -186,14 +186,37 @@ ForExecuteCommand(
     ZeroMemory(NewArgArray, ArgsNeeded * sizeof(YORI_STRING));
 
     //
-    //  MSFIX Should use a YORISPEC environment for this
+    //  If a full path is specified in the environment, use it.  If not,
+    //  use a file name only and let PATH evaluation find an interpreter.
     //
 
     if (PrefixArgCount > 0) {
         if (ExecContext->InvokeCmd) {
-            YoriLibConstantString(&NewArgArray[0], _T("cmd.exe"));
+            ArgLengthNeeded = GetEnvironmentVariable(_T("COMSPEC"), NULL, 0);
+            if (ArgLengthNeeded != 0) {
+                if (YoriLibAllocateString(&NewArgArray[0], ArgLengthNeeded)) {
+                    NewArgArray[0].LengthInChars = GetEnvironmentVariable(_T("COMSPEC"), NewArgArray[0].StartOfString, NewArgArray[0].LengthAllocated);
+                    if (NewArgArray[0].LengthInChars == 0) {
+                        YoriLibFreeStringContents(&NewArgArray[0]);
+                    }
+                }
+            }
+            if (NewArgArray[0].LengthInChars == 0) {
+                YoriLibConstantString(&NewArgArray[0], _T("cmd.exe"));
+            }
         } else {
-            YoriLibConstantString(&NewArgArray[0], _T("yori.exe"));
+            ArgLengthNeeded = GetEnvironmentVariable(_T("YORISPEC"), NULL, 0);
+            if (ArgLengthNeeded != 0) {
+                if (YoriLibAllocateString(&NewArgArray[0], ArgLengthNeeded)) {
+                    NewArgArray[0].LengthInChars = GetEnvironmentVariable(_T("YORISPEC"), NewArgArray[0].StartOfString, NewArgArray[0].LengthAllocated);
+                    if (NewArgArray[0].LengthInChars == 0) {
+                        YoriLibFreeStringContents(&NewArgArray[0]);
+                    }
+                }
+            }
+            if (NewArgArray[0].LengthInChars == 0) {
+                YoriLibConstantString(&NewArgArray[0], _T("yori.exe"));
+            }
         }
         YoriLibConstantString(&NewArgArray[1], _T("/c"));
     }
@@ -281,7 +304,7 @@ ForExecuteCommand(
 
 Cleanup:
 
-    for (Count = PrefixArgCount; Count < ArgsNeeded; Count++) {
+    for (Count = 0; Count < ArgsNeeded; Count++) {
         YoriLibFreeStringContents(&NewArgArray[Count]);
     }
 
