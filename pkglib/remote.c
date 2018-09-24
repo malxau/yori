@@ -490,6 +490,13 @@ YoriPkgCollectAllSourcesAndPackages(
 
     if (YoriLibIsListEmpty(SourcesList)) {
         YORI_STRING DummySource;
+#if YORI_BUILD_ID
+        YoriLibConstantString(&DummySource, _T("http://www.malsmith.net/testing"));
+        Source = YoriPkgAllocateRemoteSource(&DummySource);
+        if (Source != NULL) {
+            YoriLibAppendList(SourcesList, &Source->SourceList);
+        }
+#endif
         YoriLibConstantString(&DummySource, _T("http://www.malsmith.net"));
         Source = YoriPkgAllocateRemoteSource(&DummySource);
         if (Source != NULL) {
@@ -937,7 +944,5 @@ YoriPkgGetRemotePackageUrls(
 
     return PkgIndex;
 }
-
-// vim:sw=4:ts=4:et:
 
 // vim:sw=4:ts=4:et:
