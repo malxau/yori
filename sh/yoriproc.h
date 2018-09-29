@@ -132,24 +132,6 @@ VOID
 YoriShBuiltinUnregisterAll(
     );
 
-// *** CLIP.C ***
-
-BOOL
-YoriShCopyText(
-    __in PYORI_STRING Buffer
-    );
-
-BOOL
-YoriShCopyTextAndHtml(
-    __in PYORI_STRING TextVersion,
-    __in PYORI_STRING HtmlVersion
-    );
-
-BOOL
-YoriShPasteText(
-    __inout PYORI_STRING Buffer
-    );
-
 // *** CMDBUF.C ***
 
 BOOL

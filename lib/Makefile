@@ -40,6 +40,7 @@ OBJS=\
 	 printf.obj   \
 	 printfa.obj  \
 	 scut.obj     \
+	 select.obj   \
 	 string.obj   \
 	 update.obj   \
 	 util.obj     \

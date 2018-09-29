@@ -477,6 +477,22 @@ YoriLibBuildHtmlClipboardBuffer(
     __out PHANDLE HandleForClipboard
     );
 
+BOOL
+YoriLibPasteText(
+    __inout PYORI_STRING Buffer
+    );
+
+BOOL
+YoriLibCopyText(
+    __in PYORI_STRING Buffer
+    );
+
+BOOL
+YoriLibCopyTextAndHtml(
+    __in PYORI_STRING TextVersion,
+    __in PYORI_STRING HtmlVersion
+    );
+
 // *** CMDLINE.C ***
 
 BOOL
@@ -1948,6 +1964,133 @@ YoriLibCreateShortcut(
     __in WORD Hotkey,
     __in BOOL MergeWithExisting,
     __in BOOL CreateNewIfNeeded
+    );
+
+// *** SELECT.C ***
+
+/**
+ A buffer containing an array of console character attributes, along
+ with the size of the allocation.
+ */
+typedef struct _YORILIB_PREVIOUS_SELECTION_BUFFER {
+
+    /**
+     An array of character attributes corresponding to the previous
+     selection.
+     */
+    PWORD AttributeArray;
+
+    /**
+     The size of the AttributeArray allocation.
+     */
+    DWORD BufferSize;
+
+} YORILIB_PREVIOUS_SELECTION_BUFFER, *PYORILIB_PREVIOUS_SELECTION_BUFFER;
+
+/**
+ Describes a region of the screen which is selected.  This typically means the
+ application supports mouse based selection and needs to display and the
+ result of the selection.
+ */
+typedef struct _YORILIB_SELECTION {
+
+    /**
+     The coordinates where a selection started from.
+     */
+    COORD InitialPoint;
+
+    /**
+     If the mouse has left the screen, this records the extent of that
+     departure.  This means values can be negative (indicating mouse is
+     to the left or top of the screen), or positive (indicating right
+     or bottom.)
+     */
+    COORD PeriodicScrollAmount;
+
+    /**
+     The region that was selected on the last rendering pass.
+     */
+    SMALL_RECT Previous;
+
+    /**
+     The region that is selected on the next rendering pass.
+     */
+    SMALL_RECT Current;
+
+    /**
+     The current index of the previous selection buffers.
+     */
+    DWORD CurrentPreviousIndex;
+
+    /**
+     An array of two previous selection buffers.  This allows us to ping-pong
+     between the two buffers as the selection changes and avoid reallocates.
+     */
+    YORILIB_PREVIOUS_SELECTION_BUFFER PreviousBuffer[2];
+
+} YORILIB_SELECTION, *PYORILIB_SELECTION;
+
+BOOL
+YoriLibIsSelectionActive(
+    __in PYORILIB_SELECTION Selection
+    );
+
+VOID
+YoriLibRedrawSelection(
+    __inout PYORILIB_SELECTION Selection
+    );
+
+VOID
+YoriLibCleanupSelection(
+    __inout PYORILIB_SELECTION Selection
+    );
+
+BOOL
+YoriLibClearSelection(
+    __inout PYORILIB_SELECTION Selection
+    );
+
+BOOL
+YoriLibPeriodicScrollForSelection(
+    __inout PYORILIB_SELECTION Selection
+    );
+
+BOOL
+YoriLibCreateSelectionFromPoint(
+    __inout PYORILIB_SELECTION Selection,
+    __in USHORT X,
+    __in USHORT Y
+    );
+
+BOOL
+YoriLibCreateSelectionFromRange(
+    __inout PYORILIB_SELECTION Selection,
+    __in USHORT StartX,
+    __in USHORT StartY,
+    __in USHORT EndX,
+    __in USHORT EndY
+    );
+
+BOOL
+YoriLibUpdateSelectionToPoint(
+    __inout PYORILIB_SELECTION Selection,
+    __in USHORT X,
+    __in USHORT Y
+    );
+
+BOOL
+YoriLibIsPeriodicScrollActive(
+    __in PYORILIB_SELECTION Selection
+    );
+
+VOID
+YoriLibClearPeriodicScroll(
+    __in PYORILIB_SELECTION Selection
+    );
+
+BOOL
+YoriLibCopySelectionIfPresent(
+    __in PYORILIB_SELECTION Selection
     );
 
 // *** STRING.C ***

@@ -443,25 +443,6 @@ typedef struct _YORI_SH_TAB_COMPLETE_CONTEXT {
 } YORI_SH_TAB_COMPLETE_CONTEXT, *PYORI_SH_TAB_COMPLETE_CONTEXT;
 
 /**
- A buffer containing an array of console character attributes, along
- with the size of the allocation.
- */
-typedef struct _YORI_SH_PREVIOUS_SELECTION_BUFFER {
-
-    /**
-     An array of character attributes corresponding to the previous
-     selection.
-     */
-    PWORD AttributeArray;
-
-    /**
-     The size of the AttributeArray allocation.
-     */
-    DWORD BufferSize;
-
-} YORI_SH_PREVIOUS_SELECTION_BUFFER, *PYORI_SH_PREVIOUS_SELECTION_BUFFER;
-
-/**
  The context of a line that is currently being entered by the user.
  */
 typedef struct _YORI_SH_INPUT_BUFFER {
@@ -541,38 +522,9 @@ typedef struct _YORI_SH_INPUT_BUFFER {
     DWORD PreviousMouseButtonState;
 
     /**
-     The coordinates where a selection started from.
+     Description of the current selected region.
      */
-    COORD InitialSelectionPoint;
-
-    /**
-     If the mouse has left the screen, this records the extent of that
-     departure.  This means values can be negative (indicating mouse is
-     to the left or top of the screen), or positive (indicating right
-     or bottom.)
-     */
-    COORD PeriodicScrollAmount;
-
-    /**
-     The region that was selected on the last rendering pass.
-     */
-    SMALL_RECT PreviousSelection;
-
-    /**
-     The region that is selected on the next rendering pass.
-     */
-    SMALL_RECT CurrentSelection;
-
-    /**
-     The current index of the previous selection buffers.
-     */
-    DWORD CurrentPreviousSelectionIndex;
-
-    /**
-     An array of two previous selection buffers.  This allows us to ping-pong
-     between the two buffers as the selection changes and avoid reallocates.
-     */
-    YORI_SH_PREVIOUS_SELECTION_BUFFER PreviousSelectionBuffer[2];
+    YORILIB_SELECTION Selection;
 
     /**
      Delay before suggesting values in milliseconds.

@@ -5,6 +5,8 @@
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments
  - Allow child yori process to execute a plan in the background
+ - Tool for generating crashdumps from new or existing processes
+ - Use CopyFileEx when compressing to eliminate CreateFile?
  - Colorize help and error text
  - Ctrl+R
  - Ctrl+Z

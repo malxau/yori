@@ -25,7 +25,6 @@ OBJS=\
 	alias.obj        \
 	api.obj          \
 	builtin.obj      \
-	clip.obj         \
 	cmdbuf.obj       \
 	complete.obj     \
 	env.obj          \

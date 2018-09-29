@@ -215,527 +215,6 @@ YoriShPostKeyPress(
 }
 
 /**
- Returns TRUE if the current selection region is active, and FALSE if it
- is not.
-
- @param Buffer The input buffer describing the current selection state.
-
- @return TRUE if a current selection is active, FALSE if it is not.
- */
-BOOL
-YoriShIsSelectionActive(
-    __inout PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    if (Buffer->CurrentSelection.Left == Buffer->CurrentSelection.Right &&
-        Buffer->CurrentSelection.Top == Buffer->CurrentSelection.Bottom) {
-
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-/**
- Returns TRUE if a previous selection region is active, and FALSE if it
- is not.
-
- @param Buffer The input buffer describing the current selection state.
-
- @return TRUE if a current selection is active, FALSE if it is not.
- */
-BOOL
-YoriShIsPreviousSelectionActive(
-    __inout PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    if (Buffer->PreviousSelection.Left == Buffer->PreviousSelection.Right &&
-        Buffer->PreviousSelection.Top == Buffer->PreviousSelection.Bottom) {
-
-        return FALSE;
-    }
-
-    return TRUE;
-}
-
-/**
- Update a range of console cells with specified attributes.  If the attributes
- don't exist due to allocation failure, use a default attribute for the
- entire range.
-
- @param ConsoleHandle Handle to the console.
-
- @param AttributeArray If specified, pointer to an array of attributes to
-        apply.  If not specified, DefaultAttribute is used instead.
-
- @param DefaultAttribute The attribute to use for the range if AttributeArray
-        is NULL.
-
- @param Length The number of cells to update.
-
- @param StartPoint The coordinates in the console buffer to start updating
-        from.
-
- @param CharsWritten On successful completion, updated to contain the number
-        of characters updated in the console.
- */
-VOID
-YoriShDisplayAttributes(
-    __in HANDLE ConsoleHandle,
-    __in_opt PWORD AttributeArray,
-    __in WORD DefaultAttribute,
-    __in DWORD Length,
-    __in COORD StartPoint,
-    __out LPDWORD CharsWritten
-    )
-{
-    if (AttributeArray) {
-        WriteConsoleOutputAttribute(ConsoleHandle, AttributeArray, Length, StartPoint, CharsWritten);
-    } else {
-        FillConsoleOutputAttribute(ConsoleHandle, DefaultAttribute, Length, StartPoint, CharsWritten);
-    }
-}
-
-
-/**
- Allocate an attribute buffer, or reallocate one if it's already allocated,
- to contain the specified number of elements.
-
- @param AttributeBuffer Pointer to the attribute buffer to allocate or
-        reallocate.
-
- @param RequiredLength Specifies the number of cells to allocate.
-
- @return TRUE if allocation succeeded, FALSE if it did not.
- */
-BOOL
-YoriShReallocateAttributeArray(
-    __in PYORI_SH_PREVIOUS_SELECTION_BUFFER AttributeBuffer,
-    __in DWORD RequiredLength
-    )
-{
-    if (AttributeBuffer->AttributeArray != NULL) {
-        YoriLibFree(AttributeBuffer->AttributeArray);
-        AttributeBuffer->AttributeArray = NULL;
-    }
-
-    //
-    //  Allocate more than we strictly need so as to reduce the number of
-    //  reallocations
-    //
-
-    AttributeBuffer->AttributeArray = YoriLibMalloc(RequiredLength * sizeof(WORD));
-    if (AttributeBuffer->AttributeArray != NULL) {
-        AttributeBuffer->BufferSize = RequiredLength;
-        return TRUE;
-    } else {
-        AttributeBuffer->BufferSize = 0;
-        return FALSE;
-    }
-}
-
-/**
- Redraw any cells covered by a previous selection, restoring their original
- character attributes.
-
- @param Buffer The input buffer to clear the displayed selection for.
- */
-VOID
-YoriShClearPreviousSelectionDisplay(
-    __in PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    SHORT LineIndex;
-    SHORT LineLength;
-    HANDLE ConsoleHandle;
-    COORD StartPoint;
-    DWORD CharsWritten;
-    PWORD AttributeReadPoint;
-    PYORI_SH_PREVIOUS_SELECTION_BUFFER ActiveAttributes;
-
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    //
-    //  If there was no previous selection, clearing it is easy
-    //
-
-    if (!YoriShIsPreviousSelectionActive(Buffer)) {
-        return;
-    }
-
-    //
-    //  Grab a pointer to the previous selection attributes.  Note the
-    //  actual buffer can be NULL if there was an allocation failure
-    //  when selecting.  In that case attributes are restored to a
-    //  default color.
-    //
-
-    ActiveAttributes = &Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex];
-    AttributeReadPoint = ActiveAttributes->AttributeArray;
-
-    LineLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1);
-
-    for (LineIndex = Buffer->PreviousSelection.Top; LineIndex <= Buffer->PreviousSelection.Bottom; LineIndex++) {
-        StartPoint.X = Buffer->PreviousSelection.Left;
-        StartPoint.Y = LineIndex;
-
-        YoriShDisplayAttributes(ConsoleHandle, AttributeReadPoint, 0x07, LineLength, StartPoint, &CharsWritten);
-
-        if (AttributeReadPoint) {
-            AttributeReadPoint += LineLength;
-        }
-    }
-}
-
-/**
- Return the selection color to use.  On Vista and newer systems this is the
- console popup color, which is what quickedit would do.  On older systems it
- is currently hardcoded to Yellow on Blue.
-
- @param ConsoleHandle Handle to the console output device.
-
- @return The color to use for selection.
- */
-WORD
-YoriShGetSelectionColor(
-    __in HANDLE ConsoleHandle
-    )
-{
-    WORD SelectionColor;
-
-    SelectionColor = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-    if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
-        YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenInfo;
-        ZeroMemory(&ScreenInfo, sizeof(ScreenInfo));
-        ScreenInfo.cbSize = sizeof(ScreenInfo);
-        if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfo)) {
-            SelectionColor = ScreenInfo.wPopupAttributes;
-        }
-    }
-
-    return SelectionColor;
-}
-
-/**
- Draw the selection highlight around the current selection, and save off the
- character attributes of the text underneath the selection.
-
- @param Buffer The input buffer to display the selection for.
- */
-VOID
-YoriShDrawCurrentSelectionDisplay(
-    __in PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    SHORT LineIndex;
-    SHORT LineLength;
-    HANDLE ConsoleHandle;
-    COORD StartPoint;
-    DWORD CharsWritten;
-    DWORD RequiredLength;
-    PWORD AttributeWritePoint;
-    WORD SelectionColor;
-    PYORI_SH_PREVIOUS_SELECTION_BUFFER ActiveAttributes;
-
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    //
-    //  If there is no current selection, drawing it is easy
-    //
-
-    if (!YoriShIsSelectionActive(Buffer)) {
-
-        return;
-    }
-
-    RequiredLength = (Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1) * (Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
-
-    ActiveAttributes = &Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex];
-
-    if (ActiveAttributes->BufferSize < RequiredLength) {
-
-        //
-        //  Allocate more than we strictly need so as to reduce the number of
-        //  reallocations
-        //
-
-        RequiredLength = RequiredLength * 2;
-        YoriShReallocateAttributeArray(ActiveAttributes, RequiredLength);
-    }
-
-    //
-    //  Note this can be NULL on allocation failure
-    //
-
-    AttributeWritePoint = ActiveAttributes->AttributeArray;
-    LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
-
-    SelectionColor = YoriShGetSelectionColor(ConsoleHandle);
-
-    for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
-        StartPoint.X = Buffer->CurrentSelection.Left;
-        StartPoint.Y = LineIndex;
-
-        if (AttributeWritePoint != NULL) {
-            ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
-            AttributeWritePoint += LineLength;
-        }
-
-        FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
-    }
-}
-
-/**
- Draw the selection highlight around the current selection, and save off the
- character attributes of the text underneath the selection.
-
- @param Buffer The input buffer to display the selection for.
- */
-VOID
-YoriShDrawCurrentSelectionOverPreviousSelection(
-    __in PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    SHORT LineIndex;
-    SHORT LineLength;
-    SHORT RunLength;
-    HANDLE ConsoleHandle;
-    COORD StartPoint;
-    DWORD BufferOffset;
-    PWORD BufferPointer;
-    DWORD CharsWritten;
-    DWORD RequiredLength;
-    PWORD AttributeWritePoint;
-    PYORI_SH_PREVIOUS_SELECTION_BUFFER NewAttributes;
-    PYORI_SH_PREVIOUS_SELECTION_BUFFER OldAttributes;
-    DWORD NewAttributeIndex;
-    WORD SelectionColor;
-
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    ASSERT(YoriShIsPreviousSelectionActive(Buffer) && YoriShIsSelectionActive(Buffer));
-
-    //
-    //  Find the buffers that are not the ones that currently contain the
-    //  attributes of selected cells.  We'll fill that buffer with updated
-    //  information, typically drawn from the currently active buffer.
-    //
-
-    NewAttributeIndex = (Buffer->CurrentPreviousSelectionIndex + 1) % 2;
-    NewAttributes = &Buffer->PreviousSelectionBuffer[NewAttributeIndex];
-    OldAttributes = &Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex];
-
-    RequiredLength = (Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1) * (Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
-
-    if (RequiredLength > NewAttributes->BufferSize) {
-        RequiredLength = RequiredLength * 2;
-        YoriShReallocateAttributeArray(NewAttributes, RequiredLength);
-    }
-
-    LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
-
-    //
-    //  Walk through all of the new selection to save off attributes for it,
-    //  and update the console to have selection color
-    //
-
-    SelectionColor = YoriShGetSelectionColor(ConsoleHandle);
-    AttributeWritePoint = NewAttributes->AttributeArray;
-    for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
-
-        //
-        //  An entire line wasn't previously selected
-        //
-
-        if (LineIndex < Buffer->PreviousSelection.Top ||
-            LineIndex > Buffer->PreviousSelection.Bottom) {
-
-            StartPoint.X = Buffer->CurrentSelection.Left;
-            StartPoint.Y = LineIndex;
-
-            if (AttributeWritePoint != NULL) {
-                ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
-                AttributeWritePoint += LineLength;
-            }
-
-            FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
-
-        } else {
-
-            //
-            //  A set of characters to the left of the previous selection
-            //  that are now selected
-            //
-
-            if (Buffer->CurrentSelection.Left < Buffer->PreviousSelection.Left) {
-
-                StartPoint.X = Buffer->CurrentSelection.Left;
-                StartPoint.Y = LineIndex;
-
-                RunLength = (SHORT)(Buffer->PreviousSelection.Left - Buffer->CurrentSelection.Left);
-                if (LineLength < RunLength) {
-                    RunLength = LineLength;
-                }
-
-                if (AttributeWritePoint != NULL) {
-                    ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
-                    AttributeWritePoint += RunLength;
-                }
-
-                FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
-
-            }
-
-            //
-            //  A set of characters were previously selected.  These
-            //  attributes need to be migrated to the new buffer, but
-            //  the console state is already correct
-            //
-
-            if (Buffer->CurrentSelection.Right >= Buffer->PreviousSelection.Left &&
-                Buffer->CurrentSelection.Left <= Buffer->PreviousSelection.Right) {
-
-                StartPoint.X = (SHORT)(Buffer->CurrentSelection.Left - Buffer->PreviousSelection.Left);
-                RunLength = LineLength;
-                if (StartPoint.X < 0) {
-                    RunLength = (SHORT)(RunLength + StartPoint.X);
-                    StartPoint.X = 0;
-                }
-                if (StartPoint.X + RunLength > Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1) {
-                    RunLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1 - StartPoint.X);
-                }
-
-                StartPoint.Y = (SHORT)(LineIndex - Buffer->PreviousSelection.Top);
-
-                BufferOffset = (Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1) * StartPoint.Y + StartPoint.X;
-
-                if (AttributeWritePoint != NULL) {
-                    if (OldAttributes->AttributeArray != NULL) {
-                        memcpy(AttributeWritePoint, &OldAttributes->AttributeArray[BufferOffset], RunLength * sizeof(WORD));
-                    }
-
-                    AttributeWritePoint += RunLength;
-                }
-            }
-
-            //
-            //  A set of characters to the right of the previous selection
-            //  that are now selected
-            //
-
-            if (Buffer->CurrentSelection.Right > Buffer->PreviousSelection.Right) {
-
-                StartPoint.X = (SHORT)(Buffer->PreviousSelection.Right + 1);
-                if (Buffer->CurrentSelection.Left > StartPoint.X) {
-                    StartPoint.X = Buffer->CurrentSelection.Left;
-                    RunLength = LineLength;
-                } else {
-                    RunLength = (SHORT)(Buffer->CurrentSelection.Right - StartPoint.X + 1);
-                }
-                StartPoint.Y = LineIndex;
-
-                if (AttributeWritePoint != NULL) {
-                    ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
-                    AttributeWritePoint += RunLength;
-                }
-
-                FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
-            }
-        }
-    }
-
-    //
-    //  Go through the old selection looking for regions that are no longer
-    //  selected, and restore their attributes into the console
-    //
-
-    LineLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->PreviousSelection.Left + 1);
-
-    for (LineIndex = Buffer->PreviousSelection.Top; LineIndex <= Buffer->PreviousSelection.Bottom; LineIndex++) {
-
-        //
-        //  A line was previously selected and no longer is.  Restore the
-        //  saved attributes.
-        //
-
-        if (LineIndex < Buffer->CurrentSelection.Top ||
-            LineIndex > Buffer->CurrentSelection.Bottom) {
-
-            StartPoint.X = Buffer->PreviousSelection.Left;
-            StartPoint.Y = LineIndex;
-            RunLength = LineLength;
-
-            if (OldAttributes->AttributeArray != NULL) {
-                BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
-                BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
-            } else {
-                BufferPointer = NULL;
-            }
-
-            YoriShDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
-
-        } else {
-
-            //
-            //  A region to the left of the currently selected region was
-            //  previously selected.  Restore the saved attributes.
-            //
-
-            if (Buffer->PreviousSelection.Left < Buffer->CurrentSelection.Left) {
-
-                StartPoint.X = Buffer->PreviousSelection.Left;
-                StartPoint.Y = LineIndex;
-                RunLength = LineLength;
-                if (Buffer->CurrentSelection.Left - Buffer->PreviousSelection.Left < RunLength) {
-                    RunLength = (SHORT)(Buffer->CurrentSelection.Left - Buffer->PreviousSelection.Left);
-                }
-
-                if (OldAttributes->AttributeArray != NULL) {
-                    BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
-                    BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
-                } else {
-                    BufferPointer = NULL;
-                }
-
-                YoriShDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
-
-            }
-
-            //
-            //  A region to the right of the current selection was previously
-            //  selected.  Restore the saved attributes.
-            //
-
-            if (Buffer->PreviousSelection.Right > Buffer->CurrentSelection.Right) {
-
-                BufferOffset = LineLength * (LineIndex - Buffer->PreviousSelection.Top);
-                StartPoint.Y = LineIndex;
-
-                if (Buffer->PreviousSelection.Left > Buffer->CurrentSelection.Right) {
-                    StartPoint.X = Buffer->PreviousSelection.Left;
-                    RunLength = LineLength;
-                } else {
-                    RunLength = (SHORT)(Buffer->PreviousSelection.Right - Buffer->CurrentSelection.Right);
-                    StartPoint.X = (SHORT)(Buffer->CurrentSelection.Right + 1);
-                    BufferOffset += Buffer->CurrentSelection.Right - Buffer->PreviousSelection.Left + 1;
-                }
-
-                if (OldAttributes->AttributeArray != NULL) {
-                    BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
-                } else {
-                    BufferPointer = NULL;
-                }
-
-                YoriShDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
-            }
-        }
-    }
-
-    ASSERT(Buffer->CurrentPreviousSelectionIndex != NewAttributeIndex);
-    Buffer->CurrentPreviousSelectionIndex = NewAttributeIndex;
-}
-
-/**
  After a key has been pressed and processed, display the resulting buffer.
 
  @param Buffer Pointer to the input buffer to display.
@@ -755,23 +234,14 @@ YoriShDisplayAfterKeyPress(
     WORD FillAttributes;
     HANDLE hConsole;
 
+    YoriLibRedrawSelection(&Buffer->Selection);
+
     WritePosition.X = 0;
     WritePosition.Y = 0;
     SuggestionPosition.X = 0;
     SuggestionPosition.Y = 0;
     FillPosition.X = 0;
     FillPosition.Y = 0;
-
-    if (YoriShIsPreviousSelectionActive(Buffer) && YoriShIsSelectionActive(Buffer)) {
-        YoriShDrawCurrentSelectionOverPreviousSelection(Buffer);
-    } else {
-        YoriShClearPreviousSelectionDisplay(Buffer);
-        YoriShDrawCurrentSelectionDisplay(Buffer);
-    }
-    Buffer->PreviousSelection.Left = Buffer->CurrentSelection.Left;
-    Buffer->PreviousSelection.Top = Buffer->CurrentSelection.Top;
-    Buffer->PreviousSelection.Right = Buffer->CurrentSelection.Right;
-    Buffer->PreviousSelection.Bottom = Buffer->CurrentSelection.Bottom;
 
     //
     //  Re-render the text if part of the input string has changed,
@@ -1013,7 +483,6 @@ YoriShTerminateInput(
     __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    DWORD Index;
     if (Buffer->SuggestionString.LengthInChars > 0) {
         Buffer->SuggestionDirty = TRUE;
     }
@@ -1023,52 +492,13 @@ YoriShTerminateInput(
     YoriShDisplayAfterKeyPress(Buffer);
     YoriShPostKeyPress(Buffer);
     YoriShClearTabCompletionMatches(Buffer);
-    for (Index = 0; Index < 2; Index++) {
-        if (Buffer->PreviousSelectionBuffer[Index].AttributeArray) {
-            YoriLibFree(Buffer->PreviousSelectionBuffer[Index].AttributeArray);
-            Buffer->PreviousSelectionBuffer[Index].AttributeArray = NULL;
-            Buffer->PreviousSelectionBuffer[Index].BufferSize = 0;
-        }
-    }
+    YoriLibCleanupSelection(&Buffer->Selection);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
     YoriShConfigureMouseForPrograms(Buffer);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 }
 
-
-/**
- Clear any current selection.  Note this is clearing in memory state and it
- will not be re-rendered on the screen until that action is requested.
-
- @param Buffer Pointer to the input buffer describing the selection.
-
- @return TRUE to indicate a selection was cleared and the buffer requires
-         redrawing; FALSE if no redrawing is required.
- */
-BOOL
-YoriShClearSelection(
-    __inout PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    Buffer->CurrentSelection.Left = 0;
-    Buffer->CurrentSelection.Right = 0;
-    Buffer->CurrentSelection.Top = 0;
-    Buffer->CurrentSelection.Bottom = 0;
-
-    Buffer->PeriodicScrollAmount.X = 0;
-    Buffer->PeriodicScrollAmount.Y = 0;
-
-    if (Buffer->CurrentSelection.Left != Buffer->PreviousSelection.Left ||
-        Buffer->CurrentSelection.Right != Buffer->PreviousSelection.Right ||
-        Buffer->CurrentSelection.Top != Buffer->PreviousSelection.Top ||
-        Buffer->CurrentSelection.Bottom != Buffer->PreviousSelection.Bottom) {
-
-        return TRUE;
-    }
-
-    return FALSE;
-}
 
 /**
  Empty the current input buffer.
@@ -1086,7 +516,7 @@ YoriShClearInput(
     Buffer->String.LengthInChars = 0;
     Buffer->CurrentOffset = 0;
     Buffer->SearchMode = FALSE;
-    YoriShClearSelection(Buffer);
+    YoriLibClearSelection(&Buffer->Selection);
 }
 
 /**
@@ -1209,7 +639,7 @@ YoriShOverwriteSelectionIfInInput(
     //  No selection, nothing to overwrite
     //
 
-    if (!YoriShIsSelectionActive(Buffer)) {
+    if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
         return FALSE;
     }
 
@@ -1219,18 +649,18 @@ YoriShOverwriteSelectionIfInInput(
     //  ranges.
     //
 
-    if (Buffer->CurrentSelection.Bottom != Buffer->CurrentSelection.Top) {
+    if (Buffer->Selection.Current.Bottom != Buffer->Selection.Current.Top) {
         return FALSE;
     }
 
-    StartOfSelection.X = Buffer->CurrentSelection.Left;
-    StartOfSelection.Y = Buffer->CurrentSelection.Top;
+    StartOfSelection.X = Buffer->Selection.Current.Left;
+    StartOfSelection.Y = Buffer->Selection.Current.Top;
 
     if (!YoriShStringOffsetFromCoordinates(Buffer, StartOfSelection, &StartStringOffset)) {
         return FALSE;
     }
 
-    StartOfSelection.X = Buffer->CurrentSelection.Right;
+    StartOfSelection.X = Buffer->Selection.Current.Right;
 
     if (!YoriShStringOffsetFromCoordinates(Buffer, StartOfSelection, &EndStringOffset)) {
         return FALSE;
@@ -1248,168 +678,6 @@ YoriShOverwriteSelectionIfInInput(
     Buffer->CurrentOffset = StartStringOffset + Length;
     YoriShBackspace(Buffer, Length);
     return TRUE;
-}
-
-/**
- If a selection region is active, copy the region as text to the clipboard.
-
- @param Buffer Pointer to the input buffer describing the selection region.
-
- @return TRUE if the region was successfully copied, FALSE if it was not
-         copied including if no selection was present.
- */
-BOOL
-YoriShCopySelectionIfPresent(
-    __in PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    YORI_STRING TextToCopy;
-    YORI_STRING VtText;
-    YORI_STRING HtmlText;
-    SHORT LineLength;
-    SHORT LineCount;
-    SHORT LineIndex;
-    LPTSTR TextWritePoint;
-    COORD StartPoint;
-    DWORD CharsWritten;
-    HANDLE ConsoleHandle;
-
-    //
-    //  No selection, nothing to copy
-    //
-
-    if (!YoriShIsSelectionActive(Buffer)) {
-        return FALSE;
-    }
-
-    //
-    //  We want to get the attributes for rich text copy.  Rather than reinvent
-    //  that wheel, force the console to re-render if it's stale and use the
-    //  saved attribute buffer.
-    //
-
-    if (Buffer->CurrentSelection.Left != Buffer->PreviousSelection.Left ||
-        Buffer->CurrentSelection.Right != Buffer->PreviousSelection.Right ||
-        Buffer->CurrentSelection.Top != Buffer->PreviousSelection.Top ||
-        Buffer->CurrentSelection.Bottom != Buffer->PreviousSelection.Bottom) {
-
-        YoriShDisplayAfterKeyPress(Buffer);
-    }
-
-    //
-    //  If there was an allocation failure collecting attributes, stop.
-    //
-
-    if (Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex].AttributeArray == NULL) {
-        return FALSE;
-    }
-
-    //
-    //  Allocate a buffer to hold the text.  Add two chars per line for newlines.
-    //
-
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    LineLength = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
-    LineCount = (SHORT)(Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
-
-    if (!YoriLibAllocateString(&TextToCopy, (LineLength + 2) * LineCount)) {
-        return FALSE;
-    }
-
-    //
-    //  In the first pass, copy all of the text, including trailing spaces.
-    //  This version will be used to construct the rich text form.
-    //
-
-    TextWritePoint = TextToCopy.StartOfString;
-    for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
-        StartPoint.X = Buffer->CurrentSelection.Left;
-        StartPoint.Y = LineIndex;
-
-        ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
-
-        TextWritePoint += LineLength;
-    }
-
-    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
-
-    StartPoint.X = (SHORT)(Buffer->CurrentSelection.Right - Buffer->CurrentSelection.Left + 1);
-    StartPoint.Y = (SHORT)(Buffer->CurrentSelection.Bottom - Buffer->CurrentSelection.Top + 1);
-
-    //
-    //  Combine the captured text with previously saved attributes into a
-    //  VT100 stream.  This will turn into HTML.
-    //
-
-    YoriLibInitEmptyString(&VtText);
-    if (!YoriLibGenerateVtStringFromConsoleBuffers(&VtText, StartPoint, TextToCopy.StartOfString, Buffer->PreviousSelectionBuffer[Buffer->CurrentPreviousSelectionIndex].AttributeArray)) {
-        YoriLibFreeStringContents(&TextToCopy);
-        return FALSE;
-    }
-
-    //
-    //  In the second pass, copy all of the text, truncating trailing spaces.
-    //  This version will be used to construct the plain text form.
-    //
-
-    TextWritePoint = TextToCopy.StartOfString;
-    for (LineIndex = Buffer->CurrentSelection.Top; LineIndex <= Buffer->CurrentSelection.Bottom; LineIndex++) {
-        StartPoint.X = Buffer->CurrentSelection.Left;
-        StartPoint.Y = LineIndex;
-
-        ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
-        while (CharsWritten > 0) {
-            if (TextWritePoint[CharsWritten - 1] != ' ') {
-                break;
-            }
-            CharsWritten--;
-        }
-        TextWritePoint += CharsWritten;
-
-        TextWritePoint[0] = '\r';
-        TextWritePoint++;
-        TextWritePoint[0] = '\n';
-        TextWritePoint++;
-    }
-
-    //
-    //  Remove the final CRLF
-    //
-
-    if (TextToCopy.LengthInChars >= 2) {
-        TextToCopy.LengthInChars -= 2;
-    }
-
-    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
-
-    //
-    //  Convert the VT100 form into HTML, and free it
-    //
-
-    YoriLibInitEmptyString(&HtmlText);
-    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, 4)) {
-        YoriLibFreeStringContents(&VtText);
-        YoriLibFreeStringContents(&TextToCopy);
-        YoriLibFreeStringContents(&HtmlText);
-        return FALSE;
-    }
-
-    YoriLibFreeStringContents(&VtText);
-
-    //
-    //  Copy both HTML form and plain text form to the clipboard
-    //
-
-    if (YoriShCopyTextAndHtml(&TextToCopy, &HtmlText)) {
-        YoriLibFreeStringContents(&TextToCopy);
-        YoriLibFreeStringContents(&HtmlText);
-        return TRUE;
-    }
-
-    YoriLibFreeStringContents(&HtmlText);
-    YoriLibFreeStringContents(&TextToCopy);
-    return FALSE;
 }
 
 /**
@@ -1968,7 +1236,7 @@ YoriShProcessKeyDown(
                 Buffer->SearchMode = FALSE;
                 YoriLibFreeStringContents(&Buffer->SearchString);
             } else {
-                if (!YoriShCopySelectionIfPresent(Buffer)) {
+                if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
                     *TerminateInput = TRUE;
                 }
                 return TRUE;
@@ -2015,7 +1283,7 @@ YoriShProcessKeyDown(
         } else if (KeyCode == 'V') {
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
-            if (YoriShPasteText(&ClipboardData)) {
+            if (YoriLibPasteText(&ClipboardData)) {
                 YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 YoriLibFreeStringContents(&ClipboardData);
             }
@@ -2096,7 +1364,7 @@ YoriShProcessKeyDown(
                 Buffer->SearchMode = FALSE;
                 YoriLibFreeStringContents(&Buffer->SearchString);
             } else {
-                if (!YoriShCopySelectionIfPresent(Buffer)) {
+                if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
                     *TerminateInput = TRUE;
                 }
                 return TRUE;
@@ -2147,7 +1415,7 @@ YoriShProcessKeyDown(
         if (KeyCode == VK_INSERT) {
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
-            if (YoriShPasteText(&ClipboardData)) {
+            if (YoriLibPasteText(&ClipboardData)) {
                 YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 YoriLibFreeStringContents(&ClipboardData);
             }
@@ -2249,25 +1517,24 @@ YoriShProcessMouseButtonDown(
     if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
         DWORD StringOffset;
 
-        BufferChanged = YoriShClearSelection(Buffer);
-
-        Buffer->InitialSelectionPoint.X = InputRecord->Event.MouseEvent.dwMousePosition.X;
-        Buffer->InitialSelectionPoint.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
+        BufferChanged = YoriLibCreateSelectionFromPoint(&Buffer->Selection,
+                                                        InputRecord->Event.MouseEvent.dwMousePosition.X,
+                                                        InputRecord->Event.MouseEvent.dwMousePosition.Y);
 
         if (YoriShStringOffsetFromCoordinates(Buffer, InputRecord->Event.MouseEvent.dwMousePosition, &StringOffset)) {
             Buffer->CurrentOffset = StringOffset;
             BufferChanged = TRUE;
         }
     } else if (ButtonsPressed & RIGHTMOST_BUTTON_PRESSED) {
-        if (YoriShIsSelectionActive(Buffer)) {
-            BufferChanged = YoriShCopySelectionIfPresent(Buffer);
+        if (YoriLibIsSelectionActive(&Buffer->Selection)) {
+            BufferChanged = YoriLibCopySelectionIfPresent(&Buffer->Selection);
             if (BufferChanged) {
-                YoriShClearSelection(Buffer);
+                YoriLibClearSelection(&Buffer->Selection);
             }
         } else {
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
-            if (YoriShPasteText(&ClipboardData)) {
+            if (YoriLibPasteText(&ClipboardData)) {
                 YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 YoriLibFreeStringContents(&ClipboardData);
                 BufferChanged = TRUE;
@@ -2310,8 +1577,7 @@ YoriShProcessMouseButtonUp(
     //
 
     if (ButtonsReleased & FROM_LEFT_1ST_BUTTON_PRESSED) {
-        Buffer->PeriodicScrollAmount.X = 0;
-        Buffer->PeriodicScrollAmount.Y = 0;
+        YoriLibClearPeriodicScroll(&Buffer->Selection);
     }
 
     return FALSE;
@@ -2389,7 +1655,7 @@ YoriShProcessMouseDoubleClick(
         }
         YoriShGetSelectionDoubleClickBreakChars(&BreakChars);
 
-        BufferChanged = YoriShClearSelection(Buffer);
+        BufferChanged = YoriLibClearSelection(&Buffer->Selection);
 
         ReadChar = ' ';
         ReadPoint.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
@@ -2429,93 +1695,13 @@ YoriShProcessMouseDoubleClick(
             }
         }
 
-        Buffer->CurrentSelection.Top = ReadPoint.Y;
-        Buffer->CurrentSelection.Bottom = ReadPoint.Y;
-        Buffer->CurrentSelection.Left = StartOffset;
-        Buffer->CurrentSelection.Right = EndOffset;
+        YoriLibCreateSelectionFromRange(&Buffer->Selection, StartOffset, ReadPoint.Y, EndOffset, ReadPoint.Y);
 
         BufferChanged = TRUE;
         YoriLibFreeStringContents(&BreakChars);
     }
 
     return BufferChanged;
-}
-
-/**
- If the user is holding down the mouse button and trying to select a region
- that is off the screen, this routine is called periodically to move the
- window within the buffer to allow the selection to take place.
-
- @param Buffer Pointer to the input buffer to update.
-
- @return TRUE to indicate the input buffer has changed and needs to be
-         redisplayed.
- */
-BOOL
-YoriShPeriodicScroll(
-    __inout PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    HANDLE ConsoleHandle;
-    SHORT CellsToScroll;
-    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
-        return FALSE;
-    }
-
-    if (Buffer->PeriodicScrollAmount.Y < 0) {
-        CellsToScroll = (SHORT)(0 - Buffer->PeriodicScrollAmount.Y);
-        if (ScreenInfo.srWindow.Top > 0) {
-            if (ScreenInfo.srWindow.Top > CellsToScroll) {
-                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top - CellsToScroll);
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - CellsToScroll);
-            } else {
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
-                ScreenInfo.srWindow.Top = 0;
-            }
-        }
-    } else if (Buffer->PeriodicScrollAmount.Y > 0) {
-        CellsToScroll = Buffer->PeriodicScrollAmount.Y;
-        if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - 1) {
-            if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - CellsToScroll - 1) {
-                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + CellsToScroll);
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom + CellsToScroll);
-            } else {
-                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + (ScreenInfo.dwSize.Y - ScreenInfo.srWindow.Bottom - 1));
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.dwSize.Y - 1);
-            }
-        }
-    }
-
-    if (Buffer->PeriodicScrollAmount.X < 0) {
-        CellsToScroll = (SHORT)(0 - Buffer->PeriodicScrollAmount.X);
-        if (ScreenInfo.srWindow.Left > 0) {
-            if (ScreenInfo.srWindow.Left > CellsToScroll) {
-                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left - CellsToScroll);
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - CellsToScroll);
-            } else {
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left);
-                ScreenInfo.srWindow.Left = 0;
-            }
-        }
-    } else if (Buffer->PeriodicScrollAmount.X > 0) {
-        CellsToScroll = Buffer->PeriodicScrollAmount.X;
-        if (ScreenInfo.srWindow.Right < ScreenInfo.dwSize.X - 1) {
-            if (ScreenInfo.srWindow.Right < ScreenInfo.dwSize.X - CellsToScroll - 1) {
-                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + CellsToScroll);
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right + CellsToScroll);
-            } else {
-                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + (ScreenInfo.dwSize.X - ScreenInfo.srWindow.Right - 1));
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.dwSize.X - 1);
-            }
-        }
-    }
-
-    SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
-
-    return FALSE;
 }
 
 /**
@@ -2541,66 +1727,11 @@ YoriShProcessMouseMove(
     UNREFERENCED_PARAMETER(TerminateInput);
 
     if (InputRecord->Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) {
-        CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-        HANDLE ConsoleHandle;
 
-        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        YoriLibUpdateSelectionToPoint(&Buffer->Selection,
+                                      InputRecord->Event.MouseEvent.dwMousePosition.X,
+                                      InputRecord->Event.MouseEvent.dwMousePosition.Y);
 
-        if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
-            return FALSE;
-        }
-
-        if (Buffer->InitialSelectionPoint.X < InputRecord->Event.MouseEvent.dwMousePosition.X) {
-            Buffer->CurrentSelection.Left = Buffer->InitialSelectionPoint.X;
-            Buffer->CurrentSelection.Right = InputRecord->Event.MouseEvent.dwMousePosition.X;
-        } else {
-            Buffer->CurrentSelection.Left = InputRecord->Event.MouseEvent.dwMousePosition.X;
-            Buffer->CurrentSelection.Right = Buffer->InitialSelectionPoint.X;
-        }
-
-        if (Buffer->InitialSelectionPoint.Y < InputRecord->Event.MouseEvent.dwMousePosition.Y) {
-            Buffer->CurrentSelection.Top = Buffer->InitialSelectionPoint.Y;
-            Buffer->CurrentSelection.Bottom = InputRecord->Event.MouseEvent.dwMousePosition.Y;
-        } else {
-            Buffer->CurrentSelection.Top = InputRecord->Event.MouseEvent.dwMousePosition.Y;
-            Buffer->CurrentSelection.Bottom = Buffer->InitialSelectionPoint.Y;
-        }
-
-        //
-        //  Assume that the mouse move is inside the window, so periodic
-        //  scrolling is off.
-        //
-
-        Buffer->PeriodicScrollAmount.X = 0;
-        Buffer->PeriodicScrollAmount.Y = 0;
-
-        //
-        //  Check if it's outside the window and the extent of that
-        //  distance to see which periodic scrolling may be enabled.
-        //
-
-        if (InputRecord->Event.MouseEvent.dwMousePosition.X < ScreenInfo.srWindow.Left) {
-            Buffer->PeriodicScrollAmount.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Left);
-        } else if (InputRecord->Event.MouseEvent.dwMousePosition.X > ScreenInfo.srWindow.Right) {
-            Buffer->PeriodicScrollAmount.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - ScreenInfo.srWindow.Right);
-        }
-
-        if (InputRecord->Event.MouseEvent.dwMousePosition.Y < ScreenInfo.srWindow.Top) {
-            Buffer->PeriodicScrollAmount.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Top);
-        } else if (InputRecord->Event.MouseEvent.dwMousePosition.Y > ScreenInfo.srWindow.Bottom) {
-            Buffer->PeriodicScrollAmount.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - ScreenInfo.srWindow.Bottom);
-        }
-
-        //
-        //  Do one scroll immediately.  This allows the user to force scrolling
-        //  by moving the mouse outside the window.
-        //
-
-        if (Buffer->PeriodicScrollAmount.X != 0 ||
-            Buffer->PeriodicScrollAmount.Y != 0) {
-
-            YoriShPeriodicScroll(Buffer);
-        }
 
         return TRUE;
     }
@@ -2738,7 +1869,7 @@ YoriShGetExpression(
                 }
 
                 if (ReDisplayRequired) {
-                    YoriShClearSelection(&Buffer);
+                    YoriLibClearSelection(&Buffer.Selection);
                 }
 
             } else if (InputRecord->EventType == MOUSE_EVENT) {
@@ -2769,7 +1900,7 @@ YoriShGetExpression(
 
             } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
 
-                ReDisplayRequired |= YoriShClearSelection(&Buffer);
+                ReDisplayRequired |= YoriLibClearSelection(&Buffer.Selection);
             } else if (InputRecord->EventType == FOCUS_EVENT) {
                 if (InputRecord->Event.FocusEvent.bSetFocus) {
                     YoriShSetWindowState(YORI_SH_TASK_COMPLETE);
@@ -2818,15 +1949,14 @@ YoriShGetExpression(
         }
         err = WAIT_OBJECT_0;
         while (TRUE) {
-            if (Buffer.PeriodicScrollAmount.X != 0 ||
-                Buffer.PeriodicScrollAmount.Y != 0) {
+            if (YoriLibIsPeriodicScrollActive(&Buffer.Selection)) {
 
                 err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 250);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }
                 if (err == WAIT_TIMEOUT) {
-                    YoriShPeriodicScroll(&Buffer);
+                    YoriLibPeriodicScrollForSelection(&Buffer.Selection);
                 }
             } else if (!SuggestionPopulated) {
                 err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), Buffer.DelayBeforeSuggesting);
