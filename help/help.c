@@ -82,6 +82,7 @@ CHAR strHelpText1[] =
         "EXPR      Evaluate simple arithmetic expressions\n"
         "FALSE     Return false\n"
         "FINFO     Output information about file metadata\n"
+        "FILEUSER  Display which processes have a file in use\n"
         "FG        Display the output of a background job in the foreground\n"
         "FOR       Enumerates through a list of strings or files\n"
         ;

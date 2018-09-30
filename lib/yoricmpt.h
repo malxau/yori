@@ -99,6 +99,60 @@ typedef long HRESULT;
 #define ERROR_ELEVATION_REQUIRED 740
 #endif
 
+#ifndef PROCESS_QUERY_LIMITED_INFORMATION
+/**
+ Definition for opening processes with very limited access for compilation
+ environments that don't define it.
+ */
+#define PROCESS_QUERY_LIMITED_INFORMATION  (0x1000)  
+#endif
+
+/**
+ Definition of an IO_STATUS_BLOCK for compilation environments that don't
+ define it.
+ */
+typedef struct _IO_STATUS_BLOCK {
+
+    /**
+     The result of the operation.
+     */
+    union {
+        LONG Status;
+        PVOID Ptr;
+    };
+
+    /**
+     The information from the operation, typically number of bytes
+     transferred.
+     */
+    DWORD_PTR Information;
+} IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
+
+/**
+ Definition of the information class to enumerate process IDs using a file
+ for compilation environments that don't define it.
+ */
+#define FileProcessIdsUsingFileInformation (47)
+
+/**
+ A structure that is returned by NtQueryInformationFile describing
+ information about processes using a given file.
+ */
+typedef struct _FILE_PROCESS_IDS_USING_FILE_INFORMATION {
+
+    /**
+     Ignored for alignment.
+     */
+    DWORD NumberOfProcesses;
+
+    /**
+     An array of process IDs for users of this file.
+     */
+    DWORD_PTR ProcessIds[1];
+
+} FILE_PROCESS_IDS_USING_FILE_INFORMATION, *PFILE_PROCESS_IDS_USING_FILE_INFORMATION;
+
 /**
  A structure that is returned by NtQueryInformationProcess describing
  information about a process, including the location of its PEB.
@@ -2267,6 +2321,18 @@ struct IShellLinkWVtbl {
 };
 
 /**
+ A prototype for the NtQueryInformationFile function.
+ */
+typedef 
+LONG WINAPI
+NT_QUERY_INFORMATION_FILE(HANDLE, PIO_STATUS_BLOCK, PVOID, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the NtQueryInformationFile function.
+ */
+typedef NT_QUERY_INFORMATION_FILE *PNT_QUERY_INFORMATION_FILE;
+
+/**
  A prototype for the NtQueryInformationProcess function..
  */
 typedef 
@@ -2288,6 +2354,12 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtQueryInformationFile.
+     */
+    PNT_QUERY_INFORMATION_FILE pNtQueryInformationFile;
 
     /**
      If it's available on the current system, a pointer to
@@ -2552,6 +2624,18 @@ IS_WOW64_PROCESS(HANDLE, PBOOL);
 typedef IS_WOW64_PROCESS *PIS_WOW64_PROCESS;
 
 /**
+ A prototype for the QueryFullProcessImageNameW function.
+ */
+typedef
+BOOL WINAPI
+QUERY_FULL_PROCESS_IMAGE_NAMEW(HANDLE, DWORD, LPTSTR, PDWORD);
+
+/**
+ A prototype for a pointer to the the QueryFullProcessImageNameW function.
+ */
+typedef QUERY_FULL_PROCESS_IMAGE_NAMEW *PQUERY_FULL_PROCESS_IMAGE_NAMEW;
+
+/**
  A prototype for the RegisterApplicationRestart function.
  */
 typedef
@@ -2726,6 +2810,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to IsWow64Process.
      */
     PIS_WOW64_PROCESS pIsWow64Process;
+
+    /**
+     If it's available on the current system, a pointer to QueryFullProcessImageNameW.
+     */
+    PQUERY_FULL_PROCESS_IMAGE_NAMEW pQueryFullProcessImageNameW;
 
     /**
      If it's available on the current system, a pointer to RegisterApplicationRestart.
@@ -3219,6 +3308,38 @@ typedef struct _YORI_OLE32_FUNCTIONS {
 } YORI_OLE32_FUNCTIONS, *PYORI_OLE32_FUNCTIONS;
 
 extern YORI_OLE32_FUNCTIONS DllOle32;
+
+/**
+ A prototype for the GetModuleFileNameExW function.
+ */
+typedef
+DWORD WINAPI
+GET_MODULE_FILE_NAME_EXW(HANDLE, HANDLE, LPTSTR, DWORD);
+
+/**
+ A prototype for a pointer to the GetModuleFileNameExW function.
+ */
+typedef GET_MODULE_FILE_NAME_EXW *PGET_MODULE_FILE_NAME_EXW;
+
+/**
+ A structure containing optional function pointers to psapi.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_PSAPI_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to
+     GetModuleFileNameEx.
+     */
+    PGET_MODULE_FILE_NAME_EXW pGetModuleFileNameExW;
+
+} YORI_PSAPI_FUNCTIONS, *PYORI_PSAPI_FUNCTIONS;
+
+extern YORI_PSAPI_FUNCTIONS DllPsapi;
 
 /**
  A prototype for the SHBrowseForFolderW function.

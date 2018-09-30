@@ -68,6 +68,7 @@ DIRS=crt       \
      erase     \
      expr      \
      finfo     \
+     fileuser  \
      for       \
      fscmp     \
      get       \

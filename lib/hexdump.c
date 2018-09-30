@@ -274,14 +274,14 @@ YoriLibHexDwordLongLine(
         }
 
         if (DisplayWord) {
-            LARGE_INTEGER DisplayWord;
-            DisplayWord.QuadPart = WordToDisplay;
+            LARGE_INTEGER DisplayValue;
+            DisplayValue.QuadPart = WordToDisplay;
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
                           _T("%c[0%sm%08x`%08x "),
                           27,
                           (HilightBits & CurrentBit)?_T(";1"):_T(""),
-                          DisplayWord.HighPart,
-                          DisplayWord.LowPart);
+                          DisplayValue.HighPart,
+                          DisplayValue.LowPart);
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("                  "));
         }

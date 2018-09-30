@@ -89,6 +89,7 @@ YoriLibLoadNtDllFunctions()
     if (DllNtDll.hDll == NULL) {
         return FALSE;
     }
+    DllNtDll.pNtQueryInformationFile = (PNT_QUERY_INFORMATION_FILE)GetProcAddress(DllNtDll.hDll, "NtQueryInformationFile");
     DllNtDll.pNtQueryInformationProcess = (PNT_QUERY_INFORMATION_PROCESS)GetProcAddress(DllNtDll.hDll, "NtQueryInformationProcess");
     return TRUE;
 }
@@ -139,6 +140,7 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pGetPrivateProfileSectionNamesW = (PGET_PRIVATE_PROFILE_SECTION_NAMESW)GetProcAddress(DllKernel32.hDll, "GetPrivateProfileSectionNamesW");
     DllKernel32.pGetVersionExW = (PGET_VERSION_EXW)GetProcAddress(DllKernel32.hDll, "GetVersionExW");
     DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(DllKernel32.hDll, "IsWow64Process");
+    DllKernel32.pQueryFullProcessImageNameW = (PQUERY_FULL_PROCESS_IMAGE_NAMEW)GetProcAddress(DllKernel32.hDll, "QueryFullProcessImageNameW");
     DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(DllKernel32.hDll, "RegisterApplicationRestart");
     DllKernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(DllKernel32.hDll, "SetConsoleScreenBufferInfoEx");
     DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "SetCurrentConsoleFontEx");
@@ -250,6 +252,35 @@ YoriLibLoadOle32Functions()
     DllOle32.pCoCreateInstance = (PCO_CREATE_INSTANCE)GetProcAddress(DllOle32.hDll, "CoCreateInstance");
     DllOle32.pCoInitialize = (PCO_INITIALIZE)GetProcAddress(DllOle32.hDll, "CoInitialize");
     DllOle32.pCoTaskMemFree = (PCO_TASK_MEM_FREE)GetProcAddress(DllOle32.hDll, "CoTaskMemFree");
+
+    return TRUE;
+}
+
+/**
+ A structure containing pointers to psapi.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_PSAPI_FUNCTIONS DllPsapi;
+
+/**
+ Load pointers to all optional psapi.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadPsapiFunctions()
+{
+
+    if (DllPsapi.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllPsapi.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("PSAPI.DLL"));
+    if (DllPsapi.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllPsapi.pGetModuleFileNameExW = (PGET_MODULE_FILE_NAME_EXW)GetProcAddress(DllPsapi.hDll, "GetModuleFileNameExW");
 
     return TRUE;
 }

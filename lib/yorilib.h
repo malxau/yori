@@ -735,6 +735,9 @@ BOOL
 YoriLibLoadOle32Functions();
 
 BOOL
+YoriLibLoadPsapiFunctions();
+
+BOOL
 YoriLibLoadShell32Functions();
 
 BOOL
