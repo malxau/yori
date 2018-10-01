@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Determine which processes are keeping files open.\n"
         "\n"
-        "FILEUSER [-license] <file>...\n"
+        "FILEUSER [-license] [-b] [-s] <file>...\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -s             Process files from all subdirectories\n";
@@ -113,6 +113,8 @@ FileUserFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
+    FileUserContext->FilesFoundThisArg++;
+
     FileHandle = CreateFile(FilePath->StartOfString,
                             FILE_READ_ATTRIBUTES,
                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -123,13 +125,17 @@ FileUserFileFoundCallback(
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
         DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: open of %y failed: %s"), FilePath, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
+        if (LastError == ERROR_ACCESS_DENIED &&
+            DllNtDll.pRtlGetLastNtStatus != NULL &&
+            DllNtDll.pRtlGetLastNtStatus() == (LONG)0xC0000056) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: open of %y failed: the file is delete pending\n"), FilePath);
+        } else {
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: open of %y failed: %s"), FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+        }
         return TRUE;
     }
-
-    FileUserContext->FilesFoundThisArg++;
 
     Status = DllNtDll.pNtQueryInformationFile(FileHandle, &IoStatus, FileUserContext->Buffer, FileUserContext->BufferLength, FileProcessIdsUsingFileInformation);
     if (Status == 0) {

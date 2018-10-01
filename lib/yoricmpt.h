@@ -2345,6 +2345,18 @@ NT_QUERY_INFORMATION_PROCESS(HANDLE, DWORD, PVOID, DWORD, PDWORD);
 typedef NT_QUERY_INFORMATION_PROCESS *PNT_QUERY_INFORMATION_PROCESS;
 
 /**
+ A prototype for the RtlGetLastNtStatus function.
+ */
+typedef 
+LONG WINAPI
+RTL_GET_LAST_NT_STATUS();
+
+/**
+ A prototype for a pointer to the RtlGetLastNtStatus function.
+ */
+typedef RTL_GET_LAST_NT_STATUS *PRTL_GET_LAST_NT_STATUS;
+
+/**
  A structure containing optional function pointers to ntdll.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -2366,6 +2378,13 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      NtQueryInformationProcess.
      */
     PNT_QUERY_INFORMATION_PROCESS pNtQueryInformationProcess;
+
+    /**
+     If it's available on the current system, a pointer to
+     RtlGetLastNtStatus.
+     */
+    PRTL_GET_LAST_NT_STATUS pRtlGetLastNtStatus;
+
 } YORI_NTDLL_FUNCTIONS, *PYORI_NTDLL_FUNCTIONS;
 
 extern YORI_NTDLL_FUNCTIONS DllNtDll;
