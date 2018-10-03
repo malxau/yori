@@ -35,7 +35,11 @@ CHAR strHelpText[] =
         "\n"
         "Ask the shell to open a file.\n"
         "\n"
-        "START [-license] <file>\n";
+        "START [-license] [-s:b|-s:h|-s:m] <file>\n"
+        "\n"
+        "   -s:b           Start in the background\n"
+        "   -s:h           Start hidden\n"
+        "   -s:m           Start minimized\n";
 
 /**
  Display usage text to the user.
@@ -58,12 +62,15 @@ StartHelp()
 
  @param ArgV Array of arguments.
 
+ @param ShowState The state of the window for the new program.
+
  @return TRUE to indicate success, FALSE on failure.
  */
 BOOL
 StartShellExecute(
     __in DWORD ArgC,
-    __in YORI_STRING ArgV[]
+    __in YORI_STRING ArgV[],
+    __in INT ShowState
     )
 {
     YORI_STRING Args;
@@ -85,7 +92,7 @@ StartShellExecute(
     }
 
     ASSERT(YoriLibIsStringNullTerminated(&ArgV[0]));
-    hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, SW_SHOWNORMAL);
+    hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, ShowState);
 
     YoriLibFreeStringContents(&Args);
     if ((DWORD_PTR)hInst >= 32) {
@@ -147,6 +154,9 @@ ymain(
     DWORD StartArg = 0;
     DWORD i;
     YORI_STRING Arg;
+    INT ShowState;
+
+    ShowState = SW_SHOWNORMAL;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -161,6 +171,15 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:b")) == 0) {
+                ShowState = SW_SHOWNOACTIVATE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:h")) == 0) {
+                ShowState = SW_HIDE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:m")) == 0) {
+                ShowState = SW_SHOWMINNOACTIVE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -178,7 +197,7 @@ ymain(
         return EXIT_FAILURE;
     }
 
-    if (StartShellExecute(ArgC - StartArg, &ArgV[StartArg])) {
+    if (StartShellExecute(ArgC - StartArg, &ArgV[StartArg], ShowState)) {
         return EXIT_SUCCESS;
     } else {
         return EXIT_FAILURE;
