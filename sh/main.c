@@ -106,7 +106,7 @@ YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[] = {
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},
     {_T("head"),     _T("ytype -h $*$")},
-    {_T("help"),     _T("yhelp -h $*$")},
+    {_T("help"),     _T("yhelp $*$")},
     {_T("htmlclip"), _T("yclip -h $*$")},
     {_T("md"),       _T("ymkdir $*$")},
     {_T("mkdir"),    _T("ymkdir $*$")},
