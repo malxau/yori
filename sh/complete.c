@@ -896,7 +896,7 @@ YoriShPerformFileTabCompletion(
         //
 
         if (YoriShTabHeuristicMatches[Index].CharsToSkip < 0 &&
-            (DWORD)(-1 * YoriShTabHeuristicMatches[Index].CharsToSkip) > SearchString.LengthInChars) {
+            (DWORD)(-1 * YoriShTabHeuristicMatches[Index].CharsToSkip) > StringOffsetOfMatch) {
 
             YoriLibFree(MatchArray);
             YoriLibFreeStringContents(&SearchString);
