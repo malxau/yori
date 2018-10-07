@@ -603,8 +603,17 @@ YoriShFileTabCompletionCallback(
             } else if (YoriLibDoesFileMatchExpression(&ShortFileName, &SearchAfterFinalSlash)) {
                 FileNameToUse = &ShortFileName;
             } else {
-                ASSERT(FALSE);
-                FileNameToUse = &LongFileName;
+
+                //
+                //  If we can't match the long or the short name, it can be
+                //  because the expression contains extended path operators
+                //  such as {} or [].  In order to use these with suggestions
+                //  this code would need to be a lot smarter.  We could use
+                //  them for tab completion, but this piece of code can't
+                //  currently tell the difference.
+                //
+
+                return TRUE;
             }
         }
 
