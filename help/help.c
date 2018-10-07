@@ -150,6 +150,7 @@ CHAR strHelpText3[] =
         "VOL       Outputs volume information in a specified format\n"
         "WAIT      Wait for one background job or all jobs to finish executing\n"
         "WHICH     Searches a semicolon delimited environment variable for a file\n"
+        "WINPOS    Set window size or position\n"
         "YORI      Launch the Yori shell\n"
         "YPM       Install, uninstall, or update software packages\n"
         "YS        Executes a Yori script\n"

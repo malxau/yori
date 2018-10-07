@@ -107,6 +107,7 @@ DIRS=crt       \
      type      \
      vol       \
      which     \
+     winpos    \
      ypm       \
      ysetup    \
 

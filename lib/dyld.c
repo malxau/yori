@@ -376,12 +376,17 @@ YoriLibLoadUser32Functions()
         return FALSE;
     }
 
+    DllUser32.pCascadeWindows = (PCASCADE_WINDOWS)GetProcAddress(DllUser32.hDll, "CascadeWindows");
     DllUser32.pCloseClipboard = (PCLOSE_CLIPBOARD)GetProcAddress(DllUser32.hDll, "CloseClipboard");
     DllUser32.pEmptyClipboard = (PEMPTY_CLIPBOARD)GetProcAddress(DllUser32.hDll, "EmptyClipboard");
+    DllUser32.pFindWindowW = (PFIND_WINDOWW)GetProcAddress(DllUser32.hDll, "FindWindowW");
     DllUser32.pGetClipboardData = (PGET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "GetClipboardData");
+    DllUser32.pGetWindowRect = (PGET_WINDOW_RECT)GetProcAddress(DllUser32.hDll, "GetWindowRect");
+    DllUser32.pMoveWindow = (PMOVE_WINDOW)GetProcAddress(DllUser32.hDll, "MoveWindow");
     DllUser32.pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(DllUser32.hDll, "OpenClipboard");
     DllUser32.pRegisterClipboardFormatW = (PREGISTER_CLIPBOARD_FORMATW)GetProcAddress(DllUser32.hDll, "RegisterClipboardFormatW");
     DllUser32.pSetClipboardData = (PSET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "SetClipboardData");
+    DllUser32.pTileWindows = (PTILE_WINDOWS)GetProcAddress(DllUser32.hDll, "TileWindows");
 
     return TRUE;
 }

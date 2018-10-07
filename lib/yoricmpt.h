@@ -3523,6 +3523,18 @@ typedef struct _YORI_SHFOLDER_FUNCTIONS {
 extern YORI_SHFOLDER_FUNCTIONS DllShfolder;
 
 /**
+ A prototype for the CascadeWindows function.
+ */
+typedef
+WORD WINAPI
+CASCADE_WINDOWS(HWND, UINT, RECT*, UINT, HWND*);
+
+/**
+ A prototype for a pointer to the CascadeWindows function.
+ */
+typedef CASCADE_WINDOWS *PCASCADE_WINDOWS;
+
+/**
  A prototype for the CloseClipboard function.
  */
 typedef
@@ -3547,6 +3559,18 @@ EMPTY_CLIPBOARD();
 typedef EMPTY_CLIPBOARD *PEMPTY_CLIPBOARD;
 
 /**
+ A prototype for the FindWindowW function.
+ */
+typedef
+HWND WINAPI
+FIND_WINDOWW(LPCTSTR, LPCTSTR);
+
+/**
+ A prototype for a pointer to the FindWindowW function.
+ */
+typedef FIND_WINDOWW *PFIND_WINDOWW;
+
+/**
  A prototype for the GetClipboardData function.
  */
 typedef
@@ -3557,6 +3581,30 @@ GET_CLIPBOARD_DATA(UINT);
  A prototype for a pointer to the GetClipboardData function.
  */
 typedef GET_CLIPBOARD_DATA *PGET_CLIPBOARD_DATA;
+
+/**
+ A prototype for the GetWindowRect function.
+ */
+typedef
+BOOL WINAPI
+GET_WINDOW_RECT(HWND, LPRECT);
+
+/**
+ A prototype for a pointer to the GetWindowRect function.
+ */
+typedef GET_WINDOW_RECT *PGET_WINDOW_RECT;
+
+/**
+ A prototype for the MoveWindow function.
+ */
+typedef
+BOOL WINAPI
+MOVE_WINDOW(HWND, INT, INT, INT, INT, BOOL);
+
+/**
+ A prototype for a pointer to the MoveWindow function.
+ */
+typedef MOVE_WINDOW *PMOVE_WINDOW;
 
 /**
  A prototype for the OpenClipboard function.
@@ -3595,6 +3643,18 @@ SET_CLIPBOARD_DATA(UINT, HANDLE);
 typedef SET_CLIPBOARD_DATA *PSET_CLIPBOARD_DATA;
 
 /**
+ A prototype for the TileWindows function.
+ */
+typedef
+WORD WINAPI
+TILE_WINDOWS(HWND, UINT, RECT*, UINT, HWND*);
+
+/**
+ A prototype for a pointer to the TileWindows function.
+ */
+typedef TILE_WINDOWS *PTILE_WINDOWS;
+
+/**
  A structure containing optional function pointers to user32.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -3603,6 +3663,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to CascadeWindows.
+     */
+    PCASCADE_WINDOWS pCascadeWindows;
 
     /**
      If it's available on the current system, a pointer to CloseClipboard.
@@ -3615,9 +3680,24 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PEMPTY_CLIPBOARD pEmptyClipboard;
 
     /**
+     If it's available on the current system, a pointer to FindWindowW.
+     */
+    PFIND_WINDOWW pFindWindowW;
+
+    /**
      If it's available on the current system, a pointer to GetClipboardData.
      */
     PGET_CLIPBOARD_DATA pGetClipboardData;
+
+    /**
+     If it's available on the current system, a pointer to GetWindowRect.
+     */
+    PGET_WINDOW_RECT pGetWindowRect;
+
+    /**
+     If it's available on the current system, a pointer to MoveWindow.
+     */
+    PMOVE_WINDOW pMoveWindow;
 
     /**
      If it's available on the current system, a pointer to OpenClipboard.
@@ -3633,6 +3713,12 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to SetClipboardData.
      */
     PSET_CLIPBOARD_DATA pSetClipboardData;
+
+    /**
+     If it's available on the current system, a pointer to TileWindows.
+     */
+    PTILE_WINDOWS pTileWindows;
+
 } YORI_USER32_FUNCTIONS, *PYORI_USER32_FUNCTIONS;
 
 extern YORI_USER32_FUNCTIONS DllUser32;
