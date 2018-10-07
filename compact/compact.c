@@ -213,6 +213,7 @@ ymain(
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS16K;
                 CompactContext.Compress = TRUE;
+                ArgumentUnderstood = TRUE;
 
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
