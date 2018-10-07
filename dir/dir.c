@@ -288,7 +288,7 @@ DirOutputEndOfDirectorySummary(
 
  @param Depth Recursion depth, ignored in this application.
 
- @param DirContext Pointer to the dir context structure indicating the
+ @param Context Pointer to the dir context structure indicating the
         action to perform and populated with the number of objects found.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -298,7 +298,7 @@ DirFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PDIR_CONTEXT DirContext
+    __in PVOID Context
     )
 {
     SYSTEMTIME FileWriteTime;
@@ -307,6 +307,7 @@ DirFileFoundCallback(
     TCHAR SizeStringBuffer[DIR_SIZE_FIELD_SIZE];
     LARGE_INTEGER FileSize;
     LPTSTR FilePart;
+    PDIR_CONTEXT DirContext = (PDIR_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
