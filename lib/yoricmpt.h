@@ -3643,6 +3643,42 @@ SET_CLIPBOARD_DATA(UINT, HANDLE);
 typedef SET_CLIPBOARD_DATA *PSET_CLIPBOARD_DATA;
 
 /**
+ A prototype for the SetForegroundWindow function.
+ */
+typedef
+BOOL WINAPI
+SET_FOREGROUND_WINDOW(HWND);
+
+/**
+ A prototype for a pointer to the SetForegroundWindow function.
+ */
+typedef SET_FOREGROUND_WINDOW *PSET_FOREGROUND_WINDOW;
+
+/**
+ A prototype for the SetWindowTextW function.
+ */
+typedef
+BOOL WINAPI
+SET_WINDOW_TEXTW(HWND, LPCTSTR);
+
+/**
+ A prototype for a pointer to the SetWindowTextW function.
+ */
+typedef SET_WINDOW_TEXTW *PSET_WINDOW_TEXTW;
+
+/**
+ A prototype for the ShowWindow function.
+ */
+typedef
+BOOL WINAPI
+SHOW_WINDOW(HWND, INT);
+
+/**
+ A prototype for a pointer to the ShowWindow function.
+ */
+typedef SHOW_WINDOW *PSHOW_WINDOW;
+
+/**
  A prototype for the TileWindows function.
  */
 typedef
@@ -3713,6 +3749,21 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to SetClipboardData.
      */
     PSET_CLIPBOARD_DATA pSetClipboardData;
+
+    /**
+     If it's available on the current system, a pointer to SetForegroundWindow.
+     */
+    PSET_FOREGROUND_WINDOW pSetForegroundWindow;
+
+    /**
+     If it's available on the current system, a pointer to SetWindowTextW.
+     */
+    PSET_WINDOW_TEXTW pSetWindowTextW;
+
+    /**
+     If it's available on the current system, a pointer to ShowWindow.
+     */
+    PSHOW_WINDOW pShowWindow;
 
     /**
      If it's available on the current system, a pointer to TileWindows.

@@ -36,13 +36,23 @@ CHAR strHelpText[] =
         "Ask the shell to open a file.\n"
         "\n"
         "WINPOS [-license] [-c|-t]\n"
-        "WINPOS -m <title> <coordinates>\n"
+        "WINPOS -a <title>\n"
+        "WINPOS -m <title>\n"
+        "WINPOS -n <title> <newtitle>\n"
+        "WINPOS -p <title> <coordinates>\n"
+        "WINPOS -r <title>\n"
         "WINPOS -s <title> <coordinates>\n"
+        "WINPOS -x <title>\n"
         "\n"
+        "   -a             Activate a specified window\n"
         "   -c             Cascade windows on the desktop\n"
-        "   -m             Move a specified window\n"
+        "   -m             Minimize a specified window\n"
+        "   -n             Set the window title\n"
+        "   -p             Position a specified window\n"
+        "   -r             Restore a specified window (not minimized or maximized)\n"
         "   -s             Resize a specified window\n"
-        "   -t             Tile windows on the desktop\n";
+        "   -t             Tile windows on the desktop\n"
+        "   -x             Maximize a specified window\n";
 
 /**
  Display usage text to the user.
@@ -68,6 +78,11 @@ typedef enum _WINPOS_OPERATION {
     WinPosOperationTile = 2,
     WinPosOperationMove = 3,
     WinPosOperationSize = 4,
+    WinPosOperationMinimize = 5,
+    WinPosOperationMaximize = 6,
+    WinPosOperationRestore = 7,
+    WinPosOperationActivate = 8,
+    WinPosOperationName = 9,
 } WINPOS_OPERATION;
 
 /**
@@ -153,6 +168,7 @@ ymain(
     DWORD i;
     YORI_STRING Arg;
     PYORI_STRING WindowTitle = NULL;
+    PYORI_STRING NewWindowTitle = NULL;
     PYORI_STRING WindowCoordinates = NULL;
     WINPOS_OPERATION Operation;
 
@@ -172,14 +188,39 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+                if (ArgC >= i + 1) {
+                    Operation = WinPosOperationActivate;
+                    WindowTitle = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 Operation = WinPosOperationCascade;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+                if (ArgC >= i + 1) {
+                    Operation = WinPosOperationMinimize;
+                    WindowTitle = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+                if (ArgC >= i + 2) {
+                    Operation = WinPosOperationName;
+                    WindowTitle = &ArgV[i + 1];
+                    NewWindowTitle = &ArgV[i + 2];
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
                 if (ArgC >= i + 2) {
                     Operation = WinPosOperationMove;
                     WindowTitle = &ArgV[i + 1];
                     WindowCoordinates = &ArgV[i + 2];
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                if (ArgC >= i + 1) {
+                    Operation = WinPosOperationRestore;
+                    WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
@@ -192,6 +233,12 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
                 Operation = WinPosOperationTile;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("x")) == 0) {
+                if (ArgC >= i + 1) {
+                    Operation = WinPosOperationMaximize;
+                    WindowTitle = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                }
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -280,6 +327,82 @@ ymain(
                 }
                 DllUser32.pMoveWindow(Window, CurrentPosition.left, CurrentPosition.top, NewWidth, NewHeight, TRUE);
             }
+            break;
+        case WinPosOperationMinimize:
+            if (DllUser32.pShowWindow == NULL ||
+                DllUser32.pFindWindowW == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: operating system support not present\n"));
+                return EXIT_FAILURE;
+            } else {
+                HWND Window;
+                Window = DllUser32.pFindWindowW(NULL, WindowTitle->StartOfString);
+                if (Window == NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: matching window not found\n"));
+                    return EXIT_FAILURE;
+                }
+                DllUser32.pShowWindow(Window, SW_MINIMIZE);
+            }
+            break;
+        case WinPosOperationMaximize:
+            if (DllUser32.pShowWindow == NULL ||
+                DllUser32.pFindWindowW == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: operating system support not present\n"));
+                return EXIT_FAILURE;
+            } else {
+                HWND Window;
+                Window = DllUser32.pFindWindowW(NULL, WindowTitle->StartOfString);
+                if (Window == NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: matching window not found\n"));
+                    return EXIT_FAILURE;
+                }
+                DllUser32.pShowWindow(Window, SW_MAXIMIZE);
+            }
+            break;
+        case WinPosOperationRestore:
+            if (DllUser32.pShowWindow == NULL ||
+                DllUser32.pFindWindowW == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: operating system support not present\n"));
+                return EXIT_FAILURE;
+            } else {
+                HWND Window;
+                Window = DllUser32.pFindWindowW(NULL, WindowTitle->StartOfString);
+                if (Window == NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: matching window not found\n"));
+                    return EXIT_FAILURE;
+                }
+                DllUser32.pShowWindow(Window, SW_RESTORE);
+            }
+            break;
+        case WinPosOperationActivate:
+            if (DllUser32.pSetForegroundWindow == NULL ||
+                DllUser32.pFindWindowW == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: operating system support not present\n"));
+                return EXIT_FAILURE;
+            } else {
+                HWND Window;
+                Window = DllUser32.pFindWindowW(NULL, WindowTitle->StartOfString);
+                if (Window == NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: matching window not found\n"));
+                    return EXIT_FAILURE;
+                }
+                DllUser32.pSetForegroundWindow(Window);
+            }
+            break;
+        case WinPosOperationName:
+            if (DllUser32.pSetWindowTextW == NULL ||
+                DllUser32.pFindWindowW == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: operating system support not present\n"));
+                return EXIT_FAILURE;
+            } else {
+                HWND Window;
+                Window = DllUser32.pFindWindowW(NULL, WindowTitle->StartOfString);
+                if (Window == NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("winpos: matching window not found\n"));
+                    return EXIT_FAILURE;
+                }
+                DllUser32.pSetWindowTextW(Window, NewWindowTitle->StartOfString);
+            }
+            break;
     }
 
     return EXIT_SUCCESS;
