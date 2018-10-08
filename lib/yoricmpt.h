@@ -3571,6 +3571,18 @@ FIND_WINDOWW(LPCTSTR, LPCTSTR);
 typedef FIND_WINDOWW *PFIND_WINDOWW;
 
 /**
+ A prototype for the GetClientRect function.
+ */
+typedef
+BOOL WINAPI
+GET_CLIENT_RECT(HWND, LPRECT);
+
+/**
+ A prototype for a pointer to the GetClientRect function.
+ */
+typedef GET_CLIENT_RECT *PGET_CLIENT_RECT;
+
+/**
  A prototype for the GetClipboardData function.
  */
 typedef
@@ -3581,6 +3593,18 @@ GET_CLIPBOARD_DATA(UINT);
  A prototype for a pointer to the GetClipboardData function.
  */
 typedef GET_CLIPBOARD_DATA *PGET_CLIPBOARD_DATA;
+
+/**
+ A prototype for the GetDesktopWindow function.
+ */
+typedef
+HWND WINAPI
+GET_DESKTOP_WINDOW();
+
+/**
+ A prototype for a pointer to the GetDesktopWindow function.
+ */
+typedef GET_DESKTOP_WINDOW *PGET_DESKTOP_WINDOW;
 
 /**
  A prototype for the GetWindowRect function.
@@ -3721,9 +3745,19 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PFIND_WINDOWW pFindWindowW;
 
     /**
+     If it's available on the current system, a pointer to GetClientRect.
+     */
+    PGET_CLIENT_RECT pGetClientRect;
+
+    /**
      If it's available on the current system, a pointer to GetClipboardData.
      */
     PGET_CLIPBOARD_DATA pGetClipboardData;
+
+    /**
+     If it's available on the current system, a pointer to GetDesktopWindow.
+     */
+    PGET_DESKTOP_WINDOW pGetDesktopWindow;
 
     /**
      If it's available on the current system, a pointer to GetWindowRect.

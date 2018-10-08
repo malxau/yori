@@ -1873,6 +1873,12 @@ YoriLibSPrintfS(
     );
 
 int
+YoriLibSPrintfSize(
+    __in LPCTSTR szFmt,
+    ...
+    );
+
+int
 YoriLibSPrintfA(
     __out LPSTR szDest,
     __in LPCSTR szFmt,

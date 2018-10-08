@@ -179,4 +179,28 @@ YoriLibYPrintf(
     return out_len;
 }
 
+/**
+ Process a printf format string and count the number of characters required
+ to contain the result, including the NULL terminator character.
+
+ @param szFmt The format string to process.
+
+ @return The number of characters that could be populated into the buffer, or
+         -1 on error.
+ */
+int
+YoriLibSPrintfSize(
+    __in LPCTSTR szFmt,
+    ...
+    )
+{
+    va_list marker;
+    int out_len;
+
+    va_start( marker, szFmt );
+    out_len = YoriLibVSPrintfSize(szFmt, marker);
+    va_end( marker );
+    return out_len;
+}
+
 // vim:sw=4:ts=4:et:

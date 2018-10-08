@@ -33,7 +33,7 @@
 const
 CHAR strHelpText[] =
         "\n"
-        "Ask the shell to open a file.\n"
+        "Move or size application windows.\n"
         "\n"
         "WINPOS [-license] [-c|-t]\n"
         "WINPOS -a <title>\n"
@@ -186,58 +186,65 @@ ymain(
                 WinPosHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
-                if (ArgC >= i + 1) {
+                if (ArgC > i + 1) {
                     Operation = WinPosOperationActivate;
                     WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
+                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 Operation = WinPosOperationCascade;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
-                if (ArgC >= i + 1) {
+                if (ArgC > i + 1) {
                     Operation = WinPosOperationMinimize;
                     WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
+                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
-                if (ArgC >= i + 2) {
+                if (ArgC > i + 2) {
                     Operation = WinPosOperationName;
                     WindowTitle = &ArgV[i + 1];
                     NewWindowTitle = &ArgV[i + 2];
                     ArgumentUnderstood = TRUE;
+                    i += 2;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
-                if (ArgC >= i + 2) {
+                if (ArgC > i + 2) {
                     Operation = WinPosOperationMove;
                     WindowTitle = &ArgV[i + 1];
                     WindowCoordinates = &ArgV[i + 2];
                     ArgumentUnderstood = TRUE;
+                    i += 2;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
-                if (ArgC >= i + 1) {
+                if (ArgC > i + 1) {
                     Operation = WinPosOperationRestore;
                     WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
+                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
-                if (ArgC >= i + 2) {
+                if (ArgC > i + 2) {
                     Operation = WinPosOperationSize;
                     WindowTitle = &ArgV[i + 1];
                     WindowCoordinates = &ArgV[i + 2];
                     ArgumentUnderstood = TRUE;
+                    i += 2;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
                 Operation = WinPosOperationTile;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("x")) == 0) {
-                if (ArgC >= i + 1) {
+                if (ArgC > i + 1) {
                     Operation = WinPosOperationMaximize;
                     WindowTitle = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
+                    i++;
                 }
             }
         } else {

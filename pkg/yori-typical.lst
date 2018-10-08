@@ -26,4 +26,5 @@ tail.exe
 tee.exe
 touch.exe
 which.exe
+wininfo.exe
 winpos.exe
