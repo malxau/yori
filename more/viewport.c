@@ -604,7 +604,15 @@ MoreDegenerateDisplay(
 
     for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
 
-        YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialColor);
+        if (MoreContext->DisplayViewportLines[Index].InitialColor == 7) {
+            if (Index % 2 != 0) {
+                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x17);
+            } else {
+                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x7);
+            }
+        } else {
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialColor);
+        }
 
         if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
@@ -1062,6 +1070,81 @@ MoreRegenerateViewport(
     MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
 }
 
+/**
+ Move the viewport left, if the buffer is wider than the window.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @param LinesToMove Specifies the number of lines to move down.
+ */
+VOID
+MoreMoveViewportLeft(
+    __inout PMORE_CONTEXT MoreContext,
+    __in DWORD LinesToMove
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+
+    UNREFERENCED_PARAMETER(MoreContext);
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    if (ScreenInfo.srWindow.Left == 0) {
+        return;
+    }
+
+    if ((DWORD)ScreenInfo.srWindow.Left > LinesToMove) {
+        ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left - LinesToMove);
+        ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - LinesToMove);
+    } else {
+        ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left);
+        ScreenInfo.srWindow.Left = 0;
+    }
+
+    SetConsoleWindowInfo(StdOutHandle, TRUE, &ScreenInfo.srWindow);
+}
+
+/**
+ Move the viewport right, if the buffer is wider than the window.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @param LinesToMove Specifies the number of lines to move down.
+ */
+VOID
+MoreMoveViewportRight(
+    __inout PMORE_CONTEXT MoreContext,
+    __in DWORD LinesToMove
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    DWORD LinesLeft;
+    HANDLE StdOutHandle;
+
+    UNREFERENCED_PARAMETER(MoreContext);
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    if (ScreenInfo.srWindow.Right == ScreenInfo.dwSize.X - 1) {
+        return;
+    }
+
+    LinesLeft = ScreenInfo.dwSize.X - ScreenInfo.srWindow.Right - 1;
+
+    if (LinesLeft > LinesToMove) {
+        ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + LinesToMove);
+        ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right + LinesToMove);
+    } else {
+        ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + LinesLeft);
+        ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right + LinesLeft);
+    }
+
+    SetConsoleWindowInfo(StdOutHandle, TRUE, &ScreenInfo.srWindow);
+}
+
 
 /**
  Perform the requested action when the user presses a key.
@@ -1107,6 +1190,10 @@ MoreProcessKeyDown(
             MoreMoveViewportDown(MoreContext, 1);
         } else if (KeyCode == VK_UP) {
             MoreMoveViewportUp(MoreContext, 1);
+        } else if (KeyCode == VK_LEFT) {
+            MoreMoveViewportLeft(MoreContext, 1);
+        } else if (KeyCode == VK_RIGHT) {
+            MoreMoveViewportRight(MoreContext, 1);
         } else if (KeyCode == VK_NEXT) {
             MoreContext->LinesInPage = 0;
             MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
@@ -1173,7 +1260,7 @@ MoreProcessResizeViewport(
             NewCursorPosition.Y = (USHORT)((DWORD)ScreenInfo.dwCursorPosition.Y + NewViewportHeight - MoreContext->ViewportHeight);
 
             NewWindow.Left = 0;
-            NewWindow.Right = (USHORT)(MoreContext->ViewportWidth - 1);
+            NewWindow.Right = (USHORT)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1);
             NewWindow.Top = (USHORT)(NewCursorPosition.Y - NewViewportHeight);
             NewWindow.Bottom = NewCursorPosition.Y;
 
@@ -1242,12 +1329,16 @@ MoreCheckForWindowSizeChange(
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE StdOutHandle;
+    DWORD NewViewportWidth;
+    DWORD NewViewportHeight;
 
     StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
 
-    if ((DWORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top) != MoreContext->ViewportHeight ||
-        (DWORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1) != MoreContext->ViewportWidth) {
+    MoreGetViewportDimensions(&ScreenInfo, &NewViewportWidth, &NewViewportHeight);
+
+    if (NewViewportHeight != MoreContext->ViewportHeight ||
+        NewViewportWidth != MoreContext->ViewportWidth) {
 
         MoreProcessResizeViewport(MoreContext);
     }

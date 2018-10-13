@@ -46,7 +46,7 @@ MoreGetViewportDimensions(
     __out PDWORD ViewportHeight
     )
 {
-    *ViewportWidth = (DWORD)(ScreenInfo->srWindow.Right - ScreenInfo->srWindow.Left + 1);
+    *ViewportWidth = ScreenInfo->dwSize.X;
     *ViewportHeight = (DWORD)(ScreenInfo->srWindow.Bottom - ScreenInfo->srWindow.Top);
 }
 
