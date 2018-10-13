@@ -44,14 +44,18 @@
  @param HilightBits The set of bytes that should be hilighted.  This is
         a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
         order bit corresponds to the first byte.
+
+ @param DisplaySeperator If TRUE, display a character at the midpoint of
+        each line.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexByteLine(
-    __in LPCSTR Buffer,
+    __in UCHAR CONST * Buffer,
     __in DWORD BytesToDisplay,
-    __in DWORD HilightBits
+    __in DWORD HilightBits,
+    __in BOOLEAN DisplaySeperator
     )
 {
     UCHAR WordToDisplay = 0;
@@ -66,7 +70,7 @@ YoriLibHexByteLine(
 
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
-        if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
+        if (DisplaySeperator && WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
@@ -108,14 +112,18 @@ YoriLibHexByteLine(
  @param HilightBits The set of bytes that should be hilighted.  This is
         a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
         order bit corresponds to the first byte.
+
+ @param DisplaySeperator If TRUE, display a character at the midpoint of
+        each line.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexWordLine(
-    __in LPCSTR Buffer,
+    __in UCHAR CONST * Buffer,
     __in DWORD BytesToDisplay,
-    __in DWORD HilightBits
+    __in DWORD HilightBits,
+    __in BOOLEAN DisplaySeperator
     )
 {
     WORD WordToDisplay = 0;
@@ -130,7 +138,7 @@ YoriLibHexWordLine(
 
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
-        if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
+        if (DisplaySeperator && WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
@@ -173,14 +181,18 @@ YoriLibHexWordLine(
  @param HilightBits The set of bytes that should be hilighted.  This is
         a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
         order bit corresponds to the first byte.
+
+ @param DisplaySeperator If TRUE, display a character at the midpoint of
+        each line.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexDwordLine(
-    __in LPCSTR Buffer,
+    __in UCHAR CONST * Buffer,
     __in DWORD BytesToDisplay,
-    __in DWORD HilightBits
+    __in DWORD HilightBits,
+    __in BOOLEAN DisplaySeperator
     )
 {
     DWORD WordToDisplay = 0;
@@ -195,7 +207,7 @@ YoriLibHexDwordLine(
 
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
-        if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
+        if (DisplaySeperator && WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
@@ -237,14 +249,18 @@ YoriLibHexDwordLine(
  @param HilightBits The set of bytes that should be hilighted.  This is
         a bitmask with YORI_LIB_HEXDUMP_BYTES_PER_LINE bits where the high
         order bit corresponds to the first byte.
+
+ @param DisplaySeperator If TRUE, display a character at the midpoint of
+        each line.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibHexDwordLongLine(
-    __in LPCSTR Buffer,
+    __in UCHAR CONST * Buffer,
     __in DWORD BytesToDisplay,
-    __in DWORD HilightBits
+    __in DWORD HilightBits,
+    __in BOOLEAN DisplaySeperator
     )
 {
     DWORDLONG WordToDisplay = 0;
@@ -259,7 +275,7 @@ YoriLibHexDwordLongLine(
 
     for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
 
-        if (WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
+        if (DisplaySeperator && WordIndex == YORI_LIB_HEXDUMP_BYTES_PER_LINE / (sizeof(WordToDisplay) * 2)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(": "));
         }
 
@@ -360,13 +376,13 @@ YoriLibHexDump(
         //
 
         if (BytesPerWord == 1) {
-            YoriLibHexByteLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
+            YoriLibHexByteLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         } else if (BytesPerWord == 2) {
-            YoriLibHexWordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
+            YoriLibHexWordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         } else if (BytesPerWord == 4) {
-            YoriLibHexDwordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
+            YoriLibHexDwordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         } else if (BytesPerWord == 8) {
-            YoriLibHexDwordLongLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0);
+            YoriLibHexDwordLongLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         }
 
         //
@@ -515,13 +531,13 @@ YoriLibHexDiff(
             //
 
             if (BytesPerWord == 1) {
-                YoriLibHexByteLine(BufferToDisplay, BytesToDisplay, HilightBits);
+                YoriLibHexByteLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             } else if (BytesPerWord == 2) {
-                YoriLibHexWordLine(BufferToDisplay, BytesToDisplay, HilightBits);
+                YoriLibHexWordLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             } else if (BytesPerWord == 4) {
-                YoriLibHexDwordLine(BufferToDisplay, BytesToDisplay, HilightBits);
+                YoriLibHexDwordLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             } else if (BytesPerWord == 8) {
-                YoriLibHexDwordLongLine(BufferToDisplay, BytesToDisplay, HilightBits);
+                YoriLibHexDwordLongLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             }
 
             //
