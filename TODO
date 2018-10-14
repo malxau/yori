@@ -1,5 +1,8 @@
+v1.0:
+ - Ypm upgrade remove all before install so files can move between packages
  - Search in more
  - Selection in more?
+ - Hexdump -r
  - Make selection use RTF
  - General MSFIX review
  - Support input from devices other than consoles
@@ -7,14 +10,18 @@
  - Allow child yori process to execute a plan in the background
  - Tool for generating crashdumps from new or existing processes
  - ISO mount/unmount
- - Use CopyFileEx when compressing to eliminate CreateFile?
- - Colorize help and error text
- - Ctrl+R
- - Ctrl+Z
- - Isolate aliases during call
  - Have find apply file criteria
  - Cal
+ - Split sdir brief recurse into standalone du
+
+To consider:
+ - Use CopyFileEx when compressing to eliminate CreateFile?
+ - Isolate aliases during call
+ - Colorize help and error text
+ - Ctrl+R
+
+v2.0:
  - Port pcre
  - Use regex in hilite
  - Case statement in ys
- - Split sdir brief recurse into standalone du
+ - Ctrl+Z
