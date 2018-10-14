@@ -71,6 +71,12 @@ typedef struct _YORI_SH_CMD_CONTEXT {
      the contents of each of the arguments also.
      */
     PVOID MemoryToFree;
+
+    /**
+     TRUE if there are characters in the string following the final argument.
+     FALSE if the final character in the string is part of an argument.
+     */
+    BOOL TrailingChars;
 } YORI_SH_CMD_CONTEXT, *PYORI_SH_CMD_CONTEXT;
 
 /**

@@ -2070,7 +2070,9 @@ YoriShCompleteSuggestion(
         return;
     }
 
-    if (CmdContext.CurrentArg != CmdContext.ArgC - 1) {
+    if (CmdContext.CurrentArg != CmdContext.ArgC - 1 ||
+        CmdContext.TrailingChars) {
+
         YoriShFreeCmdContext(&CmdContext);
         return;
     }

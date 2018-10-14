@@ -176,6 +176,8 @@ YoriShParseCmdlineToCmdContext(
     BOOLEAN LookingForFirstQuote = FALSE;
     BOOLEAN IsMultiCommandOperatorArgument = FALSE;
 
+    CmdContext->TrailingChars = FALSE;
+
     YoriLibInitEmptyString(&Char);
     Char.StartOfString = CmdLine->StartOfString;
     Char.LengthInChars = CmdLine->LengthInChars;
@@ -280,7 +282,12 @@ YoriShParseCmdlineToCmdContext(
 
         if (TerminateArg) {
 
-            YoriShTrimSpacesFromBeginning(&Char);
+            if (Char.LengthInChars > 0) {
+                YoriShTrimSpacesFromBeginning(&Char);
+                if (Char.LengthInChars == 0) {
+                    CmdContext->TrailingChars = TRUE;
+                }
+            }
 
             if (!CurrentArgFound &&
                 (Char.StartOfString - CmdLine->StartOfString > (LONG)CurrentOffset)) {

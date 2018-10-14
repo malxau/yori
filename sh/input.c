@@ -748,6 +748,18 @@ YoriShAddYoriStringToInput(
             return;
         }
 
+        //
+        //  Trim any trailing spaces if we're "inserting" before them.
+        //
+
+        while (Buffer->String.LengthInChars > 0 &&
+               Buffer->String.LengthInChars != Buffer->CurrentOffset) {
+            if (Buffer->String.StartOfString[Buffer->String.LengthInChars - 1] == ' ') {
+                Buffer->String.LengthInChars--;
+            } else {
+                break;
+            }
+        }
         if (Buffer->String.LengthInChars != Buffer->CurrentOffset) {
             memmove(&Buffer->String.StartOfString[Buffer->CurrentOffset + String->LengthInChars],
                     &Buffer->String.StartOfString[Buffer->CurrentOffset],
