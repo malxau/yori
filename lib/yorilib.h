@@ -2027,6 +2027,16 @@ typedef struct _YORILIB_SELECTION {
     SMALL_RECT Current;
 
     /**
+     TRUE if a selection is active on the previous rendering pass.
+     */
+    BOOL SelectionPreviouslyActive;
+
+    /**
+     TRUE if a selection is active on the next rendering pass.
+     */
+    BOOL SelectionCurrentlyActive;
+
+    /**
      The current index of the previous selection buffers.
      */
     DWORD CurrentPreviousIndex;

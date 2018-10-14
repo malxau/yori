@@ -1201,6 +1201,64 @@ YoriShConfigureInputSettings(
 }
 
 /**
+ Create a new selection, and if one already exists, advance the selection
+ to the left by one character.
+
+ @param Buffer Pointer to the input buffer whose selection should be updated.
+ */
+VOID
+YoriShSelectLeftChar(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    COORD StartCoord;
+    COORD NewCoord;
+    if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
+        StartCoord = YoriShDetermineCellLocationIfMoved(0);
+    } else {
+        StartCoord.X = Buffer->Selection.Current.Left;
+        StartCoord.Y = Buffer->Selection.Current.Top;
+    }
+    NewCoord = YoriShDetermineCellLocationIfMoved(-1);
+    if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset > 0) {
+        Buffer->CurrentOffset--;
+        if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
+            YoriLibCreateSelectionFromPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
+        }
+        YoriLibUpdateSelectionToPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
+    }
+}
+
+/**
+ Create a new selection, and if one already exists, advance the selection
+ to the right by one character.
+
+ @param Buffer Pointer to the input buffer whose selection should be updated.
+ */
+VOID
+YoriShSelectRightChar(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    COORD StartCoord;
+    COORD NewCoord;
+    if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
+        StartCoord = YoriShDetermineCellLocationIfMoved(0);
+    } else {
+        StartCoord.X = Buffer->Selection.Current.Left;
+        StartCoord.Y = Buffer->Selection.Current.Top;
+    }
+    NewCoord = YoriShDetermineCellLocationIfMoved(1);
+    if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset + 1 < Buffer->String.LengthInChars) {
+        Buffer->CurrentOffset++;
+        if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
+            YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X, StartCoord.Y);
+        }
+        YoriLibUpdateSelectionToPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
+    }
+}
+
+/**
  Perform processing related to when a key is pressed.
 
  @param Buffer Pointer to the input buffer to update.
@@ -1225,6 +1283,7 @@ YoriShProcessKeyDown(
     DWORD Count;
     WORD KeyCode;
     WORD ScanCode;
+    BOOL ClearSelection;
 
     *TerminateInput = FALSE;
     YoriShPrepareForNextKey(Buffer);
@@ -1237,9 +1296,12 @@ YoriShProcessKeyDown(
     if (KeyCode >= VK_F1 && KeyCode <= VK_F12) {
         if (YoriShHotkey(Buffer, KeyCode, CtrlMask)) {
             *TerminateInput = TRUE;
+            YoriLibClearSelection(&Buffer->Selection);
             return TRUE;
         }
     }
+
+    ClearSelection = TRUE;
 
     if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
 
@@ -1251,6 +1313,7 @@ YoriShProcessKeyDown(
                 if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
                     *TerminateInput = TRUE;
                 }
+                YoriLibClearSelection(&Buffer->Selection);
                 return TRUE;
             }
         } else if (Char == 27) {
@@ -1285,6 +1348,7 @@ YoriShProcessKeyDown(
                CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) {
         if (KeyCode == 'C') {
             YoriShClearInput(Buffer);
+            YoriLibClearSelection(&Buffer->Selection);
             *TerminateInput = TRUE;
             return TRUE;
         } else if (KeyCode == 'E') {
@@ -1379,6 +1443,7 @@ YoriShProcessKeyDown(
                 if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
                     *TerminateInput = TRUE;
                 }
+                YoriLibClearSelection(&Buffer->Selection);
                 return TRUE;
             }
         }
@@ -1431,11 +1496,21 @@ YoriShProcessKeyDown(
                 YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 YoriLibFreeStringContents(&ClipboardData);
             }
+        } else if (KeyCode == VK_LEFT) {
+            YoriShSelectLeftChar(Buffer);
+            ClearSelection = FALSE;
+        } else if (KeyCode == VK_RIGHT) {
+            YoriShSelectRightChar(Buffer);
+            ClearSelection = FALSE;
         }
     }
 
     if (KeyCode != VK_SHIFT &&
         KeyCode != VK_CONTROL) {
+
+        if (ClearSelection) {
+            YoriLibClearSelection(&Buffer->Selection);
+        }
 
         YoriShPostKeyPress(Buffer);
         return TRUE;
@@ -1489,6 +1564,7 @@ YoriShProcessKeyUp(
             YoriShPrepareForNextKey(Buffer);
             YoriShAddCStringToInput(Buffer, HostKeyValue);
             YoriShPostKeyPress(Buffer);
+            YoriLibClearSelection(&Buffer->Selection);
             KeyPressGenerated = TRUE;
         }
 
@@ -1878,10 +1954,6 @@ YoriShGetExpression(
                     ReDisplayRequired |= YoriShProcessKeyDown(&Buffer, InputRecord, &TerminateInput);
                 } else {
                     ReDisplayRequired |= YoriShProcessKeyUp(&Buffer, InputRecord, &TerminateInput);
-                }
-
-                if (ReDisplayRequired) {
-                    YoriLibClearSelection(&Buffer.Selection);
                 }
 
             } else if (InputRecord->EventType == MOUSE_EVENT) {

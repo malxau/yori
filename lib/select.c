@@ -40,13 +40,7 @@ YoriLibIsSelectionActive(
     __in PYORILIB_SELECTION Selection
     )
 {
-    if (Selection->Current.Left == Selection->Current.Right &&
-        Selection->Current.Top == Selection->Current.Bottom) {
-
-        return FALSE;
-    }
-
-    return TRUE;
+    return Selection->SelectionCurrentlyActive;
 }
 
 /**
@@ -62,13 +56,7 @@ YoriLibIsPreviousSelectionActive(
     __in PYORILIB_SELECTION Selection
     )
 {
-    if (Selection->Previous.Left == Selection->Previous.Right &&
-        Selection->Previous.Top == Selection->Previous.Bottom) {
-
-        return FALSE;
-    }
-
-    return TRUE;
+    return Selection->SelectionPreviouslyActive;
 }
 
 /**
@@ -571,6 +559,7 @@ YoriLibRedrawSelection(
     Selection->Previous.Top = Selection->Current.Top;
     Selection->Previous.Right = Selection->Current.Right;
     Selection->Previous.Bottom = Selection->Current.Bottom;
+    Selection->SelectionPreviouslyActive = Selection->SelectionCurrentlyActive;
 }
 
 /**
@@ -612,6 +601,8 @@ YoriLibClearSelection(
     Selection->Current.Right = 0;
     Selection->Current.Top = 0;
     Selection->Current.Bottom = 0;
+
+    Selection->SelectionCurrentlyActive = FALSE;
 
     Selection->PeriodicScrollAmount.X = 0;
     Selection->PeriodicScrollAmount.Y = 0;
@@ -731,6 +722,8 @@ YoriLibCreateSelectionFromPoint(
     Selection->InitialPoint.X = X;
     Selection->InitialPoint.Y = Y;
 
+    Selection->SelectionCurrentlyActive = TRUE;
+
     return BufferChanged;
 }
 
@@ -768,6 +761,8 @@ YoriLibCreateSelectionFromRange(
     Selection->Current.Left = StartX;
     Selection->Current.Right = EndX;
 
+    Selection->SelectionCurrentlyActive = TRUE;
+
     return TRUE;
 }
 
@@ -801,6 +796,8 @@ YoriLibUpdateSelectionToPoint(
     if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
         return FALSE;
     }
+
+    ASSERT(YoriLibIsSelectionActive(Selection));
 
     if (Selection->InitialPoint.X < X) {
         Selection->Current.Left = Selection->InitialPoint.X;
