@@ -649,18 +649,18 @@ YoriShOverwriteSelectionIfInInput(
     //  ranges.
     //
 
-    if (Buffer->Selection.Current.Bottom != Buffer->Selection.Current.Top) {
+    if (Buffer->Selection.CurrentlySelected.Bottom != Buffer->Selection.CurrentlySelected.Top) {
         return FALSE;
     }
 
-    StartOfSelection.X = Buffer->Selection.Current.Left;
-    StartOfSelection.Y = Buffer->Selection.Current.Top;
+    StartOfSelection.X = Buffer->Selection.CurrentlySelected.Left;
+    StartOfSelection.Y = Buffer->Selection.CurrentlySelected.Top;
 
     if (!YoriShStringOffsetFromCoordinates(Buffer, StartOfSelection, &StartStringOffset)) {
         return FALSE;
     }
 
-    StartOfSelection.X = Buffer->Selection.Current.Right;
+    StartOfSelection.X = Buffer->Selection.CurrentlySelected.Right;
 
     if (!YoriShStringOffsetFromCoordinates(Buffer, StartOfSelection, &EndStringOffset)) {
         return FALSE;
@@ -1216,8 +1216,8 @@ YoriShSelectLeftChar(
     if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
         StartCoord = YoriShDetermineCellLocationIfMoved(0);
     } else {
-        StartCoord.X = Buffer->Selection.Current.Left;
-        StartCoord.Y = Buffer->Selection.Current.Top;
+        StartCoord.X = Buffer->Selection.CurrentlyDisplayed.Left;
+        StartCoord.Y = Buffer->Selection.CurrentlyDisplayed.Top;
     }
     NewCoord = YoriShDetermineCellLocationIfMoved(-1);
     if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset > 0) {
@@ -1245,8 +1245,8 @@ YoriShSelectRightChar(
     if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
         StartCoord = YoriShDetermineCellLocationIfMoved(0);
     } else {
-        StartCoord.X = Buffer->Selection.Current.Left;
-        StartCoord.Y = Buffer->Selection.Current.Top;
+        StartCoord.X = Buffer->Selection.CurrentlyDisplayed.Left;
+        StartCoord.Y = Buffer->Selection.CurrentlyDisplayed.Top;
     }
     NewCoord = YoriShDetermineCellLocationIfMoved(1);
     if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset + 1 < Buffer->String.LengthInChars) {
@@ -1671,33 +1671,6 @@ YoriShProcessMouseButtonUp(
     return FALSE;
 }
 
-/**
- Return the set of characters that should be considered break characters when
- the user double clicks to select.  Break characters are never themselves
- selected.
-
- @param BreakChars On successful completion, populated with a set of
-        characters that should be considered break characters.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriShGetSelectionDoubleClickBreakChars(
-    __out PYORI_STRING BreakChars
-    )
-{
-    YoriLibInitEmptyString(BreakChars);
-    if (!YoriShAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars) || BreakChars->LengthInChars == 0) {
-
-        //
-        //  0x2502 is Unicode full vertical line (used by sdir)
-        //
-
-        YoriLibConstantString(BreakChars, _T(" '<>|\x2502"));
-    }
-    return TRUE;
-}
-
 
 /**
  Perform processing related to when a mouse is double clicked.
@@ -1741,7 +1714,7 @@ YoriShProcessMouseDoubleClick(
         if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
             return FALSE;
         }
-        YoriShGetSelectionDoubleClickBreakChars(&BreakChars);
+        YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
 
         BufferChanged = YoriLibClearSelection(&Buffer->Selection);
 
@@ -1819,7 +1792,12 @@ YoriShProcessMouseMove(
         YoriLibUpdateSelectionToPoint(&Buffer->Selection,
                                       InputRecord->Event.MouseEvent.dwMousePosition.X,
                                       InputRecord->Event.MouseEvent.dwMousePosition.Y);
+        //
+        //  Do one scroll immediately.  This allows the user to force scrolling
+        //  by moving the mouse outside the window.
+        //
 
+        YoriLibPeriodicScrollForSelection(&Buffer->Selection);
 
         return TRUE;
     }

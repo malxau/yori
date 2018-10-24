@@ -246,6 +246,46 @@ YoriLibAreAnsiEnvironmentStringsValid(
     return FALSE;
 }
 
+/**
+ Capture the value from an environment variable, allocating a Yori string of
+ appropriate size to contain the contents.
+
+ @param Name Pointer to the name of the variable to obtain.
+
+ @param Value On successful completion, populated with a newly allocated
+        string containing the environment variable's contents.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibAllocateAndGetEnvironmentVariable(
+    __in LPCTSTR Name,
+    __out PYORI_STRING Value
+    )
+{
+    DWORD LengthNeeded;
+
+    LengthNeeded = GetEnvironmentVariable(Name, NULL, 0);
+    if (LengthNeeded == 0) {
+        YoriLibInitEmptyString(Value);
+        return TRUE;
+    }
+
+    if (!YoriLibAllocateString(Value, LengthNeeded)) {
+        return FALSE;
+    }
+
+    Value->LengthInChars = GetEnvironmentVariable(Name, Value->StartOfString, Value->LengthAllocated);
+    if (Value->LengthInChars == 0 ||
+        Value->LengthInChars >= Value->LengthAllocated) {
+
+        YoriLibFreeStringContents(Value);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 
 
 // vim:sw=4:ts=4:et:

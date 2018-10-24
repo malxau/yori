@@ -32,13 +32,15 @@
  of the length of the string or the viewport width.  In practice it can be
  a little more convoluted due to nonprinting characters.
 
- @param MoreContext Pointer to the more context containing the data to
-        display.
-
  @param PhysicalLineSubset Pointer to a string which represents either a
         complete physical line, or a trailing portion of a physical line after
         other logical lines have already been constructed from the previous
         characters.
+
+ @param MaximumVisibleCharacters The number of visible characters to preserve
+        in the logical line.  Note the logical line may contain fewer
+        characters due to insufficient data or more characters, so long as
+        they are escapes that are not visible.
 
  @param InitialColor The starting color, in Win32 form.
 
@@ -55,8 +57,8 @@
  */
 DWORD
 MoreGetLogicalLineLength(
-    __in PMORE_CONTEXT MoreContext,
     __in PYORI_STRING PhysicalLineSubset,
+    __in DWORD MaximumVisibleCharacters,
     __in WORD InitialColor,
     __out_opt PWORD FinalColor,
     __out_opt PBOOL ExplicitNewlineRequired
@@ -118,8 +120,8 @@ MoreGetLogicalLineLength(
             SourceIndex++;
         }
 
-        ASSERT(CellsDisplayed <= MoreContext->ViewportWidth);
-        if (CellsDisplayed == MoreContext->ViewportWidth) {
+        ASSERT(CellsDisplayed <= MaximumVisibleCharacters);
+        if (CellsDisplayed == MaximumVisibleCharacters) {
             if (ExplicitNewlineRequired != NULL) {
                 *ExplicitNewlineRequired = FALSE;
             }
@@ -161,7 +163,7 @@ MoreCountLogicalLinesOnPhysicalLine(
     Subset.StartOfString = PhysicalLine->LineContents.StartOfString;
     Subset.LengthInChars = PhysicalLine->LineContents.LengthInChars;
     while(TRUE) {
-        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, 0, NULL, NULL);
+        LogicalLineLength = MoreGetLogicalLineLength(&Subset, MoreContext->ViewportWidth, 0, NULL, NULL);
         Subset.StartOfString += LogicalLineLength;
         Subset.LengthInChars -= LogicalLineLength;
         Count++;
@@ -185,7 +187,7 @@ MoreCountLogicalLinesOnPhysicalLine(
  */
 VOID
 MoreMoveLogicalLine(
-    __in PMORE_LOGICAL_LINE Dest,
+    __out PMORE_LOGICAL_LINE Dest,
     __in PMORE_LOGICAL_LINE Src
     )
 {
@@ -195,6 +197,31 @@ MoreMoveLogicalLine(
     }
     memcpy(Dest, Src, sizeof(MORE_LOGICAL_LINE));
     ZeroMemory(Src, sizeof(MORE_LOGICAL_LINE));
+}
+
+/**
+ Copy a logical line to a new logical line by referencing the memory.  This
+ assumes that both logical lines are immutable.
+
+ @param Dest On successful completion, updated to contain a new logical line
+        referencing the same memory as the source.
+
+ @param Src Pointer to the source logical line to copy from.
+ */
+VOID
+MoreCloneLogicalLine(
+    __out PMORE_LOGICAL_LINE Dest,
+    __in PMORE_LOGICAL_LINE Src
+    )
+{
+    ASSERT(Dest != Src);
+    if (Dest->Line.MemoryToFree != NULL) {
+        YoriLibFreeStringContents(&Dest->Line);
+    }
+    memcpy(Dest, Src, sizeof(MORE_LOGICAL_LINE));
+    if (Dest->Line.MemoryToFree != NULL) {
+        YoriLibReference(Dest->Line.MemoryToFree);
+    }
 }
 
 /**
@@ -242,7 +269,7 @@ MoreGenerateLogicalLinesFromPhysicalLine(
         if (Count >= FirstLogicalLineIndex + NumberLogicalLines) {
             break;
         }
-        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, InitialColor, &NewColor, &ExplicitNewlineRequired);
+        LogicalLineLength = MoreGetLogicalLineLength(&Subset, MoreContext->ViewportWidth, InitialColor, &NewColor, &ExplicitNewlineRequired);
         if (Count >= FirstLogicalLineIndex) {
             ThisLine = &OutputLines[Count - FirstLogicalLineIndex];
             ThisLine->PhysicalLine = PhysicalLine;
@@ -921,8 +948,10 @@ MoreAddNewLinesToViewport(
  @param MoreContext Pointer to the context describing the data to display.
 
  @param LinesToMove Specifies the number of lines to move up.
+
+ @return The number of lines actually moved.
  */
-VOID
+DWORD
 MoreMoveViewportUp(
     __inout PMORE_CONTEXT MoreContext,
     __in DWORD LinesToMove
@@ -935,7 +964,7 @@ MoreMoveViewportUp(
     CappedLinesToMove = LinesToMove;
 
     if (MoreContext->LinesInViewport == 0) {
-        return;
+        return 0;
     }
 
     if (CappedLinesToMove > MoreContext->LinesInViewport) {
@@ -943,7 +972,7 @@ MoreMoveViewportUp(
     }
 
     if (CappedLinesToMove == 0) {
-        return;
+        return 0;
     }
 
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
@@ -957,10 +986,11 @@ MoreMoveViewportUp(
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 
     if (LinesReturned == 0) {
-        return;
+        return 0;
     }
 
     MoreDisplayPreviousLinesInViewport(MoreContext, &MoreContext->StagingViewportLines[CappedLinesToMove - LinesReturned], LinesReturned);
+    return LinesReturned;
 }
 
 
@@ -971,8 +1001,10 @@ MoreMoveViewportUp(
  @param MoreContext Pointer to the context describing the data to display.
 
  @param LinesToMove Specifies the number of lines to move down.
+
+ @return The number of lines actually moved.
  */
-VOID
+DWORD
 MoreMoveViewportDown(
     __inout PMORE_CONTEXT MoreContext,
     __in DWORD LinesToMove
@@ -985,7 +1017,7 @@ MoreMoveViewportDown(
     CappedLinesToMove = LinesToMove;
 
     if (MoreContext->LinesInViewport == 0) {
-        return;
+        return 0;
     }
 
     if (CappedLinesToMove > MoreContext->LinesInViewport) {
@@ -993,7 +1025,7 @@ MoreMoveViewportDown(
     }
 
     if (CappedLinesToMove == 0) {
-        return;
+        return 0;
     }
 
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
@@ -1011,10 +1043,12 @@ MoreMoveViewportDown(
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 
     if (LinesReturned == 0) {
-        return;
+        return 0;
     }
 
     MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
+
+    return LinesReturned;
 }
 
 /**
@@ -1145,6 +1179,236 @@ MoreMoveViewportRight(
     SetConsoleWindowInfo(StdOutHandle, TRUE, &ScreenInfo.srWindow);
 }
 
+/**
+ If a selection region is active, copy the region as text to the clipboard.
+
+ @param MoreContext Pointer to the data being displayed by the program and
+        information about the region of the data that is currently selected.
+
+ @return TRUE if the region was successfully copied, FALSE if it was not
+         copied including if no selection was present.
+ */
+BOOL
+MoreCopySelectionIfPresent(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    YORI_STRING TextToCopy;
+    YORI_STRING VtText;
+    YORI_STRING HtmlText;
+    HANDLE ConsoleHandle;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    PMORE_LOGICAL_LINE EntireLogicalLines;
+    PMORE_LOGICAL_LINE CopyLogicalLines;
+    PMORE_LOGICAL_LINE StartLine;
+    YORI_STRING Subset;
+    DWORD LineCount;
+    DWORD StartingLineIndex;
+    DWORD SingleLineBufferSize;
+    DWORD VtTextBufferSize;
+    DWORD LineIndex;
+    BOOL Result = FALSE;
+
+    PYORILIB_SELECTION Selection = &MoreContext->Selection;
+
+    //
+    //  No selection, nothing to copy
+    //
+
+    if (!YoriLibIsSelectionActive(Selection)) {
+        return FALSE;
+    }
+
+    //
+    //  We want to get the attributes for rich text copy.  Rather than reinvent
+    //  that wheel, force the console to re-render if it's stale and use the
+    //  saved attribute buffer.
+    //
+
+    if (!Selection->SelectionPreviouslyActive &&
+        Selection->CurrentlyDisplayed.Left != Selection->PreviouslyDisplayed.Left ||
+        Selection->CurrentlyDisplayed.Right != Selection->PreviouslyDisplayed.Right ||
+        Selection->CurrentlyDisplayed.Top != Selection->PreviouslyDisplayed.Top ||
+        Selection->CurrentlyDisplayed.Bottom != Selection->PreviouslyDisplayed.Bottom) {
+
+        YoriLibRedrawSelection(Selection);
+    }
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo);
+
+    ASSERT((Selection->CurrentlySelected.Bottom >= ScreenInfo.srWindow.Top && Selection->CurrentlySelected.Bottom <= ScreenInfo.srWindow.Bottom) ||
+           (Selection->CurrentlySelected.Top >= ScreenInfo.srWindow.Top && Selection->CurrentlySelected.Top <= ScreenInfo.srWindow.Bottom));
+
+
+    //
+    //  Allocate an array of logical lines covering the number of lines in the
+    //  selection.  These will be populated using regular logical line parsing
+    //  for the viewport width.  The same allocation also contains an array of
+    //  logical lines for the copy region, which is a subset of the entire
+    //  logical lines.
+    //
+
+    SingleLineBufferSize = (Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top + 1) * sizeof(MORE_LOGICAL_LINE);
+    EntireLogicalLines = YoriLibMalloc(SingleLineBufferSize * 2);
+    if (EntireLogicalLines == NULL) {
+        return FALSE;
+    }
+    CopyLogicalLines = (PMORE_LOGICAL_LINE)YoriLibAddToPointer(EntireLogicalLines, SingleLineBufferSize);
+    ZeroMemory(EntireLogicalLines, SingleLineBufferSize * 2);
+
+    if (Selection->CurrentlySelected.Top >= ScreenInfo.srWindow.Top) {
+
+        //
+        //  Take a logical line from the array (can be greater than zero), and
+        //  continue parsing forward from there
+        //
+
+        StartLine = &MoreContext->DisplayViewportLines[Selection->CurrentlySelected.Top - ScreenInfo.srWindow.Top];
+        MoreCloneLogicalLine(EntireLogicalLines, StartLine);
+
+        //
+        //  Note that the allocation is for Bottom - Top + 1, and here we only
+        //  populate Bottom - Top, because the first line is the starting
+        //  line.
+        //
+
+        LineCount = MoreGetNextLogicalLines(MoreContext, StartLine, Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top, &EntireLogicalLines[1]);
+        LineCount++;
+        StartingLineIndex = 0;
+
+    } else if (Selection->CurrentlySelected.Bottom >= ScreenInfo.srWindow.Top) {
+
+        //
+        //  Take a logical line from the array (can be greater than zero) and
+        //  parse backward to find the start
+        //
+
+        StartLine = &MoreContext->DisplayViewportLines[Selection->CurrentlySelected.Bottom - ScreenInfo.srWindow.Top];
+        MoreCloneLogicalLine(&EntireLogicalLines[Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top], StartLine);
+
+        //
+        //  Note that the allocation is for Bottom - Top + 1, and here we only
+        //  populate Bottom - Top, because the final line is the starting
+        //  line.
+        //
+
+        LineCount = MoreGetPreviousLogicalLines(MoreContext, StartLine, Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top, EntireLogicalLines);
+        StartingLineIndex = Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top - LineCount;
+        LineCount++;
+    } else {
+        return FALSE;
+    }
+
+    //
+    //  For each logical line, need to strip off CurrentlySelected.Left
+    //  (saving initial color), then create a new logical line for the
+    //  selected text.
+    //
+
+    VtTextBufferSize = 0;
+    {
+        WORD InitialColor;
+        WORD NewColor;
+        BOOL ExplicitNewlineRequired;
+        DWORD LogicalLineLength;
+
+        for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
+            YoriLibInitEmptyString(&Subset);
+            Subset.StartOfString = EntireLogicalLines[LineIndex].Line.StartOfString;
+            Subset.LengthInChars = EntireLogicalLines[LineIndex].Line.LengthInChars;
+            InitialColor = EntireLogicalLines[LineIndex].InitialColor;
+            if (Selection->CurrentlySelected.Left > 0) {
+                LogicalLineLength = MoreGetLogicalLineLength(&Subset, Selection->CurrentlySelected.Left, InitialColor, &NewColor, &ExplicitNewlineRequired);
+                InitialColor = NewColor;
+                Subset.LengthInChars -= LogicalLineLength;
+                Subset.StartOfString += LogicalLineLength;
+            }
+            LogicalLineLength = MoreGetLogicalLineLength(&Subset, Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1, InitialColor, &NewColor, &ExplicitNewlineRequired);
+            CopyLogicalLines[LineIndex].InitialColor = InitialColor;
+            CopyLogicalLines[LineIndex].Line.StartOfString = Subset.StartOfString;
+            CopyLogicalLines[LineIndex].Line.LengthInChars = LogicalLineLength;
+
+            //
+            //  We need enough space for the line text, plus CRLF (two chars),
+            //  plus the initial color.  We're pessimistic about the initial
+            //  color length.  Note that one character is added for CRLF
+            //  because the other is the NULL char from sizeof.
+            //
+
+            VtTextBufferSize += LogicalLineLength + 1 + sizeof("E[0;999;999;1m");
+        }
+    }
+
+    VtTextBufferSize++;
+    YoriLibInitEmptyString(&HtmlText);
+    YoriLibInitEmptyString(&VtText);
+    YoriLibInitEmptyString(&TextToCopy);
+    if (!YoriLibAllocateString(&VtText, VtTextBufferSize)) {
+        goto Exit;
+    }
+
+    //
+    //  For the rich text version, these logical lines need to be concatenated
+    //  along with the initial color for each line.
+    //
+
+    Subset.StartOfString = VtText.StartOfString;
+    Subset.LengthAllocated = VtText.LengthAllocated;
+    for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
+        YoriLibVtStringForTextAttribute(&Subset, CopyLogicalLines[LineIndex].InitialColor);
+        VtText.LengthInChars += Subset.LengthInChars;
+        Subset.StartOfString += Subset.LengthInChars;
+        Subset.LengthAllocated -= Subset.LengthInChars;
+        Subset.LengthInChars = 0;
+
+        YoriLibYPrintf(&Subset, _T("%y\r\n"), &CopyLogicalLines[LineIndex].Line);
+
+        VtText.LengthInChars += Subset.LengthInChars;
+        Subset.StartOfString += Subset.LengthInChars;
+        Subset.LengthAllocated -= Subset.LengthInChars;
+        Subset.LengthInChars = 0;
+    }
+
+    //
+    //  For the plain text version, these logical lines need to be copied while
+    //  removing any escapes.  Also note this form should not have a trailing
+    //  CRLF.
+    //
+
+    YoriLibStripVtEscapes(&VtText, &TextToCopy);
+    if (TextToCopy.LengthInChars >= 2) {
+        TextToCopy.LengthInChars -= 2;
+    }
+
+    //
+    //  Convert the VT100 form into HTML, and free it
+    //
+
+    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, 4)) {
+        goto Exit;
+    }
+
+    YoriLibFreeStringContents(&VtText);
+
+    //
+    //  Copy both HTML form and plain text form to the clipboard
+    //
+
+    if (YoriLibCopyTextAndHtml(&TextToCopy, &HtmlText)) {
+        Result = TRUE;
+    }
+
+Exit:
+    for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
+        YoriLibFreeStringContents(&EntireLogicalLines[LineIndex].Line);
+    }
+    YoriLibFree(EntireLogicalLines);
+    YoriLibFreeStringContents(&HtmlText);
+    YoriLibFreeStringContents(&TextToCopy);
+    YoriLibFreeStringContents(&VtText);
+    return Result;
+}
 
 /**
  Perform the requested action when the user presses a key.
@@ -1168,6 +1432,7 @@ MoreProcessKeyDown(
     TCHAR Char;
     WORD KeyCode;
     WORD ScanCode;
+    BOOL ClearSelection = FALSE;
 
     UNREFERENCED_PARAMETER(MoreContext);
 
@@ -1179,13 +1444,21 @@ MoreProcessKeyDown(
     ScanCode = InputRecord->Event.KeyEvent.wVirtualScanCode;
 
     if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
+        ClearSelection = TRUE;
         if (Char == 'q' || Char == 'Q') {
             *Terminate = TRUE;
         } else if (Char == ' ') {
             MoreContext->LinesInPage = 0;
+            if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+                YoriLibClearSelection(&MoreContext->Selection);
+                YoriLibRedrawSelection(&MoreContext->Selection);
+            }
             MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
+        } else if (Char == '\r') {
+            MoreCopySelectionIfPresent(MoreContext);
         }
     } else if (CtrlMask == ENHANCED_KEY) {
+        ClearSelection = TRUE;
         if (KeyCode == VK_DOWN) {
             MoreMoveViewportDown(MoreContext, 1);
         } else if (KeyCode == VK_UP) {
@@ -1199,6 +1472,16 @@ MoreProcessKeyDown(
             MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
         } else if (KeyCode == VK_PRIOR) {
             MoreMoveViewportUp(MoreContext, MoreContext->ViewportHeight);
+        }
+    }
+
+    if (ClearSelection &&
+        KeyCode != VK_SHIFT &&
+        KeyCode != VK_CONTROL) {
+
+        if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+            YoriLibClearSelection(&MoreContext->Selection);
+            YoriLibRedrawSelection(&MoreContext->Selection);
         }
     }
 
@@ -1227,6 +1510,11 @@ MoreProcessResizeViewport(
     DWORD Index;
     PMORE_LOGICAL_LINE OldDisplayViewportLines;
     PMORE_LOGICAL_LINE OldStagingViewportLines;
+
+    if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+        YoriLibClearSelection(&MoreContext->Selection);
+        YoriLibRedrawSelection(&MoreContext->Selection);
+    }
 
     StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
@@ -1363,6 +1651,438 @@ MoreCheckForStatusLineChange(
 }
 
 /**
+ Periodically update the selection by scrolling.  This occurs when the mouse
+ button is held down and the mouse pointer is outside the console window,
+ indicating that the console window should be updated to contain new contents
+ in the direction of the mouse cursor.
+
+ @param MoreContext Pointer to the more context including the selection to
+        update.
+
+ @return TRUE if the window was scrolled, FALSE if it was not.
+ */
+BOOL
+MorePeriodicScrollForSelection(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    HANDLE ConsoleHandle;
+    SHORT CellsToScroll;
+    DWORD LinesMoved;
+    CONSOLE_SCREEN_BUFFER_INFO StartScreenInfo;
+    CONSOLE_SCREEN_BUFFER_INFO EndScreenInfo;
+    PYORILIB_SELECTION Selection = &MoreContext->Selection;
+
+    if (Selection->PeriodicScrollAmount.Y == 0 &&
+        Selection->PeriodicScrollAmount.X == 0) {
+
+        return FALSE;
+    }
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &StartScreenInfo)) {
+        return FALSE;
+    }
+
+    memcpy(&EndScreenInfo, &StartScreenInfo, sizeof(CONSOLE_SCREEN_BUFFER_INFO));
+
+    //
+    //  MSFIX Need to truncate the selection if it's scrolling off the
+    //  buffer.  This is what happens if we scroll down until the top of
+    //  the actual (not displayed) selection would be less than zero, or
+    //  if we scroll up until the actual (not displayed) selection would
+    //  be greater than buffer height.
+    //
+
+
+    if (Selection->PeriodicScrollAmount.Y < 0) {
+        CellsToScroll = (SHORT)(0 - Selection->PeriodicScrollAmount.Y);
+        if (MoreContext->DebugDisplay) {
+            YoriLibClearPreviousSelectionDisplay(Selection);
+        }
+        LinesMoved = MoreMoveViewportUp(MoreContext, CellsToScroll);
+        if (LinesMoved > 0) {
+            YoriLibNotifyScrollBufferMoved(Selection, (SHORT)LinesMoved);
+        }
+        if (MoreContext->DebugDisplay) {
+            YoriLibDrawCurrentSelectionDisplay(Selection);
+        }
+        ASSERT(MoreContext->Selection.CurrentlySelected.Top >= StartScreenInfo.srWindow.Top);
+    } else if (Selection->PeriodicScrollAmount.Y > 0) {
+        CellsToScroll = Selection->PeriodicScrollAmount.Y;
+        if (MoreContext->DebugDisplay) {
+            YoriLibClearPreviousSelectionDisplay(Selection);
+        }
+        LinesMoved = MoreMoveViewportDown(MoreContext, CellsToScroll);
+        if (MoreContext->DebugDisplay) {
+            if (LinesMoved > 0) {
+                SHORT SignedLinesMoved = (SHORT)(0 - LinesMoved);
+                YoriLibNotifyScrollBufferMoved(Selection, SignedLinesMoved);
+            }
+            YoriLibDrawCurrentSelectionDisplay(Selection);
+        } else {
+            if (!GetConsoleScreenBufferInfo(ConsoleHandle, &EndScreenInfo)) {
+                return FALSE;
+            }
+
+            //
+            //  If moving the viewport down moved the window within a screen
+            //  buffer, then all coordinates known to the selection remain
+            //  correct.  If it scrolled data within the buffer, then all offsets
+            //  have changed and the selection needs to be updated to reflect
+            //  the new coordinates.  Calculate this by taking the lines we output
+            //  and subtracting any window movement from it; anything remaining is
+            //  the data in the buffer moving.
+            //
+
+            if (LinesMoved > 0) {
+                SHORT SignedLinesMoved = (SHORT)(LinesMoved - (EndScreenInfo.srWindow.Bottom - StartScreenInfo.srWindow.Bottom));
+                if (SignedLinesMoved > 0) {
+                    SignedLinesMoved = (0 - SignedLinesMoved);
+                    YoriLibNotifyScrollBufferMoved(Selection, SignedLinesMoved);
+                }
+            }
+        }
+    }
+
+    if (Selection->PeriodicScrollAmount.X < 0) {
+        CellsToScroll = (SHORT)(0 - Selection->PeriodicScrollAmount.X);
+        if (EndScreenInfo.srWindow.Left > 0) {
+            if (EndScreenInfo.srWindow.Left > CellsToScroll) {
+                EndScreenInfo.srWindow.Left = (SHORT)(EndScreenInfo.srWindow.Left - CellsToScroll);
+                EndScreenInfo.srWindow.Right = (SHORT)(EndScreenInfo.srWindow.Right - CellsToScroll);
+            } else {
+                EndScreenInfo.srWindow.Right = (SHORT)(EndScreenInfo.srWindow.Right - EndScreenInfo.srWindow.Left);
+                EndScreenInfo.srWindow.Left = 0;
+            }
+        }
+    } else if (Selection->PeriodicScrollAmount.X > 0) {
+        CellsToScroll = Selection->PeriodicScrollAmount.X;
+        if (EndScreenInfo.srWindow.Right < EndScreenInfo.dwSize.X - 1) {
+            if (EndScreenInfo.srWindow.Right < EndScreenInfo.dwSize.X - CellsToScroll - 1) {
+                EndScreenInfo.srWindow.Left = (SHORT)(EndScreenInfo.srWindow.Left + CellsToScroll);
+                EndScreenInfo.srWindow.Right = (SHORT)(EndScreenInfo.srWindow.Right + CellsToScroll);
+            } else {
+                EndScreenInfo.srWindow.Left = (SHORT)(EndScreenInfo.srWindow.Left + (EndScreenInfo.dwSize.X - EndScreenInfo.srWindow.Right - 1));
+                EndScreenInfo.srWindow.Right = (SHORT)(EndScreenInfo.dwSize.X - 1);
+            }
+        }
+    }
+
+    SetConsoleWindowInfo(ConsoleHandle, TRUE, &EndScreenInfo.srWindow);
+
+    return TRUE;
+}
+
+
+/**
+ Perform processing related to when a mouse button is pressed.
+
+ @param MoreContext Pointer to the more context which describes the current
+        selection.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsPressed A bit mask of buttons that were just pressed.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+MoreProcessMouseButtonDown(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsPressed,
+    __out PBOOL TerminateInput
+    )
+{
+    BOOL BufferChanged = FALSE;
+
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
+        BufferChanged = YoriLibCreateSelectionFromPoint(&MoreContext->Selection,
+                                                        InputRecord->Event.MouseEvent.dwMousePosition.X,
+                                                        InputRecord->Event.MouseEvent.dwMousePosition.Y);
+
+    } else if (ButtonsPressed & RIGHTMOST_BUTTON_PRESSED) {
+        if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+            BufferChanged = MoreCopySelectionIfPresent(MoreContext);
+            if (BufferChanged) {
+                YoriLibClearSelection(&MoreContext->Selection);
+            }
+        }
+    }
+
+    return BufferChanged;
+}
+
+/**
+ Perform processing related to when a mouse button is released.
+
+ @param MoreContext Pointer to the more context which describes the current
+        selection.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsReleased A bit mask of buttons that were just released.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+MoreProcessMouseButtonUp(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsReleased,
+    __out PBOOL TerminateInput
+    )
+{
+    UNREFERENCED_PARAMETER(InputRecord);
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    //
+    //  If the left mouse button was released and periodic scrolling was in
+    //  effect, stop it now.
+    //
+
+    if (ButtonsReleased & FROM_LEFT_1ST_BUTTON_PRESSED) {
+        YoriLibClearPeriodicScroll(&MoreContext->Selection);
+    }
+
+    return FALSE;
+}
+
+
+/**
+ Perform processing related to when a mouse is double clicked.
+
+ @param MoreContext Pointer to the more context which describes the current
+        selection.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsPressed A bit mask of buttons that were just pressed.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+MoreProcessMouseDoubleClick(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsPressed,
+    __out PBOOL TerminateInput
+    )
+{
+    BOOL BufferChanged = FALSE;
+    HANDLE ConsoleHandle;
+    COORD ReadPoint;
+    TCHAR ReadChar;
+    DWORD CharsRead;
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
+        SHORT StartOffset;
+        SHORT EndOffset;
+        CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+        YORI_STRING BreakChars;
+
+        if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+            return FALSE;
+        }
+        YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
+
+        BufferChanged = YoriLibClearSelection(&MoreContext->Selection);
+
+        ReadChar = ' ';
+        ReadPoint.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
+        ReadPoint.X = InputRecord->Event.MouseEvent.dwMousePosition.X;
+
+        //
+        //  If the user double clicked on a break char, do nothing.
+        //
+
+        ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
+        if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+            YoriLibFreeStringContents(&BreakChars);
+            return FALSE;
+        }
+
+        //
+        //  Nagivate left to find beginning of line or next break char.
+        //
+
+        for (StartOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; StartOffset > 0; StartOffset--) {
+            ReadPoint.X = (SHORT)(StartOffset - 1);
+            ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
+            if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+                break;
+            }
+        }
+
+        //
+        //  Navigate right to find end of line or next break char.
+        //
+
+        for (EndOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; EndOffset < ScreenInfo.dwSize.X - 1; EndOffset++) {
+            ReadPoint.X = (SHORT)(EndOffset + 1);
+            ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
+            if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+                break;
+            }
+        }
+
+        YoriLibCreateSelectionFromRange(&MoreContext->Selection, StartOffset, ReadPoint.Y, EndOffset, ReadPoint.Y);
+
+        BufferChanged = TRUE;
+        YoriLibFreeStringContents(&BreakChars);
+    }
+
+    return BufferChanged;
+}
+
+/**
+ Perform processing related to a mouse move event.
+
+ @param MoreContext Pointer to the more context which describes the current
+        selection.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @param RedrawStatus On successful completion, set to TRUE to indicate that
+        caller needs to update the status line because the window area has
+        moved.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+MoreProcessMouseMove(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord,
+    __out PBOOL TerminateInput,
+    __out PBOOL RedrawStatus
+    )
+{
+    HANDLE ConsoleHandle;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    if (InputRecord->Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) {
+
+        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+            return FALSE;
+        }
+
+        YoriLibUpdateSelectionToPoint(&MoreContext->Selection,
+                                      InputRecord->Event.MouseEvent.dwMousePosition.X,
+                                      InputRecord->Event.MouseEvent.dwMousePosition.Y);
+
+        if (MoreContext->Selection.CurrentlyDisplayed.Bottom >= ScreenInfo.srWindow.Bottom) {
+            MoreContext->Selection.CurrentlyDisplayed.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - 1);
+        }
+
+        if (MoreContext->Selection.PreviouslyDisplayed.Bottom >= ScreenInfo.srWindow.Bottom) {
+            *RedrawStatus = TRUE;
+        }
+
+        if (MorePeriodicScrollForSelection(MoreContext)) {
+            *RedrawStatus = TRUE;
+        }
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Perform processing related to when a mouse wheel is scrolled.
+
+ @param MoreContext Pointer to the more context which describes the current
+        selection.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ButtonsPressed A bit mask of buttons that were just pressed.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate the input buffer has changed and needs to be
+         redisplayed.
+ */
+BOOL
+MoreProcessMouseScroll(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord,
+    __in DWORD ButtonsPressed,
+    __out PBOOL TerminateInput
+    )
+{
+    HANDLE ConsoleHandle;
+    SHORT Direction;
+    SHORT LinesToScroll;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    UNREFERENCED_PARAMETER(MoreContext);
+    UNREFERENCED_PARAMETER(ButtonsPressed);
+    UNREFERENCED_PARAMETER(TerminateInput);
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    Direction = HIWORD(InputRecord->Event.MouseEvent.dwButtonState);
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    if (Direction > 0) {
+        LinesToScroll = (SHORT)(Direction / 0x20);
+        if (ScreenInfo.srWindow.Top > 0) {
+            if (ScreenInfo.srWindow.Top > LinesToScroll) {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top - LinesToScroll);
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - LinesToScroll);
+            } else {
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
+                ScreenInfo.srWindow.Top = 0;
+            }
+        }
+    } else if (Direction < 0) {
+        LinesToScroll = (SHORT)(0 - (Direction / 0x20));
+        if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - 1) {
+            if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - LinesToScroll - 1) {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + LinesToScroll);
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom + LinesToScroll);
+            } else {
+                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + (ScreenInfo.dwSize.Y - ScreenInfo.srWindow.Bottom - 1));
+                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.dwSize.Y - 1);
+            }
+        }
+    }
+
+    SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
+
+    return FALSE;
+}
+
+
+/**
  Manage the console display of the more application.
 
  @param MoreContext Pointer to the context describing the data to display.
@@ -1378,6 +2098,7 @@ MoreViewportDisplay(
     HANDLE InHandle;
     DWORD WaitObject;
     DWORD HandleCountToWait;
+    DWORD PreviousMouseButtonState = 0;
     BOOL WaitForIngestThread = TRUE;
     BOOL WaitForNewLines = TRUE;
 
@@ -1386,7 +2107,7 @@ MoreViewportDisplay(
         return FALSE;
     }
 
-    SetConsoleMode(InHandle, ENABLE_WINDOW_INPUT);
+    SetConsoleMode(InHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
 
     SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
 
@@ -1412,9 +2133,12 @@ MoreViewportDisplay(
             ObjectsToWaitFor[HandleCountToWait++] = MoreContext->IngestThread;
         }
 
-        WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, 500);
+        WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, 250);
 
         if (WaitObject == WAIT_TIMEOUT) {
+            if (YoriLibIsPeriodicScrollActive(&MoreContext->Selection)) {
+                MorePeriodicScrollForSelection(MoreContext);
+            }
             MoreCheckForWindowSizeChange(MoreContext);
             MoreCheckForStatusLineChange(MoreContext);
         } else {
@@ -1453,6 +2177,7 @@ MoreViewportDisplay(
                 DWORD ActuallyRead;
                 DWORD CurrentIndex;
                 BOOL Terminate = FALSE;
+                BOOL RedrawStatus = FALSE;
 
                 if (!ReadConsoleInput(InHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
                     break;
@@ -1466,6 +2191,45 @@ MoreViewportDisplay(
                         InputRecord->Event.KeyEvent.bKeyDown) {
 
                         MoreProcessKeyDown(MoreContext, InputRecord, &Terminate);
+                    } else if (InputRecord->EventType == MOUSE_EVENT) {
+
+                        DWORD ButtonsPressed = InputRecord->Event.MouseEvent.dwButtonState - (PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
+                        DWORD ButtonsReleased = PreviousMouseButtonState - (PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
+                        BOOL ReDisplayRequired = FALSE;
+
+                        if (ButtonsReleased > 0) {
+                            ReDisplayRequired |= MoreProcessMouseButtonUp(MoreContext, InputRecord, ButtonsReleased, &Terminate);
+                        }
+
+                        if (ButtonsPressed > 0) {
+                            ReDisplayRequired |= MoreProcessMouseButtonDown(MoreContext, InputRecord, ButtonsPressed, &Terminate);
+                        }
+
+                        PreviousMouseButtonState = InputRecord->Event.MouseEvent.dwButtonState;
+                        if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_MOVED) {
+                            ReDisplayRequired |= MoreProcessMouseMove(MoreContext, InputRecord, &Terminate, &RedrawStatus);
+                        }
+
+                        if (InputRecord->Event.MouseEvent.dwEventFlags & DOUBLE_CLICK) {
+                            ReDisplayRequired |= MoreProcessMouseDoubleClick(MoreContext, InputRecord, ButtonsPressed, &Terminate);
+                        }
+
+                        /*
+                        if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
+                            ReDisplayRequired |= MoreProcessMouseScroll(MoreContext, InputRecord, ButtonsPressed, &Terminate);
+                        }
+                        */
+
+                        if (ReDisplayRequired) {
+                            if (RedrawStatus) {
+                                MoreClearStatusLine(MoreContext);
+                                YoriLibRedrawSelection(&MoreContext->Selection);
+                                MoreDrawStatusLine(MoreContext);
+                            } else {
+                                YoriLibRedrawSelection(&MoreContext->Selection);
+                            }
+                        }
+
                     } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
                         MoreProcessResizeViewport(MoreContext);
                     }
@@ -1479,6 +2243,7 @@ MoreViewportDisplay(
         }
     }
 
+    YoriLibCleanupSelection(&MoreContext->Selection);
     CloseHandle(InHandle);
     return TRUE;
 }

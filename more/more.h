@@ -143,6 +143,10 @@ typedef struct _MORE_CONTEXT {
      */
     DWORD ViewportHeight;
 
+    /**
+     Description of the current selected region.
+     */
+    YORILIB_SELECTION Selection;
 
     /**
      An array of size ViewportHeight of lines currently displayed.  Note these

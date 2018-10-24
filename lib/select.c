@@ -174,10 +174,10 @@ YoriLibClearPreviousSelectionDisplay(
     ActiveAttributes = &Selection->PreviousBuffer[Selection->CurrentPreviousIndex];
     AttributeReadPoint = ActiveAttributes->AttributeArray;
 
-    LineLength = (SHORT)(Selection->Previous.Right - Selection->Previous.Left + 1);
+    LineLength = (SHORT)(Selection->PreviouslyDisplayed.Right - Selection->PreviouslyDisplayed.Left + 1);
 
-    for (LineIndex = Selection->Previous.Top; LineIndex <= Selection->Previous.Bottom; LineIndex++) {
-        StartPoint.X = Selection->Previous.Left;
+    for (LineIndex = Selection->PreviouslyDisplayed.Top; LineIndex <= Selection->PreviouslyDisplayed.Bottom; LineIndex++) {
+        StartPoint.X = Selection->PreviouslyDisplayed.Left;
         StartPoint.Y = LineIndex;
 
         YoriLibDisplayAttributes(ConsoleHandle, AttributeReadPoint, 0x07, LineLength, StartPoint, &CharsWritten);
@@ -249,7 +249,7 @@ YoriLibDrawCurrentSelectionDisplay(
         return;
     }
 
-    RequiredLength = (Selection->Current.Right - Selection->Current.Left + 1) * (Selection->Current.Bottom - Selection->Current.Top + 1);
+    RequiredLength = (Selection->CurrentlyDisplayed.Right - Selection->CurrentlyDisplayed.Left + 1) * (Selection->CurrentlyDisplayed.Bottom - Selection->CurrentlyDisplayed.Top + 1);
 
     ActiveAttributes = &Selection->PreviousBuffer[Selection->CurrentPreviousIndex];
 
@@ -269,12 +269,12 @@ YoriLibDrawCurrentSelectionDisplay(
     //
 
     AttributeWritePoint = ActiveAttributes->AttributeArray;
-    LineLength = (SHORT)(Selection->Current.Right - Selection->Current.Left + 1);
+    LineLength = (SHORT)(Selection->CurrentlyDisplayed.Right - Selection->CurrentlyDisplayed.Left + 1);
 
     SelectionColor = YoriLibGetSelectionColor(ConsoleHandle);
 
-    for (LineIndex = Selection->Current.Top; LineIndex <= Selection->Current.Bottom; LineIndex++) {
-        StartPoint.X = Selection->Current.Left;
+    for (LineIndex = Selection->CurrentlyDisplayed.Top; LineIndex <= Selection->CurrentlyDisplayed.Bottom; LineIndex++) {
+        StartPoint.X = Selection->CurrentlyDisplayed.Left;
         StartPoint.Y = LineIndex;
 
         if (AttributeWritePoint != NULL) {
@@ -284,17 +284,45 @@ YoriLibDrawCurrentSelectionDisplay(
 
         FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
     }
+
+    Selection->PreviouslyDisplayed.Left = Selection->CurrentlyDisplayed.Left;
+    Selection->PreviouslyDisplayed.Top = Selection->CurrentlyDisplayed.Top;
+    Selection->PreviouslyDisplayed.Right = Selection->CurrentlyDisplayed.Right;
+    Selection->PreviouslyDisplayed.Bottom = Selection->CurrentlyDisplayed.Bottom;
+    Selection->SelectionPreviouslyActive = Selection->SelectionCurrentlyActive;
 }
 
 /**
- Draw the selection highlight around the current selection, and save off the
- character attributes of the text underneath the selection.
+ Given attributes describing a region of the console buffer and a new region
+ of the console buffer, determine the attributes for the new region.  These
+ are partly extracted from the console and partly copied from the previous
+ region, if the two overlap.  Optionally, mark all of the cells within the
+ new region as selected.  This is used when generating a selection rectangle;
+ when copying cells from an off screen region, we need to calculate the
+ attributes without updating the display.
 
- @param Selection The selection to display the selection for.
+ @param OldAttributes Pointer to a buffer describing the state of a previously
+        selected range of cells.
+
+ @param OldRegion Specifies the coordinates of the previously selected range.
+
+ @param NewAttributes Pointer to a buffer to populate with the state of the
+        new region.
+
+ @param NewRegion Specifies the coordinates of the range whose attributes are
+        requested.
+
+ @param UpdateNewRegionDisplay If TRUE, the NewRegion area should be marked
+        as selected within the console.  If FALSE, the range is left
+        unmodified in the console.
  */
 VOID
-YoriLibDrawCurrentSelectionOverPreviousSelection(
-    __in PYORILIB_SELECTION Selection
+YoriLibCreateNewAttributeBufferFromPreviousBuffer(
+    __in PYORILIB_PREVIOUS_SELECTION_BUFFER OldAttributes,
+    __in PSMALL_RECT OldRegion,
+    __out PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes,
+    __in PSMALL_RECT NewRegion,
+    __in BOOL UpdateNewRegionDisplay
     )
 {
     SHORT LineIndex;
@@ -307,34 +335,17 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
     DWORD CharsWritten;
     DWORD RequiredLength;
     PWORD AttributeWritePoint;
-    PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes;
-    PYORILIB_PREVIOUS_SELECTION_BUFFER OldAttributes;
-    DWORD NewAttributeIndex;
     WORD SelectionColor;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    ASSERT(YoriLibIsPreviousSelectionActive(Selection) &&
-           YoriLibIsSelectionActive(Selection));
-
-    //
-    //  Find the buffers that are not the ones that currently contain the
-    //  attributes of selected cells.  We'll fill that buffer with updated
-    //  information, typically drawn from the currently active buffer.
-    //
-
-    NewAttributeIndex = (Selection->CurrentPreviousIndex + 1) % 2;
-    NewAttributes = &Selection->PreviousBuffer[NewAttributeIndex];
-    OldAttributes = &Selection->PreviousBuffer[Selection->CurrentPreviousIndex];
-
-    RequiredLength = (Selection->Current.Right - Selection->Current.Left + 1) * (Selection->Current.Bottom - Selection->Current.Top + 1);
+    RequiredLength = (NewRegion->Right - NewRegion->Left + 1) * (NewRegion->Bottom - NewRegion->Top + 1);
 
     if (RequiredLength > NewAttributes->BufferSize) {
-        RequiredLength = RequiredLength * 2;
-        YoriLibReallocateAttributeArray(NewAttributes, RequiredLength);
+        YoriLibReallocateAttributeArray(NewAttributes, RequiredLength * 2);
     }
 
-    LineLength = (SHORT)(Selection->Current.Right - Selection->Current.Left + 1);
+    LineLength = (SHORT)(NewRegion->Right - NewRegion->Left + 1);
 
     //
     //  Walk through all of the new selection to save off attributes for it,
@@ -343,16 +354,16 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
 
     SelectionColor = YoriLibGetSelectionColor(ConsoleHandle);
     AttributeWritePoint = NewAttributes->AttributeArray;
-    for (LineIndex = Selection->Current.Top; LineIndex <= Selection->Current.Bottom; LineIndex++) {
+    for (LineIndex = NewRegion->Top; LineIndex <= NewRegion->Bottom; LineIndex++) {
 
         //
         //  An entire line wasn't previously selected
         //
 
-        if (LineIndex < Selection->Previous.Top ||
-            LineIndex > Selection->Previous.Bottom) {
+        if (LineIndex < OldRegion->Top ||
+            LineIndex > OldRegion->Bottom) {
 
-            StartPoint.X = Selection->Current.Left;
+            StartPoint.X = NewRegion->Left;
             StartPoint.Y = LineIndex;
 
             if (AttributeWritePoint != NULL) {
@@ -360,7 +371,9 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
                 AttributeWritePoint += LineLength;
             }
 
-            FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
+            if (UpdateNewRegionDisplay) {
+                FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
+            }
 
         } else {
 
@@ -369,12 +382,12 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
             //  that are now selected
             //
 
-            if (Selection->Current.Left < Selection->Previous.Left) {
+            if (NewRegion->Left < OldRegion->Left) {
 
-                StartPoint.X = Selection->Current.Left;
+                StartPoint.X = NewRegion->Left;
                 StartPoint.Y = LineIndex;
 
-                RunLength = (SHORT)(Selection->Previous.Left - Selection->Current.Left);
+                RunLength = (SHORT)(OldRegion->Left - NewRegion->Left);
                 if (LineLength < RunLength) {
                     RunLength = LineLength;
                 }
@@ -384,7 +397,9 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
                     AttributeWritePoint += RunLength;
                 }
 
-                FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
+                if (UpdateNewRegionDisplay) {
+                    FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
+                }
 
             }
 
@@ -394,22 +409,22 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
             //  the console state is already correct
             //
 
-            if (Selection->Current.Right >= Selection->Previous.Left &&
-                Selection->Current.Left <= Selection->Previous.Right) {
+            if (NewRegion->Right >= OldRegion->Left &&
+                NewRegion->Left <= OldRegion->Right) {
 
-                StartPoint.X = (SHORT)(Selection->Current.Left - Selection->Previous.Left);
+                StartPoint.X = (SHORT)(NewRegion->Left - OldRegion->Left);
                 RunLength = LineLength;
                 if (StartPoint.X < 0) {
                     RunLength = (SHORT)(RunLength + StartPoint.X);
                     StartPoint.X = 0;
                 }
-                if (StartPoint.X + RunLength > Selection->Previous.Right - Selection->Previous.Left + 1) {
-                    RunLength = (SHORT)(Selection->Previous.Right - Selection->Previous.Left + 1 - StartPoint.X);
+                if (StartPoint.X + RunLength > OldRegion->Right - OldRegion->Left + 1) {
+                    RunLength = (SHORT)(OldRegion->Right - OldRegion->Left + 1 - StartPoint.X);
                 }
 
-                StartPoint.Y = (SHORT)(LineIndex - Selection->Previous.Top);
+                StartPoint.Y = (SHORT)(LineIndex - OldRegion->Top);
 
-                BufferOffset = (Selection->Previous.Right - Selection->Previous.Left + 1) * StartPoint.Y + StartPoint.X;
+                BufferOffset = (OldRegion->Right - OldRegion->Left + 1) * StartPoint.Y + StartPoint.X;
 
                 if (AttributeWritePoint != NULL) {
                     if (OldAttributes->AttributeArray != NULL) {
@@ -425,14 +440,14 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
             //  that are now selected
             //
 
-            if (Selection->Current.Right > Selection->Previous.Right) {
+            if (NewRegion->Right > OldRegion->Right) {
 
-                StartPoint.X = (SHORT)(Selection->Previous.Right + 1);
-                if (Selection->Current.Left > StartPoint.X) {
-                    StartPoint.X = Selection->Current.Left;
+                StartPoint.X = (SHORT)(OldRegion->Right + 1);
+                if (NewRegion->Left > StartPoint.X) {
+                    StartPoint.X = NewRegion->Left;
                     RunLength = LineLength;
                 } else {
-                    RunLength = (SHORT)(Selection->Current.Right - StartPoint.X + 1);
+                    RunLength = (SHORT)(NewRegion->Right - StartPoint.X + 1);
                 }
                 StartPoint.Y = LineIndex;
 
@@ -441,7 +456,9 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
                     AttributeWritePoint += RunLength;
                 }
 
-                FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
+                if (UpdateNewRegionDisplay) {
+                    FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, RunLength, StartPoint, &CharsWritten);
+                }
             }
         }
     }
@@ -451,49 +468,25 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
     //  selected, and restore their attributes into the console
     //
 
-    LineLength = (SHORT)(Selection->Previous.Right - Selection->Previous.Left + 1);
+    if (UpdateNewRegionDisplay) {
+        LineLength = (SHORT)(OldRegion->Right - OldRegion->Left + 1);
 
-    for (LineIndex = Selection->Previous.Top; LineIndex <= Selection->Previous.Bottom; LineIndex++) {
-
-        //
-        //  A line was previously selected and no longer is.  Restore the
-        //  saved attributes.
-        //
-
-        if (LineIndex < Selection->Current.Top ||
-            LineIndex > Selection->Current.Bottom) {
-
-            StartPoint.X = Selection->Previous.Left;
-            StartPoint.Y = LineIndex;
-            RunLength = LineLength;
-
-            if (OldAttributes->AttributeArray != NULL) {
-                BufferOffset = LineLength * (LineIndex - Selection->Previous.Top);
-                BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
-            } else {
-                BufferPointer = NULL;
-            }
-
-            YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
-
-        } else {
+        for (LineIndex = OldRegion->Top; LineIndex <= OldRegion->Bottom; LineIndex++) {
 
             //
-            //  A region to the left of the currently selected region was
-            //  previously selected.  Restore the saved attributes.
+            //  A line was previously selected and no longer is.  Restore the
+            //  saved attributes.
             //
 
-            if (Selection->Previous.Left < Selection->Current.Left) {
+            if (LineIndex < NewRegion->Top ||
+                LineIndex > NewRegion->Bottom) {
 
-                StartPoint.X = Selection->Previous.Left;
+                StartPoint.X = OldRegion->Left;
                 StartPoint.Y = LineIndex;
                 RunLength = LineLength;
-                if (Selection->Current.Left - Selection->Previous.Left < RunLength) {
-                    RunLength = (SHORT)(Selection->Current.Left - Selection->Previous.Left);
-                }
 
                 if (OldAttributes->AttributeArray != NULL) {
-                    BufferOffset = LineLength * (LineIndex - Selection->Previous.Top);
+                    BufferOffset = LineLength * (LineIndex - OldRegion->Top);
                     BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
                 } else {
                     BufferPointer = NULL;
@@ -501,40 +494,103 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
 
                 YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
 
-            }
+            } else {
 
-            //
-            //  A region to the right of the current selection was previously
-            //  selected.  Restore the saved attributes.
-            //
+                //
+                //  A region to the left of the currently selected region was
+                //  previously selected.  Restore the saved attributes.
+                //
 
-            if (Selection->Previous.Right > Selection->Current.Right) {
+                if (OldRegion->Left < NewRegion->Left) {
 
-                BufferOffset = LineLength * (LineIndex - Selection->Previous.Top);
-                StartPoint.Y = LineIndex;
-
-                if (Selection->Previous.Left > Selection->Current.Right) {
-                    StartPoint.X = Selection->Previous.Left;
+                    StartPoint.X = OldRegion->Left;
+                    StartPoint.Y = LineIndex;
                     RunLength = LineLength;
-                } else {
-                    RunLength = (SHORT)(Selection->Previous.Right - Selection->Current.Right);
-                    StartPoint.X = (SHORT)(Selection->Current.Right + 1);
-                    BufferOffset += Selection->Current.Right - Selection->Previous.Left + 1;
+                    if (NewRegion->Left - OldRegion->Left < RunLength) {
+                        RunLength = (SHORT)(NewRegion->Left - OldRegion->Left);
+                    }
+
+                    if (OldAttributes->AttributeArray != NULL) {
+                        BufferOffset = LineLength * (LineIndex - OldRegion->Top);
+                        BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
+                    } else {
+                        BufferPointer = NULL;
+                    }
+
+                    YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
+
                 }
 
-                if (OldAttributes->AttributeArray != NULL) {
-                    BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
-                } else {
-                    BufferPointer = NULL;
-                }
+                //
+                //  A region to the right of the current selection was previously
+                //  selected.  Restore the saved attributes.
+                //
 
-                YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
+                if (OldRegion->Right > NewRegion->Right) {
+
+                    BufferOffset = LineLength * (LineIndex - OldRegion->Top);
+                    StartPoint.Y = LineIndex;
+
+                    if (OldRegion->Left > NewRegion->Right) {
+                        StartPoint.X = OldRegion->Left;
+                        RunLength = LineLength;
+                    } else {
+                        RunLength = (SHORT)(OldRegion->Right - NewRegion->Right);
+                        StartPoint.X = (SHORT)(NewRegion->Right + 1);
+                        BufferOffset += NewRegion->Right - OldRegion->Left + 1;
+                    }
+
+                    if (OldAttributes->AttributeArray != NULL) {
+                        BufferPointer = &OldAttributes->AttributeArray[BufferOffset];
+                    } else {
+                        BufferPointer = NULL;
+                    }
+
+                    YoriLibDisplayAttributes(ConsoleHandle, BufferPointer, 0x07, RunLength, StartPoint, &CharsWritten);
+                }
             }
         }
     }
+}
+
+/**
+ Draw the selection highlight around the current selection, and save off the
+ character attributes of the text underneath the selection.
+
+ @param Selection The selection to display the selection for.
+ */
+VOID
+YoriLibDrawCurrentSelectionOverPreviousSelection(
+    __in PYORILIB_SELECTION Selection
+    )
+{
+    PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes;
+    PYORILIB_PREVIOUS_SELECTION_BUFFER OldAttributes;
+    DWORD NewAttributeIndex;
+
+    ASSERT(YoriLibIsPreviousSelectionActive(Selection) &&
+           YoriLibIsSelectionActive(Selection));
+
+    //
+    //  Find the buffers that are not the ones that currently contain the
+    //  attributes of selected cells.  We'll fill that buffer with updated
+    //  information, typically drawn from the currently active buffer.
+    //
+
+    NewAttributeIndex = (Selection->CurrentPreviousIndex + 1) % 2;
+    NewAttributes = &Selection->PreviousBuffer[NewAttributeIndex];
+    OldAttributes = &Selection->PreviousBuffer[Selection->CurrentPreviousIndex];
+
+    YoriLibCreateNewAttributeBufferFromPreviousBuffer(OldAttributes, &Selection->PreviouslyDisplayed, NewAttributes, &Selection->CurrentlyDisplayed, TRUE);
 
     ASSERT(Selection->CurrentPreviousIndex != NewAttributeIndex);
     Selection->CurrentPreviousIndex = NewAttributeIndex;
+
+    Selection->PreviouslyDisplayed.Left = Selection->CurrentlyDisplayed.Left;
+    Selection->PreviouslyDisplayed.Top = Selection->CurrentlyDisplayed.Top;
+    Selection->PreviouslyDisplayed.Right = Selection->CurrentlyDisplayed.Right;
+    Selection->PreviouslyDisplayed.Bottom = Selection->CurrentlyDisplayed.Bottom;
+    Selection->SelectionPreviouslyActive = Selection->SelectionCurrentlyActive;
 }
 
 /**
@@ -555,11 +611,6 @@ YoriLibRedrawSelection(
         YoriLibClearPreviousSelectionDisplay(Selection);
         YoriLibDrawCurrentSelectionDisplay(Selection);
     }
-    Selection->Previous.Left = Selection->Current.Left;
-    Selection->Previous.Top = Selection->Current.Top;
-    Selection->Previous.Right = Selection->Current.Right;
-    Selection->Previous.Bottom = Selection->Current.Bottom;
-    Selection->SelectionPreviouslyActive = Selection->SelectionCurrentlyActive;
 }
 
 /**
@@ -597,25 +648,112 @@ YoriLibClearSelection(
     __inout PYORILIB_SELECTION Selection
     )
 {
-    Selection->Current.Left = 0;
-    Selection->Current.Right = 0;
-    Selection->Current.Top = 0;
-    Selection->Current.Bottom = 0;
+    Selection->CurrentlyDisplayed.Left = 0;
+    Selection->CurrentlyDisplayed.Right = 0;
+    Selection->CurrentlyDisplayed.Top = 0;
+    Selection->CurrentlyDisplayed.Bottom = 0;
+
+    Selection->CurrentlySelected.Left = 0;
+    Selection->CurrentlySelected.Right = 0;
+    Selection->CurrentlySelected.Top = 0;
+    Selection->CurrentlySelected.Bottom = 0;
 
     Selection->SelectionCurrentlyActive = FALSE;
 
     Selection->PeriodicScrollAmount.X = 0;
     Selection->PeriodicScrollAmount.Y = 0;
 
-    if (Selection->Current.Left != Selection->Previous.Left ||
-        Selection->Current.Right != Selection->Previous.Right ||
-        Selection->Current.Top != Selection->Previous.Top ||
-        Selection->Current.Bottom != Selection->Previous.Bottom) {
+    if (Selection->CurrentlyDisplayed.Left != Selection->PreviouslyDisplayed.Left ||
+        Selection->CurrentlyDisplayed.Right != Selection->PreviouslyDisplayed.Right ||
+        Selection->CurrentlyDisplayed.Top != Selection->PreviouslyDisplayed.Top ||
+        Selection->CurrentlyDisplayed.Bottom != Selection->PreviouslyDisplayed.Bottom) {
 
         return TRUE;
     }
 
     return FALSE;
+}
+
+/**
+ Given a signed 16 bit value and signed 16 bit change to it, perform the
+ addition and return the result if it is within the specified Min and Max.  If
+ the result is greater than Max, Max is returned; if the result is less than
+ Min, Min is returned.
+
+ @param BaseValue The value to operate on.
+
+ @param Adjustment The signed value to add to BaseValue.
+
+ @param Min The value which is the minimum result.
+
+ @param Max The value which is the maximum result.
+
+ @return The result of the signed addition.
+ */
+SHORT
+YoriLibNewLineValueWithMinMax(
+    __in SHORT BaseValue,
+    __in SHORT Adjustment,
+    __in SHORT Min,
+    __in SHORT Max
+    )
+{
+    LONG NewValue;
+
+    NewValue = BaseValue + Adjustment;
+    if (NewValue < Min) {
+        return Min;
+    }
+
+    if (NewValue > Max) {
+        return Max;
+    }
+
+    return (SHORT)NewValue;
+}
+
+
+/**
+ Update the coordinates of a scroll region to reflect that the characters have
+ been externally moved.
+
+ @param Selection Pointer to the selection to update.
+
+ @param LinesToMove Specifies the number of lines to move.  If this number is
+        a positive number, it indicates that the coordinates are now at a
+        greater cell location (eg. line 5 is now line 6) which occurs when the
+        display scrolls upwards.  If this number is a negative number, it
+        indicates that the coordinates are now at a lesser cell location (eg.
+        line 6 is now line 5) which occurs when the display scrolls downwards.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibNotifyScrollBufferMoved(
+    __inout PYORILIB_SELECTION Selection,
+    __in SHORT LinesToMove
+    )
+{
+    HANDLE ConsoleHandle;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    Selection->InitialPoint.Y = YoriLibNewLineValueWithMinMax(Selection->InitialPoint.Y, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+    Selection->PreviouslyDisplayed.Top = YoriLibNewLineValueWithMinMax(Selection->PreviouslyDisplayed.Top, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+    Selection->PreviouslyDisplayed.Bottom = YoriLibNewLineValueWithMinMax(Selection->PreviouslyDisplayed.Bottom, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+    Selection->CurrentlyDisplayed.Top = YoriLibNewLineValueWithMinMax(Selection->CurrentlyDisplayed.Top, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+    Selection->CurrentlyDisplayed.Bottom = YoriLibNewLineValueWithMinMax(Selection->CurrentlyDisplayed.Bottom, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+    Selection->CurrentlySelected.Top = YoriLibNewLineValueWithMinMax(Selection->CurrentlySelected.Top, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+    Selection->CurrentlySelected.Bottom = YoriLibNewLineValueWithMinMax(Selection->CurrentlySelected.Bottom, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+
+    ASSERT(Selection->PreviouslyDisplayed.Top >= 0);
+    ASSERT(Selection->CurrentlyDisplayed.Top >= 0);
+
+    return TRUE;
 }
 
 /**
@@ -636,6 +774,12 @@ YoriLibPeriodicScrollForSelection(
     HANDLE ConsoleHandle;
     SHORT CellsToScroll;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    if (Selection->PeriodicScrollAmount.Y == 0 &&
+        Selection->PeriodicScrollAmount.X == 0) {
+
+        return TRUE;
+    }
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
@@ -756,12 +900,20 @@ YoriLibCreateSelectionFromRange(
 {
     YoriLibClearSelection(Selection);
 
-    Selection->Current.Top = StartY;
-    Selection->Current.Bottom = EndY;
-    Selection->Current.Left = StartX;
-    Selection->Current.Right = EndX;
+    Selection->CurrentlyDisplayed.Top = StartY;
+    Selection->CurrentlyDisplayed.Bottom = EndY;
+    Selection->CurrentlyDisplayed.Left = StartX;
+    Selection->CurrentlyDisplayed.Right = EndX;
+
+    Selection->CurrentlySelected.Top = StartY;
+    Selection->CurrentlySelected.Bottom = EndY;
+    Selection->CurrentlySelected.Left = StartX;
+    Selection->CurrentlySelected.Right = EndX;
 
     Selection->SelectionCurrentlyActive = TRUE;
+
+    ASSERT(Selection->CurrentlyDisplayed.Bottom >= 0);
+    ASSERT(Selection->CurrentlyDisplayed.Top >= 0);
 
     return TRUE;
 }
@@ -784,8 +936,8 @@ YoriLibCreateSelectionFromRange(
 BOOL
 YoriLibUpdateSelectionToPoint(
     __inout PYORILIB_SELECTION Selection,
-    __in USHORT X,
-    __in USHORT Y
+    __in SHORT X,
+    __in SHORT Y
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
@@ -799,21 +951,23 @@ YoriLibUpdateSelectionToPoint(
 
     ASSERT(YoriLibIsSelectionActive(Selection));
 
-    if (Selection->InitialPoint.X < X) {
-        Selection->Current.Left = Selection->InitialPoint.X;
-        Selection->Current.Right = X;
-    } else {
-        Selection->Current.Left = X;
-        Selection->Current.Right = Selection->InitialPoint.X;
+    //
+    //  Cap the range to coordinates describable by the screen buffer.
+    //
+
+    /*
+    if (X < 0) {
+        X = 0;
+    } else if (X >= ScreenInfo.dwSize.X) {
+        X = (SHORT)(ScreenInfo.dwSize.X - 1);
     }
 
-    if (Selection->InitialPoint.Y < Y) {
-        Selection->Current.Top = Selection->InitialPoint.Y;
-        Selection->Current.Bottom = Y;
-    } else {
-        Selection->Current.Top = Y;
-        Selection->Current.Bottom = Selection->InitialPoint.Y;
+    if (Y < 0) {
+        Y = 0;
+    } else if (Y >= ScreenInfo.dwSize.Y) {
+        Y = (SHORT)(ScreenInfo.dwSize.Y - 1);
     }
+    */
 
     //
     //  Assume that the mouse move is inside the window, so periodic
@@ -828,28 +982,71 @@ YoriLibUpdateSelectionToPoint(
     //  distance to see which periodic scrolling may be enabled.
     //
 
-    if (X < ScreenInfo.srWindow.Left) {
+    if (X <= ScreenInfo.srWindow.Left) {
         Selection->PeriodicScrollAmount.X = (SHORT)(X - ScreenInfo.srWindow.Left);
-    } else if (X > ScreenInfo.srWindow.Right) {
+        if (Selection->PeriodicScrollAmount.X == 0) {
+            Selection->PeriodicScrollAmount.X = -1;
+        }
+    } else if (X >= ScreenInfo.srWindow.Right) {
         Selection->PeriodicScrollAmount.X = (SHORT)(X - ScreenInfo.srWindow.Right);
+        if (Selection->PeriodicScrollAmount.X == 0) {
+            Selection->PeriodicScrollAmount.X = 1;
+        }
+    }
+
+    if (Y <= ScreenInfo.srWindow.Top) {
+        Selection->PeriodicScrollAmount.Y = (SHORT)(Y - ScreenInfo.srWindow.Top);
+        if (Selection->PeriodicScrollAmount.Y == 0) {
+            Selection->PeriodicScrollAmount.Y = -1;
+        }
+    } else if (Y >= ScreenInfo.srWindow.Bottom) {
+        Selection->PeriodicScrollAmount.Y = (SHORT)(Y - ScreenInfo.srWindow.Bottom);
+        if (Selection->PeriodicScrollAmount.Y == 0) {
+            Selection->PeriodicScrollAmount.Y = 1;
+        }
+    }
+
+    //
+    //  Don't update the selection location outside of the window.  The caller
+    //  can scroll the window when desired to select outside of it.
+    //
+
+    if (X < ScreenInfo.srWindow.Left) {
+        X = ScreenInfo.srWindow.Left;
+    } else if (X > ScreenInfo.srWindow.Right) {
+        X = ScreenInfo.srWindow.Right;
     }
 
     if (Y < ScreenInfo.srWindow.Top) {
-        Selection->PeriodicScrollAmount.Y = (SHORT)(Y - ScreenInfo.srWindow.Top);
+        Y = ScreenInfo.srWindow.Top;
     } else if (Y > ScreenInfo.srWindow.Bottom) {
-        Selection->PeriodicScrollAmount.Y = (SHORT)(Y - ScreenInfo.srWindow.Bottom);
+        Y = ScreenInfo.srWindow.Bottom;
     }
 
-    //
-    //  Do one scroll immediately.  This allows the user to force scrolling
-    //  by moving the mouse outside the window.
-    //
-
-    if (Selection->PeriodicScrollAmount.X != 0 ||
-        Selection->PeriodicScrollAmount.Y != 0) {
-
-        YoriLibPeriodicScrollForSelection(Selection);
+    if (Selection->InitialPoint.X < X) {
+        Selection->CurrentlyDisplayed.Left = Selection->InitialPoint.X;
+        Selection->CurrentlyDisplayed.Right = X;
+        Selection->CurrentlySelected.Left = Selection->InitialPoint.X;
+        Selection->CurrentlySelected.Right = X;
+    } else {
+        Selection->CurrentlyDisplayed.Left = X;
+        Selection->CurrentlyDisplayed.Right = Selection->InitialPoint.X;
+        Selection->CurrentlySelected.Left = X;
+        Selection->CurrentlySelected.Right = Selection->InitialPoint.X;
     }
+
+    if (Selection->InitialPoint.Y < Y) {
+        Selection->CurrentlyDisplayed.Top = Selection->InitialPoint.Y;
+        Selection->CurrentlyDisplayed.Bottom = Y;
+        Selection->CurrentlySelected.Top = Selection->InitialPoint.Y;
+        Selection->CurrentlySelected.Bottom = Y;
+    } else {
+        Selection->CurrentlyDisplayed.Top = Y;
+        Selection->CurrentlyDisplayed.Bottom = Selection->InitialPoint.Y;
+        Selection->CurrentlySelected.Top = Y;
+        Selection->CurrentlySelected.Bottom = Selection->InitialPoint.Y;
+    }
+
 
     return TRUE;
 }
@@ -917,6 +1114,7 @@ YoriLibCopySelectionIfPresent(
     COORD StartPoint;
     DWORD CharsWritten;
     HANDLE ConsoleHandle;
+    YORILIB_PREVIOUS_SELECTION_BUFFER Attributes;
 
     //
     //  No selection, nothing to copy
@@ -932,10 +1130,11 @@ YoriLibCopySelectionIfPresent(
     //  saved attribute buffer.
     //
 
-    if (Selection->Current.Left != Selection->Previous.Left ||
-        Selection->Current.Right != Selection->Previous.Right ||
-        Selection->Current.Top != Selection->Previous.Top ||
-        Selection->Current.Bottom != Selection->Previous.Bottom) {
+    if (!YoriLibIsPreviousSelectionActive(Selection) &&
+        Selection->CurrentlyDisplayed.Left != Selection->PreviouslyDisplayed.Left ||
+        Selection->CurrentlyDisplayed.Right != Selection->PreviouslyDisplayed.Right ||
+        Selection->CurrentlyDisplayed.Top != Selection->PreviouslyDisplayed.Top ||
+        Selection->CurrentlyDisplayed.Bottom != Selection->PreviouslyDisplayed.Bottom) {
 
         YoriLibRedrawSelection(Selection);
     }
@@ -954,8 +1153,8 @@ YoriLibCopySelectionIfPresent(
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    LineLength = (SHORT)(Selection->Current.Right - Selection->Current.Left + 1);
-    LineCount = (SHORT)(Selection->Current.Bottom - Selection->Current.Top + 1);
+    LineLength = (SHORT)(Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1);
+    LineCount = (SHORT)(Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top + 1);
 
     if (!YoriLibAllocateString(&TextToCopy, (LineLength + 2) * LineCount)) {
         return FALSE;
@@ -967,8 +1166,8 @@ YoriLibCopySelectionIfPresent(
     //
 
     TextWritePoint = TextToCopy.StartOfString;
-    for (LineIndex = Selection->Current.Top; LineIndex <= Selection->Current.Bottom; LineIndex++) {
-        StartPoint.X = Selection->Current.Left;
+    for (LineIndex = Selection->CurrentlySelected.Top; LineIndex <= Selection->CurrentlySelected.Bottom; LineIndex++) {
+        StartPoint.X = Selection->CurrentlySelected.Left;
         StartPoint.Y = LineIndex;
 
         ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
@@ -978,8 +1177,8 @@ YoriLibCopySelectionIfPresent(
 
     TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
 
-    StartPoint.X = (SHORT)(Selection->Current.Right - Selection->Current.Left + 1);
-    StartPoint.Y = (SHORT)(Selection->Current.Bottom - Selection->Current.Top + 1);
+    StartPoint.X = (SHORT)(Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1);
+    StartPoint.Y = (SHORT)(Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top + 1);
 
     //
     //  Combine the captured text with previously saved attributes into a
@@ -987,10 +1186,26 @@ YoriLibCopySelectionIfPresent(
     //
 
     YoriLibInitEmptyString(&VtText);
-    if (!YoriLibGenerateVtStringFromConsoleBuffers(&VtText, StartPoint, TextToCopy.StartOfString, Selection->PreviousBuffer[Selection->CurrentPreviousIndex].AttributeArray)) {
+    ZeroMemory(&Attributes, sizeof(Attributes));
+
+    YoriLibCreateNewAttributeBufferFromPreviousBuffer(&Selection->PreviousBuffer[Selection->CurrentPreviousIndex],
+                                                      &Selection->CurrentlyDisplayed,
+                                                      &Attributes,
+                                                      &Selection->CurrentlySelected,
+                                                      FALSE);
+
+    if (Attributes.AttributeArray == NULL) {
         YoriLibFreeStringContents(&TextToCopy);
         return FALSE;
     }
+
+    if (!YoriLibGenerateVtStringFromConsoleBuffers(&VtText, StartPoint, TextToCopy.StartOfString, Attributes.AttributeArray)) {
+        YoriLibFree(Attributes.AttributeArray);
+        YoriLibFreeStringContents(&TextToCopy);
+        return FALSE;
+    }
+
+    YoriLibFree(Attributes.AttributeArray);
 
     //
     //  In the second pass, copy all of the text, truncating trailing spaces.
@@ -998,8 +1213,8 @@ YoriLibCopySelectionIfPresent(
     //
 
     TextWritePoint = TextToCopy.StartOfString;
-    for (LineIndex = Selection->Current.Top; LineIndex <= Selection->Current.Bottom; LineIndex++) {
-        StartPoint.X = Selection->Current.Left;
+    for (LineIndex = Selection->CurrentlySelected.Top; LineIndex <= Selection->CurrentlySelected.Bottom; LineIndex++) {
+        StartPoint.X = Selection->CurrentlySelected.Left;
         StartPoint.Y = LineIndex;
 
         ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
@@ -1055,5 +1270,33 @@ YoriLibCopySelectionIfPresent(
     YoriLibFreeStringContents(&TextToCopy);
     return FALSE;
 }
+
+/**
+ Return the set of characters that should be considered break characters when
+ the user double clicks to select.  Break characters are never themselves
+ selected.
+
+ @param BreakChars On successful completion, populated with a set of
+        characters that should be considered break characters.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGetSelectionDoubleClickBreakChars(
+    __out PYORI_STRING BreakChars
+    )
+{
+    YoriLibInitEmptyString(BreakChars);
+    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars) || BreakChars->LengthInChars == 0) {
+
+        //
+        //  0x2502 is Unicode full vertical line (used by sdir)
+        //
+
+        YoriLibConstantString(BreakChars, _T(" '<>|\x2502"));
+    }
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:

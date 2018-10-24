@@ -1797,6 +1797,12 @@ YoriLibVtFinalColorFromSequence(
     __out PWORD FinalColor
     );
 
+BOOL
+YoriLibStripVtEscapes(
+    __in PYORI_STRING VtText,
+    __inout PYORI_STRING PlainText
+    );
+
 // *** PATH.C ***
 
 /**
@@ -1958,6 +1964,12 @@ YoriLibAreAnsiEnvironmentStringsValid(
     __out PYORI_STRING UnicodeStrings
     );
 
+BOOL
+YoriLibAllocateAndGetEnvironmentVariable(
+    __in LPCTSTR Name,
+    __out PYORI_STRING Value
+    );
+
 // *** SCUT.C ***
 
 BOOL
@@ -2019,12 +2031,18 @@ typedef struct _YORILIB_SELECTION {
     /**
      The region that was selected on the last rendering pass.
      */
-    SMALL_RECT Previous;
+    SMALL_RECT PreviouslyDisplayed;
 
     /**
      The region that is selected on the next rendering pass.
      */
-    SMALL_RECT Current;
+    SMALL_RECT CurrentlyDisplayed;
+
+    /**
+     The region that is logically part of the selection where text should be
+     obtained from.  This may be larger than the region that is displayed.
+     */
+    SMALL_RECT CurrentlySelected;
 
     /**
      TRUE if a selection is active on the previous rendering pass.
@@ -2051,6 +2069,25 @@ typedef struct _YORILIB_SELECTION {
 
 BOOL
 YoriLibIsSelectionActive(
+    __in PYORILIB_SELECTION Selection
+    );
+
+VOID
+YoriLibCreateNewAttributeBufferFromPreviousBuffer(
+    __in PYORILIB_PREVIOUS_SELECTION_BUFFER OldAttributes,
+    __in PSMALL_RECT OldRegion,
+    __out PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes,
+    __in PSMALL_RECT NewRegion,
+    __in BOOL UpdateNewRegionDisplay
+    );
+
+VOID
+YoriLibClearPreviousSelectionDisplay(
+    __in PYORILIB_SELECTION Selection
+    );
+
+VOID
+YoriLibDrawCurrentSelectionDisplay(
     __in PYORILIB_SELECTION Selection
     );
 
@@ -2093,8 +2130,14 @@ YoriLibCreateSelectionFromRange(
 BOOL
 YoriLibUpdateSelectionToPoint(
     __inout PYORILIB_SELECTION Selection,
-    __in USHORT X,
-    __in USHORT Y
+    __in SHORT X,
+    __in SHORT Y
+    );
+
+BOOL
+YoriLibNotifyScrollBufferMoved(
+    __inout PYORILIB_SELECTION Selection,
+    __in SHORT LinesToMove
     );
 
 BOOL
@@ -2110,6 +2153,11 @@ YoriLibClearPeriodicScroll(
 BOOL
 YoriLibCopySelectionIfPresent(
     __in PYORILIB_SELECTION Selection
+    );
+
+BOOL
+YoriLibGetSelectionDoubleClickBreakChars(
+    __out PYORI_STRING BreakChars
     );
 
 // *** STRING.C ***

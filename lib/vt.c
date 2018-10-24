@@ -1082,5 +1082,80 @@ YoriLibVtSetConsoleTextAttribute(
     return YoriLibVtSetConsoleTextAttributeOnDevice(hOut, Flags, Attribute);
 }
 
+/**
+ Given a string containing VT100 escapes, remove all escapes and return the
+ result in a newly allocated string.
+
+ @param VtText The text, containing VT100 escapes.
+
+ @param PlainText On successful completion, updated to contain a string
+        that has the contents of VtText without any escapes.  This string
+        will be reallocated within this function if the supplied string
+        is too small.
+ 
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
+ */
+BOOL
+YoriLibStripVtEscapes(
+    __in PYORI_STRING VtText,
+    __inout PYORI_STRING PlainText
+    )
+{
+    DWORD CharIndex;
+    DWORD DestIndex;
+    DWORD EscapeChars;
+    DWORD EndOfEscape;
+    YORI_STRING EscapeSubset;
+
+    EscapeChars = 0;
+
+    for (CharIndex = 0; CharIndex < VtText->LengthInChars; CharIndex++) {
+        if (VtText->LengthInChars > CharIndex + 2 &&
+            VtText->StartOfString[CharIndex] == 27 &&
+            VtText->StartOfString[CharIndex + 1] == '[') {
+
+            YoriLibInitEmptyString(&EscapeSubset);
+            EscapeSubset.StartOfString = &VtText->StartOfString[CharIndex + 2];
+            EscapeSubset.LengthInChars = VtText->LengthInChars - CharIndex - 2;
+            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            if (VtText->LengthInChars > CharIndex + 2 + EndOfEscape) {
+                EscapeChars += 3 + EndOfEscape;
+                CharIndex += 2 + EndOfEscape;
+            }
+        }
+    }
+
+    if (PlainText->LengthAllocated < VtText->LengthInChars - EscapeChars + 1) {
+        YoriLibFreeStringContents(PlainText);
+        if (!YoriLibAllocateString(PlainText, VtText->LengthInChars - EscapeChars + 1)) {
+            return FALSE;
+        }
+    }
+
+    DestIndex = 0;
+    for (CharIndex = 0; CharIndex < VtText->LengthInChars; CharIndex++) {
+        if (VtText->LengthInChars > CharIndex + 2 &&
+            VtText->StartOfString[CharIndex] == 27 &&
+            VtText->StartOfString[CharIndex + 1] == '[') {
+
+            YoriLibInitEmptyString(&EscapeSubset);
+            EscapeSubset.StartOfString = &VtText->StartOfString[CharIndex + 2];
+            EscapeSubset.LengthInChars = VtText->LengthInChars - CharIndex - 2;
+            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            if (VtText->LengthInChars > CharIndex + 2 + EndOfEscape) {
+                EscapeChars += 3 + EndOfEscape;
+                CharIndex += 2 + EndOfEscape;
+            }
+        } else {
+            PlainText->StartOfString[DestIndex] = VtText->StartOfString[CharIndex];
+            DestIndex++;
+        }
+    }
+
+    PlainText->StartOfString[DestIndex] = '\0';
+    PlainText->LengthInChars = DestIndex;
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:
