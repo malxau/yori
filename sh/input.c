@@ -1201,6 +1201,45 @@ YoriShConfigureInputSettings(
 }
 
 /**
+ Clear the screen, redisplay the prompt and resume editing the current
+ input buffer.
+
+ @param Buffer Pointer to the input buffer.
+ */
+VOID
+YoriShClearScreen(
+    __in PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    HANDLE ConsoleHandle;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    DWORD CharsWritten;
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return;
+    }
+
+    ScreenInfo.dwCursorPosition.X = 0;
+    ScreenInfo.dwCursorPosition.Y = 0;
+
+    FillConsoleOutputCharacter(ConsoleHandle, ' ', (DWORD)ScreenInfo.dwSize.X * ScreenInfo.dwSize.Y, ScreenInfo.dwCursorPosition, &CharsWritten);
+
+    FillConsoleOutputAttribute(ConsoleHandle, ScreenInfo.wAttributes, (DWORD)ScreenInfo.dwSize.X * ScreenInfo.dwSize.Y, ScreenInfo.dwCursorPosition, &CharsWritten);
+
+    SetConsoleCursorPosition(ConsoleHandle, ScreenInfo.dwCursorPosition);
+
+    YoriShPreCommand();
+    YoriShDisplayPrompt();
+    YoriShPreCommand();
+
+    Buffer->PreviousCurrentOffset = 0;
+    Buffer->DirtyBeginOffset = 0;
+    Buffer->DirtyLength = Buffer->String.LengthInChars;
+}
+
+/**
  Create a new selection, and if one already exists, advance the selection
  to the left by one character.
 
@@ -1346,16 +1385,17 @@ YoriShProcessKeyDown(
     } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
                CtrlMask == LEFT_CTRL_PRESSED ||
                CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) {
-        if (KeyCode == 'C') {
+        if (KeyCode == 'A') {
+            Buffer->CurrentOffset = 0;
+        } else if (KeyCode == 'C') {
             YoriShClearInput(Buffer);
             YoriLibClearSelection(&Buffer->Selection);
             *TerminateInput = TRUE;
             return TRUE;
         } else if (KeyCode == 'E') {
-            TCHAR StringChar[2];
-            StringChar[0] = 27;
-            StringChar[1] = '\0';
-            YoriShAddCStringToInput(Buffer, StringChar);
+            Buffer->CurrentOffset = Buffer->String.LengthInChars;
+        } else if (KeyCode == 'L') {
+            YoriShClearScreen(Buffer);
         } else if (KeyCode == 'V') {
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);

@@ -395,6 +395,11 @@ YoriShGetJobInformation(
     __inout PYORI_STRING Command
     );
 
+// *** MAIN.C ***
+
+VOID
+YoriShPreCommand();
+
 // *** PARSE.C ***
 
 BOOL
