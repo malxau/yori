@@ -742,13 +742,13 @@ YoriLibNotifyScrollBufferMoved(
         return FALSE;
     }
 
-    Selection->InitialPoint.Y = YoriLibNewLineValueWithMinMax(Selection->InitialPoint.Y, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
-    Selection->PreviouslyDisplayed.Top = YoriLibNewLineValueWithMinMax(Selection->PreviouslyDisplayed.Top, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
-    Selection->PreviouslyDisplayed.Bottom = YoriLibNewLineValueWithMinMax(Selection->PreviouslyDisplayed.Bottom, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
-    Selection->CurrentlyDisplayed.Top = YoriLibNewLineValueWithMinMax(Selection->CurrentlyDisplayed.Top, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
-    Selection->CurrentlyDisplayed.Bottom = YoriLibNewLineValueWithMinMax(Selection->CurrentlyDisplayed.Bottom, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
-    Selection->CurrentlySelected.Top = YoriLibNewLineValueWithMinMax(Selection->CurrentlySelected.Top, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
-    Selection->CurrentlySelected.Bottom = YoriLibNewLineValueWithMinMax(Selection->CurrentlySelected.Bottom, LinesToMove, 0, ScreenInfo.dwSize.Y - 1);
+    Selection->InitialPoint.Y = YoriLibNewLineValueWithMinMax(Selection->InitialPoint.Y, LinesToMove, 0, (SHORT)(ScreenInfo.dwSize.Y - 1));
+    Selection->PreviouslyDisplayed.Top = YoriLibNewLineValueWithMinMax(Selection->PreviouslyDisplayed.Top, LinesToMove, 0, (SHORT)(ScreenInfo.dwSize.Y - 1));
+    Selection->PreviouslyDisplayed.Bottom = YoriLibNewLineValueWithMinMax(Selection->PreviouslyDisplayed.Bottom, LinesToMove, 0, (SHORT)(ScreenInfo.dwSize.Y - 1));
+    Selection->CurrentlyDisplayed.Top = YoriLibNewLineValueWithMinMax(Selection->CurrentlyDisplayed.Top, LinesToMove, 0, (SHORT)(ScreenInfo.dwSize.Y - 1));
+    Selection->CurrentlyDisplayed.Bottom = YoriLibNewLineValueWithMinMax(Selection->CurrentlyDisplayed.Bottom, LinesToMove, 0, (SHORT)(ScreenInfo.dwSize.Y - 1));
+    Selection->CurrentlySelected.Top = YoriLibNewLineValueWithMinMax(Selection->CurrentlySelected.Top, LinesToMove, 0, (SHORT)(ScreenInfo.dwSize.Y - 1));
+    Selection->CurrentlySelected.Bottom = YoriLibNewLineValueWithMinMax(Selection->CurrentlySelected.Bottom, LinesToMove, 0, (SHORT)(ScreenInfo.dwSize.Y - 1));
 
     ASSERT(Selection->PreviouslyDisplayed.Top >= 0);
     ASSERT(Selection->CurrentlyDisplayed.Top >= 0);

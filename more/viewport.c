@@ -1738,7 +1738,7 @@ MorePeriodicScrollForSelection(
             if (LinesMoved > 0) {
                 SHORT SignedLinesMoved = (SHORT)(LinesMoved - (EndScreenInfo.srWindow.Bottom - StartScreenInfo.srWindow.Bottom));
                 if (SignedLinesMoved > 0) {
-                    SignedLinesMoved = (0 - SignedLinesMoved);
+                    SignedLinesMoved = (SHORT)(0 - SignedLinesMoved);
                     YoriLibNotifyScrollBufferMoved(Selection, SignedLinesMoved);
                 }
             }
