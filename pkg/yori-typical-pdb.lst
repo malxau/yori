@@ -4,7 +4,6 @@ ycompact.pdb
 cshot.pdb
 cvtvt.pdb
 finfo.pdb
-fileuser.pdb
 yget.pdb
 grpcmp.pdb
 yhelp.pdb
@@ -13,6 +12,7 @@ hilite.pdb
 iconv.pdb
 initool.pdb
 lines.pdb
+lsof.pdb
 ymore.pdb
 nice.pdb
 osver.pdb

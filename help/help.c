@@ -82,7 +82,6 @@ CHAR strHelpText1[] =
         "EXPR      Evaluate simple arithmetic expressions\n"
         "FALSE     Return false\n"
         "FINFO     Output information about file metadata\n"
-        "FILEUSER  Display which processes have a file in use\n"
         "FG        Display the output of a background job in the foreground\n"
         "FOR       Enumerates through a list of strings or files\n"
         ;
@@ -107,6 +106,7 @@ CHAR strHelpText2[] =
         "INTCMP    Compare two integer values\n"
         "JOB       Displays or updates background job status\n"
         "LINES     Count the number of lines in one or more files\n"
+        "LSOF      Display which processes have a file in use\n"
         "MKDIR     Creates directories\n"
         "MKLINK    Creates hardlinks, symbolic links, or junctions\n"
         "MORE      Displays text one page at a time with scrolling\n"

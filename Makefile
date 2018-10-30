@@ -68,7 +68,6 @@ DIRS=crt       \
      erase     \
      expr      \
      finfo     \
-     fileuser  \
      for       \
      fscmp     \
      get       \
@@ -80,6 +79,7 @@ DIRS=crt       \
      initool   \
      intcmp    \
      lines     \
+     lsof      \
      mkdir     \
      mklink    \
      more      \

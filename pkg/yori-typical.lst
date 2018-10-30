@@ -5,7 +5,6 @@ cshot.exe
 cvtvt.exe
 yget.exe
 finfo.exe
-fileuser.exe
 grpcmp.exe
 yhelp.exe
 hexdump.exe
@@ -13,6 +12,7 @@ hilite.exe
 iconv.exe
 initool.exe
 lines.exe
+lsof.exe
 ymore.exe
 nice.exe
 osver.exe

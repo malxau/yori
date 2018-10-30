@@ -1,5 +1,5 @@
 /**
- * @file fileuser/fileuser.c
+ * @file lsof/lsof.c
  *
  * Yori determine which processes are keeping files open.
  *
@@ -35,7 +35,7 @@ CHAR strHelpText[] =
         "\n"
         "Determine which processes are keeping files open.\n"
         "\n"
-        "FILEUSER [-license] [-b] [-s] <file>...\n"
+        "LSOF [-license] [-b] [-s] <file>...\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -s             Process files from all subdirectories\n";
@@ -44,9 +44,9 @@ CHAR strHelpText[] =
  Display usage text to the user.
  */
 BOOL
-FileUserHelp()
+LsofHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FileUser %i.%i\n"), FILEUSER_VER_MAJOR, FILEUSER_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Lsof %i.%i\n"), LSOF_VER_MAJOR, LSOF_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -57,7 +57,7 @@ FileUserHelp()
 /**
  Context passed to the callback which is invoked for each file found.
  */
-typedef struct _FILEUSER_CONTEXT {
+typedef struct _LSOF_CONTEXT {
 
     /**
      Counts the number of files processed in an enumerate.  If this is zero,
@@ -76,7 +76,7 @@ typedef struct _FILEUSER_CONTEXT {
      */
     PFILE_PROCESS_IDS_USING_FILE_INFORMATION Buffer;
 
-} FILEUSER_CONTEXT, *PFILEUSER_CONTEXT;
+} LSOF_CONTEXT, *PLSOF_CONTEXT;
 
 /**
  A callback that is invoked when a file is found that matches a search criteria
@@ -89,13 +89,13 @@ typedef struct _FILEUSER_CONTEXT {
 
  @param Depth Specifies the recursion depth.  Ignored in this application.
 
- @param Context Pointer to the fileuser context structure indicating the
+ @param Context Pointer to the lsof context structure indicating the
         action to perform and populated with the file and line count found.
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
 BOOL
-FileUserFileFoundCallback(
+LsofFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
@@ -103,7 +103,7 @@ FileUserFileFoundCallback(
     )
 {
     HANDLE FileHandle;
-    PFILEUSER_CONTEXT FileUserContext = (PFILEUSER_CONTEXT)Context;
+    PLSOF_CONTEXT LsofContext = (PLSOF_CONTEXT)Context;
     IO_STATUS_BLOCK IoStatus;
     DWORD Index;
     LONG Status;
@@ -113,7 +113,7 @@ FileUserFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
-    FileUserContext->FilesFoundThisArg++;
+    LsofContext->FilesFoundThisArg++;
 
     FileHandle = CreateFile(FilePath->StartOfString,
                             FILE_READ_ATTRIBUTES,
@@ -128,32 +128,32 @@ FileUserFileFoundCallback(
         if (LastError == ERROR_ACCESS_DENIED &&
             DllNtDll.pRtlGetLastNtStatus != NULL &&
             DllNtDll.pRtlGetLastNtStatus() == (LONG)0xC0000056) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: open of %y failed: the file is delete pending\n"), FilePath);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: open of %y failed: the file is delete pending\n"), FilePath);
         } else {
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: open of %y failed: %s"), FilePath, ErrText);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: open of %y failed: %s"), FilePath, ErrText);
             YoriLibFreeWinErrorText(ErrText);
         }
         return TRUE;
     }
 
-    Status = DllNtDll.pNtQueryInformationFile(FileHandle, &IoStatus, FileUserContext->Buffer, FileUserContext->BufferLength, FileProcessIdsUsingFileInformation);
+    Status = DllNtDll.pNtQueryInformationFile(FileHandle, &IoStatus, LsofContext->Buffer, LsofContext->BufferLength, FileProcessIdsUsingFileInformation);
     if (Status == 0) {
-        for (Index = 0; Index < FileUserContext->Buffer->NumberOfProcesses; Index++) {
+        for (Index = 0; Index < LsofContext->Buffer->NumberOfProcesses; Index++) {
             HANDLE ProcessHandle;
             TCHAR ProcessName[300];
             DWORD ProcessNameSize;
 
             ProcessName[0] = '\0';
             ProcessNameSize = sizeof(ProcessName)/sizeof(ProcessName[0]);
-            ProcessHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, (DWORD)FileUserContext->Buffer->ProcessIds[Index]);
+            ProcessHandle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, (DWORD)LsofContext->Buffer->ProcessIds[Index]);
             if (ProcessHandle != NULL) {
                 DllKernel32.pQueryFullProcessImageNameW(ProcessHandle, 0, ProcessName, &ProcessNameSize);
             }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%10i %s\n"), FileUserContext->Buffer->ProcessIds[Index], ProcessName);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%10i %s\n"), LsofContext->Buffer->ProcessIds[Index], ProcessName);
         }
     } else {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: query of %y failed: %08x"), FilePath, Status);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: query of %y failed: %08x"), FilePath, Status);
     }
 
     CloseHandle(FileHandle);
@@ -161,7 +161,7 @@ FileUserFileFoundCallback(
 }
 
 /**
- The main entrypoint for the fileuser cmdlet.
+ The main entrypoint for the lsof cmdlet.
 
  @param ArgC The number of arguments.
 
@@ -182,10 +182,10 @@ ymain(
     DWORD MatchFlags;
     BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
-    FILEUSER_CONTEXT FileUserContext;
+    LSOF_CONTEXT LsofContext;
     YORI_STRING Arg;
 
-    ZeroMemory(&FileUserContext, sizeof(FileUserContext));
+    ZeroMemory(&LsofContext, sizeof(LsofContext));
 
     for (i = 1; i < ArgC; i++) {
 
@@ -195,7 +195,7 @@ ymain(
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
-                FileUserHelp();
+                LsofHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
@@ -221,13 +221,13 @@ ymain(
     if (DllNtDll.pNtQueryInformationFile == NULL ||
         DllKernel32.pQueryFullProcessImageNameW == NULL) {
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: OS support not present\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: OS support not present\n"));
         return EXIT_FAILURE;
     }
 
-    FileUserContext.BufferLength = 16 * 1024;
-    FileUserContext.Buffer = YoriLibMalloc(FileUserContext.BufferLength);
-    if (FileUserContext.Buffer == NULL) {
+    LsofContext.BufferLength = 16 * 1024;
+    LsofContext.Buffer = YoriLibMalloc(LsofContext.BufferLength);
+    if (LsofContext.Buffer == NULL) {
         return EXIT_FAILURE;
     }
 
@@ -237,7 +237,7 @@ ymain(
     //
 
     if (StartArg == 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fileuser: missing argument\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: missing argument\n"));
         return EXIT_FAILURE;
     } else {
         MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
@@ -250,20 +250,20 @@ ymain(
 
         for (i = StartArg; i < ArgC; i++) {
 
-            FileUserContext.FilesFoundThisArg = 0;
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, FileUserFileFoundCallback, &FileUserContext);
-            if (FileUserContext.FilesFoundThisArg == 0) {
+            LsofContext.FilesFoundThisArg = 0;
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, LsofFileFoundCallback, &LsofContext);
+            if (LsofContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
-                    FileUserFileFoundCallback(&FullPath, NULL, 0, &FileUserContext);
+                    LsofFileFoundCallback(&FullPath, NULL, 0, &LsofContext);
                     YoriLibFreeStringContents(&FullPath);
                 }
             }
         }
     }
 
-    YoriLibFree(FileUserContext.Buffer);
+    YoriLibFree(LsofContext.Buffer);
 
     return EXIT_SUCCESS;
 }
