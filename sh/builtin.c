@@ -251,8 +251,10 @@ YoriShBuckPass (
     if (ExecAsBuiltin) {
         ExitCode = YoriShBuiltIn(ExecContext);
     } else {
+        ExecContext->IncludeEscapesAsLiteral = TRUE;
         ExitCode = YoriShExecuteSingleProgram(ExecContext);
     }
+
     YoriShFreeCmdContext(&ExecContext->CmdToExec);
     memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
     

@@ -215,13 +215,17 @@ typedef struct _YORI_SH_SINGLE_EXEC_CONTEXT {
      TRUE if when the program is executed we should wait for it to complete.
      If FALSE, execution can resume immediately, either executing the next
      program or returning to the user for more input.
-
-     MSFIX This needs to be split between individual subcommand and entire
-     string.  Depending on the operator, either the next command should be
-     launched immediately or only after the previous one has completed,
-     but this has nothing to do with returning to the shell.
      */
     BOOLEAN WaitForCompletion;
+
+    /**
+     TRUE if any escape characters should be used literally (not removed)
+     in any child process string.  This is used when the child process is
+     being generated implicitly, for example an implied subshell.  If the
+     user consciously generated a command, the shell would normally remove
+     any escapes before the child command gets the string.
+     */
+    BOOLEAN IncludeEscapesAsLiteral;
 
     /**
      TRUE if the program should be executed on a different console to the
@@ -307,14 +311,23 @@ typedef struct _YORI_SH_EXEC_PLAN {
 
     /**
      Pointer to the first program to execute.  It will link to subsequent
-     programs to execute.
+     programs to execute.  This is used when each program is executed by this
+     instance of the shell; if the shell decides to create a subshell, the
+     EntireCmd below is used instead.
      */
     PYORI_SH_SINGLE_EXEC_CONTEXT FirstCmd;
 
     /**
-     The total number of programs in the program list.
+     The total number of programs in the FirstCmd program list.
      */
     ULONG NumberCommands;
+
+    /**
+     The entire command to execute.  This is used if execution decides to hand
+     this plan to a subshell process.  If the current shell is executing the
+     plan, the FirstCmd list above is used instead.
+     */
+    YORI_SH_SINGLE_EXEC_CONTEXT EntireCmd;
 
     /**
      TRUE if the process was being waited upon and the user switched
@@ -322,6 +335,14 @@ typedef struct _YORI_SH_EXEC_PLAN {
      taskbar.
      */
     BOOLEAN TaskCompletionDisplayed;
+
+    /**
+     TRUE if when the plan is executed we should wait for it to complete.
+     If FALSE, input can resume immediately.  This may require sending the
+     plan to a child process which can execute the plan while the parent
+     process continues to prompt for input.
+     */
+    BOOLEAN WaitForCompletion;
 
 } YORI_SH_EXEC_PLAN, *PYORI_SH_EXEC_PLAN;
 

@@ -6,7 +6,6 @@ v1.0:
  - General MSFIX review
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments
- - Allow child yori process to execute a plan in the background
  - Tool for generating crashdumps from new or existing processes
  - ISO mount/unmount
  - Have find apply file criteria
@@ -18,6 +17,8 @@ To consider:
  - Isolate aliases during call
  - Colorize help and error text
  - Ctrl+R
+ - More select should use logical line coordinates rather than conhost
+   buffer coordinates to allow selection beyond screen size
 
 v2.0:
  - Port pcre

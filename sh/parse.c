@@ -1152,10 +1152,8 @@ YoriShParseCmdContextToExecContext(
     //
 
     for (Count = InitialArgument; Count < CmdContext->ArgC; Count++) {
-        if (Count != (CmdContext->ArgC - 1)) {
-            if (YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[Count])) {
-                break;
-            }
+        if (YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[Count])) {
+            break;
         }
     }
 
@@ -1242,28 +1240,6 @@ YoriShParseCmdContextToExecContext(
                 }
             }
 
-            if (Count == (CmdContext->ArgC - 1)) {
-                if (ThisArg->StartOfString[0] == '&') {
-                    if (YoriLibCompareStringWithLiteral(ThisArg, _T("&")) == 0) {
-                        ExecContext->WaitForCompletion = FALSE;
-                        RemoveThisArg = TRUE;
-                    }
-                    if (YoriLibCompareStringWithLiteral(ThisArg, _T("&!")) == 0) {
-                        ExecContext->WaitForCompletion = FALSE;
-                        ExecContext->StdInType = StdInTypeNull;
-                        ExecContext->StdOutType = StdOutTypeBuffer;
-                        ExecContext->StdOut.Buffer.RetainBufferData = TRUE;
-                        ExecContext->StdErrType = StdOutTypeBuffer;
-                        ExecContext->StdErr.Buffer.RetainBufferData = TRUE;
-                        RemoveThisArg = TRUE;
-                    }
-                    if (YoriLibCompareStringWithLiteral(ThisArg, _T("&!!")) == 0) {
-                        ExecContext->WaitForCompletion = FALSE;
-                        ExecContext->RunOnSecondConsole = TRUE;
-                        RemoveThisArg = TRUE;
-                    }
-                }
-            }
         }
 
         if (!RemoveThisArg) {
@@ -1346,6 +1322,8 @@ YoriShFreeExecPlan(
         YoriLibFree(ExecContext);
         ExecContext = NextExecContext;
     }
+
+    YoriShFreeExecContext(&ExecPlan->EntireCmd);
 }
 
 /**
@@ -1395,6 +1373,17 @@ YoriShParseCmdContextToExecPlan(
     ZeroMemory(ExecPlan, sizeof(YORI_SH_EXEC_PLAN));
     FoundProgramMatch = FALSE;
 
+    //
+    //  First, turn the entire CmdContext into an ExecContext.
+    //
+
+    if (!YoriShCopyCmdContext(&ExecPlan->EntireCmd.CmdToExec, CmdContext)) {
+        YoriShFreeExecPlan(ExecPlan);
+        return FALSE;
+    }
+    ExecPlan->EntireCmd.WaitForCompletion = TRUE;
+    ExecPlan->WaitForCompletion = TRUE;
+
     while (CurrentArg < CmdContext->ArgC) {
 
         ThisProgram = YoriLibMalloc(sizeof(YORI_SH_SINGLE_EXEC_CONTEXT));
@@ -1410,6 +1399,55 @@ YoriShParseCmdContextToExecPlan(
         if (ArgsConsumed == 0) {
             YoriShFreeExecPlan(ExecPlan);
             return FALSE;
+        }
+
+        if (CurrentArg + ArgsConsumed == (CmdContext->ArgC - 1)) {
+            PYORI_STRING ThisArg;
+            ThisArg = &CmdContext->ArgV[CurrentArg + ArgsConsumed];
+            if (ThisArg->StartOfString[0] == '&') {
+                if (YoriLibCompareStringWithLiteral(ThisArg, _T("&")) == 0) {
+                    ExecPlan->WaitForCompletion = FALSE;
+                    ExecPlan->EntireCmd.WaitForCompletion = FALSE;
+
+                    ThisProgram->WaitForCompletion = FALSE;
+
+                    YoriLibFreeStringContents(&ExecPlan->EntireCmd.CmdToExec.ArgV[CurrentArg + ArgsConsumed]);
+                    ExecPlan->EntireCmd.CmdToExec.ArgC--;
+                    ArgsConsumed++;
+                } else if (YoriLibCompareStringWithLiteral(ThisArg, _T("&!")) == 0) {
+                    ExecPlan->WaitForCompletion = FALSE;
+
+                    ExecPlan->EntireCmd.WaitForCompletion = FALSE;
+                    ExecPlan->EntireCmd.StdInType = StdInTypeNull;
+                    ExecPlan->EntireCmd.StdOutType = StdOutTypeBuffer;
+                    ExecPlan->EntireCmd.StdOut.Buffer.RetainBufferData = TRUE;
+                    ExecPlan->EntireCmd.StdErrType = StdOutTypeBuffer;
+                    ExecPlan->EntireCmd.StdErr.Buffer.RetainBufferData = TRUE;
+
+                    ThisProgram->WaitForCompletion = FALSE;
+                    ThisProgram->StdInType = StdInTypeNull;
+                    ThisProgram->StdOutType = StdOutTypeBuffer;
+                    ThisProgram->StdOut.Buffer.RetainBufferData = TRUE;
+                    ThisProgram->StdErrType = StdOutTypeBuffer;
+                    ThisProgram->StdErr.Buffer.RetainBufferData = TRUE;
+
+                    YoriLibFreeStringContents(&ExecPlan->EntireCmd.CmdToExec.ArgV[CurrentArg + ArgsConsumed]);
+                    ExecPlan->EntireCmd.CmdToExec.ArgC--;
+                    ArgsConsumed++;
+                } else if (YoriLibCompareStringWithLiteral(ThisArg, _T("&!!")) == 0) {
+                    ExecPlan->WaitForCompletion = FALSE;
+
+                    ExecPlan->EntireCmd.WaitForCompletion = FALSE;
+                    ExecPlan->EntireCmd.RunOnSecondConsole = TRUE;
+
+                    ThisProgram->WaitForCompletion = FALSE;
+                    ThisProgram->RunOnSecondConsole = TRUE;
+
+                    YoriLibFreeStringContents(&ExecPlan->EntireCmd.CmdToExec.ArgV[CurrentArg + ArgsConsumed]);
+                    ExecPlan->EntireCmd.CmdToExec.ArgC--;
+                    ArgsConsumed++;
+                }
+            }
         }
 
         //
@@ -1479,7 +1517,7 @@ YoriShParseCmdContextToExecPlan(
             CurrentArg++;
         }
     }
-
+    
     if (CmdContext->CurrentArg >= CmdContext->ArgC &&
         PreviousProgram != NULL &&
         !FoundProgramMatch) {

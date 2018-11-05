@@ -321,6 +321,13 @@ YoriShParseArgs(
                     ArgumentUnderstood = TRUE;
                     break;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ss")) == 0) {
+                if (ArgC > i + 1) {
+                    *TerminateApp = TRUE;
+                    StartArgToExec = i + 1;
+                    ArgumentUnderstood = TRUE;
+                    break;
+                }
             }
         }
 

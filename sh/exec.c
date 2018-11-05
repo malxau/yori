@@ -559,7 +559,7 @@ YoriShCreateProcess(
 
     ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
 
-    CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, TRUE, NULL, NULL);
+    CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
     if (CmdLine == NULL) {
         return ERROR_OUTOFMEMORY;
     }
@@ -1039,7 +1039,7 @@ YoriShExecViaShellExecute(
         ArgContext.ArgC--;
         ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
-        Args = YoriShBuildCmdlineFromCmdContext(&ArgContext, TRUE, NULL, NULL);
+        Args = YoriShBuildCmdlineFromCmdContext(&ArgContext, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
     }
 
     sei.lpParameters = Args;
@@ -1248,6 +1248,36 @@ YoriShCancelExecPlan(
     }
 }
 
+/**
+ Execute a single command by invoking the YORISPEC executable and telling it
+ to execute the command string.  This is used when an expression is compound
+ but cannot wait (eg. a & b &) such that something has to wait for a to
+ finish before executing b but input is supposed to continute immediately.  It
+ is also used when a builtin is being executed without waiting, so that long
+ running tasks can be builtin to the shell executable and still have non-
+ waiting semantics on request.
+
+ @param ExecContext Pointer to the single program string to execute.  This is
+        prepended with the YORISPEC executable and executed.
+ */
+VOID
+YoriShExecViaSubshell(
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    )
+{
+    YORI_STRING PathToYori;
+
+    YoriLibInitEmptyString(&PathToYori);
+    if (YoriShAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &PathToYori)) {
+
+        g_ErrorLevel = YoriShBuckPass(ExecContext, 2, PathToYori.StartOfString, _T("/ss"));
+        YoriLibFreeStringContents(&PathToYori);
+        return;
+    } else {
+        g_ErrorLevel = EXIT_FAILURE;
+    }
+}
+
 
 /**
  Execute an exec plan.  An exec plan has multiple processes, including
@@ -1268,6 +1298,20 @@ YoriShExecExecPlan(
     PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
     PVOID PreviouslyObservedOutputBuffer = NULL;
     BOOL ExecutableFound;
+
+    //
+    //  If a plan requires executing multiple tasks without waiting, hand the
+    //  request to a subshell so we can execute a single thing without
+    //  waiting and let it schedule the tasks
+    //
+
+    if (OutputBuffer == NULL &&
+        ExecPlan->NumberCommands > 1 &&
+        !ExecPlan->WaitForCompletion) {
+
+        YoriShExecViaSubshell(&ExecPlan->EntireCmd);
+        return;
+    }
 
     ExecContext = ExecPlan->FirstCmd;
     while (ExecContext != NULL) {
@@ -1299,7 +1343,11 @@ YoriShExecExecPlan(
             if (ExecutableFound) {
                 g_ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
             } else {
-                g_ErrorLevel = YoriShBuiltIn(ExecContext);
+                if (!ExecContext->WaitForCompletion) {
+                    YoriShExecViaSubshell(ExecContext);
+                } else {
+                    g_ErrorLevel = YoriShBuiltIn(ExecContext);
+                }
             }
         }
 
