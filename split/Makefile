@@ -1,9 +1,5 @@
 
-link: ysplit.exe
-
-install:
-	@copy ysplit.exe $(BINDIR) >NUL
-	@if exist ysplit.pdb copy ysplit.pdb $(SYMDIR) >NUL
+BINARIES=ysplit.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: ymove.exe
-
-install:
-	@copy ymove.exe $(BINDIR) >NUL
-	@if exist ymove.pdb copy ymove.pdb $(SYMDIR) >NUL
+BINARIES=ymove.exe
 
 !INCLUDE "..\config\common.mk"
 

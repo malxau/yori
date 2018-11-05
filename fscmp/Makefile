@@ -1,9 +1,5 @@
 
-link: fscmp.exe
-
-install:
-	@copy fscmp.exe $(BINDIR) >NUL
-	@if exist fscmp.pdb copy fscmp.pdb $(SYMDIR) >NUL
+BINARIES=fscmp.exe
 
 !INCLUDE "..\config\common.mk"
 

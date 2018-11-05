@@ -1,9 +1,5 @@
 
-link: wininfo.exe
-
-install:
-	@copy wininfo.exe $(BINDIR) >NUL
-	@if exist wininfo.pdb copy wininfo.pdb $(SYMDIR) >NUL
+BINARIES=wininfo.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: ystart.exe
-
-install:
-	@copy ystart.exe $(BINDIR) >NUL
-	@if exist ystart.pdb copy ystart.pdb $(SYMDIR) >NUL
+BINARIES=ystart.exe
 
 !INCLUDE "..\config\common.mk"
 

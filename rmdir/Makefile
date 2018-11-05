@@ -1,9 +1,5 @@
 
-link: yrmdir.exe
-
-install:
-	@copy yrmdir.exe $(BINDIR) >NUL
-	@if exist yrmdir.pdb copy yrmdir.pdb $(SYMDIR) >NUL
+BINARIES=yrmdir.exe
 
 !INCLUDE "..\config\common.mk"
 

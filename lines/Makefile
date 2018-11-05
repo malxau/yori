@@ -1,9 +1,5 @@
 
-link: lines.exe
-
-install:
-	@copy lines.exe $(BINDIR) >NUL
-	@if exist lines.pdb copy lines.pdb $(SYMDIR) >NUL
+BINARIES=lines.exe
 
 !INCLUDE "..\config\common.mk"
 

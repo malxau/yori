@@ -1,9 +1,5 @@
 
-link: yhelp.exe
-
-install:
-	@copy yhelp.exe $(BINDIR) >NUL
-	@if exist yhelp.pdb copy yhelp.pdb $(SYMDIR) >NUL
+BINARIES=yhelp.exe
 
 !INCLUDE "..\config\common.mk"
 

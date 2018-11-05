@@ -1,9 +1,5 @@
 
-link: iconv.exe
-
-install:
-	@copy iconv.exe $(BINDIR) >NUL
-	@if exist iconv.pdb copy iconv.pdb $(SYMDIR) >NUL
+BINARIES=iconv.exe
 
 !INCLUDE "..\config\common.mk"
 

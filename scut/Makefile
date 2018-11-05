@@ -1,9 +1,5 @@
 
-link: scut.exe
-
-install:
-	@copy scut.exe $(BINDIR) >NUL
-	@if exist scut.pdb copy scut.pdb $(SYMDIR) >NUL
+BINARIES=scut.exe
 
 !INCLUDE "..\config\common.mk"
 

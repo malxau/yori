@@ -1,14 +1,5 @@
 
-
-link: yori.exe yorimin.exe
-
-install:
-	@if not exist $(BINDIR) mkdir $(BINDIR)
-	@if not exist $(SYMDIR) mkdir $(SYMDIR)
-	@copy yori.exe $(BINDIR) >NUL
-	@if exist yori.pdb copy yori.pdb $(SYMDIR) >NUL
-	@copy yorimin.exe $(BINDIR) >NUL
-	@if exist yorimin.pdb copy yorimin.pdb $(SYMDIR) >NUL
+BINARIES=yori.exe yorimin.exe
 
 !INCLUDE "..\config\common.mk"
 

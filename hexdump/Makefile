@@ -1,9 +1,5 @@
 
-link: hexdump.exe
-
-install:
-	@copy hexdump.exe $(BINDIR) >NUL
-	@if exist hexdump.pdb copy hexdump.pdb $(SYMDIR) >NUL
+BINARIES=hexdump.exe
 
 !INCLUDE "..\config\common.mk"
 

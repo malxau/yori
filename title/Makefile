@@ -1,9 +1,5 @@
 
-link: ytitle.exe
-
-install:
-	@copy ytitle.exe $(BINDIR) >NUL
-	@if exist ytitle.pdb copy ytitle.pdb $(SYMDIR) >NUL
+BINARIES=ytitle.exe
 
 !INCLUDE "..\config\common.mk"
 

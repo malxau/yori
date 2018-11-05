@@ -1,9 +1,5 @@
 
-link: initool.exe
-
-install:
-	@copy initool.exe $(BINDIR) >NUL
-	@if exist initool.pdb copy initool.pdb $(SYMDIR) >NUL
+BINARIES=initool.exe
 
 !INCLUDE "..\config\common.mk"
 

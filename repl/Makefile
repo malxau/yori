@@ -1,9 +1,5 @@
 
-link: repl.exe
-
-install:
-	@copy repl.exe $(BINDIR) >NUL
-	@if exist repl.pdb copy repl.pdb $(SYMDIR) >NUL
+BINARIES=repl.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: yexpr.exe
-
-install:
-	@copy yexpr.exe $(BINDIR) >NUL
-	@if exist yexpr.pdb copy yexpr.pdb $(SYMDIR) >NUL
+BINARIES=yexpr.exe
 
 !INCLUDE "..\config\common.mk"
 

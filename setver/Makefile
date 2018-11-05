@@ -1,9 +1,5 @@
 
-link: setver.exe
-
-install:
-	@copy setver.exe $(BINDIR) >NUL
-	@if exist setver.pdb copy setver.pdb $(SYMDIR) >NUL
+BINARIES=setver.exe
 
 !INCLUDE "..\config\common.mk"
 

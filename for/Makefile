@@ -2,13 +2,7 @@
 MODULES=\
 	for.com
 
-link: yfor.exe $(MODULES) compile
-
-install:
-	@copy yfor.exe $(BINDIR) >NUL
-	@if exist yfor.pdb copy yfor.pdb $(SYMDIR) >NUL
-	@for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL
-	@for %%i in ($(MODULES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
+BINARIES=yfor.exe
 
 !INCLUDE "..\config\common.mk"
 

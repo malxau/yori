@@ -1,9 +1,5 @@
 
-link: ypm.exe
-
-install:
-	@copy ypm.exe $(BINDIR) >NUL
-	@if exist ypm.pdb copy ypm.pdb $(SYMDIR) >NUL
+BINARIES=ypm.exe
 
 !INCLUDE "..\config\common.mk"
 

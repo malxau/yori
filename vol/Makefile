@@ -1,9 +1,5 @@
 
-link: yvol.exe
-
-install:
-	@copy yvol.exe $(BINDIR) >NUL
-	@if exist yvol.pdb copy yvol.pdb $(SYMDIR) >NUL
+BINARIES=yvol.exe
 
 !INCLUDE "..\config\common.mk"
 

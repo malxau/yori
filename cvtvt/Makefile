@@ -1,9 +1,5 @@
 
-link: cvtvt.exe
-
-install:
-	@copy cvtvt.exe $(BINDIR) >NUL
-	@if exist cvtvt.pdb copy cvtvt.pdb $(SYMDIR) >NUL
+BINARIES=cvtvt.exe
 
 !INCLUDE "..\config\common.mk"
 

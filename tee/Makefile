@@ -1,9 +1,5 @@
 
-link: tee.exe
-
-install:
-	@copy tee.exe $(BINDIR) >NUL
-	@if exist tee.pdb copy tee.pdb $(SYMDIR) >NUL
+BINARIES=tee.exe
 
 !INCLUDE "..\config\common.mk"
 

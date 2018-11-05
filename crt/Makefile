@@ -1,10 +1,6 @@
 
 compile: yoricrt.lib
 
-link:
-
-install:
-
 !INCLUDE "..\config\common.mk"
 
 OBJS=\

@@ -1,9 +1,5 @@
 
-link: cshot.exe
-
-install:
-	@copy cshot.exe $(BINDIR) >NUL
-	@if exist cshot.pdb copy cshot.pdb $(SYMDIR) >NUL
+BINARIES=cshot.exe
 
 !INCLUDE "..\config\common.mk"
 

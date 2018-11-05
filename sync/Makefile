@@ -1,9 +1,5 @@
 
-link: sync.exe
-
-install:
-	@copy sync.exe $(BINDIR) >NUL
-	@if exist sync.pdb copy sync.pdb $(SYMDIR) >NUL
+BINARIES=sync.exe
 
 !INCLUDE "..\config\common.mk"
 

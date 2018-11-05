@@ -1,9 +1,5 @@
 
-link: ydate.exe
-
-install:
-	@copy ydate.exe $(BINDIR) >NUL
-	@if exist ydate.pdb copy ydate.pdb $(SYMDIR) >NUL
+BINARIES=ydate.exe
 
 !INCLUDE "..\config\common.mk"
 

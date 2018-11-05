@@ -1,9 +1,5 @@
 
-link: ytype.exe
-
-install:
-	@copy ytype.exe $(BINDIR) >NUL
-	@if exist ytype.pdb copy ytype.pdb $(SYMDIR) >NUL
+BINARIES=ytype.exe
 
 !INCLUDE "..\config\common.mk"
 

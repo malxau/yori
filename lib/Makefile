@@ -1,10 +1,6 @@
 
 compile: yorilib.lib
 
-link:
-
-install:
-
 !INCLUDE "..\config\common.mk"
 
 DEBUG=0

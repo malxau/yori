@@ -1,10 +1,6 @@
 
 compile: yoripkg.lib 
 
-link:
-
-install:
-
 !INCLUDE "..\config\common.mk"
 
 CFLAGS=$(CFLAGS) -DYPM_VER_MAJOR=$(YPM_VER_MAJOR) -DYPM_VER_MINOR=$(YPM_VER_MINOR)

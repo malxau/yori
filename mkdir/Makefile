@@ -1,9 +1,5 @@
 
-link: ymkdir.exe
-
-install:
-	@copy ymkdir.exe $(BINDIR) >NUL
-	@if exist ymkdir.pdb copy ymkdir.pdb $(SYMDIR) >NUL
+BINARIES=ymkdir.exe
 
 !INCLUDE "..\config\common.mk"
 

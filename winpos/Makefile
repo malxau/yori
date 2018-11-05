@@ -1,9 +1,5 @@
 
-link: winpos.exe
-
-install:
-	@copy winpos.exe $(BINDIR) >NUL
-	@if exist winpos.pdb copy winpos.pdb $(SYMDIR) >NUL
+BINARIES=winpos.exe
 
 !INCLUDE "..\config\common.mk"
 

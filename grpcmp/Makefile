@@ -1,9 +1,5 @@
 
-link: grpcmp.exe
-
-install:
-	@copy grpcmp.exe $(BINDIR) >NUL
-	@if exist grpcmp.pdb copy grpcmp.pdb $(SYMDIR) >NUL
+BINARIES=grpcmp.exe
 
 !INCLUDE "..\config\common.mk"
 

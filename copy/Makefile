@@ -1,9 +1,5 @@
 
-link: ycopy.exe
-
-install:
-	@copy ycopy.exe $(BINDIR) >NUL
-	@if exist ycopy.pdb copy ycopy.pdb $(SYMDIR) >NUL
+BINARIES=ycopy.exe
 
 !INCLUDE "..\config\common.mk"
 

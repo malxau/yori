@@ -1,9 +1,5 @@
 
-link: lsof.exe
-
-install:
-	@copy lsof.exe $(BINDIR) >NUL
-	@if exist lsof.pdb copy lsof.pdb $(SYMDIR) >NUL
+BINARIES=lsof.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: ypause.exe
-
-install:
-	@copy ypause.exe $(BINDIR) >NUL
-	@if exist ypause.pdb copy ypause.pdb $(SYMDIR) >NUL
+BINARIES=ypause.exe
 
 !INCLUDE "..\config\common.mk"
 

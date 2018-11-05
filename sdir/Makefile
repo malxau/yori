@@ -1,12 +1,5 @@
 
-
-link: sdir.exe
-
-install:
-	@copy sdir.exe $(BINDIR) >NUL
-	@if exist sdir.pdb copy sdir.pdb $(SYMDIR) >NUL
-
-SDIR_BUILD_ID=0
+BINARIES=sdir.exe
 
 !INCLUDE "..\config\common.mk"
 
@@ -15,7 +8,7 @@ CFLAGS=$(CFLAGS) /Fdsdir.pdb
 LINKPDB=/Pdb:sdir.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DSDIR_VER_MAJOR=$(SDIR_VER_MAJOR) -DSDIR_VER_MINOR=$(SDIR_VER_MINOR) -DSDIR_BUILD_ID=$(SDIR_BUILD_ID)
+CFLAGS=$(CFLAGS) -DSDIR_VER_MAJOR=$(SDIR_VER_MAJOR) -DSDIR_VER_MINOR=$(SDIR_VER_MINOR)
 
 OBJS=callbacks.obj color.obj display.obj init.obj sdir.obj usage.obj utils.obj
 

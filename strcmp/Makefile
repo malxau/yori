@@ -1,9 +1,5 @@
 
-link: strcmp.exe
-
-install:
-	@copy strcmp.exe $(BINDIR) >NUL
-	@if exist strcmp.pdb copy strcmp.pdb $(SYMDIR) >NUL
+BINARIES=strcmp.exe
 
 !INCLUDE "..\config\common.mk"
 

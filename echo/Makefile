@@ -1,9 +1,5 @@
 
-link: yecho.exe
-
-install:
-	@copy yecho.exe $(BINDIR) >NUL
-	@if exist yecho.pdb copy yecho.pdb $(SYMDIR) >NUL
+BINARIES=yecho.exe
 
 !INCLUDE "..\config\common.mk"
 

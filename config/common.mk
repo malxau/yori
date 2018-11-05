@@ -205,6 +205,9 @@ writeconfigcache:
 !ELSE # READCONFIGCACHEFILE
 !INCLUDE "$(READCONFIGCACHEFILE)"
 !ENDIF
+!IF "$(WRITECONFIGCACHEFILE)"==""
+
+link: $(BINARIES) $(MODULES) compile
 
 !IFDEF _NMAKE_VER
 .c.obj::
@@ -219,7 +222,6 @@ writeconfigcache:
 	@$(RC) /fo$(@B).res $(RCLAGS) $** >NUL
 	@if not exist $@ ren $(@B).res $@
 
-!IF "$(WRITECONFIGCACHEFILE)"==""
 clean:
 	-@erase if.com >NUL 2>NUL
 	@if exist *.exe erase *.exe
@@ -231,4 +233,13 @@ clean:
 	@if exist *.res erase *.res
 	@if exist *~ erase *~
 	@if exist *.manifest erase *.manifest
+
+install:
+	@if not exist $(BINDIR) mkdir $(BINDIR) >NUL
+	@if not exist $(MODDIR) mkdir $(MODDIR) >NUL
+	@if not exist $(SYMDIR) mkdir $(SYMDIR) >NUL
+	@for %%i in ($(BINARIES)) do @copy %%i $(BINDIR) >NUL
+	@for %%i in ($(BINARIES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
+	@for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL
+	@for %%i in ($(MODULES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
 !ENDIF

@@ -1,9 +1,5 @@
 
-link: readline.exe
-
-install:
-	@copy readline.exe $(BINDIR) >NUL
-	@if exist readline.pdb copy readline.pdb $(SYMDIR) >NUL
+BINARIES=readline.exe
 
 !INCLUDE "..\config\common.mk"
 

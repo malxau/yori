@@ -1,9 +1,5 @@
 
-link: finfo.exe
-
-install:
-	@copy finfo.exe $(BINDIR) >NUL
-	@if exist finfo.pdb copy finfo.pdb $(SYMDIR) >NUL
+BINARIES=finfo.exe
 
 !INCLUDE "..\config\common.mk"
 

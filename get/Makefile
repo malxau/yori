@@ -1,9 +1,5 @@
 
-link: yget.exe
-
-install:
-	@copy yget.exe $(BINDIR) >NUL
-	@if exist yget.pdb copy yget.pdb $(SYMDIR) >NUL
+BINARIES=yget.exe
 
 !INCLUDE "..\config\common.mk"
 

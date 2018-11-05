@@ -1,9 +1,5 @@
 
-link: tail.exe
-
-install:
-	@copy tail.exe $(BINDIR) >NUL
-	@if exist tail.pdb copy tail.pdb $(SYMDIR) >NUL
+BINARIES=tail.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: sleep.exe
-
-install:
-	@copy sleep.exe $(BINDIR) >NUL
-	@if exist sleep.pdb copy sleep.pdb $(SYMDIR) >NUL
+BINARIES=sleep.exe
 
 !INCLUDE "..\config\common.mk"
 

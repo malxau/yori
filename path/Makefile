@@ -1,9 +1,5 @@
 
-link: ypath.exe
-
-install:
-	@copy ypath.exe $(BINDIR) >NUL
-	@if exist ypath.pdb copy ypath.pdb $(SYMDIR) >NUL
+BINARIES=ypath.exe
 
 !INCLUDE "..\config\common.mk"
 

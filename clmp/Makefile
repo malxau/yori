@@ -1,9 +1,5 @@
 
-link: clmp.exe
-
-install:
-	@copy clmp.exe $(BINDIR) >NUL
-	@if exist clmp.pdb copy clmp.pdb $(SYMDIR) >NUL
+BINARIES=clmp.exe
 
 !INCLUDE "..\config\common.mk"
 

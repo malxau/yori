@@ -1,9 +1,5 @@
 
-link: yclip.exe
-
-install:
-	@copy yclip.exe $(BINDIR) >NUL
-	@if exist yclip.pdb copy yclip.pdb $(SYMDIR) >NUL
+BINARIES=yclip.exe
 
 !INCLUDE "..\config\common.mk"
 

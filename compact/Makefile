@@ -1,9 +1,5 @@
 
-link: ycompact.exe
-
-install:
-	@copy ycompact.exe $(BINDIR) >NUL
-	@if exist ycompact.pdb copy ycompact.pdb $(SYMDIR) >NUL
+BINARIES=ycompact.exe
 
 !INCLUDE "..\config\common.mk"
 

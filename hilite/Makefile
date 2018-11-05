@@ -1,9 +1,5 @@
 
-link: hilite.exe
-
-install:
-	@copy hilite.exe $(BINDIR) >NUL
-	@if exist hilite.pdb copy hilite.pdb $(SYMDIR) >NUL
+BINARIES=hilite.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: ysetup.exe
-
-install:
-	@copy ysetup.exe $(BINDIR) >NUL
-	@if exist ysetup.pdb copy ysetup.pdb $(SYMDIR) >NUL
+BINARIES=ysetup.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: touch.exe
-
-install:
-	@copy touch.exe $(BINDIR) >NUL
-	@if exist touch.pdb copy touch.pdb $(SYMDIR) >NUL
+BINARIES=touch.exe
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: yerase.exe
-
-install:
-	@copy yerase.exe $(BINDIR) >NUL
-	@if exist yerase.pdb copy yerase.pdb $(SYMDIR) >NUL
+BINARIES=yerase.exe
 
 !INCLUDE "..\config\common.mk"
 

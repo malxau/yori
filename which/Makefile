@@ -1,9 +1,5 @@
 
-link: which.exe
-
-install:
-	@copy which.exe $(BINDIR) >NUL
-	@if exist which.pdb copy which.pdb $(SYMDIR) >NUL
+BINARIES=which.exe
 
 !INCLUDE "..\config\common.mk"
 

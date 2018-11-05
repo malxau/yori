@@ -1,9 +1,5 @@
 
-link: cab.exe
-
-install:
-	@copy cab.exe $(BINDIR) >NUL
-	@if exist cab.pdb copy cab.pdb $(SYMDIR) >NUL
+BINARIES=cab.exe
 
 !INCLUDE "..\config\common.mk"
 

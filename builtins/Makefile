@@ -42,13 +42,7 @@ BUILTINS = alias.obj     \
            ys.obj        \
            z.obj         \
 
-link: compile $(MODULES)
-
 compile: builtins.lib
-
-install:
-	@for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL
-	@for %%i in ($(MODULES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
 
 !INCLUDE "..\config\common.mk"
 

@@ -1,9 +1,5 @@
 
-link: ycut.exe
-
-install:
-	@copy ycut.exe $(BINDIR) >NUL
-	@if exist ycut.pdb copy ycut.pdb $(SYMDIR) >NUL
+BINARIES=ycut.exe
 
 !INCLUDE "..\config\common.mk"
 

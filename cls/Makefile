@@ -1,9 +1,5 @@
 
-link: ycls.exe
-
-install:
-	@copy ycls.exe $(BINDIR) >NUL
-	@if exist ycls.pdb copy ycls.pdb $(SYMDIR) >NUL
+BINARIES=ycls.exe
 
 !INCLUDE "..\config\common.mk"
 

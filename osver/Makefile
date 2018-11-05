@@ -1,9 +1,5 @@
 
-link: osver.exe
-
-install:
-	@copy osver.exe $(BINDIR) >NUL
-	@if exist osver.pdb copy osver.pdb $(SYMDIR) >NUL
+BINARIES=osver.exe
 
 !INCLUDE "..\config\common.mk"
 

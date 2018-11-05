@@ -1,9 +1,5 @@
 
-link: nice.exe
-
-install:
-	@copy nice.exe $(BINDIR) >NUL
-	@if exist nice.pdb copy nice.pdb $(SYMDIR) >NUL
+BINARIES=nice.exe
 
 !INCLUDE "..\config\common.mk"
 

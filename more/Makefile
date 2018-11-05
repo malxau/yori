@@ -1,9 +1,5 @@
 
-link: ymore.exe
-
-install:
-	@copy ymore.exe $(BINDIR) >NUL
-	@if exist ymore.pdb copy ymore.pdb $(SYMDIR) >NUL
+BINARIES=ymore.exe
 
 !INCLUDE "..\config\common.mk"
 

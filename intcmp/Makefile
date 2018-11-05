@@ -1,9 +1,5 @@
 
-link: intcmp.exe
-
-install:
-	@copy intcmp.exe $(BINDIR) >NUL
-	@if exist intcmp.pdb copy intcmp.pdb $(SYMDIR) >NUL
+BINARIES=intcmp.exe
 
 !INCLUDE "..\config\common.mk"
 
