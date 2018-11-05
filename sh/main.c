@@ -74,63 +74,6 @@ YoriShHelp()
 }
 
 /**
- A structure defining an initial mapping of alias to value.
- */
-typedef struct _YORI_SH_DEFAULT_ALIAS_ENTRY {
-
-    /**
-     The initial alias name.
-     */
-    LPTSTR Alias;
-
-    /**
-     The initial value.
-     */
-    LPTSTR Value;
-} YORI_SH_DEFAULT_ALIAS_ENTRY, *PYORI_SH_DEFAULT_ALIAS_ENTRY;
-
-/**
- A table of initial alias to value mappings to populate.
- */
-YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[] = {
-    {_T("cd"),       _T("chdir $*$")},
-    {_T("clip"),     _T("yclip $*$")},
-    {_T("cls"),      _T("ycls $*$")},
-    {_T("compact"),  _T("ycompact $*$")},
-    {_T("copy"),     _T("ycopy $*$")},
-    {_T("cut"),      _T("ycut $*$")},
-    {_T("date"),     _T("ydate $*$")},
-    {_T("del"),      _T("yerase $*$")},
-    {_T("dir"),      _T("ydir $*$")},
-    {_T("echo"),     _T("yecho $*$")},
-    {_T("erase"),    _T("yerase $*$")},
-    {_T("expr"),     _T("yexpr $*$")},
-    {_T("head"),     _T("ytype -h $*$")},
-    {_T("help"),     _T("yhelp $*$")},
-    {_T("htmlclip"), _T("yclip -h $*$")},
-    {_T("md"),       _T("ymkdir $*$")},
-    {_T("mkdir"),    _T("ymkdir $*$")},
-    {_T("mklink"),   _T("ymklink $*$")},
-    {_T("more"),     _T("ymore $*$")},
-    {_T("move"),     _T("ymove $*$")},
-    {_T("paste"),    _T("yclip -p $*$")},
-    {_T("path"),     _T("ypath $*$")},
-    {_T("pause"),    _T("ypause $*$")},
-    {_T("pwd"),      _T("ypath . $*$")},
-    {_T("rd"),       _T("yrmdir $*$")},
-    {_T("ren"),      _T("ymove $*$")},
-    {_T("rename"),   _T("ymove $*$")},
-    {_T("rmdir"),    _T("yrmdir $*$")},
-    {_T("start"),    _T("ystart $*$")},
-    {_T("split"),    _T("ysplit $*$")},
-    {_T("time"),     _T("ydate -t $*$")},
-    {_T("title"),    _T("ytitle $*$")},
-    {_T("type"),     _T("ytype $*$")},
-    {_T("vol"),      _T("yvol $*$")},
-    {_T("?"),        _T("yexpr $*$")}
-};
-
-/**
  Initialize the console and populate the shell's environment with default
  values.
  */
@@ -229,7 +172,7 @@ YoriShInit()
     //  Register any builtin aliases, including drive letter colon commands.
     //
 
-    for (Count = 0; Count < sizeof(YoriShDefaultAliasEntries)/sizeof(YoriShDefaultAliasEntries[0]); Count++) {
+    for (Count = 0; Count < YoriShDefaultAliasEntriesCount(); Count++) {
         YoriShAddAliasLiteral(YoriShDefaultAliasEntries[Count].Alias, YoriShDefaultAliasEntries[Count].Value, TRUE);
     }
 

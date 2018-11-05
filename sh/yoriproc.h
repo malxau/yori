@@ -537,4 +537,9 @@ YoriShSetWindowState(
     __in DWORD State
     );
 
+// *** YORISTD.C / YORINONE.C ***
+
+DWORD
+YoriShDefaultAliasEntriesCount();
+
 // vim:sw=4:ts=4:et:

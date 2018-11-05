@@ -622,6 +622,23 @@ typedef struct _YORI_SH_BUILTIN_NAME_MAPPING {
     PYORI_CMD_BUILTIN BuiltinFn;
 } YORI_SH_BUILTIN_NAME_MAPPING, *PYORI_SH_BUILTIN_NAME_MAPPING;
 
+/**
+ A structure defining an initial mapping of alias to value.
+ */
+typedef struct _YORI_SH_DEFAULT_ALIAS_ENTRY {
+
+    /**
+     The initial alias name.
+     */
+    LPTSTR Alias;
+
+    /**
+     The initial value.
+     */
+    LPTSTR Value;
+} YORI_SH_DEFAULT_ALIAS_ENTRY, *PYORI_SH_DEFAULT_ALIAS_ENTRY;
+
+extern YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[];
 
 /**
  A structure containing information about a currently loaded DLL.
@@ -701,6 +718,5 @@ extern BOOL g_ExitProcess;
 extern DWORD g_ExitProcessExitCode;
 
 extern YORI_LIST_ENTRY YoriShBuiltinCallbacks;
-
 
 // vim:sw=4:ts=4:et:

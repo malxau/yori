@@ -40,7 +40,7 @@ OBJS=\
 	yori.obj         \
 
 BUILTINTABLE_OBJS=\
-	yorifull.obj     \
+	yoristd.obj      \
 	yorinone.obj     \
 
 BUILTINLIBS=\
@@ -52,6 +52,6 @@ compile: $(OBJS) $(BUILTINTABLE_OBJS)
 yorimin.exe: $(OBJS) yorinone.obj
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) yorinone.obj $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(YORIPDB) -out:$@
 
-yori.exe: $(OBJS) yorifull.obj
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yorifull.obj $(CRTLIB) ..\lib\yorilib.lib $(BUILTINLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(YORIFULLPDB) -out:$@
+yori.exe: $(OBJS) yoristd.obj
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yoristd.obj $(CRTLIB) ..\lib\yorilib.lib $(BUILTINLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(YORIFULLPDB) -out:$@
 
