@@ -69,6 +69,8 @@ SdirAppInitialize()
 
     Summary = YoriLibMalloc(sizeof(SDIR_SUMMARY));
     if (Summary == NULL) {
+        YoriLibFree(Opts);
+        Opts = NULL;
         return FALSE;
     }
     ZeroMemory(Summary, sizeof(SDIR_SUMMARY));
@@ -292,6 +294,10 @@ SdirSetSubdirWalk(
     if (!YoriLibUserStringToSingleFilePath(&UserPath, TRUE, &SubDirWalk)) {
         SdirDisplayError(GetLastError(), _T("YoriLibUserStringToSingleFilePath"));
         return FALSE;
+    }
+
+    if (Opts->SubDirWalk != NULL) {
+        YoriLibDereference(Opts->SubDirWalk);
     }
 
     Opts->SubDirWalk = SubDirWalk.StartOfString;
@@ -525,16 +531,16 @@ SdirParseOpt (
 /**
  Parse command line arguments and configure in memory state.
 
- @param argc Count of arguments.
+ @param ArgC Count of arguments.
 
- @param argv Array of NULL terminated string arguments.
+ @param ArgV Array of string arguments.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 SdirParseArgs (
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     )
 {
     ULONG  CurrentArg;
@@ -545,6 +551,8 @@ SdirParseArgs (
     LPTSTR Opt;
     LPTSTR TokContext = NULL;
     DWORD  i;
+
+    YORI_STRING Arg;
 
     //
     //  Default to name sorting.  If something else is specified
@@ -596,7 +604,7 @@ SdirParseArgs (
                     SdirWriteString(_T("Unknown environment option: "));
                     SdirWriteString(Opt);
                     SdirWriteString(_T("\n"));
-                    SdirUsage(argc, argv);
+                    SdirUsage(ArgC, ArgV);
                     return FALSE;
                 }
             }
@@ -605,23 +613,22 @@ SdirParseArgs (
         }
     }
 
-    for (CurrentArg = 1; CurrentArg < (ULONG)argc; CurrentArg++) {
+    for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
 
-        if (YoriLibIsCommandLineOptionChar(argv[CurrentArg][0])) {
-            Opt = &argv[CurrentArg][1];
+        if (YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
 
             OptParsed = FALSE;
             DisplayUsage = FALSE;
 
-            OptParsed = SdirParseOpt(Opt);
+            OptParsed = SdirParseOpt(Arg.StartOfString);
 
-            if (_tcsicmp(Opt, _T("help")) == 0) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("help")) == 0) {
                 DisplayUsage = TRUE;
                 OptParsed = TRUE;
-            } else if (_tcsicmp(Opt, _T("?")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 DisplayUsage = TRUE;
                 OptParsed = TRUE;
-            } else if (_tcsicmp(Opt, _T("v")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
                 DisplayUsage = TRUE;
                 OptParsed = TRUE;
             }
@@ -629,10 +636,10 @@ SdirParseArgs (
             if (DisplayUsage || !OptParsed) {
                 if (!OptParsed) {
                     SdirWriteString(_T("Unknown argument: "));
-                    SdirWriteString(argv[CurrentArg]);
+                    SdirWriteString(ArgV[CurrentArg].StartOfString);
                     SdirWriteString(_T("\n"));
                 }
-                SdirUsage(argc, argv);
+                SdirUsage(ArgC, ArgV);
                 return FALSE;
             }
         }
@@ -645,16 +652,16 @@ SdirParseArgs (
  Initialize the application, parsing all arguments and configuring global
  state ready for execution.
 
- @param argc Count of arguments.
+ @param ArgC Count of arguments.
 
- @param argv Array of NULL terminated string arguments.
+ @param ArgV Array of string arguments.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 SdirInit(
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     )
 {
     if (!YoriLibLoadKernel32Functions()) {
@@ -665,7 +672,7 @@ SdirInit(
         return FALSE;
     }
 
-    if (!SdirParseArgs(argc, argv)) {
+    if (!SdirParseArgs(ArgC, ArgV)) {
         return FALSE;
     }
 
@@ -682,6 +689,43 @@ SdirInit(
     }
 
     return TRUE;
+}
+
+
+/**
+ Tear down any global allocations caused by invoking the application.
+ */
+VOID
+SdirAppCleanup()
+{
+    if (Opts != NULL) {
+        YoriLibFreeStringContents(&Opts->ParentName);
+        if (Opts->SubDirWalk != NULL) {
+            YoriLibDereference(Opts->SubDirWalk);
+        }
+        YoriLibFree(Opts);
+        Opts = NULL;
+    }
+
+    if (Summary != NULL) {
+        YoriLibFree(Summary);
+        Summary = NULL;
+    }
+
+    if (SdirAttributeApply != NULL) {
+        YoriLibFree(SdirAttributeApply);
+        SdirAttributeApply = NULL;
+    }
+
+    if (SdirDirCollection != NULL) {
+        YoriLibFree(SdirDirCollection);
+        SdirDirCollection = NULL;
+    }
+
+    if (SdirDirSorted != NULL) {
+        YoriLibFree(SdirDirSorted);
+        SdirDirSorted = NULL;
+    }
 }
 
 // vim:sw=4:ts=4:et:

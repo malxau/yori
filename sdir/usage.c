@@ -680,18 +680,19 @@ SdirUsageMetaColor()
 /**
  Display usage information.
 
- @param argc Count of arguments.
+ @param ArgC Count of arguments.
 
- @param argv Array of arguments.
+ @param ArgV Array of arguments.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 SdirUsage(
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     )
 {
+    YORI_STRING Arg;
     ULONG CurrentArg;
     BOOLEAN DisplayOptionsHelp = FALSE;
     BOOLEAN DisplayDisplayHelp = FALSE;
@@ -714,32 +715,31 @@ SdirUsage(
     //  Check if the user wants detailed information on something.
     //
 
-    for (CurrentArg = 1; CurrentArg < (ULONG)argc; CurrentArg++) {
+    for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
 
-        if (argv[CurrentArg][0] == '-' || argv[CurrentArg][0] == '/') {
-            LPTSTR Opt = &argv[CurrentArg][1];
+        if (YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
 
-            if (_tcsicmp(Opt, _T("opts")) == 0) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("opts")) == 0) {
                 DisplayOptionsHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (_tcsicmp(Opt, _T("display")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("display")) == 0) {
                 DisplayDisplayHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (_tcsicmp(Opt, _T("sort")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("sort")) == 0) {
                 DisplaySortHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (_tcsicmp(Opt, _T("filecolor")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filecolor")) == 0) {
                 DisplayFileColorHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (_tcsicmp(Opt, _T("metacolor")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("metacolor")) == 0) {
                 DisplayMetaColorHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (_tcsicmp(Opt, _T("license")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 DisplayLicenseHelp = TRUE;
                 DisplaySomething = TRUE;
-            } else if (_tcsicmp(Opt, _T("v")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
                 DisplaySomething = TRUE;
-            } else if (_tcsicmp(Opt, _T("all")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("all")) == 0) {
                 DisplayOptionsHelp = TRUE;
                 DisplayLicenseHelp = TRUE;
                 DisplayDisplayHelp = TRUE;

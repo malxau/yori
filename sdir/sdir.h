@@ -815,11 +815,50 @@ typedef struct _SDIR_EXEC {
 } SDIR_EXEC, *PSDIR_EXEC;
 #pragma pack(pop)
 
+/**
+ An in memory representation of a single match criteria, specifying the color
+ to apply in event that the incoming file matches a specified criteria.
+ */
+typedef struct _SDIR_ATTRIBUTE_APPLY {
+
+    /**
+     Pointer to a function to compare an incoming directory entry against the
+     dummy one contained here.
+     */
+    SDIR_COMPARE_FN CompareFn;
+
+    /**
+     An array indicating whether a match is found if the comparison returns
+     less than, greater than, or equal.
+     */
+    BOOL TruthStates[3];
+
+    /**
+     The color to apply in event of a match.
+     */
+    YORILIB_COLOR_ATTRIBUTES Attribute;
+
+    /**
+     Unused data to explicitly preserve alignment.
+     */
+    WORD AlignmentPadding;
+
+    /**
+     A dummy directory entry containing values to compare against.  This is
+     used to allow all compare functions to operate on two directory entries.
+     */
+    YORI_FILE_INFO CompareEntry;
+} SDIR_ATTRIBUTE_APPLY, *PSDIR_ATTRIBUTE_APPLY;
+
 extern PSDIR_OPTS Opts;
 extern PSDIR_SUMMARY Summary;
 extern const SDIR_OPT SdirOptions[];
 extern const SDIR_EXEC SdirExec[];
 extern const CHAR SdirAttributeDefaultApplyString[];
+extern PSDIR_ATTRIBUTE_APPLY SdirAttributeApply;
+extern PYORI_FILE_INFO SdirDirCollection;
+extern PYORI_FILE_INFO * SdirDirSorted;
+extern DWORD SdirWriteStringLinesDisplayed;
 
 //
 //  Functions from display.c
@@ -954,9 +993,12 @@ SdirApplyAttribute(
 
 BOOL
 SdirInit(
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     );
+
+VOID
+SdirAppCleanup();
 
 //
 //  Functions from sdir.c
@@ -971,8 +1013,8 @@ SdirGetNumAttrPairs();
 
 BOOL
 SdirUsage(
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     );
 
 //

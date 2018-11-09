@@ -97,41 +97,6 @@ SdirColorStringFromFeature(
     return TRUE;
 }
 
-/**
- An in memory representation of a single match criteria, specifying the color
- to apply in event that the incoming file matches a specified criteria.
- */
-typedef struct _SDIR_ATTRIBUTE_APPLY {
-
-    /**
-     Pointer to a function to compare an incoming directory entry against the
-     dummy one contained here.
-     */
-    SDIR_COMPARE_FN CompareFn;
-
-    /**
-     An array indicating whether a match is found if the comparison returns
-     less than, greater than, or equal.
-     */
-    BOOL TruthStates[3];
-
-    /**
-     The color to apply in event of a match.
-     */
-    YORILIB_COLOR_ATTRIBUTES Attribute;
-
-    /**
-     Unused data to explicitly preserve alignment.
-     */
-    WORD AlignmentPadding;
-
-    /**
-     A dummy directory entry containing values to compare against.  This is
-     used to allow all compare functions to operate on two directory entries.
-     */
-    YORI_FILE_INFO CompareEntry;
-} SDIR_ATTRIBUTE_APPLY, *PSDIR_ATTRIBUTE_APPLY;
-
 
 /**
  Populate a single SDIR_ATTRIBUTE_APPLY structure from a string indicating

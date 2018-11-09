@@ -32,54 +32,52 @@
 
 /**
  Specifies the number of directory entries that are currently allocated.
- If none are allocated, the initial value here indicates the size of the
- initial allocation.
  */
-DWORD SdirAllocatedDirents     = 1000;
+DWORD SdirAllocatedDirents;
 
 /**
  Pointer to an array of directory entries.  This corresponds to files in
  a single directory, populated in response to enumerate.
  */
-PYORI_FILE_INFO SdirDirCollection = NULL;
+PYORI_FILE_INFO SdirDirCollection;
 
 /**
  Pointer to an array of pointers to directory entries.  These pointers
  are maintained sorted based on the user's sort criteria so that files
  can be displayed in order from this indirection.
  */
-PYORI_FILE_INFO * SdirDirSorted   = NULL;
+PYORI_FILE_INFO * SdirDirSorted;
 
 /**
  Specifies the number of allocated directory entries that have been
  populated with files returned from directory enumerate.
  */
-ULONG SdirDirCollectionCurrent = 0;
+ULONG SdirDirCollectionCurrent;
 
 /**
  Specifies the longest file name found so far when enumerating through a
  single directory.  This length in in characters.
  */
-ULONG SdirDirCollectionLongest = 0;
+ULONG SdirDirCollectionLongest;
 
 /**
  Specifies the total length of characters stored in file names during
  enumeration of a single directory.  This is used to truncate file names
  if they start to look too long.
  */
-ULONG SdirDirCollectionTotalNameLength = 0;
+ULONG SdirDirCollectionTotalNameLength;
 
 /**
  Pointer to a dynamically allocated options structure which contains run
  time configuration about the application.
  */
-PSDIR_OPTS Opts = NULL;
+PSDIR_OPTS Opts;
 
 /**
  Pointer to a dynamically allocated summary structure recording the number
  of files and directories found during enumerate and their sizes.
  */
-PSDIR_SUMMARY Summary = NULL;
+PSDIR_SUMMARY Summary;
 
 
 BOOL
@@ -1046,9 +1044,9 @@ typedef BOOL (* SDIR_FOR_EACH_PATHSPEC_FN)(LPCTSTR);
  specified any set of files explicitly, enumerate all files from the current
  directory.
 
- @param argc The number of arguments passed to the application.
+ @param ArgC The number of arguments passed to the application.
 
- @param argv An array of arguments passed to the application.
+ @param ArgV An array of arguments passed to the application.
 
  @param Callback Specifies a callback function to invoke for each parameter
         that represents a set of files.
@@ -1057,21 +1055,21 @@ typedef BOOL (* SDIR_FOR_EACH_PATHSPEC_FN)(LPCTSTR);
  */
 BOOL
 SdirForEachPathSpec (
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[],
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[],
     __in SDIR_FOR_EACH_PATHSPEC_FN Callback
     )
 {
     ULONG  CurrentArg;
     BOOLEAN EnumerateUserSpecified = FALSE;
-    YORI_STRING UserPath;
     YORI_STRING FindStr;
+    YORI_STRING Arg;
 
     YoriLibInitEmptyString(&FindStr);
 
-    for (CurrentArg = 1; CurrentArg < (ULONG)argc; CurrentArg++) {
+    for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
 
-        if (!YoriLibIsCommandLineOptionChar(argv[CurrentArg][0])) {
+        if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
 
             HANDLE hDir;
 
@@ -1079,8 +1077,7 @@ SdirForEachPathSpec (
 
             YoriLibFreeStringContents(&FindStr);
 
-            YoriLibConstantString(&UserPath, argv[CurrentArg]);
-            if (!YoriLibUserStringToSingleFilePath(&UserPath, TRUE, &FindStr)) {
+            if (!YoriLibUserStringToSingleFilePath(&ArgV[CurrentArg], TRUE, &FindStr)) {
                 SdirDisplayError(GetLastError(), _T("YoriLibUserStringToSingleFilePath"));
                 return FALSE;
             }
@@ -1164,19 +1161,19 @@ SdirForEachPathSpec (
 /**
  Enumerate and display the contents of a single directory.
 
- @param argc The number of arguments passed to the application.
+ @param ArgC The number of arguments passed to the application.
 
- @param argv An array of arguments passed to the application.
+ @param ArgV An array of arguments passed to the application.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 SdirEnumerateAndDisplay (
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     )
 {
-    if (!SdirForEachPathSpec(argc, argv, SdirEnumeratePath)) {
+    if (!SdirForEachPathSpec(ArgC, ArgV, SdirEnumeratePath)) {
         return FALSE;
     }
 
@@ -1440,9 +1437,9 @@ SdirDisplayHeirarchySummary(
  @param Depth Indicates the current recursion depth.  The user specified
         directory is zero.
 
- @param argc The number of arguments passed to the application.
+ @param ArgC The number of arguments passed to the application.
 
- @param argv An array of arguments passed to the application.
+ @param ArgV An array of arguments passed to the application.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -1450,8 +1447,8 @@ BOOL
 SdirEnumerateAndDisplaySubtree (
     __in TCHAR * TreeRoot,
     __in ULONG Depth,
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     )
 {
     LPTSTR NextSubDir;
@@ -1463,6 +1460,7 @@ SdirEnumerateAndDisplaySubtree (
     BOOLEAN EnumerateUserSpecified = FALSE;
     SDIR_SUMMARY SummaryOnEntry;
     LPTSTR szFormatStr;
+    YORI_STRING Arg;
    
     memcpy(&SummaryOnEntry, Summary, sizeof(SDIR_SUMMARY));
 
@@ -1479,16 +1477,16 @@ SdirEnumerateAndDisplaySubtree (
     //  those.  There may be multiple.
     //
 
-    for (CurrentArg = 1; CurrentArg < (ULONG)argc; CurrentArg++) {
-        if (!YoriLibIsCommandLineOptionChar(argv[CurrentArg][0])) {
+    for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
+        if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
 
             if (TreeRoot[TreeRootLen - 1] == '\\') {
-                szFormatStr = _T("%s%s");
+                szFormatStr = _T("%s%y");
             } else {
-                szFormatStr = _T("%s\\%s");
+                szFormatStr = _T("%s\\%y");
             }
 
-            if (YoriLibSPrintfS(NextSubDir, NextSubDirLength, szFormatStr, TreeRoot, argv[CurrentArg]) < 0 ||
+            if (YoriLibSPrintfS(NextSubDir, NextSubDirLength, szFormatStr, TreeRoot, &ArgV[CurrentArg]) < 0 ||
                 NextSubDir[0] == '\0') {
 
                 SdirWriteString(_T("Path exceeds allocated length\n"));
@@ -1652,7 +1650,7 @@ SdirEnumerateAndDisplaySubtree (
                     return FALSE;
                 }
     
-                if (!SdirEnumerateAndDisplaySubtree( NextSubDir, Depth + 1, argc, argv )) {
+                if (!SdirEnumerateAndDisplaySubtree(NextSubDir, Depth + 1, ArgC, ArgV)) {
                     FindClose(hFind);
                     YoriLibFree(NextSubDir);
                     return FALSE;
@@ -1679,40 +1677,47 @@ SdirEnumerateAndDisplaySubtree (
     return TRUE;
 }
 
-
-#ifdef UNICODE
+#ifdef YORI_BUILTIN
 /**
- The entrypoint for Unicode builds.
+ The main entrypoint for the for builtin command.
  */
-#define ENTRYPOINT wmain
+#define ENTRYPOINT YoriCmd_SDIR
 #else
 /**
- The entrypoint for non-Unicode builds.
+ The main entrypoint for the for standalone application.
  */
-#define ENTRYPOINT main
+#define ENTRYPOINT ymain
 #endif
 
 /**
  The main entrypoint for the sdir command.
 
- @param argc The number of arguments.
+ @param ArgC The number of arguments.
 
- @param argv An array of arguments.
+ @param ArgV An array of arguments.
 
  @return Exit code of the process.
  */
-int __cdecl
-ENTRYPOINT (
-    __in int argc,
-    __in_ecount(argc) LPTSTR argv[]
+DWORD
+ENTRYPOINT(
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
     )
 {
-    if (!SdirInit(argc, argv)) {
+    SdirAllocatedDirents = 1000;
+    SdirDirCollection = NULL;
+    SdirDirSorted = NULL;
+    SdirDirCollectionCurrent = 0;
+    SdirDirCollectionLongest = 0;
+    SdirDirCollectionTotalNameLength = 0;
+    SdirWriteStringLinesDisplayed = 0;
+
+    if (!SdirInit(ArgC, ArgV)) {
         goto restore_and_exit;
     }
 
     if (Opts->SubDirWalk != NULL) {
-        if (!SdirEnumerateAndDisplaySubtree(Opts->SubDirWalk, 0, argc, argv)) {
+        if (!SdirEnumerateAndDisplaySubtree(Opts->SubDirWalk, 0, ArgC, ArgV)) {
             goto restore_and_exit;
         }
 
@@ -1720,7 +1725,7 @@ ENTRYPOINT (
             SdirWriteStringWithAttribute(_T("Errors found during enumerate; results are incomplete\n"), Opts->FtError.HighlightColor);
         }
     } else {
-        if (!SdirEnumerateAndDisplay(argc, argv)) {
+        if (!SdirEnumerateAndDisplay(ArgC, ArgV)) {
             goto restore_and_exit;
         }
     }
@@ -1732,7 +1737,10 @@ ENTRYPOINT (
 
 restore_and_exit:
 
-    SdirSetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Opts->PreviousAttributes);
+    if (Opts != NULL) {
+        SdirSetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Opts->PreviousAttributes);
+    }
+    SdirAppCleanup();
 
     return 0;
 }
