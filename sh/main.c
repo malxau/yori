@@ -366,7 +366,7 @@ YoriShDisplayWarnings()
             liWriteTime.QuadPart = liWriteTime.QuadPart / (60 * 60 * 24);
 
             if (liNow.QuadPart > liWriteTime.QuadPart &&
-                liWriteTime.QuadPart + 60 < liNow.QuadPart) {
+                liWriteTime.QuadPart + 120 < liNow.QuadPart) {
 
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This build of Yori is %lli days old.  Run ypm -u to upgrade."), liNow.QuadPart - liWriteTime.QuadPart);
             }
