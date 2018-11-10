@@ -10,12 +10,22 @@ LINKPDB=/Pdb:yvol.pdb
 
 CFLAGS=$(CFLAGS) -DVOL_VER_MAJOR=$(VOL_VER_MAJOR) -DVOL_VER_MINOR=$(VOL_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 vol.obj        \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_vol.obj    \
 
-yvol.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+yvol.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(VOL_VER_MAJOR).$(VOL_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(VOL_VER_MAJOR).$(VOL_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_vol.obj: vol.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ vol.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

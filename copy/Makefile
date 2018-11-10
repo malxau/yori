@@ -10,12 +10,24 @@ LINKPDB=/Pdb:ycopy.pdb
 
 CFLAGS=$(CFLAGS) -DCOPY_VER_MAJOR=$(COPY_VER_MAJOR) -DCOPY_VER_MINOR=$(COPY_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 copy.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_copy.obj     \
 
-ycopy.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+ycopy.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(COPY_VER_MAJOR).$(COPY_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(COPY_VER_MAJOR).$(COPY_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_copy.obj: copy.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ copy.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
+
 

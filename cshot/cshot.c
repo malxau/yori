@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strCshotHelpText[] =
         "\n"
         "Captures previous output on the console and outputs to standard output.\n"
         "\n"
@@ -50,9 +50,21 @@ CshotHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strCshotHelpText);
     return TRUE;
 }
+
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_CSHOT
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the cshot cmdlet.
@@ -65,7 +77,7 @@ CshotHelp()
          could not be launched.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

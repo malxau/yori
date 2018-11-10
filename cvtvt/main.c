@@ -30,7 +30,7 @@
  Help text to display for this application.
  */
 const
-CHAR strHelpText[] =
+CHAR strCvtvtHelpText[] =
         "\n"
         "Converts text with VT100 color escapes into another format.\n"
         "\n"
@@ -56,7 +56,7 @@ CvtvtUsage()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strCvtvtHelpText);
     return TRUE;
 }
 
@@ -90,6 +90,18 @@ CvtvtInputPumpThread(
     return 0;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_CVTVT
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The master entrypoint for cvtvt.
 
@@ -101,7 +113,7 @@ CvtvtInputPumpThread(
          nonzero for failure.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strTitleHelpText[] =
         "\n"
         "Set the console window title.\n"
         "\n"
@@ -47,10 +47,21 @@ TitleHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strTitleHelpText);
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YTITLE
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the title cmdlet.
@@ -62,7 +73,7 @@ TitleHelp()
  @return Exit code of the process, zero on success, nonzero on failure.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

@@ -10,12 +10,22 @@ LINKPDB=/Pdb:touch.pdb
 
 CFLAGS=$(CFLAGS) -DTOUCH_VER_MAJOR=$(TOUCH_VER_MAJOR) -DTOUCH_VER_MINOR=$(TOUCH_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 touch.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_touch.obj     \
 
-touch.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+touch.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TOUCH_VER_MAJOR).$(TOUCH_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TOUCH_VER_MAJOR).$(TOUCH_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_touch.obj: touch.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ touch.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

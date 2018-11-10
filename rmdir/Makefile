@@ -10,12 +10,22 @@ LINKPDB=/Pdb:yrmdir.pdb
 
 CFLAGS=$(CFLAGS) -DRMDIR_VER_MAJOR=$(RMDIR_VER_MAJOR) -DRMDIR_VER_MINOR=$(RMDIR_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 rmdir.obj        \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_rmdir.obj    \
 
-yrmdir.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+yrmdir.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(RMDIR_VER_MAJOR).$(RMDIR_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(RMDIR_VER_MAJOR).$(RMDIR_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_rmdir.obj: rmdir.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ rmdir.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

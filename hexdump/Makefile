@@ -10,12 +10,23 @@ LINKPDB=/Pdb:hexdump.pdb
 
 CFLAGS=$(CFLAGS) -DHEXDUMP_VER_MAJOR=$(HEXDUMP_VER_MAJOR) -DHEXDUMP_VER_MINOR=$(HEXDUMP_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 hexdump.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_hexdump.obj     \
 
-hexdump.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+hexdump.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(HEXDUMP_VER_MAJOR).$(HEXDUMP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(HEXDUMP_VER_MAJOR).$(HEXDUMP_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_hexdump.obj: hexdump.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ hexdump.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

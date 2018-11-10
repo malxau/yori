@@ -10,12 +10,23 @@ LINKPDB=/Pdb:initool.pdb
 
 CFLAGS=$(CFLAGS) -DINITOOL_VER_MAJOR=$(INITOOL_VER_MAJOR) -DINITOOL_VER_MINOR=$(INITOOL_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 initool.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_initool.obj     \
 
-initool.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+initool.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(INITOOL_VER_MAJOR).$(INITOOL_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(INITOOL_VER_MAJOR).$(INITOOL_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_initool.obj: initool.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ initool.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

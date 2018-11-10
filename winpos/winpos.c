@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strWinPosHelpText[] =
         "\n"
         "Move or size application windows.\n"
         "\n"
@@ -64,7 +64,7 @@ WinPosHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strWinPosHelpText);
     return TRUE;
 }
 
@@ -146,6 +146,17 @@ WinPosStringToCoordinates(
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_WINPOS
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the winpos cmdlet.
@@ -158,7 +169,7 @@ WinPosStringToCoordinates(
          could not be launched.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

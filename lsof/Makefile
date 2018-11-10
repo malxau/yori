@@ -10,12 +10,22 @@ LINKPDB=/Pdb:lsof.pdb
 
 CFLAGS=$(CFLAGS) -DLSOF_VER_MAJOR=$(LSOF_VER_MAJOR) -DLSOF_VER_MINOR=$(LSOF_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 lsof.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_lsof.obj     \
 
-lsof.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+lsof.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(LSOF_VER_MAJOR).$(LSOF_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(LSOF_VER_MAJOR).$(LSOF_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_lsof.obj: lsof.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ lsof.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

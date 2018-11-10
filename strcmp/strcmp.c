@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strStrCmpHelpText[] =
         "\n"
         "Compare two strings.\n"
         "\n"
@@ -54,7 +54,7 @@ StrCmpHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strStrCmpHelpText);
     return TRUE;
 }
 
@@ -73,6 +73,17 @@ StrCmpHelp()
  */
 #define STRCMP_OPERATOR_BEYOND_MAX  2
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_STRCMP
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the strcmp cmdlet.
@@ -84,7 +95,7 @@ StrCmpHelp()
  @return Exit code of the process, zero for true and nonzero for false.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

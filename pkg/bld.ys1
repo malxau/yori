@@ -22,7 +22,7 @@ if intcmp %ERRORLEVEL%==0;set ARCH=arm64
 
 pushd ..
 
-set BINPKGS=yori-modular yori-core yori-typical yori-extra yori-ypm
+set BINPKGS=yori-modular yori-core yori-typical yori-extra yori-ypm yori-one
 
 REM
 REM Extract Yori version from ver.inc and generate string containing the

@@ -10,12 +10,22 @@ LINKPDB=/Pdb:tee.pdb
 
 CFLAGS=$(CFLAGS) -DTEE_VER_MAJOR=$(TEE_VER_MAJOR) -DTEE_VER_MINOR=$(TEE_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 tee.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_tee.obj     \
 
-tee.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+tee.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TEE_VER_MAJOR).$(TEE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TEE_VER_MAJOR).$(TEE_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_tee.obj: tee.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ tee.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

@@ -42,7 +42,7 @@ LPTSTR SearchVar = _T("PATH");
  Usage text for this application.
  */
 const
-CHAR strUsageText[] =
+CHAR strWhichUsageText[] =
      "\n"
      "Searches a semicolon delimited environment variable for a file.  When\n"
      "searching PATH, also applies PATHEXT executable extension matching.\n"
@@ -50,13 +50,6 @@ CHAR strUsageText[] =
      "WHICH [-license] [-p <variable>] <file>\n"
      "\n"
      "   -p var Indicates the environment variable to search.  If not specified, use PATH\n"
-     "\n"
-     "   -get-update    Update to latest version of current type\n"
-     "   -get-daily     Get the latest daily version\n"
-     "   -get-source    Get source for this version\n"
-     "   -get-stable    Get the latest stable version\n"
-     "   -get-symbol    Get debugging symbol for this version\n"
-     "   -get-ver-x.y   Get a specific version of the program\n"
      "\n"
      " If PATHEXT not defined, defaults to .COM, .EXE, .BAT and .CMD\n"
      " If file extension not specified and var not specified, searches for files\n"
@@ -73,7 +66,7 @@ WhichUsage()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
 
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strUsageText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strWhichUsageText);
 }
 
 /**
@@ -126,6 +119,18 @@ WhichParseArgs(
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_WHICH
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The main entrypoint for the which application.
 
@@ -136,7 +141,7 @@ WhichParseArgs(
  @return ExitCode, zero indicating success, nonzero indicating failure.
  */
 DWORD
-ymain (
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

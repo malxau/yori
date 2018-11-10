@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strMoveHelpText[] =
         "\n"
         "Moves or renames one or more files.\n"
         "\n"
@@ -50,7 +50,7 @@ MoveHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strMoveHelpText);
     return TRUE;
 }
 
@@ -177,6 +177,17 @@ MoveFileFoundCallback(
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YMOVE
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the move cmdlet.
@@ -188,7 +199,7 @@ MoveFileFoundCallback(
  @return Exit code of the process indicating success or failure.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

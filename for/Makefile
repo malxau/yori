@@ -19,7 +19,7 @@ BIN_OBJS=\
 MOD_OBJS=\
 	mod_for.obj    \
 
-compile: $(BIN_OBJS) $(MOD_OBJS) builtins.lib
+compile: $(BIN_OBJS) builtins.lib
 
 yfor.exe: $(BIN_OBJS) 
 	@echo $@

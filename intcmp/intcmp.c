@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strIntCmpHelpText[] =
         "\n"
         "Compare two integer values.\n"
         "\n"
@@ -57,7 +57,7 @@ IntCmpHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strIntCmpHelpText);
     return TRUE;
 }
 
@@ -96,6 +96,18 @@ IntCmpHelp()
  */
 #define INTCMP_OPERATOR_BEYOND_MAX       6
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_INTCMP
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The main entrypoint for the intcmp cmdlet.
 
@@ -107,7 +119,7 @@ IntCmpHelp()
          could not be launched.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

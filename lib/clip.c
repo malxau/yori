@@ -34,7 +34,7 @@
  strings.  The zero padding helps keep computation sane.
  Dummy because it is only used to count its size, not used as a string.
  */
-const CHAR DummyHeader[] = 
+static const CHAR DummyHeader[] = 
                   "Version:0.9\n"
                   "StartHTML:12345678\n"
                   "EndHTML:12345678\n"
@@ -50,7 +50,7 @@ const CHAR DummyHeader[] =
  A string indicating the start of a fragment.
  Dummy because it is only used to count its size, not used as a string.
  */
-const CHAR DummyFragStart[] = 
+static const CHAR DummyFragStart[] = 
                   "<!--StartFragment-->";
 
 /**
@@ -62,7 +62,7 @@ const CHAR DummyFragStart[] =
  A string indicating the end of a fragment.
  Dummy because it is only used to count its size, not used as a string.
  */
-const CHAR DummyFragEnd[] = 
+static const CHAR DummyFragEnd[] = 
                   "<!--EndFragment-->";
 
 /**

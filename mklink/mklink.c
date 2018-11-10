@@ -32,7 +32,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strMklinkHelpText[] =
         "Creates hardlinks, symbolic links, or junctions.\n"
         "\n"
         "MKLINK [-license] [[-d]|[-f]|[-h]|[-j]] <link> <target>\n"
@@ -52,7 +52,7 @@ MklinkHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strMklinkHelpText);
     return TRUE;
 }
 
@@ -283,6 +283,17 @@ typedef enum _MKLINK_LINK_TYPE {
  */
 typedef MKLINK_LINK_TYPE *PMKLINK_LINK_TYPE;
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YMKLINK
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the mklink cmdlet.
@@ -294,7 +305,7 @@ typedef MKLINK_LINK_TYPE *PMKLINK_LINK_TYPE;
  @return Exit code indicating success or failure for the application.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

@@ -10,12 +10,23 @@ LINKPDB=/Pdb:ypath.pdb
 
 CFLAGS=$(CFLAGS) -DPATH_VER_MAJOR=$(PATH_VER_MAJOR) -DPATH_VER_MINOR=$(PATH_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 path.obj        \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_path.obj    \
 
-ypath.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+ypath.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(PATH_VER_MAJOR).$(PATH_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(PATH_VER_MAJOR).$(PATH_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_path.obj: path.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ path.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

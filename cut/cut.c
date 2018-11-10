@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strCutHelpText[] =
         "\n"
         "Outputs a portion of an input buffer of text.\n"
         "\n"
@@ -55,7 +55,7 @@ CutHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strCutHelpText);
     return TRUE;
 }
 
@@ -219,6 +219,18 @@ CutFileFoundCallback(
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YCUT
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The main entrypoint for the cut cmdlet.
 
@@ -229,7 +241,7 @@ CutFileFoundCallback(
  @return Exit code of zero to indicate success, nonzero to indicate failure.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

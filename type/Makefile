@@ -10,12 +10,22 @@ LINKPDB=/Pdb:ytype.pdb
 
 CFLAGS=$(CFLAGS) -DTYPE_VER_MAJOR=$(TYPE_VER_MAJOR) -DTYPE_VER_MINOR=$(TYPE_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 type.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_type.obj     \
 
-ytype.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+ytype.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TYPE_VER_MAJOR).$(TYPE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TYPE_VER_MAJOR).$(TYPE_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_type.obj: type.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ type.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

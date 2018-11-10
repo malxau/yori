@@ -10,13 +10,26 @@ LINKPDB=/Pdb:cvtvt.pdb
 
 CFLAGS=$(CFLAGS) -DCVTVT_VER_MAJOR=$(CVTVT_VER_MAJOR) -DCVTVT_VER_MINOR=$(CVTVT_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 html.obj        \
 	 main.obj        \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 html.obj        \
+	 mod_main.obj    \
 
-cvtvt.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+cvtvt.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CVTVT_VER_MAJOR).$(CVTVT_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CVTVT_VER_MAJOR).$(CVTVT_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_main.obj: main.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ main.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
+
 

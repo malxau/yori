@@ -170,6 +170,18 @@ ScutExpandVariables(
     return CharsNeeded;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_SCUT
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The main entrypoint for scut.
 
@@ -180,7 +192,7 @@ ScutExpandVariables(
  @return ExitCode for the process.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

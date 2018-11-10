@@ -10,12 +10,24 @@ LINKPDB=/Pdb:hilite.pdb
 
 CFLAGS=$(CFLAGS) -DHILITE_VER_MAJOR=$(HILITE_VER_MAJOR) -DHILITE_VER_MINOR=$(HILITE_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 hilite.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_hilite.obj     \
 
-hilite.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+hilite.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(HILITE_VER_MAJOR).$(HILITE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(HILITE_VER_MAJOR).$(HILITE_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_hilite.obj: hilite.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ hilite.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
+
 

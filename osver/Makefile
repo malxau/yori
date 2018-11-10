@@ -10,12 +10,23 @@ LINKPDB=/Pdb:osver.pdb
 
 CFLAGS=$(CFLAGS) -DOSVER_VER_MAJOR=$(OSVER_VER_MAJOR) -DOSVER_VER_MINOR=$(OSVER_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 osver.obj        \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_osver.obj    \
 
-osver.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+osver.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(OSVER_VER_MAJOR).$(OSVER_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(OSVER_VER_MAJOR).$(OSVER_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_osver.obj: osver.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ osver.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

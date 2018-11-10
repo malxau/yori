@@ -55,7 +55,7 @@ HelpHelp()
  Text to display to the user about Yori and its tools.
  */
 const
-CHAR strHelpText1[] =
+CHAR strHelpHelpText1[] =
         "\n"
         "For more information about a command, run <command> /?\n"
         "\n"
@@ -90,7 +90,7 @@ CHAR strHelpText1[] =
  More text to display to the user about Yori and its tools.
  */
 const
-CHAR strHelpText2[] =
+CHAR strHelpHelpText2[] =
         "FSCMP     Test for file system conditions\n"
         "GET       Fetches objects from HTTP and stores them in local files\n"
         "GRPCMP    Returns true if the user is a member of the specified group\n"
@@ -126,7 +126,7 @@ CHAR strHelpText2[] =
  More text to display to the user about Yori and its tools.
  */
 const
-CHAR strHelpText3[] =
+CHAR strHelpHelpText3[] =
         "RETURN    Return from a subroutine (only valid after CALL)\n"
         "RMDIR     Removes directories\n"
         "SCUT      Create, modify, display or execute Windows shortcuts\n"
@@ -163,12 +163,23 @@ CHAR strHelpText3[] =
 BOOL
 HelpText()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText1);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText2);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText3);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText1);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText2);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpHelpText3);
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YHELP
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the help cmdlet.
@@ -181,7 +192,7 @@ HelpText()
          could not be launched.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

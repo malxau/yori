@@ -10,11 +10,37 @@ LINKPDB=/Pdb:sdir.pdb
 
 CFLAGS=$(CFLAGS) -DSDIR_VER_MAJOR=$(SDIR_VER_MAJOR) -DSDIR_VER_MINOR=$(SDIR_VER_MINOR)
 
-OBJS=callbacks.obj color.obj display.obj init.obj sdir.obj usage.obj utils.obj
+BIN_OBJS=\
+		 callbacks.obj \
+		 color.obj     \
+		 display.obj   \
+		 init.obj      \
+		 sdir.obj      \
+		 usage.obj     \
+		 utils.obj
 
-compile: $(OBJS)
+MOD_OBJS=\
+		 callbacks.obj \
+		 color.obj     \
+		 display.obj   \
+		 init.obj      \
+		 mod_sdir.obj  \
+		 usage.obj     \
+		 utils.obj
 
-sdir.exe: $(OBJS) 
+
+compile: $(BIN_OBJS) builtins.lib
+
+sdir.exe: $(BIN_OBJS)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SDIR_VER_MAJOR).$(SDIR_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SDIR_VER_MAJOR).$(SDIR_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_sdir.obj: sdir.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ sdir.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
+
 

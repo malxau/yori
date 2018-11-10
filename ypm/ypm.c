@@ -32,7 +32,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strYpmHelpText[] =
         "\n"
         "Installs or upgrades packages.\n"
         "\n"
@@ -71,7 +71,7 @@ YpmHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strYpmHelpText);
     return TRUE;
 }
 
@@ -92,6 +92,17 @@ typedef enum _YPM_OPERATION {
     YpmOpInstallSymbol = 10
 } YPM_OPERATION;
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YPM
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the update cmdlet.
@@ -104,7 +115,7 @@ typedef enum _YPM_OPERATION {
          could not be launched.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

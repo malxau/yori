@@ -10,12 +10,23 @@ LINKPDB=/Pdb:ycls.pdb
 
 CFLAGS=$(CFLAGS) -DCLS_VER_MAJOR=$(CLS_VER_MAJOR) -DCLS_VER_MINOR=$(CLS_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 cls.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_cls.obj     \
 
-ycls.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+ycls.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CLS_VER_MAJOR).$(CLS_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CLS_VER_MAJOR).$(CLS_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_cls.obj: cls.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ cls.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

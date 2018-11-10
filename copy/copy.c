@@ -47,7 +47,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strCopyHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
@@ -73,7 +73,7 @@ CopyHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strCopyHelpText);
     return TRUE;
 }
 
@@ -593,6 +593,18 @@ CopyFreeCopyContext(
     CopyFreeExcludes(CopyContext);
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YCOPY
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The main entrypoint for the copy cmdlet.
 
@@ -604,7 +616,7 @@ CopyFreeCopyContext(
          could not be launched.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

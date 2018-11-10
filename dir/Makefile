@@ -10,12 +10,24 @@ LINKPDB=/Pdb:ydir.pdb
 
 CFLAGS=$(CFLAGS) -DDIR_VER_MAJOR=$(DIR_VER_MAJOR) -DDIR_VER_MINOR=$(DIR_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 dir.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_dir.obj     \
 
-ydir.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+ydir.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(DIR_VER_MAJOR).$(DIR_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(DIR_VER_MAJOR).$(DIR_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_dir.obj: dir.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ dir.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
+
 

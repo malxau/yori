@@ -10,12 +10,22 @@ LINKPDB=/Pdb:readline.pdb
 
 CFLAGS=$(CFLAGS) -DREADLINE_VER_MAJOR=$(READLINE_VER_MAJOR) -DREADLINE_VER_MINOR=$(READLINE_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 readline.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_readline.obj     \
 
-readline.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+readline.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(READLINE_VER_MAJOR).$(READLINE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(READLINE_VER_MAJOR).$(READLINE_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_readline.obj: readline.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ readline.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

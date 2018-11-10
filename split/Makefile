@@ -10,12 +10,23 @@ LINKPDB=/Pdb:ysplit.pdb
 
 CFLAGS=$(CFLAGS) -DSPLIT_VER_MAJOR=$(SPLIT_VER_MAJOR) -DSPLIT_VER_MINOR=$(SPLIT_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 split.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_split.obj     \
 
-ysplit.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+ysplit.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SPLIT_VER_MAJOR).$(SPLIT_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SPLIT_VER_MAJOR).$(SPLIT_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_split.obj: split.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ split.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

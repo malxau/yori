@@ -10,12 +10,22 @@ LINKPDB=/Pdb:winpos.pdb
 
 CFLAGS=$(CFLAGS) -DWINPOS_VER_MAJOR=$(WINPOS_VER_MAJOR) -DWINPOS_VER_MINOR=$(WINPOS_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 winpos.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_winpos.obj     \
 
-winpos.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+winpos.exe: $(BIN_OBJS) builtins.lib
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(WINPOS_VER_MAJOR).$(WINPOS_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(WINPOS_VER_MAJOR).$(WINPOS_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_winpos.obj: winpos.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ winpos.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

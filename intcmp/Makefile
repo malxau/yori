@@ -10,12 +10,22 @@ LINKPDB=/Pdb:intcmp.pdb
 
 CFLAGS=$(CFLAGS) -DINTCMP_VER_MAJOR=$(INTCMP_VER_MAJOR) -DINTCMP_VER_MINOR=$(INTCMP_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 intcmp.obj        \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_intcmp.obj    \
 
-intcmp.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+intcmp.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(INTCMP_VER_MAJOR).$(INTCMP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(INTCMP_VER_MAJOR).$(INTCMP_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_intcmp.obj: intcmp.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ intcmp.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

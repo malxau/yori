@@ -10,12 +10,22 @@ LINKPDB=/Pdb:which.pdb
 
 CFLAGS=$(CFLAGS) -DWHICH_VER_MAJOR=$(WHICH_VER_MAJOR) -DWHICH_VER_MINOR=$(WHICH_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 which.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_which.obj     \
 
-which.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+which.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(WHICH_VER_MAJOR).$(WHICH_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(WHICH_VER_MAJOR).$(WHICH_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_which.obj: which.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ which.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

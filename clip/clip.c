@@ -32,7 +32,7 @@
  Help text for this application.
  */
 const
-CHAR strHelpText[] = 
+CHAR strClipHelpText[] = 
         "\n"
         "Manipulate clipboard state including copy and paste.\n"
         "\n"
@@ -53,7 +53,7 @@ ClipHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strClipHelpText);
     return TRUE;
 }
 
@@ -63,7 +63,7 @@ ClipHelp()
  strings.  The zero padding helps keep computation sane.
  Dummy because it is only used to count its size, not used as a string.
  */
-const CHAR DummyHeader[] = 
+static const CHAR DummyHeader[] = 
                   "Version:0.9\n"
                   "StartHTML:12345678\n"
                   "EndHTML:12345678\n"
@@ -79,7 +79,7 @@ const CHAR DummyHeader[] =
  A string indicating the start of a fragment.
  Dummy because it is only used to count its size, not used as a string.
  */
-const CHAR DummyFragStart[] = 
+static const CHAR DummyFragStart[] = 
                   "<!--StartFragment-->";
 
 /**
@@ -91,7 +91,7 @@ const CHAR DummyFragStart[] =
  A string indicating the end of a fragment.
  Dummy because it is only used to count its size, not used as a string.
  */
-const CHAR DummyFragEnd[] = 
+static const CHAR DummyFragEnd[] = 
                   "<!--EndFragment-->";
 
 /**
@@ -545,6 +545,18 @@ ClipEmptyClipboard(
     return TRUE;
 }
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YCLIP
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
 /**
  The entrypoint for the clip application.
 
@@ -556,7 +568,7 @@ ClipEmptyClipboard(
          nonzero for failure.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )

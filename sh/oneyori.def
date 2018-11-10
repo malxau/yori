@@ -1,0 +1,25 @@
+NAME ONEYORI
+
+EXPORTS
+    YoriApiAddAlias
+    YoriApiBuiltinRegister
+    YoriApiBuiltinUnregister
+    YoriApiDeleteAlias
+    YoriApiExecuteBuiltin
+    YoriApiExecuteExpression
+    YoriApiExitProcess
+    YoriApiExpandAlias
+    YoriApiFreeYoriString
+    YoriApiGetAliasStrings
+    YoriApiGetErrorLevel
+    YoriApiGetHistoryStrings
+    YoriApiGetJobInformation
+    YoriApiGetJobOutput
+    YoriApiGetNextJobId
+    YoriApiGetYoriVersion
+    YoriApiPipeJobOutput
+    YoriApiSetDefaultColor
+    YoriApiSetJobPriority
+    YoriApiSetUnloadRoutine
+    YoriApiTerminateJob
+    YoriApiWaitForJob

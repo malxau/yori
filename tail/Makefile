@@ -10,12 +10,22 @@ LINKPDB=/Pdb:tail.pdb
 
 CFLAGS=$(CFLAGS) -DTAIL_VER_MAJOR=$(TAIL_VER_MAJOR) -DTAIL_VER_MINOR=$(TAIL_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 tail.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_tail.obj     \
 
-tail.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+tail.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TAIL_VER_MAJOR).$(TAIL_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TAIL_VER_MAJOR).$(TAIL_VER_MINOR) $(LINKPDB) -out:$@
 
+mod_tail.obj: tail.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ tail.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@

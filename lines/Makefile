@@ -10,12 +10,23 @@ LINKPDB=/Pdb:lines.pdb
 
 CFLAGS=$(CFLAGS) -DLINES_VER_MAJOR=$(LINES_VER_MAJOR) -DLINES_VER_MINOR=$(LINES_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 lines.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_lines.obj     \
 
-lines.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+lines.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(LINES_VER_MAJOR).$(LINES_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(LINES_VER_MAJOR).$(LINES_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_lines.obj: lines.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ lines.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

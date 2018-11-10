@@ -10,12 +10,23 @@ LINKPDB=/Pdb:cab.pdb
 
 CFLAGS=$(CFLAGS) -DCAB_VER_MAJOR=$(CAB_VER_MAJOR) -DCAB_VER_MINOR=$(CAB_VER_MINOR)
 
-OBJS=\
+BIN_OBJS=\
 	 cab.obj         \
 
-compile: $(OBJS)
+MOD_OBJS=\
+	 mod_cab.obj     \
 
-cab.exe: $(OBJS) 
+compile: $(BIN_OBJS) builtins.lib
+
+cab.exe: $(BIN_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CAB_VER_MAJOR).$(CAB_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CAB_VER_MAJOR).$(CAB_VER_MINOR) $(LINKPDB) -out:$@
+
+mod_cab.obj: cab.c
+	@echo $@
+	@$(CC) -c -DYORI_BUILTIN=1 $(CFLAGS) -Fo$@ cab.c
+
+builtins.lib: $(MOD_OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 

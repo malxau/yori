@@ -31,7 +31,7 @@
  Help text to display to the user.
  */
 const
-CHAR strHelpText[] =
+CHAR strFInfoHelpText[] =
         "\n"
         "Output information about file metadata.\n"
         "\n"
@@ -1327,7 +1327,7 @@ FInfoHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strFInfoHelpText);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Format specifiers are:\n\n"));
     for (Count = 0; Count < sizeof(FInfoKnownVariables)/sizeof(FInfoKnownVariables[0]); Count++) {
         YoriLibSPrintfS(NameWithQualifiers, sizeof(NameWithQualifiers)/sizeof(NameWithQualifiers[0]), _T("$%s$"), FInfoKnownVariables[Count].VariableName);
@@ -1439,6 +1439,17 @@ TCHAR DefaultFormatString[] =
     _T("WRITEDATE:        $WRITEDATE_YEAR$/$WRITEDATE_MON$/$WRITEDATE_DAY$\n")
     _T("WRITETIME:        $WRITETIME_HOUR$:$WRITETIME_MIN$:$WRITETIME_SEC$\n");
 
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the for builtin command.
+ */
+#define ENTRYPOINT YoriCmd_FINFO
+#else
+/**
+ The main entrypoint for the for standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
 
 /**
  The main entrypoint for the finfo cmdlet.
@@ -1450,7 +1461,7 @@ TCHAR DefaultFormatString[] =
  @return Exit code of the process, zero on success, nonzero on failure.
  */
 DWORD
-ymain(
+ENTRYPOINT(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )
