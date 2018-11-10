@@ -19,13 +19,9 @@ ARCH=arm64
 BINDIR=bin\$(ARCH)
 SYMDIR=sym\$(ARCH)
 MODDIR=bin\$(ARCH)\modules
+
 BUILD=$(MAKE) -nologo DEBUG=$(DEBUG) PDB=$(PDB) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=..\$(BINDIR) SYMDIR=..\$(SYMDIR) MODDIR=..\$(MODDIR)
 
-FOR=for
-FOR_ST=for
-MKDIR=mkdir
-RMDIR=rmdir
-STARTCMD=
 CURRENTTIME=REM
 WRITECONFIGCACHEFILE=cache.mk
 
@@ -33,21 +29,15 @@ all: all.real
 
 !INCLUDE "config\common.mk"
 
-!IF [yfor.exe -? >NUL 2>&1]==0
-FOR=yfor -c -p %NUMBER_OF_PROCESSORS%
-FOR_ST=yfor -c
+!IF "$(FOR)"=="for"
+STARTCMD=
+!ELSE
 STARTCMD="
 !ENDIF
+
 !IF [ydate.exe -? >NUL 2>&1]==0
 CURRENTTIME=echo. & echo For: $(FOR) & ydate $$HOUR$$:$$MIN$$:$$SEC$$ & echo.
 !ENDIF
-!IF [ymkdir.exe -? >NUL 2>&1]==0
-MKDIR=ymkdir
-!ENDIF
-!IF [yrmdir.exe -? >NUL 2>&1]==0
-RMDIR=yrmdir
-!ENDIF
-
 
 DIRS=crt       \
      lib       \

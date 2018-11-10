@@ -184,6 +184,23 @@ LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE
 
 !ENDIF # PROBELINKER
 
+FOR=for
+FOR_ST=for
+MKDIR=mkdir
+RMDIR=rmdir
+
+!IF [yfor.exe -? >NUL 2>&1]==0
+FOR=yfor -c -p %NUMBER_OF_PROCESSORS%
+FOR_ST=yfor -c
+!ENDIF
+!IF [ymkdir.exe -? >NUL 2>&1]==0
+MKDIR=ymkdir
+!ENDIF
+!IF [yrmdir.exe -? >NUL 2>&1]==0
+RMDIR=yrmdir
+!ENDIF
+
+
 !IF "$(WRITECONFIGCACHEFILE)"!=""
 writeconfigcache:
 	@echo Generating config cache...
@@ -193,12 +210,16 @@ writeconfigcache:
 	@echo CRTLIB=$(CRTLIB) >>$(WRITECONFIGCACHEFILE)
 	@echo ENTRY=$(ENTRY) >>$(WRITECONFIGCACHEFILE)
 	@echo YENTRY=$(YENTRY) >>$(WRITECONFIGCACHEFILE)
+	@echo FOR=$(FOR) >>$(WRITECONFIGCACHEFILE)
+	@echo FOR_ST=$(FOR_ST) >>$(WRITECONFIGCACHEFILE)
 	@echo LDFLAGS=$(LDFLAGS) >>$(WRITECONFIGCACHEFILE)
 	@echo LIB32=$(LIB32) >>$(WRITECONFIGCACHEFILE)
 	@echo LIBFLAGS=$(LIBFLAGS) >>$(WRITECONFIGCACHEFILE)
 	@echo LIBS=$(LIBS) >>$(WRITECONFIGCACHEFILE)
 	@echo LINK=$(LINK) >>$(WRITECONFIGCACHEFILE)
 	@echo MAKE=$(MAKE) >>$(WRITECONFIGCACHEFILE)
+	@echo MKDIR=$(MKDIR) >>$(WRITECONFIGCACHEFILE)
+	@echo RMDIR=$(RMDIR) >>$(WRITECONFIGCACHEFILE)
 
 !ENDIF
 
@@ -235,11 +256,11 @@ clean:
 	@if exist *.manifest erase *.manifest
 
 install:
-	@if not exist $(BINDIR) mkdir $(BINDIR) >NUL
-	@if not exist $(MODDIR) mkdir $(MODDIR) >NUL
-	@if not exist $(SYMDIR) mkdir $(SYMDIR) >NUL
-	@for %%i in ($(BINARIES)) do @copy %%i $(BINDIR) >NUL
-	@for %%i in ($(BINARIES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
-	@for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL
-	@for %%i in ($(MODULES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
+	@if not exist $(BINDIR) $(MKDIR) $(BINDIR) >NUL
+	@if not exist $(MODDIR) $(MKDIR) $(MODDIR) >NUL
+	@if not exist $(SYMDIR) $(MKDIR) $(SYMDIR) >NUL
+	@if not "$(BINARIES)."=="." for %%i in ($(BINARIES)) do @copy %%i $(BINDIR) >NUL
+	@if not "$(BINARIES)."=="." for %%i in ($(BINARIES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
+	@if not "$(MODULES)."=="." for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL
+	@if not "$(MODULES)."=="." for %%i in ($(MODULES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
 !ENDIF
