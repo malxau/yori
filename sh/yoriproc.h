@@ -306,6 +306,11 @@ YoriShAddToHistory(
     __in PYORI_STRING NewCmd
     );
 
+BOOL
+YoriShAddToHistoryAndReallocate(
+    __in PYORI_STRING NewCmd
+    );
+
 VOID
 YoriShRemoveOneHistoryEntry(
     __in PYORI_SH_HISTORY_ENTRY HistoryEntry

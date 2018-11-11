@@ -45,6 +45,19 @@ YoriApiAddAlias(
 }
 
 /**
+ Add a new string to command history.
+
+ @return TRUE if the string was successfully added, FALSE if not.
+ */
+BOOL
+YoriApiAddHistoryString(
+    __in PYORI_STRING NewCmd
+    )
+{
+    return YoriShAddToHistoryAndReallocate(NewCmd);
+}
+
+/**
  Associate a new builtin command with a function pointer to be invoked when
  the command is specified.
 
@@ -81,6 +94,19 @@ YoriApiBuiltinUnregister(
     )
 {
     return YoriShBuiltinUnregister(BuiltinCmd, CallbackFn);
+}
+
+/**
+ Clear existing history strings.
+
+ @return TRUE if the history strings were successfully deleted, FALSE if not.
+ */
+BOOL
+YoriApiClearHistoryStrings(
+    )
+{
+    YoriShClearAllHistory();
+    return TRUE;
 }
 
 /**

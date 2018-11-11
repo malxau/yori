@@ -70,6 +70,45 @@ YoriCallAddAlias(
     return pYoriApiAddAlias(Alias, Value);
 }
 
+
+/**
+ Prototype for the @ref YoriApiAddHistoryString function.
+ */
+typedef BOOL YORI_API_ADD_HISTORY_STRING(PYORI_STRING);
+
+/**
+ Prototype for a pointer to the @ref YoriApiAddHistoryString function.
+ */
+typedef YORI_API_ADD_HISTORY_STRING *PYORI_API_ADD_HISTORY_STRING;
+
+/**
+ Pointer to the @ref YoriApiAddHistoryString function.
+ */
+PYORI_API_ADD_HISTORY_STRING pYoriApiAddHistoryString;
+
+/**
+ Add a new string to command history.
+
+ @return TRUE if the string was successfully added, FALSE if not.
+ */
+BOOL
+YoriCallAddHistoryString(
+    __in PYORI_STRING NewCmd
+    )
+{
+    if (pYoriApiAddHistoryString == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiAddHistoryString = (PYORI_API_ADD_HISTORY_STRING)GetProcAddress(hYori, "YoriApiAddHistoryString");
+        if (pYoriApiAddHistoryString == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiAddHistoryString(NewCmd);
+}
+
+
 /**
  Prototype for the @ref YoriApiBuiltinRegister function.
  */
@@ -152,6 +191,43 @@ YoriCallBuiltinUnregister(
         }
     }
     return pYoriApiBuiltinUnregister(BuiltinCmd, CallbackFn);
+}
+
+
+/**
+ Prototype for the @ref YoriApiClearHistoryStrings function.
+ */
+typedef BOOL YORI_API_CLEAR_HISTORY_STRINGS();
+
+/**
+ Prototype for a pointer to the @ref YoriApiClearHistoryStrings function.
+ */
+typedef YORI_API_CLEAR_HISTORY_STRINGS *PYORI_API_CLEAR_HISTORY_STRINGS;
+
+/**
+ Pointer to the @ref YoriApiClearHistoryStrings function.
+ */
+PYORI_API_CLEAR_HISTORY_STRINGS pYoriApiClearHistoryStrings;
+
+/**
+ Clear existing history strings.
+
+ @return TRUE if the history strings were successfully deleted, FALSE if not.
+ */
+BOOL
+YoriCallClearHistoryStrings(
+    )
+{
+    if (pYoriApiClearHistoryStrings == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiClearHistoryStrings = (PYORI_API_CLEAR_HISTORY_STRINGS)GetProcAddress(hYori, "YoriApiClearHistoryStrings");
+        if (pYoriApiClearHistoryStrings == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiClearHistoryStrings();
 }
 
 

@@ -54,11 +54,13 @@ HANDLE YoriShHistoryLock;
 BOOL YoriShHistoryInitialized;
 
 /**
- Add an entered command into the command history buffer.  On error it is
- silently discarded and not propagated into history.
+ Add an entered command into the command history buffer.
 
  @param NewCmd Pointer to a Yori string corresponding to the new
         entry to add to history.
+ 
+ @return TRUE to indicate an entry was successfully added, FALSE if it was
+         not.
  */
 BOOL
 YoriShAddToHistory(
@@ -462,6 +464,49 @@ YoriShGetHistoryStrings(
 
     return TRUE;
 }
+
+/**
+ Add an entered command into the command history buffer and reallocate the
+ string such that the caller's buffer is subsequently unreferenced.
+
+ @param NewCmd Pointer to a Yori string corresponding to the new
+        entry to add to history.
+ 
+ @return TRUE to indicate an entry was successfully added, FALSE if it was
+         not.
+ */
+BOOL
+YoriShAddToHistoryAndReallocate(
+    __in PYORI_STRING NewCmd
+    )
+{
+    YORI_STRING NewString;
+
+    if (NewCmd->LengthInChars == 0) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&NewString, NewCmd->LengthInChars)) {
+        return FALSE;
+    }
+
+    memcpy(NewString.StartOfString, NewCmd->StartOfString, NewCmd->LengthInChars * sizeof(TCHAR));
+    NewString.LengthInChars = NewCmd->LengthInChars;
+
+    //
+    //  This function will reference the string if it uses it, so this
+    //  function can unconditionally dereference the string
+    //
+
+    if (!YoriShAddToHistory(&NewString)) {
+        YoriLibFreeStringContents(&NewString);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&NewString);
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:
 

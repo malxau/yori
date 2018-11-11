@@ -34,10 +34,11 @@
 const
 CHAR strHistoryHelpText[] =
         "\n"
-        "Displays recent command history.\n"
+        "Displays or modifies recent command history.\n"
         "\n"
-        "HISTORY [-license] [-n lines]\n"
+        "HISTORY [-license] [-l <file>|-n lines]\n"
         "\n"
+        "   -l             Load history from a file\n"
         "   -n             The number of lines of history to output\n";
 
 /**
@@ -51,6 +52,62 @@ HistoryHelp()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHistoryHelpText);
+    return TRUE;
+}
+
+/**
+ Load history from a file.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+HistoryLoadHistoryFromFile(
+    __in PYORI_STRING FilePath
+    )
+{
+    HANDLE FileHandle;
+    PVOID LineContext = NULL;
+    YORI_STRING LineString;
+
+    FileHandle = CreateFile(FilePath->StartOfString,
+                            GENERIC_READ,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+
+    if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
+        DWORD LastError = GetLastError();
+        if (LastError != ERROR_FILE_NOT_FOUND) {
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("history: open of %y failed: %s"), &FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+        }
+        return FALSE;
+    }
+
+    YoriCallClearHistoryStrings();
+    YoriLibInitEmptyString(&LineString);
+
+    while (TRUE) {
+
+        if (!YoriLibReadLineToString(&LineString, &LineContext, FileHandle)) {
+            break;
+        }
+
+        //
+        //  If we fail to add to history, stop.
+        //
+
+        if (!YoriCallAddHistoryString(&LineString)) {
+            break;
+        }
+    }
+
+    YoriLibLineReadClose(LineContext);
+    YoriLibFreeStringContents(&LineString);
+    CloseHandle(FileHandle);
     return TRUE;
 }
 
@@ -76,6 +133,7 @@ YoriCmd_HISTORY(
     DWORD LineCount = 0;
     YORI_STRING Arg;
     YORI_STRING HistoryStrings;
+    PYORI_STRING SourceFile = NULL;
     LPTSTR ThisVar;
     DWORD VarLen;
 
@@ -95,6 +153,12 @@ YoriCmd_HISTORY(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                if (ArgC > i + 1) {
+                    SourceFile = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD CharsConsumed;
@@ -116,15 +180,31 @@ YoriCmd_HISTORY(
         }
     }
 
-    if (YoriCallGetHistoryStrings(LineCount, &HistoryStrings)) {
-        ThisVar = HistoryStrings.StartOfString;
-        while (*ThisVar != '\0') {
-            VarLen = _tcslen(ThisVar);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
-            ThisVar += VarLen;
-            ThisVar++;
+    if (SourceFile != NULL) {
+        YORI_STRING FileName;
+        if (!YoriLibUserStringToSingleFilePath(SourceFile, TRUE, &FileName)) {
+            DWORD LastError = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("history: getfullpathname of %y failed: %s"), &ArgV[StartArg], ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            return EXIT_FAILURE;
         }
-        YoriCallFreeYoriString(&HistoryStrings);
+        if (!HistoryLoadHistoryFromFile(&FileName)) {
+            YoriLibFreeStringContents(&FileName);
+            return EXIT_FAILURE;
+        }
+        YoriLibFreeStringContents(&FileName);
+    } else {
+        if (YoriCallGetHistoryStrings(LineCount, &HistoryStrings)) {
+            ThisVar = HistoryStrings.StartOfString;
+            while (*ThisVar != '\0') {
+                VarLen = _tcslen(ThisVar);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
+                ThisVar += VarLen;
+                ThisVar++;
+            }
+            YoriCallFreeYoriString(&HistoryStrings);
+        }
     }
     return EXIT_SUCCESS;
 }

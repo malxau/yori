@@ -2,8 +2,10 @@ NAME YORIMIN
 
 EXPORTS
     YoriApiAddAlias
+    YoriApiAddHistoryString
     YoriApiBuiltinRegister
     YoriApiBuiltinUnregister
+    YoriApiClearHistoryStrings
     YoriApiDeleteAlias
     YoriApiExecuteBuiltin
     YoriApiExecuteExpression

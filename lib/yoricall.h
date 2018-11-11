@@ -31,6 +31,11 @@ YoriCallAddAlias(
     );
 
 BOOL
+YoriCallAddHistoryString(
+    __in PYORI_STRING NewCmd
+    );
+
+BOOL
 YoriCallBuiltinRegister(
     __in PYORI_STRING BuiltinCmd,
     __in PYORI_CMD_BUILTIN CallbackFn
@@ -40,6 +45,10 @@ BOOL
 YoriCallBuiltinUnregister(
     __in PYORI_STRING BuiltinCmd,
     __in PYORI_CMD_BUILTIN CallbackFn
+    );
+
+BOOL
+YoriCallClearHistoryStrings(
     );
 
 BOOL

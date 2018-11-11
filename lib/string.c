@@ -1211,7 +1211,7 @@ YoriLibStringToDate(
         if (CurrentCharsConsumed < Substring.LengthInChars && Substring.StartOfString[CurrentCharsConsumed] == '/') {
             Substring.LengthInChars -= CurrentCharsConsumed + 1;
             Substring.StartOfString += CurrentCharsConsumed + 1;
-    
+
             if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CurrentCharsConsumed)) {
                 return FALSE;
             }
@@ -1270,7 +1270,7 @@ YoriLibStringToTime(
         if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == ':') {
             Substring.LengthInChars -= CharsConsumed + 1;
             Substring.StartOfString += CharsConsumed + 1;
-    
+
             if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
                 return FALSE;
             }
