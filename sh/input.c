@@ -1499,6 +1499,24 @@ YoriShProcessKeyDown(
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
         } else if (KeyCode == VK_DOWN) {
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
+        } else if (KeyCode == VK_DELETE) {
+            if (Buffer->HistoryEntryToUse != NULL) {
+                PYORI_LIST_ENTRY NewEntry = NULL;
+                PYORI_SH_HISTORY_ENTRY HistoryEntry;
+
+                NewEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, Buffer->HistoryEntryToUse);
+                HistoryEntry = CONTAINING_RECORD(Buffer->HistoryEntryToUse, YORI_SH_HISTORY_ENTRY, ListEntry);
+                YoriShRemoveOneHistoryEntry(HistoryEntry);
+
+                if (NewEntry != NULL) {
+                    Buffer->HistoryEntryToUse = NewEntry;
+                    HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
+                    YoriShClearInput(Buffer);
+                    YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
+                } else {
+                    YoriShClearInput(Buffer);
+                }
+            }
         }
     } else if (CtrlMask == LEFT_ALT_PRESSED || CtrlMask == RIGHT_ALT_PRESSED ||
                CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY) ||

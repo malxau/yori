@@ -108,6 +108,25 @@ YoriShAddToHistory(
 }
 
 /**
+ Remove a single command from the history buffer.
+
+ @param HistoryEntry Pointer to the entry to remove.
+ */
+VOID
+YoriShRemoveOneHistoryEntry(
+    __in PYORI_SH_HISTORY_ENTRY HistoryEntry
+    )
+{
+    if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
+        YoriLibRemoveListItem(&HistoryEntry->ListEntry);
+        YoriLibFreeStringContents(&HistoryEntry->CmdLine);
+        YoriLibFree(HistoryEntry);
+        YoriShCommandHistoryCount--;
+        ReleaseMutex(YoriShHistoryLock);
+    }
+}
+
+/**
  Free all command history.
  */
 VOID

@@ -307,6 +307,11 @@ YoriShAddToHistory(
     );
 
 VOID
+YoriShRemoveOneHistoryEntry(
+    __in PYORI_SH_HISTORY_ENTRY HistoryEntry
+    );
+
+VOID
 YoriShClearAllHistory();
 
 BOOL
