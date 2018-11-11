@@ -267,6 +267,13 @@ ENTRYPOINT(
         CompactContext.CompressContext.Verbose = TRUE;
     }
 
+    //
+    //  NTFS compression operates on directories and therefore this program
+    //  really wants to see directories as well as files.  This unfortunately
+    //  changes recursive expansion semantics because C:\foo* refers to the
+    //  object name in the root and not the object name in all children.
+    //
+
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
     if (Recursive) {
         MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN;

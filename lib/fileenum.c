@@ -162,24 +162,46 @@ YoriLibForEachFileEnum(
     //
     //  If this is the first level enumerate and the caller wanted directory
     //  contents as opposed to directories themselves replace the caller
-    //  provided expression with one ending in \*
+    //  provided expression with one ending in \* .
+    //
+    //  If the caller wanted recursive directory enumeration and specified
+    //  an actual directory, ensure it's a full path so we can find the
+    //  parent and apply the correct string to search within the parent.
+    //  This differs from the above case because in this case the caller
+    //  wants to observe the directory itself (and contents) rather than
+    //  just contents.
     //
 
-    if ((MatchFlags & YORILIB_FILEENUM_DIRECTORY_CONTENTS) != 0 &&
-        Depth == 0) {
+    if (Depth == 0) {
+        YORI_STRING NewFileSpec;
+        DWORD FileAttributes;
+        if ((MatchFlags & YORILIB_FILEENUM_DIRECTORY_CONTENTS) != 0) {
 
-        DWORD FileAttributes = GetFileAttributes(FileSpec->StartOfString);
-        if (FileAttributes != (DWORD)-1 &&
-            (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-
-            YORI_STRING NewFileSpec;
-            if (!YoriLibAllocateString(&NewFileSpec, ForEachContext->EffectiveFileSpec.LengthInChars + 3)) {
-                YoriLibFree(ForEachContext);
-                return FALSE;
+            FileAttributes = GetFileAttributes(FileSpec->StartOfString);
+            if (FileAttributes != (DWORD)-1 &&
+                (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+    
+                if (!YoriLibAllocateString(&NewFileSpec, ForEachContext->EffectiveFileSpec.LengthInChars + 3)) {
+                    YoriLibFree(ForEachContext);
+                    return FALSE;
+                }
+    
+                NewFileSpec.LengthInChars = YoriLibSPrintf(NewFileSpec.StartOfString, _T("%y\\*"), &ForEachContext->EffectiveFileSpec);
+                memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
             }
+        } else if ((MatchFlags & (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) != 0) {
+            FileAttributes = GetFileAttributes(FileSpec->StartOfString);
+            if (FileAttributes != (DWORD)-1 &&
+                (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
 
-            NewFileSpec.LengthInChars = YoriLibSPrintf(NewFileSpec.StartOfString, _T("%y\\*"), &ForEachContext->EffectiveFileSpec);
-            memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
+                YoriLibInitEmptyString(&NewFileSpec);
+                if (!YoriLibGetFullPathNameReturnAllocation(&ForEachContext->EffectiveFileSpec, TRUE, &NewFileSpec, NULL)) {
+                    YoriLibFree(ForEachContext);
+                    return FALSE;
+                }
+
+                memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
+            }
         }
     }
 
