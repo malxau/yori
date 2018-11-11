@@ -952,24 +952,6 @@ YoriLibUpdateSelectionToPoint(
     ASSERT(YoriLibIsSelectionActive(Selection));
 
     //
-    //  Cap the range to coordinates describable by the screen buffer.
-    //
-
-    /*
-    if (X < 0) {
-        X = 0;
-    } else if (X >= ScreenInfo.dwSize.X) {
-        X = (SHORT)(ScreenInfo.dwSize.X - 1);
-    }
-
-    if (Y < 0) {
-        Y = 0;
-    } else if (Y >= ScreenInfo.dwSize.Y) {
-        Y = (SHORT)(ScreenInfo.dwSize.Y - 1);
-    }
-    */
-
-    //
     //  Assume that the mouse move is inside the window, so periodic
     //  scrolling is off.
     //
