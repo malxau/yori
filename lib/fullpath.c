@@ -615,10 +615,10 @@ YoriLibGetFullPathNameReturnAllocation(
             //
 
             if (EffectiveRoot == NULL) {
-                SetLastError(ERROR_BAD_PATHNAME);
                 if (FreeOnFailure) {
                     YoriLibFreeStringContents(Buffer);
                 }
+                SetLastError(ERROR_BAD_PATHNAME);
                 return FALSE;
             }
 
@@ -686,7 +686,23 @@ YoriLibGetFullPathNameReturnAllocation(
 
             PreviousWasSeperator = FALSE;
         } else {
-            EffectiveRoot = &Buffer->StartOfString[3];
+
+            EffectiveRoot = _tcschr(Buffer->StartOfString, '\\');
+
+            //
+            //  If the path is \\?\C: (exactly, no trailing component), it's
+            //  as full as it'll ever get.  We should just return it here.
+            //
+
+            if (EffectiveRoot == NULL) {
+                if (lpFilePart != NULL) {
+                    *lpFilePart = NULL;
+                }
+                ASSERT(Buffer->StartOfString[Buffer->LengthInChars] == '\0');
+                return TRUE;
+            }
+
+            EffectiveRoot++;
             PreviousWasSeperator = TRUE;
         }
     }
