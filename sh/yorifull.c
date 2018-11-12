@@ -384,6 +384,11 @@ YORI_CMD_BUILTIN YoriCmd_WINPOS;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YDBG;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YPM;
 
 /**
@@ -455,6 +460,7 @@ YoriShBuiltins[] = {
                     {_T("YCOPY"),     YoriCmd_YCOPY},
                     {_T("YCUT"),      YoriCmd_YCUT},
                     {_T("YDATE"),     YoriCmd_YDATE},
+                    {_T("YDBG"),      YoriCmd_YDBG},
                     {_T("YDIR"),      YoriCmd_YDIR},
                     {_T("YECHO"),     YoriCmd_YECHO},
                     {_T("YERASE"),    YoriCmd_YERASE},

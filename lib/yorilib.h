@@ -732,6 +732,9 @@ BOOL
 YoriLibLoadCabinetFunctions();
 
 BOOL
+YoriLibLoadDbgHelpFunctions();
+
+BOOL
 YoriLibLoadOle32Functions();
 
 BOOL

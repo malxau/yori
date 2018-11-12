@@ -152,6 +152,7 @@ CHAR strHelpHelpText3[] =
         "WHICH     Searches a semicolon delimited environment variable for a file\n"
         "WININFO   Return window information including size or position\n"
         "WINPOS    Set window size or position\n"
+        "YDBG      Debug processes\n"
         "YORI      Launch the Yori shell\n"
         "YPM       Install, uninstall, or update software packages\n"
         "YS        Executes a Yori script\n"

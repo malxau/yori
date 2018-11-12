@@ -227,6 +227,35 @@ YoriLibLoadCabinetFunctions()
 }
 
 /**
+ A structure containing pointers to dbghelp.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_DBGHELP_FUNCTIONS DllDbgHelp;
+
+/**
+ Load pointers to all optional dbghelp.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadDbgHelpFunctions()
+{
+
+    if (DllDbgHelp.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllDbgHelp.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("DBGHELP.DLL"));
+    if (DllDbgHelp.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllDbgHelp.pMiniDumpWriteDump = (PMINI_DUMP_WRITE_DUMP)GetProcAddress(DllDbgHelp.hDll, "MiniDumpWriteDump");
+
+    return TRUE;
+}
+
+/**
  A structure containing pointers to ole32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */

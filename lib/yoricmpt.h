@@ -3264,6 +3264,37 @@ typedef struct _YORI_CABINET_FUNCTIONS {
 
 extern YORI_CABINET_FUNCTIONS DllCabinet;
 
+ 
+/**
+ A prototype for the MiniDumpWriteDump function.
+ */
+typedef
+BOOL WINAPI
+MINI_DUMP_WRITE_DUMP(HANDLE, DWORD, HANDLE, DWORD, PVOID, PVOID, PVOID);
+
+/**
+ A prototype for a pointer to the MiniDumpWriteDump function.
+ */
+typedef MINI_DUMP_WRITE_DUMP *PMINI_DUMP_WRITE_DUMP;
+
+/**
+ A structure containing optional function pointers to dbghelp.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_DBGHELP_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to FCIAddFile.
+     */
+    PMINI_DUMP_WRITE_DUMP pMiniDumpWriteDump;
+} YORI_DBGHELP_FUNCTIONS, *PYORI_DBGHELP_FUNCTIONS;
+
+extern YORI_DBGHELP_FUNCTIONS DllDbgHelp;
+
 /**
  A prototype for the CoCreateInstance function.
  */

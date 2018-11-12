@@ -6,7 +6,6 @@ v1.0:
  - General MSFIX review
  - Support input from devices other than consoles
  - Merge sdir recursion root and criteria arguments
- - Tool for generating crashdumps from new or existing processes
  - ISO mount/unmount
  - Have find apply file criteria
  - Cal

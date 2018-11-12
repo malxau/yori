@@ -42,6 +42,8 @@ BUILTINS = alias.obj     \
            ys.obj        \
            z.obj         \
 
+all: compile link
+
 !INCLUDE "..\config\common.mk"
 
 compile: builtins.lib

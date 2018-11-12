@@ -97,6 +97,7 @@ FULL_BUILTINLIBS=\
 	..\which\builtins.lib    \
 	..\wininfo\builtins.lib  \
 	..\winpos\builtins.lib   \
+	..\ydbg\builtins.lib     \
 	..\ypm\builtins.lib      \
 
 compile: $(OBJS) $(BUILTINTABLE_OBJS)

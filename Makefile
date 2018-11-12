@@ -99,6 +99,7 @@ DIRS=crt       \
      which     \
      wininfo   \
      winpos    \
+     ydbg      \
      ypm       \
      ysetup    \
 
