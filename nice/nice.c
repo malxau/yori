@@ -26,6 +26,9 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#ifdef YORI_BUILTIN
+#include <yoricall.h>
+#endif
 
 /**
  Help text to display to the user.
@@ -80,13 +83,8 @@ ENTRYPOINT(
     )
 {
     YORI_STRING CmdLine;
-    YORI_STRING Executable;
-    PYORI_STRING ChildArgs;
-    PROCESS_INFORMATION ProcessInfo;
-    STARTUPINFO StartupInfo;
     DWORD ExitCode;
     BOOL ArgumentUnderstood;
-    HANDLE hJob;
     DWORD StartArg = 1;
     DWORD i;
     YORI_STRING Arg;
@@ -121,59 +119,95 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    YoriLibInitEmptyString(&Executable);
-    if (!YoriLibLocateExecutableInPath(&ArgV[StartArg], NULL, NULL, &Executable) ||
-        Executable.LengthInChars == 0) {
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("nice: unable to find executable\n"));
-        return EXIT_FAILURE;
+#ifdef YORI_BUILTIN
+
+    {
+        DWORD OldPriority;
+
+        OldPriority = GetPriorityClass(GetCurrentProcess());
+
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &CmdLine)) {
+            return EXIT_FAILURE;
+        }
+
+        SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+        YoriCallExecuteExpression(&CmdLine);
+        SetPriorityClass(GetCurrentProcess(), OldPriority);
+        YoriLibFreeStringContents(&CmdLine);
+
+        ExitCode = YoriCallGetErrorLevel();
     }
+#else
+    {
+        YORI_STRING Executable;
+        PYORI_STRING ChildArgs;
+        PROCESS_INFORMATION ProcessInfo;
+        STARTUPINFO StartupInfo;
+        HANDLE hJob;
 
-    ChildArgs = YoriLibMalloc((ArgC - StartArg) * sizeof(YORI_STRING));
-    if (ChildArgs == NULL) {
-        return EXIT_FAILURE;
+        ChildArgs = YoriLibMalloc((ArgC - StartArg) * sizeof(YORI_STRING));
+        if (ChildArgs == NULL) {
+            return EXIT_FAILURE;
+        }
+
+        YoriLibInitEmptyString(&Executable);
+        if (!YoriLibLocateExecutableInPath(&ArgV[StartArg], NULL, NULL, &Executable) ||
+            Executable.LengthInChars == 0) {
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("nice: unable to find executable\n"));
+            YoriLibFree(ChildArgs);
+            return EXIT_FAILURE;
+        }
+
+
+        memcpy(&ChildArgs[0], &Executable, sizeof(YORI_STRING));
+        if (StartArg + 1 < ArgC) {
+            memcpy(&ChildArgs[1], &ArgV[StartArg + 1], (ArgC - StartArg - 1) * sizeof(YORI_STRING));
+        }
+
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, ChildArgs, TRUE, &CmdLine)) {
+            YoriLibFree(ChildArgs);
+            YoriLibFreeStringContents(&Executable);
+            return EXIT_FAILURE;
+        }
+
+        ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+
+        hJob = YoriLibCreateJobObject();
+
+        memset(&StartupInfo, 0, sizeof(StartupInfo));
+        StartupInfo.cb = sizeof(StartupInfo);
+
+        if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, IDLE_PRIORITY_CLASS | CREATE_SUSPENDED, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+            DWORD LastError = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("nice: execution failed: %s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            YoriLibFree(ChildArgs);
+            YoriLibFreeStringContents(&CmdLine);
+            YoriLibFreeStringContents(&Executable);
+            return EXIT_FAILURE;
+        }
+
+        if (hJob != NULL) {
+            YoriLibAssignProcessToJobObject(hJob, ProcessInfo.hProcess);
+            YoriLibLimitJobObjectPriority(hJob, IDLE_PRIORITY_CLASS);
+        }
+
+        ResumeThread(ProcessInfo.hThread);
+        WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
+        GetExitCodeProcess(ProcessInfo.hProcess, &ExitCode);
+        CloseHandle(ProcessInfo.hProcess);
+        CloseHandle(ProcessInfo.hThread);
+        if (hJob != NULL) {
+            CloseHandle(hJob);
+        }
+        YoriLibFreeStringContents(&Executable);
+        YoriLibFreeStringContents(&CmdLine);
+        YoriLibFree(ChildArgs);
     }
-
-    memcpy(&ChildArgs[0], &Executable, sizeof(YORI_STRING));
-    if (StartArg + 1 < ArgC) {
-        memcpy(&ChildArgs[1], &ArgV[StartArg + 1], (ArgC - StartArg - 1) * sizeof(YORI_STRING));
-    }
-
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, ChildArgs, TRUE, &CmdLine)) {
-        return EXIT_FAILURE;
-    }
-
-    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-
-    hJob = YoriLibCreateJobObject();
-
-    memset(&StartupInfo, 0, sizeof(StartupInfo));
-    StartupInfo.cb = sizeof(StartupInfo);
-
-    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, IDLE_PRIORITY_CLASS | CREATE_SUSPENDED, NULL, NULL, &StartupInfo, &ProcessInfo)) {
-        DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("nice: execution failed: %s"), ErrText);
-        YoriLibFreeWinErrorText(ErrText);
-        return EXIT_FAILURE;
-    }
-
-    if (hJob != NULL) {
-        YoriLibAssignProcessToJobObject(hJob, ProcessInfo.hProcess);
-        YoriLibLimitJobObjectPriority(hJob, IDLE_PRIORITY_CLASS);
-    }
-
-    ResumeThread(ProcessInfo.hThread);
-    WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
-    GetExitCodeProcess(ProcessInfo.hProcess, &ExitCode);
-    CloseHandle(ProcessInfo.hProcess);
-    CloseHandle(ProcessInfo.hThread);
-    if (hJob != NULL) {
-        CloseHandle(hJob);
-    }
-    YoriLibFreeStringContents(&Executable);
-    YoriLibFreeStringContents(&CmdLine);
-    YoriLibFree(ChildArgs);
+#endif
 
     return ExitCode;
 }

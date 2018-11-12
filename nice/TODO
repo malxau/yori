@@ -1,4 +1,0 @@
-Nice.exe is cute, but:
- - An external program plays nicely with job control
- - An external program cannot resolve aliases
- - An external program cannot invoke builtins

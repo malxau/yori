@@ -84,6 +84,11 @@ YORI_CMD_BUILTIN YoriCmd_JOB;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_NICE;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_PUSHD;
 
 /**
@@ -142,6 +147,7 @@ YoriShBuiltins[] = {
                     {_T("HISTORY"),   YoriCmd_HISTORY},
                     {_T("IF"),        YoriCmd_IF},
                     {_T("JOB"),       YoriCmd_JOB},
+                    {_T("NICE"),      YoriCmd_NICE},
                     {_T("PUSHD"),     YoriCmd_PUSHD},
                     {_T("REM"),       YoriCmd_REM},
                     {_T("SET"),       YoriCmd_SET},

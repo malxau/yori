@@ -39,6 +39,7 @@ BUILTINTABLE_OBJS=\
 STD_BUILTINLIBS=\
 	..\builtins\builtins.lib \
 	..\for\builtins.lib      \
+	..\nice\builtins.lib     \
 
 FULL_BUILTINLIBS=\
 	$(STD_BUILTINLIBS)       \
