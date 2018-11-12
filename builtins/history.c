@@ -36,8 +36,9 @@ CHAR strHistoryHelpText[] =
         "\n"
         "Displays or modifies recent command history.\n"
         "\n"
-        "HISTORY [-license] [-l <file>|-n lines]\n"
+        "HISTORY [-license] [-c|-l <file>|-n lines]\n"
         "\n"
+        "   -c             Clear current history\n"
         "   -l             Load history from a file\n"
         "   -n             The number of lines of history to output\n";
 
@@ -112,6 +113,15 @@ HistoryLoadHistoryFromFile(
 }
 
 /**
+ The set of operations this module is capable of performing.
+ */
+typedef enum _HISTORY_OP {
+    HistoryDisplayHistory = 1,
+    HistoryLoadHistory = 2,
+    HistoryClearHistory =3
+} HISTORY_OP;
+
+/**
  Display yori shell command history.
 
  @param ArgC The number of arguments.
@@ -136,7 +146,9 @@ YoriCmd_HISTORY(
     PYORI_STRING SourceFile = NULL;
     LPTSTR ThisVar;
     DWORD VarLen;
+    HISTORY_OP Op;
 
+    Op = HistoryDisplayHistory;
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
 
@@ -153,8 +165,12 @@ YoriCmd_HISTORY(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                Op = HistoryClearHistory;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
+                    Op = HistoryLoadHistory;
                     SourceFile = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
                     i++;
@@ -180,7 +196,11 @@ YoriCmd_HISTORY(
         }
     }
 
-    if (SourceFile != NULL) {
+    if (Op == HistoryClearHistory) {
+        if (!YoriCallClearHistoryStrings()) {
+            return EXIT_FAILURE;
+        }
+    } else if (Op == HistoryLoadHistory) {
         YORI_STRING FileName;
         if (!YoriLibUserStringToSingleFilePath(SourceFile, TRUE, &FileName)) {
             DWORD LastError = GetLastError();
@@ -194,7 +214,7 @@ YoriCmd_HISTORY(
             return EXIT_FAILURE;
         }
         YoriLibFreeStringContents(&FileName);
-    } else {
+    } else if (Op == HistoryDisplayHistory) {
         if (YoriCallGetHistoryStrings(LineCount, &HistoryStrings)) {
             ThisVar = HistoryStrings.StartOfString;
             while (*ThisVar != '\0') {

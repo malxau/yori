@@ -42,9 +42,9 @@ BUILTINS = alias.obj     \
            ys.obj        \
            z.obj         \
 
-compile: builtins.lib
-
 !INCLUDE "..\config\common.mk"
+
+compile: builtins.lib
 
 !IF $(PDB)==1
 CFLAGS=$(CFLAGS) /Fdbuiltins.pdb
