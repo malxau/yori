@@ -1214,6 +1214,8 @@ YoriLibCopySelectionIfPresent(
         TextWritePoint++;
     }
 
+    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
+
     //
     //  Remove the final CRLF
     //
@@ -1221,8 +1223,6 @@ YoriLibCopySelectionIfPresent(
     if (TextToCopy.LengthInChars >= 2) {
         TextToCopy.LengthInChars -= 2;
     }
-
-    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
 
     //
     //  Convert the VT100 form into HTML, and free it
