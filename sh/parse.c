@@ -978,11 +978,15 @@ YoriShExecContextCleanupStdErr(
 
  @param Arg Pointer to the argument to check.
 
+ @param EndOfExpression TRUE if the argument is the final argument in the
+        expression, FALSE if it is an intermediate argument.
+
  @return TRUE to indicate this argument is a seperator between programs.
  */
 BOOL
 YoriShIsArgumentProgramSeperator(
-    __in PYORI_STRING Arg
+    __in PYORI_STRING Arg,
+    __in BOOL EndOfExpression
     )
 {
     if (YoriLibCompareStringWithLiteralInsensitive(Arg, _T("&")) == 0 ||
@@ -992,6 +996,14 @@ YoriShIsArgumentProgramSeperator(
         YoriLibCompareStringWithLiteralInsensitive(Arg, _T("||")) == 0) {
 
         return TRUE;
+    }
+
+    if (EndOfExpression) {
+        if (YoriLibCompareStringWithLiteralInsensitive(Arg, _T("&!")) == 0 ||
+            YoriLibCompareStringWithLiteralInsensitive(Arg, _T("&!!")) == 0) {
+
+            return TRUE;
+        }
     }
     return FALSE;
 }
@@ -1134,6 +1146,7 @@ YoriShParseCmdContextToExecContext(
 {
     DWORD Count;
     BOOL RemoveThisArg;
+    BOOL EndOfExpression;
     DWORD ArgumentsConsumed = 0;
     PYORI_STRING ThisArg;
 
@@ -1152,7 +1165,11 @@ YoriShParseCmdContextToExecContext(
     //
 
     for (Count = InitialArgument; Count < CmdContext->ArgC; Count++) {
-        if (YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[Count])) {
+        EndOfExpression = FALSE;
+        if (Count == CmdContext->ArgC - 1) {
+            EndOfExpression = TRUE;
+        }
+        if (YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[Count], EndOfExpression)) {
             break;
         }
     }
@@ -1511,7 +1528,7 @@ YoriShParseCmdContextToExecPlan(
         CurrentArg += ArgsConsumed;
 
         while (CurrentArg < CmdContext->ArgC &&
-               YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[CurrentArg])) {
+               YoriShIsArgumentProgramSeperator(&CmdContext->ArgV[CurrentArg], FALSE)) {
 
             ArgOfLastOperatorIndex = CurrentArg;
             CurrentArg++;
