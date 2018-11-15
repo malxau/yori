@@ -142,7 +142,6 @@ MoreInitContext(
     MoreContext->BasicEnumeration = BasicEnumeration;
     MoreContext->DebugDisplay = DebugDisplay;
     MoreContext->TabWidth = 4;
-    MoreContext->InitialColor = YoriLibVtGetDefaultColor();
 
     YoriLibInitializeListHead(&MoreContext->PhysicalLineList);
     MoreContext->PhysicalLineMutex = CreateMutex(NULL, FALSE, NULL);
@@ -163,6 +162,14 @@ MoreInitContext(
     if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
         return FALSE;
     }
+
+    //
+    //  Ingest depends on knowing the default color, which can happen before
+    //  any output.  Force set it here.
+    //
+
+    YoriLibVtSetDefaultColor(ScreenInfo.wAttributes);
+    MoreContext->InitialColor = YoriLibVtGetDefaultColor();
 
     MoreGetViewportDimensions(&ScreenInfo, &MoreContext->ViewportWidth, &MoreContext->ViewportHeight);
 
