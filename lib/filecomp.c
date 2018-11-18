@@ -177,6 +177,7 @@ YoriLibCompressSingleFile(
     BY_HANDLE_FILE_INFORMATION FileInfo;
     DWORD BytesReturned;
     BOOL Result = FALSE;
+    BOOL CompressFile = TRUE;
 
     AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE;
     if (CompressionAlgorithm.NtfsAlgorithm != 0) {
@@ -234,19 +235,42 @@ YoriLibCompressSingleFile(
         } CompressInfo;
 
         ZeroMemory(&CompressInfo, sizeof(CompressInfo));
-        CompressInfo.WofInfo.Version = 1;
-        CompressInfo.WofInfo.Provider = WOF_PROVIDER_FILE;
-        CompressInfo.FileInfo.Version = 1;
-        CompressInfo.FileInfo.Algorithm = CompressionAlgorithm.WofAlgorithm;
 
         Result = DeviceIoControl(DestFileHandle,
-                                 FSCTL_SET_EXTERNAL_BACKING,
-                                 &CompressInfo,
-                                 sizeof(CompressInfo),
+                                 FSCTL_GET_EXTERNAL_BACKING,
                                  NULL,
                                  0,
+                                 &CompressInfo,
+                                 sizeof(CompressInfo),
                                  &BytesReturned,
                                  NULL);
+
+        if (Result) {
+            if (CompressInfo.WofInfo.Version == 1 &&
+                CompressInfo.WofInfo.Provider == WOF_PROVIDER_FILE &&
+                CompressInfo.FileInfo.Version == 1 &&
+                CompressInfo.FileInfo.Algorithm == CompressionAlgorithm.WofAlgorithm) {
+
+                CompressFile = FALSE;
+            }
+        }
+
+        if (CompressFile) {
+            ZeroMemory(&CompressInfo, sizeof(CompressInfo));
+            CompressInfo.WofInfo.Version = 1;
+            CompressInfo.WofInfo.Provider = WOF_PROVIDER_FILE;
+            CompressInfo.FileInfo.Version = 1;
+            CompressInfo.FileInfo.Algorithm = CompressionAlgorithm.WofAlgorithm;
+
+            Result = DeviceIoControl(DestFileHandle,
+                                     FSCTL_SET_EXTERNAL_BACKING,
+                                     &CompressInfo,
+                                     sizeof(CompressInfo),
+                                     NULL,
+                                     0,
+                                     &BytesReturned,
+                                     NULL);
+        }
     }
 
 Exit:
