@@ -289,7 +289,7 @@ YoriShLoadHistoryFromFile()
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToString(&LineString, &LineContext, FileHandle)) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, TRUE, FileHandle)) {
             break;
         }
 

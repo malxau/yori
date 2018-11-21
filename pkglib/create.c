@@ -175,7 +175,7 @@ YoriPkgCreateBinaryPackage(
 
     YoriLibInitEmptyString(&LineString);
     while(TRUE) {
-        if (!YoriLibReadLineToString(&LineString, &LineContext, FileListSource)) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, TRUE, FileListSource)) {
             break;
         }
         if (!YoriLibAddFileToCab(CabHandle, &LineString, &LineString)) {
@@ -536,7 +536,7 @@ YoriPkgCreateSourcePackage(
         if (ExcludeFileHandle != INVALID_HANDLE_VALUE) {
             YoriLibInitEmptyString(&LineString);
             while(TRUE) {
-                if (!YoriLibReadLineToString(&LineString, &LineContext, ExcludeFileHandle)) {
+                if (!YoriLibReadLineToString(&LineString, &LineContext, TRUE, ExcludeFileHandle)) {
                     break;
                 }
 

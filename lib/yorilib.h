@@ -1536,7 +1536,8 @@ YoriLibDisplayMitLicense(
 PVOID
 YoriLibReadLineToString(
     __in PYORI_STRING UserString,
-    __in PVOID * Context,
+    __inout PVOID * Context,
+    __in BOOL ReturnFinalNonTerminatedLine,
     __in HANDLE FileHandle
     );
 

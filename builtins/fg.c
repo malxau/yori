@@ -141,7 +141,7 @@ YoriCmd_FG(
 
         while (TRUE) {
 
-            if (!YoriLibReadLineToString(&Line, &LineContext, ReadPipe)) {
+            if (!YoriLibReadLineToString(&Line, &LineContext, TRUE, ReadPipe)) {
                 break;
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &Line);

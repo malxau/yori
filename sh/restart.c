@@ -567,7 +567,7 @@ YoriShLoadSavedRestartState(
             PVOID LineContext = NULL;
             YoriLibInitEmptyString(&LineString);
             while (TRUE) {
-                if (!YoriLibReadLineToString(&LineString, &LineContext, hBufferFile)) {
+                if (!YoriLibReadLineToString(&LineString, &LineContext, TRUE, hBufferFile)) {
                     break;
                 }
 

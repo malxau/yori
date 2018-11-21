@@ -122,7 +122,7 @@ ReplProcessStream(
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, TRUE, hSource)) {
             break;
         }
 

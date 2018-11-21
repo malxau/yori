@@ -177,6 +177,11 @@ YoriLibBytesInBom(
         initialized to NULL for the first line read, and will be updated by
         this function.
 
+ @param ReturnFinalNonTerminatedLine If TRUE, treat any line at the end of the
+        stream without a line ending character to be a line to return.  If
+        FALSE, assume new input could arrive that means we just haven't
+        observed the line break yet.
+
  @param FileHandle Specifies the handle to the file to read the line from.
 
  @return Pointer to the Line buffer for success, NULL on failure.
@@ -184,7 +189,8 @@ YoriLibBytesInBom(
 PVOID
 YoriLibReadLineToString(
     __in PYORI_STRING UserString,
-    __in PVOID * Context,
+    __inout PVOID * Context,
+    __in BOOL ReturnFinalNonTerminatedLine,
     __in HANDLE FileHandle
     )
 {
@@ -365,7 +371,6 @@ YoriLibReadLineToString(
             return NULL;
         }
 
-
         //
         //  Wait for more data, or for cancellation if it's enabled.
         //
@@ -442,6 +447,7 @@ YoriLibReadLineToString(
         //
 
         TerminateProcessing = FALSE;
+        BytesRead = 0;
         if (!ReadFile(FileHandle, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->BytesInBuffer), ReadContext->LengthOfBuffer - ReadContext->BytesInBuffer, &BytesRead, NULL)) {
 #if DBG
             DWORD LastError = GetLastError();
@@ -456,7 +462,8 @@ YoriLibReadLineToString(
         }
 
         if (TerminateProcessing) {
-            if (ReadContext->BytesInBuffer > 0) {
+            if (ReadContext->BytesInBuffer > 0 && ReturnFinalNonTerminatedLine) {
+
                 //
                 //  We're at the end of the file.  Return what we have, even if
                 //  there's not a newline character.

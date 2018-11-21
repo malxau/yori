@@ -418,7 +418,7 @@ YsLoadLines(
 
         YoriLibInitEmptyString(&ThisLine->LineContents);
 
-        if (!YoriLibReadLineToString(&ThisLine->LineContents, &LineContext, Handle)) {
+        if (!YoriLibReadLineToString(&ThisLine->LineContents, &LineContext, TRUE, Handle)) {
             YoriLibFree(ThisLine);
             YoriLibLineReadClose(LineContext);
             return TRUE;

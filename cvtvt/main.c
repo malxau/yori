@@ -302,7 +302,7 @@ ENTRYPOINT(
 
     Result = TRUE;
     
-    while (YoriLibReadLineToString(&LineString, &LineReadContext, hSource)) {
+    while (YoriLibReadLineToString(&LineString, &LineReadContext, TRUE, hSource)) {
 
         //
         //  Start producing HTML

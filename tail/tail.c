@@ -37,10 +37,11 @@ CHAR strTailHelpText[] =
         "\n"
         "Output the final lines of one or more files.\n"
         "\n"
-        "TAIL [-license] [-b] [-s] [-n count] [-c line] [<file>...]\n"
+        "TAIL [-license] [-b] [-f] [-s] [-n count] [-c line] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Specify a line to display context around instead of EOF\n"
+        "   -f             Wait for new output and continue outputting\n"
         "   -n             Specify the number of lines to display\n"
         "   -s             Process files from all subdirectories\n";
 
@@ -91,6 +92,12 @@ typedef struct _TAIL_CONTEXT {
      */
     PYORI_STRING LinesArray;
 
+    /**
+     If TRUE, continue outputting results as more arrive.  If FALSE, terminate
+     as soon as the requested lines have been output.
+     */
+    BOOL WaitForMore;
+
 } TAIL_CONTEXT, *PTAIL_CONTEXT;
 
 /**
@@ -120,7 +127,7 @@ TailProcessStream(
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToString(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, hSource)) {
+        if (!YoriLibReadLineToString(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, hSource)) {
             break;
         }
 
@@ -130,8 +137,6 @@ TailProcessStream(
             break;
         }
     }
-
-    YoriLibLineReadClose(LineContext);
 
     if (TailContext->LinesFound > TailContext->LinesToDisplay) {
         StartLine = TailContext->LinesFound - TailContext->LinesToDisplay;
@@ -143,6 +148,19 @@ TailProcessStream(
         LineString = &TailContext->LinesArray[CurrentLine % TailContext->LinesToDisplay];
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), LineString);
     }
+
+    if (TailContext->WaitForMore) {
+        while (TRUE) {
+
+            if (!YoriLibReadLineToString(&TailContext->LinesArray[0], &LineContext, FALSE, hSource)) {
+                Sleep(200);
+                continue;
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &TailContext->LinesArray[0]);
+        }
+    }
+
+    YoriLibLineReadClose(LineContext);
     return TRUE;
 }
 
@@ -266,6 +284,9 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+                TailContext.WaitForMore = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 if (ArgC > i + 1) {
                     LONGLONG LineCount;

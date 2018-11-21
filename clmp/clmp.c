@@ -133,7 +133,7 @@ ClmpPumpSingleStream(
     YoriLibInitEmptyString(&LineString);
 
     while (TRUE) {
-        if (!YoriLibReadLineToString(&LineString, &LineContext, Buffer->Pipe)) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, TRUE, Buffer->Pipe)) {
             break;
         }
 
