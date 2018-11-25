@@ -957,12 +957,13 @@ DWORD
 YsExpandArgumentVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in PYS_ARGUMENT_CONTEXT Context
+    __in PVOID Context
     )
 {
     DWORD CharsConsumed;
     LONGLONG ArgIndex;
     DWORD StringLength;
+    PYS_ARGUMENT_CONTEXT ArgContext = (PYS_ARGUMENT_CONTEXT)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("~SCRIPTNAME")) == 0) {
         if (OutputString->LengthAllocated >= YsActiveScript->FileName.LengthInChars) {
@@ -974,12 +975,12 @@ YsExpandArgumentVariables(
     if (YoriLibCompareStringWithLiteral(VariableName, _T("*")) == 0) {
         YORI_STRING EntireLine;
 
-        if (Context->ArgC < Context->ShiftCount + 1) {
+        if (ArgContext->ArgC < ArgContext->ShiftCount + 1) {
             return 0;
         }
 
         YoriLibInitEmptyString(&EntireLine);
-        if (!YoriLibBuildCmdlineFromArgcArgv(Context->ArgC - Context->ShiftCount - 1, &Context->ArgV[Context->ShiftCount + 1], TRUE, &EntireLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgContext->ArgC - ArgContext->ShiftCount - 1, &ArgContext->ArgV[ArgContext->ShiftCount + 1], TRUE, &EntireLine)) {
             return 0;
         }
 
@@ -992,11 +993,11 @@ YsExpandArgumentVariables(
     }
 
     if (YoriLibStringToNumber(VariableName, TRUE, &ArgIndex, &CharsConsumed) && CharsConsumed > 0 && CharsConsumed == VariableName->LengthInChars) {
-        if (ArgIndex > 0 && ArgIndex + Context->ShiftCount < Context->ArgC) {
+        if (ArgIndex > 0 && ArgIndex + ArgContext->ShiftCount < ArgContext->ArgC) {
 
-            StringLength = Context->ArgV[ArgIndex + Context->ShiftCount].LengthInChars;
+            StringLength = ArgContext->ArgV[ArgIndex + ArgContext->ShiftCount].LengthInChars;
             if (OutputString->LengthAllocated >= StringLength) {
-                memcpy(OutputString->StartOfString, Context->ArgV[ArgIndex + Context->ShiftCount].StartOfString, StringLength  * sizeof(TCHAR));
+                memcpy(OutputString->StartOfString, ArgContext->ArgV[ArgIndex + ArgContext->ShiftCount].StartOfString, StringLength  * sizeof(TCHAR));
             }
             return StringLength;
         } else {
