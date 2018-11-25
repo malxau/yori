@@ -184,6 +184,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("mkdir"),    _T("ymkdir $*$")},
     {_T("mklink"),   _T("ymklink $*$")},
     {_T("more"),     _T("ymore $*$")},
+    {_T("mount"),    _T("ymount $*$")},
     {_T("move"),     _T("ymove $*$")},
     {_T("paste"),    _T("yclip -p $*$")},
     {_T("path"),     _T("ypath $*$")},

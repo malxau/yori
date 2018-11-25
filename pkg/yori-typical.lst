@@ -14,6 +14,7 @@ initool.exe
 lines.exe
 lsof.exe
 ymore.exe
+ymount.exe
 nice.exe
 osver.exe
 readline.exe

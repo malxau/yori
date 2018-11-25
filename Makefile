@@ -74,6 +74,7 @@ DIRS=crt       \
      mkdir     \
      mklink    \
      more      \
+     mount     \
      move      \
      nice      \
      osver     \

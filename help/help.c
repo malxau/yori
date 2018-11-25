@@ -110,6 +110,7 @@ CHAR strHelpHelpText2[] =
         "MKDIR     Creates directories\n"
         "MKLINK    Creates hardlinks, symbolic links, or junctions\n"
         "MORE      Displays text one page at a time with scrolling\n"
+        "MOUNT     Mounts or unmounts an ISO image\n"
         "MOVE      Moves or renames one or more files\n"
         "NICE      Runs a child program at low priority\n"
         "OSVER     Outputs the operating system version in a specified format\n"

@@ -2321,6 +2321,196 @@ struct IShellLinkWVtbl {
 };
 
 /**
+ A structure describing the underlying storage provider when accessing
+ virtual disks.
+ */
+typedef struct _VIRTUAL_STORAGE_TYPE {
+
+    /**
+     The type of the storage provider.
+     */
+    DWORD DeviceId;
+
+    /**
+     A GUID describing the vendor of the storage provider.
+     */
+    GUID  VendorId;
+} VIRTUAL_STORAGE_TYPE, *PVIRTUAL_STORAGE_TYPE;
+
+/**
+ The only known storage provider to this application, Microsoft.
+ */
+extern const GUID VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT;
+
+/**
+ The ISO image storage provider.
+ */
+#define VIRTUAL_STORAGE_TYPE_DEVICE_ISO                    (0x1)
+
+/**
+ The VHD image storage provider.
+ */
+#define VIRTUAL_STORAGE_TYPE_DEVICE_VHD                    (0x2)
+
+/**
+ The VHDX image storage provider.
+ */
+#define VIRTUAL_STORAGE_TYPE_DEVICE_VHDX                   (0x3)
+
+/**
+ The VHD set storage provider.
+ */
+#define VIRTUAL_STORAGE_TYPE_DEVICE_VHDSET                 (0x4)
+
+/**
+ The normal recursion depth when mounting a VHD for read write.  If a VHD
+ is mounted from physical storage, the depth should be one.  If a VHD is
+ mounted from within another VHD, the depth should be two.
+ */
+#define OPEN_VIRTUAL_DISK_RW_DEPTH_DEFAULT                 (0x1)
+
+/**
+ Version one of the parameters when opening a virtual disk.
+ */
+#define OPEN_VIRTUAL_DISK_VERSION_1                        (0x1)
+
+/**
+ Version two of the parameters when opening a virtual disk.
+ */
+#define OPEN_VIRTUAL_DISK_VERSION_2                        (0x2)
+
+/**
+ Parameters to pass when opening a virtual disk.
+ */
+typedef struct _OPEN_VIRTUAL_DISK_PARAMETERS {
+
+    /**
+     The version of the parameters included below.
+     */
+    DWORD Version;
+
+    union {
+        struct {
+            DWORD RWDepth;
+        } Version1;
+        struct {
+            BOOL GetInfoOnly;
+            BOOL ReadOnly;
+            GUID ResiliencyGuid;
+        } Version2;
+    };
+} OPEN_VIRTUAL_DISK_PARAMETERS, *POPEN_VIRTUAL_DISK_PARAMETERS;
+
+/**
+ No access is needed to the virtual disk.
+ */
+#define VIRTUAL_DISK_ACCESS_NONE                           (0x00000000)
+
+/**
+ The opened virtual disk needs to be capable of attaching in read only mode.
+ */
+#define VIRTUAL_DISK_ACCESS_ATTACH_RO                      (0x00010000)
+
+/**
+ The opened virtual disk needs to be capable of attaching in read write mode.
+ */
+#define VIRTUAL_DISK_ACCESS_ATTACH_RW                      (0x00020000)
+
+/**
+ The opened virtual disk needs to be capable of detaching.
+ */
+#define VIRTUAL_DISK_ACCESS_DETACH                         (0x00040000)
+
+/**
+ The opened virtual disk needs to be capable of querying information.
+ */
+#define VIRTUAL_DISK_ACCESS_GET_INFO                       (0x00080000)
+
+/**
+ The opened virtual disk needs to be capable of being created.
+ */
+#define VIRTUAL_DISK_ACCESS_CREATE                         (0x00100000)
+
+/**
+ The opened virtual disk needs to be capable of having metadata modifications
+ performed.
+ */
+#define VIRTUAL_DISK_ACCESS_METAOPS                        (0x00200000)
+
+/**
+ The opened virtual disk including all access needed for read only operations.
+ */
+#define VIRTUAL_DISK_ACCESS_READ                           (0x000d0000)
+
+
+/**
+ Open the virtual disk with no special options.
+ */
+#define OPEN_VIRTUAL_DISK_FLAG_NONE                        (0x00000000)
+
+/**
+ Skip any verification and validation of a virtual disk, since it may be an
+ uninitialized file.
+ */
+#define OPEN_VIRTUAL_DISK_FLAG_BLANK_FILE                  (0x00000002)
+
+/**
+ Use cached IO when working on the virtual disk.  Note that files within
+ virtual disks are cached normally; this applies global caching to the disk
+ file itself, which is typically redundant and/or dangerous.
+ */
+#define OPEN_VIRTUAL_DISK_FLAG_CACHED_IO                   (0x00000008)
+
+/**
+ Version one of the parameters when attaching a virtual disk.
+ */
+#define ATTACH_VIRTUAL_DISK_VERSION_1                      (0x1)
+
+/**
+ Parameters to pass when attaching a virtual disk.
+ */
+typedef struct _ATTACH_VIRTUAL_DISK_PARAMETERS {
+
+    /**
+     Specifies the version of the attach parameters.  Currently this
+     structure is only defined with support for 1.
+     */
+    DWORD Version;
+
+    /**
+     32 bits of padding because version 1 of the structure expects it.
+     */
+    DWORD Reserved;
+} ATTACH_VIRTUAL_DISK_PARAMETERS, *PATTACH_VIRTUAL_DISK_PARAMETERS;
+
+
+/**
+ Perform a normal attach.
+ */
+#define ATTACH_VIRTUAL_DISK_FLAG_NONE                      (0x00000000)
+
+/**
+ Attach the virtual disk as read only.
+ */
+#define ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY                 (0x00000001)
+
+/**
+ Don't assign drive letter(s) for the volumes within the virtual disk.
+ */
+#define ATTACH_VIRTUAL_DISK_FLAG_NO_DRIVE_LETTER           (0x00000002)
+
+/**
+ Keep the attachment active after the handle to the virtual disk is closed.
+ */
+#define ATTACH_VIRTUAL_DISK_FLAG_PERMANENT_LIFETIME        (0x00000004)
+
+/**
+ According to MSDN, use the default security descriptor, although the API
+ also allows a NULL SD to be passed which sounds similar.
+ */
+#define ATTACH_VIRTUAL_DISK_FLAG_NO_SECURITY_DESCRIPTOR    (0x00000010)
+
+/**
  A prototype for the NtQueryInformationFile function.
  */
 typedef 
@@ -3904,5 +4094,70 @@ typedef struct _YORI_VERSION_FUNCTIONS {
 
 extern YORI_VERSION_FUNCTIONS DllVersion;
 
+/**
+ A prototype for the AttachVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+ATTACH_VIRTUAL_DISK(HANDLE, PSECURITY_DESCRIPTOR, DWORD, DWORD, LPVOID, LPOVERLAPPED);
+
+/**
+ A prototype for a pointer to the AttachVirtualDisk function.
+ */
+typedef ATTACH_VIRTUAL_DISK *PATTACH_VIRTUAL_DISK;
+
+/**
+ A prototype for the DetachVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+DETACH_VIRTUAL_DISK(HANDLE, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the DetachVirtualDisk function.
+ */
+typedef DETACH_VIRTUAL_DISK *PDETACH_VIRTUAL_DISK;
+
+/**
+ A prototype for the OpenVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+OPEN_VIRTUAL_DISK(PVIRTUAL_STORAGE_TYPE, LPCWSTR, DWORD, DWORD, POPEN_VIRTUAL_DISK_PARAMETERS, PHANDLE);
+
+/**
+ A prototype for a pointer to the OpenVirtualDisk function.
+ */
+typedef OPEN_VIRTUAL_DISK *POPEN_VIRTUAL_DISK;
+
+/**
+ A structure containing optional function pointers to virtdisk.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_VIRTDISK_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to AttachVirtualDisk.
+     */
+    PATTACH_VIRTUAL_DISK pAttachVirtualDisk;
+
+    /**
+     If it's available on the current system, a pointer to DetachVirtualDisk.
+     */
+    PDETACH_VIRTUAL_DISK pDetachVirtualDisk;
+
+    /**
+     If it's available on the current system, a pointer to OpenVirtualDisk.
+     */
+    POPEN_VIRTUAL_DISK pOpenVirtualDisk;
+
+} YORI_VIRTDISK_FUNCTIONS, *PYORI_VIRTDISK_FUNCTIONS;
+
+extern YORI_VIRTDISK_FUNCTIONS DllVirtDisk;
 
 // vim:sw=4:ts=4:et:

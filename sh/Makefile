@@ -71,6 +71,7 @@ FULL_BUILTINLIBS=\
 	..\mkdir\builtins.lib    \
 	..\mklink\builtins.lib   \
 	..\more\builtins.lib     \
+	..\mount\builtins.lib    \
 	..\move\builtins.lib     \
 	..\nice\builtins.lib     \
 	..\osver\builtins.lib    \

@@ -752,6 +752,9 @@ YoriLibLoadUser32Functions();
 BOOL
 YoriLibLoadVersionFunctions();
 
+BOOL
+YoriLibLoadVirtDiskFunctions();
+
 // *** FILECOMP.C ***
 
 /**

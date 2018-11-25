@@ -456,5 +456,41 @@ YoriLibLoadVersionFunctions()
     return TRUE;
 }
 
+/**
+ GUID for Microsoft provided virtual storage implementations.
+ */
+const GUID VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT = { 0xec984aec, 0xa0f9, 0x47e9, { 0x90, 0x1f, 0x71, 0x41, 0x5a, 0x66, 0x34, 0x5b } };
+
+/**
+ A structure containing pointers to virtdisk.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_VIRTDISK_FUNCTIONS DllVirtDisk;
+
+/**
+ Load pointers to all optional virtdisk.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadVirtDiskFunctions()
+{
+
+    if (DllVirtDisk.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllVirtDisk.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("VIRTDISK.DLL"));
+    if (DllVirtDisk.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllVirtDisk.pAttachVirtualDisk = (PATTACH_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "AttachVirtualDisk");
+    DllVirtDisk.pDetachVirtualDisk = (PDETACH_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "DetachVirtualDisk");
+    DllVirtDisk.pOpenVirtualDisk = (POPEN_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "OpenVirtualDisk");
+
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:
