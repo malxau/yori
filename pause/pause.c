@@ -53,12 +53,12 @@ PauseHelp()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the pause builtin command.
  */
 #define ENTRYPOINT YoriCmd_YPAUSE
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the pause standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

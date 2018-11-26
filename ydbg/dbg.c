@@ -138,12 +138,12 @@ typedef enum _YDBG_OP {
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the ydbg builtin command.
  */
 #define ENTRYPOINT YoriCmd_YDBG
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the ydbg standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

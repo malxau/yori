@@ -130,12 +130,12 @@ WinInfoExpandVariables(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the wininfo builtin command.
  */
 #define ENTRYPOINT YoriCmd_WININFO
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the wininfo standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

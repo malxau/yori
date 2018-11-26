@@ -53,12 +53,12 @@ ReadLineHelp()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the readline builtin command.
  */
 #define ENTRYPOINT YoriCmd_READLINE
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the readline standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

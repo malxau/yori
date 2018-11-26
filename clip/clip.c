@@ -547,12 +547,12 @@ ClipEmptyClipboard(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the clip builtin command.
  */
 #define ENTRYPOINT YoriCmd_YCLIP
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the clip standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

@@ -442,12 +442,12 @@ DirFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the dir builtin command.
  */
 #define ENTRYPOINT YoriCmd_YDIR
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the dir standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

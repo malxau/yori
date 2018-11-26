@@ -595,12 +595,12 @@ CopyFreeCopyContext(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the copy builtin command.
  */
 #define ENTRYPOINT YoriCmd_YCOPY
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the copy standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

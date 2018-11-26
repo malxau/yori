@@ -56,12 +56,12 @@ MoreHelp()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the more builtin command.
  */
 #define ENTRYPOINT YoriCmd_YMORE
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the more standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

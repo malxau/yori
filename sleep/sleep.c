@@ -55,12 +55,12 @@ SleepHelp()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the sleep builtin command.
  */
 #define ENTRYPOINT YoriCmd_SLEEP
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the sleep standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

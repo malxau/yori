@@ -173,12 +173,12 @@ HelpText()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the help builtin command.
  */
 #define ENTRYPOINT YoriCmd_YHELP
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the help standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

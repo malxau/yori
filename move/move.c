@@ -179,12 +179,12 @@ MoveFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the move builtin command.
  */
 #define ENTRYPOINT YoriCmd_YMOVE
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the move standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

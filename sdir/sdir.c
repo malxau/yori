@@ -1679,12 +1679,12 @@ SdirEnumerateAndDisplaySubtree (
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the sdir builtin command.
  */
 #define ENTRYPOINT YoriCmd_SDIR
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the sdir standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

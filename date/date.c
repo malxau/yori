@@ -189,12 +189,12 @@ DateExpandVariables(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the date builtin command.
  */
 #define ENTRYPOINT YoriCmd_YDATE
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the date standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

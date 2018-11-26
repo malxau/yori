@@ -92,12 +92,12 @@ CvtvtInputPumpThread(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the cvtvt builtin command.
  */
 #define ENTRYPOINT YoriCmd_CVTVT
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the cvtvt standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

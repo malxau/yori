@@ -285,12 +285,12 @@ typedef MKLINK_LINK_TYPE *PMKLINK_LINK_TYPE;
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the mklink builtin command.
  */
 #define ENTRYPOINT YoriCmd_YMKLINK
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the mklink standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

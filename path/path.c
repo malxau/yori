@@ -184,12 +184,12 @@ PathExpandVariables(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the path builtin command.
  */
 #define ENTRYPOINT YoriCmd_PATH
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the path standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

@@ -175,18 +175,18 @@ RmdirFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the rmdir builtin command.
  */
 #define ENTRYPOINT YoriCmd_YRMDIR
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the rmdir standalone application.
  */
 #define ENTRYPOINT ymain
 #endif
 
 /**
- The main entrypoint for the for cmdlet.
+ The main entrypoint for the rmdir cmdlet.
 
  @param ArgC The number of arguments.
 

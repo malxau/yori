@@ -1441,12 +1441,12 @@ TCHAR DefaultFormatString[] =
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the finfo builtin command.
  */
 #define ENTRYPOINT YoriCmd_FINFO
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the finfo standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

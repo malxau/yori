@@ -141,12 +141,12 @@ FsCmpFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the fscmp builtin command.
  */
 #define ENTRYPOINT YoriCmd_FSCMP
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the fscmp standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

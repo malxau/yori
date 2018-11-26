@@ -268,12 +268,12 @@ ReplFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the repl builtin command.
  */
 #define ENTRYPOINT YoriCmd_REPL
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the repl standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

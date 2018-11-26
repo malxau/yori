@@ -529,12 +529,12 @@ Exit:
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the hexdump builtin command.
  */
 #define ENTRYPOINT YoriCmd_HEXDUMP
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the hexdump standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

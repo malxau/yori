@@ -53,12 +53,12 @@ GrpcmpHelp()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the grpcmp builtin command.
  */
 #define ENTRYPOINT YoriCmd_GRPCMP
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the grpcmp standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

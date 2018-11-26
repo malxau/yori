@@ -53,12 +53,12 @@ TitleHelp()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the title builtin command.
  */
 #define ENTRYPOINT YoriCmd_YTITLE
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the title standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

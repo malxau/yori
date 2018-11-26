@@ -117,12 +117,12 @@ ExprOutputNumber(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the expr builtin command.
  */
 #define ENTRYPOINT YoriCmd_YEXPR
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the expr standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

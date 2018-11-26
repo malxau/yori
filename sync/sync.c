@@ -144,12 +144,12 @@ SyncFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the sync builtin command.
  */
 #define ENTRYPOINT YoriCmd_SYNC
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the sync standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

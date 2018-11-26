@@ -145,12 +145,12 @@ CompactFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the compact builtin command.
  */
 #define ENTRYPOINT YoriCmd_YCOMPACT
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the compact standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

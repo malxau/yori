@@ -199,7 +199,7 @@ typedef enum _MOUNT_OP {
 #define ENTRYPOINT YoriCmd_YMOUNT
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the mount standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

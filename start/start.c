@@ -135,12 +135,12 @@ StartShellExecute(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the start builtin command.
  */
 #define ENTRYPOINT YoriCmd_YSTART
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the start standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

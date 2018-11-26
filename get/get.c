@@ -52,12 +52,12 @@ GetHelp()
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the get builtin command.
  */
 #define ENTRYPOINT YoriCmd_YGET
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the get standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

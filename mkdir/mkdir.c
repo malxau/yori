@@ -115,18 +115,18 @@ MkdirCreateDirectoryAndParents(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the mkdir builtin command.
  */
 #define ENTRYPOINT YoriCmd_YMKDIR
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the mkdir standalone application.
  */
 #define ENTRYPOINT ymain
 #endif
 
 /**
- The main entrypoint for the for cmdlet.
+ The main entrypoint for the mkdir cmdlet.
 
  @param ArgC The number of arguments.
 

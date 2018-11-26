@@ -268,12 +268,12 @@ typedef enum _INITOOL_OPERATION {
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the initool builtin command.
  */
 #define ENTRYPOINT YoriCmd_INITOOL
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the initool standalone application.
  */
 #define ENTRYPOINT ymain
 #endif

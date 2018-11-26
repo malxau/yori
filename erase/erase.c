@@ -148,12 +148,12 @@ EraseFileFoundCallback(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the for builtin command.
+ The main entrypoint for the erase builtin command.
  */
 #define ENTRYPOINT YoriCmd_YERASE
 #else
 /**
- The main entrypoint for the for standalone application.
+ The main entrypoint for the erase standalone application.
  */
 #define ENTRYPOINT ymain
 #endif
