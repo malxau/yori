@@ -35,10 +35,12 @@ CHAR strMountHelpText[] =
         "\n"
         "Mount or unmount an ISO disk.\n"
         "\n"
-        "MOUNT [-license] [-i <file>|-u <file>]\n"
+        "MOUNT [-license] [-r] [-i <file>|-u <file>|-v <file>]\n"
         "\n"
         "   -i <file>      Mount an ISO disk\n"
-        "   -u <file>      Unmount a disk\n";
+        "   -r             Mount read only\n"
+        "   -u <file>      Unmount a disk\n"
+        "   -v <file>      Mount a VHD disk\n";
 
 /**
  Display usage text to the user.
@@ -121,6 +123,115 @@ MountMountIso(
 }
 
 /**
+ Mount a VHD file as a locally attached storage device.
+
+ @param FileName Pointer to the file name of the VHD file.  This routine will
+        resolve it into a full path.
+
+ @param ReadOnly TRUE if the device should be read only, FALSE if it should be
+        read and write.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+MountMountVhd(
+    __in PYORI_STRING FileName,
+    __in BOOL ReadOnly
+    )
+{
+    VIRTUAL_STORAGE_TYPE StorageType;
+    OPEN_VIRTUAL_DISK_PARAMETERS OpenParams;
+    ATTACH_VIRTUAL_DISK_PARAMETERS AttachParams;
+    HANDLE StorHandle;
+    DWORD Err;
+    DWORD AccessRequested;
+    YORI_STRING FullFileName;
+    TOKEN_PRIVILEGES TokenPrivileges;
+    LUID ManageVolumeLuid;
+    HANDLE TokenHandle;
+
+    YoriLibLoadVirtDiskFunctions();
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllVirtDisk.pAttachVirtualDisk == NULL ||
+        DllVirtDisk.pOpenVirtualDisk == NULL ||
+        DllAdvApi32.pLookupPrivilegeValueW == NULL ||
+        DllAdvApi32.pOpenProcessToken == NULL ||
+        DllAdvApi32.pAdjustTokenPrivileges == NULL) {
+
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&FullFileName);
+    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+        return FALSE;
+    }
+
+    if (!DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_MANAGE_VOLUME_NAME, &ManageVolumeLuid)) {
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    if (!DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &TokenHandle)) {
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    TokenPrivileges.PrivilegeCount = 1;
+    TokenPrivileges.Privileges[0].Luid = ManageVolumeLuid;
+    TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    if (!DllAdvApi32.pAdjustTokenPrivileges(TokenHandle, FALSE, &TokenPrivileges, 0, NULL, 0)) {
+        CloseHandle(TokenHandle);
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    StorageType.DeviceId = VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN;
+    StorageType.VendorId = VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN;
+
+    ZeroMemory(&OpenParams, sizeof(OpenParams));
+    OpenParams.Version = OPEN_VIRTUAL_DISK_VERSION_1;
+    OpenParams.Version1.RWDepth = OPEN_VIRTUAL_DISK_RW_DEPTH_DEFAULT;
+
+    if (ReadOnly) {
+        AccessRequested = VIRTUAL_DISK_ACCESS_READ;
+    } else {
+        AccessRequested = VIRTUAL_DISK_ACCESS_ATTACH_RW | VIRTUAL_DISK_ACCESS_GET_INFO | VIRTUAL_DISK_ACCESS_DETACH;
+    }
+
+    Err = DllVirtDisk.pOpenVirtualDisk(&StorageType, FullFileName.StartOfString, AccessRequested, OPEN_VIRTUAL_DISK_FLAG_NONE, &OpenParams, &StorHandle);
+    if (Err != ERROR_SUCCESS) {
+        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: open of %y failed: %s"), &FullFileName, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    ZeroMemory(&AttachParams, sizeof(AttachParams));
+    AttachParams.Version = ATTACH_VIRTUAL_DISK_VERSION_1;
+
+    AccessRequested = ATTACH_VIRTUAL_DISK_FLAG_PERMANENT_LIFETIME;
+    if (ReadOnly) {
+        AccessRequested |= ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY;
+    }
+
+    Err = DllVirtDisk.pAttachVirtualDisk(StorHandle, NULL, AccessRequested, 0, &AttachParams, NULL);
+    if (Err != ERROR_SUCCESS) {
+        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: attach of %y failed: %s"), &FullFileName, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        CloseHandle(StorHandle);
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    CloseHandle(StorHandle);
+    YoriLibFreeStringContents(&FullFileName);
+    return TRUE;
+}
+
+/**
  Unmount a previously mounted file being used as a locally attached storage
  device.
 
@@ -153,8 +264,8 @@ MountUnmount(
         return FALSE;
     }
 
-    StorageType.DeviceId = VIRTUAL_STORAGE_TYPE_DEVICE_ISO;
-    StorageType.VendorId = VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT;
+    StorageType.DeviceId = VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN;
+    StorageType.VendorId = VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN;
 
     ZeroMemory(&OpenParams, sizeof(OpenParams));
     OpenParams.Version = OPEN_VIRTUAL_DISK_VERSION_1;
@@ -189,7 +300,8 @@ MountUnmount(
 typedef enum _MOUNT_OP {
     MountOpNone = 0,
     MountOpMountIso = 1,
-    MountOpUnmount = 2
+    MountOpUnmount = 2,
+    MountOpMountVhd = 3
 } MOUNT_OP;
 
 #ifdef YORI_BUILTIN
@@ -221,11 +333,11 @@ ENTRYPOINT(
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD StartArg = 0;
     DWORD i;
     YORI_STRING Arg;
     PYORI_STRING FileName = NULL;
     MOUNT_OP Op;
+    BOOL ReadOnly = FALSE;
 
     Op = MountOpNone;
 
@@ -249,6 +361,9 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                ReadOnly = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
                 if (ArgC > i + 1) {
                     FileName = &ArgV[i + 1];
@@ -256,10 +371,36 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+                if (ArgC > i + 1) {
+                    FileName = &ArgV[i + 1];
+                    Op = MountOpMountVhd;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             }
         } else {
-            ArgumentUnderstood = TRUE;
-            StartArg = i;
+            if (Op == MountOpNone) {
+                LPTSTR Period;
+                Period = YoriLibFindRightMostCharacter(&ArgV[i], '.');
+                if (Period != NULL) {
+                    YORI_STRING Ext;
+                    YoriLibInitEmptyString(&Ext);
+                    Ext.StartOfString = Period + 1;
+                    Ext.LengthInChars = ArgV[i].LengthInChars - (DWORD)(Period - ArgV[i].StartOfString) - 1;
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Looking for extension %y\n"), &Ext);
+                    if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("iso")) == 0) {
+                        FileName = &ArgV[i];
+                        Op = MountOpMountIso;
+                        ArgumentUnderstood = TRUE;
+                    } else if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("vhd")) == 0 ||
+                               YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("vhdx")) == 0) {
+                        FileName = &ArgV[i];
+                        Op = MountOpMountVhd;
+                        ArgumentUnderstood = TRUE;
+                    }
+                }
+            }
             break;
         }
 
@@ -279,6 +420,9 @@ ENTRYPOINT(
             break;
         case MountOpUnmount:
             MountUnmount(FileName);
+            break;
+        case MountOpMountVhd:
+            MountMountVhd(FileName, ReadOnly);
             break;
     }
 

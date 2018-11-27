@@ -2338,9 +2338,19 @@ typedef struct _VIRTUAL_STORAGE_TYPE {
 } VIRTUAL_STORAGE_TYPE, *PVIRTUAL_STORAGE_TYPE;
 
 /**
+ An unknown storage provider.
+ */
+extern const GUID VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN;
+
+/**
  The only known storage provider to this application, Microsoft.
  */
 extern const GUID VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT;
+
+/**
+ An unknown storage provider.
+ */
+#define VIRTUAL_STORAGE_TYPE_DEVICE_UNKNOWN                (0x0)
 
 /**
  The ISO image storage provider.

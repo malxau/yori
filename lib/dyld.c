@@ -458,6 +458,11 @@ YoriLibLoadVersionFunctions()
 }
 
 /**
+ GUID for an unknown virtual storage implementations.
+ */
+const GUID VIRTUAL_STORAGE_TYPE_VENDOR_UNKNOWN = { 0x00000000, 0x0000, 0x0000, { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 } };
+
+/**
  GUID for Microsoft provided virtual storage implementations.
  */
 const GUID VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT = { 0xec984aec, 0xa0f9, 0x47e9, { 0x90, 0x1f, 0x71, 0x41, 0x5a, 0x66, 0x34, 0x5b } };
