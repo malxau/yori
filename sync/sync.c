@@ -33,11 +33,13 @@
 const
 CHAR strSyncHelpText[] =
         "\n"
-        "Create files or update timestamps.\n"
+        "Flush files, directories or volumes to disk.\n"
         "\n"
         "SYNC [-license] [-b] [-s] [-v] <file>...\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -q             Query if the volume is in use, and flush if it is not in use\n"
+        "   -r             Dismount and remount the volume\n"
         "   -s             Process files from all subdirectories\n"
         "   -v             Display verbose output\n";
 
@@ -65,6 +67,19 @@ typedef struct _SYNC_CONTEXT {
      the program assumes the request is to create a new file.
      */
     DWORD FilesFoundThisArg;
+
+    /**
+     TRUE if the volume should be locked.  In Windows, this will fail if the
+     volume is in use, otherwise it will flush the volume ready for removal.
+     */
+    BOOL LockVolume;
+
+    /**
+     TRUE if the volume should be dismounted.  In Windows, this will probably
+     be remounted again immediately, hence externally calling this a remount
+     command.
+     */
+    BOOL VolumeDismount;
 
     /**
      If TRUE, display output for each object where sync is attempted.
@@ -99,6 +114,9 @@ SyncFileFoundCallback(
 {
     HANDLE FileHandle;
     DWORD DesiredAccess;
+    DWORD LastError;
+    DWORD BytesReturned;
+    LPTSTR ErrText;
     PSYNC_CONTEXT SyncContext = (PSYNC_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
@@ -110,36 +128,102 @@ SyncFileFoundCallback(
 
     DesiredAccess = GENERIC_WRITE;
 
-    if (SyncContext->Verbose) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("sync: syncing %y\n"), FilePath);
-    }
+    //
+    //  If the user requested a volume operation, find the volume name and
+    //  attempt the operation on the volume.  If not, just use the file name
+    //  that has already been located.
+    //
 
-    FileHandle = CreateFile(FilePath->StartOfString,
-                            DesiredAccess,
-                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                            NULL,
-                            OPEN_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
+    if (SyncContext->VolumeDismount || SyncContext->LockVolume) {
+        YORI_STRING VolumePath;
+        YoriLibInitEmptyString(&VolumePath);
+        if (!YoriLibGetVolumePathName(FilePath, &VolumePath)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("sync: could not determine volume for %y\n"), FilePath);
+            return TRUE;
+        }
 
-    if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: open of %y failed: %s"), FilePath, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
+        if (SyncContext->Verbose) {
+            if (SyncContext->VolumeDismount) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("sync: dismounting %y\n"), &VolumePath);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("sync: locking %y\n"), &VolumePath);
+            }
+        }
+
+        FileHandle = CreateFile(VolumePath.StartOfString,
+                                DesiredAccess,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL);
+
+        if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
+            LastError = GetLastError();
+            ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: open of %y failed: %s"), &VolumePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            YoriLibFreeStringContents(&VolumePath);
+            return TRUE;
+        }
+
+        if (SyncContext->VolumeDismount) {
+            if (!DeviceIoControl(FileHandle, FSCTL_DISMOUNT_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL)) {
+                LastError = GetLastError();
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: dismount of %y failed: %s"), &VolumePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                YoriLibFreeStringContents(&VolumePath);
+                return TRUE;
+            }
+        } else {
+            if (!DeviceIoControl(FileHandle, FSCTL_LOCK_VOLUME, NULL, 0, NULL, 0, &BytesReturned, NULL)) {
+                LastError = GetLastError();
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: lock of %y failed, volume may be in use: %s"), &VolumePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                YoriLibFreeStringContents(&VolumePath);
+                return TRUE;
+            }
+        }
+
+        YoriLibFreeStringContents(&VolumePath);
+        CloseHandle(FileHandle);
+        return TRUE;
+
+    } else {
+
+        if (SyncContext->Verbose) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("sync: syncing %y\n"), FilePath);
+        }
+
+        FileHandle = CreateFile(FilePath->StartOfString,
+                                DesiredAccess,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_ALWAYS,
+                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL);
+
+        if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
+            LastError = GetLastError();
+            ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: open of %y failed: %s"), FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            return TRUE;
+        }
+
+        if (!FlushFileBuffers(FileHandle)) {
+            LastError = GetLastError();
+            ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: flush of %y failed: %s"), FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            return TRUE;
+        }
+
+        CloseHandle(FileHandle);
         return TRUE;
     }
-
-    if (!FlushFileBuffers(FileHandle)) {
-        DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sync: flush of %y failed: %s"), FilePath, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
-        return TRUE;
-    }
-
-    CloseHandle(FileHandle);
-    return TRUE;
 }
 
 #ifdef YORI_BUILTIN
@@ -196,6 +280,12 @@ ENTRYPOINT(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("q")) == 0) {
+                SyncContext.LockVolume = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                SyncContext.VolumeDismount = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;

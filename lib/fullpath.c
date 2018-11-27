@@ -1211,5 +1211,135 @@ YoriLibUnescapePath(
     return TRUE;
 }
 
+/**
+ Return the volume name of the volume that is hosting a particular file.  This
+ is normally done via the Win32 GetVolumePathName API, which was added in
+ Windows 2000 to support mount points; on older versions this behavior is
+ emulated by returning the drive letter or UNC share name.
+
+ @param FileName Pointer to the file name to obtain the volume for.
+
+ @param VolumeName On successful completion, populated with a path to the
+        volume name.  This string is expected to be initialized on entry and
+        may be reallocated within this routine.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGetVolumePathName(
+    __in PYORI_STRING FileName,
+    __inout PYORI_STRING VolumeName
+    )
+{
+    BOOL FreeOnFailure = FALSE;
+    ASSERT(YoriLibIsStringNullTerminated(FileName));
+
+    //
+    //  This function expects a full/escaped path, because Win32 has no way
+    //  to determine the buffer length if it's anything else.
+    //
+
+    if (FileName->LengthInChars < 4 ||
+        !YoriLibIsSep(FileName->StartOfString[0]) ||
+        !YoriLibIsSep(FileName->StartOfString[1]) ||
+        (FileName->StartOfString[2] != '?' && FileName->StartOfString[2] != '.') ||
+        !YoriLibIsSep(FileName->StartOfString[3])) {
+
+        return FALSE;
+    }
+
+    //
+    //  The volume name can be as long as the file name, plus a NULL
+    //  terminator.
+    //
+
+    if (VolumeName->LengthAllocated <= FileName->LengthInChars) {
+        YoriLibFreeStringContents(VolumeName);
+        if (!YoriLibAllocateString(VolumeName, FileName->LengthInChars + 1)) {
+            return FALSE;
+        }
+        FreeOnFailure = TRUE;
+    }
+
+    //
+    //  If Win32 support exists, use it.
+    //
+
+    if (DllKernel32.pGetVolumePathNameW != NULL) {
+        if (!DllKernel32.pGetVolumePathNameW(FileName->StartOfString, VolumeName->StartOfString, VolumeName->LengthAllocated)) {
+            if (FreeOnFailure) {
+                YoriLibFreeStringContents(VolumeName);
+            }
+            return FALSE;
+        }
+        VolumeName->LengthInChars = _tcslen(VolumeName->StartOfString);
+
+        //
+        //  If it ends in a backslash, truncate it
+        //
+
+        if (VolumeName->LengthInChars > 0 &&
+            YoriLibIsSep(VolumeName->StartOfString[VolumeName->LengthInChars - 1])) {
+
+            VolumeName->LengthInChars--;
+            VolumeName->StartOfString[VolumeName->LengthInChars] = '\0';
+        }
+        return TRUE;
+    }
+
+    //
+    //  If Win32 support doesn't exist, we know that mount points can't
+    //  exist so we can return only the drive letter path, or the UNC
+    //  path with server and share.
+    //
+
+    if (!YoriLibIsFullPathUnc(FileName)) {
+        if (FileName->LengthInChars >= 6) {
+            memcpy(VolumeName->StartOfString, FileName->StartOfString, 6 * sizeof(TCHAR));
+            VolumeName->StartOfString[6] = '\0';
+            VolumeName->LengthInChars = 6;
+            return TRUE;
+        }
+    } else {
+        if (FileName->LengthInChars >= sizeof("\\\\?\\UNC\\")) {
+            YORI_STRING Subset;
+            LPTSTR Slash;
+            DWORD CharsToCopy;
+
+            YoriLibInitEmptyString(&Subset);
+            Subset.StartOfString = FileName->StartOfString + sizeof("\\\\?\\UNC\\");
+            Subset.LengthInChars = FileName->LengthInChars - sizeof("\\\\?\\UNC\\");
+
+            Slash = YoriLibFindLeftMostCharacter(&Subset, '\\');
+            if (Slash != NULL) {
+                Subset.LengthInChars = Subset.LengthInChars - (DWORD)(Slash - Subset.StartOfString);
+                Subset.StartOfString = Slash;
+
+                if (Subset.LengthInChars > 0) {
+                    Subset.LengthInChars--;
+                    Subset.StartOfString++;
+                    Slash = YoriLibFindLeftMostCharacter(&Subset, '\\');
+                    if (Slash != NULL) {
+                        CharsToCopy = (DWORD)(Slash - FileName->StartOfString);
+                    } else {
+                        CharsToCopy = (DWORD)(Subset.StartOfString - FileName->StartOfString) + Subset.LengthInChars;
+                    }
+
+                    memcpy(VolumeName->StartOfString, FileName->StartOfString, CharsToCopy * sizeof(TCHAR));
+                    VolumeName->StartOfString[CharsToCopy] = '\0';
+                    VolumeName->LengthInChars = CharsToCopy;
+                    return TRUE;
+                }
+            }
+        }
+    }
+
+    if (FreeOnFailure) {
+        YoriLibFreeStringContents(VolumeName);
+    }
+    YoriLibFreeStringContents(VolumeName);
+    return FALSE;
+}
+
 
 // vim:sw=4:ts=4:et:

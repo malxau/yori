@@ -2821,6 +2821,18 @@ GET_VERSION_EXW(PYORI_OS_VERSION_INFO);
 typedef GET_VERSION_EXW *PGET_VERSION_EXW;
 
 /**
+ A prototype for the GetVolumePathNameW function.
+ */
+typedef
+BOOL WINAPI
+GET_VOLUME_PATH_NAMEW(LPCWSTR, LPWSTR, DWORD);
+
+/**
+ A prototype for a pointer to the GetVolumePathNameW function.
+ */
+typedef GET_VOLUME_PATH_NAMEW *PGET_VOLUME_PATH_NAMEW;
+
+/**
  A prototype for the IsWow64Process function.
  */
 typedef
@@ -3014,6 +3026,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetVersionExW.
      */
     PGET_VERSION_EXW pGetVersionExW;
+
+    /**
+     If it's available on the current system, a pointer to GetVolumePathNameW.
+     */
+    PGET_VOLUME_PATH_NAMEW pGetVolumePathNameW;
 
     /**
      If it's available on the current system, a pointer to IsWow64Process.

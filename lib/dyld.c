@@ -140,6 +140,7 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(DllKernel32.hDll, "GetFileInformationByHandleEx");
     DllKernel32.pGetPrivateProfileSectionNamesW = (PGET_PRIVATE_PROFILE_SECTION_NAMESW)GetProcAddress(DllKernel32.hDll, "GetPrivateProfileSectionNamesW");
     DllKernel32.pGetVersionExW = (PGET_VERSION_EXW)GetProcAddress(DllKernel32.hDll, "GetVersionExW");
+    DllKernel32.pGetVolumePathNameW = (PGET_VOLUME_PATH_NAMEW)GetProcAddress(DllKernel32.hDll, "GetVolumePathNameW");
     DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(DllKernel32.hDll, "IsWow64Process");
     DllKernel32.pQueryFullProcessImageNameW = (PQUERY_FULL_PROCESS_IMAGE_NAMEW)GetProcAddress(DllKernel32.hDll, "QueryFullProcessImageNameW");
     DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(DllKernel32.hDll, "RegisterApplicationRestart");

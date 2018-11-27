@@ -1366,6 +1366,12 @@ YoriLibUnescapePath(
     __inout PYORI_STRING UnescapedPath
     );
 
+BOOL
+YoriLibGetVolumePathName(
+    __in PYORI_STRING FileName,
+    __inout PYORI_STRING VolumeName
+    );
+
 // *** HASH.C ***
 
 PYORI_HASH_TABLE
