@@ -58,10 +58,10 @@ mkdir pkg\%ARCH%-dbg
 move bin\%ARCH% pkg\%ARCH%-dbg\bin
 move sym\%ARCH% pkg\%ARCH%-dbg\sym
 pushd pkg\%ARCH%-dbg\bin
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-%ARCH%.cab %%i-dbg %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-dbg-pdb-%ARCH%.cab -replaces %%i -filelist ..\..\%%i.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-%ARCH%.cab %%i-dbg %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-dbg-pdb-%ARCH%.cab -replaces %%i -filelist ..\..\%%i.lst
 popd
 pushd pkg\%ARCH%-dbg\sym
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-pdb-%ARCH%.cab %%i-dbg-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-pdb -filelist ..\..\%%i-pdb.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-pdb-%ARCH%.cab %%i-dbg-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-pdb -filelist ..\..\%%i-pdb.lst
 popd
 
 echo *** Cleaning tree
@@ -78,10 +78,10 @@ mkdir pkg\%ARCH%
 move bin\%ARCH% pkg\%ARCH%\bin
 move sym\%ARCH% pkg\%ARCH%\sym
 pushd pkg\%ARCH%\bin
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-%ARCH%.cab %%i %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-pdb-%ARCH%.cab -replaces %%i-dbg -filelist ..\..\%%i.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-%ARCH%.cab %%i %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-pdb-%ARCH%.cab -replaces %%i-dbg -filelist ..\..\%%i.lst
 popd
 pushd pkg\%ARCH%\sym
-yfor -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-pdb-%ARCH%.cab %%i-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-dbg-pdb -filelist ..\..\%%i-pdb.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-pdb-%ARCH%.cab %%i-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-dbg-pdb -filelist ..\..\%%i-pdb.lst
 popd
 
 if strcmp %ARCH%==win32;mkdir %OUTDIR%\%ARCH% ^& copy pkg\%ARCH%\bin\ysetup.exe %OUTDIR%\%ARCH% >NUL 2>&1
@@ -99,7 +99,7 @@ REM directory
 REM
 
 pushd pkg
-yfor %%i in (%BINPKGS%) do bld-pkglist %%i %ARCH% ^& bld-pkglist %%i-pdb %ARCH% ^& bld-pkglist %%i-dbg %ARCH% ^& bld-pkglist %%i-dbg-pdb %ARCH%
+for %%i in (%BINPKGS%) do bld-pkglist %%i %ARCH% ^& bld-pkglist %%i-pdb %ARCH% ^& bld-pkglist %%i-dbg %ARCH% ^& bld-pkglist %%i-dbg-pdb %ARCH%
 bld-pkglist yori-completion noarch
 bld-pkglist yori-source noarch
 popd

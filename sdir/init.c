@@ -698,6 +698,7 @@ SdirInit(
 VOID
 SdirAppCleanup()
 {
+    SetConsoleCtrlHandler(SdirCancelHandler, FALSE);
     if (Opts != NULL) {
         YoriLibFreeStringContents(&Opts->ParentName);
         if (Opts->SubDirWalk != NULL) {

@@ -572,6 +572,7 @@ CopyEnableSymlinkPrivilege()
         CloseHandle(TokenHandle);
         return FALSE;
     }
+    CloseHandle(TokenHandle);
 
     return TRUE;
 }

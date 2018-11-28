@@ -192,7 +192,13 @@ RMDIR=rmdir
 !IF [yfor.exe -? >NUL 2>&1]==0
 FOR=yfor -c -p %NUMBER_OF_PROCESSORS%
 FOR_ST=yfor -c
+!ELSE
+!IF [oneyori.exe -c for -? >NUL 2>&1]==0
+FOR=oneyori -c for -c -p %NUMBER_OF_PROCESSORS%
+FOR_ST=oneyori -c for -c
 !ENDIF
+!ENDIF
+
 !IF [ymkdir.exe -? >NUL 2>&1]==0
 MKDIR=ymkdir
 !ENDIF

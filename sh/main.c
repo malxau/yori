@@ -284,7 +284,11 @@ YoriShParseArgs(
 
         if (YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArgToExec, &ArgV[StartArgToExec], TRUE, &YsCmdToExec)) {
             if (YsCmdToExec.LengthInChars > 0) {
-                *ExitCode = YoriShExecuteExpression(&YsCmdToExec);
+                if (YoriShExecuteExpression(&YsCmdToExec)) {
+                    *ExitCode = g_ErrorLevel;
+                } else {
+                    *ExitCode = EXIT_FAILURE;
+                }
             }
             YoriLibFreeStringContents(&YsCmdToExec);
         }
