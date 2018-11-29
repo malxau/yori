@@ -82,18 +82,6 @@ typedef struct _DIR_WIN32_FIND_STREAM_DATA {
 } DIR_WIN32_FIND_STREAM_DATA, *PDIR_WIN32_FIND_STREAM_DATA;
 
 /**
- Prototype for a pointer to a function to enumerate the first stream on a
- file.
- */
-typedef HANDLE (WINAPI * FIND_FIRST_STREAM_FN)(LPCTSTR, DWORD, PDIR_WIN32_FIND_STREAM_DATA, DWORD);
-
-/**
- Prototype for a pointer to a function to enumerate the next stream on a
- file.
- */
-typedef BOOL (WINAPI * FIND_NEXT_STREAM_FN)(HANDLE, PDIR_WIN32_FIND_STREAM_DATA);
-
-/**
  Context passed to the callback which is invoked for each file found.
  */
 typedef struct _DIR_CONTEXT {
