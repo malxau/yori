@@ -1,5 +1,5 @@
 /**
- * @file more/init.c
+ * @file more/moreinit.c
  *
  * Yori shell more initialization
  *

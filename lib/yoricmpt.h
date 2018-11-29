@@ -107,6 +107,14 @@ typedef long HRESULT;
 #define PROCESS_QUERY_LIMITED_INFORMATION  (0x1000)  
 #endif
 
+#ifndef SE_MANAGE_VOLUME_NAME
+/**
+ Definition for manage volume privilege for compilation environments that
+ don't define it.
+ */
+#define SE_MANAGE_VOLUME_NAME             _T("SeManageVolumePrivilege")
+#endif
+
 /**
  Definition of an IO_STATUS_BLOCK for compilation environments that don't
  define it.
@@ -2320,6 +2328,7 @@ struct IShellLinkWVtbl {
     IShellLink_SetPath * SetPath;
 };
 
+#ifndef _VIRTUAL_STORAGE_TYPE_DEFINED
 /**
  A structure describing the underlying storage provider when accessing
  virtual disks.
@@ -2336,6 +2345,7 @@ typedef struct _VIRTUAL_STORAGE_TYPE {
      */
     GUID  VendorId;
 } VIRTUAL_STORAGE_TYPE, *PVIRTUAL_STORAGE_TYPE;
+#endif
 
 /**
  An unknown storage provider.

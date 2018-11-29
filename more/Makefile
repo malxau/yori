@@ -12,13 +12,13 @@ CFLAGS=$(CFLAGS) -DMORE_VER_MAJOR=$(MORE_VER_MAJOR) -DMORE_VER_MINOR=$(MORE_VER_
 
 BIN_OBJS=\
 	 ingest.obj       \
-	 init.obj         \
+	 moreinit.obj     \
 	 more.obj         \
 	 viewport.obj     \
 
 MOD_OBJS=\
 	 ingest.obj       \
-	 init.obj         \
+	 moreinit.obj     \
 	 mod_more.obj     \
 	 viewport.obj     \
 
