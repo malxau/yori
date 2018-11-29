@@ -61,6 +61,8 @@ CHAR strHelpHelpText1[] =
         "\n"
         "ALIAS     Displays or updates command aliases\n"
         "BUILTIN   Executes a command explicitly as a builtin\n"
+        "CAB       Compress or decompress cabinet archives\n"
+        "CAL       Display the calendar\n"
         "CALL      Call a subroutine (only valid in scripts)\n"
         "CHDIR     Changes the current directory\n"
         "CLIP      Manipulate clipboard state including copy and paste\n"

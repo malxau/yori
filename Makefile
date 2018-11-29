@@ -45,6 +45,7 @@ DIRS=crt       \
      lib       \
      builtins  \
      cab       \
+     cal       \
      clip      \
      clmp      \
      cls       \

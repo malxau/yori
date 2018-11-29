@@ -44,6 +44,11 @@ YORI_CMD_BUILTIN YoriCmd_CAB;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YCAL;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_CHDIR;
 
 /**
@@ -414,6 +419,7 @@ YoriShBuiltins[] = {
                     {_T("ALIAS"),     YoriCmd_ALIAS},
                     {_T("BUILTIN"),   YoriCmd_BUILTIN},
                     {_T("CAB"),       YoriCmd_CAB},
+                    {_T("CAL"),       YoriCmd_YCAL},
                     {_T("CHDIR"),     YoriCmd_CHDIR},
                     {_T("CLS"),       YoriCmd_CLS},
                     {_T("COLOR"),     YoriCmd_COLOR},
@@ -495,6 +501,7 @@ YoriShBuiltins[] = {
  */
 YORI_SH_DEFAULT_ALIAS_ENTRY
 YoriShDefaultAliasEntries[] = {
+    {_T("cal"),      _T("ycal $*$")},
     {_T("cd"),       _T("chdir $*$")},
     {_T("clip"),     _T("yclip $*$")},
     {_T("compact"),  _T("ycompact $*$")},

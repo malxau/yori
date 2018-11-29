@@ -1,0 +1,337 @@
+/**
+ * @file cal/cal.c
+ *
+ * Yori shell display calendar
+ *
+ * Copyright (c) 2017-2018 Malcolm J. Smith
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+*/
+
+#include <yoripch.h>
+#include <yorilib.h>
+
+/**
+ Help text to display to the user.
+ */
+const
+CHAR strCalHelpText[] =
+        "\n"
+        "Display a calendar.\n"
+        "\n"
+        "CAL [-license] [year]\n";
+
+/**
+ Display usage text to the user.
+ */
+BOOL
+CalHelp()
+{
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cal %i.%i\n"), CAL_VER_MAJOR, CAL_VER_MINOR);
+#if YORI_BUILD_ID
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
+#endif
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strCalHelpText);
+    return TRUE;
+}
+
+/**
+ The number of days in each month.  This is a static set, but due to leap
+ years this static set is re-evaluated for the second month at run time.
+ */
+DWORD StaticDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+/**
+ A list of names for each month.
+ */
+LPTSTR MonthNames[12] = {_T("January"),
+                         _T("February"),
+                         _T("March"),
+                         _T("April"),
+                         _T("May"),
+                         _T("June"),
+                         _T("July"),
+                         _T("August"),
+                         _T("September"),
+                         _T("October"),
+                         _T("November"),
+                         _T("December")};
+
+
+/**
+ The number of rows of months.
+ */
+#define CAL_ROWS_OF_MONTHS (4)
+
+/**
+ The number of months displayed in each row.
+ */
+#define CAL_MONTHS_PER_ROW (3)
+
+/**
+ The number of days per week.  This can't really change because this program
+ is depending on SYSTEMTIME's concept of which day in a week a particular day
+ falls.
+ */
+#define CAL_DAYS_PER_WEEK  (7)
+
+/**
+ The number of characters to use on the console when displaying each day.
+ */
+#define CAL_CHARS_PER_DAY  (3)
+
+/**
+ The number of characters to display between months on the same row.
+ */
+#define CAL_CHARS_BETWEEN_MONTHS (3)
+
+/**
+ The maximum number of days per month.  This is used to calculate the maximum
+ number of rows needed to display a given month.
+ */
+#define CAL_MAX_DAYS_PER_MONTH   (31)
+
+/**
+ The number of rows needed to display a month.
+ */
+#define CAL_ROWS_PER_MONTH       ((CAL_MAX_DAYS_PER_MONTH + 2 * CAL_DAYS_PER_WEEK - 1) / CAL_DAYS_PER_WEEK)
+
+
+/**
+ Display the calendar for a specified calendar year.
+
+ @param Year The year number to display the calendar for.
+
+ @param Today Optionally points to a systemtime structure indicating the
+        the current date.  If this is specified, the current day is highlighted
+        within the calendar.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+CalOutputCalendarForYear(
+    __in WORD Year,
+    __in_opt PSYSTEMTIME Today
+    )
+{
+    SYSTEMTIME SysTimeAtYearStart;
+    FILETIME FileTime;
+    DWORD LineCount;
+    DWORD DayCount;
+    DWORD ThisDayNumber;
+    DWORD Quarter;
+    DWORD Month;
+    DWORD MonthIndex;
+    DWORD DesiredOffset;
+    DWORD CurrentOffset;
+    DWORD MonthNameLength;
+    DWORD RealDaysInMonth[12];
+    DWORD DayIndexAtStartOfMonth[12];
+
+    ZeroMemory(&SysTimeAtYearStart, sizeof(SysTimeAtYearStart));
+
+    SysTimeAtYearStart.wYear = Year;
+    SysTimeAtYearStart.wMonth = 1;
+    SysTimeAtYearStart.wDay = 1;
+
+    if (!SystemTimeToFileTime(&SysTimeAtYearStart, &FileTime)) {
+        return FALSE;
+    }
+    if (!FileTimeToSystemTime(&FileTime, &SysTimeAtYearStart)) {
+        return FALSE;
+    }
+
+    //
+    //  Calculate the number of days in each month and which day of the week
+    //  each month starts on.
+    //
+
+    for (Month = 0; Month < 12; Month++) {
+        RealDaysInMonth[Month] = StaticDaysInMonth[Month];
+        if (Month == 1 && (Year % 4) == 0 && (Year % 100) != 0) {
+            RealDaysInMonth[Month] = 29;
+        }
+        if (Month == 0) {
+            DayIndexAtStartOfMonth[Month] = SysTimeAtYearStart.wDayOfWeek;
+        } else {
+            DayIndexAtStartOfMonth[Month] = (DayIndexAtStartOfMonth[Month - 1] + RealDaysInMonth[Month - 1]) % 7;
+        }
+    }
+
+    for (Quarter = 0; Quarter < CAL_ROWS_OF_MONTHS; Quarter++) {
+
+        //
+        //  For each row of months, first display the name of the month,
+        //  centered around where the day numbers below it will follow.
+        //
+
+        CurrentOffset = 0;
+        for (MonthIndex = 0; MonthIndex < CAL_MONTHS_PER_ROW; MonthIndex++) {
+            DesiredOffset = 0;
+            if (MonthIndex > 0) {
+                DesiredOffset = MonthIndex * ((CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY) + CAL_CHARS_BETWEEN_MONTHS);
+            }
+
+            MonthNameLength = _tcslen(MonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex]);
+
+            DesiredOffset += ((CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY) - MonthNameLength) / 2;
+            while(CurrentOffset < DesiredOffset) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                CurrentOffset++;
+            }
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s"), MonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex]);
+            CurrentOffset += MonthNameLength;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+
+        //
+        //  Print the day numbers for each month.
+        //
+
+        for (LineCount = 0; LineCount < CAL_ROWS_PER_MONTH; LineCount++) {
+            for (MonthIndex = 0; MonthIndex < CAL_MONTHS_PER_ROW; MonthIndex++) {
+                Month = Quarter * CAL_MONTHS_PER_ROW + MonthIndex;
+                for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
+                    DesiredOffset = CAL_CHARS_PER_DAY;
+                    CurrentOffset = 0;
+                    if (LineCount > 0 || DayCount >= DayIndexAtStartOfMonth[Month]) {
+                        ThisDayNumber = LineCount * CAL_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1;
+                        if (ThisDayNumber <= RealDaysInMonth[Month]) {
+                            if (Today != NULL &&
+                                Today->wYear == Year &&
+                                Today->wMonth == (Month + 1) &&
+                                Today->wDay == ThisDayNumber) {
+
+                                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[7m%02i%c[7m"), 27, ThisDayNumber, 27);
+                            } else {
+                                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02i"), ThisDayNumber);
+                            }
+                            CurrentOffset = 2;
+                        }
+                    }
+                    while (CurrentOffset < DesiredOffset) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                        CurrentOffset++;
+                    }
+                }
+
+                //
+                //  Print spaces between two months.
+                //
+
+                if (MonthIndex != (CAL_MONTHS_PER_ROW - 1)) {
+                    DesiredOffset = CAL_CHARS_BETWEEN_MONTHS;
+                    CurrentOffset = 0;
+                    while (CurrentOffset < DesiredOffset) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                        CurrentOffset++;
+                    }
+                }
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+    }
+
+    return TRUE;
+}
+
+#ifdef YORI_BUILTIN
+/**
+ The main entrypoint for the cal builtin command.
+ */
+#define ENTRYPOINT YoriCmd_YCAL
+#else
+/**
+ The main entrypoint for the cal standalone application.
+ */
+#define ENTRYPOINT ymain
+#endif
+
+/**
+ The main entrypoint for the cal cmdlet.
+
+ @param ArgC The number of arguments.
+
+ @param ArgV An array of arguments.
+
+ @return Exit code of the child process on success, or failure if the child
+         could not be launched.
+ */
+DWORD
+ENTRYPOINT(
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
+    )
+{
+    BOOL ArgumentUnderstood;
+    DWORD i;
+    DWORD StartArg = 0;
+    YORI_STRING Arg;
+    SYSTEMTIME CurrentSysTime;
+    DWORD CharsConsumed;
+    LONGLONG TargetYear;
+
+    for (i = 1; i < ArgC; i++) {
+
+        ArgumentUnderstood = FALSE;
+        ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
+
+        if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
+
+            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+                CalHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2018"));
+                return EXIT_SUCCESS;
+            }
+        } else {
+            ArgumentUnderstood = TRUE;
+            StartArg = i;
+            break;
+        }
+
+        if (!ArgumentUnderstood) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
+        }
+    }
+
+    if (StartArg != 0) {
+        if (!YoriLibStringToNumber(&ArgV[StartArg], FALSE, &TargetYear, &CharsConsumed) ||
+            CharsConsumed == 0) {
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cal: invalid year specified: %y\n"), &ArgV[StartArg]);
+        }
+
+        if (TargetYear < 1601 || TargetYear > 2100) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cal: invalid year specified: %y\n"), &ArgV[StartArg]);
+        }
+
+        CalOutputCalendarForYear((WORD)TargetYear, NULL);
+    } else {
+        GetLocalTime(&CurrentSysTime);
+        CalOutputCalendarForYear(CurrentSysTime.wYear, &CurrentSysTime);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+// vim:sw=4:ts=4:et:

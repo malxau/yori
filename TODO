@@ -8,7 +8,6 @@ v1.0:
  - Merge sdir recursion root and criteria arguments
  - Have find apply file criteria
  - Tool for creating VHDs
- - Cal
  - Split sdir brief recurse into standalone du
 
 To consider:
