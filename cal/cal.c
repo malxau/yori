@@ -55,23 +55,34 @@ CalHelp()
  The number of days in each month.  This is a static set, but due to leap
  years this static set is re-evaluated for the second month at run time.
  */
-DWORD StaticDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+DWORD CalStaticDaysInMonth[12] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 /**
  A list of names for each month.
  */
-LPTSTR MonthNames[12] = {_T("January"),
-                         _T("February"),
-                         _T("March"),
-                         _T("April"),
-                         _T("May"),
-                         _T("June"),
-                         _T("July"),
-                         _T("August"),
-                         _T("September"),
-                         _T("October"),
-                         _T("November"),
-                         _T("December")};
+LPTSTR CalMonthNames[12] = {_T("January"),
+                            _T("February"),
+                            _T("March"),
+                            _T("April"),
+                            _T("May"),
+                            _T("June"),
+                            _T("July"),
+                            _T("August"),
+                            _T("September"),
+                            _T("October"),
+                            _T("November"),
+                            _T("December")};
+
+/**
+ A list of names for each day.
+ */
+LPTSTR CalDayNames[7] = {_T("Sunday"),
+                         _T("Monday"),
+                         _T("Tuesday"),
+                         _T("Wednesday"),
+                         _T("Thursday"),
+                         _T("Friday"),
+                         _T("Saturday")};
 
 
 /**
@@ -163,7 +174,7 @@ CalOutputCalendarForYear(
     //
 
     for (Month = 0; Month < 12; Month++) {
-        RealDaysInMonth[Month] = StaticDaysInMonth[Month];
+        RealDaysInMonth[Month] = CalStaticDaysInMonth[Month];
         if (Month == 1 && (Year % 4) == 0 && (Year % 100) != 0) {
             RealDaysInMonth[Month] = 29;
         }
@@ -188,7 +199,7 @@ CalOutputCalendarForYear(
                 DesiredOffset = MonthIndex * ((CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY) + CAL_CHARS_BETWEEN_MONTHS);
             }
 
-            MonthNameLength = _tcslen(MonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex]);
+            MonthNameLength = _tcslen(CalMonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex]);
 
             DesiredOffset += ((CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY) - MonthNameLength) / 2;
             while(CurrentOffset < DesiredOffset) {
@@ -196,8 +207,38 @@ CalOutputCalendarForYear(
                 CurrentOffset++;
             }
 
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s"), MonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex]);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s"), CalMonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex]);
             CurrentOffset += MonthNameLength;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+
+        //
+        //  Print the day names
+        //
+
+        for (MonthIndex = 0; MonthIndex < CAL_MONTHS_PER_ROW; MonthIndex++) {
+            for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%2s"), CalDayNames[DayCount]);
+                CurrentOffset = 2;
+                DesiredOffset = CAL_CHARS_PER_DAY;
+                while (CurrentOffset < DesiredOffset) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                    CurrentOffset++;
+                }
+            }
+
+            //
+            //  Print spaces between two months.
+            //
+
+            if (MonthIndex != (CAL_MONTHS_PER_ROW - 1)) {
+                DesiredOffset = CAL_CHARS_BETWEEN_MONTHS;
+                CurrentOffset = 0;
+                while (CurrentOffset < DesiredOffset) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                    CurrentOffset++;
+                }
+            }
         }
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 
