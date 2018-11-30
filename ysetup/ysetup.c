@@ -68,13 +68,19 @@ YsetupHelp()
  */
 BOOL
 SetupInstallToDirectory(
-    __in PYORI_STRING InstallDirectory
+    __inout PYORI_STRING InstallDirectory
     )
 {
     YORI_STRING PkgNames[4];
     DWORD SuccessCount = 0;
 
-    YoriLibCreateDirectoryAndParents(InstallDirectory);
+    if (!YoriLibCreateDirectoryAndParents(InstallDirectory)) {
+        DWORD Err = GetLastError();
+        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: Could not create installation directory %y: %s\n"), InstallDirectory, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
 
     YoriLibConstantString(&PkgNames[0], _T("yori-ypm"));
     YoriLibConstantString(&PkgNames[1], _T("yori-core"));
@@ -706,7 +712,11 @@ ymain(
 
     if (StartArg > 0) {
         YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &NewDirectory);
-        SetupInstallToDirectory(&NewDirectory);
+        if (!SetupInstallToDirectory(&NewDirectory)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: install failed\n"));
+            YoriLibFreeStringContents(&NewDirectory);
+            return EXIT_FAILURE;
+        }
         YoriLibFreeStringContents(&NewDirectory);
     } else {
         SetupDisplayUi();

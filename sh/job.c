@@ -103,10 +103,6 @@ YORI_LIST_ENTRY JobList;
 /**
  Allocate a new job for background processing.
 
- MSFIX Right now this is for a single process.  We really need it to be for
- an entire plan, which probably implies that the plan is being executed by
- a child process.
-
  @param ExecContext The process that is currently executing in the background.
 
  @param hProcess A handle to the process.  If this call succeeds, the handle
@@ -160,10 +156,6 @@ YoriShCreateNewJob(
     }
 
     ThisJob->JobState = JobStateExecuting;
-
-    //
-    //  MSFIX This probably doesn't belong here
-    //
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i: %s\n"), ThisJob->JobId, ThisJob->szCmd);
     YoriLibAppendList(&JobList, &ThisJob->ListEntry);

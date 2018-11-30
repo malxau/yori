@@ -132,48 +132,64 @@ YoriLibFreeWinErrorText(
 }
 
 /**
- Create a directory, and any parent directories that do not yet exist.
- Note that this routine temporarily alters the DirName buffer - it is not
- const, but will be restored to original contents on exit.
+ Create a directory, and any parent directories that do not yet exist.  Note
+ the input buffer is modified within this routine.  On success it will be
+ restored to its original contents, on failure it will indicate the name of
+ the path which could not be created.
 
- @param DirName The directory to create.
+ @param DirName The directory to create.  On failure this will contain the
+        name of the directory that could not be created.
+
+ @return TRUE to indicate success, FALSE to indicate failure.  On failure,
+         Win32 LastError will indicate the reason.
  */
 BOOL
 YoriLibCreateDirectoryAndParents(
-    __in PYORI_STRING DirName
+    __inout PYORI_STRING DirName
     )
 {
     DWORD MaxIndex = DirName->LengthInChars - 1;
     DWORD Err;
     DWORD SepIndex = MaxIndex;
+    BOOL Result;
     BOOL StartedSucceeding = FALSE;
 
     while (TRUE) {
-        if (!CreateDirectory(DirName->StartOfString, NULL)) {
+        Result = CreateDirectory(DirName->StartOfString, NULL);
+        if (!Result) {
             Err = GetLastError();
-            if (Err == ERROR_PATH_NOT_FOUND && !StartedSucceeding) {
-
-                //
-                //  MSFIX Check for truncation beyond \\?\ or \\?\UNC\ ?
-                //
-
-                for (;!YoriLibIsSep(DirName->StartOfString[SepIndex]) && SepIndex > 0; SepIndex--) {
+            if (Err == ERROR_ALREADY_EXISTS) {
+                DWORD Attributes = GetFileAttributes(DirName->StartOfString);
+                if ((Attributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+                    Err = ERROR_ACCESS_DENIED;
+                    SetLastError(Err);
+                } else {
+                    Err = ERROR_SUCCESS;
                 }
+            }
+        } else {
+            Err = ERROR_SUCCESS;
+        }
 
-                if (!YoriLibIsSep(DirName->StartOfString[SepIndex])) {
-                    return FALSE;
-                }
+        if (Err == ERROR_PATH_NOT_FOUND && !StartedSucceeding) {
 
-                DirName->StartOfString[SepIndex] = '\0';
-                DirName->LengthInChars = SepIndex;
-                continue;
+            //
+            //  MSFIX Check for truncation beyond \\?\ or \\?\UNC\ ?
+            //
 
-            } else {
-                if (Err == ERROR_ALREADY_EXISTS) {
-                    return TRUE;
-                }
+            for (;!YoriLibIsSep(DirName->StartOfString[SepIndex]) && SepIndex > 0; SepIndex--) {
+            }
+
+            if (!YoriLibIsSep(DirName->StartOfString[SepIndex])) {
                 return FALSE;
             }
+
+            DirName->StartOfString[SepIndex] = '\0';
+            DirName->LengthInChars = SepIndex;
+            continue;
+
+        } else if (Err != ERROR_SUCCESS) {
+            return FALSE;
         } else {
             StartedSucceeding = TRUE;
             if (SepIndex < MaxIndex) {
@@ -184,6 +200,7 @@ YoriLibCreateDirectoryAndParents(
                 DirName->LengthInChars = SepIndex;
                 continue;
             } else {
+                DirName->LengthInChars = MaxIndex + 1;
                 return TRUE;
             }
         }

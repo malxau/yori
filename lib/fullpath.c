@@ -1092,14 +1092,6 @@ YoriLibUserStringToSingleFilePath(
     YORI_STRING ExpandedString;
     BOOL ReturnValue = FALSE;
 
-    //
-    //  MSFIX This routine is assuming it gets NULL terminated YORI_STRINGs.
-    //  The YORI_STRING is for the benefit of home directory expansion, but
-    //  full path expansion is NULL terminated.  Sigh.
-    //
-
-    ASSERT(YoriLibIsStringNullTerminated(UserString));
-
     YoriLibInitEmptyString(&YsFilePrefix);
     YsFilePrefix.StartOfString = UserString->StartOfString;
     YsFilePrefix.LengthInChars = sizeof("file:///") - 1;

@@ -2451,7 +2451,7 @@ YoriLibFreeWinErrorText(
 
 BOOL
 YoriLibCreateDirectoryAndParents(
-    __in PYORI_STRING DirName
+    __inout PYORI_STRING DirName
     );
 
 BOOL

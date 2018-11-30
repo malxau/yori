@@ -432,21 +432,25 @@ YoriLibCabFileOpenForExtract(
             *LastSep = '\0';
             FullPath->LengthInChars = (DWORD)(LastSep - FullPath->StartOfString);
 
-            YoriLibCreateDirectoryAndParents(FullPath);
-
-            FullPath->LengthInChars = OldLength;
-            *LastSep = '\\';
-
-            hFile = CreateFile(FullPath->StartOfString,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                               NULL,
-                               CREATE_NEW,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL);
-
-            if (hFile == INVALID_HANDLE_VALUE) {
+            if (!YoriLibCreateDirectoryAndParents(FullPath)) {
                 Err = GetLastError();
+                hFile = INVALID_HANDLE_VALUE;
+            } else {
+
+                FullPath->LengthInChars = OldLength;
+                *LastSep = '\\';
+
+                hFile = CreateFile(FullPath->StartOfString,
+                                   GENERIC_READ | GENERIC_WRITE,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                   NULL,
+                                   CREATE_NEW,
+                                   FILE_ATTRIBUTE_NORMAL,
+                                   NULL);
+
+                if (hFile == INVALID_HANDLE_VALUE) {
+                    Err = GetLastError();
+                }
             }
 
             break;

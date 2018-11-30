@@ -950,6 +950,7 @@ YoriLibLocateExecutableInPath(
     YORI_STRING FoundPath;
     YORI_STRING PathData;
     DWORD PathLength;
+    DWORD CurDirLength;
 
     ASSERT(YoriLibIsStringNullTerminated(SearchFor));
 
@@ -1026,22 +1027,21 @@ YoriLibLocateExecutableInPath(
     YoriLibInitEmptyString(PathName);
 
     //
-    //  The worst case file name length is the size of the PATH variable
-    //  plus the longest possible file name component in Windows, which is
-    //  256.
-    //
-    //  MSFIX The above statement isn't true if the object is in the current
-    //  directory, which might have a path longer than the PATH variable
-    //
-    //  MSFIX This really should also include \\?\, although CMD explodes
-    //  if we use that on a script for it to invoke.  Perhaps this routine
-    //  should (hackily) apply it on all extensions except .CMD/.BAT?
+    //  The worst case file name length is the size of the prefix, plus the
+    //  PATH variable or current directory, a seperator, and the longest
+    //  possible file name component in Windows, which is 256.
     //
 
+    CurDirLength = GetCurrentDirectory(0, NULL);
     PathLength = GetEnvironmentVariable(_T("PATH"), NULL, 0);
+    if (PathLength < CurDirLength + 1) {
+        PathLength = CurDirLength + 1;
+    }
     if (PathLength < MAX_PATH) {
         PathLength = MAX_PATH;
     }
+
+    PathLength += sizeof("\\\\?\\");
 
     if (!YoriLibAllocateString(&FoundPath, PathLength + 256)) {
         return FALSE;

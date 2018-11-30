@@ -52,67 +52,6 @@ MkdirHelp()
     return TRUE;
 }
 
-
-/**
- Create a directory, and any parent directories that do not yet exist.
-
- @param DirName The directory to create.
- */
-VOID
-MkdirCreateDirectoryAndParents(
-    __in PYORI_STRING DirName
-    )
-{
-    DWORD MaxIndex = DirName->LengthInChars - 1;
-    DWORD Err;
-    DWORD SepIndex = MaxIndex;
-    BOOL StartedSucceeding = FALSE;
-
-    while (TRUE) {
-        if (!CreateDirectory(DirName->StartOfString, NULL)) {
-            Err = GetLastError();
-            if (Err == ERROR_PATH_NOT_FOUND && !StartedSucceeding) {
-
-                //
-                //  MSFIX Check for truncation beyond \\?\ or \\?\UNC\ ?
-                //
-
-                for (;!YoriLibIsSep(DirName->StartOfString[SepIndex]) && SepIndex > 0; SepIndex--) {
-                }
-
-                if (!YoriLibIsSep(DirName->StartOfString[SepIndex])) {
-                    LPTSTR ErrText = YoriLibGetWinErrorText(Err);
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mkdir: create failed: %y: %s"), DirName, ErrText);
-                    YoriLibFreeWinErrorText(ErrText);
-                    return;
-                }
-
-                DirName->StartOfString[SepIndex] = '\0';
-                DirName->LengthInChars = SepIndex;
-                continue;
-
-            } else {
-                LPTSTR ErrText = YoriLibGetWinErrorText(Err);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mkdir: create failed: %y: %s"), DirName, ErrText);
-                YoriLibFreeWinErrorText(ErrText);
-                return;
-            }
-        } else {
-            StartedSucceeding = TRUE;
-            if (SepIndex < MaxIndex) {
-                ASSERT(DirName->StartOfString[SepIndex] == '\0');
-
-                DirName->StartOfString[SepIndex] = '\\';
-                for (;DirName->StartOfString[SepIndex] != '\0' && SepIndex <= MaxIndex; SepIndex++);
-                DirName->LengthInChars = SepIndex;
-                continue;
-            } else {
-                return;
-            }
-        }
-    }
-}
-
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the mkdir builtin command.
@@ -182,7 +121,18 @@ ENTRYPOINT(
         if (!YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mkdir: could not resolve full path: %y\n"), &ArgV[i]);
         } else {
-            MkdirCreateDirectoryAndParents(&FullPath);
+
+            //
+            //  When this call fails, it leaves the path indicating the
+            //  component it failed on.
+            //
+
+            if (!YoriLibCreateDirectoryAndParents(&FullPath)) {
+                DWORD Err = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mkdir: create failed: %y: %s"), &FullPath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
             YoriLibFreeStringContents(&FullPath);
         }
     }

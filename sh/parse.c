@@ -1184,14 +1184,6 @@ YoriShParseCmdContextToExecContext(
     ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
     ExecContext->CmdToExec.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, ArgumentsConsumed * sizeof(YORI_STRING));
 
-    //
-    //  MSFIX This parsing logic is really lame.
-    //  Should support quoted file names
-    //  Should support file names in different args to operators
-    //  Should resolve to full path names with escapes, which implies double
-    //    buffering
-    //
-
     for (Count = InitialArgument; Count < (InitialArgument + ArgumentsConsumed); Count++) {
 
         RemoveThisArg = FALSE;
@@ -1204,6 +1196,14 @@ YoriShParseCmdContextToExecContext(
         if (Count > InitialArgument) {
 
             ThisArg = &CmdContext->ArgV[Count];
+
+            //
+            //  When parsing the CmdContext, any argument starting with a
+            //  quote is not a candidate to be a redirect.  However, it is
+            //  valid to have a redirect followed by a file name in quotes,
+            //  in which case the argument isn't considered "quoted" but
+            //  can still contain spaces.
+            //
 
             if (!CmdContext->ArgContexts[Count].Quoted) {
 
@@ -1256,7 +1256,6 @@ YoriShParseCmdContextToExecContext(
                     }
                 }
             }
-
         }
 
         if (!RemoveThisArg) {
