@@ -2173,6 +2173,11 @@ YoriLibGetSelectionDoubleClickBreakChars(
     __out PYORI_STRING BreakChars
     );
 
+WORD
+YoriLibGetSelectionColor(
+    __in HANDLE ConsoleHandle
+    );
+
 // *** STRING.C ***
 
 VOID

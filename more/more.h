@@ -85,9 +85,22 @@ typedef struct _MORE_LOGICAL_LINE {
     DWORD PhysicalLineCharacterOffset;
 
     /**
+     Characters remaining in any search match, if a search match commenced
+     on a previous logical line from the same physical line.
+     */
+    DWORD CharactersRemainingInMatch;
+
+    /**
      The color attribute to display at the beginning of the line.
      */
-    WORD InitialColor;
+    WORD InitialDisplayColor;
+
+    /**
+     The color attribute at the beginning of the line as indicated by the
+     input stream.  This can be different to display color where things like
+     search are used which changes the color of the input stream.
+     */
+    WORD InitialUserColor;
 
     /**
      If TRUE, a newline should be displayed after this string.  If FALSE, the
@@ -198,10 +211,32 @@ typedef struct _MORE_CONTEXT {
     WORD InitialColor;
 
     /**
+     The color to use to highlight search terms.
+     */
+    WORD SearchColor;
+
+    /**
      Pointer to an array of length InputSourceCount for file specifications
      to process.
      */
     PYORI_STRING InputSources;
+
+    /**
+     TRUE if we are in search mode, meaning that keystrokes will be applied
+     to the SearchString below.  FALSE if keystrokes imply navigation.
+     */
+    BOOL SearchMode;
+
+    /**
+     TRUE if the status line needs to be redrawn as a result of a search
+     string change.
+     */
+    BOOL SearchDirty;
+
+    /**
+     A string describing any text to search for.
+     */
+    YORI_STRING SearchString;
 
     /**
      Handle to the thread that is adding to the physical line array.

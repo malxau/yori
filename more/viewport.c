@@ -27,10 +27,70 @@
 #include "more.h"
 
 /**
+ A structure to describe the state of parsing after a single logical line
+ has been processed.
+ */
+typedef struct _MORE_LINE_END_CONTEXT {
+
+    /**
+     Indicates the color that is being displayed at the end of one logical
+     line.  Conceptually the next logical line starts with this color.
+     */
+    WORD FinalDisplayColor;
+
+    /**
+     Indicates the color that is specified by the inbound text stream at the
+     end of a logical line.  Typically this is the same as the display color
+     above, but can be different if the display color is being overwridden
+     by this program via a search.
+     */
+    WORD FinalUserColor;
+
+    /**
+     Set to TRUE to indicate that once this line is displayed an explicit
+     newline character should be written.  This allows a logical line to be
+     generated referring only to characters within a physical line (no
+     reallocation or double buffering) but still terminate the line before
+     starting the next line.  This is typically FALSE because a logical line
+     has written to the edge of the console window so that processing is
+     resuming on the next console line without a newline present.
+     */
+    BOOL ExplicitNewlineRequired;
+
+    /**
+     Set to TRUE to indicate the logical line needs to be parsed character
+     by character because the contents of the logical line are not merely
+     a subset of characters from a physical line.  FALSE if the line is
+     just part of a physical line allocation.  Currently this is only used
+     when a search is present so that the logical line contains extra
+     escape sequences that the physical line does not.
+     */
+    BOOL RequiresGeneration;
+
+    /**
+     Specifies the number of characters needed to describe the logical line
+     contents.  When RequiresGeneration is TRUE this number may not match
+     the number of characters needing to be consumed from the physical line.
+     */
+    DWORD CharactersNeededInAllocation;
+
+    /**
+     Indicates the number of characters remaining in a search match.  This is
+     nonzero if a match is found that is partially on one logical line and
+     partially on a following logical line.  In that case, the second logical
+     line contains a highlighted region that is for fewer characters than the
+     match string, does not match the match string, etc.
+     */
+    DWORD CharactersRemainingInMatch;
+} MORE_LINE_END_CONTEXT, *PMORE_LINE_END_CONTEXT;
+
+/**
  Return the number of characters within a subset of a physical line which
  will form a logical line.  Conceptually this represents either the minimum
  of the length of the string or the viewport width.  In practice it can be
  a little more convoluted due to nonprinting characters.
+
+ @param MoreContext Pointer to the more context.
 
  @param PhysicalLineSubset Pointer to a string which represents either a
         complete physical line, or a trailing portion of a physical line after
@@ -42,26 +102,38 @@
         characters due to insufficient data or more characters, so long as
         they are escapes that are not visible.
 
- @param InitialColor The starting color, in Win32 form.
+ @param InitialDisplayColor The starting color to display, in Win32 form.
 
- @param FinalColor On successful completion, updated to contain the final
-        color.
+ @param InitialUserColor The starting color according to the previous input
+        stream.  This may be different to the display color if the display
+        is being altered by this program to do things like highlight search
+        matches.
 
- @param ExplicitNewlineRequired On successful completion, set to TRUE if the
-        number of visible character cells consumed is less than an entire line
-        so an explicit newline is needed to move to the next line.  Set to
-        FALSE if the number of visible character cells is equal to the entire
-        line so that the display will move to the next line automatically.
+ @param CharactersRemainingInMatch Specifies the number of characters at the
+        beginning of the logical line which consist of a match against a
+        search that commenced on a previous logical line.  If zero, no match
+        is spanning the two lines.
 
- @return The number of characters within the next logical line.
+ @param LineEndContext Optionally points to a context block to be populated
+        with information describing parsing state at the end of a logical
+        line.  This is used when generating multiple logical lines.  It is
+        not needed to count logical lines without generating them.
+
+ @return The number of characters to consume from the physical line buffer
+         that will be part of the next logical line.  Note this is not
+         necessarily the same as the number of characters allocated into the
+         logical line, which may contain extra information if
+         RequiresGeneration is set.
  */
 DWORD
 MoreGetLogicalLineLength(
+    __in PMORE_CONTEXT MoreContext,
     __in PYORI_STRING PhysicalLineSubset,
     __in DWORD MaximumVisibleCharacters,
-    __in WORD InitialColor,
-    __out_opt PWORD FinalColor,
-    __out_opt PBOOL ExplicitNewlineRequired
+    __in WORD InitialDisplayColor,
+    __in WORD InitialUserColor,
+    __in DWORD CharactersRemainingInMatch,
+    __out_opt PMORE_LINE_END_CONTEXT LineEndContext
     )
 {
     DWORD SourceIndex;
@@ -69,16 +141,59 @@ MoreGetLogicalLineLength(
     DWORD CellsDisplayed;
     YORI_STRING EscapeSubset;
     DWORD EndOfEscape;
-    WORD CurrentColor = InitialColor;
+    WORD CurrentColor = InitialDisplayColor;
+    WORD CurrentUserColor = InitialUserColor;
+    YORI_STRING MatchEscapeChars;
+    TCHAR MatchEscapeCharsBuf[sizeof("E[0;999;999;1m")];
+    DWORD MatchOffset;
+    DWORD MatchLength;
+    BOOL MatchFound;
 
     CharsInOutputBuffer = 0;
     CellsDisplayed = 0;
 
-    if (ExplicitNewlineRequired != NULL) {
-        *ExplicitNewlineRequired = TRUE;
+    if (LineEndContext != NULL) {
+        LineEndContext->ExplicitNewlineRequired = TRUE;
+        LineEndContext->RequiresGeneration = FALSE;
+    }
+
+    MatchOffset = 0;
+    MatchLength = 0;
+    YoriLibInitEmptyString(&MatchEscapeChars);
+    MatchEscapeChars.StartOfString = MatchEscapeCharsBuf;
+    MatchEscapeChars.LengthAllocated = sizeof(MatchEscapeCharsBuf)/sizeof(MatchEscapeCharsBuf[0]);
+    if (CharactersRemainingInMatch > 0) {
+        MatchFound = TRUE;
+        MatchLength = CharactersRemainingInMatch;
+    } else if (MoreContext->SearchString.LengthInChars > 0) {
+        MatchFound = TRUE;
+    } else {
+        MatchFound = FALSE;
     }
 
     for (SourceIndex = 0; SourceIndex < PhysicalLineSubset->LengthInChars; ) {
+
+        //
+        //  Look to see if the string contains another search match from this
+        //  offset.  On the first character we're doing this check if the
+        //  search string is not empty.
+        //
+
+        if (MatchFound &&
+            SourceIndex >= MatchOffset + MatchLength) {
+
+            YORI_STRING StringForNextMatch;
+            YoriLibInitEmptyString(&StringForNextMatch);
+            StringForNextMatch.StartOfString = &PhysicalLineSubset->StartOfString[SourceIndex];
+            StringForNextMatch.LengthInChars = PhysicalLineSubset->LengthInChars - SourceIndex;
+            if (YoriLibFindFirstMatchingSubstringInsensitive(&StringForNextMatch, 1, &MoreContext->SearchString, &MatchOffset)) {
+                MatchFound = TRUE;
+                MatchLength = MoreContext->SearchString.LengthInChars;
+                MatchOffset += SourceIndex;
+            } else {
+                MatchFound = FALSE;
+            }
+        }
 
         //
         //  If the string is <ESC>[, then treat it as an escape sequence.
@@ -104,33 +219,69 @@ MoreGetLogicalLineLength(
                 CharsInOutputBuffer += 3 + EndOfEscape;
                 SourceIndex += 3 + EndOfEscape;
 
-                if (FinalColor != NULL) {
-                    EscapeSubset.StartOfString -= 2;
-                    EscapeSubset.LengthInChars = EndOfEscape + 3;
-                    YoriLibVtFinalColorFromSequence(CurrentColor, &EscapeSubset, &CurrentColor);
+                EscapeSubset.StartOfString -= 2;
+                EscapeSubset.LengthInChars = EndOfEscape + 3;
+                YoriLibVtFinalColorFromSequence(CurrentUserColor, &EscapeSubset, &CurrentUserColor);
+                if (!MatchFound || SourceIndex < MatchOffset) {
+                    CurrentColor = CurrentUserColor;
                 }
             } else {
                 CharsInOutputBuffer += 2 + EndOfEscape;
                 SourceIndex += 2 + EndOfEscape;
             }
-
         } else {
+            if (MatchFound) {
+                if (MatchOffset == SourceIndex) {
+                    if (LineEndContext != NULL) {
+                        LineEndContext->RequiresGeneration = TRUE;
+                    }
+                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, MoreContext->SearchColor);
+                    CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                    CurrentColor = MoreContext->SearchColor;
+                }
+            }
             CharsInOutputBuffer++;
             CellsDisplayed++;
             SourceIndex++;
         }
 
+        if (MatchFound) {
+            if (MatchOffset + MatchLength <= SourceIndex) {
+                if (LineEndContext != NULL) {
+                    LineEndContext->RequiresGeneration = TRUE;
+                }
+                YoriLibVtStringForTextAttribute(&MatchEscapeChars, CurrentUserColor);
+                CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                CurrentColor = CurrentUserColor;
+            }
+        }
+
         ASSERT(CellsDisplayed <= MaximumVisibleCharacters);
         if (CellsDisplayed == MaximumVisibleCharacters) {
-            if (ExplicitNewlineRequired != NULL) {
-                *ExplicitNewlineRequired = FALSE;
+            if (LineEndContext != NULL) {
+                LineEndContext->ExplicitNewlineRequired = FALSE;
             }
             break;
         }
     }
 
-    if (FinalColor != NULL) {
-        *FinalColor = CurrentColor;
+    //
+    //  MSFIX When the search criteria spans logical lines, we need to
+    //  indicate how many visible characters are remaining until the search
+    //  ends, not just that the display color is different
+    //
+
+    if (LineEndContext != NULL) {
+        LineEndContext->FinalDisplayColor = CurrentColor;
+        LineEndContext->FinalUserColor = CurrentUserColor;
+        LineEndContext->CharactersNeededInAllocation = CharsInOutputBuffer;
+        if (MatchFound) {
+            if (MatchOffset < SourceIndex) {
+                LineEndContext->CharactersRemainingInMatch = (MatchOffset + MatchLength - SourceIndex);
+            } else {
+                LineEndContext->CharactersRemainingInMatch = 0;
+            }
+        }
     }
 
     return SourceIndex;
@@ -163,7 +314,7 @@ MoreCountLogicalLinesOnPhysicalLine(
     Subset.StartOfString = PhysicalLine->LineContents.StartOfString;
     Subset.LengthInChars = PhysicalLine->LineContents.LengthInChars;
     while(TRUE) {
-        LogicalLineLength = MoreGetLogicalLineLength(&Subset, MoreContext->ViewportWidth, 0, NULL, NULL);
+        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, MoreContext->ViewportWidth, 0, 0, 0, NULL);
         Subset.StartOfString += LogicalLineLength;
         Subset.LengthInChars -= LogicalLineLength;
         Count++;
@@ -225,6 +376,175 @@ MoreCloneLogicalLine(
 }
 
 /**
+ Copy a string from a physical line into a logical line.  Typically this
+ just references the same memory and creates a substring pointing within it.
+ If RegenerationRequired is set, the logical line is explicitly allocated
+ seperately to the physical line and its contents are manually constructed.
+
+ @param MoreContext Pointer to the more context.
+
+ @param LogicalLine Pointer to the logical line, describing its state but
+        not yet containing the string representation of the logical line.
+
+ @param RegenerationRequired TRUE if the logical line string needs to be
+        allocated and generated manually.  FALSE if the logical line will
+        just be a referenced substring from the physical line.
+
+ @param SourceCharsToConsume The number of characters to consume from the
+        physical line, which may not match the number of characters in the
+        logical line if RegenerationRequired is TRUE.
+
+ @param AllocationLengthRequired The number of characters needed in the
+        logical line, which is not the same as SourceCharsToConsume if
+        RegenerationRequired is true.
+ */
+VOID
+MoreCopyRangeIntoLogicalLine(
+    __in PMORE_CONTEXT MoreContext,
+    __in PMORE_LOGICAL_LINE LogicalLine,
+    __in BOOL RegenerationRequired,
+    __in DWORD SourceCharsToConsume,
+    __in DWORD AllocationLengthRequired
+    )
+{
+    if (RegenerationRequired) {
+        YORI_STRING PhysicalLineSubset;
+        DWORD SourceIndex;
+        DWORD CharsInOutputBuffer;
+        YORI_STRING MatchEscapeChars;
+        YORI_STRING EscapeSubset;
+        DWORD EndOfEscape;
+        TCHAR MatchEscapeCharsBuf[sizeof("E[0;999;999;1m")];
+        DWORD MatchOffset;
+        DWORD MatchLength;
+        BOOL MatchFound;
+        WORD CurrentUserColor = LogicalLine->InitialUserColor;
+
+        YoriLibInitEmptyString(&PhysicalLineSubset);
+        PhysicalLineSubset.StartOfString = &LogicalLine->PhysicalLine->LineContents.StartOfString[LogicalLine->PhysicalLineCharacterOffset]; 
+        PhysicalLineSubset.LengthInChars = SourceCharsToConsume;
+
+        //
+        //  MSFIX error handling
+        //
+
+        if (!YoriLibAllocateString(&LogicalLine->Line, AllocationLengthRequired)) {
+            return;
+        }
+
+        CharsInOutputBuffer = 0;
+    
+        MatchOffset = 0;
+        MatchLength = 0;
+        YoriLibInitEmptyString(&MatchEscapeChars);
+        MatchEscapeChars.StartOfString = MatchEscapeCharsBuf;
+        MatchEscapeChars.LengthAllocated = sizeof(MatchEscapeCharsBuf)/sizeof(MatchEscapeCharsBuf[0]);
+        if (LogicalLine->CharactersRemainingInMatch > 0) {
+            MatchFound = TRUE;
+            MatchLength = LogicalLine->CharactersRemainingInMatch;
+        } else if (MoreContext->SearchString.LengthInChars > 0) {
+            MatchFound = TRUE;
+        } else {
+            MatchFound = FALSE;
+        }
+    
+        for (SourceIndex = 0; SourceIndex < PhysicalLineSubset.LengthInChars; ) {
+
+            //
+            //  Look to see if the string contains another search match from this
+            //  offset.  On the first character we're doing this check if the
+            //  search string is not empty.
+            //
+    
+            if (MatchFound &&
+                SourceIndex == MatchOffset + MatchLength) {
+    
+                YORI_STRING StringForNextMatch;
+                YoriLibInitEmptyString(&StringForNextMatch);
+                StringForNextMatch.StartOfString = &PhysicalLineSubset.StartOfString[SourceIndex];
+                StringForNextMatch.LengthInChars = LogicalLine->PhysicalLine->LineContents.LengthInChars - LogicalLine->PhysicalLineCharacterOffset - SourceIndex;
+                if (YoriLibFindFirstMatchingSubstringInsensitive(&StringForNextMatch, 1, &MoreContext->SearchString, &MatchOffset)) {
+                    MatchFound = TRUE;
+                    MatchLength = MoreContext->SearchString.LengthInChars;
+                    MatchOffset += SourceIndex;
+                } else {
+                    MatchFound = FALSE;
+                }
+            }
+
+            //
+            //  If the string is <ESC>[, then treat it as an escape sequence.
+            //  Look for the final letter after any numbers or semicolon.
+            //
+    
+            if (PhysicalLineSubset.LengthInChars > SourceIndex + 2 &&
+                PhysicalLineSubset.StartOfString[SourceIndex] == 27 &&
+                PhysicalLineSubset.StartOfString[SourceIndex + 1] == '[') {
+    
+                YoriLibInitEmptyString(&EscapeSubset);
+                EscapeSubset.StartOfString = &PhysicalLineSubset.StartOfString[SourceIndex + 2];
+                EscapeSubset.LengthInChars = PhysicalLineSubset.LengthInChars - SourceIndex - 2;
+                EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+    
+                //
+                //  Count everything as consuming the source and needing buffer
+                //  space in the destination but consuming no display cells.  This
+                //  may include the final letter, if we found one.
+                //
+    
+                if (PhysicalLineSubset.LengthInChars > SourceIndex + 2 + EndOfEscape) {
+                    memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], &PhysicalLineSubset.StartOfString[SourceIndex], (3 + EndOfEscape) * sizeof(TCHAR));
+                    CharsInOutputBuffer += 3 + EndOfEscape;
+                    SourceIndex += 3 + EndOfEscape;
+    
+                    EscapeSubset.StartOfString -= 2;
+                    EscapeSubset.LengthInChars = EndOfEscape + 3;
+                    YoriLibVtFinalColorFromSequence(CurrentUserColor, &EscapeSubset, &CurrentUserColor);
+                } else {
+                    memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], &PhysicalLineSubset.StartOfString[SourceIndex], (2 + EndOfEscape) * sizeof(TCHAR));
+                    CharsInOutputBuffer += 2 + EndOfEscape;
+                    SourceIndex += 2 + EndOfEscape;
+                }
+            } else {
+    
+                if (MatchFound) {
+                    if (MatchOffset == SourceIndex) {
+                        YoriLibVtStringForTextAttribute(&MatchEscapeChars, MoreContext->SearchColor);
+                        memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], MatchEscapeChars.StartOfString, MatchEscapeChars.LengthInChars * sizeof(TCHAR));
+                        CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                    }
+                }
+    
+                LogicalLine->Line.StartOfString[CharsInOutputBuffer] = PhysicalLineSubset.StartOfString[SourceIndex];
+                CharsInOutputBuffer++;
+                SourceIndex++;
+            }
+
+            ASSERT(CharsInOutputBuffer <= LogicalLine->Line.LengthAllocated);
+    
+            if (MatchFound) {
+
+                if (MatchOffset + MatchLength <= SourceIndex) {
+                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, CurrentUserColor);
+                    memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], MatchEscapeChars.StartOfString, MatchEscapeChars.LengthInChars * sizeof(TCHAR));
+                    CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
+                }
+            }
+        }
+
+        LogicalLine->Line.LengthInChars = CharsInOutputBuffer;
+    } else {
+        ASSERT(SourceCharsToConsume == AllocationLengthRequired);
+        YoriLibInitEmptyString(&LogicalLine->Line);
+        LogicalLine->Line.StartOfString = &LogicalLine->PhysicalLine->LineContents.StartOfString[LogicalLine->PhysicalLineCharacterOffset];
+        LogicalLine->Line.LengthInChars = SourceCharsToConsume;
+
+        YoriLibReference(LogicalLine->PhysicalLine->MemoryToFree);
+        LogicalLine->Line.MemoryToFree = LogicalLine->PhysicalLine->MemoryToFree;
+    }
+}
+
+/**
  From a specified physical line, generate one or more logical lines to
  display.
 
@@ -256,11 +576,12 @@ MoreGenerateLogicalLinesFromPhysicalLine(
     DWORD Count = 0;
     DWORD CharIndex = 0;
     DWORD LogicalLineLength;
+    DWORD CharactersRemainingInMatch = 0;
     YORI_STRING Subset;
     PMORE_LOGICAL_LINE ThisLine;
-    BOOL ExplicitNewlineRequired;
-    WORD InitialColor = PhysicalLine->InitialColor;
-    WORD NewColor;
+    WORD InitialUserColor = PhysicalLine->InitialColor;
+    WORD InitialDisplayColor = PhysicalLine->InitialColor;
+    MORE_LINE_END_CONTEXT LineEndContext;
 
     YoriLibInitEmptyString(&Subset);
     Subset.StartOfString = PhysicalLine->LineContents.StartOfString;
@@ -269,24 +590,24 @@ MoreGenerateLogicalLinesFromPhysicalLine(
         if (Count >= FirstLogicalLineIndex + NumberLogicalLines) {
             break;
         }
-        LogicalLineLength = MoreGetLogicalLineLength(&Subset, MoreContext->ViewportWidth, InitialColor, &NewColor, &ExplicitNewlineRequired);
+        LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, MoreContext->ViewportWidth, InitialDisplayColor, InitialUserColor, CharactersRemainingInMatch, &LineEndContext);
         if (Count >= FirstLogicalLineIndex) {
             ThisLine = &OutputLines[Count - FirstLogicalLineIndex];
             ThisLine->PhysicalLine = PhysicalLine;
-            ThisLine->InitialColor = InitialColor;
+            ThisLine->InitialUserColor = InitialUserColor;
+            ThisLine->InitialDisplayColor = InitialDisplayColor;
+            ThisLine->CharactersRemainingInMatch = CharactersRemainingInMatch;
             ThisLine->LogicalLineIndex = Count;
             ThisLine->PhysicalLineCharacterOffset = CharIndex;
+            ThisLine->ExplicitNewlineRequired = LineEndContext.ExplicitNewlineRequired;
 
-            YoriLibInitEmptyString(&ThisLine->Line);
-            ThisLine->Line.StartOfString = Subset.StartOfString;
-            ThisLine->Line.LengthInChars = LogicalLineLength;
-            ThisLine->ExplicitNewlineRequired = ExplicitNewlineRequired;
+            MoreCopyRangeIntoLogicalLine(MoreContext, ThisLine, LineEndContext.RequiresGeneration, LogicalLineLength, LineEndContext.CharactersNeededInAllocation);
 
-            YoriLibReference(ThisLine->PhysicalLine->MemoryToFree);
-            ThisLine->Line.MemoryToFree = ThisLine->PhysicalLine->MemoryToFree;
+            CharactersRemainingInMatch = LineEndContext.CharactersRemainingInMatch;
         }
 
-        InitialColor = NewColor;
+        InitialUserColor = LineEndContext.FinalUserColor;
+        InitialDisplayColor = LineEndContext.FinalDisplayColor;
         Subset.StartOfString += LogicalLineLength;
         Subset.LengthInChars -= LogicalLineLength;
         Count++;
@@ -394,6 +715,10 @@ MoreGetPreviousLogicalLines(
  @param CurrentLine Optionally points to the current line that the next lines
         should follow.
 
+ @param StartFromNextLine If TRUE, logical lines should be generated following
+        CurrentLine.  If FALSE, logical lines should be generated including
+        and following CurrentLine.
+
  @param LinesToOutput Specifies the number of lines to output.
 
  @param OutputLines An array of logical lines with LinesToOutput elements.  On
@@ -408,6 +733,7 @@ DWORD
 MoreGetNextLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE CurrentLine,
+    __in BOOL StartFromNextLine,
     __in DWORD LinesToOutput,
     __out PMORE_LOGICAL_LINE OutputLines
     )
@@ -422,14 +748,31 @@ MoreGetNextLogicalLines(
     CurrentInputLine = CurrentLine;
 
     if (CurrentInputLine != NULL) {
-        LogicalLineCount = MoreCountLogicalLinesOnPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
-
-        if (CurrentInputLine->LogicalLineIndex < LogicalLineCount - 1) {
-            LineIndexToCopy = CurrentInputLine->LogicalLineIndex + 1;
-            if (LogicalLineCount - CurrentInputLine->LogicalLineIndex - 1 > LinesRemaining) {
+        if (StartFromNextLine) {
+            LogicalLineCount = MoreCountLogicalLinesOnPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
+    
+            if (CurrentInputLine->LogicalLineIndex < LogicalLineCount - 1) {
+                LineIndexToCopy = CurrentInputLine->LogicalLineIndex + 1;
+                if (LogicalLineCount - CurrentInputLine->LogicalLineIndex - 1 > LinesRemaining) {
+                    LinesToCopy = LinesRemaining;
+                } else {
+                    LinesToCopy = LogicalLineCount - CurrentInputLine->LogicalLineIndex - 1;
+                }
+                CurrentOutputLine = &OutputLines[LinesToOutput - LinesRemaining];
+                MoreGenerateLogicalLinesFromPhysicalLine(MoreContext,
+                                                         CurrentInputLine->PhysicalLine,
+                                                         LineIndexToCopy,
+                                                         LinesToCopy,
+                                                         CurrentOutputLine);
+                LinesRemaining -= LinesToCopy;
+            }
+        } else {
+            LogicalLineCount = MoreCountLogicalLinesOnPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
+            LineIndexToCopy = CurrentInputLine->LogicalLineIndex;
+            if (LogicalLineCount - CurrentInputLine->LogicalLineIndex > LinesRemaining) {
                 LinesToCopy = LinesRemaining;
             } else {
-                LinesToCopy = LogicalLineCount - CurrentInputLine->LogicalLineIndex - 1;
+                LinesToCopy = LogicalLineCount - CurrentInputLine->LogicalLineIndex;
             }
             CurrentOutputLine = &OutputLines[LinesToOutput - LinesRemaining];
             MoreGenerateLogicalLinesFromPhysicalLine(MoreContext,
@@ -476,6 +819,54 @@ MoreGetNextLogicalLines(
         CurrentInputLine = &CurrentOutputLine[LinesToCopy - 1];
     }
     return LinesToOutput - LinesRemaining;
+}
+
+/**
+ Find the next physical line that contains a match for the current search
+ string.
+
+ @param MoreContext Pointer to the more context, containing all physical
+        lines.
+
+ @param PreviousMatchLine Pointer to the logical line which is the most
+        recent line to not look for matches within.
+
+ @return Pointer to the next physical line containing a match, or NULL
+         if no further physical lines contain a match.
+ */
+PMORE_PHYSICAL_LINE
+MoreFindNextLineWithSearchMatch(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_LOGICAL_LINE PreviousMatchLine
+    )
+{
+    PMORE_PHYSICAL_LINE SearchLine;
+    PYORI_LIST_ENTRY ListEntry;
+    DWORD MatchOffset;
+
+    if (PreviousMatchLine == NULL) {
+        SearchLine = NULL;
+        ListEntry = NULL;
+    } else {
+        SearchLine = PreviousMatchLine->PhysicalLine;
+        ListEntry = &SearchLine->LineList;
+    }
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, ListEntry);
+        if (ListEntry == NULL) {
+            ReleaseMutex(MoreContext->PhysicalLineMutex);
+            return NULL;
+        }
+
+        SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
+        if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, &MoreContext->SearchString, &MatchOffset)) {
+            ReleaseMutex(MoreContext->PhysicalLineMutex);
+            return SearchLine;
+        }
+    }
 }
 
 /**
@@ -586,6 +977,11 @@ MoreDrawStatusLine(
                   TotalLines,
                   LastViewportLine * 100 / TotalLines);
 
+    if (MoreContext->SearchString.LengthInChars > 0 || MoreContext->SearchMode) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" Search: %y"), &MoreContext->SearchString);
+    }
+    MoreContext->SearchDirty = FALSE;
+
     YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
 }
 
@@ -631,14 +1027,14 @@ MoreDegenerateDisplay(
 
     for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
 
-        if (MoreContext->DisplayViewportLines[Index].InitialColor == 7) {
+        if (MoreContext->DisplayViewportLines[Index].InitialDisplayColor == 7) {
             if (Index % 2 != 0) {
                 YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x17);
             } else {
                 YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, 0x7);
             }
         } else {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialColor);
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialDisplayColor);
         }
 
         if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
@@ -678,7 +1074,7 @@ MoreOutputSeriesOfLines(
 
     CharsRequired = 0;
     for (Index = 0; Index < LineCount; Index++) {
-        YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialColor);
+        YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialDisplayColor);
         CharsRequired += VtAttribute.LengthInChars;
         CharsRequired += FirstLine[Index].Line.LengthInChars;
         if (FirstLine[Index].ExplicitNewlineRequired) {
@@ -691,7 +1087,7 @@ MoreOutputSeriesOfLines(
     if (YoriLibAllocateString(&CombinedBuffer, CharsRequired)) {
         CharsRequired = 0;
         for (Index = 0; Index < LineCount; Index++) {
-            YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialColor);
+            YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialDisplayColor);
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], VtAttribute.StartOfString, VtAttribute.LengthInChars * sizeof(TCHAR));
             CharsRequired += VtAttribute.LengthInChars;
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], FirstLine[Index].Line.StartOfString, FirstLine[Index].Line.LengthInChars * sizeof(TCHAR));
@@ -707,7 +1103,7 @@ MoreOutputSeriesOfLines(
         YoriLibFreeStringContents(&CombinedBuffer);
     } else {
         for (Index = 0; Index < LineCount; Index++) {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FirstLine[Index].InitialColor);
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FirstLine[Index].InitialDisplayColor);
             if (FirstLine[Index].ExplicitNewlineRequired) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &FirstLine[Index].Line);
             } else {
@@ -715,6 +1111,102 @@ MoreOutputSeriesOfLines(
             }
         }
     }
+}
+
+/**
+ After a search term has changed, redisplay all of the contents currently
+ in the viewport with contents including highlighted search terms.  In the
+ current implementation of this routine, only lines containing search
+ match changes are redisplayed.
+
+ @param MoreContext Pointer to the more context, which in this function
+        indicates the currently displayed logical lines.
+
+ @return The number of lines whose display has been altered.  This can be
+         zero if no lines in the viewport contain a search match.
+ */
+DWORD
+MoreDisplayChangedLinesInViewport(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    DWORD Index;
+    DWORD ChangedLineCount = 0;
+    DWORD NumberWritten;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+    COORD NewPosition;
+
+    if (MoreContext->LinesInViewport == 0) {
+        return ChangedLineCount;
+    }
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    NumberWritten = MoreGetNextLogicalLines(MoreContext,
+                                            &MoreContext->DisplayViewportLines[0],
+                                            FALSE,
+                                            MoreContext->LinesInViewport,
+                                            MoreContext->StagingViewportLines);
+
+    //
+    //  The data shouldn't already be in the viewport if it's unavailable.
+    //
+
+    ASSERT(NumberWritten == MoreContext->LinesInViewport);
+                            
+    for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
+
+        if (YoriLibCompareString(&MoreContext->DisplayViewportLines[Index].Line, &MoreContext->StagingViewportLines[Index].Line) != 0) {
+
+            ChangedLineCount++;
+
+            //
+            //  Clear the region we want to overwrite
+            //
+    
+            NewPosition.X = 0;
+            NewPosition.Y = (USHORT)(ScreenInfo.dwCursorPosition.Y - MoreContext->LinesInViewport + Index);
+            FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X, NewPosition, &NumberWritten);
+            FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X, NewPosition, &NumberWritten);
+    
+            //
+            //  Set the cursor to the top of the viewport
+            //
+    
+            SetConsoleCursorPosition(StdOutHandle, NewPosition);
+
+            MoreCloneLogicalLine(&MoreContext->DisplayViewportLines[Index], &MoreContext->StagingViewportLines[Index]);
+    
+            MoreOutputSeriesOfLines(&MoreContext->DisplayViewportLines[Index], 1);
+        }
+    }
+
+    for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
+        YoriLibFreeStringContents(&MoreContext->StagingViewportLines[Index].Line);
+    }
+
+    //
+    //  Restore the cursor to the bottom of the viewport
+    //
+
+    NewPosition.X = 0;
+    NewPosition.Y = ScreenInfo.dwCursorPosition.Y;
+    SetConsoleCursorPosition(StdOutHandle, NewPosition);
+
+    if (ChangedLineCount == 0) {
+        return ChangedLineCount;
+    }
+
+    return ChangedLineCount;
+
+    // Take first display logical line and regenerate into staging
+    // Do this for number of logical lines
+    // Loop through and detect if a line has changed
+    // If it has, fill the line with space and default attributes, then
+    //   write the new logical line there
+    // Count and return number of redrawn lines
 }
 
 /**
@@ -930,7 +1422,7 @@ MoreAddNewLinesToViewport(
 
     LinesDesired = MoreContext->ViewportHeight - MoreContext->LinesInPage;
 
-    LinesReturned = MoreGetNextLogicalLines(MoreContext, CurrentLine, LinesDesired, MoreContext->StagingViewportLines);
+    LinesReturned = MoreGetNextLogicalLines(MoreContext, CurrentLine, TRUE, LinesDesired, MoreContext->StagingViewportLines);
 
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 
@@ -1036,7 +1528,7 @@ MoreMoveViewportDown(
         CurrentLine = &MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1];
     }
 
-    LinesReturned = MoreGetNextLogicalLines(MoreContext, CurrentLine, CappedLinesToMove, MoreContext->StagingViewportLines);
+    LinesReturned = MoreGetNextLogicalLines(MoreContext, CurrentLine, TRUE, CappedLinesToMove, MoreContext->StagingViewportLines);
 
     ASSERT(LinesReturned <= CappedLinesToMove);
 
@@ -1052,7 +1544,7 @@ MoreMoveViewportDown(
 }
 
 /**
- Regenerate new logical lines into the viewport based on the e next line
+ Regenerate new logical lines into the viewport based on the next line
  of data is rendered at the bottom of the screen.
 
  @param MoreContext Pointer to the context describing the data to display.
@@ -1087,7 +1579,7 @@ MoreRegenerateViewport(
         LineToFollow = NULL;
     }
 
-    LinesReturned = MoreGetNextLogicalLines(MoreContext, LineToFollow, CappedLinesToMove, MoreContext->StagingViewportLines);
+    LinesReturned = MoreGetNextLogicalLines(MoreContext, LineToFollow, TRUE, CappedLinesToMove, MoreContext->StagingViewportLines);
 
     if (LineToFollow != NULL) {
         YoriLibFreeStringContents(&LineToFollow->Line);
@@ -1102,6 +1594,41 @@ MoreRegenerateViewport(
     }
 
     MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
+}
+
+/**
+ Find the next search match, meaning any match after the top logical line,
+ and advance the viewport to it.  If no further match is found, no update is
+ made.
+
+ @param MoreContext Pointer to the more context to search for a match and use
+        for the source of any display refresh.
+ */
+VOID
+MoreMoveViewportToNextSearchMatch(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    PMORE_PHYSICAL_LINE NextMatch;
+    PMORE_LOGICAL_LINE LineToFollow;
+
+    LineToFollow = NULL;
+    if (MoreContext->LinesInViewport > 0) {
+        LineToFollow = &MoreContext->DisplayViewportLines[0];
+    }
+    NextMatch = MoreFindNextLineWithSearchMatch(MoreContext, LineToFollow);
+
+    if (NextMatch == NULL) {
+        return;
+    }
+
+    MoreContext->LinesInPage = 0;
+    if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+        YoriLibClearSelection(&MoreContext->Selection);
+        YoriLibRedrawSelection(&MoreContext->Selection);
+    }
+
+    MoreRegenerateViewport(MoreContext, NextMatch);
 }
 
 /**
@@ -1207,6 +1734,7 @@ MoreCopySelectionIfPresent(
     DWORD SingleLineBufferSize;
     DWORD VtTextBufferSize;
     DWORD LineIndex;
+    DWORD CharactersRemainingInMatch = 0;
     BOOL Result = FALSE;
 
     PYORILIB_SELECTION Selection = &MoreContext->Selection;
@@ -1273,7 +1801,7 @@ MoreCopySelectionIfPresent(
         //  line.
         //
 
-        LineCount = MoreGetNextLogicalLines(MoreContext, StartLine, Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top, &EntireLogicalLines[1]);
+        LineCount = MoreGetNextLogicalLines(MoreContext, StartLine, TRUE, Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top, &EntireLogicalLines[1]);
         LineCount++;
         StartingLineIndex = 0;
 
@@ -1308,24 +1836,30 @@ MoreCopySelectionIfPresent(
 
     VtTextBufferSize = 0;
     {
-        WORD InitialColor;
-        WORD NewColor;
-        BOOL ExplicitNewlineRequired;
+        WORD InitialDisplayColor;
+        WORD InitialUserColor;
         DWORD LogicalLineLength;
+        MORE_LINE_END_CONTEXT LineEndContext;
 
         for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
             YoriLibInitEmptyString(&Subset);
             Subset.StartOfString = EntireLogicalLines[LineIndex].Line.StartOfString;
             Subset.LengthInChars = EntireLogicalLines[LineIndex].Line.LengthInChars;
-            InitialColor = EntireLogicalLines[LineIndex].InitialColor;
+            InitialDisplayColor = EntireLogicalLines[LineIndex].InitialDisplayColor;
+            InitialUserColor = EntireLogicalLines[LineIndex].InitialUserColor;
+            CharactersRemainingInMatch = EntireLogicalLines[LineIndex].CharactersRemainingInMatch;
             if (Selection->CurrentlySelected.Left > 0) {
-                LogicalLineLength = MoreGetLogicalLineLength(&Subset, Selection->CurrentlySelected.Left, InitialColor, &NewColor, &ExplicitNewlineRequired);
-                InitialColor = NewColor;
+                LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, Selection->CurrentlySelected.Left, InitialDisplayColor, InitialUserColor, CharactersRemainingInMatch, &LineEndContext);
+                InitialDisplayColor = LineEndContext.FinalDisplayColor;
+                InitialUserColor = LineEndContext.FinalUserColor;
                 Subset.LengthInChars -= LogicalLineLength;
                 Subset.StartOfString += LogicalLineLength;
+                CharactersRemainingInMatch = LineEndContext.CharactersRemainingInMatch;
             }
-            LogicalLineLength = MoreGetLogicalLineLength(&Subset, Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1, InitialColor, &NewColor, &ExplicitNewlineRequired);
-            CopyLogicalLines[LineIndex].InitialColor = InitialColor;
+            LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1, InitialDisplayColor, InitialUserColor, CharactersRemainingInMatch, &LineEndContext);
+            CopyLogicalLines[LineIndex].InitialDisplayColor = InitialDisplayColor;
+            CopyLogicalLines[LineIndex].InitialUserColor = InitialUserColor;
+            CopyLogicalLines[LineIndex].CharactersRemainingInMatch = CharactersRemainingInMatch;
             CopyLogicalLines[LineIndex].Line.StartOfString = Subset.StartOfString;
             CopyLogicalLines[LineIndex].Line.LengthInChars = LogicalLineLength;
 
@@ -1356,7 +1890,7 @@ MoreCopySelectionIfPresent(
     Subset.StartOfString = VtText.StartOfString;
     Subset.LengthAllocated = VtText.LengthAllocated;
     for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
-        YoriLibVtStringForTextAttribute(&Subset, CopyLogicalLines[LineIndex].InitialColor);
+        YoriLibVtStringForTextAttribute(&Subset, CopyLogicalLines[LineIndex].InitialDisplayColor);
         VtText.LengthInChars += Subset.LengthInChars;
         Subset.StartOfString += Subset.LengthInChars;
         Subset.LengthAllocated -= Subset.LengthInChars;
@@ -1420,12 +1954,17 @@ Exit:
 
  @param Terminate On successful completion, set to TRUE to indicate the
         program should terminate.
+
+ @param RedrawStatus On successful completion, set to TRUE to indicate that
+        caller needs to update the status line because the window area has
+        moved.
  */
 VOID
 MoreProcessKeyDown(
     __inout PMORE_CONTEXT MoreContext,
     __in PINPUT_RECORD InputRecord,
-    __out PBOOL Terminate
+    __out PBOOL Terminate,
+    __out PBOOL RedrawStatus
     )
 {
     DWORD CtrlMask;
@@ -1433,8 +1972,6 @@ MoreProcessKeyDown(
     WORD KeyCode;
     WORD ScanCode;
     BOOL ClearSelection = FALSE;
-
-    UNREFERENCED_PARAMETER(MoreContext);
 
     *Terminate = FALSE;
 
@@ -1445,17 +1982,59 @@ MoreProcessKeyDown(
 
     if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
         ClearSelection = TRUE;
-        if (Char == 'q' || Char == 'Q') {
-            *Terminate = TRUE;
-        } else if (Char == ' ') {
-            MoreContext->LinesInPage = 0;
-            if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
-                YoriLibClearSelection(&MoreContext->Selection);
-                YoriLibRedrawSelection(&MoreContext->Selection);
+        if (MoreContext->SearchMode) {
+            if (Char == 27) {
+                MoreContext->SearchMode = FALSE;
+                YoriLibFreeStringContents(&MoreContext->SearchString);
+                MoreContext->SearchDirty = TRUE;
+            } else if (Char == '\b') {
+                if (InputRecord->Event.KeyEvent.wRepeatCount > MoreContext->SearchString.LengthInChars) {
+                    MoreContext->SearchString.LengthInChars = 0;
+                } else {
+                    MoreContext->SearchString.LengthInChars = MoreContext->SearchString.LengthInChars - InputRecord->Event.KeyEvent.wRepeatCount;
+                }
+                MoreContext->SearchDirty = TRUE;
+            } else if (Char == '\r') {
+                if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+                    MoreCopySelectionIfPresent(MoreContext);
+                } else {
+                    MoreMoveViewportToNextSearchMatch(MoreContext);
+                }
+            } else if (Char != '\0' && Char != '\n') {
+                if (MoreContext->SearchString.LengthAllocated < MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
+                    DWORD NewAllocSize;
+                    NewAllocSize = MoreContext->SearchString.LengthAllocated + 4096;
+                    if (NewAllocSize < MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
+                        NewAllocSize = MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1;
+                    }
+                    YoriLibReallocateString(&MoreContext->SearchString, NewAllocSize);
+                }
+                if (MoreContext->SearchString.LengthAllocated >= MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
+                    DWORD Count;
+                    for (Count = 0; Count < InputRecord->Event.KeyEvent.wRepeatCount; Count++) {
+                        MoreContext->SearchString.StartOfString[MoreContext->SearchString.LengthInChars + Count] = Char;
+                    }
+                    MoreContext->SearchString.LengthInChars = MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount;
+                    MoreContext->SearchDirty = TRUE;
+                }
             }
-            MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
-        } else if (Char == '\r') {
-            MoreCopySelectionIfPresent(MoreContext);
+        } else {
+            if (Char == 'q' || Char == 'Q' || Char == 27) {
+                *Terminate = TRUE;
+            } else if (Char == ' ') {
+                MoreContext->LinesInPage = 0;
+                if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+                    YoriLibClearSelection(&MoreContext->Selection);
+                    YoriLibRedrawSelection(&MoreContext->Selection);
+                }
+                MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
+            } else if (Char == '\r') {
+                MoreCopySelectionIfPresent(MoreContext);
+            } else if (Char == '/') {
+                MoreContext->SearchMode = TRUE;
+                MoreContext->SearchDirty = TRUE;
+                *RedrawStatus = TRUE;
+            }
         }
     } else if (CtrlMask == ENHANCED_KEY) {
         ClearSelection = TRUE;
@@ -1644,7 +2223,7 @@ MoreCheckForStatusLineChange(
     __inout PMORE_CONTEXT MoreContext
     )
 {
-    if (MoreContext->TotalLinesInViewportStatus != MoreContext->LineCount) {
+    if (MoreContext->TotalLinesInViewportStatus != MoreContext->LineCount || MoreContext->SearchDirty) {
         MoreClearStatusLine(MoreContext);
         MoreDrawStatusLine(MoreContext);
     }
@@ -2190,7 +2769,16 @@ MoreViewportDisplay(
                     if (InputRecord->EventType == KEY_EVENT &&
                         InputRecord->Event.KeyEvent.bKeyDown) {
 
-                        MoreProcessKeyDown(MoreContext, InputRecord, &Terminate);
+                        MoreProcessKeyDown(MoreContext, InputRecord, &Terminate, &RedrawStatus);
+                        if (MoreContext->SearchDirty) {
+                            MoreDisplayChangedLinesInViewport(MoreContext);
+                            RedrawStatus = TRUE;
+                        }
+                        if (RedrawStatus) {
+                            MoreClearStatusLine(MoreContext);
+                            YoriLibRedrawSelection(&MoreContext->Selection);
+                            MoreDrawStatusLine(MoreContext);
+                        }
                     } else if (InputRecord->EventType == MOUSE_EVENT) {
 
                         DWORD ButtonsPressed = InputRecord->Event.MouseEvent.dwButtonState - (PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);

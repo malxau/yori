@@ -170,6 +170,7 @@ MoreInitContext(
 
     YoriLibVtSetDefaultColor(ScreenInfo.wAttributes);
     MoreContext->InitialColor = YoriLibVtGetDefaultColor();
+    MoreContext->SearchColor = YoriLibGetSelectionColor(GetStdHandle(STD_OUTPUT_HANDLE));
 
     MoreGetViewportDimensions(&ScreenInfo, &MoreContext->ViewportWidth, &MoreContext->ViewportHeight);
 
@@ -229,6 +230,8 @@ MoreCleanupContext(
         CloseHandle(MoreContext->IngestThread);
         MoreContext->IngestThread = NULL;
     }
+
+    YoriLibFreeStringContents(&MoreContext->SearchString);
 }
 
 /**
