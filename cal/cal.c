@@ -123,6 +123,168 @@ LPTSTR CalDayNames[7] = {_T("Sunday"),
  */
 #define CAL_ROWS_PER_MONTH       ((CAL_MAX_DAYS_PER_MONTH + 2 * CAL_DAYS_PER_WEEK - 1) / CAL_DAYS_PER_WEEK)
 
+/**
+ Display the calendar for a specified calendar month.
+
+ @param Year The year number to display the calendar for.
+
+ @param Month The month number to display the calendar for.
+
+ @param Today Optionally points to a systemtime structure indicating the
+        the current date.  If this is specified, the current day is highlighted
+        within the calendar.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+CalOutputCalendarForMonth(
+    __in WORD Year,
+    __in WORD Month,
+    __in_opt PSYSTEMTIME Today
+    )
+{
+    SYSTEMTIME SysTimeAtYearStart;
+    FILETIME FileTime;
+    DWORD LineCount;
+    DWORD DayCount;
+    DWORD ThisDayNumber;
+    DWORD DesiredOffset;
+    DWORD CurrentOffset;
+    DWORD MonthIndex;
+    DWORD MonthNameLength;
+    DWORD RealDaysInMonth[12];
+    DWORD DayIndexAtStartOfMonth[12];
+    YORI_STRING Line;
+
+    ZeroMemory(&SysTimeAtYearStart, sizeof(SysTimeAtYearStart));
+
+    //
+    //  To buffer a single console row, we need one month, which consists
+    //  of a week worth of days.  We can also highlight the current day,
+    //  which takes four chars to start highlighting and four to end
+    //  highlighting, and a newline with a NULL terminator.
+    //
+
+    DesiredOffset = (CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY) + 4 * 2 + 2;
+
+    if (!YoriLibAllocateString(&Line, DesiredOffset)) {
+        return FALSE;
+    }
+
+    SysTimeAtYearStart.wYear = Year;
+    SysTimeAtYearStart.wMonth = 1;
+    SysTimeAtYearStart.wDay = 1;
+
+    if (!SystemTimeToFileTime(&SysTimeAtYearStart, &FileTime)) {
+        return FALSE;
+    }
+    if (!FileTimeToSystemTime(&FileTime, &SysTimeAtYearStart)) {
+        return FALSE;
+    }
+
+    //
+    //  Calculate the number of days in each month and which day of the week
+    //  each month starts on.
+    //
+
+    for (MonthIndex = 0; MonthIndex < 12; MonthIndex++) {
+        RealDaysInMonth[MonthIndex] = CalStaticDaysInMonth[MonthIndex];
+        if (MonthIndex == 1 && (Year % 4) == 0 && (Year % 100) != 0) {
+            RealDaysInMonth[MonthIndex] = 29;
+        }
+        if (MonthIndex == 0) {
+            DayIndexAtStartOfMonth[MonthIndex] = SysTimeAtYearStart.wDayOfWeek;
+        } else {
+            DayIndexAtStartOfMonth[MonthIndex] = (DayIndexAtStartOfMonth[MonthIndex - 1] + RealDaysInMonth[MonthIndex - 1]) % 7;
+        }
+    }
+
+    //
+    //  Print the name of the month
+    //
+
+    CurrentOffset = 0;
+    MonthNameLength = _tcslen(CalMonthNames[Month]);
+
+    DesiredOffset = ((CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY) - MonthNameLength) / 2;
+    while(CurrentOffset < DesiredOffset) {
+        Line.StartOfString[CurrentOffset] = ' ';
+        Line.LengthInChars += 1;
+        CurrentOffset++;
+    }
+
+    memcpy(&Line.StartOfString[CurrentOffset], CalMonthNames[Month], MonthNameLength * sizeof(TCHAR));
+    CurrentOffset += MonthNameLength;
+    Line.LengthInChars += MonthNameLength;
+    Line.StartOfString[Line.LengthInChars] = '\n';
+    Line.LengthInChars++;
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Line);
+    Line.LengthInChars = 0;
+
+    //
+    //  Print the day names
+    //
+
+    for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
+        YoriLibSPrintf(&Line.StartOfString[Line.LengthInChars], _T("%2s"), CalDayNames[DayCount]);
+        Line.LengthInChars += 2;
+        CurrentOffset = 2;
+        DesiredOffset = CAL_CHARS_PER_DAY;
+        while (CurrentOffset < DesiredOffset) {
+            Line.StartOfString[Line.LengthInChars] = ' ';
+            Line.LengthInChars++;
+            CurrentOffset++;
+        }
+    }
+
+    Line.StartOfString[Line.LengthInChars] = '\n';
+    Line.LengthInChars++;
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Line);
+    Line.LengthInChars = 0;
+
+    //
+    //  Print the day numbers for each month.
+    //
+
+    for (LineCount = 0; LineCount < CAL_ROWS_PER_MONTH; LineCount++) {
+        for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
+            DesiredOffset = CAL_CHARS_PER_DAY;
+            CurrentOffset = 0;
+            if (LineCount > 0 || DayCount >= DayIndexAtStartOfMonth[Month]) {
+                ThisDayNumber = LineCount * CAL_DAYS_PER_WEEK + DayCount - DayIndexAtStartOfMonth[Month] + 1;
+                if (ThisDayNumber <= RealDaysInMonth[Month]) {
+                    if (Today != NULL &&
+                        Today->wYear == Year &&
+                        Today->wMonth == (Month + 1) &&
+                        Today->wDay == ThisDayNumber) {
+
+                        YoriLibSPrintf(&Line.StartOfString[Line.LengthInChars], _T("%c[7m%02i%c[7m"), 27, ThisDayNumber, 27);
+                        Line.LengthInChars += 4 + 2 + 4;
+                    } else {
+                        YoriLibSPrintf(&Line.StartOfString[Line.LengthInChars], _T("%02i"), ThisDayNumber);
+                        Line.LengthInChars +=  2;
+                    }
+                    CurrentOffset = 2;
+                }
+            }
+            while (CurrentOffset < DesiredOffset) {
+                Line.StartOfString[Line.LengthInChars] = ' ';
+                Line.LengthInChars++;
+                CurrentOffset++;
+            }
+        }
+
+        Line.StartOfString[Line.LengthInChars] = '\n';
+        Line.LengthInChars++;
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Line);
+        Line.LengthInChars = 0;
+    }
+
+    YoriLibFreeStringContents(&Line);
+
+    return TRUE;
+}
 
 /**
  Display the calendar for a specified calendar year.
@@ -154,8 +316,23 @@ CalOutputCalendarForYear(
     DWORD MonthNameLength;
     DWORD RealDaysInMonth[12];
     DWORD DayIndexAtStartOfMonth[12];
+    YORI_STRING Line;
 
     ZeroMemory(&SysTimeAtYearStart, sizeof(SysTimeAtYearStart));
+
+    //
+    //  To buffer a single console row, we need N months, each of which
+    //  consists of a week worth of days, plus space between months.  We can
+    //  also highlight the current day, which takes four chars to start
+    //  highlighting and four to end highlighting, and a newline with a
+    //  NULL terminator.
+    //
+
+    DesiredOffset = CAL_MONTHS_PER_ROW * (CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY + CAL_CHARS_BETWEEN_MONTHS) + 4 * 2 + 2;
+
+    if (!YoriLibAllocateString(&Line, DesiredOffset)) {
+        return FALSE;
+    }
 
     SysTimeAtYearStart.wYear = Year;
     SysTimeAtYearStart.wMonth = 1;
@@ -203,14 +380,20 @@ CalOutputCalendarForYear(
 
             DesiredOffset += ((CAL_DAYS_PER_WEEK * CAL_CHARS_PER_DAY) - MonthNameLength) / 2;
             while(CurrentOffset < DesiredOffset) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                Line.StartOfString[CurrentOffset] = ' ';
+                Line.LengthInChars += 1;
                 CurrentOffset++;
             }
 
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s"), CalMonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex]);
+            memcpy(&Line.StartOfString[CurrentOffset], CalMonthNames[Quarter * CAL_MONTHS_PER_ROW + MonthIndex], MonthNameLength * sizeof(TCHAR));
             CurrentOffset += MonthNameLength;
+            Line.LengthInChars += MonthNameLength;
         }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        Line.StartOfString[Line.LengthInChars] = '\n';
+        Line.LengthInChars++;
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Line);
+        Line.LengthInChars = 0;
 
         //
         //  Print the day names
@@ -218,11 +401,13 @@ CalOutputCalendarForYear(
 
         for (MonthIndex = 0; MonthIndex < CAL_MONTHS_PER_ROW; MonthIndex++) {
             for (DayCount = 0; DayCount < CAL_DAYS_PER_WEEK; DayCount++) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%2s"), CalDayNames[DayCount]);
+                YoriLibSPrintf(&Line.StartOfString[Line.LengthInChars], _T("%2s"), CalDayNames[DayCount]);
+                Line.LengthInChars += 2;
                 CurrentOffset = 2;
                 DesiredOffset = CAL_CHARS_PER_DAY;
                 while (CurrentOffset < DesiredOffset) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                    Line.StartOfString[Line.LengthInChars] = ' ';
+                    Line.LengthInChars++;
                     CurrentOffset++;
                 }
             }
@@ -235,12 +420,16 @@ CalOutputCalendarForYear(
                 DesiredOffset = CAL_CHARS_BETWEEN_MONTHS;
                 CurrentOffset = 0;
                 while (CurrentOffset < DesiredOffset) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                    Line.StartOfString[Line.LengthInChars] = ' ';
+                    Line.LengthInChars++;
                     CurrentOffset++;
                 }
             }
         }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        Line.StartOfString[Line.LengthInChars] = '\n';
+        Line.LengthInChars++;
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Line);
+        Line.LengthInChars = 0;
 
         //
         //  Print the day numbers for each month.
@@ -260,15 +449,18 @@ CalOutputCalendarForYear(
                                 Today->wMonth == (Month + 1) &&
                                 Today->wDay == ThisDayNumber) {
 
-                                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[7m%02i%c[7m"), 27, ThisDayNumber, 27);
+                                YoriLibSPrintf(&Line.StartOfString[Line.LengthInChars], _T("%c[7m%02i%c[7m"), 27, ThisDayNumber, 27);
+                                Line.LengthInChars += 4 + 2 + 4;
                             } else {
-                                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02i"), ThisDayNumber);
+                                YoriLibSPrintf(&Line.StartOfString[Line.LengthInChars], _T("%02i"), ThisDayNumber);
+                                Line.LengthInChars +=  2;
                             }
                             CurrentOffset = 2;
                         }
                     }
                     while (CurrentOffset < DesiredOffset) {
-                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                        Line.StartOfString[Line.LengthInChars] = ' ';
+                        Line.LengthInChars++;
                         CurrentOffset++;
                     }
                 }
@@ -281,15 +473,21 @@ CalOutputCalendarForYear(
                     DesiredOffset = CAL_CHARS_BETWEEN_MONTHS;
                     CurrentOffset = 0;
                     while (CurrentOffset < DesiredOffset) {
-                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" "));
+                        Line.StartOfString[Line.LengthInChars] = ' ';
+                        Line.LengthInChars++;
                         CurrentOffset++;
                     }
                 }
             }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            Line.StartOfString[Line.LengthInChars] = '\n';
+            Line.LengthInChars++;
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Line);
+            Line.LengthInChars = 0;
         }
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
     }
+
+    YoriLibFreeStringContents(&Line);
 
     return TRUE;
 }
@@ -356,10 +554,24 @@ ENTRYPOINT(
     }
 
     if (StartArg != 0) {
+        for (i = 0; i < sizeof(CalMonthNames)/sizeof(CalMonthNames[0]); i++) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[StartArg], CalMonthNames[i]) == 0) {
+                GetLocalTime(&CurrentSysTime);
+                CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)i, &CurrentSysTime);
+                return EXIT_SUCCESS;
+            }
+        }
+
         if (!YoriLibStringToNumber(&ArgV[StartArg], FALSE, &TargetYear, &CharsConsumed) ||
             CharsConsumed == 0) {
 
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cal: invalid year specified: %y\n"), &ArgV[StartArg]);
+        }
+
+        if (TargetYear > 0 && TargetYear <= sizeof(CalMonthNames)/sizeof(CalMonthNames[0])) {
+            GetLocalTime(&CurrentSysTime);
+            CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)TargetYear - 1, &CurrentSysTime);
+            return EXIT_SUCCESS;
         }
 
         if (TargetYear < 1601 || TargetYear > 2100) {
@@ -369,7 +581,7 @@ ENTRYPOINT(
         CalOutputCalendarForYear((WORD)TargetYear, NULL);
     } else {
         GetLocalTime(&CurrentSysTime);
-        CalOutputCalendarForYear(CurrentSysTime.wYear, &CurrentSysTime);
+        CalOutputCalendarForMonth(CurrentSysTime.wYear, CurrentSysTime.wMonth - 1, &CurrentSysTime);
     }
 
     return EXIT_SUCCESS;
