@@ -570,7 +570,7 @@ ENTRYPOINT(
 
         if (TargetYear > 0 && TargetYear <= sizeof(CalMonthNames)/sizeof(CalMonthNames[0])) {
             GetLocalTime(&CurrentSysTime);
-            CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)TargetYear - 1, &CurrentSysTime);
+            CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)(TargetYear - 1), &CurrentSysTime);
             return EXIT_SUCCESS;
         }
 
@@ -581,7 +581,7 @@ ENTRYPOINT(
         CalOutputCalendarForYear((WORD)TargetYear, NULL);
     } else {
         GetLocalTime(&CurrentSysTime);
-        CalOutputCalendarForMonth(CurrentSysTime.wYear, CurrentSysTime.wMonth - 1, &CurrentSysTime);
+        CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)(CurrentSysTime.wMonth - 1), &CurrentSysTime);
     }
 
     return EXIT_SUCCESS;
