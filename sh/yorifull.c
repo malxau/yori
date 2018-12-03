@@ -466,6 +466,7 @@ YoriShBuiltins[] = {
                     {_T("WHICH"),     YoriCmd_WHICH},
                     {_T("WININFO"),   YoriCmd_WININFO},
                     {_T("WINPOS"),    YoriCmd_WINPOS},
+                    {_T("YCAL"),      YoriCmd_YCAL},
                     {_T("YCLIP"),     YoriCmd_YCLIP},
                     {_T("YCOMPACT"),  YoriCmd_YCOMPACT},
                     {_T("YCOPY"),     YoriCmd_YCOPY},
