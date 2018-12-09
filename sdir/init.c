@@ -274,39 +274,6 @@ SdirOptInitialize()
 }
 
 /**
- If the request is for a recursive enumerate, populates the root of the
- enumeration path from a user string.  This implies resolving the user string
- back to a fully qualified path.
-
- @param SubDirPath The root of the recursive enumerate.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirSetSubdirWalk(
-    __in LPTSTR SubDirPath
-    )
-{
-    YORI_STRING UserPath;
-    YORI_STRING SubDirWalk;
-    YoriLibInitEmptyString(&SubDirWalk);
-    YoriLibConstantString(&UserPath, SubDirPath);
-    if (!YoriLibUserStringToSingleFilePath(&UserPath, TRUE, &SubDirWalk)) {
-        SdirDisplayError(GetLastError(), _T("YoriLibUserStringToSingleFilePath"));
-        return FALSE;
-    }
-
-    if (Opts->SubDirWalk != NULL) {
-        YoriLibDereference(Opts->SubDirWalk);
-    }
-
-    Opts->SubDirWalk = SubDirWalk.StartOfString;
-
-    return TRUE;
-}
-
-
-/**
  Process a single command line option and configure in memory state to
  correspond to it.
 
@@ -341,12 +308,7 @@ SdirParseOpt (
                 Opts->BriefRecurseDepth = UINT_MAX;
             }
             OptParsed = TRUE;
-
-            if (Opts->SubDirWalk == NULL) {
-                if (!SdirSetSubdirWalk(_T("."))) {
-                    return FALSE;
-                }
-            }
+            Opts->Recursive = TRUE;
         } else if (Opt[1] == 's') {
             YORI_STRING YsSize;
             LARGE_INTEGER FileSize;
@@ -357,12 +319,7 @@ SdirParseOpt (
             FileSize = YoriLibStringToFileSize(&YsSize);
             Opts->BriefRecurseSize = SdirFileSizeFromLargeInt(&FileSize);
             OptParsed = TRUE;
-
-            if (Opts->SubDirWalk == NULL) {
-                if (!SdirSetSubdirWalk(_T("."))) {
-                    return FALSE;
-                }
-            }
+            Opts->Recursive = TRUE;
         }
     } else if (Opt[0] == 'c') {
         if (Opt[1] == 'w') {
@@ -494,17 +451,8 @@ SdirParseOpt (
             OptParsed = TRUE;
         }
     } else if (Opt[0] == 'r') {
-
-        LPTSTR SubDirPath = &Opt[1];
-
         OptParsed = TRUE;
-        if (SubDirPath[0] == '\0') {
-            SubDirPath = _T(".");
-        }
-
-        if (!SdirSetSubdirWalk(SubDirPath)) {
-            return FALSE;
-        }
+        Opts->Recursive = TRUE;
     } else if (Opt[0] == 't') {
         if (Opt[1] == 'n') {
             Opts->EnableNameTruncation = FALSE;
@@ -566,8 +514,6 @@ SdirParseArgs (
 
     Opts->EnableNameTruncation = TRUE;
 
-    Opts->SubDirWalk = NULL;
-
     //
     //  Default to ANSI files
     //
@@ -595,8 +541,6 @@ SdirParseArgs (
             if (YoriLibIsCommandLineOptionChar(Opt[0])) {
 
                 Opt++;
-
-                OptParsed = FALSE;
 
                 OptParsed = SdirParseOpt(Opt);
 
@@ -701,9 +645,6 @@ SdirAppCleanup()
     SetConsoleCtrlHandler(SdirCancelHandler, FALSE);
     if (Opts != NULL) {
         YoriLibFreeStringContents(&Opts->ParentName);
-        if (Opts->SubDirWalk != NULL) {
-            YoriLibDereference(Opts->SubDirWalk);
-        }
         YoriLibFree(Opts);
         Opts = NULL;
     }

@@ -455,7 +455,7 @@ SdirItemFoundCallback(
  */
 BOOL
 SdirEnumeratePathWithDepth (
-    __in LPCTSTR FindStr,
+    __in PYORI_STRING FindStr,
     __in DWORD Depth
     )
 {
@@ -465,7 +465,6 @@ SdirEnumeratePathWithDepth (
     PYORI_FILE_INFO NewSdirDirCollection;
     PYORI_FILE_INFO * NewSdirDirSorted;
     SDIR_ITEM_FOUND_CONTEXT ItemFoundContext;
-    YORI_STRING YsFindStr;
     DWORD MatchFlags;
 
     //
@@ -477,9 +476,7 @@ SdirEnumeratePathWithDepth (
         YoriLibFreeStringContents(&Opts->ParentName);
     }
 
-    YoriLibConstantString(&YsFindStr, FindStr);
-
-    if (!YoriLibGetFullPathNameReturnAllocation(&YsFindStr, TRUE, &Opts->ParentName, &FinalPart)) {
+    if (!YoriLibGetFullPathNameReturnAllocation(FindStr, TRUE, &Opts->ParentName, &FinalPart)) {
         SdirDisplayError(GetLastError(), _T("YoriLibGetFullPathNameReturnAllocation"));
         return FALSE;
     }
@@ -645,23 +642,23 @@ SdirEnumeratePathWithDepth (
         if (Depth > 0) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-        if (!YoriLibForEachFile(&YsFindStr,
+        if (!YoriLibForEachFile(FindStr,
                                 MatchFlags,
                                 0,
                                 SdirItemFoundCallback,
                                 &ItemFoundContext)) {
 
-            if (Opts->SubDirWalk == NULL) {
+            if (!Opts->Recursive) {
                 DWORD Err = GetLastError();
-                SdirDisplayError(Err, FindStr);
+                SdirDisplayYsError(Err, FindStr);
                 SetLastError(Err);
             }
             return FALSE;
         }
 
         if (ItemFoundContext.ItemsFound == 0) {
-            if (Opts->SubDirWalk == NULL) {
-                SdirDisplayError(GetLastError(), FindStr);
+            if (!Opts->Recursive) {
+                SdirDisplayYsError(GetLastError(), FindStr);
             }
             SetLastError(ERROR_FILE_NOT_FOUND);
             return FALSE;
@@ -689,7 +686,7 @@ SdirEnumeratePathWithDepth (
  */
 BOOL
 SdirEnumeratePath (
-    __in LPCTSTR FindStr
+    __in PYORI_STRING FindStr
     )
 {
     return SdirEnumeratePathWithDepth(FindStr, 0);
@@ -1036,7 +1033,7 @@ SdirDisplayCollection()
  A prototype for a callback function to invoke for each parameter that
  describes a set of files to enumerate.
  */
-typedef BOOL (* SDIR_FOR_EACH_PATHSPEC_FN)(LPCTSTR);
+typedef BOOL (* SDIR_FOR_EACH_PATHSPEC_FN)(PYORI_STRING);
 
 /**
  For every parameter specified on the command line that refers to a set of
@@ -1140,7 +1137,7 @@ SdirForEachPathSpec (
                 CloseHandle(hDir);
             }
 
-            if (!Callback( FindStr.StartOfString )) {
+            if (!Callback(&FindStr)) {
                 YoriLibFreeStringContents(&FindStr);
                 return FALSE;
             }
@@ -1150,7 +1147,8 @@ SdirForEachPathSpec (
     YoriLibFreeStringContents(&FindStr);
 
     if (!EnumerateUserSpecified) {
-        if (!Callback( _T("*") )) {
+        YoriLibConstantString(&FindStr, _T("*"));
+        if (!Callback(&FindStr)) {
             return FALSE;
         }
     }
@@ -1431,154 +1429,113 @@ SdirDisplayHeirarchySummary(
  Perform a recursive enumerate.  This may be a brief enumerate (du-style) or
  may be a regular display of files in each directory.
 
- @param TreeRoot Pointer to a NULL terminated string indicating the directory
-        to walk down.
-
  @param Depth Indicates the current recursion depth.  The user specified
         directory is zero.
 
- @param ArgC The number of arguments passed to the application.
-
- @param ArgV An array of arguments passed to the application.
+ @param FileSpec A string which contains a directory and search criteria.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 SdirEnumerateAndDisplaySubtree (
-    __in TCHAR * TreeRoot,
-    __in ULONG Depth,
-    __in DWORD ArgC,
-    __in YORI_STRING ArgV[]
+    __in DWORD Depth,
+    __in PYORI_STRING FileSpec
     )
 {
-    LPTSTR NextSubDir;
-    DWORD NextSubDirLength;
-    DWORD TreeRootLen;
+    YORI_STRING ParentDirectory;
+    YORI_STRING SearchCriteria;
+    LPTSTR FinalBackslash;
+    YORI_STRING NextSubDir;
     HANDLE hFind;
     WIN32_FIND_DATA FindData;
-    ULONG  CurrentArg;
-    BOOLEAN EnumerateUserSpecified = FALSE;
     SDIR_SUMMARY SummaryOnEntry;
     LPTSTR szFormatStr;
-    YORI_STRING Arg;
-   
+
+    YoriLibInitEmptyString(&ParentDirectory);
+    YoriLibInitEmptyString(&SearchCriteria);
+
+    FinalBackslash = YoriLibFindRightMostCharacter(FileSpec, '\\');
+    if (FinalBackslash != NULL) {
+        ParentDirectory.StartOfString = FileSpec->StartOfString;
+        ParentDirectory.LengthInChars = (DWORD)(FinalBackslash - FileSpec->StartOfString);
+        ParentDirectory.LengthAllocated = ParentDirectory.LengthInChars + 1;
+
+        FinalBackslash[0] = '\0';
+
+        SearchCriteria.StartOfString = FinalBackslash + 1;
+        SearchCriteria.LengthInChars = FileSpec->LengthInChars - ParentDirectory.LengthInChars - 1;
+        SearchCriteria.LengthAllocated = FileSpec->LengthAllocated - ParentDirectory.LengthAllocated;
+
+    } else {
+        SearchCriteria.StartOfString = FileSpec->StartOfString;
+        SearchCriteria.LengthInChars = FileSpec->LengthInChars;
+        SearchCriteria.LengthAllocated = FileSpec->LengthAllocated;
+    }
+
+    ASSERT(ParentDirectory.LengthInChars == 0 || YoriLibIsStringNullTerminated(&ParentDirectory));
+    ASSERT(YoriLibIsStringNullTerminated(&SearchCriteria));
+
     memcpy(&SummaryOnEntry, Summary, sizeof(SDIR_SUMMARY));
 
-    TreeRootLen = (DWORD)_tcslen(TreeRoot);
-    NextSubDirLength = TreeRootLen + YORI_LIB_MAX_FILE_NAME + 2;
-    NextSubDir = YoriLibMalloc(NextSubDirLength * sizeof(TCHAR));
-    if (NextSubDir == NULL) {
-        SdirDisplayError(GetLastError(), _T("YoriLibMalloc"));
+    if (!YoriLibAllocateString(&NextSubDir, ParentDirectory.LengthInChars + YORI_LIB_MAX_FILE_NAME + 2 + SearchCriteria.LengthInChars + 1)) {
+        SdirDisplayError(GetLastError(), _T("YoriLibAllocateString"));
         return FALSE;
     }
 
-    //
-    //  If the user has specified search criteria, go ahead and collect
-    //  those.  There may be multiple.
-    //
-
-    for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
-        if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
-
-            if (TreeRoot[TreeRootLen - 1] == '\\') {
-                szFormatStr = _T("%s%y");
-            } else {
-                szFormatStr = _T("%s\\%y");
-            }
-
-            if (YoriLibSPrintfS(NextSubDir, NextSubDirLength, szFormatStr, TreeRoot, &ArgV[CurrentArg]) < 0 ||
-                NextSubDir[0] == '\0') {
-
-                SdirWriteString(_T("Path exceeds allocated length\n"));
-                YoriLibFree(NextSubDir);
-                return FALSE;
-            }
-
-            EnumerateUserSpecified = TRUE;
-
-            if (!SdirEnumeratePathWithDepth(NextSubDir, Depth)) {
-                DWORD Err = GetLastError();
-                if (SdirIsReportableError(Err)) {
-
-                    Opts->ErrorsFound = TRUE;
-                }
-                if (!SdirContinuableError(Err)) {
-
-                    YoriLibFree(NextSubDir);
-                    return FALSE;
-                }
-            }
-        }
+    if (ParentDirectory.LengthInChars == 0 ||
+        ParentDirectory.StartOfString[ParentDirectory.LengthInChars - 1] == '\\') {
+        szFormatStr = _T("%y%y");
+    } else {
+        szFormatStr = _T("%y\\%y");
     }
 
-    //
-    //  If the user hasn't specified any search criteria, assume "*" and
-    //  collect everything.
-    //
+    if (YoriLibYPrintf(&NextSubDir, szFormatStr, &ParentDirectory, &SearchCriteria) < 0 ||
+        NextSubDir.LengthInChars == 0) {
 
-    if (!EnumerateUserSpecified) {
+        SdirWriteString(_T("Path exceeds allocated length\n"));
+        YoriLibFreeStringContents(&NextSubDir);
+        return FALSE;
+    }
 
-        if (TreeRoot[TreeRootLen - 1] == '\\') {
-            szFormatStr = _T("%s*");
-        } else {
-            szFormatStr = _T("%s\\*");
+    if (!SdirEnumeratePathWithDepth(&NextSubDir, Depth)) {
+        DWORD Err = GetLastError();
+        if (SdirIsReportableError(Err)) {
+
+            Opts->ErrorsFound = TRUE;
         }
+        if (!SdirContinuableError(Err)) {
 
-        if (YoriLibSPrintfS(NextSubDir, NextSubDirLength, szFormatStr, TreeRoot) < 0 ||
-            NextSubDir[0] == '\0') {
-
-            SdirWriteString(_T("Path exceeds allocated length\n"));
-            YoriLibFree(NextSubDir);
+            YoriLibFreeStringContents(&NextSubDir);
             return FALSE;
         }
-
-        if (!SdirEnumeratePathWithDepth(NextSubDir, Depth)) {
-            DWORD Err = GetLastError();
-            if (SdirIsReportableError(Err)) {
-
-                Opts->ErrorsFound = TRUE;
-            }
-            if (!SdirContinuableError(Err)) {
-
-                YoriLibFree(NextSubDir);
-                return FALSE;
-            }
-        }
     }
 
     //
-    //  If we're giving a regular view and
-    //  have something to display, display it.
+    //  If we're giving a regular view and have something to display,
+    //  display it.
     //
 
     if (Opts->BriefRecurseDepth == 0 && SdirDirCollectionCurrent > 0) {
 
         YORILIB_COLOR_ATTRIBUTES RenderAttributes;
-        YORI_STRING YsTreeRoot;
+        RenderAttributes = SdirRenderAttributesFromPath(&ParentDirectory);
 
-        YoriLibInitEmptyString(&YsTreeRoot);
-        YsTreeRoot.StartOfString = TreeRoot;
-        YsTreeRoot.LengthInChars = TreeRootLen;
-        YsTreeRoot.LengthAllocated = TreeRootLen + 1;
-
-        RenderAttributes = SdirRenderAttributesFromPath(&YsTreeRoot);
-
-        if (YoriLibIsFullPathUnc(&YsTreeRoot)) {
+        if (YoriLibIsFullPathUnc(&ParentDirectory)) {
             SdirWriteStringWithAttribute(_T("\\\\"), RenderAttributes);
-            SdirWriteStringWithAttribute(&TreeRoot[8], RenderAttributes);
+            SdirWriteStringWithAttribute(&ParentDirectory.StartOfString[8], RenderAttributes);
         } else {
-            SdirWriteStringWithAttribute(&TreeRoot[4], RenderAttributes);
+            SdirWriteStringWithAttribute(&ParentDirectory.StartOfString[4], RenderAttributes);
         }
     
         SdirNewlineThroughDisplay();
 
         if (!SdirRowDisplayed()) {
-            YoriLibFree(NextSubDir);
+            YoriLibFreeStringContents(&NextSubDir);
             return FALSE;
         }
 
         if (!SdirDisplayCollection()) {
-            YoriLibFree(NextSubDir);
+            YoriLibFreeStringContents(&NextSubDir);
             return FALSE;
         }
     }
@@ -1592,36 +1549,38 @@ SdirEnumerateAndDisplaySubtree (
     SdirDirCollectionLongest = 0;
     SdirDirCollectionTotalNameLength = 0;
 
-    if (TreeRoot[TreeRootLen - 1] == '\\') {
-        szFormatStr = _T("%s*");
+    if (ParentDirectory.LengthInChars == 0 ||
+        ParentDirectory.StartOfString[ParentDirectory.LengthInChars - 1] == '\\') {
+
+        szFormatStr = _T("%y*");
     } else {
-        szFormatStr = _T("%s\\*");
+        szFormatStr = _T("%y\\*");
     }
 
-    if (YoriLibSPrintfS(NextSubDir, NextSubDirLength, szFormatStr, TreeRoot) < 0 ||
-        NextSubDir[0] == '\0') {
+    if (YoriLibYPrintf(&NextSubDir, szFormatStr, &ParentDirectory) < 0 ||
+        NextSubDir.LengthInChars == 0) {
 
         SdirWriteString(_T("Path exceeds allocated length\n"));
-        YoriLibFree(NextSubDir);
+        YoriLibFreeStringContents(&NextSubDir);
         return FALSE;
     }
 
-    hFind = FindFirstFile(NextSubDir, &FindData);
+    hFind = FindFirstFile(NextSubDir.StartOfString, &FindData);
     
     if (hFind == NULL || hFind == INVALID_HANDLE_VALUE) {
         DWORD Err = GetLastError();
         Opts->ErrorsFound = TRUE;
         if (SdirIsReportableError(Err)) {
-            if (!SdirDisplayError(Err, NextSubDir)) {
-                YoriLibFree(NextSubDir);
+            if (!SdirDisplayYsError(Err, &NextSubDir)) {
+                YoriLibFreeStringContents(&NextSubDir);
                 return FALSE;
             }
         }
         if (!SdirContinuableError(Err)) {
-            YoriLibFree(NextSubDir);
+            YoriLibFreeStringContents(&NextSubDir);
             return FALSE;
         } else {
-            YoriLibFree(NextSubDir);
+            YoriLibFreeStringContents(&NextSubDir);
             return TRUE;
         }
     }
@@ -1636,30 +1595,31 @@ SdirEnumerateAndDisplaySubtree (
                 (FindData.dwReserved0 != IO_REPARSE_TAG_MOUNT_POINT &&
                  FindData.dwReserved0 != IO_REPARSE_TAG_SYMLINK)) {
 
-                if (TreeRoot[TreeRootLen - 1] == '\\') {
-                    szFormatStr = _T("%s%s");
+                if (ParentDirectory.LengthInChars == 0 ||
+                    ParentDirectory.StartOfString[ParentDirectory.LengthInChars - 1] == '\\') {
+                    szFormatStr = _T("%y%s\\%y");
                 } else {
-                    szFormatStr = _T("%s\\%s");
+                    szFormatStr = _T("%y\\%s\\%y");
                 }
 
-                if (YoriLibSPrintfS(NextSubDir, NextSubDirLength, szFormatStr, TreeRoot, FindData.cFileName) < 0 ||
-                    NextSubDir[0] == '\0') {
+                if (YoriLibYPrintf(&NextSubDir, szFormatStr, &ParentDirectory, FindData.cFileName, &SearchCriteria) < 0 ||
+                    NextSubDir.LengthInChars == 0) {
 
                     SdirWriteString(_T("Path exceeds allocated length\n"));
-                    YoriLibFree(NextSubDir);
+                    YoriLibFreeStringContents(&NextSubDir);
                     return FALSE;
                 }
     
-                if (!SdirEnumerateAndDisplaySubtree(NextSubDir, Depth + 1, ArgC, ArgV)) {
+                if (!SdirEnumerateAndDisplaySubtree(Depth + 1, &NextSubDir)) {
                     FindClose(hFind);
-                    YoriLibFree(NextSubDir);
+                    YoriLibFreeStringContents(&NextSubDir);
                     return FALSE;
                 }
             }
         }
     } while (FindNextFile(hFind, &FindData) && !Opts->Cancelled);
 
-    YoriLibFree(NextSubDir);
+    YoriLibFreeStringContents(&NextSubDir);
     
     FindClose(hFind);
 
@@ -1669,9 +1629,63 @@ SdirEnumerateAndDisplaySubtree (
     //
 
     if (Opts->BriefRecurseDepth != 0 && Depth <= Opts->BriefRecurseDepth) {
-        if (!SdirDisplayHeirarchySummary(TreeRoot, &SummaryOnEntry, Summary, Opts->FtSummary.HighlightColor)) {
+        if (!SdirDisplayHeirarchySummary(ParentDirectory.StartOfString, &SummaryOnEntry, Summary, Opts->FtSummary.HighlightColor)) {
             return FALSE;
         }
+    }
+
+    return TRUE;
+}
+
+/**
+ Walk through each of the arguments to the program and enumerate each
+ recursively.
+
+ @param ArgC Number of arguments passed to the program.
+
+ @param ArgV An array of each argument passed to the program.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SdirEnumerateAndDisplayRecursive (
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
+    )
+{
+    BOOLEAN EnumerateUserSpecified = FALSE;
+    ULONG CurrentArg;
+    YORI_STRING Arg;
+    YORI_STRING FindStr;
+
+    for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
+        if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
+
+            YoriLibInitEmptyString(&FindStr);
+            if (!YoriLibUserStringToSingleFilePath(&ArgV[CurrentArg], TRUE, &FindStr)) {
+                return FALSE;
+            }
+
+            if (!SdirEnumerateAndDisplaySubtree(0, &FindStr)) {
+                YoriLibFreeStringContents(&FindStr);
+                return FALSE;
+            }
+            YoriLibFreeStringContents(&FindStr);
+            EnumerateUserSpecified = TRUE;
+        }
+    }
+
+    if (!EnumerateUserSpecified) {
+        YoriLibConstantString(&Arg, _T("*"));
+        YoriLibInitEmptyString(&FindStr);
+        if (!YoriLibUserStringToSingleFilePath(&Arg, TRUE, &FindStr)) {
+            return FALSE;
+        }
+        if (!SdirEnumerateAndDisplaySubtree(0, &FindStr)) {
+            YoriLibFreeStringContents(&FindStr);
+            return FALSE;
+        }
+        YoriLibFreeStringContents(&FindStr);
     }
 
     return TRUE;
@@ -1716,8 +1730,8 @@ ENTRYPOINT(
         goto restore_and_exit;
     }
 
-    if (Opts->SubDirWalk != NULL) {
-        if (!SdirEnumerateAndDisplaySubtree(Opts->SubDirWalk, 0, ArgC, ArgV)) {
+    if (Opts->Recursive) {
+        if (!SdirEnumerateAndDisplayRecursive(ArgC, ArgV)) {
             goto restore_and_exit;
         }
 

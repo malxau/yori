@@ -323,7 +323,7 @@ SdirPasteStrAndPad (
 BOOL
 SdirDisplayError (
     __in LONG ErrorCode,
-    __in LPCTSTR Prefix
+    __in_opt LPCTSTR Prefix
     )
 {
     LPTSTR OutputBuffer;
@@ -348,6 +348,47 @@ SdirDisplayError (
         LocalFree((PVOID)OutputBuffer);
     }
     return TRUE;
+}
+
+/**
+ Display a Win32 error string with a prefix string describing the context of
+ the error.
+
+ @param ErrorCode The Win32 error code to display the error string for.
+
+ @param YsPrefix A prefix string describing the context of the error.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SdirDisplayYsError (
+    __in LONG ErrorCode,
+    __in PYORI_STRING YsPrefix
+    )
+{
+    LPTSTR OutputBuffer;
+    YORI_STRING EntireMsg;
+    BOOL RetVal = FALSE;
+
+    if (FormatMessage(
+            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
+            NULL,
+            ErrorCode,
+            MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            (LPTSTR)&OutputBuffer,
+            0,
+            NULL)) {
+
+        YoriLibInitEmptyString(&EntireMsg);
+        YoriLibYPrintf(&EntireMsg, _T("%y: %s"), YsPrefix, OutputBuffer);
+        if (EntireMsg.StartOfString != NULL) {
+            SdirWriteStringWithAttribute(EntireMsg.StartOfString, Opts->FtError.HighlightColor);
+            YoriLibFreeStringContents(&EntireMsg);
+            RetVal = TRUE;
+        }
+        LocalFree((PVOID)OutputBuffer);
+    }
+    return RetVal;
 }
 
 /**

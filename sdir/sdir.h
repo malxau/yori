@@ -355,10 +355,10 @@ typedef struct _SDIR_OPTS {
     DWORD           CustomFileFilterLength;
 
     /**
-     Specifies the root path that should be recursively enumerated, or NULL
-     if no recursive enumerate is requested.
+     TRUE if any specification should be recursively enumerated, or
+     FALSE to only display a single level.
      */
-    LPTSTR          SubDirWalk;
+    BOOL            Recursive;
 
     /**
      Specifies the name of the directory that is currently being enumerated.
@@ -907,7 +907,13 @@ SdirWriteStringWithAttribute (
 BOOL
 SdirDisplayError (
     __in LONG ErrorCode,
-    __in LPCTSTR Prefix
+    __in_opt LPCTSTR Prefix
+    );
+
+BOOL
+SdirDisplayYsError (
+    __in LONG ErrorCode,
+    __in PYORI_STRING YsPrefix
     );
 
 extern YORILIB_COLOR_ATTRIBUTES SdirDefaultColor;

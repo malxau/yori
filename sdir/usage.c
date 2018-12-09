@@ -212,7 +212,7 @@ CHAR strCmdLineOpts[] =
                    "   -fe[string]  Exclude files matching criteria, see file color section\n"
                    "   -l/-ln       Traverse symbolic links and mount points when recursing\n"
                    "   -p/-pn       Pause/no pause after each screen\n"
-                   "   -r[dir]      Recurse through dir when enumerating\n"
+                   "   -r           Recurse through directories when enumerating\n"
                    "   -t/-tn       Truncate/no truncate of very long file names\n"
 #ifdef UNICODE
                    "   -u/-un       Unicode/no unicode output\n"
