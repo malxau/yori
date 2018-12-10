@@ -75,6 +75,7 @@ CHAR strHelpHelpText1[] =
         "CUT       Outputs a portion of an input buffer of text\n"
         "CVTVT     Converts text with VT100 color escapes into another format\n"
         "DATE      Outputs the system date and time in a specified format\n"
+        "DF        Display disk free space\n"
         "DIR       Enumerate the contents of directories in a traditional way\n"
         "ECHO      Outputs text\n"
         "ENDLOCAL  Pop a previous saved environment from the stack (only valid after\n"

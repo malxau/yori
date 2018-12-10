@@ -48,6 +48,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("cut"),      _T("ycut $*$")},
     {_T("date"),     _T("ydate $*$")},
     {_T("del"),      _T("yerase $*$")},
+    {_T("df"),       _T("ydf $*$")},
     {_T("dir"),      _T("ydir $*$")},
     {_T("echo"),     _T("yecho $*$")},
     {_T("erase"),    _T("yerase $*$")},

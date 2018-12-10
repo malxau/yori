@@ -8,6 +8,7 @@
 ..\cut\builtins.lib
 ..\cvtvt\builtins.lib
 ..\date\builtins.lib
+..\df\builtins.lib
 ..\dir\builtins.lib
 ..\echo\builtins.lib
 ..\erase\builtins.lib

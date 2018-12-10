@@ -55,6 +55,7 @@ DIRS=crt       \
      cut       \
      cvtvt     \
      date      \
+     df        \
      dir       \
      echo      \
      erase     \

@@ -1391,7 +1391,7 @@ YoriLibFindNextVolume(
                 return FALSE;
             }
 
-            ProbeString[0] = (TCHAR)FindContext->NextDriveLetter + 'A';
+            ProbeString[0] = (TCHAR)(FindContext->NextDriveLetter + 'A');
             ProbeString[1] = ':';
             ProbeString[2] = '\\';
             ProbeString[3] = '\0';
