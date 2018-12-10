@@ -388,7 +388,6 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&Ext);
                     Ext.StartOfString = Period + 1;
                     Ext.LengthInChars = ArgV[i].LengthInChars - (DWORD)(Period - ArgV[i].StartOfString) - 1;
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Looking for extension %y\n"), &Ext);
                     if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T("iso")) == 0) {
                         FileName = &ArgV[i];
                         Op = MountOpMountIso;
