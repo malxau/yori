@@ -1158,6 +1158,71 @@ YoriLibStringToFileSize(
 }
 
 /**
+ Convert a 64 bit file size into a string.  This function returns 3 or 4
+ significant digits followed by a suffix indicating the magnitude, for a
+ total of 5 chars.
+
+ @param String On successful completion, updated to contain the string form
+        of the file size.  The caller should ensure this is allocated with
+        six chars on input.
+
+ @param FileSize The numeric file size.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibFileSizeToString(
+    __out PYORI_STRING String,
+    __in PLARGE_INTEGER FileSize
+    )
+{
+    TCHAR Suffixes[] = {'b', 'k', 'm', 'g', 't', '?'};
+    DWORD SuffixLevel = 0;
+    LARGE_INTEGER Size = *FileSize;
+    LARGE_INTEGER OldSize = Size;
+
+    if (String->LengthAllocated < sizeof("12.3k")) {
+        return FALSE;
+    }
+
+
+    while (Size.HighPart != 0 || Size.LowPart > 9999) {
+        SuffixLevel++;
+        OldSize = Size;
+
+        //
+        //  Conceptually we want to divide by 1024.  We do this
+        //  in two 32-bit shifts combining back the high bits
+        //  so we don't need full compiler support.
+        //
+
+        Size.LowPart = (Size.LowPart >> 10) + ((Size.HighPart & 0x3ff) << 22);
+        Size.HighPart = (Size.HighPart >> 10) & 0x003fffff;
+    }
+
+    if (SuffixLevel >= sizeof(Suffixes)/sizeof(TCHAR)) {
+        SuffixLevel = sizeof(Suffixes)/sizeof(TCHAR) - 1;
+    }
+
+    if (Size.LowPart < 100 && SuffixLevel > 0) {
+        OldSize.LowPart = (OldSize.LowPart % 1024) * 10 / 1024;
+        String->LengthInChars = YoriLibSPrintfS(String->StartOfString,
+                                                String->LengthAllocated,
+                                                _T("%2i.%1i%c"),
+                                                (int)Size.LowPart,
+                                                (int)OldSize.LowPart,
+                                                Suffixes[SuffixLevel]);
+    } else {
+        String->LengthInChars = YoriLibSPrintfS(String->StartOfString,
+                                                String->LengthAllocated,
+                                                _T("%4i%c"),
+                                                (int)Size.LowPart,
+                                                Suffixes[SuffixLevel]);
+    }
+    return TRUE;
+}
+
+/**
  Parse a string specifying a file date and return a timestamp from the result.
 
  @param String Pointer to the string to parse.

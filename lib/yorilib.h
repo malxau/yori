@@ -1372,6 +1372,32 @@ YoriLibGetVolumePathName(
     __inout PYORI_STRING VolumeName
     );
 
+HANDLE
+YoriLibFindFirstVolume(
+    __out LPWSTR VolumeName,
+    __in DWORD BufferLength
+    );
+
+BOOL
+YoriLibFindNextVolume(
+    __in HANDLE FindHandle,
+    __out LPWSTR VolumeName,
+    __in DWORD BufferLength
+    );
+
+BOOL
+YoriLibFindVolumeClose(
+    __in HANDLE FindHandle
+    );
+
+BOOL
+YoriLibGetDiskFreeSpace(
+    __in LPCTSTR DirectoryName,
+    __out_opt PLARGE_INTEGER BytesAvailable,
+    __out_opt PLARGE_INTEGER TotalBytes,
+    __out_opt PLARGE_INTEGER FreeBytes
+    );
+
 // *** HASH.C ***
 
 PYORI_HASH_TABLE
@@ -2358,6 +2384,12 @@ YoriLibStringToHexBuffer(
 LARGE_INTEGER
 YoriLibStringToFileSize(
     __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibFileSizeToString(
+    __out PYORI_STRING String,
+    __in PLARGE_INTEGER FileSize
     );
 
 BOOL

@@ -126,7 +126,10 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pCreateJobObjectW = (PCREATE_JOB_OBJECTW)GetProcAddress(DllKernel32.hDll, "CreateJobObjectW");
     DllKernel32.pCreateSymbolicLinkW = (PCREATE_SYMBOLIC_LINKW)GetProcAddress(DllKernel32.hDll, "CreateSymbolicLinkW");
     DllKernel32.pFindFirstStreamW = (PFIND_FIRST_STREAMW)GetProcAddress(DllKernel32.hDll, "FindFirstStreamW");
+    DllKernel32.pFindFirstVolumeW = (PFIND_FIRST_VOLUMEW)GetProcAddress(DllKernel32.hDll, "FindFirstVolumeW");
     DllKernel32.pFindNextStreamW = (PFIND_NEXT_STREAMW)GetProcAddress(DllKernel32.hDll, "FindNextStreamW");
+    DllKernel32.pFindNextVolumeW = (PFIND_NEXT_VOLUMEW)GetProcAddress(DllKernel32.hDll, "FindNextVolumeW");
+    DllKernel32.pFindVolumeClose = (PFIND_VOLUME_CLOSE)GetProcAddress(DllKernel32.hDll, "FindVolumeClose");
     DllKernel32.pFreeEnvironmentStringsW = (PFREE_ENVIRONMENT_STRINGSW)GetProcAddress(DllKernel32.hDll, "FreeEnvironmentStringsW");
     DllKernel32.pGetCompressedFileSizeW = (PGET_COMPRESSED_FILE_SIZEW)GetProcAddress(DllKernel32.hDll, "GetCompressedFileSizeW");
     DllKernel32.pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(DllKernel32.hDll, "GetConsoleAliasesLengthW");
@@ -140,6 +143,7 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(DllKernel32.hDll, "GetFileInformationByHandleEx");
     DllKernel32.pGetPrivateProfileSectionNamesW = (PGET_PRIVATE_PROFILE_SECTION_NAMESW)GetProcAddress(DllKernel32.hDll, "GetPrivateProfileSectionNamesW");
     DllKernel32.pGetVersionExW = (PGET_VERSION_EXW)GetProcAddress(DllKernel32.hDll, "GetVersionExW");
+    DllKernel32.pGetVolumePathNamesForVolumeNameW = (PGET_VOLUME_PATH_NAMES_FOR_VOLUME_NAMEW)GetProcAddress(DllKernel32.hDll, "GetVolumePathNamesForVolumeNameW");
     DllKernel32.pGetVolumePathNameW = (PGET_VOLUME_PATH_NAMEW)GetProcAddress(DllKernel32.hDll, "GetVolumePathNameW");
     DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(DllKernel32.hDll, "IsWow64Process");
     DllKernel32.pQueryFullProcessImageNameW = (PQUERY_FULL_PROCESS_IMAGE_NAMEW)GetProcAddress(DllKernel32.hDll, "QueryFullProcessImageNameW");

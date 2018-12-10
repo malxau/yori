@@ -2673,6 +2673,18 @@ FIND_FIRST_STREAMW(LPCWSTR, DWORD, PWIN32_FIND_STREAM_DATA, DWORD);
 typedef FIND_FIRST_STREAMW *PFIND_FIRST_STREAMW;
 
 /**
+ A prototype for the FindFirstVolumeW function.
+ */
+typedef
+HANDLE WINAPI 
+FIND_FIRST_VOLUMEW(LPWSTR, DWORD);
+
+/**
+ A prototype for a pointer to the FindFirstVolumeW function.
+ */
+typedef FIND_FIRST_VOLUMEW *PFIND_FIRST_VOLUMEW;
+
+/**
  A prototype for the FindNextStreamW function.
  */
 typedef
@@ -2683,6 +2695,30 @@ FIND_NEXT_STREAMW(HANDLE, PWIN32_FIND_STREAM_DATA);
  A prototype for a pointer to the FindNextStreamW function.
  */
 typedef FIND_NEXT_STREAMW *PFIND_NEXT_STREAMW;
+
+/**
+ A prototype for the FindNextVolumeW function.
+ */
+typedef
+BOOL WINAPI 
+FIND_NEXT_VOLUMEW(HANDLE, LPWSTR, DWORD);
+
+/**
+ A prototype for a pointer to the FindNextVolumeW function.
+ */
+typedef FIND_NEXT_VOLUMEW *PFIND_NEXT_VOLUMEW;
+
+/**
+ A prototype for the FindVolumeClose function.
+ */
+typedef
+BOOL WINAPI 
+FIND_VOLUME_CLOSE(HANDLE);
+
+/**
+ A prototype for a pointer to the FindVolumeClose function.
+ */
+typedef FIND_VOLUME_CLOSE *PFIND_VOLUME_CLOSE;
 
 /**
  A prototype for the FreeEnvironmentStringsW function.
@@ -2841,6 +2877,18 @@ GET_VERSION_EXW(PYORI_OS_VERSION_INFO);
 typedef GET_VERSION_EXW *PGET_VERSION_EXW;
 
 /**
+ A prototype for the GetVolumePathNamesForVolumeNameW function.
+ */
+typedef
+BOOL WINAPI
+GET_VOLUME_PATH_NAMES_FOR_VOLUME_NAMEW(LPCWSTR, LPWSTR, DWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the GetVolumePathNamesForVolumeNameW function.
+ */
+typedef GET_VOLUME_PATH_NAMES_FOR_VOLUME_NAMEW *PGET_VOLUME_PATH_NAMES_FOR_VOLUME_NAMEW;
+
+/**
  A prototype for the GetVolumePathNameW function.
  */
 typedef
@@ -2978,9 +3026,24 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
     PFIND_FIRST_STREAMW pFindFirstStreamW;
 
     /**
+     If it's available on the current system, a pointer to FindFirstVolumeW.
+     */
+    PFIND_FIRST_VOLUMEW pFindFirstVolumeW;
+
+    /**
      If it's available on the current system, a pointer to FindNextStreamW.
      */
     PFIND_NEXT_STREAMW pFindNextStreamW;
+
+    /**
+     If it's available on the current system, a pointer to FindNextVolumeW.
+     */
+    PFIND_NEXT_VOLUMEW pFindNextVolumeW;
+
+    /**
+     If it's available on the current system, a pointer to FindVolumeClose.
+     */
+    PFIND_VOLUME_CLOSE pFindVolumeClose;
 
     /**
      If it's available on the current system, a pointer to FreeEnvironmentStringsW.
@@ -3046,6 +3109,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetVersionExW.
      */
     PGET_VERSION_EXW pGetVersionExW;
+
+    /**
+     If it's available on the current system, a pointer to GetVolumePathNamesForVolumeNameW.
+     */
+    PGET_VOLUME_PATH_NAMES_FOR_VOLUME_NAMEW pGetVolumePathNamesForVolumeNameW;
 
     /**
      If it's available on the current system, a pointer to GetVolumePathNameW.

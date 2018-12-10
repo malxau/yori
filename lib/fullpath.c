@@ -373,7 +373,7 @@ YoriLibGetFullPathNameReturnAllocation(
                 SetLastError(ERROR_NOT_ENOUGH_MEMORY);
                 return FALSE;
             }
-    
+
             Result = GetCurrentDirectory(CurrentDirectory.LengthAllocated, CurrentDirectory.StartOfString);
             if (Result == 0 || Result >= CurrentDirectory.LengthAllocated) {
                 YoriLibFreeStringContents(&CurrentDirectory);
@@ -1333,5 +1333,237 @@ YoriLibGetVolumePathName(
     return FALSE;
 }
 
+/**
+ Context structure used to preserve state about the next volume to return
+ when a native platform implementation of FindFirstVolume et al are not
+ available.
+ */
+typedef struct _YORI_LIB_FIND_VOLUME_CONTEXT {
+
+    /**
+     Indicates the number of the drive to probe on the next call to
+     @ref YoriLibFindNextVolume .
+     */
+    DWORD NextDriveLetter;
+} YORI_LIB_FIND_VOLUME_CONTEXT, *PYORI_LIB_FIND_VOLUME_CONTEXT;
+
+/**
+ Returns the next volume on the system following a previous call to
+ @ref YoriLibFindFirstVolume.  When no more volumes are available, this
+ function will return FALSE and set last error to ERROR_NO_MORE_FILES.
+ When this occurs, the handle must be closed with
+ @ref YoriLibFindVolumeClose.
+
+ @param FindHandle The handle previously returned from
+        @ref YoriLibFindFirstVolume .
+
+ @param VolumeName On successful completion, populated with the path to the
+        next volume found.
+
+ @param BufferLength Specifies the length, in characters, of the VolumeName
+        buffer.
+
+ @return On successful completion, an opaque handle to use for subsequent
+         matches by calling @ref YoriLibFindNextVolume , and terminated by
+         calling @ref YoriLibFindVolumeClose .  On failure,
+         INVALID_HANDLE_VALUE.
+ */
+BOOL
+YoriLibFindNextVolume(
+    __in HANDLE FindHandle,
+    __out LPWSTR VolumeName,
+    __in DWORD BufferLength
+    )
+{
+    if (DllKernel32.pFindFirstVolumeW &&
+        DllKernel32.pFindNextVolumeW &&
+        DllKernel32.pFindVolumeClose) {
+
+        return DllKernel32.pFindNextVolumeW(FindHandle, VolumeName, BufferLength);
+    } else {
+        PYORI_LIB_FIND_VOLUME_CONTEXT FindContext = (PYORI_LIB_FIND_VOLUME_CONTEXT)FindHandle;
+        TCHAR ProbeString[sizeof("A:\\")];
+        DWORD DriveType;
+
+        while(TRUE) {
+            if (FindContext->NextDriveLetter + 'A' > 'Z') {
+                SetLastError(ERROR_NO_MORE_FILES);
+                return FALSE;
+            }
+
+            ProbeString[0] = (TCHAR)FindContext->NextDriveLetter + 'A';
+            ProbeString[1] = ':';
+            ProbeString[2] = '\\';
+            ProbeString[3] = '\0';
+
+            DriveType = GetDriveType(ProbeString);
+            if (DriveType != DRIVE_UNKNOWN &&
+                DriveType != DRIVE_NO_ROOT_DIR) {
+
+                if (BufferLength >= sizeof(ProbeString)/sizeof(ProbeString[0])) {
+                    memcpy(VolumeName, ProbeString, sizeof(ProbeString)/sizeof(ProbeString[0]) * sizeof(TCHAR));
+                    FindContext->NextDriveLetter++;
+                    return TRUE;
+                } else {
+                    SetLastError(ERROR_INSUFFICIENT_BUFFER);
+                    return FALSE;
+                }
+            }
+
+            FindContext->NextDriveLetter++;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
+ Close a handle returned from @ref YoriLibFindFirstVolume .
+
+ @param FindHandle The handle to close.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibFindVolumeClose(
+    __in HANDLE FindHandle
+    )
+{
+    if (DllKernel32.pFindFirstVolumeW &&
+        DllKernel32.pFindNextVolumeW &&
+        DllKernel32.pFindVolumeClose) {
+
+        return DllKernel32.pFindVolumeClose(FindHandle);
+    } else {
+        YoriLibFree(FindHandle);
+    }
+    return TRUE;
+}
+
+/**
+ Returns the first volume on the system and a handle to use for subsequent
+ volumes with @ref YoriLibFindNextVolume .  This handle must be closed with
+ @ref YoriLibFindVolumeClose.
+
+ @param VolumeName On successful completion, populated with the path to the
+        first volume found.
+
+ @param BufferLength Specifies the length, in characters, of the VolumeName
+        buffer.
+
+ @return On successful completion, an opaque handle to use for subsequent
+         matches by calling @ref YoriLibFindNextVolume , and terminated by
+         calling @ref YoriLibFindVolumeClose .  On failure,
+         INVALID_HANDLE_VALUE.
+ */
+HANDLE
+YoriLibFindFirstVolume(
+    __out LPWSTR VolumeName,
+    __in DWORD BufferLength
+    )
+{
+    if (DllKernel32.pFindFirstVolumeW &&
+        DllKernel32.pFindNextVolumeW &&
+        DllKernel32.pFindVolumeClose) {
+
+        return DllKernel32.pFindFirstVolumeW(VolumeName, BufferLength);
+    } else {
+        PYORI_LIB_FIND_VOLUME_CONTEXT FindContext;
+
+        FindContext = YoriLibMalloc(sizeof(YORI_LIB_FIND_VOLUME_CONTEXT));
+        if (FindContext == NULL) {
+            return INVALID_HANDLE_VALUE;
+        }
+
+        FindContext->NextDriveLetter = 0;
+
+        if (YoriLibFindNextVolume((HANDLE)FindContext, VolumeName, BufferLength)) {
+            return (HANDLE)FindContext;
+        } else {
+            YoriLibFindVolumeClose((HANDLE)FindContext);
+        }
+    }
+    return INVALID_HANDLE_VALUE;
+}
+
+/**
+ Wrapper that calls GetDiskFreeSpaceEx if present, and if not uses 64 bit
+ math to calculate total and free disk space up to the limit (which should
+ be around 8Tb with a 4Kb cluster size.)
+
+ @param DirectoryName Specifies the drive or directory to calculate free
+        space for.
+
+ @param BytesAvailable Optionally points to a location to receive the amount
+        of allocatable space on successful completion.
+
+ @param TotalBytes Optionally points to a location to receive the amount
+        of total space on successful completion.
+
+ @param FreeBytes Optionally points to a location to receive the amount
+        of unused space on successful completion.
+
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGetDiskFreeSpace(
+    __in LPCTSTR DirectoryName,
+    __out_opt PLARGE_INTEGER BytesAvailable,
+    __out_opt PLARGE_INTEGER TotalBytes,
+    __out_opt PLARGE_INTEGER FreeBytes
+    )
+{
+    LARGE_INTEGER LocalBytesAvailable;
+    LARGE_INTEGER LocalTotalBytes;
+    LARGE_INTEGER LocalFreeBytes;
+    DWORD LocalSectorsPerCluster;
+    DWORD LocalBytesPerSector;
+    LARGE_INTEGER LocalAllocationSize;
+    LARGE_INTEGER LocalNumberOfFreeClusters;
+    LARGE_INTEGER LocalTotalNumberOfClusters;
+    BOOL Result;
+
+    if (DllKernel32.pGetDiskFreeSpaceExW != NULL) {
+        Result = DllKernel32.pGetDiskFreeSpaceExW(DirectoryName,
+                                                  &LocalBytesAvailable,
+                                                  &LocalTotalBytes,
+                                                  &LocalFreeBytes);
+        if (!Result) {
+            return FALSE;
+        }
+    } else {
+
+        LocalNumberOfFreeClusters.HighPart = 0;
+        LocalTotalNumberOfClusters.HighPart = 0;
+
+        Result = GetDiskFreeSpace(DirectoryName,
+                                  &LocalSectorsPerCluster,
+                                  &LocalBytesPerSector,
+                                  &LocalNumberOfFreeClusters.LowPart,
+                                  &LocalTotalNumberOfClusters.LowPart);
+
+        if (!Result) {
+            return FALSE;
+        }
+
+        LocalAllocationSize.QuadPart = LocalSectorsPerCluster * LocalBytesPerSector;
+
+        LocalBytesAvailable.QuadPart = LocalAllocationSize.QuadPart * LocalNumberOfFreeClusters.QuadPart;
+        LocalFreeBytes.QuadPart = LocalBytesAvailable.QuadPart;
+        LocalTotalBytes.QuadPart = LocalAllocationSize.QuadPart * LocalTotalNumberOfClusters.QuadPart;
+    }
+
+    if (BytesAvailable != NULL) {
+        BytesAvailable->QuadPart = LocalBytesAvailable.QuadPart;
+    }
+    if (TotalBytes != NULL) {
+        TotalBytes->QuadPart = LocalTotalBytes.QuadPart;
+    }
+    if (FreeBytes != NULL) {
+        FreeBytes->QuadPart = LocalFreeBytes.QuadPart;
+    }
+
+    return TRUE;
+}
 
 // vim:sw=4:ts=4:et:

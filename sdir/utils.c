@@ -258,48 +258,18 @@ SdirDisplayGenericSize(
     __in PLARGE_INTEGER GenericSize
     )
 {
-    TCHAR Suffixes[] = {'b', 'k', 'm', 'g', 't', '?'};
-    DWORD SuffixLevel = 0;
     TCHAR StrSize[10];
-        
+    YORI_STRING YsSize;
+
     if (Buffer) {
-        LARGE_INTEGER Size = *GenericSize;
-        LARGE_INTEGER OldSize = Size;
+        YoriLibInitEmptyString(&YsSize);
+        YsSize.StartOfString = &StrSize[1];
+        YsSize.LengthAllocated = sizeof(StrSize)/sizeof(StrSize[0]) - 1;
 
-        while (Size.HighPart != 0 || Size.LowPart > 9999) {
-            SuffixLevel++;
-            OldSize = Size;
+        YoriLibFileSizeToString(&YsSize, GenericSize);
+        ASSERT(YsSize.LengthInChars == 5);
 
-            //
-            //  Conceptually we want to divide by 1024.  We do this
-            //  in two 32-bit shifts combining back the high bits
-            //  so we don't need full compiler support.
-            //
-
-            Size.LowPart = (Size.LowPart >> 10) + ((Size.HighPart & 0x3ff) << 22);
-            Size.HighPart = (Size.HighPart >> 10) & 0x003fffff;
-        }
-
-        if (SuffixLevel >= sizeof(Suffixes)/sizeof(TCHAR)) {
-            SuffixLevel = sizeof(Suffixes)/sizeof(TCHAR) - 1;
-        }
-            
-        if (Size.LowPart < 100 && SuffixLevel > 0) {
-            OldSize.LowPart = (OldSize.LowPart % 1024) * 10 / 1024;
-            YoriLibSPrintfS(StrSize,
-                        sizeof(StrSize)/sizeof(StrSize[0]),
-                        _T(" %2i.%1i%c"),
-                        (int)Size.LowPart,
-                        (int)OldSize.LowPart,
-                        Suffixes[SuffixLevel]);
-        } else {
-            YoriLibSPrintfS(StrSize,
-                        sizeof(StrSize)/sizeof(StrSize[0]),
-                        _T(" %4i%c"),
-                        (int)Size.LowPart,
-                        Suffixes[SuffixLevel]);
-        }
-            
+        StrSize[0] = ' ';
         SdirPasteStr(Buffer, StrSize, Attributes, 6);
     }
     return 6;

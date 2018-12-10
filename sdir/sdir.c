@@ -1212,7 +1212,7 @@ ULONG HeirarchyLineNumber = 0;
  */
 BOOL
 SdirDisplayHeirarchySummary(
-    __in LPTSTR NodeName,
+    __in PYORI_STRING NodeName,
     __in PSDIR_SUMMARY Before,
     __in PSDIR_SUMMARY After,
     __in YORILIB_COLOR_ATTRIBUTES DefaultAttributes
@@ -1221,6 +1221,7 @@ SdirDisplayHeirarchySummary(
     PSDIR_FMTCHAR Buffer;
     TCHAR Str[100];
     DWORD Len;
+    DWORD NodeNameOffset;
     DWORD PrefixLen;
     LARGE_INTEGER Size;
     ULONG CurrentChar = 0;
@@ -1230,7 +1231,6 @@ SdirDisplayHeirarchySummary(
     YORILIB_COLOR_ATTRIBUTES Background;
     YORILIB_COLOR_ATTRIBUTES RenderAttributes;
     YORILIB_COLOR_ATTRIBUTES ThisColor;
-    YORI_STRING YsNodeName;
 
     //
     //  If it doesn't meet size criteria, display nothing
@@ -1242,9 +1242,7 @@ SdirDisplayHeirarchySummary(
         }
     }
 
-    YoriLibConstantString(&YsNodeName, NodeName);
-
-    Len = YsNodeName.LengthInChars + SDIR_MAX_WIDTH;
+    Len = NodeName->LengthInChars + SDIR_MAX_WIDTH;
     Buffer = YoriLibMalloc(Len * sizeof(SDIR_FMTCHAR));
     if (Buffer == NULL) {
         SdirDisplayError(GetLastError(), _T("YoriLibMalloc"));
@@ -1296,15 +1294,15 @@ SdirDisplayHeirarchySummary(
     //  Display directory name
     //
 
-    RenderAttributes = SdirRenderAttributesFromPath(&YsNodeName);
+    RenderAttributes = SdirRenderAttributesFromPath(NodeName);
     RenderAttributes = YoriLibCombineColors(RenderAttributes, Background);
-    Len = YsNodeName.LengthInChars;
+    Len = NodeName->LengthInChars;
     PrefixLen = 0;
 
-    if (YoriLibIsFullPathUnc(&YsNodeName)) {
+    if (YoriLibIsFullPathUnc(NodeName)) {
 
         Len -= 8;
-        NodeName += 8;
+        NodeNameOffset = 8;
 
         SdirPasteStr(&Buffer[CurrentChar], _T("\\\\"), RenderAttributes, 2);
         CurrentChar += 2;
@@ -1312,10 +1310,10 @@ SdirDisplayHeirarchySummary(
 
     } else {
         Len -= 4;
-        NodeName += 4;
+        NodeNameOffset = 4;
     }
     
-    SdirPasteStr(&Buffer[CurrentChar], NodeName, RenderAttributes, Len);
+    SdirPasteStr(&Buffer[CurrentChar], &NodeName->StartOfString[NodeNameOffset], RenderAttributes, Len);
     CurrentChar += Len;
     Len = DirectoryNameAlignSize - ((Len + PrefixLen) % DirectoryNameAlignSize);
     SdirPasteStrAndPad(&Buffer[CurrentChar], NULL, RenderAttributes, 0, Len);
@@ -1629,7 +1627,7 @@ SdirEnumerateAndDisplaySubtree (
     //
 
     if (Opts->BriefRecurseDepth != 0 && Depth <= Opts->BriefRecurseDepth) {
-        if (!SdirDisplayHeirarchySummary(ParentDirectory.StartOfString, &SummaryOnEntry, Summary, Opts->FtSummary.HighlightColor)) {
+        if (!SdirDisplayHeirarchySummary(&ParentDirectory, &SummaryOnEntry, Summary, Opts->FtSummary.HighlightColor)) {
             return FALSE;
         }
     }
