@@ -94,18 +94,20 @@ DWORD
 WinInfoExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in PWININFO_CONTEXT Context
+    __in PVOID Context
     )
 {
     DWORD CharsNeeded;
+    PWININFO_CONTEXT WinInfoContext = (PWININFO_CONTEXT)Context;
+
     if (YoriLibCompareStringWithLiteral(VariableName, _T("left")) == 0) {
-        CharsNeeded = YoriLibSPrintfSize(_T("%i"), Context->WindowRect.left);
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), WinInfoContext->WindowRect.left);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("top")) == 0) {
-        CharsNeeded = YoriLibSPrintfSize(_T("%i"), Context->WindowRect.top);
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), WinInfoContext->WindowRect.top);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("width")) == 0) {
-        CharsNeeded = YoriLibSPrintfSize(_T("%i"), Context->WindowRect.right - Context->WindowRect.left);
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), WinInfoContext->WindowRect.right - WinInfoContext->WindowRect.left);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("height")) == 0) {
-        CharsNeeded = YoriLibSPrintfSize(_T("%i"), Context->WindowRect.bottom - Context->WindowRect.top);
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), WinInfoContext->WindowRect.bottom - WinInfoContext->WindowRect.top);
     } else {
         return 0;
     }
@@ -115,13 +117,13 @@ WinInfoExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("left")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->WindowRect.left);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), WinInfoContext->WindowRect.left);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("top")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->WindowRect.top);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), WinInfoContext->WindowRect.top);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("width")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->WindowRect.right - Context->WindowRect.left);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), WinInfoContext->WindowRect.right - WinInfoContext->WindowRect.left);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("height")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->WindowRect.bottom - Context->WindowRect.top);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), WinInfoContext->WindowRect.bottom - WinInfoContext->WindowRect.top);
     }
 
     OutputString->LengthInChars = CharsNeeded;

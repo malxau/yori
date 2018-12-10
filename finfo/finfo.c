@@ -1355,16 +1355,17 @@ DWORD
 FInfoExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in PFINFO_CONTEXT Context
+    __in PVOID Context
     )
 {
     DWORD Index;
     DWORD CharsNeeded = 0;
+    PFINFO_CONTEXT FInfoContext = (PFINFO_CONTEXT)Context;
 
     for (Index = 0; Index < sizeof(FInfoKnownVariables)/sizeof(FInfoKnownVariables[0]); Index++) {
         if (YoriLibCompareStringWithLiteral(VariableName, FInfoKnownVariables[Index].VariableName) == 0) {
-            FInfoKnownVariables[Index].CollectFn(&Context->Entry, Context->FileInfo, Context->FilePath);
-            CharsNeeded = FInfoKnownVariables[Index].OutputFn(Context, OutputString);
+            FInfoKnownVariables[Index].CollectFn(&FInfoContext->Entry, FInfoContext->FileInfo, FInfoContext->FilePath);
+            CharsNeeded = FInfoKnownVariables[Index].OutputFn(FInfoContext, OutputString);
         }
     }
 

@@ -107,14 +107,16 @@ DWORD
 VolExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in PVOL_RESULT Context
+    __in PVOID Context
     )
 {
     DWORD CharsNeeded;
+    PVOL_RESULT VolContext = (PVOL_RESULT)Context;
+
     if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
-        CharsNeeded = Context->FsName.LengthInChars;
+        CharsNeeded = VolContext->FsName.LengthInChars;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("label")) == 0) {
-        CharsNeeded = Context->VolumeLabel.LengthInChars;
+        CharsNeeded = VolContext->VolumeLabel.LengthInChars;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("serial")) == 0) {
         CharsNeeded = 8;
     } else {
@@ -126,11 +128,11 @@ VolExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &Context->FsName);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->FsName);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("label")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &Context->VolumeLabel);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->VolumeLabel);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("serial")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%08x"), Context->ShortSerialNumber);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%08x"), VolContext->ShortSerialNumber);
     }
 
     OutputString->LengthInChars = CharsNeeded;

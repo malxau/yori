@@ -120,8 +120,8 @@ typedef struct _YORI_PATH_COMPONENTS {
 
  @param VariableName The variable name to expand.
 
- @param PathComponents Pointer to a YORI_PATH_COMPONENTS structure
-        containing the data to populate.
+ @param Context Pointer to a YORI_PATH_COMPONENTS structure containing the
+        data to populate.
  
  @return The number of characters successfully populated, or the number of
          characters required in order to successfully populate, or zero
@@ -131,10 +131,11 @@ DWORD
 PathExpandVariables(
    __inout PYORI_STRING OutputString,
    __in PYORI_STRING VariableName,
-   __in PYORI_PATH_COMPONENTS PathComponents
+   __in PVOID Context
    )
 {
     DWORD CharsNeeded = 0;
+    PYORI_PATH_COMPONENTS PathComponents = (PYORI_PATH_COMPONENTS)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("PATH")) == 0) {
         CharsNeeded = PathComponents->EntirePath.LengthInChars;

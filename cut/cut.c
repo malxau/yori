@@ -183,7 +183,7 @@ CutFilterHandle(
 
  @param Depth Recursion depth, unused in this application.
 
- @param CutContext Pointer to a context block the cut operation to perform and
+ @param Context Pointer to a context block the cut operation to perform and
         tracking the number of files that have been processed.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -193,10 +193,11 @@ CutFileFoundCallback(
     __in PYORI_STRING Filename,
     __in PWIN32_FIND_DATA FindData,
     __in DWORD Depth,
-    __in PCUT_CONTEXT CutContext
+    __in PVOID Context
     )
 {
     HANDLE hSource;
+    PCUT_CONTEXT CutContext = (PCUT_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
     UNREFERENCED_PARAMETER(FindData);
