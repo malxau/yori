@@ -96,21 +96,30 @@ ExprStringToNumber(
 
  @param Number The number to display.
 
+ @param OutputSeperator TRUE if commas should be inserted at every third
+        digit in decimal output.  FALSE if no seperators should be inserted.
+
  @param Base The case to use when displaying the number.
  */
 VOID
 ExprOutputNumber(
     __in EXPR_NUMBER Number,
+    __in BOOL OutputSeperator,
     __in DWORD Base
     )
 {
     YORI_STRING String;
+    DWORD SeperatorDigits = 0;
 
     if (!YoriLibAllocateString(&String, 32)) {
         return;
     }
 
-    YoriLibNumberToString(&String, Number.Value, Base, 0, '\0');
+    if (OutputSeperator) {
+        SeperatorDigits = 3;
+    }
+
+    YoriLibNumberToString(&String, Number.Value, Base, SeperatorDigits, ',');
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &String);
     YoriLibFreeStringContents(&String);
 }
@@ -145,6 +154,7 @@ ENTRYPOINT(
 {
     BOOL ArgumentUnderstood;
     BOOL OutputHex = FALSE;
+    BOOL OutputSeperator = FALSE;
     DWORD i;
     DWORD StartArg = 0;
     DWORD CharsConsumed;
@@ -170,6 +180,9 @@ ENTRYPOINT(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 OutputHex = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                OutputSeperator = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i;
@@ -306,9 +319,11 @@ ENTRYPOINT(
     YoriLibFreeStringContents(&RemainingString);
 
     if (OutputHex) {
-        ExprOutputNumber(Result, 16);
+        ExprOutputNumber(Result, FALSE, 16);
+    } else if (OutputSeperator) {
+        ExprOutputNumber(Result, TRUE, 10);
     } else {
-        ExprOutputNumber(Result, 10);
+        ExprOutputNumber(Result, FALSE, 10);
     }
 
     return EXIT_SUCCESS;
