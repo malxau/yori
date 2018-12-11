@@ -254,7 +254,7 @@ YORI_CMD_BUILTIN YoriCmd_OSVER;
 /**
  Declaration for the builtin command.
  */
-YORI_CMD_BUILTIN YoriCmd_PATH;
+YORI_CMD_BUILTIN YoriCmd_YPATH;
 
 /**
  Declaration for the builtin command.
@@ -449,7 +449,6 @@ YoriShBuiltins[] = {
                     {_T("LSOF"),      YoriCmd_LSOF},
                     {_T("NICE"),      YoriCmd_NICE},
                     {_T("OSVER"),     YoriCmd_OSVER},
-                    {_T("PATH"),      YoriCmd_PATH},
                     {_T("PUSHD"),     YoriCmd_PUSHD},
                     {_T("REM"),       YoriCmd_REM},
                     {_T("READLINE"),  YoriCmd_READLINE},
@@ -490,6 +489,7 @@ YoriShBuiltins[] = {
                     {_T("YMORE"),     YoriCmd_YMORE},
                     {_T("YMOUNT"),    YoriCmd_YMOUNT},
                     {_T("YMOVE"),     YoriCmd_YMOVE},
+                    {_T("YPATH"),     YoriCmd_YPATH},
                     {_T("YPAUSE"),    YoriCmd_YPAUSE},
                     {_T("YPM"),       YoriCmd_YPM},
                     {_T("YRMDIR"),    YoriCmd_YRMDIR},

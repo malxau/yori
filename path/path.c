@@ -187,7 +187,7 @@ PathExpandVariables(
 /**
  The main entrypoint for the path builtin command.
  */
-#define ENTRYPOINT YoriCmd_PATH
+#define ENTRYPOINT YoriCmd_YPATH
 #else
 /**
  The main entrypoint for the path standalone application.
