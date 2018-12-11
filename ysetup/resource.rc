@@ -4,6 +4,21 @@
 
 1                       ICON    DISCARDABLE     "..\\lib\\yori.ico"
 
+//
+// We can build the manifest using old resource compilers,
+// but need to ensure the definitions are in place.
+//
+
+#ifndef CREATEPROCESS_MANIFEST_RESOURCE_ID
+#define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
+#endif
+
+#ifndef RT_MANIFEST
+#define RT_MANIFEST 24
+#endif
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "ysetup.manifest"
+
 SETUPDIALOG DIALOGEX 0, 0, 400, 220
 STYLE WS_POPUP | WS_CAPTION | DS_MODALFRAME
 CAPTION "Yori setup"

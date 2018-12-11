@@ -375,7 +375,7 @@ SetupInstallSelectedFromDialog(
             YoriLibFreeStringContents(&ShortcutNameFullPath);
         }
 
-        if (IsDlgButtonChecked(hDlg, IDC_DESKTOP_SHORTCUT)) {
+        if (IsDlgButtonChecked(hDlg, IDC_START_SHORTCUT)) {
             YoriLibConstantString(&RelativeShortcutName, _T("~Programs\\Yori.lnk"));
             if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath)) {
                 YoriLibFreeStringContents(&YoriExeFullPath);

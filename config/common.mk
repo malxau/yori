@@ -259,7 +259,7 @@ clean:
 	@if exist *.exp erase *.exp
 	@if exist *.res erase *.res
 	@if exist *~ erase *~
-	@if exist *.manifest erase *.manifest
+	@if exist *.exe.manifest erase *.exe.manifest
 
 install:
 	@if not exist $(BINDIR) $(MKDIR) $(BINDIR) >NUL
