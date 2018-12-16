@@ -118,6 +118,52 @@ IfExpandRedirectOperators(
 }
 
 /**
+ Look forward in the string for the next seperator between if test or
+ execution expressions.  If one is found, replace the seperator char
+ with a NULL terminator and return the offset.
+
+ @param String The string to parse.
+
+ @param Offset On successful completion, updated with the character offset of
+        the seperator character.
+
+ @return TRUE to indicate a component was found, FALSE if it was not.
+ */
+BOOL
+IfFindOffsetOfNextComponent(
+    __in PYORI_STRING String,
+    __out PDWORD Offset
+    )
+{
+    DWORD CharIndex;
+    for (CharIndex = 0; CharIndex < String->LengthInChars; CharIndex++) {
+        if (YoriLibIsEscapeChar(String->StartOfString[CharIndex])) {
+            CharIndex++;
+            continue;
+        }
+        if (String->LengthInChars > CharIndex + 2 &&
+            String->StartOfString[CharIndex] == 27 &&
+            String->StartOfString[CharIndex + 1] == '[') {
+
+            YORI_STRING EscapeSubset;
+            DWORD EndOfEscape;
+
+            YoriLibInitEmptyString(&EscapeSubset);
+            EscapeSubset.StartOfString = &String->StartOfString[CharIndex + 2];
+            EscapeSubset.LengthInChars = String->LengthInChars - CharIndex - 2;
+            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            CharIndex += 2 + EndOfEscape;
+        } else if (String->StartOfString[CharIndex] == ';') {
+            String->StartOfString[CharIndex] = '\0';
+            *Offset = CharIndex;
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
  Yori shell test a condition and execute a command in response
 
  @param ArgC The number of arguments.
@@ -186,49 +232,41 @@ YoriCmd_IF(
     YoriLibInitEmptyString(&TestCommand);
     YoriLibInitEmptyString(&TrueCommand);
     YoriLibInitEmptyString(&FalseCommand);
+    YoriLibInitEmptyString(&Arg);
+
+    Arg.StartOfString = CmdLine.StartOfString;
+    Arg.LengthInChars = CmdLine.LengthInChars;
 
     TestCommand.StartOfString = CmdLine.StartOfString;
-    for (CharIndex = 0; CharIndex < CmdLine.LengthInChars; CharIndex++) {
-        if (YoriLibIsEscapeChar(CmdLine.StartOfString[CharIndex])) {
-            CharIndex++;
-            continue;
-        }
-        if (CmdLine.StartOfString[CharIndex] == ';') {
-            CmdLine.StartOfString[CharIndex] = '\0';
-            break;
-        }
+    TestCommand.LengthInChars = CmdLine.LengthInChars;
+    if (IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
+        TestCommand.LengthInChars = CharIndex;
     }
 
-    TestCommand.LengthInChars = CharIndex;
-    CharIndex++;
-    TrueCommand.StartOfString = &CmdLine.StartOfString[CharIndex];
+    Arg.StartOfString += TestCommand.LengthInChars;
+    Arg.LengthInChars -= TestCommand.LengthInChars;
 
-    for (; CharIndex < CmdLine.LengthInChars; CharIndex++) {
-        if (YoriLibIsEscapeChar(CmdLine.StartOfString[CharIndex])) {
-            CharIndex++;
-            continue;
+    if (Arg.LengthInChars > 0) {
+        Arg.StartOfString++;
+        Arg.LengthInChars--;
+        TrueCommand.StartOfString = Arg.StartOfString;
+        TrueCommand.LengthInChars = Arg.LengthInChars;
+        if (IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
+            TrueCommand.LengthInChars = CharIndex;
         }
-        if (CmdLine.StartOfString[CharIndex] == ';') {
-            CmdLine.StartOfString[CharIndex] = '\0';
-            break;
-        }
+        Arg.StartOfString += TrueCommand.LengthInChars;
+        Arg.LengthInChars -= TrueCommand.LengthInChars;
     }
 
-    TrueCommand.LengthInChars = CharIndex - TestCommand.LengthInChars - 1;
-    CharIndex++;
-    FalseCommand.StartOfString = &CmdLine.StartOfString[CharIndex];
-
-    for (; CharIndex < CmdLine.LengthInChars; CharIndex++) {
-        if (YoriLibIsEscapeChar(CmdLine.StartOfString[CharIndex])) {
-            CharIndex++;
-            continue;
-        }
-        if (CmdLine.StartOfString[CharIndex] == ';') {
-            CmdLine.StartOfString[CharIndex] = '\0';
-            break;
+    if (Arg.LengthInChars > 0) {
+        Arg.StartOfString++;
+        Arg.LengthInChars--;
+        FalseCommand.StartOfString = Arg.StartOfString;
+        FalseCommand.LengthInChars = Arg.LengthInChars;
+        if (IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
+            FalseCommand.LengthInChars = CharIndex;
         }
     }
-    FalseCommand.LengthInChars = CharIndex - TestCommand.LengthInChars - 1 - TrueCommand.LengthInChars - 1;
 
     IfExpandRedirectOperators(&TestCommand);
 
