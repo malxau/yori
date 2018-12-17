@@ -51,14 +51,16 @@ CHAR strCopyHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-v] [-x exclude] <src>\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-v] [-x exclude]\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-v] [-x exclude]\n"
+        "      <src>\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-v] [-x exclude]\n"
         "      <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Compress targets with specified algorithm.  Options are:\n"
         "                    lzx, ntfs, xp4k, xp8k, xp16k\n"
         "   -l             Copy links as links rather than contents\n"
+        "   -n             Copy new or changed files only\n"
         "   -s             Copy subdirectories as well as files\n"
         "   -v             Verbose output\n"
         "   -x             Exclude files matching specified pattern\n";
@@ -139,6 +141,13 @@ typedef struct _COPY_CONTEXT {
     BOOL CopyAsLinks;
 
     /**
+     If TRUE, files are copied if they are not on the target, or if the size
+     on the source is different to the target, or if the last written time
+     on the source is significantly different to the target.
+     */
+    BOOL CopyNewOnly;
+
+    /**
      If TRUE, output is generated for each object copied.
      */
     BOOL Verbose;
@@ -201,6 +210,59 @@ CopyFreeExcludes(
     }
 }
 
+
+/**
+ Construct a full path to the destination from a CopyContext which specifies
+ the destination location, and the relative path from the source.
+
+ @param CopyContext Pointer to a copy context specifying the destination.
+
+ @param RelativePathFromSource Pointer to the file name relative to the source
+        root.
+
+ @param FullDest On successful completion, updated to point to a fully
+        qualified name to the destination.
+
+ @return TRUE to indicate success, FALSE to indicate failure.  Note this
+         function can display errors to the console.
+ */
+BOOL
+CopyBuildDestinationPath(
+    __in PCOPY_CONTEXT CopyContext,
+    __in PYORI_STRING RelativePathFromSource,
+    __out PYORI_STRING FullDest
+    )
+{
+    //
+    //  If the target is a directory, construct a full path to the object
+    //  within the target's directory tree.  Otherwise, the target is just
+    //  a regular file with no path.
+    //
+
+    if (CopyContext->DestAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        YORI_STRING DestWithFile;
+
+        if (!YoriLibAllocateString(&DestWithFile, CopyContext->Dest.LengthInChars + 1 + RelativePathFromSource->LengthInChars + 1)) {
+            return FALSE;
+        }
+        DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%y"), &CopyContext->Dest, RelativePathFromSource);
+        if (!YoriLibGetFullPathNameReturnAllocation(&DestWithFile, TRUE, FullDest, NULL)) {
+            return FALSE;
+        }
+        YoriLibFreeStringContents(&DestWithFile);
+    } else {
+        if (!YoriLibGetFullPathNameReturnAllocation(&CopyContext->Dest, TRUE, FullDest, NULL)) {
+            return FALSE;
+        }
+        if (CopyContext->FilesCopied > 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Attempting to copy multiple files over a single file (%s)\n"), FullDest->StartOfString);
+            YoriLibFreeStringContents(FullDest);
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
 /**
  Returns TRUE to indicate that an object should be excluded based on the
  exclude criteria, or FALSE if it should be included.
@@ -211,12 +273,16 @@ CopyFreeExcludes(
  @param RelativeSourcePath Pointer to a string describing the file relative
         to the root of the source of the copy operation.
 
+ @param SourceFindData Pointer to information about the source as returned
+        from directory enumeration.
+
  @return TRUE to exclude the file, FALSE to include it.
  */
 BOOL
 CopyShouldExclude(
     __in PCOPY_CONTEXT CopyContext,
-    __in PYORI_STRING RelativeSourcePath
+    __in PYORI_STRING RelativeSourcePath,
+    __in PWIN32_FIND_DATA SourceFindData
     )
 {
     PCOPY_EXCLUDE_ITEM ExcludeItem;
@@ -229,6 +295,68 @@ CopyShouldExclude(
             return TRUE;
         }
         ListEntry = YoriLibGetNextListEntry(&CopyContext->ExcludeList, ListEntry);
+    }
+
+    if (CopyContext->CopyNewOnly) {
+        YORI_STRING FullDest;
+        BY_HANDLE_FILE_INFORMATION DestFileInfo;
+        LARGE_INTEGER DestWriteTime;
+        LARGE_INTEGER SourceWriteTime;
+        HANDLE DestFileHandle;
+
+        YoriLibInitEmptyString(&FullDest);
+
+        if (!CopyBuildDestinationPath(CopyContext, RelativeSourcePath, &FullDest)) {
+            return FALSE;
+        }
+
+        DestFileHandle = CreateFile(FullDest.StartOfString,
+                                    FILE_READ_ATTRIBUTES,
+                                    FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                    NULL,
+                                    OPEN_EXISTING,
+                                    FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL|FILE_FLAG_BACKUP_SEMANTICS,
+                                    NULL);
+
+        YoriLibFreeStringContents(&FullDest);
+
+        if (DestFileHandle == INVALID_HANDLE_VALUE) {
+            return FALSE;
+        }
+
+        if (!GetFileInformationByHandle(DestFileHandle, &DestFileInfo)) {
+            CloseHandle(DestFileHandle);
+            return FALSE;
+        }
+
+        if (DestFileInfo.nFileSizeHigh != SourceFindData->nFileSizeHigh ||
+            DestFileInfo.nFileSizeLow != SourceFindData->nFileSizeLow) {
+
+            CloseHandle(DestFileHandle);
+            return FALSE;
+        }
+
+        DestWriteTime.HighPart = DestFileInfo.ftLastWriteTime.dwHighDateTime;
+        DestWriteTime.LowPart = DestFileInfo.ftLastWriteTime.dwLowDateTime;
+        SourceWriteTime.HighPart = SourceFindData->ftLastWriteTime.dwHighDateTime;
+        SourceWriteTime.LowPart = SourceFindData->ftLastWriteTime.dwLowDateTime;
+
+
+        //
+        //  Due to file system timing granularity, if the source was written
+        //  to more than 5 seconds before or after the target, consider it
+        //  a timestamp change.
+        //
+
+        if (SourceWriteTime.QuadPart < DestWriteTime.QuadPart - 10 * 1000 * 1000 * 5 ||
+            SourceWriteTime.QuadPart > DestWriteTime.QuadPart + 10 * 1000 * 1000 * 5) {
+
+            CloseHandle(DestFileHandle);
+            return FALSE;
+        }
+
+        CloseHandle(DestFileHandle);
+        return TRUE;
     }
     return FALSE;
 }
@@ -295,7 +423,7 @@ CopyAsLink(
                                     OPEN_EXISTING,
                                     FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL|FILE_FLAG_BACKUP_SEMANTICS,
                                     NULL);
-    
+
         if (DestFileHandle == INVALID_HANDLE_VALUE) {
             LastError = GetLastError();
             ErrText = YoriLibGetWinErrorText(LastError);
@@ -313,7 +441,7 @@ CopyAsLink(
                                     CREATE_ALWAYS,
                                     FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL|FILE_FLAG_BACKUP_SEMANTICS,
                                     NULL);
-    
+
         if (DestFileHandle == INVALID_HANDLE_VALUE) {
             LastError = GetLastError();
             ErrText = YoriLibGetWinErrorText(LastError);
@@ -437,7 +565,7 @@ CopyFileFoundCallback(
     //  Check if the user wanted to exclude this file
     //
 
-    if (CopyShouldExclude(CopyContext, &RelativePathFromSource)) {
+    if (CopyShouldExclude(CopyContext, &RelativePathFromSource, FileInfo)) {
 
         if (CopyContext->Verbose) {
             if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
@@ -450,32 +578,8 @@ CopyFileFoundCallback(
         return TRUE;
     }
 
-    //
-    //  If the target is a directory, construct a full path to the object
-    //  within the target's directory tree.  Otherwise, the target is just
-    //  a regular file with no path.
-    //
-
-    if (CopyContext->DestAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        YORI_STRING DestWithFile;
-
-        if (!YoriLibAllocateString(&DestWithFile, CopyContext->Dest.LengthInChars + 1 + RelativePathFromSource.LengthInChars + 1)) {
-            return FALSE;
-        }
-        DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%y"), &CopyContext->Dest, &RelativePathFromSource);
-        if (!YoriLibGetFullPathNameReturnAllocation(&DestWithFile, TRUE, &FullDest, NULL)) {
-            return FALSE;
-        }
-        YoriLibFreeStringContents(&DestWithFile);
-    } else {
-        if (!YoriLibGetFullPathNameReturnAllocation(&CopyContext->Dest, TRUE, &FullDest, NULL)) {
-            return FALSE;
-        }
-        if (CopyContext->FilesCopied > 0) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Attempting to copy multiple files over a single file (%s)\n"), FullDest.StartOfString);
-            YoriLibFreeStringContents(&FullDest);
-            return FALSE;
-        }
+    if (!CopyBuildDestinationPath(CopyContext, &RelativePathFromSource, &FullDest)) {
+        return FALSE;
     }
 
     DestNameToDisplay = &FullDest;
@@ -689,6 +793,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 CopyContext.CopyAsLinks = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+                CopyContext.CopyNewOnly = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
