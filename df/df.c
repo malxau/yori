@@ -35,7 +35,9 @@ CHAR strDfHelpText[] =
         "\n"
         "Display disk free space.\n"
         "\n"
-        "DF [-license]\n";
+        "DF [-license] [-m] [<drive>]\n"
+        "\n"
+        "   -m             Minimal display, raw data only\n";
 
 /**
  Display usage text to the user.
@@ -52,17 +54,51 @@ DfHelp()
 }
 
 /**
+ Context structure passed between each drive whose free space is being
+ displayed.
+ */
+typedef struct _DF_CONTEXT {
+
+    /**
+     TRUE if the display should be minimal so that it can be easily parsed,
+     with no human readability added.
+     */
+    BOOL MinimalDisplay;
+
+    /**
+     TRUE if a graph of space utilization should be displayed.
+     */
+    BOOL DisplayGraph;
+
+    /**
+     The width of the console, in characters.
+     */
+    DWORD ConsoleWidth;
+
+    /**
+     A buffer to generate the graph line into.  This is allocated when the
+     app starts and contains ConsoleWidth chars plus space for two VT100
+     escape sequences to initiate and terminate the color of the graph.
+     */
+    YORI_STRING LineBuffer;
+} DF_CONTEXT, *PDF_CONTEXT;
+
+/**
  Report the space usage on a single volume.
 
  @param VolName The volume name.  This can either be a volume GUID path
         returned from volume enumeration, or a user specified path to
         anything.
 
+ @param DfContext Pointer to the context used to indicate options for each
+        drive whose free space is being reported.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 DfReportSingleVolume(
-    __in LPTSTR VolName
+    __in LPTSTR VolName,
+    __in PDF_CONTEXT DfContext
     )
 {
     LARGE_INTEGER TotalBytes;
@@ -108,12 +144,67 @@ DfReportSingleVolume(
 
         YoriLibFileSizeToString(&StrTotalSize, &TotalBytes);
         YoriLibFileSizeToString(&StrFreeSize, &FreeBytes);
+
+        if (DfContext->MinimalDisplay) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%lli %lli %s\n"), TotalBytes, FreeBytes, NameToReport, NameToReport);
+        } 
+
         while (TotalBytes.HighPart != 0 && FreeBytes.HighPart != 0) {
             TotalBytes.QuadPart = TotalBytes.QuadPart >> 1;
             FreeBytes.QuadPart = FreeBytes.QuadPart >> 1;
         }
         PercentageUsed = 1000 - (DWORD)(FreeBytes.QuadPart * 1000 / TotalBytes.QuadPart);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y total %y free %3i.%i%% used %s\n"), &StrTotalSize, &StrFreeSize, PercentageUsed / 10, PercentageUsed % 10, NameToReport);
+
+        if (!DfContext->MinimalDisplay) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y total %y free %3i.%i%% used %s\n"), &StrTotalSize, &StrFreeSize, PercentageUsed / 10, PercentageUsed % 10, NameToReport);
+        }
+
+        if (DfContext->DisplayGraph) {
+            YORI_STRING Subset;
+            WORD Background;
+            DWORD TotalBarSize;
+            DWORD BarsSet;
+            DWORD Index;
+
+            DfContext->LineBuffer.StartOfString[0] = ' ';
+            DfContext->LineBuffer.StartOfString[1] = '[';
+
+            YoriLibInitEmptyString(&Subset);
+            Subset.StartOfString = &DfContext->LineBuffer.StartOfString[2];
+            Subset.LengthAllocated = DfContext->LineBuffer.LengthAllocated - 2;
+
+            Background = YoriLibVtGetDefaultColor() & 0xF0;
+
+            if (PercentageUsed <= 700) {
+                YoriLibVtStringForTextAttribute(&Subset, Background | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+            } else if (PercentageUsed <= 850) {
+                YoriLibVtStringForTextAttribute(&Subset, Background | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+            } else {
+                YoriLibVtStringForTextAttribute(&Subset, Background | FOREGROUND_RED | FOREGROUND_INTENSITY);
+            }
+
+            DfContext->LineBuffer.LengthInChars = 2 + Subset.LengthInChars;
+
+            TotalBarSize = DfContext->ConsoleWidth - 4;
+            BarsSet = TotalBarSize * PercentageUsed / 1000;
+
+            for (Index = 0; Index < BarsSet; Index++) {
+                DfContext->LineBuffer.StartOfString[Index + DfContext->LineBuffer.LengthInChars] = '*';
+            }
+            for (; Index < TotalBarSize; Index++) {
+                DfContext->LineBuffer.StartOfString[Index + DfContext->LineBuffer.LengthInChars] = ' ';
+            }
+            DfContext->LineBuffer.LengthInChars += TotalBarSize;
+
+            Subset.StartOfString = &DfContext->LineBuffer.StartOfString[DfContext->LineBuffer.LengthInChars];
+            Subset.LengthAllocated = DfContext->LineBuffer.LengthAllocated - DfContext->LineBuffer.LengthInChars;
+
+            Subset.LengthInChars = YoriLibSPrintf(Subset.StartOfString, _T("%c[0m]\n"), 27);
+            DfContext->LineBuffer.LengthInChars += Subset.LengthInChars;
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DfContext->LineBuffer);
+
+        }
         Result = TRUE;
     }
 
@@ -154,6 +245,18 @@ ENTRYPOINT(
     YORI_STRING Arg;
     HANDLE FindHandle;
     TCHAR VolName[512];
+    DF_CONTEXT DfContext;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    ZeroMemory(&DfContext, sizeof(DfContext));
+
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
+        DfContext.DisplayGraph = TRUE;
+        DfContext.ConsoleWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
+    } else {
+        DfContext.DisplayGraph = TRUE;
+        DfContext.ConsoleWidth = 80;
+    }
 
     for (i = 1; i < ArgC; i++) {
 
@@ -168,6 +271,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2018"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+                DfContext.MinimalDisplay = TRUE;
+                DfContext.DisplayGraph = FALSE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i;
                 ArgumentUnderstood = TRUE;
@@ -184,9 +291,15 @@ ENTRYPOINT(
         }
     }
 
+    if (DfContext.DisplayGraph) {
+        if (!YoriLibAllocateString(&DfContext.LineBuffer, DfContext.ConsoleWidth + 2 * YORI_MAX_INTERNAL_VT_ESCAPE_CHARS)) {
+            return EXIT_FAILURE;
+        }
+    }
+
     if (StartArg != 0) {
         for (i = StartArg; i < ArgC; i++) {
-            if (!DfReportSingleVolume(ArgV[i].StartOfString)) {
+            if (!DfReportSingleVolume(ArgV[i].StartOfString, &DfContext)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("df: Could not query %y\n"), &ArgV[i]);
             }
         }
@@ -194,11 +307,13 @@ ENTRYPOINT(
         FindHandle = YoriLibFindFirstVolume(VolName, sizeof(VolName)/sizeof(VolName[0]));
         if (FindHandle != INVALID_HANDLE_VALUE) {
             do {
-                DfReportSingleVolume(VolName);
+                DfReportSingleVolume(VolName, &DfContext);
             } while(YoriLibFindNextVolume(FindHandle, VolName, sizeof(VolName)/sizeof(VolName[0])));
             YoriLibFindVolumeClose(FindHandle);
         }
     }
+
+    YoriLibFreeStringContents(&DfContext.LineBuffer);
 
     return EXIT_SUCCESS;
 }

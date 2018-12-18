@@ -1680,6 +1680,13 @@ YoriLibRecycleBinFile(
 
 // *** VT.C ***
 
+
+/**
+ The maximum length of a string used to describe a VT sequence generated
+ internally by one of these tools.
+ */
+#define YORI_MAX_INTERNAL_VT_ESCAPE_CHARS sizeof("E[0;999;999;1m")
+
 BOOL
 YoriLibOutputTextToMultibyteDevice(
     __in HANDLE hOutput,
