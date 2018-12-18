@@ -271,12 +271,15 @@ SdirUsageLicense()
     YoriLibMitLicenseText(_T("2014-2018"), &License);
 
     if (!SdirUsageHeader(strLicenseHeader)) {
+        YoriLibFreeStringContents(&License);
         return FALSE;
     }
 
     if (!SdirWriteString(License.StartOfString)) {
+        YoriLibFreeStringContents(&License);
         return FALSE;
     }
+    YoriLibFreeStringContents(&License);
 
     return TRUE;
 }
