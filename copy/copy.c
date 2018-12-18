@@ -51,9 +51,9 @@ CHAR strCopyHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-v] [-x exclude]\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-p] [-v] [-x exclude]\n"
         "      <src>\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-v] [-x exclude]\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-p] [-v] [-x exclude]\n"
         "      <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
@@ -61,6 +61,7 @@ CHAR strCopyHelpText[] =
         "                    lzx, ntfs, xp4k, xp8k, xp16k\n"
         "   -l             Copy links as links rather than contents\n"
         "   -n             Copy new or changed files only\n"
+        "   -p             Preserve existing files, no overwriting\n"
         "   -s             Copy subdirectories as well as files\n"
         "   -v             Verbose output\n"
         "   -x             Exclude files matching specified pattern\n";
@@ -146,6 +147,12 @@ typedef struct _COPY_CONTEXT {
      on the source is significantly different to the target.
      */
     BOOL CopyNewOnly;
+
+    /**
+     If TRUE, files are copied if they do not already exists.  Any existing
+     file will be skipped.
+     */
+    BOOL PreserveExisting;
 
     /**
      If TRUE, output is generated for each object copied.
@@ -297,7 +304,7 @@ CopyShouldExclude(
         ListEntry = YoriLibGetNextListEntry(&CopyContext->ExcludeList, ListEntry);
     }
 
-    if (CopyContext->CopyNewOnly) {
+    if (CopyContext->CopyNewOnly || CopyContext->PreserveExisting) {
         YORI_STRING FullDest;
         BY_HANDLE_FILE_INFORMATION DestFileInfo;
         LARGE_INTEGER DestWriteTime;
@@ -322,6 +329,11 @@ CopyShouldExclude(
 
         if (DestFileHandle == INVALID_HANDLE_VALUE) {
             return FALSE;
+        }
+
+        if (CopyContext->PreserveExisting) {
+            CloseHandle(DestFileHandle);
+            return TRUE;
         }
 
         if (!GetFileInformationByHandle(DestFileHandle, &DestFileInfo)) {
@@ -795,7 +807,12 @@ ENTRYPOINT(
                 CopyContext.CopyAsLinks = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+                CopyContext.PreserveExisting = FALSE;
                 CopyContext.CopyNewOnly = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+                CopyContext.CopyNewOnly = FALSE;
+                CopyContext.PreserveExisting = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
