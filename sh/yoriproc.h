@@ -347,6 +347,9 @@ YoriShGetExpression(
     __inout PYORI_STRING Expression
     );
 
+VOID
+YoriShCleanupInputContext();
+
 // *** JOB.C ***
 
 BOOL

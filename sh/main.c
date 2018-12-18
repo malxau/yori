@@ -102,11 +102,17 @@ YoriShInit()
     }
 
     //
-    //  If we don't have a prompt defined, set a default.
+    //  If we don't have a prompt defined, set a default.  If outputting to
+    //  the console directly, use VT color; otherwise, default to monochrome.
     //
 
     if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0) == 0) {
-        SetEnvironmentVariable(_T("YORIPROMPT"), _T("$E$[35;1m$P$$E$[0m$G$"));
+        DWORD ConsoleMode;
+        if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &ConsoleMode)) {
+            SetEnvironmentVariable(_T("YORIPROMPT"), _T("$E$[35;1m$P$$E$[0m$G$"));
+        } else {
+            SetEnvironmentVariable(_T("YORIPROMPT"), _T("$P$$G$"));
+        }
     }
 
     //
@@ -397,22 +403,23 @@ YoriShPostCommand()
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE ConsoleHandle;
+    BOOL ConsoleMode;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("GetConsoleScreenBufferInfo failed with %i\n"), GetLastError());
-    }
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m"), 27);
-    if (ScreenInfo.srWindow.Left > 0) {
-        SHORT CharsToMoveLeft;
-        CharsToMoveLeft = ScreenInfo.srWindow.Left;
-        ScreenInfo.srWindow.Left = 0;
-        ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - CharsToMoveLeft);
-        SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
-    }
-    if (ScreenInfo.dwCursorPosition.X != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+    ConsoleMode = GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo);
+    if (ConsoleMode)  {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m"), 27);
+        if (ScreenInfo.srWindow.Left > 0) {
+            SHORT CharsToMoveLeft;
+            CharsToMoveLeft = ScreenInfo.srWindow.Left;
+            ScreenInfo.srWindow.Left = 0;
+            ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - CharsToMoveLeft);
+            SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
+        }
+        if (ScreenInfo.dwCursorPosition.X != 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
     }
 }
 
@@ -425,8 +432,6 @@ YoriShPreCommand()
     YoriLibCancelEnable();
     YoriLibCancelIgnore();
     YoriLibCancelReset();
-    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
-    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 }
 
 /**
@@ -467,8 +472,7 @@ ymain (
             YoriShDisplayPrompt();
             YoriShPreCommand();
             if (!YoriShGetExpression(&CurrentExpression)) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Failed to read expression!"));
-                continue;
+                break;
             }
             if (g_ExitProcess) {
                 break;
@@ -488,6 +492,7 @@ ymain (
     YoriShClearAllAliases();
     YoriShBuiltinUnregisterAll();
     YoriShDiscardSavedRestartState(NULL);
+    YoriShCleanupInputContext();
 
     return g_ExitProcessExitCode;
 }

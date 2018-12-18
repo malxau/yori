@@ -1944,7 +1944,7 @@ YoriShProcessMouseScroll(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriShGetExpression(
+YoriShGetExpressionFromConsole(
     __inout PYORI_STRING Expression
     )
 {
@@ -1958,13 +1958,20 @@ YoriShGetExpression(
     BOOL TerminateInput;
     BOOL RestartStateSaved = FALSE;
     BOOL SuggestionPopulated = FALSE;
-
+    HANDLE InputHandle;
+    HANDLE OutputHandle;
 
     ZeroMemory(&Buffer, sizeof(Buffer));
     Buffer.InsertMode = TRUE;
     Buffer.CursorInfo.bVisible = TRUE;
     Buffer.CursorInfo.dwSize = 20;
-    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &Buffer.CursorInfo);
+
+    InputHandle = GetStdHandle(STD_INPUT_HANDLE);
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    SetConsoleCursorInfo(OutputHandle, &Buffer.CursorInfo);
+    SetConsoleMode(InputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+    SetConsoleMode(OutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
     if (!YoriLibAllocateString(&Buffer.String, 256)) {
         return FALSE;
@@ -1976,7 +1983,7 @@ YoriShGetExpression(
 
     while (TRUE) {
 
-        if (!PeekConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
+        if (!PeekConsoleInput(InputHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
             break;
         }
 
@@ -2032,7 +2039,7 @@ YoriShGetExpression(
 
             if (TerminateInput) {
                 YoriShTerminateInput(&Buffer);
-                ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
+                ReadConsoleInput(InputHandle, InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
                 if (Buffer.String.LengthInChars > 0) {
                     YoriShAddToHistory(&Buffer.String);
                 }
@@ -2050,7 +2057,7 @@ YoriShGetExpression(
         //
 
         if (ActuallyRead > 0) {
-            if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), InputRecords, ActuallyRead, &ActuallyRead)) {
+            if (!ReadConsoleInput(InputHandle, InputRecords, ActuallyRead, &ActuallyRead)) {
                 break;
             }
         }
@@ -2074,7 +2081,7 @@ YoriShGetExpression(
         while (TRUE) {
             if (YoriLibIsPeriodicScrollActive(&Buffer.Selection)) {
 
-                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 250);
+                err = WaitForSingleObject(InputHandle, 250);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }
@@ -2082,7 +2089,7 @@ YoriShGetExpression(
                     YoriLibPeriodicScrollForSelection(&Buffer.Selection);
                 }
             } else if (!SuggestionPopulated) {
-                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), Buffer.DelayBeforeSuggesting);
+                err = WaitForSingleObject(InputHandle, Buffer.DelayBeforeSuggesting);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }
@@ -2096,7 +2103,7 @@ YoriShGetExpression(
                     }
                 }
             } else if (!RestartStateSaved) {
-                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), 30 * 1000);
+                err = WaitForSingleObject(InputHandle, 30 * 1000);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }
@@ -2106,7 +2113,7 @@ YoriShGetExpression(
                     RestartStateSaved = TRUE;
                 }
             } else {
-                err = WaitForSingleObject(GetStdHandle(STD_INPUT_HANDLE), INFINITE);
+                err = WaitForSingleObject(InputHandle, INFINITE);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }
@@ -2124,11 +2131,66 @@ YoriShGetExpression(
 
     err = GetLastError();
 
-    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error reading from console %i handle %08x\n"), err, GetStdHandle(STD_INPUT_HANDLE));
+    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error reading from console %i handle %08x\n"), err, InputHandle);
 
     YoriShTerminateInput(&Buffer);
     YoriLibFreeStringContents(&Buffer.String);
     return FALSE;
+}
+
+/**
+ Context that is preserved across reads from any input file or pipe to
+ determine the state of line parsing.
+ */
+PVOID YoriShGetExpressionLineContext = NULL;
+
+/**
+ Get a new expression from the user from whatever input device we have
+ configured.
+
+ @param Expression On successful completion, updated to point to the
+        entered expression.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShGetExpression(
+    __inout PYORI_STRING Expression
+    )
+{
+    HANDLE InputHandle;
+    HANDLE OutputHandle;
+    DWORD ConsoleMode;
+
+    YoriLibInitEmptyString(Expression);
+
+    InputHandle = GetStdHandle(STD_INPUT_HANDLE);
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (GetConsoleMode(InputHandle, &ConsoleMode) && GetConsoleMode(OutputHandle, &ConsoleMode)) {
+        return YoriShGetExpressionFromConsole(Expression);
+    }
+
+    SetConsoleMode(InputHandle, ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_ECHO_INPUT);
+    SetConsoleMode(OutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
+    if (!YoriLibReadLineToString(Expression, &YoriShGetExpressionLineContext, TRUE, InputHandle)) {
+        return FALSE;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), Expression);
+
+    return TRUE;
+}
+
+/**
+ On process termination, cleanup any currently active line parsing context,
+ */
+VOID
+YoriShCleanupInputContext()
+{
+    if (YoriShGetExpressionLineContext != NULL) {
+        YoriLibLineReadClose(YoriShGetExpressionLineContext);
+    }
 }
 
 
