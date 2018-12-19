@@ -121,6 +121,7 @@ ENTRYPOINT(
     HANDLE hSource = INVALID_HANDLE_VALUE;
     HANDLE hOutput = INVALID_HANDLE_VALUE;
     HANDLE hControl = INVALID_HANDLE_VALUE;
+    HANDLE InputPumpThread = NULL;
     
     DWORD  CurrentOffset;
     PVOID  LineReadContext = NULL;
@@ -272,7 +273,7 @@ ENTRYPOINT(
             CloseHandle(ProcessInfo.hProcess);
             CloseHandle(ProcessInfo.hThread);
 
-            CreateThread(NULL, 0, CvtvtInputPumpThread, hControl, 0, NULL);
+            InputPumpThread = CreateThread(NULL, 0, CvtvtInputPumpThread, hControl, 0, NULL);
         }
     } else if (UserFileName != NULL) {
         if (!YoriLibUserStringToSingleFilePath(UserFileName, TRUE, &FileName)) {
@@ -343,6 +344,11 @@ ENTRYPOINT(
     }
     if (hControl != INVALID_HANDLE_VALUE) {
         CloseHandle(hControl);
+    }
+
+    if (InputPumpThread != NULL) {
+        TerminateThread(InputPumpThread, 0);
+        CloseHandle(InputPumpThread);
     }
 
     YoriLibFreeStringContents(&FileName);
