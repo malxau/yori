@@ -189,7 +189,7 @@ DfReportSingleVolume(
             BarsSet = TotalBarSize * PercentageUsed / 1000;
 
             for (Index = 0; Index < BarsSet; Index++) {
-                DfContext->LineBuffer.StartOfString[Index + DfContext->LineBuffer.LengthInChars] = '*';
+                DfContext->LineBuffer.StartOfString[Index + DfContext->LineBuffer.LengthInChars] = '#';
             }
             for (; Index < TotalBarSize; Index++) {
                 DfContext->LineBuffer.StartOfString[Index + DfContext->LineBuffer.LengthInChars] = ' ';
