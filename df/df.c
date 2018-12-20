@@ -173,14 +173,14 @@ DfReportSingleVolume(
             Subset.StartOfString = &DfContext->LineBuffer.StartOfString[2];
             Subset.LengthAllocated = DfContext->LineBuffer.LengthAllocated - 2;
 
-            Background = YoriLibVtGetDefaultColor() & 0xF0;
+            Background = (USHORT)(YoriLibVtGetDefaultColor() & 0xF0);
 
             if (PercentageUsed <= 700) {
-                YoriLibVtStringForTextAttribute(&Subset, Background | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+                YoriLibVtStringForTextAttribute(&Subset, (USHORT)(Background | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
             } else if (PercentageUsed <= 850) {
-                YoriLibVtStringForTextAttribute(&Subset, Background | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+                YoriLibVtStringForTextAttribute(&Subset, (USHORT)(Background | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
             } else {
-                YoriLibVtStringForTextAttribute(&Subset, Background | FOREGROUND_RED | FOREGROUND_INTENSITY);
+                YoriLibVtStringForTextAttribute(&Subset, (USHORT)(Background | FOREGROUND_RED | FOREGROUND_INTENSITY));
             }
 
             DfContext->LineBuffer.LengthInChars = 2 + Subset.LengthInChars;
@@ -246,17 +246,11 @@ ENTRYPOINT(
     HANDLE FindHandle;
     TCHAR VolName[512];
     DF_CONTEXT DfContext;
-    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
 
     ZeroMemory(&DfContext, sizeof(DfContext));
 
-    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
-        DfContext.DisplayGraph = TRUE;
-        DfContext.ConsoleWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
-    } else {
-        DfContext.DisplayGraph = TRUE;
-        DfContext.ConsoleWidth = 80;
-    }
+    YoriLibGetWindowDimensions(GetStdHandle(STD_OUTPUT_HANDLE), &DfContext.ConsoleWidth, NULL);
+    DfContext.DisplayGraph = TRUE;
 
     for (i = 1; i < ArgC; i++) {
 

@@ -1572,8 +1572,18 @@ PVOID
 YoriLibReadLineToString(
     __in PYORI_STRING UserString,
     __inout PVOID * Context,
-    __in BOOL ReturnFinalNonTerminatedLine,
     __in HANDLE FileHandle
+    );
+
+PVOID
+YoriLibReadLineToStringEx(
+    __in PYORI_STRING UserString,
+    __inout PVOID * Context,
+    __in BOOL ReturnFinalNonTerminatedLine,
+    __in DWORD MaximumDelay,
+    __in HANDLE FileHandle,
+    __out PBOOL LineTerminated,
+    __out PBOOL TimeoutReached
     );
 
 VOID
@@ -1849,6 +1859,21 @@ YoriLibStripVtEscapes(
     __inout PYORI_STRING PlainText
     );
 
+BOOL
+YoriLibGetWindowDimensions(
+    __in HANDLE OutputHandle,
+    __out_opt PDWORD Width,
+    __out_opt PDWORD Height
+    );
+
+BOOL
+YoriLibQueryConsoleCapabilities(
+    __in HANDLE OutputHandle,
+    __out_opt PBOOL SupportsColor,
+    __out_opt PBOOL SupportsExtendedChars,
+    __out_opt PBOOL SupportsAutoLineWrap
+    );
+
 // *** PATH.C ***
 
 /**
@@ -2014,6 +2039,12 @@ BOOL
 YoriLibAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
     __out PYORI_STRING Value
+    );
+
+BOOL
+YoriLibGetEnvironmentVariableAsNumber(
+    __in LPCTSTR Name,
+    __out PLONGLONG Value
     );
 
 // *** SCUT.C ***

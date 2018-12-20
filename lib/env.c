@@ -286,6 +286,64 @@ YoriLibAllocateAndGetEnvironmentVariable(
     return TRUE;
 }
 
+/**
+ Capture the value from an environment variable, convert it to a number and
+ return the result.
+
+ @param Name Pointer to the name of the variable to obtain.
+
+ @param Value On successful completion, populated with the contents of the
+        variable in numeric form.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGetEnvironmentVariableAsNumber(
+    __in LPCTSTR Name,
+    __out PLONGLONG Value
+    )
+{
+    DWORD LengthNeeded;
+    YORI_STRING Temp;
+    TCHAR Buffer[32];
+    DWORD CharsConsumed;
+
+    LengthNeeded = GetEnvironmentVariable(Name, NULL, 0);
+
+    if (LengthNeeded == 0) {
+        return FALSE;
+    }
+
+    if (LengthNeeded < sizeof(Buffer)/sizeof(Buffer[0])) {
+        YoriLibInitEmptyString(&Temp);
+        Temp.StartOfString = Buffer;
+        Temp.LengthAllocated = sizeof(Buffer)/sizeof(Buffer[0]);
+    } else if (!YoriLibAllocateString(&Temp, LengthNeeded)) {
+        return FALSE;
+    }
+
+    Temp.LengthInChars = GetEnvironmentVariable(Name, Temp.StartOfString, Temp.LengthAllocated);
+    if (Temp.LengthInChars == 0 ||
+        Temp.LengthInChars >= Temp.LengthAllocated) {
+
+        YoriLibFreeStringContents(&Temp);
+        return FALSE;
+    }
+
+    if (!YoriLibStringToNumber(&Temp, FALSE, Value, &CharsConsumed)) {
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&Temp);
+
+    if (CharsConsumed == 0) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
 
 
 // vim:sw=4:ts=4:et:

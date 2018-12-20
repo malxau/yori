@@ -131,12 +131,16 @@ ENTRYPOINT(
     PYORI_STRING UserFileName = NULL;
     YORI_STRING FileName;
     YORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks;
+    DWORD  StartArg = 0;
 
     BOOLEAN StreamStarted = FALSE;
     BOOLEAN ExecMode = FALSE;
     BOOLEAN DisplayUsage = FALSE;
     BOOLEAN ArgParsed = FALSE;
     BOOLEAN StripEscapes = FALSE;
+
+    BOOL LineTerminated;
+    BOOL TimeoutReached;
 
     CvtvtHtml4SetFunctions(&Callbacks);
 
@@ -181,7 +185,8 @@ ENTRYPOINT(
             }
 
         } else {
-            UserFileName = &ArgV[CurrentOffset];
+            StartArg = CurrentOffset;
+            break;
         }
     }
 
@@ -193,7 +198,7 @@ ENTRYPOINT(
     //  sure how to run this program and help them along.
     //
 
-    if (UserFileName == NULL) {
+    if (StartArg == 0) {
         DWORD FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
         FileType = FileType & ~(FILE_TYPE_REMOTE);
         if (FileType == FILE_TYPE_CHAR) {
@@ -205,6 +210,8 @@ ENTRYPOINT(
         CvtvtUsage();
         return EXIT_FAILURE;
     }
+
+    UserFileName = &ArgV[StartArg];
 
     //
     //  If we have a file name, read it; otherwise read from stdin
@@ -221,8 +228,16 @@ ENTRYPOINT(
             PROCESS_INFORMATION ProcessInfo;
             TCHAR szTermVar[256];
             DWORD dwConsoleMode;
+            YORI_STRING CmdLine;
+            CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
 
             if (!YoriLibUserStringToSingleFilePath(UserFileName, TRUE, &FileName)) {
+                return EXIT_FAILURE;
+            }
+
+            YoriLibInitEmptyString(&CmdLine);
+            if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &CmdLine)) {
+                YoriLibFreeStringContents(&FileName);
                 return EXIT_FAILURE;
             }
 
@@ -239,9 +254,29 @@ ENTRYPOINT(
                        NULL,
                        2048);
 
-            GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &dwConsoleMode);
-            YoriLibSPrintf(szTermVar, _T("color;%s"), dwConsoleMode&ENABLE_WRAP_AT_EOL_OUTPUT?_T(";autolinewrap"):_T(""));
-            SetEnvironmentVariable(_T("NTTERM"), szTermVar);
+            if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ConsoleInfo)) {
+                YoriLibSPrintf(szTermVar, _T("%i"), ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1);
+                SetEnvironmentVariable(_T("COLUMNS"), szTermVar);
+                YoriLibSPrintf(szTermVar, _T("%i"), ConsoleInfo.srWindow.Bottom - ConsoleInfo.srWindow.Top + 1);
+                SetEnvironmentVariable(_T("LINES"), szTermVar);
+
+                if (GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &dwConsoleMode)) {
+
+                    //
+                    //  If the window right edge is the end of the buffer, then
+                    //  auto line wrap is in effect if the console has it
+                    //  enabled.  If neither of these is true, then apps must
+                    //  explicitly emit newlines.
+                    //
+
+                    if (ConsoleInfo.dwSize.X != (ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1)) {
+                        dwConsoleMode = 0;
+                    }
+                    YoriLibSPrintf(szTermVar, _T("color;extendedchars%s"), dwConsoleMode&ENABLE_WRAP_AT_EOL_OUTPUT?_T(";autolinewrap"):_T(""));
+                    SetEnvironmentVariable(_T("YORITERM"), szTermVar);
+                }
+
+            }
 
             YoriLibMakeInheritableHandle(hProcessInput, &hProcessInput);
             YoriLibMakeInheritableHandle(hProcessOutput, &hProcessOutput);
@@ -254,7 +289,7 @@ ENTRYPOINT(
             SetEnvironmentVariable(_T("PROMPT"), _T("$e[31;1m$p$e[37m$g"));
 
             if (!CreateProcess(FileName.StartOfString,
-                               FileName.StartOfString,
+                               CmdLine.StartOfString,
                                NULL,
                                NULL,
                                TRUE,
@@ -263,9 +298,13 @@ ENTRYPOINT(
                                NULL,
                                &StartupInfo,
                                &ProcessInfo)) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not launch process, error %i\n"), (int)GetLastError());
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not launch process %s, error %i\n"), FileName.StartOfString, (int)GetLastError());
+                YoriLibFreeStringContents(&FileName);
+                YoriLibFreeStringContents(&CmdLine);
                 return EXIT_FAILURE;
             }
+
+            YoriLibFreeStringContents(&CmdLine);
 
             CloseHandle(hProcessInput);
             CloseHandle(hProcessOutput);
@@ -303,7 +342,7 @@ ENTRYPOINT(
 
     Result = TRUE;
     
-    while (YoriLibReadLineToString(&LineString, &LineReadContext, TRUE, hSource)) {
+    while (YoriLibReadLineToStringEx(&LineString, &LineReadContext, TRUE, 100, hSource, &LineTerminated, &TimeoutReached) || TimeoutReached) {
 
         //
         //  Start producing HTML
@@ -314,22 +353,28 @@ ENTRYPOINT(
             StreamStarted = TRUE;
         }
 
-        if (!YoriLibProcessVtEscapesOnOpenStream(LineString.StartOfString,
-                                                 LineString.LengthInChars,
-                                                 hOutput,
-                                                 &Callbacks)) {
+        if (LineString.LengthInChars > 0) {
 
-            Result = FALSE;
-            break;
+            if (!YoriLibProcessVtEscapesOnOpenStream(LineString.StartOfString,
+                                                     LineString.LengthInChars,
+                                                     hOutput,
+                                                     &Callbacks)) {
+
+                Result = FALSE;
+                break;
+            }
+
         }
 
-        if (!YoriLibProcessVtEscapesOnOpenStream(_T("\n"),
-                                                 1,
-                                                 hOutput,
-                                                 &Callbacks)) {
+        if (LineTerminated) {
+            if (!YoriLibProcessVtEscapesOnOpenStream(_T("\n"),
+                                                     1,
+                                                     hOutput,
+                                                     &Callbacks)) {
 
-            Result = FALSE;
-            break;
+                Result = FALSE;
+                break;
+            }
         }
     }
 

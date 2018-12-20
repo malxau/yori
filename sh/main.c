@@ -420,6 +420,17 @@ YoriShPostCommand()
         if (ScreenInfo.dwCursorPosition.X != 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
+
+    } else {
+
+        //
+        //  If output isn't to a console, we have no way to know if a
+        //  newline is needed, so just output one unconditionally.  This
+        //  is what CMD always does, ensuring that if you execute any
+        //  command there's a blank line following.
+        //
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
     }
 }
 

@@ -1157,5 +1157,171 @@ YoriLibStripVtEscapes(
     return TRUE;
 }
 
+/**
+ Query the console for the size of the window.  If the output device is not
+ a console, use the COLUMNS and LINES environment variable to indicate the
+ user's preference for how to size output.
+
+ @param OutputHandle Handle to the output device.
+
+ @param Width If specified, populated with the width of the console.
+
+ @param Height If specified, populated with the height of the console.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGetWindowDimensions(
+    __in HANDLE OutputHandle,
+    __out_opt PDWORD Width,
+    __out_opt PDWORD Height
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
+    LONGLONG Temp;
+
+    if (GetConsoleScreenBufferInfo(OutputHandle, &ConsoleInfo)) {
+        if (Width != NULL) {
+            *Width = ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1;
+        }
+        if (Height != NULL) {
+            *Height = ConsoleInfo.srWindow.Bottom - ConsoleInfo.srWindow.Top + 1;
+        }
+
+        return TRUE;
+    }
+
+    if (Width != NULL) {
+        if (!YoriLibGetEnvironmentVariableAsNumber(_T("COLUMNS"), &Temp)) {
+            *Width = 80;
+        } else {
+            *Width = (DWORD)Temp;
+        }
+    }
+
+    if (Height != NULL) {
+        if (!YoriLibGetEnvironmentVariableAsNumber(_T("LINES"), &Temp)) {
+            *Height = 25;
+        } else {
+            *Height = (DWORD)Temp;
+        }
+    }
+
+    return TRUE;
+}
+
+/**
+ Query the capabilities of the console.  If the output is going to the
+ console, this is just an API call.  If it's being redirected, parse the
+ environment string to determine the output that the user wants.
+
+ @param OutputHandle Handle to the output device.
+
+ @param SupportsColor If specified, set to TRUE to indicate the output can
+        handle color escape information.
+
+ @param SupportsExtendedChars If specified, set to TRUE to indicate the
+        output can handle UTF8 characters.
+
+ @param SupportsAutoLineWrap If specified, set to TRUE to indicate that text
+        will automatically wrap one the end of the window is reached.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibQueryConsoleCapabilities(
+    __in HANDLE OutputHandle,
+    __out_opt PBOOL SupportsColor,
+    __out_opt PBOOL SupportsExtendedChars,
+    __out_opt PBOOL SupportsAutoLineWrap
+    )
+{
+    YORI_STRING TermString;
+    YORI_STRING SubString;
+    LPTSTR NextSeperator;
+    DWORD Mode;
+
+    if (GetConsoleMode(OutputHandle, &Mode)) {
+        if (SupportsColor != NULL) {
+            *SupportsColor = TRUE;
+        }
+        if (SupportsExtendedChars != NULL) {
+            *SupportsExtendedChars = TRUE;
+        }
+        if (SupportsAutoLineWrap != NULL) {
+            if (Mode & ENABLE_WRAP_AT_EOL_OUTPUT) {
+                *SupportsAutoLineWrap = TRUE;
+            } else {
+                *SupportsAutoLineWrap = FALSE;
+            }
+        }
+
+        return TRUE;
+    }
+
+    if (SupportsColor != NULL) {
+        *SupportsColor = FALSE;
+    }
+    if (SupportsExtendedChars != NULL) {
+        *SupportsExtendedChars = FALSE;
+    }
+    if (SupportsAutoLineWrap != NULL) {
+        *SupportsAutoLineWrap = FALSE;
+    }
+
+    //
+    //  Load any user specified support from the environment.
+    //
+
+    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORITERM"), &TermString)) {
+        return TRUE;
+    }
+
+    YoriLibInitEmptyString(&SubString);
+    SubString.StartOfString = TermString.StartOfString;
+    SubString.LengthInChars = TermString.LengthInChars;
+
+    //
+    //  Now go through the list and see what support is present.
+    //
+
+    while (TRUE) {
+
+        NextSeperator = YoriLibFindLeftMostCharacter(&SubString, ';');
+        if (NextSeperator != NULL) {
+            SubString.LengthInChars = (DWORD)(NextSeperator - SubString.StartOfString);
+        }
+
+        if (YoriLibCompareStringWithLiteralInsensitive(&SubString, _T("color")) == 0) {
+            if (SupportsColor != NULL) {
+                *SupportsColor = TRUE;
+            }
+        }
+
+        if (YoriLibCompareStringWithLiteralInsensitive(&SubString, _T("extendedchars")) == 0) {
+            if (SupportsExtendedChars != NULL) {
+                *SupportsExtendedChars = TRUE;
+            }
+        }
+
+        if (YoriLibCompareStringWithLiteralInsensitive(&SubString, _T("autolinewrap")) == 0) {
+            if (SupportsAutoLineWrap != NULL) {
+                *SupportsAutoLineWrap = TRUE;
+            }
+        }
+
+        if (NextSeperator == NULL) {
+            break;
+        }
+
+        SubString.StartOfString = NextSeperator + 1;
+        SubString.LengthInChars = TermString.LengthInChars - (DWORD)(SubString.StartOfString - TermString.StartOfString);
+    }
+
+    YoriLibFreeStringContents(&TermString);
+    return TRUE;
+}
+
+
 
 // vim:sw=4:ts=4:et:

@@ -93,7 +93,7 @@ HistoryLoadHistoryFromFile(
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToString(&LineString, &LineContext, TRUE, FileHandle)) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, FileHandle)) {
             break;
         }
 

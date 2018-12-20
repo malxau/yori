@@ -89,7 +89,18 @@ SdirAppInitialize()
     //
 
     if (!GetConsoleMode(hConsoleOutput, &CurrentMode)) {
+        BOOL SupportsAutoLineWrap;
+        BOOL SupportsExtendedChars;
         Opts->OutputWithConsoleApi = FALSE;
+        if (YoriLibQueryConsoleCapabilities(hConsoleOutput, NULL, &SupportsExtendedChars, &SupportsAutoLineWrap)) {
+            if (SupportsExtendedChars) {
+                Opts->OutputExtendedCharacters = TRUE;
+            }
+            if (SupportsAutoLineWrap) {
+                Opts->OutputHasAutoLineWrap = TRUE;
+            }
+        }
+
     } else {
         Opts->OutputHasAutoLineWrap = TRUE;
         Opts->OutputExtendedCharacters = TRUE;
@@ -105,16 +116,11 @@ SdirAppInitialize()
     //
 
     if (!GetConsoleScreenBufferInfo(hConsoleOutput, &ScreenInfo)) {
-        if (GetLastError() == ERROR_INVALID_HANDLE) {
-            if (Opts->ConsoleWidth == 0) {
-                Opts->ConsoleWidth = 100;
-            }
-            Opts->ConsoleBufferWidth = Opts->ConsoleWidth;
-            Opts->EnablePause = FALSE;
-        } else {
+        if (!YoriLibGetWindowDimensions(hConsoleOutput, &Opts->ConsoleWidth, &Opts->ConsoleHeight)) {
             SdirDisplayError(GetLastError(), _T("GetConsoleScreenBufferInfo"));
             return FALSE;
         }
+        Opts->ConsoleBufferWidth = Opts->ConsoleWidth;
     } else {
         Opts->ConsoleBufferWidth = 
         Opts->ConsoleWidth = ScreenInfo.dwSize.X;
@@ -513,16 +519,6 @@ SdirParseArgs (
     Opts->Sort[0].CompareInverseCondition = SDIR_LESS_THAN;
 
     Opts->EnableNameTruncation = TRUE;
-
-    //
-    //  Default to ANSI files
-    //
-
-    if (!Opts->OutputWithConsoleApi) {
-        Opts->OutputExtendedCharacters = FALSE;
-    } else {
-        Opts->OutputExtendedCharacters = TRUE;
-    }
 
     for (i = 0; i < SdirGetNumSdirOptions(); i++) {
         PSDIR_FEATURE Feature;

@@ -182,16 +182,34 @@ YoriLibBytesInBom(
         FALSE, assume new input could arrive that means we just haven't
         observed the line break yet.
 
+ @param MaximumDelay Specifies the maximum amount of time to wait for a
+        complete line.  This value can be INFINITE or a specified number of
+        milliseconds.  If the timeout value is reached, TimeoutReached will
+        be set to true and the function will return NULL.
+
  @param FileHandle Specifies the handle to the file to read the line from.
+
+ @param LineTerminated On successful completion, set to TRUE to indicate
+        a complete line with line end was found.  Set to FALSE to indicate
+        no line end was found.  This can happen if
+        ReturnFinalNonTerminatedLine is TRUE or MaximumDelay is less than
+        infinite and a partial line was found.
+
+ @param TimeoutReached On successful completion, set to TRUE to indicate that
+        the timeout value in MaximumDelay was reached.  If MaximumDelay is
+        INFINITE, this cannot happen.
 
  @return Pointer to the Line buffer for success, NULL on failure.
  */
 PVOID
-YoriLibReadLineToString(
+YoriLibReadLineToStringEx(
     __in PYORI_STRING UserString,
     __inout PVOID * Context,
     __in BOOL ReturnFinalNonTerminatedLine,
-    __in HANDLE FileHandle
+    __in DWORD MaximumDelay,
+    __in HANDLE FileHandle,
+    __out PBOOL LineTerminated,
+    __out PBOOL TimeoutReached
     )
 {
     PYORI_LIB_LINE_READ_CONTEXT ReadContext;
@@ -207,7 +225,9 @@ YoriLibReadLineToString(
     DWORD FileType;
     DWORD DelayTime;
     DWORD CharsRemaining;
+    DWORD CumulativeDelay;
 
+    *TimeoutReached = FALSE;
     FileType = GetFileType(FileHandle);
 
     //
@@ -217,6 +237,8 @@ YoriLibReadLineToString(
     if (*Context == NULL) {
         ReadContext = YoriLibMalloc(sizeof(YORI_LIB_LINE_READ_CONTEXT));
         if (ReadContext == NULL) {
+            UserString->LengthInChars = 0;
+            *LineTerminated = FALSE;
             return NULL;
         }
         *Context = ReadContext;
@@ -245,6 +267,8 @@ YoriLibReadLineToString(
         }
         ReadContext->PreviousBuffer = YoriLibMalloc(ReadContext->LengthOfBuffer);
         if (ReadContext->PreviousBuffer == NULL) {
+            UserString->LengthInChars = 0;
+            *LineTerminated = FALSE;
             return NULL;
         }
     }
@@ -297,8 +321,11 @@ YoriLibReadLineToString(
                         if (YoriLibCopyLineToUserBufferW(UserString, (LPSTR)&WideBuffer[CharsToSkip], CharsToCopy)) {
                             ReadContext->CurrentBufferOffset += Count * sizeof(WCHAR);
                             ReadContext->LinesRead++;
+                            *LineTerminated = TRUE;
                             return UserString->StartOfString;
                         } else {
+                            UserString->LengthInChars = 0;
+                            *LineTerminated = FALSE;
                             return NULL;
                         }
                     }
@@ -340,8 +367,11 @@ YoriLibReadLineToString(
                         if (YoriLibCopyLineToUserBufferW(UserString, &Buffer[CharsToSkip], CharsToCopy)) {
                             ReadContext->CurrentBufferOffset += Count;
                             ReadContext->LinesRead++;
+                            *LineTerminated = TRUE;
                             return UserString->StartOfString;
                         } else {
+                            UserString->LengthInChars = 0;
+                            *LineTerminated = FALSE;
                             return NULL;
                         }
                     }
@@ -368,6 +398,8 @@ YoriLibReadLineToString(
         //
 
         if (ReadContext->LengthOfBuffer == ReadContext->BytesInBuffer) {
+            UserString->LengthInChars = 0;
+            *LineTerminated = FALSE;
             return NULL;
         }
 
@@ -394,7 +426,9 @@ YoriLibReadLineToString(
         //  which will not be overactively signalled.
         //
 
+        CumulativeDelay = 0;
         DelayTime = 10;
+        TerminateProcessing = FALSE;
         while(TRUE) {
             DWORD BytesAvailable;
 
@@ -409,6 +443,8 @@ YoriLibReadLineToString(
 
             WaitResult = WaitForMultipleObjects(HandleCount, HandleArray, FALSE, INFINITE);
             if (WaitResult == WAIT_OBJECT_0 && HandleCount > 1) {
+                UserString->LengthInChars = 0;
+                *LineTerminated = FALSE;
                 return NULL;
             }
 
@@ -417,10 +453,18 @@ YoriLibReadLineToString(
             }
 
             if (!PeekNamedPipe(FileHandle, NULL, 0, NULL, &BytesAvailable, NULL)) {
+                UserString->LengthInChars = 0;
+                *LineTerminated = FALSE;
                 return NULL;
             }
 
             if (BytesAvailable > 0) {
+                break;
+            }
+
+            if (MaximumDelay != INFINITE && CumulativeDelay >= MaximumDelay) {
+                *TimeoutReached = TRUE;
+                TerminateProcessing = TRUE;
                 break;
             }
 
@@ -434,6 +478,7 @@ YoriLibReadLineToString(
             //
 
             Sleep(DelayTime);
+            CumulativeDelay += DelayTime;
             DelayTime *= 2;
             if (DelayTime > 500) {
                 DelayTime = 500;
@@ -446,19 +491,20 @@ YoriLibReadLineToString(
         //  just treat any buffer remainder as a line.
         //
 
-        TerminateProcessing = FALSE;
         BytesRead = 0;
-        if (!ReadFile(FileHandle, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->BytesInBuffer), ReadContext->LengthOfBuffer - ReadContext->BytesInBuffer, &BytesRead, NULL)) {
+        if (!TerminateProcessing) {
+            if (!ReadFile(FileHandle, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->BytesInBuffer), ReadContext->LengthOfBuffer - ReadContext->BytesInBuffer, &BytesRead, NULL)) {
 #if DBG
-            DWORD LastError = GetLastError();
-            ASSERT(LastError == ERROR_BROKEN_PIPE || LastError == ERROR_NO_DATA || LastError == ERROR_HANDLE_EOF);
+                DWORD LastError = GetLastError();
+                ASSERT(LastError == ERROR_BROKEN_PIPE || LastError == ERROR_NO_DATA || LastError == ERROR_HANDLE_EOF);
 #endif
-            TerminateProcessing = TRUE;
-        }
+                TerminateProcessing = TRUE;
+            }
 
-        if (FileType != FILE_TYPE_PIPE && BytesRead == 0) {
+            if (FileType != FILE_TYPE_PIPE && BytesRead == 0) {
 
-            TerminateProcessing = TRUE;
+                TerminateProcessing = TRUE;
+            }
         }
 
         if (TerminateProcessing) {
@@ -483,15 +529,47 @@ YoriLibReadLineToString(
                 }
                 if (YoriLibCopyLineToUserBufferW(UserString, &ReadContext->PreviousBuffer[CharsToSkip], CharsToCopy)) {
                     ReadContext->BytesInBuffer = 0;
+                    *LineTerminated = FALSE;
                     return UserString->StartOfString;
                 }
             }
+            UserString->LengthInChars = 0;
+            *LineTerminated = FALSE;
             return NULL;
         }
 
         ReadContext->BytesInBuffer += BytesRead;
 
     } while(TRUE);
+}
+
+/**
+ Read a line from an input stream.
+
+ @param UserString Pointer to a string to be updated to contain data for a
+        line.  This must be initialized by the caller and the caller's buffer
+        will be used if it is large enough.  If not, this function may
+        reallocate the string to point to a new buffer.
+
+ @param Context Pointer to a PVOID sized block of memory that should be
+        initialized to NULL for the first line read, and will be updated by
+        this function.
+
+ @param FileHandle Specifies the handle to the file to read the line from.
+
+ @return Pointer to the Line buffer for success, NULL on failure.
+ */
+PVOID
+YoriLibReadLineToString(
+    __in PYORI_STRING UserString,
+    __inout PVOID * Context,
+    __in HANDLE FileHandle
+    )
+{
+    BOOL LineTerminated;
+    BOOL TimeoutReached;
+
+    return YoriLibReadLineToStringEx(UserString, Context, TRUE, INFINITE, FileHandle, &LineTerminated, &TimeoutReached);
 }
 
 /**

@@ -121,13 +121,15 @@ TailProcessStream(
     LONGLONG StartLine;
     LONGLONG CurrentLine;
     PYORI_STRING LineString;
+    BOOL LineTerminated;
+    BOOL TimeoutReached;
 
     TailContext->FilesFound++;
     TailContext->LinesFound = 0;
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToString(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, hSource)) {
+        if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, INFINITE, hSource, &LineTerminated, &TimeoutReached)) {
             break;
         }
 
@@ -152,7 +154,7 @@ TailProcessStream(
     if (TailContext->WaitForMore) {
         while (TRUE) {
 
-            if (!YoriLibReadLineToString(&TailContext->LinesArray[0], &LineContext, FALSE, hSource)) {
+            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[0], &LineContext, FALSE, INFINITE, hSource, &LineTerminated, &TimeoutReached)) {
                 Sleep(200);
                 continue;
             }

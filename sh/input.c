@@ -2173,7 +2173,7 @@ YoriShGetExpression(
     SetConsoleMode(InputHandle, ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_ECHO_INPUT);
     SetConsoleMode(OutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
-    if (!YoriLibReadLineToString(Expression, &YoriShGetExpressionLineContext, TRUE, InputHandle)) {
+    if (!YoriLibReadLineToString(Expression, &YoriShGetExpressionLineContext, InputHandle)) {
         return FALSE;
     }
 
