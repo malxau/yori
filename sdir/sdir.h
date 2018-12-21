@@ -342,23 +342,16 @@ typedef struct _SDIR_OPTS {
      */
     DWORD           CustomFileColorLength;
 
-
-    /**
-     Points to a user supplied string indicating file criteria to not
-     display.
-     */
-    LPTSTR          CustomFileFilter;
-
     /**
      Specifies the length, in characters, of CustomFileFilter.
      */
     DWORD           CustomFileFilterLength;
 
     /**
-     TRUE if any specification should be recursively enumerated, or
-     FALSE to only display a single level.
+     Points to a user supplied string indicating file criteria to not
+     display.
      */
-    BOOL            Recursive;
+    LPTSTR          CustomFileFilter;
 
     /**
      Specifies the name of the directory that is currently being enumerated.
@@ -371,6 +364,12 @@ typedef struct _SDIR_OPTS {
      it should be displayed in brief recurse mode.
      */
     SDIR_FILESIZE   BriefRecurseSize;
+
+    /**
+     TRUE if any specification should be recursively enumerated, or
+     FALSE to only display a single level.
+     */
+    BOOL            Recursive;
 
     /**
      Specifies the number of levels of depth that the user wants to display
