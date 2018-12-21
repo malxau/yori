@@ -3,10 +3,11 @@ v1.0:
  - Hexdump -r
  - Make selection use RTF
  - General MSFIX review
- - Support input from devices other than consoles
  - Have find apply file criteria
  - Tool for creating VHDs
  - Split sdir brief recurse into standalone du
+ - 32 bit setver on HyperV server
+ - Share sdir color logic
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
@@ -21,3 +22,5 @@ v2.0:
  - Use regex in hilite
  - Case statement in ys
  - Ctrl+Z
+ - Markdown formatter/parser
+ - Man or something like it

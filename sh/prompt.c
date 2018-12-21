@@ -27,6 +27,39 @@
 #include "yori.h"
 
 /**
+ Set to TRUE once the process has queried whether it is running as part of the
+ administrator group.  FALSE at start.
+ */
+BOOL YoriShPromptAdminDetermined;
+
+/**
+ Set to TRUE if the process has determined that it is running as part of the
+ administrator group.
+ */
+BOOL YoriShPromptAdminPresent;
+
+/**
+ Return TRUE if the process is running as part of the administrator group,
+ FALSE if not.
+ */
+BOOL
+YoriShPromptIsAdmin()
+{
+    YORI_STRING AdminName;
+
+    if (YoriShPromptAdminDetermined) {
+        return YoriShPromptAdminPresent;
+    }
+
+    YoriLibConstantString(&AdminName, _T("Administrators"));
+
+    YoriLibIsCurrentUserInGroup(&AdminName, &YoriShPromptAdminPresent);
+    YoriShPromptAdminDetermined = TRUE;
+
+    return YoriShPromptAdminPresent;
+}
+
+/**
  Expand variables in a prompt environment variable to form a displayable
  string.
 
@@ -79,6 +112,15 @@ YoriShExpandPrompt(
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '>';
+        }
+    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("G_OR_ADMIN_G")) == 0) {
+        CharsNeeded = 1;
+        if (OutputString->LengthAllocated > CharsNeeded) {
+            if (YoriShPromptIsAdmin()) {
+                OutputString->StartOfString[0] = 0xBB;
+            } else {
+                OutputString->StartOfString[0] = '>';
+            }
         }
     } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("L")) == 0) {
         CharsNeeded = 1;

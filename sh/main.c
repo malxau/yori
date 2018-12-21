@@ -109,9 +109,9 @@ YoriShInit()
     if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0) == 0) {
         DWORD ConsoleMode;
         if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &ConsoleMode)) {
-            SetEnvironmentVariable(_T("YORIPROMPT"), _T("$E$[35;1m$P$$E$[0m$G$"));
+            SetEnvironmentVariable(_T("YORIPROMPT"), _T("$E$[35;1m$P$$E$[0m$G_OR_ADMIN_G$"));
         } else {
-            SetEnvironmentVariable(_T("YORIPROMPT"), _T("$P$$G$"));
+            SetEnvironmentVariable(_T("YORIPROMPT"), _T("$P$$G_OR_ADMIN_G$"));
         }
     }
 

@@ -22,6 +22,7 @@ OBJS=\
 	 fileenum.obj \
 	 fileinfo.obj \
 	 fullpath.obj \
+	 group.obj    \
 	 hash.obj     \
 	 hexdump.obj  \
 	 iconv.obj    \

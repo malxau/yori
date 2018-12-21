@@ -1398,6 +1398,14 @@ YoriLibGetDiskFreeSpace(
     __out_opt PLARGE_INTEGER FreeBytes
     );
 
+// *** GROUP.C ***
+
+BOOL
+YoriLibIsCurrentUserInGroup(
+    __in PYORI_STRING GroupName,
+    __out PBOOL IsMember
+    );
+
 // *** HASH.C ***
 
 PYORI_HASH_TABLE
