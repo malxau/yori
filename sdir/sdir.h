@@ -249,10 +249,10 @@ typedef struct _SDIR_COMPARE {
     SDIR_COMPARE_FN CompareFn;
 
     /**
-     Can be set to SDIR_EQUAL, SDIR_GREATER_THAN, SDIR_LESS_THAN.  Items are
-     inserted into order by comparing against existing entries until this
-     condition is met, at which point the item can be inserted into its
-     sorted position.
+     Can be set to YORI_LIB_EQUAL, YORI_LIB_GREATER_THAN, YORI_LIB_LESS_THAN.
+     Items are inserted into order by comparing against existing entries
+     until this condition is met, at which point the item can be inserted
+     into its sorted position.
      */
     DWORD           CompareBreakCondition;
 
@@ -771,29 +771,6 @@ typedef struct _SDIR_OPT {
 } SDIR_OPT, *PSDIR_OPT;
 #pragma pack(pop)
 
-/**
- For string/integer compares, indicates that the first value is less than the
- second.
- */
-#define SDIR_LESS_THAN    0
-
-/**
- For string/integer compares, indicates that the first value is equal to the
- second.
- */
-#define SDIR_EQUAL        1
-
-/**
- For string/integer compares, indicates that the first value is greater than
- the second.
- */
-#define SDIR_GREATER_THAN 2
-
-/**
- For bitwise or wildcard compares, indicates a mismatch.
- */
-#define SDIR_NOT_EQUAL    0
-
 #pragma pack(push, 4)
 
 /**
@@ -956,12 +933,6 @@ SdirDisplayShortName (
     __in PYORI_FILE_INFO Entry
     );
 
-DWORD
-SdirCompareFileName (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    );
-
 /**
  Return a pointer to a feature's volatile configuration from its array
  index.
@@ -1025,30 +996,6 @@ SdirUsage(
 //
 //  Functions from utils.c
 //
-
-DWORD
-SdirCompareLargeInt (
-    __in PULARGE_INTEGER Left,
-    __in PULARGE_INTEGER Right
-    );
-
-DWORD
-SdirCompareString (
-    __in LPCTSTR Left,
-    __in LPCTSTR Right
-    );
-
-DWORD
-SdirCompareDate (
-    __in LPSYSTEMTIME Left,
-    __in LPSYSTEMTIME Right
-    );
-
-DWORD
-SdirCompareTime (
-    __in LPSYSTEMTIME Left,
-    __in LPSYSTEMTIME Right
-    );
 
 DWORD
 SdirStringToNum32(

@@ -1509,6 +1509,955 @@ YoriLibCollectWriteTime(
     return TRUE;
 }
 
+//
+//  Sorting support
+//
+
+/**
+ Compare two 64 bit unsigned large integers and return which is greater than
+ the other, or if the two are equal.
+
+ @param Left Pointer to the first integer to compare.
+
+ @param Right Pointer to the second integer to compare.
+
+ @return YORI_LIB_LESS_THAN if the first integer is less than the second;
+         YORI_LIB_GREATER_THAN if the first integer is greater than the second;
+         YORI_LIB_EQUAL if the two are identical.
+ */
+DWORD
+YoriLibCompareLargeInt (
+    __in PULARGE_INTEGER Left,
+    __in PULARGE_INTEGER Right
+    )
+{
+    if (Left->HighPart < Right->HighPart) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->HighPart > Right->HighPart) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    if (Left->LowPart < Right->LowPart) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->LowPart > Right->LowPart) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two NULL terminated strings and return which is greater than the
+ other, or if the two are equal.
+
+ @param Left Pointer to the first string to compare.
+
+ @param Right Pointer to the second string to compare.
+
+ @return YORI_LIB_LESS_THAN if the first string is less than the second;
+         YORI_LIB_GREATER_THAN if the first string is greater than the second;
+         YORI_LIB_EQUAL if the two are identical.
+ */
+DWORD
+YoriLibCompareNullTerminatedString (
+    __in LPCTSTR Left,
+    __in LPCTSTR Right
+    )
+{
+    int ret = _tcsicmp(Left, Right);
+
+    if (ret < 0) {
+        return YORI_LIB_LESS_THAN;
+    } else if (ret == 0) {
+        return YORI_LIB_EQUAL;
+    } else {
+        return YORI_LIB_GREATER_THAN;
+    }
+}
+
+/**
+ Compare two NT formatted timestamps and return which date is greater than the
+ other, or if the two are equal.  Note specifically that this routine does not
+ care about time components in the timestamp, only date components.
+
+ @param Left Pointer to the date to compare.
+
+ @param Right Pointer to the date to compare.
+
+ @return YORI_LIB_LESS_THAN if the first date is less than the second;
+         YORI_LIB_GREATER_THAN if the first date is greater than the second;
+         YORI_LIB_EQUAL if the two are identical.
+ */
+DWORD
+YoriLibCompareDate (
+    __in LPSYSTEMTIME Left,
+    __in LPSYSTEMTIME Right
+    )
+{
+    if (Left->wYear < Right->wYear) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->wYear > Right->wYear) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    if (Left->wMonth < Right->wMonth) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->wMonth > Right->wMonth) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    if (Left->wDay < Right->wDay) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->wDay > Right->wDay) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two NT formatted timestamps and return which time is greater than the
+ other, or if the two are equal.  Note specifically that this routine does not
+ care about date components in the timestamp, only time components.
+
+ @param Left Pointer to the time to compare.
+
+ @param Right Pointer to the time to compare.
+
+ @return YORI_LIB_LESS_THAN if the first time is less than the second;
+         YORI_LIB_GREATER_THAN if the first time is greater than the second;
+         YORI_LIB_EQUAL if the two are identical.
+ */
+DWORD
+YoriLibCompareTime (
+    __in LPSYSTEMTIME Left,
+    __in LPSYSTEMTIME Right
+    )
+{
+    if (Left->wHour < Right->wHour) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->wHour > Right->wHour) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    if (Left->wMinute < Right->wMinute) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->wMinute > Right->wMinute) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    if (Left->wSecond < Right->wSecond) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->wSecond > Right->wSecond) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    if (Left->wMilliseconds < Right->wMilliseconds) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->wMilliseconds > Right->wMilliseconds) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry access dates.
+
+ @param Left The first date to compare.
+
+ @param Right The second date to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareAccessDate (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareDate(&Left->AccessTime, &Right->AccessTime);
+}
+
+/**
+ Compare two directory entry access times.
+
+ @param Left The first time to compare.
+
+ @param Right The second time to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareAccessTime (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareTime(&Left->AccessTime, &Right->AccessTime);
+}
+
+/**
+ Compare two directory entry allocated range counts.
+
+ @param Left The first count to compare.
+
+ @param Right The second count to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareAllocatedRangeCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->AllocatedRangeCount, (PULARGE_INTEGER)&Right->AllocatedRangeCount);
+}
+
+/**
+ Compare two directory entry allocation sizes.
+
+ @param Left The first size to compare.
+
+ @param Right The second size to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareAllocationSize (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->AllocationSize, (PULARGE_INTEGER)&Right->AllocationSize);
+}
+
+/**
+ Compare two directory entry OS architectures.
+
+ @param Left The first architecture to compare.
+
+ @param Right The second architecture to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareArch (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->Architecture < Right->Architecture) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->Architecture > Right->Architecture) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry compression algorithms.
+
+ @param Left The first algorithm to compare.
+
+ @param Right The second algorithm to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareCompressionAlgorithm (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->CompressionAlgorithm < Right->CompressionAlgorithm) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->CompressionAlgorithm > Right->CompressionAlgorithm) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry compressed file sizes.
+
+ @param Left The first size to compare.
+
+ @param Right The second size to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareCompressedFileSize (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->CompressedFileSize, (PULARGE_INTEGER)&Right->CompressedFileSize);
+}
+
+/**
+ Compare two directory entry create dates.
+
+ @param Left The first date to compare.
+
+ @param Right The second date to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareCreateDate (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareDate(&Left->CreateTime, &Right->CreateTime);
+}
+
+/**
+ Compare two directory entry create times.
+
+ @param Left The first time to compare.
+
+ @param Right The second time to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareCreateTime (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareTime(&Left->CreateTime, &Right->CreateTime);
+}
+
+/**
+ Compare two directory entry file description strings.
+
+ @param Left The first file description string to compare.
+
+ @param Right The second file description string to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareDescription (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareNullTerminatedString(Left->Description, Right->Description);
+}
+
+/**
+ Compare two directory entry effective permissions.
+
+ @param Left The first set of permissions to compare.
+
+ @param Right The second set of permissions to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareEffectivePermissions (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->EffectivePermissions < Right->EffectivePermissions) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->EffectivePermissions > Right->EffectivePermissions) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry file attributes.
+
+ @param Left The first set of attributes to compare.
+
+ @param Right The second set of attributes to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareFileAttributes (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->FileAttributes < Right->FileAttributes) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->FileAttributes > Right->FileAttributes) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry file extensions.
+
+ @param Left The first extension to compare.
+
+ @param Right The second extension to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareFileExtension (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareNullTerminatedString(Left->Extension, Right->Extension);
+}
+
+/**
+ Compare two directory entry file identifiers.
+
+ @param Left The first ID to compare.
+
+ @param Right The second ID to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareFileId (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->FileId, (PULARGE_INTEGER)&Right->FileId);
+}
+
+/**
+ Compare two directory entry file names.
+
+ @param Left The first name to compare.
+
+ @param Right The second name to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareFileName (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareNullTerminatedString(Left->FileName, Right->FileName);
+}
+
+/**
+ Compare two directory entry file sizes.
+
+ @param Left The first size to compare.
+
+ @param Right The second size to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareFileSize (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->FileSize, (PULARGE_INTEGER)&Right->FileSize);
+}
+
+/**
+ Compare two directory entry file version strings.
+
+ @param Left The first file version string to compare.
+
+ @param Right The second file version string to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareFileVersionString (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareNullTerminatedString(Left->FileVersionString, Right->FileVersionString);
+}
+
+/**
+ Compare two directory entry fragment counts.
+
+ @param Left The first count to compare.
+
+ @param Right The second count to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareFragmentCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->FragmentCount, (PULARGE_INTEGER)&Right->FragmentCount);
+}
+
+/**
+ Compare two directory entry link counts.
+
+ @param Left The first count to compare.
+
+ @param Right The second count to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareLinkCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->LinkCount < Right->LinkCount) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->LinkCount > Right->LinkCount) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry object IDs.
+
+ @param Left The first ID to compare.
+
+ @param Right The second ID to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareObjectId (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    int result = memcmp(&Left->ObjectId, &Right->ObjectId, sizeof(Left->ObjectId));
+    
+    if (result < 0) {
+        return YORI_LIB_LESS_THAN;
+    } else if (result > 0) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry minimum OS versions.
+
+ @param Left The first version to compare.
+
+ @param Right The second version to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareOsVersion (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->OsVersionHigh < Right->OsVersionHigh) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->OsVersionHigh > Right->OsVersionHigh) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    if (Left->OsVersionLow < Right->OsVersionLow) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->OsVersionLow > Right->OsVersionLow) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry owners.
+
+ @param Left The first owner to compare.
+
+ @param Right The second owner to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareOwner (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareNullTerminatedString(Left->Owner, Right->Owner);
+}
+
+/**
+ Compare two directory entry reparse tags.
+
+ @param Left The first tag to compare.
+
+ @param Right The second tag to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareReparseTag (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->ReparseTag < Right->ReparseTag) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->ReparseTag > Right->ReparseTag) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry short file names.
+
+ @param Left The first name to compare.
+
+ @param Right The second name to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareShortName (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareNullTerminatedString(Left->ShortFileName, Right->ShortFileName);
+}
+
+/**
+ Compare two directory entry OS subsystems.
+
+ @param Left The first subsystem to compare.
+
+ @param Right The second subsystem to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareSubsystem (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->Subsystem < Right->Subsystem) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->Subsystem > Right->Subsystem) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory entry stream counts.
+
+ @param Left The first count to compare.
+
+ @param Right The second count to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareStreamCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->StreamCount < Right->StreamCount) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->StreamCount > Right->StreamCount) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
+ Compare two directory USN values.
+
+ @param Left The first USN to compare.
+
+ @param Right The second USN to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareUsn (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->Usn, (PULARGE_INTEGER)&Right->Usn);
+}
+
+/**
+ Compare two directory entry version resources.
+
+ @param Left The first version to compare.
+
+ @param Right The second version to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareVersion (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareLargeInt((PULARGE_INTEGER)&Left->FileVersion, (PULARGE_INTEGER)&Right->FileVersion);
+}
+
+/**
+ Compare two directory entry write dates.
+
+ @param Left The first date to compare.
+
+ @param Right The second date to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareWriteDate (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareDate(&Left->WriteTime, &Right->WriteTime);
+}
+
+/**
+ Compare two directory entry write times.
+
+ @param Left The first time to compare.
+
+ @param Right The second time to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareWriteTime (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    return YoriLibCompareTime(&Left->WriteTime, &Right->WriteTime);
+}
+
+/**
+ Compare two directory entry effective permissions to see if all bits
+ in the second are in the first.
+
+ @param Left The first set of permissions to compare.
+
+ @param Right The second set of permissions to compare.
+
+ @return YORI_LIB_NOT_EQUAL if not all bits from the first are set in the second,
+         YORI_LIB_EQUAL if all bits are set in the second.
+ */
+DWORD
+YoriLibBitwiseEffectivePermissions (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if ((Left->EffectivePermissions & Right->EffectivePermissions) == Right->EffectivePermissions) {
+        return YORI_LIB_EQUAL;
+    }
+    return YORI_LIB_NOT_EQUAL;
+}
+
+/**
+ Compare two directory entry file attributes to see if all bits
+ in the second are in the first.
+
+ @param Left The first set of attributes to compare.
+
+ @param Right The second set of attributes to compare.
+
+ @return YORI_LIB_NOT_EQUAL if not all bits from the first are set in the second,
+         YORI_LIB_EQUAL if all bits are set in the second.
+ */
+DWORD
+YoriLibBitwiseFileAttributes (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if ((Left->FileAttributes & Right->FileAttributes) == Right->FileAttributes) {
+        return YORI_LIB_EQUAL;
+    }
+    return YORI_LIB_NOT_EQUAL;
+}
+
+/**
+ Upcase a single character within a string, referenced by offset.
+
+ @param Str Pointer to the string.
+
+ @param Index The offset within the string of the character.
+
+ @return The upcased form of the character.
+ */
+TCHAR
+YoriLibGetUpcasedCharFromString (
+    __in LPTSTR Str,
+    __in DWORD Index
+    )
+{
+    return YoriLibUpcaseChar(Str[Index]);
+}
+
+/**
+ Compare two directory entry file names to see if the first matches the
+ wildcard criteria in the second.
+
+ @param Left The first file name to compare.
+
+ @param Right The second file name to compare.
+
+ @return YORI_LIB_NOT_EQUAL if not specified characters in the first match the
+         second,
+         YORI_LIB_EQUAL if the first name matches the wildcard pattern in the
+         second.
+ */
+DWORD
+YoriLibBitwiseFileName (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    DWORD LeftIndex, RightIndex;
+
+    TCHAR CompareLeft;
+    TCHAR CompareRight;
+
+    LeftIndex = 0;
+    RightIndex = 0;
+
+    while (Left->FileName[LeftIndex] != '\0' && Right->FileName[RightIndex] != '\0') {
+
+        CompareLeft = YoriLibGetUpcasedCharFromString(Left->FileName, LeftIndex);
+        CompareRight = YoriLibGetUpcasedCharFromString(Right->FileName, RightIndex);
+
+        LeftIndex++;
+        RightIndex++;
+
+        if (CompareRight == '?') {
+
+            //
+            //  '?' matches with everything.  We've already advanced to the next
+            //  char, so continue.
+            //
+
+        } else if (CompareRight == '*') {
+
+            //
+            //  Skip one char so Right is the one after *.  Left should compare
+            //  the character it's currently on.  Keep going through Left until
+            //  we find the char in Right
+            //
+
+            LeftIndex--;
+            CompareRight = YoriLibGetUpcasedCharFromString(Right->FileName, RightIndex);
+            CompareLeft = YoriLibGetUpcasedCharFromString(Left->FileName, LeftIndex);
+
+            while (CompareLeft != CompareRight && CompareLeft != '\0') {
+                LeftIndex++;
+                CompareLeft = YoriLibGetUpcasedCharFromString(Left->FileName, LeftIndex);
+            }
+
+        } else {
+            if (CompareLeft != CompareRight) {
+                return YORI_LIB_NOT_EQUAL;
+            }
+        }
+
+    }
+
+    if (Left->FileName[LeftIndex] == '\0' && Right->FileName[RightIndex] == '\0') {
+        return YORI_LIB_EQUAL;
+    }
+
+    return YORI_LIB_NOT_EQUAL;
+}
+
 
 //
 //  When criteria are specified to apply attributes, we need to load the

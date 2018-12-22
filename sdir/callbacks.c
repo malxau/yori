@@ -87,809 +87,6 @@ SdirGetNumPermissionPairs()
     return sizeof(PermissionPairs)/sizeof(PermissionPairs[0]);
 }
 
-
-//
-//  Sorting support
-//
-
-/**
- Compare two directory entry access dates.
-
- @param Left The first date to compare.
-
- @param Right The second date to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareAccessDate (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareDate(&Left->AccessTime, &Right->AccessTime);
-}
-
-/**
- Compare two directory entry access times.
-
- @param Left The first time to compare.
-
- @param Right The second time to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareAccessTime (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareTime(&Left->AccessTime, &Right->AccessTime);
-}
-
-/**
- Compare two directory entry allocated range counts.
-
- @param Left The first count to compare.
-
- @param Right The second count to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareAllocatedRangeCount (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->AllocatedRangeCount, (PULARGE_INTEGER)&Right->AllocatedRangeCount);
-}
-
-/**
- Compare two directory entry allocation sizes.
-
- @param Left The first size to compare.
-
- @param Right The second size to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareAllocationSize (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->AllocationSize, (PULARGE_INTEGER)&Right->AllocationSize);
-}
-
-/**
- Compare two directory entry OS architectures.
-
- @param Left The first architecture to compare.
-
- @param Right The second architecture to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareArch (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->Architecture < Right->Architecture) {
-        return SDIR_LESS_THAN;
-    } else if (Left->Architecture > Right->Architecture) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry compression algorithms.
-
- @param Left The first algorithm to compare.
-
- @param Right The second algorithm to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareCompressionAlgorithm (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->CompressionAlgorithm < Right->CompressionAlgorithm) {
-        return SDIR_LESS_THAN;
-    } else if (Left->CompressionAlgorithm > Right->CompressionAlgorithm) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry compressed file sizes.
-
- @param Left The first size to compare.
-
- @param Right The second size to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareCompressedFileSize (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->CompressedFileSize, (PULARGE_INTEGER)&Right->CompressedFileSize);
-}
-
-/**
- Compare two directory entry create dates.
-
- @param Left The first date to compare.
-
- @param Right The second date to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareCreateDate (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareDate(&Left->CreateTime, &Right->CreateTime);
-}
-
-/**
- Compare two directory entry create times.
-
- @param Left The first time to compare.
-
- @param Right The second time to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareCreateTime (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareTime(&Left->CreateTime, &Right->CreateTime);
-}
-
-/**
- Compare two directory entry file description strings.
-
- @param Left The first file description string to compare.
-
- @param Right The second file description string to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareDescription (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareString(Left->Description, Right->Description);
-}
-
-/**
- Compare two directory entry effective permissions.
-
- @param Left The first set of permissions to compare.
-
- @param Right The second set of permissions to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareEffectivePermissions (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->EffectivePermissions < Right->EffectivePermissions) {
-        return SDIR_LESS_THAN;
-    } else if (Left->EffectivePermissions > Right->EffectivePermissions) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry file attributes.
-
- @param Left The first set of attributes to compare.
-
- @param Right The second set of attributes to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareFileAttributes (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->FileAttributes < Right->FileAttributes) {
-        return SDIR_LESS_THAN;
-    } else if (Left->FileAttributes > Right->FileAttributes) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry file extensions.
-
- @param Left The first extension to compare.
-
- @param Right The second extension to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareFileExtension (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareString(Left->Extension, Right->Extension);
-}
-
-/**
- Compare two directory entry file identifiers.
-
- @param Left The first ID to compare.
-
- @param Right The second ID to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareFileId (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FileId, (PULARGE_INTEGER)&Right->FileId);
-}
-
-/**
- Compare two directory entry file names.
-
- @param Left The first name to compare.
-
- @param Right The second name to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareFileName (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareString(Left->FileName, Right->FileName);
-}
-
-/**
- Compare two directory entry file sizes.
-
- @param Left The first size to compare.
-
- @param Right The second size to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareFileSize (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FileSize, (PULARGE_INTEGER)&Right->FileSize);
-}
-
-/**
- Compare two directory entry file version strings.
-
- @param Left The first file version string to compare.
-
- @param Right The second file version string to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareFileVersionString (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareString(Left->FileVersionString, Right->FileVersionString);
-}
-
-/**
- Compare two directory entry fragment counts.
-
- @param Left The first count to compare.
-
- @param Right The second count to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareFragmentCount (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FragmentCount, (PULARGE_INTEGER)&Right->FragmentCount);
-}
-
-/**
- Compare two directory entry link counts.
-
- @param Left The first count to compare.
-
- @param Right The second count to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareLinkCount (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->LinkCount < Right->LinkCount) {
-        return SDIR_LESS_THAN;
-    } else if (Left->LinkCount > Right->LinkCount) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry object IDs.
-
- @param Left The first ID to compare.
-
- @param Right The second ID to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareObjectId (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    int result = memcmp(&Left->ObjectId, &Right->ObjectId, sizeof(Left->ObjectId));
-    
-    if (result < 0) {
-        return SDIR_LESS_THAN;
-    } else if (result > 0) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry minimum OS versions.
-
- @param Left The first version to compare.
-
- @param Right The second version to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareOsVersion (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->OsVersionHigh < Right->OsVersionHigh) {
-        return SDIR_LESS_THAN;
-    } else if (Left->OsVersionHigh > Right->OsVersionHigh) {
-        return SDIR_GREATER_THAN;
-    }
-
-    if (Left->OsVersionLow < Right->OsVersionLow) {
-        return SDIR_LESS_THAN;
-    } else if (Left->OsVersionLow > Right->OsVersionLow) {
-        return SDIR_GREATER_THAN;
-    }
-
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry owners.
-
- @param Left The first owner to compare.
-
- @param Right The second owner to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareOwner (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareString(Left->Owner, Right->Owner);
-}
-
-/**
- Compare two directory entry reparse tags.
-
- @param Left The first tag to compare.
-
- @param Right The second tag to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareReparseTag (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->ReparseTag < Right->ReparseTag) {
-        return SDIR_LESS_THAN;
-    } else if (Left->ReparseTag > Right->ReparseTag) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry short file names.
-
- @param Left The first name to compare.
-
- @param Right The second name to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareShortName (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareString(Left->ShortFileName, Right->ShortFileName);
-}
-
-/**
- Compare two directory entry OS subsystems.
-
- @param Left The first subsystem to compare.
-
- @param Right The second subsystem to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareSubsystem (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->Subsystem < Right->Subsystem) {
-        return SDIR_LESS_THAN;
-    } else if (Left->Subsystem > Right->Subsystem) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory entry stream counts.
-
- @param Left The first count to compare.
-
- @param Right The second count to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareStreamCount (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if (Left->StreamCount < Right->StreamCount) {
-        return SDIR_LESS_THAN;
-    } else if (Left->StreamCount > Right->StreamCount) {
-        return SDIR_GREATER_THAN;
-    }
-    return SDIR_EQUAL;
-}
-
-/**
- Compare two directory USN values.
-
- @param Left The first USN to compare.
-
- @param Right The second USN to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareUsn (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->Usn, (PULARGE_INTEGER)&Right->Usn);
-}
-
-/**
- Compare two directory entry version resources.
-
- @param Left The first version to compare.
-
- @param Right The second version to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareVersion (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareLargeInt((PULARGE_INTEGER)&Left->FileVersion, (PULARGE_INTEGER)&Right->FileVersion);
-}
-
-/**
- Compare two directory entry write dates.
-
- @param Left The first date to compare.
-
- @param Right The second date to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareWriteDate (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareDate(&Left->WriteTime, &Right->WriteTime);
-}
-
-/**
- Compare two directory entry write times.
-
- @param Left The first time to compare.
-
- @param Right The second time to compare.
-
- @return SDIR_LESS_THAN if the first is less than the second,
-         SDIR_GREATER_THAN if the first is greater than the second,
-         SDIR_EQUAL if the two are the same.
- */
-DWORD
-SdirCompareWriteTime (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    return SdirCompareTime(&Left->WriteTime, &Right->WriteTime);
-}
-
-/**
- Compare two directory entry effective permissions to see if all bits
- in the second are in the first.
-
- @param Left The first set of permissions to compare.
-
- @param Right The second set of permissions to compare.
-
- @return SDIR_NOT_EQUAL if not all bits from the first are set in the second,
-         SDIR_EQUAL if all bits are set in the second.
- */
-DWORD
-SdirBitwiseEffectivePermissions (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if ((Left->EffectivePermissions & Right->EffectivePermissions) == Right->EffectivePermissions) {
-        return SDIR_EQUAL;
-    }
-    return SDIR_NOT_EQUAL;
-}
-
-/**
- Compare two directory entry file attributes to see if all bits
- in the second are in the first.
-
- @param Left The first set of attributes to compare.
-
- @param Right The second set of attributes to compare.
-
- @return SDIR_NOT_EQUAL if not all bits from the first are set in the second,
-         SDIR_EQUAL if all bits are set in the second.
- */
-DWORD
-SdirBitwiseFileAttributes (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    if ((Left->FileAttributes & Right->FileAttributes) == Right->FileAttributes) {
-        return SDIR_EQUAL;
-    }
-    return SDIR_NOT_EQUAL;
-}
-
-/**
- Upcase a single character within a string, referenced by offset.
-
- @param Str Pointer to the string.
-
- @param Index The offset within the string of the character.
-
- @return The upcased form of the character.
- */
-TCHAR
-SdirGetUpcasedCharFromString (
-    __in LPTSTR Str,
-    __in DWORD Index
-    )
-{
-    return YoriLibUpcaseChar(Str[Index]);
-}
-
-/**
- Compare two directory entry file names to see if the first matches the
- wildcard criteria in the second.
-
- @param Left The first file name to compare.
-
- @param Right The second file name to compare.
-
- @return SDIR_NOT_EQUAL if not specified characters in the first match the
-         second,
-         SDIR_EQUAL if the first name matches the wildcard pattern in the
-         second.
- */
-DWORD
-SdirBitwiseFileName (
-    __in PYORI_FILE_INFO Left,
-    __in PYORI_FILE_INFO Right
-    )
-{
-    DWORD LeftIndex, RightIndex;
-
-    TCHAR CompareLeft;
-    TCHAR CompareRight;
-
-    LeftIndex = 0;
-    RightIndex = 0;
-
-    while (Left->FileName[LeftIndex] != '\0' && Right->FileName[RightIndex] != '\0') {
-
-        CompareLeft = SdirGetUpcasedCharFromString(Left->FileName, LeftIndex);
-        CompareRight = SdirGetUpcasedCharFromString(Right->FileName, RightIndex);
-
-        LeftIndex++;
-        RightIndex++;
-
-        if (CompareRight == '?') {
-
-            //
-            //  '?' matches with everything.  We've already advanced to the next
-            //  char, so continue.
-            //
-
-        } else if (CompareRight == '*') {
-
-            //
-            //  Skip one char so Right is the one after *.  Left should compare
-            //  the character it's currently on.  Keep going through Left until
-            //  we find the char in Right
-            //
-
-            LeftIndex--;
-            CompareRight = SdirGetUpcasedCharFromString(Right->FileName, RightIndex);
-            CompareLeft = SdirGetUpcasedCharFromString(Left->FileName, LeftIndex);
-
-            while (CompareLeft != CompareRight && CompareLeft != '\0') {
-                LeftIndex++;
-                CompareLeft = SdirGetUpcasedCharFromString(Left->FileName, LeftIndex);
-            }
-
-        } else {
-            if (CompareLeft != CompareRight) {
-                return SDIR_NOT_EQUAL;
-            }
-        }
-
-    }
-
-    if (Left->FileName[LeftIndex] == '\0' && Right->FileName[RightIndex] == '\0') {
-        return SDIR_EQUAL;
-    }
-
-    return SDIR_NOT_EQUAL;
-}
-
-
 //
 //  File enumeration support
 //
@@ -958,7 +155,7 @@ SdirCollectFileAttributes (
     if (YoriLibCollectFileAttributes(Entry, FindData, FullPath)) {
         DWORD i;
         DWORD Mask;
-   
+
         //
         //  We do this bit by bit to ensure that we don't have file attributes
         //  recorded that we don't understand.  This allows us to perform
@@ -1018,13 +215,13 @@ SdirCollectSummary(
             EffectiveLinkCount = 1;
         }
         Summary->TotalSize += SdirFileSizeFromLargeInt(&Entry->FileSize) / EffectiveLinkCount;
-    
+
         if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_COLLECT) {
             Summary->CompressedSize += SdirFileSizeFromLargeInt(&Entry->CompressedFileSize) / EffectiveLinkCount;
         }
     } else {
         Summary->TotalSize += SdirFileSizeFromLargeInt(&Entry->FileSize);
-    
+
         if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_COLLECT) {
             Summary->CompressedSize += SdirFileSizeFromLargeInt(&Entry->CompressedFileSize);
         }
@@ -1459,7 +656,7 @@ SdirDisplayEffectivePermissions (
         }
 
         StrAtts[i + 1] = '\0';
-    
+
         SdirPasteStr(Buffer, StrAtts, Attributes, SdirGetNumPermissionPairs() + 1);
     }
     return SdirGetNumPermissionPairs() + 1;
@@ -1554,7 +751,7 @@ SdirDisplayFileAttributes (
         }
 
         StrAtts[i + 1] = '\0';
-    
+
         SdirPasteStr(Buffer, StrAtts, Attributes, SdirGetNumAttrPairs() + 1);
     }
     return SdirGetNumAttrPairs() + 1;
@@ -1808,13 +1005,13 @@ SdirDisplayOsVersion (
 
     if (Buffer) {
         YoriLibSPrintfS(Str, sizeof(Str)/sizeof(Str[0]), _T(" %02i.%02i"), Entry->OsVersionHigh, Entry->OsVersionLow);
-    
+
         if (Entry->OsVersionHigh > ThisOsMajor ||
             (Entry->OsVersionHigh == ThisOsMajor && Entry->OsVersionLow > ThisOsMinor)) {
-    
+
             YoriLibSetColorToWin32(&Attributes, SDIR_FUTURE_VERSION_COLOR);
         }
-    
+
         SdirPasteStr(Buffer, Str, Attributes, 6);
     }
     return 6;
@@ -2266,189 +1463,225 @@ SdirDisplayFileWriteTime (
 const SDIR_OPT
 SdirOptions[] = {
 
-    {OPT_OS(FtAllocatedRangeCount),      _T("ac"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayAllocatedRangeCount,  YoriLibCollectAllocatedRangeCount,
-        SdirCompareAllocatedRangeCount,  NULL,                          YoriLibGenerateAllocatedRangeCount,
-        "allocated range count"},
+    {OPT_OS(FtAllocatedRangeCount),          _T("ac"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayAllocatedRangeCount,      YoriLibCollectAllocatedRangeCount,
+        YoriLibCompareAllocatedRangeCount,   NULL,
+        YoriLibGenerateAllocatedRangeCount,  "allocated range count"},
 
-    {OPT_OS(FtAccessDate),               _T("ad"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
-        SdirDisplayFileAccessDate,       YoriLibCollectAccessTime,
-        SdirCompareAccessDate,           NULL,                          YoriLibGenerateAccessDate,
-        "access date"},
+    {OPT_OS(FtAccessDate),                   _T("ad"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
+        SdirDisplayFileAccessDate,           YoriLibCollectAccessTime,
+        YoriLibCompareAccessDate,            NULL,
+        YoriLibGenerateAccessDate,           "access date"},
 
-    {OPT_OS(FtArch),                     _T("ar"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayArch,                 YoriLibCollectArch,
-        SdirCompareArch,                 NULL,                          YoriLibGenerateArch,
-        "CPU architecture"},
+    {OPT_OS(FtArch),                         _T("ar"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
+        SdirDisplayArch,                     YoriLibCollectArch,
+        YoriLibCompareArch,                  NULL,
+        YoriLibGenerateArch,                 "CPU architecture"},
 
-    {OPT_OS(FtAllocationSize),           _T("as"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayAllocationSize,       YoriLibCollectAllocationSize,
-        SdirCompareAllocationSize,       NULL,                          YoriLibGenerateAllocationSize,
-        "allocation size"},
+    {OPT_OS(FtAllocationSize),               _T("as"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
+        SdirDisplayAllocationSize,           YoriLibCollectAllocationSize,
+        YoriLibCompareAllocationSize,        NULL,
+        YoriLibGenerateAllocationSize,       "allocation size"},
 
-    {OPT_OS(FtAccessTime),               _T("at"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
-        SdirDisplayFileAccessTime,       YoriLibCollectAccessTime,
-        SdirCompareAccessTime,           NULL,                          YoriLibGenerateAccessTime,
-        "access time"},
+    {OPT_OS(FtAccessTime),                   _T("at"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_BLUE},
+        SdirDisplayFileAccessTime,           YoriLibCollectAccessTime,
+        YoriLibCompareAccessTime,            NULL,
+        YoriLibGenerateAccessTime,           "access time"},
 
-    {OPT_OS(FtBriefAlternate),           _T("ba"), {0, 0, BACKGROUND_BLUE},
-        NULL,                            NULL,                 
-        NULL,                            NULL,                          NULL,
-        "brief alternate mask"},
+    {OPT_OS(FtBriefAlternate),               _T("ba"),
+        {0, 0, BACKGROUND_BLUE},
+        NULL,                                NULL,
+        NULL,                                NULL,
+        NULL,                                "brief alternate mask"},
 
-    {OPT_OS(FtCompressionAlgorithm),     _T("ca"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayCompressionAlgorithm, YoriLibCollectCompressionAlgorithm,
-        SdirCompareCompressionAlgorithm, NULL,                          YoriLibGenerateCompressionAlgorithm,
-        "compression algorithm"},
-    
-    {OPT_OS(FtCreateDate),               _T("cd"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFileCreateDate,       YoriLibCollectCreateTime,
-        SdirCompareCreateDate,           NULL,                          YoriLibGenerateCreateDate,
-        "create date"},
+    {OPT_OS(FtCompressionAlgorithm),         _T("ca"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayCompressionAlgorithm,     YoriLibCollectCompressionAlgorithm,
+        YoriLibCompareCompressionAlgorithm,  NULL,
+        YoriLibGenerateCompressionAlgorithm, "compression algorithm"},
 
-    {OPT_OS(FtCompressedFileSize),       _T("cs"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayCompressedFileSize,   YoriLibCollectCompressedFileSize,
-        SdirCompareCompressedFileSize,   NULL,                          YoriLibGenerateCompressedFileSize,
-        "compressed size"},
+    {OPT_OS(FtCreateDate),                   _T("cd"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayFileCreateDate,           YoriLibCollectCreateTime,
+        YoriLibCompareCreateDate,            NULL,
+        YoriLibGenerateCreateDate,           "create date"},
 
-    {OPT_OS(FtCreateTime),               _T("ct"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFileCreateTime,       YoriLibCollectCreateTime,
-        SdirCompareCreateTime,           NULL,                          YoriLibGenerateCreateTime,
-        "create time"},
+    {OPT_OS(FtCompressedFileSize),           _T("cs"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
+        SdirDisplayCompressedFileSize,       YoriLibCollectCompressedFileSize,
+        YoriLibCompareCompressedFileSize,    NULL,
+        YoriLibGenerateCompressedFileSize,   "compressed size"},
 
-    {OPT_OS(FtDescription),              _T("de"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayDescription,          YoriLibCollectDescription,
-        SdirCompareDescription,          NULL,                          YoriLibGenerateDescription,
-        "description"},
+    {OPT_OS(FtCreateTime),                   _T("ct"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayFileCreateTime,           YoriLibCollectCreateTime,
+        YoriLibCompareCreateTime,            NULL,
+        YoriLibGenerateCreateTime,           "create time"},
 
-    {OPT_OS(FtEffectivePermissions),     _T("ep"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayEffectivePermissions, SdirCollectEffectivePermissions,
-        SdirCompareEffectivePermissions, SdirBitwiseEffectivePermissions, SdirGenerateEffectivePermissions,
-        "effective permissions"},
+    {OPT_OS(FtDescription),                  _T("de"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayDescription,              YoriLibCollectDescription,
+        YoriLibCompareDescription,           NULL,
+        YoriLibGenerateDescription,          "description"},
 
-    {OPT_OS(FtError),                    _T("er"), {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_INTENSITY},
-        NULL,                            NULL,                 
-        NULL,                            NULL,                          NULL,
-        "errors"},
+    {OPT_OS(FtEffectivePermissions),         _T("ep"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayEffectivePermissions,     SdirCollectEffectivePermissions,
+        YoriLibCompareEffectivePermissions,  YoriLibBitwiseEffectivePermissions,
+        SdirGenerateEffectivePermissions,    "effective permissions"},
 
-    {OPT_OS(FtFileAttributes),           _T("fa"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayFileAttributes,       SdirCollectFileAttributes,
-        SdirCompareFileAttributes,       SdirBitwiseFileAttributes,     SdirGenerateFileAttributes,
-        "file attributes"},
+    {OPT_OS(FtError),                        _T("er"),
+        {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_INTENSITY},
+        NULL,                                NULL,
+        NULL,                                NULL,
+        NULL,                                "errors"},
 
-    {OPT_OS(FtFragmentCount),            _T("fc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFragmentCount,        YoriLibCollectFragmentCount,
-        SdirCompareFragmentCount,        NULL,                          YoriLibGenerateFragmentCount,
-        "fragment count"},
+    {OPT_OS(FtFileAttributes),               _T("fa"),
+        {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
+        SdirDisplayFileAttributes,           SdirCollectFileAttributes,
+        YoriLibCompareFileAttributes,        YoriLibBitwiseFileAttributes,
+        SdirGenerateFileAttributes,          "file attributes"},
 
-    {OPT_OS(FtFileExtension),            _T("fe"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_FIXED_COLOR, 0, 0},
-        NULL,                            YoriLibCollectFileExtension,
-        SdirCompareFileExtension,        NULL,                          YoriLibGenerateFileExtension,
-        "file extension"},
+    {OPT_OS(FtFragmentCount),                _T("fc"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayFragmentCount,            YoriLibCollectFragmentCount,
+        YoriLibCompareFragmentCount,         NULL,
+        YoriLibGenerateFragmentCount,        "fragment count"},
 
-    {OPT_OS(FtFileId),                   _T("fi"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFileId,               YoriLibCollectFileId,
-        SdirCompareFileId,               NULL,                          NULL,
-        "file id"},
+    {OPT_OS(FtFileExtension),                _T("fe"),
+        {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_FIXED_COLOR, 0, 0},
+        NULL,                                YoriLibCollectFileExtension,
+        YoriLibCompareFileExtension,         NULL,
+        YoriLibGenerateFileExtension,        "file extension"},
 
-    {OPT_OS(FtFileName),                 _T("fn"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
-        NULL,                            YoriLibCollectFileName,
-        SdirCompareFileName,             SdirBitwiseFileName,           YoriLibGenerateFileName,
-        "file name"},
+    {OPT_OS(FtFileId),                       _T("fi"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayFileId,                   YoriLibCollectFileId,
+        YoriLibCompareFileId,                NULL,
+        NULL,                                "file id"},
 
-    {OPT_OS(FtFileSize),                 _T("fs"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayFileSize,             YoriLibCollectFileSize,
-        SdirCompareFileSize,             NULL,                          YoriLibGenerateFileSize,
-        "file size"},
+    {OPT_OS(FtFileName),                     _T("fn"),
+        {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
+        NULL,                                YoriLibCollectFileName,
+        YoriLibCompareFileName,              YoriLibBitwiseFileName,
+        YoriLibGenerateFileName,             "file name"},
 
-    {OPT_OS(FtFileVersionString),        _T("fv"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayFileVersionString,    YoriLibCollectFileVersionString,
-        SdirCompareFileVersionString,    NULL,                          YoriLibGenerateFileVersionString,
-        "file version string"},
+    {OPT_OS(FtFileSize),                     _T("fs"),
+        {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
+        SdirDisplayFileSize,                 YoriLibCollectFileSize,
+        YoriLibCompareFileSize,              NULL,
+        YoriLibGenerateFileSize,             "file size"},
 
-    {OPT_OS(FtGrid),                     _T("gr"), {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
-        NULL,                            NULL,                 
-        NULL,                            NULL,                          NULL,
-        "grid"},
+    {OPT_OS(FtFileVersionString),            _T("fv"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayFileVersionString,        YoriLibCollectFileVersionString,
+        YoriLibCompareFileVersionString,     NULL,
+        YoriLibGenerateFileVersionString,    "file version string"},
 
-    {OPT_OS(FtLinkCount),                _T("lc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayLinkCount,            YoriLibCollectLinkCount,
-        SdirCompareLinkCount,            NULL,                          YoriLibGenerateLinkCount,
-        "link count"},
+    {OPT_OS(FtGrid),                         _T("gr"),
+        {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
+        NULL,                                NULL,
+        NULL,                                NULL,
+        NULL,                                "grid"},
 
-    {OPT_OS(FtNumberFiles),              _T("nf"), {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        NULL,                            NULL,                 
-        NULL,                            NULL,                          NULL,
-        "number files"},
+    {OPT_OS(FtLinkCount),                    _T("lc"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayLinkCount,                YoriLibCollectLinkCount,
+        YoriLibCompareLinkCount,             NULL,
+        YoriLibGenerateLinkCount,            "link count"},
 
-#ifdef UNICODE
-    {OPT_OS(FtNamedStreams),             _T("ns"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_FIXED_COLOR, 0, 0},
-        NULL,                            NULL,                   
-        NULL,                            NULL,                          NULL,
-        "named streams"},
-#endif
-
-    {OPT_OS(FtObjectId),                _T("oi"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayObjectId,             YoriLibCollectObjectId,
-        SdirCompareObjectId,             NULL,                          YoriLibGenerateObjectId,
-        "object id"},
-
-    {OPT_OS(FtOsVersion),                _T("os"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayOsVersion,            YoriLibCollectOsVersion,
-        SdirCompareOsVersion,            NULL,                          YoriLibGenerateOsVersion,
-        "minimum OS version"},
-
-    {OPT_OS(FtOwner),                    _T("ow"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayOwner,                YoriLibCollectOwner,
-        SdirCompareOwner,                NULL,                          YoriLibGenerateOwner,
-        "owner"},
-
-    {OPT_OS(FtReparseTag),               _T("rt"), {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayReparseTag,           YoriLibCollectReparseTag,
-        SdirCompareReparseTag,           NULL,                          YoriLibGenerateReparseTag,
-        "reparse tag"},
+    {OPT_OS(FtNumberFiles),                  _T("nf"),
+        {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN|FOREGROUND_INTENSITY},
+        NULL,                                NULL,
+        NULL,                                NULL,
+        NULL,                                "number files"},
 
 #ifdef UNICODE
-    {OPT_OS(FtStreamCount),              _T("sc"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayStreamCount,          YoriLibCollectStreamCount,
-        SdirCompareStreamCount,          NULL,                          YoriLibGenerateStreamCount,
-        "stream count"},
+    {OPT_OS(FtNamedStreams),                 _T("ns"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_FIXED_COLOR, 0, 0},
+        NULL,                                NULL,
+        NULL,                                NULL,
+        NULL,                                "named streams"},
 #endif
 
-    {OPT_OS(FtSummary),                  _T("sm"), {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE},
-        NULL,                            NULL,
-        NULL,                            NULL,                          NULL,
-        "summary"},
+    {OPT_OS(FtObjectId),                     _T("oi"),
+        {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayObjectId,                 YoriLibCollectObjectId,
+        YoriLibCompareObjectId,              NULL,
+        YoriLibGenerateObjectId,             "object id"},
 
-    {OPT_OS(FtShortName),                _T("sn"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
-        SdirDisplayShortName,            YoriLibCollectShortName,
-        SdirCompareShortName,            NULL,                          YoriLibGenerateShortName,
-        "short name"},
+    {OPT_OS(FtOsVersion),                    _T("os"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayOsVersion,                YoriLibCollectOsVersion,
+        YoriLibCompareOsVersion,             NULL,
+        YoriLibGenerateOsVersion,            "minimum OS version"},
 
-    {OPT_OS(FtSubsystem),                _T("ss"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplaySubsystem,            YoriLibCollectSubsystem,
-        SdirCompareSubsystem,            NULL,                          YoriLibGenerateSubsystem,
-        "subsystem"},
+    {OPT_OS(FtOwner),                        _T("ow"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayOwner,                    YoriLibCollectOwner,
+        YoriLibCompareOwner,                 NULL,
+        YoriLibGenerateOwner,                "owner"},
 
-    {OPT_OS(FtUsn),                      _T("us"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayUsn,                  YoriLibCollectUsn,
-        SdirCompareUsn,                  NULL,                          YoriLibGenerateUsn,
-        "USN"},
+    {OPT_OS(FtReparseTag),                   _T("rt"),
+        {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayReparseTag,               YoriLibCollectReparseTag,
+        YoriLibCompareReparseTag,            NULL,
+        YoriLibGenerateReparseTag,           "reparse tag"},
 
-    {OPT_OS(FtVersion),                  _T("vr"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayVersion,              YoriLibCollectVersion,
-        SdirCompareVersion,              NULL,                          YoriLibGenerateVersion,
-        "version"},
+#ifdef UNICODE
+    {OPT_OS(FtStreamCount),                  _T("sc"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayStreamCount,              YoriLibCollectStreamCount,
+        YoriLibCompareStreamCount,           NULL,
+        YoriLibGenerateStreamCount,          "stream count"},
+#endif
 
-    {OPT_OS(FtWriteDate),                _T("wd"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
-        SdirDisplayFileWriteDate,        YoriLibCollectWriteTime,
-        SdirCompareWriteDate,            NULL,                          YoriLibGenerateWriteDate,
-        "write date"},
+    {OPT_OS(FtSummary),                      _T("sm"),
+        {SDIR_FEATURE_DISPLAY|SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE},
+        NULL,                                NULL,
+        NULL,                                NULL,
+        NULL,                                "summary"},
 
-    {OPT_OS(FtWriteTime),                _T("wt"), {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
-        SdirDisplayFileWriteTime,        YoriLibCollectWriteTime,
-        SdirCompareWriteTime,            NULL,                          YoriLibGenerateWriteTime,
-        "write time"},
+    {OPT_OS(FtShortName),                    _T("sn"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT|SDIR_FEATURE_USE_FILE_COLOR, 0, 0},
+        SdirDisplayShortName,                YoriLibCollectShortName,
+        YoriLibCompareShortName,             NULL,
+        YoriLibGenerateShortName,            "short name"},
+
+    {OPT_OS(FtSubsystem),                    _T("ss"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplaySubsystem,                YoriLibCollectSubsystem,
+        YoriLibCompareSubsystem,             NULL,
+        YoriLibGenerateSubsystem,            "subsystem"},
+
+    {OPT_OS(FtUsn),                          _T("us"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayUsn,                      YoriLibCollectUsn,
+        YoriLibCompareUsn,                   NULL,
+        YoriLibGenerateUsn,                  "USN"},
+
+    {OPT_OS(FtVersion),                      _T("vr"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayVersion,                  YoriLibCollectVersion,
+        YoriLibCompareVersion,               NULL,
+        YoriLibGenerateVersion,              "version"},
+
+    {OPT_OS(FtWriteDate),                    _T("wd"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
+        SdirDisplayFileWriteDate,            YoriLibCollectWriteTime,
+        YoriLibCompareWriteDate,             NULL,
+        YoriLibGenerateWriteDate,            "write date"},
+
+    {OPT_OS(FtWriteTime),                    _T("wt"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_GREEN},
+        SdirDisplayFileWriteTime,            YoriLibCollectWriteTime,
+        YoriLibCompareWriteTime,             NULL,
+        YoriLibGenerateWriteTime,            "write time"},
 };
 
 /**

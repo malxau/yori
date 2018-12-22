@@ -949,6 +949,29 @@ YoriLibDoesFileMatchExpression (
 
 // *** FILEINFO.C ***
 
+/**
+ For string/integer compares, indicates that the first value is less than the
+ second.
+ */
+#define YORI_LIB_LESS_THAN    0
+
+/**
+ For string/integer compares, indicates that the first value is equal to the
+ second.
+ */
+#define YORI_LIB_EQUAL        1
+
+/**
+ For string/integer compares, indicates that the first value is greater than
+ the second.
+ */
+#define YORI_LIB_GREATER_THAN 2
+
+/**
+ For bitwise or wildcard compares, indicates a mismatch.
+ */
+#define YORI_LIB_NOT_EQUAL    0
+
 BOOL
 YoriLibIsExecutableGui(
     __in PYORI_STRING FullPath
@@ -1141,6 +1164,228 @@ YoriLibCollectWriteTime(
     __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
     __in PYORI_STRING FullPath
+    );
+
+DWORD
+YoriLibCompareLargeInt (
+    __in PULARGE_INTEGER Left,
+    __in PULARGE_INTEGER Right
+    );
+
+DWORD
+YoriLibCompareNullTerminatedString (
+    __in LPCTSTR Left,
+    __in LPCTSTR Right
+    );
+
+DWORD
+YoriLibCompareDate (
+    __in LPSYSTEMTIME Left,
+    __in LPSYSTEMTIME Right
+    );
+
+DWORD
+YoriLibCompareTime (
+    __in LPSYSTEMTIME Left,
+    __in LPSYSTEMTIME Right
+    );
+
+DWORD
+YoriLibCompareAccessDate (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareAccessTime (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareAllocatedRangeCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareAllocationSize (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareArch (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareCompressionAlgorithm (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareCompressedFileSize (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareCreateDate (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareCreateTime (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareDescription (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareEffectivePermissions (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareFileAttributes (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareFileExtension (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareFileId (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareFileName (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareFileSize (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareFileVersionString (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareFragmentCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareLinkCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareObjectId (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareOsVersion (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareOwner (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareReparseTag (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareShortName (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareSubsystem (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareStreamCount (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareUsn (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareVersion (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareWriteDate (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibCompareWriteTime (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibBitwiseEffectivePermissions (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibBitwiseFileAttributes (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
+YoriLibBitwiseFileName (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
     );
 
 BOOL

@@ -138,41 +138,41 @@ SdirPopulateApplyEntry(
     if (Operator[0] == '>') {
         ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
 
-        ThisApply->TruthStates[SDIR_LESS_THAN] = FALSE;
-        ThisApply->TruthStates[SDIR_GREATER_THAN] = TRUE;
+        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
+        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = TRUE;
         if (Operator[1] == '=') {
-            ThisApply->TruthStates[SDIR_EQUAL] = TRUE;
+            ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
         } else {
-            ThisApply->TruthStates[SDIR_EQUAL] = FALSE;
+            ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
         }
     } else if (Operator[0] == '<') {
         ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
 
-        ThisApply->TruthStates[SDIR_LESS_THAN] = TRUE;
-        ThisApply->TruthStates[SDIR_GREATER_THAN] = FALSE;
+        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = TRUE;
+        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = FALSE;
         if (Operator[1] == '=') {
-            ThisApply->TruthStates[SDIR_EQUAL] = TRUE;
+            ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
         } else {
-            ThisApply->TruthStates[SDIR_EQUAL] = FALSE;
+            ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
         }
     } else if (Operator[0] == '!' && Operator[1] == '=') {
         ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
-        ThisApply->TruthStates[SDIR_LESS_THAN] = TRUE;
-        ThisApply->TruthStates[SDIR_GREATER_THAN] = TRUE;
-        ThisApply->TruthStates[SDIR_EQUAL] = FALSE;
+        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = TRUE;
+        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = TRUE;
+        ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
     } else if (Operator[0] == '=') {
         ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
-        ThisApply->TruthStates[SDIR_LESS_THAN] = FALSE;
-        ThisApply->TruthStates[SDIR_GREATER_THAN] = FALSE;
-        ThisApply->TruthStates[SDIR_EQUAL] = TRUE;
+        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
+        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = FALSE;
+        ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
     } else if (Operator[0] == '&') {
         ThisApply->CompareFn = SdirOptions[FeatureNumber].BitwiseCompareFn;
-        ThisApply->TruthStates[SDIR_EQUAL] = TRUE;
-        ThisApply->TruthStates[SDIR_NOT_EQUAL] = FALSE;
+        ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
+        ThisApply->TruthStates[YORI_LIB_NOT_EQUAL] = FALSE;
     } else if (Operator[0] == '!' && Operator[1] == '&') {
         ThisApply->CompareFn = SdirOptions[FeatureNumber].BitwiseCompareFn;
-        ThisApply->TruthStates[SDIR_EQUAL] = FALSE;
-        ThisApply->TruthStates[SDIR_NOT_EQUAL] = TRUE;
+        ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
+        ThisApply->TruthStates[YORI_LIB_NOT_EQUAL] = TRUE;
     } else {
         SdirWriteString(_T("Operator error in: "));
         return FALSE;

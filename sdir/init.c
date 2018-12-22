@@ -431,11 +431,11 @@ SdirParseOpt (
                     Opts->Sort[Opts->CurrentSort].CompareFn = SdirOptions[i].CompareFn;
 
                     if (Opt[0] == 's') {
-                        Opts->Sort[Opts->CurrentSort].CompareBreakCondition = SDIR_GREATER_THAN;
-                        Opts->Sort[Opts->CurrentSort].CompareInverseCondition = SDIR_LESS_THAN;
+                        Opts->Sort[Opts->CurrentSort].CompareBreakCondition = YORI_LIB_GREATER_THAN;
+                        Opts->Sort[Opts->CurrentSort].CompareInverseCondition = YORI_LIB_LESS_THAN;
                     } else {
-                        Opts->Sort[Opts->CurrentSort].CompareBreakCondition = SDIR_LESS_THAN;
-                        Opts->Sort[Opts->CurrentSort].CompareInverseCondition = SDIR_GREATER_THAN;
+                        Opts->Sort[Opts->CurrentSort].CompareBreakCondition = YORI_LIB_LESS_THAN;
+                        Opts->Sort[Opts->CurrentSort].CompareInverseCondition = YORI_LIB_GREATER_THAN;
                     }
                     Opts->CurrentSort++;
                     OptParsed = TRUE;
@@ -514,9 +514,9 @@ SdirParseArgs (
     //
 
     Opts->CurrentSort = 0;
-    Opts->Sort[0].CompareFn = SdirCompareFileName;
-    Opts->Sort[0].CompareBreakCondition = SDIR_GREATER_THAN;
-    Opts->Sort[0].CompareInverseCondition = SDIR_LESS_THAN;
+    Opts->Sort[0].CompareFn = YoriLibCompareFileName;
+    Opts->Sort[0].CompareBreakCondition = YORI_LIB_GREATER_THAN;
+    Opts->Sort[0].CompareInverseCondition = YORI_LIB_LESS_THAN;
 
     Opts->EnableNameTruncation = TRUE;
 
