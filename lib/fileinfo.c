@@ -2738,6 +2738,28 @@ YoriLibGenerateFileExtension(
 
 /**
  Parse a string and populate a directory entry to facilitate
+ comparisons for a file's ID.
+
+ @param Entry The directory entry to populate from the string.
+
+ @param String Pointer to a string to use to populate the
+        directory entry.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGenerateFileId(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    )
+{
+    DWORD CharsConsumed;
+    YoriLibStringToNumber(String, TRUE, &Entry->FileId.QuadPart, &CharsConsumed);
+    return TRUE;
+}
+
+/**
+ Parse a string and populate a directory entry to facilitate
  comparisons for a file's name.
 
  @param Entry The directory entry to populate from the string.

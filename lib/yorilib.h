@@ -1455,6 +1455,12 @@ YoriLibGenerateFileExtension(
     );
 
 BOOL
+YoriLibGenerateFileId(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
 YoriLibGenerateFileName(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
