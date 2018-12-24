@@ -173,7 +173,6 @@ ForFilterOptions[] = {
      YoriLibCompareDescription,              NULL,
      YoriLibGenerateDescription,             "description"},
 
-    /*
     {_T("ep"),                               YoriLibCollectEffectivePermissions,
      YoriLibCompareEffectivePermissions,     YoriLibBitwiseEffectivePermissions,
      YoriLibGenerateEffectivePermissions,    "effective permissions"},
@@ -181,7 +180,6 @@ ForFilterOptions[] = {
     {_T("fa"),                               YoriLibCollectFileAttributes,
      YoriLibCompareFileAttributes,           YoriLibBitwiseFileAttributes,
      YoriLibGenerateFileAttributes,          "file attributes"},
-     */
 
     {_T("fc"),                               YoriLibCollectFragmentCount,
      YoriLibCompareFragmentCount,            NULL,

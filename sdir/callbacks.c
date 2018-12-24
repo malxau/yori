@@ -30,151 +30,10 @@
 
 #include "sdir.h"
 
-/**
- A table that maps file attribute flags as returned by the system to character
- representations used in UI or specified by the user.
- */
-const SDIR_ATTRPAIR
-AttrPairs[] = {
-    {FILE_ATTRIBUTE_ARCHIVE,           'A'},
-    {FILE_ATTRIBUTE_READONLY,          'R'},
-    {FILE_ATTRIBUTE_HIDDEN,            'H'},
-    {FILE_ATTRIBUTE_SYSTEM,            'S'},
-    {FILE_ATTRIBUTE_DIRECTORY,         'D'},
-    {FILE_ATTRIBUTE_COMPRESSED,        'C'},
-    {FILE_ATTRIBUTE_ENCRYPTED,         'E'},
-    {FILE_ATTRIBUTE_OFFLINE,           'O'},
-    {FILE_ATTRIBUTE_REPARSE_POINT,     'r'},
-    {FILE_ATTRIBUTE_SPARSE_FILE,       's'},
-    {FILE_ATTRIBUTE_INTEGRITY_STREAM,  'I'},
-    };
-
-/**
- Return the count of attribute pairs, meaning characters to flags describing
- attributes.
- This exists so other modules can know about how many attributes there are
- without having access to know what all of the attributes are.
- */
-DWORD
-SdirGetNumAttrPairs()
-{
-    return sizeof(AttrPairs)/sizeof(AttrPairs[0]);
-}
-
-/**
- A table that maps file permission flags as returned by the system to
- character representations used in UI or specified by the user.
- */
-const SDIR_ATTRPAIR PermissionPairs[] = {
-    {FILE_READ_DATA,                   'R'},
-    {FILE_READ_ATTRIBUTES,             'r'},
-    {FILE_WRITE_DATA,                  'W'},
-    {FILE_WRITE_ATTRIBUTES,            'w'},
-    {FILE_APPEND_DATA,                 'A'},
-    {FILE_EXECUTE,                     'X'},
-    {DELETE,                           'D'},
-    };
-
-/**
- Return the count of permission pairs, meaning characters to flags describing
- permissions.
- This exists so other modules can know about how many permissions there are
- without having access to know what all of the permissions are.
- */
-DWORD
-SdirGetNumPermissionPairs()
-{
-    return sizeof(PermissionPairs)/sizeof(PermissionPairs[0]);
-}
-
 //
 //  File enumeration support
 //
 
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's effective permissions.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectEffectivePermissions (
-    __inout PYORI_FILE_INFO Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in PYORI_STRING FullPath
-    )
-{
-
-    if (YoriLibCollectEffectivePermissions(Entry, FindData, FullPath)) {
-        DWORD i;
-        ACCESS_MASK UnderstoodPermissions = 0;
-
-        //
-        //  Strip off any permissions we don't understand so that tests for
-        //  equality are meaningful
-        //
-
-        for (i = 0; i < SdirGetNumPermissionPairs(); i++) {
-            UnderstoodPermissions |= PermissionPairs[i].FileAttribute;
-        }
-
-        Entry->EffectivePermissions &= UnderstoodPermissions;
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-/**
- Collect information from a directory enumerate and full file name relating
- to the file's attributes.
-
- @param Entry The directory entry to populate.
-
- @param FindData The directory enumeration information.
-
- @param FullPath Pointer to a string to the full file name.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirCollectFileAttributes (
-    __inout PYORI_FILE_INFO Entry,
-    __in PWIN32_FIND_DATA FindData,
-    __in PYORI_STRING FullPath
-    )
-{
-
-    if (YoriLibCollectFileAttributes(Entry, FindData, FullPath)) {
-        DWORD i;
-        DWORD Mask;
-
-        //
-        //  We do this bit by bit to ensure that we don't have file attributes
-        //  recorded that we don't understand.  This allows us to perform
-        //  equality comparisons where the result is understandable to the user
-        //  in that it can be specified and displayed.
-        //
-
-
-        Mask = 0;
-        for (i = 0; i < SdirGetNumAttrPairs(); i++) {
-            Mask |= AttrPairs[i].FileAttribute;
-        }
-
-        Entry->FileAttributes &= Mask;
-        return TRUE;
-    }
-
-    return FALSE;
-}
 
 /**
  Collect information from a directory entry into the active summary count.
@@ -237,75 +96,6 @@ SdirCollectSummary(
 //
 
 
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's effective permissions.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateEffectivePermissions(
-    __inout PYORI_FILE_INFO Entry,
-    __in PYORI_STRING String
-    )
-{
-    DWORD i;
-    DWORD StringIndex = 0;
-
-    Entry->FileAttributes = 0;
-
-    while (StringIndex < String->LengthInChars) {
-
-        for (i = 0; i < SdirGetNumPermissionPairs(); i++) {
-            if (String->StartOfString[StringIndex] == PermissionPairs[i].DisplayLetter) {
-                Entry->EffectivePermissions |= PermissionPairs[i].FileAttribute;
-            }
-        }
-
-        StringIndex++;
-    }
-    return TRUE;
-}
-
-/**
- Parse a NULL terminated string and populate a directory entry to facilitate
- comparisons for a file's attributes.
-
- @param Entry The directory entry to populate from the string.
-
- @param String Pointer to a NULL terminated string to use to populate the
-        directory entry.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirGenerateFileAttributes(
-    __inout PYORI_FILE_INFO Entry,
-    __in PYORI_STRING String
-    )
-{
-    DWORD i;
-    DWORD StringIndex = 0;
-
-    Entry->FileAttributes = 0;
-
-    while (StringIndex < String->LengthInChars) {
-
-        for (i = 0; i < SdirGetNumAttrPairs(); i++) {
-            if (String->StartOfString[StringIndex] == AttrPairs[i].DisplayLetter) {
-                Entry->FileAttributes |= AttrPairs[i].FileAttribute;
-            }
-        }
-
-        StringIndex++;
-    }
-    return TRUE;
-}
 
 //
 //  Specific formatting and sizing callbacks for each supported piece of file metadata.
@@ -645,11 +435,16 @@ SdirDisplayEffectivePermissions (
     TCHAR StrAtts[32];
     DWORD i;
 
+    PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
+    DWORD PairCount;
+
+    YoriLibGetFilePermissionPairs(&PairCount, &Pairs);
+
     if (Buffer) {
         StrAtts[0] = ' ';
-        for (i = 0; i < SdirGetNumPermissionPairs(); i++) {
-            if (Entry->EffectivePermissions & PermissionPairs[i].FileAttribute) {
-                StrAtts[i + 1] = PermissionPairs[i].DisplayLetter;
+        for (i = 0; i < PairCount; i++) {
+            if (Entry->EffectivePermissions & Pairs[i].Flag) {
+                StrAtts[i + 1] = Pairs[i].DisplayLetter;
             } else {
                 StrAtts[i + 1] = '-';
             }
@@ -657,9 +452,9 @@ SdirDisplayEffectivePermissions (
 
         StrAtts[i + 1] = '\0';
 
-        SdirPasteStr(Buffer, StrAtts, Attributes, SdirGetNumPermissionPairs() + 1);
+        SdirPasteStr(Buffer, StrAtts, Attributes, PairCount + 1);
     }
-    return SdirGetNumPermissionPairs() + 1;
+    return PairCount + 1;
 }
 
 /**
@@ -739,12 +534,16 @@ SdirDisplayFileAttributes (
 {
     TCHAR StrAtts[32];
     DWORD i;
+    PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
+    DWORD PairCount;
+
+    YoriLibGetFileAttrPairs(&PairCount, &Pairs);
 
     if (Buffer) {
         StrAtts[0] = ' ';
-        for (i = 0; i < SdirGetNumAttrPairs(); i++) {
-            if (Entry->FileAttributes & AttrPairs[i].FileAttribute) {
-                StrAtts[i + 1] = AttrPairs[i].DisplayLetter;
+        for (i = 0; i < PairCount; i++) {
+            if (Entry->FileAttributes & Pairs[i].Flag) {
+                StrAtts[i + 1] = Pairs[i].DisplayLetter;
             } else {
                 StrAtts[i + 1] = '-';
             }
@@ -752,9 +551,9 @@ SdirDisplayFileAttributes (
 
         StrAtts[i + 1] = '\0';
 
-        SdirPasteStr(Buffer, StrAtts, Attributes, SdirGetNumAttrPairs() + 1);
+        SdirPasteStr(Buffer, StrAtts, Attributes, PairCount + 1);
     }
-    return SdirGetNumAttrPairs() + 1;
+    return PairCount + 1;
 }
 
 /**
@@ -1531,9 +1330,9 @@ SdirOptions[] = {
 
     {OPT_OS(FtEffectivePermissions),         _T("ep"),
         {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
-        SdirDisplayEffectivePermissions,     SdirCollectEffectivePermissions,
+        SdirDisplayEffectivePermissions,     YoriLibCollectEffectivePermissions,
         YoriLibCompareEffectivePermissions,  YoriLibBitwiseEffectivePermissions,
-        SdirGenerateEffectivePermissions,    "effective permissions"},
+        YoriLibGenerateEffectivePermissions, "effective permissions"},
 
     {OPT_OS(FtError),                        _T("er"),
         {0, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_INTENSITY},
@@ -1543,9 +1342,9 @@ SdirOptions[] = {
 
     {OPT_OS(FtFileAttributes),               _T("fa"),
         {SDIR_FEATURE_COLLECT|SDIR_FEATURE_ALLOW_DISPLAY, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
-        SdirDisplayFileAttributes,           SdirCollectFileAttributes,
+        SdirDisplayFileAttributes,           YoriLibCollectFileAttributes,
         YoriLibCompareFileAttributes,        YoriLibBitwiseFileAttributes,
-        SdirGenerateFileAttributes,          "file attributes"},
+        YoriLibGenerateFileAttributes,       "file attributes"},
 
     {OPT_OS(FtFragmentCount),                _T("fc"),
         {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, SDIR_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},

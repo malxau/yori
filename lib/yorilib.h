@@ -972,6 +972,48 @@ YoriLibDoesFileMatchExpression (
  */
 #define YORI_LIB_NOT_EQUAL    0
 
+/**
+ A structure to map a 32 bit flag value to a character to input or output
+ when describing the flag to humans.  The character is expected to be
+ unique to allow input by character to function.
+ */
+typedef struct _YORI_LIB_CHAR_TO_DWORD_FLAG {
+
+    /**
+     The flag in native representation.
+     */
+    DWORD Flag;
+
+    /**
+     The character to display to the user.
+     */
+    TCHAR DisplayLetter;
+
+    /**
+     Unused in order to ensure structure alignment.
+     */
+    WORD  AlignmentPadding;
+
+} YORI_LIB_CHAR_TO_DWORD_FLAG, *PYORI_LIB_CHAR_TO_DWORD_FLAG;
+
+/**
+ Pointer to a constant flag to character array.  This should typically be
+ used because the data is in read only memory.
+ */
+typedef YORI_LIB_CHAR_TO_DWORD_FLAG CONST *PCYORI_LIB_CHAR_TO_DWORD_FLAG;
+
+VOID
+YoriLibGetFileAttrPairs(
+    __out PDWORD Count,
+    __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
+    );
+
+VOID
+YoriLibGetFilePermissionPairs(
+    __out PDWORD Count,
+    __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
+    );
+
 BOOL
 YoriLibIsExecutableGui(
     __in PYORI_STRING FullPath
@@ -1444,6 +1486,18 @@ YoriLibGenerateCreateTime(
 
 BOOL
 YoriLibGenerateDescription(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateEffectivePermissions(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateFileAttributes(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
     );

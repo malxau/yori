@@ -80,29 +80,6 @@ typedef LONGLONG SDIR_FILESIZE;
 //  File size lengths
 //
 
-/**
- A mapping structure between file attributes and letters to display.
- */
-typedef struct _SDIR_ATTRPAIR {
-
-    /**
-     The file attribute in native representation.
-     */
-    DWORD FileAttribute;
-
-    /**
-     The character to display to the user.
-     */
-    TCHAR DisplayLetter;
-
-    /**
-     Unused in order to ensure structure alignment.
-     */
-    WORD  AlignmentPadding;
-} SDIR_ATTRPAIR, *PSDIR_ATTRPAIR;
-
-extern const SDIR_ATTRPAIR AttrPairs[];
-
 #pragma pack(push, 1)
 
 /**
@@ -975,13 +952,6 @@ SdirInit(
 
 VOID
 SdirAppCleanup();
-
-//
-//  Functions from sdir.c
-//
-
-DWORD
-SdirGetNumAttrPairs();
 
 //
 //  Functions from usage.c

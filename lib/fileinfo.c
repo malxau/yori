@@ -31,6 +31,80 @@
 #include "yorilib.h"
 
 /**
+ A table that maps file attribute flags as returned by the system to character
+ representations used in UI or specified by the user.
+ */
+const YORI_LIB_CHAR_TO_DWORD_FLAG
+YoriLibFileAttrPairs[] = {
+    {FILE_ATTRIBUTE_ARCHIVE,           'A'},
+    {FILE_ATTRIBUTE_READONLY,          'R'},
+    {FILE_ATTRIBUTE_HIDDEN,            'H'},
+    {FILE_ATTRIBUTE_SYSTEM,            'S'},
+    {FILE_ATTRIBUTE_DIRECTORY,         'D'},
+    {FILE_ATTRIBUTE_COMPRESSED,        'C'},
+    {FILE_ATTRIBUTE_ENCRYPTED,         'E'},
+    {FILE_ATTRIBUTE_OFFLINE,           'O'},
+    {FILE_ATTRIBUTE_REPARSE_POINT,     'r'},
+    {FILE_ATTRIBUTE_SPARSE_FILE,       's'},
+    {FILE_ATTRIBUTE_INTEGRITY_STREAM,  'I'},
+    };
+
+/**
+ Return a pointer to the array of attribute character to flag pairs and the
+ number of elements in the array.
+ 
+ @param Count On successful completion, populated with the number of elements
+        in the array.
+        
+ @param Pairs On successful completion, populated with a pointer to the array.
+        Note the memory in this array is read only.
+ */
+VOID
+YoriLibGetFileAttrPairs(
+    __out PDWORD Count,
+    __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
+    )
+{
+    *Pairs = YoriLibFileAttrPairs;
+    *Count = sizeof(YoriLibFileAttrPairs)/sizeof(YoriLibFileAttrPairs[0]);
+}
+
+/**
+ A table that maps file permission flags as returned by the system to
+ character representations used in UI or specified by the user.
+ */
+const YORI_LIB_CHAR_TO_DWORD_FLAG
+YoriLibFilePermissionPairs[] = {
+    {FILE_READ_DATA,                   'R'},
+    {FILE_READ_ATTRIBUTES,             'r'},
+    {FILE_WRITE_DATA,                  'W'},
+    {FILE_WRITE_ATTRIBUTES,            'w'},
+    {FILE_APPEND_DATA,                 'A'},
+    {FILE_EXECUTE,                     'X'},
+    {DELETE,                           'D'},
+    };
+
+/**
+ Return a pointer to the array of attribute character to flag pairs and the
+ number of elements in the array.
+ 
+ @param Count On successful completion, populated with the number of elements
+        in the array.
+        
+ @param Pairs On successful completion, populated with a pointer to the array.
+        Note the memory in this array is read only.
+ */
+VOID
+YoriLibGetFilePermissionPairs(
+    __out PDWORD Count,
+    __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
+    )
+{
+    *Pairs = YoriLibFilePermissionPairs;
+    *Count = sizeof(YoriLibFilePermissionPairs)/sizeof(YoriLibFilePermissionPairs[0]);
+}
+
+/**
  Copy a file name from one buffer to another, sanitizing unprintable
  characters into ?'s.
 
@@ -671,6 +745,10 @@ YoriLibCollectEffectivePermissions (
     GENERIC_MAPPING Mapping = {0};
     PRIVILEGE_SET Privilege;
     DWORD PrivilegeLength = sizeof(Privilege);
+    DWORD Index;
+    ACCESS_MASK UnderstoodPermissions = 0;
+    PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
+    DWORD PairCount;
 
     UNREFERENCED_PARAMETER(FindData);
 
@@ -694,7 +772,10 @@ YoriLibCollectEffectivePermissions (
     if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(LocalSecurityDescriptor), &dwSdRequired)) {
         if (dwSdRequired != 0) {
             SecurityDescriptor = YoriLibMalloc(dwSdRequired);
-    
+            if (SecurityDescriptor == NULL) {
+                goto Exit;
+            }
+
             if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, dwSdRequired, &dwSdRequired)) {
                 goto Exit;
             }
@@ -722,6 +803,18 @@ Exit:
         YoriLibFree(SecurityDescriptor);
     }
 
+    YoriLibGetFilePermissionPairs(&PairCount, &Pairs);
+
+    //
+    //  Strip off any permissions we don't understand so that tests for
+    //  equality are meaningful
+    //
+
+    for (Index = 0; Index < PairCount; Index++) {
+        UnderstoodPermissions |= Pairs[Index].Flag;
+    }
+
+    Entry->EffectivePermissions &= UnderstoodPermissions;
     return TRUE;
 }
 
@@ -744,9 +837,29 @@ YoriLibCollectFileAttributes (
     __in PYORI_STRING FullPath
     )
 {
+    DWORD i;
+    DWORD Mask;
+    PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
+    DWORD PairCount;
+
     UNREFERENCED_PARAMETER(FullPath);
 
     Entry->FileAttributes = FindData->dwFileAttributes;
+
+    //
+    //  We do this bit by bit to ensure that we don't have file attributes
+    //  recorded that we don't understand.  This allows us to perform
+    //  equality comparisons where the result is understandable to the user
+    //  in that it can be specified and displayed.
+    //
+
+    YoriLibGetFileAttrPairs(&PairCount, &Pairs);
+    Mask = 0;
+    for (i = 0; i < PairCount; i++) {
+        Mask |= Pairs[i].Flag;
+    }
+
+    Entry->FileAttributes &= Mask;
     return TRUE;
 }
 
@@ -1251,7 +1364,7 @@ YoriLibCollectReparseTag (
 {
     UNREFERENCED_PARAMETER(FullPath);
 
-    if (Entry->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
+    if (FindData->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) {
         Entry->ReparseTag = FindData->dwReserved0;
     } else {
         Entry->ReparseTag = 0;
@@ -2520,7 +2633,11 @@ YoriLibGenerateAllocatedRangeCount(
     )
 {
     DWORD CharsConsumed;
-    YoriLibStringToNumber(String, TRUE, &Entry->AllocatedRangeCount.QuadPart, &CharsConsumed);
+    if (!YoriLibStringToNumber(String, TRUE, &Entry->AllocatedRangeCount.QuadPart, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -2705,6 +2822,83 @@ YoriLibGenerateDescription(
     return TRUE;
 }
 
+/**
+ Parse a string and populate a directory entry to facilitate comparisons for
+ a file's effective permissions.
+
+ @param Entry The directory entry to populate from the string.
+
+ @param String Pointer to a NULL terminated string to use to populate the
+        directory entry.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGenerateEffectivePermissions(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    )
+{
+    DWORD i;
+    DWORD StringIndex = 0;
+    PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
+    DWORD PairCount;
+
+    YoriLibGetFilePermissionPairs(&PairCount, &Pairs);
+
+    Entry->FileAttributes = 0;
+
+    while (StringIndex < String->LengthInChars) {
+
+        for (i = 0; i < PairCount; i++) {
+            if (String->StartOfString[StringIndex] == Pairs[i].DisplayLetter) {
+                Entry->EffectivePermissions |= Pairs[i].Flag;
+            }
+        }
+
+        StringIndex++;
+    }
+    return TRUE;
+}
+
+/**
+ Parse a string and populate a directory entry to facilitate comparisons for
+ a file's attributes.
+
+ @param Entry The directory entry to populate from the string.
+
+ @param String Pointer to a string to use to populate the directory entry.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGenerateFileAttributes(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    )
+{
+    DWORD i;
+    DWORD StringIndex = 0;
+    PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
+    DWORD PairCount;
+
+    Entry->FileAttributes = 0;
+
+    YoriLibGetFileAttrPairs(&PairCount, &Pairs);
+
+    while (StringIndex < String->LengthInChars) {
+
+        for (i = 0; i < PairCount; i++) {
+            if (String->StartOfString[StringIndex] == Pairs[i].DisplayLetter) {
+                Entry->FileAttributes |= Pairs[i].Flag;
+            }
+        }
+
+        StringIndex++;
+    }
+    return TRUE;
+}
+
 
 /**
  Parse a string and populate a directory entry to facilitate
@@ -2754,7 +2948,11 @@ YoriLibGenerateFileId(
     )
 {
     DWORD CharsConsumed;
-    YoriLibStringToNumber(String, TRUE, &Entry->FileId.QuadPart, &CharsConsumed);
+    if (!YoriLibStringToNumber(String, TRUE, &Entry->FileId.QuadPart, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -2843,7 +3041,11 @@ YoriLibGenerateFragmentCount(
     )
 {
     DWORD CharsConsumed;
-    YoriLibStringToNumber(String, TRUE, &Entry->FragmentCount.QuadPart, &CharsConsumed);
+    if (!YoriLibStringToNumber(String, TRUE, &Entry->FragmentCount.QuadPart, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -2866,7 +3068,11 @@ YoriLibGenerateLinkCount(
 {
     DWORD CharsConsumed;
     LONGLONG llTemp;
-    YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed);
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        return FALSE;
+    }
     Entry->LinkCount = (DWORD)llTemp;
     return TRUE;
 }
@@ -2920,7 +3126,8 @@ YoriLibGenerateOsVersion(
     Substring.StartOfString = String->StartOfString;
     Substring.LengthInChars = String->LengthInChars;
 
-    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
+        CharsConsumed == 0) {
         return FALSE;
     }
 
@@ -2930,7 +3137,8 @@ YoriLibGenerateOsVersion(
         Substring.LengthInChars -= CharsConsumed + 1;
         Substring.StartOfString += CharsConsumed + 1;
 
-        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
+            CharsConsumed == 0) {
             return FALSE;
         }
 
@@ -2982,7 +3190,11 @@ YoriLibGenerateReparseTag(
 {
     DWORD CharsConsumed;
     LONGLONG llTemp;
-    YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed);
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        return FALSE;
+    }
     Entry->ReparseTag = (DWORD)llTemp;
     return TRUE;
 }
@@ -3083,7 +3295,11 @@ YoriLibGenerateStreamCount(
 {
     DWORD CharsConsumed;
     LONGLONG llTemp;
-    YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed);
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        return FALSE;
+    }
     Entry->StreamCount = (DWORD)llTemp;
     return TRUE;
 }
@@ -3106,7 +3322,11 @@ YoriLibGenerateUsn(
     )
 {
     DWORD CharsConsumed;
-    YoriLibStringToNumber(String, TRUE, &Entry->Usn.QuadPart, &CharsConsumed);
+    if (!YoriLibStringToNumber(String, TRUE, &Entry->Usn.QuadPart, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -3136,7 +3356,9 @@ YoriLibGenerateVersion(
     Substring.StartOfString = String->StartOfString;
     Substring.LengthInChars = String->LengthInChars;
 
-    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
         return FALSE;
     }
 
@@ -3146,7 +3368,9 @@ YoriLibGenerateVersion(
         Substring.LengthInChars -= CharsConsumed + 1;
         Substring.StartOfString += CharsConsumed + 1;
 
-        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+        if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
+            CharsConsumed == 0) {
+
             return FALSE;
         }
 
@@ -3156,7 +3380,9 @@ YoriLibGenerateVersion(
             Substring.LengthInChars -= CharsConsumed + 1;
             Substring.StartOfString += CharsConsumed + 1;
     
-            if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+            if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
+                CharsConsumed == 0) {
+
                 return FALSE;
             }
 
@@ -3166,13 +3392,13 @@ YoriLibGenerateVersion(
                 Substring.LengthInChars -= CharsConsumed + 1;
                 Substring.StartOfString += CharsConsumed + 1;
         
-                if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed)) {
+                if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
+                    CharsConsumed == 0) {
                     return FALSE;
                 }
 
                 FileVersion.LowPart = FileVersion.LowPart + (WORD)llTemp;
             }
-
         }
     }
 
