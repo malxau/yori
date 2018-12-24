@@ -20,6 +20,7 @@ OBJS=\
 	 ep_yori.obj  \
 	 filecomp.obj \
 	 fileenum.obj \
+	 filefilt.obj \
 	 fileinfo.obj \
 	 fullpath.obj \
 	 group.obj    \

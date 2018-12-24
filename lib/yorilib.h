@@ -947,6 +947,47 @@ YoriLibDoesFileMatchExpression (
     __in PYORI_STRING Wildcard
     );
 
+// *** FILEFILT.C ***
+
+/**
+ An object describing a set of criteria to apply against a file to check
+ for whether it should be included.
+ */
+typedef struct _YORI_LIB_FILE_FILTER {
+
+    /**
+     The number of criteria to apply.
+     */
+    DWORD NumberCriteria;
+
+    /**
+     An array of criteria to apply.
+     */
+    PVOID Criteria;
+} YORI_LIB_FILE_FILTER, *PYORI_LIB_FILE_FILTER;
+
+BOOL
+YoriLibFileFiltHelp();
+
+BOOL
+YoriLibFileFiltParseFilterString(
+    __out PYORI_LIB_FILE_FILTER Filter,
+    __in PYORI_STRING FilterString,
+    __out PYORI_STRING ErrorSubstring
+    );
+
+BOOL
+YoriLibFileFiltCheckFilterMatch(
+    __in PYORI_LIB_FILE_FILTER Filter,
+    __in PYORI_STRING FilePath,
+    __in PWIN32_FIND_DATA FileInfo
+    );
+
+VOID
+YoriLibFileFiltFreeFilter(
+    __in PYORI_LIB_FILE_FILTER Filter
+    );
+
 // *** FILEINFO.C ***
 
 /**
