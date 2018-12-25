@@ -103,35 +103,37 @@ FsCmpFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PFSCMP_CONTEXT Context
+    __in PVOID Context
     )
 {
+    PFSCMP_CONTEXT FsCmpContext = (PFSCMP_CONTEXT)Context;
+
     UNREFERENCED_PARAMETER(Depth);
     UNREFERENCED_PARAMETER(FilePath);
 
-    if (Context->TestType == FsCmpTestTypeExists) {
-        Context->ConditionMet = TRUE;
+    if (FsCmpContext->TestType == FsCmpTestTypeExists) {
+        FsCmpContext->ConditionMet = TRUE;
         return FALSE;
-    } else if (Context->TestType == FsCmpTestTypeDirectoryExists) {
+    } else if (FsCmpContext->TestType == FsCmpTestTypeDirectoryExists) {
         if (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            Context->ConditionMet = TRUE;
+            FsCmpContext->ConditionMet = TRUE;
             return FALSE;
         }
-    } else if (Context->TestType == FsCmpTestTypeLinkExists) {
+    } else if (FsCmpContext->TestType == FsCmpTestTypeLinkExists) {
         if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0 &&
             (FileInfo->dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT ||
              FileInfo->dwReserved0 == IO_REPARSE_TAG_SYMLINK)) {
 
-            Context->ConditionMet = TRUE;
+            FsCmpContext->ConditionMet = TRUE;
             return FALSE;
         }
-    } else if (Context->TestType == FsCmpTestTypeFileExists) {
+    } else if (FsCmpContext->TestType == FsCmpTestTypeFileExists) {
         if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 &&
             ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) == 0 ||
              (FileInfo->dwReserved0 != IO_REPARSE_TAG_MOUNT_POINT &&
               FileInfo->dwReserved0 != IO_REPARSE_TAG_SYMLINK))) {
 
-            Context->ConditionMet = TRUE;
+            FsCmpContext->ConditionMet = TRUE;
             return FALSE;
         }
     }

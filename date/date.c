@@ -90,10 +90,12 @@ DWORD
 DateExpandVariables(
     __out PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
-    __in PSYSTEMTIME Context
+    __in PVOID Context
     )
 {
     DWORD CharsNeeded;
+    PSYSTEMTIME DateContext = (PSYSTEMTIME)Context;
+
     if (YoriLibCompareStringWithLiteral(VariableName, _T("YEAR")) == 0) {
         CharsNeeded = 4;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("year")) == 0) {
@@ -131,54 +133,54 @@ DateExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("YEAR")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), Context->wYear);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->wYear);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("year")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), Context->wYear % 100);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wYear % 100);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MON")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), Context->wMonth);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wMonth);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("mon")) == 0) {
-        if (Context->wMonth < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), Context->wMonth);
+        if (DateContext->wMonth < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wMonth);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DAY")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), Context->wDay);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wDay);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("day")) == 0) {
-        if (Context->wDay < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), Context->wDay);
+        if (DateContext->wDay < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wDay);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HOUR")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), Context->wHour);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wHour);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("hour")) == 0) {
-        if (Context->wHour < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), Context->wHour);
+        if (DateContext->wHour < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wHour);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MIN")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), Context->wMinute);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wMinute);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("min")) == 0) {
-        if (Context->wMinute < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), Context->wMinute);
+        if (DateContext->wMinute < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wMinute);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SEC")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), Context->wSecond);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wSecond);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("sec")) == 0) {
-        if (Context->wSecond < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), Context->wSecond);
+        if (DateContext->wSecond < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wSecond);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MS")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), Context->wMilliseconds);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->wMilliseconds);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ms")) == 0) {
-        if (Context->wMilliseconds < 10000) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), Context->wMilliseconds);
+        if (DateContext->wMilliseconds < 10000) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wMilliseconds);
         } else {
             CharsNeeded = 0;
         }

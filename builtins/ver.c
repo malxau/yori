@@ -112,10 +112,14 @@ DWORD
 VerExpandVariables(
     __out PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in PVER_VERSION_RESULT Context
+    __in PVOID Context
     )
 {
+    PVER_VERSION_RESULT VerContext;
     DWORD CharsNeeded;
+
+    VerContext = (PVER_VERSION_RESULT)Context;
+
     if (YoriLibCompareStringWithLiteral(VariableName, _T("LIBMAJOR")) == 0) {
         CharsNeeded = 2;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("libmajor")) == 0) {
@@ -143,34 +147,34 @@ VerExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("LIBMAJOR")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), Context->LibMajorVersion);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->LibMajorVersion);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("LIBMINOR")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), Context->LibMinorVersion);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->LibMinorVersion);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("libmajor")) == 0) {
-        if (Context->LibMajorVersion < 1000) {
-            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->LibMajorVersion);
+        if (VerContext->LibMajorVersion < 1000) {
+            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->LibMajorVersion);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("libminor")) == 0) {
-        if (Context->LibMinorVersion < 1000) {
-            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->LibMinorVersion);
+        if (VerContext->LibMinorVersion < 1000) {
+            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->LibMinorVersion);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHMAJOR")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), Context->ShMajorVersion);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->ShMajorVersion);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHMINOR")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), Context->ShMinorVersion);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), VerContext->ShMinorVersion);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("shmajor")) == 0) {
-        if (Context->ShMajorVersion < 1000) {
-            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->ShMajorVersion);
+        if (VerContext->ShMajorVersion < 1000) {
+            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->ShMajorVersion);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("shminor")) == 0) {
-        if (Context->ShMinorVersion < 1000) {
-            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->ShMinorVersion);
+        if (VerContext->ShMinorVersion < 1000) {
+            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VerContext->ShMinorVersion);
         } else {
             CharsNeeded = 0;
         }

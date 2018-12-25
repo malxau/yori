@@ -102,10 +102,12 @@ DWORD
 OsVerExpandVariables(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in POSVER_VERSION_RESULT Context
+    __in PVOID Context
     )
 {
     DWORD CharsNeeded;
+    POSVER_VERSION_RESULT OsVerContext = (POSVER_VERSION_RESULT)Context;
+
     if (YoriLibCompareStringWithLiteral(VariableName, _T("MAJOR")) == 0) {
         CharsNeeded = 2;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("major")) == 0) {
@@ -127,26 +129,26 @@ OsVerExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("MAJOR")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), Context->MajorVersion);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), OsVerContext->MajorVersion);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MINOR")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), Context->MinorVersion);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%02i"), OsVerContext->MinorVersion);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("BUILD")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%05i"), Context->BuildNumber);
+        YoriLibSPrintf(OutputString->StartOfString, _T("%05i"), OsVerContext->BuildNumber);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("major")) == 0) {
-        if (Context->MajorVersion < 1000) {
-            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->MajorVersion);
+        if (OsVerContext->MajorVersion < 1000) {
+            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), OsVerContext->MajorVersion);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("minor")) == 0) {
-        if (Context->MinorVersion < 1000) {
-            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->MinorVersion);
+        if (OsVerContext->MinorVersion < 1000) {
+            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), OsVerContext->MinorVersion);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("build")) == 0) {
-        if (Context->MinorVersion < 100000) {
-            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), Context->BuildNumber);
+        if (OsVerContext->MinorVersion < 100000) {
+            CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), OsVerContext->BuildNumber);
         } else {
             CharsNeeded = 0;
         }
