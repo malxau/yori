@@ -35,13 +35,19 @@ CHAR strFsCmpHelpText[] =
         "\n"
         "Test for file system conditions.\n"
         "\n"
-        "FSCMP [-license] [-b] [-d | -e | -f | -l] <file>\n"
+        "FSCMP [-license] [-b] [-d | -e | -f | -i <condition> | -l] <file>\n"
         "\n"
         "   -b             Use basic search criteria\n"
         "   -d             Test if directory exists\n"
         "   -e             Test if object exists\n"
         "   -f             Test if file exists\n"
-        "   -l             Test if symbolic link exists\n";
+        "   -i             Test for a specified file metadata condition\n"
+        "   -l             Test if symbolic link exists\n"
+        "\n"
+        " The -i option will match files only if they meet criteria.  This is a\n"
+        " semicolon delimited list of entries matching the following form:\n"
+        "\n"
+        "   [file attribute][operator][criteria]\n";
 
 /**
  Display usage text to the user.
@@ -54,6 +60,12 @@ FsCmpHelp()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strFsCmpHelpText);
+
+    //
+    //  Display supported options and operators
+    //
+
+    YoriLibFileFiltHelp();
     return TRUE;
 }
 
@@ -66,6 +78,7 @@ typedef enum _FSCMP_TEST_TYPE {
     FsCmpTestTypeDirectoryExists = 2,
     FsCmpTestTypeFileExists = 3,
     FsCmpTestTypeLinkExists = 4,
+    FsCmpTestTypeApplyFilter = 5,
 } FSCMP_TEST_TYPE;
 
 /**
@@ -82,6 +95,11 @@ typedef struct _FSCMP_CONTEXT {
      Set to TRUE if the test is met.
      */
     BOOL ConditionMet;
+
+    /**
+     A list of criteria to filter matches against.
+     */
+    YORI_LIB_FILE_FILTER Filter;
 } FSCMP_CONTEXT, *PFSCMP_CONTEXT;
 
 /**
@@ -133,6 +151,11 @@ FsCmpFileFoundCallback(
              (FileInfo->dwReserved0 != IO_REPARSE_TAG_MOUNT_POINT &&
               FileInfo->dwReserved0 != IO_REPARSE_TAG_SYMLINK))) {
 
+            FsCmpContext->ConditionMet = TRUE;
+            return FALSE;
+        }
+    } else if (FsCmpContext->TestType == FsCmpTestTypeApplyFilter) {
+        if (YoriLibFileFiltCheckFilterMatch(&FsCmpContext->Filter, FilePath, FileInfo)) {
             FsCmpContext->ConditionMet = TRUE;
             return FALSE;
         }
@@ -205,6 +228,23 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 FsCmpContext.TestType = FsCmpTestTypeFileExists;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+                if (i + 1 < ArgC) {
+                    YORI_STRING ErrorSubstring;
+                    YoriLibInitEmptyString(&ErrorSubstring);
+                    
+                    if (!YoriLibFileFiltParseFilterString(&FsCmpContext.Filter, &ArgV[i + 1], &ErrorSubstring)) {
+                        if (ErrorSubstring.LengthInChars > 0) {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fscmp: error parsing filter string '%y' at '%y'\n"), &ArgV[i + 1], &ErrorSubstring);
+                        } else {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fscmp: error parsing filter string '%y'\n"), &ArgV[i + 1]);
+                        }
+                        goto cleanup_and_exit;
+                    }
+                    FsCmpContext.TestType = FsCmpTestTypeApplyFilter;
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 FsCmpContext.TestType = FsCmpTestTypeLinkExists;
                 ArgumentUnderstood = TRUE;
@@ -222,12 +262,12 @@ ENTRYPOINT(
 
     if (StartArg == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fscmp: missing argument\n"));
-        return EXIT_FAILURE;
+        goto cleanup_and_exit;
     }
 
     if (FsCmpContext.TestType == FsCmpTestTypeUnknown) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fscmp: missing test condition\n"));
-        return EXIT_FAILURE;
+        goto cleanup_and_exit;
     }
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
@@ -238,6 +278,10 @@ ENTRYPOINT(
     for (i = StartArg; i < ArgC && !FsCmpContext.ConditionMet; i++) {
         YoriLibForEachFile(&ArgV[i], MatchFlags, 0, FsCmpFileFoundCallback, &FsCmpContext);
     }
+
+cleanup_and_exit:
+
+    YoriLibFileFiltFreeFilter(&FsCmpContext.Filter);
 
     if (FsCmpContext.ConditionMet) {
         return EXIT_SUCCESS;
