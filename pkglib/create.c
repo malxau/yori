@@ -26,7 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include "yoripkg.h"
+#include "yoripkgp.h"
 
 /**
  Creates a binary (installable) package.  This could be architecture specific

@@ -327,7 +327,7 @@ SetupInstallSelectedFromDialog(
         if (StatusText.StartOfString != NULL) {
             SetDlgItemText(hDlg, IDC_STATUS, StatusText.StartOfString);
         }
-        if (!YoriPkgInstallPackage(&PackageUrls[PkgCount], &InstallDir)) {
+        if (!YoriPkgInstallSinglePackage(&PackageUrls[PkgCount], &InstallDir)) {
             YoriLibYPrintf(&StatusText, _T("Failed to install %y from %y"), &PkgNames[PkgCount], &PackageUrls[PkgCount]);
             MessageBox(hDlg, StatusText.StartOfString, _T("Installation failed."), MB_ICONSTOP);
             goto Exit;

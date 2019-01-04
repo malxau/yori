@@ -1,0 +1,813 @@
+/**
+ * @file pkglib/api.c
+ *
+ * Yori shell functions exported out of this module
+ *
+ * Copyright (c) 2018-2019 Malcolm J. Smith
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+
+#include <yoripch.h>
+#include <yorilib.h>
+#include "yoripkg.h"
+#include "yoripkgp.h"
+
+/**
+ Upgrade all installed packages in the system.
+
+ @param NewArchitecture Optionally points to the new architecture to apply.
+        If not specified, the current architecture is retained.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgUpgradeInstalledPackages(
+    __in_opt PYORI_STRING NewArchitecture
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+    YORI_STRING UpgradePath;
+    DWORD LineLength;
+    DWORD TotalCount;
+    DWORD CurrentIndex;
+    BOOL Result;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORI_LIST_ENTRY ListEntry = NULL;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&UpgradePath, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&InstalledSection);
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    TotalCount = 0;
+    Result = FALSE;
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            *Equals = '\0';
+        } else {
+            PkgNameOnly.LengthInChars = LineLength;
+        }
+
+        UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradePath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
+        if (UpgradePath.LengthInChars > 0) {
+            if (NewArchitecture != NULL) {
+                YoriPkgBuildUpgradeLocationForNewArchitecture(&PkgNameOnly, NewArchitecture, &PkgIniFile, &UpgradePath);
+            }
+            if (YoriLibIsPathUrl(&UpgradePath)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &UpgradePath);
+            }
+            if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &UpgradePath)) {
+                goto Exit;
+            }
+            TotalCount++;
+        }
+        if (Equals) {
+            *Equals = '=';
+        }
+
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    //
+    //  Upgrade all packages which specify an upgrade path.
+    //
+
+    Result = TRUE;
+    CurrentIndex = 0;
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        CurrentIndex++;
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Upgrading %y (%i/%i)...\n"), &PendingPackage->PackageName, CurrentIndex, TotalCount);
+        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
+            Result = FALSE;
+            break;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+    }
+
+    //
+    //  If everything worked, commit the backed up packages.
+    //
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+
+    //
+    //  If there's any backup left, abort the install of those packages.
+    //
+
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&PkgIniFile, NULL, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&InstalledSection);
+    YoriLibFreeStringContents(&UpgradePath);
+
+    return TRUE;
+}
+
+/**
+ Upgrade a single package installed on the system.
+
+ @param PackageName The name of the package to upgrade.
+
+ @param NewArchitecture Optionally points to the new architecture to apply.
+        If not specified, the current architecture is retained.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgUpgradeSinglePackage(
+    __in PYORI_STRING PackageName,
+    __in_opt PYORI_STRING NewArchitecture
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING IniValue;
+    BOOL Result;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    PYORI_LIST_ENTRY ListEntry;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify an upgrade path\n"), PackageName);
+        return FALSE;
+    }
+
+    if (NewArchitecture != NULL) {
+        YoriPkgBuildUpgradeLocationForNewArchitecture(PackageName, NewArchitecture, &PkgIniFile, &IniValue);
+    }
+
+    Result = FALSE;
+    if (YoriLibIsPathUrl(&IniValue)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &IniValue);
+    }
+    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue)) {
+        goto Exit;
+    }
+
+    //
+    //  Install the package from the pending package list.  This is done
+    //  because the package must be already downloaded and we want to use
+    //  the local file name.
+    //
+
+    ListEntry = NULL;
+    Result = TRUE;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Upgrading %y...\n"), &PendingPackage->PackageName);
+        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
+            Result = FALSE;
+            break;
+        }
+    }
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&PkgIniFile, NULL, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&IniValue);
+
+    return Result;
+}
+
+/**
+ Install a single package from a specified path to a package.
+
+ @param PackagePath The path of the package file to install.
+
+ @param TargetDirectory Pointer to a string specifying the directory to
+        install the package.  If NULL, the directory containing the
+        application is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgInstallSinglePackage(
+    __in PYORI_STRING PackagePath,
+    __in_opt PYORI_STRING TargetDirectory
+    )
+{
+    YORI_STRING PkgIniFile;
+    BOOL Result;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    PYORI_LIST_ENTRY ListEntry;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    Result = FALSE;
+    if (YoriLibIsPathUrl(PackagePath)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), PackagePath);
+    }
+    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, TargetDirectory, &PendingPackages, PackagePath)) {
+        goto Exit;
+    }
+
+    //
+    //  Install the package from the pending package list.  This is done
+    //  because the package must be already downloaded and we want to use
+    //  the local file name.
+    //
+
+    ListEntry = NULL;
+    Result = TRUE;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &PendingPackage->PackageName);
+        if (!YoriPkgInstallPackage(PendingPackage, TargetDirectory)) {
+            Result = FALSE;
+            break;
+        }
+    }
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&PkgIniFile, TargetDirectory, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+
+    return Result;
+}
+
+
+/**
+ Install source for all installed packages in the system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgInstallSourceForInstalledPackages(
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+    YORI_STRING SourcePath;
+    DWORD LineLength;
+    DWORD TotalCount;
+    DWORD CurrentIndex;
+    BOOL Result;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORI_LIST_ENTRY ListEntry = NULL;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&SourcePath, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&InstalledSection);
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    TotalCount = 0;
+    Result = FALSE;
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            *Equals = '\0';
+        } else {
+            PkgNameOnly.LengthInChars = LineLength;
+        }
+
+        SourcePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("SourcePath"), _T(""), SourcePath.StartOfString, SourcePath.LengthAllocated, PkgIniFile.StartOfString);
+        if (SourcePath.LengthInChars > 0) {
+            if (YoriLibIsPathUrl(&SourcePath)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading source for %y from %y...\n"), &PkgNameOnly, &SourcePath);
+            }
+            if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &SourcePath)) {
+                goto Exit;
+            }
+            TotalCount++;
+        }
+        if (Equals) {
+            *Equals = '=';
+        }
+
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    //
+    //  Install all packages which specify a source path.
+    //
+
+    Result = TRUE;
+    CurrentIndex = 0;
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        CurrentIndex++;
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y (%i/%i)...\n"), &PendingPackage->PackageName, CurrentIndex, TotalCount);
+        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
+            Result = FALSE;
+            break;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+    }
+
+    //
+    //  If everything worked, commit the backed up packages.
+    //
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+
+    //
+    //  If there's any backup left, abort the install of those packages.
+    //
+
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&PkgIniFile, NULL, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&InstalledSection);
+    YoriLibFreeStringContents(&SourcePath);
+
+    return TRUE;
+}
+
+/**
+ Install source for a single package installed on the system.
+
+ @param PackageName The name of the package to obtain source for.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgInstallSourceForSinglePackage(
+    __in PYORI_STRING PackageName
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING IniValue;
+    BOOL Result;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    PYORI_LIST_ENTRY ListEntry;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SourcePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify a source path\n"), PackageName);
+        return FALSE;
+    }
+
+    Result = FALSE;
+    if (YoriLibIsPathUrl(&IniValue)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &IniValue);
+    }
+    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue)) {
+        goto Exit;
+    }
+
+    //
+    //  Install the package from the pending package list.  This is done
+    //  because the package must be already downloaded and we want to use
+    //  the local file name.
+    //
+
+    ListEntry = NULL;
+    Result = TRUE;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &PendingPackage->PackageName);
+        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
+            Result = FALSE;
+            break;
+        }
+    }
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&PkgIniFile, NULL, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&IniValue);
+
+    return Result;
+}
+
+/**
+ Install symbols for all installed packages in the system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgInstallSymbolsForInstalledPackages(
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+    YORI_STRING SymbolPath;
+    DWORD LineLength;
+    DWORD TotalCount;
+    DWORD CurrentIndex;
+    BOOL Result;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORI_LIST_ENTRY ListEntry = NULL;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&SymbolPath, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&InstalledSection);
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    TotalCount = 0;
+    Result = FALSE;
+    while (*ThisLine != '\0') {
+        LineLength = _tcslen(ThisLine);
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            *Equals = '\0';
+        } else {
+            PkgNameOnly.LengthInChars = LineLength;
+        }
+
+        SymbolPath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("SymbolPath"), _T(""), SymbolPath.StartOfString, SymbolPath.LengthAllocated, PkgIniFile.StartOfString);
+        if (SymbolPath.LengthInChars > 0) {
+            if (YoriLibIsPathUrl(&SymbolPath)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading symbols for %y from %y...\n"), &PkgNameOnly, &SymbolPath);
+            }
+            if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &SymbolPath)) {
+                goto Exit;
+            }
+            TotalCount++;
+        }
+        if (Equals) {
+            *Equals = '=';
+        }
+
+        ThisLine += LineLength;
+        ThisLine++;
+    }
+
+    //
+    //  Install all packages which specify a source path.
+    //
+
+    Result = TRUE;
+    CurrentIndex = 0;
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        CurrentIndex++;
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y (%i/%i)...\n"), &PendingPackage->PackageName, CurrentIndex, TotalCount);
+        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
+            Result = FALSE;
+            break;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+    }
+
+    //
+    //  If everything worked, commit the backed up packages.
+    //
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+
+    //
+    //  If there's any backup left, abort the install of those packages.
+    //
+
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&PkgIniFile, NULL, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&InstalledSection);
+    YoriLibFreeStringContents(&SymbolPath);
+
+    return TRUE;
+}
+
+/**
+ Install symbols for a single package installed on the system.
+
+ @param PackageName The name of the package to obtain source for.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgInstallSymbolForSinglePackage(
+    __in PYORI_STRING PackageName
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING IniValue;
+    BOOL Result;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    PYORI_LIST_ENTRY ListEntry;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+
+    if (IniValue.LengthInChars == 0) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify a source path\n"), PackageName);
+        return FALSE;
+    }
+
+    Result = FALSE;
+    if (YoriLibIsPathUrl(&IniValue)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &IniValue);
+    }
+    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue)) {
+        goto Exit;
+    }
+
+    //
+    //  Install the package from the pending package list.  This is done
+    //  because the package must be already downloaded and we want to use
+    //  the local file name.
+    //
+
+    ListEntry = NULL;
+    Result = TRUE;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &PendingPackage->PackageName);
+        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
+            Result = FALSE;
+            break;
+        }
+    }
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&PkgIniFile, NULL, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&IniValue);
+
+    return Result;
+}
+
+/**
+ List all installed packages in the system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgListInstalledPackages()
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+        } else {
+            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &PkgNameOnly);
+        ThisLine += _tcslen(ThisLine);
+        ThisLine++;
+    }
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&InstalledSection);
+
+    return TRUE;
+}
+
+
+// vim:sw=4:ts=4:et:

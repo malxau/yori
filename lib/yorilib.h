@@ -2884,6 +2884,12 @@ YoriLibCreateDirectoryAndParents(
     );
 
 BOOL
+YoriLibRenameFileToBackupName(
+    __in PYORI_STRING FullPath,
+    __out PYORI_STRING NewName
+    );
+
+BOOL
 YoriLibIsPathUrl(
     __in PYORI_STRING PackagePath
     );

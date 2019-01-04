@@ -27,7 +27,7 @@
 #include <yoripch.h>
 #include <yorilib.h>
 #include "yoripkg.h"
-
+#include "yoripkgp.h"
 
 /**
  Information about a single package that was found on the remote source.
@@ -58,6 +58,13 @@ typedef struct _YORIPKG_REMOTE_PACKAGE {
      A fully qualified path name or URL that contains the package.
      */
     YORI_STRING InstallUrl;
+
+    /**
+     If attempting an upgrade, points to a backup of the previous version of
+     the package.
+     */
+    PYORIPKG_BACKUP_PACKAGE Backup;
+
 } YORIPKG_REMOTE_PACKAGE, *PYORIPKG_REMOTE_PACKAGE;
 
 /**
@@ -829,12 +836,34 @@ YoriPkgInstallRemotePackages(
     )
 {
     DWORD MatchingPackageCount;
-    DWORD InstallCount;
+    DWORD AttemptedCount;
+    DWORD InstallCount = 0;
     YORI_LIST_ENTRY PackagesMatchingCriteria;
     PYORI_LIST_ENTRY PackageEntry;
     PYORIPKG_REMOTE_PACKAGE Package;
+    YORI_STRING IniFile;
+    YORI_STRING IniValue;
+    YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    PYORI_LIST_ENTRY ListEntry;
+
+    YoriPkgInitializePendingPackages(&PendingPackages);
+
+    if (!YoriPkgGetPackageIniFile(NewDirectory, &IniFile)) {
+        return 0;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&IniFile);
+        return 0;
+    }
 
     YoriLibInitializeListHead(&PackagesMatchingCriteria);
+
+    //
+    //  Find the number of packages that can be resolved from remote
+    //  sources.
+    //
 
     MatchingPackageCount = YoriPkgFindRemotePackages(PackageNames,
                                                      PackageNameCount,
@@ -843,18 +872,73 @@ YoriPkgInstallRemotePackages(
                                                      MatchArch,
                                                      &PackagesMatchingCriteria);
 
-    InstallCount = 0;
+    //
+    //  Find if any of these are installed and back them up.
+    //
+
+    AttemptedCount = 0;
     PackageEntry = NULL;
     PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
     while (PackageEntry != NULL) {
         Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
         PackageEntry = YoriLibGetNextListEntry(&PackagesMatchingCriteria, PackageEntry);
-        if (YoriPkgInstallPackage(&Package->InstallUrl, NewDirectory)) {
-            InstallCount++;
+
+        if (YoriLibIsPathUrl(&Package->InstallUrl)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &Package->InstallUrl);
         }
+        if (!YoriPkgPreparePackageForInstall(&IniFile, NewDirectory, &PendingPackages, &Package->InstallUrl)) {
+            goto Exit;
+        }
+
+        AttemptedCount++;
     }
 
+    //
+    //  Install the package from the pending package list.  This is done
+    //  because the package must be already downloaded and we want to use
+    //  the local file name.
+    //
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y version %y...\n"), &PendingPackage->PackageName, &PendingPackage->Version);
+        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
+            break;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        InstallCount++;
+    }
+
+    //
+    //  If everything that we backed up worked, commit.  We may not have
+    //  installed everything, but there's no point rolling back whatever
+    //  worked.
+    //
+
+    if (InstallCount == AttemptedCount) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    }
+
+Exit:
+
+    //
+    //  Abort anything that wasn't committed.  This means if we took a backup
+    //  attempt to uninstall any new version of the package.  This may or may
+    //  not exist.
+    //
+
+    if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(&IniFile, NewDirectory, &PendingPackages.BackupPackages);
+    }
+
+    YoriPkgDeletePendingPackages(&PendingPackages);
+
     YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingCriteria);
+    YoriLibFreeStringContents(&IniFile);
+    YoriLibFreeStringContents(&IniValue);
 
     return InstallCount;
 }

@@ -279,7 +279,7 @@ ENTRYPOINT(
         }
 
         for (i = StartArg; i < ArgC; i++) {
-            YoriPkgInstallPackage(&ArgV[i], NULL);
+            YoriPkgInstallSinglePackage(&ArgV[i], NULL);
         }
 
     } else if (Op == YpmOpListPackages) {

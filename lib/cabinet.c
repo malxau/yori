@@ -462,51 +462,8 @@ YoriLibCabFileOpenForExtract(
         } else if (Err == ERROR_FILE_EXISTS) {
 
             YORI_STRING NewName;
-            DWORD ProbeIndex;
-            HANDLE hDeadFile;
 
-            if (!YoriLibAllocateString(&NewName, FullPath->LengthInChars + sizeof(".old.9"))) {
-                break;
-            }
-
-            for (ProbeIndex = 0; ProbeIndex < 10; ProbeIndex++) {
-
-                if (ProbeIndex == 0) {
-                    NewName.LengthInChars = YoriLibSPrintf(NewName.StartOfString, _T("%y.old"), FullPath);
-                } else {
-                    NewName.LengthInChars = YoriLibSPrintf(NewName.StartOfString, _T("%y.old.%i"), FullPath, ProbeIndex);
-                }
-
-                //
-                //  Try to delete the old file via DeleteFile and
-                //  FILE_FLAG_DELETE_ON_CLOSE, then do a superseding
-                //  rename, and hope one of them works
-                //
-
-                DeleteFile(NewName.StartOfString);
-                hDeadFile = CreateFile(NewName.StartOfString,
-                                       DELETE,
-                                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                       NULL,
-                                       OPEN_EXISTING,
-                                       FILE_FLAG_DELETE_ON_CLOSE,
-                                       NULL);
-
-                if (hDeadFile != INVALID_HANDLE_VALUE) {
-                    CloseHandle(hDeadFile);
-                }
-
-                if (MoveFileEx(FullPath->StartOfString, NewName.StartOfString, MOVEFILE_REPLACE_EXISTING)) {
-                    break;
-                }
-            }
-
-            //
-            //  If we couldn't find a suitable name in 10 attempts, stop.
-            //
-
-            if (ProbeIndex == 10) {
-                YoriLibFreeStringContents(&NewName);
+            if (!YoriLibRenameFileToBackupName(FullPath, &NewName)) {
                 break;
             }
 
@@ -527,6 +484,8 @@ YoriLibCabFileOpenForExtract(
                 Err = GetLastError();
                 MoveFileEx(NewName.StartOfString, FullPath->StartOfString, MOVEFILE_REPLACE_EXISTING);
             } else {
+
+                HANDLE hDeadFile;
 
                 //
                 //  Try to delete the old file via DeleteFile and

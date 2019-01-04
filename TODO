@@ -1,5 +1,4 @@
 v1.0:
- - Ypm upgrade remove all before install so files can move between packages
  - Hexdump -r
  - Make selection use RTF
  - General MSFIX review

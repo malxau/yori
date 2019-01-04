@@ -26,7 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
-#include "yoripkg.h"
+#include "yoripkgp.h"
 
 /**
  Return a fully qualified path to the directory containing the program.
@@ -193,6 +193,85 @@ YoriPkgGetPackageInfo(
     SymbolPath->LengthAllocated = MaxFieldSize;
 
     SymbolPath->LengthInChars = GetPrivateProfileString(_T("Package"), _T("SymbolPath"), _T(""), SymbolPath->StartOfString, SymbolPath->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibFreeStringContents(&TempBuffer);
+    return TRUE;
+}
+
+/**
+ Given a fully qualified path to the system package INI file and a package
+ name, extract fixed sized information.
+
+ @param IniPath Pointer to a path to the system's INI file.
+
+ @param PackageName Pointer to the package's canonical name.
+
+ @param PackageVersion On successful completion, populated with the package
+        version.
+
+ @param PackageArch On successful completion, populated with the package
+        architecture.
+
+ @param UpgradePath On successful completion, populated with a URL that will
+        return the latest version of the package.
+
+ @param SourcePath On successful completion, populated with a URL that will
+        return the source code matching the package.
+
+ @param SymbolPath On successful completion, populated with a URL that will
+        return the symbols for the package.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgGetInstalledPackageInfo(
+    __in PYORI_STRING IniPath,
+    __in PYORI_STRING PackageName,
+    __out PYORI_STRING PackageVersion,
+    __out PYORI_STRING PackageArch,
+    __out PYORI_STRING UpgradePath,
+    __out PYORI_STRING SourcePath,
+    __out PYORI_STRING SymbolPath
+    )
+{
+    YORI_STRING TempBuffer;
+    DWORD MaxFieldSize = YORIPKG_MAX_FIELD_LENGTH;
+
+    ASSERT(YoriLibIsStringNullTerminated(IniPath));
+    ASSERT(YoriLibIsStringNullTerminated(PackageName));
+
+    if (!YoriLibAllocateString(&TempBuffer, 5 * MaxFieldSize)) {
+        return FALSE;
+    }
+
+    YoriLibCloneString(PackageVersion, &TempBuffer);
+    PackageVersion->LengthAllocated = MaxFieldSize;
+
+    PackageVersion->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("Version"), _T(""), PackageVersion->StartOfString, PackageVersion->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(PackageArch, &TempBuffer);
+    PackageArch->StartOfString += 1 * MaxFieldSize;
+    PackageArch->LengthAllocated = MaxFieldSize;
+
+    PackageArch->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("Architecture"), _T(""), PackageArch->StartOfString, PackageArch->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(UpgradePath, &TempBuffer);
+    UpgradePath->StartOfString += 2 * MaxFieldSize;
+    UpgradePath->LengthAllocated = MaxFieldSize;
+
+    UpgradePath->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), _T(""), UpgradePath->StartOfString, UpgradePath->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(SourcePath, &TempBuffer);
+    SourcePath->StartOfString += 3 * MaxFieldSize;
+    SourcePath->LengthAllocated = MaxFieldSize;
+
+    SourcePath->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SourcePath"), _T(""), SourcePath->StartOfString, SourcePath->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(SymbolPath, &TempBuffer);
+    SymbolPath->StartOfString += 4 * MaxFieldSize;
+    SymbolPath->LengthAllocated = MaxFieldSize;
+
+    SymbolPath->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), _T(""), SymbolPath->StartOfString, SymbolPath->LengthAllocated, IniPath->StartOfString);
 
     YoriLibFreeStringContents(&TempBuffer);
     return TRUE;
