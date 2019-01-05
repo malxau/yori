@@ -149,7 +149,7 @@ DfReportSingleVolume(
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%lli %lli %s\n"), TotalBytes, FreeBytes, NameToReport, NameToReport);
         } 
 
-        while (TotalBytes.HighPart != 0 && FreeBytes.HighPart != 0) {
+        while (TotalBytes.HighPart != 0) {
             TotalBytes.QuadPart = TotalBytes.QuadPart >> 1;
             FreeBytes.QuadPart = FreeBytes.QuadPart >> 1;
         }
