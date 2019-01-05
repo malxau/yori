@@ -392,7 +392,7 @@ YoriLibCabFileOpenForExtract(
     __out_opt PYORI_STRING ErrorString
     )
 {
-    HANDLE hFile;
+    HANDLE hFile = INVALID_HANDLE_VALUE;
     DWORD Err = 0;
 
     while (TRUE) {
