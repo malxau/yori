@@ -2081,7 +2081,7 @@ YoriShGetExpressionFromConsole(
         while (TRUE) {
             if (YoriLibIsPeriodicScrollActive(&Buffer.Selection)) {
 
-                err = WaitForSingleObject(InputHandle, 250);
+                err = WaitForSingleObject(InputHandle, 100);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }

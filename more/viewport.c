@@ -2678,6 +2678,7 @@ MoreViewportDisplay(
     DWORD WaitObject;
     DWORD HandleCountToWait;
     DWORD PreviousMouseButtonState = 0;
+    DWORD Timeout;
     BOOL WaitForIngestThread = TRUE;
     BOOL WaitForNewLines = TRUE;
 
@@ -2712,7 +2713,13 @@ MoreViewportDisplay(
             ObjectsToWaitFor[HandleCountToWait++] = MoreContext->IngestThread;
         }
 
-        WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, 250);
+        if (YoriLibIsPeriodicScrollActive(&MoreContext->Selection)) {
+            Timeout = 100;
+        } else {
+            Timeout = 250;
+        }
+
+        WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, Timeout);
 
         if (WaitObject == WAIT_TIMEOUT) {
             if (YoriLibIsPeriodicScrollActive(&MoreContext->Selection)) {
