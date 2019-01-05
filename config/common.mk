@@ -246,7 +246,7 @@ link: $(BINARIES) $(MODULES) compile
 .rc.obj:
 	@echo $(**F)
 	@if exist $@ erase $@
-	@$(RC) /fo$(@B).res $(RCLAGS) $** >NUL
+	@$(RC) /fo$(@B).res $(RCFLAGS) $** >NUL
 	@if not exist $@ ren $(@B).res $@
 
 clean:

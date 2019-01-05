@@ -50,6 +50,8 @@ FONT 8, "MS Sans Serif"
 
     DEFPUSHBUTTON "Install", IDC_OK, 8, 198, 50, 14
     PUSHBUTTON "Cancel", IDC_CANCEL, 68, 198, 50, 14
+
+    LTEXT "Version", IDC_VERSION, 330, 200, 60, 19, WS_DISABLED
 }
 
 // vim:sw=4:ts=4:et:

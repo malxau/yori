@@ -55,6 +55,11 @@
  */
 #define IDC_STATUS 205
 
+/**
+ The text to update with the setup version.
+ */
+#define IDC_VERSION 206
+
 //
 //  Code depends on these being sequential
 //

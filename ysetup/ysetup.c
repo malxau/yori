@@ -612,6 +612,17 @@ SetupUiDialogProc(
 
             SetWindowPos(hDlg, HWND_TOP, rcNew.left, rcNew.top, 0, 0, SWP_NOSIZE);
 
+            {
+                TCHAR Version[32];
+
+#if YORI_BUILD_ID
+                YoriLibSPrintf(Version, _T("%i.%i.%i"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR, YORI_BUILD_ID);
+#else
+                YoriLibSPrintf(Version, _T("%i.%i"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR);
+#endif
+                SetDlgItemText(hDlg, IDC_VERSION, Version);
+            }
+
             YoriLibInitEmptyString(&InstallDir);
             SetupGetDefaultInstallDir(&InstallDir);
             SetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
