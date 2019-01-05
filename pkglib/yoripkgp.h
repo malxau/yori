@@ -325,4 +325,11 @@ YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PackageUrl
     );
 
+BOOL
+YoriPkgInstallPendingPackages(
+    __in PYORI_STRING PkgIniFile,
+    __in_opt PYORI_STRING TargetDirectory,
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
+    );
+
 // vim:sw=4:ts=4:et:

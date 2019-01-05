@@ -1,8 +1,4 @@
  - Document mirrors/sources since they're otherwise invisible
  - Ypm figure out how to use backticks - don't use newlines when sending to pipes?
- - Need to back up all "Replaces" packages
  - Logic to detect duplicate files?
  - Remove rename logic from CAB expand
- - Remove upgrade logic from YoriPkgInstallPackage.  Should detect same
-   version installed (benign) and different version installed (incompatible)
- - What to do with ysetup installing over the top of an existing install?

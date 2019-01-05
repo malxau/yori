@@ -826,7 +826,7 @@ YoriPkgFindRemotePackages(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-DWORD
+BOOL
 YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
@@ -844,8 +844,6 @@ YoriPkgInstallRemotePackages(
     YORI_STRING IniFile;
     YORI_STRING IniValue;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
-    PYORI_LIST_ENTRY ListEntry;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -893,33 +891,8 @@ YoriPkgInstallRemotePackages(
         AttemptedCount++;
     }
 
-    //
-    //  Install the package from the pending package list.  This is done
-    //  because the package must be already downloaded and we want to use
-    //  the local file name.
-    //
-
-    ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y version %y...\n"), &PendingPackage->PackageName, &PendingPackage->Version);
-        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
-            break;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-        InstallCount++;
-    }
-
-    //
-    //  If everything that we backed up worked, commit.  We may not have
-    //  installed everything, but there's no point rolling back whatever
-    //  worked.
-    //
-
-    if (InstallCount == AttemptedCount) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
+    if (YoriPkgInstallPendingPackages(&IniFile, NewDirectory, &PendingPackages)) {
+        InstallCount = AttemptedCount;
     }
 
 Exit:

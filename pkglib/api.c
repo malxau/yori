@@ -49,12 +49,8 @@ YoriPkgUpgradeInstalledPackages(
     YORI_STRING PkgNameOnly;
     YORI_STRING UpgradePath;
     DWORD LineLength;
-    DWORD TotalCount;
-    DWORD CurrentIndex;
     BOOL Result;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORI_LIST_ENTRY ListEntry = NULL;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -78,7 +74,6 @@ YoriPkgUpgradeInstalledPackages(
     YoriLibInitEmptyString(&PkgNameOnly);
     ThisLine = InstalledSection.StartOfString;
 
-    TotalCount = 0;
     Result = FALSE;
     while (*ThisLine != '\0') {
         LineLength = _tcslen(ThisLine);
@@ -102,7 +97,6 @@ YoriPkgUpgradeInstalledPackages(
             if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &UpgradePath)) {
                 goto Exit;
             }
-            TotalCount++;
         }
         if (Equals) {
             *Equals = '=';
@@ -116,30 +110,7 @@ YoriPkgUpgradeInstalledPackages(
     //  Upgrade all packages which specify an upgrade path.
     //
 
-    Result = TRUE;
-    CurrentIndex = 0;
-
-    ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        CurrentIndex++;
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Upgrading %y (%i/%i)...\n"), &PendingPackage->PackageName, CurrentIndex, TotalCount);
-        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
-            Result = FALSE;
-            break;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-    }
-
-    //
-    //  If everything worked, commit the backed up packages.
-    //
-
-    if (Result) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
-    }
+    Result = YoriPkgInstallPendingPackages(&PkgIniFile, NULL, &PendingPackages);
 
 Exit:
 
@@ -180,8 +151,6 @@ YoriPkgUpgradeSinglePackage(
     YORI_STRING IniValue;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
-    PYORI_LIST_ENTRY ListEntry;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -223,28 +192,7 @@ YoriPkgUpgradeSinglePackage(
         goto Exit;
     }
 
-    //
-    //  Install the package from the pending package list.  This is done
-    //  because the package must be already downloaded and we want to use
-    //  the local file name.
-    //
-
-    ListEntry = NULL;
-    Result = TRUE;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Upgrading %y...\n"), &PendingPackage->PackageName);
-        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
-            Result = FALSE;
-            break;
-        }
-    }
-
-    if (Result) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
-    }
+    Result = YoriPkgInstallPendingPackages(&PkgIniFile, NULL, &PendingPackages);
 
 Exit:
     if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
@@ -279,8 +227,6 @@ YoriPkgInstallSinglePackage(
     YORI_STRING PkgIniFile;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
-    PYORI_LIST_ENTRY ListEntry;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -296,28 +242,7 @@ YoriPkgInstallSinglePackage(
         goto Exit;
     }
 
-    //
-    //  Install the package from the pending package list.  This is done
-    //  because the package must be already downloaded and we want to use
-    //  the local file name.
-    //
-
-    ListEntry = NULL;
-    Result = TRUE;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &PendingPackage->PackageName);
-        if (!YoriPkgInstallPackage(PendingPackage, TargetDirectory)) {
-            Result = FALSE;
-            break;
-        }
-    }
-
-    if (Result) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
-    }
+    Result = YoriPkgInstallPendingPackages(&PkgIniFile, TargetDirectory, &PendingPackages);
 
 Exit:
     if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
@@ -348,12 +273,8 @@ YoriPkgInstallSourceForInstalledPackages(
     YORI_STRING PkgNameOnly;
     YORI_STRING SourcePath;
     DWORD LineLength;
-    DWORD TotalCount;
-    DWORD CurrentIndex;
     BOOL Result;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORI_LIST_ENTRY ListEntry = NULL;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -377,7 +298,6 @@ YoriPkgInstallSourceForInstalledPackages(
     YoriLibInitEmptyString(&PkgNameOnly);
     ThisLine = InstalledSection.StartOfString;
 
-    TotalCount = 0;
     Result = FALSE;
     while (*ThisLine != '\0') {
         LineLength = _tcslen(ThisLine);
@@ -398,7 +318,6 @@ YoriPkgInstallSourceForInstalledPackages(
             if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &SourcePath)) {
                 goto Exit;
             }
-            TotalCount++;
         }
         if (Equals) {
             *Equals = '=';
@@ -412,30 +331,7 @@ YoriPkgInstallSourceForInstalledPackages(
     //  Install all packages which specify a source path.
     //
 
-    Result = TRUE;
-    CurrentIndex = 0;
-
-    ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        CurrentIndex++;
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y (%i/%i)...\n"), &PendingPackage->PackageName, CurrentIndex, TotalCount);
-        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
-            Result = FALSE;
-            break;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-    }
-
-    //
-    //  If everything worked, commit the backed up packages.
-    //
-
-    if (Result) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
-    }
+    Result = YoriPkgInstallPendingPackages(&PkgIniFile, NULL, &PendingPackages);
 
 Exit:
 
@@ -472,8 +368,6 @@ YoriPkgInstallSourceForSinglePackage(
     YORI_STRING IniValue;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
-    PYORI_LIST_ENTRY ListEntry;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -511,28 +405,7 @@ YoriPkgInstallSourceForSinglePackage(
         goto Exit;
     }
 
-    //
-    //  Install the package from the pending package list.  This is done
-    //  because the package must be already downloaded and we want to use
-    //  the local file name.
-    //
-
-    ListEntry = NULL;
-    Result = TRUE;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &PendingPackage->PackageName);
-        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
-            Result = FALSE;
-            break;
-        }
-    }
-
-    if (Result) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
-    }
+    Result = YoriPkgInstallPendingPackages(&PkgIniFile, NULL, &PendingPackages);
 
 Exit:
     if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {
@@ -564,11 +437,8 @@ YoriPkgInstallSymbolsForInstalledPackages(
     YORI_STRING SymbolPath;
     DWORD LineLength;
     DWORD TotalCount;
-    DWORD CurrentIndex;
     BOOL Result;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORI_LIST_ENTRY ListEntry = NULL;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -627,30 +497,7 @@ YoriPkgInstallSymbolsForInstalledPackages(
     //  Install all packages which specify a source path.
     //
 
-    Result = TRUE;
-    CurrentIndex = 0;
-
-    ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        CurrentIndex++;
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y (%i/%i)...\n"), &PendingPackage->PackageName, CurrentIndex, TotalCount);
-        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
-            Result = FALSE;
-            break;
-        }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-    }
-
-    //
-    //  If everything worked, commit the backed up packages.
-    //
-
-    if (Result) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
-    }
+    Result = YoriPkgInstallPendingPackages(&PkgIniFile, NULL, &PendingPackages);
 
 Exit:
 
@@ -687,8 +534,6 @@ YoriPkgInstallSymbolForSinglePackage(
     YORI_STRING IniValue;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
-    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
-    PYORI_LIST_ENTRY ListEntry;
 
     YoriPkgInitializePendingPackages(&PendingPackages);
 
@@ -726,28 +571,7 @@ YoriPkgInstallSymbolForSinglePackage(
         goto Exit;
     }
 
-    //
-    //  Install the package from the pending package list.  This is done
-    //  because the package must be already downloaded and we want to use
-    //  the local file name.
-    //
-
-    ListEntry = NULL;
-    Result = TRUE;
-    ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-    while (ListEntry != NULL) {
-        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
-        ListEntry = YoriLibGetNextListEntry(&PendingPackages.PackageList, ListEntry);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y...\n"), &PendingPackage->PackageName);
-        if (!YoriPkgInstallPackage(PendingPackage, NULL)) {
-            Result = FALSE;
-            break;
-        }
-    }
-
-    if (Result) {
-        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages.BackupPackages);
-    }
+    Result = YoriPkgInstallPendingPackages(&PkgIniFile, NULL, &PendingPackages);
 
 Exit:
     if (!YoriLibIsListEmpty(&PendingPackages.BackupPackages)) {

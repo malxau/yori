@@ -91,7 +91,7 @@ YoriPkgInstallSymbolForSinglePackage(
 BOOL
 YoriPkgDisplayAvailableRemotePackages();
 
-DWORD
+BOOL
 YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,

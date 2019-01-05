@@ -405,7 +405,7 @@ YoriLibCabFileOpenForExtract(
                            GENERIC_READ | GENERIC_WRITE,
                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                            NULL,
-                           CREATE_NEW,
+                           CREATE_ALWAYS,
                            FILE_ATTRIBUTE_NORMAL,
                            NULL);
 
@@ -453,59 +453,6 @@ YoriLibCabFileOpenForExtract(
                 }
             }
 
-            break;
-
-        //
-        //  If the file is already there, try to rename it out of the way.
-        //
-
-        } else if (Err == ERROR_FILE_EXISTS) {
-
-            YORI_STRING NewName;
-
-            if (!YoriLibRenameFileToBackupName(FullPath, &NewName)) {
-                break;
-            }
-
-            //
-            //  Try again to create the final file.  If it fails, try to put
-            //  the original file back.
-            //
-
-            hFile = CreateFile(FullPath->StartOfString,
-                               GENERIC_READ | GENERIC_WRITE,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                               NULL,
-                               CREATE_NEW,
-                               FILE_ATTRIBUTE_NORMAL,
-                               NULL);
-
-            if (hFile == INVALID_HANDLE_VALUE) {
-                Err = GetLastError();
-                MoveFileEx(NewName.StartOfString, FullPath->StartOfString, MOVEFILE_REPLACE_EXISTING);
-            } else {
-
-                HANDLE hDeadFile;
-
-                //
-                //  Try to delete the old file via DeleteFile and
-                //  FILE_FLAG_DELETE_ON_CLOSE, and hope one of them works
-                //
-
-                DeleteFile(NewName.StartOfString);
-                hDeadFile = CreateFile(NewName.StartOfString,
-                                       DELETE,
-                                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                       NULL,
-                                       OPEN_EXISTING,
-                                       FILE_FLAG_DELETE_ON_CLOSE,
-                                       NULL);
-
-                if (hDeadFile != INVALID_HANDLE_VALUE) {
-                    CloseHandle(hDeadFile);
-                }
-            }
-            YoriLibFreeStringContents(&NewName);
             break;
         }
     }

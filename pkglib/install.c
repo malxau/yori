@@ -521,4 +521,78 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     return FALSE;
 }
 
+
+/**
+ Install a set of packages.  If all installations succeed, commit the set
+ (removing backups) and return TRUE.  If anything fails, roll back all backed
+ up packages and return FALSE.  Note this function generates output for the
+ user.
+
+ @param PkgIniFile Pointer to the system global package INI file.
+
+ @param TargetDirectory Pointer to a string specifying the directory
+        containing the package.  If NULL, the directory containing the
+        application is used.
+
+ @param PendingPackages Pointer to a list of packages to install, and packages
+        backed up in preparation for these installations.
+
+ @return TRUE to indicate all packages were installed successfully, FALSE
+         otherwise.
+ */
+BOOL
+YoriPkgInstallPendingPackages(
+    __in PYORI_STRING PkgIniFile,
+    __in_opt PYORI_STRING TargetDirectory,
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
+    )
+{
+    PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    PYORI_LIST_ENTRY ListEntry;
+    DWORD TotalCount;
+    DWORD CurrentIndex;
+    BOOL Result;
+
+    //
+    //  Count the number of packages to install
+    //
+
+    TotalCount = 0;
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages->PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        TotalCount++;
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages->PackageList, ListEntry);
+    }
+
+    //
+    //  Install the list of packages
+    //
+
+    ListEntry = NULL;
+    Result = TRUE;
+    CurrentIndex = 0;
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages->PackageList, ListEntry);
+    while (ListEntry != NULL) {
+        CurrentIndex++;
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages->PackageList, ListEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y version %y (%i/%i)...\n"), &PendingPackage->PackageName, &PendingPackage->Version, CurrentIndex, TotalCount);
+        if (!YoriPkgInstallPackage(PendingPackage, TargetDirectory)) {
+            Result = FALSE;
+            break;
+        }
+    }
+
+    if (Result) {
+        YoriPkgCommitAndFreeBackupPackageList(&PendingPackages->BackupPackages);
+    }
+
+    if (!YoriLibIsListEmpty(&PendingPackages->BackupPackages)) {
+        YoriPkgRollbackAndFreeBackupPackageList(PkgIniFile, TargetDirectory, &PendingPackages->BackupPackages);
+    }
+
+    return Result;
+}
+
 // vim:sw=4:ts=4:et:

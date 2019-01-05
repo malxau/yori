@@ -72,7 +72,6 @@ SetupInstallToDirectory(
     )
 {
     YORI_STRING PkgNames[4];
-    DWORD SuccessCount = 0;
 
     if (!YoriLibCreateDirectoryAndParents(InstallDirectory)) {
         DWORD Err = GetLastError();
@@ -87,8 +86,7 @@ SetupInstallToDirectory(
     YoriLibConstantString(&PkgNames[2], _T("yori-typical"));
     YoriLibConstantString(&PkgNames[3], _T("yori-completion"));
 
-    SuccessCount = YoriPkgInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), InstallDirectory, NULL, NULL);
-    if (SuccessCount == 3) {
+    if (YoriPkgInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), InstallDirectory, NULL, NULL)) {
         return TRUE;
     }
     return FALSE;

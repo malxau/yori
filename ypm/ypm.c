@@ -319,14 +319,12 @@ ENTRYPOINT(
         YoriPkgDisplayAvailableRemotePackages();
     } else if (Op == YpmOpInstallRemote) {
         DWORD PkgCount;
-        DWORD SuccessCount;
         PkgCount = ArgC - StartArg;
         if (PkgCount == 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing package name\n"));
             return EXIT_FAILURE;
         }
-        SuccessCount = YoriPkgInstallRemotePackages(&ArgV[StartArg], PkgCount, NULL, NewVersion, NewArch);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i packages installed (%i not installed)\n"), SuccessCount, PkgCount - SuccessCount);
+        YoriPkgInstallRemotePackages(&ArgV[StartArg], PkgCount, NULL, NewVersion, NewArch);
     } else if (Op == YpmOpInstallSource) {
         if (StartArg == 0 || StartArg >= ArgC) {
             YoriPkgInstallSourceForInstalledPackages();
