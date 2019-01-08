@@ -962,6 +962,10 @@ YoriLibCabNotify(
                 YoriLibFreeStringContents(&FileName);
             }
             return 1;
+        case YoriLibCabNotifyNextCabinet:
+            if (Notification->FdiError != 0) {
+                return (DWORD_PTR)-1;
+            }
     }
     return 0;
 }
