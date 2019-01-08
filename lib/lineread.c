@@ -262,8 +262,8 @@ YoriLibReadLineToStringEx(
 
     if (ReadContext->PreviousBuffer == NULL) {
         ReadContext->LengthOfBuffer = UserString->LengthAllocated;
-        if (ReadContext->LengthOfBuffer < 16 * 1024) {
-            ReadContext->LengthOfBuffer = 16 * 1024;
+        if (ReadContext->LengthOfBuffer < 256 * 1024) {
+            ReadContext->LengthOfBuffer = 256 * 1024;
         }
         ReadContext->PreviousBuffer = YoriLibMalloc(ReadContext->LengthOfBuffer);
         if (ReadContext->PreviousBuffer == NULL) {
