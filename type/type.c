@@ -240,16 +240,30 @@ ENTRYPOINT(
                     LONGLONG HeadLines = 0;
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &HeadLines, &CharsConsumed);
 
-                    //
-                    //  Hack to allow "head -50" to mean "positive 50"
-                    //
+                    if (CharsConsumed == 0) {
 
-                    if (HeadLines < 0) {
-                        HeadLines = HeadLines * -1;
+                        //
+                        //  If it's not numeric, assume it's a file name.
+                        //  Default to 10 lines, and don't advance the
+                        //  argument.
+                        //
+
+                        TypeContext.HeadLines = 10;
+                        ArgumentUnderstood = TRUE;
+
+                    } else {
+
+                        //
+                        //  Hack to allow "head -50" to mean "positive 50"
+                        //
+
+                        if (HeadLines < 0) {
+                            HeadLines = HeadLines * -1;
+                        }
+                        TypeContext.HeadLines = (ULONG)HeadLines;
+                        ArgumentUnderstood = TRUE;
+                        i++;
                     }
-                    TypeContext.HeadLines = (ULONG)HeadLines;
-                    ArgumentUnderstood = TRUE;
-                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
@@ -288,9 +302,9 @@ ENTRYPOINT(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
-    
+
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, TypeFileFoundCallback, &TypeContext);
         }
     }
