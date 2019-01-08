@@ -1736,6 +1736,8 @@ MoreCopySelectionIfPresent(
     DWORD LineIndex;
     DWORD CharactersRemainingInMatch = 0;
     BOOL Result = FALSE;
+    YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenInfoEx;
+    PDWORD ColorTableToUse = NULL;
 
     PYORILIB_SELECTION Selection = &MoreContext->Selection;
 
@@ -1919,7 +1921,14 @@ MoreCopySelectionIfPresent(
     //  Convert the VT100 form into HTML, and free it
     //
 
-    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, 4)) {
+    if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
+        ScreenInfoEx.cbSize = sizeof(ScreenInfoEx);
+        if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfoEx)) {
+            ColorTableToUse = (PDWORD)&ScreenInfoEx.ColorTable;
+        }
+    }
+
+    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, ColorTableToUse, 4)) {
         goto Exit;
     }
 

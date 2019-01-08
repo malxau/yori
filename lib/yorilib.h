@@ -680,6 +680,7 @@ BOOL
 YoriLibHtmlConvertToHtmlFromVt(
     __in PYORI_STRING VtText,
     __inout PYORI_STRING HtmlText,
+    __in_opt PDWORD ColorTable,
     __in DWORD HtmlVersion
     );
 

@@ -324,6 +324,9 @@ YoriLibHtmlGenerateTextString(
  @param BufferSizeNeeded On successful completion, indicates the number of
         characters needed in the TextString buffer to complete the operation.
 
+ @param ColorTable Pointer to a color table describing how to convert the 16
+        colors into RGB.  If NULL, a default mapping is used.
+
  @param StringBuffer Pointer to the string containing a VT100 escape to
         convert to HTML.
 
@@ -332,9 +335,10 @@ YoriLibHtmlGenerateTextString(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibHtmlGenerateEscapeString(
+YoriLibHtmlGenerateEscapeStringInternal(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
+    __in_opt PDWORD ColorTable,
     __in LPTSTR StringBuffer,
     __in DWORD BufferLength
     )
@@ -363,8 +367,14 @@ YoriLibHtmlGenerateEscapeString(
         DWORD code;
         TCHAR NewTag[128];
         BOOLEAN NewUnderline = FALSE;
-        DWORD ColorTable[] = {0x000000, 0x800000, 0x008000, 0x808000, 0x000080, 0x800080, 0x008080, 0xc0c0c0,
-                              0x808080, 0xff0000, 0x00ff00, 0xffff00, 0x0000ff, 0xff00ff, 0x00ffff, 0xffffff};
+        PDWORD ColorTableToUse;
+        DWORD DefaultColorTable[] = {0x000000, 0x800000, 0x008000, 0x808000, 0x000080, 0x800080, 0x008080, 0xc0c0c0,
+                                     0x808080, 0xff0000, 0x00ff00, 0xffff00, 0x0000ff, 0xff00ff, 0x00ffff, 0xffffff};
+
+        ColorTableToUse = ColorTable;
+        if (ColorTableToUse == NULL) {
+            ColorTableToUse = DefaultColorTable;
+        }
 
         SrcPoint++;
         RemainingLength--;
@@ -458,12 +468,12 @@ YoriLibHtmlGenerateEscapeString(
         if (YoriLibHtmlVersion == 4) {
             SrcOffset = YoriLibSPrintf(NewTag,
                                        _T("<FONT COLOR=#%06x>"),
-                                       (int)ColorTable[NewColor & 0xf]);
+                                       (int)ColorTableToUse[NewColor & 0xf]);
         } else {
             SrcOffset = YoriLibSPrintf(NewTag,
                                        _T("<SPAN STYLE=\"color:#%06x;background-color:#%06x\">"),
-                                      (int)ColorTable[NewColor & 0xf],
-                                      (int)ColorTable[(NewColor & 0xf0) >> 4]);
+                                      (int)ColorTableToUse[NewColor & 0xf],
+                                      (int)ColorTableToUse[(NewColor & 0xf0) >> 4]);
         }
 
         if (DestOffset + SrcOffset < TextString->LengthAllocated) {
@@ -492,6 +502,35 @@ YoriLibHtmlGenerateEscapeString(
     *BufferSizeNeeded = DestOffset + 1;
 
     return TRUE;
+}
+
+/**
+ Generate a string of text that descibes a VT100 escape action in terms of
+ HTML.
+
+ @param TextString On successful completion, updated to contain the escaped
+        HTML text.  If this buffer is not large enough, the routine succeeds
+        and returns the required size in BufferSizeNeeded.
+
+ @param BufferSizeNeeded On successful completion, indicates the number of
+        characters needed in the TextString buffer to complete the operation.
+
+ @param StringBuffer Pointer to the string containing a VT100 escape to
+        convert to HTML.
+
+ @param BufferLength Specifies the number of characters in StringBuffer.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibHtmlGenerateEscapeString(
+    __inout PYORI_STRING TextString,
+    __out PDWORD BufferSizeNeeded,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    )
+{
+    return YoriLibHtmlGenerateEscapeStringInternal(TextString, BufferSizeNeeded, NULL, StringBuffer, BufferLength);
 }
 
 /**
@@ -524,6 +563,12 @@ typedef struct _YORI_LIB_HTML_CONVERT_CONTEXT {
      reallocated.
      */
     PYORI_STRING HtmlText;
+
+    /**
+     Pointer to a color table describing how to convert the 16 colors into
+     RGB.  If NULL, a default mapping is used.
+     */
+    PDWORD ColorTable;
 } YORI_LIB_HTML_CONVERT_CONTEXT, *PYORI_LIB_HTML_CONVERT_CONTEXT;
 
 /**
@@ -693,7 +738,7 @@ YoriLibHtmlCnvProcessAndOutputEscape(
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength)) {
         return FALSE;
     }
 
@@ -702,7 +747,7 @@ YoriLibHtmlCnvProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -726,6 +771,9 @@ YoriLibHtmlCnvProcessAndOutputEscape(
  @param HtmlText On successful completion, updated to point to an HTML
         representation.  This string will be reallocated within this routine.
 
+ @param ColorTable Pointer to a color table describing how to convert the 16
+        colors into RGB.  If NULL, a default mapping is used.
+
  @param HtmlVersion Specifies the format of HTML to use.
 
  @return TRUE to indicate success, FALSE to indicate failure.
@@ -734,6 +782,7 @@ BOOL
 YoriLibHtmlConvertToHtmlFromVt(
     __in PYORI_STRING VtText,
     __inout PYORI_STRING HtmlText,
+    __in_opt PDWORD ColorTable,
     __in DWORD HtmlVersion
     )
 {
@@ -743,6 +792,7 @@ YoriLibHtmlConvertToHtmlFromVt(
     YoriLibHtmlSetVersion(HtmlVersion);
 
     Context.HtmlText = HtmlText;
+    Context.ColorTable = ColorTable;
 
     CallbackFunctions.InitializeStream = YoriLibHtmlCnvInitializeStream;
     CallbackFunctions.EndStream = YoriLibHtmlCnvEndStream;

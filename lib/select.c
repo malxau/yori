@@ -1097,6 +1097,8 @@ YoriLibCopySelectionIfPresent(
     DWORD CharsWritten;
     HANDLE ConsoleHandle;
     YORILIB_PREVIOUS_SELECTION_BUFFER Attributes;
+    YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenInfoEx;
+    PDWORD ColorTableToUse = NULL;
 
     //
     //  No selection, nothing to copy
@@ -1228,8 +1230,15 @@ YoriLibCopySelectionIfPresent(
     //  Convert the VT100 form into HTML, and free it
     //
 
+    if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
+        ScreenInfoEx.cbSize = sizeof(ScreenInfoEx);
+        if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfoEx)) {
+            ColorTableToUse = (PDWORD)&ScreenInfoEx.ColorTable;
+        }
+    }
+
     YoriLibInitEmptyString(&HtmlText);
-    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, 4)) {
+    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, ColorTableToUse, 4)) {
         YoriLibFreeStringContents(&VtText);
         YoriLibFreeStringContents(&TextToCopy);
         YoriLibFreeStringContents(&HtmlText);
