@@ -1273,9 +1273,10 @@ YoriLibGetSelectionDoubleClickBreakChars(
 
         //
         //  0x2502 is Unicode full vertical line (used by sdir)
+        //  0x00BB is double angle quotation mark, used in elevated prompts
         //
 
-        YoriLibConstantString(BreakChars, _T(" '<>|\x2502"));
+        YoriLibConstantString(BreakChars, _T(" '<>|\x2502\x00BB"));
     }
     return TRUE;
 }
