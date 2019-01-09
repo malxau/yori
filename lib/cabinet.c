@@ -454,6 +454,8 @@ YoriLibCabFileOpenForExtract(
             }
 
             break;
+        } else {
+            break;
         }
     }
 
