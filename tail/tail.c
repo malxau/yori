@@ -123,27 +123,65 @@ TailProcessStream(
     PYORI_STRING LineString;
     BOOL LineTerminated;
     BOOL TimeoutReached;
+    DWORD SeekToEndOffset = 0;
+
+    DWORD FileType = GetFileType(hSource);
+    FileType = FileType & ~(FILE_TYPE_REMOTE);
+
+    //
+    //  If it's a file and we want the final few lines, start searching
+    //  from the end, assuming an average line size of 256 bytes.
+    //
+
+    if (FileType == FILE_TYPE_DISK && TailContext->FinalLine == 0) {
+        SeekToEndOffset = 256 * TailContext->LinesToDisplay;
+    }
 
     TailContext->FilesFound++;
-    TailContext->LinesFound = 0;
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, INFINITE, hSource, &LineTerminated, &TimeoutReached)) {
-            break;
+        if (SeekToEndOffset != 0) {
+            SetFilePointer(hSource, -1 * SeekToEndOffset, NULL, FILE_END);
+        }
+        TailContext->LinesFound = 0;
+
+        while (TRUE) {
+
+            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, INFINITE, hSource, &LineTerminated, &TimeoutReached)) {
+                break;
+            }
+
+            TailContext->LinesFound++;
+
+            if (TailContext->FinalLine != 0 && TailContext->LinesFound >= TailContext->FinalLine) {
+                break;
+            }
         }
 
-        TailContext->LinesFound++;
+        if (TailContext->LinesFound > TailContext->LinesToDisplay) {
+            StartLine = TailContext->LinesFound - TailContext->LinesToDisplay;
+            break;
+        } else if (SeekToEndOffset != 0) {
 
-        if (TailContext->FinalLine != 0 && TailContext->LinesFound >= TailContext->FinalLine) {
+            //
+            //  If we didn't get enough lines and we have a file that
+            //  supports arbitrary seeks, try to grab more data.  If
+            //  we've already hit our arbitrary maximum (a 4Kb average
+            //  line size) start scanning from the top.
+            //
+
+            if (SeekToEndOffset < 4096 * TailContext->LinesToDisplay) {
+                SeekToEndOffset = 4096 * TailContext->LinesToDisplay;
+            } else {
+                SeekToEndOffset = 0;
+                SetFilePointer(hSource, 0, NULL, FILE_BEGIN);
+            }
+            continue;
+        } else {
+            StartLine = 0;
             break;
         }
-    }
-
-    if (TailContext->LinesFound > TailContext->LinesToDisplay) {
-        StartLine = TailContext->LinesFound - TailContext->LinesToDisplay;
-    } else {
-        StartLine = 0;
     }
 
     for (CurrentLine = StartLine; CurrentLine < TailContext->LinesFound; CurrentLine++) {
@@ -351,9 +389,9 @@ ENTRYPOINT(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
-    
+
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, TailFileFoundCallback, &TailContext);
         }
     }
