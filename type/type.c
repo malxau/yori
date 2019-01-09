@@ -97,11 +97,21 @@ TypeProcessStream(
     PVOID LineContext = NULL;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     YORI_STRING LineString;
+    BOOL OutputIsConsole;
+    DWORD dwMode;
+    HANDLE OutputHandle;
+
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     YoriLibInitEmptyString(&LineString);
 
     TypeContext->FilesFound++;
     TypeContext->FileLinesFound = 0;
+
+    OutputIsConsole = FALSE;
+    if (GetConsoleMode(OutputHandle, &dwMode)) {
+        OutputIsConsole = TRUE;
+    }
 
     while (TRUE) {
 
@@ -113,7 +123,11 @@ TypeProcessStream(
 
         if ((TypeContext->HeadLines == 0 || TypeContext->FileLinesFound <= TypeContext->HeadLines)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &LineString);
-            if (LineString.LengthInChars == 0 || !GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo) || ScreenInfo.dwCursorPosition.X != 0) {
+            if (LineString.LengthInChars == 0 ||
+                !OutputIsConsole ||
+                !GetConsoleScreenBufferInfo(OutputHandle, &ScreenInfo) ||
+                ScreenInfo.dwCursorPosition.X != 0) {
+
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
             }
         } else {
