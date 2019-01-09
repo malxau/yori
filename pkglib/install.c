@@ -403,6 +403,7 @@ YoriPkgInstallPackage(
     InstallContext.IniFileName = &PkgIniFile;
     InstallContext.PackageName = &Package->PackageName;
     InstallContext.NumberFiles = 0;
+    YoriLibInitEmptyString(&ErrorString);
     if (!YoriLibExtractCab(&Package->LocalPackagePath, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YoriPkgInstallPackageFileCallback, YoriPkgCompressPackageFileCallback, &InstallContext, &ErrorString)) {
         WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), &Package->LocalPackagePath, &ErrorString);
