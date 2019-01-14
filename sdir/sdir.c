@@ -79,6 +79,10 @@ PSDIR_OPTS Opts;
  */
 PSDIR_SUMMARY Summary;
 
+/**
+ Global data for the application.
+ */
+SDIR_GLOBAL SdirGlobal;
 
 BOOL
 SdirDisplayCollection();
@@ -137,53 +141,6 @@ SdirCaptureFoundItemIntoDirent (
 }
 
 /**
- Generate information typically returned from a directory enumeration by
- opening the file and querying information from it.  This is used for named
- streams which do not go through a regular file enumeration.
-
- @param FindData On successful completion, populated with information 
-        typically returned by the system when enumerating files.
-
- @param FullPath Pointer to a NULL terminate string referring to the full
-        path to the file.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirUpdateFindDataFromFileInformation (
-    __out PWIN32_FIND_DATA FindData,
-    __in LPTSTR FullPath
-    )
-{
-    HANDLE hFile;
-    BY_HANDLE_FILE_INFORMATION FileInfo;
-
-    hFile = CreateFile(FullPath,
-                       FILE_READ_ATTRIBUTES,
-                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
-                       NULL);
-
-    if (hFile != INVALID_HANDLE_VALUE) {
-
-        GetFileInformationByHandle(hFile, &FileInfo);
-
-        FindData->dwFileAttributes = FileInfo.dwFileAttributes;
-        FindData->ftCreationTime = FileInfo.ftCreationTime;
-        FindData->ftLastAccessTime = FileInfo.ftLastAccessTime;
-        FindData->ftLastWriteTime = FileInfo.ftLastWriteTime;
-        FindData->nFileSizeHigh = FileInfo.nFileSizeHigh;
-        FindData->nFileSizeLow  = FileInfo.nFileSizeLow;
-
-        CloseHandle(hFile);
-        return TRUE;
-    }
-    return FALSE;
-}
-
-/**
  Capture enough state about a file from its path to determine the color
  to display it with.  This is used when displaying directory names as part
  of recursive enumerations where the directories aren't rendered as part of
@@ -219,7 +176,7 @@ SdirRenderAttributesFromPath (
 
         memset(&FindData, 0, sizeof(FindData));
         DummyString.LengthInChars = YoriLibSPrintfS(DummyString.StartOfString, DummyString.LengthAllocated, _T("%s\\"), FullPath);
-        SdirUpdateFindDataFromFileInformation(&FindData, DummyString.StartOfString);
+        YoriLibUpdateFindDataFromFileInformation(&FindData, DummyString.StartOfString, FALSE);
         SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, &DummyString);
         YoriLibFreeStringContents(&DummyString);
         return CurrentEntry.RenderAttributes;
@@ -260,7 +217,7 @@ SdirAddToCollection (
     SdirCaptureFoundItemIntoDirent(CurrentEntry, FindData, FullPath);
 
     if (Opts->BriefRecurseDepth == 0 &&
-        CurrentEntry->RenderAttributes.Ctrl & SDIR_ATTRCTRL_HIDE) {
+        CurrentEntry->RenderAttributes.Ctrl & YORILIB_ATTRCTRL_HIDE) {
 
         SdirDirCollectionCurrent--;
         return TRUE;
@@ -418,7 +375,7 @@ SdirItemFoundCallback(
                     //  Populate stream information
                     //
 
-                    SdirUpdateFindDataFromFileInformation(&BogusFindData, StreamFullPath.StartOfString);
+                    YoriLibUpdateFindDataFromFileInformation(&BogusFindData, StreamFullPath.StartOfString, FALSE);
                     SdirAddToCollection(&BogusFindData, &StreamFullPath);
                 }
             } while (DllKernel32.pFindNextStreamW(hStreamFind, &FindStreamData));

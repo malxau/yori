@@ -49,24 +49,6 @@ CHAR strFileFiltHelpText[] =
         " Valid attributes are:\n";
 
 /**
- Specifies a pointer to a function which can compare two directory entries
- in some fashion.
- */
-typedef DWORD (* YORI_LIB_FILE_FILT_COMPARE_FN)(PYORI_FILE_INFO, PYORI_FILE_INFO);
-
-/**
- Specifies a pointer to a function which can collect file information from
- the disk or file system for some particular piece of data.
- */
-typedef BOOL (* YORI_LIB_FILE_FILT_COLLECT_FN)(PYORI_FILE_INFO, PWIN32_FIND_DATA, PYORI_STRING);
-
-/**
- Specifies a pointer to a function which can generate in memory file
- information from a user provided string.
- */
-typedef BOOL (* YORI_LIB_FILE_FILT_GENERATE_FROM_STRING_FN)(PYORI_FILE_INFO, PYORI_STRING);
-
-/**
  A single option that files can be filtered against.
  */
 typedef struct _YORI_LIB_FILE_FILT_FILTER_OPT {
@@ -267,36 +249,6 @@ YoriLibFileFiltHelp()
     return TRUE;
 }
 
-/**
- An in memory representation of a single match criteria, specifying the color
- to apply in event that the incoming file matches a specified criteria.
- */
-typedef struct _YORI_LIB_FILE_FILT_MATCH_CRITERIA {
-
-    /**
-     Pointer to a function to ingest an incoming directory entry so that we
-     have two objects to compare against.
-     */
-    YORI_LIB_FILE_FILT_COLLECT_FN CollectFn;
-
-    /**
-     Pointer to a function to compare an incoming directory entry against the
-     dummy one contained here.
-     */
-    YORI_LIB_FILE_FILT_COMPARE_FN CompareFn;
-
-    /**
-     An array indicating whether a match is found if the comparison returns
-     less than, greater than, or equal.
-     */
-    BOOL TruthStates[3];
-
-    /**
-     A dummy directory entry containing values to compare against.  This is
-     used to allow all compare functions to operate on two directory entries.
-     */
-    YORI_FILE_INFO CompareEntry;
-} YORI_LIB_FILE_FILT_MATCH_CRITERIA, *PYORI_LIB_FILE_FILT_MATCH_CRITERIA;
 
 /**
  Parse a user supplied operator and user supplied value for an option that
@@ -415,17 +367,21 @@ YoriLibFileFiltParseFilterOperator(
 }
 
 /**
- Parse a single user supplied option string into a criteria to apply against
- each file found.  This function performs all string validation.
-
- @param Criteria Pointer to the criteria object to populate with the result
-        of this function.
+ Parse a single user supplied option string that commences with an option
+ followed by an operator.  This function resolves the option into a pointer
+ to its structure, and validates the operator and returns a substring to it.
 
  @param FilterElement Pointer to the string describing a single thing to
-        filter against.  This string should indicate the option, operator,
-        and value.  This function needs to perform all validation that these
-        details are provided and are meaningful.  Note this string is not
-        NULL terminated since it refers to a portion of the user's string.
+        filter against.  This string should indicate the option and operator.
+        This function needs to perform validation that these details are
+        provided and are meaningful.  Note this string is not NULL terminated
+        since it refers to a portion of the user's string.
+
+ @param Opt On successful completion, updated to point to the in memory object
+        describing the user specified option.
+
+ @param Operator On successful completion, updated to point to the substring
+        within FilterElement that refers to the operator.
 
  @param ErrorSubstring On failure, updated to point to the part of the user's
         expression that caused the failure.
@@ -433,14 +389,13 @@ YoriLibFileFiltParseFilterOperator(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibFileFiltParseFilterElement(
-    __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
+YoriLibFileFiltParseFilterOptAndOperator(
     __in PYORI_STRING FilterElement,
+    __out PCYORI_LIB_FILE_FILT_FILTER_OPT * Opt,
+    __out PYORI_STRING Operator,
     __out PYORI_STRING ErrorSubstring
     )
 {
-    YORI_STRING Operator;
-    YORI_STRING Value;
     YORI_STRING SwitchName;
     DWORD Count;
     PCYORI_LIB_FILE_FILT_FILTER_OPT FoundOpt;
@@ -468,12 +423,49 @@ YoriLibFileFiltParseFilterElement(
         return FALSE;
     }
 
-    YoriLibInitEmptyString(&Operator);
+    *Opt = FoundOpt;
 
-    Operator.StartOfString = SwitchName.StartOfString + SwitchName.LengthInChars;
-    Operator.LengthInChars = FilterElement->LengthInChars - SwitchName.LengthInChars - (DWORD)(SwitchName.StartOfString - FilterElement->StartOfString);
+    YoriLibInitEmptyString(Operator);
 
-    Operator.LengthInChars = YoriLibCountStringContainingChars(&Operator, _T("&<>=!"));
+    Operator->StartOfString = SwitchName.StartOfString + SwitchName.LengthInChars;
+    Operator->LengthInChars = FilterElement->LengthInChars - SwitchName.LengthInChars - (DWORD)(SwitchName.StartOfString - FilterElement->StartOfString);
+
+    Operator->LengthInChars = YoriLibCountStringContainingChars(Operator, _T("&<>=!"));
+    return TRUE;
+}
+
+/**
+ Parse a single user supplied option string into a criteria to apply against
+ each file found.  This function performs all string validation.
+
+ @param Criteria Pointer to the criteria object to populate with the result
+        of this function.
+
+ @param FilterElement Pointer to the string describing a single thing to
+        filter against.  This string should indicate the option, operator,
+        and value.  This function needs to perform all validation that these
+        details are provided and are meaningful.  Note this string is not
+        NULL terminated since it refers to a portion of the user's string.
+
+ @param ErrorSubstring On failure, updated to point to the part of the user's
+        expression that caused the failure.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibFileFiltParseFilterElement(
+    __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
+    __in PYORI_STRING FilterElement,
+    __out PYORI_STRING ErrorSubstring
+    )
+{
+    YORI_STRING Operator;
+    YORI_STRING Value;
+    PCYORI_LIB_FILE_FILT_FILTER_OPT FoundOpt;
+
+    if (!YoriLibFileFiltParseFilterOptAndOperator(FilterElement, &FoundOpt, &Operator, ErrorSubstring)) {
+        return FALSE;
+    }
 
     YoriLibInitEmptyString(&Value);
 
@@ -482,6 +474,87 @@ YoriLibFileFiltParseFilterElement(
 
     return YoriLibFileFiltParseFilterOperator(Criteria, &Operator, &Value, FoundOpt, ErrorSubstring);
 }
+
+/**
+ Parse a single user supplied option string into a criteria to apply against
+ each file found.  This function performs all string validation.
+
+ @param Criteria Pointer to the criteria object to populate with the result
+        of this function.  Note for this function this points to a color
+        criteria describing how to determine a match and which color to
+        apply if a match is found.
+
+ @param FilterElement Pointer to the string describing a single thing to
+        filter against.  This string should indicate the option, operator,
+        comparison value, a comma, and the color to apply.  This function
+        needs to perform all validation that these details are provided and
+        are meaningful.  Note this string is not NULL terminated since it
+        refers to a portion of the user's string.
+
+ @param ErrorSubstring On failure, updated to point to the part of the user's
+        expression that caused the failure.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibFileFiltParseColorElement(
+    __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
+    __in PYORI_STRING FilterElement,
+    __out PYORI_STRING ErrorSubstring
+    )
+{
+    YORI_STRING Operator;
+    YORI_STRING Value;
+    PYORI_LIB_FILE_FILT_COLOR_CRITERIA ColorCriteria = (PYORI_LIB_FILE_FILT_COLOR_CRITERIA)Criteria;
+    PCYORI_LIB_FILE_FILT_FILTER_OPT FoundOpt;
+    DWORD CharsToCompare;
+    DWORD CharsRemaining;
+
+    if (!YoriLibFileFiltParseFilterOptAndOperator(FilterElement, &FoundOpt, &Operator, ErrorSubstring)) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&Value);
+
+    Value.StartOfString = Operator.StartOfString + Operator.LengthInChars;
+    CharsRemaining = FilterElement->LengthInChars - Operator.LengthInChars - (DWORD)(Operator.StartOfString - FilterElement->StartOfString);
+    Value.LengthInChars = CharsRemaining;
+
+    CharsToCompare = YoriLibCountStringNotContainingChars(&Value, _T(","));
+    if (Value.LengthInChars == CharsToCompare) {
+        YoriLibInitEmptyString(ErrorSubstring);
+        ErrorSubstring->StartOfString = FilterElement->StartOfString;
+        ErrorSubstring->LengthInChars = FilterElement->LengthInChars;
+        return FALSE;
+    }
+
+    Value.LengthInChars = CharsToCompare;
+
+    if (!YoriLibFileFiltParseFilterOperator(Criteria, &Operator, &Value, FoundOpt, ErrorSubstring)) {
+        return FALSE;
+    }
+
+    Value.StartOfString += CharsToCompare + 1;
+    Value.LengthInChars = CharsRemaining - CharsToCompare - 1;
+
+    ColorCriteria->Color = YoriLibAttributeFromString(&Value);
+    return TRUE;
+}
+
+
+/**
+ A callback function which can be invoked to parse each element in a
+ semicolon delimited list of filter rules to apply.
+ */
+typedef 
+BOOL
+YORI_LIB_FILE_FILT_PARSE_FN(PYORI_LIB_FILE_FILT_MATCH_CRITERIA, PYORI_STRING, PYORI_STRING);
+
+/**
+ A pointer to a callback function which can be invoked to parse each element
+ in a semicolon delimited list of filter rules to apply.
+ */
+typedef YORI_LIB_FILE_FILT_PARSE_FN *PYORI_LIB_FILE_FILT_PARSE_FN;
 
 /**
  Parse a complete user supplied filter string into a series of options and
@@ -493,24 +566,35 @@ YoriLibFileFiltParseFilterElement(
  @param FilterString Pointer to the string describing all of the filters to
         apply to all found files.
 
+ @param Fn Pointer to a callback function to invoke for each element found.
+
+ @param AllocationSize Specifies the size, in bytes, needed for each element
+        generated.
+
  @param ErrorSubstring On failure, updated to point to the part of the user's
         expression that caused the failure.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibFileFiltParseFilterString(
+YoriLibFileFiltParseFilterStringInternal(
     __out PYORI_LIB_FILE_FILTER Filter,
     __in PYORI_STRING FilterString,
+    __in PYORI_LIB_FILE_FILT_PARSE_FN Fn,
+    __in DWORD AllocationSize,
     __out PYORI_STRING ErrorSubstring
     )
 {
     YORI_STRING Remaining;
     YORI_STRING Element;
     PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria = NULL;
+    PYORI_LIB_FILE_FILT_MATCH_CRITERIA ThisElement;
     LPTSTR NextStart;
     DWORD ElementCount;
+    DWORD Index;
     DWORD Phase;
+
+    ASSERT(AllocationSize >= sizeof(YORI_LIB_FILE_FILT_MATCH_CRITERIA));
 
     YoriLibInitEmptyString(&Remaining);
     YoriLibInitEmptyString(&Element);
@@ -533,9 +617,30 @@ YoriLibFileFiltParseFilterString(
             if (Element.LengthInChars > 0) {
                 if (Criteria != NULL) {
                     ASSERT(Phase == 1);
-                    if (!YoriLibFileFiltParseFilterElement(&Criteria[ElementCount], &Element, ErrorSubstring)) {
+                    ThisElement = (PYORI_LIB_FILE_FILT_MATCH_CRITERIA)YoriLibAddToPointer(Criteria, ElementCount * AllocationSize);
+                    if (!Fn(ThisElement, &Element, ErrorSubstring)) {
                         YoriLibFree(Criteria);
                         return FALSE;
+                    }
+
+                    //
+                    //  At the expense of being N^2, check if a previous
+                    //  item is already collecting the same data.  If it
+                    //  is, don't collect anything by this item.  The
+                    //  hope is this filter chain is executed across
+                    //  multiple files so the cost of this check will be
+                    //  outweighed by the operations it eliminates.
+                    //
+
+                    if (ThisElement->CollectFn != NULL) {
+                        PYORI_LIB_FILE_FILT_MATCH_CRITERIA PreviousElement;
+                        for (Index = 0; Index < ElementCount; Index++) {
+                            PreviousElement = (PYORI_LIB_FILE_FILT_MATCH_CRITERIA)YoriLibAddToPointer(Criteria, Index * AllocationSize);
+                            if (ThisElement->CollectFn == PreviousElement->CollectFn) {
+                                ThisElement->CollectFn = NULL;
+                                break;
+                            }
+                        }
                     }
                 }
                 ElementCount++;
@@ -559,19 +664,71 @@ YoriLibFileFiltParseFilterString(
         }
 
         if (Phase == 0) {
-            Criteria = YoriLibMalloc(ElementCount * sizeof(YORI_LIB_FILE_FILT_MATCH_CRITERIA));
+            Criteria = YoriLibMalloc(ElementCount * AllocationSize);
             if (Criteria == NULL) {
                 YoriLibInitEmptyString(ErrorSubstring);
                 return FALSE;
             }
-            ZeroMemory(Criteria, ElementCount * sizeof(YORI_LIB_FILE_FILT_MATCH_CRITERIA));
+            ZeroMemory(Criteria, ElementCount * AllocationSize);
             ElementCount = 0;
         }
     }
 
     Filter->Criteria = Criteria;
+    Filter->ElementSize = AllocationSize;
     Filter->NumberCriteria = ElementCount;
     return TRUE;
+}
+
+/**
+ Parse a string that consists of a semicolon delimited list of elements, with
+ each element containing a criteria, operator and comparison value.
+
+ @param Filter Pointer to the filter object to populate with the rules to 
+        apply for each element.
+
+ @param FilterString Pointer to the string containing the list to parse.
+
+ @param ErrorSubstring If this function fails, this is populated with the
+        range within the FilterString that was determined to be in error.
+        Note this is not NULL terminated.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibFileFiltParseFilterString(
+    __out PYORI_LIB_FILE_FILTER Filter,
+    __in PYORI_STRING FilterString,
+    __out PYORI_STRING ErrorSubstring
+    )
+{
+    return YoriLibFileFiltParseFilterStringInternal(Filter, FilterString, YoriLibFileFiltParseFilterElement, sizeof(YORI_LIB_FILE_FILT_MATCH_CRITERIA), ErrorSubstring);
+}
+
+/**
+ Parse a string that consists of a semicolon delimited list of elements, with
+ each element containing a criteria, operator, comparison value, and color to
+ apply in event of a match.
+
+ @param Filter Pointer to the filter object to populate with the rules to 
+        apply for each element.
+
+ @param ColorString Pointer to the string containing the list to parse.
+
+ @param ErrorSubstring If this function fails, this is populated with the
+        range within the ColorString that was determined to be in error.
+        Note this is not NULL terminated.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibFileFiltParseColorString(
+    __out PYORI_LIB_FILE_FILTER Filter,
+    __in PYORI_STRING ColorString,
+    __out PYORI_STRING ErrorSubstring
+    )
+{
+    return YoriLibFileFiltParseFilterStringInternal(Filter, ColorString, YoriLibFileFiltParseColorElement, sizeof(YORI_LIB_FILE_FILT_COLOR_CRITERIA), ErrorSubstring);
 }
 
 /**
@@ -611,7 +768,9 @@ YoriLibFileFiltCheckFilterMatch(
     CriteriaArray = (PYORI_LIB_FILE_FILT_MATCH_CRITERIA)Filter->Criteria;
     for (Count = 0; Count < Filter->NumberCriteria; Count++) {
         Criteria = &CriteriaArray[Count];
-        if (!Criteria->CollectFn(&CompareEntry, FileInfo, FilePath)) {
+        if (Criteria->CollectFn != NULL &&
+            !Criteria->CollectFn(&CompareEntry, FileInfo, FilePath)) {
+
             return FALSE;
         }
 
@@ -620,6 +779,97 @@ YoriLibFileFiltCheckFilterMatch(
         }
     }
 
+    return TRUE;
+}
+
+/**
+ Evaluate which color a file should be displayed as based on the user
+ supplied filter string.
+
+ @param Filter Pointer to the filter object which contains a list of filters
+        to apply.
+
+ @param FilePath Pointer to a fully qualified file path.
+
+ @param FileInfo Pointer to the information returned from directory
+        enumeration.
+
+ @param Attribute On successful completion, updated with the color to use to
+        display the file.
+
+ @return TRUE to indicate a color has been found, FALSE if no color has
+         been determined.
+ */
+BOOL
+YoriLibFileFiltCheckColorMatch(
+    __in PYORI_LIB_FILE_FILTER Filter,
+    __in PYORI_STRING FilePath,
+    __in PWIN32_FIND_DATA FileInfo,
+    __out PYORILIB_COLOR_ATTRIBUTES Attribute
+    )
+{
+    DWORD Index;
+    YORILIB_COLOR_ATTRIBUTES ThisAttribute = {YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG, 0};
+    YORILIB_COLOR_ATTRIBUTES PreviousAttributes;
+    PYORI_LIB_FILE_FILT_COLOR_CRITERIA ThisApply;
+    PYORI_LIB_FILE_FILT_COLOR_CRITERIA ColorsToApply;
+    YORI_FILE_INFO CompareEntry;
+
+    ZeroMemory(&CompareEntry, sizeof(CompareEntry));
+
+    PreviousAttributes.Ctrl = 0;
+    PreviousAttributes.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
+
+    //
+    //  We expect each element to be the criteria determining a match and
+    //  color to apply in event of a match.
+    //
+
+    ASSERT((Filter->ElementSize == 0 &&
+            Filter->NumberCriteria == 0) ||
+           Filter->ElementSize == sizeof(YORI_LIB_FILE_FILT_COLOR_CRITERIA));
+
+    ColorsToApply = (PYORI_LIB_FILE_FILT_COLOR_CRITERIA)Filter->Criteria;
+    for (Index = 0; Index < Filter->NumberCriteria; Index++) {
+        ThisApply = &ColorsToApply[Index];
+
+        if (ThisApply->Match.CollectFn != NULL &&
+            !ThisApply->Match.CollectFn(&CompareEntry, FileInfo, FilePath)) {
+
+            return FALSE;
+        }
+
+        if (ThisApply->Match.TruthStates[ThisApply->Match.CompareFn(&CompareEntry, &ThisApply->Match.CompareEntry)]) {
+            ThisAttribute = YoriLibCombineColors(ThisAttribute, ThisApply->Color);
+            if ((ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
+
+                ThisAttribute = YoriLibResolveWindowColorComponents(ThisAttribute, PreviousAttributes, FALSE);
+
+                if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_INVERT) {
+                    ThisAttribute.Win32Attr = (UCHAR)(((ThisAttribute.Win32Attr & 0x0F) << 4) + ((ThisAttribute.Win32Attr & 0xF0) >> 4));
+                }
+
+                *Attribute = ThisAttribute;
+                return TRUE;
+            }
+
+            ThisAttribute.Ctrl = (UCHAR)(ThisAttribute.Ctrl & ~(YORILIB_ATTRCTRL_CONTINUE));
+        }
+    }
+
+    //
+    //  We do let the user explicitly request black on black, but
+    //  if we ended the search due to unbounded continues, return
+    //  what we have.
+    //
+
+    if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_TERMINATE_MASK || ThisAttribute.Win32Attr != 0) {
+
+        *Attribute = ThisAttribute;
+        return TRUE;
+    }
+
+    *Attribute = PreviousAttributes;
     return TRUE;
 }
 
@@ -640,6 +890,68 @@ YoriLibFileFiltFreeFilter(
     }
     Filter->Criteria = NULL;
     Filter->NumberCriteria = 0;
+}
+
+/**
+ Generate information typically returned from a directory enumeration by
+ opening the file and querying information from it.  This is used for named
+ streams which do not go through a regular file enumeration.
+
+ @param FindData On successful completion, populated with information 
+        typically returned by the system when enumerating files.
+
+ @param FullPath Pointer to a NULL terminate string referring to the full
+        path to the file.
+
+ @param CopyName TRUE if the full path's file name component should also be
+        copied into the find data structure.  FALSE if the caller does not
+        need this or will do it manually.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibUpdateFindDataFromFileInformation (
+    __out PWIN32_FIND_DATA FindData,
+    __in LPTSTR FullPath,
+    __in BOOL CopyName
+    )
+{
+    HANDLE hFile;
+    BY_HANDLE_FILE_INFORMATION FileInfo;
+    LPTSTR FinalSlash;
+
+    hFile = CreateFile(FullPath,
+                       FILE_READ_ATTRIBUTES,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                       NULL,
+                       OPEN_EXISTING,
+                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
+                       NULL);
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+
+        GetFileInformationByHandle(hFile, &FileInfo);
+
+        FindData->dwFileAttributes = FileInfo.dwFileAttributes;
+        FindData->ftCreationTime = FileInfo.ftCreationTime;
+        FindData->ftLastAccessTime = FileInfo.ftLastAccessTime;
+        FindData->ftLastWriteTime = FileInfo.ftLastWriteTime;
+        FindData->nFileSizeHigh = FileInfo.nFileSizeHigh;
+        FindData->nFileSizeLow  = FileInfo.nFileSizeLow;
+
+        CloseHandle(hFile);
+
+        if (CopyName) {
+            FinalSlash = _tcsrchr(FullPath, '\\');
+            if (FinalSlash) {
+                YoriLibSPrintfS(FindData->cFileName, MAX_PATH, _T("%s"), FinalSlash + 1);
+            } else {
+                YoriLibSPrintfS(FindData->cFileName, MAX_PATH, _T("%s"), FullPath);
+            }
+        }
+        return TRUE;
+    }
+    return FALSE;
 }
 
 // vim:sw=4:ts=4:et:

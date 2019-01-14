@@ -145,7 +145,7 @@ SdirAppInitialize()
             Opts->ConsoleHeight = 2;
         }
 
-        YoriLibSetColorToWin32(&Opts->PreviousAttributes, (UCHAR)(ScreenInfo.wAttributes & SDIR_ATTRIBUTE_FULLCOLOR_MASK));
+        YoriLibSetColorToWin32(&Opts->PreviousAttributes, (UCHAR)(ScreenInfo.wAttributes & YORILIB_ATTRIBUTE_FULLCOLOR_MASK));
     }
 
     SdirDefaultColor = YoriLibResolveWindowColorComponents(SdirDefaultColor, Opts->PreviousAttributes, TRUE);
@@ -368,23 +368,19 @@ SdirParseOpt (
         if (Opt[1] == 'c') {
             DWORD Len = (DWORD)_tcslen(&Opt[2]);
             if (Len > 0) {
-                Opts->CustomFileColor = YoriLibMalloc((Len + 1) * sizeof(TCHAR));
-                if (Opts->CustomFileColor == NULL) {
+                if (!YoriLibAllocateString(&Opts->CustomFileColor, Len + 1)) {
                     return FALSE;
                 }
-                YoriLibSPrintfS(Opts->CustomFileColor, Len + 1, _T("%s"), &Opt[2]);
-                Opts->CustomFileColorLength = Len;
+                Opts->CustomFileColor.LengthInChars = YoriLibSPrintfS(Opts->CustomFileColor.StartOfString, Len + 1, _T("%s"), &Opt[2]);
                 OptParsed = TRUE;
             }
         } else if (Opt[1] == 'e') {
             DWORD Len = (DWORD)_tcslen(&Opt[2]);
             if (Len > 0) {
-                Opts->CustomFileFilter = YoriLibMalloc((Len + 1) * sizeof(TCHAR));
-                if (Opts->CustomFileFilter == NULL) {
+                if (!YoriLibAllocateString(&Opts->CustomFileFilter, Len + 1)) {
                     return FALSE;
                 }
-                YoriLibSPrintfS(Opts->CustomFileFilter, Len + 1, _T("%s"), &Opt[2]);
-                Opts->CustomFileFilterLength = Len;
+                Opts->CustomFileFilter.LengthInChars = YoriLibSPrintfS(Opts->CustomFileFilter.StartOfString, Len + 1, _T("%s"), &Opt[2]);
                 OptParsed = TRUE;
             }
         }
@@ -640,6 +636,8 @@ SdirAppCleanup()
 {
     SetConsoleCtrlHandler(SdirCancelHandler, FALSE);
     if (Opts != NULL) {
+        YoriLibFreeStringContents(&Opts->CustomFileFilter);
+        YoriLibFreeStringContents(&Opts->CustomFileColor);
         YoriLibFreeStringContents(&Opts->ParentName);
         YoriLibFree(Opts);
         Opts = NULL;
@@ -650,10 +648,8 @@ SdirAppCleanup()
         Summary = NULL;
     }
 
-    if (SdirAttributeApply != NULL) {
-        YoriLibFree(SdirAttributeApply);
-        SdirAttributeApply = NULL;
-    }
+    YoriLibFileFiltFreeFilter(&SdirGlobal.FileColorCriteria);
+    YoriLibFileFiltFreeFilter(&SdirGlobal.FileHideCriteria);
 
     if (SdirDirCollection != NULL) {
         YoriLibFree(SdirDirCollection);

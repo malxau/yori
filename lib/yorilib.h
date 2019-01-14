@@ -585,6 +585,12 @@ extern YORILIB_ATTRIBUTE_COLOR_STRING ColorString[];
 #define YORILIB_ATTRCTRL_WINDOW_FG        0x20
 
 /**
+ If any of the flags are set here (or if a color is specified) no further
+ processing is performed to find color information.
+ */
+#define YORILIB_ATTRCTRL_TERMINATE_MASK   (YORILIB_ATTRCTRL_HIDE)
+
+/**
  A mask that represents all possible colors in the Win32Attr member
  of YORILIB_COLOR_ATTRIBUTES, consisting of both a background and a foreground.
  */
@@ -598,6 +604,11 @@ extern YORILIB_ATTRIBUTE_COLOR_STRING ColorString[];
 
 YORILIB_COLOR_ATTRIBUTES
 YoriLibAttributeFromString(
+    __in PYORI_STRING String
+    );
+
+YORILIB_COLOR_ATTRIBUTES
+YoriLibAttributeFromLiteralString(
     __in LPCTSTR String
     );
 
@@ -624,6 +635,15 @@ BOOL
 YoriLibAreColorsIdentical(
     __in YORILIB_COLOR_ATTRIBUTES Color1,
     __in YORILIB_COLOR_ATTRIBUTES Color2
+    );
+
+LPCSTR
+YoriLibGetDefaultFileColorString();
+
+BOOL
+YoriLibLoadCombinedFileColorString(
+    __in_opt PYORI_STRING Custom,
+    __out PYORI_STRING Combined
     );
 
 // *** CSHOT.C ***
@@ -962,10 +982,82 @@ typedef struct _YORI_LIB_FILE_FILTER {
     DWORD NumberCriteria;
 
     /**
+     The size of each element.
+     */
+    DWORD ElementSize;
+
+    /**
      An array of criteria to apply.
      */
     PVOID Criteria;
 } YORI_LIB_FILE_FILTER, *PYORI_LIB_FILE_FILTER;
+
+/**
+ Specifies a pointer to a function which can compare two directory entries
+ in some fashion.
+ */
+typedef DWORD (* YORI_LIB_FILE_FILT_COMPARE_FN)(PYORI_FILE_INFO, PYORI_FILE_INFO);
+
+/**
+ Specifies a pointer to a function which can collect file information from
+ the disk or file system for some particular piece of data.
+ */
+typedef BOOL (* YORI_LIB_FILE_FILT_COLLECT_FN)(PYORI_FILE_INFO, PWIN32_FIND_DATA, PYORI_STRING);
+
+/**
+ Specifies a pointer to a function which can generate in memory file
+ information from a user provided string.
+ */
+typedef BOOL (* YORI_LIB_FILE_FILT_GENERATE_FROM_STRING_FN)(PYORI_FILE_INFO, PYORI_STRING);
+
+/**
+ An in memory representation of a single match criteria, specifying whether
+ a file matches a specified criteria.
+ */
+typedef struct _YORI_LIB_FILE_FILT_MATCH_CRITERIA {
+
+    /**
+     Pointer to a function to ingest an incoming directory entry so that we
+     have two objects to compare against.
+     */
+    YORI_LIB_FILE_FILT_COLLECT_FN CollectFn;
+
+    /**
+     Pointer to a function to compare an incoming directory entry against the
+     dummy one contained here.
+     */
+    YORI_LIB_FILE_FILT_COMPARE_FN CompareFn;
+
+    /**
+     An array indicating whether a match is found if the comparison returns
+     less than, greater than, or equal.
+     */
+    BOOL TruthStates[3];
+
+    /**
+     A dummy directory entry containing values to compare against.  This is
+     used to allow all compare functions to operate on two directory entries.
+     */
+    YORI_FILE_INFO CompareEntry;
+} YORI_LIB_FILE_FILT_MATCH_CRITERIA, *PYORI_LIB_FILE_FILT_MATCH_CRITERIA;
+
+/**
+ An in memory representation of a single match criteria and color to apply
+ in the event that a file matches the criteria.
+ */
+typedef struct _YORI_LIB_FILE_FILT_COLOR_CRITERIA {
+
+    /**
+     Information describing the criteria to match and how to determine whether
+     a match took place.
+     */
+    YORI_LIB_FILE_FILT_MATCH_CRITERIA Match;
+
+    /**
+     The color to apply in event of a match.
+     */
+    YORILIB_COLOR_ATTRIBUTES Color;
+} YORI_LIB_FILE_FILT_COLOR_CRITERIA, *PYORI_LIB_FILE_FILT_COLOR_CRITERIA;
 
 BOOL
 YoriLibFileFiltHelp();
@@ -978,15 +1070,37 @@ YoriLibFileFiltParseFilterString(
     );
 
 BOOL
+YoriLibFileFiltParseColorString(
+    __out PYORI_LIB_FILE_FILTER Filter,
+    __in PYORI_STRING ColorString,
+    __out PYORI_STRING ErrorSubstring
+    );
+
+BOOL
 YoriLibFileFiltCheckFilterMatch(
     __in PYORI_LIB_FILE_FILTER Filter,
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo
     );
 
+BOOL
+YoriLibFileFiltCheckColorMatch(
+    __in PYORI_LIB_FILE_FILTER Filter,
+    __in PYORI_STRING FilePath,
+    __in PWIN32_FIND_DATA FileInfo,
+    __out PYORILIB_COLOR_ATTRIBUTES Attribute
+    );
+
 VOID
 YoriLibFileFiltFreeFilter(
     __in PYORI_LIB_FILE_FILTER Filter
+    );
+
+BOOL
+YoriLibUpdateFindDataFromFileInformation (
+    __out PWIN32_FIND_DATA FindData,
+    __in LPTSTR FullPath,
+    __in BOOL CopyName
     );
 
 // *** FILEINFO.C ***

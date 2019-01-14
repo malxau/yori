@@ -146,7 +146,7 @@ YoriCmd_COLOR(
             YORILIB_COLOR_ATTRIBUTES WindowAttributes;
             YORILIB_COLOR_ATTRIBUTES Attributes;
 
-            Attributes = YoriLibAttributeFromString(ArgV[StartArg].StartOfString);
+            Attributes = YoriLibAttributeFromString(&ArgV[StartArg]);
             if (Attributes.Ctrl == (YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: invalid character '%c'\n"), ArgV[StartArg].StartOfString[i]);
                 return EXIT_FAILURE;

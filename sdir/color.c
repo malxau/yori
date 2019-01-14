@@ -37,7 +37,7 @@
  that, but if not, the previous window color is populated from the color
  here.
  */
-YORILIB_COLOR_ATTRIBUTES SdirDefaultColor = {SDIR_ATTRCTRL_WINDOW_BG | SDIR_ATTRCTRL_WINDOW_FG, SDIR_DEFAULT_COLOR};
+YORILIB_COLOR_ATTRIBUTES SdirDefaultColor = {YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG, SDIR_DEFAULT_COLOR};
 
 /**
  Generate a color string describing the color that would be used to display
@@ -71,16 +71,16 @@ SdirColorStringFromFeature(
         return TRUE;
     }
 
-    Forecolor = (WORD)(Feature->HighlightColor.Win32Attr & SDIR_ATTRIBUTE_ONECOLOR_MASK);
-    Backcolor = (WORD)((Feature->HighlightColor.Win32Attr >> 4) & SDIR_ATTRIBUTE_ONECOLOR_MASK);
+    Forecolor = (WORD)(Feature->HighlightColor.Win32Attr & YORILIB_ATTRIBUTE_ONECOLOR_MASK);
+    Backcolor = (WORD)((Feature->HighlightColor.Win32Attr >> 4) & YORILIB_ATTRIBUTE_ONECOLOR_MASK);
 
-    if (Feature->HighlightColor.Ctrl & SDIR_ATTRCTRL_WINDOW_BG) {
+    if (Feature->HighlightColor.Ctrl & YORILIB_ATTRCTRL_WINDOW_BG) {
         Backstring = NULL;
     } else {
         Backstring = ColorString[Backcolor].String;
     }
 
-    if (Feature->HighlightColor.Ctrl & SDIR_ATTRCTRL_WINDOW_FG) {
+    if (Feature->HighlightColor.Ctrl & YORILIB_ATTRCTRL_WINDOW_FG) {
         Forestring = NULL;
     } else {
         Forestring = ColorString[Forecolor].String;
@@ -97,154 +97,49 @@ SdirColorStringFromFeature(
     return TRUE;
 }
 
-
 /**
- Populate a single SDIR_ATTRIBUTE_APPLY structure from a string indicating
- the operator, and a string indicating the criteria, and a feature index used
- to indicate which set of implementations should be used to apply the
- operator.
+ Go through each matching criteria in a filter, and ensure the corresponding
+ feature is marked for collection.  This function assumes that the function
+ pointers between the two must be the same.
 
- @param ThisApply Pointer to the structure to populate.
+ @param Filter The list of criteria to collect.
 
- @param Operator Pointer to a NULL terminated string specifying the operator.
-
- @param Criteria Pointer to a NULL terminated string specifying the match
-        criteria.
-
- @param FeatureNumber Specifies the index corresponding to the data source
-        to compare against.  This is used to determine the appropriate
-        comparison functions.
-
- @return TRUE to indicate success, FALSE to indicate failure.
+ @param SanitizeColor If TRUE, any color specified should be sanitized,
+        removing meaningless values.  Note this implies that each match
+        is for a color match.  If FALSE, no assumption is made about the
+        type of the match.
  */
-BOOL
-SdirPopulateApplyEntry(
-    __in PSDIR_ATTRIBUTE_APPLY ThisApply,
-    __in LPCTSTR Operator,
-    __in LPCTSTR Criteria,
-    __in DWORD FeatureNumber
+VOID
+SdirMarkFeaturesForCollection(
+    __in PYORI_LIB_FILE_FILTER Filter,
+    __in BOOL SanitizeColor
     )
 {
+    PYORI_LIB_FILE_FILT_MATCH_CRITERIA ThisMatch;
+    DWORD Index;
+    DWORD FeatureNumber;
     PSDIR_FEATURE Feature;
-    YORI_STRING YsCriteria;
 
-    //
-    //  Based on the operator, fill in the truth table.  We'll
-    //  use the generic compare function and based on this
-    //  truth table we'll decide whether the rule is satisfied
-    //  or not.
-    //
-
-    if (Operator[0] == '>') {
-        ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
-
-        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
-        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = TRUE;
-        if (Operator[1] == '=') {
-            ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
-        } else {
-            ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
+    for (Index = 0; Index < Filter->NumberCriteria; Index++) {
+        ThisMatch = (PYORI_LIB_FILE_FILT_MATCH_CRITERIA)YoriLibAddToPointer(Filter->Criteria, Index * Filter->ElementSize);
+        if (ThisMatch->CollectFn != NULL) {
+            for (FeatureNumber = 0; FeatureNumber < SdirGetNumSdirOptions(); FeatureNumber++) {
+                if (ThisMatch->CollectFn == SdirOptions[FeatureNumber].CollectFn) {
+    
+                    Feature = SdirFeatureByOptionNumber(FeatureNumber);
+                    Feature->Flags |= SDIR_FEATURE_COLLECT;
+                    break;
+                }
+            }
+            ASSERT(FeatureNumber < SdirGetNumSdirOptions());
         }
-    } else if (Operator[0] == '<') {
-        ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
-
-        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = TRUE;
-        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = FALSE;
-        if (Operator[1] == '=') {
-            ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
-        } else {
-            ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
+        if (SanitizeColor) {
+            PYORI_LIB_FILE_FILT_COLOR_CRITERIA ThisColor;
+            ThisColor = (PYORI_LIB_FILE_FILT_COLOR_CRITERIA)ThisMatch;
+            ThisColor->Color.Ctrl &= ~(SDIR_ATTRCTRL_INVALID_FILE);
         }
-    } else if (Operator[0] == '!' && Operator[1] == '=') {
-        ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
-        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = TRUE;
-        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = TRUE;
-        ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
-    } else if (Operator[0] == '=') {
-        ThisApply->CompareFn = SdirOptions[FeatureNumber].CompareFn;
-        ThisApply->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
-        ThisApply->TruthStates[YORI_LIB_GREATER_THAN] = FALSE;
-        ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
-    } else if (Operator[0] == '&') {
-        ThisApply->CompareFn = SdirOptions[FeatureNumber].BitwiseCompareFn;
-        ThisApply->TruthStates[YORI_LIB_EQUAL] = TRUE;
-        ThisApply->TruthStates[YORI_LIB_NOT_EQUAL] = FALSE;
-    } else if (Operator[0] == '!' && Operator[1] == '&') {
-        ThisApply->CompareFn = SdirOptions[FeatureNumber].BitwiseCompareFn;
-        ThisApply->TruthStates[YORI_LIB_EQUAL] = FALSE;
-        ThisApply->TruthStates[YORI_LIB_NOT_EQUAL] = TRUE;
-    } else {
-        SdirWriteString(_T("Operator error in: "));
-        return FALSE;
     }
-
-    //
-    //  Maybe the operator specified was valid but not supported
-    //  by this type.
-    //
-
-    if (ThisApply->CompareFn == NULL) {
-        SdirWriteString(_T("Operator not supported in: "));
-        return FALSE;
-    }
-
-    //
-    //  If we fail to capture this, ignore it and move on to the
-    //  next entry, clobbering this structure again.
-    //
-
-    YoriLibConstantString(&YsCriteria, Criteria);
-    if (!SdirOptions[FeatureNumber].GenerateFromStringFn(&ThisApply->CompareEntry, &YsCriteria)) {
-        SdirWriteString(_T("Could not parse evalutation criteria in: "));
-        return FALSE;
-    }
-
-    //
-    //  Mark anything we're filtering by for collection
-    //
-
-    Feature = SdirFeatureByOptionNumber(FeatureNumber);
-    Feature->Flags |= SDIR_FEATURE_COLLECT;
-    return TRUE;
 }
-
-/**
- A global array of structures describing the criteria to use when applying
- colors to files.
- */
-PSDIR_ATTRIBUTE_APPLY SdirAttributeApply = NULL; 
-
-/**
- The default color attributes to apply for file criteria if the user has not
- specified anything else in the environment.
- */
-const
-CHAR SdirAttributeDefaultApplyString[] = 
-    "fa&r,magenta;"
-    "fa&D,lightmagenta;"
-    "fa&R,green;"
-    "fa&H,green;"
-    "fa&S,green;"
-    "fe=bat,lightred;"
-    "fe=cmd,lightred;"
-    "fe=com,lightcyan;"
-    "fe=dll,cyan;"
-    "fe=doc,white;"
-    "fe=docx,white;"
-    "fe=exe,lightcyan;"
-    "fe=htm,white;"
-    "fe=html,white;"
-    "fe=pdf,white;"
-    "fe=pl,red;"
-    "fe=ppt,white;"
-    "fe=pptx,white;"
-    "fe=ps1,lightred;"
-    "fe=psd1,red;"
-    "fe=psm1,red;"
-    "fe=sys,cyan;"
-    "fe=xls,white;"
-    "fe=xlsx,white;"
-    "fe=ys1,lightred";
 
 /**
  Parse the attribute strings from either the environment or the default set,
@@ -256,331 +151,51 @@ CHAR SdirAttributeDefaultApplyString[] =
 BOOL
 SdirParseAttributeApplyString()
 {
-    TCHAR SingleSwitch[20];
-    LPTSTR Next;
     LPTSTR This;
-    LPTSTR Operator;
-    LPTSTR Criteria;
-    LPTSTR Attribute;
-    ULONG i;
-    PSDIR_ATTRIBUTE_APPLY ThisApply;
-    LPTSTR SdirAttributeCombinedApplyString = NULL;
-    LPTSTR TokContext = NULL;
-    DWORD  SdirColorPrependLength = 0;
-    DWORD  SdirColorAppendLength  = 0;
-    DWORD  SdirColorReplaceLength = 0;
-    DWORD  SdirColorCustomLength = 0;
+    YORI_STRING Combined;
+    YORI_STRING ErrorSubstring;
 
-    //
-    //  Load any user specified colors from the environment.  Prepend values go before
-    //  any default; replace values supersede any default; and append values go last.
-    //  We need to insert semicolons between these values if they're specified.
-    //
-    //  First, count how big the allocation needs to be and allocate it.
-    //
-
-    SdirColorPrependLength = GetEnvironmentVariable(_T("SDIR_COLOR_PREPEND"), NULL, 0);
-    SdirColorReplaceLength = GetEnvironmentVariable(_T("SDIR_COLOR_REPLACE"), NULL, 0);
-    SdirColorAppendLength  = GetEnvironmentVariable(_T("SDIR_COLOR_APPEND"), NULL, 0);
-    if (Opts->CustomFileColor != NULL) {
-        SdirColorCustomLength = Opts->CustomFileColorLength;
-    }
-
-    SdirAttributeCombinedApplyString = YoriLibMalloc((SdirColorPrependLength + 1 + SdirColorAppendLength + 1 + SdirColorReplaceLength + 1 + SdirColorCustomLength + sizeof(SdirAttributeDefaultApplyString)) * sizeof(TCHAR));
-
-    if (SdirAttributeCombinedApplyString == NULL) {
+    if (!YoriLibLoadCombinedFileColorString(&Opts->CustomFileColor, &Combined)) {
         return FALSE;
     }
 
     //
-    //  Now, load any environment variables into the buffer.  If replace isn't specified,
-    //  we use the hardcoded default.
+    //  Now that we have a single string from all sources, parse the string
+    //  into a series of actions to apply.  Start with the objects to hide.
     //
 
-    i = 0;
-    if (SdirColorPrependLength) {
-        GetEnvironmentVariable(_T("SDIR_COLOR_PREPEND"), SdirAttributeCombinedApplyString, SdirColorPrependLength);
-        i += SdirColorPrependLength;
-        SdirAttributeCombinedApplyString[i - 1] = ';';
-    }
-
-    if (SdirColorCustomLength) {
-        YoriLibSPrintfS(SdirAttributeCombinedApplyString + i, SdirColorCustomLength + 1, _T("%s"), Opts->CustomFileColor);
-        i += SdirColorCustomLength;
-        SdirAttributeCombinedApplyString[i] = ';';
-        i++;
-    }
-
-    if (SdirColorReplaceLength) {
-        GetEnvironmentVariable(_T("SDIR_COLOR_REPLACE"), SdirAttributeCombinedApplyString + i, SdirColorReplaceLength);
-        i += SdirColorReplaceLength - 1;
-    } else {
-        YoriLibSPrintfS(SdirAttributeCombinedApplyString + i, 
-                    sizeof(SdirAttributeDefaultApplyString) / sizeof(SdirAttributeDefaultApplyString[0]),
-                    _T("%hs"),
-                    SdirAttributeDefaultApplyString);
-        i += sizeof(SdirAttributeDefaultApplyString) / sizeof(SdirAttributeDefaultApplyString[0]) - 1;
-    }
-
-    if (SdirColorAppendLength) {
-        SdirAttributeCombinedApplyString[i] = ';';
-        i += 1;
-        GetEnvironmentVariable(_T("SDIR_COLOR_APPEND"), SdirAttributeCombinedApplyString + i, SdirColorAppendLength);
+    if (Opts->CustomFileFilter.LengthInChars > 0) {
+        if (!YoriLibFileFiltParseFilterString(&SdirGlobal.FileHideCriteria, &Opts->CustomFileFilter, &ErrorSubstring)) {
+            This = YoriLibCStringFromYoriString(&ErrorSubstring);
+            goto error_substring_return;
+        }
+        SdirMarkFeaturesForCollection(&SdirGlobal.FileHideCriteria, FALSE);
     }
 
     //
-    //  First count the number of rules so we can allocate the correct amount
-    //  of memory for the set.  For ease of use, we allocate an additional one
-    //  as a "null terminator."
+    //  Now look for colors to apply in response to specific criteria.
     //
 
-    This = SdirAttributeCombinedApplyString;
-    i = 1;
-
-    while (This != NULL) {
-
-        i++;
-        Next = _tcschr(This, ';');
-
-        if (Next) {
-            This = Next + 1;
-        } else {
-            This = NULL;
-        }
+    if (!YoriLibFileFiltParseColorString(&SdirGlobal.FileColorCriteria, &Combined, &ErrorSubstring)) {
+        This = YoriLibCStringFromYoriString(&ErrorSubstring);
+        goto error_substring_return;
     }
+    SdirMarkFeaturesForCollection(&SdirGlobal.FileColorCriteria, TRUE);
 
-    if (Opts->CustomFileFilter != NULL) {
-        This = Opts->CustomFileFilter;
-
-        while (This != NULL) {
-
-            i++;
-            Next = _tcschr(This, ';');
-
-            if (Next) {
-                This = Next + 1;
-            } else {
-                This = NULL;
-            }
-        }
-    }
-
-    SdirAttributeApply = YoriLibMalloc(i * sizeof(SDIR_ATTRIBUTE_APPLY));
-    if (SdirAttributeApply == NULL) {
-        YoriLibFree(SdirAttributeCombinedApplyString);
-        return FALSE;
-    }
-
-    ZeroMemory(SdirAttributeApply, i * sizeof(SDIR_ATTRIBUTE_APPLY));
-    ThisApply = SdirAttributeApply;
-
-    //
-    //  First, process any filter/exclusion list, if present.
-    //
-
-    if (Opts->CustomFileFilter != NULL) {
-        This = _tcstok_s(Opts->CustomFileFilter, _T(";"), &TokContext);
-
-        //
-        //  Now go through the rules again and populate the memory we just
-        //  allocated with the comparison functions, criteria and attributes.
-        //
-    
-        while (This != NULL) {
-    
-            //
-            //  Ignore any leading spaces
-            //
-    
-            while(*This == ' ') {
-                This++;
-            }
-    
-            //
-            //  Count the number of chars to the operator.  Copy that
-            //  many into the switch buffer, but not more than the
-            //  size of the buffer.  We increment i to ensure we have
-            //  space for the null terminator as well as the
-            //  substring we want to process.
-            //
-    
-            i = (ULONG)_tcscspn(This, _T("&<>=!"));
-            if (i >= sizeof(SingleSwitch)/sizeof(SingleSwitch[0])) {
-                i = sizeof(SingleSwitch)/sizeof(SingleSwitch[0]);
-            } else {
-                i++;
-            }
-    
-            //
-            //  Here we just give up on the 'secure' CRT things.  We
-            //  want to copy the switch, up to the size of the buffer,
-            //  and we're doing it manually to avoid puking because
-            //  the source string may still (will still) have characters
-            //  beyond this number.
-            //
-    
-            memcpy(SingleSwitch, This, i * sizeof(TCHAR));
-            SingleSwitch[i - 1] = '\0';
-    
-            Operator = This + i - 1;
-    
-            //
-            //  Count the length of the operator and verify it's
-            //  sane.
-            //
-    
-            i = (ULONG)_tcsspn(Operator, _T("&<>=!"));
-    
-            if (i != 1 && i != 2) {
-                SdirWriteString(_T("Operator error in: "));
-                goto error_return;
-            }
-    
-            //
-            //  Count the length of the criteria and null terminate
-            //  it for convenience.
-            //
-    
-            Criteria = Operator + i;
-    
-            for (i = 0; i < SdirGetNumSdirOptions(); i++) {
-                if (_tcsicmp(SingleSwitch, SdirOptions[i].Switch) == 0 &&
-                    SdirOptions[i].GenerateFromStringFn != NULL) {
-    
-                    if (!SdirPopulateApplyEntry(ThisApply, Operator, Criteria, i)) {
-                        goto error_return;
-                    }
-    
-                    ThisApply->Attribute.Ctrl = SDIR_ATTRCTRL_HIDE;
-                    ThisApply->Attribute.Win32Attr = 0;
-    
-                    ThisApply++;
-                    break;
-                }
-            }
-    
-            if (i == SdirGetNumSdirOptions()) {
-                SdirWriteString(_T("Criteria error in: "));
-                goto error_return;
-            }
-    
-            This = _tcstok_s(NULL, _T(";"), &TokContext);
-        }
-
-        //
-        //  Since _tcstok just turned this into swiss cheese, deallocate it.
-        //
-
-        YoriLibFree(Opts->CustomFileFilter);
-        Opts->CustomFileFilter = NULL;
-    }
-
-    This = _tcstok_s(SdirAttributeCombinedApplyString, _T(";"), &TokContext);
-
-    //
-    //  Now go through the rules again and populate the memory we just
-    //  allocated with the comparison functions, criteria and attributes.
-    //
-
-    while (This != NULL) {
-
-        //
-        //  Ignore any leading spaces
-        //
-
-        while(*This == ' ') {
-            This++;
-        }
-
-        //
-        //  Count the number of chars to the operator.  Copy that
-        //  many into the switch buffer, but not more than the
-        //  size of the buffer.  We increment i to ensure we have
-        //  space for the null terminator as well as the
-        //  substring we want to process.
-        //
-
-        i = (ULONG)_tcscspn(This, _T("&<>=!"));
-        if (i >= sizeof(SingleSwitch)/sizeof(SingleSwitch[0])) {
-            i = sizeof(SingleSwitch)/sizeof(SingleSwitch[0]);
-        } else {
-            i++;
-        }
-
-        //
-        //  Here we just give up on the 'secure' CRT things.  We
-        //  want to copy the switch, up to the size of the buffer,
-        //  and we're doing it manually to avoid puking because
-        //  the source string may still (will still) have characters
-        //  beyond this number.
-        //
-
-        memcpy(SingleSwitch, This, i * sizeof(TCHAR));
-        SingleSwitch[i - 1] = '\0';
-
-        Operator = This + i - 1;
-
-        //
-        //  Count the length of the operator and verify it's
-        //  sane.
-        //
-
-        i = (ULONG)_tcsspn(Operator, _T("&<>=!"));
-
-        if (i != 1 && i != 2) {
-            SdirWriteString(_T("Operator error in: "));
-            goto error_return;
-        }
-
-        //
-        //  Count the length of the criteria and null terminate
-        //  it for convenience.
-        //
-
-        Criteria = Operator + i;
-
-        i = (ULONG)_tcscspn(Criteria, _T(","));
-        if (Criteria[i] == '\0') {
-            SdirWriteString(_T("Attribute error in: "));
-            goto error_return;
-        }
-
-        Criteria[i] = '\0';
-        Attribute = Criteria + i + 1;
-
-        for (i = 0; i < SdirGetNumSdirOptions(); i++) {
-            if (_tcsicmp(SingleSwitch, SdirOptions[i].Switch) == 0 &&
-                SdirOptions[i].GenerateFromStringFn != NULL) {
-
-                if (!SdirPopulateApplyEntry(ThisApply, Operator, Criteria, i)) {
-                    goto error_return;
-                }
-
-                ThisApply->Attribute = YoriLibAttributeFromString(Attribute);
-                ThisApply->Attribute.Ctrl &= ~(SDIR_ATTRCTRL_INVALID_FILE);
-
-                ThisApply++;
-                break;
-            }
-        }
-
-        if (i == SdirGetNumSdirOptions()) {
-            SdirWriteString(_T("Criteria error in: "));
-            goto error_return;
-        }
-
-        This = _tcstok_s(NULL, _T(";"), &TokContext);
-    }
-
-    YoriLibFree(SdirAttributeCombinedApplyString);
+    YoriLibFreeStringContents(&Combined);
     return TRUE;
 
-error_return:
+error_substring_return:
 
-    SdirWriteString(This);
+    if (This != NULL) {
+        SdirWriteString(_T("Parse error in: "));
+        SdirWriteString(This);
+        YoriLibDereference(This);
+    }
+
     SdirWriteString(_T("\n"));
+    YoriLibFreeStringContents(&Combined);
 
-    YoriLibFree(SdirAttributeCombinedApplyString);
     return FALSE;
 }
 
@@ -726,7 +341,7 @@ SdirParseMetadataAttributeString()
                 //  color in the flags field and retain color in the attribute.
                 //
 
-                HighlightColor = YoriLibAttributeFromString(Attribute);
+                HighlightColor = YoriLibAttributeFromLiteralString(Attribute);
                 if (HighlightColor.Ctrl & SDIR_ATTRCTRL_INVALID_METADATA) {
                     SdirWriteString(_T("Invalid color specified in: "));
                     goto error_return;
@@ -735,7 +350,7 @@ SdirParseMetadataAttributeString()
 
                 Feature->HighlightColor = YoriLibResolveWindowColorComponents(HighlightColor, Opts->PreviousAttributes, FALSE);
 
-                if (HighlightColor.Ctrl & SDIR_ATTRCTRL_FILE) {
+                if (HighlightColor.Ctrl & YORILIB_ATTRCTRL_FILE) {
                     Feature->Flags |= SDIR_FEATURE_USE_FILE_COLOR;
                 } else {
                     Feature->Flags &= ~(SDIR_FEATURE_USE_FILE_COLOR);
@@ -782,35 +397,74 @@ SdirApplyAttribute(
     __out PYORILIB_COLOR_ATTRIBUTES Attribute
     )
 {
-    PSDIR_ATTRIBUTE_APPLY ThisApply;
-    YORILIB_COLOR_ATTRIBUTES ThisAttribute = {SDIR_ATTRCTRL_WINDOW_BG | SDIR_ATTRCTRL_WINDOW_FG, 0};
+    DWORD Index;
+    YORILIB_COLOR_ATTRIBUTES ThisAttribute = {YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG, 0};
 
-    if (SdirAttributeApply == NULL) {
-        return FALSE;
-    }
+
+    //
+    //  First check for files to hide.
+    //
+
+    {
+        PYORI_LIB_FILE_FILT_MATCH_CRITERIA ThisMatch;
+        PYORI_LIB_FILE_FILT_MATCH_CRITERIA Matches;
+
+        //
+        //  We expect each element to just be the criteria determining a
+        //  match, since the action to take is already known.
+        //
+
+        ASSERT((SdirGlobal.FileHideCriteria.ElementSize == 0 &&
+                SdirGlobal.FileHideCriteria.NumberCriteria == 0) ||
+               SdirGlobal.FileHideCriteria.ElementSize == sizeof(YORI_LIB_FILE_FILT_MATCH_CRITERIA));
     
-    ThisApply = SdirAttributeApply;
-
-    while (ThisApply->CompareFn) {
-
-        if (ThisApply->TruthStates[ThisApply->CompareFn(DirEnt, &ThisApply->CompareEntry)]) {
-            ThisAttribute = YoriLibCombineColors(ThisAttribute, ThisApply->Attribute);
-            if ((ThisAttribute.Ctrl & SDIR_ATTRCTRL_CONTINUE) == 0) {
-
-                ThisAttribute = YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, FALSE);
-
-                if (ThisAttribute.Ctrl & SDIR_ATTRCTRL_INVERT) {
-                    ThisAttribute.Win32Attr = (UCHAR)(((ThisAttribute.Win32Attr & 0x0F) << 4) + ((ThisAttribute.Win32Attr & 0xF0) >> 4));
-                }
-
+        Matches = (PYORI_LIB_FILE_FILT_MATCH_CRITERIA)SdirGlobal.FileHideCriteria.Criteria;
+        for (Index = 0; Index < SdirGlobal.FileHideCriteria.NumberCriteria; Index++) {
+            ThisMatch = &Matches[Index];
+            if (ThisMatch->TruthStates[ThisMatch->CompareFn(DirEnt, &ThisMatch->CompareEntry)]) {
+                ThisAttribute.Ctrl |= YORILIB_ATTRCTRL_HIDE;
                 *Attribute = ThisAttribute;
                 return TRUE;
             }
-
-            ThisAttribute.Ctrl = (UCHAR)(ThisAttribute.Ctrl & ~(SDIR_ATTRCTRL_CONTINUE));
         }
+    }
 
-        ThisApply++;
+    //
+    //  Now check for the color to apply to files which are not hidden.
+    //
+
+    {
+        PYORI_LIB_FILE_FILT_COLOR_CRITERIA ThisApply;
+        PYORI_LIB_FILE_FILT_COLOR_CRITERIA ColorsToApply;
+
+        //
+        //  We expect each element to be the criteria determining a match and
+        //  color to apply in event of a match.
+        //
+    
+        ASSERT((SdirGlobal.FileColorCriteria.ElementSize == 0 &&
+                SdirGlobal.FileColorCriteria.NumberCriteria == 0) ||
+               SdirGlobal.FileColorCriteria.ElementSize == sizeof(YORI_LIB_FILE_FILT_COLOR_CRITERIA));
+        ColorsToApply = (PYORI_LIB_FILE_FILT_COLOR_CRITERIA)SdirGlobal.FileColorCriteria.Criteria;
+        for (Index = 0; Index < SdirGlobal.FileColorCriteria.NumberCriteria; Index++) {
+            ThisApply = &ColorsToApply[Index];
+            if (ThisApply->Match.TruthStates[ThisApply->Match.CompareFn(DirEnt, &ThisApply->Match.CompareEntry)]) {
+                ThisAttribute = YoriLibCombineColors(ThisAttribute, ThisApply->Color);
+                if ((ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
+    
+                    ThisAttribute = YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, FALSE);
+    
+                    if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_INVERT) {
+                        ThisAttribute.Win32Attr = (UCHAR)(((ThisAttribute.Win32Attr & 0x0F) << 4) + ((ThisAttribute.Win32Attr & 0xF0) >> 4));
+                    }
+    
+                    *Attribute = ThisAttribute;
+                    return TRUE;
+                }
+    
+                ThisAttribute.Ctrl = (UCHAR)(ThisAttribute.Ctrl & ~(YORILIB_ATTRCTRL_CONTINUE));
+            }
+        }
     }
 
     //
@@ -819,7 +473,7 @@ SdirApplyAttribute(
     //  what we have.
     //
 
-    if (ThisAttribute.Ctrl & SDIR_ATTRCTRL_TERMINATE_MASK || ThisAttribute.Win32Attr != 0) {
+    if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_TERMINATE_MASK || ThisAttribute.Win32Attr != 0) {
 
         *Attribute = ThisAttribute;
         return TRUE;

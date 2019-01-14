@@ -369,7 +369,7 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&NewCriteria->MatchString);
                     NewCriteria->MatchString.StartOfString = ArgV[i + 1].StartOfString;
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
-                    NewCriteria->Color = YoriLibAttributeFromString(ArgV[i + 2].StartOfString);
+                    NewCriteria->Color = YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString);
                     NewCriteria->Color = YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE);
                     YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
@@ -385,7 +385,7 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&NewCriteria->MatchString);
                     NewCriteria->MatchString.StartOfString = ArgV[i + 1].StartOfString;
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
-                    NewCriteria->Color = YoriLibAttributeFromString(ArgV[i + 2].StartOfString);
+                    NewCriteria->Color = YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString);
                     NewCriteria->Color = YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE);
                     YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
@@ -407,7 +407,7 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&NewCriteria->MatchString);
                     NewCriteria->MatchString.StartOfString = ArgV[i + 1].StartOfString;
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
-                    NewCriteria->Color = YoriLibAttributeFromString(ArgV[i + 2].StartOfString);
+                    NewCriteria->Color = YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString);
                     NewCriteria->Color = YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE);
                     YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;

@@ -991,7 +991,7 @@ YoriLibVtStringForTextAttribute(
 
     if (String->LengthAllocated < sizeof("E[0;999;999;1m")) {
         YoriLibFreeStringContents(String);
-        if (!YoriLibAllocateString(String, sizeof("E0;999;999;1m"))) {
+        if (!YoriLibAllocateString(String, sizeof("E[0;999;999;1m"))) {
             return FALSE;
         }
     }

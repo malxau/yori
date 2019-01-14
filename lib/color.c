@@ -83,32 +83,39 @@ YORILIB_ATTRIBUTE_COLOR_STRING ColorString[] = {
  */
 YORILIB_COLOR_ATTRIBUTES
 YoriLibAttributeFromString(
-    __in LPCTSTR String
+    __in PYORI_STRING String
     )
 {
     YORILIB_COLOR_ATTRIBUTES Attribute = {0};
+    YORI_STRING SingleElement;
     DWORD Element;
     BOOL Background = FALSE;
     BOOL ExplicitBackground = FALSE;
     BOOL ExplicitForeground = FALSE;
-    LPTSTR Next;
+    DWORD Index;
 
     //
     //  Loop through the list of color keywords
     //
 
-    while (String && String[0] != '\0') {
+    Index = 0;
+    YoriLibInitEmptyString(&SingleElement);
+    while (Index < String->LengthInChars) {
 
         //
         //  Check if we're setting a background.
         //
-    
+
         Background = FALSE;
-        if ((String[0] == 'b' || String[0] == 'B') &&
-            (String[1] == 'g' || String[1] == 'G') &&
-            String[2] == '_') {
-    
-            String += 3;
+        SingleElement.StartOfString = &String->StartOfString[Index];
+        SingleElement.LengthInChars = String->LengthInChars - Index;
+        if (SingleElement.LengthInChars >= 3 &&
+            (SingleElement.StartOfString[0] == 'b' || SingleElement.StartOfString[0] == 'B') &&
+            (SingleElement.StartOfString[1] == 'g' || SingleElement.StartOfString[1] == 'G') &&
+            SingleElement.StartOfString[2] == '_') {
+
+            SingleElement.StartOfString += 3;
+            SingleElement.LengthInChars -= 3;
             Background = TRUE;
         }
 
@@ -116,18 +123,15 @@ YoriLibAttributeFromString(
         //  Look for the next element
         //
 
-        Next = _tcschr(String, '+');
-        if (Next) {
-            *Next = '\0';
-        }
+        SingleElement.LengthInChars = YoriLibCountStringNotContainingChars(&SingleElement, _T("+"));
 
         //
         //  Walk through the string table for a match.
         //
-    
+
         for (Element = 0; Element < sizeof(ColorString)/sizeof(ColorString[0]); Element++) {
-            if (_tcsicmp(String, ColorString[Element].String) == 0) {
-    
+            if (YoriLibCompareStringWithLiteralInsensitive(&SingleElement, ColorString[Element].String) == 0) {
+
                 if (Background) {
                     if (ColorString[Element].Attr.Ctrl != 0) {
                         Attribute.Ctrl |= ColorString[Element].Attr.Ctrl;
@@ -143,19 +147,25 @@ YoriLibAttributeFromString(
                     }
                     Attribute.Win32Attr |= ColorString[Element].Attr.Win32Attr;
                 }
-    
+
                 break;
             }
         }
-    
+
         //
         //  Advance to the next element
         //
 
-        if (Next) {
-            String = Next + 1;
-        } else {
-            String = NULL;
+        if (Background) {
+            Index += 3;
+        }
+        Index += SingleElement.LengthInChars;
+        while (Index < String->LengthInChars) {
+            if (String->StartOfString[Index] == '+') {
+                Index++;
+            } else {
+                break;
+            }
         }
     }
 
@@ -175,6 +185,25 @@ YoriLibAttributeFromString(
     }
 
     return Attribute;
+}
+
+/**
+ Lookup a color from a NULL terminated string.  This function can combine
+ different foreground and background settings.  If it cannot resolve the
+ color, it returns the current window background and foreground.
+
+ @param String The string to resolve.
+
+ @return The corresponding color.
+ */
+YORILIB_COLOR_ATTRIBUTES
+YoriLibAttributeFromLiteralString(
+    __in LPCTSTR String
+    )
+{
+    YORI_STRING Ys;
+    YoriLibConstantString(&Ys, String);
+    return YoriLibAttributeFromString(&Ys);
 }
 
 /**
@@ -304,6 +333,143 @@ YoriLibAreColorsIdentical(
         return TRUE;
     }
     return FALSE;
+}
+
+/**
+ The default color attributes to apply for file criteria if the user has not
+ specified anything else in the environment.
+ */
+const
+CHAR YoriLibDefaultFileColorString[] = 
+    "fa&r,magenta;"
+    "fa&D,lightmagenta;"
+    "fa&R,green;"
+    "fa&H,green;"
+    "fa&S,green;"
+    "fe=bat,lightred;"
+    "fe=cmd,lightred;"
+    "fe=com,lightcyan;"
+    "fe=dll,cyan;"
+    "fe=doc,white;"
+    "fe=docx,white;"
+    "fe=exe,lightcyan;"
+    "fe=htm,white;"
+    "fe=html,white;"
+    "fe=pdf,white;"
+    "fe=pl,red;"
+    "fe=ppt,white;"
+    "fe=pptx,white;"
+    "fe=ps1,lightred;"
+    "fe=psd1,red;"
+    "fe=psm1,red;"
+    "fe=sys,cyan;"
+    "fe=xls,white;"
+    "fe=xlsx,white;"
+    "fe=ys1,lightred";
+
+/**
+ Return the default file color string for display in help texts.
+ 
+ @return Pointer to a const NULL terminated ANSI string containing the default
+         file color string.
+ */
+LPCSTR
+YoriLibGetDefaultFileColorString()
+{
+    return YoriLibDefaultFileColorString;
+}
+
+
+/**
+ Generate an allocated string containing the user's environment contents
+ combined with any default.
+
+ @param Custom Optionally points to a string of colors to include ahead of any
+        defaults.
+
+ @param Combined On successful completion, populated with a newly allocated
+        string representing the entire set of file color criteria to apply
+        in order.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadCombinedFileColorString(
+    __in_opt PYORI_STRING Custom,
+    __out PYORI_STRING Combined
+    )
+{
+    DWORD ColorPrependLength = 0;
+    DWORD ColorAppendLength  = 0;
+    DWORD ColorReplaceLength = 0;
+    DWORD ColorCustomLength = 0;
+    DWORD i;
+
+    //
+    //  Load any user specified colors from the environment.  Prepend values go before
+    //  any default; replace values supersede any default; and append values go last.
+    //  We need to insert semicolons between these values if they're specified.
+    //
+    //  First, count how big the allocation needs to be and allocate it.
+    //
+
+    ColorPrependLength = GetEnvironmentVariable(_T("SDIR_COLOR_PREPEND"), NULL, 0);
+    ColorReplaceLength = GetEnvironmentVariable(_T("SDIR_COLOR_REPLACE"), NULL, 0);
+    ColorAppendLength  = GetEnvironmentVariable(_T("SDIR_COLOR_APPEND"), NULL, 0);
+    if (Custom != NULL) {
+        ColorCustomLength = Custom->LengthInChars;
+    }
+
+    if (!YoriLibAllocateString(Combined, ColorPrependLength + 1 + ColorAppendLength + 1 + ColorReplaceLength + 1 + ColorCustomLength + sizeof(YoriLibDefaultFileColorString))) {
+        return FALSE;
+    }
+
+    //
+    //  Now, load any environment variables into the buffer.  If replace isn't
+    //  specified, we use the hardcoded default.
+    //
+
+    i = 0;
+    if (ColorPrependLength) {
+        GetEnvironmentVariable(_T("SDIR_COLOR_PREPEND"),
+                               Combined->StartOfString,
+                               ColorPrependLength);
+        i += ColorPrependLength;
+        Combined->StartOfString[i - 1] = ';';
+    }
+
+    if (ColorCustomLength) {
+        YoriLibSPrintfS(&Combined->StartOfString[i], ColorCustomLength + 1, _T("%y"), Custom);
+        i += ColorCustomLength;
+        Combined->StartOfString[i] = ';';
+        i++;
+    }
+
+    if (ColorReplaceLength) {
+        GetEnvironmentVariable(_T("SDIR_COLOR_REPLACE"),
+                               &Combined->StartOfString[i],
+                               ColorReplaceLength);
+        i += ColorReplaceLength - 1;
+    } else {
+        YoriLibSPrintfS(&Combined->StartOfString[i],
+                        sizeof(YoriLibDefaultFileColorString) / sizeof(YoriLibDefaultFileColorString[0]),
+                        _T("%hs"),
+                        YoriLibDefaultFileColorString);
+        i += sizeof(YoriLibDefaultFileColorString) / sizeof(YoriLibDefaultFileColorString[0]) - 1;
+    }
+
+    if (ColorAppendLength) {
+        Combined->StartOfString[i] = ';';
+        i += 1;
+        GetEnvironmentVariable(_T("SDIR_COLOR_APPEND"),
+                               &Combined->StartOfString[i],
+                               ColorAppendLength);
+        i += ColorAppendLength - 1;
+    }
+
+    Combined->LengthInChars = i;
+
+    return TRUE;
 }
 
 // vim:sw=4:ts=4:et:

@@ -561,7 +561,7 @@ SdirUsageFileColor()
     //  one per line.  This is the kludge to make that happen.
     //
 
-    This = SdirAttributeDefaultApplyString;
+    This = YoriLibGetDefaultFileColorString();
 
     YoriLibSPrintfS(Line,
                 sizeof(Line)/sizeof(Line[0]),
