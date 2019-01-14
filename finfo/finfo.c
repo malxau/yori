@@ -35,9 +35,10 @@ CHAR strFInfoHelpText[] =
         "\n"
         "Output information about file metadata.\n"
         "\n"
-        "FINFO [-license] [-b] [-f fmt] [-s] <file>...\n"
+        "FINFO [-license] [-b] [-d] [-f fmt] [-s] <file>...\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -d             Return directories rather than directory contents\n"
         "   -f             Specify a custom format string\n"
         "   -s             Process files from all subdirectories\n";
 
@@ -71,6 +72,11 @@ typedef struct _FINFO_CONTEXT {
      Records the total number of files processed.
      */
     LONGLONG FilesFound;
+
+    /**
+     Records the total number of files processed for each argument processed.
+     */
+    LONGLONG FilesFoundThisArg;
 
 } FINFO_CONTEXT, *PFINFO_CONTEXT;
 
@@ -1390,19 +1396,30 @@ FInfoExpandVariables(
 BOOL
 FInfoFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PFINFO_CONTEXT FInfoContext
     )
 {
     YORI_STRING DisplayString;
+    WIN32_FIND_DATA LocalFileInfo;
+    PWIN32_FIND_DATA FileInfoToUse;
 
     UNREFERENCED_PARAMETER(Depth);
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
+    if (FileInfo != NULL) {
+        FileInfoToUse = FileInfo;
+    } else {
+        ZeroMemory(&LocalFileInfo, sizeof(LocalFileInfo));
+        YoriLibUpdateFindDataFromFileInformation(&LocalFileInfo, FilePath->StartOfString, TRUE);
+        FileInfoToUse = &LocalFileInfo;
+    }
+
     FInfoContext->FilePath = FilePath;
-    FInfoContext->FileInfo = FileInfo;
+    FInfoContext->FileInfo = &LocalFileInfo;
     FInfoContext->FilesFound++;
+    FInfoContext->FilesFoundThisArg++;
 
     YoriLibInitEmptyString(&DisplayString);
     YoriLibExpandCommandVariables(&FInfoContext->FormatString, '$', TRUE, FInfoExpandVariables, FInfoContext, &DisplayString);
@@ -1473,6 +1490,7 @@ ENTRYPOINT(
     DWORD MatchFlags;
     BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
+    BOOL ReturnDirectories = FALSE;
     FINFO_CONTEXT FInfoContext;
     YORI_STRING Arg;
 
@@ -1493,6 +1511,9 @@ ENTRYPOINT(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                ReturnDirectories = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (i + 1 < ArgC) {
@@ -1524,17 +1545,34 @@ ENTRYPOINT(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("finfo: missing argument\n"));
         return EXIT_FAILURE;
     } else {
-        MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+
+        if (ReturnDirectories) {
+            MatchFlags |= YORILIB_FILEENUM_RETURN_DIRECTORIES;
+        } else {
+            MatchFlags |= YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+        }
+
         if (Recursive) {
             MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
         }
+
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
     
         for (i = StartArg; i < ArgC; i++) {
-    
+
+            FInfoContext.FilesFoundThisArg = 0;
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, FInfoFileFoundCallback, &FInfoContext);
+            if (FInfoContext.FilesFoundThisArg == 0) {
+                YORI_STRING FullPath;
+                YoriLibInitEmptyString(&FullPath);
+                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    FInfoFileFoundCallback(&FullPath, NULL, 0, &FInfoContext);
+                    YoriLibFreeStringContents(&FullPath);
+                }
+            }
         }
     }
 
