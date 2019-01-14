@@ -81,6 +81,12 @@ typedef struct _DF_CONTEXT {
      escape sequences to initiate and terminate the color of the graph.
      */
     YORI_STRING LineBuffer;
+
+    /**
+     Color information to display against matching directories.
+     */
+    YORI_LIB_FILE_FILTER ColorRules;
+
 } DF_CONTEXT, *PDF_CONTEXT;
 
 /**
@@ -109,6 +115,9 @@ DfReportSingleVolume(
     YORI_STRING StrFreeSize;
     DWORD PercentageUsed;
     BOOL Result = FALSE;
+    WIN32_FIND_DATA FindData;
+    YORI_STRING VtAttribute;
+    TCHAR VtAttributeBuffer[sizeof("E[0;999;999;1m")];
 
     TCHAR MountPointName[MAX_PATH];
     LPTSTR NameToReport;
@@ -123,6 +132,9 @@ DfReportSingleVolume(
     YoriLibInitEmptyString(&StrFreeSize);
     StrFreeSize.StartOfString = FreeSizeBuffer;
     StrFreeSize.LengthAllocated = sizeof(FreeSizeBuffer)/sizeof(FreeSizeBuffer[0]);
+    YoriLibInitEmptyString(&VtAttribute);
+    VtAttribute.StartOfString = VtAttributeBuffer;
+    VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(VtAttributeBuffer[0]);
 
     //
     //  If the OS supports it, try to translate the GUID volume names back
@@ -156,7 +168,24 @@ DfReportSingleVolume(
         PercentageUsed = 1000 - (DWORD)(FreeBytes.QuadPart * 1000 / TotalBytes.QuadPart);
 
         if (!DfContext->MinimalDisplay) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y total %y free %3i.%i%% used %s\n"), &StrTotalSize, &StrFreeSize, PercentageUsed / 10, PercentageUsed % 10, NameToReport);
+            LPTSTR FinalComponent;
+            YORILIB_COLOR_ATTRIBUTES Attribute;
+            YORI_STRING YsVolName;
+
+            YoriLibUpdateFindDataFromFileInformation(&FindData, VolName, FALSE);
+            FinalComponent = _tcsrchr(NameToReport, '\\');
+            if (FinalComponent != NULL) {
+                YoriLibSPrintfS(FindData.cFileName, MAX_PATH, _T("%s"), FinalComponent + 1);
+            } else {
+                YoriLibSPrintfS(FindData.cFileName, MAX_PATH, _T("%s"), NameToReport);
+            }
+            YoriLibConstantString(&YsVolName, VolName);
+            if (!YoriLibFileFiltCheckColorMatch(&DfContext->ColorRules, &YsVolName, &FindData, &Attribute)) {
+                Attribute.Ctrl = 0;
+                Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
+            }
+            YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y total %y free %3i.%i%% used %y%s%c[0m\n"), &StrTotalSize, &StrFreeSize, PercentageUsed / 10, PercentageUsed % 10, &VtAttribute, NameToReport, 27);
         }
 
         if (DfContext->DisplayGraph) {
@@ -246,6 +275,7 @@ ENTRYPOINT(
     HANDLE FindHandle;
     TCHAR VolName[512];
     DF_CONTEXT DfContext;
+    YORI_STRING Combined;
 
     ZeroMemory(&DfContext, sizeof(DfContext));
 
@@ -285,8 +315,19 @@ ENTRYPOINT(
         }
     }
 
+    //
+    //  Load the default color string and parse it into rules.
+    //
+
+    if (YoriLibLoadCombinedFileColorString(NULL, &Combined)) {
+        YORI_STRING ErrorSubstring;
+        YoriLibFileFiltParseColorString(&DfContext.ColorRules, &Combined, &ErrorSubstring);
+        YoriLibFreeStringContents(&Combined);
+    }
+
     if (DfContext.DisplayGraph) {
         if (!YoriLibAllocateString(&DfContext.LineBuffer, DfContext.ConsoleWidth + 2 * YORI_MAX_INTERNAL_VT_ESCAPE_CHARS)) {
+            YoriLibFileFiltFreeFilter(&DfContext.ColorRules);
             return EXIT_FAILURE;
         }
     }
@@ -307,6 +348,7 @@ ENTRYPOINT(
         }
     }
 
+    YoriLibFileFiltFreeFilter(&DfContext.ColorRules);
     YoriLibFreeStringContents(&DfContext.LineBuffer);
 
     return EXIT_SUCCESS;
