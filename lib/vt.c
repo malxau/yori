@@ -989,9 +989,9 @@ YoriLibVtStringForTextAttribute(
     CHAR  AnsiForeground;
     CHAR  AnsiBackground;
 
-    if (String->LengthAllocated < sizeof("E[0;999;999;1m")) {
+    if (String->LengthAllocated < YORI_MAX_INTERNAL_VT_ESCAPE_CHARS) {
         YoriLibFreeStringContents(String);
-        if (!YoriLibAllocateString(String, sizeof("E[0;999;999;1m"))) {
+        if (!YoriLibAllocateString(String, YORI_MAX_INTERNAL_VT_ESCAPE_CHARS)) {
             return FALSE;
         }
     }
@@ -1031,7 +1031,7 @@ YoriLibVtSetConsoleTextAttributeOnDevice(
     __in WORD Attribute
     )
 {
-    TCHAR OutputStringBuffer[sizeof("E[0;999;999;1m")];
+    TCHAR OutputStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
     YORI_STRING OutputString;
 
     YoriLibInitEmptyString(&OutputString);

@@ -179,7 +179,7 @@ YoriLibGenerateVtStringFromConsoleBuffers(
     SHORT LineIndex;
     SHORT CharIndex;
     WORD LastAttribute;
-    TCHAR EscapeStringBuffer[sizeof("E[0;999;999;1m")];
+    TCHAR EscapeStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
     YORI_STRING EscapeString;
 
     //

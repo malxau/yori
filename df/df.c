@@ -117,7 +117,7 @@ DfReportSingleVolume(
     BOOL Result = FALSE;
     WIN32_FIND_DATA FindData;
     YORI_STRING VtAttribute;
-    TCHAR VtAttributeBuffer[sizeof("E[0;999;999;1m")];
+    TCHAR VtAttributeBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
 
     TCHAR MountPointName[MAX_PATH];
     LPTSTR NameToReport;

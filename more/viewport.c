@@ -144,7 +144,7 @@ MoreGetLogicalLineLength(
     WORD CurrentColor = InitialDisplayColor;
     WORD CurrentUserColor = InitialUserColor;
     YORI_STRING MatchEscapeChars;
-    TCHAR MatchEscapeCharsBuf[sizeof("E[0;999;999;1m")];
+    TCHAR MatchEscapeCharsBuf[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
     DWORD MatchOffset;
     DWORD MatchLength;
     BOOL MatchFound;
@@ -414,7 +414,7 @@ MoreCopyRangeIntoLogicalLine(
         YORI_STRING MatchEscapeChars;
         YORI_STRING EscapeSubset;
         DWORD EndOfEscape;
-        TCHAR MatchEscapeCharsBuf[sizeof("E[0;999;999;1m")];
+        TCHAR MatchEscapeCharsBuf[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
         DWORD MatchOffset;
         DWORD MatchLength;
         BOOL MatchFound;
@@ -1872,7 +1872,7 @@ MoreCopySelectionIfPresent(
             //  because the other is the NULL char from sizeof.
             //
 
-            VtTextBufferSize += LogicalLineLength + 1 + sizeof("E[0;999;999;1m");
+            VtTextBufferSize += LogicalLineLength + 1 + YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
         }
     }
 
