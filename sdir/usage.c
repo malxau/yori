@@ -509,7 +509,7 @@ SdirUsageFileColor()
         YoriLibSPrintfS(Line,
                     sizeof(Line)/sizeof(Line[0]),
                     _T("   %-16s"),
-                    ColorString[i].String);
+                    YoriLibColorStringTable[i].String);
 
         if (i==0) {
             YoriLibSetColorToWin32(&Attr, SDIR_DEFAULT_COLOR);
@@ -522,7 +522,7 @@ SdirUsageFileColor()
         YoriLibSPrintfS(Line,
                     sizeof(Line)/sizeof(Line[0]),
                     _T(" %-16s"),
-                    ColorString[i+8].String);
+                    YoriLibColorStringTable[i+8].String);
 
         YoriLibSetColorToWin32(&Attr, (UCHAR)(i + 8));
 
@@ -531,7 +531,7 @@ SdirUsageFileColor()
         YoriLibSPrintfS(Line,
                     sizeof(Line)/sizeof(Line[0]),
                     _T(" bg_%-16s"),
-                    ColorString[i].String);
+                    YoriLibColorStringTable[i].String);
 
         YoriLibSetColorToWin32(&Attr, (UCHAR)((i<<4) + 0xF));
 
@@ -540,7 +540,7 @@ SdirUsageFileColor()
         YoriLibSPrintfS(Line,
                     sizeof(Line)/sizeof(Line[0]),
                     _T(" bg_%-16s"),
-                    ColorString[i+8].String);
+                    YoriLibColorStringTable[i+8].String);
 
         YoriLibSetColorToWin32(&Attr, (UCHAR)((i+8)<<4));
 

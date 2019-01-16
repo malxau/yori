@@ -221,8 +221,6 @@ typedef struct _SDIR_FEATURE {
  */
 typedef SDIR_FEATURE CONST *PCSDIR_FEATURE;
 
-extern YORILIB_ATTRIBUTE_COLOR_STRING ColorString[];
-
 #pragma pack(push, 4)
 
 /**

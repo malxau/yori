@@ -33,7 +33,7 @@
 /**
  A table of color strings to CGA colors.
  */
-YORILIB_ATTRIBUTE_COLOR_STRING ColorString[] = {
+YORILIB_ATTRIBUTE_COLOR_STRING YoriLibColorStringTable[] = {
 
     {_T("black"),        {0, 0x00}},
     {_T("blue"),         {0, 0x01}},
@@ -129,23 +129,23 @@ YoriLibAttributeFromString(
         //  Walk through the string table for a match.
         //
 
-        for (Element = 0; Element < sizeof(ColorString)/sizeof(ColorString[0]); Element++) {
-            if (YoriLibCompareStringWithLiteralInsensitive(&SingleElement, ColorString[Element].String) == 0) {
+        for (Element = 0; Element < sizeof(YoriLibColorStringTable)/sizeof(YoriLibColorStringTable[0]); Element++) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&SingleElement, YoriLibColorStringTable[Element].String) == 0) {
 
                 if (Background) {
-                    if (ColorString[Element].Attr.Ctrl != 0) {
-                        Attribute.Ctrl |= ColorString[Element].Attr.Ctrl;
+                    if (YoriLibColorStringTable[Element].Attr.Ctrl != 0) {
+                        Attribute.Ctrl |= YoriLibColorStringTable[Element].Attr.Ctrl;
                     } else {
                         ExplicitBackground = TRUE;
                     }
-                    Attribute.Win32Attr |= (ColorString[Element].Attr.Win32Attr & YORILIB_ATTRIBUTE_ONECOLOR_MASK) << 4;
+                    Attribute.Win32Attr |= (YoriLibColorStringTable[Element].Attr.Win32Attr & YORILIB_ATTRIBUTE_ONECOLOR_MASK) << 4;
                 } else {
-                    if (ColorString[Element].Attr.Ctrl != 0) {
-                        Attribute.Ctrl |= ColorString[Element].Attr.Ctrl;
+                    if (YoriLibColorStringTable[Element].Attr.Ctrl != 0) {
+                        Attribute.Ctrl |= YoriLibColorStringTable[Element].Attr.Ctrl;
                     } else {
                         ExplicitForeground = TRUE;
                     }
-                    Attribute.Win32Attr |= ColorString[Element].Attr.Win32Attr;
+                    Attribute.Win32Attr |= YoriLibColorStringTable[Element].Attr.Win32Attr;
                 }
 
                 break;

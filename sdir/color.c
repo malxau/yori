@@ -77,13 +77,13 @@ SdirColorStringFromFeature(
     if (Feature->HighlightColor.Ctrl & YORILIB_ATTRCTRL_WINDOW_BG) {
         Backstring = NULL;
     } else {
-        Backstring = ColorString[Backcolor].String;
+        Backstring = YoriLibColorStringTable[Backcolor].String;
     }
 
     if (Feature->HighlightColor.Ctrl & YORILIB_ATTRCTRL_WINDOW_FG) {
         Forestring = NULL;
     } else {
-        Forestring = ColorString[Forecolor].String;
+        Forestring = YoriLibColorStringTable[Forecolor].String;
     }
 
     if (Backstring != NULL && Forestring != NULL) {

@@ -548,7 +548,7 @@ YoriLibExpandCommandVariables(
 // *** COLOR.C ***
 
 
-extern YORILIB_ATTRIBUTE_COLOR_STRING ColorString[];
+extern YORILIB_ATTRIBUTE_COLOR_STRING YoriLibColorStringTable[];
 
 /**
  A flag defining inversion in the Ctrl member of YORILIB_COLOR_ATTRIBUTES.
