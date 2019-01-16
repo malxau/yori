@@ -114,6 +114,16 @@ typedef struct _DIR_CONTEXT {
     LONGLONG FilesFound;
 
     /**
+     Records the total number of directories processed.
+     */
+    LONGLONG DirsFound;
+
+    /**
+     The total amount of bytes consumed by all files processed.
+     */
+    LONGLONG TotalFileSize;
+
+    /**
      A string containing the directory currently being enumerated.
      */
     YORI_STRING CurrentDirectoryName;
@@ -265,6 +275,51 @@ DirOutputEndOfDirectorySummary(
     return TRUE;
 }
 
+/**
+ After recursively displaying the contents of a directory, this function
+ the total numbers found from all child directories.
+
+ @param DirContext Context describing the state of the enumeration.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+DirOutputEndOfRecursiveSummary(
+    __in PDIR_CONTEXT DirContext
+    )
+{
+    YORI_STRING CountString;
+    YORI_STRING SizeString;
+    TCHAR CountStringBuffer[DIR_COUNT_FIELD_SIZE];
+    TCHAR SizeStringBuffer[DIR_SIZE_FIELD_SIZE];
+
+    YoriLibInitEmptyString(&SizeString);
+    SizeString.StartOfString = SizeStringBuffer;
+    SizeString.LengthAllocated = sizeof(SizeStringBuffer)/sizeof(SizeStringBuffer[0]);
+
+    YoriLibInitEmptyString(&CountString);
+    CountString.StartOfString = CountStringBuffer;
+    CountString.LengthAllocated = sizeof(CountStringBuffer)/sizeof(CountStringBuffer[0]);
+
+    YoriLibNumberToString(&CountString, DirContext->FilesFound, 10, 3, ',');
+    YoriLibNumberToString(&SizeString, DirContext->TotalFileSize, 10, 3, ',');
+
+    DirRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
+    DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n     Total Files Listed:\n"));
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y File(s) %y bytes\n"), &CountString, &SizeString);
+
+    YoriLibNumberToString(&CountString, DirContext->DirsFound, 10, 3, ',');
+
+    DirRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y Dir(s)\n"), &CountString);
+
+    YoriLibFreeStringContents(&CountString);
+    YoriLibFreeStringContents(&SizeString);
+    return TRUE;
+}
+
 
 /**
  A callback that is invoked when a file is found that matches a search criteria
@@ -329,7 +384,11 @@ DirFileFoundCallback(
 
     }
 
-    DirContext->FilesFound++;
+    if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+        DirContext->DirsFound++;
+    } else {
+        DirContext->FilesFound++;
+    }
     DirContext->ObjectsFoundInThisDir++;
 
     YoriLibInitEmptyString(&SizeString);
@@ -377,6 +436,7 @@ DirFileFoundCallback(
                 FileSize.HighPart = FileInfo->nFileSizeHigh;
                 FileSize.LowPart = FileInfo->nFileSizeLow;
                 DirContext->FileSizeInThisDir += FileSize.QuadPart;
+                DirContext->TotalFileSize += FileSize.QuadPart;
                 YoriLibNumberToString(&SizeString, FileSize.QuadPart, 10, 3, ',');
                 if (SizeString.LengthInChars < DIR_SIZE_FIELD_SIZE) {
                     DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
@@ -539,16 +599,17 @@ ENTRYPOINT(
         }
     }
 
-
     if (DirContext.ObjectsFoundInThisDir > 0 && !DirContext.MinimalDisplay) {
         DirOutputEndOfDirectorySummary(&DirContext);
     } 
 
     YoriLibFreeStringContents(&DirContext.CurrentDirectoryName);
 
-    if (DirContext.FilesFound == 0) {
+    if (DirContext.FilesFound == 0 && DirContext.DirsFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("dir: no matching files found\n"));
         return EXIT_FAILURE;
+    } else if (DirContext.Recursive) {
+        DirOutputEndOfRecursiveSummary(&DirContext);
     }
 
     return EXIT_SUCCESS;
