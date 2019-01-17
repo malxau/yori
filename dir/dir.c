@@ -3,7 +3,7 @@
  *
  * Yori shell enumerate files in directories
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -220,6 +220,12 @@ DirOutputBeginningOfDirectorySummary(
 {
     YORI_STRING UnescapedPath;
     PYORI_STRING PathToDisplay;
+    YORI_STRING VtAttribute;
+    TCHAR VtAttributeBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    YORILIB_COLOR_ATTRIBUTES Attribute;
+
+    YoriLibInitEmptyString(&VtAttribute);
+
     YoriLibInitEmptyString(&UnescapedPath);
     YoriLibUnescapePath(&DirContext->CurrentDirectoryName, &UnescapedPath);
     if (UnescapedPath.LengthInChars > 0) {
@@ -227,7 +233,28 @@ DirOutputBeginningOfDirectorySummary(
     } else {
         PathToDisplay = &DirContext->CurrentDirectoryName;
     }
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n Directory of %y\n\n"), PathToDisplay);
+
+    if (DirContext->ColorRules.NumberCriteria) {
+        WIN32_FIND_DATA FileInfo;
+
+        VtAttribute.StartOfString = VtAttributeBuffer;
+        VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(VtAttributeBuffer[0]);
+
+        YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirContext->CurrentDirectoryName.StartOfString, TRUE);
+
+        if (!YoriLibFileFiltCheckColorMatch(&DirContext->ColorRules, &DirContext->CurrentDirectoryName, &FileInfo, &Attribute)) {
+            Attribute.Ctrl = 0;
+            Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
+        }
+
+        YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+    }
+
+    if (VtAttribute.LengthInChars > 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n Directory of %y%y%c[0m\n\n"), &VtAttribute, PathToDisplay, 27);
+    } else {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n Directory of %y\n\n"), PathToDisplay);
+    }
     YoriLibFreeStringContents(&UnescapedPath);
     return TRUE;
 }
@@ -249,6 +276,7 @@ DirOutputEndOfDirectorySummary(
     YORI_STRING SizeString;
     TCHAR CountStringBuffer[DIR_COUNT_FIELD_SIZE];
     TCHAR SizeStringBuffer[DIR_SIZE_FIELD_SIZE];
+    LARGE_INTEGER FreeSpace;
 
     YoriLibInitEmptyString(&SizeString);
     SizeString.StartOfString = SizeStringBuffer;
@@ -266,10 +294,17 @@ DirOutputEndOfDirectorySummary(
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y File(s) %y bytes\n"), &CountString, &SizeString);
 
+
+    FreeSpace.QuadPart = 0;
+    YoriLibGetDiskFreeSpace(DirContext->CurrentDirectoryName.StartOfString, NULL, NULL, &FreeSpace);
+
     YoriLibNumberToString(&CountString, DirContext->DirsFoundInThisDir, 10, 3, ',');
+    YoriLibNumberToString(&SizeString, FreeSpace.QuadPart, 10, 3, ',');
 
     DirRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y Dir(s)\n"), &CountString);
+    DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y Dir(s)  %y bytes free\n"), &CountString, &SizeString);
 
     DirContext->ObjectsFoundInThisDir = 0;
     DirContext->FilesFoundInThisDir = 0;
@@ -373,7 +408,7 @@ DirFileFoundCallback(
             if (DirContext->ObjectsFoundInThisDir != 0 && !DirContext->MinimalDisplay) {
                 DirOutputEndOfDirectorySummary(DirContext);
             }
-            if (DirContext->CurrentDirectoryName.LengthAllocated < ThisDirName.LengthInChars) {
+            if (DirContext->CurrentDirectoryName.LengthAllocated <= ThisDirName.LengthInChars) {
                 YoriLibFreeStringContents(&DirContext->CurrentDirectoryName);
                 if (!YoriLibAllocateString(&DirContext->CurrentDirectoryName, ThisDirName.LengthInChars + 80)) {
                     return FALSE;
@@ -382,6 +417,7 @@ DirFileFoundCallback(
             memcpy(DirContext->CurrentDirectoryName.StartOfString,
                    ThisDirName.StartOfString,
                    ThisDirName.LengthInChars * sizeof(TCHAR));
+            DirContext->CurrentDirectoryName.StartOfString[ThisDirName.LengthInChars] = '\0';
             DirContext->CurrentDirectoryName.LengthInChars = ThisDirName.LengthInChars;
             if (!DirContext->MinimalDisplay) {
                 DirOutputBeginningOfDirectorySummary(DirContext);
@@ -630,7 +666,7 @@ ENTRYPOINT(
                 DirHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
