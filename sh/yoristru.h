@@ -363,16 +363,6 @@ typedef struct _YORI_SH_HISTORY_ENTRY {
 } YORI_SH_HISTORY_ENTRY, *PYORI_SH_HISTORY_ENTRY;
 
 /**
- List of command history.
- */
-extern YORI_LIST_ENTRY YoriShCommandHistory;
-
-/**
- Number of elements in command history.
- */
-extern DWORD YoriShCommandHistoryCount;
-
-/**
  Information about a single tab complete match.
  */
 typedef struct _YORI_SH_TAB_COMPLETE_MATCH {
@@ -638,7 +628,7 @@ typedef struct _YORI_SH_DEFAULT_ALIAS_ENTRY {
     LPTSTR Value;
 } YORI_SH_DEFAULT_ALIAS_ENTRY, *PYORI_SH_DEFAULT_ALIAS_ENTRY;
 
-extern YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[];
+extern CONST YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[];
 
 /**
  A structure containing information about a currently loaded DLL.
@@ -706,17 +696,46 @@ typedef struct _YORI_SH_BUILTIN_CALLBACK {
 
 } YORI_SH_BUILTIN_CALLBACK, *PYORI_SH_BUILTIN_CALLBACK;
 
+
 /**
- The exit code ("error level") of the previous process to complete.
+ A structure containing state that is global across the Yori shell process.
  */
-extern DWORD g_ErrorLevel;
+typedef struct _YORI_SH_GLOBALS {
 
-extern DWORD g_PreviousJobId;
+    /**
+     The exit code ("error level") of the previous process to complete.
+     */
+    DWORD ErrorLevel;
 
-extern BOOL g_ExitProcess;
+    /**
+     When ExitProcess is set to TRUE, this is set to the code that the shell
+     should return as its exit code.
+     */
+    DWORD ExitProcessExitCode;
 
-extern DWORD g_ExitProcessExitCode;
+    /**
+     The most recent Job ID that was assigned.
+    */
+    DWORD PreviousJobId;
 
-extern YORI_LIST_ENTRY YoriShBuiltinCallbacks;
+    /**
+     List of command history.
+     */
+    YORI_LIST_ENTRY CommandHistory;
+
+    /**
+     List of builtin callbacks currently registered with Yori.
+     */
+    YORI_LIST_ENTRY BuiltinCallbacks;
+
+    /**
+     When set to TRUE, the process should end rather than seek another
+     command.
+     */
+    BOOL ExitProcess;
+
+} YORI_SH_GLOBALS, *PYORI_SH_GLOBALS;
+
+extern YORI_SH_GLOBALS YoriShGlobal;
 
 // vim:sw=4:ts=4:et:

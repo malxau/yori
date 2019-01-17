@@ -163,7 +163,7 @@ YoriShBuiltins[] = {
 /**
  A table of initial alias to value mappings to populate.
  */
-YORI_SH_DEFAULT_ALIAS_ENTRY
+CONST YORI_SH_DEFAULT_ALIAS_ENTRY
 YoriShDefaultAliasEntries[] = {
     {_T("cal"),      _T("ycal $*$")},
     {_T("cd"),       _T("chdir $*$")},

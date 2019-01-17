@@ -27,11 +27,6 @@
 #include "yori.h"
 
 /**
- List of command history.
- */
-YORI_LIST_ENTRY YoriShCommandHistory;
-
-/**
  Number of elements in command history.
  */
 DWORD YoriShCommandHistoryCount;
@@ -86,17 +81,17 @@ YoriShAddToHistory(
 
         YoriLibCloneString(&NewHistoryEntry->CmdLine, NewCmd);
 
-        if (YoriShCommandHistory.Next == NULL) {
-            YoriLibInitializeListHead(&YoriShCommandHistory);
+        if (YoriShGlobal.CommandHistory.Next == NULL) {
+            YoriLibInitializeListHead(&YoriShGlobal.CommandHistory);
         }
 
-        YoriLibAppendList(&YoriShCommandHistory, &NewHistoryEntry->ListEntry);
+        YoriLibAppendList(&YoriShGlobal.CommandHistory, &NewHistoryEntry->ListEntry);
         YoriShCommandHistoryCount++;
         while (YoriShCommandHistoryCount > YoriShCommandHistoryMax) {
             PYORI_LIST_ENTRY ListEntry;
             PYORI_SH_HISTORY_ENTRY OldHistoryEntry;
 
-            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
+            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, NULL);
             OldHistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             YoriLibRemoveListItem(ListEntry);
             YoriLibFreeStringContents(&OldHistoryEntry->CmdLine);
@@ -138,10 +133,10 @@ YoriShClearAllHistory()
     PYORI_SH_HISTORY_ENTRY HistoryEntry;
 
     if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
+        ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, NULL);
         while (ListEntry != NULL) {
             HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
-            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, ListEntry);
             YoriLibRemoveListItem(&HistoryEntry->ListEntry);
             YoriLibFreeStringContents(&HistoryEntry->CmdLine);
             YoriLibFree(HistoryEntry);
@@ -180,8 +175,8 @@ YoriShInitHistory()
 
     YoriShCommandHistoryMax = 250;
 
-    if (YoriShCommandHistory.Next == NULL) {
-        YoriLibInitializeListHead(&YoriShCommandHistory);
+    if (YoriShGlobal.CommandHistory.Next == NULL) {
+        YoriLibInitializeListHead(&YoriShGlobal.CommandHistory);
     }
 
     //
@@ -376,13 +371,13 @@ YoriShSaveHistoryToFile()
     //
 
     if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, NULL);
+        ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, NULL);
         while (ListEntry != NULL) {
             HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
 
             YoriLibOutputToDevice(FileHandle, 0, _T("%y\n"), &HistoryEntry->CmdLine);
 
-            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, ListEntry);
         }
         ReleaseMutex(YoriShHistoryLock);
     }
@@ -417,23 +412,23 @@ YoriShGetHistoryStrings(
     PYORI_SH_HISTORY_ENTRY HistoryEntry;
     PYORI_LIST_ENTRY StartReturningFrom = NULL;
 
-    if (YoriShCommandHistory.Next != NULL) {
+    if (YoriShGlobal.CommandHistory.Next != NULL) {
         DWORD EntriesToSkip = 0;
         if (YoriShCommandHistoryCount > MaximumNumber && MaximumNumber > 0) {
             EntriesToSkip = YoriShCommandHistoryCount - MaximumNumber;
             while (EntriesToSkip > 0) {
-                ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+                ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, ListEntry);
                 EntriesToSkip--;
             }
 
             StartReturningFrom = ListEntry;
         }
 
-        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, StartReturningFrom);
+        ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, StartReturningFrom);
         while (ListEntry != NULL) {
             HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             CharsNeeded += HistoryEntry->CmdLine.LengthInChars + 1;
-            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, ListEntry);
         }
     }
 
@@ -448,15 +443,15 @@ YoriShGetHistoryStrings(
 
     StringOffset = 0;
 
-    if (YoriShCommandHistory.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, StartReturningFrom);
+    if (YoriShGlobal.CommandHistory.Next != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, StartReturningFrom);
         while (ListEntry != NULL) {
             HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
             memcpy(&HistoryStrings->StartOfString[StringOffset], HistoryEntry->CmdLine.StartOfString, HistoryEntry->CmdLine.LengthInChars * sizeof(TCHAR));
             StringOffset += HistoryEntry->CmdLine.LengthInChars;
             HistoryStrings->StartOfString[StringOffset] = '\0';
             StringOffset++;
-            ListEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, ListEntry);
         }
     }
     HistoryStrings->StartOfString[StringOffset] = '\0';

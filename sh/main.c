@@ -26,24 +26,10 @@
 
 #include "yori.h"
 
-DWORD g_ErrorLevel;
-
 /**
- When set to TRUE, the process should end rather than seek another
- command.
+ Mutable state that is global across the shell process.
  */
-BOOL g_ExitProcess;
-
-/**
- When g_ExitProcess is set to TRUE, this is set to the code that the shell
- should return as its exit code.
- */
-DWORD g_ExitProcessExitCode;
-
-/**
- A function pointer that can be used to enable or disable WOW64 redirection.
- */
-typedef BOOL (WINAPI * DISABLE_WOW_REDIRECT_FN)(PVOID*);
+YORI_SH_GLOBALS YoriShGlobal;
 
 /**
  Help text to display to the user.
@@ -291,7 +277,7 @@ YoriShParseArgs(
         if (YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArgToExec, &ArgV[StartArgToExec], TRUE, &YsCmdToExec)) {
             if (YsCmdToExec.LengthInChars > 0) {
                 if (YoriShExecuteExpression(&YsCmdToExec)) {
-                    *ExitCode = g_ErrorLevel;
+                    *ExitCode = YoriShGlobal.ErrorLevel;
                 } else {
                     *ExitCode = EXIT_FAILURE;
                 }
@@ -464,7 +450,7 @@ ymain (
     BOOL TerminateApp = FALSE;
 
     YoriShInit();
-    YoriShParseArgs(ArgC, ArgV, &TerminateApp, &g_ExitProcessExitCode);
+    YoriShParseArgs(ArgC, ArgV, &TerminateApp, &YoriShGlobal.ExitProcessExitCode);
 
     if (!TerminateApp) {
 
@@ -476,7 +462,7 @@ ymain (
             YoriShPostCommand();
             YoriShScanJobsReportCompletion(FALSE);
             YoriShScanProcessBuffersForTeardown(FALSE);
-            if (g_ExitProcess) {
+            if (YoriShGlobal.ExitProcess) {
                 break;
             }
             YoriShPreCommand();
@@ -485,7 +471,7 @@ ymain (
             if (!YoriShGetExpression(&CurrentExpression)) {
                 break;
             }
-            if (g_ExitProcess) {
+            if (YoriShGlobal.ExitProcess) {
                 break;
             }
             if (CurrentExpression.LengthInChars > 0) {
@@ -505,7 +491,7 @@ ymain (
     YoriShDiscardSavedRestartState(NULL);
     YoriShCleanupInputContext();
 
-    return g_ExitProcessExitCode;
+    return YoriShGlobal.ExitProcessExitCode;
 }
 
 // vim:sw=4:ts=4:et:

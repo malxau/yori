@@ -176,7 +176,7 @@ YoriShDisplayPrompt()
     YORI_STRING PromptAfterEnvExpansion;
     YORI_STRING DisplayString;
     PYORI_STRING StringToUse;
-    DWORD SavedErrorLevel = g_ErrorLevel;
+    DWORD SavedErrorLevel = YoriShGlobal.ErrorLevel;
 
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0);
     if (EnvVarLength > 0) {
@@ -334,7 +334,7 @@ YoriShDisplayPrompt()
     //  commands which alter it.
     //
 
-    g_ErrorLevel = SavedErrorLevel;
+    YoriShGlobal.ErrorLevel = SavedErrorLevel;
 
     return TRUE;
 }

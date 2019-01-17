@@ -1270,11 +1270,11 @@ YoriShExecViaSubshell(
     YoriLibInitEmptyString(&PathToYori);
     if (YoriShAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &PathToYori)) {
 
-        g_ErrorLevel = YoriShBuckPass(ExecContext, 2, PathToYori.StartOfString, _T("/ss"));
+        YoriShGlobal.ErrorLevel = YoriShBuckPass(ExecContext, 2, PathToYori.StartOfString, _T("/ss"));
         YoriLibFreeStringContents(&PathToYori);
         return;
     } else {
-        g_ErrorLevel = EXIT_FAILURE;
+        YoriShGlobal.ErrorLevel = EXIT_FAILURE;
     }
 }
 
@@ -1334,19 +1334,19 @@ YoriShExecExecPlan(
         }
 
         if (YoriLibIsPathUrl(&ExecContext->CmdToExec.ArgV[0])) {
-            g_ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
+            YoriShGlobal.ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
         } else {
             if (!YoriShResolveCommandToExecutable(&ExecContext->CmdToExec, &ExecutableFound)) {
                 break;
             }
 
             if (ExecutableFound) {
-                g_ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
+                YoriShGlobal.ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
             } else {
                 if (!ExecContext->WaitForCompletion) {
                     YoriShExecViaSubshell(ExecContext);
                 } else {
-                    g_ErrorLevel = YoriShBuiltIn(ExecContext);
+                    YoriShGlobal.ErrorLevel = YoriShBuiltIn(ExecContext);
                 }
             }
         }
@@ -1381,7 +1381,7 @@ YoriShExecExecPlan(
                     ExecContext = ExecContext->NextProgram;
                     break;
                 case NextProgramExecOnFailure:
-                    if (g_ErrorLevel != 0) {
+                    if (YoriShGlobal.ErrorLevel != 0) {
                         ExecContext = ExecContext->NextProgram;
                     } else {
                         do {
@@ -1393,7 +1393,7 @@ YoriShExecExecPlan(
                     }
                     break;
                 case NextProgramExecOnSuccess:
-                    if (g_ErrorLevel == 0) {
+                    if (YoriShGlobal.ErrorLevel == 0) {
                         ExecContext = ExecContext->NextProgram;
                     } else {
                         do {
@@ -1424,7 +1424,7 @@ YoriShExecExecPlan(
     if (YoriLibIsOperationCancelled()) {
         YoriShCancelExecPlan(ExecPlan);
     } else if (ExecPlan->TaskCompletionDisplayed) {
-        if (g_ErrorLevel == 0) {
+        if (YoriShGlobal.ErrorLevel == 0) {
             YoriShSetWindowState(YORI_SH_TASK_SUCCESS);
         } else {
             YoriShSetWindowState(YORI_SH_TASK_FAILED);

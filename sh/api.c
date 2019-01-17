@@ -167,8 +167,8 @@ YoriApiExitProcess(
     __in DWORD ExitCode
     )
 {
-    g_ExitProcess = TRUE;
-    g_ExitProcessExitCode = ExitCode;
+    YoriShGlobal.ExitProcess = TRUE;
+    YoriShGlobal.ExitProcessExitCode = ExitCode;
 }
 
 /**
@@ -228,7 +228,7 @@ YoriApiGetAliasStrings(
 DWORD
 YoriApiGetErrorLevel()
 {
-    return g_ErrorLevel;
+    return YoriShGlobal.ErrorLevel;
 }
 
 /**

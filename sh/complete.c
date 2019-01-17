@@ -121,7 +121,7 @@ YoriShPerformHistoryTabCompletion(
     //  Search the list of history.
     //
 
-    ListEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, NULL);
+    ListEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, NULL);
     while (ListEntry != NULL) {
         HistoryEntry = CONTAINING_RECORD(ListEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
 
@@ -154,7 +154,7 @@ YoriShPerformHistoryTabCompletion(
             YoriShAddMatchToTabContext(TabContext, NULL, Match);
 
         }
-        ListEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, ListEntry);
+        ListEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, ListEntry);
     }
 }
 
@@ -441,11 +441,11 @@ YoriShPerformExecutableTabCompletion(
     //  Thirdly, search the table of builtins.
     //
 
-    if (IncludeBuiltins && YoriShBuiltinCallbacks.Next != NULL) {
+    if (IncludeBuiltins && YoriShGlobal.BuiltinCallbacks.Next != NULL) {
         PYORI_LIST_ENTRY ListEntry;
         PYORI_SH_BUILTIN_CALLBACK Callback;
 
-        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, NULL);
+        ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.BuiltinCallbacks, NULL);
         while (ListEntry != NULL) {
             Callback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_CALLBACK, ListEntry);
             if (YoriLibCompareStringInsensitiveCount(&SearchString, &Callback->BuiltinName, CompareLength) == 0) {
@@ -476,7 +476,7 @@ YoriShPerformExecutableTabCompletion(
 
                 YoriShAddMatchToTabContext(TabContext, NULL, Match);
             }
-            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinCallbacks, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.BuiltinCallbacks, ListEntry);
         }
     }
 }

@@ -1423,7 +1423,7 @@ YoriShProcessKeyDown(
         PYORI_LIST_ENTRY NewEntry = NULL;
         PYORI_SH_HISTORY_ENTRY HistoryEntry;
         if (KeyCode == VK_UP) {
-            NewEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, Buffer->HistoryEntryToUse);
+            NewEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, Buffer->HistoryEntryToUse);
             if (NewEntry != NULL) {
                 Buffer->HistoryEntryToUse = NewEntry;
                 HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
@@ -1432,7 +1432,7 @@ YoriShProcessKeyDown(
             }
         } else if (KeyCode == VK_DOWN) {
             if (Buffer->HistoryEntryToUse != NULL) {
-                NewEntry = YoriLibGetNextListEntry(&YoriShCommandHistory, Buffer->HistoryEntryToUse);
+                NewEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, Buffer->HistoryEntryToUse);
             }
             if (NewEntry != NULL) {
                 Buffer->HistoryEntryToUse = NewEntry;
@@ -1504,7 +1504,7 @@ YoriShProcessKeyDown(
                 PYORI_LIST_ENTRY NewEntry = NULL;
                 PYORI_SH_HISTORY_ENTRY HistoryEntry;
 
-                NewEntry = YoriLibGetPreviousListEntry(&YoriShCommandHistory, Buffer->HistoryEntryToUse);
+                NewEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, Buffer->HistoryEntryToUse);
                 HistoryEntry = CONTAINING_RECORD(Buffer->HistoryEntryToUse, YORI_SH_HISTORY_ENTRY, ListEntry);
                 YoriShRemoveOneHistoryEntry(HistoryEntry);
 

@@ -77,16 +77,16 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
         Length = GetCurrentDirectory(Size, Variable);
     } else if (tcsicmp(Name, _T("ERRORLEVEL")) == 0) {
         if (Variable != NULL) {
-            Length = YoriLibSPrintfS(Variable, Size, _T("%i"), g_ErrorLevel);
+            Length = YoriLibSPrintfS(Variable, Size, _T("%i"), YoriShGlobal.ErrorLevel);
         } else {
-            Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("%i"), g_ErrorLevel);
+            Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("%i"), YoriShGlobal.ErrorLevel);
             Length++;
         }
     } else if (tcsicmp(Name, _T("LASTJOB")) == 0) {
         if (Variable != NULL) {
-            Length = YoriLibSPrintfS(Variable, Size, _T("%i"), g_PreviousJobId);
+            Length = YoriLibSPrintfS(Variable, Size, _T("%i"), YoriShGlobal.PreviousJobId);
         } else {
-            Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("%i"), g_PreviousJobId);
+            Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("%i"), YoriShGlobal.PreviousJobId);
             Length++;
         }
     } else {

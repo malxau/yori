@@ -91,11 +91,6 @@ typedef struct _YORI_JOB {
 } YORI_JOB, *PYORI_JOB;
 
 /**
- The most recent Job ID that was assigned.
- */
-DWORD g_PreviousJobId;
-
-/**
  The global list of active jobs.
  */
 YORI_LIST_ENTRY JobList;
@@ -122,7 +117,7 @@ YoriShCreateNewJob(
 {
     PYORI_JOB ThisJob;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         YoriLibInitializeListHead(&JobList);
     }
 
@@ -139,7 +134,7 @@ YoriShCreateNewJob(
         return FALSE;
     }
 
-    ThisJob->JobId = ++g_PreviousJobId;
+    ThisJob->JobId = ++YoriShGlobal.PreviousJobId;
     ThisJob->hProcess = hProcess;
     ThisJob->dwProcessId = dwProcessId;
 
@@ -201,7 +196,7 @@ YoriShScanJobsReportCompletion(
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return TRUE;
     }
 
@@ -254,7 +249,7 @@ YoriShTerminateJob(
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return TRUE;
     }
 
@@ -287,7 +282,7 @@ YoriShGetNextJobId(
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return 0;
     }
 
@@ -315,7 +310,7 @@ YoriShJobWait(
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return;
     }
 
@@ -348,7 +343,7 @@ YoriShJobSetPriority(
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return FALSE;
     }
 
@@ -389,7 +384,7 @@ YoriShGetJobOutput(
     PYORI_LIST_ENTRY ListEntry;
     BOOL Result;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return FALSE;
     }
 
@@ -437,7 +432,7 @@ YoriShPipeJobOutput(
     PYORI_LIST_ENTRY ListEntry;
     BOOL Result;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return FALSE;
     }
 
@@ -489,7 +484,7 @@ YoriShGetJobInformation(
     PYORI_LIST_ENTRY ListEntry;
     DWORD CmdLength;
 
-    if (g_PreviousJobId == 0) {
+    if (YoriShGlobal.PreviousJobId == 0) {
         return FALSE;
     }
 
