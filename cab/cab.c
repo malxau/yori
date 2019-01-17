@@ -3,7 +3,7 @@
  *
  * Yori shell compress and uncompress archives
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,10 +35,13 @@ CHAR strCabHelpText[] =
         "\n"
         "Compresses files into CAB files or extracts files from CAB files.\n"
         "\n"
-        "CAB [-license] [-b] [-s] [-c|-u] <cabfile>\n"
+        "CAB [-license] [-b] [-s] -c <cabfile> <files...>\n"
+        "CAB [-license] [-b] [-s] -u <cabfiles...>\n"
+        "CAB [-license] [-b] [-s] -f <files...>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Compress files into an archive\n"
+        "   -f             Compress each file into its own archive\n"
         "   -s             Copy subdirectories as well as files\n"
         "   -u             Uncompress files from an archive\n";
 
@@ -204,7 +207,7 @@ CabCreateShouldExclude(
 
 /**
  A callback that is invoked when a file is found within the tree root that is
- being turned into a source package.
+ being compressed into a CAB archive that contains only that file.
 
  @param FilePath Pointer to the file path that was found.
 
@@ -214,7 +217,62 @@ CabCreateShouldExclude(
         path to check if an object should be included or excluded.
 
  @param Context Pointer to a context block specifying the destination of 
-        package.
+        the file.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+CabCreateSingleFileFoundCallback(
+    __in PYORI_STRING FilePath,
+    __in PWIN32_FIND_DATA FileInfo,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    YORI_STRING RelativePathFrom;
+    YORI_STRING FullCabName;
+    PVOID CabHandle;
+
+    UNREFERENCED_PARAMETER(Depth);
+    UNREFERENCED_PARAMETER(Context);
+
+    YoriLibConstantString(&RelativePathFrom, FileInfo->cFileName);
+    if (!YoriLibAllocateString(&FullCabName, FilePath->LengthInChars + sizeof(".cab"))) {
+        return FALSE;
+    }
+
+    FullCabName.LengthInChars = YoriLibSPrintf(FullCabName.StartOfString, _T("%y.cab"), FilePath);
+
+    if (!YoriLibCreateCab(&FullCabName, &CabHandle)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibCreateCab failure\n"));
+        YoriLibFreeStringContents(&FullCabName);
+        return FALSE;
+    }
+
+
+    if (!YoriLibAddFileToCab(CabHandle, FilePath, &RelativePathFrom)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibAddFileToCab cannot add %y\n"), &RelativePathFrom);
+    }
+
+    YoriLibFreeStringContents(&FullCabName);
+    YoriLibCloseCab(CabHandle);
+
+    return TRUE;
+}
+
+/**
+ A callback that is invoked when a file is found within the tree root that is
+ being compressed into a CAB archive.
+
+ @param FilePath Pointer to the file path that was found.
+
+ @param FileInfo Information about the file.
+
+ @param Depth Indicates the recursion depth.  Used to determine the relative
+        path to check if an object should be included or excluded.
+
+ @param Context Pointer to a context block specifying the destination of 
+        the file.
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
@@ -266,6 +324,46 @@ CabCreateFileFoundCallback(
     return TRUE;
 }
 
+/**
+ A callback that is invoked when a cab file is found and its contents should
+ be extracted.
+
+ @param FilePath Pointer to the file path of the CAB file that was found.
+
+ @param FileInfo Information about the file.
+
+ @param Depth Indicates the recursion depth.  Used to determine the relative
+        path to check if an object should be included or excluded.
+
+ @param Context Pointer to a context block specifying the destination of 
+        archive.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+CabExpandFileFoundCallback(
+    __in PYORI_STRING FilePath,
+    __in PWIN32_FIND_DATA FileInfo,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PYORI_STRING FullTargetDirectory = (PYORI_STRING)Context;
+    YORI_STRING ErrorString;
+
+    UNREFERENCED_PARAMETER(FileInfo);
+    UNREFERENCED_PARAMETER(Depth);
+
+    YoriLibInitEmptyString(&ErrorString);
+
+    if (!YoriLibExtractCab(FilePath, FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, NULL, &ErrorString)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), FilePath, &ErrorString);
+        YoriLibFreeStringContents(&ErrorString);
+    }
+
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the cab builtin command.
@@ -296,11 +394,13 @@ ENTRYPOINT(
 {
     BOOL ArgumentUnderstood;
     BOOL Compress = FALSE;
+    BOOL CompressEachFile = FALSE;
     BOOL Uncompress = FALSE;
     BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
     DWORD i;
     DWORD StartArg = 1;
+    DWORD MatchFlags;
     YORI_STRING Arg;
     PYORI_STRING CabFileName;
 
@@ -315,13 +415,19 @@ ENTRYPOINT(
                 CabHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 Compress = TRUE;
+                CompressEachFile = FALSE;
+                Uncompress = FALSE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+                Compress = FALSE;
+                CompressEachFile = TRUE;
                 Uncompress = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
@@ -329,6 +435,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
                 Compress = FALSE;
+                CompressEachFile = FALSE;
                 Uncompress = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
@@ -355,14 +462,41 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    if (!Compress && !Uncompress) {
+    if (!Compress && !Uncompress && !CompressEachFile) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cab: missing operation\n"));
         return EXIT_FAILURE;
     }
 
-    if (Compress) {
+    if (CompressEachFile) {
         CAB_CREATE_CONTEXT CreateContext;
-        DWORD MatchFlags;
+
+        if (StartArg >= ArgC) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cab: missing source files\n"));
+            return EXIT_FAILURE;
+        }
+
+        ZeroMemory(&CreateContext, sizeof(CreateContext));
+        YoriLibInitializeListHead(&CreateContext.ExcludeList);
+        YoriLibInitializeListHead(&CreateContext.IncludeList);
+
+        MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+        if (BasicEnumeration) {
+            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
+        }
+        if (Recursive) {
+            MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
+        }
+
+        for (i = StartArg; i < ArgC; i++) {
+            YoriLibForEachFile(&ArgV[i],
+                               MatchFlags,
+                               0,
+                               CabCreateSingleFileFoundCallback,
+                               &CreateContext);
+        }
+        CabCreateFreeMatchLists(&CreateContext);
+    } else if (Compress) {
+        CAB_CREATE_CONTEXT CreateContext;
 
         if (StartArg + 1 >= ArgC) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cab: missing source files\n"));
@@ -400,23 +534,28 @@ ENTRYPOINT(
     } else {
         YORI_STRING FullTargetDirectory;
         YORI_STRING TargetDirectory;
-        YORI_STRING ErrorString;
-
-        CabFileName = &ArgV[StartArg];
 
         YoriLibConstantString(&TargetDirectory, _T("."));
         if (!YoriLibUserStringToSingleFilePath(&TargetDirectory, FALSE, &FullTargetDirectory)) {
             return EXIT_FAILURE;
         }
 
-        YoriLibInitEmptyString(&ErrorString);
-
-        if (!YoriLibExtractCab(CabFileName, &FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, NULL, &ErrorString)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), CabFileName, &ErrorString);
-            YoriLibFreeStringContents(&ErrorString);
-            YoriLibFreeStringContents(&FullTargetDirectory);
-            return EXIT_FAILURE;
+        MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
+        if (BasicEnumeration) {
+            MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
+        if (Recursive) {
+            MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
+        }
+
+        for (i = StartArg; i < ArgC; i++) {
+            YoriLibForEachFile(&ArgV[i],
+                               MatchFlags,
+                               0,
+                               CabExpandFileFoundCallback,
+                               &FullTargetDirectory);
+        }
+
         YoriLibFreeStringContents(&FullTargetDirectory);
     }
 
