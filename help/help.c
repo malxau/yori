@@ -146,7 +146,7 @@ CHAR strHelpHelpText3[] =
         "SYNC      Flush a file, directory or volume\n"
         "TAIL      Output the final lines of one or more files\n"
         "TEE       Output the contents of standard input to standard output and a file\n"
-        "TITLE     Set the console window title\n"
+        "TITLE     Get or set the console window title\n"
         "TOUCH     Create a file or update its timestamps\n"
         "TRUE      Returns true\n"
         "TYPE      Output the contents of one or more files\n"

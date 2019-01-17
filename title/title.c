@@ -3,7 +3,7 @@
  *
  * Yori shell set window title
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,9 @@
 const
 CHAR strTitleHelpText[] =
         "\n"
-        "Set the console window title.\n"
+        "Get or set the console window title.\n"
         "\n"
-        "TITLE [-license] <title>\n";
+        "TITLE [-license] [-g|<title>]\n";
 
 /**
  Display usage text to the user.
@@ -83,6 +83,7 @@ ENTRYPOINT(
     DWORD i;
     DWORD StartArg = 1;
     YORI_STRING Arg;
+    BOOL GetTitleMode = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -95,8 +96,11 @@ ENTRYPOINT(
                 TitleHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g")) == 0) {
+                GetTitleMode = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -109,13 +113,31 @@ ENTRYPOINT(
         }
     }
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &CmdLine)) {
-        return EXIT_FAILURE;
-    }
-    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+    if (GetTitleMode) {
+        YORI_STRING PreviousTitle;
 
-    SetConsoleTitle(CmdLine.StartOfString);
-    YoriLibFreeStringContents(&CmdLine);
+        //
+        //  MSDN implies there's no way to know how big the buffer needs to be,
+        //  but it needs to be less than 64Kb, so we use that.
+        //
+
+        if (!YoriLibAllocateString(&PreviousTitle, 64 * 1024)) {
+            return EXIT_FAILURE;
+        }
+
+        PreviousTitle.LengthInChars = GetConsoleTitle(PreviousTitle.StartOfString, PreviousTitle.LengthAllocated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &PreviousTitle);
+        YoriLibFreeStringContents(&PreviousTitle);
+
+    } else {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &CmdLine)) {
+            return EXIT_FAILURE;
+        }
+        ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+    
+        SetConsoleTitle(CmdLine.StartOfString);
+        YoriLibFreeStringContents(&CmdLine);
+    }
 
     return EXIT_SUCCESS;
 }
