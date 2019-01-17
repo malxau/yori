@@ -3,7 +3,7 @@
  *
  * Yori shell split a file into pieces
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,9 +35,10 @@ CHAR strSplitHelpText[] =
         "\n"
         "Split a file into pieces.\n"
         "\n"
-        "SPLIT [-license] [-l n | -b n] [-p <prefix>] [<file>]\n"
+        "SPLIT [-license] [-j] [-l n | -b n] [-p <prefix>] [<file>]\n"
         "\n"
         "   -b             Use <n> bytes per part\n"
+        "   -j             Join files previously split into one\n"
         "   -l             Use <n> number of lines per part\n"
         "   -p             Specify the prefix of part files\n";
 
@@ -165,14 +166,14 @@ SplitProcessStream(
             if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
                 break;
             }
-    
+
             if ((LineNumber % SplitContext->LinesPerPart) == 0) {
                 if (hDestFile != NULL) {
                     CloseHandle(hDestFile);
                     hDestFile = NULL;
                 }
             }
-    
+
             if (hDestFile == NULL) {
                 hDestFile = SplitOpenTargetForCurrentPart(SplitContext);
                 if (hDestFile == NULL) {
@@ -182,11 +183,11 @@ SplitProcessStream(
                 }
                 SplitContext->CurrentPartNumber++;
             }
-    
+
             YoriLibOutputToDevice(hDestFile, 0, _T("%y\n"), &LineString);
             LineNumber++;
         }
-    
+
         YoriLibLineReadClose(LineContext);
         YoriLibFreeStringContents(&LineString);
     } else {
@@ -233,6 +234,143 @@ SplitProcessStream(
     return TRUE;
 }
 
+/**
+ Join a series of files with a given prefix back into a single file.  This is
+ the inverse of split.
+
+ @param Prefix Pointer to the string containing the prefix name of the set of
+        files.
+
+ @param OutputFile Pointer to the string containing the name of the combined
+        file to generate.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SplitJoin(
+    __in PYORI_STRING Prefix,
+    __in PYORI_STRING OutputFile
+    )
+{
+    HANDLE SourceHandle;
+    HANDLE TargetHandle;
+    PUCHAR Buffer;
+    DWORD BytesRead;
+    DWORD BytesAllocated;
+    LONGLONG CurrentFragment;
+    LPTSTR FragmentFileName;
+    YORI_STRING NumberString;
+    DWORD LastError;
+    LPTSTR ErrText;
+
+    ASSERT(YoriLibIsStringNullTerminated(OutputFile));
+
+    BytesAllocated = 256 * 1024;
+
+    Buffer = YoriLibMalloc(BytesAllocated);
+    if (Buffer == NULL) {
+        return FALSE;
+    }
+
+    TargetHandle = CreateFile(OutputFile->StartOfString,
+                              GENERIC_WRITE,
+                              FILE_SHARE_READ | FILE_SHARE_DELETE,
+                              NULL,
+                              CREATE_ALWAYS,
+                              FILE_ATTRIBUTE_NORMAL,
+                              NULL);
+
+    if (TargetHandle == NULL || TargetHandle == INVALID_HANDLE_VALUE) {
+        LastError = GetLastError();
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %y failed: %s"), OutputFile, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        YoriLibFree(Buffer);
+        return FALSE;
+    }
+
+    CurrentFragment = 0;
+
+    while(TRUE) {
+
+        YoriLibInitEmptyString(&NumberString);
+        if (!YoriLibNumberToString(&NumberString, CurrentFragment, 10, 0, '\0')) {
+            CloseHandle(TargetHandle);
+            YoriLibFree(Buffer);
+            return FALSE;
+        }
+
+        FragmentFileName = YoriLibMalloc((Prefix->LengthInChars + NumberString.LengthInChars + 1) * sizeof(TCHAR));
+        if (FragmentFileName == NULL) {
+            YoriLibFreeStringContents(&NumberString);
+            CloseHandle(TargetHandle);
+            YoriLibFree(Buffer);
+            return FALSE;
+        }
+
+        YoriLibSPrintf(FragmentFileName, _T("%y%y"), Prefix, &NumberString);
+        YoriLibFreeStringContents(&NumberString);
+
+        SourceHandle = CreateFile(FragmentFileName, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (SourceHandle == INVALID_HANDLE_VALUE) {
+            LastError = GetLastError();
+            if (LastError == ERROR_FILE_NOT_FOUND && CurrentFragment > 0) {
+                YoriLibFree(FragmentFileName);
+                break;
+            }
+            ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %s failed: %s"), FragmentFileName, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            YoriLibFree(FragmentFileName);
+            CloseHandle(TargetHandle);
+            YoriLibFree(Buffer);
+            return FALSE;
+        }
+
+        while(TRUE) {
+
+            if (!ReadFile(SourceHandle, Buffer, BytesAllocated, &BytesRead, NULL)) {
+                LastError = GetLastError();
+                if (LastError == ERROR_HANDLE_EOF) {
+                    break;
+                }
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: read of %s failed: %s"), FragmentFileName, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                YoriLibFree(FragmentFileName);
+                CloseHandle(TargetHandle);
+                CloseHandle(SourceHandle);
+                YoriLibFree(Buffer);
+                return FALSE;
+            }
+
+            if (BytesRead == 0) {
+                break;
+            }
+
+            if (!WriteFile(TargetHandle, Buffer, BytesRead, &BytesRead, NULL)) {
+                LastError = GetLastError();
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: write to %y failed: %s"), OutputFile, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                YoriLibFree(FragmentFileName);
+                CloseHandle(TargetHandle);
+                CloseHandle(SourceHandle);
+                YoriLibFree(Buffer);
+                return FALSE;
+            }
+        }
+
+        CloseHandle(SourceHandle);
+        YoriLibFree(FragmentFileName);
+        CurrentFragment++;
+    }
+
+    YoriLibFree(Buffer);
+    CloseHandle(TargetHandle);
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the split builtin command.
@@ -266,6 +404,7 @@ ENTRYPOINT(
     DWORD StartArg = 0;
     SPLIT_CONTEXT SplitContext;
     YORI_STRING Arg;
+    BOOL JoinMode = FALSE;
 
     ZeroMemory(&SplitContext, sizeof(SplitContext));
 
@@ -280,7 +419,7 @@ ENTRYPOINT(
                 SplitHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 if (ArgC > i + 1) {
@@ -290,6 +429,9 @@ ENTRYPOINT(
                     YoriLibStringToNumber(&ArgV[i + 1], TRUE, &SplitContext.BytesPerPart, &CharsConsumed);
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("j")) == 0) {
+                JoinMode = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD CharsConsumed;
@@ -318,7 +460,7 @@ ENTRYPOINT(
     }
 
     if (SplitContext.Prefix.StartOfString == NULL) {
-        if (StartArg != 0) {
+        if (StartArg != 0 && !JoinMode) {
             YORI_STRING DefaultPrefix;
 
             if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &DefaultPrefix)) {
@@ -327,69 +469,90 @@ ENTRYPOINT(
             YoriLibYPrintf(&SplitContext.Prefix, _T("%y."), &DefaultPrefix);
             YoriLibFreeStringContents(&DefaultPrefix);
         } else {
+            YoriLibFreeStringContents(&SplitContext.Prefix);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: no prefix specified\n"));
             return EXIT_FAILURE;
         }
     }
 
-    if (SplitContext.LinesMode) {
-        if (SplitContext.LinesPerPart == 0) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: invalid lines per part\n"));
+    if (JoinMode) {
+        if (StartArg == 0) {
+            YoriLibFreeStringContents(&SplitContext.Prefix);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: no input specified\n"));
             return EXIT_FAILURE;
         }
+
+        if (!SplitJoin(&SplitContext.Prefix, &ArgV[StartArg])) {
+            YoriLibFreeStringContents(&SplitContext.Prefix);
+            return EXIT_FAILURE;
+        }
+        YoriLibFreeStringContents(&SplitContext.Prefix);
     } else {
-        if (SplitContext.BytesPerPart == 0 || SplitContext.BytesPerPart >= (DWORD)-1) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: invalid bytes per part\n"));
-            return EXIT_FAILURE;
-        }
-    }
-
-    //
-    //  If no file name is specified, use stdin; otherwise open
-    //  the file and use that
-    //
-
-    if (StartArg == 0) {
-        DWORD FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
-        FileType = FileType & ~(FILE_TYPE_REMOTE);
-        if (FileType == FILE_TYPE_CHAR) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: no file or pipe for input\n"));
-            return EXIT_FAILURE;
+        if (SplitContext.LinesMode) {
+            if (SplitContext.LinesPerPart == 0) {
+                YoriLibFreeStringContents(&SplitContext.Prefix);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: invalid lines per part\n"));
+                return EXIT_FAILURE;
+            }
+        } else {
+            if (SplitContext.BytesPerPart == 0 || SplitContext.BytesPerPart >= (DWORD)-1) {
+                YoriLibFreeStringContents(&SplitContext.Prefix);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: invalid bytes per part\n"));
+                return EXIT_FAILURE;
+            }
         }
 
-        if (!SplitProcessStream(GetStdHandle(STD_INPUT_HANDLE), &SplitContext)) {
-            return EXIT_FAILURE;
-        }
-    } else {
-        HANDLE FileHandle;
-        YORI_STRING FilePath;
+        //
+        //  If no file name is specified, use stdin; otherwise open
+        //  the file and use that
+        //
 
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FilePath)) {
-            return EXIT_FAILURE;
-        }
-        FileHandle = CreateFile(FilePath.StartOfString,
-                                GENERIC_READ,
-                                FILE_SHARE_READ | FILE_SHARE_DELETE,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL,
-                                NULL);
+        if (StartArg == 0) {
+            DWORD FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
+            FileType = FileType & ~(FILE_TYPE_REMOTE);
+            if (FileType == FILE_TYPE_CHAR) {
+                YoriLibFreeStringContents(&SplitContext.Prefix);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: no file or pipe for input\n"));
+                return EXIT_FAILURE;
+            }
 
-        if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %y failed: %s"), &FilePath, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
-            return TRUE;
-        }
+            if (!SplitProcessStream(GetStdHandle(STD_INPUT_HANDLE), &SplitContext)) {
+                YoriLibFreeStringContents(&SplitContext.Prefix);
+                return EXIT_FAILURE;
+            }
+        } else {
+            HANDLE FileHandle;
+            YORI_STRING FilePath;
 
-        YoriLibFreeStringContents(&FilePath);
+            if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FilePath)) {
+                return EXIT_FAILURE;
+            }
+            FileHandle = CreateFile(FilePath.StartOfString,
+                                    GENERIC_READ,
+                                    FILE_SHARE_READ | FILE_SHARE_DELETE,
+                                    NULL,
+                                    OPEN_EXISTING,
+                                    FILE_ATTRIBUTE_NORMAL,
+                                    NULL);
 
-        if (!SplitProcessStream(FileHandle, &SplitContext)) {
+            if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
+                DWORD LastError = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %y failed: %s"), &FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return TRUE;
+            }
+
+            YoriLibFreeStringContents(&FilePath);
+
+            if (!SplitProcessStream(FileHandle, &SplitContext)) {
+                CloseHandle(FileHandle);
+                YoriLibFreeStringContents(&SplitContext.Prefix);
+                return EXIT_FAILURE;
+            }
             CloseHandle(FileHandle);
-            return EXIT_FAILURE;
         }
-        CloseHandle(FileHandle);
+        YoriLibFreeStringContents(&SplitContext.Prefix);
     }
 
     return EXIT_SUCCESS;
