@@ -2,10 +2,13 @@ v1.0:
  - Hexdump -r
  - Make selection use RTF
  - General MSFIX review
+ - Taskbar progress, don't clear until toplevel interactive
+ - Erase indicate no files found
+ - Pkglib check for duplicate files
  - Tool for creating VHDs
  - Split sdir brief recurse into standalone du
  - 32 bit setver on HyperV server
- - Share sdir color logic
+ - Share sdir metadata color logic
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
