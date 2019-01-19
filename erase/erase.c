@@ -65,6 +65,11 @@ typedef struct _ERASE_CONTEXT {
      */
     BOOL RecycleBin;
 
+    /**
+     The number of files found.
+     */
+    DWORDLONG FilesFound;
+
 } ERASE_CONTEXT, *PERASE_CONTEXT;
 
 /**
@@ -77,7 +82,8 @@ typedef struct _ERASE_CONTEXT {
 
  @param Depth Recursion depth, ignored in this application.
 
- @param Context Specifies if erase should move objects to the recycle bin.
+ @param Context Specifies if erase should move objects to the recycle bin and
+        records the count of files found.
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
@@ -86,25 +92,28 @@ EraseFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PERASE_CONTEXT Context
+    __in PVOID Context
     )
 {
     DWORD Err;
     LPTSTR ErrText;
     BOOLEAN FileDeleted;
+    PERASE_CONTEXT EraseContext = (PERASE_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
-    ASSERT(FilePath->StartOfString[FilePath->LengthInChars] == '\0');
+    ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
     FileDeleted = FALSE;
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+
+        EraseContext->FilesFound++;
 
         //
         //  If the user wanted it deleted via the recycle bin, try that.
         //
 
-        if (Context->RecycleBin) {
+        if (EraseContext->RecycleBin) {
             if (YoriLibRecycleBinFile(FilePath)) {
                 FileDeleted = TRUE;
             }
@@ -238,6 +247,11 @@ ENTRYPOINT(
     for (i = StartArg; i < ArgC; i++) {
 
         YoriLibForEachFile(&ArgV[i], MatchFlags, 0, EraseFileFoundCallback, &Context);
+    }
+
+    if (Context.FilesFound == 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("erase: no matching files found\n"));
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

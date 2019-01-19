@@ -3,7 +3,6 @@ v1.0:
  - Make selection use RTF
  - General MSFIX review
  - Taskbar progress, don't clear until toplevel interactive
- - Erase indicate no files found
  - Pkglib check for duplicate files
  - Tool for creating VHDs
  - Split sdir brief recurse into standalone du
