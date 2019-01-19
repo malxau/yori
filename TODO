@@ -2,9 +2,9 @@ v1.0:
  - Hexdump -r
  - Make selection use RTF
  - General MSFIX review
- - Taskbar progress, don't clear until toplevel interactive
  - Pkglib check for duplicate files
  - Tool for creating VHDs
+ - Tool for hashing files
  - Split sdir brief recurse into standalone du
  - 32 bit setver on HyperV server
  - Share sdir metadata color logic

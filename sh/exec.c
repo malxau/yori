@@ -1091,7 +1091,7 @@ YoriShExecuteSingleProgram(
 
     if (YoriLibIsPathUrl(&ExecContext->CmdToExec.ArgV[0])) {
         LaunchViaShellExecute = TRUE;
-       ExecContext->SuppressTaskCompletion = TRUE;
+        ExecContext->SuppressTaskCompletion = TRUE;
     } else {
         szExt = YoriLibFindRightMostCharacter(&ExecContext->CmdToExec.ArgV[0], '.');
         if (szExt != NULL) {
@@ -1423,12 +1423,6 @@ YoriShExecExecPlan(
 
     if (YoriLibIsOperationCancelled()) {
         YoriShCancelExecPlan(ExecPlan);
-    } else if (ExecPlan->TaskCompletionDisplayed) {
-        if (YoriShGlobal.ErrorLevel == 0) {
-            YoriShSetWindowState(YORI_SH_TASK_SUCCESS);
-        } else {
-            YoriShSetWindowState(YORI_SH_TASK_FAILED);
-        }
     }
 }
 

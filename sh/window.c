@@ -114,20 +114,37 @@ YoriShSetWindowState(
     )
 {
     HRESULT hr;
-    UNREFERENCED_PARAMETER(State);
 
     //
-    //  If no UI has been displayed and we're being asked to clear it, do
-    //  nothing.  This is to avoid loading COM etc when the user isn't
-    //  using the feature.
+    //  Subshells shouldn't do anything.  Let the parent shell display
+    //  progress and track completion.
     //
 
-    if (State == YORI_SH_TASK_COMPLETE && !YoriShTaskUiActive) {
+    if (YoriShGlobal.SubShell) {
         return TRUE;
     }
 
     if (DllKernel32.pGetConsoleWindow == NULL) {
         return FALSE;
+    }
+
+    //
+    //  If no UI has been displayed and we're being asked to clear it, do
+    //  nothing.  This is to avoid loading COM etc when the user isn't
+    //  using the feature.  If we're being invoked from within a builtin
+    //  command (ie., script), it's okay to start the progress indicator but
+    //  don't display success or fail until the builtin is done.
+    //
+
+    if (State != YORI_SH_TASK_IN_PROGRESS) {
+
+        if (!YoriShTaskUiActive) {
+            return TRUE;
+        }
+
+        if (YoriShGlobal.RecursionDepth > 0) {
+            return TRUE;
+        }
     }
 
     if (!YoriShInitializedCom) {

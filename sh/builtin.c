@@ -351,7 +351,9 @@ YoriShExecuteInProc(
         }
     }
 
+    YoriShGlobal.RecursionDepth++;
     ExitCode = Fn(ArgC, ArgV);
+    YoriShGlobal.RecursionDepth--;
     YoriShRevertRedirection(&PreviousRedirectContext);
 
     if (WasPipe) {

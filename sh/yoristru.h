@@ -719,6 +719,14 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD PreviousJobId;
 
     /**
+     Count of recursion depth.  This is incremented when calling a builtin
+     or when the shell is invoked from a subshell, and decremented when
+     these return.  A recursion depth of zero implies a shell ready for user
+     interaction.
+     */
+    DWORD RecursionDepth;
+
+    /**
      List of command history.
      */
     YORI_LIST_ENTRY CommandHistory;
@@ -733,6 +741,12 @@ typedef struct _YORI_SH_GLOBALS {
      command.
      */
     BOOL ExitProcess;
+
+    /**
+     When set to TRUE, indicates this process has been spawned as a subshell
+     to execute builtin commands from a monolithic shell.
+     */
+    BOOL SubShell;
 
 } YORI_SH_GLOBALS, *PYORI_SH_GLOBALS;
 

@@ -3,7 +3,7 @@
  *
  * Yori shell entrypoint
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -231,7 +231,7 @@ YoriShParseArgs(
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
@@ -258,6 +258,8 @@ YoriShParseArgs(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ss")) == 0) {
                 if (ArgC > i + 1) {
+                    YoriShGlobal.RecursionDepth++;
+                    YoriShGlobal.SubShell = TRUE;
                     *TerminateApp = TRUE;
                     StartArgToExec = i + 1;
                     ArgumentUnderstood = TRUE;
@@ -390,6 +392,17 @@ YoriShPostCommand()
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE ConsoleHandle;
     BOOL ConsoleMode;
+
+    //
+    //  This will only do anything if this process has already set the state
+    //  previously.
+    //
+
+    if (YoriShGlobal.ErrorLevel == 0) {
+        YoriShSetWindowState(YORI_SH_TASK_SUCCESS);
+    } else {
+        YoriShSetWindowState(YORI_SH_TASK_FAILED);
+    }
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
