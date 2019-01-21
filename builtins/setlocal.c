@@ -34,9 +34,13 @@
 const
 CHAR strSetlocalHelpText[] =
         "\n"
-        "Push the current directory and environment onto a saved stack.\n"
+        "Push attributes onto a saved stack to restore later.  By default, the current\n"
+        " directory and environment are saved.\n"
         "\n"
-        "SETLOCAL [-license]\n";
+        "SETLOCAL [-license] [-d] [-e]\n"
+        "\n"
+        "   -d             Save and restore the current directory.\n"
+        "   -e             Save and restore the environment.\n";
 
 /**
  Display usage text to the user.
@@ -77,6 +81,16 @@ EndlocalHelp()
 }
 
 /**
+ If set, the current directory is saved by this setlocal stack entry.
+ */
+#define SETLOCAL_ATTRIBUTE_DIRECTORY     (0x00000001)
+
+/**
+ If set, the environment is saved by this setlocal stack entry.
+ */
+#define SETLOCAL_ATTRIBUTE_ENVIRONMENT   (0x00000002)
+
+/**
  Information describing saved state at the time of a setlocal call.
  */
 typedef struct _SETLOCAL_STACK {
@@ -85,6 +99,11 @@ typedef struct _SETLOCAL_STACK {
      Pointers to the next most recent and previous in time setlocal calls.
      */
     YORI_LIST_ENTRY StackLinks;
+
+    /**
+     The attributes saved by this setlocal entry.
+     */
+    DWORD AttributesSaved;
 
     /**
      A string containing the current directory at the time setlocal was
@@ -204,66 +223,70 @@ YoriCmd_ENDLOCAL(
     //  Restore the current directory.
     //
 
-    if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
-        YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
-        YoriLibFree(StackLocation);
-        return EXIT_FAILURE;
+    if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_DIRECTORY) {
+        if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
+            YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
+            YoriLibFree(StackLocation);
+            return EXIT_FAILURE;
+        }
     }
 
     //
     //  Query the current environment and delete everything in it.
     //
 
-    if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
+    if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
+        if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
+            YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
+            YoriLibFree(StackLocation);
+            return EXIT_FAILURE;
+        }
+        ThisVar = CurrentEnvironment.StartOfString;
+        while (*ThisVar != '\0') {
+            VarLen = _tcslen(ThisVar);
+
+            //
+            //  We know there's at least one char.  Skip it if it's equals since
+            //  that's how drive current directories are recorded.
+            //
+
+            ThisValue = _tcschr(&ThisVar[1], '=');
+            if (ThisValue != NULL) {
+                ThisValue[0] = '\0';
+                SetEnvironmentVariable(ThisVar, NULL);
+            }
+
+            ThisVar += VarLen;
+            ThisVar++;
+        }
+        YoriLibFreeStringContents(&CurrentEnvironment);
+
+        //
+        //  Now restore the saved environment.
+        //
+
+        ThisVar = StackLocation->PreviousEnvironment.StartOfString;
+        while (*ThisVar != '\0') {
+            VarLen = _tcslen(ThisVar);
+
+            //
+            //  We know there's at least one char.  Skip it if it's equals since
+            //  that's how drive current directories are recorded.
+            //
+
+            ThisValue = _tcschr(&ThisVar[1], '=');
+            if (ThisValue != NULL) {
+                ThisValue[0] = '\0';
+                ThisValue++;
+                SetEnvironmentVariable(ThisVar, ThisValue);
+            }
+
+            ThisVar += VarLen;
+            ThisVar++;
+        }
+
         YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
-        YoriLibFree(StackLocation);
-        return EXIT_FAILURE;
     }
-    ThisVar = CurrentEnvironment.StartOfString;
-    while (*ThisVar != '\0') {
-        VarLen = _tcslen(ThisVar);
-
-        //
-        //  We know there's at least one char.  Skip it if it's equals since
-        //  that's how drive current directories are recorded.
-        //
-
-        ThisValue = _tcschr(&ThisVar[1], '=');
-        if (ThisValue != NULL) {
-            ThisValue[0] = '\0';
-            SetEnvironmentVariable(ThisVar, NULL);
-        }
-
-        ThisVar += VarLen;
-        ThisVar++;
-    }
-    YoriLibFreeStringContents(&CurrentEnvironment);
-
-    //
-    //  Now restore the saved environment.
-    //
-
-    ThisVar = StackLocation->PreviousEnvironment.StartOfString;
-    while (*ThisVar != '\0') {
-        VarLen = _tcslen(ThisVar);
-
-        //
-        //  We know there's at least one char.  Skip it if it's equals since
-        //  that's how drive current directories are recorded.
-        //
-
-        ThisValue = _tcschr(&ThisVar[1], '=');
-        if (ThisValue != NULL) {
-            ThisValue[0] = '\0';
-            ThisValue++;
-            SetEnvironmentVariable(ThisVar, ThisValue);
-        }
-
-        ThisVar += VarLen;
-        ThisVar++;
-    }
-
-    YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
     YoriLibFree(StackLocation);
     return EXIT_SUCCESS;
 }
@@ -290,6 +313,7 @@ YoriCmd_SETLOCAL(
     PSETLOCAL_STACK NewStackEntry;
     DWORD CurrentDirectoryLength;
     YORI_STRING Arg;
+    DWORD AttributesToSave = 0;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -305,14 +329,24 @@ YoriCmd_SETLOCAL(
                 SetlocalHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                ArgumentUnderstood = TRUE;
+                AttributesToSave |= SETLOCAL_ATTRIBUTE_DIRECTORY;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+                ArgumentUnderstood = TRUE;
+                AttributesToSave |= SETLOCAL_ATTRIBUTE_ENVIRONMENT;
             }
         }
 
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (AttributesToSave == 0) {
+        AttributesToSave = SETLOCAL_ATTRIBUTE_DIRECTORY | SETLOCAL_ATTRIBUTE_ENVIRONMENT;
     }
 
     CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
@@ -323,13 +357,20 @@ YoriCmd_SETLOCAL(
     }
 
     YoriLibInitEmptyString(&NewStackEntry->PreviousDirectory);
-    NewStackEntry->PreviousDirectory.StartOfString = (LPTSTR)(NewStackEntry + 1);
-    NewStackEntry->PreviousDirectory.LengthInChars = GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
 
-    if (!YoriLibGetEnvironmentStrings(&NewStackEntry->PreviousEnvironment)) {
-        YoriLibFree(NewStackEntry);
-        return EXIT_FAILURE;
+    if (AttributesToSave & SETLOCAL_ATTRIBUTE_DIRECTORY) {
+        NewStackEntry->PreviousDirectory.StartOfString = (LPTSTR)(NewStackEntry + 1);
+        NewStackEntry->PreviousDirectory.LengthInChars = GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
     }
+
+    if (AttributesToSave & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
+        if (!YoriLibGetEnvironmentStrings(&NewStackEntry->PreviousEnvironment)) {
+            YoriLibFree(NewStackEntry);
+            return EXIT_FAILURE;
+        }
+    }
+
+    NewStackEntry->AttributesSaved = AttributesToSave;
 
     if (SetlocalStack.Next == NULL) {
         YoriLibInitializeListHead(&SetlocalStack);
