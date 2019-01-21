@@ -3,7 +3,7 @@
  *
  * Yori shell push and pop current directories
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,10 +37,11 @@ CHAR strSetlocalHelpText[] =
         "Push attributes onto a saved stack to restore later.  By default, the current\n"
         " directory and environment are saved.\n"
         "\n"
-        "SETLOCAL [-license] [-d] [-e]\n"
+        "SETLOCAL [-license] [-d] [-e] [-t]\n"
         "\n"
         "   -d             Save and restore the current directory.\n"
-        "   -e             Save and restore the environment.\n";
+        "   -e             Save and restore the environment.\n"
+        "   -t             Save and restore the window title.\n";
 
 /**
  Display usage text to the user.
@@ -62,7 +63,7 @@ SetlocalHelp()
 const
 CHAR strEndlocalHelpText[] =
         "\n"
-        "Pop a previous saved environment from the stack.\n"
+        "Pop a previous saved context from the stack.\n"
         "\n"
         "ENDLOCAL [-license]\n";
 
@@ -81,6 +82,13 @@ EndlocalHelp()
 }
 
 /**
+ GetConsoleTitle doesn't say how long the title is until after we've fetched
+ it, so this is the maximum allocation setlocal will use to record the window
+ title.
+ */
+#define SETLOCAL_MAX_WINDOW_TITLE_LENGTH (8192)
+
+/**
  If set, the current directory is saved by this setlocal stack entry.
  */
 #define SETLOCAL_ATTRIBUTE_DIRECTORY     (0x00000001)
@@ -89,6 +97,11 @@ EndlocalHelp()
  If set, the environment is saved by this setlocal stack entry.
  */
 #define SETLOCAL_ATTRIBUTE_ENVIRONMENT   (0x00000002)
+
+/**
+ If set, the window title is saved by this setlocal stack entry.
+ */
+#define SETLOCAL_ATTRIBUTE_TITLE         (0x00000004)
 
 /**
  Information describing saved state at the time of a setlocal call.
@@ -110,6 +123,11 @@ typedef struct _SETLOCAL_STACK {
      executed.
      */
     YORI_STRING PreviousDirectory;
+
+    /**
+     A string containing the window title at the time setlocal was executed.
+     */
+    YORI_STRING PreviousTitle;
 
     /**
      Pointer to the environment block that was saved when setlocal was
@@ -150,7 +168,21 @@ SetlocalNotifyUnload()
 }
 
 /**
- Pop an environment onto the stack.  This function is only
+ Free a saved context, including all child allocations.
+
+ @param StackLocation Pointer to the context to free.
+ */
+VOID
+SetlocalFreeStack(
+    __in PSETLOCAL_STACK StackLocation
+    )
+{
+    YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
+    YoriLibFree(StackLocation);
+}
+
+/**
+ Pop a saved context from the stack.  This function is only
  registered/available if the stack has something to pop.
 
  @param ArgC The number of arguments.
@@ -225,8 +257,18 @@ YoriCmd_ENDLOCAL(
 
     if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_DIRECTORY) {
         if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
-            YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
-            YoriLibFree(StackLocation);
+            SetlocalFreeStack(StackLocation);
+            return EXIT_FAILURE;
+        }
+    }
+
+    //
+    //  Restore the window title.
+    //
+
+    if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_TITLE) {
+        if (!SetConsoleTitle(StackLocation->PreviousTitle.StartOfString)) {
+            SetlocalFreeStack(StackLocation);
             return EXIT_FAILURE;
         }
     }
@@ -237,8 +279,7 @@ YoriCmd_ENDLOCAL(
 
     if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
         if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
-            YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
-            YoriLibFree(StackLocation);
+            SetlocalFreeStack(StackLocation);
             return EXIT_FAILURE;
         }
         ThisVar = CurrentEnvironment.StartOfString;
@@ -285,9 +326,8 @@ YoriCmd_ENDLOCAL(
             ThisVar++;
         }
 
-        YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
     }
-    YoriLibFree(StackLocation);
+    SetlocalFreeStack(StackLocation);
     return EXIT_SUCCESS;
 }
 
@@ -314,6 +354,8 @@ YoriCmd_SETLOCAL(
     DWORD CurrentDirectoryLength;
     YORI_STRING Arg;
     DWORD AttributesToSave = 0;
+    DWORD ExtraChars;
+    LPTSTR CharOffset;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -337,6 +379,9 @@ YoriCmd_SETLOCAL(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 ArgumentUnderstood = TRUE;
                 AttributesToSave |= SETLOCAL_ATTRIBUTE_ENVIRONMENT;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+                ArgumentUnderstood = TRUE;
+                AttributesToSave |= SETLOCAL_ATTRIBUTE_TITLE;
             }
         }
 
@@ -349,18 +394,44 @@ YoriCmd_SETLOCAL(
         AttributesToSave = SETLOCAL_ATTRIBUTE_DIRECTORY | SETLOCAL_ATTRIBUTE_ENVIRONMENT;
     }
 
-    CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    ExtraChars = 0;
+    CurrentDirectoryLength = 0;
+    if (AttributesToSave & SETLOCAL_ATTRIBUTE_DIRECTORY) {
+        CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+        ExtraChars += CurrentDirectoryLength;
+    }
 
-    NewStackEntry = YoriLibMalloc(sizeof(SETLOCAL_STACK) + CurrentDirectoryLength * sizeof(TCHAR));
+    //
+    //  GetConsoleTitle doesn't seem to return the number of characters
+    //  available, so we have to be pessimistic.
+    //
+
+    if (AttributesToSave & SETLOCAL_ATTRIBUTE_TITLE) {
+        ExtraChars += SETLOCAL_MAX_WINDOW_TITLE_LENGTH;
+    }
+
+    NewStackEntry = YoriLibMalloc(sizeof(SETLOCAL_STACK) + ExtraChars * sizeof(TCHAR));
     if (NewStackEntry == NULL) {
         return EXIT_FAILURE;
     }
 
     YoriLibInitEmptyString(&NewStackEntry->PreviousDirectory);
+    YoriLibInitEmptyString(&NewStackEntry->PreviousTitle);
+    YoriLibInitEmptyString(&NewStackEntry->PreviousEnvironment);
 
+    CharOffset = (LPTSTR)(NewStackEntry + 1);
     if (AttributesToSave & SETLOCAL_ATTRIBUTE_DIRECTORY) {
-        NewStackEntry->PreviousDirectory.StartOfString = (LPTSTR)(NewStackEntry + 1);
+        NewStackEntry->PreviousDirectory.StartOfString = CharOffset;
+        NewStackEntry->PreviousDirectory.LengthAllocated = CurrentDirectoryLength;
         NewStackEntry->PreviousDirectory.LengthInChars = GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
+        CharOffset += CurrentDirectoryLength;
+    }
+
+    if (AttributesToSave & SETLOCAL_ATTRIBUTE_TITLE) {
+        NewStackEntry->PreviousTitle.StartOfString = CharOffset;
+        NewStackEntry->PreviousTitle.LengthAllocated = SETLOCAL_MAX_WINDOW_TITLE_LENGTH;
+        NewStackEntry->PreviousTitle.LengthInChars = GetConsoleTitle(NewStackEntry->PreviousTitle.StartOfString, NewStackEntry->PreviousTitle.LengthAllocated);
+        CharOffset += SETLOCAL_MAX_WINDOW_TITLE_LENGTH;
     }
 
     if (AttributesToSave & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
