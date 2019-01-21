@@ -10,7 +10,6 @@ v1.0:
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
- - Isolate aliases during call
  - Colorize help and error text
  - Ctrl+R
  - More select should use logical line coordinates rather than conhost

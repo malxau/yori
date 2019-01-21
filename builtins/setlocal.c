@@ -37,8 +37,9 @@ CHAR strSetlocalHelpText[] =
         "Push attributes onto a saved stack to restore later.  By default, the current\n"
         " directory and environment are saved.\n"
         "\n"
-        "SETLOCAL [-license] [-d] [-e] [-t]\n"
+        "SETLOCAL [-license] [-a] [-d] [-e] [-t]\n"
         "\n"
+        "   -d             Save and restore the current aliases.\n"
         "   -d             Save and restore the current directory.\n"
         "   -e             Save and restore the environment.\n"
         "   -t             Save and restore the window title.\n";
@@ -104,6 +105,11 @@ EndlocalHelp()
 #define SETLOCAL_ATTRIBUTE_TITLE         (0x00000004)
 
 /**
+ If set, the window title is saved by this setlocal stack entry.
+ */
+#define SETLOCAL_ATTRIBUTE_ALIASES       (0x00000008)
+
+/**
  Information describing saved state at the time of a setlocal call.
  */
 typedef struct _SETLOCAL_STACK {
@@ -134,6 +140,11 @@ typedef struct _SETLOCAL_STACK {
      executed.
      */
     YORI_STRING PreviousEnvironment;
+
+    /**
+     Pointer to the alias block that was saved when setlocal was executed.
+     */
+    YORI_STRING PreviousAliases;
 } SETLOCAL_STACK, *PSETLOCAL_STACK;
 
 /**
@@ -178,6 +189,9 @@ SetlocalFreeStack(
     )
 {
     YoriLibFreeStringContents(&StackLocation->PreviousEnvironment);
+    if (StackLocation->PreviousAliases.MemoryToFree != NULL) {
+        YoriCallFreeYoriString(&StackLocation->PreviousAliases);
+    }
     YoriLibFree(StackLocation);
 }
 
@@ -202,7 +216,6 @@ YoriCmd_ENDLOCAL(
     BOOL ArgumentUnderstood;
     PYORI_LIST_ENTRY ListEntry;
     PSETLOCAL_STACK StackLocation;
-    YORI_STRING CurrentEnvironment;
     DWORD VarLen;
     LPTSTR ThisVar;
     LPTSTR ThisValue;
@@ -278,6 +291,7 @@ YoriCmd_ENDLOCAL(
     //
 
     if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
+        YORI_STRING CurrentEnvironment;
         if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
             SetlocalFreeStack(StackLocation);
             return EXIT_FAILURE;
@@ -320,6 +334,62 @@ YoriCmd_ENDLOCAL(
                 ThisValue[0] = '\0';
                 ThisValue++;
                 SetEnvironmentVariable(ThisVar, ThisValue);
+            }
+
+            ThisVar += VarLen;
+            ThisVar++;
+        }
+
+    }
+
+    //
+    //  Query the current aliases and delete them.
+    //
+
+    if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_ALIASES) {
+        YORI_STRING CurrentAliases;
+        YORI_STRING AliasName;
+        YORI_STRING AliasValue;
+
+        if (!YoriCallGetAliasStrings(&CurrentAliases)) {
+            SetlocalFreeStack(StackLocation);
+            return EXIT_FAILURE;
+        }
+
+        YoriLibInitEmptyString(&AliasName);
+        YoriLibInitEmptyString(&AliasValue);
+        ThisVar = CurrentAliases.StartOfString;
+        while (*ThisVar != '\0') {
+            YoriLibConstantString(&AliasName, ThisVar);
+            VarLen = AliasName.LengthInChars;
+            ThisValue = YoriLibFindLeftMostCharacter(&AliasName, '=');
+            if (ThisValue != NULL) {
+                ThisValue[0] = '\0';
+                AliasName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                YoriCallDeleteAlias(&AliasName);
+            }
+
+            ThisVar += VarLen;
+            ThisVar++;
+        }
+        YoriCallFreeYoriString(&CurrentAliases);
+
+        //
+        //  Now restore the saved aliases.
+        //
+
+        ThisVar = StackLocation->PreviousAliases.StartOfString;
+        while (*ThisVar != '\0') {
+            YoriLibConstantString(&AliasName, ThisVar);
+            VarLen = AliasName.LengthInChars;
+            ThisValue = YoriLibFindLeftMostCharacter(&AliasName, '=');
+            if (ThisValue != NULL) {
+                ThisValue[0] = '\0';
+                AliasName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                ThisValue++;
+                AliasValue.StartOfString = ThisValue;
+                AliasValue.LengthInChars = VarLen - AliasName.LengthInChars - 1;
+                YoriCallAddAlias(&AliasName, &AliasValue);
             }
 
             ThisVar += VarLen;
@@ -373,6 +443,9 @@ YoriCmd_SETLOCAL(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+                ArgumentUnderstood = TRUE;
+                AttributesToSave |= SETLOCAL_ATTRIBUTE_ALIASES;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 ArgumentUnderstood = TRUE;
                 AttributesToSave |= SETLOCAL_ATTRIBUTE_DIRECTORY;
@@ -418,6 +491,7 @@ YoriCmd_SETLOCAL(
     YoriLibInitEmptyString(&NewStackEntry->PreviousDirectory);
     YoriLibInitEmptyString(&NewStackEntry->PreviousTitle);
     YoriLibInitEmptyString(&NewStackEntry->PreviousEnvironment);
+    YoriLibInitEmptyString(&NewStackEntry->PreviousAliases);
 
     CharOffset = (LPTSTR)(NewStackEntry + 1);
     if (AttributesToSave & SETLOCAL_ATTRIBUTE_DIRECTORY) {
@@ -436,7 +510,14 @@ YoriCmd_SETLOCAL(
 
     if (AttributesToSave & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
         if (!YoriLibGetEnvironmentStrings(&NewStackEntry->PreviousEnvironment)) {
-            YoriLibFree(NewStackEntry);
+            SetlocalFreeStack(NewStackEntry);
+            return EXIT_FAILURE;
+        }
+    }
+
+    if (AttributesToSave & SETLOCAL_ATTRIBUTE_ALIASES) {
+        if (!YoriCallGetAliasStrings(&NewStackEntry->PreviousAliases)) {
+            SetlocalFreeStack(NewStackEntry);
             return EXIT_FAILURE;
         }
     }
@@ -450,8 +531,7 @@ YoriCmd_SETLOCAL(
         YORI_STRING EndlocalCmd;
         YoriLibConstantString(&EndlocalCmd, _T("ENDLOCAL"));
         if (!YoriCallBuiltinRegister(&EndlocalCmd, YoriCmd_ENDLOCAL)) {
-            YoriLibFreeStringContents(&NewStackEntry->PreviousEnvironment);
-            YoriLibFree(NewStackEntry);
+            SetlocalFreeStack(NewStackEntry);
             return EXIT_FAILURE;
         }
 
