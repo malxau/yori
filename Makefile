@@ -65,6 +65,7 @@ DIRS=crt       \
      fscmp     \
      get       \
      grpcmp    \
+     hash      \
      help      \
 	 hexdump   \
      hilite    \

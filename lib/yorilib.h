@@ -750,6 +750,9 @@ BOOL
 YoriLibLoadAdvApi32Functions();
 
 BOOL
+YoriLibLoadBCryptFunctions();
+
+BOOL
 YoriLibLoadCabinetFunctions();
 
 BOOL
@@ -2886,6 +2889,13 @@ YoriLibStringToHexBuffer(
     __in PYORI_STRING String,
     __out PUCHAR Buffer,
     __in DWORD BufferSize
+    );
+
+BOOL
+YoriLibHexBufferToString(
+    __in PUCHAR Buffer,
+    __in DWORD BufferSize,
+    __in PYORI_STRING String
     );
 
 LARGE_INTEGER

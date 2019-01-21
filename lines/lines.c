@@ -131,8 +131,8 @@ LinesProcessStream(
 
  @param Depth Specifies the recursion depth.  Ignored in this application.
 
- @param LinesContext Pointer to the lines context structure indicating the
-        action to perform and populated with the file and line count found.
+ @param Context Pointer to the lines context structure indicating the action
+        to perform and populated with the file and line count found.
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
@@ -141,10 +141,11 @@ LinesFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PLINES_CONTEXT LinesContext
+    __in PVOID Context
     )
 {
     HANDLE FileHandle;
+    PLINES_CONTEXT LinesContext = (PLINES_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 

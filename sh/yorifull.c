@@ -164,6 +164,11 @@ YORI_CMD_BUILTIN YoriCmd_GRPCMP;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YHASH;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YHELP;
 
 /**
@@ -483,6 +488,7 @@ YoriShBuiltins[] = {
                     {_T("YERASE"),    YoriCmd_YERASE},
                     {_T("YEXPR"),     YoriCmd_YEXPR},
                     {_T("YGET"),      YoriCmd_YGET},
+                    {_T("YHASH"),     YoriCmd_YHASH},
                     {_T("YHELP"),     YoriCmd_YHELP},
                     {_T("YMKDIR"),    YoriCmd_YMKDIR},
                     {_T("YMKLINK"),   YoriCmd_YMKLINK},
@@ -521,10 +527,12 @@ YoriShDefaultAliasEntries[] = {
     {_T("echo"),     _T("yecho $*$")},
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},
+    {_T("hash"),     _T("yhash $*$")},
     {_T("head"),     _T("ytype -h $*$")},
     {_T("help"),     _T("yhelp $*$")},
     {_T("htmlclip"), _T("clip -h $*$")},
     {_T("md"),       _T("ymkdir $*$")},
+    {_T("md5sum"),   _T("yhash -a md5 $*$")},
     {_T("mkdir"),    _T("ymkdir $*$")},
     {_T("mklink"),   _T("ymklink $*$")},
     {_T("more"),     _T("ymore $*$")},
@@ -538,6 +546,10 @@ YoriShDefaultAliasEntries[] = {
     {_T("ren"),      _T("ymove $*$")},
     {_T("rename"),   _T("ymove $*$")},
     {_T("rmdir"),    _T("yrmdir $*$")},
+    {_T("sha1sum"),  _T("yhash -a sha1 $*$")},
+    {_T("sha256sum"),_T("yhash -a sha256 $*$")},
+    {_T("sha384sum"),_T("yhash -a sha384 $*$")},
+    {_T("sha512sum"),_T("yhash -a sha512 $*$")},
     {_T("start"),    _T("ystart $*$")},
     {_T("split"),    _T("ysplit $*$")},
     {_T("time"),     _T("ydate -t $*$")},

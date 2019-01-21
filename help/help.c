@@ -98,6 +98,7 @@ CHAR strHelpHelpText2[] =
         "GET       Fetches objects from HTTP and stores them in local files\n"
         "GRPCMP    Returns true if the user is a member of the specified group\n"
         "GOTO      Goto a label in a script\n"
+        "HASH      Calculates the hash of a file or set of files\n"
         "HELP      Displays this help text\n"
         "HEXDUMP   Display a stream of data as hex\n"
         "HILITE    Output the contents of one or more files with highlight on lines\n"

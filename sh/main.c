@@ -291,6 +291,18 @@ YoriShParseArgs(
     return TRUE;
 }
 
+#if YORI_BUILD_ID
+/**
+ The number of days before suggesting the user upgrade on a testing build.
+ */
+#define YORI_SH_DAYS_BEFORE_WARNING (40)
+#else
+/**
+ The number of days before suggesting the user upgrade on a release build.
+ */
+#define YORI_SH_DAYS_BEFORE_WARNING (120)
+#endif
+
 /**
  If the user hasn't suppressed warning displays, display warnings for the age
  of the program and suboptimal architecture.
@@ -364,7 +376,7 @@ YoriShDisplayWarnings()
             liWriteTime.QuadPart = liWriteTime.QuadPart / (60 * 60 * 24);
 
             if (liNow.QuadPart > liWriteTime.QuadPart &&
-                liWriteTime.QuadPart + 120 < liNow.QuadPart) {
+                liWriteTime.QuadPart + YORI_SH_DAYS_BEFORE_WARNING < liNow.QuadPart) {
 
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This build of Yori is %lli days old.  Run ypm -u to upgrade."), liNow.QuadPart - liWriteTime.QuadPart);
             }

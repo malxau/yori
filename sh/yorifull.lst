@@ -17,6 +17,7 @@
 ..\fscmp\builtins.lib
 ..\get\builtins.lib
 ..\grpcmp\builtins.lib
+..\hash\builtins.lib
 ..\help\builtins.lib
 ..\hexdump\builtins.lib
 ..\hilite\builtins.lib

@@ -1112,6 +1112,70 @@ YoriLibStringToHexBuffer(
 }
 
 /**
+ Parse a buffer containing binary data and generate a string that encodes the
+ data into hex (implying two chars per byte.)
+
+ @param Buffer Pointer to a buffer to parse.
+
+ @param BufferSize Specifies the length of Buffer, in bytes.
+
+ @param String Pointer to the string to populate.
+
+ @return TRUE to indicate parse success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibHexBufferToString(
+    __in PUCHAR Buffer,
+    __in DWORD BufferSize,
+    __in PYORI_STRING String
+    )
+{
+    UCHAR SourceChar;
+    UCHAR SourceNibble;
+    DWORD Offset;
+    DWORD StrIndex;
+
+    //
+    //  Currently this routine assumes the caller allocated a large enough
+    //  buffer.  The buffer should hold two chars per byte plus a NULL.
+    //
+
+    if (String->LengthAllocated <= BufferSize * sizeof(TCHAR)) {
+        return FALSE;
+    }
+
+    //
+    //  Loop through the buffer
+    //
+
+    StrIndex = 0;
+    for (Offset = 0; Offset < BufferSize; Offset++) {
+
+        SourceChar = Buffer[Offset];
+        SourceNibble = (UCHAR)(SourceChar >> 4);
+        if (SourceNibble >= 10) {
+            String->StartOfString[StrIndex] = (UCHAR)('a' + SourceNibble - 10);
+        } else {
+            String->StartOfString[StrIndex] = (UCHAR)('0' + SourceNibble);
+        }
+
+        StrIndex++;
+        SourceNibble = (UCHAR)(SourceChar & 0xF);
+        if (SourceNibble >= 10) {
+            String->StartOfString[StrIndex] = (UCHAR)('a' + SourceNibble - 10);
+        } else {
+            String->StartOfString[StrIndex] = (UCHAR)('0' + SourceNibble);
+        }
+
+        StrIndex++;
+    }
+
+    String->StartOfString[StrIndex] = '\0';
+    String->LengthInChars = StrIndex;
+    return TRUE;
+}
+
+/**
  Parse a string specifying a file size and return a 64 bit unsigned integer
  from the result.  This function can parse prefixed hex or decimal inputs, and
  understands file size qualifiers (k, m, g et al.)
