@@ -409,7 +409,7 @@ ZBuildScoreboardAndSelectBest(
 
     if (FullMatchToUserSpec->LengthInChars > 0) {
         memcpy(&Entries[EntriesPopulated].DirectoryName, FullMatchToUserSpec, sizeof(YORI_STRING));
-        Entries[EntriesPopulated].Score = Z_MAX_RECENT_DIRS * 10;
+        Entries[EntriesPopulated].Score = Z_MAX_RECENT_DIRS * 16;
         EntriesPopulated++;
     }
 
@@ -424,8 +424,8 @@ ZBuildScoreboardAndSelectBest(
         //  Calculate a rough score for this entry.
         //
 
-        ScoreForThisEntry = Index * (Z_MAX_RECENT_DIRS / 4);
-        ScoreForThisEntry += FoundRecentDir->HitCount * (Z_MAX_RECENT_DIRS / 4);
+        ScoreForThisEntry = Index * (Z_MAX_RECENT_DIRS / 8);
+        ScoreForThisEntry += FoundRecentDir->HitCount * (Z_MAX_RECENT_DIRS / 8);
 
         //
         //  Determine if it's a match and we should add it.
