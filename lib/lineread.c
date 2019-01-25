@@ -427,7 +427,7 @@ YoriLibReadLineToStringEx(
         //
 
         CumulativeDelay = 0;
-        DelayTime = 10;
+        DelayTime = 1;
         TerminateProcessing = FALSE;
         while(TRUE) {
             DWORD BytesAvailable;
