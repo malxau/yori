@@ -707,7 +707,7 @@ YoriLibCabFdiFileSeek(
  @return Zero to indicate success.  This is speculation since I haven't found
          this documented, but it appears to work.
  */
-INT DIAMONDAPI
+DWORD DIAMONDAPI
 YoriLibCabFciFileDelete(
     __in LPSTR FileName,
     __inout_opt PINT Err,

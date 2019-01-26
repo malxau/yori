@@ -376,13 +376,13 @@ YoriLibHexDump(
         //
 
         if (BytesPerWord == 1) {
-            YoriLibHexByteLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
+            YoriLibHexByteLine((CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         } else if (BytesPerWord == 2) {
-            YoriLibHexWordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
+            YoriLibHexWordLine((CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         } else if (BytesPerWord == 4) {
-            YoriLibHexDwordLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
+            YoriLibHexDwordLine((CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         } else if (BytesPerWord == 8) {
-            YoriLibHexDwordLongLine(&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
+            YoriLibHexDwordLongLine((CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         }
 
         //
@@ -531,13 +531,13 @@ YoriLibHexDiff(
             //
 
             if (BytesPerWord == 1) {
-                YoriLibHexByteLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
+                YoriLibHexByteLine((CONST UCHAR *)BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             } else if (BytesPerWord == 2) {
-                YoriLibHexWordLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
+                YoriLibHexWordLine((CONST UCHAR *)BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             } else if (BytesPerWord == 4) {
-                YoriLibHexDwordLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
+                YoriLibHexDwordLine((CONST UCHAR *)BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             } else if (BytesPerWord == 8) {
-                YoriLibHexDwordLongLine(BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
+                YoriLibHexDwordLongLine((CONST UCHAR *)BufferToDisplay, BytesToDisplay, HilightBits, TRUE);
             }
 
             //

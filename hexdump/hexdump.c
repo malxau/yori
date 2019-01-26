@@ -184,7 +184,7 @@ HexDumpProcessStream(
             }
         }
 
-        if (!YoriLibHexDump(&Buffer[BufferOffset], StreamOffset.QuadPart + BufferOffset, LengthToDisplay, HexDumpContext->BytesPerGroup, DisplayFlags)) {
+        if (!YoriLibHexDump((LPCSTR)&Buffer[BufferOffset], StreamOffset.QuadPart + BufferOffset, LengthToDisplay, HexDumpContext->BytesPerGroup, DisplayFlags)) {
             break;
         }
 
@@ -478,9 +478,9 @@ HexDumpDisplayDiff(
 
             if (LineDifference) {
                 if (!YoriLibHexDiff(StreamOffset.QuadPart + BufferOffset,
-                                    &Objects[0].Buffer[BufferOffset],
+                                    (LPCSTR)&Objects[0].Buffer[BufferOffset],
                                     Objects[0].DisplayLength,
-                                    &Objects[1].Buffer[BufferOffset],
+                                    (LPCSTR)&Objects[1].Buffer[BufferOffset],
                                     Objects[1].DisplayLength,
                                     HexDumpContext->BytesPerGroup,
                                     DisplayFlags)) {

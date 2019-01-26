@@ -54,22 +54,10 @@
 //  Hacks for older compilers
 //
 
-#ifdef _ULONGLONG_
-
 /**
  If the compiler has unsigned 64 bit values, use them for file size.
  */
-typedef ULONGLONG SDIR_FILESIZE;
-
-#elif !defined(_MSC_VER) || _MSC_VER >= 900
-
-/**
- If the compiler has only has signed 64 bit values, use them for file size.
- */
-typedef LONGLONG SDIR_FILESIZE;
-#else
-#error "Compiler does not have 64 bit support"
-#endif
+typedef DWORDLONG SDIR_FILESIZE;
 
 /**
  Macro to return the file size from a large integer.

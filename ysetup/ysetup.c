@@ -569,8 +569,6 @@ SetupUiDialogProc(
                         EndDialog(hDlg, TRUE);
                     }
                     return TRUE;
-                    EndDialog(hDlg, TRUE);
-                    return TRUE;
                 case IDC_CANCEL:
                     EndDialog(hDlg, FALSE);
                     return TRUE;

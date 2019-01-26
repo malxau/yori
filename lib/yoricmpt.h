@@ -1573,7 +1573,7 @@ typedef CAB_CB_FCI_FILE_DELETE *PCAB_CB_FCI_FILE_DELETE;
  A prototype for FCICreate's temporary file callback.
  */
 typedef
-DWORD DIAMONDAPI
+BOOL DIAMONDAPI
 CAB_CB_FCI_GET_TEMP_FILE(LPSTR, INT, PVOID);
 
 /**
@@ -1585,7 +1585,7 @@ typedef CAB_CB_FCI_GET_TEMP_FILE *PCAB_CB_FCI_GET_TEMP_FILE;
  A prototype for FCIAddFile's get next cabinet callback.
  */
 typedef
-DWORD DIAMONDAPI
+BOOL DIAMONDAPI
 CAB_CB_FCI_GET_NEXT_CABINET(PCAB_FCI_CONTEXT, DWORD, PVOID);
 
 /**
@@ -4237,7 +4237,7 @@ typedef struct _YORI_USER32_FUNCTIONS {
     /**
      If it's available on the current system, a pointer to RegisterClipboardFormatW.
      */
-    POPEN_CLIPBOARD pRegisterClipboardFormatW;
+    PREGISTER_CLIPBOARD_FORMATW pRegisterClipboardFormatW;
 
     /**
      If it's available on the current system, a pointer to SetClipboardData.

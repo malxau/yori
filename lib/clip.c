@@ -144,7 +144,7 @@ YoriLibBuildHtmlClipboardBuffer(
                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE),
                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + 1 + UserBytes));
 
-    Return = WideCharToMultiByte(EncodingToUse, 0, TextToCopy->StartOfString, TextToCopy->LengthInChars, pMem + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE, UserBytes, NULL, NULL);
+    Return = WideCharToMultiByte(EncodingToUse, 0, TextToCopy->StartOfString, TextToCopy->LengthInChars, (LPSTR)(pMem + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE), UserBytes, NULL, NULL);
     if (Return == 0) {
         GlobalUnlock(hMem);
         GlobalFree(hMem);

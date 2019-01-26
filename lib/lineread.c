@@ -332,7 +332,7 @@ YoriLibReadLineToStringEx(
                 }
             }
         } else {
-            PCHAR Buffer = YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->CurrentBufferOffset);
+            PUCHAR Buffer = YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->CurrentBufferOffset);
             CharsRemaining = ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset;
             for (Count = 0; Count < CharsRemaining; Count++) {
 
@@ -364,7 +364,7 @@ YoriLibReadLineToStringEx(
                                 CharsToCopy -= CharsToSkip;
                             }
                         }
-                        if (YoriLibCopyLineToUserBufferW(UserString, &Buffer[CharsToSkip], CharsToCopy)) {
+                        if (YoriLibCopyLineToUserBufferW(UserString, (LPSTR)&Buffer[CharsToSkip], CharsToCopy)) {
                             ReadContext->CurrentBufferOffset += Count;
                             ReadContext->LinesRead++;
                             *LineTerminated = TRUE;

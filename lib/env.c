@@ -235,7 +235,7 @@ YoriLibAreAnsiEnvironmentStringsValid(
                 return FALSE;
             }
 
-            MultiByteToWideChar(CP_ACP, 0, AnsiEnvStringBuffer, Index + 2, UnicodeStrings->StartOfString, Index + 2);
+            MultiByteToWideChar(CP_ACP, 0, (LPSTR)AnsiEnvStringBuffer, Index + 2, UnicodeStrings->StartOfString, Index + 2);
 
             UnicodeStrings->LengthInChars = Index + 2;
 

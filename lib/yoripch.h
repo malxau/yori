@@ -37,7 +37,7 @@
 #pragma warning(disable: 4201) // nameless struct/union
 #pragma warning(disable: 4214) // bit field type other than int
 #pragma warning(disable: 4276) // No prototype because the compiler discarded it
-#pragma warning(disable: 4514) // unreferenced inline function
+//#pragma warning(disable: 4514) // unreferenced inline function
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 #pragma warning(disable: 4996) // function (GetVersion) declared deprecated
 #endif
