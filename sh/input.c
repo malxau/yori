@@ -1342,7 +1342,19 @@ YoriShProcessKeyDown(
 
     ClearSelection = TRUE;
 
-    if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
+    //
+    //  Right Alt is AltGr, which is a form of shift key on international
+    //  keyboards.  Windows exposes this as Ctrl+Alt.
+    //
+
+    if (CtrlMask == 0 ||
+        CtrlMask == SHIFT_PRESSED ||
+        CtrlMask == (LEFT_CTRL_PRESSED | LEFT_ALT_PRESSED) ||
+        CtrlMask == (LEFT_CTRL_PRESSED | LEFT_ALT_PRESSED | SHIFT_PRESSED) ||
+        CtrlMask == (LEFT_CTRL_PRESSED | RIGHT_ALT_PRESSED) ||
+        CtrlMask == (LEFT_CTRL_PRESSED | RIGHT_ALT_PRESSED | SHIFT_PRESSED) ||
+        CtrlMask == RIGHT_ALT_PRESSED ||
+        CtrlMask == (RIGHT_ALT_PRESSED | SHIFT_PRESSED)) {
 
         if (Char == '\r') {
             if (Buffer->SearchMode) {
@@ -1486,6 +1498,12 @@ YoriShProcessKeyDown(
                 YoriLibClearSelection(&Buffer->Selection);
                 return TRUE;
             }
+        } else if (KeyCode == VK_DIVIDE) {
+            YORI_STRING KeyString;
+            YoriLibConstantString(&KeyString, _T("/"));
+            for (Count = 0; Count < InputRecord->Event.KeyEvent.wRepeatCount; Count++) {
+                YoriShAddYoriStringToInput(Buffer, &KeyString);
+            }
         }
     } else if (CtrlMask == (RIGHT_CTRL_PRESSED | ENHANCED_KEY) ||
                CtrlMask == (LEFT_CTRL_PRESSED | ENHANCED_KEY) ||
@@ -1518,9 +1536,8 @@ YoriShProcessKeyDown(
                 }
             }
         }
-    } else if (CtrlMask == LEFT_ALT_PRESSED || CtrlMask == RIGHT_ALT_PRESSED ||
-               CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY) ||
-               CtrlMask == (RIGHT_ALT_PRESSED | ENHANCED_KEY)) {
+    } else if (CtrlMask == LEFT_ALT_PRESSED ||
+               CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY)) {
         if (KeyCode >= '0' && KeyCode <= '9') {
             if (KeyCode == '0' && Buffer->NumericKeyValue == 0 && !Buffer->NumericKeyAnsiMode) {
                 Buffer->NumericKeyAnsiMode = TRUE;
