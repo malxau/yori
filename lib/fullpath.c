@@ -805,7 +805,7 @@ YoriLibGetFullPathNameReturnAllocation(
         } else {
             PreviousWasSeperator = FALSE;
         }
- 
+
         *CurrentWriteChar = *CurrentReadChar;
         CurrentWriteChar++;
     }
@@ -1377,7 +1377,8 @@ YoriLibFindNextVolume(
 {
     if (DllKernel32.pFindFirstVolumeW &&
         DllKernel32.pFindNextVolumeW &&
-        DllKernel32.pFindVolumeClose) {
+        DllKernel32.pFindVolumeClose &&
+        DllKernel32.pGetVolumePathNamesForVolumeNameW) {
 
         return DllKernel32.pFindNextVolumeW(FindHandle, VolumeName, BufferLength);
     } else {
@@ -1431,7 +1432,8 @@ YoriLibFindVolumeClose(
 {
     if (DllKernel32.pFindFirstVolumeW &&
         DllKernel32.pFindNextVolumeW &&
-        DllKernel32.pFindVolumeClose) {
+        DllKernel32.pFindVolumeClose &&
+        DllKernel32.pGetVolumePathNamesForVolumeNameW) {
 
         return DllKernel32.pFindVolumeClose(FindHandle);
     } else {
@@ -1462,9 +1464,18 @@ YoriLibFindFirstVolume(
     __in DWORD BufferLength
     )
 {
+
+    //
+    //  Windows 2000 supports mount points but doesn't provide the API
+    //  needed to find a human name for them, so we treat it like NT4
+    //  and only look for drive letter paths.  Not including mount points
+    //  seems like a lesser evil than giving the user volume GUIDs.
+    //
+
     if (DllKernel32.pFindFirstVolumeW &&
         DllKernel32.pFindNextVolumeW &&
-        DllKernel32.pFindVolumeClose) {
+        DllKernel32.pFindVolumeClose &&
+        DllKernel32.pGetVolumePathNamesForVolumeNameW) {
 
         return DllKernel32.pFindFirstVolumeW(VolumeName, BufferLength);
     } else {

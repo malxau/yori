@@ -332,6 +332,13 @@ ENTRYPOINT(
         }
     }
 
+    //
+    //  Just return errors.  Don't display a dialog to indicate no disk is in
+    //  a drive.
+    //
+
+    SetErrorMode(SEM_FAILCRITICALERRORS | SEM_NOOPENFILEERRORBOX);
+
     if (StartArg != 0) {
         for (i = StartArg; i < ArgC; i++) {
             if (!DfReportSingleVolume(ArgV[i].StartOfString, &DfContext)) {

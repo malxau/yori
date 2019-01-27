@@ -118,7 +118,7 @@ TailProcessStream(
     )
 {
     PVOID LineContext = NULL;
-    LONGLONG StartLine;
+    LONGLONG StartLine = 0;
     LONGLONG CurrentLine;
     PYORI_STRING LineString;
     BOOL LineTerminated;
