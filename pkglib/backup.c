@@ -455,18 +455,192 @@ YoriPkgCommitAndFreeBackupPackageList(
 }
 
 /**
+ Add a currently installed file into the installed files hash table.
+
+ @param PendingPackages Pointer to the set of packages to install that is
+        being populated with information about currently installed files.
+
+ @param RelativeFileName Pointer to the file to insert into the hash table.
+        Note this function will allocate space and copy the file name into it,
+        so the buffer is available for the caller to reuse after this function
+        returns.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgAddExistingFileToPendingPackages(
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
+    __in PYORI_STRING RelativeFileName
+    )
+{
+    PYORIPKG_EXISTING_FILE ExistingFile;
+
+    ExistingFile = YoriLibReferencedMalloc(sizeof(YORIPKG_EXISTING_FILE) + (RelativeFileName->LengthInChars + 1) * sizeof(TCHAR));
+    if (ExistingFile == NULL) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&ExistingFile->RelativeFileName);
+    ExistingFile->RelativeFileName.MemoryToFree = ExistingFile;
+    ExistingFile->RelativeFileName.StartOfString = (LPTSTR)(ExistingFile + 1);
+    ExistingFile->RelativeFileName.LengthInChars = RelativeFileName->LengthInChars;
+    memcpy(ExistingFile->RelativeFileName.StartOfString, RelativeFileName->StartOfString, RelativeFileName->LengthInChars * sizeof(TCHAR));
+    ExistingFile->RelativeFileName.StartOfString[ExistingFile->RelativeFileName.LengthInChars] = '\0';
+    ExistingFile->RelativeFileName.LengthAllocated = RelativeFileName->LengthInChars + 1;
+
+    YoriLibHashInsertByKey(PendingPackages->ExistingFilesTable, &ExistingFile->RelativeFileName, ExistingFile, &ExistingFile->HashEntry);
+    return TRUE;
+}
+
+/**
+ Free the contents of the currently installed files hash table.
+
+ @param PendingPackages Pointer to the set of packages to install that has
+        been populated with currently installed file information.
+ */
+VOID
+YoriPkgFreeExistingFiles(
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
+    )
+{
+    DWORD BucketIndex;
+    PYORI_HASH_BUCKET Bucket;
+    PYORIPKG_EXISTING_FILE ExistingFile;
+
+    for (BucketIndex = 0; BucketIndex < PendingPackages->ExistingFilesTable->NumberBuckets; BucketIndex++) {
+        Bucket = &PendingPackages->ExistingFilesTable->Buckets[BucketIndex];
+        while (!YoriLibIsListEmpty(&Bucket->ListHead)) {
+            ExistingFile = CONTAINING_RECORD(Bucket->ListHead.Next, YORIPKG_EXISTING_FILE, HashEntry.ListEntry);
+            YoriLibHashRemoveByEntry(&ExistingFile->HashEntry);
+            YoriLibDereference(ExistingFile);
+        }
+    }
+}
+
+/**
+ Check if a file that is being installed already exists on the system.
+
+ @param PendingPackages Pointer to a set of packages to install that has been
+        populated with currently installed file information.
+
+ @param FileName Pointer to a relative file name to check for.
+
+ @return TRUE if the file is already installed by some package, FALSE if it is
+         not.
+ */
+BOOL
+YoriPkgCheckIfFileAlreadyExists(
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
+    __in PYORI_STRING FileName
+    )
+{
+    if (YoriLibHashLookupByKey(PendingPackages->ExistingFilesTable, FileName) != NULL) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+
+/**
+ Scan through all installed packages, and within each, all installed files,
+ and populate the hash table with files that are installed by any package.
+ Note that in the normal installation flow, any package being upgraded or
+ replaced has already been moved aside by this point, so the only files that
+ appear to be installed are those from packages which will remain after this
+ installation operation is complete.
+
+ @param PkgIniFile Pointer to the system global INI file.
+
+ @param PendingPackages Pointer to the packages to install which will be
+        populated with currently installed file information.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgAddExistingFilesToPendingPackages(
+    __in PYORI_STRING PkgIniFile,
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
+    )
+{
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+    YORI_STRING IniValue;
+    DWORD LineLength;
+    DWORD FileCount;
+    DWORD FileIndex;
+    TCHAR FileIndexString[16];
+
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&InstalledSection);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile->StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        LineLength = _tcslen(ThisLine);
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+        } else {
+            PkgNameOnly.LengthInChars = LineLength;
+        }
+        ThisLine += LineLength;
+        ThisLine++;
+        PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
+
+        FileCount = GetPrivateProfileInt(PkgNameOnly.StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
+
+        for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
+            YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
+
+            IniValue.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
+            if (!YoriPkgAddExistingFileToPendingPackages(PendingPackages, &IniValue)) {
+                YoriLibFreeStringContents(&InstalledSection);
+                YoriLibFreeStringContents(&IniValue);
+                return FALSE;
+            }
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y: %y\n"), &PkgNameOnly, &IniValue);
+        }
+    }
+
+    YoriLibFreeStringContents(&InstalledSection);
+    YoriLibFreeStringContents(&IniValue);
+
+    return TRUE;
+}
+
+
+/**
  Initialize a list of pending packages, including the list of packages to
  install and the list of packages that have been packed up.
 
  @param PendingPackages Pointer to the pending package list to initialize.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
  */
-VOID
+BOOL
 YoriPkgInitializePendingPackages(
     __out PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
     )
 {
     YoriLibInitializeListHead(&PendingPackages->PackageList);
     YoriLibInitializeListHead(&PendingPackages->BackupPackages);
+    PendingPackages->ExistingFilesTable = YoriLibAllocateHashTable(253);
+    if (PendingPackages->ExistingFilesTable == NULL) {
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /**
@@ -527,6 +701,12 @@ YoriPkgDeletePendingPackages(
 
         YoriLibRemoveListItem(&PendingPackage->PackageList);
         YoriPkgDeletePendingPackage(PendingPackage);
+    }
+
+    if (PendingPackages->ExistingFilesTable != NULL) {
+        YoriPkgFreeExistingFiles(PendingPackages);
+        YoriLibFreeEmptyHashTable(PendingPackages->ExistingFilesTable);
+        PendingPackages->ExistingFilesTable = NULL;
     }
 }
 

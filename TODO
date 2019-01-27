@@ -2,7 +2,6 @@ v1.0:
  - Hexdump -r
  - Make selection use RTF
  - General MSFIX review
- - Pkglib check for duplicate files
  - Tool for creating VHDs
  - Split sdir brief recurse into standalone du
  - 32 bit setver on HyperV server

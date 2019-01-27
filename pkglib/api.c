@@ -52,18 +52,23 @@ YoriPkgUpgradeInstalledPackages(
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&UpgradePath, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&InstalledSection);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
@@ -152,19 +157,24 @@ YoriPkgUpgradeSinglePackage(
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
 
     IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
     if (IniValue.LengthInChars == 0) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
@@ -174,6 +184,7 @@ YoriPkgUpgradeSinglePackage(
     IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
 
     if (IniValue.LengthInChars == 0) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify an upgrade path\n"), PackageName);
@@ -228,9 +239,12 @@ YoriPkgInstallSinglePackage(
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return FALSE;
     }
 
@@ -276,18 +290,23 @@ YoriPkgInstallSourceForInstalledPackages(
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&SourcePath, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&InstalledSection);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
@@ -369,19 +388,24 @@ YoriPkgInstallSourceForSinglePackage(
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
 
     IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
     if (IniValue.LengthInChars == 0) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
@@ -391,6 +415,7 @@ YoriPkgInstallSourceForSinglePackage(
     IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SourcePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
 
     if (IniValue.LengthInChars == 0) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify a source path\n"), PackageName);
@@ -440,18 +465,23 @@ YoriPkgInstallSymbolsForInstalledPackages(
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&SymbolPath, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&InstalledSection);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
@@ -535,19 +565,24 @@ YoriPkgInstallSymbolForSinglePackage(
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return FALSE;
     }
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
 
     IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
     if (IniValue.LengthInChars == 0) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y is not installed\n"), PackageName);
@@ -557,6 +592,7 @@ YoriPkgInstallSymbolForSinglePackage(
     IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
 
     if (IniValue.LengthInChars == 0) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&IniValue);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y does not specify a source path\n"), PackageName);

@@ -845,13 +845,17 @@ YoriPkgInstallRemotePackages(
     YORI_STRING IniValue;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
-    YoriPkgInitializePendingPackages(&PendingPackages);
+    if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
+        return FALSE;
+    }
 
     if (!YoriPkgGetPackageIniFile(NewDirectory, &IniFile)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         return 0;
     }
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&IniFile);
         return 0;
     }

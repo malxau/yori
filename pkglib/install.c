@@ -197,6 +197,12 @@ YoriPkgDeletePackage(
 typedef struct _YORIPKG_INSTALL_PKG_CONTEXT {
 
     /**
+     Pointer to the set of operations to perform and assorted state with
+     the top level request.
+     */
+    PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+
+    /**
      Path to the INI file recording package installation.
      */
     PYORI_STRING IniFileName;
@@ -216,6 +222,11 @@ typedef struct _YORIPKG_INSTALL_PKG_CONTEXT {
      If TRUE, files extracted from this package should be compressed.
      */
     BOOL CompressFiles;
+
+    /**
+     If TRUE, installation is aborted due to a file conflict.
+     */
+    BOOL ConflictingFileFound;
 
     /**
      Context for background compression threads.
@@ -247,6 +258,16 @@ YoriPkgInstallPackageFileCallback(
     TCHAR FileIndexString[16];
 
     UNREFERENCED_PARAMETER(FullPath);
+
+    if (InstallContext->ConflictingFileFound) {
+        return FALSE;
+    }
+
+    if (YoriPkgCheckIfFileAlreadyExists(InstallContext->PendingPackages, RelativePath)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Install of package %y conflicts with installed file %y\n"), InstallContext->PackageName, RelativePath);
+        InstallContext->ConflictingFileFound = TRUE;
+        return FALSE;
+    }
 
     InstallContext->NumberFiles++;
     YoriLibSPrintf(FileIndexString, _T("File%i"), InstallContext->NumberFiles);
@@ -291,6 +312,9 @@ YoriPkgCompressPackageFileCallback(
 /**
  Install a package into the system.
 
+ @param PendingPackages Pointer to a list of packages to install, and packages
+        backed up in preparation for these installations.
+
  @param Package Information about a package to install.
 
  @param TargetDirectory Pointer to a string specifying the directory to
@@ -301,6 +325,7 @@ YoriPkgCompressPackageFileCallback(
  */
 BOOL
 YoriPkgInstallPackage(
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
     __in PYORIPKG_PACKAGE_PENDING_INSTALL Package,
     __in_opt PYORI_STRING TargetDirectory
     )
@@ -345,7 +370,10 @@ YoriPkgInstallPackage(
 
         //
         //  Check if a different version of the package being installed
-        //  is already present.  If it is, we need to delete it.
+        //  is already present.  If it is, installation at this point fails.
+        //  Typically a higher level process will backup anything that an
+        //  installation intends to supersede, so by this point it would
+        //  not appear installed.
         //
 
         if (!YoriLibAllocateString(&PkgToDelete, YORIPKG_MAX_FIELD_LENGTH)) {
@@ -400,14 +428,22 @@ YoriPkgInstallPackage(
     //  location
     //
 
+    InstallContext.PendingPackages = PendingPackages;
     InstallContext.IniFileName = &PkgIniFile;
     InstallContext.PackageName = &Package->PackageName;
     InstallContext.NumberFiles = 0;
+    InstallContext.ConflictingFileFound = FALSE;
     YoriLibInitEmptyString(&ErrorString);
     if (!YoriLibExtractCab(&Package->LocalPackagePath, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YoriPkgInstallPackageFileCallback, YoriPkgCompressPackageFileCallback, &InstallContext, &ErrorString)) {
         WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), &Package->LocalPackagePath, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
+        goto Exit;
+    }
+
+    if (InstallContext.ConflictingFileFound) {
+        WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Install aborted due to file conflict\n"));
         goto Exit;
     }
 
@@ -555,6 +591,13 @@ YoriPkgInstallPendingPackages(
     BOOL Result;
 
     //
+    //  Load into memory all files owned by packages that are installed
+    //  prior to this installation and are not replaced by it
+    //
+
+    YoriPkgAddExistingFilesToPendingPackages(PkgIniFile, PendingPackages);
+
+    //
     //  Count the number of packages to install
     //
 
@@ -579,7 +622,7 @@ YoriPkgInstallPendingPackages(
         PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
         ListEntry = YoriLibGetNextListEntry(&PendingPackages->PackageList, ListEntry);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Installing %y version %y (%i/%i)...\n"), &PendingPackage->PackageName, &PendingPackage->Version, CurrentIndex, TotalCount);
-        if (!YoriPkgInstallPackage(PendingPackage, TargetDirectory)) {
+        if (!YoriPkgInstallPackage(PendingPackages, PendingPackage, TargetDirectory)) {
             Result = FALSE;
             break;
         }

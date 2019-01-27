@@ -119,6 +119,24 @@ typedef struct _YORIPKG_BACKUP_PACKAGE {
 } YORIPKG_BACKUP_PACKAGE, *PYORIPKG_BACKUP_PACKAGE;
 
 /**
+ A structure describing a currently installed file.  This allocation is
+ followed by a variable length buffer containing the relative file name.
+ */
+typedef struct _YORIPKG_EXISTING_FILE {
+
+    /**
+     The linkage for this file within the hash table of installed files.
+     */
+    YORI_HASH_ENTRY HashEntry;
+
+    /**
+     The relative name for the file.  This string contains a reference on
+     the parent structure.
+     */
+    YORI_STRING RelativeFileName;
+} YORIPKG_EXISTING_FILE, *PYORIPKG_EXISTING_FILE;
+
+/**
  A list of packages awaiting installation.  These have been downloaded and
  parsed, and any existing packages that conflict with the new packages have
  been packed up.
@@ -136,6 +154,13 @@ typedef struct _YORIPKG_PACKAGES_PENDING_INSTALL {
      @ref YORIPKG_BACKUP_PACKAGE::PackageList .
      */
     YORI_LIST_ENTRY BackupPackages;
+
+    /**
+     A hash table containing files that are currently installed by other
+     packages that are not being upgraded or replaced by this installation
+     operation.
+     */
+    PYORI_HASH_TABLE ExistingFilesTable;
 
 } YORIPKG_PACKAGES_PENDING_INSTALL, *PYORIPKG_PACKAGES_PENDING_INSTALL;
 
@@ -252,12 +277,6 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     );
 
 BOOL
-YoriPkgInstallPackage(
-    __in PYORIPKG_PACKAGE_PENDING_INSTALL Package,
-    __in_opt PYORI_STRING TargetDirectory
-    );
-
-BOOL
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,
@@ -302,7 +321,7 @@ YoriPkgCommitAndFreeBackupPackageList(
     __in PYORI_LIST_ENTRY ListHead
     );
 
-VOID
+BOOL
 YoriPkgInitializePendingPackages(
     __out PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
     );
@@ -323,6 +342,18 @@ YoriPkgPreparePackageForInstall(
     __in_opt PYORI_STRING TargetDirectory,
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
     __in PYORI_STRING PackageUrl
+    );
+
+BOOL
+YoriPkgAddExistingFilesToPendingPackages(
+    __in PYORI_STRING PkgIniFile,
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
+    );
+
+BOOL
+YoriPkgCheckIfFileAlreadyExists(
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
+    __in PYORI_STRING FileName
     );
 
 BOOL
