@@ -4,6 +4,7 @@ v1.0:
  - General MSFIX review
  - Tool for creating VHDs
  - Add features to du and remove sdir support for it
+ - Fix volume root handling in du
  - 32 bit setver on HyperV server
  - Share sdir metadata color logic
 

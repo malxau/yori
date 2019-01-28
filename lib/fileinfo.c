@@ -1477,13 +1477,11 @@ YoriLibCollectStreamCount (
     if (DllKernel32.pFindFirstStreamW != NULL && DllKernel32.pFindNextStreamW != NULL) {
         hFind = DllKernel32.pFindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
         if (hFind != INVALID_HANDLE_VALUE) {
-
             do {
                 Entry->StreamCount++;
             } while (DllKernel32.pFindNextStreamW(hFind, &FindStreamData));
+            FindClose(hFind);
         }
-
-        FindClose(hFind);
     }
 
     return TRUE;

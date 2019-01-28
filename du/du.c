@@ -35,12 +35,19 @@ CHAR strDuHelpText[] =
         "\n"
         "Display disk space used within directories.\n"
         "\n"
-        "DU [-license] [-b] [-color] [-r <num>] [-s <size>] [<spec>...]\n"
+        "DU [-license] [-a] [-b] [-c] [-color] [-d] [-h] [-r <num>] [-s <size>]\n"
+        "   [-w] [<spec>...]\n"
         "\n"
+        "   -a             Enable all features for maximum accuracy\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -c             Display compressed file size\n"
         "   -color         Use file color highlighting\n"
+        "   -d             Include space used by alternate data streams\n"
+        "   -h             Average space used across multiple hard links\n"
         "   -r <num>       The maximum recursion depth to display\n"
-        "   -s <size>      Only display directories containing at least size bytes\n";
+        "   -s <size>      Only display directories containing at least size bytes\n"
+        "   -u             Round space up to file allocation unit or cluster size\n"
+        "   -w             Count files backed by a WIM archive as zero size\n";
 
 /**
  Display usage text to the user.
@@ -106,6 +113,13 @@ typedef struct _DU_DIRECTORY_STACK {
      their enumerations.
      */
     LONGLONG SpaceConsumedInChildren;
+
+    /**
+     The number of bytes in each file system allocation unit for this
+     directory.  This is only meaningful if AllocationSize reporting is
+     enabled.
+     */
+    DWORD AllocationSize;
 } DU_DIRECTORY_STACK, *PDU_DIRECTORY_STACK;
 
 /**
@@ -140,6 +154,32 @@ typedef struct _DU_CONTEXT {
      only at a particular depth.
      */
     DWORD MaximumDepthToDisplay;
+
+    /**
+     Round file size up to allocation unit
+     */
+    BOOL AllocationSize;
+
+    /**
+     Display compressed file size, as opposed to logical file size.
+     */
+    BOOL CompressedFileSize;
+
+    /**
+     Average size across multiple hard links.
+     */
+    BOOL AverageHardLinkSize;
+
+    /**
+     Count space used by alternate data streams on the file.
+     */
+    BOOL IncludeNamedStreams;
+
+    /**
+     Count WIM backed files as zero size, because the space is accounted for
+     as the WIM file itself.
+     */
+    BOOL WimBackedFilesAsZero;
 
     /**
      The minimum directory size to display.
@@ -301,6 +341,199 @@ DuReportAndCloseAllActiveStacks(
     return TRUE;
 }
 
+/**
+ Initialize a single directory stack location.
+
+ @param DuContext Pointer to the DU context specifying the options to apply.
+
+ @param DirStack Pointer to the directory stack location to initialize.
+
+ @param DirName Pointer to the directory name to initialize in the stack.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+DuInitializeDirectoryStack(
+    __in PDU_CONTEXT DuContext,
+    __in PDU_DIRECTORY_STACK DirStack,
+    __in PYORI_STRING DirName
+    )
+{
+    DWORD SectorsPerCluster;
+    DWORD BytesPerSector;
+    DWORD NumberOfFreeClusters;
+    DWORD TotalNumberOfClusters;
+
+    if (DirStack->DirectoryName.LengthAllocated <= DirName->LengthInChars) {
+        YoriLibFreeStringContents(&DirStack->DirectoryName);
+        if (!YoriLibAllocateString(&DirStack->DirectoryName, DirName->LengthInChars + 80)) {
+            return FALSE;
+        }
+    }
+
+    memcpy(DirStack->DirectoryName.StartOfString, DirName->StartOfString, DirName->LengthInChars * sizeof(TCHAR));
+    DirStack->DirectoryName.StartOfString[DirName->LengthInChars] = '\0';
+    DirStack->DirectoryName.LengthInChars = DirName->LengthInChars;
+
+    //
+    //  If GetDiskFreeSpace fails, assume a 4Kb cluster size.
+    //
+
+    if (DuContext->AllocationSize) {
+        if (!GetDiskFreeSpace(DirStack->DirectoryName.StartOfString, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters)) {
+            DirStack->AllocationSize = 4096;
+        } else {
+            DirStack->AllocationSize = SectorsPerCluster * BytesPerSector;
+        }
+    }
+
+    return TRUE;
+}
+
+/**
+ Count the amount of disk space to attribute to a file given the user selected
+ options.
+
+ @param DuContext Context specifying the accounting options to apply.
+
+ @param DirStack Pointer to the directory stack indicating the allocation size
+        used for the directory.
+
+ @param FilePath Pointer to a fully specified path to the file.
+
+ @param FileInfo Pointer to the block of data returned from directory
+        enumerate.
+
+ @return The number of bytes attributable to the file.
+ */
+LARGE_INTEGER
+DuCalculateSpaceUsedByFile(
+    __in PDU_CONTEXT DuContext,
+    __in PDU_DIRECTORY_STACK DirStack,
+    __in PYORI_STRING FilePath,
+    __in PWIN32_FIND_DATA FileInfo
+    )
+{
+    LARGE_INTEGER FileSize;
+    HANDLE FileHandle = INVALID_HANDLE_VALUE;
+    BOOL ForceSizeZero = FALSE;
+
+    FileSize.QuadPart = 0;
+
+    if (DuContext->AverageHardLinkSize || DuContext->WimBackedFilesAsZero) {
+
+        FileHandle = CreateFile(FilePath->StartOfString,
+                                FILE_READ_ATTRIBUTES|SYNCHRONIZE,
+                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_OPEN_NO_RECALL | FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL);
+    }
+
+    //
+    //  If the file is WIM backed and the user requested it, count the default
+    //  stream size as zero.
+    //
+
+    if (DuContext->WimBackedFilesAsZero) {
+        struct {
+            WOF_EXTERNAL_INFO WofHeader;
+            union {
+                WIM_PROVIDER_EXTERNAL_INFO WimInfo;
+                FILE_PROVIDER_EXTERNAL_INFO FileInfo;
+            } u;
+        } WofInfo;
+        DWORD BytesReturned;
+
+        if (DeviceIoControl(FileHandle, FSCTL_GET_EXTERNAL_BACKING, NULL, 0, &WofInfo, sizeof(WofInfo), &BytesReturned, NULL)) {
+            if (WofInfo.WofHeader.Provider == WOF_PROVIDER_WIM) {
+                FileSize.QuadPart = 0;
+                ForceSizeZero = TRUE;
+            }
+        }
+    }
+
+    //
+    //  If the default stream size wasn't forced to zero above, calculate it
+    //  now as either the compressed or uncompressed file size.
+    //
+
+    if (!ForceSizeZero) {
+        if (DuContext->CompressedFileSize &&
+            DllKernel32.pGetCompressedFileSizeW) {
+    
+            FileSize.LowPart = DllKernel32.pGetCompressedFileSizeW(FilePath->StartOfString, (PDWORD)&FileSize.HighPart);
+    
+            if (FileSize.LowPart == INVALID_FILE_SIZE && GetLastError() != NO_ERROR) {
+                FileSize.LowPart = FileInfo->nFileSizeLow;
+                FileSize.HighPart = FileInfo->nFileSizeHigh;
+            }
+        } else {
+            FileSize.LowPart = FileInfo->nFileSizeLow;
+            FileSize.HighPart = FileInfo->nFileSizeHigh;
+        }
+    }
+
+    //
+    //  Round up to allocation size if requested.
+    //
+
+    if (DuContext->AllocationSize) {
+        FileSize.QuadPart = (FileSize.QuadPart + DirStack->AllocationSize - 1) & (~(DirStack->AllocationSize - 1));
+    }
+
+    //
+    //  Add in any space used by alternate streams.  Note in particular that
+    //  WIM backed files will only have their default stream WIM backed, so
+    //  these are added in even in the ForceSizeZero case.
+    //
+
+    if (DuContext->IncludeNamedStreams &&
+        DllKernel32.pFindFirstStreamW &&
+        DllKernel32.pFindNextStreamW) {
+
+        HANDLE hFind;
+        WIN32_FIND_STREAM_DATA FindStreamData;
+
+        hFind = DllKernel32.pFindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
+        if (hFind != INVALID_HANDLE_VALUE) {
+            do {
+                if (_tcscmp(FindStreamData.cStreamName, L"::$DATA") != 0) {
+                    FileSize.QuadPart += FindStreamData.StreamSize.QuadPart;
+                    if (DuContext->AllocationSize) {
+                        FileSize.QuadPart = (FileSize.QuadPart + DirStack->AllocationSize - 1) & (~(DirStack->AllocationSize - 1));
+                    }
+                }
+            } while (DllKernel32.pFindNextStreamW(hFind, &FindStreamData));
+            FindClose(hFind);
+        }
+    }
+
+    //
+    //  If the file has a size and hardlink averaging is reuqested, divide the
+    //  size found by the number of hard links.
+    //
+
+    if (DuContext->AverageHardLinkSize && FileHandle != INVALID_HANDLE_VALUE && FileSize.QuadPart != 0) {
+        BY_HANDLE_FILE_INFORMATION HandleFileInfo;
+
+        if (GetFileInformationByHandle(FileHandle, &HandleFileInfo)) {
+            if (HandleFileInfo.nNumberOfLinks > 1) {
+                FileSize.QuadPart = FileSize.QuadPart / HandleFileInfo.nNumberOfLinks;
+            }
+        }
+    }
+
+    if (FileHandle != INVALID_HANDLE_VALUE) {
+        CloseHandle(FileHandle);
+    }
+
+
+    return FileSize;
+}
+
+
 
 /**
  A callback that is invoked when a file is found that matches a search criteria
@@ -331,7 +564,7 @@ DuFileFoundCallback(
 
     if (Depth >= DuContext->StackAllocated) {
         PDU_DIRECTORY_STACK NewStack;
-        NewStack = YoriLibMalloc((Depth + 1) * sizeof(DU_DIRECTORY_STACK));
+        NewStack = YoriLibMalloc((Depth + 8) * sizeof(DU_DIRECTORY_STACK));
         if (NewStack == NULL) {
             return FALSE;
         }
@@ -341,7 +574,7 @@ DuFileFoundCallback(
             YoriLibFree(DuContext->DirStack);
         }
 
-        for (Index = DuContext->StackAllocated; Index <= Depth; Index++) {
+        for (Index = DuContext->StackAllocated; Index < Depth + 8; Index++) {
             YoriLibInitEmptyString(&NewStack[Index].DirectoryName);
             NewStack[Index].ObjectsFoundThisDirectory = 0;
             NewStack[Index].SpaceConsumedThisDirectory = 0;
@@ -349,7 +582,7 @@ DuFileFoundCallback(
         }
 
         DuContext->DirStack = NewStack;
-        DuContext->StackAllocated = Depth + 1;
+        DuContext->StackAllocated = Depth + 8;
     }
 
     //
@@ -397,15 +630,9 @@ DuFileFoundCallback(
                 ASSERT(YoriLibCompareString(&DuContext->DirStack[Index].DirectoryName, &ThisDirName) == 0);
                 break;
             }
-            if (DuContext->DirStack[Index].DirectoryName.LengthAllocated <= ThisDirName.LengthInChars) {
-                YoriLibFreeStringContents(&DuContext->DirStack[Index].DirectoryName);
-                if (!YoriLibAllocateString(&DuContext->DirStack[Index].DirectoryName, ThisDirName.LengthInChars + 1)) {
-                    return FALSE;
-                }
+            if (!DuInitializeDirectoryStack(DuContext, &DuContext->DirStack[Index], &ThisDirName)) {
+                return FALSE;
             }
-            memcpy(DuContext->DirStack[Index].DirectoryName.StartOfString, ThisDirName.StartOfString, ThisDirName.LengthInChars * sizeof(TCHAR));
-            DuContext->DirStack[Index].DirectoryName.StartOfString[ThisDirName.LengthInChars] = '\0';
-            DuContext->DirStack[Index].DirectoryName.LengthInChars = ThisDirName.LengthInChars;
             ASSERT(DuContext->DirStack[Index].ObjectsFoundThisDirectory == 0);
             ASSERT(DuContext->DirStack[Index].SpaceConsumedThisDirectory == 0);
             ASSERT(DuContext->DirStack[Index].SpaceConsumedInChildren == 0);
@@ -424,8 +651,7 @@ DuFileFoundCallback(
 
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
         LARGE_INTEGER FileSize;
-        FileSize.LowPart = FileInfo->nFileSizeLow;
-        FileSize.HighPart = FileInfo->nFileSizeHigh;
+        FileSize = DuCalculateSpaceUsedByFile(DuContext, &DuContext->DirStack[Depth], FilePath, FileInfo);
         //YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("   adding %lli bytes for %y to %y Depth %i\n"), FileSize.QuadPart, FilePath, &DuContext->DirStack[Depth].DirectoryName, Depth);
         DuContext->DirStack[Depth].SpaceConsumedThisDirectory += FileSize.QuadPart;
     }
@@ -485,11 +711,27 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+                DuContext.CompressedFileSize = TRUE;
+                DuContext.IncludeNamedStreams = TRUE;
+                DuContext.AverageHardLinkSize = TRUE;
+                DuContext.AllocationSize = TRUE;
+                DuContext.WimBackedFilesAsZero = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                DuContext.CompressedFileSize = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                DuContext.IncludeNamedStreams = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("color")) == 0) {
                 DisplayColor = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+                DuContext.AverageHardLinkSize = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 if (i + 1 < ArgC) {
@@ -508,6 +750,12 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+                DuContext.AllocationSize = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+                DuContext.WimBackedFilesAsZero = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
