@@ -96,6 +96,65 @@ YoriLibIsDriveLetterWithColonAndSlash(
     return FALSE;
 }
 
+/**
+ Return TRUE if the path contains the \\?\ prefix or equivalent.
+
+ @param Path Pointer to the string to check.
+
+ @return TRUE if the string starts with a prefix, FALSE otherwise.
+ */
+BOOL
+YoriLibIsPathPrefixed(
+    __in PYORI_STRING Path
+    )
+{
+    if (Path->LengthInChars < 4) {
+        return FALSE;
+    }
+
+    if (Path->StartOfString[0] != '\\' ||
+        Path->StartOfString[1] != '\\' ||
+        (Path->StartOfString[2] != '?'  && Path->StartOfString[2] != '.') ||
+        Path->StartOfString[3] != '\\') {
+
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/**
+ Return TRUE if the path consists of a prefix, drive letter, colon, and path
+ seperator, potentially followed by other characters.
+
+ @param Path Pointer to the string to check.
+
+ @return TRUE if the string starts with a prefix, drive letter, colon, and
+         seperator; FALSE otherwise.
+ */
+BOOL
+YoriLibIsPrefixedDriveLetterWithColonAndSlash(
+    __in PYORI_STRING Path
+    )
+{
+    if (Path->LengthInChars < 7) {
+        return FALSE;
+    }
+
+    if (!YoriLibIsPathPrefixed(Path)) {
+        return FALSE;
+    }
+
+    if (((Path->StartOfString[4] >= 'A' && Path->StartOfString[4] <= 'Z') ||
+         (Path->StartOfString[4] >= 'a' && Path->StartOfString[4] <= 'z')) &&
+        Path->StartOfString[5] == ':' &&
+        Path->StartOfString[6] == '\\') {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 
 /**
  Return TRUE if the path is a UNC path.  This function assumes that the

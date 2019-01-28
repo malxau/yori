@@ -336,6 +336,23 @@ YoriLibForEachFileEnum(
                 ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%y"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec);
             }
             hFind = FindFirstFile(ForEachContext->FullPath.StartOfString, &ForEachContext->FileInfo);
+
+            //
+            //  If we can't enumerate it because it's a volume root, cook up
+            //  the data by hand and set hFind to NULL to indicate that the
+            //  enumeration sort of worked.
+            //
+
+            if (hFind == INVALID_HANDLE_VALUE) {
+                if ((ForEachContext->FullPath.LengthInChars == 3 && YoriLibIsDriveLetterWithColonAndSlash(&ForEachContext->FullPath)) ||
+                    (ForEachContext->FullPath.LengthInChars == 7 && YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ForEachContext->FullPath))) {
+
+                    YoriLibUpdateFindDataFromFileInformation(&ForEachContext->FileInfo, ForEachContext->FullPath.StartOfString, FALSE);
+                    ForEachContext->FileInfo.cFileName[0] = '\0';
+                    ForEachContext->FileInfo.cAlternateFileName[0] = '\0';
+                    hFind = NULL;
+                }
+            }
         }
 
         if (hFind != INVALID_HANDLE_VALUE) {
@@ -473,11 +490,13 @@ YoriLibForEachFileEnum(
                     }
                 }
 
-            } while (FindNextFile(hFind, &ForEachContext->FileInfo));
+            } while (hFind != INVALID_HANDLE_VALUE && hFind != NULL && FindNextFile(hFind, &ForEachContext->FileInfo));
 
             YoriLibFreeStringContents(&ForEachContext->RecurseCriteria);
 
-            FindClose(hFind);
+            if (hFind != NULL && hFind != INVALID_HANDLE_VALUE) {
+                FindClose(hFind);
+            }
 
             if (Result == FALSE) {
                 break;

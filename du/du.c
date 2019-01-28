@@ -119,7 +119,7 @@ typedef struct _DU_DIRECTORY_STACK {
      directory.  This is only meaningful if AllocationSize reporting is
      enabled.
      */
-    DWORD AllocationSize;
+    LONGLONG AllocationSize;
 } DU_DIRECTORY_STACK, *PDU_DIRECTORY_STACK;
 
 /**
@@ -626,8 +626,23 @@ DuFileFoundCallback(
         Index = Depth;
         while (TRUE) {
             if (DuContext->DirStack[Index].DirectoryName.LengthInChars > 0) {
+
                 ASSERT(Index == DuContext->StackIndex);
-                ASSERT(YoriLibCompareString(&DuContext->DirStack[Index].DirectoryName, &ThisDirName) == 0);
+
+                //
+                //  Strings should match except when we're at the top level of
+                //  the stack and have a mangled \\? string, meaning the second
+                //  top level was \\?\x: and we've advanced beyond that by one
+                //  seperator.  This will never be displayed to the user.
+                //
+
+                ASSERT(YoriLibCompareString(&DuContext->DirStack[Index].DirectoryName, &ThisDirName) == 0 || 
+                       (Index == 0 &&
+                        DuContext->DirStack[Index].DirectoryName.LengthInChars == 3 &&
+                        DuContext->DirStack[Index].DirectoryName.StartOfString[0] == '\\' &&
+                        DuContext->DirStack[Index].DirectoryName.StartOfString[1] == '\\' &&
+                        (DuContext->DirStack[Index].DirectoryName.StartOfString[2] == '?' ||
+                         DuContext->DirStack[Index].DirectoryName.StartOfString[2] == '.')));
                 break;
             }
             if (!DuInitializeDirectoryStack(DuContext, &DuContext->DirStack[Index], &ThisDirName)) {

@@ -1799,6 +1799,11 @@ YoriLibIsDriveLetterWithColonAndSlash(
     );
 
 BOOL
+YoriLibIsPrefixedDriveLetterWithColonAndSlash(
+    __in PYORI_STRING Path
+    );
+
+BOOL
 YoriLibIsFullPathUnc(
     __in PYORI_STRING Path
     );
