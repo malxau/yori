@@ -176,6 +176,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("del"),      _T("yerase $*$")},
     {_T("df"),       _T("ydf $*$")},
     {_T("dir"),      _T("ydir $*$")},
+    {_T("du"),       _T("ydu $*$")},
     {_T("echo"),     _T("yecho $*$")},
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},

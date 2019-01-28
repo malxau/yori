@@ -109,6 +109,11 @@ YORI_CMD_BUILTIN YoriCmd_YDIR;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YDU;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YECHO;
 
 /**
@@ -484,6 +489,7 @@ YoriShBuiltins[] = {
                     {_T("YDBG"),      YoriCmd_YDBG},
                     {_T("YDF"),       YoriCmd_YDF},
                     {_T("YDIR"),      YoriCmd_YDIR},
+                    {_T("YDU"),       YoriCmd_YDU},
                     {_T("YECHO"),     YoriCmd_YECHO},
                     {_T("YERASE"),    YoriCmd_YERASE},
                     {_T("YEXPR"),     YoriCmd_YEXPR},
@@ -524,6 +530,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("del"),      _T("yerase $*$")},
     {_T("df"),       _T("ydf $*$")},
     {_T("dir"),      _T("ydir $*$")},
+    {_T("du"),       _T("ydu $*$")},
     {_T("echo"),     _T("yecho $*$")},
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},

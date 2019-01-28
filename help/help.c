@@ -77,6 +77,7 @@ CHAR strHelpHelpText1[] =
         "DATE      Outputs the system date and time in a specified format\n"
         "DF        Display disk free space\n"
         "DIR       Enumerate the contents of directories in a traditional way\n"
+        "DU        Display disk space used within a directory tree\n"
         "ECHO      Outputs text\n"
         "ENDLOCAL  Pop a previous saved environment from the stack (only valid after\n"
         "            SETLOCAL)\n"

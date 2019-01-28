@@ -57,6 +57,7 @@ DIRS=crt       \
      date      \
      df        \
      dir       \
+     du        \
      echo      \
      erase     \
      expr      \
