@@ -766,5 +766,66 @@ YoriLibDoesFileMatchExpression (
     return FALSE;
 }
 
+/**
+ Generate information typically returned from a directory enumeration by
+ opening the file and querying information from it.  This is used for named
+ streams which do not go through a regular file enumeration.
+
+ @param FindData On successful completion, populated with information 
+        typically returned by the system when enumerating files.
+
+ @param FullPath Pointer to a NULL terminate string referring to the full
+        path to the file.
+
+ @param CopyName TRUE if the full path's file name component should also be
+        copied into the find data structure.  FALSE if the caller does not
+        need this or will do it manually.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibUpdateFindDataFromFileInformation (
+    __out PWIN32_FIND_DATA FindData,
+    __in LPTSTR FullPath,
+    __in BOOL CopyName
+    )
+{
+    HANDLE hFile;
+    BY_HANDLE_FILE_INFORMATION FileInfo;
+    LPTSTR FinalSlash;
+
+    hFile = CreateFile(FullPath,
+                       FILE_READ_ATTRIBUTES,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                       NULL,
+                       OPEN_EXISTING,
+                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
+                       NULL);
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+
+        GetFileInformationByHandle(hFile, &FileInfo);
+
+        FindData->dwFileAttributes = FileInfo.dwFileAttributes;
+        FindData->ftCreationTime = FileInfo.ftCreationTime;
+        FindData->ftLastAccessTime = FileInfo.ftLastAccessTime;
+        FindData->ftLastWriteTime = FileInfo.ftLastWriteTime;
+        FindData->nFileSizeHigh = FileInfo.nFileSizeHigh;
+        FindData->nFileSizeLow  = FileInfo.nFileSizeLow;
+
+        CloseHandle(hFile);
+
+        if (CopyName) {
+            FinalSlash = _tcsrchr(FullPath, '\\');
+            if (FinalSlash) {
+                YoriLibSPrintfS(FindData->cFileName, MAX_PATH, _T("%s"), FinalSlash + 1);
+            } else {
+                YoriLibSPrintfS(FindData->cFileName, MAX_PATH, _T("%s"), FullPath);
+            }
+        }
+        return TRUE;
+    }
+    return FALSE;
+}
 
 // vim:sw=4:ts=4:et:
