@@ -636,11 +636,13 @@ DuFileFoundCallback(
             if (Depth >= Index &&
                 YoriLibCompareStringCount(FilePath, &DuContext->DirStack[Index].DirectoryName, StackDirLength) == 0 &&
                 (FilePath->LengthInChars == StackDirLength ||
-                 YoriLibIsSep(FilePath->StartOfString[StackDirLength]))) {
+                 YoriLibIsSep(FilePath->StartOfString[StackDirLength]) ||
+                 YoriLibIsSep(DuContext->DirStack[Index].DirectoryName.StartOfString[StackDirLength - 1]))) {
 
                 break;
             }
 
+            // YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Reporting because file %y (depth %i) not in directory %y (depth %i)\n"), FilePath, Depth, &DuContext->DirStack[Index].DirectoryName, Index);
             if (Index > 0) {
                 DuContext->DirStack[Index - 1].SpaceConsumedInChildren += DuContext->DirStack[Index].SpaceConsumedInChildren + DuContext->DirStack[Index].SpaceConsumedThisDirectory;
             }
@@ -660,27 +662,19 @@ DuFileFoundCallback(
         YoriLibInitEmptyString(&ThisDirName);
         ThisDirName.StartOfString = FilePath->StartOfString;
         ThisDirName.LengthInChars = (DWORD)(FilePart - FilePath->StartOfString);
+        if (ThisDirName.LengthInChars == 6) {
+            ThisDirName.LengthInChars++;
+            if (!YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ThisDirName)) {
+                ThisDirName.LengthInChars--;
+            }
+        }
 
         Index = Depth;
         while (TRUE) {
             if (DuContext->DirStack[Index].DirectoryName.LengthInChars > 0) {
 
                 ASSERT(Index == DuContext->StackIndex);
-
-                //
-                //  Strings should match except when we're at the top level of
-                //  the stack and have a mangled \\? string, meaning the second
-                //  top level was \\?\x: and we've advanced beyond that by one
-                //  seperator.  This will never be displayed to the user.
-                //
-
-                ASSERT(YoriLibCompareString(&DuContext->DirStack[Index].DirectoryName, &ThisDirName) == 0 || 
-                       (Index == 0 &&
-                        DuContext->DirStack[Index].DirectoryName.LengthInChars == 3 &&
-                        DuContext->DirStack[Index].DirectoryName.StartOfString[0] == '\\' &&
-                        DuContext->DirStack[Index].DirectoryName.StartOfString[1] == '\\' &&
-                        (DuContext->DirStack[Index].DirectoryName.StartOfString[2] == '?' ||
-                         DuContext->DirStack[Index].DirectoryName.StartOfString[2] == '.')));
+                ASSERT(YoriLibCompareString(&DuContext->DirStack[Index].DirectoryName, &ThisDirName) == 0);
                 break;
             }
             if (!DuInitializeDirectoryStack(DuContext, &DuContext->DirStack[Index], &ThisDirName)) {
@@ -696,6 +690,12 @@ DuFileFoundCallback(
             FilePart = YoriLibFindRightMostCharacter(&ThisDirName, '\\');
             ASSERT(FilePart != NULL);
             ThisDirName.LengthInChars = (DWORD)(FilePart - ThisDirName.StartOfString);
+            if (ThisDirName.LengthInChars == 6) {
+                ThisDirName.LengthInChars++;
+                if (!YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ThisDirName)) {
+                    ThisDirName.LengthInChars--;
+                }
+            }
         }
     }
 
