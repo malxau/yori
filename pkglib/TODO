@@ -1,3 +1,0 @@
- - Document mirrors/sources since they're otherwise invisible
- - Ypm figure out how to use backticks - don't use newlines when sending to pipes?
- - Remove rename logic from CAB expand

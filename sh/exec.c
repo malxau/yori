@@ -1447,6 +1447,7 @@ YoriShExecuteExpressionAndCaptureOutput(
     PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
     YORI_SH_CMD_CONTEXT CmdContext;
     PVOID OutputBuffer;
+    DWORD Index;
 
     //
     //  Parse the expression we're trying to execute.
@@ -1506,6 +1507,18 @@ YoriShExecuteExpressionAndCaptureOutput(
                 ProcessOutput->StartOfString[ProcessOutput->LengthInChars - 1] == '\r')) {
 
             ProcessOutput->LengthInChars--;
+        }
+
+        //
+        //  Convert any remaining newlines to spaces
+        //
+
+        for (Index = 0; Index < ProcessOutput->LengthInChars; Index++) {
+            if ((ProcessOutput->StartOfString[Index] == '\n' ||
+                 ProcessOutput->StartOfString[Index] == '\r')) {
+
+                ProcessOutput->StartOfString[Index] = ' ';
+            }
         }
     }
 
