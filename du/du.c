@@ -263,6 +263,9 @@ DuReportAndCloseStack(
     YORI_STRING FileSizeString;
     TCHAR FileSizeStringBuffer[8];
     LARGE_INTEGER SizeToDisplay;
+    YORI_STRING VtAttribute;
+    TCHAR VtAttributeBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+    YORILIB_COLOR_ATTRIBUTES Attribute;
 
     PDU_DIRECTORY_STACK DirStack;
 
@@ -276,6 +279,10 @@ DuReportAndCloseStack(
         if (DuContext->MinimumDirectorySizeToDisplay.QuadPart == 0 ||
             SizeToDisplay.QuadPart >= DuContext->MinimumDirectorySizeToDisplay.QuadPart) {
 
+            //
+            //  Convert the escaped path into a path for humans.
+            //
+
             YoriLibInitEmptyString(&UnescapedPath);
             if (YoriLibUnescapePath(&DirStack->DirectoryName, &UnescapedPath)) {
                 StringToDisplay = &UnescapedPath;
@@ -283,11 +290,42 @@ DuReportAndCloseStack(
                 StringToDisplay = &DirStack->DirectoryName;
             }
 
+            //
+            //  Convert the file size from a number of bytes to a short string
+            //  with a suffix
+            //
+
             YoriLibInitEmptyString(&FileSizeString);
             FileSizeString.StartOfString = FileSizeStringBuffer;
             FileSizeString.LengthAllocated = sizeof(FileSizeStringBuffer)/sizeof(FileSizeStringBuffer[0]);
             YoriLibFileSizeToString(&FileSizeString, &SizeToDisplay);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y\n"), &FileSizeString, StringToDisplay);
+
+            //
+            //  If the user requested it, determine the color to display with
+            //
+
+            YoriLibInitEmptyString(&VtAttribute);
+            if (DuContext->ColorRules.NumberCriteria) {
+                WIN32_FIND_DATA FileInfo;
+        
+                VtAttribute.StartOfString = VtAttributeBuffer;
+                VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(VtAttributeBuffer[0]);
+        
+                YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirStack->DirectoryName.StartOfString, TRUE);
+        
+                if (!YoriLibFileFiltCheckColorMatch(&DuContext->ColorRules, &DirStack->DirectoryName, &FileInfo, &Attribute)) {
+                    Attribute.Ctrl = 0;
+                    Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
+                }
+        
+                YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+            }
+
+            if (VtAttribute.LengthInChars > 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y%y%c[0m\n"), &FileSizeString, &VtAttribute, StringToDisplay, 27);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y\n"), &FileSizeString, StringToDisplay);
+            }
 
             YoriLibFreeStringContents(&UnescapedPath);
         }
@@ -707,8 +745,8 @@ ENTRYPOINT(
     DWORD StartArg = 0;
     DWORD MatchFlags;
     BOOL BasicEnumeration = FALSE;
-    BOOL DisplayColor = FALSE;
     DU_CONTEXT DuContext;
+    YORI_STRING Combined;
     YORI_STRING Arg;
 
     ZeroMemory(&DuContext, sizeof(DuContext));
@@ -741,9 +779,6 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 DuContext.IncludeNamedStreams = TRUE;
-                ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("color")) == 0) {
-                DisplayColor = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 DuContext.AverageHardLinkSize = TRUE;
@@ -783,15 +818,12 @@ ENTRYPOINT(
         }
     }
 
-    if (DisplayColor) {
+    if (YoriLibLoadCombinedFileColorString(NULL, &Combined)) {
         YORI_STRING ErrorSubstring;
-        YORI_STRING Combined;
-        if (YoriLibLoadCombinedFileColorString(NULL, &Combined)) {
-            if (!YoriLibFileFiltParseColorString(&DuContext.ColorRules, &Combined, &ErrorSubstring)) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("du: parse error at %y\n"), &ErrorSubstring);
-            }
-            YoriLibFreeStringContents(&Combined);
+        if (!YoriLibFileFiltParseColorString(&DuContext.ColorRules, &Combined, &ErrorSubstring)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("du: parse error at %y\n"), &ErrorSubstring);
         }
+        YoriLibFreeStringContents(&Combined);
     }
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES |
