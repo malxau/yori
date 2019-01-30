@@ -1123,6 +1123,65 @@ YoriLibExpandHomeDirectories(
 }
 
 /**
+ Return TRUE if the argument is a special DOS device name, FALSE if it is
+ a regular file.  DOS device names include things like AUX, CON, PRN etc.
+ In Yori, a DOS device name is only a DOS device name if it does not
+ contain any path information.
+
+ @param File The file name to check.
+
+ @return TRUE to indicate this argument is a DOS device name, FALSE to
+         indicate that it is a regular file.
+ */
+BOOL
+YoriLibIsFileNameDeviceName(
+    __in PYORI_STRING File
+    )
+{
+    YORI_STRING NameToCheck;
+    DWORD Offset;
+
+    YoriLibInitEmptyString(&NameToCheck);
+    Offset = 0;
+    if (YoriLibIsPathPrefixed(File)) {
+        Offset = sizeof("\\\\.\\") - 1;
+    }
+
+    NameToCheck.StartOfString = &File->StartOfString[Offset];
+    NameToCheck.LengthInChars = File->LengthInChars - Offset;
+
+    if (NameToCheck.LengthInChars < 3 || NameToCheck.LengthInChars > 4) {
+        return FALSE;
+    }
+        
+    if (YoriLibCompareStringWithLiteralInsensitive(&NameToCheck, _T("CON")) == 0 ||
+        YoriLibCompareStringWithLiteralInsensitive(&NameToCheck, _T("AUX")) == 0 ||
+        YoriLibCompareStringWithLiteralInsensitive(&NameToCheck, _T("PRN")) == 0 ||
+        YoriLibCompareStringWithLiteralInsensitive(&NameToCheck, _T("NUL")) == 0) {
+
+        return TRUE;
+    }
+
+    if (NameToCheck.LengthInChars < 4) {
+        return FALSE;
+    }
+
+    if (YoriLibCompareStringWithLiteralInsensitiveCount(&NameToCheck, _T("LPT"), 3) == 0 &&
+        (NameToCheck.StartOfString[3] >= '1' && NameToCheck.StartOfString[3] <= '9')) {
+
+        return TRUE;
+    }
+
+    if (YoriLibCompareStringWithLiteralInsensitiveCount(&NameToCheck, _T("COM"), 3) == 0 &&
+        (NameToCheck.StartOfString[3] >= '1' && NameToCheck.StartOfString[3] <= '9')) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Resolves a user string which must refer to a single file into a physical path
  for that file.
 
@@ -1179,6 +1238,50 @@ YoriLibUserStringToSingleFilePath(
     }
 
     return ReturnValue;
+}
+
+/**
+ Checks if a file name refers to a device, and if so returns a path to the
+ device.  If it does not refer to a device, the path is resolved into a file
+ path for the specified file.
+
+ @param UserString The string as specified by the user.  This is currently
+        required to be NULL terminated.
+
+ @param bReturnEscapedPath TRUE if the resulting path should be prefixed with
+        \\?\, FALSE to indicate a traditional Win32 path.
+
+ @param FullPath On successful completion, this pointer is updated to point to
+        the full path string.  This string should be uninitialized on input and
+        is allocated within this routine.  The caller is expected to free this
+        with @ref YoriLibFreeStringContents.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibUserStringToSingleFilePathOrDevice(
+    __in PYORI_STRING UserString,
+    __in BOOL bReturnEscapedPath,
+    __inout PYORI_STRING FullPath
+    )
+{
+    if (YoriLibIsFileNameDeviceName(UserString)) {
+        DWORD CharsNeeded;
+        CharsNeeded = UserString->LengthInChars + 1;
+        if (bReturnEscapedPath) {
+            CharsNeeded += sizeof("\\\\.\\") - 1;
+        }
+        if (!YoriLibAllocateString(FullPath, CharsNeeded)) {
+            return FALSE;
+        }
+        if (bReturnEscapedPath) {
+            FullPath->LengthInChars = YoriLibSPrintf(FullPath->StartOfString, _T("\\\\.\\%y"), UserString);
+        } else {
+            FullPath->LengthInChars = YoriLibSPrintf(FullPath->StartOfString, _T("%y"), UserString);
+        }
+        return TRUE;
+    }
+    return YoriLibUserStringToSingleFilePath(UserString, bReturnEscapedPath, FullPath);
 }
 
 /**

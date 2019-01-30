@@ -131,6 +131,13 @@ typedef struct _COPY_CONTEXT {
     DWORD FilesCopied;
 
     /**
+     The number of files that have been copied while expanding a particular
+     command argument.  If this is zero, the argument hasn't resolved to
+     any existing files.
+     */
+    DWORD FilesCopiedThisArg;
+
+    /**
      If TRUE, targets should be compressed.
      */
     BOOL CompressDest;
@@ -153,6 +160,13 @@ typedef struct _COPY_CONTEXT {
      file will be skipped.
      */
     BOOL PreserveExisting;
+
+    /**
+     If TRUE, the destination is a device rather than a file, and CopyFile
+     should not be used since setting file metadata on the device is
+     expected to fail.
+     */
+    BOOL DestinationIsDevice;
 
     /**
      If TRUE, output is generated for each object copied.
@@ -281,7 +295,8 @@ CopyBuildDestinationPath(
         to the root of the source of the copy operation.
 
  @param SourceFindData Pointer to information about the source as returned
-        from directory enumeration.
+        from directory enumeration.  This can be NULL if the source was not
+        found from directory enumeration.
 
  @return TRUE to exclude the file, FALSE to include it.
  */
@@ -289,7 +304,7 @@ BOOL
 CopyShouldExclude(
     __in PCOPY_CONTEXT CopyContext,
     __in PYORI_STRING RelativeSourcePath,
-    __in PWIN32_FIND_DATA SourceFindData
+    __in_opt PWIN32_FIND_DATA SourceFindData
     )
 {
     PCOPY_EXCLUDE_ITEM ExcludeItem;
@@ -339,6 +354,11 @@ CopyShouldExclude(
         if (!GetFileInformationByHandle(DestFileHandle, &DestFileInfo)) {
             CloseHandle(DestFileHandle);
             return FALSE;
+        }
+
+        if (SourceFindData == NULL) {
+            CloseHandle(DestFileHandle);
+            return TRUE;
         }
 
         if (DestFileInfo.nFileSizeHigh != SourceFindData->nFileSizeHigh ||
@@ -515,12 +535,95 @@ CopyAsLink(
 }
 
 /**
+ For objects that are not really files, copy can't use CopyFile, and instead
+ falls back to this stupid thing of reading and writing.  Note this path
+ should not be used for files since it makes no attempt to preserve any kind
+ of file metadata, but for devices file metadata is meaningless anyway.
+
+ @param SourceFile Pointer to the source file/device name.
+
+ @param DestFile Pointer to the destination file/device name.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+CopyAsDumbDataMove(
+    __in PYORI_STRING SourceFile,
+    __in PYORI_STRING DestFile
+    )
+{
+    PVOID Buffer;
+    DWORD BytesCopied;
+    DWORD BufferSize;
+    HANDLE SourceHandle;
+    HANDLE DestHandle;
+    DWORD LastError;
+    LPTSTR ErrText;
+
+    SourceHandle = CreateFile(SourceFile->StartOfString,
+                              GENERIC_READ,
+                              FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                              NULL,
+                              OPEN_EXISTING,
+                              FILE_FLAG_OPEN_NO_RECALL|FILE_FLAG_BACKUP_SEMANTICS,
+                              NULL);
+
+    if (SourceHandle == INVALID_HANDLE_VALUE) {
+        LastError = GetLastError();
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of source failed: %y: %s"), SourceFile, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
+
+    DestHandle = CreateFile(DestFile->StartOfString,
+                            GENERIC_WRITE,
+                            FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                            NULL,
+                            CREATE_ALWAYS,
+                            FILE_FLAG_BACKUP_SEMANTICS,
+                            NULL);
+
+    if (DestHandle == INVALID_HANDLE_VALUE) {
+        LastError = GetLastError();
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of destination failed: %y: %s"), DestFile, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        CloseHandle(SourceHandle);
+        return FALSE;
+    }
+
+    BufferSize = 64 * 1024;
+    Buffer = YoriLibMalloc(BufferSize);
+    if (Buffer == NULL) {
+        CloseHandle(SourceHandle);
+        CloseHandle(DestHandle);
+        return FALSE;
+    }
+
+    while (ReadFile(SourceHandle, Buffer, BufferSize, &BytesCopied, NULL)) {
+        if (BytesCopied == 0) {
+            break;
+        }
+
+        WriteFile(DestHandle, Buffer, BytesCopied, &BytesCopied, NULL);
+    }
+
+    YoriLibFree(Buffer);
+    CloseHandle(SourceHandle);
+    CloseHandle(DestHandle);
+    return TRUE;
+}
+
+/**
  A callback that is invoked when a file is found that matches a search criteria
  specified in the set of strings to enumerate.
 
  @param FilePath Pointer to the file path that was found.
 
- @param FileInfo Information about the file.
+ @param FileInfo Information about the file.  This can be NULL if the file was
+        not found from enumeration, since the file may not be a file system
+        object (ie., it may be a device.)
 
  @param Depth Indicates the recursion depth.  Used by copy to check if it
         needs to create new directories in the destination path.
@@ -534,7 +637,7 @@ CopyAsLink(
 BOOL
 CopyFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -606,13 +709,17 @@ CopyFileFoundCallback(
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Copying %y to %y\n"), SourceNameToDisplay, DestNameToDisplay);
     }
 
-    if (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT &&
+    if (FileInfo != NULL &&
+        FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT &&
         CopyContext->CopyAsLinks &&
         (FileInfo->dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT || FileInfo->dwReserved0 == IO_REPARSE_TAG_SYMLINK)) {
 
-        CopyAsLink(FilePath->StartOfString, FullDest.StartOfString, ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0));
+        if (CopyAsLink(FilePath->StartOfString, FullDest.StartOfString, ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0))) {
+            CopyContext->FilesCopiedThisArg++;
+        }
 
-    } else if (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    } else if (FileInfo != NULL &&
+               FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
         if (!CreateDirectory(FullDest.StartOfString, NULL)) {
             DWORD LastError = GetLastError();
             if (LastError != ERROR_ALREADY_EXISTS) {
@@ -620,6 +727,12 @@ CopyFileFoundCallback(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %s: %s"), FullDest.StartOfString, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
             }
+        } else {
+            CopyContext->FilesCopiedThisArg++;
+        }
+    } else if (CopyContext->DestinationIsDevice || YoriLibIsFileNameDeviceName(FilePath)) {
+        if (CopyAsDumbDataMove(FilePath, &FullDest)) {
+            CopyContext->FilesCopiedThisArg++;
         }
     } else {
         if (!CopyFile(FilePath->StartOfString, FullDest.StartOfString, FALSE)) {
@@ -637,6 +750,8 @@ CopyFileFoundCallback(
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
             YoriLibFreeWinErrorText(ErrText);
+        } else {
+            CopyContext->FilesCopiedThisArg++;
         }
 
         if (CopyContext->CompressDest) {
@@ -848,10 +963,13 @@ ENTRYPOINT(
     } else if (FileCount == 1) {
         YoriLibConstantString(&CopyContext.Dest, _T("."));
     } else {
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[LastFileArg], TRUE, &CopyContext.Dest)) {
+        if (!YoriLibUserStringToSingleFilePathOrDevice(&ArgV[LastFileArg], TRUE, &CopyContext.Dest)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &ArgV[LastFileArg]);
             CopyFreeCopyContext(&CopyContext);
             return EXIT_FAILURE;
+        }
+        if (YoriLibIsFileNameDeviceName(&ArgV[LastFileArg])) {
+            CopyContext.DestinationIsDevice = TRUE;
         }
         FileCount--;
     }
@@ -909,7 +1027,15 @@ ENTRYPOINT(
                 }
             }
 
+            CopyContext.FilesCopiedThisArg = 0;
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CopyFileFoundCallback, &CopyContext);
+            if (CopyContext.FilesCopiedThisArg == 0) {
+                YORI_STRING FullPath;
+                if (YoriLibUserStringToSingleFilePathOrDevice(&ArgV[i], TRUE, &FullPath)) {
+                    CopyFileFoundCallback(&FullPath, NULL, 0, &CopyContext);
+                    YoriLibFreeStringContents(&FullPath);
+                }
+            }
             FilesProcessed++;
             if (FilesProcessed == FileCount) {
                 break;

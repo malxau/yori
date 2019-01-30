@@ -1009,49 +1009,6 @@ YoriShIsArgumentProgramSeperator(
 }
 
 /**
- Return TRUE if the argument is a special DOS device name, FALSE if it is
- a regular file.  DOS device names include things like AUX, CON, PRN etc.
- In Yori, a DOS device name is only a DOS device name if it does not
- contain any path information.
-
- @param File The file name to check.
-
- @return TRUE to indicate this argument is a DOS device name, FALSE to
-         indicate that it is a regular file.
- */
-BOOL
-YoriShIsFileNameDeviceName(
-    __in PYORI_STRING File
-    )
-{
-    if (YoriLibCompareStringWithLiteralInsensitive(File, _T("CON")) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitive(File, _T("AUX")) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitive(File, _T("PRN")) == 0 ||
-        YoriLibCompareStringWithLiteralInsensitive(File, _T("NUL")) == 0) {
-
-        return TRUE;
-    }
-
-    if (File->LengthInChars < 4) {
-        return FALSE;
-    }
-
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(File, _T("LPT"), 3) == 0 &&
-        (File->StartOfString[3] >= '1' && File->StartOfString[3] <= '9')) {
-
-        return TRUE;
-    }
-
-    if (YoriLibCompareStringWithLiteralInsensitiveCount(File, _T("COM"), 3) == 0 &&
-        (File->StartOfString[3] >= '1' && File->StartOfString[3] <= '9')) {
-
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
-/**
  Check if a given name is a DOS device name.  If it is, retain the name since
  the intention is to talk to the device, and reference it for use in a new
  environment.  If it is not a DOS device name, resolve it to a fully qualified
@@ -1093,7 +1050,7 @@ YoriShCheckForDeviceNameAndDuplicate(
     //
 
     if (UserName.LengthInChars == 0 ||
-        YoriShIsFileNameDeviceName(&UserName)) {
+        YoriLibIsFileNameDeviceName(&UserName)) {
 
         if (UserName.MemoryToFree != NULL) {
             YoriLibReference(UserName.MemoryToFree);

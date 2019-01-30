@@ -1823,7 +1823,19 @@ YoriLibExpandHomeDirectories(
     );
 
 BOOL
+YoriLibIsFileNameDeviceName(
+    __in PYORI_STRING File
+    );
+
+BOOL
 YoriLibUserStringToSingleFilePath(
+    __in PYORI_STRING UserString,
+    __in BOOL bReturnEscapedPath,
+    __inout PYORI_STRING FullPath
+    );
+
+BOOL
+YoriLibUserStringToSingleFilePathOrDevice(
     __in PYORI_STRING UserString,
     __in BOOL bReturnEscapedPath,
     __inout PYORI_STRING FullPath
