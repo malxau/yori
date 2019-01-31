@@ -3,7 +3,7 @@
  *
  * Yori shell display operating system version
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,7 @@ CHAR strOsVerHelpText[] =
         "Format specifiers are:\n"
         "   $BUILD$        The build number with leading zero\n"
         "   $build$        The build number without leading zero\n"
+        "   $desc$         The human friendly build description\n"
         "   $MAJOR$        The major version with leading zero\n"
         "   $major$        The major version without leading zero\n"
         "   $MINOR$        The minor version with leading zero\n"
@@ -82,6 +83,93 @@ typedef struct _OSVER_VERSION_RESULT {
 } OSVER_VERSION_RESULT, *POSVER_VERSION_RESULT;
 
 /**
+ An association between a numeric build number and a human string
+ describing the significance of that build.
+ */
+typedef struct _OSVER_BUILD_DESCRIPTION {
+
+    /**
+     The reported build number.
+     */
+    DWORD BuildNumber;
+
+    /**
+     A human readable string describing the build.
+     */
+    LPSTR BuildDescription;
+} OSVER_BUILD_DESCRIPTION, *POSVER_BUILD_DESCRIPTION;
+
+/**
+ A table of Windows builds known to this application.
+ */
+const
+OSVER_BUILD_DESCRIPTION OsVerBuildDescriptions[] = {
+    {528,  "Windows NT 3.1"},
+    {807,  "Windows NT 3.5"},
+    {1057, "Windows NT 3.51"},
+    {1381, "Windows NT 4"},
+    {2195, "Windows 2000"},
+    {2600, "Windows XP"},
+    {3790, "Windows Server 2003/XP 64 bit"},
+    {6000, "Vista"},
+    {6001, "Vista SP1/Server 2008"},
+    {6002, "Vista SP2/Server 2008 SP2"},
+    {7600, "Windows 7/Server 2008 R2"},
+    {7601, "Windows 7 SP1/Server 2008 R2 SP1"},
+    {9200, "Windows 8/Server 2012"},
+    {9600, "Windows 8.1/Server 2012 R2"},
+    {10240, "Windows 10 TH1 1507"},
+    {10586, "Windows 10 TH2 1511"},
+    {14393, "Windows 10 RS1 1607/Server 2016"},
+    {15063, "Windows 10 RS2 1703"},
+    {16299, "Windows 10 RS3 1709"},
+    {17134, "Windows 10 RS4 1803"},
+    {17763, "Windows 10 RS5 1809/Server 2019"}
+};
+
+/**
+ Return a pointer to a constant string describing the build.  Note this will
+ always return a string, even if the string indicates it is an unknown build.
+
+ @param BuildNumber The numeric build number to check for.
+
+ @return Pointer to a constant string describing the build.
+ */
+LPCSTR
+OsVerGetBuildDescriptionString(
+    __in DWORD BuildNumber
+    )
+{
+    DWORD Index;
+
+    for (Index = 0; Index < sizeof(OsVerBuildDescriptions)/sizeof(OsVerBuildDescriptions[0]); Index++) {
+        if (BuildNumber == OsVerBuildDescriptions[Index].BuildNumber) {
+            return OsVerBuildDescriptions[Index].BuildDescription;
+        }
+    }
+
+    return "unknown";
+}
+
+/**
+ Return the number of characters needed to describe the human readable string
+ describing the build.
+
+ @param BuildNumber The numeric build number to check for.
+
+ @return The number of characters in the human readable string describing the
+         build.
+ */
+DWORD
+OsVerLengthOfBuildDescription(
+    __in DWORD BuildNumber
+    )
+{
+    return strlen(OsVerGetBuildDescriptionString(BuildNumber));
+}
+
+
+/**
  A callback function to expand any known variables found when parsing the
  format string.
 
@@ -112,6 +200,8 @@ OsVerExpandVariables(
         CharsNeeded = 2;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("major")) == 0) {
         CharsNeeded = 3;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("desc")) == 0) {
+        CharsNeeded = OsVerLengthOfBuildDescription(OsVerContext->BuildNumber);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MINOR")) == 0) {
         CharsNeeded = 2;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("minor")) == 0) {
@@ -152,6 +242,8 @@ OsVerExpandVariables(
         } else {
             CharsNeeded = 0;
         }
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("desc")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%hs"), OsVerGetBuildDescriptionString(OsVerContext->BuildNumber));
     }
 
     OutputString->LengthInChars = CharsNeeded;
@@ -187,7 +279,7 @@ ENTRYPOINT(
 {
     OSVER_VERSION_RESULT VersionResult;
     BOOL ArgumentUnderstood;
-    LPTSTR FormatString = _T("\x1b[41;34;1m\x2584\x1b[42;33;1m\x2584\x1b[0m Windows version: $major$.$minor$.$build$\n");
+    LPTSTR FormatString = _T("\x1b[41;34;1m\x2584\x1b[42;33;1m\x2584\x1b[0m Windows version: $major$.$minor$.$build$ ($desc$)\n");
     YORI_STRING DisplayString;
     DWORD i;
     YORI_STRING Arg;
@@ -206,7 +298,7 @@ ENTRYPOINT(
                 OsVerHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             }
         } else {
