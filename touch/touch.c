@@ -35,12 +35,13 @@ CHAR strTouchHelpText[] =
         "\n"
         "Create files or update timestamps.\n"
         "\n"
-        "TOUCH [-license] [-a] [-b] [-c] [-f size] [-s] [-t <date and time>]\n"
+        "TOUCH [-license] [-a] [-b] [-c] [-e] [-f size] [-s] [-t <date and time>]\n"
         "      [-w] <file>...\n"
         "\n"
         "   -a             Update last access time\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Update create time\n"
+        "   -e             Only update existing files\n"
         "   -f             Create new file with specified file size\n"
         "   -s             Process files from all subdirectories\n"
         "   -t             Specify the timestamp to set\n"
@@ -91,6 +92,12 @@ typedef struct _TOUCH_CONTEXT {
      */
     ULONG FilesFoundThisArg;
 
+    /**
+     If TRUE, only existing files should be modified, and no new files should
+     be created.
+     */
+    BOOL ExistingOnly;
+
 } TOUCH_CONTEXT, *PTOUCH_CONTEXT;
 
 /**
@@ -135,7 +142,7 @@ TouchFileFoundCallback(
                             DesiredAccess,
                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                             NULL,
-                            OPEN_ALWAYS,
+                            TouchContext->ExistingOnly?OPEN_EXISTING:OPEN_ALWAYS,
                             FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
@@ -247,6 +254,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 UpdateCreationTime = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+                TouchContext.ExistingOnly = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (i + 1 < ArgC) {
