@@ -472,4 +472,118 @@ YoriLibLoadCombinedFileColorString(
     return TRUE;
 }
 
+/**
+ The default colors to display file metadata with.
+ */
+const
+CHAR YoriLibDefaultMetadataColorString[] = 
+    ";"
+    "fc,lightgreen;"
+    "fs,yellow;";
+
+/**
+ Obtain a numeric color code given a (typically two character) string
+ describing metadata of interest.  Note this routine has to reconstruct
+ and reparse the criteria string on each call, so it is only useful for
+ programs displaying a small amount of metadata color.
+
+ @param RequestedAttributeCodeString Pointer to a Yori string containing
+        the metadata character code to locate.
+
+ @param Color On successful completion, populated with the color to display.
+
+ @return TRUE to indicate success, implying that the attribute code was
+         found either in the user's environment or the default string.  FALSE
+         to indicate no color could be determined.
+ */
+BOOL
+YoriLibGetMetadataColor(
+    __in PYORI_STRING RequestedAttributeCodeString,
+    __out PYORILIB_COLOR_ATTRIBUTES Color
+    )
+{
+    YORI_STRING CriteriaString;
+    YORI_STRING Remaining;
+    YORI_STRING Element;
+    YORI_STRING FoundAttributeCodeString;
+    YORI_STRING FoundColorString;
+    LPTSTR Seperator;
+    LPTSTR NextStart;
+    YORILIB_COLOR_ATTRIBUTES FoundColor;
+    YORILIB_COLOR_ATTRIBUTES WindowColor;
+    DWORD CustomLength = 0;
+
+    YoriLibInitEmptyString(&Remaining);
+    YoriLibInitEmptyString(&Element);
+    YoriLibInitEmptyString(&FoundAttributeCodeString);
+    YoriLibInitEmptyString(&FoundColorString);
+
+    CustomLength = GetEnvironmentVariable(_T("SDIR_COLOR_METADATA"), NULL, 0);
+
+    if (!YoriLibAllocateString(&CriteriaString, CustomLength + sizeof(YoriLibDefaultMetadataColorString))) {
+        return FALSE;
+    }
+
+    if (CustomLength > 0) {
+        CustomLength = GetEnvironmentVariable(_T("SDIR_COLOR_METADATA"), CriteriaString.StartOfString, CustomLength);
+        CriteriaString.LengthInChars = CustomLength;
+    }
+
+    CriteriaString.LengthInChars += YoriLibSPrintf(&CriteriaString.StartOfString[CustomLength], _T("%hs"), YoriLibDefaultMetadataColorString);
+
+    Remaining.StartOfString = CriteriaString.StartOfString;
+    Remaining.LengthInChars = CriteriaString.LengthInChars;
+
+    while (TRUE) {
+        NextStart = YoriLibFindLeftMostCharacter(&Remaining, ';');
+        Element.StartOfString = Remaining.StartOfString;
+        if (NextStart != NULL) {
+            Element.LengthInChars = (DWORD)(NextStart - Element.StartOfString);
+        } else {
+            Element.LengthInChars = Remaining.LengthInChars;
+        }
+
+        YoriLibTrimSpaces(&Element);
+        if (Element.LengthInChars > 0) {
+            Seperator = YoriLibFindLeftMostCharacter(&Element, ',');
+            if (Seperator != NULL) {
+                FoundAttributeCodeString.StartOfString = Element.StartOfString;
+                FoundAttributeCodeString.LengthInChars = (DWORD)(Seperator - Element.StartOfString);
+                FoundColorString.StartOfString = Seperator + 1;
+                FoundColorString.LengthInChars = Element.LengthInChars - FoundAttributeCodeString.LengthInChars - 1;
+
+
+                if (YoriLibCompareStringInsensitive(RequestedAttributeCodeString, &FoundAttributeCodeString) == 0) {
+                    FoundColor = YoriLibAttributeFromString(&FoundColorString);
+                    WindowColor.Ctrl = 0;
+                    WindowColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
+                    FoundColor = YoriLibResolveWindowColorComponents(FoundColor, WindowColor, FALSE);
+                    YoriLibFreeStringContents(&CriteriaString);
+                    *Color = FoundColor;
+                    return TRUE;
+                }
+            }
+        }
+
+        if (NextStart == NULL) {
+            break;
+        }
+
+        Remaining.StartOfString = NextStart;
+        Remaining.LengthInChars = CriteriaString.LengthInChars - (DWORD)(NextStart - CriteriaString.StartOfString);
+
+        if (Remaining.LengthInChars > 0) {
+            Remaining.StartOfString++;
+            Remaining.LengthInChars--;
+        }
+
+        if (Remaining.LengthInChars == 0) {
+            break;
+        }
+    }
+
+    return FALSE;
+}
+
+
 // vim:sw=4:ts=4:et:

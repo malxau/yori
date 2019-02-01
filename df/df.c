@@ -3,7 +3,7 @@
  *
  * Yori shell display disk free on volumes
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -74,6 +74,21 @@ typedef struct _DF_CONTEXT {
      The width of the console, in characters.
      */
     DWORD ConsoleWidth;
+
+    /**
+     The color to display file sizes in.
+     */
+    YORILIB_COLOR_ATTRIBUTES FileSizeColor;
+
+    /**
+     A string form of the VT sequence for the file color above.
+     */
+    YORI_STRING FileSizeColorString;
+
+    /**
+     The buffer for the above string.
+     */
+    TCHAR FileSizeColorStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
 
     /**
      A buffer to generate the graph line into.  This is allocated when the
@@ -185,7 +200,18 @@ DfReportSingleVolume(
                 Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
             }
             YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y total %y free %3i.%i%% used %y%s%c[0m\n"), &StrTotalSize, &StrFreeSize, PercentageUsed / 10, PercentageUsed % 10, &VtAttribute, NameToReport, 27);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("%y%y%c[0m total %y%y%c[0m free %3i.%i%% used %y%s%c[0m\n"),
+                          &DfContext->FileSizeColorString,
+                          &StrTotalSize,
+                          27,
+                          &DfContext->FileSizeColorString,
+                          &StrFreeSize,
+                          27,
+                          PercentageUsed / 10, PercentageUsed % 10,
+                          &VtAttribute,
+                          NameToReport,
+                          27);
         }
 
         if (DfContext->DisplayGraph) {
@@ -293,7 +319,7 @@ ENTRYPOINT(
                 DfHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
                 DfContext.MinimalDisplay = TRUE;
@@ -324,6 +350,16 @@ ENTRYPOINT(
         YoriLibFileFiltParseColorString(&DfContext.ColorRules, &Combined, &ErrorSubstring);
         YoriLibFreeStringContents(&Combined);
     }
+
+    YoriLibConstantString(&Combined, _T("fs"));
+    if (!YoriLibGetMetadataColor(&Combined, &DfContext.FileSizeColor)) {
+        DfContext.FileSizeColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
+    }
+
+    DfContext.FileSizeColorString.StartOfString = DfContext.FileSizeColorStringBuffer;
+    DfContext.FileSizeColorString.LengthAllocated = YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
+
+    YoriLibVtStringForTextAttribute(&DfContext.FileSizeColorString, DfContext.FileSizeColor.Win32Attr);
 
     if (DfContext.DisplayGraph) {
         if (!YoriLibAllocateString(&DfContext.LineBuffer, DfContext.ConsoleWidth + 2 * YORI_MAX_INTERNAL_VT_ESCAPE_CHARS)) {

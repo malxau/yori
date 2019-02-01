@@ -182,9 +182,24 @@ typedef struct _DU_CONTEXT {
     BOOL WimBackedFilesAsZero;
 
     /**
+     The color to display file sizes in.
+     */
+    YORILIB_COLOR_ATTRIBUTES FileSizeColor;
+
+    /**
      The minimum directory size to display.
      */
     LARGE_INTEGER MinimumDirectorySizeToDisplay;
+
+    /**
+     A string form of the VT sequence for the file color above.
+     */
+    YORI_STRING FileSizeColorString;
+
+    /**
+     The buffer for the above string.
+     */
+    TCHAR FileSizeColorStringBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
 
     /**
      Color information to display against matching files.
@@ -322,7 +337,14 @@ DuReportAndCloseStack(
             }
 
             if (VtAttribute.LengthInChars > 0) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y%y%c[0m\n"), &FileSizeString, &VtAttribute, StringToDisplay, 27);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%y%y%c[0m %y%y%c[0m\n"),
+                              &DuContext->FileSizeColorString,
+                              &FileSizeString,
+                              27,
+                              &VtAttribute,
+                              StringToDisplay,
+                              27);
             } else {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y\n"), &FileSizeString, StringToDisplay);
             }
@@ -825,6 +847,17 @@ ENTRYPOINT(
         }
         YoriLibFreeStringContents(&Combined);
     }
+
+    YoriLibConstantString(&Combined, _T("fs"));
+    if (!YoriLibGetMetadataColor(&Combined, &DuContext.FileSizeColor)) {
+        DuContext.FileSizeColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
+    }
+
+    DuContext.FileSizeColorString.StartOfString = DuContext.FileSizeColorStringBuffer;
+    DuContext.FileSizeColorString.LengthAllocated = YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
+
+    YoriLibVtStringForTextAttribute(&DuContext.FileSizeColorString, DuContext.FileSizeColor.Win32Attr);
+
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES |
                  YORILIB_FILEENUM_RETURN_DIRECTORIES |

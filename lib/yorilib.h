@@ -646,6 +646,12 @@ YoriLibLoadCombinedFileColorString(
     __out PYORI_STRING Combined
     );
 
+BOOL
+YoriLibGetMetadataColor(
+    __in PYORI_STRING RequestedAttributeCodeString,
+    __out PYORILIB_COLOR_ATTRIBUTES Color
+    );
+
 // *** CSHOT.C ***
 
 BOOL
