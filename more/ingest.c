@@ -316,7 +316,7 @@ MoreIngestThread(
     
         for (i = 0; i < MoreContext->InputSourceCount; i++) {
     
-            YoriLibForEachFile(&MoreContext->InputSources[i], MatchFlags, 0, MoreFileFoundCallback, MoreContext);
+            YoriLibForEachFile(&MoreContext->InputSources[i], MatchFlags, 0, MoreFileFoundCallback, NULL, MoreContext);
         }
     }
 

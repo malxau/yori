@@ -276,7 +276,7 @@ ENTRYPOINT(
     }
 
     for (i = StartArg; i < ArgC && !FsCmpContext.ConditionMet; i++) {
-        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, FsCmpFileFoundCallback, &FsCmpContext);
+        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, FsCmpFileFoundCallback, NULL, &FsCmpContext);
     }
 
 cleanup_and_exit:

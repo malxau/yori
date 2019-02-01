@@ -492,6 +492,7 @@ ENTRYPOINT(
                                MatchFlags,
                                0,
                                CabCreateSingleFileFoundCallback,
+                               NULL,
                                &CreateContext);
         }
         CabCreateFreeMatchLists(&CreateContext);
@@ -527,6 +528,7 @@ ENTRYPOINT(
                                MatchFlags,
                                0,
                                CabCreateFileFoundCallback,
+                               NULL,
                                &CreateContext);
         }
         YoriLibCloseCab(CreateContext.CabHandle);
@@ -553,6 +555,7 @@ ENTRYPOINT(
                                MatchFlags,
                                0,
                                CabExpandFileFoundCallback,
+                               NULL,
                                &FullTargetDirectory);
         }
 

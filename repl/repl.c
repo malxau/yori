@@ -373,7 +373,7 @@ ENTRYPOINT(
     
         for (i = StartArg; i < ArgC; i++) {
     
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, ReplFileFoundCallback, &ReplContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, ReplFileFoundCallback, NULL, &ReplContext);
         }
     }
 

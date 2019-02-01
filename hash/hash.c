@@ -512,6 +512,7 @@ ENTRYPOINT(
                                MatchFlags,
                                0,
                                HashFileFoundCallback,
+                               NULL,
                                &HashContext);
         }
     }

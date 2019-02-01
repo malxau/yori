@@ -1564,7 +1564,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             FInfoContext.FilesFoundThisArg = 0;
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, FInfoFileFoundCallback, &FInfoContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, FInfoFileFoundCallback, NULL, &FInfoContext);
             if (FInfoContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);

@@ -575,6 +575,7 @@ YoriPkgCreateSourcePackage(
                        YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS | YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_NO_LINK_TRAVERSE,
                        0,
                        YoriPkgCreateSourceFileFoundCallback,
+                       NULL,
                        &CreateSourceContext);
 
     YoriLibCloseCab(CreateSourceContext.CabHandle);

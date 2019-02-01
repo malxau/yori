@@ -292,7 +292,7 @@ ENTRYPOINT(
     
         for (i = StartArg; i < ArgC; i++) {
     
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, LinesFileFoundCallback, &LinesContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, LinesFileFoundCallback, NULL, &LinesContext);
         }
     }
 

@@ -318,7 +318,7 @@ ENTRYPOINT(
     
         for (i = StartArg; i < ArgC; i++) {
     
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, IconvFileFoundCallback, &IconvContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, IconvFileFoundCallback, NULL, &IconvContext);
         }
     }
 

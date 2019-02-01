@@ -735,10 +735,10 @@ ENTRYPOINT(
     if (StartArg == 0) {
         YORI_STRING FilesInDirectorySpec;
         YoriLibConstantString(&FilesInDirectorySpec, _T("*"));
-        YoriLibForEachFile(&FilesInDirectorySpec, MatchFlags, 0, DirFileFoundCallback, &DirContext);
+        YoriLibForEachFile(&FilesInDirectorySpec, MatchFlags, 0, DirFileFoundCallback, NULL, &DirContext);
     } else {
         for (i = StartArg; i < ArgC; i++) {
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, DirFileFoundCallback, &DirContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, DirFileFoundCallback, NULL, &DirContext);
         }
     }
 

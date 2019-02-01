@@ -732,7 +732,7 @@ ENTRYPOINT(
             if (ThisMatch.LengthInChars > 0) {
 
                 if (RequiresExpansion) {
-                    YoriLibForEachFile(&ThisMatch, MatchFlags, 0, ForFileFoundCallback, &ExecContext);
+                    YoriLibForEachFile(&ThisMatch, MatchFlags, 0, ForFileFoundCallback, NULL, &ExecContext);
                 } else {
                     ForExecuteCommand(&ThisMatch, &ExecContext);
                 }

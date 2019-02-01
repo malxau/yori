@@ -341,7 +341,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             TouchContext.FilesFoundThisArg = 0;
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, TouchFileFoundCallback, &TouchContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, TouchFileFoundCallback, NULL, &TouchContext);
             if (TouchContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);

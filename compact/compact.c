@@ -284,7 +284,7 @@ ENTRYPOINT(
 
     for (i = StartArg; i < ArgC; i++) {
 
-        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CompactFileFoundCallback, &CompactContext);
+        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CompactFileFoundCallback, NULL, &CompactContext);
     }
 
     YoriLibFreeCompressContext(&CompactContext.CompressContext);

@@ -477,6 +477,7 @@ DuCalculateSpaceUsedByFile(
     LARGE_INTEGER FileSize;
     HANDLE FileHandle = INVALID_HANDLE_VALUE;
     BOOL ForceSizeZero = FALSE;
+    BOOL ReportedOpenError = FALSE;
 
     FileSize.QuadPart = 0;
 
@@ -489,6 +490,13 @@ DuCalculateSpaceUsedByFile(
                                 OPEN_EXISTING,
                                 FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_OPEN_NO_RECALL | FILE_FLAG_BACKUP_SEMANTICS,
                                 NULL);
+        if (FileHandle == INVALID_HANDLE_VALUE) {
+            DWORD ErrorCode = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of %y failed, results inaccurate: %s"), FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            ReportedOpenError = TRUE;
+        }
     }
 
     //
@@ -557,7 +565,14 @@ DuCalculateSpaceUsedByFile(
         WIN32_FIND_STREAM_DATA FindStreamData;
 
         hFind = DllKernel32.pFindFirstStreamW(FilePath->StartOfString, 0, &FindStreamData, 0);
-        if (hFind != INVALID_HANDLE_VALUE) {
+        if (hFind == INVALID_HANDLE_VALUE) {
+            if (!ReportedOpenError) {
+                DWORD ErrorCode = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of %y failed, results inaccurate: %s"), FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
+        } else {
             do {
                 if (_tcscmp(FindStreamData.cStreamName, L"::$DATA") != 0) {
                     FileSize.QuadPart += FindStreamData.StreamSize.QuadPart;
@@ -734,6 +749,78 @@ DuFileFoundCallback(
     return TRUE;
 }
 
+/**
+ Attempt to enable backup privilege to allow Administrators to enumerate and
+ open more objects successfully.  If this fails the application may encounter
+ more objects it cannot accurately account for, but it is not fatal, or
+ unexpected.
+
+ @return TRUE to indicate that the privilege enablement was attempted
+         successfully.
+ */
+BOOL
+DuEnableBackupPrivilege()
+{
+    HANDLE ProcessToken;
+    YoriLibLoadAdvApi32Functions();
+
+    //
+    //  Attempt to enable backup privilege.  This allows us to enumerate and recurse
+    //  through objects which normally ACLs would prevent.
+    //
+
+    if (DllAdvApi32.pOpenProcessToken != NULL &&
+        DllAdvApi32.pLookupPrivilegeValueW != NULL &&
+        DllAdvApi32.pAdjustTokenPrivileges != NULL &&
+        DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &ProcessToken)) {
+        struct {
+            TOKEN_PRIVILEGES TokenPrivileges;
+            LUID_AND_ATTRIBUTES BackupPrivilege;
+        } PrivilegesToChange;
+
+        DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_BACKUP_NAME, &PrivilegesToChange.TokenPrivileges.Privileges[0].Luid);
+
+        PrivilegesToChange.TokenPrivileges.PrivilegeCount = 1;
+        PrivilegesToChange.TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+
+        DllAdvApi32.pAdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL);
+        CloseHandle(ProcessToken);
+    }
+
+    return TRUE;
+}
+
+
+/**
+ A callback that is invoked when a directory cannot be successfully enumerated.
+
+ @param FilePath Pointer to the file path that could not be enumerated.
+
+ @param ErrorCode The Win32 error code describing the failure.
+
+ @param Depth Recursion depth, ignored in this application.
+
+ @param Context Pointer to the du context structure indicating the
+        action to perform and populated with the number of objects found.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+DuFileEnumerateErrorCallback(
+    __in PYORI_STRING FilePath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
+    UNREFERENCED_PARAMETER(Depth);
+    UNREFERENCED_PARAMETER(Context);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Enumerate of %y failed, results incomplete: %s"), FilePath, ErrText);
+    YoriLibFreeWinErrorText(ErrText);
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the du builtin command.
@@ -858,10 +945,12 @@ ENTRYPOINT(
 
     YoriLibVtStringForTextAttribute(&DuContext.FileSizeColorString, DuContext.FileSizeColor.Win32Attr);
 
+    DuEnableBackupPrivilege();
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES |
                  YORILIB_FILEENUM_RETURN_DIRECTORIES |
-                 YORILIB_FILEENUM_RECURSE_BEFORE_RETURN;
+                 YORILIB_FILEENUM_RECURSE_BEFORE_RETURN |
+                 YORILIB_FILEENUM_NO_LINK_TRAVERSE;
     if (BasicEnumeration) {
         MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
     }
@@ -873,11 +962,11 @@ ENTRYPOINT(
     if (StartArg == 0) {
         YORI_STRING FilesInDirectorySpec;
         YoriLibConstantString(&FilesInDirectorySpec, _T("."));
-        YoriLibForEachFile(&FilesInDirectorySpec, MatchFlags, 0, DuFileFoundCallback, &DuContext);
+        YoriLibForEachFile(&FilesInDirectorySpec, MatchFlags, 0, DuFileFoundCallback, NULL, &DuContext);
         DuReportAndCloseAllActiveStacks(&DuContext, 1);
     } else {
         for (i = StartArg; i < ArgC; i++) {
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, DuFileFoundCallback, &DuContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, DuFileFoundCallback, DuFileEnumerateErrorCallback, &DuContext);
             DuReportAndCloseAllActiveStacks(&DuContext, 1);
         }
     }

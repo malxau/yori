@@ -344,7 +344,7 @@ ENTRYPOINT(
         }
 
         for (i = StartArg; i < ArgC; i++) {
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CutFileFoundCallback, &CutContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CutFileFoundCallback, NULL, &CutContext);
         }
 
         if (CutContext.FilesFound == 0) {

@@ -670,7 +670,7 @@ ENTRYPOINT(
 
         for (i = StartArg; i < ArgC; i++) {
 
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, HexDumpFileFoundCallback, &HexDumpContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, HexDumpFileFoundCallback, NULL, &HexDumpContext);
         }
     }
 

@@ -826,7 +826,7 @@ YoriShPerformFileTabCompletion(
     if (SearchString.LengthInChars < 1 ||
         (SearchString.StartOfString[0] != '>' && SearchString.StartOfString[0] != '<')) {
 
-        YoriLibForEachFile(&SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, &EnumContext);
+        YoriLibForEachFile(&SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, &EnumContext);
     }
 
     //
@@ -938,7 +938,7 @@ YoriShPerformFileTabCompletion(
         EnumContext.CharsToFinalSlash = YoriShFindFinalSlashIfSpecified(&SearchString);
         EnumContext.SearchString = SearchString.StartOfString;
 
-        YoriLibForEachFile(&SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, &EnumContext);
+        YoriLibForEachFile(&SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, &EnumContext);
 
         YoriLibFree(MatchArray);
     }

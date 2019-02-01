@@ -419,6 +419,7 @@ SdirEnumeratePathWithDepth (
     LPTSTR FinalPart;
     DWORD SizeCopied;
     ULONG DirEntsToPreserve;
+    SDIR_SUMMARY SummaryToPreserve;
     PYORI_FILE_INFO NewSdirDirCollection;
     PYORI_FILE_INFO * NewSdirDirSorted;
     SDIR_ITEM_FOUND_CONTEXT ItemFoundContext;
@@ -510,6 +511,7 @@ SdirEnumeratePathWithDepth (
     //
 
     DirEntsToPreserve = SdirDirCollectionCurrent;
+    memcpy(&SummaryToPreserve, Summary, sizeof(SummaryToPreserve));
 
     do {
 
@@ -575,6 +577,7 @@ SdirEnumeratePathWithDepth (
             SdirDirCollection = NewSdirDirCollection;
             SdirDirSorted = NewSdirDirSorted;
             SdirDirCollectionCurrent = DirEntsToPreserve;
+            memcpy(Summary, &SummaryToPreserve, sizeof(SummaryToPreserve));
         }
 
         //
@@ -603,6 +606,7 @@ SdirEnumeratePathWithDepth (
                                 MatchFlags,
                                 0,
                                 SdirItemFoundCallback,
+                                NULL,
                                 &ItemFoundContext)) {
 
             if (!Opts->Recursive) {

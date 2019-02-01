@@ -276,7 +276,7 @@ ENTRYPOINT(
     }
 
     for (i = StartArg; i < ArgC; i++) {
-        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, RmdirFileFoundCallback, &RmdirContext);
+        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, RmdirFileFoundCallback, NULL, &RmdirContext);
     }
 
     return EXIT_SUCCESS;

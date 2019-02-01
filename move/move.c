@@ -276,7 +276,7 @@ ENTRYPOINT(
             if (BasicEnumeration) {
                 MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
             }
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, MoveFileFoundCallback, &MoveContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, MoveFileFoundCallback, NULL, &MoveContext);
             FilesProcessed++;
             if (FilesProcessed == FileCount) {
                 break;

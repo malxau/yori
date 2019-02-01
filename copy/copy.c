@@ -1028,7 +1028,7 @@ ENTRYPOINT(
             }
 
             CopyContext.FilesCopiedThisArg = 0;
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CopyFileFoundCallback, &CopyContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CopyFileFoundCallback, NULL, &CopyContext);
             if (CopyContext.FilesCopiedThisArg == 0) {
                 YORI_STRING FullPath;
                 if (YoriLibUserStringToSingleFilePathOrDevice(&ArgV[i], TRUE, &FullPath)) {

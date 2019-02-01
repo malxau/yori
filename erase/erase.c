@@ -246,7 +246,7 @@ ENTRYPOINT(
 
     for (i = StartArg; i < ArgC; i++) {
 
-        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, EraseFileFoundCallback, &Context);
+        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, EraseFileFoundCallback, NULL, &Context);
     }
 
     if (Context.FilesFound == 0) {

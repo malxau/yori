@@ -450,7 +450,7 @@ ENTRYPOINT(
     
         for (i = StartArg; i < ArgC; i++) {
     
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, HiliteFileFoundCallback, &HiliteContext);
+            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, HiliteFileFoundCallback, NULL, &HiliteContext);
         }
     }
 

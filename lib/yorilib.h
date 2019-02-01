@@ -903,6 +903,16 @@ YoriLibGetWofVersionAvailable(
 /**
  A prototype for a callback function to invoke for each matching file.
  */
+typedef BOOL YORILIB_FILE_ENUM_ERROR_FN(PYORI_STRING FileName, DWORD ErrorCode, DWORD Depth, PVOID Context);
+
+/**
+ A pointer to a callback function to invoke for each matching file.
+ */
+typedef YORILIB_FILE_ENUM_ERROR_FN *PYORILIB_FILE_ENUM_ERROR_FN;
+
+/**
+ A prototype for a callback function to invoke for each matching file.
+ */
 typedef BOOL YORILIB_FILE_ENUM_FN(PYORI_STRING FileName, PWIN32_FIND_DATA FileInfo, DWORD Depth, PVOID Context);
 
 /**
@@ -968,6 +978,7 @@ YoriLibForEachFile(
     __in DWORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
+    __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
     __in PVOID Context
     );
 

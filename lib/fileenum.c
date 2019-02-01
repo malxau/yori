@@ -104,6 +104,10 @@ typedef struct _YORILIB_FOREACHFILE_CONTEXT {
 
  @param Callback The callback to invoke on each match.
 
+ @param ErrorCallback Optionally points to a function to invoke if a
+        directory cannot be enumerated.  If NULL, the caller does not care
+        about failures and wants to silently continue.
+
  @param Context Caller provided context to pass to the callback.
  */
 BOOL
@@ -112,6 +116,7 @@ YoriLibForEachFileEnum(
     __in DWORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
+    __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
     __in PVOID Context
     )
 {
@@ -355,7 +360,14 @@ YoriLibForEachFileEnum(
             }
         }
 
-        if (hFind != INVALID_HANDLE_VALUE) {
+        if (hFind == INVALID_HANDLE_VALUE) {
+            if (ErrorCallback != NULL) {
+                if (!ErrorCallback(&ForEachContext->FullPath, GetLastError(), Depth, Context)) {
+                    Result = FALSE;
+                }
+                break;
+            }
+        } else {
             do {
 
                 ReportObject = TRUE;
@@ -462,7 +474,7 @@ YoriLibForEachFileEnum(
                         ForEachContext->RecurseCriteria.StartOfString[ForEachContext->RecurseCriteria.LengthInChars] = '\0';
                     }
 
-                    if (!YoriLibForEachFileEnum(&ForEachContext->RecurseCriteria, MatchFlags, Depth + 1, Callback, Context)) {
+                    if (!YoriLibForEachFileEnum(&ForEachContext->RecurseCriteria, MatchFlags, Depth + 1, Callback, ErrorCallback, Context)) {
                         Result = FALSE;
                         break;
                     }
@@ -527,6 +539,10 @@ YoriLibForEachFileEnum(
 
  @param Callback The callback to invoke on each match.
 
+ @param ErrorCallback Optionally points to a function to invoke if a
+        directory cannot be enumerated.  If NULL, the caller does not care
+        about failures and wants to silently continue.
+
  @param Context Caller provided context to pass to the callback.
 
  @return TRUE to indicate success, FALSE to indicate failure.
@@ -537,6 +553,7 @@ YoriLibForEachFile(
     __in DWORD MatchFlags,
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
+    __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
     __in PVOID Context
     )
 {
@@ -549,7 +566,7 @@ YoriLibForEachFile(
     BOOL SingleCharMode;
 
     if (MatchFlags & YORILIB_FILEENUM_BASIC_EXPANSION) {
-        return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, Context);
+        return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context);
     }
 
     SingleCharMode = FALSE;
@@ -566,12 +583,12 @@ YoriLibForEachFile(
 
         if (YoriLibExpandHomeDirectories(FileSpec, &NewFileSpec)) {
             BOOL Result;
-            Result = YoriLibForEachFileEnum(&NewFileSpec, MatchFlags, Depth, Callback, Context);
+            Result = YoriLibForEachFileEnum(&NewFileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context);
             YoriLibFreeStringContents(&NewFileSpec);
             return Result;
         }
 
-        return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, Context);
+        return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context);
     }
 
     YoriLibInitEmptyString(&BeforeOperator);
@@ -590,7 +607,7 @@ YoriLibForEachFile(
 
     CharsToOperator = YoriLibCountStringNotContainingChars(&SubstituteValues, SingleCharMode?_T("]"):_T("}"));
     if (CharsToOperator == SubstituteValues.LengthInChars) {
-        return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, Context);
+        return YoriLibForEachFileEnum(FileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context);
     }
 
     AfterOperator.StartOfString = &SubstituteValues.StartOfString[CharsToOperator + 1];
@@ -610,7 +627,7 @@ YoriLibForEachFile(
 
             YoriLibYPrintf(&NewFileSpec, _T("%y%y%y"), &BeforeOperator, &MatchValue, &AfterOperator);
 
-            if (!YoriLibForEachFile(&NewFileSpec, MatchFlags, Depth, Callback, Context)) {
+            if (!YoriLibForEachFile(&NewFileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context)) {
                 YoriLibFreeStringContents(&NewFileSpec);
                 return FALSE;
             }
@@ -637,7 +654,7 @@ YoriLibForEachFile(
 
             YoriLibYPrintf(&NewFileSpec, _T("%y%y%y"), &BeforeOperator, &MatchValue, &AfterOperator);
 
-            if (!YoriLibForEachFile(&NewFileSpec, MatchFlags, Depth, Callback, Context)) {
+            if (!YoriLibForEachFile(&NewFileSpec, MatchFlags, Depth, Callback, ErrorCallback, Context)) {
                 YoriLibFreeStringContents(&NewFileSpec);
                 return FALSE;
             }
