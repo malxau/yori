@@ -235,22 +235,10 @@ typedef struct _SDIR_OPTS {
     YORI_STRING     ParentName;
 
     /**
-     Specifies the amount of space that must be used within a subtree before
-     it should be displayed in brief recurse mode.
-     */
-    SDIR_FILESIZE   BriefRecurseSize;
-
-    /**
      TRUE if any specification should be recursively enumerated, or
      FALSE to only display a single level.
      */
     BOOL            Recursive;
-
-    /**
-     Specifies the number of levels of depth that the user wants to display
-     in brief recurse mode.
-     */
-    DWORD           BriefRecurseDepth;
 
     /**
      Specifies the effective height of the console window, in characters.
@@ -304,12 +292,6 @@ typedef struct _SDIR_OPTS {
      The volatile configuration for an executable's architecture.
      */
     SDIR_FEATURE    FtArch;
-
-    /**
-     The volatile configuration for how to display alternate lines in brief
-     recurse mode.
-     */
-    SDIR_FEATURE    FtBriefAlternate;
 
     /**
      The volatile configuration for the file's compression algorithm.
@@ -463,13 +445,6 @@ typedef struct _SDIR_OPTS {
     SDIR_FEATURE    FtWriteTime;
 
     /**
-     TRUE if when calculating file usage in directories in brief recurse
-     mode, the file size divided by link count should be used rather than
-     the raw file size (so that the file size is only counted once per disk.)
-     */
-    BOOLEAN         EnableAverageLinkSize:1;
-
-    /**
      TRUE if once the screen is full of output, the program should wait for
      the user to press a key before generating more.
      */
@@ -545,8 +520,7 @@ typedef struct _SDIR_OPTS {
 
 /**
  Summary information.  This is used to display the final line after
- enumerating a single directory, and also to calculate changes when
- enumerating across multiple directories in a brief recurse mode.
+ enumerating a single directory.
  */
 typedef struct _SDIR_SUMMARY {
     /**

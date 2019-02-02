@@ -68,22 +68,10 @@ SdirCollectSummary(
         Summary->NumFiles++;
     }
 
-    if (Opts->EnableAverageLinkSize) {
-        ULONG EffectiveLinkCount = Entry->LinkCount;
-        if (EffectiveLinkCount == 0) {
-            EffectiveLinkCount = 1;
-        }
-        Summary->TotalSize += SdirFileSizeFromLargeInt(&Entry->FileSize) / EffectiveLinkCount;
+    Summary->TotalSize += SdirFileSizeFromLargeInt(&Entry->FileSize);
 
-        if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_COLLECT) {
-            Summary->CompressedSize += SdirFileSizeFromLargeInt(&Entry->CompressedFileSize) / EffectiveLinkCount;
-        }
-    } else {
-        Summary->TotalSize += SdirFileSizeFromLargeInt(&Entry->FileSize);
-
-        if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_COLLECT) {
-            Summary->CompressedSize += SdirFileSizeFromLargeInt(&Entry->CompressedFileSize);
-        }
+    if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_COLLECT) {
+        Summary->CompressedSize += SdirFileSizeFromLargeInt(&Entry->CompressedFileSize);
     }
 
     return TRUE;
@@ -1291,12 +1279,6 @@ SdirOptions[] = {
         SdirDisplayFileAccessTime,           YoriLibCollectAccessTime,
         YoriLibCompareAccessTime,            NULL,
         YoriLibGenerateAccessTime,           "access time"},
-
-    {OPT_OS(FtBriefAlternate),               _T("ba"),
-        {0, 0, BACKGROUND_BLUE},
-        NULL,                                NULL,
-        NULL,                                NULL,
-        NULL,                                "brief alternate mask"},
 
     {OPT_OS(FtCompressionAlgorithm),         _T("ca"),
         {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, YORILIB_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},

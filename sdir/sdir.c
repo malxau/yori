@@ -216,8 +216,7 @@ SdirAddToCollection (
 
     SdirCaptureFoundItemIntoDirent(CurrentEntry, FindData, FullPath);
 
-    if (Opts->BriefRecurseDepth == 0 &&
-        CurrentEntry->RenderAttributes.Ctrl & YORILIB_ATTRCTRL_HIDE) {
+    if (CurrentEntry->RenderAttributes.Ctrl & YORILIB_ATTRCTRL_HIDE) {
 
         SdirDirCollectionCurrent--;
         return TRUE;
@@ -1149,229 +1148,6 @@ SdirEnumerateAndDisplay (
 }
 
 /**
- Count of the number of lines displayed in brief recurse mode to allow
- for alternating colors in order to make lines more readable.
- */
-ULONG HeirarchyLineNumber = 0;
-
-/**
- Display a single line of output during brief recurse (du style) enumerates.
-
- @param NodeName Pointer to a NULL terminated string indicating the directory
-        that was just enumerated.
-
- @param Before Pointer to summary information indicating the number of files
-        found and their sizes before this directory enumerate.
-
- @param After Pointer to summary information indicating the number of files
-        found and their sizes after this directory enumerate.
-
- @param DefaultAttributes Specifies the default color information to apply for
-        text.  This is overridden by much of the display elements.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SdirDisplayHeirarchySummary(
-    __in PYORI_STRING NodeName,
-    __in PSDIR_SUMMARY Before,
-    __in PSDIR_SUMMARY After,
-    __in YORILIB_COLOR_ATTRIBUTES DefaultAttributes
-    )
-{
-    PSDIR_FMTCHAR Buffer;
-    TCHAR Str[100];
-    DWORD Len;
-    DWORD NodeNameOffset;
-    DWORD PrefixLen;
-    LARGE_INTEGER Size;
-    ULONG CurrentChar = 0;
-    ULONG MetadataSize = 40;
-    ULONG FileCountAlignSize = 4;
-    ULONG DirectoryNameAlignSize;
-    YORILIB_COLOR_ATTRIBUTES Background;
-    YORILIB_COLOR_ATTRIBUTES RenderAttributes;
-    YORILIB_COLOR_ATTRIBUTES ThisColor;
-
-    //
-    //  If it doesn't meet size criteria, display nothing
-    //
-
-    if (Opts->BriefRecurseSize > 0) {
-        if ((After->TotalSize - Before->TotalSize) < Opts->BriefRecurseSize) {
-            return TRUE;
-        }
-    }
-
-    Len = NodeName->LengthInChars + SDIR_MAX_WIDTH;
-    Buffer = YoriLibMalloc(Len * sizeof(SDIR_FMTCHAR));
-    if (Buffer == NULL) {
-        SdirDisplayError(GetLastError(), _T("YoriLibMalloc"));
-        return FALSE;
-    }
-
-    HeirarchyLineNumber++;
-
-    if ((HeirarchyLineNumber % 2) == 0) {
-        Background = Opts->FtBriefAlternate.HighlightColor;
-    } else {
-        YoriLibSetColorToWin32(&Background, 0);
-    }
-
-    //
-    //  Guess a good amount of padding based on the window size
-    //
-
-    if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_DISPLAY) {
-        MetadataSize += 20;
-    }
-
-    if (Opts->ConsoleWidth < 10 + MetadataSize) {
-        DirectoryNameAlignSize = 10;
-    } else {
-        DirectoryNameAlignSize = Opts->ConsoleWidth - MetadataSize;
-    }
-
-    if (DirectoryNameAlignSize > (SDIR_MAX_WIDTH - 100)) {
-        DirectoryNameAlignSize = SDIR_MAX_WIDTH - 100;
-    }
-
-    if (Opts->ConsoleWidth > 70) {
-        FileCountAlignSize++;
-        DirectoryNameAlignSize -= 2;
-    }
-
-    if (Opts->ConsoleWidth > 100) {
-        FileCountAlignSize++;
-        DirectoryNameAlignSize -= 2;
-    }
-
-    if (Opts->ConsoleWidth > 130) {
-        FileCountAlignSize++;
-        DirectoryNameAlignSize -= 2;
-    }
-
-    //
-    //  Display directory name
-    //
-
-    RenderAttributes = SdirRenderAttributesFromPath(NodeName);
-    RenderAttributes = YoriLibCombineColors(RenderAttributes, Background);
-    Len = NodeName->LengthInChars;
-    PrefixLen = 0;
-
-    if (YoriLibIsFullPathUnc(NodeName)) {
-
-        Len -= 8;
-        NodeNameOffset = 8;
-
-        SdirPasteStr(&Buffer[CurrentChar], _T("\\\\"), RenderAttributes, 2);
-        CurrentChar += 2;
-        PrefixLen = 2;
-
-    } else {
-        Len -= 4;
-        NodeNameOffset = 4;
-    }
-    
-    SdirPasteStr(&Buffer[CurrentChar], &NodeName->StartOfString[NodeNameOffset], RenderAttributes, Len);
-    CurrentChar += Len;
-    Len = DirectoryNameAlignSize - ((Len + PrefixLen) % DirectoryNameAlignSize);
-    SdirPasteStrAndPad(&Buffer[CurrentChar], NULL, RenderAttributes, 0, Len);
-    CurrentChar += Len;
-
-    //
-    //  Display size of the directory contents
-    //
-
-    Size.HighPart = 0;
-    SdirFileSizeFromLargeInt(&Size) = After->TotalSize - Before->TotalSize;
-    ThisColor = YoriLibCombineColors(Opts->FtFileSize.HighlightColor, Background);
-    CurrentChar += SdirDisplayGenericSize(&Buffer[CurrentChar], ThisColor, &Size);
-    ThisColor = YoriLibCombineColors(DefaultAttributes, Background);
-    SdirPasteStr(&Buffer[CurrentChar], _T(" used "), ThisColor, 6);
-    CurrentChar += 6;
-
-    //
-    //  Display compressed size if requested
-    //
-
-    if (Opts->FtCompressedFileSize.Flags & SDIR_FEATURE_DISPLAY) {
-        ThisColor = YoriLibCombineColors(DefaultAttributes, Background);
-        SdirPasteStr(&Buffer[CurrentChar], _T("("), ThisColor, 1);
-        CurrentChar += 1;
-
-        Size.HighPart = 0;
-        SdirFileSizeFromLargeInt(&Size) = After->CompressedSize - Before->CompressedSize;
-
-        ThisColor = YoriLibCombineColors(Opts->FtCompressedFileSize.HighlightColor, Background);
-        CurrentChar += SdirDisplayGenericSize(&Buffer[CurrentChar], ThisColor, &Size);
-        ThisColor = YoriLibCombineColors(DefaultAttributes, Background);
-        SdirPasteStr(&Buffer[CurrentChar], _T(" compressed) "), ThisColor, 13);
-        CurrentChar += 13;
-    }
-
-    //
-    //  Display count of files
-    //
-
-    YoriLibSPrintfS(Str, sizeof(Str)/sizeof(Str[0]), _T("%i"), (int)(After->NumFiles - Before->NumFiles));
-    Len = (DWORD)_tcslen(Str);
-
-    ThisColor = YoriLibCombineColors(DefaultAttributes, Background);
-    SdirPasteStrAndPad(&Buffer[CurrentChar], _T("in "), ThisColor, 3, 3+FileCountAlignSize);
-    CurrentChar += (Len>FileCountAlignSize)?3:(3+FileCountAlignSize-Len);
-    ThisColor = YoriLibCombineColors(Opts->FtNumberFiles.HighlightColor, Background);
-    SdirPasteStr(&Buffer[CurrentChar], Str, ThisColor, Len);
-    CurrentChar += Len;
-
-    //
-    //  And count of dirs
-    //
-
-    YoriLibSPrintfS(Str, sizeof(Str)/sizeof(Str[0]), _T("%i"), (int)(After->NumDirs - Before->NumDirs));
-    Len = (DWORD)_tcslen(Str);
-
-    ThisColor = YoriLibCombineColors(DefaultAttributes, Background);
-    SdirPasteStrAndPad(&Buffer[CurrentChar], _T(" files and "), ThisColor, 11, 11+FileCountAlignSize);
-    CurrentChar += (Len>FileCountAlignSize)?11:(11+FileCountAlignSize-Len);
-
-    ThisColor = YoriLibCombineColors(Opts->FtNumberFiles.HighlightColor, Background);
-    SdirPasteStr(&Buffer[CurrentChar], Str, ThisColor, Len);
-    CurrentChar += Len;
-
-    ThisColor = YoriLibCombineColors(DefaultAttributes, Background);
-    SdirPasteStr(&Buffer[CurrentChar], _T(" dirs"), ThisColor, 5);
-    CurrentChar += 5;
-
-    //
-    //  Display the formatted line
-    //
-
-    for (Len = 0; Len < CurrentChar / Opts->ConsoleWidth; Len++) {
-        if (!SdirRowDisplayed()) {
-            YoriLibFree(Buffer);
-            return FALSE;
-        }
-    }
-    SdirWrite(Buffer, CurrentChar);
-
-    //
-    //  Newline is written through this function for automatic pause
-    //  accounting
-    //
-
-    ThisColor = YoriLibCombineColors(DefaultAttributes, Background);
-    if (!SdirWriteStringWithAttribute(_T("\n"), ThisColor)) {
-        YoriLibFree(Buffer);
-        return FALSE;
-    }
-
-    YoriLibFree(Buffer);
-    return TRUE;
-}
-
-/**
  Error codes that should allow enumeration to continue rather than abort.
  */
 #define SdirContinuableError(err) \
@@ -1385,8 +1161,7 @@ SdirDisplayHeirarchySummary(
     (err != ERROR_FILE_NOT_FOUND)
 
 /**
- Perform a recursive enumerate.  This may be a brief enumerate (du-style) or
- may be a regular display of files in each directory.
+ Perform a recursive enumerate.
 
  @param Depth Indicates the current recursion depth.  The user specified
         directory is zero.
@@ -1470,11 +1245,10 @@ SdirEnumerateAndDisplaySubtree (
     }
 
     //
-    //  If we're giving a regular view and have something to display,
-    //  display it.
+    //  If we have something to display, display it.
     //
 
-    if (Opts->BriefRecurseDepth == 0 && SdirDirCollectionCurrent > 0) {
+    if (SdirDirCollectionCurrent > 0) {
 
         YORILIB_COLOR_ATTRIBUTES RenderAttributes;
         RenderAttributes = SdirRenderAttributesFromPath(&ParentDirectory);
@@ -1581,17 +1355,6 @@ SdirEnumerateAndDisplaySubtree (
     YoriLibFreeStringContents(&NextSubDir);
     
     FindClose(hFind);
-
-    //
-    //  If we're displaying a heirarchy, display the results at
-    //  the end, after all children have been accounted for.
-    //
-
-    if (Opts->BriefRecurseDepth != 0 && Depth <= Opts->BriefRecurseDepth) {
-        if (!SdirDisplayHeirarchySummary(&ParentDirectory, &SummaryOnEntry, Summary, Opts->FtSummary.HighlightColor)) {
-            return FALSE;
-        }
-    }
 
     return TRUE;
 }

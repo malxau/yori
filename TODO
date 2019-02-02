@@ -3,7 +3,6 @@ v1.0:
  - Make selection use RTF
  - General MSFIX review
  - Tool for creating VHDs
- - Add features to du and remove sdir support for it
  - 32 bit setver on HyperV server
  - Share sdir metadata color logic
 
