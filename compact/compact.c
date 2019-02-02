@@ -3,7 +3,7 @@
  *
  * Yori shell compress or decompress files
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -70,6 +70,12 @@ typedef struct _COMPACT_CONTEXT {
     BOOL Compress;
 
     /**
+     TRUE if enumeration is recursive, FALSE if it is within one directory
+     only.
+     */
+    BOOL Recursive;
+
+    /**
      TRUE if output should be generated for each file processed.  FALSE for
      silent processing.
      */
@@ -97,8 +103,8 @@ typedef struct _COMPACT_CONTEXT {
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
- @param CompactContext Pointer to the compact context structure indicating the
-        action to perform and populated with the file found.
+ @param Context Pointer to the compact context structure indicating the action
+        to perform and populated with the file found.
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
@@ -107,10 +113,11 @@ CompactFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PCOMPACT_CONTEXT CompactContext
+    __in PVOID Context
     )
 {
     BOOL IncludeFile;
+    PCOMPACT_CONTEXT CompactContext = (PCOMPACT_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -143,6 +150,67 @@ CompactFileFoundCallback(
     return TRUE;
 }
 
+/**
+ A callback that is invoked when a directory cannot be successfully enumerated.
+
+ @param FilePath Pointer to the file path that could not be enumerated.
+
+ @param ErrorCode The Win32 error code describing the failure.
+
+ @param Depth Recursion depth, ignored in this application.
+
+ @param Context Pointer to the context block indicating whether the
+        enumeration was recursive.  Recursive enumerates do not complain
+        if a matching file is not in every single directory, because
+        common usage expects files to be in a subset of directories only.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+CompactFileEnumerateErrorCallback(
+    __in PYORI_STRING FilePath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    YORI_STRING UnescapedFilePath;
+    BOOL Result = FALSE;
+    PCOMPACT_CONTEXT CompactContext = (PCOMPACT_CONTEXT)Context;
+
+    UNREFERENCED_PARAMETER(Depth);
+
+    YoriLibInitEmptyString(&UnescapedFilePath);
+    if (!YoriLibUnescapePath(FilePath, &UnescapedFilePath)) {
+        UnescapedFilePath.StartOfString = FilePath->StartOfString;
+        UnescapedFilePath.LengthInChars = FilePath->LengthInChars;
+    }
+
+    if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
+        if (!CompactContext->Recursive) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+        }
+        Result = TRUE;
+    } else {
+        LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
+        YORI_STRING DirName;
+        LPTSTR FilePart;
+        YoriLibInitEmptyString(&DirName);
+        DirName.StartOfString = UnescapedFilePath.StartOfString;
+        FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
+        if (FilePart != NULL) {
+            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+        } else {
+            DirName.LengthInChars = UnescapedFilePath.LengthInChars;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Enumerate of %y failed: %s"), &DirName, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+    }
+    YoriLibFreeStringContents(&UnescapedFilePath);
+    return Result;
+}
+
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the compact builtin command.
@@ -174,7 +242,6 @@ ENTRYPOINT(
     DWORD i;
     DWORD StartArg = 0;
     DWORD MatchFlags;
-    BOOL Recursive = FALSE;
     BOOL BasicEnumeration = FALSE;
     COMPACT_CONTEXT CompactContext;
     YORILIB_COMPRESS_ALGORITHM CompressionAlgorithm;
@@ -193,7 +260,7 @@ ENTRYPOINT(
                 CompactHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -204,7 +271,8 @@ ENTRYPOINT(
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_LZX;
                 CompactContext.Compress = TRUE;
                 ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:ntfs")) == 0) {
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0 ||
+                       YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:ntfs")) == 0) {
                 CompressionAlgorithm.EntireAlgorithm = 0;
                 CompressionAlgorithm.NtfsAlgorithm = COMPRESSION_FORMAT_DEFAULT;
                 CompactContext.Compress = TRUE;
@@ -227,7 +295,7 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
 
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
-                Recursive = TRUE;
+                CompactContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
                 CompactContext.Compress = FALSE;
@@ -275,7 +343,7 @@ ENTRYPOINT(
     //
 
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
-    if (Recursive) {
+    if (CompactContext.Recursive) {
         MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN;
     }
     if (BasicEnumeration) {
@@ -284,7 +352,12 @@ ENTRYPOINT(
 
     for (i = StartArg; i < ArgC; i++) {
 
-        YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CompactFileFoundCallback, NULL, &CompactContext);
+        YoriLibForEachFile(&ArgV[i],
+                           MatchFlags,
+                           0,
+                           CompactFileFoundCallback,
+                           CompactFileEnumerateErrorCallback,
+                           &CompactContext);
     }
 
     YoriLibFreeCompressContext(&CompactContext.CompressContext);

@@ -4,7 +4,7 @@ v1.0:
  - General MSFIX review
  - Tool for creating VHDs
  - 32 bit setver on HyperV server
- - Share sdir metadata color logic
+ - Allow get to refresh files
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?

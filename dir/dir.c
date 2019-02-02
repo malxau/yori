@@ -395,7 +395,7 @@ DirFileFoundCallback(
 
     UNREFERENCED_PARAMETER(Depth);
 
-    ASSERT(FilePath->StartOfString[FilePath->LengthInChars] == '\0');
+    ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
     FilePart = YoriLibFindRightMostCharacter(FilePath, '\\');
     ASSERT(FilePart != NULL);
@@ -616,6 +616,61 @@ DirFileFoundCallback(
     return TRUE;
 }
 
+/**
+ A callback that is invoked when a directory cannot be successfully enumerated.
+
+ @param FilePath Pointer to the file path that could not be enumerated.
+
+ @param ErrorCode The Win32 error code describing the failure.
+
+ @param Depth Recursion depth, ignored in this application.
+
+ @param Context Context, ignored in this function.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+DirFileEnumerateErrorCallback(
+    __in PYORI_STRING FilePath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    YORI_STRING UnescapedFilePath;
+    BOOL Result = FALSE;
+
+    UNREFERENCED_PARAMETER(Depth);
+    UNREFERENCED_PARAMETER(Context);
+
+    YoriLibInitEmptyString(&UnescapedFilePath);
+    if (!YoriLibUnescapePath(FilePath, &UnescapedFilePath)) {
+        UnescapedFilePath.StartOfString = FilePath->StartOfString;
+        UnescapedFilePath.LengthInChars = FilePath->LengthInChars;
+    }
+
+    if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
+        Result = TRUE;
+    } else {
+        LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
+        YORI_STRING DirName;
+        LPTSTR FilePart;
+        YoriLibInitEmptyString(&DirName);
+        DirName.StartOfString = UnescapedFilePath.StartOfString;
+        FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
+        if (FilePart != NULL) {
+            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+        } else {
+            DirName.LengthInChars = UnescapedFilePath.LengthInChars;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Enumerate of %y failed: %s"), &DirName, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+    }
+    YoriLibFreeStringContents(&UnescapedFilePath);
+    return Result;
+}
+
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the dir builtin command.
@@ -735,10 +790,20 @@ ENTRYPOINT(
     if (StartArg == 0) {
         YORI_STRING FilesInDirectorySpec;
         YoriLibConstantString(&FilesInDirectorySpec, _T("*"));
-        YoriLibForEachFile(&FilesInDirectorySpec, MatchFlags, 0, DirFileFoundCallback, NULL, &DirContext);
+        YoriLibForEachFile(&FilesInDirectorySpec,
+                           MatchFlags,
+                           0,
+                           DirFileFoundCallback,
+                           DirFileEnumerateErrorCallback,
+                           &DirContext);
     } else {
         for (i = StartArg; i < ArgC; i++) {
-            YoriLibForEachFile(&ArgV[i], MatchFlags, 0, DirFileFoundCallback, NULL, &DirContext);
+            YoriLibForEachFile(&ArgV[i],
+                               MatchFlags,
+                               0,
+                               DirFileFoundCallback,
+                               DirFileEnumerateErrorCallback,
+                               &DirContext);
         }
     }
 

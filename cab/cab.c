@@ -78,10 +78,15 @@ typedef struct _CAB_MATCH_ITEM {
 } CAB_MATCH_ITEM, *PCAB_MATCH_ITEM;
 
 /**
- Context passed between the source package creation operation and every file
- found while creating the source package.
+ Context passed between the archive creation operation and every file
+ found while creating the archive.
  */
 typedef struct _CAB_CREATE_CONTEXT {
+
+    /**
+     TRUE if directories are being enumerated recursively.
+     */
+    BOOL Recursive;
 
     /**
      A handle to the Cabinet being created.
@@ -99,6 +104,24 @@ typedef struct _CAB_CREATE_CONTEXT {
      */
     YORI_LIST_ENTRY IncludeList;
 } CAB_CREATE_CONTEXT, *PCAB_CREATE_CONTEXT;
+
+/**
+ Context passed between the archive expansion operation and every file
+ found while expanding the archives.
+ */
+typedef struct _CAB_EXPAND_CONTEXT {
+
+    /**
+     TRUE if directories are being enumerated recursively.
+     */
+    BOOL Recursive;
+
+    /**
+     The location to expand any archives into.
+     */
+    YORI_STRING FullTargetDirectory;
+
+} CAB_EXPAND_CONTEXT, *PCAB_EXPAND_CONTEXT;
 
 /**
  Add a new match criteria to the list.
@@ -236,6 +259,8 @@ CabCreateSingleFileFoundCallback(
     UNREFERENCED_PARAMETER(Depth);
     UNREFERENCED_PARAMETER(Context);
 
+    ASSERT(YoriLibIsStringNullTerminated(FilePath));
+
     YoriLibConstantString(&RelativePathFrom, FileInfo->cFileName);
     if (!YoriLibAllocateString(&FullCabName, FilePath->LengthInChars + sizeof(".cab"))) {
         return FALSE;
@@ -348,7 +373,7 @@ CabExpandFileFoundCallback(
     __in PVOID Context
     )
 {
-    PYORI_STRING FullTargetDirectory = (PYORI_STRING)Context;
+    PCAB_EXPAND_CONTEXT ExpandContext = (PCAB_EXPAND_CONTEXT)Context;
     YORI_STRING ErrorString;
 
     UNREFERENCED_PARAMETER(FileInfo);
@@ -356,13 +381,134 @@ CabExpandFileFoundCallback(
 
     YoriLibInitEmptyString(&ErrorString);
 
-    if (!YoriLibExtractCab(FilePath, FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, NULL, &ErrorString)) {
+    if (!YoriLibExtractCab(FilePath, &ExpandContext->FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, NULL, &ErrorString)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), FilePath, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
     }
 
     return TRUE;
 }
+
+/**
+ A callback that is invoked when a directory cannot be successfully enumerated.
+
+ @param FilePath Pointer to the file path that could not be enumerated.
+
+ @param ErrorCode The Win32 error code describing the failure.
+
+ @param Depth Recursion depth, ignored in this application.
+
+ @param Context Pointer to the context block indicating whether the
+        enumeration was recursive.  Recursive enumerates do not complain
+        if a matching file is not in every single directory, because
+        common usage expects files to be in a subset of directories only.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+CabCreateFileEnumerateErrorCallback(
+    __in PYORI_STRING FilePath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PCAB_CREATE_CONTEXT CreateContext = (PCAB_CREATE_CONTEXT)Context;
+    YORI_STRING UnescapedFilePath;
+    BOOL Result = FALSE;
+
+    UNREFERENCED_PARAMETER(Depth);
+
+    YoriLibInitEmptyString(&UnescapedFilePath);
+    if (!YoriLibUnescapePath(FilePath, &UnescapedFilePath)) {
+        UnescapedFilePath.StartOfString = FilePath->StartOfString;
+        UnescapedFilePath.LengthInChars = FilePath->LengthInChars;
+    }
+
+    if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
+        if (!CreateContext->Recursive) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+        }
+        Result = TRUE;
+    } else {
+        LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
+        YORI_STRING DirName;
+        LPTSTR FilePart;
+        YoriLibInitEmptyString(&DirName);
+        DirName.StartOfString = UnescapedFilePath.StartOfString;
+        FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
+        if (FilePart != NULL) {
+            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+        } else {
+            DirName.LengthInChars = UnescapedFilePath.LengthInChars;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Enumerate of %y failed: %s"), &DirName, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+    }
+    YoriLibFreeStringContents(&UnescapedFilePath);
+    return Result;
+}
+
+/**
+ A callback that is invoked when a directory cannot be successfully enumerated.
+
+ @param FilePath Pointer to the file path that could not be enumerated.
+
+ @param ErrorCode The Win32 error code describing the failure.
+
+ @param Depth Recursion depth, ignored in this application.
+
+ @param Context Pointer to the context block indicating whether the
+        enumeration was recursive.  Recursive enumerates do not complain
+        if a matching file is not in every single directory, because
+        common usage expects files to be in a subset of directories only.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+CabExpandFileEnumerateErrorCallback(
+    __in PYORI_STRING FilePath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PCAB_EXPAND_CONTEXT ExpandContext = (PCAB_EXPAND_CONTEXT)Context;
+    YORI_STRING UnescapedFilePath;
+    BOOL Result = FALSE;
+
+    UNREFERENCED_PARAMETER(Depth);
+
+    YoriLibInitEmptyString(&UnescapedFilePath);
+    if (!YoriLibUnescapePath(FilePath, &UnescapedFilePath)) {
+        UnescapedFilePath.StartOfString = FilePath->StartOfString;
+        UnescapedFilePath.LengthInChars = FilePath->LengthInChars;
+    }
+
+    if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
+        if (!ExpandContext->Recursive) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+        }
+        Result = TRUE;
+    } else {
+        LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
+        YORI_STRING DirName;
+        LPTSTR FilePart;
+        YoriLibInitEmptyString(&DirName);
+        DirName.StartOfString = UnescapedFilePath.StartOfString;
+        FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
+        if (FilePart != NULL) {
+            DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
+        } else {
+            DirName.LengthInChars = UnescapedFilePath.LengthInChars;
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Enumerate of %y failed: %s"), &DirName, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+    }
+    YoriLibFreeStringContents(&UnescapedFilePath);
+    return Result;
+}
+
 
 #ifdef YORI_BUILTIN
 /**
@@ -484,6 +630,7 @@ ENTRYPOINT(
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
         if (Recursive) {
+            CreateContext.Recursive = TRUE;
             MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
         }
 
@@ -492,7 +639,7 @@ ENTRYPOINT(
                                MatchFlags,
                                0,
                                CabCreateSingleFileFoundCallback,
-                               NULL,
+                               CabCreateFileEnumerateErrorCallback,
                                &CreateContext);
         }
         CabCreateFreeMatchLists(&CreateContext);
@@ -520,6 +667,7 @@ ENTRYPOINT(
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
         if (Recursive) {
+            CreateContext.Recursive = TRUE;
             MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
         }
 
@@ -528,17 +676,19 @@ ENTRYPOINT(
                                MatchFlags,
                                0,
                                CabCreateFileFoundCallback,
-                               NULL,
+                               CabCreateFileEnumerateErrorCallback,
                                &CreateContext);
         }
         YoriLibCloseCab(CreateContext.CabHandle);
         CabCreateFreeMatchLists(&CreateContext);
     } else {
-        YORI_STRING FullTargetDirectory;
         YORI_STRING TargetDirectory;
+        CAB_EXPAND_CONTEXT ExpandContext;
+
+        ZeroMemory(&ExpandContext, sizeof(ExpandContext));
 
         YoriLibConstantString(&TargetDirectory, _T("."));
-        if (!YoriLibUserStringToSingleFilePath(&TargetDirectory, FALSE, &FullTargetDirectory)) {
+        if (!YoriLibUserStringToSingleFilePath(&TargetDirectory, FALSE, &ExpandContext.FullTargetDirectory)) {
             return EXIT_FAILURE;
         }
 
@@ -547,6 +697,7 @@ ENTRYPOINT(
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
         if (Recursive) {
+            ExpandContext.Recursive = TRUE;
             MatchFlags |= YORILIB_FILEENUM_RECURSE_AFTER_RETURN;
         }
 
@@ -555,11 +706,11 @@ ENTRYPOINT(
                                MatchFlags,
                                0,
                                CabExpandFileFoundCallback,
-                               NULL,
-                               &FullTargetDirectory);
+                               CabExpandFileEnumerateErrorCallback,
+                               &ExpandContext);
         }
 
-        YoriLibFreeStringContents(&FullTargetDirectory);
+        YoriLibFreeStringContents(&ExpandContext.FullTargetDirectory);
     }
 
     return EXIT_SUCCESS;
