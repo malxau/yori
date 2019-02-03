@@ -441,6 +441,7 @@ YoriLibGetFullPathNameReturnAllocation(
 
             CurrentDirectory.LengthInChars = Result;
         }
+        ASSERT(YoriLibIsStringNullTerminated(&CurrentDirectory));
 
         //
         //  Assume the current directory is a normal, boring Win32 form,
@@ -486,8 +487,40 @@ YoriLibGetFullPathNameReturnAllocation(
 
         if (AbsoluteWithoutDrive) {
             if (CurrentDirectory.LengthInChars > 2) {
-                CurrentDirectory.LengthInChars = 2;
-                CurrentDirectory.StartOfString[2] = '\0';
+                if (UncPath) {
+                    YORI_STRING CurrentDirectorySubstring;
+                    LPTSTR Slash;
+                    YoriLibInitEmptyString(&CurrentDirectorySubstring);
+
+                    //
+                    //  For a UNC path, we just chopped off the first slash
+                    //  or prefix so it's currently \server\share.  Skip
+                    //  the first slash; length was checked above.
+                    //
+
+                    CurrentDirectorySubstring.StartOfString = &CurrentDirectory.StartOfString[1];
+                    CurrentDirectorySubstring.LengthInChars = CurrentDirectory.LengthInChars - 1;
+
+                    Slash = YoriLibFindLeftMostCharacter(&CurrentDirectorySubstring, '\\');
+                    if (Slash != NULL) {
+                        CurrentDirectorySubstring.StartOfString = Slash + 1;
+                        CurrentDirectorySubstring.LengthInChars = CurrentDirectory.LengthInChars - (DWORD)(Slash - CurrentDirectory.StartOfString) - 1;
+                        Slash = YoriLibFindLeftMostCharacter(&CurrentDirectorySubstring, '\\');
+                        if (Slash != NULL) {
+                            CurrentDirectory.LengthInChars = (DWORD)(Slash - CurrentDirectory.StartOfString);
+                            CurrentDirectory.StartOfString[CurrentDirectory.LengthInChars] = '\0';
+                        }
+                    }
+                } else {
+
+                    //
+                    //  If it's a drive letter path, just truncate the string
+                    //  to where the drive letter should be.
+                    //
+
+                    CurrentDirectory.LengthInChars = 2;
+                    CurrentDirectory.StartOfString[2] = '\0';
+                }
             }
         }
 
