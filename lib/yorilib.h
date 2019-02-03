@@ -1944,6 +1944,11 @@ YoriLibHashRemoveByKey(
 // *** HEXDUMP.C ***
 
 /**
+ The number of bytes of data to display in hex form per line.
+ */
+#define YORI_LIB_HEXDUMP_BYTES_PER_LINE 16
+
+/**
  If set, display the characters as well as the hex values.
  */
 #define YORI_LIB_HEX_FLAG_DISPLAY_CHARS        (0x00000001)

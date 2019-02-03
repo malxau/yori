@@ -28,11 +28,6 @@
 #include "yorilib.h"
 
 /**
- The number of bytes of data to display in hex form per line.
- */
-#define YORI_LIB_HEXDUMP_BYTES_PER_LINE 16
-
-/**
  Display a line of up to YORI_LIB_HEXDUMP_BYTES_PER_LINE in units of one
  UCHAR.
 
@@ -85,11 +80,18 @@ YoriLibHexByteLine(
         }
 
         if (DisplayWord) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
-                          _T("%c[0%sm%02x "),
-                          27,
-                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
-                          WordToDisplay);
+            if (HilightBits) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%c[0%sm%02x%c[0m "),
+                              27,
+                              (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                              WordToDisplay,
+                              27);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%02x "),
+                              WordToDisplay);
+            }
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("   "));
         }
@@ -153,11 +155,18 @@ YoriLibHexWordLine(
         }
 
         if (DisplayWord) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
-                          _T("%c[0%sm%04x "),
-                          27,
-                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
-                          WordToDisplay);
+            if (HilightBits) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%c[0%sm%04x%c[0m "),
+                              27,
+                              (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                              WordToDisplay,
+                              27);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%04x "),
+                              WordToDisplay);
+            }
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("     "));
         }
@@ -222,11 +231,18 @@ YoriLibHexDwordLine(
         }
 
         if (DisplayWord) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
-                          _T("%c[0%sm%08x "),
-                          27,
-                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
-                          WordToDisplay);
+            if (HilightBits) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%c[0%sm%08x%c[0m "),
+                              27,
+                              (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                              WordToDisplay,
+                              27);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%08x "),
+                              WordToDisplay);
+            }
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("         "));
         }
@@ -292,12 +308,20 @@ YoriLibHexDwordLongLine(
         if (DisplayWord) {
             LARGE_INTEGER DisplayValue;
             DisplayValue.QuadPart = WordToDisplay;
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
-                          _T("%c[0%sm%08x`%08x "),
-                          27,
-                          (HilightBits & CurrentBit)?_T(";1"):_T(""),
-                          DisplayValue.HighPart,
-                          DisplayValue.LowPart);
+            if (HilightBits) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%c[0%sm%08x`%08x%c[0m "),
+                              27,
+                              (HilightBits & CurrentBit)?_T(";1"):_T(""),
+                              DisplayValue.HighPart,
+                              DisplayValue.LowPart,
+                              27);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("%08x`%08x "),
+                              DisplayValue.HighPart,
+                              DisplayValue.LowPart);
+            }
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("                  "));
         }
@@ -567,11 +591,11 @@ YoriLibHexDiff(
             }
 
             if (BufferIndex == 0) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m | "), 27);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" | "));
             }
         }
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m\n"), 27);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
     }
 
     return TRUE;

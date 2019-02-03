@@ -1,8 +1,6 @@
 v1.0:
- - Hexdump -r
  - Make selection use RTF
  - General MSFIX review
- - Tool for creating VHDs
  - 32 bit setver on HyperV server
  - Allow get to refresh files
 
@@ -20,3 +18,5 @@ v2.0:
  - Ctrl+Z
  - Markdown formatter/parser
  - Man or something like it
+ - Env
+ - Tool for creating VHDs
