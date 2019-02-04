@@ -301,31 +301,27 @@ HexDumpReverseParseByte(
     UCHAR Value = 0;
     UCHAR ThisByte = 0;
     TCHAR SourceChar;
-    DWORD Index;
     DWORD BytePart;
 
     if (String->LengthInChars < ReverseContext->BytesPerWord * 2) {
         return FALSE;
     }
 
-    for (Index = 0; Index < ReverseContext->BytesPerWord; Index++) {
-        Value = Value << 8;
-        ThisByte = 0;
-        for (BytePart = 0; BytePart < 2; BytePart++) {
-            ThisByte = ThisByte << 4;
-            SourceChar = String->StartOfString[Index * 2 + BytePart];
-            if (SourceChar >= 'a' && SourceChar <= 'f') {
-                ThisByte = (UCHAR)(ThisByte + SourceChar - 'a' + 10);
-            } else if (SourceChar >= 'A' && SourceChar <= 'F') {
-                ThisByte = (UCHAR)(ThisByte + SourceChar - 'A' + 10);
-            } else if (SourceChar >= '0' && SourceChar <= '9') {
-                ThisByte = (UCHAR)(ThisByte + SourceChar - '0');
-            } else {
-                return FALSE;
-            }
+    ThisByte = 0;
+    for (BytePart = 0; BytePart < 2; BytePart++) {
+        ThisByte = (UCHAR)(ThisByte << 4);
+        SourceChar = String->StartOfString[BytePart];
+        if (SourceChar >= 'a' && SourceChar <= 'f') {
+            ThisByte = (UCHAR)(ThisByte + SourceChar - 'a' + 10);
+        } else if (SourceChar >= 'A' && SourceChar <= 'F') {
+            ThisByte = (UCHAR)(ThisByte + SourceChar - 'A' + 10);
+        } else if (SourceChar >= '0' && SourceChar <= '9') {
+            ThisByte = (UCHAR)(ThisByte + SourceChar - '0');
+        } else {
+            return FALSE;
         }
-        Value = Value | ThisByte;
     }
+    Value = ThisByte;
 
     memcpy(&ReverseContext->OutputBuffer[ReverseContext->BytesThisLine], &Value, sizeof(Value));
     ReverseContext->BytesThisLine += sizeof(Value);
@@ -360,10 +356,10 @@ HexDumpReverseParseWord(
     }
 
     for (Index = 0; Index < ReverseContext->BytesPerWord; Index++) {
-        Value = Value << 8;
+        Value = (WORD)(Value << 8);
         ThisByte = 0;
         for (BytePart = 0; BytePart < 2; BytePart++) {
-            ThisByte = ThisByte << 4;
+            ThisByte = (UCHAR)(ThisByte << 4);
             SourceChar = String->StartOfString[Index * 2 + BytePart];
             if (SourceChar >= 'a' && SourceChar <= 'f') {
                 ThisByte = (UCHAR)(ThisByte + SourceChar - 'a' + 10);
@@ -375,7 +371,7 @@ HexDumpReverseParseWord(
                 return FALSE;
             }
         }
-        Value = Value | ThisByte;
+        Value = (WORD)(Value | ThisByte);
     }
 
     memcpy(&ReverseContext->OutputBuffer[ReverseContext->BytesThisLine], &Value, sizeof(Value));
@@ -414,7 +410,7 @@ HexDumpReverseParseDword(
         Value = Value << 8;
         ThisByte = 0;
         for (BytePart = 0; BytePart < 2; BytePart++) {
-            ThisByte = ThisByte << 4;
+            ThisByte = (UCHAR)(ThisByte << 4);
             SourceChar = String->StartOfString[Index * 2 + BytePart];
             if (SourceChar >= 'a' && SourceChar <= 'f') {
                 ThisByte = (UCHAR)(ThisByte + SourceChar - 'a' + 10);
@@ -470,7 +466,7 @@ HexDumpReverseParseDwordLong(
         Value = Value << 8;
         ThisByte = 0;
         for (BytePart = 0; BytePart < 2; BytePart++) {
-            ThisByte = ThisByte << 4;
+            ThisByte = (UCHAR)(ThisByte << 4);
             SourceChar = String->StartOfString[Index * 2 + BytePart - ByteShift];
             if (SourceChar >= 'a' && SourceChar <= 'f') {
                 ThisByte = (UCHAR)(ThisByte + SourceChar - 'a' + 10);
