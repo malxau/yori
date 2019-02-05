@@ -275,15 +275,27 @@ ENTRYPOINT(
     ZeroMemory(&PathComponents, sizeof(PathComponents));
 
     if (YoriLibUserStringToSingleFilePath(&ArgV[StartArg], UseLongPath, &PathComponents.EntirePath)) {
-        ULONG CharIndex;
+        DWORD CharIndex;
         BOOL ExtensionFound = FALSE;
         BOOL FileComponentFound = FALSE;
+        DWORD KeepTrailingSlashesBefore;
+
+        KeepTrailingSlashesBefore = 0;
+        if (UseLongPath) {
+            if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(&PathComponents.EntirePath)) {
+                KeepTrailingSlashesBefore = sizeof("\\\\?\\C:\\") - 1;
+            }
+        } else {
+            if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntirePath)) {
+                KeepTrailingSlashesBefore = sizeof("C:\\") - 1;
+            }
+        }
 
         //
         //  Remove any trailing slashes
         //
 
-        for (CharIndex = PathComponents.EntirePath.LengthInChars - 1; CharIndex >= 0; CharIndex--) {
+        for (CharIndex = PathComponents.EntirePath.LengthInChars - 1; CharIndex > KeepTrailingSlashesBefore; CharIndex--) {
             if (PathComponents.EntirePath.StartOfString[CharIndex] == '\\') {
                 PathComponents.EntirePath.LengthInChars--;
             } else {
