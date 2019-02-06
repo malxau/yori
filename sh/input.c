@@ -1508,9 +1508,12 @@ YoriShProcessKeyDown(
         if (KeyCode == 'A') {
             Buffer->CurrentOffset = 0;
         } else if (KeyCode == 'C') {
-            YoriShClearInput(Buffer);
+            if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
+                YoriLibClearSelection(&Buffer->Selection);
+                YoriShClearInput(Buffer);
+                *TerminateInput = TRUE;
+            }
             YoriLibClearSelection(&Buffer->Selection);
-            *TerminateInput = TRUE;
             return TRUE;
         } else if (KeyCode == 'E') {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
