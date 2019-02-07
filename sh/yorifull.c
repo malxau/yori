@@ -537,7 +537,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("hash"),     _T("yhash $*$")},
     {_T("head"),     _T("ytype -h $*$")},
     {_T("help"),     _T("yhelp $*$")},
-    {_T("htmlclip"), _T("clip -h $*$")},
+    {_T("htmlclip"), _T("yclip -h $*$")},
     {_T("md"),       _T("ymkdir $*$")},
     {_T("md5sum"),   _T("yhash -a md5 $*$")},
     {_T("mkdir"),    _T("ymkdir $*$")},
