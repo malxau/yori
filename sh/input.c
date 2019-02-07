@@ -1265,6 +1265,13 @@ YoriShSelectLeftChar(
             YoriLibCreateSelectionFromPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
         }
         YoriLibUpdateSelectionToPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
+
+        //
+        //  Since this is horizontal selection, we don't want to periodically
+        //  scroll vertically.
+        //
+
+        Buffer->Selection.PeriodicScrollAmount.Y = 0;
     }
 }
 
@@ -1294,6 +1301,13 @@ YoriShSelectRightChar(
             YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X, StartCoord.Y);
         }
         YoriLibUpdateSelectionToPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
+
+        //
+        //  Since this is horizontal selection, we don't want to periodically
+        //  scroll vertically.
+        //
+
+        Buffer->Selection.PeriodicScrollAmount.Y = 0;
     }
 }
 
