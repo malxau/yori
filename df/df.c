@@ -76,6 +76,11 @@ typedef struct _DF_CONTEXT {
     DWORD ConsoleWidth;
 
     /**
+     Number of volumes reported.
+     */
+    DWORD VolumesDisplayed;
+
+    /**
      The color to display file sizes in.
      */
     YORILIB_COLOR_ATTRIBUTES FileSizeColor;
@@ -187,6 +192,10 @@ DfReportSingleVolume(
             YORILIB_COLOR_ATTRIBUTES Attribute;
             YORI_STRING YsVolName;
 
+            if (DfContext->VolumesDisplayed > 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            }
+
             YoriLibUpdateFindDataFromFileInformation(&FindData, VolName, FALSE);
             FinalComponent = _tcsrchr(NameToReport, '\\');
             if (FinalComponent != NULL) {
@@ -262,6 +271,8 @@ DfReportSingleVolume(
         }
         Result = TRUE;
     }
+
+    DfContext->VolumesDisplayed++;
 
     return Result;
 }
