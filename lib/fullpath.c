@@ -275,6 +275,185 @@ YoriLibSetCurrentDirectoryOnDrive(
 }
 
 /**
+ Given a fully qualified path containing a drive letter or UNC root, determine
+ where the root component is that cannot be traversed above.  The path may
+ still contain .. components, it must have a parent directory specified
+ explicitly.  Because this function is assuming a fully qualified path, it
+ also assumes that forward slashes have been converted to backslashes by this
+ point.
+
+ @param Path Pointer to the fully qualified path which may have ..
+        components remaining in it.
+
+ @param PathHasPrefix TRUE if the path starts with a \\?\ or similar prefix.
+        FALSE if it does not.
+
+ @param PathIsUnc TRUE if the path is to a UNC share.  FALSE if it refers to
+        a drive letter mapping.
+
+ @param EffectiveRoot On successful completion, updated to point to the
+        substring within Path that cannot be traversed above.
+
+ @return TRUE to indicate a root was found, FALSE to indicate a parsing
+         error.
+ */
+BOOL
+YoriLibFindEffectiveRootInternal(
+    __in PYORI_STRING Path,
+    __in BOOL PathHasPrefix,
+    __in BOOL PathIsUnc,
+    __out PYORI_STRING EffectiveRoot
+    )
+{
+    YORI_STRING Substring;
+    LPTSTR StringPtr;
+
+    YoriLibInitEmptyString(&Substring);
+
+    YoriLibInitEmptyString(EffectiveRoot);
+    EffectiveRoot->StartOfString = Path->StartOfString;
+
+    if (PathHasPrefix) {
+
+        if (PathIsUnc) {
+
+            ASSERT(Path->LengthInChars >= sizeof("\\\\?\\UNC\\") - 1);
+
+            Substring.StartOfString = &Path->StartOfString[8];
+            Substring.LengthInChars = Path->LengthInChars - 8;
+
+            StringPtr = YoriLibFindLeftMostCharacter(&Substring, '\\');
+
+            //
+            //  If the path is \\server (no share), we can't handle it.
+            //
+
+            if (StringPtr == NULL) {
+                return FALSE;
+            }
+
+            Substring.LengthInChars = Substring.LengthInChars - (DWORD)(StringPtr - Substring.StartOfString) - 1;
+            Substring.StartOfString = &StringPtr[1];
+
+            StringPtr = YoriLibFindLeftMostCharacter(&Substring, '\\');
+
+            //
+            //  If the path is \\?\UNC\server\share (exactly, no trailing
+            //  component), it's as full as it'll ever get.  We should
+            //  just return it here.
+            //
+
+        } else {
+
+            ASSERT(Path->LengthInChars >= sizeof("\\\\?\\C:") - 1);
+
+            Substring.StartOfString = &Path->StartOfString[4];
+            Substring.LengthInChars = Path->LengthInChars - 4;
+
+            StringPtr = YoriLibFindLeftMostCharacter(&Substring, '\\');
+
+            //
+            //  If we found a seperator, include it in the effective root.
+            //
+
+            if (StringPtr != NULL) {
+                StringPtr++;
+            }
+        }
+    } else {
+        if (PathIsUnc) {
+
+            ASSERT(Path->LengthInChars >= sizeof("\\\\") - 1);
+
+            Substring.StartOfString = &Path->StartOfString[2];
+            Substring.LengthInChars = Path->LengthInChars - 2;
+
+            StringPtr = YoriLibFindLeftMostCharacter(&Substring, '\\');
+
+            //
+            //  If the path is \\server (no share), we can't handle it.
+            //
+
+            if (StringPtr == NULL) {
+                return FALSE;
+            }
+
+            Substring.LengthInChars = Substring.LengthInChars - (DWORD)(StringPtr - Substring.StartOfString) - 1;
+            Substring.StartOfString = &StringPtr[1];
+
+            StringPtr = YoriLibFindLeftMostCharacter(&Substring, '\\');
+
+            //
+            //  If the path is \\server\share (exactly, no trailing
+            //  component), it's as full as it'll ever get.  We should
+            //  just return it here.
+            //
+
+        } else {
+
+            StringPtr = YoriLibFindLeftMostCharacter(Path, '\\');
+
+            //
+            //  If we found a seperator, include it in the effective root.
+            //
+
+            if (StringPtr != NULL) {
+                StringPtr++;
+            }
+        }
+    }
+
+    if (StringPtr == NULL) {
+        EffectiveRoot->LengthInChars = Path->LengthInChars;
+        return TRUE;
+    }
+
+    EffectiveRoot->LengthInChars = (DWORD)(StringPtr - EffectiveRoot->StartOfString);
+    return TRUE;
+}
+
+/**
+ Given a fully qualified path containing a drive letter or UNC root, determine
+ where the root component is that cannot be traversed above.  The path may
+ still contain .. components, it must have a parent directory specified
+ explicitly.  Because this function is assuming a fully qualified path, it
+ also assumes that forward slashes have been converted to backslashes by this
+ point.
+
+ @param Path Pointer to the fully qualified path which may have ..
+        components remaining in it.
+
+ @param EffectiveRoot On successful completion, updated to point to the
+        substring within Path that cannot be traversed above.
+
+ @return TRUE to indicate a root was found, FALSE to indicate a parsing
+         error.
+ */
+BOOL
+YoriLibFindEffectiveRoot(
+    __in PYORI_STRING Path,
+    __out PYORI_STRING EffectiveRoot
+    )
+{
+    BOOL PrefixedPath = FALSE;
+    BOOL UncPath = FALSE;
+    if (YoriLibIsPathPrefixed(Path)) {
+        PrefixedPath = TRUE;
+        if (YoriLibIsFullPathUnc(Path)) {
+            UncPath = TRUE;
+        }
+    } else {
+        if (Path->LengthInChars >= 2 &&
+            Path->StartOfString[0] == '\\' &&
+            Path->StartOfString[1] == '\\') {
+            UncPath = TRUE;
+        }
+    }
+
+    return YoriLibFindEffectiveRootInternal(Path, PrefixedPath, UncPath, EffectiveRoot);
+}
+
+/**
  Private implementation of GetFullPathName.  This function will convert paths
  into their \\?\ (MAX_PATH exceeding) form, applying all of the necessary
  transformations.  This function will update a YORI_STRING, including
@@ -337,6 +516,7 @@ YoriLibGetFullPathNameReturnAllocation(
     BOOLEAN FreeOnFailure = FALSE;
 
     LPTSTR EffectiveRoot;
+    YORI_STRING EffectiveRootSubstring;
     YORI_STRING StartOfRelativePath;
 
     LPTSTR CurrentReadChar;
@@ -691,113 +871,54 @@ YoriLibGetFullPathNameReturnAllocation(
     //  before \\?\X:\ or \\?\UNC\server\share.
     //
 
+
     if (bReturnEscapedPath) {
         if (YoriLibIsFullPathUnc(Buffer)) {
             UncPath = TRUE;
         } else {
             UncPath = FALSE;
         }
-
-        if (UncPath) {
-
-            EffectiveRoot = _tcschr(&Buffer->StartOfString[8], '\\');
-
-            //
-            //  If the path is \\server (no share), we can't handle it.
-            //
-
-            if (EffectiveRoot == NULL) {
-                if (FreeOnFailure) {
-                    YoriLibFreeStringContents(Buffer);
-                }
-                SetLastError(ERROR_BAD_PATHNAME);
-                return FALSE;
-            }
-
-            EffectiveRoot = _tcschr(&EffectiveRoot[1], '\\');
-
-            //
-            //  If the path is \\?\UNC\server\share (exactly, no trailing
-            //  component), it's as full as it'll ever get.  We should
-            //  just return it here.
-            //
-
-            if (EffectiveRoot == NULL) {
-                if (lpFilePart != NULL) {
-                    *lpFilePart = NULL;
-                }
-                ASSERT(Buffer->StartOfString[Buffer->LengthInChars] == '\0');
-                return TRUE;
-            }
-
-            PreviousWasSeperator = FALSE;
-
-        } else {
-
-            for (Result = 4; Result < Buffer->LengthInChars && Buffer->StartOfString[Result] != '\\'; Result++);
-
-            if (Buffer->StartOfString[Result] == '\\') {
-                EffectiveRoot = &Buffer->StartOfString[Result + 1];
-                PreviousWasSeperator = TRUE;
-            } else {
-                EffectiveRoot = &Buffer->StartOfString[Result];
-                PreviousWasSeperator = FALSE;
-            }
-        }
     } else {
         if (Buffer->StartOfString[0] == '\\' && Buffer->StartOfString[1] == '\\') {
-            EffectiveRoot = _tcschr(&Buffer->StartOfString[2], '\\');
-
-            //
-            //  If the path is \\server (no share), we can't handle it.
-            //
-
-            if (EffectiveRoot == NULL) {
-                SetLastError(ERROR_BAD_PATHNAME);
-                if (FreeOnFailure) {
-                    YoriLibFreeStringContents(Buffer);
-                }
-                return FALSE;
-            }
-
-            EffectiveRoot = _tcschr(&EffectiveRoot[1], '\\');
-
-            //
-            //  If the path is \\server\share (exactly, no trailing
-            //  component), it's as full as it'll ever get.  We should
-            //  just return it here.
-            //
-
-            if (EffectiveRoot == NULL) {
-                if (lpFilePart != NULL) {
-                    *lpFilePart = NULL;
-                }
-                ASSERT(Buffer->StartOfString[Buffer->LengthInChars] == '\0');
-                return TRUE;
-            }
-
-            PreviousWasSeperator = FALSE;
+            UncPath = TRUE;
         } else {
-
-            EffectiveRoot = _tcschr(Buffer->StartOfString, '\\');
-
-            //
-            //  If the path is \\?\C: (exactly, no trailing component), it's
-            //  as full as it'll ever get.  We should just return it here.
-            //
-
-            if (EffectiveRoot == NULL) {
-                if (lpFilePart != NULL) {
-                    *lpFilePart = NULL;
-                }
-                ASSERT(Buffer->StartOfString[Buffer->LengthInChars] == '\0');
-                return TRUE;
-            }
-
-            EffectiveRoot++;
-            PreviousWasSeperator = TRUE;
+            UncPath = FALSE;
         }
     }
+
+    if (!YoriLibFindEffectiveRootInternal(Buffer, bReturnEscapedPath, UncPath, &EffectiveRootSubstring)) {
+        if (FreeOnFailure) {
+            YoriLibFreeStringContents(Buffer);
+        }
+        SetLastError(ERROR_BAD_PATHNAME);
+        return FALSE;
+    }
+
+    //
+    //  If the root is the whole string, there are no more operations we
+    //  can perform, so return.
+    //
+
+    if (EffectiveRootSubstring.LengthInChars == Buffer->LengthInChars) {
+        if (lpFilePart != NULL) {
+            *lpFilePart = NULL;
+        }
+        ASSERT(Buffer->StartOfString[Buffer->LengthInChars] == '\0');
+        return TRUE;
+    }
+
+    //
+    //  Check if the effective root ends with a backslash or not.
+    //
+
+    PreviousWasSeperator = FALSE;
+    if (EffectiveRootSubstring.LengthInChars > 0 &&
+        EffectiveRootSubstring.StartOfString[EffectiveRootSubstring.LengthInChars - 1] == '\\') {
+
+        PreviousWasSeperator = TRUE;
+    }
+
+    EffectiveRoot = &EffectiveRootSubstring.StartOfString[EffectiveRootSubstring.LengthInChars];
 
     //
     //  Now process the path to remove duplicate slashes, remove .

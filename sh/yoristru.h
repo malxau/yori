@@ -230,11 +230,6 @@ typedef struct _YORI_SH_SINGLE_EXEC_CONTEXT {
     /**
      TRUE if the program should be executed on a different console to the
      one the user is operating on.
-
-     MSFIX This can't really be a property of an individual command, it has
-     to be a property of the set; but if it is, we need a subshell to do the
-     work because a single process can only be associated with a single
-     console.
      */
     BOOLEAN RunOnSecondConsole;
 
