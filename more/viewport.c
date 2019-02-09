@@ -1723,6 +1723,7 @@ MoreCopySelectionIfPresent(
     YORI_STRING TextToCopy;
     YORI_STRING VtText;
     YORI_STRING HtmlText;
+    YORI_STRING RtfText;
     HANDLE ConsoleHandle;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     PMORE_LOGICAL_LINE EntireLogicalLines;
@@ -1878,6 +1879,7 @@ MoreCopySelectionIfPresent(
 
     VtTextBufferSize++;
     YoriLibInitEmptyString(&HtmlText);
+    YoriLibInitEmptyString(&RtfText);
     YoriLibInitEmptyString(&VtText);
     YoriLibInitEmptyString(&TextToCopy);
     if (!YoriLibAllocateString(&VtText, VtTextBufferSize)) {
@@ -1918,7 +1920,7 @@ MoreCopySelectionIfPresent(
     }
 
     //
-    //  Convert the VT100 form into HTML, and free it
+    //  Convert the VT100 form into HTML and RTF, and free it
     //
 
     if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
@@ -1932,13 +1934,17 @@ MoreCopySelectionIfPresent(
         goto Exit;
     }
 
+    if (!YoriLibRtfConvertToRtfFromVt(&VtText, &RtfText, ColorTableToUse)) {
+        goto Exit;
+    }
+
     YoriLibFreeStringContents(&VtText);
 
     //
-    //  Copy both HTML form and plain text form to the clipboard
+    //  Copy HTML, RTF and plain text forms to the clipboard
     //
 
-    if (YoriLibCopyTextAndHtml(&TextToCopy, &HtmlText)) {
+    if (YoriLibCopyTextRtfAndHtml(&TextToCopy, &RtfText, &HtmlText)) {
         Result = TRUE;
     }
 
@@ -1948,6 +1954,7 @@ Exit:
     }
     YoriLibFree(EntireLogicalLines);
     YoriLibFreeStringContents(&HtmlText);
+    YoriLibFreeStringContents(&RtfText);
     YoriLibFreeStringContents(&TextToCopy);
     YoriLibFreeStringContents(&VtText);
     return Result;

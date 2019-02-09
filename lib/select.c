@@ -1089,6 +1089,7 @@ YoriLibCopySelectionIfPresent(
     YORI_STRING TextToCopy;
     YORI_STRING VtText;
     YORI_STRING HtmlText;
+    YORI_STRING RtfText;
     SHORT LineLength;
     SHORT LineCount;
     SHORT LineIndex;
@@ -1166,7 +1167,7 @@ YoriLibCopySelectionIfPresent(
 
     //
     //  Combine the captured text with previously saved attributes into a
-    //  VT100 stream.  This will turn into HTML.
+    //  VT100 stream.  This will turn into HTML and RTF.
     //
 
     YoriLibInitEmptyString(&VtText);
@@ -1227,7 +1228,7 @@ YoriLibCopySelectionIfPresent(
     }
 
     //
-    //  Convert the VT100 form into HTML, and free it
+    //  Convert the VT100 form into HTML and RTF, and free it
     //
 
     if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
@@ -1245,19 +1246,31 @@ YoriLibCopySelectionIfPresent(
         return FALSE;
     }
 
+    YoriLibInitEmptyString(&RtfText);
+    if (!YoriLibRtfConvertToRtfFromVt(&VtText, &RtfText, ColorTableToUse)) {
+        YoriLibFreeStringContents(&VtText);
+        YoriLibFreeStringContents(&TextToCopy);
+        YoriLibFreeStringContents(&HtmlText);
+        YoriLibFreeStringContents(&RtfText);
+        return FALSE;
+    }
+
     YoriLibFreeStringContents(&VtText);
 
     //
-    //  Copy both HTML form and plain text form to the clipboard
+    //  Copy HTML, RTF and plain text forms to the clipboard
     //
 
-    if (YoriLibCopyTextAndHtml(&TextToCopy, &HtmlText)) {
+    if (YoriLibCopyTextRtfAndHtml(&TextToCopy, &RtfText, &HtmlText)) {
         YoriLibFreeStringContents(&TextToCopy);
         YoriLibFreeStringContents(&HtmlText);
+        YoriLibFreeStringContents(&RtfText);
+
         return TRUE;
     }
 
     YoriLibFreeStringContents(&HtmlText);
+    YoriLibFreeStringContents(&RtfText);
     YoriLibFreeStringContents(&TextToCopy);
     return FALSE;
 }

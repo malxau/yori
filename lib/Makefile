@@ -14,6 +14,7 @@ OBJS=\
 	 color.obj    \
 	 cshot.obj    \
 	 cvthtml.obj  \
+	 cvtrtf.obj   \
 	 debug.obj    \
 	 dyld.obj     \
 	 env.obj      \

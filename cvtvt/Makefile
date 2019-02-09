@@ -13,10 +13,12 @@ CFLAGS=$(CFLAGS) -DCVTVT_VER_MAJOR=$(CVTVT_VER_MAJOR) -DCVTVT_VER_MINOR=$(CVTVT_
 BIN_OBJS=\
 	 html.obj        \
 	 main.obj        \
+	 rtf.obj         \
 
 MOD_OBJS=\
 	 html.obj        \
 	 mod_main.obj    \
+	 rtf.obj         \
 
 compile: $(BIN_OBJS) builtins.lib
 

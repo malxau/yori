@@ -306,26 +306,33 @@ YoriLibCopyText(
 }
 
 /**
- Copy a Yori text string into the clipboard along with an HTML representation
- of the same string.
+ Copy a Yori text string into the clipboard along with an HTML and RTF
+ representation of the same string.
 
  @param TextVersion The string to populate into the clipboard in text format.
+
+ @param RtfVersion The string to populate into the clipboard in RTF format.
 
  @param HtmlVersion The string to populate into the clipboard in HTML format.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibCopyTextAndHtml(
+YoriLibCopyTextRtfAndHtml(
     __in PYORI_STRING TextVersion,
+    __in PYORI_STRING RtfVersion,
     __in PYORI_STRING HtmlVersion
     )
 {
     HANDLE hText;
     HANDLE hHtml;
+    HANDLE hRtf;
     HANDLE hClip;
-    LPWSTR pMem;
+    LPWSTR pWideMem;
+    LPSTR  pNarrowMem;
+    DWORD Index;
     UINT HtmlFmt;
+    UINT RtfFmt;
 
     YoriLibLoadUser32Functions();
 
@@ -345,26 +352,67 @@ YoriLibCopyTextAndHtml(
         return FALSE;
     }
 
+    //
+    //  The clipboard uses global memory handles.  Copy the text form into
+    //  a global memory allocation.
+    //
+
     hText = GlobalAlloc(GMEM_MOVEABLE, (TextVersion->LengthInChars + 1) * sizeof(TCHAR));
     if (hText == NULL) {
         DllUser32.pCloseClipboard();
         return FALSE;
     }
 
-    pMem = GlobalLock(hText);
-    if (pMem == NULL) {
+    pWideMem = GlobalLock(hText);
+    if (pWideMem == NULL) {
         GlobalFree(hText);
         DllUser32.pCloseClipboard();
         return FALSE;
     }
 
-    memcpy(pMem, TextVersion->StartOfString, TextVersion->LengthInChars * sizeof(TCHAR));
-    pMem[TextVersion->LengthInChars] = '\0';
+    memcpy(pWideMem, TextVersion->StartOfString, TextVersion->LengthInChars * sizeof(TCHAR));
+    pWideMem[TextVersion->LengthInChars] = '\0';
     GlobalUnlock(hText);
-    pMem = NULL;
+    pWideMem = NULL;
+
+    //
+    //  The clipboard uses global memory handles.  Copy the RTF form into
+    //  a global memory allocation.  Because RTF predates Unicode, any
+    //  extended characters must have already been encoded when generating
+    //  RTF, so the high 8 bits per char are discarded here.
+    //
+
+    hRtf = GlobalAlloc(GMEM_MOVEABLE, RtfVersion->LengthInChars + 1);
+    if (hRtf == NULL) {
+        GlobalFree(hText);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    pNarrowMem = GlobalLock(hRtf);
+    if (pNarrowMem == NULL) {
+        GlobalFree(hText);
+        GlobalFree(hRtf);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    for (Index = 0; Index < RtfVersion->LengthInChars; Index++) {
+        pNarrowMem[Index] = (UCHAR)(RtfVersion->StartOfString[Index] & 0x7f);
+    }
+    pNarrowMem[RtfVersion->LengthInChars] = '\0';
+
+    GlobalUnlock(hRtf);
+    pNarrowMem = NULL;
+
+    //
+    //  Construct a global memory region for HTML.  This is more involved
+    //  because unlike the others it has a header.
+    //
 
     if (!YoriLibBuildHtmlClipboardBuffer(HtmlVersion, &hHtml)) {
         GlobalFree(hText);
+        GlobalFree(hRtf);
         DllUser32.pCloseClipboard();
         return FALSE;
     }
@@ -374,6 +422,16 @@ YoriLibCopyTextAndHtml(
     HtmlFmt = DllUser32.pRegisterClipboardFormatW(_T("HTML Format"));
     if (HtmlFmt == 0) {
         GlobalFree(hText);
+        GlobalFree(hRtf);
+        GlobalFree(hHtml);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    RtfFmt = DllUser32.pRegisterClipboardFormatW(_T("Rich Text Format"));
+    if (RtfFmt == 0) {
+        GlobalFree(hText);
+        GlobalFree(hRtf);
         GlobalFree(hHtml);
         DllUser32.pCloseClipboard();
         return FALSE;
@@ -383,6 +441,16 @@ YoriLibCopyTextAndHtml(
     if (hClip == NULL) {
         DllUser32.pCloseClipboard();
         GlobalFree(hHtml);
+        GlobalFree(hRtf);
+        GlobalFree(hText);
+        return FALSE;
+    }
+
+    hClip = DllUser32.pSetClipboardData(RtfFmt, hRtf);
+    if (hClip == NULL) {
+        DllUser32.pCloseClipboard();
+        GlobalFree(hHtml);
+        GlobalFree(hRtf);
         GlobalFree(hText);
         return FALSE;
     }
@@ -391,12 +459,14 @@ YoriLibCopyTextAndHtml(
     if (hClip == NULL) {
         DllUser32.pCloseClipboard();
         GlobalFree(hHtml);
+        GlobalFree(hRtf);
         GlobalFree(hText);
         return FALSE;
     }
 
     DllUser32.pCloseClipboard();
     GlobalFree(hText);
+    GlobalFree(hRtf);
     GlobalFree(hHtml);
     return TRUE;
 }

@@ -38,5 +38,6 @@
 
 BOOL CvtvtHtml4SetFunctions(__out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions);
 BOOL CvtvtHtml5SetFunctions(__out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions);
+BOOL CvtvtRtfSetFunctions(__out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions);
 
 // vim:sw=4:ts=4:et:

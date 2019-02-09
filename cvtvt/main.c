@@ -40,6 +40,7 @@ CHAR strCvtvtHelpText[] =
         "   -exec binary   Run process and pipe its output into cvtvt\n"
         "   -html4         Generate output with FONT tags (no backgrounds)\n"
         "   -html5         Generate output with CSS\n"
+        "   -rtf           Generate output as RTF\n"
         "   -text          Generate output as plain text\n"
         "   -win32         Convert to native Win32\n"
         "\n"
@@ -171,6 +172,10 @@ ENTRYPOINT(
                 ArgParsed = TRUE;
                 StripEscapes = FALSE;
                 CvtvtHtml5SetFunctions(&Callbacks);
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rtf")) == 0) {
+                ArgParsed = TRUE;
+                StripEscapes = FALSE;
+                CvtvtRtfSetFunctions(&Callbacks);
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("text")) == 0) {
                 ArgParsed = TRUE;
                 StripEscapes = TRUE;

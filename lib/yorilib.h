@@ -488,8 +488,9 @@ YoriLibCopyText(
     );
 
 BOOL
-YoriLibCopyTextAndHtml(
+YoriLibCopyTextRtfAndHtml(
     __in PYORI_STRING TextVersion,
+    __in PYORI_STRING RtfVersion,
     __in PYORI_STRING HtmlVersion
     );
 
@@ -671,6 +672,19 @@ YoriLibGenerateVtStringFromConsoleBuffers(
 
 // *** CVTHTML.C ***
 
+extern DWORD YoriLibDefaultColorTable[];
+
+BOOL
+YoriLibCaptureConsoleFont(
+    __out PYORI_CONSOLE_FONT_INFOEX FontInfo
+    );
+
+BOOL
+YoriLibCaptureConsoleColorTable(
+    __out PDWORD * ColorTable,
+    __out_opt PWORD CurrentAttributes
+    );
+
 BOOL
 YoriLibHtmlGenerateInitialString(
     __inout PYORI_STRING TextString
@@ -708,6 +722,42 @@ YoriLibHtmlConvertToHtmlFromVt(
     __inout PYORI_STRING HtmlText,
     __in_opt PDWORD ColorTable,
     __in DWORD HtmlVersion
+    );
+
+// *** CVTRTF.C ***
+
+BOOL
+YoriLibRtfGenerateInitialString(
+    __inout PYORI_STRING TextString,
+    __in_opt PDWORD ColorTable
+    );
+
+BOOL
+YoriLibRtfGenerateEndString(
+    __inout PYORI_STRING TextString
+    );
+
+BOOL
+YoriLibRtfGenerateTextString(
+    __inout PYORI_STRING TextString,
+    __out PDWORD BufferSizeNeeded,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    );
+
+BOOL
+YoriLibRtfGenerateEscapeString(
+    __inout PYORI_STRING TextString,
+    __out PDWORD BufferSizeNeeded,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    );
+
+BOOL
+YoriLibRtfConvertToRtfFromVt(
+    __in PYORI_STRING VtText,
+    __inout PYORI_STRING RtfText,
+    __in_opt PDWORD ColorTable
     );
 
 // *** DEBUG.C ***
