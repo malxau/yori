@@ -610,7 +610,6 @@ YoriPkgAddExistingFilesToPendingPackages(
                 YoriLibFreeStringContents(&IniValue);
                 return FALSE;
             }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y: %y\n"), &PkgNameOnly, &IniValue);
         }
     }
 
