@@ -4,7 +4,7 @@
  * Copy HTML text onto the clipboard in HTML formatting for use in applications
  * that support rich text.
  *
- * Copyright (c) 2015-2018 Malcolm J. Smith
+ * Copyright (c) 2015-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,11 +36,12 @@ CHAR strClipHelpText[] =
         "\n"
         "Manipulate clipboard state including copy and paste.\n"
         "\n"
-        "CLIP [-license] [-e|-h|-p|-t] [filename]\n"
+        "CLIP [-license] [-e|-h|-p|-r|-t] [filename]\n"
         "\n"
         "   -e             Empty clipboard\n"
         "   -h             Copy to the clipboard in HTML format\n"
         "   -p             Paste the clipboard\n"
+        "   -r             Copy to the clipboard in RTF format\n"
         "   -t             Retain only plain text in the clipboard\n";
 
 /**
@@ -266,6 +267,142 @@ ClipCopyAsHtml(
         DllUser32.pCloseClipboard();
         return FALSE;
     }
+    DllUser32.pCloseClipboard();
+    GlobalFree(hMem);
+    return TRUE;
+}
+
+/**
+ Copy the contents of a file or pipe to the clipboard in RTF format.
+
+ @param hFile Handle to the file or pipe.
+
+ @param FileSize The length of the file, in bytes.  For a pipe, this value is
+        not known beforehand, and is specified as MAX_PIPE_SIZE.
+
+ @return TRUE to indicate success or FALSE to indicate failure.
+ */
+BOOL
+ClipCopyAsRtf(
+    __in HANDLE hFile,
+    __in DWORD FileSize
+    )
+{
+    LPSTR  AnsiBuffer;
+    DWORD  AllocSize;
+    HANDLE hMem;
+    PCHAR  pMem;
+    DWORD  BytesTransferred;
+    DWORD  CurrentOffset;
+    DWORD  Err;
+    LPTSTR ErrText;
+    UINT   ClipFmt;
+
+    //
+    //  Allocate space to copy the file or pipe contents.
+    //
+
+    AllocSize = FileSize + 1;
+    AnsiBuffer = YoriLibMalloc(AllocSize);
+    if (AnsiBuffer == NULL) {
+        return FALSE;
+    }
+
+    //
+    //  Note this is not Unicode.
+    //
+
+    CurrentOffset = 0;
+
+    //
+    //  Read text.
+    //
+
+    while (ReadFile(hFile, AnsiBuffer + CurrentOffset, FileSize - CurrentOffset, &BytesTransferred, NULL)) {
+        CurrentOffset += BytesTransferred;
+
+        //
+        //  If we're reading from the pipe and have exceeded our storage,
+        //  fail.
+        //
+
+        if (CurrentOffset == FileSize &&
+            FileSize == MAX_PIPE_SIZE &&
+            hFile == GetStdHandle(STD_INPUT_HANDLE)) {
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Pipe data too large for buffer.  Limit is %i bytes\n"), MAX_PIPE_SIZE);
+            return FALSE;
+        }
+
+        if (BytesTransferred == 0) {
+            break;
+        }
+    }
+
+    if (CurrentOffset == 0) {
+        YoriLibFree(AnsiBuffer);
+        ClipHelp();
+        return FALSE;
+    }
+
+
+    AllocSize = CurrentOffset;
+    hMem = GlobalAlloc(GMEM_MOVEABLE|GMEM_DDESHARE, (AllocSize + 1) * sizeof(TCHAR));
+    if (hMem == NULL) {
+        YoriLibFree(AnsiBuffer);
+        return FALSE;
+    }
+
+    pMem = GlobalLock(hMem);
+
+    for (CurrentOffset = 0; CurrentOffset < AllocSize; CurrentOffset++) {
+        pMem[CurrentOffset] = (CHAR)(AnsiBuffer[CurrentOffset] & 0x7f);
+    }
+
+    pMem[AllocSize] = '\0';
+    GlobalUnlock(hMem);
+
+    YoriLibFree(AnsiBuffer);
+
+    //
+    //  Send the buffer to the clipboard.
+    //
+
+    if (!DllUser32.pOpenClipboard(NULL)) {
+        Err = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
+        GlobalFree(hMem);
+        return FALSE;
+    }
+
+    if (!DllUser32.pEmptyClipboard()) {
+        Err = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not empty clipboard: %s\n"), ErrText);
+        DllUser32.pCloseClipboard();
+        GlobalFree(hMem);
+        return FALSE;
+    }
+
+    ClipFmt = DllUser32.pRegisterClipboardFormatW(_T("Rich Text Format"));
+    if (ClipFmt == 0) {
+        Err = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not register clipboard format: %s\n"), ErrText);
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
+
+    if (DllUser32.pSetClipboardData(ClipFmt, hMem) == NULL) {
+        Err = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not set clipboard data: %s\n"), ErrText);
+        DllUser32.pCloseClipboard();
+        GlobalFree(hMem);
+        return FALSE;
+    }
+
     DllUser32.pCloseClipboard();
     GlobalFree(hMem);
     return TRUE;
@@ -578,6 +715,7 @@ ENTRYPOINT(
     LPTSTR ErrText;
     DWORD  FileSize = 0;
     BOOL   HtmlMode = FALSE;
+    BOOL   RtfMode = FALSE;
     BOOL   OpenedFile = FALSE;
     BOOL   Empty = FALSE;
     BOOL   Paste = FALSE;
@@ -604,25 +742,30 @@ ENTRYPOINT(
                     ClipHelp();
                     return EXIT_SUCCESS;
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                    YoriLibDisplayMitLicense(_T("2015-2018"));
+                    YoriLibDisplayMitLicense(_T("2015-2019"));
                     return EXIT_SUCCESS;
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
-                    if (!Paste && !HtmlMode && !PreserveText) {
+                    if (!Paste && !HtmlMode && !PreserveText && !RtfMode) {
                         ArgParsed = TRUE;
                         Empty = TRUE;
                     }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
-                    if (!Paste && !Empty && !PreserveText) {
+                    if (!Paste && !Empty && !PreserveText && !RtfMode) {
                         ArgParsed = TRUE;
                         HtmlMode = TRUE;
                     }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
-                    if (!HtmlMode && !Empty && !PreserveText) {
+                    if (!HtmlMode && !Empty && !PreserveText && !RtfMode) {
                         ArgParsed = TRUE;
                         Paste = TRUE;
                     }
+                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                    if (!Paste && !Empty && !PreserveText && !HtmlMode) {
+                        ArgParsed = TRUE;
+                        RtfMode = TRUE;
+                    }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
-                    if (!HtmlMode && !Empty && !Paste) {
+                    if (!HtmlMode && !Empty && !Paste && !RtfMode) {
                         ArgParsed = TRUE;
                         PreserveText = TRUE;
                     }
@@ -696,6 +839,10 @@ ENTRYPOINT(
         }
     } else if (HtmlMode) {
         if (!ClipCopyAsHtml(hFile, FileSize)) {
+            return EXIT_FAILURE;
+        }
+    } else if (RtfMode) {
+        if (!ClipCopyAsRtf(hFile, FileSize)) {
             return EXIT_FAILURE;
         }
     } else if (PreserveText) {
