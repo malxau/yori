@@ -47,7 +47,7 @@ BOOLEAN YoriLibRtfBoldOn = FALSE;
 /**
  Output to include at the beginning of any RTF stream.
  */
-CONST TCHAR YoriLibRtfHeader[] = _T("{\\rtf1\\ansi\\ansicpg1252\\deff0\\sl0\\slmult0\\sa0\\sb0{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 %s;}}\n");
+CONST TCHAR YoriLibRtfHeader[] = _T("{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 %s;}}\n");
 
 /**
  The longest single color table entry, used for buffer sizing.
@@ -67,7 +67,7 @@ CONST TCHAR YoriLibRtfColorTableFooter[] = _T("}\n");
 /**
  The paragraph header.
  */
-CONST TCHAR YoriLibRtfParagraphHeader[] = _T("\\pard\\fcharset0\\f0\\cbpat%i\\fs%i\\uc1\\sl0\\slmult0\\sa0\\sb0");
+CONST TCHAR YoriLibRtfParagraphHeader[] = _T("\\pard\\sl240\\slmult1\\sa0\\sb0\\f0\\fs%i\\cbpat%i\\uc1");
 
 /**
  Final text to output at the end of any RTF stream.
@@ -141,12 +141,20 @@ YoriLibRtfGenerateInitialString(
         }
     }
 
+    //
+    //  Generate RTF header specifying console font.
+    //
+
     TextString->LengthInChars = YoriLibSPrintf(TextString->StartOfString, YoriLibRtfHeader, FontInfo.FaceName);
 
     YoriLibInitEmptyString(&Substring);
 
     Substring.StartOfString = &TextString->StartOfString[TextString->LengthInChars];
     Substring.LengthAllocated = TextString->LengthAllocated - TextString->LengthInChars;
+    //
+    //  Generate table of console colors.
+    //
+
     Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, YoriLibRtfColorTableHeader);
 
     TextString->LengthInChars += Substring.LengthInChars;
@@ -174,7 +182,10 @@ YoriLibRtfGenerateInitialString(
     //  be explicitly overwritten by any text though.
     //
 
-    Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, YoriLibRtfParagraphHeader, ((CurrentAttributes >> 4) & 0xf) + 1, FontInfo.dwFontSize.Y * 15 / 10);
+    Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString,
+                                             YoriLibRtfParagraphHeader,
+                                             FontInfo.dwFontSize.Y * 15 / 10,
+                                             ((CurrentAttributes >> 4) & 0xf) + 1);
     TextString->LengthInChars += Substring.LengthInChars;
 
     if (FreeColorTable) {
@@ -266,13 +277,27 @@ YoriLibRtfGenerateTextString(
             SrcPoint++;
             SrcConsumed++;
         } else if (*SrcPoint == '\n') {
-            if (DestOffset + sizeof("\\line ") - 1 < TextString->LengthAllocated) {
-                memcpy(&TextString->StartOfString[DestOffset], _T("\\line "), sizeof(_T("\\line ")) - sizeof(TCHAR));
+            if (DestOffset + sizeof("\n\\par ") - 1 < TextString->LengthAllocated) {
+                memcpy(&TextString->StartOfString[DestOffset], _T("\n\\par "), sizeof(_T("\n\\par ")) - sizeof(TCHAR));
             }
-            DestOffset += sizeof("\\line ") - 1;
+            DestOffset += sizeof("\n\\par ") - 1;
             SrcPoint++;
             SrcConsumed++;
         } else if (*SrcPoint == '\r') {
+            SrcPoint++;
+            SrcConsumed++;
+        } else if (*SrcPoint == '{') {
+            if (DestOffset + sizeof("\\{") - 1 < TextString->LengthAllocated) {
+                memcpy(&TextString->StartOfString[DestOffset], _T("\\{"), sizeof(_T("\\{")) - sizeof(TCHAR));
+            }
+            DestOffset += sizeof("\\{") - 1;
+            SrcPoint++;
+            SrcConsumed++;
+        } else if (*SrcPoint == '}') {
+            if (DestOffset + sizeof("\\}") - 1 < TextString->LengthAllocated) {
+                memcpy(&TextString->StartOfString[DestOffset], _T("\\}"), sizeof(_T("\\}")) - sizeof(TCHAR));
+            }
+            DestOffset += sizeof("\\}") - 1;
             SrcPoint++;
             SrcConsumed++;
         } else if (*SrcPoint >= 128) {
