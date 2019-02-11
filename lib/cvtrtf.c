@@ -33,16 +33,16 @@
 #define CVTVT_DEFAULT_COLOR (7)
 
 /**
- While parsing, TRUE if underlining is in effect.
- MSFIX Implement
+ While parsing, TRUE if underlining is in effect.  This global is updated
+ when text is generated.
  */
 BOOLEAN YoriLibRtfUnderlineOn = FALSE;
 
 /**
- While parsing, TRUE if bold is in effect.
- MSFIX Implement
+ While parsing, TRUE if underlining is in effect.  This global is updated
+ when buffer size checks are made but no text is generated.
  */
-BOOLEAN YoriLibRtfBoldOn = FALSE;
+BOOLEAN YoriLibRtfUnderlineOnBufferCheck = FALSE;
 
 /**
  Output to include at the beginning of any RTF stream.
@@ -67,7 +67,7 @@ CONST TCHAR YoriLibRtfColorTableFooter[] = _T("}\n");
 /**
  The paragraph header.
  */
-CONST TCHAR YoriLibRtfParagraphHeader[] = _T("\\pard\\sl240\\slmult1\\sa0\\sb0\\f0\\fs%i\\cbpat%i\\uc1");
+CONST TCHAR YoriLibRtfParagraphHeader[] = _T("\\pard\\sl240\\slmult1\\sa0\\sb0\\f0\\fs%i\\cbpat%i\\uc1%s");
 
 /**
  Final text to output at the end of any RTF stream.
@@ -120,9 +120,9 @@ YoriLibRtfGenerateInitialString(
         FontInfo.dwFontSize.Y = 14;
     }
 
-    //
-    //  MSFIX Bold and underline
-    //
+    if (FontInfo.FontWeight == 0) {
+        FontInfo.FontWeight = 700;
+    }
 
     CharsNeeded = sizeof(YoriLibRtfHeader)/sizeof(YoriLibRtfHeader[0]) +
                   _tcslen(FontInfo.FaceName) +
@@ -185,7 +185,8 @@ YoriLibRtfGenerateInitialString(
     Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString,
                                              YoriLibRtfParagraphHeader,
                                              FontInfo.dwFontSize.Y * 15 / 10,
-                                             ((CurrentAttributes >> 4) & 0xf) + 1);
+                                             ((CurrentAttributes >> 4) & 0xf) + 1,
+                                             (FontInfo.FontWeight >= 600)?_T("\\b"):_T(""));
     TextString->LengthInChars += Substring.LengthInChars;
 
     if (FreeColorTable) {
@@ -382,6 +383,8 @@ YoriLibRtfGenerateEscapeString(
     DWORD  RemainingLength;
     DWORD  DestOffset;
     YORI_STRING SearchString;
+    LPTSTR UnderlineString;
+    BOOLEAN PreviousUnderlineOn;
 
     RemainingLength = BufferLength;
 
@@ -466,19 +469,41 @@ YoriLibRtfGenerateEscapeString(
             }
         }
 
+        if (TextString->StartOfString != NULL) {
+            PreviousUnderlineOn = YoriLibRtfUnderlineOn;
+        } else {
+            PreviousUnderlineOn = YoriLibRtfUnderlineOnBufferCheck;
+        }
+
+        UnderlineString = _T("");
+        if (NewUnderline && !PreviousUnderlineOn) {
+            UnderlineString = _T("\\ul");
+            PreviousUnderlineOn = TRUE;
+        } else if (!NewUnderline && PreviousUnderlineOn) {
+            UnderlineString = _T("\\ul0");
+            PreviousUnderlineOn = FALSE;
+        }
+
         //
         //  Output the appropriate tag depending on the version the user wanted
         //
 
         SrcOffset = YoriLibSPrintf(NewTag,
-                                   _T("\\cf%i\\highlight%i "),
+                                   _T("\\cf%i\\highlight%i%s "),
                                    (NewColor & 0xf) + 1,
-                                   ((NewColor >> 4) & 0xf) + 1);
+                                   ((NewColor >> 4) & 0xf) + 1,
+                                   UnderlineString);
 
         if (DestOffset + SrcOffset < TextString->LengthAllocated) {
             memcpy(&TextString->StartOfString[DestOffset], NewTag, SrcOffset * sizeof(TCHAR));
         }
         DestOffset += SrcOffset;
+
+        if (TextString->StartOfString != NULL) {
+            YoriLibRtfUnderlineOn = PreviousUnderlineOn;
+        } else {
+            YoriLibRtfUnderlineOnBufferCheck = PreviousUnderlineOn;
+        }
     }
 
     if (DestOffset < TextString->LengthAllocated) {
