@@ -3,7 +3,7 @@
  *
  * Yori shell environment variable control
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,10 +37,11 @@ CHAR strSetHelpText[] =
         "\n"
         "SET -license\n"
         "SET [<variable prefix to display>]\n"
-        "SET [-i | -r] <variable>=<value>\n"
+        "SET [-e | -i | -r] <variable>=<value>\n"
         "SET <variable to delete>=\n"
         "\n"
-        "   -i             Include the string in a semicolon delimited variable\n"
+        "   -e             Include the string in a semicolon delimited variable at the end\n"
+        "   -i             Include the string in a semicolon delimited variable at the start\n"
         "   -r             Remove the string from a semicolon delimited variable\n";
 
 /**
@@ -74,6 +75,7 @@ YoriCmd_SET(
     )
 {
     BOOL ArgumentUnderstood;
+    BOOL AppendComponent = FALSE;
     BOOL IncludeComponent = FALSE;
     BOOL RemoveComponent = FALSE;
     DWORD i;
@@ -94,15 +96,20 @@ YoriCmd_SET(
                 SetHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+                if (!RemoveComponent && !IncludeComponent) {
+                    AppendComponent = TRUE;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
-                if (!RemoveComponent) {
+                if (!RemoveComponent && !AppendComponent) {
                     IncludeComponent = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
-                if (!IncludeComponent) {
+                if (!IncludeComponent && !AppendComponent) {
                     RemoveComponent = TRUE;
                     ArgumentUnderstood = TRUE;
                 }
@@ -228,6 +235,8 @@ YoriCmd_SET(
                 YORI_STRING YsValue;
                 YoriLibConstantString(&YsValue, Value);
                 if (IncludeComponent) {
+                    YoriLibAddEnvironmentComponent(Variable, &YsValue, TRUE);
+                } else if (AppendComponent) {
                     YoriLibAddEnvironmentComponent(Variable, &YsValue, FALSE);
                 } else if (RemoveComponent) {
                     YoriLibRemoveEnvironmentComponent(Variable, &YsValue);
