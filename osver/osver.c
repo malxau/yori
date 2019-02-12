@@ -80,6 +80,11 @@ typedef struct _OSVER_VERSION_RESULT {
      The OS build number.
      */
     DWORD BuildNumber;
+
+    /**
+     The OS architecture.
+     */
+    DWORD Architecture;
 } OSVER_VERSION_RESULT, *POSVER_VERSION_RESULT;
 
 /**
@@ -168,6 +173,81 @@ OsVerLengthOfBuildDescription(
     return strlen(OsVerGetBuildDescriptionString(BuildNumber));
 }
 
+/**
+ An association between a numeric architecture and a human string
+ describing the significance of that architecture.
+ */
+typedef struct _OSVER_ARCHITECTURE {
+
+    /**
+     The reported architecture.
+     */
+    DWORD Architecture;
+
+    /**
+     A human readable string describing the architecture;
+     */
+    LPSTR ArchitectureString;
+
+} OSVER_ARCHITECTURE, *POSVER_ARCHITECTURE;
+
+/**
+ A table of processor architectures known to this application.
+ */
+const
+OSVER_ARCHITECTURE OsVerArchitecture[] = {
+    {YORI_PROCESSOR_ARCHITECTURE_INTEL,  "i386"},
+    {YORI_PROCESSOR_ARCHITECTURE_MIPS,   "MIPS"},
+    {YORI_PROCESSOR_ARCHITECTURE_ALPHA,  "Alpha"},
+    {YORI_PROCESSOR_ARCHITECTURE_PPC,    "PPC"},
+    {YORI_PROCESSOR_ARCHITECTURE_ARM,    "ARM"},
+    {YORI_PROCESSOR_ARCHITECTURE_IA64,   "IA64"},
+    {YORI_PROCESSOR_ARCHITECTURE_AMD64,  "AMD64"},
+    {YORI_PROCESSOR_ARCHITECTURE_ARM64,  "ARM64"}
+};
+
+/**
+ Return a pointer to a constant string describing the processor architecture.
+ Note this will always return a string, even if the string indicates it is an
+ unknown architecture.
+
+ @param Architecture The numeric architecture number to check for.
+
+ @return Pointer to a constant string describing the architecture.
+ */
+LPCSTR
+OsVerGetArchitectureDescriptionString(
+    __in DWORD Architecture
+    )
+{
+    DWORD Index;
+
+    for (Index = 0; Index < sizeof(OsVerArchitecture)/sizeof(OsVerArchitecture[0]); Index++) {
+        if (Architecture == OsVerArchitecture[Index].Architecture) {
+            return OsVerArchitecture[Index].ArchitectureString;
+        }
+    }
+
+    return "unknown";
+}
+
+/**
+ Return the number of characters needed to describe the human readable string
+ describing the processor architecture.
+
+ @param Architecture The numeric architecture number to check for.
+
+ @return The number of characters in the human readable string describing the
+         architecture.
+ */
+DWORD
+OsVerLengthOfArchitectureDescription(
+    __in DWORD Architecture
+    )
+{
+    return strlen(OsVerGetArchitectureDescriptionString(Architecture));
+}
+
 
 /**
  A callback function to expand any known variables found when parsing the
@@ -202,6 +282,8 @@ OsVerExpandVariables(
         CharsNeeded = 3;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("desc")) == 0) {
         CharsNeeded = OsVerLengthOfBuildDescription(OsVerContext->BuildNumber);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("arch")) == 0) {
+        CharsNeeded = OsVerLengthOfArchitectureDescription(OsVerContext->Architecture);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MINOR")) == 0) {
         CharsNeeded = 2;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("minor")) == 0) {
@@ -244,10 +326,65 @@ OsVerExpandVariables(
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("desc")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%hs"), OsVerGetBuildDescriptionString(OsVerContext->BuildNumber));
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("arch")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%hs"), OsVerGetArchitectureDescriptionString(OsVerContext->Architecture));
     }
 
     OutputString->LengthInChars = CharsNeeded;
     return CharsNeeded;
+}
+
+/**
+ Capture the architecture number from the running system.
+
+ @param VersionResult Pointer to the version information determined so far.
+        This indicates whether the OS is capable of returning an architecture,
+        and will be updated on completion with the detected architecture.
+ */
+VOID
+OsVerGetArchitecture(
+    __inout POSVER_VERSION_RESULT VersionResult
+    )
+{
+    SYSTEM_INFO SysInfo;
+
+    if (VersionResult->MajorVersion < 4) {
+        GetSystemInfo(&SysInfo);
+
+        //
+        //  In old versions the wProcessorArchitecture member does not exist.
+        //  For these systems, we have to look at dwProcessorType.
+        //  Fortunately since these are old versions, the list is static.
+        //
+
+        switch(SysInfo.dwProcessorType) {
+            case YORI_PROCESSOR_INTEL_386:
+            case YORI_PROCESSOR_INTEL_486:
+            case YORI_PROCESSOR_INTEL_PENTIUM:
+                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_INTEL;
+                break;
+            case YORI_PROCESSOR_MIPS_R4000:
+                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_MIPS;
+                break;
+            case YORI_PROCESSOR_ALPHA_21064:
+                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_ALPHA;
+                break;
+            case YORI_PROCESSOR_PPC_601:
+            case YORI_PROCESSOR_PPC_603:
+            case YORI_PROCESSOR_PPC_604:
+            case YORI_PROCESSOR_PPC_620:
+                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_PPC;
+                break;
+        }
+
+        return;
+
+    } else if (DllKernel32.pGetNativeSystemInfo) {
+        DllKernel32.pGetNativeSystemInfo(&SysInfo);
+    } else {
+        GetSystemInfo(&SysInfo);
+    }
+    VersionResult->Architecture = SysInfo.wProcessorArchitecture;
 }
 
 #ifdef YORI_BUILTIN
@@ -279,7 +416,7 @@ ENTRYPOINT(
 {
     OSVER_VERSION_RESULT VersionResult;
     BOOL ArgumentUnderstood;
-    LPTSTR FormatString = _T("\x1b[41;34;1m\x2584\x1b[42;33;1m\x2584\x1b[0m Windows version: $major$.$minor$.$build$ ($desc$)\n");
+    LPTSTR FormatString = _T("\x1b[41;34;1m\x2584\x1b[42;33;1m\x2584\x1b[0m Windows version: $major$.$minor$.$build$ ($desc$), $arch$\n");
     YORI_STRING DisplayString;
     DWORD i;
     YORI_STRING Arg;
@@ -318,12 +455,9 @@ ENTRYPOINT(
         YoriLibConstantString(&YsFormatString, FormatString);
     }
 
-    //
-    //  MSFIX Have option for architecture
-    //
-
     YoriLibInitEmptyString(&DisplayString);
     YoriLibGetOsVersion(&VersionResult.MajorVersion, &VersionResult.MinorVersion, &VersionResult.BuildNumber);
+    OsVerGetArchitecture(&VersionResult);
     YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, OsVerExpandVariables, &VersionResult, &DisplayString);
     if (DisplayString.StartOfString != NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);

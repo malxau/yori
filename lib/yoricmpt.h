@@ -1037,6 +1037,123 @@ typedef struct _GUID {
 #endif
 
 /**
+ A processor architecture identifier for i386.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_INTEL           0
+
+/**
+ A processor architecture identifier for MIPS.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_MIPS            1
+
+/**
+ A processor architecture identifier for Alpha.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_ALPHA           2
+
+/**
+ A processor architecture identifier for PowerPC.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_PPC             3
+
+/**
+ A processor architecture identifier for ARM.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_ARM             5
+
+/**
+ A processor architecture identifier for Itanium.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_IA64            6
+
+/**
+ A processor architecture identifier for AMD64.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_AMD64           9
+
+/**
+ A virtual processor architecture identifier for an i386 binary running under
+ emulation on any 64 bit host environment.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_IA32_ON_WIN64   10
+
+/**
+ A processor architecture identifier for ARM64.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_ARM64           12
+
+/**
+ A virtual processor architecture identifier for an arm binary running under
+ emulation on any 64 bit host environment.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_ARM32_ON_WIN64  13
+
+/**
+ A virtual processor architecture identifier for an i386 binary running under
+ emulation on an arm64 host environment.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_IA32_ON_ARM64   14
+
+/**
+ An unknown processor architecture identifier.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_UNKNOWN         0xFFFF
+
+/**
+ A processor identifier for a 386.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_INTEL family.
+ */
+#define YORI_PROCESSOR_INTEL_386                    386
+
+/**
+ A processor identifier for a 486.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_INTEL family.
+ */
+#define YORI_PROCESSOR_INTEL_486                    486
+
+/**
+ A processor identifier for a Pentium.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_INTEL family.
+ */
+#define YORI_PROCESSOR_INTEL_PENTIUM                586
+
+/**
+ A processor identifier for an R4000.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_MIPS family.
+ */
+#define YORI_PROCESSOR_MIPS_R4000                   4000
+
+/**
+ A processor identifier for a 21064.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_ALPHA family.
+ */
+#define YORI_PROCESSOR_ALPHA_21064                  21064
+
+/**
+ A processor identifier for a 601.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_PPC family.
+ */
+#define YORI_PROCESSOR_PPC_601                      601
+
+/**
+ A processor identifier for a 603.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_PPC family.
+ */
+#define YORI_PROCESSOR_PPC_603                      603
+
+/**
+ A processor identifier for a 604.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_PPC family.
+ */
+#define YORI_PROCESSOR_PPC_604                      604
+
+/**
+ A processor identifier for a 620.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_PPC family.
+ */
+#define YORI_PROCESSOR_PPC_620                      620
+
+/**
  A private definition of CONSOLE_FONT_INFOEX in case the compilation
  environment doesn't provide it.
  */
@@ -2853,6 +2970,18 @@ GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, ULONG, PVOID, DWORD);
 typedef GET_FILE_INFORMATION_BY_HANDLE_EX *PGET_FILE_INFORMATION_BY_HANDLE_EX;
 
 /**
+ A prototype for the GetNativeSystemInfo function.
+ */
+typedef
+BOOL WINAPI
+GET_NATIVE_SYSTEM_INFO(PVOID);
+
+/**
+ A prototype for a pointer to the GetNativeSystemInfo function.
+ */
+typedef GET_NATIVE_SYSTEM_INFO *PGET_NATIVE_SYSTEM_INFO;
+
+/**
  A prototype for the GetPrivateProfileSectionNamesW function.
  */
 typedef
@@ -3099,6 +3228,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetFileInformationByHandleEx.
      */
     PGET_FILE_INFORMATION_BY_HANDLE_EX pGetFileInformationByHandleEx;
+
+    /**
+     If it's available on the current system, a pointer to GetNativeSystemInfo.
+     */
+    PGET_NATIVE_SYSTEM_INFO pGetNativeSystemInfo;
 
     /**
      If it's available on the current system, a pointer to GetPrivateProfileSectionNamesW.
