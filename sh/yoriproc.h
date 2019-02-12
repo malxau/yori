@@ -265,7 +265,7 @@ YoriShExpandEnvironmentVariables(
     );
 
 // *** EXEC.C ***
-BOOL
+DWORD
 YoriShInitializeRedirection(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __in BOOL PrepareForBuiltIn,

@@ -329,7 +329,17 @@ YoriShExecuteInProc(
         }
     }
 
-    YoriShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
+    ExitCode = YoriShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
+    if (ExitCode != ERROR_SUCCESS) {
+        if (ArgV != CmdContext->ArgV) {
+            for (Count = 0; Count < ArgC; Count++) {
+                YoriLibFreeStringContents(&ArgV[Count]);
+            }
+            YoriLibDereference(ArgV);
+        }
+
+        return ExitCode;
+    }
 
     //
     //  Unlike external processes, builtins need to start buffering
