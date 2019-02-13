@@ -420,6 +420,7 @@ YoriShPostCommand()
 
     ConsoleMode = GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo);
     if (ConsoleMode)  {
+        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m"), 27);
         if (ScreenInfo.srWindow.Left > 0) {
             SHORT CharsToMoveLeft;

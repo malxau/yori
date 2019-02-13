@@ -47,17 +47,6 @@ typedef struct _MORE_LINE_END_CONTEXT {
     WORD FinalUserColor;
 
     /**
-     Set to TRUE to indicate that once this line is displayed an explicit
-     newline character should be written.  This allows a logical line to be
-     generated referring only to characters within a physical line (no
-     reallocation or double buffering) but still terminate the line before
-     starting the next line.  This is typically FALSE because a logical line
-     has written to the edge of the console window so that processing is
-     resuming on the next console line without a newline present.
-     */
-    BOOL ExplicitNewlineRequired;
-
-    /**
      Set to TRUE to indicate the logical line needs to be parsed character
      by character because the contents of the logical line are not merely
      a subset of characters from a physical line.  FALSE if the line is
@@ -153,7 +142,6 @@ MoreGetLogicalLineLength(
     CellsDisplayed = 0;
 
     if (LineEndContext != NULL) {
-        LineEndContext->ExplicitNewlineRequired = TRUE;
         LineEndContext->RequiresGeneration = FALSE;
     }
 
@@ -258,17 +246,14 @@ MoreGetLogicalLineLength(
 
         ASSERT(CellsDisplayed <= MaximumVisibleCharacters);
         if (CellsDisplayed == MaximumVisibleCharacters) {
-            if (LineEndContext != NULL) {
-                LineEndContext->ExplicitNewlineRequired = FALSE;
-            }
             break;
         }
     }
 
     //
-    //  MSFIX When the search criteria spans logical lines, we need to
-    //  indicate how many visible characters are remaining until the search
-    //  ends, not just that the display color is different
+    //  When the search criteria spans logical lines, we need to indicate how
+    //  many visible characters are remaining until the search ends, not just
+    //  that the display color is different
     //
 
     if (LineEndContext != NULL) {
@@ -281,6 +266,8 @@ MoreGetLogicalLineLength(
             } else {
                 LineEndContext->CharactersRemainingInMatch = 0;
             }
+        } else {
+            LineEndContext->CharactersRemainingInMatch = 0;
         }
     }
 
@@ -599,7 +586,8 @@ MoreGenerateLogicalLinesFromPhysicalLine(
             ThisLine->CharactersRemainingInMatch = CharactersRemainingInMatch;
             ThisLine->LogicalLineIndex = Count;
             ThisLine->PhysicalLineCharacterOffset = CharIndex;
-            ThisLine->ExplicitNewlineRequired = LineEndContext.ExplicitNewlineRequired;
+
+            ASSERT(ThisLine->CharactersRemainingInMatch == 0 || ThisLine->InitialUserColor != ThisLine->InitialDisplayColor);
 
             MoreCopyRangeIntoLogicalLine(MoreContext, ThisLine, LineEndContext.RequiresGeneration, LogicalLineLength, LineEndContext.CharactersNeededInAllocation);
 
@@ -1037,11 +1025,7 @@ MoreDegenerateDisplay(
             YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialDisplayColor);
         }
 
-        if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &MoreContext->DisplayViewportLines[Index].Line);
-        } else {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MoreContext->DisplayViewportLines[Index].Line);
-        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y%c[0m\n"), &MoreContext->DisplayViewportLines[Index].Line, 27);
     }
 
     MoreDrawStatusLine(MoreContext);
@@ -1073,13 +1057,19 @@ MoreOutputSeriesOfLines(
     VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(TCHAR);
 
     CharsRequired = 0;
+
     for (Index = 0; Index < LineCount; Index++) {
         YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialDisplayColor);
         CharsRequired += VtAttribute.LengthInChars;
         CharsRequired += FirstLine[Index].Line.LengthInChars;
-        if (FirstLine[Index].ExplicitNewlineRequired) {
-            CharsRequired += 1;
-        }
+
+        //
+        //  When scrolling to a new line, the console can initialize the
+        //  attributes of the new line as the active color.  Make sure we
+        //  reset the color before displaying the newline.
+        //
+
+        CharsRequired += sizeof("e[0m\n");
     }
 
     CharsRequired++;
@@ -1092,10 +1082,7 @@ MoreOutputSeriesOfLines(
             CharsRequired += VtAttribute.LengthInChars;
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], FirstLine[Index].Line.StartOfString, FirstLine[Index].Line.LengthInChars * sizeof(TCHAR));
             CharsRequired += FirstLine[Index].Line.LengthInChars;
-            if (FirstLine[Index].ExplicitNewlineRequired) {
-                CombinedBuffer.StartOfString[CharsRequired] = '\n';
-                CharsRequired++;
-            }
+            CharsRequired += YoriLibSPrintf(&CombinedBuffer.StartOfString[CharsRequired], _T("%c[0m\n"), 27);
         }
         CombinedBuffer.StartOfString[CharsRequired] = '\0';
         CombinedBuffer.LengthInChars = CharsRequired;
@@ -1104,11 +1091,14 @@ MoreOutputSeriesOfLines(
     } else {
         for (Index = 0; Index < LineCount; Index++) {
             YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FirstLine[Index].InitialDisplayColor);
-            if (FirstLine[Index].ExplicitNewlineRequired) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &FirstLine[Index].Line);
-            } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &FirstLine[Index].Line);
-            }
+
+            //
+            //  When scrolling to a new line, the console can initialize the
+            //  attributes of the new line as the active color.  Make sure we
+            //  reset the color before displaying the newline.
+            //
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y%c[0m\n"), &FirstLine[Index].Line, 27);
         }
     }
 }
@@ -2289,7 +2279,6 @@ MorePeriodicScrollForSelection(
     //  be greater than buffer height.
     //
 
-
     if (Selection->PeriodicScrollAmount.Y < 0) {
         CellsToScroll = (SHORT)(0 - Selection->PeriodicScrollAmount.Y);
         if (MoreContext->DebugDisplay) {
@@ -2705,7 +2694,13 @@ MoreViewportDisplay(
 
     SetConsoleMode(InHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
 
-    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
+    //
+    //  A better way to read this is "disable ENABLE_WRAP_AT_EOL_OUTPUT"
+    //  which is the default.  This program must emit explicit newlines
+    //  after each viewport line.
+    //
+
+    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT);
 
     while(TRUE) {
 
