@@ -225,10 +225,6 @@ YoriShSaveRestartState()
             ThisVar = ThisPair;
             ThisPair += _tcslen(ThisPair) + 1;
 
-            //
-            //  MSFIX Map drive current directories to something?
-            //
-
             if (ThisVar[0] != '=') {
                 ThisValue = _tcschr(ThisVar, '=');
                 if (ThisValue) {
@@ -236,7 +232,40 @@ YoriShSaveRestartState()
                     ThisValue++;
 
                     WritePrivateProfileString(_T("Environment"), ThisVar, ThisValue, RestartFileName.StartOfString);
+
+                    ThisValue--;
+                    ThisValue[0] = '=';
                 }
+            }
+        }
+
+        //
+        //  With the "regular" environment done, go through and write a new
+        //  section for current directories on alternate drives.  These are
+        //  part of the environment but inexpressible in the INI format as
+        //  regular entries, so they get their own section.
+        //
+
+        ThisPair = Env.StartOfString;
+        while (*ThisPair != '\0') {
+            ThisVar = ThisPair;
+            ThisPair += _tcslen(ThisPair) + 1;
+
+            if (ThisVar[0] == '=' &&
+                ((ThisVar[1] >= 'A' && ThisVar[1] <= 'Z') ||
+                 (ThisVar[1] >= 'a' && ThisVar[1] <= 'z')) &&
+                ThisVar[2] == ':' &&
+                ThisVar[3] == '=') {
+
+                ThisValue = &ThisVar[3];
+                ThisVar++;
+                ThisValue[0] = '\0';
+                ThisValue++;
+
+                WritePrivateProfileString(_T("CurrentDirectories"), ThisVar, ThisValue, RestartFileName.StartOfString);
+
+                ThisValue--;
+                ThisValue[0] = '=';
             }
         }
 
@@ -477,6 +506,39 @@ YoriShLoadSavedRestartState(
                     ThisValue++;
 
                     SetEnvironmentVariable(ThisVar, ThisValue);
+                }
+            }
+        }
+    }
+
+    //
+    //  Populate current directories.
+    //
+
+    ReadBuffer.LengthInChars = GetPrivateProfileSection(_T("CurrentDirectories"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+
+    if (ReadBuffer.LengthInChars > 0) {
+        LPTSTR ThisPair;
+        LPTSTR ThisVar;
+        LPTSTR ThisValue;
+        TCHAR DriveLetterBuffer[sizeof("=C:")];
+
+        ThisPair = ReadBuffer.StartOfString;
+        while (*ThisPair != '\0') {
+            ThisVar = ThisPair;
+            ThisPair += _tcslen(ThisPair) + 1;
+            if (ThisVar[0] != '=') {
+                ThisValue = _tcschr(ThisVar, '=');
+                if (ThisValue) {
+                    ThisValue[0] = '\0';
+                    ThisValue++;
+
+                    DriveLetterBuffer[0] = '=';
+                    DriveLetterBuffer[1] = ThisVar[0];
+                    DriveLetterBuffer[2] = ':';
+                    DriveLetterBuffer[3] = '\0';
+
+                    SetEnvironmentVariable(DriveLetterBuffer, ThisValue);
                 }
             }
         }
