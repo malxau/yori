@@ -233,9 +233,10 @@ SdirAddToCollection (
     }
 
     //
-    //  Now that our internal entry is fully poulated, insert it into the correct sorted position.
-    //  As an optimization, check if we just need to insert at the end (for file name sort on
-    //  NTFS, this is the common case.)
+    //  Now that our internal entry is fully poulated, insert it into the
+    //  correct sorted position.  As an optimization, check if we just need
+    //  to insert at the end (for file name sort on NTFS, this is the
+    //  common case.)
     //
 
     if (SdirDirCollectionCurrent > 1 &&
@@ -246,8 +247,10 @@ SdirAddToCollection (
     }
 
     //
-    //  MSFIX This algorithm seems really stupid.  Since we know the sort
-    //  list is sorted, shouldn't we binary search?
+    //  Currently sorting is done very inefficiently by a selection sort
+    //  type algorithm.  Generally this doesn't run due to the optimization
+    //  above.  When a different sort order is requested, performance could
+    //  be improved by using a better algorithm here.
     //
 
     for (i = 0; i < SdirDirCollectionCurrent - 1; i++) {
@@ -284,7 +287,63 @@ typedef struct _SDIR_ITEM_FOUND_CONTEXT {
      request.
      */
     DWORD ItemsFound;
+
+    /**
+     A Win32 error code, initialized to success and populated with an error
+     if any enumeration operation fails.  This is done to reduce reliance
+     on Win32 GetLastError, because it allows us to plumb an enumerate
+     error back to the calling function without promising not to make
+     Win32 calls in the meantime.
+     */
+    DWORD Error;
+
+    /**
+     An allocation for enumerating streams within files.  This is generally
+     never used unless stream enumeration is requested.  The caller should
+     always be prepared to free it.
+     */
+    YORI_STRING StreamFullPath;
+
+
 } SDIR_ITEM_FOUND_CONTEXT, *PSDIR_ITEM_FOUND_CONTEXT;
+
+/**
+ A callback invoked by @ref SdirEnumeratePathWithDepth when an enumerate
+ error occurs.
+
+ @param FullPath Pointer to a full, escaped path to the file.
+
+ @param ErrorCode Specifies the error that was encountered.
+
+ @param Depth Specifies the recursion depth.  This should be zero and is
+        ignored.
+
+ @param Context Pointer to a an SDIR_ITEM_FOUND_CONTEXT block for all objects
+        found via a single enumerate request.
+ 
+ @return TRUE to indicate enumeration should continue, FALSE to indicate it
+         should terminate.
+ */
+BOOL
+SdirEnumerateErrorCallback(
+    __in PYORI_STRING FullPath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PSDIR_ITEM_FOUND_CONTEXT ItemContext = (PSDIR_ITEM_FOUND_CONTEXT)Context;
+
+    UNREFERENCED_PARAMETER(FullPath);
+    UNREFERENCED_PARAMETER(Depth);
+
+    if (ItemContext->Error == ERROR_SUCCESS) {
+        ItemContext->Error = ErrorCode;
+    }
+
+    return TRUE;
+}
+
 
 /**
  A callback invoked by @ref SdirEnumeratePathWithDepth for every file found.
@@ -320,7 +379,6 @@ SdirItemFoundCallback(
         HANDLE hStreamFind;
         WIN32_FIND_STREAM_DATA FindStreamData;
         WIN32_FIND_DATA BogusFindData;
-        YORI_STRING StreamFullPath;
 
         //
         //  Display the default stream
@@ -335,9 +393,18 @@ SdirItemFoundCallback(
         hStreamFind = DllKernel32.pFindFirstStreamW(FullPath->StartOfString, 0, &FindStreamData, 0);
         if (hStreamFind != INVALID_HANDLE_VALUE) {
 
-            if (!YoriLibAllocateString(&StreamFullPath, FullPath->LengthInChars + YORI_LIB_MAX_STREAM_NAME)) {
-                FindClose(hStreamFind);
-                return FALSE;
+            //
+            //  If the existing buffer isn't large enough, allocate a new
+            //  one.  Add in an extra 100 chars in the hope that this new
+            //  buffer can be reused for a later file.
+            //
+
+            if (ItemContext->StreamFullPath.LengthAllocated < FullPath->LengthInChars + YORI_LIB_MAX_STREAM_NAME) {
+                YoriLibFreeStringContents(&ItemContext->StreamFullPath);
+                if (!YoriLibAllocateString(&ItemContext->StreamFullPath, FullPath->LengthInChars + YORI_LIB_MAX_STREAM_NAME + 100)) {
+                    FindClose(hStreamFind);
+                    return FALSE;
+                }
             }
 
             do {
@@ -356,7 +423,7 @@ SdirItemFoundCallback(
                         FindStreamData.cStreamName[StreamLength - 6] = '\0';
                     }
 
-                    StreamFullPath.LengthInChars = YoriLibSPrintfS(StreamFullPath.StartOfString, StreamFullPath.LengthAllocated, _T("%s%s%s"), Opts->ParentName.StartOfString, FindData->cFileName, FindStreamData.cStreamName);
+                    ItemContext->StreamFullPath.LengthInChars = YoriLibSPrintfS(ItemContext->StreamFullPath.StartOfString, ItemContext->StreamFullPath.LengthAllocated, _T("%s%s%s"), Opts->ParentName.StartOfString, FindData->cFileName, FindStreamData.cStreamName);
 
                     //
                     //  Assume file state is stream state
@@ -374,16 +441,10 @@ SdirItemFoundCallback(
                     //  Populate stream information
                     //
 
-                    YoriLibUpdateFindDataFromFileInformation(&BogusFindData, StreamFullPath.StartOfString, FALSE);
-                    SdirAddToCollection(&BogusFindData, &StreamFullPath);
+                    YoriLibUpdateFindDataFromFileInformation(&BogusFindData, ItemContext->StreamFullPath.StartOfString, FALSE);
+                    SdirAddToCollection(&BogusFindData, &ItemContext->StreamFullPath);
                 }
             } while (DllKernel32.pFindNextStreamW(hStreamFind, &FindStreamData));
-
-            //
-            //  MSFIX Keep this on the context so we can reuse it
-            //
-
-            YoriLibFreeStringContents(&StreamFullPath);
         }
 
         FindClose(hStreamFind);
@@ -545,15 +606,18 @@ SdirEnumeratePathWithDepth (
             }
 
             //
-            // Copy back any previous data.  This occurs when multiple criteria are specified, eg.,
-            // "*.a *.b".  Apply fixups to everything in the sorted array which were based on the
-            // previous collection and now need to be based on the new one.
+            //  Copy back any previous data.  This occurs when multiple
+            //  criteria are specified, eg., "*.a *.b".  Apply fixups to
+            //  everything in the sorted array which were based on the
+            //  previous collection and now need to be based on the new one.
             //
-            // MSFIX I don't think this is right.  Fixing up offsets is fine, but if we already
-            // inserted things from the second criteria before failing out, the sorted array
-            // is being updated to point to items that we haven't populated into the new array.
-            // This is rare because we need to have multiple criteria, succeed with one, try
-            // for the second, then fail out and reallocate.
+            //  MSFIX I don't think this is right.  Fixing up offsets is fine,
+            //  but if we already inserted things from the second criteria
+            //  before failing out, the sorted array is being updated to
+            //  point to items that we haven't populated into the new array.
+            //  This is rare because we need to have multiple criteria,
+            //  succeed with one, try for the second, then fail out and
+            //  reallocate.
             //
     
             if (DirEntsToPreserve > 0) {
@@ -583,10 +647,6 @@ SdirEnumeratePathWithDepth (
         //  If we can't find enumerate, display the error except when we're recursive
         //  and the error is we found no files in this particular directory.
         //
-        //  MSFIX YoriLibForEachFile isn't trying to set last error.  This means
-        //  error reports are garbage and we don't know why items weren't found
-        //  (access denied vs. no matches.)
-        //
 
         ItemFoundContext.ItemsFound = 0;
         MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES;
@@ -601,24 +661,38 @@ SdirEnumeratePathWithDepth (
         if (Depth > 0) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
+
+        YoriLibInitEmptyString(&ItemFoundContext.StreamFullPath);
+        ItemFoundContext.Error = ERROR_SUCCESS;
+
         if (!YoriLibForEachFile(FindStr,
                                 MatchFlags,
                                 0,
                                 SdirItemFoundCallback,
-                                NULL,
+                                SdirEnumerateErrorCallback,
                                 &ItemFoundContext)) {
 
             if (!Opts->Recursive) {
-                DWORD Err = GetLastError();
-                SdirDisplayYsError(Err, FindStr);
-                SetLastError(Err);
+                if (ItemFoundContext.Error == ERROR_SUCCESS) {
+                    ItemFoundContext.Error = GetLastError();
+                }
+                SdirDisplayYsError(ItemFoundContext.Error, FindStr);
+                YoriLibFreeStringContents(&ItemFoundContext.StreamFullPath);
+                SetLastError(ItemFoundContext.Error);
+            } else {
+                YoriLibFreeStringContents(&ItemFoundContext.StreamFullPath);
             }
             return FALSE;
         }
 
+        YoriLibFreeStringContents(&ItemFoundContext.StreamFullPath);
+
         if (ItemFoundContext.ItemsFound == 0) {
             if (!Opts->Recursive) {
-                SdirDisplayYsError(GetLastError(), FindStr);
+                if (ItemFoundContext.Error == ERROR_SUCCESS) {
+                    ItemFoundContext.Error = GetLastError();
+                }
+                SdirDisplayYsError(ItemFoundContext.Error, FindStr);
             }
             SetLastError(ERROR_FILE_NOT_FOUND);
             return FALSE;
