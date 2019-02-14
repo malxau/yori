@@ -459,6 +459,66 @@ SdirItemFoundCallback(
     return TRUE;
 }
 
+/**
+ Copy entries from one old sorted array allocation to a new allocation.
+ When this occurs the pointer values in the old array need to be adjusted
+ from the old allocation to the new allocation.  In addition, entries may
+ have been inserted into the old collection which should not be preserved
+ because they will be reenumerated.  When this occurs they will be in the
+ sorted array in sorted order, so any entry beyond the end of the
+ collection array should not be propagated to the new sort array.
+
+ @param OldCollection Pointer to the previous array of directory entries.
+
+ @param NewCollection Pointer to the new array of directory entries.  This,
+        combined with OldCollection, implies the offset adjustment to apply
+        to any entry within the sorted array.
+
+ @param NumberEntriesToCopy Specifies the maximum number of entries that
+        should be copied into the new sorted array.  This is the number of
+        entries within the collection that are being preserved; newer entries
+        will be enumerated again in a subsequent operation.
+
+ @param OldSorted Pointer to the previous array of sorted entries.  Entries
+        within this array will be filtered against NumberEntriesToCopy,
+        adjusted based on pointer offset, and propagated to the new array.
+
+ @param NewSorted Pointer to the new array of sorted entries.  This will be
+        populated within this routine.
+
+ @param NumberSortedEntries The number of elements in the OldSorted array.
+ */
+VOID
+SdirMoveSortedEntries(
+    __in PYORI_FILE_INFO OldCollection,
+    __in PYORI_FILE_INFO NewCollection,
+    __in DWORD NumberEntriesToCopy,
+    __in PYORI_FILE_INFO* OldSorted,
+    __out PYORI_FILE_INFO* NewSorted,
+    __in DWORD NumberSortedEntries
+    )
+{
+    DWORD SrcIndex;
+    DWORD DestIndex;
+    PYORI_FILE_INFO ThisEntry;
+
+    UNREFERENCED_PARAMETER(NumberSortedEntries);
+
+    DestIndex = 0;
+    for (SrcIndex = 0; SrcIndex < NumberSortedEntries; SrcIndex++) {
+        ThisEntry = (PYORI_FILE_INFO)OldSorted[SrcIndex];
+        ASSERT(ThisEntry >= OldCollection);
+        if (ThisEntry < &OldCollection[NumberEntriesToCopy]) {
+            NewSorted[DestIndex] = (PYORI_FILE_INFO)((PUCHAR)ThisEntry -
+                                                     (PUCHAR)OldCollection +
+                                                     (PUCHAR)NewCollection);
+            DestIndex++;
+        }
+    }
+
+    ASSERT(DestIndex == NumberEntriesToCopy);
+}
+
 
 /**
  Enumerate all of the files in a given single directory/wildcard pattern,
@@ -477,7 +537,6 @@ SdirEnumeratePathWithDepth (
     )
 {
     LPTSTR FinalPart;
-    DWORD SizeCopied;
     ULONG DirEntsToPreserve;
     SDIR_SUMMARY SummaryToPreserve;
     PYORI_FILE_INFO NewSdirDirCollection;
@@ -582,9 +641,10 @@ SdirEnumeratePathWithDepth (
         //
 
         if (SdirDirCollectionCurrent >= SdirAllocatedDirents || SdirDirCollection == NULL) {
+            DWORD PreviousAllocatedDirents = SdirAllocatedDirents;
 
-            if (SdirDirCollectionCurrent > SdirAllocatedDirents) {
-                SdirAllocatedDirents = SdirDirCollectionCurrent;
+            if (SdirDirCollectionCurrent >= SdirAllocatedDirents) {
+                SdirAllocatedDirents = SdirDirCollectionCurrent + 1;
             }
             if (SdirAllocatedDirents < UINT_MAX - 100) {
                 SdirAllocatedDirents += 100;
@@ -611,22 +671,10 @@ SdirEnumeratePathWithDepth (
             //  everything in the sorted array which were based on the
             //  previous collection and now need to be based on the new one.
             //
-            //  MSFIX I don't think this is right.  Fixing up offsets is fine,
-            //  but if we already inserted things from the second criteria
-            //  before failing out, the sorted array is being updated to
-            //  point to items that we haven't populated into the new array.
-            //  This is rare because we need to have multiple criteria,
-            //  succeed with one, try for the second, then fail out and
-            //  reallocate.
-            //
     
             if (DirEntsToPreserve > 0) {
                 memcpy(NewSdirDirCollection, SdirDirCollection, sizeof(YORI_FILE_INFO)*DirEntsToPreserve);
-                for (SizeCopied = 0; SizeCopied < DirEntsToPreserve; SizeCopied++) {
-                    NewSdirDirSorted[SizeCopied] = (PYORI_FILE_INFO)((PUCHAR)SdirDirSorted[SizeCopied] -
-                                                                  (PUCHAR)SdirDirCollection +
-                                                                  (PUCHAR)NewSdirDirCollection);
-                }
+                SdirMoveSortedEntries(SdirDirCollection, NewSdirDirCollection, DirEntsToPreserve, SdirDirSorted, NewSdirDirSorted, PreviousAllocatedDirents);
             }
     
             if (SdirDirCollection != NULL) {
