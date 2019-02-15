@@ -2,7 +2,6 @@ v1.0:
  - General MSFIX review
  - 32 bit setver on HyperV server
  - Allow get to refresh files
- - Fix RTF so wordpad doesn't substitute symbol fonts
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?

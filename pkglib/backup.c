@@ -873,7 +873,7 @@ YoriPkgPreparePackageForInstall(
         //  is installed, and if so, back it up too
         //
 
-        PkgInstalled.LengthInChars = GetPrivateProfileString(_T("Installed"), PendingPackage->PackageName.StartOfString, _T(""), PkgInstalled.StartOfString, PkgInstalled.LengthAllocated, PkgIniFile->StartOfString);
+        PkgInstalled.LengthInChars = GetPrivateProfileString(_T("Installed"), PkgToReplace.StartOfString, _T(""), PkgInstalled.StartOfString, PkgInstalled.LengthAllocated, PkgIniFile->StartOfString);
         if (PkgInstalled.LengthInChars > 0) {
             if (!YoriPkgBackupPackage(PkgIniFile, &PkgToReplace, TargetDirectory, &BackupPackage)) {
                 YoriLibFreeStringContents(&ReplacesList);
