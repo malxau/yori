@@ -207,7 +207,9 @@ RmdirFileEnumerateErrorCallback(
     }
 
     if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+        if (Depth == 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+        }
         Result = TRUE;
     } else {
         LPTSTR ErrText = YoriLibGetWinErrorText(ErrorCode);
