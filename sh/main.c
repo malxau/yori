@@ -420,7 +420,16 @@ YoriShPostCommand()
 
     ConsoleMode = GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo);
     if (ConsoleMode)  {
+
+        //
+        //  Old versions will fail and ignore any call that contains a flag
+        //  they don't understand, so attempt a lowest common denominator
+        //  setting and try to upgrade it, which might fail.
+        //
+
+        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
         SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m"), 27);
         if (ScreenInfo.srWindow.Left > 0) {
             SHORT CharsToMoveLeft;
