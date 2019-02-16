@@ -407,7 +407,7 @@ YoriShSuckEnv(
 #endif
 
     if (TargetProcess32BitPeb) {
-        YORI_LIB_PEB32 ProcessPeb;
+        YORI_LIB_PEB32_NATIVE ProcessPeb;
 
         if (!ReadProcessMemory(ProcessHandle, BasicInfo.PebBaseAddress, &ProcessPeb, sizeof(ProcessPeb), &BytesReturned)) {
             return FALSE;
@@ -421,7 +421,7 @@ YoriShSuckEnv(
                        sizeof(DWORD), 
                        YORI_LIB_HEX_FLAG_DISPLAY_OFFSET);
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters offset %x\n"), FIELD_OFFSET(YORI_LIB_PEB32, ProcessParameters));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcessParameters offset %x\n"), FIELD_OFFSET(YORI_LIB_PEB32_NATIVE, ProcessParameters));
 #endif
 
         ProcessParamsBlockToRead = (PVOID)(ULONG_PTR)ProcessPeb.ProcessParameters;

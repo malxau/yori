@@ -52,7 +52,7 @@ DWORD CachedBuildNumber;
 /**
  On 32 bit builds, the current process PEB is 32 bit.
  */
-#define PYORI_LIB_PEB_NATIVE PYORI_LIB_PEB32
+#define PYORI_LIB_PEB_NATIVE PYORI_LIB_PEB32_NATIVE
 #endif
 
 /**

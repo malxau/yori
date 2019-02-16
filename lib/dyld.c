@@ -91,6 +91,7 @@ YoriLibLoadNtDllFunctions()
     }
     DllNtDll.pNtQueryInformationFile = (PNT_QUERY_INFORMATION_FILE)GetProcAddress(DllNtDll.hDll, "NtQueryInformationFile");
     DllNtDll.pNtQueryInformationProcess = (PNT_QUERY_INFORMATION_PROCESS)GetProcAddress(DllNtDll.hDll, "NtQueryInformationProcess");
+    DllNtDll.pNtQueryInformationThread = (PNT_QUERY_INFORMATION_THREAD)GetProcAddress(DllNtDll.hDll, "NtQueryInformationThread");
     DllNtDll.pRtlGetLastNtStatus = (PRTL_GET_LAST_NT_STATUS)GetProcAddress(DllNtDll.hDll, "RtlGetLastNtStatus");
     return TRUE;
 }
@@ -153,6 +154,8 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "SetCurrentConsoleFontEx");
     DllKernel32.pSetInformationJobObject = (PSET_INFORMATION_JOB_OBJECT)GetProcAddress(DllKernel32.hDll, "SetInformationJobObject");
     DllKernel32.pWow64DisableWow64FsRedirection = (PWOW64_DISABLE_WOW64_FS_REDIRECTION)GetProcAddress(DllKernel32.hDll, "Wow64DisableWow64FsRedirection");
+    DllKernel32.pWow64GetThreadContext = (PWOW64_GET_THREAD_CONTEXT)GetProcAddress(DllKernel32.hDll, "Wow64GetThreadContext");
+    DllKernel32.pWow64SetThreadContext = (PWOW64_SET_THREAD_CONTEXT)GetProcAddress(DllKernel32.hDll, "Wow64SetThreadContext");
 
     return TRUE;
 }

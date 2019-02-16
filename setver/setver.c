@@ -3,7 +3,7 @@
  *
  * Yori shell invoke a child process with an explicit Windows version number.
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -120,7 +120,7 @@ SetVerApplyVersionToProcess(
 #endif
 
     if (TargetProcess32BitPeb) {
-        YORI_LIB_PEB32 ProcessPeb;
+        YORI_LIB_PEB32_NATIVE ProcessPeb;
 
         if (!ReadProcessMemory(hProcess, BasicInfo.PebBaseAddress, &ProcessPeb, sizeof(ProcessPeb), &BytesReturned)) {
             return FALSE;
@@ -153,6 +153,254 @@ SetVerApplyVersionToProcess(
 }
 
 /**
+ Structure to query from NtQueryInformationThread since it is not defined
+ by the compilation environment.
+ */
+typedef struct _YORI_THREAD_BASIC_INFORMATION {
+
+    /**
+     If the thread has terminated, the exit code for the thread.
+     */
+    LONG ExitStatus;
+
+    /**
+     Pointer to the native TEB for the thread.
+     */
+    PVOID TebAddress;
+
+    /**
+     A unique process handle.
+     */
+    HANDLE ProcessHandle;
+
+    /**
+     A unique thread handle.
+     */
+    HANDLE ThreadHandle;
+
+    /**
+     The processors the thread should be scheduled on.
+     */
+    ULONG_PTR AffinityMask;
+
+    /**
+     The priority of the thread.
+     */
+    LONG Priority;
+
+    /**
+     The base priority of the thread.
+     */
+    LONG BasePriority;
+} YORI_THREAD_BASIC_INFORMATION, *PYORI_THREAD_BASIC_INFORMATION;
+
+#if defined(_M_AMD64)
+
+/**
+ Apply the requested OS version into the 32 bit PEB of a WOW process.
+
+ @param Context Pointer to the context describing the OS version to apply.
+
+ @param hProcess Handle to the process to apply the OS version into.
+
+ @param hThread Handle to a thread in the process.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SetVerApplyVersionToProcessWow(
+    __in PSETVER_CONTEXT Context,
+    __in HANDLE hProcess,
+    __in HANDLE hThread
+    )
+{
+    LONG Status;
+    YORI_THREAD_BASIC_INFORMATION BasicInfo;
+    SIZE_T BytesReturned;
+    DWORD dwBytesReturned;
+    PVOID Teb64Address;
+    PVOID Teb32Address;
+    PVOID Peb32Address;
+    YORI_LIB_TEB32 Teb32;
+    YORI_LIB_PEB32_WOW ProcessPeb;
+
+    if (DllNtDll.pNtQueryInformationThread == NULL) {
+        return FALSE;
+    }
+
+    Status = DllNtDll.pNtQueryInformationThread(hThread, 0, &BasicInfo, sizeof(BasicInfo), &dwBytesReturned);
+    if (Status != 0) {
+        return FALSE;
+    }
+
+    Teb64Address = BasicInfo.TebAddress;
+    Teb32Address = (PUCHAR)Teb64Address + 0x2000;
+
+#if SETVER_DEBUG
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("64 bit Teb at %p, 32 bit Teb at %p\n"), Teb64Address, Teb32Address);
+#endif
+
+    if (!ReadProcessMemory(hProcess, Teb32Address, &Teb32, sizeof(Teb32), &BytesReturned)) {
+        return FALSE;
+    }
+
+    Peb32Address = (PVOID)(DWORD_PTR)Teb32.Peb32Address;
+
+#if SETVER_DEBUG
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("32 bit Peb at %p\n"), Peb32Address);
+#endif
+
+    if (!ReadProcessMemory(hProcess, Peb32Address, &ProcessPeb, sizeof(ProcessPeb), &BytesReturned)) {
+        return FALSE;
+    }
+
+    ProcessPeb.OSMajorVersion = Context->AppVerMajor;
+    ProcessPeb.OSMinorVersion = Context->AppVerMinor;
+    ProcessPeb.OSBuildNumber = (WORD)Context->AppBuildNumber;
+
+    if (!WriteProcessMemory(hProcess, Peb32Address, &ProcessPeb, sizeof(ProcessPeb), &BytesReturned)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+#endif
+
+#pragma warning(disable: 4152)
+#pragma warning(disable: 4054)
+
+/**
+ Information about a process where the mini-debugger has observed it be
+ launched and has not yet observed termination.  This is used so that the
+ version information can be fixed up in all child processes once they
+ reach their first instruction to execute.
+ */
+typedef struct _SETVER_OUTSTANDING_PROCESS {
+
+    /**
+     The linkage of this process within the list of known processes.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     A handle to the process.  This has been duplicated within this program
+     and must be closed when freeing this structure.
+     */
+    HANDLE hProcess;
+
+    /**
+     A handle to the initial thread within the process.  This has been
+     duplicated within this program and must be closed when freeing this
+     structure.
+     */
+    HANDLE hInitialThread;
+
+    /**
+     Pointer within the target process' VA for where execution will commence.
+     */
+    LPTHREAD_START_ROUTINE StartRoutine;
+
+    /**
+     The process identifier for this process.
+     */
+    DWORD dwProcessId;
+
+    /**
+     A saved copy of the first byte in the StartRoutine.  This may be an
+     entire instruction or may be part of one, but since the breakpoint is
+     a single byte, this byte must be restored before execution can
+     resume.
+     */
+    UCHAR FirstInstruction;
+
+    /**
+     TRUE once the StartRoutine function has executed, indicating that the
+     breakpoint has fired and been cleared, and no handling should be
+     performed for exceptions from the StartRoutine again.
+     */
+    BOOLEAN ProcessStarted;
+} SETVER_OUTSTANDING_PROCESS, *PSETVER_OUTSTANDING_PROCESS;
+
+/**
+ Find a process in the list of known processes by its process ID.
+
+ @param ListHead Pointer to the list of known processes.
+
+ @param dwProcessId The process identifier of the process whose information is
+        requested.
+
+ @return Pointer to the information block about the child process.
+ */
+PSETVER_OUTSTANDING_PROCESS
+SetVerFindProcess(
+    __in PYORI_LIST_ENTRY ListHead,
+    __in DWORD dwProcessId
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PSETVER_OUTSTANDING_PROCESS Process;
+
+    ListEntry = NULL;
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(ListHead, ListEntry);
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        Process = CONTAINING_RECORD(ListEntry, SETVER_OUTSTANDING_PROCESS, ListEntry);
+        if (Process->dwProcessId == dwProcessId) {
+            return Process;
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ Deallocate information about a single known child processes.
+
+ @param Process Pointer to information about a single child process.
+ */
+VOID
+SetVerFreeProcess(
+    __in PSETVER_OUTSTANDING_PROCESS Process
+    )
+{
+    YoriLibRemoveListItem(&Process->ListEntry);
+    CloseHandle(Process->hProcess);
+    CloseHandle(Process->hInitialThread);
+    YoriLibFree(Process);
+}
+
+/**
+ Deallocate information about all known child processes.
+
+ @param ListHead Pointer to the list of known child processes.
+ */
+VOID
+SetVerFreeAllProcesses(
+    __in PYORI_LIST_ENTRY ListHead
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PSETVER_OUTSTANDING_PROCESS Process;
+
+    ListEntry = NULL;
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(ListHead, ListEntry);
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        Process = CONTAINING_RECORD(ListEntry, SETVER_OUTSTANDING_PROCESS, ListEntry);
+        SetVerFreeProcess(Process);
+        ListEntry = NULL;
+    }
+}
+
+
+/**
  Pump debug events for child processes and complete when the initial process
  has terminated.
 
@@ -166,6 +414,15 @@ SetVerPumpDebugEvents(
     __in PSETVER_CONTEXT Context
     )
 {
+    UCHAR BreakpointInstruction = 0xcc;
+    SIZE_T BytesWritten;
+    YORI_LIST_ENTRY Processes;
+    PSETVER_OUTSTANDING_PROCESS Process;
+    BOOL UseProcessBreakpoint;
+    BOOL ProcessIsWow;
+
+    YoriLibInitializeListHead(&Processes);
+
     while(TRUE) {
         DEBUG_EVENT DbgEvent;
         DWORD dwContinueStatus;
@@ -183,11 +440,78 @@ SetVerPumpDebugEvents(
 
         switch(DbgEvent.dwDebugEventCode) {
             case CREATE_PROCESS_DEBUG_EVENT:
-                if (!SetVerApplyVersionToProcess(Context, DbgEvent.u.CreateProcessInfo.hProcess)) {
+
+                Process = YoriLibMalloc(sizeof(SETVER_OUTSTANDING_PROCESS));
+                if (Process == NULL) {
                     break;
                 }
+                
+                ZeroMemory(Process, sizeof(SETVER_OUTSTANDING_PROCESS));
+                DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hProcess, GetCurrentProcess(), &Process->hProcess, 0, FALSE, DUPLICATE_SAME_ACCESS);
+                DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hThread, GetCurrentProcess(), &Process->hInitialThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
+                Process->StartRoutine = DbgEvent.u.CreateProcessInfo.lpStartAddress;
+                Process->dwProcessId = DbgEvent.dwProcessId;
+
+#if SETVER_DEBUG
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("StartRoutine of Pid %x at %p\n"), DbgEvent.dwProcessId, Process->StartRoutine);
+#endif
+
+                //
+                //  On x86/amd64, set a breakpoint at the entrypoint code
+                //  and resume execution.  We'll fix up the versions over
+                //  there.  On any other architecture, fix up the versions
+                //  now and hope things go well.  We can't do this if the
+                //  OS doesn't have Wow64GetThreadContext and the child
+                //  process is 32 bit, since we have no way to process the
+                //  breakpoints in the child.
+                //
+
+#if defined(_M_AMD64) || defined(_M_IX86)
+                UseProcessBreakpoint = TRUE;
+#else
+                UseProcessBreakpoint = FALSE;
+#endif
+                ProcessIsWow = FALSE;
+                if (DllKernel32.pIsWow64Process != NULL) {
+                    if (DllKernel32.pIsWow64Process(Process->hProcess, &ProcessIsWow) && ProcessIsWow) {
+                        if (DllKernel32.pWow64GetThreadContext == NULL ||
+                            DllKernel32.pWow64SetThreadContext == NULL) {
+                            UseProcessBreakpoint = FALSE;
+                        }
+                    }
+
+                }
+
+#if defined(_M_AMD64) || defined(_M_IX86)
+                if (UseProcessBreakpoint) {
+                    ReadProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
+                    WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &BreakpointInstruction, sizeof(BreakpointInstruction), &BytesWritten);
+                    FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
+                }
+#endif
+
+                if (!UseProcessBreakpoint) {
+                    if (!SetVerApplyVersionToProcess(Context, Process->hProcess)) {
+                        break;
+                    }
+                    if (ProcessIsWow) {
+                        if (!SetVerApplyVersionToProcessWow(Context, Process->hProcess, Process->hInitialThread)) {
+                            break;
+                        }
+                    }
+                    Process->ProcessStarted = TRUE;
+                }
+
+                YoriLibAppendList(&Processes, &Process->ListEntry);
 
                 CloseHandle(DbgEvent.u.CreateProcessInfo.hFile);
+                break;
+            case EXIT_PROCESS_DEBUG_EVENT:
+                Process = SetVerFindProcess(&Processes, DbgEvent.dwProcessId);
+                ASSERT(Process != NULL);
+                if (Process != NULL) {
+                    SetVerFreeProcess(Process);
+                }
                 break;
             case LOAD_DLL_DEBUG_EVENT:
 #if SETVER_DEBUG
@@ -221,15 +545,85 @@ SetVerPumpDebugEvents(
                 if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
 
                     dwContinueStatus = DBG_CONTINUE;
+
+#if defined(_M_AMD64) || defined(_M_IX86)
+                    Process = SetVerFindProcess(&Processes, DbgEvent.dwProcessId);
+                    ASSERT(Process != NULL);
+                    if (Process != NULL &&
+                        DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == Process->StartRoutine &&
+                        !Process->ProcessStarted) {
+
+
+                        CONTEXT ThreadContext;
+                        ZeroMemory(&ThreadContext, sizeof(ThreadContext));
+
+                        ThreadContext.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+                        GetThreadContext(Process->hInitialThread, &ThreadContext);
+#if defined(_M_AMD64)
+#if SETVER_DEBUG
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("rip %p\n"), ThreadContext.Rip);
+#endif
+                        ThreadContext.Rip = (DWORD_PTR)(LPVOID)Process->StartRoutine;
+#else
+#if SETVER_DEBUG
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("eip %p\n"), ThreadContext.Eip);
+#endif
+                        ThreadContext.Eip = (DWORD_PTR)(LPVOID)Process->StartRoutine;
+#endif
+                        
+                        WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
+                        FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
+                        SetThreadContext(Process->hInitialThread, &ThreadContext);
+                        Process->ProcessStarted = TRUE;
+
+                        if (!SetVerApplyVersionToProcess(Context, Process->hProcess)) {
+                            break;
+                        }
+                    }
+#endif
                 }
 
                 if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001F) {
 
                     dwContinueStatus = DBG_CONTINUE;
+#if defined(_M_AMD64)
+                    Process = SetVerFindProcess(&Processes, DbgEvent.dwProcessId);
+                    ASSERT(Process != NULL);
+                    if (Process != NULL &&
+                        DllKernel32.pWow64GetThreadContext != NULL &&
+                        DllKernel32.pWow64SetThreadContext != NULL &&
+                        DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == Process->StartRoutine &&
+                        !Process->ProcessStarted) {
+
+                        if (DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == Process->StartRoutine) {
+                            YORI_LIB_WOW64_CONTEXT ThreadContext;
+                            ZeroMemory(&ThreadContext, sizeof(ThreadContext));
+    
+                            ThreadContext.ContextFlags = YORI_WOW64_CONTEXT_CONTROL | YORI_WOW64_CONTEXT_INTEGER;
+                            DllKernel32.pWow64GetThreadContext(Process->hInitialThread, &ThreadContext);
+#if SETVER_DEBUG
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("eip %p\n"), ThreadContext.Eip);
+#endif
+                            ThreadContext.Eip = (DWORD)(DWORD_PTR)(LPVOID)Process->StartRoutine;
+                            DllKernel32.pWow64SetThreadContext(Process->hInitialThread, &ThreadContext);
+                            WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
+                            FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
+                            Process->ProcessStarted = TRUE;
+                        }
+                        
+                        if (!SetVerApplyVersionToProcess(Context, Process->hProcess)) {
+                            break;
+                        }
+                        if (!SetVerApplyVersionToProcessWow(Context, Process->hProcess, Process->hInitialThread)) {
+                            break;
+                        }
+                    }
+#endif
                 }
 
+
 #if SETVER_DEBUG
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ExceptionCode %x ContinueStatus %x\n"), DbgEvent.u.Exception.ExceptionRecord.ExceptionCode, dwContinueStatus);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ExceptionCode %x Address %p ContinueStatus %x\n"), DbgEvent.u.Exception.ExceptionRecord.ExceptionCode, DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress, dwContinueStatus);
 #endif
 
                 break;
@@ -241,6 +635,8 @@ SetVerPumpDebugEvents(
             break;
         }
     }
+
+    SetVerFreeAllProcesses(&Processes);
 
     return TRUE;
 }
@@ -300,7 +696,7 @@ ENTRYPOINT(
                 SetVerHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
             }
         } else {

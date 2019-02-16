@@ -208,9 +208,10 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS32 {
 } YORI_LIB_PROCESS_PARAMETERS32, *PYORI_LIB_PROCESS_PARAMETERS32;
 
 /**
- A structure corresponding to a PEB in a 32 bit child process.
+ A structure corresponding to a PEB in a 32 bit child process when viewed from
+ a 32 bit debugger process.
  */
-typedef struct _YORI_LIB_PEB32 {
+typedef struct _YORI_LIB_PEB32_NATIVE {
     /**
      Ignored for alignment.
      */
@@ -256,7 +257,194 @@ typedef struct _YORI_LIB_PEB32 {
      */
     WORD OSCSDVersion;
 
-} YORI_LIB_PEB32, *PYORI_LIB_PEB32;
+} YORI_LIB_PEB32_NATIVE, *PYORI_LIB_PEB32_NATIVE;
+
+/**
+ A structure corresponding to a PEB in a 32 bit child process on 64 bit
+ versions of Windows when viewed through a 64 bit debugger.
+ */
+typedef struct _YORI_LIB_PEB32_WOW {
+    /**
+     Ignored for alignment.
+     */
+    DWORD Flags;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored[3];
+
+    /**
+     Pointer to the process parameters.
+     */
+    PYORI_LIB_PROCESS_PARAMETERS32 ProcessParameters;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored2[17];
+
+    /**
+     Ignored for alignment.
+     */
+    DWORD Ignored3[18];
+
+    /**
+     The major OS version to report to the application.
+     */
+    DWORD OSMajorVersion;
+
+    /**
+     The minor OS version to report to the application.
+     */
+    DWORD OSMinorVersion;
+
+    /**
+     The build number to report to the application.
+     */
+    WORD OSBuildNumber;
+
+    /**
+     The servicing number.
+     */
+    WORD OSCSDVersion;
+
+} YORI_LIB_PEB32_WOW, *PYORI_LIB_PEB32_WOW;
+
+/**
+ A minimal definition of a 32 bit TEB, suitable for finding a 32 bit PEB.
+ */
+typedef struct _YORI_LIB_TEB32 {
+
+    /**
+     Unknown and reserved for alignment.
+     */
+    DWORD Ignored[12];
+
+    /**
+     A 32 bit pointer to the 32 bit PEB.
+     */
+    DWORD Peb32Address;
+} YORI_LIB_TEB32, *PYORI_LIB_TEB32;
+
+/**
+ Indicates that control registers (eip etc) be captured.
+ */
+#define YORI_WOW64_CONTEXT_CONTROL (0x00010001)
+
+/**
+ Indicates that integer registers (eax, ebx et al) be captured.
+ */
+#define YORI_WOW64_CONTEXT_INTEGER (0x00010002)
+
+/**
+ Saved registers from a 32 bit process running within a 64 bit OS.  Not all
+ 64 bit compilation environments define this.
+ */
+typedef struct _YORI_LIB_WOW64_CONTEXT {
+
+    /**
+     Flags indicating the set of registers to capture.
+     */
+    DWORD ContextFlags;
+
+    /**
+     CPU debug registers, unused in this application.
+     */
+    DWORD DebugRegisters[6];
+
+    /**
+     State about floating point, unused in this application.
+     */
+    DWORD FloatRegisters[28];
+
+    /**
+     The gs register.
+     */
+    DWORD SegGs;
+
+    /**
+     The fs register.
+     */
+    DWORD SegFs;
+
+    /**
+     The extra segment register.
+     */
+    DWORD SegEs;
+
+    /**
+     The data segment register.
+     */
+    DWORD SegDs;
+
+    /**
+     The edi register.
+     */
+    DWORD Edi;
+
+    /**
+     The esi register.
+     */
+    DWORD Esi;
+
+    /**
+     The ebx register.
+     */
+    DWORD Ebx;
+
+    /**
+     The edx register.
+     */
+    DWORD Edx;
+
+    /**
+     The ecx register.
+     */
+    DWORD Ecx;
+
+    /**
+     The eax register.
+     */
+    DWORD Eax;
+
+
+    /**
+     The stack base pointer.
+     */
+    DWORD Ebp;
+
+    /**
+     The instruction pointer.
+     */
+    DWORD Eip;
+
+    /**
+     The code segment register.
+     */
+    DWORD SegCs;
+
+    /**
+     Processor flags.
+     */
+    DWORD EFlags;
+
+    /**
+     The stack pointer register.
+     */
+    DWORD Esp;
+
+    /**
+     The stack segment register.
+     */
+    DWORD SegSs;
+
+    /**
+     Extra space used for some unknown OS specific reason.
+     */
+    DWORD Padding[128];
+
+} YORI_LIB_WOW64_CONTEXT, *PYORI_LIB_WOW64_CONTEXT;
 
 /**
  The size of a 64 bit pointer.
@@ -2672,6 +2860,18 @@ NT_QUERY_INFORMATION_PROCESS(HANDLE, DWORD, PVOID, DWORD, PDWORD);
 typedef NT_QUERY_INFORMATION_PROCESS *PNT_QUERY_INFORMATION_PROCESS;
 
 /**
+ A prototype for the NtQueryInformationThread function..
+ */
+typedef 
+LONG WINAPI
+NT_QUERY_INFORMATION_THREAD(HANDLE, DWORD, PVOID, DWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the NtQueryInformationThread function.
+ */
+typedef NT_QUERY_INFORMATION_THREAD *PNT_QUERY_INFORMATION_THREAD;
+
+/**
  A prototype for the RtlGetLastNtStatus function.
  */
 typedef 
@@ -2705,6 +2905,12 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      NtQueryInformationProcess.
      */
     PNT_QUERY_INFORMATION_PROCESS pNtQueryInformationProcess;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtQueryInformationThread.
+     */
+    PNT_QUERY_INFORMATION_THREAD pNtQueryInformationThread;
 
     /**
      If it's available on the current system, a pointer to
@@ -3114,6 +3320,30 @@ WOW64_DISABLE_WOW64_FS_REDIRECTION(PVOID*);
 typedef WOW64_DISABLE_WOW64_FS_REDIRECTION *PWOW64_DISABLE_WOW64_FS_REDIRECTION;
 
 /**
+ A prototype for the Wow64GetThreadContext function.
+ */
+typedef
+BOOL WINAPI
+WOW64_GET_THREAD_CONTEXT(HANDLE, PYORI_LIB_WOW64_CONTEXT);
+
+/**
+ A prototype for a pointer to the Wow64GetThreadContext function.
+ */
+typedef WOW64_GET_THREAD_CONTEXT *PWOW64_GET_THREAD_CONTEXT;
+
+/**
+ A prototype for the Wow64SetThreadContext function.
+ */
+typedef
+BOOL WINAPI
+WOW64_SET_THREAD_CONTEXT(HANDLE, PYORI_LIB_WOW64_CONTEXT);
+
+/**
+ A prototype for a pointer to the Wow64SetThreadContext function.
+ */
+typedef WOW64_SET_THREAD_CONTEXT *PWOW64_SET_THREAD_CONTEXT;
+
+/**
  A structure containing optional function pointers to kernel32.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -3288,6 +3518,16 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to Wow64DisableWow64FsRedirection.
      */
     PWOW64_DISABLE_WOW64_FS_REDIRECTION pWow64DisableWow64FsRedirection;
+
+    /**
+     If it's available on the current system, a pointer to Wow64GetThreadContext.
+     */
+    PWOW64_GET_THREAD_CONTEXT pWow64GetThreadContext;
+
+    /**
+     If it's available on the current system, a pointer to Wow64SetThreadContext.
+     */
+    PWOW64_SET_THREAD_CONTEXT pWow64SetThreadContext;
 } YORI_KERNEL32_FUNCTIONS, *PYORI_KERNEL32_FUNCTIONS;
 
 extern YORI_KERNEL32_FUNCTIONS DllKernel32;

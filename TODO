@@ -1,6 +1,5 @@
 v1.0:
  - General MSFIX review
- - 32 bit setver on HyperV server
  - Allow get to refresh files
 
 To consider:
