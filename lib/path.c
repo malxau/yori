@@ -1277,6 +1277,7 @@ YoriLibRemoveEnvironmentComponent(
     LPTSTR PathData;
     LPTSTR NewPathData;
     LPTSTR ThisPath;
+    LPTSTR ValueToSet;
     TCHAR * TokCtx;
     DWORD PathLength;
     DWORD NewOffset;
@@ -1319,7 +1320,18 @@ YoriLibRemoveEnvironmentComponent(
         ThisPath = _tcstok_s(NULL, _T(";"), &TokCtx);
     }
 
-    if (!SetEnvironmentVariable(EnvironmentVariable, NewPathData)) {
+    //
+    //  If no data was copied forward, delete the variable.  Note NewPathData
+    //  contains uninitialized data at this point when that occurs.
+    //
+
+    if (NewOffset > 0) {
+        ValueToSet = NewPathData;
+    } else {
+        ValueToSet = NULL;
+    }
+
+    if (!SetEnvironmentVariable(EnvironmentVariable, ValueToSet)) {
         YoriLibFree(PathData);
         return FALSE;
     }
