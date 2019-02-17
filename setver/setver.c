@@ -194,7 +194,7 @@ typedef struct _YORI_THREAD_BASIC_INFORMATION {
     LONG BasePriority;
 } YORI_THREAD_BASIC_INFORMATION, *PYORI_THREAD_BASIC_INFORMATION;
 
-#if defined(_M_AMD64)
+#if defined(_WIN64)
 
 /**
  Apply the requested OS version into the 32 bit PEB of a WOW process.
@@ -494,11 +494,13 @@ SetVerPumpDebugEvents(
                     if (!SetVerApplyVersionToProcess(Context, Process->hProcess)) {
                         break;
                     }
+#if defined(_WIN64)
                     if (ProcessIsWow) {
                         if (!SetVerApplyVersionToProcessWow(Context, Process->hProcess, Process->hInitialThread)) {
                             break;
                         }
                     }
+#endif
                     Process->ProcessStarted = TRUE;
                 }
 

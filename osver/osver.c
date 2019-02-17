@@ -346,10 +346,10 @@ OsVerGetArchitecture(
     __inout POSVER_VERSION_RESULT VersionResult
     )
 {
-    SYSTEM_INFO SysInfo;
+    YORI_SYSTEM_INFO SysInfo;
 
     if (VersionResult->MajorVersion < 4) {
-        GetSystemInfo(&SysInfo);
+        GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
 
         //
         //  In old versions the wProcessorArchitecture member does not exist.
@@ -380,9 +380,9 @@ OsVerGetArchitecture(
         return;
 
     } else if (DllKernel32.pGetNativeSystemInfo) {
-        DllKernel32.pGetNativeSystemInfo(&SysInfo);
+        DllKernel32.pGetNativeSystemInfo((LPSYSTEM_INFO)&SysInfo);
     } else {
-        GetSystemInfo(&SysInfo);
+        GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
     }
     VersionResult->Architecture = SysInfo.wProcessorArchitecture;
 }

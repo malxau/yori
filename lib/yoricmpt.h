@@ -557,6 +557,79 @@ typedef struct _YORI_OS_VERSION_INFO {
     TCHAR szCSDVersion[128];
 } YORI_OS_VERSION_INFO, *PYORI_OS_VERSION_INFO;
 
+/**
+ Output from the GetSystemInfo system call.  This is defined here so that it
+ can contain newer fields than older compilers include, which may be returned
+ from an OS regardless of how old the compiler is.
+ */
+typedef struct _YORI_SYSTEM_INFO {
+    union {
+        /**
+         Historic representation of a system architecture, used in NT 3.x
+         */
+        DWORD dwOemId;
+        struct {
+
+            /**
+             Current representation of a system architecture, used in NT4+
+             */
+            WORD wProcessorArchitecture;
+
+            /**
+             "Unused" except as above
+             */
+            WORD wReserved;
+        };
+    };
+
+    /**
+     The size of a memory page, in bytes
+     */
+    DWORD dwPageSize;
+
+    /**
+     The base address of usermode memory
+     */
+    LPVOID lpMinimumApplicationAddress;
+
+    /**
+     The upper address of usermode memory
+     */
+    LPVOID lpMaximumApplicationAddress;
+
+    /**
+     A mask of CPUs that are currently in use
+     */
+    DWORD_PTR dwActiveProcessorMask;
+
+    /**
+     The number of CPUs that are currently in use
+     */
+    DWORD dwNumberOfProcessors;
+
+    /**
+     The type of CPUs that are currently in use.  Note this refers to the
+     specific type of processor, not the process architecture, which is
+     returned above
+     */
+    DWORD dwProcessorType;
+
+    /**
+     The minimum number of bytes that can be allocated from the system heap
+     */
+    DWORD dwAllocationGranularity;
+
+    /**
+     Information about the specific model of processor
+     */
+    WORD wProcessorLevel;
+
+    /**
+     Information about the specific model of processor
+     */
+    WORD wProcessorRevision;
+} YORI_SYSTEM_INFO, *PYORI_SYSTEM_INFO;
+
 #ifndef FSCTL_SET_REPARSE_POINT
 
 /**
