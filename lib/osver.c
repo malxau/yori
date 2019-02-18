@@ -117,6 +117,7 @@ YoriLibGetOsVersionFromResource(
     )
 {
     LPTSTR Kernel32FileName;
+    TCHAR BlockString[sizeof("\\")];
     VS_FIXEDFILEINFO * FixedVerInfo;
     PVOID VerBuffer;
     DWORD SystemFileNameLength;
@@ -163,7 +164,14 @@ YoriLibGetOsVersionFromResource(
 
     YoriLibFree(Kernel32FileName);
 
-    if (!DllVersion.pVerQueryValueW(VerBuffer, _T("\\"), &FixedVerInfo, (PUINT)&Junk)) {
+    //
+    //  Old versions of version.dll modify this buffer while parsing
+    //  it, so we need to give them a writable stack based copy
+    //
+
+    YoriLibSPrintf(BlockString, _T("\\"));
+
+    if (!DllVersion.pVerQueryValueW(VerBuffer, BlockString, &FixedVerInfo, (PUINT)&Junk)) {
         YoriLibFree(VerBuffer);
         return FALSE;
     }

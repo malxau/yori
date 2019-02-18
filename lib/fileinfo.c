@@ -690,7 +690,15 @@ YoriLibCollectDescription (
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
         if (DllVersion.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
-            if (DllVersion.pVerQueryValueW(Buffer, _T("\\VarFileInfo\\Translation"), (PVOID*)&TranslationBlock, (PUINT)&Junk) && sizeof(Junk) >= 2 * sizeof(WORD)) {
+            TCHAR TranslationBlockString[sizeof("\\VarFileInfo\\Translation")];
+
+            //
+            //  Old versions of version.dll modify this buffer while parsing
+            //  it, so we need to give them a writable stack based copy
+            //
+
+            YoriLibSPrintf(TranslationBlockString, _T("\\VarFileInfo\\Translation"));
+            if (DllVersion.pVerQueryValueW(Buffer, TranslationBlockString, (PVOID*)&TranslationBlock, (PUINT)&Junk) && Junk >= 2 * sizeof(WORD)) {
 
                 TCHAR LanguageBlockToFind[sizeof("\\StringFileInfo\\01234567\\FileDescription")];
                 LPTSTR Description;
@@ -1044,7 +1052,15 @@ YoriLibCollectFileVersionString (
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
         if (DllVersion.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
-            if (DllVersion.pVerQueryValueW(Buffer, _T("\\VarFileInfo\\Translation"), (PVOID*)&TranslationBlock, (PUINT)&Junk) && sizeof(Junk) >= 2 * sizeof(WORD)) {
+            TCHAR TranslationBlockString[sizeof("\\VarFileInfo\\Translation")];
+
+            //
+            //  Old versions of version.dll modify this buffer while parsing
+            //  it, so we need to give them a writable stack based copy
+            //
+
+            YoriLibSPrintf(TranslationBlockString, _T("\\VarFileInfo\\Translation"));
+            if (DllVersion.pVerQueryValueW(Buffer, TranslationBlockString, (PVOID*)&TranslationBlock, (PUINT)&Junk) && Junk >= 2 * sizeof(WORD)) {
 
                 TCHAR LanguageBlockToFind[sizeof("\\StringFileInfo\\01234567\\FileVersion")];
                 LPTSTR FileVersionString;
@@ -1581,7 +1597,15 @@ YoriLibCollectVersion (
     Buffer = YoriLibMalloc(VerSize);
     if (Buffer != NULL) {
         if (DllVersion.pGetFileVersionInfoW(FullPath->StartOfString, 0, VerSize, Buffer)) {
-            if (DllVersion.pVerQueryValueW(Buffer, _T("\\"), (PVOID*)&RootBlock, (PUINT)&Junk)) {
+            TCHAR BlockString[sizeof("\\")];
+
+            //
+            //  Old versions of version.dll modify this buffer while parsing
+            //  it, so we need to give them a writable stack based copy
+            //
+
+            YoriLibSPrintf(BlockString, _T("\\"));
+            if (DllVersion.pVerQueryValueW(Buffer, BlockString, (PVOID*)&RootBlock, (PUINT)&Junk)) {
                 Entry->FileVersion.HighPart = RootBlock->dwFileVersionMS;
                 Entry->FileVersion.LowPart = RootBlock->dwFileVersionLS;
                 Entry->FileVersionFlags = RootBlock->dwFileFlags & RootBlock->dwFileFlagsMask;
