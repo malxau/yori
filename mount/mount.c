@@ -81,6 +81,7 @@ MountMountIso(
     if (DllVirtDisk.pAttachVirtualDisk == NULL ||
         DllVirtDisk.pOpenVirtualDisk == NULL) {
 
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: OS support not present\n"));
         return FALSE;
     }
 
@@ -159,6 +160,7 @@ MountMountVhd(
         DllAdvApi32.pOpenProcessToken == NULL ||
         DllAdvApi32.pAdjustTokenPrivileges == NULL) {
 
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: OS support not present\n"));
         return FALSE;
     }
 
@@ -256,6 +258,7 @@ MountUnmount(
     if (DllVirtDisk.pDetachVirtualDisk == NULL ||
         DllVirtDisk.pOpenVirtualDisk == NULL) {
 
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: OS support not present\n"));
         return FALSE;
     }
 
