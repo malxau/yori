@@ -47,7 +47,7 @@ CHAR strEchoHelpText[] =
 BOOL
 EchoHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Echo %i.%i\n"), ECHO_VER_MAJOR, ECHO_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Echo %i.%02i\n"), ECHO_VER_MAJOR, ECHO_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

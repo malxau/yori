@@ -102,7 +102,7 @@ CHAR strShiftHelpText[] =
 BOOL
 YsHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -122,7 +122,7 @@ YsHelp()
 BOOL
 CallHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -136,7 +136,7 @@ CallHelp()
 BOOL
 GotoHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -150,7 +150,7 @@ GotoHelp()
 BOOL
 IncludeHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -164,7 +164,7 @@ IncludeHelp()
 BOOL
 ReturnHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -178,7 +178,7 @@ ReturnHelp()
 BOOL
 ShiftHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

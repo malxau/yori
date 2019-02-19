@@ -48,7 +48,7 @@ CHAR strIconvHelpText[] =
 BOOL
 IconvHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Iconv %i.%i\n"), ICONV_VER_MAJOR, ICONV_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Iconv %i.%02i\n"), ICONV_VER_MAJOR, ICONV_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

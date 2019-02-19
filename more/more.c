@@ -46,7 +46,7 @@ CHAR strMoreHelpText[] =
 BOOL
 MoreHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("More %i.%i\n"), MORE_VER_MAJOR, MORE_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("More %i.%02i\n"), MORE_VER_MAJOR, MORE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

@@ -50,7 +50,7 @@ CHAR strClipHelpText[] =
 BOOL
 ClipHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Clip %i.%i\n"), CLIP_VER_MAJOR, CLIP_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Clip %i.%02i\n"), CLIP_VER_MAJOR, CLIP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

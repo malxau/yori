@@ -52,7 +52,7 @@ SdirUsageVersionInfo()
 
     YoriLibSPrintfS(Line,
                 sizeof(Line)/sizeof(Line[0]),
-                _T("Sdir version %i.%i, compiled %hs\n"),
+                _T("Sdir version %i.%02i, compiled %hs\n"),
                 SDIR_VER_MAJOR,
                 SDIR_VER_MINOR,
                 __DATE__

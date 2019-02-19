@@ -47,7 +47,7 @@ CHAR strTypeHelpText[] =
 BOOL
 TypeHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Type %i.%i\n"), TYPE_VER_MAJOR, TYPE_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Type %i.%02i\n"), TYPE_VER_MAJOR, TYPE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

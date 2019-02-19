@@ -48,7 +48,7 @@ CHAR strReplHelpText[] =
 BOOL
 ReplHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Repl %i.%i\n"), REPL_VER_MAJOR, REPL_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Repl %i.%02i\n"), REPL_VER_MAJOR, REPL_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

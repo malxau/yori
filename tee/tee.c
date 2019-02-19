@@ -45,7 +45,7 @@ CHAR strTeeHelpText[] =
 BOOL
 TeeHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Tee %i.%i\n"), TEE_VER_MAJOR, TEE_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Tee %i.%02i\n"), TEE_VER_MAJOR, TEE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

@@ -46,7 +46,7 @@ CHAR strLsofHelpText[] =
 BOOL
 LsofHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Lsof %i.%i\n"), LSOF_VER_MAJOR, LSOF_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Lsof %i.%02i\n"), LSOF_VER_MAJOR, LSOF_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

@@ -62,7 +62,7 @@ CHAR strDateHelpText[] =
 BOOL
 DateHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Date %i.%i\n"), DATE_VER_MAJOR, DATE_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Date %i.%02i\n"), DATE_VER_MAJOR, DATE_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

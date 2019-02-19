@@ -61,7 +61,7 @@ CHAR strWhichUsageText[] =
 VOID
 WhichUsage()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Which %i.%i\n"), WHICH_VER_MAJOR, WHICH_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Which %i.%02i\n"), WHICH_VER_MAJOR, WHICH_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

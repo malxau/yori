@@ -56,7 +56,7 @@ CHAR strHexDumpHelpText[] =
 BOOL
 HexDumpHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("HexDump %i.%i\n"), HEXDUMP_VER_MAJOR, HEXDUMP_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("HexDump %i.%02i\n"), HEXDUMP_VER_MAJOR, HEXDUMP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

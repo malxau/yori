@@ -1329,7 +1329,7 @@ FInfoHelp()
     DWORD Count;
     TCHAR NameWithQualifiers[32];
 
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FInfo %i.%i\n"), FINFO_VER_MAJOR, FINFO_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FInfo %i.%02i\n"), FINFO_VER_MAJOR, FINFO_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

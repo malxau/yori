@@ -55,7 +55,7 @@ CHAR strDuHelpText[] =
 BOOL
 DuHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Du %i.%i\n"), DU_VER_MAJOR, DU_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Du %i.%02i\n"), DU_VER_MAJOR, DU_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

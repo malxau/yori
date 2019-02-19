@@ -43,7 +43,7 @@ CHAR strGrpcmpHelpText[] =
 BOOL
 GrpcmpHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Grpcmp %i.%i\n"), GRPCMP_VER_MAJOR, GRPCMP_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Grpcmp %i.%02i\n"), GRPCMP_VER_MAJOR, GRPCMP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

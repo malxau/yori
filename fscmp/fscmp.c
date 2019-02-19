@@ -55,7 +55,7 @@ CHAR strFsCmpHelpText[] =
 BOOL
 FsCmpHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FsCmp %i.%i\n"), FSCMP_VER_MAJOR, FSCMP_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FsCmp %i.%02i\n"), FSCMP_VER_MAJOR, FSCMP_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

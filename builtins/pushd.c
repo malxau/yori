@@ -46,7 +46,7 @@ CHAR strPushdHelpText[] =
 BOOL
 PushdHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PushD %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PushD %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -72,7 +72,7 @@ CHAR strPopdHelpText[] =
 BOOL
 PopdHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PopD %i.%i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PopD %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

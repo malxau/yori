@@ -48,7 +48,7 @@ CHAR strSplitHelpText[] =
 BOOL
 SplitHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Split %i.%i\n"), SPLIT_VER_MAJOR, SPLIT_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Split %i.%02i\n"), SPLIT_VER_MAJOR, SPLIT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

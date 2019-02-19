@@ -51,7 +51,7 @@ CHAR strCabHelpText[] =
 BOOL
 CabHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cab %i.%i\n"), CAB_VER_MAJOR, CAB_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cab %i.%02i\n"), CAB_VER_MAJOR, CAB_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

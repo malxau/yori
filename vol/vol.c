@@ -48,7 +48,7 @@ CHAR strVolHelpText[] =
 BOOL
 VolHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Vol %i.%i\n"), VOL_VER_MAJOR, VOL_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Vol %i.%02i\n"), VOL_VER_MAJOR, VOL_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

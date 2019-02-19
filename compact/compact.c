@@ -50,7 +50,7 @@ CHAR strCompactHelpText[] =
 BOOL
 CompactHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Compact %i.%i\n"), COMPACT_VER_MAJOR, COMPACT_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Compact %i.%02i\n"), COMPACT_VER_MAJOR, COMPACT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
