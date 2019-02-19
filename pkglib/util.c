@@ -489,7 +489,7 @@ YoriPkgPackagePathToLocalPath(
             goto Exit;
         }
 
-        Error = YoriLibUpdateBinaryFromUrl(MirroredPath.StartOfString, TempFileName.StartOfString, UserAgent.StartOfString);
+        Error = YoriLibUpdateBinaryFromUrl(MirroredPath.StartOfString, TempFileName.StartOfString, UserAgent.StartOfString, NULL);
 
         if (Error != YoriLibUpdErrorSuccess) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Network result: %s\n"), YoriLibUpdateErrorString(Error));

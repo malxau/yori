@@ -3061,7 +3061,8 @@ YoriLibUpdError
 YoriLibUpdateBinaryFromUrl(
     __in LPTSTR Url,
     __in_opt LPTSTR TargetName,
-    __in LPTSTR Agent
+    __in LPTSTR Agent,
+    __in_opt PSYSTEMTIME IfModifiedSince
     );
 
 LPCTSTR

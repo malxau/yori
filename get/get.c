@@ -3,7 +3,7 @@
  *
  * Yori shell display command line output
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,7 +34,9 @@ const
 CHAR strGetHelpText[] =
         "Fetches objects from HTTP and stores them in local files.\n"
         "\n"
-        "GET [-license] <url> <file>\n";
+        "GET [-license] [-n] <url> <file>\n"
+        "\n"
+        "   -n             Only download URL if newer than file\n";
 
 /**
  Display usage text to the user.
@@ -86,6 +88,8 @@ ENTRYPOINT(
     YoriLibUpdError Error;
     TCHAR szAgent[64];
     YORI_STRING Arg;
+    BOOL NewerOnly = FALSE;
+    SYSTEMTIME ExistingFileTime;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -96,8 +100,11 @@ ENTRYPOINT(
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 GetHelp();
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+                NewerOnly = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             }
         } else {
@@ -122,10 +129,34 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+    if (NewerOnly) {
+        HANDLE hFile;
+
+        hFile = CreateFile(NewFileName.StartOfString,
+                           FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           NULL,
+                           OPEN_EXISTING,
+                           FILE_ATTRIBUTE_NORMAL,
+                           NULL);
+
+        if (hFile == INVALID_HANDLE_VALUE) {
+            NewerOnly = FALSE;
+        } else {
+            FILETIME LastAccessTime;
+            FILETIME LastWriteTime;
+            FILETIME CreateTime;
+
+            GetFileTime(hFile, &CreateTime, &LastAccessTime, &LastWriteTime);
+            FileTimeToSystemTime(&LastWriteTime, &ExistingFileTime);
+            CloseHandle(hFile);
+        }
+    }
+
     ExistingUrlName = ArgV[StartArg].StartOfString;
 
     YoriLibSPrintf(szAgent, _T("YGet %i.%i\r\n"), GET_VER_MAJOR, GET_VER_MINOR);
-    Error = YoriLibUpdateBinaryFromUrl(ExistingUrlName, NewFileName.StartOfString, szAgent);
+    Error = YoriLibUpdateBinaryFromUrl(ExistingUrlName, NewFileName.StartOfString, szAgent, NewerOnly?&ExistingFileTime:NULL);
     YoriLibFreeStringContents(&NewFileName);
     if (Error != YoriLibUpdErrorSuccess) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("get: failed to download: %s\n"), YoriLibUpdateErrorString(Error));

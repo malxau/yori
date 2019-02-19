@@ -256,6 +256,35 @@ INTERNET_CLOSE_HANDLE(
 typedef INTERNET_CLOSE_HANDLE *PINTERNET_CLOSE_HANDLE;
 
 /**
+ An array of human readable day names in HTTP format.
+ */
+LPCSTR YoriLibDayNames[] = {
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"};
+
+/**
+ An array of human readable month names in HTTP format.
+ */
+LPCSTR YoriLibMonthNames[] = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"};
+
+/**
  The size of a single read buffer.  This will be given to WInInet as a single
  operation.  We can read more bytes than this, it will just be done in multiple
  operations to WinInet.
@@ -272,13 +301,17 @@ typedef INTERNET_CLOSE_HANDLE *PINTERNET_CLOSE_HANDLE;
 
  @param Agent The user agent to report to the remote web server.
 
+ @param IfModifiedSince If specified, indicates a timestamp where a new
+        object should only be downloaded if it is newer.
+
  @return An update error code indicating success or appropriate error.
  */
 YoriLibUpdError
 YoriLibUpdateBinaryFromUrl(
     __in LPTSTR Url,
     __in_opt LPTSTR TargetName,
-    __in LPTSTR Agent
+    __in LPTSTR Agent,
+    __in_opt PSYSTEMTIME IfModifiedSince
     )
 {
     PVOID hInternet = NULL;
@@ -296,6 +329,8 @@ YoriLibUpdateBinaryFromUrl(
     LPTSTR StartOfHost;
     LPTSTR EndOfHost;
     YORI_STRING HostHeader;
+    YORI_STRING IfModifiedSinceHeader;
+    YORI_STRING CombinedHeader;
 
     PINTERNET_OPEN InetOpen;
     PINTERNET_OPEN_URL InetOpenUrl;
@@ -372,18 +407,59 @@ YoriLibUpdateBinaryFromUrl(
     }
 
     //
+    //  If the caller only wanted to fetch a resource if it's newer than an
+    //  existing file, generate that header now.
+    //
+
+    YoriLibInitEmptyString(&IfModifiedSinceHeader);
+    if (IfModifiedSince != NULL) {
+        YoriLibYPrintf(&IfModifiedSinceHeader,
+                       _T("If-Modified-Since: %hs, %02i %hs %04i %02i:%02i:%02i GMT\r\n"),
+                       YoriLibDayNames[IfModifiedSince->wDayOfWeek],
+                       IfModifiedSince->wDay,
+                       YoriLibMonthNames[IfModifiedSince->wMonth - 1],
+                       IfModifiedSince->wYear,
+                       IfModifiedSince->wHour,
+                       IfModifiedSince->wMinute,
+                       IfModifiedSince->wSecond);
+    }
+
+
+    //
+    //  Merge headers.  If we have only one or the other, this is just a
+    //  reference with no allocation.
+    //
+
+    YoriLibInitEmptyString(&CombinedHeader);
+    if (IfModifiedSinceHeader.LengthInChars > 0 && HostHeader.LengthInChars > 0) {
+        YoriLibYPrintf(&CombinedHeader, _T("%y%y"), &HostHeader, &IfModifiedSinceHeader);
+    } else if (IfModifiedSinceHeader.LengthInChars > 0) {
+        YoriLibCloneString(&CombinedHeader, &IfModifiedSinceHeader);
+    } else if (HostHeader.LengthInChars > 0) {
+        YoriLibCloneString(&CombinedHeader, &HostHeader);
+    }
+
+    //
+    //  Now all the headers are merged, we don't need the component parts.
+    //
+
+    YoriLibFreeStringContents(&HostHeader);
+    YoriLibFreeStringContents(&IfModifiedSinceHeader);
+
+    //
     //  Request the desired URL and check the status is HTTP success.
     //
 
-    NewBinary = InetOpenUrl(hInternet, Url, HostHeader.StartOfString, HostHeader.LengthInChars, 0, 0);
+    NewBinary = InetOpenUrl(hInternet, Url, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, 0, 0);
     if (NewBinary == NULL) {
         dwError = GetLastError();
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("InetOpenUrl returned %i looking for %s\n"), dwError, Url);
-        YoriLibFreeStringContents(&HostHeader);
+        YoriLibFreeStringContents(&CombinedHeader);
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
     }
-    YoriLibFreeStringContents(&HostHeader);
+
+    YoriLibFreeStringContents(&CombinedHeader);
 
     ErrorBufferSize = sizeof(dwError);
     ActualBinarySize = 0;
@@ -396,8 +472,10 @@ YoriLibUpdateBinaryFromUrl(
     }
 
     if (dwError != 200) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("HttpQueryInfo indicated HTTP response of %i for %s\n"), dwError, Url);
-        Return = YoriLibUpdErrorInetConnect;
+        if (dwError != 304 || IfModifiedSince == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("HttpQueryInfo indicated HTTP response of %i for %s\n"), dwError, Url);
+            Return = YoriLibUpdErrorInetConnect;
+        }
         goto Exit;
     }
 

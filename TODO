@@ -1,6 +1,5 @@
 v1.0:
  - General MSFIX review
- - Allow get to refresh files
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
