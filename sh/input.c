@@ -1989,6 +1989,7 @@ YoriShProcessMouseMove(
             YoriLibUpdateSelectionToPoint(&Buffer->Selection,
                                           InputRecord->Event.MouseEvent.dwMousePosition.X,
                                           InputRecord->Event.MouseEvent.dwMousePosition.Y);
+
             //
             //  Do one scroll immediately.  This allows the user to force scrolling
             //  by moving the mouse outside the window.

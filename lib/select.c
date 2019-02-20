@@ -774,11 +774,12 @@ YoriLibPeriodicScrollForSelection(
     HANDLE ConsoleHandle;
     SHORT CellsToScroll;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    SMALL_RECT NewWindow;
 
     if (Selection->PeriodicScrollAmount.Y == 0 &&
         Selection->PeriodicScrollAmount.X == 0) {
 
-        return TRUE;
+        return FALSE;
     }
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -786,57 +787,69 @@ YoriLibPeriodicScrollForSelection(
         return FALSE;
     }
 
+    NewWindow.Top = ScreenInfo.srWindow.Top;
+    NewWindow.Bottom = ScreenInfo.srWindow.Bottom;
+    NewWindow.Left = ScreenInfo.srWindow.Left;
+    NewWindow.Right = ScreenInfo.srWindow.Right;
+
     if (Selection->PeriodicScrollAmount.Y < 0) {
         CellsToScroll = (SHORT)(0 - Selection->PeriodicScrollAmount.Y);
-        if (ScreenInfo.srWindow.Top > 0) {
-            if (ScreenInfo.srWindow.Top > CellsToScroll) {
-                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top - CellsToScroll);
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - CellsToScroll);
+        if (NewWindow.Top > 0) {
+            if (NewWindow.Top > CellsToScroll) {
+                NewWindow.Top = (SHORT)(NewWindow.Top - CellsToScroll);
+                NewWindow.Bottom = (SHORT)(NewWindow.Bottom - CellsToScroll);
             } else {
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top);
-                ScreenInfo.srWindow.Top = 0;
+                NewWindow.Bottom = (SHORT)(NewWindow.Bottom - NewWindow.Top);
+                NewWindow.Top = 0;
             }
         }
     } else if (Selection->PeriodicScrollAmount.Y > 0) {
         CellsToScroll = Selection->PeriodicScrollAmount.Y;
-        if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - 1) {
-            if (ScreenInfo.srWindow.Bottom < ScreenInfo.dwSize.Y - CellsToScroll - 1) {
-                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + CellsToScroll);
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.srWindow.Bottom + CellsToScroll);
+        if (NewWindow.Bottom < ScreenInfo.dwSize.Y - 1) {
+            if (NewWindow.Bottom < ScreenInfo.dwSize.Y - CellsToScroll - 1) {
+                NewWindow.Top = (SHORT)(NewWindow.Top + CellsToScroll);
+                NewWindow.Bottom = (SHORT)(NewWindow.Bottom + CellsToScroll);
             } else {
-                ScreenInfo.srWindow.Top = (SHORT)(ScreenInfo.srWindow.Top + (ScreenInfo.dwSize.Y - ScreenInfo.srWindow.Bottom - 1));
-                ScreenInfo.srWindow.Bottom = (SHORT)(ScreenInfo.dwSize.Y - 1);
+                NewWindow.Top = (SHORT)(NewWindow.Top + (ScreenInfo.dwSize.Y - NewWindow.Bottom - 1));
+                NewWindow.Bottom = (SHORT)(ScreenInfo.dwSize.Y - 1);
             }
         }
     }
 
     if (Selection->PeriodicScrollAmount.X < 0) {
         CellsToScroll = (SHORT)(0 - Selection->PeriodicScrollAmount.X);
-        if (ScreenInfo.srWindow.Left > 0) {
-            if (ScreenInfo.srWindow.Left > CellsToScroll) {
-                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left - CellsToScroll);
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - CellsToScroll);
+        if (NewWindow.Left > 0) {
+            if (NewWindow.Left > CellsToScroll) {
+                NewWindow.Left = (SHORT)(NewWindow.Left - CellsToScroll);
+                NewWindow.Right = (SHORT)(NewWindow.Right - CellsToScroll);
             } else {
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left);
-                ScreenInfo.srWindow.Left = 0;
+                NewWindow.Right = (SHORT)(NewWindow.Right - NewWindow.Left);
+                NewWindow.Left = 0;
             }
         }
     } else if (Selection->PeriodicScrollAmount.X > 0) {
         CellsToScroll = Selection->PeriodicScrollAmount.X;
-        if (ScreenInfo.srWindow.Right < ScreenInfo.dwSize.X - 1) {
-            if (ScreenInfo.srWindow.Right < ScreenInfo.dwSize.X - CellsToScroll - 1) {
-                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + CellsToScroll);
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.srWindow.Right + CellsToScroll);
+        if (NewWindow.Right < ScreenInfo.dwSize.X - 1) {
+            if (NewWindow.Right < ScreenInfo.dwSize.X - CellsToScroll - 1) {
+                NewWindow.Left = (SHORT)(NewWindow.Left + CellsToScroll);
+                NewWindow.Right = (SHORT)(NewWindow.Right + CellsToScroll);
             } else {
-                ScreenInfo.srWindow.Left = (SHORT)(ScreenInfo.srWindow.Left + (ScreenInfo.dwSize.X - ScreenInfo.srWindow.Right - 1));
-                ScreenInfo.srWindow.Right = (SHORT)(ScreenInfo.dwSize.X - 1);
+                NewWindow.Left = (SHORT)(NewWindow.Left + (ScreenInfo.dwSize.X - NewWindow.Right - 1));
+                NewWindow.Right = (SHORT)(ScreenInfo.dwSize.X - 1);
             }
         }
     }
 
-    SetConsoleWindowInfo(ConsoleHandle, TRUE, &ScreenInfo.srWindow);
+    if (NewWindow.Left == ScreenInfo.srWindow.Left &&
+        NewWindow.Right == ScreenInfo.srWindow.Right &&
+        NewWindow.Top == ScreenInfo.srWindow.Top &&
+        NewWindow.Bottom == ScreenInfo.srWindow.Bottom) {
 
-    return FALSE;
+        return FALSE;
+    }
+
+    SetConsoleWindowInfo(ConsoleHandle, TRUE, &NewWindow);
+    return TRUE;
 }
 
 /**
