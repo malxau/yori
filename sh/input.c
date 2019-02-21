@@ -1771,6 +1771,102 @@ YoriShProcessKeyUp(
 }
 
 /**
+ Given an initial X,Y location, based on the user configurable break chars,
+ determine the initial X,Y location and ending X,Y location of any selection.
+ Note that currently this routine is limited to selecting along a single line,
+ although given this interface selection across lines is potentially possible.
+
+ @param ConsoleHandle Handle to the console output device.
+
+ @param InitialLocation The starting X,Y location for the selection.
+
+ @param BeginRange On successful completion, populated with the first char in
+        the selection.
+
+ @param EndRange On successful completion, populated with the final char in
+        the selection.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShFindAutoBreakSelectionRange(
+    __in HANDLE ConsoleHandle,
+    __in COORD InitialLocation,
+    __out PCOORD BeginRange,
+    __out PCOORD EndRange
+    )
+{
+    YORI_STRING BreakChars;
+    SHORT StartOffset;
+    SHORT EndOffset;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    TCHAR ReadChar;
+    COORD ReadPoint;
+    DWORD CharsRead;
+
+    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
+
+    ReadChar = ' ';
+    ReadPoint.X = InitialLocation.X;
+    ReadPoint.Y = InitialLocation.Y;
+
+    //
+    //  If the user double clicked on a break char, do nothing.
+    //
+
+    if (!ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead)) {
+        YoriLibFreeStringContents(&BreakChars);
+        return FALSE;
+    }
+
+    if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+        YoriLibFreeStringContents(&BreakChars);
+        return FALSE;
+    }
+
+    //
+    //  Nagivate left to find beginning of line or next break char.
+    //
+
+    for (StartOffset = InitialLocation.X; StartOffset > 0; StartOffset--) {
+        ReadPoint.X = (SHORT)(StartOffset - 1);
+        if (!ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead)) {
+            break;
+        }
+        if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+            break;
+        }
+    }
+
+    //
+    //  Navigate right to find end of line or next break char.
+    //
+
+    for (EndOffset = InitialLocation.X; EndOffset < ScreenInfo.dwSize.X - 1; EndOffset++) {
+        ReadPoint.X = (SHORT)(EndOffset + 1);
+        if (!ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead)) {
+            break;
+        }
+        if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+            break;
+        }
+    }
+
+    YoriLibFreeStringContents(&BreakChars);
+
+    BeginRange->X = StartOffset;
+    BeginRange->Y = InitialLocation.Y;
+    EndRange->X = EndOffset;
+    EndRange->Y = InitialLocation.Y;
+
+    return TRUE;
+}
+
+/**
  Perform processing related to when a mouse button is pressed.
 
  @param Buffer Pointer to the input buffer to update.
@@ -1794,10 +1890,44 @@ YoriShProcessMouseButtonDown(
     )
 {
     BOOL BufferChanged = FALSE;
+    BOOL CtrlPressed = FALSE;
 
     UNREFERENCED_PARAMETER(TerminateInput);
 
-    if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
+    if (InputRecord->Event.MouseEvent.dwControlKeyState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) {
+        CtrlPressed = TRUE;
+    }
+
+
+    if (CtrlPressed &&
+        (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED)) {
+
+        COORD BeginRange;
+        COORD EndRange;
+        HANDLE ConsoleHandle;
+
+        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        if (YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange) && BeginRange.Y == EndRange.Y) {
+
+            YORI_STRING StringToCopy;
+            DWORD LengthToCopy;
+            DWORD CharsRead;
+
+            LengthToCopy = EndRange.X - BeginRange.X + 1;
+
+            if (YoriLibAllocateString(&StringToCopy, LengthToCopy + 2)) {
+                if (ReadConsoleOutputCharacter(ConsoleHandle, StringToCopy.StartOfString, LengthToCopy, BeginRange, &CharsRead)) {
+                    StringToCopy.StartOfString[LengthToCopy] = ' ';
+                    StringToCopy.LengthInChars = LengthToCopy + 1;
+                    YoriShAddYoriStringToInput(Buffer, &StringToCopy);
+                    BufferChanged = TRUE;
+                }
+                YoriLibFreeStringContents(&StringToCopy);
+            }
+        }
+
+    } else if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
         DWORD StringOffset;
 
         BufferChanged = YoriLibCreateSelectionFromPoint(&Buffer->Selection,
@@ -1867,6 +1997,7 @@ YoriShProcessMouseButtonUp(
 }
 
 
+
 /**
  Perform processing related to when a mouse is double clicked.
 
@@ -1892,69 +2023,28 @@ YoriShProcessMouseDoubleClick(
 {
     BOOL BufferChanged = FALSE;
     HANDLE ConsoleHandle;
-    COORD ReadPoint;
-    TCHAR ReadChar;
-    DWORD CharsRead;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     UNREFERENCED_PARAMETER(TerminateInput);
 
     if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
-        SHORT StartOffset;
-        SHORT EndOffset;
-        CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-        YORI_STRING BreakChars;
-
-        if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
-            return FALSE;
-        }
-        YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
+        COORD BeginRange;
+        COORD EndRange;
 
         BufferChanged = YoriLibClearSelection(&Buffer->Selection);
 
-        ReadChar = ' ';
-        ReadPoint.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
-        ReadPoint.X = InputRecord->Event.MouseEvent.dwMousePosition.X;
-
-        //
-        //  If the user double clicked on a break char, do nothing.
-        //
-
-        ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
-        if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
-            YoriLibFreeStringContents(&BreakChars);
+        if (!YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange)) {
             return FALSE;
         }
 
-        //
-        //  Nagivate left to find beginning of line or next break char.
-        //
-
-        for (StartOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; StartOffset > 0; StartOffset--) {
-            ReadPoint.X = (SHORT)(StartOffset - 1);
-            ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
-            if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
-                break;
-            }
+        if (BeginRange.Y != EndRange.Y) {
+            return FALSE;
         }
 
-        //
-        //  Navigate right to find end of line or next break char.
-        //
-
-        for (EndOffset = InputRecord->Event.MouseEvent.dwMousePosition.X; EndOffset < ScreenInfo.dwSize.X - 1; EndOffset++) {
-            ReadPoint.X = (SHORT)(EndOffset + 1);
-            ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead);
-            if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
-                break;
-            }
-        }
-
-        YoriLibCreateSelectionFromRange(&Buffer->Selection, StartOffset, ReadPoint.Y, EndOffset, ReadPoint.Y);
+        YoriLibCreateSelectionFromRange(&Buffer->Selection, BeginRange.X, BeginRange.Y, EndRange.X, EndRange.Y);
 
         BufferChanged = TRUE;
-        YoriLibFreeStringContents(&BreakChars);
     }
 
     return BufferChanged;
