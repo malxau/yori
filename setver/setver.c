@@ -414,12 +414,13 @@ SetVerPumpDebugEvents(
     __in PSETVER_CONTEXT Context
     )
 {
-    UCHAR BreakpointInstruction = 0xcc;
-    SIZE_T BytesWritten;
     YORI_LIST_ENTRY Processes;
     PSETVER_OUTSTANDING_PROCESS Process;
     BOOL UseProcessBreakpoint;
     BOOL ProcessIsWow;
+#if defined(_M_AMD64) || defined(_M_IX86)
+    SIZE_T BytesWritten;
+#endif
 
     YoriLibInitializeListHead(&Processes);
 
@@ -484,6 +485,7 @@ SetVerPumpDebugEvents(
 
 #if defined(_M_AMD64) || defined(_M_IX86)
                 if (UseProcessBreakpoint) {
+                    UCHAR BreakpointInstruction = 0xcc;
                     ReadProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
                     WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &BreakpointInstruction, sizeof(BreakpointInstruction), &BytesWritten);
                     FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
@@ -554,7 +556,6 @@ SetVerPumpDebugEvents(
                     if (Process != NULL &&
                         DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == Process->StartRoutine &&
                         !Process->ProcessStarted) {
-
 
                         CONTEXT ThreadContext;
                         ZeroMemory(&ThreadContext, sizeof(ThreadContext));

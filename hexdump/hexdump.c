@@ -733,7 +733,7 @@ HexDumpProcessStream(
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
- @param HexDumpContext Pointer to the hexdump context structure indicating the
+ @param Context Pointer to the hexdump context structure indicating the
         action to perform and populated with the file and line count found.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -743,10 +743,11 @@ HexDumpFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PHEXDUMP_CONTEXT HexDumpContext
+    __in PVOID Context
     )
 {
     HANDLE FileHandle;
+    PHEXDUMP_CONTEXT HexDumpContext = (PHEXDUMP_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -787,7 +788,7 @@ HexDumpFileFoundCallback(
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
- @param HexDumpContext Pointer to the hexdump context structure indicating the
+ @param Context Pointer to the hexdump context structure indicating the
         action to perform and populated with the file and line count found.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -797,10 +798,11 @@ HexDumpReverseFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PHEXDUMP_CONTEXT HexDumpContext
+    __in PVOID Context
     )
 {
     HANDLE FileHandle;
+    PHEXDUMP_CONTEXT HexDumpContext = (PHEXDUMP_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 

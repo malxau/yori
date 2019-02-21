@@ -1388,7 +1388,7 @@ FInfoExpandVariables(
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
- @param FInfoContext Pointer to the finfo context structure indicating the
+ @param Context Pointer to the finfo context structure indicating the
         action to perform and populated with the file and line count found.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -1398,15 +1398,18 @@ FInfoFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PFINFO_CONTEXT FInfoContext
+    __in PVOID Context
     )
 {
     YORI_STRING DisplayString;
     WIN32_FIND_DATA LocalFileInfo;
     PWIN32_FIND_DATA FileInfoToUse;
+    PFINFO_CONTEXT FInfoContext;
 
     UNREFERENCED_PARAMETER(Depth);
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
+
+    FInfoContext = (PFINFO_CONTEXT)Context;
 
     if (FileInfo != NULL) {
         FileInfoToUse = FileInfo;

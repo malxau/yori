@@ -270,9 +270,8 @@ DfReportSingleVolume(
 
         }
         Result = TRUE;
+        DfContext->VolumesDisplayed++;
     }
-
-    DfContext->VolumesDisplayed++;
 
     return Result;
 }

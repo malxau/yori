@@ -342,7 +342,7 @@ Cleanup:
 
  @param Depth Recursion depth, ignored in this application.
 
- @param ExecContext The current state of the program and information needed to
+ @param Context The current state of the program and information needed to
         launch new child processes.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -352,11 +352,15 @@ ForFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PFOR_EXEC_CONTEXT ExecContext
+    __in PVOID Context
     )
 {
+    PFOR_EXEC_CONTEXT ExecContext;
+
     UNREFERENCED_PARAMETER(Depth);
     UNREFERENCED_PARAMETER(FileInfo);
+
+    ExecContext = (PFOR_EXEC_CONTEXT)Context;
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 

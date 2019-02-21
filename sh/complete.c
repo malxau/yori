@@ -550,23 +550,24 @@ YoriShFileTabCompletionCallback(
     __in PYORI_STRING Filename,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PYORI_SH_FILE_COMPLETE_CONTEXT Context
+    __in PVOID Context
     )
 {
     PYORI_LIST_ENTRY ListEntry;
     PYORI_SH_TAB_COMPLETE_MATCH Match;
     PYORI_SH_TAB_COMPLETE_MATCH Existing;
     INT CompareResult;
+    PYORI_SH_FILE_COMPLETE_CONTEXT FileCompleteContext = (PYORI_SH_FILE_COMPLETE_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
-    if (Context->ExpandFullPath) {
+    if (FileCompleteContext->ExpandFullPath) {
 
         //
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Filename->LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + Filename->LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -580,7 +581,7 @@ YoriShFileTabCompletionCallback(
         YoriLibReference(Match);
         Match->Value.MemoryToFree = Match;
 
-        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y"), &Context->Prefix, Filename);
+        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y"), &FileCompleteContext->Prefix, Filename);
 
         Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
     } else {
@@ -596,7 +597,7 @@ YoriShFileTabCompletionCallback(
         if (ShortFileName.LengthInChars == 0) {
             FileNameToUse = &LongFileName;
         } else {
-            YoriLibConstantString(&SearchAfterFinalSlash, &Context->SearchString[Context->CharsToFinalSlash]);
+            YoriLibConstantString(&SearchAfterFinalSlash, &FileCompleteContext->SearchString[FileCompleteContext->CharsToFinalSlash]);
             ASSERT(SearchAfterFinalSlash.LengthInChars > 0);
             if (YoriLibDoesFileMatchExpression(&LongFileName, &SearchAfterFinalSlash)) {
                 FileNameToUse = &LongFileName;
@@ -621,7 +622,7 @@ YoriShFileTabCompletionCallback(
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (Context->Prefix.LengthInChars + Context->CharsToFinalSlash + FileNameToUse->LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + FileCompleteContext->CharsToFinalSlash + FileNameToUse->LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -636,11 +637,11 @@ YoriShFileTabCompletionCallback(
         Match->Value.MemoryToFree = Match;
 
         YoriLibInitEmptyString(&StringToFinalSlash);
-        StringToFinalSlash.StartOfString = Context->SearchString;
-        StringToFinalSlash.LengthInChars = Context->CharsToFinalSlash;
+        StringToFinalSlash.StartOfString = FileCompleteContext->SearchString;
+        StringToFinalSlash.LengthInChars = FileCompleteContext->CharsToFinalSlash;
 
 
-        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y"), &Context->Prefix, &StringToFinalSlash, FileNameToUse);
+        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
 
         Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
     }
@@ -651,27 +652,27 @@ YoriShFileTabCompletionCallback(
     //  that is greater than this one.
     //
 
-    if (!Context->KeepCompletionsSorted) {
+    if (!FileCompleteContext->KeepCompletionsSorted) {
         PYORI_HASH_ENTRY PriorEntry;
-        PriorEntry = YoriLibHashLookupByKey(Context->TabContext->MatchHashTable, &Match->Value);
+        PriorEntry = YoriLibHashLookupByKey(FileCompleteContext->TabContext->MatchHashTable, &Match->Value);
         if (PriorEntry == NULL) {
-            YoriShAddMatchToTabContext(Context->TabContext, NULL, Match);
+            YoriShAddMatchToTabContext(FileCompleteContext->TabContext, NULL, Match);
         } else {
             YoriLibFreeStringContents(&Match->Value);
             YoriLibDereference(Match);
             Match = NULL;
         }
     } else {
-        ListEntry = YoriLibGetNextListEntry(&Context->TabContext->MatchList, NULL);
+        ListEntry = YoriLibGetNextListEntry(&FileCompleteContext->TabContext->MatchList, NULL);
         do {
             if (ListEntry == NULL) {
-                YoriShAddMatchToTabContext(Context->TabContext, NULL, Match);
+                YoriShAddMatchToTabContext(FileCompleteContext->TabContext, NULL, Match);
                 break;
             }
             Existing = CONTAINING_RECORD(ListEntry, YORI_SH_TAB_COMPLETE_MATCH, ListEntry);
             CompareResult = YoriLibCompareStringInsensitive(&Match->Value, &Existing->Value);
             if (CompareResult < 0) {
-                YoriShAddMatchToTabContext(Context->TabContext, ListEntry, Match);
+                YoriShAddMatchToTabContext(FileCompleteContext->TabContext, ListEntry, Match);
                 break;
             } else if (CompareResult == 0) {
                 YoriLibFreeStringContents(&Match->Value);
@@ -679,12 +680,12 @@ YoriShFileTabCompletionCallback(
                 Match = NULL;
                 break;
             }
-            ListEntry = YoriLibGetNextListEntry(&Context->TabContext->MatchList, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&FileCompleteContext->TabContext->MatchList, ListEntry);
         } while(TRUE);
     }
 
     if (Match != NULL) {
-        Context->FilesFound++;
+        FileCompleteContext->FilesFound++;
     }
 
     return TRUE;

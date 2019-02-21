@@ -87,7 +87,7 @@ RmdirFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PRMDIR_CONTEXT Context
+    __in PVOID Context
     )
 {
     DWORD Err = NO_ERROR;
@@ -95,6 +95,7 @@ RmdirFileFoundCallback(
     DWORD OldAttributes;
     DWORD NewAttributes;
     BOOL FileDeleted;
+    PRMDIR_CONTEXT RmdirContext = (PRMDIR_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -106,7 +107,7 @@ RmdirFileFoundCallback(
     //  Try to delete it.
     //
 
-    if (Context->RecycleBin) {
+    if (RmdirContext->RecycleBin) {
         if (YoriLibRecycleBinFile(FilePath)) {
             FileDeleted = TRUE;
         }

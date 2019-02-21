@@ -225,7 +225,7 @@ MoreProcessStream(
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
- @param MoreContext Pointer to the more context structure indicating the
+ @param Context Pointer to the more context structure indicating the
         action to perform and populated with the file and line count found.
 
  @return TRUE to continute enumerating, FALSE to abort.
@@ -235,10 +235,11 @@ MoreFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
-    __in PMORE_CONTEXT MoreContext
+    __in PVOID Context
     )
 {
     HANDLE FileHandle;
+    PMORE_CONTEXT MoreContext = (PMORE_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
 
