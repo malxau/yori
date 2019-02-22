@@ -360,6 +360,10 @@ ENTRYPOINT(
         }
     }
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     //
     //  If no file name is specified, use stdin; otherwise open
     //  the file and use that

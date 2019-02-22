@@ -1010,8 +1010,12 @@ ENTRYPOINT(
             CopyContext.CompressContext.Verbose = TRUE;
         }
     }
-    CopyContext.FilesCopied = 0;
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
+    CopyContext.FilesCopied = 0;
     FilesProcessed = 0;
 
     for (i = FirstFileArg; i <= LastFileArg; i++) {

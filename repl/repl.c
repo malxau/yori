@@ -419,6 +419,10 @@ ENTRYPOINT(
     ReplContext.NewString = &ArgV[StartArg + 1];
     StartArg += 2;
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     if (StartArg == 0) {
         DWORD FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
         FileType = FileType & ~(FILE_TYPE_REMOTE);

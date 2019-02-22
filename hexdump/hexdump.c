@@ -1267,6 +1267,10 @@ ENTRYPOINT(
         }
     }
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     if (DiffMode) {
         if (StartArg == 0 || StartArg + 2 > ArgC) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: insufficient arguments\n"));

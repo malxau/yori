@@ -318,6 +318,10 @@ ENTRYPOINT(
         FileCount--;
     }
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     MoveContext.DestAttributes = GetFileAttributes(MoveContext.Dest.StartOfString);
     if (MoveContext.DestAttributes == 0xFFFFFFFF) {
         MoveContext.DestAttributes = 0;

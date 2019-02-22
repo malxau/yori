@@ -613,6 +613,10 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     if (CompressEachFile) {
         CAB_CREATE_CONTEXT CreateContext;
 

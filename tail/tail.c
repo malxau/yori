@@ -428,6 +428,10 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     for (Count = 0; Count < TailContext.LinesToDisplay; Count++) {
         YoriLibInitEmptyString(&TailContext.LinesArray[Count]);
     }

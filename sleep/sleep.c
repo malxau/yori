@@ -88,6 +88,7 @@ ENTRYPOINT(
     DWORD TimeToSleep;
     LONGLONG llTemp;
     DWORD CharsConsumed;
+    HANDLE CancelHandle;
 
     StartArg = 0;
 
@@ -146,7 +147,17 @@ ENTRYPOINT(
         TimeToSleep = (DWORD)llTemp * 1000;
     }
 
-    Sleep(TimeToSleep);
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
+    CancelHandle = YoriLibCancelGetEvent();
+
+    if (CancelHandle != NULL) {
+        WaitForSingleObject(CancelHandle, TimeToSleep);
+    } else {
+        Sleep(TimeToSleep);
+    }
 
     return EXIT_SUCCESS;
 }

@@ -331,6 +331,10 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     if (CompactContext.Verbose) {
         CompactContext.CompressContext.Verbose = TRUE;
     }

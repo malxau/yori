@@ -947,6 +947,10 @@ ENTRYPOINT(
 
     DuEnableBackupPrivilege();
 
+#if YORI_BUILTIN
+    YoriLibCancelEnable();
+#endif
+
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES |
                  YORILIB_FILEENUM_RETURN_DIRECTORIES |
                  YORILIB_FILEENUM_RECURSE_BEFORE_RETURN |

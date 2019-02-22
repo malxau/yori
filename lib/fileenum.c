@@ -500,6 +500,11 @@ YoriLibForEachFileEnum(
                         Result = FALSE;
                         break;
                     }
+
+                    if (YoriLibIsOperationCancelled()) {
+                        Result = FALSE;
+                        break;
+                    }
                 }
 
             } while (hFind != INVALID_HANDLE_VALUE && hFind != NULL && FindNextFile(hFind, &ForEachContext->FileInfo));
