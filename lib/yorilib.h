@@ -586,6 +586,11 @@ extern YORILIB_ATTRIBUTE_COLOR_STRING YoriLibColorStringTable[];
 #define YORILIB_ATTRCTRL_WINDOW_FG        0x20
 
 /**
+ A flag indicating that underline should be enabled.
+ */
+#define YORILIB_ATTRCTRL_UNDERLINE        0x40
+
+/**
  If any of the flags are set here (or if a color is specified) no further
  processing is performed to find color information.
  */
@@ -2685,12 +2690,28 @@ typedef struct _YORILIB_SELECTION {
     /**
      TRUE if a selection is active on the previous rendering pass.
      */
-    BOOL SelectionPreviouslyActive;
+    BOOLEAN SelectionPreviouslyActive;
 
     /**
      TRUE if a selection is active on the next rendering pass.
      */
-    BOOL SelectionCurrentlyActive;
+    BOOLEAN SelectionCurrentlyActive;
+
+    /**
+     TRUE if a selection's initial point is known.  It won't become active
+     until it is updated to cover a cell.
+     */
+    BOOLEAN InitialSpecified;
+
+    /**
+     TRUE if the selection color has been determined.
+     */
+    BOOLEAN SelectionColorSet;
+
+    /**
+     The current selection color.
+     */
+    WORD SelectionColor;
 
     /**
      The current index of the previous selection buffers.
@@ -2706,17 +2727,18 @@ typedef struct _YORILIB_SELECTION {
 } YORILIB_SELECTION, *PYORILIB_SELECTION;
 
 BOOL
+YoriLibIsPreviousSelectionActive(
+    __in PYORILIB_SELECTION Selection
+    );
+
+BOOL
 YoriLibIsSelectionActive(
     __in PYORILIB_SELECTION Selection
     );
 
-VOID
-YoriLibCreateNewAttributeBufferFromPreviousBuffer(
-    __in PYORILIB_PREVIOUS_SELECTION_BUFFER OldAttributes,
-    __in PSMALL_RECT OldRegion,
-    __out PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes,
-    __in PSMALL_RECT NewRegion,
-    __in BOOL UpdateNewRegionDisplay
+BOOL
+YoriLibSelectionInitialSpecified(
+    __in PYORILIB_SELECTION Selection
     );
 
 VOID
@@ -2801,6 +2823,12 @@ YoriLibGetSelectionDoubleClickBreakChars(
 WORD
 YoriLibGetSelectionColor(
     __in HANDLE ConsoleHandle
+    );
+
+VOID
+YoriLibSetSelectionColor(
+    __in PYORILIB_SELECTION Selection,
+    __in WORD SelectionColor
     );
 
 // *** STRING.C ***

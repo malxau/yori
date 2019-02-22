@@ -72,6 +72,13 @@ YoriLibVtGetDefaultColor()
 {
     if (YoriLibVtResetColorSet) {
         return YoriLibVtResetColor;
+    } else {
+        CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
+        if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ConsoleInfo)) {
+            YoriLibVtResetColor = ConsoleInfo.wAttributes;
+            YoriLibVtResetColorSet = TRUE;
+            return YoriLibVtResetColor;
+        }
     }
     return DEFAULT_COLOR;
 }
@@ -297,14 +304,6 @@ YoriLibConsoleProcessAndIgnoreEscape(
 
     return TRUE;
 }
-
-#ifndef COMMON_LVB_UNDERSCORE
-/**
- Define for the console's underline functionality if the compiler doesn't
- know about it.
- */
-#define COMMON_LVB_UNDERSCORE      0x8000
-#endif
 
 /**
  Given a starting color and a VT sequence which may change it, generate the

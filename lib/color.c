@@ -68,7 +68,8 @@ YORILIB_ATTRIBUTE_COLOR_STRING YoriLibColorStringTable[] = {
     {_T("continue"),     {YORILIB_ATTRCTRL_CONTINUE, 0}},
     {_T("file"),         {YORILIB_ATTRCTRL_FILE, 0}},
     {_T("window_bg"),    {YORILIB_ATTRCTRL_WINDOW_BG, 0}},
-    {_T("window_fg"),    {YORILIB_ATTRCTRL_WINDOW_FG, 0}}
+    {_T("window_fg"),    {YORILIB_ATTRCTRL_WINDOW_FG, 0}},
+    {_T("underline"),    {YORILIB_ATTRCTRL_UNDERLINE, 0}}
 };
 
 
@@ -479,7 +480,9 @@ const
 CHAR YoriLibDefaultMetadataColorString[] = 
     ";"
     "fc,lightgreen;"
-    "fs,yellow;";
+    "fs,yellow;"
+    "mo,underline+lightblue;"
+    ;
 
 /**
  Obtain a numeric color code given a (typically two character) string
@@ -582,6 +585,7 @@ YoriLibGetMetadataColor(
         }
     }
 
+    YoriLibFreeStringContents(&CriteriaString);
     return FALSE;
 }
 

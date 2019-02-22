@@ -539,6 +539,11 @@ typedef struct _YORI_SH_INPUT_BUFFER {
     YORILIB_SELECTION Selection;
 
     /**
+     Description of the current mouseover region.
+     */
+    YORILIB_SELECTION Mouseover;
+
+    /**
      Delay before suggesting values in milliseconds.
      */
     DWORD DelayBeforeSuggesting;
@@ -587,6 +592,17 @@ typedef struct _YORI_SH_INPUT_BUFFER {
      The current search string, when searching within the buffer itself.
      */
     YORI_STRING SearchString;
+
+    /**
+     TRUE if mouseover support is enabled, FALSE if it is disabled.  Note this
+     is currently enabled by default.
+     */
+    BOOL MouseoverEnabled;
+
+    /**
+     The Win32 color to use when changing text color due to a mouse over.
+     */
+    WORD MouseoverColor;
 
 } YORI_SH_INPUT_BUFFER, *PYORI_SH_INPUT_BUFFER;
 

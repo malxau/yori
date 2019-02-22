@@ -60,6 +60,23 @@ YoriLibIsPreviousSelectionActive(
 }
 
 /**
+ Returns TRUE if a selection has commenced from a point, and FALSE if it has
+ not commenced or is a fully specified region.
+
+ @param Selection The structure describing the current selection state.
+
+ @return TRUE if a current selection has originated from a point, FALSE if it
+         has not.
+ */
+BOOL
+YoriLibSelectionInitialSpecified(
+    __in PYORILIB_SELECTION Selection
+    )
+{
+    return Selection->InitialSpecified;
+}
+
+/**
  Update a range of console cells with specified attributes.  If the attributes
  don't exist due to allocation failure, use a default attribute for the
  entire range.
@@ -154,8 +171,6 @@ YoriLibClearPreviousSelectionDisplay(
     PWORD AttributeReadPoint;
     PYORILIB_PREVIOUS_SELECTION_BUFFER ActiveAttributes;
 
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
     //
     //  If there was no previous selection, clearing it is easy
     //
@@ -163,6 +178,8 @@ YoriLibClearPreviousSelectionDisplay(
     if (!YoriLibIsPreviousSelectionActive(Selection)) {
         return;
     }
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     //
     //  Grab a pointer to the previous selection attributes.  Note the
@@ -186,6 +203,18 @@ YoriLibClearPreviousSelectionDisplay(
             AttributeReadPoint += LineLength;
         }
     }
+
+    Selection->CurrentlyDisplayed.Left = 0;
+    Selection->CurrentlyDisplayed.Right = 0;
+    Selection->CurrentlyDisplayed.Top = 0;
+    Selection->CurrentlyDisplayed.Bottom = 0;
+
+    Selection->PreviouslyDisplayed.Left = Selection->CurrentlyDisplayed.Left;
+    Selection->PreviouslyDisplayed.Top = Selection->CurrentlyDisplayed.Top;
+    Selection->PreviouslyDisplayed.Right = Selection->CurrentlyDisplayed.Right;
+    Selection->PreviouslyDisplayed.Bottom = Selection->CurrentlyDisplayed.Bottom;
+
+    Selection->SelectionPreviouslyActive = FALSE;
 }
 
 /**
@@ -218,6 +247,24 @@ YoriLibGetSelectionColor(
 }
 
 /**
+ Set the color to use for a selection.  If this function is not called, the
+ popup color from the console is used.
+
+ @param Selection Pointer to the selection to set a custom selection color on.
+
+ @param SelectionColor The Win32 selection color to use.
+ */
+VOID
+YoriLibSetSelectionColor(
+    __in PYORILIB_SELECTION Selection,
+    __in WORD SelectionColor
+    )
+{
+    Selection->SelectionColor = SelectionColor;
+    Selection->SelectionColorSet = TRUE;
+}
+
+/**
  Draw the selection highlight around the current selection, and save off the
  character attributes of the text underneath the selection.
 
@@ -235,10 +282,7 @@ YoriLibDrawCurrentSelectionDisplay(
     DWORD CharsWritten;
     DWORD RequiredLength;
     PWORD AttributeWritePoint;
-    WORD SelectionColor;
     PYORILIB_PREVIOUS_SELECTION_BUFFER ActiveAttributes;
-
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     //
     //  If there is no current selection, drawing it is easy
@@ -248,6 +292,8 @@ YoriLibDrawCurrentSelectionDisplay(
 
         return;
     }
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     RequiredLength = (Selection->CurrentlyDisplayed.Right - Selection->CurrentlyDisplayed.Left + 1) * (Selection->CurrentlyDisplayed.Bottom - Selection->CurrentlyDisplayed.Top + 1);
 
@@ -271,7 +317,10 @@ YoriLibDrawCurrentSelectionDisplay(
     AttributeWritePoint = ActiveAttributes->AttributeArray;
     LineLength = (SHORT)(Selection->CurrentlyDisplayed.Right - Selection->CurrentlyDisplayed.Left + 1);
 
-    SelectionColor = YoriLibGetSelectionColor(ConsoleHandle);
+    if (!Selection->SelectionColorSet) {
+        Selection->SelectionColor = YoriLibGetSelectionColor(ConsoleHandle);
+        Selection->SelectionColorSet = TRUE;
+    }
 
     for (LineIndex = Selection->CurrentlyDisplayed.Top; LineIndex <= Selection->CurrentlyDisplayed.Bottom; LineIndex++) {
         StartPoint.X = Selection->CurrentlyDisplayed.Left;
@@ -282,7 +331,7 @@ YoriLibDrawCurrentSelectionDisplay(
             AttributeWritePoint += LineLength;
         }
 
-        FillConsoleOutputAttribute(ConsoleHandle, SelectionColor, LineLength, StartPoint, &CharsWritten);
+        FillConsoleOutputAttribute(ConsoleHandle, Selection->SelectionColor, LineLength, StartPoint, &CharsWritten);
     }
 
     Selection->PreviouslyDisplayed.Left = Selection->CurrentlyDisplayed.Left;
@@ -315,6 +364,9 @@ YoriLibDrawCurrentSelectionDisplay(
  @param UpdateNewRegionDisplay If TRUE, the NewRegion area should be marked
         as selected within the console.  If FALSE, the range is left
         unmodified in the console.
+
+ @param SelectionColor Specifies the color of the selection to apply within
+        the console.  Only meaningful if UpdateNewRegionDisplay is TRUE.
  */
 VOID
 YoriLibCreateNewAttributeBufferFromPreviousBuffer(
@@ -322,7 +374,8 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
     __in PSMALL_RECT OldRegion,
     __out PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes,
     __in PSMALL_RECT NewRegion,
-    __in BOOL UpdateNewRegionDisplay
+    __in BOOL UpdateNewRegionDisplay,
+    __in WORD SelectionColor
     )
 {
     SHORT LineIndex;
@@ -335,7 +388,6 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
     DWORD CharsWritten;
     DWORD RequiredLength;
     PWORD AttributeWritePoint;
-    WORD SelectionColor;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
@@ -352,7 +404,6 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
     //  and update the console to have selection color
     //
 
-    SelectionColor = YoriLibGetSelectionColor(ConsoleHandle);
     AttributeWritePoint = NewAttributes->AttributeArray;
     for (LineIndex = NewRegion->Top; LineIndex <= NewRegion->Bottom; LineIndex++) {
 
@@ -581,7 +632,14 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
     NewAttributes = &Selection->PreviousBuffer[NewAttributeIndex];
     OldAttributes = &Selection->PreviousBuffer[Selection->CurrentPreviousIndex];
 
-    YoriLibCreateNewAttributeBufferFromPreviousBuffer(OldAttributes, &Selection->PreviouslyDisplayed, NewAttributes, &Selection->CurrentlyDisplayed, TRUE);
+    if (!Selection->SelectionColorSet) {
+        HANDLE ConsoleHandle;
+        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        Selection->SelectionColor = YoriLibGetSelectionColor(ConsoleHandle);
+        Selection->SelectionColorSet = TRUE;
+    }
+
+    YoriLibCreateNewAttributeBufferFromPreviousBuffer(OldAttributes, &Selection->PreviouslyDisplayed, NewAttributes, &Selection->CurrentlyDisplayed, TRUE, Selection->SelectionColor);
 
     ASSERT(Selection->CurrentPreviousIndex != NewAttributeIndex);
     Selection->CurrentPreviousIndex = NewAttributeIndex;
@@ -659,6 +717,7 @@ YoriLibClearSelection(
     Selection->CurrentlySelected.Bottom = 0;
 
     Selection->SelectionCurrentlyActive = FALSE;
+    Selection->InitialSpecified = FALSE;
 
     Selection->PeriodicScrollAmount.X = 0;
     Selection->PeriodicScrollAmount.Y = 0;
@@ -879,7 +938,7 @@ YoriLibCreateSelectionFromPoint(
     Selection->InitialPoint.X = X;
     Selection->InitialPoint.Y = Y;
 
-    Selection->SelectionCurrentlyActive = TRUE;
+    Selection->InitialSpecified = TRUE;
 
     return BufferChanged;
 }
@@ -962,7 +1021,7 @@ YoriLibUpdateSelectionToPoint(
         return FALSE;
     }
 
-    ASSERT(YoriLibIsSelectionActive(Selection));
+    ASSERT(Selection->InitialSpecified);
 
     //
     //  Assume that the mouse move is inside the window, so periodic
@@ -1042,6 +1101,7 @@ YoriLibUpdateSelectionToPoint(
         Selection->CurrentlySelected.Bottom = Selection->InitialPoint.Y;
     }
 
+    Selection->SelectionCurrentlyActive = TRUE;
 
     return TRUE;
 }
@@ -1190,7 +1250,8 @@ YoriLibCopySelectionIfPresent(
                                                       &Selection->CurrentlyDisplayed,
                                                       &Attributes,
                                                       &Selection->CurrentlySelected,
-                                                      FALSE);
+                                                      FALSE,
+                                                      0);
 
     if (Attributes.AttributeArray == NULL) {
         YoriLibFreeStringContents(&TextToCopy);
@@ -1307,11 +1368,12 @@ YoriLibGetSelectionDoubleClickBreakChars(
     if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars) || BreakChars->LengthInChars == 0) {
 
         //
+        //  0x2500 is Unicode full horizontal line (used by sdir)
         //  0x2502 is Unicode full vertical line (used by sdir)
         //  0x00BB is double angle quotation mark, used in elevated prompts
         //
 
-        YoriLibConstantString(BreakChars, _T(" '<>|\x2502\x00BB"));
+        YoriLibConstantString(BreakChars, _T(" '[]<>|\x2500\x2502\x252c\x2534\x00BB"));
     }
     return TRUE;
 }

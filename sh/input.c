@@ -260,7 +260,39 @@ YoriShDisplayAfterKeyPress(
     WORD FillAttributes;
     HANDLE hConsole;
 
+    //
+    //  We don't want to have a selection and mouseover active at once, since
+    //  it'd be too confusing for the user and the code.  However, this routine
+    //  may be trying to clear one and display the other; in that case, we need
+    //  to clear the old one first to ensure the new one captures the user's
+    //  color information, not the result of a stale highlight.
+    //
+
+    ASSERT(!(YoriLibIsSelectionActive(&Buffer->Selection) && YoriLibIsSelectionActive(&Buffer->Mouseover)));
+
+    //
+    //  If we're clearing the mouseover, clear it first.
+    //
+
+    if (YoriLibIsPreviousSelectionActive(&Buffer->Mouseover) && !YoriLibIsSelectionActive(&Buffer->Mouseover)) {
+        YoriLibRedrawSelection(&Buffer->Mouseover);
+    }
+
+    //
+    //  If we're clearing the selection, clear it now.
+    //
+
+    if (YoriLibIsPreviousSelectionActive(&Buffer->Selection) && !YoriLibIsSelectionActive(&Buffer->Selection)) {
+        YoriLibRedrawSelection(&Buffer->Selection);
+    }
+
+
+    //
+    //  Redraw whichever is active now
+    //
+
     YoriLibRedrawSelection(&Buffer->Selection);
+    YoriLibRedrawSelection(&Buffer->Mouseover);
 
     WritePosition.X = 0;
     WritePosition.Y = 0;
@@ -535,10 +567,51 @@ YoriShTerminateInput(
     YoriShPostKeyPress(Buffer);
     YoriShClearTabCompletionMatches(Buffer);
     YoriLibCleanupSelection(&Buffer->Selection);
+    YoriLibCleanupSelection(&Buffer->Mouseover);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
     YoriShConfigureMouseForPrograms(Buffer);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+}
+
+/**
+ Clear any mouse over selection.
+
+ @param Buffer Pointer to the input buffer to clear any mouse over selection
+        from.
+
+ @return TRUE to indicate that a redraw is required because a selection was
+         cleared.
+ */
+BOOL
+YoriShClearMouseoverSelection(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    return YoriLibClearSelection(&Buffer->Mouseover);
+}
+
+/**
+ Clear any mouse over selection as well as any copy/paste selection.
+
+ @param Buffer Pointer to the input buffer to clear any selection from.
+
+ @return TRUE to indicate that a redraw is required because at least one
+         selection was cleared.
+ */
+BOOL
+YoriShClearInputSelections(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    BOOL RedrawFromMouseover;
+    BOOL RedrawFromSelection;
+
+    RedrawFromMouseover = YoriShClearMouseoverSelection(Buffer);
+    RedrawFromSelection = YoriLibClearSelection(&Buffer->Selection);
+
+    ASSERT(!(RedrawFromMouseover && RedrawFromSelection));
+    return (RedrawFromMouseover || RedrawFromSelection);
 }
 
 
@@ -558,7 +631,7 @@ YoriShClearInput(
     Buffer->String.LengthInChars = 0;
     Buffer->CurrentOffset = 0;
     Buffer->SearchMode = FALSE;
-    YoriLibClearSelection(&Buffer->Selection);
+    YoriShClearInputSelections(Buffer);
 }
 
 /**
@@ -1166,6 +1239,8 @@ YoriShConfigureInputSettings(
     LONGLONG llTemp;
     DWORD CharsConsumed;
     TCHAR EnvVarBuffer[10];
+    YORI_STRING MouseoverColorString;
+    YORILIB_COLOR_ATTRIBUTES MouseoverColor;
 
     //
     //  Default to suggesting in 400ms after seeing 2 chars in an arg.
@@ -1239,7 +1314,39 @@ YoriShConfigureInputSettings(
         }
     }
 
+    //
+    //  Check the environment to see if the user wants to use Yori's mouse
+    //  over support.
+    //
+
+    Buffer->MouseoverEnabled = TRUE;
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIMOUSEOVER"), NULL, 0);
+    if (EnvVarLength > 0) {
+        if (EnvVarLength > EnvVar.LengthAllocated) {
+            YoriLibFreeStringContents(&EnvVar);
+            YoriLibAllocateString(&EnvVar, EnvVarLength);
+        }
+        if (EnvVarLength <= EnvVar.LengthAllocated) {
+            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIMOUSEOVER"), EnvVar.StartOfString, EnvVar.LengthAllocated);
+            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                if (llTemp == 0) {
+                    Buffer->MouseoverEnabled = FALSE;
+                }
+            }
+        }
+    }
+
     YoriLibFreeStringContents(&EnvVar);
+
+    YoriLibConstantString(&MouseoverColorString, _T("mo"));
+    if (!YoriLibGetMetadataColor(&MouseoverColorString, &MouseoverColor)) {
+        Buffer->MouseoverColor = (UCHAR)YoriLibVtGetDefaultColor();
+    }
+
+    Buffer->MouseoverColor = MouseoverColor.Win32Attr;
+    if (MouseoverColor.Ctrl & YORILIB_ATTRCTRL_UNDERLINE) {
+        Buffer->MouseoverColor |= COMMON_LVB_UNDERSCORE;
+    }
 }
 
 /**
@@ -1309,6 +1416,7 @@ YoriShSelectLeftChar(
     }
 
     if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset > 0) {
+        YoriShClearMouseoverSelection(Buffer);
         Buffer->CurrentOffset--;
         if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
             YoriLibCreateSelectionFromPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
@@ -1357,6 +1465,7 @@ YoriShSelectRightChar(
     }
 
     if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset + 1 < Buffer->String.LengthInChars) {
+        YoriShClearMouseoverSelection(Buffer);
         Buffer->CurrentOffset++;
         if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
             YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X, StartCoord.Y);
@@ -1456,7 +1565,6 @@ YoriShProcessEnhancedKeyDown(
             }
 
             Buffer->CurrentOffset += Count;
-
             YoriShBackspace(Buffer, Count);
         }
 
@@ -1468,7 +1576,7 @@ YoriShProcessEnhancedKeyDown(
             if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
                 *TerminateInput = TRUE;
             }
-            YoriLibClearSelection(&Buffer->Selection);
+            YoriShClearInputSelections(Buffer);
             return TRUE;
         }
     } else if (KeyCode == VK_DIVIDE) {
@@ -1519,7 +1627,7 @@ YoriShProcessKeyDown(
     if (KeyCode >= VK_F1 && KeyCode <= VK_F12) {
         if (YoriShHotkey(Buffer, KeyCode, CtrlMask)) {
             *TerminateInput = TRUE;
-            YoriLibClearSelection(&Buffer->Selection);
+            YoriShClearInputSelections(Buffer);
             return TRUE;
         }
     }
@@ -1548,7 +1656,7 @@ YoriShProcessKeyDown(
                 if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
                     *TerminateInput = TRUE;
                 }
-                YoriLibClearSelection(&Buffer->Selection);
+                YoriShClearInputSelections(Buffer);
                 return TRUE;
             }
         } else if (Char == 27) {
@@ -1588,11 +1696,11 @@ YoriShProcessKeyDown(
             Buffer->CurrentOffset = 0;
         } else if (KeyCode == 'C') {
             if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
-                YoriLibClearSelection(&Buffer->Selection);
+                YoriShClearInputSelections(Buffer);
                 YoriShClearInput(Buffer);
                 *TerminateInput = TRUE;
             }
-            YoriLibClearSelection(&Buffer->Selection);
+            YoriShClearInputSelections(Buffer);
             return TRUE;
         } else if (KeyCode == 'E') {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
@@ -1704,7 +1812,7 @@ YoriShProcessKeyDown(
         KeyCode != VK_CONTROL) {
 
         if (ClearSelection) {
-            YoriLibClearSelection(&Buffer->Selection);
+            YoriShClearInputSelections(Buffer);
         }
 
         YoriShPostKeyPress(Buffer);
@@ -1759,7 +1867,7 @@ YoriShProcessKeyUp(
             YoriShPrepareForNextKey(Buffer);
             YoriShAddCStringToInput(Buffer, HostKeyValue);
             YoriShPostKeyPress(Buffer);
-            YoriLibClearSelection(&Buffer->Selection);
+            YoriShClearInputSelections(Buffer);
             KeyPressGenerated = TRUE;
         }
 
@@ -1930,9 +2038,11 @@ YoriShProcessMouseButtonDown(
     } else if (ButtonsPressed & FROM_LEFT_1ST_BUTTON_PRESSED) {
         DWORD StringOffset;
 
-        BufferChanged = YoriLibCreateSelectionFromPoint(&Buffer->Selection,
-                                                        InputRecord->Event.MouseEvent.dwMousePosition.X,
-                                                        InputRecord->Event.MouseEvent.dwMousePosition.Y);
+        BufferChanged = YoriShClearMouseoverSelection(Buffer);
+
+        BufferChanged |= YoriLibCreateSelectionFromPoint(&Buffer->Selection,
+                                                         InputRecord->Event.MouseEvent.dwMousePosition.X,
+                                                         InputRecord->Event.MouseEvent.dwMousePosition.Y);
 
         if (YoriShStringOffsetFromCoordinates(Buffer, InputRecord->Event.MouseEvent.dwMousePosition, &StringOffset)) {
             Buffer->CurrentOffset = StringOffset;
@@ -1942,7 +2052,7 @@ YoriShProcessMouseButtonDown(
         if (YoriLibIsSelectionActive(&Buffer->Selection)) {
             BufferChanged = YoriLibCopySelectionIfPresent(&Buffer->Selection);
             if (BufferChanged) {
-                YoriLibClearSelection(&Buffer->Selection);
+                YoriShClearInputSelections(Buffer);
             }
         } else {
             YORI_STRING ClipboardData;
@@ -1996,8 +2106,6 @@ YoriShProcessMouseButtonUp(
     return FALSE;
 }
 
-
-
 /**
  Perform processing related to when a mouse is double clicked.
 
@@ -2032,7 +2140,7 @@ YoriShProcessMouseDoubleClick(
         COORD BeginRange;
         COORD EndRange;
 
-        BufferChanged = YoriLibClearSelection(&Buffer->Selection);
+        BufferChanged = YoriShClearInputSelections(Buffer);
 
         if (!YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange)) {
             return FALSE;
@@ -2070,11 +2178,12 @@ YoriShProcessMouseMove(
     __out PBOOL TerminateInput
     )
 {
+
     UNREFERENCED_PARAMETER(TerminateInput);
 
     if (InputRecord->Event.MouseEvent.dwButtonState & FROM_LEFT_1ST_BUTTON_PRESSED) {
 
-        if (YoriLibIsSelectionActive(&Buffer->Selection)) {
+        if (YoriLibSelectionInitialSpecified(&Buffer->Selection)) {
 
             YoriLibUpdateSelectionToPoint(&Buffer->Selection,
                                           InputRecord->Event.MouseEvent.dwMousePosition.X,
@@ -2088,6 +2197,26 @@ YoriShProcessMouseMove(
             YoriLibPeriodicScrollForSelection(&Buffer->Selection);
 
             return TRUE;
+        }
+    } else if (!YoriLibIsSelectionActive(&Buffer->Selection) &&
+               Buffer->MouseoverEnabled) {
+
+        COORD BeginRange;
+        COORD EndRange;
+        HANDLE ConsoleHandle;
+
+        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        if (YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange) && BeginRange.Y == EndRange.Y) {
+
+            YoriShClearMouseoverSelection(Buffer);
+            YoriLibSetSelectionColor(&Buffer->Mouseover, Buffer->MouseoverColor);
+            YoriLibCreateSelectionFromRange(&Buffer->Mouseover, BeginRange.X, BeginRange.Y, EndRange.X, EndRange.Y);
+            return TRUE;
+        } else {
+            if (YoriShClearMouseoverSelection(Buffer)) {
+                return TRUE;
+            }
         }
     }
 
@@ -2257,8 +2386,7 @@ YoriShGetExpressionFromConsole(
                 }
 
             } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
-
-                ReDisplayRequired |= YoriLibClearSelection(&Buffer.Selection);
+                ReDisplayRequired |= YoriShClearInputSelections(&Buffer);
             } else if (InputRecord->EventType == FOCUS_EVENT) {
                 if (InputRecord->Event.FocusEvent.bSetFocus) {
                     YoriShSetWindowState(YORI_SH_TASK_COMPLETE);

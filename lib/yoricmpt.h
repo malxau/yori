@@ -53,6 +53,14 @@
 #define ENABLE_EXTENDED_FLAGS 0x0080
 #endif
 
+#ifndef COMMON_LVB_UNDERSCORE
+/**
+ Define for the console's underline functionality if the compiler doesn't
+ know about it.
+ */
+#define COMMON_LVB_UNDERSCORE      0x8000
+#endif
+
 
 #ifndef DWORD_PTR
 #ifndef _WIN64
