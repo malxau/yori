@@ -7,7 +7,7 @@
  * This module implements string parsing and rule application to select a
  * given set of color attributes to render any particular file with.
  *
- * Copyright (c) 2014-2017 Malcolm J. Smith
+ * Copyright (c) 2014-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -217,6 +217,7 @@ SdirParseMetadataAttributeString()
     LPTSTR SdirApplyString = NULL;
     DWORD  SdirColorMetadataLength = 0;
     PSDIR_FEATURE Feature;
+    LPTSTR EnvVarName = _T("YORICOLORMETADATA");
 
     //
     //  Load any user specified colors from the environment.
@@ -224,9 +225,13 @@ SdirParseMetadataAttributeString()
     //  First, count how big the allocation needs to be and allocate it.
     //
 
-    SdirColorMetadataLength = GetEnvironmentVariable(_T("SDIR_COLOR_METADATA"), NULL, 0);
+    SdirColorMetadataLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
     if (SdirColorMetadataLength == 0) {
-        return TRUE;
+        EnvVarName = _T("SDIR_COLOR_METADATA");
+        SdirColorMetadataLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
+        if (SdirColorMetadataLength == 0) {
+            return TRUE;
+        }
     }
     SdirApplyString = YoriLibMalloc((SdirColorMetadataLength + 1) * sizeof(TCHAR));
 
@@ -238,7 +243,7 @@ SdirParseMetadataAttributeString()
     //  Now, load any environment variables into the buffer.
     //
 
-    GetEnvironmentVariable(_T("SDIR_COLOR_METADATA"), SdirApplyString, SdirColorMetadataLength);
+    GetEnvironmentVariable(EnvVarName, SdirApplyString, SdirColorMetadataLength);
 
     This = SdirApplyString;
 

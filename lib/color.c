@@ -405,6 +405,9 @@ YoriLibLoadCombinedFileColorString(
     DWORD ColorReplaceLength = 0;
     DWORD ColorCustomLength = 0;
     DWORD i;
+    LPTSTR PrependVarName = _T("YORICOLORPREPEND");
+    LPTSTR ReplaceVarName = _T("YORICOLORREPLACE");
+    LPTSTR AppendVarName = _T("YORICOLORAPPEND");
 
     //
     //  Load any user specified colors from the environment.  Prepend values go before
@@ -414,9 +417,21 @@ YoriLibLoadCombinedFileColorString(
     //  First, count how big the allocation needs to be and allocate it.
     //
 
-    ColorPrependLength = GetEnvironmentVariable(_T("SDIR_COLOR_PREPEND"), NULL, 0);
-    ColorReplaceLength = GetEnvironmentVariable(_T("SDIR_COLOR_REPLACE"), NULL, 0);
-    ColorAppendLength  = GetEnvironmentVariable(_T("SDIR_COLOR_APPEND"), NULL, 0);
+    ColorPrependLength = GetEnvironmentVariable(PrependVarName, NULL, 0);
+    if (ColorPrependLength == 0) {
+        PrependVarName = _T("SDIR_COLOR_PREPEND");
+        ColorPrependLength = GetEnvironmentVariable(PrependVarName, NULL, 0);
+    }
+    ColorReplaceLength = GetEnvironmentVariable(ReplaceVarName, NULL, 0);
+    if (ColorReplaceLength == 0) {
+        ReplaceVarName = _T("SDIR_COLOR_REPLACE");
+        ColorReplaceLength = GetEnvironmentVariable(ReplaceVarName, NULL, 0);
+    }
+    ColorAppendLength  = GetEnvironmentVariable(AppendVarName, NULL, 0);
+    if (ColorAppendLength == 0) {
+        AppendVarName = _T("SDIR_COLOR_APPEND");
+        ColorAppendLength  = GetEnvironmentVariable(AppendVarName, NULL, 0);
+    }
     if (Custom != NULL) {
         ColorCustomLength = Custom->LengthInChars;
     }
@@ -432,7 +447,7 @@ YoriLibLoadCombinedFileColorString(
 
     i = 0;
     if (ColorPrependLength) {
-        GetEnvironmentVariable(_T("SDIR_COLOR_PREPEND"),
+        GetEnvironmentVariable(PrependVarName,
                                Combined->StartOfString,
                                ColorPrependLength);
         i += ColorPrependLength;
@@ -447,7 +462,7 @@ YoriLibLoadCombinedFileColorString(
     }
 
     if (ColorReplaceLength) {
-        GetEnvironmentVariable(_T("SDIR_COLOR_REPLACE"),
+        GetEnvironmentVariable(ReplaceVarName,
                                &Combined->StartOfString[i],
                                ColorReplaceLength);
         i += ColorReplaceLength - 1;
@@ -462,7 +477,7 @@ YoriLibLoadCombinedFileColorString(
     if (ColorAppendLength) {
         Combined->StartOfString[i] = ';';
         i += 1;
-        GetEnvironmentVariable(_T("SDIR_COLOR_APPEND"),
+        GetEnvironmentVariable(AppendVarName,
                                &Combined->StartOfString[i],
                                ColorAppendLength);
         i += ColorAppendLength - 1;
@@ -479,9 +494,9 @@ YoriLibLoadCombinedFileColorString(
 const
 CHAR YoriLibDefaultMetadataColorString[] = 
     ";"
-    "fc,lightgreen;"
     "fs,yellow;"
     "mo,underline+lightblue;"
+    "nf,lightgreen;"
     ;
 
 /**
@@ -515,20 +530,31 @@ YoriLibGetMetadataColor(
     YORILIB_COLOR_ATTRIBUTES FoundColor;
     YORILIB_COLOR_ATTRIBUTES WindowColor;
     DWORD CustomLength = 0;
+    LPTSTR EnvVarName = _T("YORICOLORMETADATA");
 
     YoriLibInitEmptyString(&Remaining);
     YoriLibInitEmptyString(&Element);
     YoriLibInitEmptyString(&FoundAttributeCodeString);
     YoriLibInitEmptyString(&FoundColorString);
 
-    CustomLength = GetEnvironmentVariable(_T("SDIR_COLOR_METADATA"), NULL, 0);
+    //
+    //  Query for any customizations.  If none are present with the new
+    //  variable name, check if there are any with the old SDIR variable
+    //  name.
+    //
+
+    CustomLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
+    if (CustomLength == 0) {
+        EnvVarName = _T("SDIR_COLOR_METADATA");
+        CustomLength = GetEnvironmentVariable(EnvVarName, NULL, 0);
+    }
 
     if (!YoriLibAllocateString(&CriteriaString, CustomLength + sizeof(YoriLibDefaultMetadataColorString))) {
         return FALSE;
     }
 
     if (CustomLength > 0) {
-        CustomLength = GetEnvironmentVariable(_T("SDIR_COLOR_METADATA"), CriteriaString.StartOfString, CustomLength);
+        CustomLength = GetEnvironmentVariable(EnvVarName, CriteriaString.StartOfString, CustomLength);
         CriteriaString.LengthInChars = CustomLength;
     }
 

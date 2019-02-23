@@ -391,10 +391,10 @@ const
 CHAR strFileColorUsage1[] = 
                    " Color coding for files is defined via three environment variables,\n"
                    " plus the command line, processed in order:\n"
-                   "   SDIR_COLOR_PREPEND, processed first\n"
+                   "   YORICOLORPREPEND, processed first\n"
                    "   Command line -fc options, processed next\n"
-                   "   SDIR_COLOR_REPLACE, if defined; otherwise, built in defaults apply\n"
-                   "   SDIR_COLOR_APPEND, processed last\n"
+                   "   YORICOLORREPLACE, if defined; otherwise, built in defaults apply\n"
+                   "   YORICOLORAPPEND, processed last\n"
                    "\n"
                    " Each variable contains a semicolon delimited list of rules.  Each rule takes\n"
                    " the form of:\n"
@@ -609,7 +609,7 @@ CHAR strMetaColorHeader[] = "METADATA COLOR CODING";
  */
 const
 CHAR strMetaColorUsage1[] =
-                   " Color coding for metadata attributes is defined via SDIR_COLOR_METADATA.\n"
+                   " Color coding for metadata attributes is defined via YORICOLORMETADATA.\n"
                    " This variable also contains a semicolon delimited list of rules.  Each rule\n"
                    " takes the form of:\n"
                    "\n"
