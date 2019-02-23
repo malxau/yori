@@ -546,18 +546,31 @@ YoriLibHtmlGenerateEscapeStringInternal(
         }
 
         //
+        //  Convert the color to a Windows color so that it maps into the
+        //  Windows colortable
+        //
+
+        NewColor = YoriLibAnsiToWindowsByte(NewColor);
+
+        //
         //  Output the appropriate tag depending on the version the user wanted
         //
 
         if (YoriLibHtmlVersion == 4) {
             SrcOffset = YoriLibSPrintf(NewTag,
-                                       _T("<FONT COLOR=#%06x>"),
-                                       (int)ColorTableToUse[NewColor & 0xf]);
+                                       _T("<FONT COLOR=#%02x%02x%02x>"),
+                                       GetRValue(ColorTableToUse[NewColor & 0xf]),
+                                       GetGValue(ColorTableToUse[NewColor & 0xf]),
+                                       GetBValue(ColorTableToUse[NewColor & 0xf]));
         } else {
             SrcOffset = YoriLibSPrintf(NewTag,
-                                       _T("<SPAN STYLE=\"color:#%06x;background-color:#%06x\">"),
-                                      (int)ColorTableToUse[NewColor & 0xf],
-                                      (int)ColorTableToUse[(NewColor & 0xf0) >> 4]);
+                                       _T("<SPAN STYLE=\"color:#%02x%02x%02x;background-color:#%02x%02x%02x\">"),
+                                       GetRValue(ColorTableToUse[NewColor & 0xf]),
+                                       GetGValue(ColorTableToUse[NewColor & 0xf]),
+                                       GetBValue(ColorTableToUse[NewColor & 0xf]),
+                                       GetRValue(ColorTableToUse[(NewColor & 0xf0) >> 4]),
+                                       GetGValue(ColorTableToUse[(NewColor & 0xf0) >> 4]),
+                                       GetBValue(ColorTableToUse[(NewColor & 0xf0) >> 4]));
         }
 
         if (DestOffset + SrcOffset < TextString->LengthAllocated) {

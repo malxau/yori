@@ -162,7 +162,12 @@ YoriLibRtfGenerateInitialString(
     for (Index = 0; Index < 16; Index++) {
         Substring.StartOfString = &TextString->StartOfString[TextString->LengthInChars];
         Substring.LengthAllocated = TextString->LengthAllocated - TextString->LengthInChars;
-        Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, _T("\\red%i\\green%i\\blue%i;"), ((ColorTableToUse[Index]>>16)&0xff), ((ColorTableToUse[Index]>>8)&0xff), (ColorTableToUse[Index]&0xff));
+        Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString,
+                                                 _T("\\red%i\\green%i\\blue%i;"),
+                                                 GetRValue(ColorTableToUse[Index]),
+                                                 GetGValue(ColorTableToUse[Index]),
+                                                 GetBValue(ColorTableToUse[Index]));
+
         TextString->LengthInChars += Substring.LengthInChars;
     }
 
@@ -483,6 +488,13 @@ YoriLibRtfGenerateEscapeString(
             UnderlineString = _T("\\ul0");
             PreviousUnderlineOn = FALSE;
         }
+
+        //
+        //  Convert the color to a Windows color so that it maps into the
+        //  Windows colortable
+        //
+
+        NewColor = YoriLibAnsiToWindowsByte(NewColor);
 
         //
         //  Output the appropriate tag depending on the version the user wanted

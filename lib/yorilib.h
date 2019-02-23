@@ -2256,6 +2256,31 @@ YoriLibRecycleBinFile(
 
 // *** VT.C ***
 
+/**
+ Convert an ANSI attribute (in RGB order) back into Windows BGR order.
+ */
+#define YoriLibAnsiToWindowsNibble(COL)      \
+    (((COL) & 8?FOREGROUND_INTENSITY:0)|     \
+     ((COL) & 4?FOREGROUND_BLUE:0)|          \
+     ((COL) & 2?FOREGROUND_GREEN:0)|         \
+     ((COL) & 1?FOREGROUND_RED:0))
+
+/**
+ Convert an ANSI attribute, containing both a background and a foreground
+ (in RGB order) back into Windows BGR order.
+ */
+#define YoriLibAnsiToWindowsByte(COL)          \
+    (UCHAR)(YoriLibAnsiToWindowsNibble(COL) |  \
+     (YoriLibAnsiToWindowsNibble((COL)>>4)<<4));
+
+/**
+ Convert a Win32 text attribute into an ANSI escape value.  This happens
+ because the two disagree on RGB order.
+ */
+#define YoriLibWindowsToAnsi(COL)      \
+    (((COL) & FOREGROUND_BLUE?4:0)|    \
+     ((COL) & FOREGROUND_GREEN?2:0)|   \
+     ((COL) & FOREGROUND_RED?1:0))
 
 /**
  The maximum length of a string used to describe a VT sequence generated

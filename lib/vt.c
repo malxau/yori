@@ -958,16 +958,6 @@ YoriLibOutputToDevice(
 }
 
 /**
- Convert a Win32 text attribute into an ANSI escape value.  This happens
- because the two disagree on RGB order.
- */
-#define YoriLibWindowsToAnsi(COL)      \
-    (((COL) & FOREGROUND_BLUE?4:0)|    \
-     ((COL) & FOREGROUND_GREEN?2:0)|   \
-     ((COL) & FOREGROUND_RED?1:0))
-
-
-/**
  Generate a string that is the VT100 representation for the specified Win32
  attribute.
 
