@@ -264,6 +264,13 @@ typedef struct _MORE_CONTEXT {
     BOOL DebugDisplay;
 
     /**
+     TRUE if out of memory occurred and viewport can't intelligently keep
+     displaying results.  This can happen because there's no memory to
+     ingest more data, or because the data we have cannot be rendered.
+     */
+    BOOL OutOfMemory;
+
+    /**
      Records the total number of files processed.
      */
     DWORDLONG FilesFound;

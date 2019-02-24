@@ -105,13 +105,9 @@ MoreProcessStream(
             }
             BufferOffset = 0;
 
-            //
-            //  MSFIX What to do on out of memory?  This tool can actually run
-            //  out
-            //
-
             Buffer = YoriLibReferencedMalloc(BytesRemainingInBuffer);
             if (Buffer == NULL) {
+                MoreContext->OutOfMemory = TRUE;
                 break;
             }
         }
@@ -271,6 +267,9 @@ MoreFileFoundCallback(
         CloseHandle(FileHandle);
     }
 
+    if (MoreContext->OutOfMemory) {
+        return FALSE;
+    }
     return TRUE;
 }
 
