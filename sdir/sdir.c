@@ -724,9 +724,20 @@ SdirEnumeratePathWithDepth (
                 if (ItemFoundContext.Error == ERROR_SUCCESS) {
                     ItemFoundContext.Error = GetLastError();
                 }
-                SdirDisplayYsError(ItemFoundContext.Error, FindStr);
                 YoriLibFreeStringContents(&ItemFoundContext.StreamFullPath);
-                SetLastError(ItemFoundContext.Error);
+
+                //
+                //  For file not found errors, continue enumerating through
+                //  all of the criteria specified by the user, and display
+                //  it only if there are no files from any criteria
+                //
+
+                if (ItemFoundContext.Error != ERROR_FILE_NOT_FOUND) {
+                    SdirDisplayYsError(ItemFoundContext.Error, FindStr);
+                    SetLastError(ItemFoundContext.Error);
+                } else {
+                    return TRUE;
+                }
             } else {
                 YoriLibFreeStringContents(&ItemFoundContext.StreamFullPath);
             }
@@ -738,9 +749,14 @@ SdirEnumeratePathWithDepth (
         if (ItemFoundContext.ItemsFound == 0) {
             if (!Opts->Recursive) {
                 if (ItemFoundContext.Error == ERROR_SUCCESS) {
-                    ItemFoundContext.Error = GetLastError();
+                    ItemFoundContext.Error = ERROR_FILE_NOT_FOUND;
                 }
-                SdirDisplayYsError(ItemFoundContext.Error, FindStr);
+
+                if (ItemFoundContext.Error != ERROR_FILE_NOT_FOUND) {
+                    SdirDisplayYsError(ItemFoundContext.Error, FindStr);
+                } else {
+                    return TRUE;
+                }
             }
             SetLastError(ERROR_FILE_NOT_FOUND);
             return FALSE;

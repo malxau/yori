@@ -625,7 +625,9 @@ DirFileFoundCallback(
 
  @param Depth Recursion depth, ignored in this application.
 
- @param Context Context, ignored in this function.
+ @param Context Pointer to the DirContext, indicating whether the request is
+        recursive or not.  Recursive enumerates are more willing to continue
+        on error than single directory enumerates.
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
@@ -639,9 +641,9 @@ DirFileEnumerateErrorCallback(
 {
     YORI_STRING UnescapedFilePath;
     BOOL Result = FALSE;
+    PDIR_CONTEXT DirContext = (PDIR_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
-    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&UnescapedFilePath);
     if (!YoriLibUnescapePath(FilePath, &UnescapedFilePath)) {
@@ -665,6 +667,9 @@ DirFileEnumerateErrorCallback(
         }
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Enumerate of %y failed: %s"), &DirName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
+        if (DirContext->Recursive) {
+            Result = TRUE;
+        }
     }
     YoriLibFreeStringContents(&UnescapedFilePath);
     return Result;
