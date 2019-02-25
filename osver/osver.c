@@ -109,7 +109,8 @@ typedef struct _OSVER_BUILD_DESCRIPTION {
  */
 const
 OSVER_BUILD_DESCRIPTION OsVerBuildDescriptions[] = {
-    {528,  "Windows NT 3.1"},
+    {511,  "Windows NT 3.1"},
+    {528,  "Windows NT 3.1 SP3"},
     {807,  "Windows NT 3.5"},
     {1057, "Windows NT 3.51"},
     {1381, "Windows NT 4"},
