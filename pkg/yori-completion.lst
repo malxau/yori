@@ -1,8 +1,11 @@
 completion\chdir.ys1
 completion\chdir.com.ys1
 completion\nice.exe.ys1
+completion\nice.ys1
 completion\pushd.ys1
 completion\pushd.com.ys1
+completion\which.exe.ys1
+completion\which.ys1
 completion\ymkdir.ys1
 completion\ymkdir.exe.ys1
 completion\yrmdir.ys1
