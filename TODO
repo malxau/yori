@@ -1,6 +1,13 @@
 v1.0:
  - General MSFIX review
 
+v1.1:
+ - YORIQUICKEDIT behavior in more
+ - Wide char support in sdir
+ - Env
+ - Tool for creating VHDs
+ - Stdout redirection by number
+
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
  - Colorize help and error text
@@ -15,5 +22,3 @@ v2.0:
  - Ctrl+Z
  - Markdown formatter/parser
  - Man or something like it
- - Env
- - Tool for creating VHDs
