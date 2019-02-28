@@ -102,6 +102,18 @@ YoriShInit()
     }
 
     //
+    //  If we don't have defined break characters, set them to the default.
+    //  This allows the user to see the current set and manipulate them.
+    //
+
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDITBREAKCHARS"), NULL, 0) == 0) {
+        YORI_STRING BreakChars;
+        YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
+        SetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars.StartOfString);
+        YoriLibFreeStringContents(&BreakChars);
+    }
+
+    //
     //  If we're running Yori and don't have a YORISPEC, assume this is the
     //  path to the shell the user wants to keep using.
     //
