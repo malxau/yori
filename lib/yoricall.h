@@ -3,7 +3,7 @@
  *
  * Yori exported API for modules to call
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,6 +49,10 @@ YoriCallBuiltinUnregister(
 
 BOOL
 YoriCallClearHistoryStrings(
+    );
+
+BOOL
+YoriCallDecrementPromptRecursionDepth(
     );
 
 BOOL
@@ -122,6 +126,10 @@ BOOL
 YoriCallGetYoriVersion(
     __out PDWORD MajorVersion,
     __out PDWORD MinorVersion
+    );
+
+BOOL
+YoriCallIncrementPromptRecursionDepth(
     );
 
 BOOL

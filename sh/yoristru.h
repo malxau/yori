@@ -738,6 +738,12 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD RecursionDepth;
 
     /**
+     Count of prompt recursion depth.  This is the number of characters to
+     display when $+$ is used.
+     */
+    DWORD PromptRecursionDepth;
+
+    /**
      List of command history.
      */
     YORI_LIST_ENTRY CommandHistory;

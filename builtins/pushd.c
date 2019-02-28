@@ -3,7 +3,7 @@
  *
  * Yori shell push and pop current directories
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -123,6 +123,7 @@ PushdNotifyUnload()
         StackLocation = CONTAINING_RECORD(ListEntry, PUSHD_STACK, StackLinks);
         ListEntry = YoriLibGetPreviousListEntry(&PushdStack, ListEntry);
         YoriLibRemoveListItem(&StackLocation->StackLinks);
+        YoriCallDecrementPromptRecursionDepth();
         YoriLibFree(StackLocation);
     }
 }
@@ -184,7 +185,7 @@ YoriCmd_POPD(
                 PopdHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 ListStack = TRUE;
@@ -215,6 +216,7 @@ YoriCmd_POPD(
 
     StackLocation = CONTAINING_RECORD(ListEntry, PUSHD_STACK, StackLinks);
     YoriLibRemoveListItem(&StackLocation->StackLinks);
+    YoriCallDecrementPromptRecursionDepth();
 
     if (PushdStack.Next == &PushdStack) {
         YORI_STRING PopdCmd;
@@ -271,7 +273,7 @@ YoriCmd_PUSHD(
                 PushdHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 ListStack = TRUE;
@@ -340,6 +342,7 @@ YoriCmd_PUSHD(
     }
 
     YoriLibAppendList(&PushdStack, &NewStackEntry->StackLinks);
+    YoriCallIncrementPromptRecursionDepth();
 
     return EXIT_SUCCESS;
 }

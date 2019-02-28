@@ -3,7 +3,7 @@
  *
  * Yori shell prompt display
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -156,6 +156,14 @@ YoriShExpandPrompt(
         CharsNeeded = 1;
         if (OutputString->LengthAllocated > CharsNeeded) {
             OutputString->StartOfString[0] = '$';
+        }
+    } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("+")) == 0) {
+        CharsNeeded = YoriShGlobal.PromptRecursionDepth;
+        if (OutputString->LengthAllocated > YoriShGlobal.PromptRecursionDepth) {
+            DWORD Index;
+            for (Index = 0; Index < YoriShGlobal.PromptRecursionDepth; Index++) {
+                OutputString->StartOfString[Index] = '+';
+            }
         }
     }
 

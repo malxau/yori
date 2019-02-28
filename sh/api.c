@@ -3,7 +3,7 @@
  *
  * Yori exported API for modules to call
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -107,6 +107,24 @@ YoriApiClearHistoryStrings(
 {
     YoriShClearAllHistory();
     return TRUE;
+}
+
+/**
+ Decrements the recursion depth that the prompt should display when the $+$
+ token is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiDecrementPromptRecursionDepth(
+    )
+{
+    ASSERT(YoriShGlobal.PromptRecursionDepth > 0);
+    if (YoriShGlobal.PromptRecursionDepth > 0) {
+        YoriShGlobal.PromptRecursionDepth--;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /**
@@ -347,6 +365,20 @@ YoriApiGetYoriVersion(
 {
     *MajorVersion = YORI_VER_MAJOR;
     *MinorVersion = YORI_VER_MINOR;
+    return TRUE;
+}
+
+/**
+ Increments the recursion depth that the prompt should display when the $+$
+ token is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiIncrementPromptRecursionDepth(
+    )
+{
+    YoriShGlobal.PromptRecursionDepth++;
     return TRUE;
 }
 

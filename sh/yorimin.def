@@ -6,6 +6,7 @@ EXPORTS
     YoriApiBuiltinRegister
     YoriApiBuiltinUnregister
     YoriApiClearHistoryStrings
+    YoriApiDecrementPromptRecursionDepth
     YoriApiDeleteAlias
     YoriApiExecuteBuiltin
     YoriApiExecuteExpression
@@ -19,6 +20,7 @@ EXPORTS
     YoriApiGetJobOutput
     YoriApiGetNextJobId
     YoriApiGetYoriVersion
+    YoriApiIncrementPromptRecursionDepth
     YoriApiPipeJobOutput
     YoriApiSetDefaultColor
     YoriApiSetJobPriority

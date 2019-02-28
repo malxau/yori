@@ -4,7 +4,7 @@
  * Yori call from modules into external API.  Functions in this file can only
  * be called from code running within the Yori process.
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -228,6 +228,43 @@ YoriCallClearHistoryStrings(
         }
     }
     return pYoriApiClearHistoryStrings();
+}
+
+/**
+ Prototype for the @ref YoriApiDecrementPromptRecursionDepth function.
+ */
+typedef BOOL YORI_API_DECREMENT_PROMPT_RECURSION_DEPTH();
+
+/**
+ Prototype for a pointer to the @ref YoriApiDecrementPromptRecursionDepth function.
+ */
+typedef YORI_API_DECREMENT_PROMPT_RECURSION_DEPTH *PYORI_API_DECREMENT_PROMPT_RECURSION_DEPTH;
+
+/**
+ Pointer to the @ref YoriApiDecrementPromptRecursionDepth function.
+ */
+PYORI_API_DECREMENT_PROMPT_RECURSION_DEPTH pYoriApiDecrementPromptRecursionDepth;
+
+/**
+ Decrements the recursion depth that the prompt should display when the $+$
+ token is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriCallDecrementPromptRecursionDepth(
+    )
+{
+    if (pYoriApiDecrementPromptRecursionDepth == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiDecrementPromptRecursionDepth = (PYORI_API_DECREMENT_PROMPT_RECURSION_DEPTH)GetProcAddress(hYori, "YoriApiDecrementPromptRecursionDepth");
+        if (pYoriApiDecrementPromptRecursionDepth == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiDecrementPromptRecursionDepth();
 }
 
 
@@ -778,6 +815,43 @@ YoriCallGetYoriVersion(
         }
     }
     return pYoriApiGetYoriVersion(MajorVersion, MinorVersion);
+}
+
+/**
+ Prototype for the @ref YoriApiIncrementPromptRecursionDepth function.
+ */
+typedef BOOL YORI_API_INCREMENT_PROMPT_RECURSION_DEPTH();
+
+/**
+ Prototype for a pointer to the @ref YoriApiIncrementPromptRecursionDepth function.
+ */
+typedef YORI_API_INCREMENT_PROMPT_RECURSION_DEPTH *PYORI_API_INCREMENT_PROMPT_RECURSION_DEPTH;
+
+/**
+ Pointer to the @ref YoriApiIncrementPromptRecursionDepth function.
+ */
+PYORI_API_INCREMENT_PROMPT_RECURSION_DEPTH pYoriApiIncrementPromptRecursionDepth;
+
+/**
+ Increments the recursion depth that the prompt should display when the $+$
+ token is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriCallIncrementPromptRecursionDepth(
+    )
+{
+    if (pYoriApiIncrementPromptRecursionDepth == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiIncrementPromptRecursionDepth = (PYORI_API_INCREMENT_PROMPT_RECURSION_DEPTH)GetProcAddress(hYori, "YoriApiIncrementPromptRecursionDepth");
+        if (pYoriApiIncrementPromptRecursionDepth == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiIncrementPromptRecursionDepth();
 }
 
 /**
