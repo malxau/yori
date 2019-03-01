@@ -498,12 +498,17 @@ YoriLibLocateFileExtensionsInOnePath(
     //  Normally we'd build the search path, a seperator, and the file
     //  criteria.  If the search path is just an X: prefix though, we
     //  really don't want to add the seperator, which would completely
-    //  change the meaning of the request.
+    //  change the meaning of the request.  If the search path ends in
+    //  a seperator already, don't add another.
     //
 
     NeedsSeperator = TRUE;
     if (SearchPath->LengthInChars == 2 &&
         SearchPath->StartOfString[1] == ':') {
+
+        NeedsSeperator = FALSE;
+    } else if (SearchPath->LengthInChars > 0 &&
+               YoriLibIsSep(SearchPath->StartOfString[SearchPath->LengthInChars - 1])) {
 
         NeedsSeperator = FALSE;
     }
@@ -832,12 +837,23 @@ YoriLibPathLocateUnknownExtensionKnownLocation(
             FileNameToFind.LengthInChars = DirectoryToSearch.LengthInChars - PathSeperator - 1;
 
             //
-            //  If the seperator is a slash, remove it.  If it's a colon,
+            //  If the seperator is a slash, and it's in the middle of a
+            //  path specification, remove it.  If the seperator is a slash
+            //  but it indicates the root of a drive, or if it's a colon,
             //  retain it.
             //
 
             if (YoriLibIsSep(DirectoryToSearch.StartOfString[PathSeperator])) {
-                DirectoryToSearch.LengthInChars = PathSeperator;
+                if (PathSeperator == 2 &&
+                    YoriLibIsDriveLetterWithColonAndSlash(&DirectoryToSearch)) {
+
+                    DirectoryToSearch.LengthInChars = PathSeperator + 1;
+                } else if (PathSeperator == 6 &&
+                           YoriLibIsPrefixedDriveLetterWithColonAndSlash(&DirectoryToSearch)) {
+                    DirectoryToSearch.LengthInChars = PathSeperator + 1;
+                } else {
+                    DirectoryToSearch.LengthInChars = PathSeperator;
+                }
             } else {
                 DirectoryToSearch.LengthInChars = PathSeperator + 1;
             }
