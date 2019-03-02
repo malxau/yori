@@ -1183,6 +1183,28 @@ YoriLibExpandHomeSymbol(
         return TRUE;
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~APPDATA")) == 0) {
         return YoriLibExpandShellDirectory(CSIDL_APPDATA, ExpandedSymbol);
+    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~APPDIR")) == 0) {
+        LPTSTR FinalSlash;
+
+        //
+        //  Unlike most other Win32 APIs, this one has no way to indicate
+        //  how much space it needs.  We can be wasteful here though, since
+        //  it'll be freed immediately.
+        //
+
+        if (!YoriLibAllocateString(ExpandedSymbol, 32768)) {
+            return FALSE;
+        }
+
+        ExpandedSymbol->LengthInChars = GetModuleFileName(NULL, ExpandedSymbol->StartOfString, ExpandedSymbol->LengthAllocated);
+        FinalSlash = YoriLibFindRightMostCharacter(ExpandedSymbol, '\\');
+        if (FinalSlash == NULL) {
+            YoriLibFreeStringContents(ExpandedSymbol);
+            return FALSE;
+        }
+
+        ExpandedSymbol->LengthInChars = (DWORD)(FinalSlash - ExpandedSymbol->StartOfString);
+        return TRUE;
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~DESKTOP")) == 0) {
         return YoriLibExpandShellDirectory(CSIDL_DESKTOPDIRECTORY, ExpandedSymbol);
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~DOCUMENTS")) == 0) {
