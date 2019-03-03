@@ -72,8 +72,10 @@ YoriShInit()
     DWORD Count;
     YORI_SH_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
     YORI_STRING RelativeYoriInitName;
-    YORI_STRING ExpandedYoriInitName;
+    YORI_STRING ExpandedUserYoriInitName;
+    YORI_STRING ExpandedSystemYoriInitName;
     YORI_STRING FoundYoriInitName;
+    YORI_STRING InitNameWithQuotes;
 
     //
     //  Translate the constant builtin function mapping into dynamic function
@@ -207,35 +209,61 @@ YoriShInit()
     //
 
     YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit"));
-    YoriLibInitEmptyString(&ExpandedYoriInitName);
-    if (YoriLibExpandHomeDirectories(&RelativeYoriInitName, &ExpandedYoriInitName)) {
-
-        //
-        //  We need enough space for the base name, including path, plus
-        //  any matching extension.  256 is the worst case for a single
-        //  file component in Windows.
-        //
-
-        if (YoriLibAllocateString(&FoundYoriInitName, ExpandedYoriInitName.LengthInChars + 256)) {
-
-            //
-            //  Search for any matching YoriInit script, and if one is found,
-            //  execute it.
-            //
-
-            if (YoriLibPathLocateUnknownExtensionKnownLocation(&ExpandedYoriInitName, NULL, NULL, &FoundYoriInitName) && FoundYoriInitName.LengthInChars > 0) {
-                YORI_STRING InitNameWithQuotes;
-                YoriLibInitEmptyString(&InitNameWithQuotes);
-                YoriLibYPrintf(&InitNameWithQuotes, _T("\"%y\""), &FoundYoriInitName);
-                if (InitNameWithQuotes.LengthInChars > 0) {
-                    YoriShExecuteExpression(&InitNameWithQuotes);
-                }
-                YoriLibFreeStringContents(&InitNameWithQuotes);
-            }
-        }
-        YoriLibFreeStringContents(&FoundYoriInitName);
-        YoriLibFreeStringContents(&ExpandedYoriInitName);
+    YoriLibInitEmptyString(&ExpandedUserYoriInitName);
+    YoriLibInitEmptyString(&ExpandedSystemYoriInitName);
+    if (!YoriLibExpandHomeDirectories(&RelativeYoriInitName, &ExpandedUserYoriInitName)) {
+        return FALSE;
     }
+
+    YoriLibConstantString(&RelativeYoriInitName, _T("~AppDir\\YoriInit"));
+    if (!YoriLibExpandHomeDirectories(&RelativeYoriInitName, &ExpandedSystemYoriInitName)) {
+        YoriLibFreeStringContents(&ExpandedUserYoriInitName);
+        return FALSE;
+    }
+
+    if (ExpandedUserYoriInitName.LengthInChars > ExpandedSystemYoriInitName.LengthInChars) {
+        Count = ExpandedUserYoriInitName.LengthInChars;
+    } else {
+        Count = ExpandedSystemYoriInitName.LengthInChars;
+    }
+
+    //
+    //  We need enough space for the base name, including path, plus
+    //  any matching extension.  256 is the worst case for a single
+    //  file component in Windows.
+    //
+
+    Count = Count + 256;
+    if (!YoriLibAllocateString(&FoundYoriInitName, Count)) {
+        YoriLibFreeStringContents(&ExpandedUserYoriInitName);
+        YoriLibFreeStringContents(&ExpandedSystemYoriInitName);
+        return FALSE;
+    }
+
+
+    //
+    //  Search for any matching YoriInit script, and if one is found,
+    //  execute it.
+    //
+
+    YoriLibInitEmptyString(&InitNameWithQuotes);
+    if (YoriLibPathLocateUnknownExtensionKnownLocation(&ExpandedUserYoriInitName, NULL, NULL, &FoundYoriInitName) && FoundYoriInitName.LengthInChars > 0) {
+        YoriLibYPrintf(&InitNameWithQuotes, _T("\"%y\""), &FoundYoriInitName);
+        if (InitNameWithQuotes.LengthInChars > 0) {
+            YoriShExecuteExpression(&InitNameWithQuotes);
+        }
+        YoriLibFreeStringContents(&InitNameWithQuotes);
+    } else if (YoriLibPathLocateUnknownExtensionKnownLocation(&ExpandedSystemYoriInitName, NULL, NULL, &FoundYoriInitName) && FoundYoriInitName.LengthInChars > 0) {
+        YoriLibYPrintf(&InitNameWithQuotes, _T("\"%y\""), &FoundYoriInitName);
+        if (InitNameWithQuotes.LengthInChars > 0) {
+            YoriShExecuteExpression(&InitNameWithQuotes);
+        }
+        YoriLibFreeStringContents(&InitNameWithQuotes);
+    }
+
+    YoriLibFreeStringContents(&FoundYoriInitName);
+    YoriLibFreeStringContents(&ExpandedUserYoriInitName);
+    YoriLibFreeStringContents(&ExpandedSystemYoriInitName);
 
     return TRUE;
 }
