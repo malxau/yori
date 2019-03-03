@@ -1908,31 +1908,41 @@ YoriShFindAutoBreakSelectionRange(
     SHORT StartOffset;
     SHORT EndOffset;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    TCHAR ReadChar;
     COORD ReadPoint;
     DWORD CharsRead;
+    YORI_STRING LineBuffer;
 
     if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
         return FALSE;
     }
 
+    if (!YoriLibAllocateString(&LineBuffer, ScreenInfo.dwSize.X)) {
+        return FALSE;
+    }
+
     YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
 
-    ReadChar = ' ';
-    ReadPoint.X = InitialLocation.X;
+    //
+    //  Read the line that the user is selecting.
+    //
+
+    ReadPoint.X = 0;
     ReadPoint.Y = InitialLocation.Y;
+    if (!ReadConsoleOutputCharacter(ConsoleHandle, LineBuffer.StartOfString, ScreenInfo.dwSize.X, ReadPoint, &CharsRead)) {
+        YoriLibFreeStringContents(&BreakChars);
+        YoriLibFreeStringContents(&LineBuffer);
+        return FALSE;
+    }
+    LineBuffer.LengthInChars = CharsRead;
 
     //
     //  If the user double clicked on a break char, do nothing.
     //
 
-    if (!ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead)) {
+    if (InitialLocation.X >= (SHORT)LineBuffer.LengthInChars ||
+        YoriLibFindLeftMostCharacter(&BreakChars, LineBuffer.StartOfString[InitialLocation.X]) != NULL) {
         YoriLibFreeStringContents(&BreakChars);
-        return FALSE;
-    }
-
-    if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
-        YoriLibFreeStringContents(&BreakChars);
+        YoriLibFreeStringContents(&LineBuffer);
         return FALSE;
     }
 
@@ -1942,10 +1952,7 @@ YoriShFindAutoBreakSelectionRange(
 
     for (StartOffset = InitialLocation.X; StartOffset > 0; StartOffset--) {
         ReadPoint.X = (SHORT)(StartOffset - 1);
-        if (!ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead)) {
-            break;
-        }
-        if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+        if (YoriLibFindLeftMostCharacter(&BreakChars, LineBuffer.StartOfString[ReadPoint.X]) != NULL) {
             break;
         }
     }
@@ -1954,17 +1961,15 @@ YoriShFindAutoBreakSelectionRange(
     //  Navigate right to find end of line or next break char.
     //
 
-    for (EndOffset = InitialLocation.X; EndOffset < ScreenInfo.dwSize.X - 1; EndOffset++) {
+    for (EndOffset = InitialLocation.X; EndOffset < (SHORT)LineBuffer.LengthInChars - 1; EndOffset++) {
         ReadPoint.X = (SHORT)(EndOffset + 1);
-        if (!ReadConsoleOutputCharacter(ConsoleHandle, &ReadChar, 1, ReadPoint, &CharsRead)) {
-            break;
-        }
-        if (YoriLibFindLeftMostCharacter(&BreakChars, ReadChar) != NULL) {
+        if (YoriLibFindLeftMostCharacter(&BreakChars, LineBuffer.StartOfString[ReadPoint.X]) != NULL) {
             break;
         }
     }
 
     YoriLibFreeStringContents(&BreakChars);
+    YoriLibFreeStringContents(&LineBuffer);
 
     BeginRange->X = StartOffset;
     BeginRange->Y = InitialLocation.Y;
