@@ -4813,6 +4813,18 @@ DETACH_VIRTUAL_DISK(HANDLE, DWORD, DWORD);
 typedef DETACH_VIRTUAL_DISK *PDETACH_VIRTUAL_DISK;
 
 /**
+ A prototype for the GetVirtualDiskPhysicalPath function.
+ */
+typedef
+DWORD WINAPI
+GET_VIRTUAL_DISK_PHYSICAL_PATH(HANDLE, PDWORD, LPWSTR);
+
+/**
+ A prototype for a pointer to the GetVirtualDiskPhysicalPath function.
+ */
+typedef GET_VIRTUAL_DISK_PHYSICAL_PATH *PGET_VIRTUAL_DISK_PHYSICAL_PATH;
+
+/**
  A prototype for the OpenVirtualDisk function.
  */
 typedef
@@ -4844,6 +4856,11 @@ typedef struct _YORI_VIRTDISK_FUNCTIONS {
      If it's available on the current system, a pointer to DetachVirtualDisk.
      */
     PDETACH_VIRTUAL_DISK pDetachVirtualDisk;
+
+    /**
+     If it's available on the current system, a pointer to GetVirtualDiskPhysicalPath.
+     */
+    PGET_VIRTUAL_DISK_PHYSICAL_PATH pGetVirtualDiskPhysicalPath;
 
     /**
      If it's available on the current system, a pointer to OpenVirtualDisk.

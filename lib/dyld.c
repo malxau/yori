@@ -536,6 +536,7 @@ YoriLibLoadVirtDiskFunctions()
 
     DllVirtDisk.pAttachVirtualDisk = (PATTACH_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "AttachVirtualDisk");
     DllVirtDisk.pDetachVirtualDisk = (PDETACH_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "DetachVirtualDisk");
+    DllVirtDisk.pGetVirtualDiskPhysicalPath = (PGET_VIRTUAL_DISK_PHYSICAL_PATH)GetProcAddress(DllVirtDisk.hDll, "GetVirtualDiskPhysicalPath");
     DllVirtDisk.pOpenVirtualDisk = (POPEN_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "OpenVirtualDisk");
 
     return TRUE;

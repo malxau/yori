@@ -74,11 +74,15 @@ MountMountIso(
     ATTACH_VIRTUAL_DISK_PARAMETERS AttachParams;
     HANDLE StorHandle;
     DWORD Err;
+    DWORD Length;
+    LPTSTR ErrText;
     YORI_STRING FullFileName;
+    YORI_STRING DiskPhysicalPath;
 
     YoriLibLoadVirtDiskFunctions();
 
     if (DllVirtDisk.pAttachVirtualDisk == NULL ||
+        DllVirtDisk.pGetVirtualDiskPhysicalPath == NULL ||
         DllVirtDisk.pOpenVirtualDisk == NULL) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: OS support not present\n"));
@@ -98,7 +102,7 @@ MountMountIso(
 
     Err = DllVirtDisk.pOpenVirtualDisk(&StorageType, FullFileName.StartOfString, VIRTUAL_DISK_ACCESS_READ, OPEN_VIRTUAL_DISK_FLAG_NONE, &OpenParams, &StorHandle);
     if (Err != ERROR_SUCCESS) {
-        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: open of %y failed: %s"), &FullFileName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&FullFileName);
@@ -110,7 +114,7 @@ MountMountIso(
 
     Err = DllVirtDisk.pAttachVirtualDisk(StorHandle, NULL, ATTACH_VIRTUAL_DISK_FLAG_READ_ONLY | ATTACH_VIRTUAL_DISK_FLAG_PERMANENT_LIFETIME, 0, &AttachParams, NULL);
     if (Err != ERROR_SUCCESS) {
-        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: attach of %y failed: %s"), &FullFileName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         CloseHandle(StorHandle);
@@ -118,8 +122,28 @@ MountMountIso(
         return FALSE;
     }
 
-    CloseHandle(StorHandle);
     YoriLibFreeStringContents(&FullFileName);
+
+    if (!YoriLibAllocateString(&DiskPhysicalPath, 32768)) {
+        CloseHandle(StorHandle);
+        return FALSE;
+    }
+
+    Length = DiskPhysicalPath.LengthAllocated;
+    Err = DllVirtDisk.pGetVirtualDiskPhysicalPath(StorHandle, &Length, DiskPhysicalPath.StartOfString);
+    if (Err != ERROR_SUCCESS) {
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: query physical disk name failed: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        CloseHandle(StorHandle);
+        YoriLibFreeStringContents(&DiskPhysicalPath);
+        return FALSE;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Disk mounted as %s\n"), DiskPhysicalPath.StartOfString);
+    YoriLibFreeStringContents(&DiskPhysicalPath);
+
+    CloseHandle(StorHandle);
     return TRUE;
 }
 
@@ -145,16 +169,20 @@ MountMountVhd(
     ATTACH_VIRTUAL_DISK_PARAMETERS AttachParams;
     HANDLE StorHandle;
     DWORD Err;
+    DWORD Length;
     DWORD AccessRequested;
     YORI_STRING FullFileName;
     TOKEN_PRIVILEGES TokenPrivileges;
     LUID ManageVolumeLuid;
     HANDLE TokenHandle;
+    YORI_STRING DiskPhysicalPath;
+    LPTSTR ErrText;
 
     YoriLibLoadVirtDiskFunctions();
     YoriLibLoadAdvApi32Functions();
 
     if (DllVirtDisk.pAttachVirtualDisk == NULL ||
+        DllVirtDisk.pGetVirtualDiskPhysicalPath == NULL ||
         DllVirtDisk.pOpenVirtualDisk == NULL ||
         DllAdvApi32.pLookupPrivilegeValueW == NULL ||
         DllAdvApi32.pOpenProcessToken == NULL ||
@@ -203,7 +231,7 @@ MountMountVhd(
 
     Err = DllVirtDisk.pOpenVirtualDisk(&StorageType, FullFileName.StartOfString, AccessRequested, OPEN_VIRTUAL_DISK_FLAG_NONE, &OpenParams, &StorHandle);
     if (Err != ERROR_SUCCESS) {
-        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: open of %y failed: %s"), &FullFileName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&FullFileName);
@@ -220,7 +248,7 @@ MountMountVhd(
 
     Err = DllVirtDisk.pAttachVirtualDisk(StorHandle, NULL, AccessRequested, 0, &AttachParams, NULL);
     if (Err != ERROR_SUCCESS) {
-        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: attach of %y failed: %s"), &FullFileName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         CloseHandle(StorHandle);
@@ -228,8 +256,28 @@ MountMountVhd(
         return FALSE;
     }
 
-    CloseHandle(StorHandle);
     YoriLibFreeStringContents(&FullFileName);
+
+    if (!YoriLibAllocateString(&DiskPhysicalPath, 32768)) {
+        CloseHandle(StorHandle);
+        return FALSE;
+    }
+
+    Length = DiskPhysicalPath.LengthAllocated;
+    Err = DllVirtDisk.pGetVirtualDiskPhysicalPath(StorHandle, &Length, DiskPhysicalPath.StartOfString);
+    if (Err != ERROR_SUCCESS) {
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: query physical disk name failed: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        CloseHandle(StorHandle);
+        YoriLibFreeStringContents(&DiskPhysicalPath);
+        return FALSE;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Disk mounted as %s\n"), DiskPhysicalPath.StartOfString);
+    YoriLibFreeStringContents(&DiskPhysicalPath);
+
+    CloseHandle(StorHandle);
     return TRUE;
 }
 
