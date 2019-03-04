@@ -426,9 +426,10 @@ Exit:
         the caller should delete the file (it is temporary); set to FALSE to
         indicate the file should be retained.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @return ERROR_SUCCESS to indicate success, or other Win32 error to indicate
+         the type of failure.
  */
-BOOL
+DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,
@@ -437,7 +438,7 @@ YoriPkgPackagePathToLocalPath(
     )
 {
     YORI_STRING MirroredPath;
-    BOOL Result = FALSE;
+    DWORD Result = ERROR_SUCCESS;
 
     YoriLibInitEmptyString(&MirroredPath);
 
@@ -464,18 +465,21 @@ YoriPkgPackagePathToLocalPath(
 
         TempPath.LengthAllocated = GetTempPath(0, NULL);
         if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated)) {
+            Result = ERROR_NOT_ENOUGH_MEMORY;
             goto Exit;
         }
         TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
 
         if (!YoriLibAllocateString(&TempFileName, MAX_PATH)) {
             YoriLibFreeStringContents(&TempPath);
-            return FALSE;
+            Result = ERROR_NOT_ENOUGH_MEMORY;
+            goto Exit;
         }
 
         if (GetTempFileName(TempPath.StartOfString, _T("ypm"), 0, TempFileName.StartOfString) == 0) {
             YoriLibFreeStringContents(&TempPath);
             YoriLibFreeStringContents(&TempFileName);
+            Result = ERROR_NOT_ENOUGH_MEMORY;
             goto Exit;
         }
 
@@ -486,37 +490,96 @@ YoriPkgPackagePathToLocalPath(
         if (UserAgent.StartOfString == NULL) {
             YoriLibFreeStringContents(&TempPath);
             YoriLibFreeStringContents(&TempFileName);
+            Result = ERROR_NOT_ENOUGH_MEMORY;
             goto Exit;
         }
 
         Error = YoriLibUpdateBinaryFromUrl(MirroredPath.StartOfString, TempFileName.StartOfString, UserAgent.StartOfString, NULL);
 
         if (Error != YoriLibUpdErrorSuccess) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Network result: %s\n"), YoriLibUpdateErrorString(Error));
+            switch(Error) {
+                case YoriLibUpdErrorInetInit:
+                case YoriLibUpdErrorInetConnect:
+                case YoriLibUpdErrorInetRead:
+                case YoriLibUpdErrorInetContents:
+                    Result = ERROR_NO_NETWORK;
+                    break;
+                case YoriLibUpdErrorFileWrite:
+                case YoriLibUpdErrorFileReplace:
+                    Result = ERROR_WRITE_FAULT;
+                    break;
+                default:
+                    Result = ERROR_NOT_SUPPORTED;
+                    break;
+            }
         }
 
         YoriLibFreeStringContents(&TempPath);
         YoriLibFreeStringContents(&UserAgent);
 
-        if (Error != YoriLibUpdErrorSuccess) {
+        if (Result != ERROR_SUCCESS) {
             YoriLibFreeStringContents(&TempFileName);
             goto Exit;
         }
 
         memcpy(LocalPath, &TempFileName, sizeof(YORI_STRING));
         *DeleteWhenFinished = TRUE;
-        Result = TRUE;
 
     } else {
         *DeleteWhenFinished = FALSE;
         YoriLibCloneString(LocalPath, &MirroredPath);
-        Result = TRUE;
     }
 
 Exit:
 
     YoriLibFreeStringContents(&MirroredPath);
     return Result;
+}
+
+/**
+ Display the best available error text given an installation failure with the
+ specified Win32 error code.
+
+ @param ErrorCode The error code to display a message for.
+ */
+VOID
+YoriPkgDisplayErrorStringForInstallFailure(
+    __in DWORD ErrorCode
+    )
+{
+    LPTSTR ErrText;
+    YORI_STRING AdminName;
+    BOOL RunningAsAdmin = FALSE;
+
+    switch(ErrorCode) {
+        case ERROR_ALREADY_ASSIGNED:
+            //
+            //  This error means "we already told the user about it in a
+            //  more specific way so please do nothing later."
+            //
+            break;
+        case ERROR_WRITE_FAULT:
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not write to temporary directory.\n"));
+            break;
+        case ERROR_NO_NETWORK:
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not download package from the network.\n"));
+            break;
+        case ERROR_ACCESS_DENIED:
+            YoriLibConstantString(&AdminName, _T("Administrators"));
+            YoriLibIsCurrentUserInGroup(&AdminName, &RunningAsAdmin);
+            if (RunningAsAdmin) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Access denied when writing to files.\n"));
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Not running as Administrator and could not write to files.  Perhaps elevation is required?\n"));
+            }
+            break;
+
+        default:
+            ErrText = YoriLibGetWinErrorText(ErrorCode);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Installation failed: %s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+
+    }
 }
 
 // vim:sw=4:ts=4:et:

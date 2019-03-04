@@ -384,7 +384,7 @@ YoriPkgCollectPackagesFromSource(
     YoriLibInitEmptyString(&IniValue);
     YoriLibInitEmptyString(&PkgVersion);
 
-    if (!YoriPkgPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished)) {
+    if (YoriPkgPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished) != ERROR_SUCCESS) {
         goto Exit;
     }
 

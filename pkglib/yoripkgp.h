@@ -276,12 +276,17 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     __inout PYORI_STRING UpgradePath
     );
 
-BOOL
+DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
     __out PBOOL DeleteWhenFinished
+    );
+
+VOID
+YoriPkgDisplayErrorStringForInstallFailure(
+    __in DWORD ErrorCode
     );
 
 VOID
@@ -295,7 +300,7 @@ YoriPkgRollbackPackage(
     __in PYORIPKG_BACKUP_PACKAGE PackageBackup
     );
 
-BOOL
+DWORD
 YoriPkgBackupPackage(
     __in PYORI_STRING IniPath,
     __in PYORI_STRING PackageName,
@@ -336,7 +341,7 @@ YoriPkgDeletePendingPackages(
     __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
     );
 
-BOOL
+DWORD
 YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,

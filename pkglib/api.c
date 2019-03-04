@@ -49,6 +49,7 @@ YoriPkgUpgradeInstalledPackages(
     YORI_STRING PkgNameOnly;
     YORI_STRING UpgradePath;
     DWORD LineLength;
+    DWORD Error;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
@@ -99,7 +100,9 @@ YoriPkgUpgradeInstalledPackages(
             if (YoriLibIsPathUrl(&UpgradePath)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &UpgradePath);
             }
-            if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &UpgradePath)) {
+            Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &UpgradePath);
+            if (Error != ERROR_SUCCESS) {
+                YoriPkgDisplayErrorStringForInstallFailure(Error);
                 goto Exit;
             }
         }
@@ -155,6 +158,7 @@ YoriPkgUpgradeSinglePackage(
     YORI_STRING PkgIniFile;
     YORI_STRING IniValue;
     BOOL Result;
+    DWORD Error;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
     if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
@@ -199,7 +203,9 @@ YoriPkgUpgradeSinglePackage(
     if (YoriLibIsPathUrl(&IniValue)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &IniValue);
     }
-    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue)) {
+    Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue);
+    if (Error != ERROR_SUCCESS) {
+        YoriPkgDisplayErrorStringForInstallFailure(Error);
         goto Exit;
     }
 
@@ -237,6 +243,7 @@ YoriPkgInstallSinglePackage(
 {
     YORI_STRING PkgIniFile;
     BOOL Result;
+    DWORD Error;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
     if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
@@ -252,7 +259,9 @@ YoriPkgInstallSinglePackage(
     if (YoriLibIsPathUrl(PackagePath)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), PackagePath);
     }
-    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, TargetDirectory, &PendingPackages, PackagePath)) {
+    Error = YoriPkgPreparePackageForInstall(&PkgIniFile, TargetDirectory, &PendingPackages, PackagePath);
+    if (Error != ERROR_SUCCESS) {
+        YoriPkgDisplayErrorStringForInstallFailure(Error);
         goto Exit;
     }
 
@@ -287,6 +296,7 @@ YoriPkgInstallSourceForInstalledPackages(
     YORI_STRING PkgNameOnly;
     YORI_STRING SourcePath;
     DWORD LineLength;
+    DWORD Error;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
@@ -334,7 +344,9 @@ YoriPkgInstallSourceForInstalledPackages(
             if (YoriLibIsPathUrl(&SourcePath)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading source for %y from %y...\n"), &PkgNameOnly, &SourcePath);
             }
-            if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &SourcePath)) {
+            Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &SourcePath);
+            if (Error != ERROR_SUCCESS) {
+                YoriPkgDisplayErrorStringForInstallFailure(Error);
                 goto Exit;
             }
         }
@@ -386,6 +398,7 @@ YoriPkgInstallSourceForSinglePackage(
     YORI_STRING PkgIniFile;
     YORI_STRING IniValue;
     BOOL Result;
+    DWORD Error;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
     if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
@@ -426,7 +439,9 @@ YoriPkgInstallSourceForSinglePackage(
     if (YoriLibIsPathUrl(&IniValue)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &IniValue);
     }
-    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue)) {
+    Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue);
+    if (Error != ERROR_SUCCESS) {
+        YoriPkgDisplayErrorStringForInstallFailure(Error);
         goto Exit;
     }
 
@@ -462,6 +477,7 @@ YoriPkgInstallSymbolsForInstalledPackages(
     YORI_STRING SymbolPath;
     DWORD LineLength;
     DWORD TotalCount;
+    DWORD Error;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
@@ -510,7 +526,9 @@ YoriPkgInstallSymbolsForInstalledPackages(
             if (YoriLibIsPathUrl(&SymbolPath)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading symbols for %y from %y...\n"), &PkgNameOnly, &SymbolPath);
             }
-            if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &SymbolPath)) {
+            Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &SymbolPath);
+            if (Error != ERROR_SUCCESS) {
+                YoriPkgDisplayErrorStringForInstallFailure(Error);
                 goto Exit;
             }
             TotalCount++;
@@ -562,6 +580,7 @@ YoriPkgInstallSymbolForSinglePackage(
 {
     YORI_STRING PkgIniFile;
     YORI_STRING IniValue;
+    DWORD Error;
     BOOL Result;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
@@ -603,7 +622,9 @@ YoriPkgInstallSymbolForSinglePackage(
     if (YoriLibIsPathUrl(&IniValue)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &IniValue);
     }
-    if (!YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue)) {
+    Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &IniValue);
+    if (Error != ERROR_SUCCESS) {
+        YoriPkgDisplayErrorStringForInstallFailure(Error);
         goto Exit;
     }
 

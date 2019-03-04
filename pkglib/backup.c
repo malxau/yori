@@ -248,10 +248,10 @@ YoriPkgRollbackPackage(
         structure indicating the files that have been backed up and all of the
         associated INI entries needed to restore it.
 
- @return TRUE to indicate the package has been successfully backed up, FALSE
-         to indicate that the package could not be backed up successfully.
+ @return ERROR_SUCCESS to indicate the package has been successfully backed
+         up, or a Win32 error code indicating the reason for any failure.
  */
-BOOL
+DWORD
 YoriPkgBackupPackage(
     __in PYORI_STRING IniPath,
     __in PYORI_STRING PackageName,
@@ -264,11 +264,12 @@ YoriPkgBackupPackage(
     YORI_STRING FullTargetDirectory;
     YORI_STRING IniValue;
     DWORD FileIndex;
+    DWORD Err;
     TCHAR FileIndexString[16];
 
     Context = YoriLibMalloc(sizeof(YORIPKG_BACKUP_PACKAGE));
     if (Context == NULL) {
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     ZeroMemory(Context, sizeof(YORIPKG_BACKUP_PACKAGE));
@@ -279,19 +280,19 @@ YoriPkgBackupPackage(
     if (TargetDirectory != NULL) {
         if (!YoriLibUserStringToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
             YoriLibFree(Context);
-            return FALSE;
+            return ERROR_NOT_ENOUGH_MEMORY;
         }
     } else {
         if (!YoriPkgGetApplicationDirectory(&FullTargetDirectory)) {
             YoriLibFree(Context);
-            return FALSE;
+            return ERROR_NOT_ENOUGH_MEMORY;
         }
     }
 
     if (!YoriLibAllocateString(&Context->PackageName, PackageName->LengthInChars + 1)) {
         YoriLibFreeStringContents(&FullTargetDirectory);
         YoriLibFree(Context);
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     memcpy(Context->PackageName.StartOfString, PackageName->StartOfString, PackageName->LengthInChars * sizeof(TCHAR));
@@ -301,20 +302,21 @@ YoriPkgBackupPackage(
     if (!YoriPkgGetInstalledPackageInfo(IniPath, &Context->PackageName, &Context->Version, &Context->Architecture, &Context->UpgradePath, &Context->SourcePath, &Context->SymbolPath)) {
         YoriLibFreeStringContents(&FullTargetDirectory);
         YoriPkgFreeBackupPackage(Context);
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     Context->FileCount = GetPrivateProfileInt(Context->PackageName.StartOfString, _T("FileCount"), 0, IniPath->StartOfString);
     if (Context->FileCount == 0) {
+        Err = GetLastError();
         YoriLibFreeStringContents(&FullTargetDirectory);
         YoriPkgFreeBackupPackage(Context);
-        return FALSE;
+        return Err;
     }
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         YoriLibFreeStringContents(&FullTargetDirectory);
         YoriPkgFreeBackupPackage(Context);
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     for (FileIndex = 1; FileIndex <= Context->FileCount; FileIndex++) {
@@ -326,7 +328,7 @@ YoriPkgBackupPackage(
             YoriLibFreeStringContents(&FullTargetDirectory);
             YoriLibFreeStringContents(&IniValue);
             YoriPkgFreeBackupPackage(Context);
-            return FALSE;
+            return ERROR_NOT_ENOUGH_MEMORY;
         }
 
         ZeroMemory(BackupFile, sizeof(YORIPKG_BACKUP_FILE));
@@ -340,7 +342,7 @@ YoriPkgBackupPackage(
             YoriLibFreeStringContents(&IniValue);
             YoriLibDereference(BackupFile);
             YoriPkgFreeBackupPackage(Context);
-            return FALSE;
+            return ERROR_NOT_ENOUGH_MEMORY;
         }
 
         YoriLibInitEmptyString(&BackupFile->OriginalRelativeName);
@@ -348,14 +350,17 @@ YoriPkgBackupPackage(
         BackupFile->OriginalRelativeName.LengthInChars = BackupFile->OriginalName.LengthInChars - FullTargetDirectory.LengthInChars - 1;
         BackupFile->OriginalRelativeName.LengthAllocated = BackupFile->OriginalName.LengthAllocated - FullTargetDirectory.LengthInChars - 1;
 
-        if (!YoriLibRenameFileToBackupName(&BackupFile->OriginalName, &BackupFile->BackupName) && GetLastError() != ERROR_FILE_NOT_FOUND) {
-            YoriPkgRollbackRenamedFiles(IniPath, Context, FALSE);
-            YoriLibFreeStringContents(&BackupFile->OriginalName);
-            YoriLibFreeStringContents(&FullTargetDirectory);
-            YoriLibFreeStringContents(&IniValue);
-            YoriLibDereference(BackupFile);
-            YoriPkgFreeBackupPackage(Context);
-            return FALSE;
+        if (!YoriLibRenameFileToBackupName(&BackupFile->OriginalName, &BackupFile->BackupName)) {
+            Err = GetLastError();
+            if (Err != ERROR_FILE_NOT_FOUND) {
+                YoriPkgRollbackRenamedFiles(IniPath, Context, FALSE);
+                YoriLibFreeStringContents(&BackupFile->OriginalName);
+                YoriLibFreeStringContents(&FullTargetDirectory);
+                YoriLibFreeStringContents(&IniValue);
+                YoriLibDereference(BackupFile);
+                YoriPkgFreeBackupPackage(Context);
+                return Err;
+            }
         }
 
         YoriLibAppendList(&Context->FileList, &BackupFile->ListEntry);
@@ -365,7 +370,7 @@ YoriPkgBackupPackage(
     YoriLibFreeStringContents(&IniValue);
 
     *PackageBackup = Context;
-    return TRUE;
+    return ERROR_SUCCESS;
 }
 
 /**
@@ -735,7 +740,7 @@ YoriPkgDeletePendingPackages(
 
  @return TRUE to indicate success, or FALSE to indicate failure.
  */
-BOOL
+DWORD
 YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,
@@ -754,18 +759,19 @@ YoriPkgPreparePackageForInstall(
     LPTSTR ThisLine;
     LPTSTR Equals;
     PYORIPKG_BACKUP_PACKAGE BackupPackage;
-    BOOL Result = FALSE;
+    DWORD Result = ERROR_SUCCESS;
 
     YoriLibConstantString(&PkgInfoFile, _T("pkginfo.ini"));
 
     PendingPackage = YoriLibMalloc(sizeof(YORIPKG_PACKAGE_PENDING_INSTALL));
     if (PendingPackage == NULL) {
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
     ZeroMemory(PendingPackage, sizeof(YORIPKG_PACKAGE_PENDING_INSTALL));
-    if (!YoriPkgPackagePathToLocalPath(PackageUrl, PkgIniFile, &PendingPackage->LocalPackagePath, &PendingPackage->DeleteLocalPackagePath)) {
+    Result = YoriPkgPackagePathToLocalPath(PackageUrl, PkgIniFile, &PendingPackage->LocalPackagePath, &PendingPackage->DeleteLocalPackagePath);
+    if (Result != ERROR_SUCCESS) {
         YoriLibFree(PendingPackage);
-        return FALSE;
+        return Result;
     }
 
     YoriLibInitEmptyString(&TempPath);
@@ -776,6 +782,7 @@ YoriPkgPreparePackageForInstall(
 
     TempPath.LengthAllocated = GetTempPath(0, NULL);
     if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated + PkgInfoFile.LengthInChars + 1)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
     TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
@@ -786,8 +793,8 @@ YoriPkgPreparePackageForInstall(
 
     YoriLibInitEmptyString(&ErrorString);
     if (!YoriLibExtractCab(&PendingPackage->LocalPackagePath, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, NULL, &ErrorString)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), &PendingPackage->LocalPackagePath, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
+        Result = ERROR_WRITE_FAULT;
         goto Exit;
     }
 
@@ -805,6 +812,7 @@ YoriPkgPreparePackageForInstall(
                                &PendingPackage->UpgradePath,
                                &PendingPackage->SourcePath,
                                &PendingPackage->SymbolPath)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
@@ -814,6 +822,7 @@ YoriPkgPreparePackageForInstall(
     //
 
     if (!YoriLibAllocateString(&PkgInstalled, YORIPKG_MAX_FIELD_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
@@ -826,7 +835,7 @@ YoriPkgPreparePackageForInstall(
     if (YoriLibCompareString(&PkgInstalled, &PendingPackage->Version) == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y version %y is already installed\n"), &PendingPackage->PackageName, &PendingPackage->Version);
         YoriLibFreeStringContents(&PkgInstalled);
-        Result = TRUE;
+        Result = ERROR_SUCCESS;
         goto Exit;
     }
 
@@ -836,7 +845,9 @@ YoriPkgPreparePackageForInstall(
     //
 
     if (PkgInstalled.LengthInChars > 0) {
-        if (!YoriPkgBackupPackage(PkgIniFile, &PendingPackage->PackageName, TargetDirectory, &BackupPackage)) {
+        Result = YoriPkgBackupPackage(PkgIniFile, &PendingPackage->PackageName, TargetDirectory, &BackupPackage);
+        if (Result != ERROR_SUCCESS) {
+            YoriLibFreeStringContents(&PkgInstalled);
             goto Exit;
         }
         YoriPkgRemoveSystemReferencesToPackage(PkgIniFile, BackupPackage);
@@ -850,6 +861,7 @@ YoriPkgPreparePackageForInstall(
 
     if (!YoriLibAllocateString(&ReplacesList, YORIPKG_MAX_SECTION_LENGTH)) {
         YoriLibFreeStringContents(&PkgInstalled);
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
@@ -875,7 +887,8 @@ YoriPkgPreparePackageForInstall(
 
         PkgInstalled.LengthInChars = GetPrivateProfileString(_T("Installed"), PkgToReplace.StartOfString, _T(""), PkgInstalled.StartOfString, PkgInstalled.LengthAllocated, PkgIniFile->StartOfString);
         if (PkgInstalled.LengthInChars > 0) {
-            if (!YoriPkgBackupPackage(PkgIniFile, &PkgToReplace, TargetDirectory, &BackupPackage)) {
+            Result = YoriPkgBackupPackage(PkgIniFile, &PkgToReplace, TargetDirectory, &BackupPackage);
+            if (Result != ERROR_SUCCESS) {
                 YoriLibFreeStringContents(&ReplacesList);
                 goto Exit;
             }
@@ -891,7 +904,7 @@ YoriPkgPreparePackageForInstall(
     YoriLibFreeStringContents(&TempPath);
 
     YoriLibAppendList(&PackageList->PackageList, &PendingPackage->PackageList);
-    return TRUE;
+    return ERROR_SUCCESS;
 
 Exit:
 
