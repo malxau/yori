@@ -576,7 +576,7 @@ YoriPkgDisplayErrorStringForInstallFailure(
 
         default:
             ErrText = YoriLibGetWinErrorText(ErrorCode);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Installation failed: %s"), ErrText);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%s"), ErrText);
             YoriLibFreeWinErrorText(ErrText);
 
     }

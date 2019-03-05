@@ -356,9 +356,10 @@ Exit:
  @param SourcesList Pointer to a list of sources to update with any new
         sources to check.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @return ERROR_SUCCESS to indicate packages were collected from source,
+         or a Win32 error code indicating the reason for any failure.
  */
-BOOL
+DWORD
 YoriPkgCollectPackagesFromSource(
     __in PYORIPKG_REMOTE_SOURCE Source,
     __in PYORI_STRING PackagesIni,
@@ -377,26 +378,30 @@ YoriPkgCollectPackagesFromSource(
     LPTSTR Equals;
     LPTSTR KnownArchitectures[] = {_T("noarch"), _T("win32"), _T("amd64")};
     DWORD ArchIndex;
-    BOOL Result = FALSE;
+    DWORD Result;
 
     YoriLibInitEmptyString(&LocalPath);
     YoriLibInitEmptyString(&ProvidesSection);
     YoriLibInitEmptyString(&IniValue);
     YoriLibInitEmptyString(&PkgVersion);
 
-    if (YoriPkgPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished) != ERROR_SUCCESS) {
+    Result = YoriPkgPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished);
+    if (Result != ERROR_SUCCESS) {
         goto Exit;
     }
 
     if (!YoriLibAllocateString(&ProvidesSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
     if (!YoriLibAllocateString(&PkgVersion, YORIPKG_MAX_FIELD_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
 
@@ -437,10 +442,9 @@ YoriPkgCollectPackagesFromSource(
     }
 
     if (!YoriPkgCollectSourcesFromIni(&LocalPath, SourcesList)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
-
-    Result = TRUE;
 
 Exit:
     if (DeleteWhenFinished) {
@@ -480,6 +484,7 @@ YoriPkgCollectAllSourcesAndPackages(
     YORI_STRING PackagesIni;
     PYORI_LIST_ENTRY SourceEntry;
     PYORIPKG_REMOTE_SOURCE Source;
+    DWORD Result;
 
     YoriLibInitializeListHead(PackageList);
     YoriLibInitializeListHead(SourcesList);
@@ -520,7 +525,11 @@ YoriPkgCollectAllSourcesAndPackages(
     SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     while (SourceEntry != NULL) {
         Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
-        YoriPkgCollectPackagesFromSource(Source, &PackagesIni, PackageList, SourcesList);
+        Result = YoriPkgCollectPackagesFromSource(Source, &PackagesIni, PackageList, SourcesList);
+        if (Result != ERROR_SUCCESS) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error obtaining package list from %y: "), &Source->SourceRootUrl);
+            YoriPkgDisplayErrorStringForInstallFailure(Result);
+        }
         SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     }
 
@@ -844,6 +853,7 @@ YoriPkgInstallRemotePackages(
     YORI_STRING IniFile;
     YORI_STRING IniValue;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
+    DWORD Error;
 
     if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
         return FALSE;
@@ -888,7 +898,9 @@ YoriPkgInstallRemotePackages(
         if (YoriLibIsPathUrl(&Package->InstallUrl)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &Package->InstallUrl);
         }
-        if (!YoriPkgPreparePackageForInstall(&IniFile, NewDirectory, &PendingPackages, &Package->InstallUrl)) {
+        Error = YoriPkgPreparePackageForInstall(&IniFile, NewDirectory, &PendingPackages, &Package->InstallUrl);
+        if (Error != ERROR_SUCCESS) {
+            YoriPkgDisplayErrorStringForInstallFailure(Error);
             goto Exit;
         }
 
