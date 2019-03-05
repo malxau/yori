@@ -113,8 +113,34 @@ YoriShInit()
 
     if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDITBREAKCHARS"), NULL, 0) == 0) {
         YORI_STRING BreakChars;
+        YORI_STRING ExpandedBreakChars;
         YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
-        SetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars.StartOfString);
+        if (YoriLibAllocateString(&ExpandedBreakChars, BreakChars.LengthInChars * 7)) {
+            DWORD ReadIndex;
+            DWORD WriteIndex;
+            YORI_STRING Substring;
+
+            WriteIndex = 0;
+            YoriLibInitEmptyString(&Substring);
+            for (ReadIndex = 0; ReadIndex < BreakChars.LengthInChars; ReadIndex++) {
+                Substring.StartOfString = &ExpandedBreakChars.StartOfString[WriteIndex];
+                Substring.LengthAllocated = ExpandedBreakChars.LengthAllocated - WriteIndex;
+                if (BreakChars.StartOfString[ReadIndex] <= 0xFF) {
+                    Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, _T("0x%02x,"), BreakChars.StartOfString[ReadIndex]);
+                } else {
+                    Substring.LengthInChars = YoriLibSPrintf(Substring.StartOfString, _T("0x%04x,"), BreakChars.StartOfString[ReadIndex]);
+                }
+
+                WriteIndex += Substring.LengthInChars;
+            }
+
+            if (WriteIndex > 0) {
+                WriteIndex--;
+                ExpandedBreakChars.StartOfString[WriteIndex] = '\0';
+            }
+            SetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), ExpandedBreakChars.StartOfString);
+            YoriLibFreeStringContents(&ExpandedBreakChars);
+        }
         YoriLibFreeStringContents(&BreakChars);
     }
 

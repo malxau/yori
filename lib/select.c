@@ -1364,6 +1364,10 @@ YoriLibGetSelectionDoubleClickBreakChars(
     __out PYORI_STRING BreakChars
     )
 {
+    DWORD WriteIndex;
+    DWORD ReadIndex;
+    YORI_STRING Substring;
+
     YoriLibInitEmptyString(BreakChars);
     if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDITBREAKCHARS"), BreakChars) || BreakChars->LengthInChars == 0) {
 
@@ -1374,7 +1378,42 @@ YoriLibGetSelectionDoubleClickBreakChars(
         //
 
         YoriLibConstantString(BreakChars, _T(" '[]<>|\x2500\x2502\x252c\x2534\x00BB"));
+        return TRUE;
     }
+
+    ReadIndex = 0;
+    WriteIndex = 0;
+    YoriLibInitEmptyString(&Substring);
+
+    for (ReadIndex = 0; ReadIndex < BreakChars->LengthInChars; ReadIndex++) {
+        if (ReadIndex + 1 < BreakChars->LengthInChars &&
+            BreakChars->StartOfString[ReadIndex] == '0' &&
+            BreakChars->StartOfString[ReadIndex + 1] == 'x') {
+
+            DWORD CharsConsumed;
+            LONGLONG Number;
+
+            Substring.StartOfString = &BreakChars->StartOfString[ReadIndex];
+            Substring.LengthInChars = BreakChars->LengthInChars - ReadIndex;
+
+            if (YoriLibStringToNumber(&Substring, FALSE, &Number, &CharsConsumed) &&
+                CharsConsumed > 0 &&
+                Number <= 0xFFFF) {
+
+                BreakChars->StartOfString[WriteIndex] = (TCHAR)Number;
+                WriteIndex++;
+                ReadIndex += CharsConsumed;
+            }
+        } else {
+            if (ReadIndex != WriteIndex) {
+                BreakChars->StartOfString[WriteIndex] = BreakChars->StartOfString[ReadIndex];
+            }
+            WriteIndex++;
+        }
+    }
+
+    BreakChars->LengthInChars = WriteIndex;
+
     return TRUE;
 }
 
