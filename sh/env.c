@@ -89,6 +89,13 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
             Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("%i"), YoriShGlobal.PreviousJobId);
             Length++;
         }
+    } else if (tcsicmp(Name, _T("YORIPID")) == 0) {
+        if (Variable != NULL) {
+            Length = YoriLibSPrintfS(Variable, Size, _T("0x%x"), GetCurrentProcessId());
+        } else {
+            Length = YoriLibSPrintfS(NumString, sizeof(NumString)/sizeof(NumString[0]), _T("0x%x"), GetCurrentProcessId());
+            Length++;
+        }
     } else {
         Length = GetEnvironmentVariable(Name, Variable, Size);
     }
