@@ -186,6 +186,14 @@ YoriShDisplayPrompt()
     PYORI_STRING StringToUse;
     DWORD SavedErrorLevel = YoriShGlobal.ErrorLevel;
 
+
+    //
+    //  Don't update taskbar UI while executing processes executed as part of
+    //  the prompt or title
+    //
+
+    YoriShGlobal.SuppressTaskUi = TRUE;
+
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0);
     if (EnvVarLength > 0) {
         if (YoriLibAllocateString(&PromptVar, EnvVarLength)) {
@@ -336,6 +344,8 @@ YoriShDisplayPrompt()
             YoriLibFreeStringContents(&PromptVar);
         }
     }
+
+    YoriShGlobal.SuppressTaskUi = FALSE;
 
     //
     //  Restore the error level since the prompt or title may execute

@@ -757,13 +757,31 @@ typedef struct _YORI_SH_GLOBALS {
      When set to TRUE, the process should end rather than seek another
      command.
      */
-    BOOL ExitProcess;
+    BOOLEAN ExitProcess;
 
     /**
      When set to TRUE, indicates this process has been spawned as a subshell
      to execute builtin commands from a monolithic shell.
      */
-    BOOL SubShell;
+    BOOLEAN SubShell;
+
+    /**
+     Set to TRUE once the process has initialized COM.
+     */
+    BOOLEAN InitializedCom;
+
+    /**
+     Set to TRUE if the process has set the taskbar button to any non-default
+     state.
+     */
+    BOOLEAN TaskUiActive;
+
+    /**
+     Set to TRUE to ignore any task UI state updates.  This is set when
+     executing programs as part of the prompt or title, since they're not
+     tasks the user is really waiting on.
+     */
+    BOOLEAN SuppressTaskUi;
 
 } YORI_SH_GLOBALS, *PYORI_SH_GLOBALS;
 
