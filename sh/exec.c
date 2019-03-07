@@ -802,7 +802,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
 
             YORI_STRING EnvString;
             if (YoriShSuckEnv(ExecContext->hProcess, &EnvString)) {
-                YoriLibSetEnvironmentStrings(&EnvString);
+                YoriShSetEnvironmentStrings(&EnvString);
                 YoriLibFreeStringContents(&EnvString);
             }
         }
@@ -1322,7 +1322,7 @@ YoriShExecViaSubshell(
     YORI_STRING PathToYori;
 
     YoriLibInitEmptyString(&PathToYori);
-    if (YoriShAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &PathToYori)) {
+    if (YoriShAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &PathToYori, NULL)) {
 
         YoriShGlobal.ErrorLevel = YoriShBuckPass(ExecContext, 2, PathToYori.StartOfString, _T("/ss"));
         YoriLibFreeStringContents(&PathToYori);

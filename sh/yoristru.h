@@ -544,22 +544,6 @@ typedef struct _YORI_SH_INPUT_BUFFER {
     YORILIB_SELECTION Mouseover;
 
     /**
-     Delay before suggesting values in milliseconds.
-     */
-    DWORD DelayBeforeSuggesting;
-
-    /**
-     Minimum number of characters in an arg before suggesting.
-     */
-    DWORD MinimumCharsInArgBeforeSuggesting;
-
-    /**
-     Set to TRUE to disable the console's quickedit before inputting
-     commands and enable it before executing them.
-     */
-    BOOL YoriQuickEdit;
-
-    /**
      Extra information specific to tab completion processing.
      */
     YORI_SH_TAB_COMPLETE_CONTEXT TabContext;
@@ -593,16 +577,6 @@ typedef struct _YORI_SH_INPUT_BUFFER {
      */
     YORI_STRING SearchString;
 
-    /**
-     TRUE if mouseover support is enabled, FALSE if it is disabled.  Note this
-     is currently enabled by default.
-     */
-    BOOL MouseoverEnabled;
-
-    /**
-     The Win32 color to use when changing text color due to a mouse over.
-     */
-    WORD MouseoverColor;
 
 } YORI_SH_INPUT_BUFFER, *PYORI_SH_INPUT_BUFFER;
 
@@ -744,6 +718,30 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD PromptRecursionDepth;
 
     /**
+     The current revision number of the environment variables in the process.
+     This is incremented whenever a change occurs to the environment which
+     may imply that cached state about shell behavior needs to be reloaded.
+     */
+    DWORD EnvironmentGeneration;
+
+    /**
+     The number of ms to wait before suggesting the completion to a command.
+     */
+    DWORD DelayBeforeSuggesting;
+
+    /**
+     The minimum number of characters that the user must enter before
+     suggestions occur.
+     */
+    DWORD MinimumCharsInArgBeforeSuggesting;
+
+    /**
+     The generation of the environment last time input parameters were
+     refreshed.
+     */
+    DWORD InputParamsGeneration;
+
+    /**
      List of command history.
      */
     YORI_LIST_ENTRY CommandHistory;
@@ -752,6 +750,26 @@ typedef struct _YORI_SH_GLOBALS {
      List of builtin callbacks currently registered with Yori.
      */
     YORI_LIST_ENTRY BuiltinCallbacks;
+
+    /**
+     The contents of the YORIPROMPT environment variable.
+     */
+    YORI_STRING PromptVariable;
+
+    /**
+     The generation of the environment at the time the variable was queried.
+     */
+    DWORD PromptGeneration;
+
+    /**
+     The contents of the YORITITLE environment variable.
+     */
+    YORI_STRING TitleVariable;
+
+    /**
+     The generation of the environment at the time the variable was queried.
+     */
+    DWORD TitleGeneration;
 
     /**
      When set to TRUE, the process should end rather than seek another
@@ -782,6 +800,23 @@ typedef struct _YORI_SH_GLOBALS {
      tasks the user is really waiting on.
      */
     BOOLEAN SuppressTaskUi;
+
+    /**
+     Set to TRUE to disable the console's quickedit before inputting
+     commands and enable it before executing them.
+     */
+    BOOLEAN YoriQuickEdit;
+
+    /**
+     TRUE if mouseover support is enabled, FALSE if it is disabled.  Note this
+     is currently enabled by default.
+     */
+    BOOL MouseoverEnabled;
+
+    /**
+     The Win32 color to use when changing text color due to a mouse over.
+     */
+    WORD MouseoverColor;
 
 } YORI_SH_GLOBALS, *PYORI_SH_GLOBALS;
 

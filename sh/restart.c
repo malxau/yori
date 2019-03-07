@@ -104,7 +104,7 @@ YoriShSaveRestartState()
     //  If the user hasn't opted in by setting YORIAUTORESTART, do nothing.
     //
 
-    Count = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"), NULL, 0);
+    Count = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"), NULL, 0, NULL);
     if (Count == 0) {
         return FALSE;
     }
@@ -114,7 +114,7 @@ YoriShSaveRestartState()
         return FALSE;
     }
 
-    RestartFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"), RestartFileName.StartOfString, RestartFileName.LengthAllocated);
+    RestartFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"), RestartFileName.StartOfString, RestartFileName.LengthAllocated, NULL);
     if (RestartFileName.LengthInChars == 0) {
         YoriLibFreeStringContents(&RestartFileName);
         return FALSE;

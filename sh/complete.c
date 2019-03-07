@@ -1205,7 +1205,7 @@ YoriShResolveTabCompletionActionForExecutable(
     //  may be empty but typically shouldn't fail except for memory.
     //
 
-    if (!YoriShAllocateAndGetEnvironmentVariable(_T("YORICOMPLETEPATH"), &YoriCompletePathVariable)) {
+    if (!YoriShAllocateAndGetEnvironmentVariable(_T("YORICOMPLETEPATH"), &YoriCompletePathVariable, NULL)) {
         return FALSE;
     }
 
@@ -2078,7 +2078,7 @@ YoriShCompleteSuggestion(
         return;
     }
 
-    if (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars < Buffer->MinimumCharsInArgBeforeSuggesting) {
+    if (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars < YoriShGlobal.MinimumCharsInArgBeforeSuggesting) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
@@ -2103,7 +2103,7 @@ YoriShCompleteSuggestion(
 
     Index = YoriShFindFinalSlashIfSpecified(Arg);
 
-    if (Arg->LengthInChars - Index < Buffer->MinimumCharsInArgBeforeSuggesting) {
+    if (Arg->LengthInChars - Index < YoriShGlobal.MinimumCharsInArgBeforeSuggesting) {
         YoriShFreeCmdContext(&CmdContext);
         return;
     }

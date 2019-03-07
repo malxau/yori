@@ -97,7 +97,7 @@ YoriShInit()
     //  the console directly, use VT color; otherwise, default to monochrome.
     //
 
-    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0) == 0) {
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0, NULL) == 0) {
         DWORD ConsoleMode;
         if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &ConsoleMode)) {
             SetEnvironmentVariable(_T("YORIPROMPT"), _T("$E$[35;1m$P$$E$[0m$G_OR_ADMIN_G$"));
@@ -111,7 +111,7 @@ YoriShInit()
     //  This allows the user to see the current set and manipulate them.
     //
 
-    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDITBREAKCHARS"), NULL, 0) == 0) {
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDITBREAKCHARS"), NULL, 0, NULL) == 0) {
         YORI_STRING BreakChars;
         YORI_STRING ExpandedBreakChars;
         YoriLibGetSelectionDoubleClickBreakChars(&BreakChars);
@@ -149,7 +149,7 @@ YoriShInit()
     //  path to the shell the user wants to keep using.
     //
 
-    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISPEC"), NULL, 0) == 0) {
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISPEC"), NULL, 0, NULL) == 0) {
         YORI_STRING ModuleName;
 
         //
@@ -175,7 +175,7 @@ YoriShInit()
             }
         }
 
-        if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORICOMPLETEPATH"), NULL, 0) == 0) {
+        if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORICOMPLETEPATH"), NULL, 0, NULL) == 0) {
             YORI_STRING CompletePath;
 
             if (YoriLibAllocateString(&CompletePath, ModuleName.LengthInChars + sizeof("\\completion"))) {
@@ -192,7 +192,7 @@ YoriShInit()
     //  Add .YS1 to PATHEXT if it's not there already.
     //
 
-    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("PATHEXT"), NULL, 0) == 0) {
+    if (YoriShGetEnvironmentVariableWithoutSubstitution(_T("PATHEXT"), NULL, 0, NULL) == 0) {
         SetEnvironmentVariable(_T("PATHEXT"), _T(".YS1;.COM;.EXE;.CMD;.BAT"));
     } else {
         YORI_STRING NewExt;
@@ -290,6 +290,12 @@ YoriShInit()
     YoriLibFreeStringContents(&FoundYoriInitName);
     YoriLibFreeStringContents(&ExpandedUserYoriInitName);
     YoriLibFreeStringContents(&ExpandedSystemYoriInitName);
+
+    //
+    //  Reload any state next time it's requested.
+    //
+
+    YoriShGlobal.EnvironmentGeneration++;
 
     return TRUE;
 }
@@ -419,14 +425,14 @@ YoriShDisplayWarnings()
     DWORD EnvVarLength;
     YORI_STRING ModuleName;
 
-    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NULL, 0);
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NULL, 0, NULL);
     if (EnvVarLength > 0) {
         YORI_STRING NoWarningsVar;
         if (!YoriLibAllocateString(&NoWarningsVar, EnvVarLength + 1)) {
             return FALSE;
         }
 
-        NoWarningsVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NoWarningsVar.StartOfString, NoWarningsVar.LengthAllocated);
+        NoWarningsVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NoWarningsVar.StartOfString, NoWarningsVar.LengthAllocated, NULL);
         if (EnvVarLength < NoWarningsVar.LengthAllocated &&
             YoriLibCompareStringWithLiteral(&NoWarningsVar, _T("1")) == 0) {
 
@@ -629,6 +635,8 @@ ymain (
     YoriShBuiltinUnregisterAll();
     YoriShDiscardSavedRestartState(NULL);
     YoriShCleanupInputContext();
+    YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);
+    YoriLibFreeStringContents(&YoriShGlobal.TitleVariable);
 
     return YoriShGlobal.ExitProcessExitCode;
 }

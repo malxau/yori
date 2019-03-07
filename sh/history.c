@@ -183,7 +183,7 @@ YoriShInitHistory()
     //  See if the user has other ideas.
     //
 
-    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTSIZE"), NULL, 0);
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTSIZE"), NULL, 0, NULL);
     if (EnvVarLength != 0) {
         YORI_STRING HistSizeString;
         DWORD CharsConsumed;
@@ -193,7 +193,7 @@ YoriShInitHistory()
             return FALSE;
         }
 
-        HistSizeString.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTSIZE"), HistSizeString.StartOfString, HistSizeString.LengthAllocated);
+        HistSizeString.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTSIZE"), HistSizeString.StartOfString, HistSizeString.LengthAllocated, NULL);
 
         if (HistSizeString.LengthInChars == 0 || HistSizeString.LengthInChars >= HistSizeString.LengthAllocated) {
             return FALSE;
@@ -236,7 +236,7 @@ YoriShLoadHistoryFromFile()
     //  Check if there's a file to load saved history from.
     //
 
-    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), NULL, 0);
+    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), NULL, 0, NULL);
     if (EnvVarLength == 0) {
         return TRUE;
     }
@@ -245,7 +245,7 @@ YoriShLoadHistoryFromFile()
         return FALSE;
     }
 
-    UserHistFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), UserHistFileName.StartOfString, UserHistFileName.LengthAllocated);
+    UserHistFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), UserHistFileName.StartOfString, UserHistFileName.LengthAllocated, NULL);
 
     if (UserHistFileName.LengthInChars == 0 || UserHistFileName.LengthInChars >= UserHistFileName.LengthAllocated) {
         YoriLibFreeStringContents(&UserHistFileName);
@@ -324,7 +324,7 @@ YoriShSaveHistoryToFile()
     PYORI_LIST_ENTRY ListEntry;
     PYORI_SH_HISTORY_ENTRY HistoryEntry;
 
-    FileNameLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), NULL, 0);
+    FileNameLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), NULL, 0, NULL);
     if (FileNameLength == 0) {
         return TRUE;
     }
@@ -333,7 +333,7 @@ YoriShSaveHistoryToFile()
         return FALSE;
     }
 
-    UserHistFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), UserHistFileName.StartOfString, UserHistFileName.LengthAllocated);
+    UserHistFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIHISTFILE"), UserHistFileName.StartOfString, UserHistFileName.LengthAllocated, NULL);
 
     if (UserHistFileName.LengthInChars == 0 || UserHistFileName.LengthInChars >= UserHistFileName.LengthAllocated) {
         YoriLibFreeStringContents(&UserHistFileName);

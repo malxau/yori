@@ -241,7 +241,8 @@ DWORD
 YoriShGetEnvironmentVariableWithoutSubstitution(
     __in LPCTSTR Name,
     __out_opt LPTSTR Variable,
-    __in DWORD Size
+    __in DWORD Size,
+    __out_opt PDWORD Generation
     );
 
 BOOL
@@ -249,13 +250,15 @@ YoriShGetEnvironmentVariable(
     __in LPCTSTR Name,
     __out_opt LPTSTR Variable,
     __in DWORD Size,
-    __out PDWORD ReturnedSize
+    __out PDWORD ReturnedSize,
+    __out_opt PDWORD Generation
     );
 
 BOOL
 YoriShAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
-    __out PYORI_STRING Value
+    __out PYORI_STRING Value,
+    __out_opt PDWORD Generation
     );
 
 BOOL
@@ -268,6 +271,11 @@ BOOL
 YoriShSetEnvironmentVariable(
     __in PYORI_STRING VariableName,
     __in_opt PYORI_STRING Value
+    );
+
+BOOL
+YoriShSetEnvironmentStrings(
+    __in PYORI_STRING NewEnv
     );
 
 // *** EXEC.C ***

@@ -445,19 +445,15 @@ YoriShEnsureStringHasEnoughCharacters(
  allow Yori to process mouse input so it can use its internal QuickEdit
  support.
 
- @param Buffer Pointer to the input buffer which indicates whether this
-        behavior is requested.
-
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriShConfigureMouseForPrompt(
-    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     HANDLE ConsoleHandle;
     DWORD ConsoleMode;
-    if (!Buffer->YoriQuickEdit) {
+    if (!YoriShGlobal.YoriQuickEdit) {
         return TRUE;
     }
 
@@ -480,19 +476,15 @@ YoriShConfigureMouseForPrompt(
  When YORIQUICKEDIT is set, enable the console's QuickEdit capabilities to
  allow QuickEdit to be used with external programs.
 
- @param Buffer Pointer to the input buffer which indicates whether this
-        behavior is requested.
-
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriShConfigureMouseForPrograms(
-    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     HANDLE ConsoleHandle;
     DWORD ConsoleMode;
-    if (!Buffer->YoriQuickEdit) {
+    if (!YoriShGlobal.YoriQuickEdit) {
         return TRUE;
     }
 
@@ -570,7 +562,7 @@ YoriShTerminateInput(
     YoriLibCleanupSelection(&Buffer->Mouseover);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
-    YoriShConfigureMouseForPrograms(Buffer);
+    YoriShConfigureMouseForPrograms();
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 }
 
@@ -1225,13 +1217,9 @@ YoriShHotkey(
 /**
  Check the environment to see if the user wants to customize suggestion
  settings.
-
- @param Buffer Pointer to the input buffer structure to update in response
-        to values found in the environment.
  */
 VOID
 YoriShConfigureInputSettings(
-    __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
     DWORD EnvVarLength;
@@ -1242,110 +1230,115 @@ YoriShConfigureInputSettings(
     YORI_STRING MouseoverColorString;
     YORILIB_COLOR_ATTRIBUTES MouseoverColor;
 
-    //
-    //  Default to suggesting in 400ms after seeing 2 chars in an arg.
-    //
+    if (YoriShGlobal.InputParamsGeneration != YoriShGlobal.EnvironmentGeneration) {
 
-    Buffer->DelayBeforeSuggesting = 400;
-    Buffer->MinimumCharsInArgBeforeSuggesting = 2;
-    Buffer->YoriQuickEdit = FALSE;
+        //
+        //  Default to suggesting in 400ms after seeing 2 chars in an arg.
+        //
 
-    //
-    //  Check the environment to see if the user wants to override the
-    //  suggestion delay.  Note a value of zero disables the feature.
-    //
+        YoriShGlobal.DelayBeforeSuggesting = 400;
+        YoriShGlobal.MinimumCharsInArgBeforeSuggesting = 2;
+        YoriShGlobal.YoriQuickEdit = FALSE;
+        YoriShGlobal.MouseoverEnabled = TRUE;
 
-    YoriLibInitEmptyString(&EnvVar);
-    EnvVar.StartOfString = EnvVarBuffer;
-    EnvVar.LengthAllocated = sizeof(EnvVarBuffer)/sizeof(EnvVarBuffer[0]);
+        //
+        //  Check the environment to see if the user wants to override the
+        //  suggestion delay.  Note a value of zero disables the feature.
+        //
 
-    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), NULL, 0);
-    if (EnvVarLength > 0) {
-        if (EnvVarLength > EnvVar.LengthAllocated) {
-            YoriLibFreeStringContents(&EnvVar);
-            YoriLibAllocateString(&EnvVar, EnvVarLength);
-        }
-        if (EnvVarLength <= EnvVar.LengthAllocated) {
-            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), EnvVar.StartOfString, EnvVar.LengthAllocated);
-            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                Buffer->DelayBeforeSuggesting = (ULONG)llTemp;
+        YoriLibInitEmptyString(&EnvVar);
+        EnvVar.StartOfString = EnvVarBuffer;
+        EnvVar.LengthAllocated = sizeof(EnvVarBuffer)/sizeof(EnvVarBuffer[0]);
+
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (EnvVarLength > EnvVar.LengthAllocated) {
+                YoriLibFreeStringContents(&EnvVar);
+                YoriLibAllocateString(&EnvVar, EnvVarLength);
             }
-        }
-    }
-
-    //
-    //  Check the environment to see if the user wants to override the
-    //  minimum number of characters needed in an arg before suggesting.
-    //
-
-    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), NULL, 0);
-    if (EnvVarLength > 0) {
-        if (EnvVarLength > EnvVar.LengthAllocated) {
-            YoriLibFreeStringContents(&EnvVar);
-            YoriLibAllocateString(&EnvVar, EnvVarLength);
-        }
-        if (EnvVarLength <= EnvVar.LengthAllocated) {
-            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), EnvVar.StartOfString, EnvVar.LengthAllocated);
-            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                Buffer->MinimumCharsInArgBeforeSuggesting = (ULONG)llTemp;
-            }
-        }
-    }
-
-    //
-    //  Check the environment to see if the user wants to use Yori's mouse
-    //  input support at the prompt and console QuickEdit when running
-    //  applications.
-    //
-
-    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), NULL, 0);
-    if (EnvVarLength > 0) {
-        if (EnvVarLength > EnvVar.LengthAllocated) {
-            YoriLibFreeStringContents(&EnvVar);
-            YoriLibAllocateString(&EnvVar, EnvVarLength);
-        }
-        if (EnvVarLength <= EnvVar.LengthAllocated) {
-            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), EnvVar.StartOfString, EnvVar.LengthAllocated);
-            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                if (llTemp == 1) {
-                    Buffer->YoriQuickEdit = TRUE;
+            if (EnvVarLength <= EnvVar.LengthAllocated) {
+                EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONDELAY"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
+                if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                    YoriShGlobal.DelayBeforeSuggesting = (ULONG)llTemp;
                 }
             }
         }
-    }
 
-    //
-    //  Check the environment to see if the user wants to use Yori's mouse
-    //  over support.
-    //
+        //
+        //  Check the environment to see if the user wants to override the
+        //  minimum number of characters needed in an arg before suggesting.
+        //
 
-    Buffer->MouseoverEnabled = TRUE;
-    EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIMOUSEOVER"), NULL, 0);
-    if (EnvVarLength > 0) {
-        if (EnvVarLength > EnvVar.LengthAllocated) {
-            YoriLibFreeStringContents(&EnvVar);
-            YoriLibAllocateString(&EnvVar, EnvVarLength);
-        }
-        if (EnvVarLength <= EnvVar.LengthAllocated) {
-            EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIMOUSEOVER"), EnvVar.StartOfString, EnvVar.LengthAllocated);
-            if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                if (llTemp == 0) {
-                    Buffer->MouseoverEnabled = FALSE;
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (EnvVarLength > EnvVar.LengthAllocated) {
+                YoriLibFreeStringContents(&EnvVar);
+                YoriLibAllocateString(&EnvVar, EnvVarLength);
+            }
+            if (EnvVarLength <= EnvVar.LengthAllocated) {
+                EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORISUGGESTIONMINCHARS"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
+                if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                    YoriShGlobal.MinimumCharsInArgBeforeSuggesting = (ULONG)llTemp;
                 }
             }
         }
-    }
 
-    YoriLibFreeStringContents(&EnvVar);
+        //
+        //  Check the environment to see if the user wants to use Yori's mouse
+        //  input support at the prompt and console QuickEdit when running
+        //  applications.
+        //
 
-    YoriLibConstantString(&MouseoverColorString, _T("mo"));
-    if (!YoriLibGetMetadataColor(&MouseoverColorString, &MouseoverColor)) {
-        Buffer->MouseoverColor = (UCHAR)YoriLibVtGetDefaultColor();
-    }
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (EnvVarLength > EnvVar.LengthAllocated) {
+                YoriLibFreeStringContents(&EnvVar);
+                YoriLibAllocateString(&EnvVar, EnvVarLength);
+            }
+            if (EnvVarLength <= EnvVar.LengthAllocated) {
+                EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
+                if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                    if (llTemp == 1) {
+                        YoriShGlobal.YoriQuickEdit = TRUE;
+                    }
+                }
+            }
+        }
 
-    Buffer->MouseoverColor = MouseoverColor.Win32Attr;
-    if (MouseoverColor.Ctrl & YORILIB_ATTRCTRL_UNDERLINE) {
-        Buffer->MouseoverColor |= COMMON_LVB_UNDERSCORE;
+        //
+        //  Check the environment to see if the user wants to use Yori's mouse
+        //  over support.
+        //
+
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIMOUSEOVER"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (EnvVarLength > EnvVar.LengthAllocated) {
+                YoriLibFreeStringContents(&EnvVar);
+                YoriLibAllocateString(&EnvVar, EnvVarLength);
+            }
+            if (EnvVarLength <= EnvVar.LengthAllocated) {
+                EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIMOUSEOVER"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
+                if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                    if (llTemp == 0) {
+                        YoriShGlobal.MouseoverEnabled = FALSE;
+                    }
+                }
+            }
+        }
+
+        YoriLibFreeStringContents(&EnvVar);
+
+        YoriLibConstantString(&MouseoverColorString, _T("mo"));
+        if (!YoriLibGetMetadataColor(&MouseoverColorString, &MouseoverColor)) {
+            YoriShGlobal.MouseoverColor = (UCHAR)YoriLibVtGetDefaultColor();
+        }
+
+        YoriShGlobal.MouseoverColor = MouseoverColor.Win32Attr;
+        if (MouseoverColor.Ctrl & YORILIB_ATTRCTRL_UNDERLINE) {
+            YoriShGlobal.MouseoverColor |= COMMON_LVB_UNDERSCORE;
+        }
+
+        YoriShGlobal.InputParamsGeneration = YoriShGlobal.EnvironmentGeneration;
     }
 }
 
@@ -2204,7 +2197,7 @@ YoriShProcessMouseMove(
             return TRUE;
         }
     } else if (!YoriLibIsSelectionActive(&Buffer->Selection) &&
-               Buffer->MouseoverEnabled) {
+               YoriShGlobal.MouseoverEnabled) {
 
         COORD BeginRange;
         COORD EndRange;
@@ -2215,7 +2208,7 @@ YoriShProcessMouseMove(
         if (YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange) && BeginRange.Y == EndRange.Y) {
 
             YoriShClearMouseoverSelection(Buffer);
-            YoriLibSetSelectionColor(&Buffer->Mouseover, Buffer->MouseoverColor);
+            YoriLibSetSelectionColor(&Buffer->Mouseover, YoriShGlobal.MouseoverColor);
             YoriLibCreateSelectionFromRange(&Buffer->Mouseover, BeginRange.X, BeginRange.Y, EndRange.X, EndRange.Y);
             return TRUE;
         } else {
@@ -2339,8 +2332,8 @@ YoriShGetExpressionFromConsole(
         return FALSE;
     }
 
-    YoriShConfigureInputSettings(&Buffer);
-    YoriShConfigureMouseForPrompt(&Buffer);
+    YoriShConfigureInputSettings();
+    YoriShConfigureMouseForPrompt();
     SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, TRUE);
 
     while (TRUE) {
@@ -2433,7 +2426,7 @@ YoriShGetExpressionFromConsole(
 
         SuggestionPopulated = FALSE;
         if (Buffer.SuggestionString.LengthInChars > 0 ||
-            Buffer.DelayBeforeSuggesting == 0 ||
+            YoriShGlobal.DelayBeforeSuggesting == 0 ||
             Buffer.TabContext.TabCount != 0) {
 
             SuggestionPopulated = TRUE;
@@ -2450,7 +2443,7 @@ YoriShGetExpressionFromConsole(
                     YoriLibPeriodicScrollForSelection(&Buffer.Selection);
                 }
             } else if (!SuggestionPopulated) {
-                err = WaitForSingleObject(InputHandle, Buffer.DelayBeforeSuggesting);
+                err = WaitForSingleObject(InputHandle, YoriShGlobal.DelayBeforeSuggesting);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }

@@ -2599,11 +2599,6 @@ YoriLibGetEnvironmentStrings(
     );
 
 BOOL
-YoriLibSetEnvironmentStrings(
-    __in PYORI_STRING NewEnv
-    );
-
-BOOL
 YoriLibAreEnvironmentStringsValid(
     __inout PYORI_STRING EnvStrings
     );
