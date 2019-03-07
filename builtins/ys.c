@@ -466,6 +466,8 @@ YoriCmd_RETURN(
     LPTSTR ThisValue;
     BOOL PreserveVariable;
     YORI_STRING Arg;
+    YORI_STRING VariableName;
+    YORI_STRING ValueName;
 
     StartArg = 0;
 
@@ -547,6 +549,10 @@ YoriCmd_RETURN(
         YsFreeCallStack(StackLocation);
         return EXIT_FAILURE;
     }
+
+    YoriLibInitEmptyString(&VariableName);
+    YoriLibInitEmptyString(&ValueName);
+
     ThisVar = CurrentEnvironment.StartOfString;
     while (*ThisVar != '\0') {
         VarLen = _tcslen(ThisVar);
@@ -559,13 +565,16 @@ YoriCmd_RETURN(
         ThisValue = _tcschr(&ThisVar[1], '=');
         if (ThisValue != NULL) {
             ThisValue[0] = '\0';
+            VariableName.StartOfString = ThisVar;
+            VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+            VariableName.LengthAllocated = VariableName.LengthInChars + 1;
             for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
                 if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
                     PreserveVariable = TRUE;
                 }
             }
             if (!PreserveVariable) {
-                SetEnvironmentVariable(ThisVar, NULL);
+                YoriCallSetEnvironmentVariable(&VariableName, NULL);
             }
         }
 
@@ -590,14 +599,20 @@ YoriCmd_RETURN(
         ThisValue = _tcschr(&ThisVar[1], '=');
         if (ThisValue != NULL) {
             ThisValue[0] = '\0';
+            VariableName.StartOfString = ThisVar;
+            VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+            VariableName.LengthAllocated = VariableName.LengthInChars + 1;
             ThisValue++;
+            ValueName.StartOfString = ThisValue;
+            ValueName.LengthInChars = VarLen - VariableName.LengthInChars - 1;
+            ValueName.LengthAllocated = ValueName.LengthInChars + 1;
             for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
                 if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
                     PreserveVariable = TRUE;
                 }
             }
             if (!PreserveVariable) {
-                SetEnvironmentVariable(ThisVar, ThisValue);
+                YoriCallSetEnvironmentVariable(&VariableName, &ValueName);
             }
         }
 

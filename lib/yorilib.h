@@ -2511,25 +2511,6 @@ YoriLibLocateExecutableInPath(
     __out PYORI_STRING PathName
     );
 
-BOOL
-YoriLibAddEnvironmentComponentToString(
-    __inout PYORI_STRING ExistingString,
-    __in PYORI_STRING NewComponent,
-    __in BOOL InsertAtFront
-    );
-
-BOOL
-YoriLibAddEnvironmentComponent(
-    __in LPTSTR EnvironmentVariable,
-    __in PYORI_STRING NewComponent,
-    __in BOOL InsertAtFront
-    );
-
-BOOL
-YoriLibRemoveEnvironmentComponent(
-    __in LPTSTR EnvironmentVariable,
-    __in PYORI_STRING ComponentToRemove
-    );
 
 // *** PRINTF.C ***
 
@@ -2644,6 +2625,41 @@ BOOL
 YoriLibGetEnvironmentVariableAsNumber(
     __in LPCTSTR Name,
     __out PLONGLONG Value
+    );
+
+BOOL
+YoriLibAddEnvironmentComponentToString(
+    __inout PYORI_STRING ExistingString,
+    __in PYORI_STRING NewComponent,
+    __in BOOL InsertAtFront
+    );
+
+BOOL
+YoriLibAddEnvironmentComponentReturnString(
+    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING NewComponent,
+    __in BOOL InsertAtFront,
+    __out PYORI_STRING Result
+    );
+
+BOOL
+YoriLibAddEnvironmentComponent(
+    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING NewComponent,
+    __in BOOL InsertAtFront
+    );
+
+BOOL
+YoriLibRemoveEnvironmentComponentReturnString(
+    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING ComponentToRemove,
+    __out PYORI_STRING Result
+    );
+
+BOOL
+YoriLibRemoveEnvironmentComponent(
+    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING ComponentToRemove
     );
 
 // *** SCUT.C ***

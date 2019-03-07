@@ -26,6 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#include <yoricall.h>
 
 /**
  Help text to display to the user.
@@ -149,16 +150,24 @@ YoriCmd_SET(
         LPTSTR Variable;
         LPTSTR Value;
         YORI_STRING CmdLine;
+        YORI_STRING YsVariable;
 
         if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &CmdLine)) {
             return EXIT_FAILURE;
         }
 
+        YoriLibInitEmptyString(&YsVariable);
+        YsVariable.StartOfString = CmdLine.StartOfString;
         Variable = CmdLine.StartOfString;
         Value = _tcschr(Variable, '=');
         if (Value) {
             *Value = '\0';
             Value++;
+            YsVariable.LengthAllocated = (DWORD)(Value - CmdLine.StartOfString);
+            YsVariable.LengthInChars = YsVariable.LengthAllocated - 1;
+        } else {
+            YsVariable.LengthAllocated = CmdLine.LengthAllocated;
+            YsVariable.LengthInChars = CmdLine.LengthInChars;
         }
 
         if (Value != NULL) {
@@ -230,18 +239,32 @@ YoriCmd_SET(
             }
             
             if (*Value == '\0') {
-                SetEnvironmentVariable(Variable, NULL);
+                YoriCallSetEnvironmentVariable(&YsVariable, NULL);
             } else {
                 YORI_STRING YsValue;
+                YORI_STRING CombinedValue;
                 YoriLibConstantString(&YsValue, Value);
                 if (IncludeComponent) {
-                    YoriLibAddEnvironmentComponent(Variable, &YsValue, TRUE);
+                    if (YoriLibAddEnvironmentComponentReturnString(Variable, &YsValue, TRUE, &CombinedValue)) {
+                        YoriCallSetEnvironmentVariable(&YsVariable, &CombinedValue);
+                        YoriLibFreeStringContents(&CombinedValue);
+                    }
                 } else if (AppendComponent) {
-                    YoriLibAddEnvironmentComponent(Variable, &YsValue, FALSE);
+                    if (YoriLibAddEnvironmentComponentReturnString(Variable, &YsValue, FALSE, &CombinedValue)) {
+                        YoriCallSetEnvironmentVariable(&YsVariable, &CombinedValue);
+                        YoriLibFreeStringContents(&CombinedValue);
+                    }
                 } else if (RemoveComponent) {
-                    YoriLibRemoveEnvironmentComponent(Variable, &YsValue);
+                    if (YoriLibRemoveEnvironmentComponentReturnString(Variable, &YsValue, &CombinedValue)) {
+                        if (CombinedValue.LengthAllocated > 0) {
+                            YoriCallSetEnvironmentVariable(&YsVariable, &CombinedValue);
+                        } else {
+                            YoriCallSetEnvironmentVariable(&YsVariable, NULL);
+                        }
+                        YoriLibFreeStringContents(&CombinedValue);
+                    }
                 } else {
-                    SetEnvironmentVariable(Variable, Value);
+                    YoriCallSetEnvironmentVariable(&YsVariable, &YsValue);
                 }
             }
         } else {

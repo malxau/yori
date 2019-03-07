@@ -945,6 +945,49 @@ YoriCallSetDefaultColor(
 }
 
 /**
+ Prototype for the YoriApiSetEnvironmentVariable function.
+ */
+typedef VOID YORI_API_SET_ENVIRONMENT_VARIABLE(PYORI_STRING, PYORI_STRING);
+
+/**
+ Prototype for a pointer to the YoriApiSetEnvironmentVariable function.
+ */
+typedef YORI_API_SET_ENVIRONMENT_VARIABLE *PYORI_API_SET_ENVIRONMENT_VARIABLE;
+
+/**
+ Pointer to the @ref YoriApiSetEnvironmentVariable function.
+ */
+PYORI_API_SET_ENVIRONMENT_VARIABLE pYoriApiSetEnvironmentVariable;
+
+/**
+ Set an environment variable in the Yori shell process.
+
+ @param VariableName The variable name to set.
+
+ @param Value Pointer to the value to set.  If NULL, the variable is deleted.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriCallSetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __in_opt PYORI_STRING Value
+    )
+{
+    if (pYoriApiSetEnvironmentVariable == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiSetEnvironmentVariable = (PYORI_API_SET_ENVIRONMENT_VARIABLE)GetProcAddress(hYori, "YoriApiSetEnvironmentVariable");
+        if (pYoriApiSetEnvironmentVariable == NULL) {
+            return FALSE;
+        }
+    }
+    pYoriApiSetEnvironmentVariable(VariableName, Value);
+    return TRUE;
+}
+
+/**
  Prototype for the @ref YoriApiSetJobPriority function.
  */
 typedef BOOL YORI_API_SET_JOB_PRIORITY(DWORD, DWORD);

@@ -264,7 +264,14 @@ YoriShExpandEnvironmentVariables(
     __out PYORI_STRING ResultingExpression
     );
 
+BOOL
+YoriShSetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __in_opt PYORI_STRING Value
+    );
+
 // *** EXEC.C ***
+
 DWORD
 YoriShInitializeRedirection(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,

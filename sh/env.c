@@ -644,6 +644,68 @@ YoriShExpandEnvironmentVariables(
     return TRUE;
 }
 
+/**
+ Set an environment variable in the Yori shell process.
+
+ @param VariableName The variable name to set.
+
+ @param Value Pointer to the value to set.  If NULL, the variable is deleted.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShSetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __in_opt PYORI_STRING Value
+    )
+{
+    LPTSTR NullTerminatedVariable;
+    LPTSTR NullTerminatedValue;
+    BOOL AllocatedVariable;
+    BOOL AllocatedValue;
+    BOOL Result;
+
+    if (YoriLibIsStringNullTerminated(VariableName)) {
+        NullTerminatedVariable = VariableName->StartOfString;
+        AllocatedVariable = FALSE;
+    } else {
+        NullTerminatedVariable = YoriLibCStringFromYoriString(VariableName);
+        if (NullTerminatedVariable == NULL) {
+            return FALSE;
+        }
+        AllocatedVariable = TRUE;
+    }
+
+    if (Value == NULL) {
+        NullTerminatedValue = NULL;
+        AllocatedValue = FALSE;
+    } else if (YoriLibIsStringNullTerminated(Value)) {
+        NullTerminatedValue = Value->StartOfString;
+        AllocatedValue = FALSE;
+    } else {
+        NullTerminatedValue = YoriLibCStringFromYoriString(Value);
+        if (NullTerminatedValue == NULL) {
+            if (AllocatedVariable) {
+                YoriLibDereference(NullTerminatedVariable);
+            }
+            return FALSE;
+        }
+        AllocatedValue = TRUE;
+    }
+
+    ASSERT(!AllocatedVariable && !AllocatedValue);
+
+    Result = SetEnvironmentVariable(NullTerminatedVariable, NullTerminatedValue);
+
+    if (AllocatedVariable) {
+        YoriLibDereference(NullTerminatedVariable);
+    }
+    if (AllocatedValue) {
+        YoriLibDereference(NullTerminatedValue);
+    }
+
+    return Result;
+}
 
 
 // vim:sw=4:ts=4:et:

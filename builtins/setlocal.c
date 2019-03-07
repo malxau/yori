@@ -292,10 +292,17 @@ YoriCmd_ENDLOCAL(
 
     if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
         YORI_STRING CurrentEnvironment;
+        YORI_STRING VariableName;
+        YORI_STRING ValueName;
+
         if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
             SetlocalFreeStack(StackLocation);
             return EXIT_FAILURE;
         }
+
+        YoriLibInitEmptyString(&VariableName);
+        YoriLibInitEmptyString(&ValueName);
+
         ThisVar = CurrentEnvironment.StartOfString;
         while (*ThisVar != '\0') {
             VarLen = _tcslen(ThisVar);
@@ -308,7 +315,10 @@ YoriCmd_ENDLOCAL(
             ThisValue = _tcschr(&ThisVar[1], '=');
             if (ThisValue != NULL) {
                 ThisValue[0] = '\0';
-                SetEnvironmentVariable(ThisVar, NULL);
+                VariableName.StartOfString = ThisVar;
+                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                VariableName.LengthAllocated = VariableName.LengthInChars + 1;
+                YoriCallSetEnvironmentVariable(&VariableName, NULL);
             }
 
             ThisVar += VarLen;
@@ -332,14 +342,19 @@ YoriCmd_ENDLOCAL(
             ThisValue = _tcschr(&ThisVar[1], '=');
             if (ThisValue != NULL) {
                 ThisValue[0] = '\0';
+                VariableName.StartOfString = ThisVar;
+                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                VariableName.LengthAllocated = VariableName.LengthInChars + 1;
                 ThisValue++;
-                SetEnvironmentVariable(ThisVar, ThisValue);
+                ValueName.StartOfString = ThisValue;
+                ValueName.LengthInChars = VarLen - VariableName.LengthInChars - 1;
+                ValueName.LengthAllocated = ValueName.LengthInChars + 1;
+                YoriCallSetEnvironmentVariable(&VariableName, &ValueName);
             }
 
             ThisVar += VarLen;
             ThisVar++;
         }
-
     }
 
     //

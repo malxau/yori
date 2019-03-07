@@ -145,6 +145,12 @@ YoriCallSetDefaultColor(
     );
 
 BOOL
+YoriCallSetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __in_opt PYORI_STRING Value
+    );
+
+BOOL
 YoriCallSetJobPriority(
     __in DWORD JobId,
     __in DWORD PriorityClass

@@ -418,6 +418,24 @@ YoriApiSetDefaultColor(
 }
 
 /**
+ Set an environment variable in the Yori shell process.
+
+ @param VariableName The variable name to set.
+
+ @param Value Pointer to the value to set.  If NULL, the variable is deleted.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiSetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __in_opt PYORI_STRING Value
+    )
+{
+    return YoriShSetEnvironmentVariable(VariableName, Value);
+}
+
+/**
  Sets the priority associated with a job.
 
  @param JobId The ID to set priority for.
