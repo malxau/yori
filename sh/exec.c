@@ -3,7 +3,7 @@
  *
  * Yori shell execute external program
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -727,6 +727,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
         YoriLibFreeWinErrorText(ErrText);
         YoriShCleanupFailedProcessLaunch(ExecContext);
         YoriLibFreeStringContents(&OriginalAliases);
+        YoriShDereferenceExecContext(ExecContext, TRUE);
         return 0;
     }
 
@@ -823,6 +824,9 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
         }
         YoriLibFreeStringContents(&OriginalAliases);
     }
+
+    ExecContext->DebugPumpThreadFinished = TRUE;
+    YoriShDereferenceExecContext(ExecContext, TRUE);
     return 0;
 }
 
@@ -862,8 +866,10 @@ YoriShWaitForProcessToTerminate(
 
     if (ExecContext->CaptureEnvironmentOnExit) {
         DWORD ThreadId;
+        YoriShReferenceExecContext(ExecContext);
         ExecContext->hDebuggerThread = CreateThread(NULL, 0, YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit, ExecContext, 0, &ThreadId);
         if (ExecContext->hDebuggerThread == NULL) {
+            YoriShDereferenceExecContext(ExecContext, TRUE);
             YoriLibCancelIgnore();
             return;
         }

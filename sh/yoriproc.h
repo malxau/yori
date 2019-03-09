@@ -3,7 +3,7 @@
  *
  * Yori shell function declaration header file
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -476,13 +476,19 @@ YoriShFreeCmdContext(
     );
 
 VOID
-YoriShFreeExecContext(
+YoriShFreeExecPlan(
+    __in PYORI_SH_EXEC_PLAN ExecPlan
+    );
+
+VOID
+YoriShReferenceExecContext(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 VOID
-YoriShFreeExecPlan(
-    __in PYORI_SH_EXEC_PLAN ExecPlan
+YoriShDereferenceExecContext(
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in BOOLEAN Deallocate
     );
 
 BOOL

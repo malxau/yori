@@ -3,7 +3,7 @@
  *
  * Yori shell structures header file
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -95,6 +95,14 @@ typedef struct _YORI_SH_SINGLE_EXEC_CONTEXT {
      no next program.
      */
     struct _YORI_SH_SINGLE_EXEC_CONTEXT * NextProgram;
+
+    /**
+     Reference count.  This structure should not be cleaned up or deallocated
+     until this reaches zero.  Synchronized via Interlock.  Note that while
+     an exec context is part of an exec plan, a reference is held from the
+     plan.
+     */
+    DWORD ReferenceCount;
 
     /**
      Specifies the type of the next program and the conditions under which
@@ -252,6 +260,14 @@ typedef struct _YORI_SH_SINGLE_EXEC_CONTEXT {
      process.
      */
     BOOLEAN SuppressTaskCompletion;
+
+    /**
+     Set to TRUE to indicate that the debug pump thread has completed
+     processing.  This is currently only used for debugging, because the
+     debug pump thread is still running at the point of the final dereference,
+     even though it has completed processing debug messages.
+     */
+    BOOLEAN DebugPumpThreadFinished;
 
 } YORI_SH_SINGLE_EXEC_CONTEXT, *PYORI_SH_SINGLE_EXEC_CONTEXT;
 

@@ -3,7 +3,7 @@
  *
  * Parses an expression into component pieces
  *
- * Copyright (c) 2014-2017 Malcolm J. Smith
+ * Copyright (c) 2014-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1110,6 +1110,7 @@ YoriShParseCmdContextToExecContext(
     PYORI_STRING ThisArg;
 
     ZeroMemory(ExecContext, sizeof(YORI_SH_SINGLE_EXEC_CONTEXT));
+    ExecContext->ReferenceCount = 1;
     ExecContext->StdInType = StdInTypeDefault;
     ExecContext->StdOutType = StdOutTypeDefault;
     ExecContext->StdErrType = StdErrTypeDefault;
@@ -1239,13 +1240,15 @@ YoriShFreeExecContext(
     )
 {
 
+    ASSERT(ExecContext->ReferenceCount == 0);
+
     //
     //  If the process was being debugged, the debugger thread should
     //  have torn down before we tear down the context it uses.
     //
 
     if (ExecContext->hDebuggerThread != NULL) {
-        ASSERT(WaitForSingleObject(ExecContext->hDebuggerThread, 0) == WAIT_OBJECT_0);
+        ASSERT(WaitForSingleObject(ExecContext->hDebuggerThread, 0) == WAIT_OBJECT_0 || ExecContext->DebugPumpThreadFinished);
         CloseHandle(ExecContext->hDebuggerThread);
         ExecContext->hDebuggerThread = NULL;
     }
@@ -1264,6 +1267,45 @@ YoriShFreeExecContext(
         ExecContext->hPrimaryThread = NULL;
     }
 }
+
+/**
+ Add a reference to a single exec context.
+
+ @param ExecContext Pointer to the exec context to reference.
+ */
+VOID
+YoriShReferenceExecContext(
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    )
+{
+    ASSERT(ExecContext->ReferenceCount > 0);
+    InterlockedIncrement((volatile LONG *)&ExecContext->ReferenceCount);
+}
+
+/**
+ Dereference a single exec context.
+
+ @param ExecContext Pointer to the exec context to dereference.
+
+ @param Deallocate If TRUE, the ExecContext memory should be freed on
+        dereference to zero.  If FALSE, the structure should be cleaned
+        up but the memory should remain allocated.
+ */
+VOID
+YoriShDereferenceExecContext(
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in BOOLEAN Deallocate
+    )
+{
+    ASSERT(ExecContext->ReferenceCount > 0);
+    if (InterlockedDecrement((volatile LONG *)&ExecContext->ReferenceCount) == 0) {
+        YoriShFreeExecContext(ExecContext);
+        if (Deallocate) {
+            YoriLibFree(ExecContext);
+        }
+    }
+}
+
 
 /**
  Frees any internal allocations in a @ref YORI_SH_EXEC_PLAN .  Note it
@@ -1285,12 +1327,12 @@ YoriShFreeExecPlan(
 
     while (ExecContext != NULL) {
         NextExecContext = ExecContext->NextProgram;
-        YoriShFreeExecContext(ExecContext);
-        YoriLibFree(ExecContext);
+        ExecContext->NextProgram = NULL;
+        YoriShDereferenceExecContext(ExecContext, TRUE);
         ExecContext = NextExecContext;
     }
 
-    YoriShFreeExecContext(&ExecPlan->EntireCmd);
+    YoriShDereferenceExecContext(&ExecPlan->EntireCmd, FALSE);
 }
 
 /**
@@ -1349,6 +1391,7 @@ YoriShParseCmdContextToExecPlan(
         return FALSE;
     }
     ExecPlan->EntireCmd.WaitForCompletion = TRUE;
+    ExecPlan->EntireCmd.ReferenceCount = 1;
     ExecPlan->WaitForCompletion = TRUE;
 
     while (CurrentArg < CmdContext->ArgC) {
@@ -1364,6 +1407,7 @@ YoriShParseCmdContextToExecPlan(
 
         ArgsConsumed = YoriShParseCmdContextToExecContext(CmdContext, CurrentArg, ThisProgram, &LocalCurrentArgIsForProgram, &LocalCurrentArgIndex);
         if (ArgsConsumed == 0) {
+            YoriShDereferenceExecContext(ThisProgram, TRUE);
             YoriShFreeExecPlan(ExecPlan);
             return FALSE;
         }
@@ -1444,6 +1488,8 @@ YoriShParseCmdContextToExecPlan(
                 *CurrentArgIsForProgram = LocalCurrentArgIsForProgram;
             }
         }
+
+        ThisProgram->ReferenceCount = 1;
 
         if (PreviousProgram != NULL) {
             PYORI_STRING ArgOfLastOperator;
