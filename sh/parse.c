@@ -1279,7 +1279,7 @@ YoriShReferenceExecContext(
     )
 {
     ASSERT(ExecContext->ReferenceCount > 0);
-    InterlockedIncrement((volatile LONG *)&ExecContext->ReferenceCount);
+    InterlockedIncrement((LONG *)&ExecContext->ReferenceCount);
 }
 
 /**
@@ -1298,7 +1298,7 @@ YoriShDereferenceExecContext(
     )
 {
     ASSERT(ExecContext->ReferenceCount > 0);
-    if (InterlockedDecrement((volatile LONG *)&ExecContext->ReferenceCount) == 0) {
+    if (InterlockedDecrement((LONG *)&ExecContext->ReferenceCount) == 0) {
         YoriShFreeExecContext(ExecContext);
         if (Deallocate) {
             YoriLibFree(ExecContext);
