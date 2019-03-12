@@ -37,12 +37,13 @@ CHAR strSetlocalHelpText[] =
         "Push attributes onto a saved stack to restore later.  By default, the current\n"
         " directory and environment are saved.\n"
         "\n"
-        "SETLOCAL [-license] [-a] [-d] [-e] [-t]\n"
+        "SETLOCAL [-license] [-c | [-a] [-d] [-e] [-t]]\n"
         "\n"
-        "   -d             Save and restore the current aliases.\n"
-        "   -d             Save and restore the current directory.\n"
-        "   -e             Save and restore the environment.\n"
-        "   -t             Save and restore the window title.\n";
+        "   -a             Save and restore the current aliases\n"
+        "   -c             Display the number of entries on the setlocal stack\n"
+        "   -d             Save and restore the current directory\n"
+        "   -e             Save and restore the environment\n"
+        "   -t             Save and restore the window title\n";
 
 /**
  Display usage text to the user.
@@ -416,6 +417,29 @@ YoriCmd_ENDLOCAL(
     return EXIT_SUCCESS;
 }
 
+/**
+ Display the number of entries on the current setlocal stack.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SetlocalDisplayCurrentStackCount()
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PSETLOCAL_STACK StackLocation;
+    DWORD Count = 0;
+
+    if (SetlocalStack.Next != NULL) {
+        ListEntry = YoriLibGetPreviousListEntry(&SetlocalStack, NULL);
+        while(ListEntry != NULL) {
+            Count++;
+            StackLocation = CONTAINING_RECORD(ListEntry, SETLOCAL_STACK, StackLinks);
+            ListEntry = YoriLibGetPreviousListEntry(&SetlocalStack, ListEntry);
+        }
+    }
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i\n"), Count);
+    return TRUE;
+}
 
 /**
  Push an environment onto the stack.
@@ -441,6 +465,7 @@ YoriCmd_SETLOCAL(
     DWORD AttributesToSave = 0;
     DWORD ExtraChars;
     LPTSTR CharOffset;
+    BOOLEAN CountStack = FALSE;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -461,6 +486,9 @@ YoriCmd_SETLOCAL(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 ArgumentUnderstood = TRUE;
                 AttributesToSave |= SETLOCAL_ATTRIBUTE_ALIASES;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                ArgumentUnderstood = TRUE;
+                CountStack = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 ArgumentUnderstood = TRUE;
                 AttributesToSave |= SETLOCAL_ATTRIBUTE_DIRECTORY;
@@ -476,6 +504,13 @@ YoriCmd_SETLOCAL(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (CountStack) {
+        if (SetlocalDisplayCurrentStackCount()) {
+            return EXIT_SUCCESS;
+        }
+        return EXIT_FAILURE;
     }
 
     if (AttributesToSave == 0) {
