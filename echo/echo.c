@@ -35,11 +35,12 @@ CHAR strEchoHelpText[] =
         "\n"
         "Outputs text.\n"
         "\n"
-        "ECHO [-license] [-e] [-n] [--] String\n"
+        "ECHO [-license] [-e] [-n] [-r <n>] [--] String\n"
         "\n"
         "   --             Treat all further arguments as disaplay parameters\n"
         "   -e             Display to standard error stream\n"
-        "   -n             Do not display a newline after text\n";
+        "   -n             Do not display a newline after text\n"
+        "   -r <n>         Repeat the display <n> times\n";
 
 /**
  Display usage text to the user.
@@ -89,7 +90,9 @@ ENTRYPOINT(
     BOOL Result;
     DWORD OutputFlags;
     DWORD i;
+    DWORD Count;
     DWORD StartArg = 1;
+    DWORD RepeatCount = 1;
     YORI_STRING Arg;
 
     for (i = 1; i < ArgC; i++) {
@@ -111,6 +114,17 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 NewLine = FALSE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                if (i + 1 < ArgC) {
+                    LONGLONG llRepeat;
+                    DWORD CharsConsumed;
+                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llRepeat, &CharsConsumed);
+                    if (CharsConsumed > 0) {
+                        RepeatCount = (DWORD)llRepeat;
+                    }
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
@@ -127,8 +141,6 @@ ENTRYPOINT(
         }
     }
 
-    i = StartArg;
-
     if (StdErr) {
         OutputFlags = YORI_LIB_OUTPUT_STDERR;
     } else {
@@ -137,19 +149,20 @@ ENTRYPOINT(
 
     Result = TRUE;
 
-    do {
-        if (i < ArgC) {
-            if (!YoriLibOutput(OutputFlags, _T("%y"), &ArgV[i])) {
-                Result = FALSE;
-            }
-            if (i + 1 < ArgC) {
-                if (!YoriLibOutput(OutputFlags, _T(" "))) {
+    for (Count = 0; Count < RepeatCount; Count++) {
+        for (i = StartArg; i < ArgC; i++) {
+            if (i < ArgC) {
+                if (!YoriLibOutput(OutputFlags, _T("%y"), &ArgV[i])) {
                     Result = FALSE;
+                }
+                if (i + 1 < ArgC) {
+                    if (!YoriLibOutput(OutputFlags, _T(" "))) {
+                        Result = FALSE;
+                    }
                 }
             }
         }
-        i++;
-    } while (i < ArgC);
+    }
 
     if (NewLine) {
         if (!YoriLibOutput(OutputFlags, _T("\n"))) {
