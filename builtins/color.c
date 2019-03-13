@@ -126,7 +126,19 @@ YoriCmd_COLOR(
     }
 
     if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &BufferInfo)) {
+        HANDLE hConsole;
         ZeroMemory(&BufferInfo, sizeof(BufferInfo));
+        hConsole = CreateFile(_T("CONOUT$"),
+                              GENERIC_READ | GENERIC_WRITE,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              NULL,
+                              OPEN_EXISTING,
+                              0,
+                              NULL);
+        if (hConsole != INVALID_HANDLE_VALUE) {
+            GetConsoleScreenBufferInfo(hConsole, &BufferInfo);
+            CloseHandle(hConsole);
+        }
     }
 
     OriginalAttributes = BufferInfo.wAttributes;
