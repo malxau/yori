@@ -3,7 +3,7 @@
  *
  * Yori shell enumerate and operate on strings or files
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ const
 CHAR strForHelpText[] =
         "Enumerates through a list of strings or files.\n"
         "\n"
-        "FOR [-license] [-b] [-c] [-d] [-i <criteria>] [-p n] <var> in (<list>)\n"
+        "FOR [-license] [-b] [-c] [-d] [-i <criteria>] [-p n] [-r] <var> in (<list>)\n"
         "    do <cmd>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
@@ -46,6 +46,7 @@ CHAR strForHelpText[] =
         "   -i <criteria>  Only treat match files if they meet criteria, see below\n"
         "   -l             Use (start,step,end) notation for the list\n"
         "   -p <n>         Execute with <n> concurrent processes\n"
+        "   -r             Look for matches in subdirectories under the current directory\n"
         "\n"
         " The -i option will match files only if they meet criteria.  This is a\n"
         " semicolon delimited list of entries matching the following form:\n"
@@ -282,7 +283,7 @@ ForExecuteCommand(
                 NewArgWritePoint.StartOfString += OldArg.LengthInChars;
                 NewArgWritePoint.LengthAllocated -= OldArg.LengthInChars;
                 NewArgWritePoint.StartOfString[0] = '\0';
-                
+
                 NewArgArray[Count + PrefixArgCount].LengthInChars = (DWORD)(NewArgWritePoint.StartOfString - NewArgArray[Count + PrefixArgCount].StartOfString);
                 ASSERT(NewArgArray[Count + PrefixArgCount].LengthInChars < NewArgArray[Count + PrefixArgCount].LengthAllocated);
                 ASSERT(YoriLibIsStringNullTerminated(&NewArgArray[Count + PrefixArgCount]));
@@ -437,7 +438,7 @@ ENTRYPOINT(
                 ForHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -452,7 +453,7 @@ ENTRYPOINT(
                 if (i + 1 < ArgC) {
                     YORI_STRING ErrorSubstring;
                     YoriLibInitEmptyString(&ErrorSubstring);
-                    
+
                     if (!YoriLibFileFiltParseFilterString(&ExecContext.Filter, &ArgV[i + 1], &ErrorSubstring)) {
                         if (ErrorSubstring.LengthInChars > 0) {
                             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("for: error parsing filter string '%y' at '%y'\n"), &ArgV[i + 1], &ErrorSubstring);
@@ -619,7 +620,7 @@ ENTRYPOINT(
             YoriLibFreeStringContents(&Criteria);
             goto cleanup_and_exit;
         }
-        
+
         Criteria.StartOfString += 1;
         Criteria.LengthInChars -= 1;
         YoriLibTrimSpaces(&Criteria);
@@ -644,7 +645,7 @@ ENTRYPOINT(
             YoriLibFreeStringContents(&Criteria);
             goto cleanup_and_exit;
         }
-        
+
         Criteria.StartOfString += 1;
         Criteria.LengthInChars -= 1;
         YoriLibTrimSpaces(&Criteria);
@@ -716,19 +717,23 @@ ENTRYPOINT(
             }
 
             RequiresExpansion = FALSE;
-            for (CharIndex = 0; CharIndex < ThisMatch.LengthInChars; CharIndex++) {
-                if (ThisMatch.StartOfString[CharIndex] == '*' ||
-                    ThisMatch.StartOfString[CharIndex] == '?') {
+            if (Recurse) {
+                RequiresExpansion = TRUE;
+            } else {
+                for (CharIndex = 0; CharIndex < ThisMatch.LengthInChars; CharIndex++) {
+                    if (ThisMatch.StartOfString[CharIndex] == '*' ||
+                        ThisMatch.StartOfString[CharIndex] == '?') {
 
-                    RequiresExpansion = TRUE;
-                    break;
-                }
-                if (!BasicEnumeration) {
-                    if (ThisMatch.StartOfString[CharIndex] == '[' ||
-                        ThisMatch.StartOfString[CharIndex] == '{') {
-    
                         RequiresExpansion = TRUE;
                         break;
+                    }
+                    if (!BasicEnumeration) {
+                        if (ThisMatch.StartOfString[CharIndex] == '[' ||
+                            ThisMatch.StartOfString[CharIndex] == '{') {
+
+                            RequiresExpansion = TRUE;
+                            break;
+                        }
                     }
                 }
             }
