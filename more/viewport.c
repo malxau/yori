@@ -223,7 +223,7 @@ MoreGetLogicalLineLength(
                     if (LineEndContext != NULL) {
                         LineEndContext->RequiresGeneration = TRUE;
                     }
-                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, MoreContext->SearchColor);
+                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, MoreContext->SearchColor);
                     CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
                     CurrentColor = MoreContext->SearchColor;
                 }
@@ -238,7 +238,7 @@ MoreGetLogicalLineLength(
                 if (LineEndContext != NULL) {
                     LineEndContext->RequiresGeneration = TRUE;
                 }
-                YoriLibVtStringForTextAttribute(&MatchEscapeChars, CurrentUserColor);
+                YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, CurrentUserColor);
                 CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
                 CurrentColor = CurrentUserColor;
             }
@@ -495,7 +495,7 @@ MoreCopyRangeIntoLogicalLine(
     
                 if (MatchFound) {
                     if (MatchOffset == SourceIndex) {
-                        YoriLibVtStringForTextAttribute(&MatchEscapeChars, MoreContext->SearchColor);
+                        YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, MoreContext->SearchColor);
                         memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], MatchEscapeChars.StartOfString, MatchEscapeChars.LengthInChars * sizeof(TCHAR));
                         CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
                     }
@@ -511,7 +511,7 @@ MoreCopyRangeIntoLogicalLine(
             if (MatchFound) {
 
                 if (MatchOffset + MatchLength <= SourceIndex) {
-                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, CurrentUserColor);
+                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, CurrentUserColor);
                     memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], MatchEscapeChars.StartOfString, MatchEscapeChars.LengthInChars * sizeof(TCHAR));
                     CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
                 }
@@ -1135,7 +1135,7 @@ MoreOutputSeriesOfLines(
     CharsRequired = 0;
 
     for (Index = 0; Index < LineCount; Index++) {
-        YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialDisplayColor);
+        YoriLibVtStringForTextAttribute(&VtAttribute, 0, FirstLine[Index].InitialDisplayColor);
         CharsRequired += VtAttribute.LengthInChars;
         CharsRequired += FirstLine[Index].Line.LengthInChars;
 
@@ -1153,7 +1153,7 @@ MoreOutputSeriesOfLines(
     if (YoriLibAllocateString(&CombinedBuffer, CharsRequired)) {
         CharsRequired = 0;
         for (Index = 0; Index < LineCount; Index++) {
-            YoriLibVtStringForTextAttribute(&VtAttribute, FirstLine[Index].InitialDisplayColor);
+            YoriLibVtStringForTextAttribute(&VtAttribute, 0, FirstLine[Index].InitialDisplayColor);
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], VtAttribute.StartOfString, VtAttribute.LengthInChars * sizeof(TCHAR));
             CharsRequired += VtAttribute.LengthInChars;
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], FirstLine[Index].Line.StartOfString, FirstLine[Index].Line.LengthInChars * sizeof(TCHAR));
@@ -1971,7 +1971,7 @@ MoreCopySelectionIfPresent(
     Subset.StartOfString = VtText.StartOfString;
     Subset.LengthAllocated = VtText.LengthAllocated;
     for (LineIndex = StartingLineIndex; LineIndex < StartingLineIndex + LineCount; LineIndex++) {
-        YoriLibVtStringForTextAttribute(&Subset, CopyLogicalLines[LineIndex].InitialDisplayColor);
+        YoriLibVtStringForTextAttribute(&Subset, 0, CopyLogicalLines[LineIndex].InitialDisplayColor);
         VtText.LengthInChars += Subset.LengthInChars;
         Subset.StartOfString += Subset.LengthInChars;
         Subset.LengthAllocated -= Subset.LengthInChars;

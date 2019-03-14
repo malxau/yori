@@ -89,7 +89,7 @@ SdirSetConsoleTextAttribute(
 
     SdirCurrentAttribute = Attribute;
 
-    return YoriLibVtSetConsoleTextAttributeOnDevice(hConsole, 0, Attribute.Win32Attr);
+    return YoriLibVtSetConsoleTextAttributeOnDevice(hConsole, 0, 0, Attribute.Win32Attr);
 }
 
 /**

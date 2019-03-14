@@ -2414,12 +2414,14 @@ BOOL
 YoriLibVtSetConsoleTextAttributeOnDevice(
     __in HANDLE hOut,
     __in DWORD Flags,
+    __in UCHAR Ctrl,
     __in WORD Attribute
     );
 
 BOOL
 YoriLibVtStringForTextAttribute(
     __inout PYORI_STRING String,
+    __in UCHAR Ctrl,
     __in WORD Attribute
     );
 

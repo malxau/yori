@@ -81,6 +81,7 @@ YoriCmd_COLOR(
     DWORD i;
     DWORD StartArg;
     YORI_STRING Arg;
+    YORILIB_COLOR_ATTRIBUTES Attributes;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -143,9 +144,16 @@ YoriCmd_COLOR(
 
     OriginalAttributes = BufferInfo.wAttributes;
     BufferInfo.wAttributes = 0;
+    Attributes.Win32Attr = 0;
+    Attributes.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
     for (i = 0; i < 2; i++) {
         if (ArgV[StartArg].LengthInChars <= i) {
             break;
+        }
+        if (i == 0) {
+            Attributes.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG;
+        } else {
+            Attributes.Ctrl = 0;
         }
         BufferInfo.wAttributes = (WORD)(BufferInfo.wAttributes << 4);
         if (ArgV[StartArg].StartOfString[i] >= 'a' && ArgV[StartArg].StartOfString[i] <= 'f') {
@@ -156,12 +164,15 @@ YoriCmd_COLOR(
             BufferInfo.wAttributes = (WORD)(BufferInfo.wAttributes + ArgV[StartArg].StartOfString[i] - '0');
         } else {
             YORILIB_COLOR_ATTRIBUTES WindowAttributes;
-            YORILIB_COLOR_ATTRIBUTES Attributes;
 
-            Attributes = YoriLibAttributeFromString(&ArgV[StartArg]);
-            if (Attributes.Ctrl == (YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG)) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: invalid character '%c'\n"), ArgV[StartArg].StartOfString[i]);
-                return EXIT_FAILURE;
+            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[StartArg], _T("reset")) == 0) {
+                Attributes.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
+            } else {
+                Attributes = YoriLibAttributeFromString(&ArgV[StartArg]);
+                if (Attributes.Ctrl == (YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG)) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: invalid character '%c'\n"), ArgV[StartArg].StartOfString[i]);
+                    return EXIT_FAILURE;
+                }
             }
 
             WindowAttributes.Ctrl = 0;
@@ -172,14 +183,16 @@ YoriCmd_COLOR(
         }
     }
 
-    if ((BufferInfo.wAttributes >> 4) == (BufferInfo.wAttributes & 0xf)) {
+    if (Attributes.Ctrl == 0 &&
+        (BufferInfo.wAttributes >> 4) == (BufferInfo.wAttributes & 0xf)) {
+
         return EXIT_FAILURE;
     }
 
     if (Fullscreen) {
         BufferInfo.dwCursorPosition.X = 0;
         BufferInfo.dwCursorPosition.Y = 0;
-        
+
         if (BufferInfo.dwSize.X > 0 && BufferInfo.dwSize.Y > 0) {
             FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE),
                                        BufferInfo.wAttributes,
@@ -192,8 +205,8 @@ YoriCmd_COLOR(
     if (Default) {
         YoriCallSetDefaultColor(BufferInfo.wAttributes);
     }
-    
-    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, BufferInfo.wAttributes);
+
+    YoriLibVtSetConsoleTextAttributeOnDevice(GetStdHandle(STD_OUTPUT_HANDLE), 0, Attributes.Ctrl, BufferInfo.wAttributes);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 
     return EXIT_SUCCESS;

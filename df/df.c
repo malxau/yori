@@ -205,10 +205,10 @@ DfReportSingleVolume(
             }
             YoriLibConstantString(&YsVolName, VolName);
             if (!YoriLibFileFiltCheckColorMatch(&DfContext->ColorRules, &YsVolName, &FindData, &Attribute)) {
-                Attribute.Ctrl = 0;
+                Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
                 Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
             }
-            YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+            YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Ctrl, Attribute.Win32Attr);
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
                           _T("%y%y%c[0m total %y%y%c[0m free %3i.%i%% used %y%s%c[0m\n"),
                           &DfContext->FileSizeColorString,
@@ -229,6 +229,7 @@ DfReportSingleVolume(
             DWORD TotalBarSize;
             DWORD BarsSet;
             DWORD Index;
+            UCHAR Ctrl;
 
             DfContext->LineBuffer.StartOfString[0] = ' ';
             DfContext->LineBuffer.StartOfString[1] = '[';
@@ -237,14 +238,15 @@ DfReportSingleVolume(
             Subset.StartOfString = &DfContext->LineBuffer.StartOfString[2];
             Subset.LengthAllocated = DfContext->LineBuffer.LengthAllocated - 2;
 
+            Ctrl = YORILIB_ATTRCTRL_WINDOW_BG;
             Background = (USHORT)(YoriLibVtGetDefaultColor() & 0xF0);
 
             if (PercentageUsed <= 700) {
-                YoriLibVtStringForTextAttribute(&Subset, (USHORT)(Background | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
+                YoriLibVtStringForTextAttribute(&Subset, Ctrl, (USHORT)(Background | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
             } else if (PercentageUsed <= 850) {
-                YoriLibVtStringForTextAttribute(&Subset, (USHORT)(Background | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
+                YoriLibVtStringForTextAttribute(&Subset, Ctrl, (USHORT)(Background | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
             } else {
-                YoriLibVtStringForTextAttribute(&Subset, (USHORT)(Background | FOREGROUND_RED | FOREGROUND_INTENSITY));
+                YoriLibVtStringForTextAttribute(&Subset, Ctrl, (USHORT)(Background | FOREGROUND_RED | FOREGROUND_INTENSITY));
             }
 
             DfContext->LineBuffer.LengthInChars = 2 + Subset.LengthInChars;
@@ -363,13 +365,14 @@ ENTRYPOINT(
 
     YoriLibConstantString(&Combined, _T("fs"));
     if (!YoriLibGetMetadataColor(&Combined, &DfContext.FileSizeColor)) {
+        DfContext.FileSizeColor.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
         DfContext.FileSizeColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
     }
 
     DfContext.FileSizeColorString.StartOfString = DfContext.FileSizeColorStringBuffer;
     DfContext.FileSizeColorString.LengthAllocated = YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
 
-    YoriLibVtStringForTextAttribute(&DfContext.FileSizeColorString, DfContext.FileSizeColor.Win32Attr);
+    YoriLibVtStringForTextAttribute(&DfContext.FileSizeColorString, DfContext.FileSizeColor.Ctrl, DfContext.FileSizeColor.Win32Attr);
 
     if (DfContext.DisplayGraph) {
         if (!YoriLibAllocateString(&DfContext.LineBuffer, DfContext.ConsoleWidth + 2 * YORI_MAX_INTERNAL_VT_ESCAPE_CHARS)) {

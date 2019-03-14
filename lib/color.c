@@ -586,7 +586,7 @@ YoriLibGetMetadataColor(
                     FoundColor = YoriLibAttributeFromString(&FoundColorString);
                     WindowColor.Ctrl = 0;
                     WindowColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
-                    FoundColor = YoriLibResolveWindowColorComponents(FoundColor, WindowColor, FALSE);
+                    FoundColor = YoriLibResolveWindowColorComponents(FoundColor, WindowColor, TRUE);
                     YoriLibFreeStringContents(&CriteriaString);
                     *Color = FoundColor;
                     return TRUE;

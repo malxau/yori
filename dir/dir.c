@@ -243,11 +243,11 @@ DirOutputBeginningOfDirectorySummary(
         YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirContext->CurrentDirectoryName.StartOfString, TRUE);
 
         if (!YoriLibFileFiltCheckColorMatch(&DirContext->ColorRules, &DirContext->CurrentDirectoryName, &FileInfo, &Attribute)) {
-            Attribute.Ctrl = 0;
+            Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
             Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
         }
 
-        YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+        YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Ctrl, Attribute.Win32Attr);
     }
 
     if (VtAttribute.LengthInChars > 0) {
@@ -507,11 +507,11 @@ DirFileFoundCallback(
             VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(VtAttributeBuffer[0]);
 
             if (!YoriLibFileFiltCheckColorMatch(&DirContext->ColorRules, FilePath, FileInfo, &Attribute)) {
-                Attribute.Ctrl = 0;
+                Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
                 Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
             }
 
-            YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+            YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Ctrl, Attribute.Win32Attr);
         }
 
         if (VtAttribute.LengthInChars > 0) {
@@ -580,11 +580,11 @@ DirFileFoundCallback(
 
                             YoriLibUpdateFindDataFromFileInformation(&BogusFileInfo, StreamFullPath.StartOfString, FALSE);
                             if (!YoriLibFileFiltCheckColorMatch(&DirContext->ColorRules, &StreamFullPath, &BogusFileInfo, &Attribute)) {
-                                Attribute.Ctrl = 0;
+                                Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
                                 Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
                             }
 
-                            YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+                            YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Ctrl, Attribute.Win32Attr);
                         }
                         YoriLibNumberToString(&SizeString, FindStreamData.StreamSize.QuadPart, 10, 3, ',');
                         if (SizeString.LengthInChars < DIR_SIZE_FIELD_SIZE) {

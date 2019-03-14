@@ -965,6 +965,9 @@ YoriLibOutputToDevice(
         representation for the attribute.  This string can be reallocated
         within this routine.
 
+ @param Ctrl The control part of the attribute that specifies whether the
+        default window foreground or background should be applied.
+
  @param Attribute The attribute to convert to a VT100 escape sequence.
 
  @return TRUE to indicate success, FALSE to indicate failure.
@@ -972,6 +975,7 @@ YoriLibOutputToDevice(
 BOOL
 YoriLibVtStringForTextAttribute(
     __inout PYORI_STRING String,
+    __in UCHAR Ctrl,
     __in WORD Attribute
     )
 {
@@ -985,15 +989,30 @@ YoriLibVtStringForTextAttribute(
         }
     }
 
-    AnsiForeground = (CHAR)YoriLibWindowsToAnsi(Attribute&7);
-    AnsiBackground = (CHAR)YoriLibWindowsToAnsi((Attribute>>4)&7);
+    if (Ctrl & YORILIB_ATTRCTRL_WINDOW_BG) {
+        AnsiBackground = 49;
+    } else {
+        AnsiBackground = (CHAR)YoriLibWindowsToAnsi((Attribute>>4)&7);
+        if (Attribute & BACKGROUND_INTENSITY) {
+            AnsiBackground += 100;
+        } else {
+            AnsiBackground += 40;
+        }
+    }
+
+    if (Ctrl & YORILIB_ATTRCTRL_WINDOW_FG) {
+        AnsiForeground = 39;
+    } else {
+        AnsiForeground = (CHAR)YoriLibWindowsToAnsi(Attribute&7);
+        AnsiForeground += 30;
+    }
 
     String->LengthInChars = YoriLibSPrintfS(String->StartOfString,
                                             String->LengthAllocated,
                                             _T("%c[0;%i;%i%sm"),
                                             27,
-                                            (Attribute & BACKGROUND_INTENSITY)?100+AnsiBackground:40+AnsiBackground,
-                                            30+AnsiForeground,
+                                            AnsiBackground,
+                                            AnsiForeground,
                                             (Attribute & FOREGROUND_INTENSITY)?_T(";1"):_T("")
                                             );
 
@@ -1009,6 +1028,9 @@ YoriLibVtStringForTextAttribute(
 
  @param Flags Flags indicating output behavior.
 
+ @param Ctrl The control part of the attribute that specifies whether the
+        default window foreground or background should be applied.
+
  @param Attribute The Win32 color code to make active.
 
  @return TRUE to indicate success, FALSE to indicate failure.
@@ -1017,6 +1039,7 @@ BOOL
 YoriLibVtSetConsoleTextAttributeOnDevice(
     __in HANDLE hOut,
     __in DWORD Flags,
+    __in UCHAR Ctrl,
     __in WORD Attribute
     )
 {
@@ -1032,7 +1055,7 @@ YoriLibVtSetConsoleTextAttributeOnDevice(
     //  fail.
     //
 
-    if (!YoriLibVtStringForTextAttribute(&OutputString, Attribute)) {
+    if (!YoriLibVtStringForTextAttribute(&OutputString, Ctrl, Attribute)) {
         ASSERT(FALSE);
         return FALSE;
     }
@@ -1068,7 +1091,7 @@ YoriLibVtSetConsoleTextAttribute(
     } else {
         hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     }
-    return YoriLibVtSetConsoleTextAttributeOnDevice(hOut, Flags, Attribute);
+    return YoriLibVtSetConsoleTextAttributeOnDevice(hOut, Flags, 0, Attribute);
 }
 
 /**

@@ -329,11 +329,11 @@ DuReportAndCloseStack(
                 YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirStack->DirectoryName.StartOfString, TRUE);
         
                 if (!YoriLibFileFiltCheckColorMatch(&DuContext->ColorRules, &DirStack->DirectoryName, &FileInfo, &Attribute)) {
-                    Attribute.Ctrl = 0;
+                    Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
                     Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
                 }
         
-                YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Win32Attr);
+                YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Ctrl, Attribute.Win32Attr);
             }
 
             if (VtAttribute.LengthInChars > 0) {
@@ -937,13 +937,14 @@ ENTRYPOINT(
 
     YoriLibConstantString(&Combined, _T("fs"));
     if (!YoriLibGetMetadataColor(&Combined, &DuContext.FileSizeColor)) {
+        DuContext.FileSizeColor.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
         DuContext.FileSizeColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
     }
 
     DuContext.FileSizeColorString.StartOfString = DuContext.FileSizeColorStringBuffer;
     DuContext.FileSizeColorString.LengthAllocated = YORI_MAX_INTERNAL_VT_ESCAPE_CHARS;
 
-    YoriLibVtStringForTextAttribute(&DuContext.FileSizeColorString, DuContext.FileSizeColor.Win32Attr);
+    YoriLibVtStringForTextAttribute(&DuContext.FileSizeColorString, DuContext.FileSizeColor.Ctrl, DuContext.FileSizeColor.Win32Attr);
 
     DuEnableBackupPrivilege();
 

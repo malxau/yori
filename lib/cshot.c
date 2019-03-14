@@ -125,7 +125,7 @@ YoriLibRewriteConsoleContents(
         }
     }
 
-    YoriLibVtSetConsoleTextAttributeOnDevice(hTarget, 0, ReadBuffer[0].Attributes);
+    YoriLibVtSetConsoleTextAttributeOnDevice(hTarget, 0, 0, ReadBuffer[0].Attributes);
     LastAttribute = ReadBuffer[0].Attributes;
 
     for (ReadBufferOffset.Y = 0; ReadBufferOffset.Y < ReadBufferSize.Y; ReadBufferOffset.Y++) {
@@ -137,7 +137,7 @@ YoriLibRewriteConsoleContents(
             CellIndex = ReadBufferOffset.Y * ReadBufferSize.X + ReadBufferOffset.X;
             
             if (ReadBuffer[CellIndex].Attributes != LastAttribute) {
-                YoriLibVtSetConsoleTextAttributeOnDevice(hTarget, 0, ReadBuffer[CellIndex].Attributes);
+                YoriLibVtSetConsoleTextAttributeOnDevice(hTarget, 0, 0, ReadBuffer[CellIndex].Attributes);
                 LastAttribute = ReadBuffer[CellIndex].Attributes;
             }
             YoriLibOutputToDevice(hTarget, 0, _T("%c"), ReadBuffer[CellIndex].Char.UnicodeChar);
@@ -203,14 +203,14 @@ YoriLibGenerateVtStringFromConsoleBuffers(
     //
 
     LastAttribute = AttrBuffer[0];
-    YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+    YoriLibVtStringForTextAttribute(&EscapeString, 0, LastAttribute);
     BufferSizeNeeded += EscapeString.LengthInChars;
 
     for (LineIndex = 0; LineIndex < BufferSize.Y; LineIndex++) {
         for (CharIndex = 0; CharIndex < BufferSize.X; CharIndex++) {
             if (AttrBuffer[LineIndex * BufferSize.X + CharIndex] != LastAttribute) {
                 LastAttribute = AttrBuffer[LineIndex * BufferSize.X + CharIndex];
-                YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+                YoriLibVtStringForTextAttribute(&EscapeString, 0, LastAttribute);
                 BufferSizeNeeded += EscapeString.LengthInChars;
             }
         }
@@ -234,7 +234,7 @@ YoriLibGenerateVtStringFromConsoleBuffers(
 
     String->LengthInChars = 0;
     LastAttribute = AttrBuffer[0];
-    YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+    YoriLibVtStringForTextAttribute(&EscapeString, 0, LastAttribute);
 
     memcpy(&String->StartOfString[String->LengthInChars], EscapeString.StartOfString, EscapeString.LengthInChars * sizeof(TCHAR));
     String->LengthInChars += EscapeString.LengthInChars;
@@ -243,7 +243,7 @@ YoriLibGenerateVtStringFromConsoleBuffers(
         for (CharIndex = 0; CharIndex < BufferSize.X; CharIndex++) {
             if (AttrBuffer[LineIndex * BufferSize.X + CharIndex] != LastAttribute) {
                 LastAttribute = AttrBuffer[LineIndex * BufferSize.X + CharIndex];
-                YoriLibVtStringForTextAttribute(&EscapeString, LastAttribute);
+                YoriLibVtStringForTextAttribute(&EscapeString, 0, LastAttribute);
                 memcpy(&String->StartOfString[String->LengthInChars], EscapeString.StartOfString, EscapeString.LengthInChars * sizeof(TCHAR));
                 String->LengthInChars += EscapeString.LengthInChars;
             }
