@@ -55,7 +55,7 @@ ClsHelp()
 /**
  The main entrypoint for the cls builtin command.
  */
-#define ENTRYPOINT YoriCmd_CLS
+#define ENTRYPOINT YoriCmd_YCLS
 #else
 /**
  The main entrypoint for the cls standalone application.

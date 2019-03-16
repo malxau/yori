@@ -59,7 +59,7 @@ YORI_CMD_BUILTIN YoriCmd_YCLIP;
 /**
  Declaration for the builtin command.
  */
-YORI_CMD_BUILTIN YoriCmd_CLS;
+YORI_CMD_BUILTIN YoriCmd_YCLS;
 
 /**
  Declaration for the builtin command.
@@ -436,7 +436,6 @@ YoriShBuiltins[] = {
                     {_T("CAB"),       YoriCmd_CAB},
                     {_T("CAL"),       YoriCmd_YCAL},
                     {_T("CHDIR"),     YoriCmd_CHDIR},
-                    {_T("CLS"),       YoriCmd_CLS},
                     {_T("COLOR"),     YoriCmd_COLOR},
                     {_T("CSHOT"),     YoriCmd_CSHOT},
                     {_T("CVTVT"),     YoriCmd_CVTVT},
@@ -482,6 +481,7 @@ YoriShBuiltins[] = {
                     {_T("WINPOS"),    YoriCmd_WINPOS},
                     {_T("YCAL"),      YoriCmd_YCAL},
                     {_T("YCLIP"),     YoriCmd_YCLIP},
+                    {_T("YCLS"),      YoriCmd_YCLS},
                     {_T("YCOMPACT"),  YoriCmd_YCOMPACT},
                     {_T("YCOPY"),     YoriCmd_YCOPY},
                     {_T("YCUT"),      YoriCmd_YCUT},
@@ -523,6 +523,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("cal"),      _T("ycal $*$")},
     {_T("cd"),       _T("chdir $*$")},
     {_T("clip"),     _T("yclip $*$")},
+    {_T("cls"),      _T("ycls $*$")},
     {_T("compact"),  _T("ycompact $*$")},
     {_T("copy"),     _T("ycopy $*$")},
     {_T("cut"),      _T("ycut $*$")},

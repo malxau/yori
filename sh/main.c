@@ -60,6 +60,65 @@ YoriShHelp()
 }
 
 /**
+ A callback function for every file found in the YoriInit.d directory.
+
+ @param Filename Pointer to the fully qualified file name to execute.
+
+ @param FileInfo Pointer to information about the file.  Ignored in this
+        function.
+
+ @param Depth The recursion depth.  Ignored in this function.
+
+ @param Context Pointer to context.  Ignored in this function.
+
+ @return TRUE to continue enumerating, FALSE to terminate.
+ */
+BOOL
+YoriShExecuteYoriInit(
+    __in PYORI_STRING Filename,
+    __in PWIN32_FIND_DATA FileInfo,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    YORI_STRING InitNameWithQuotes;
+    LPTSTR szExt;
+    YORI_STRING UnescapedPath;
+    PYORI_STRING NameToUse;
+
+    UNREFERENCED_PARAMETER(FileInfo);
+    UNREFERENCED_PARAMETER(Depth);
+    UNREFERENCED_PARAMETER(Context);
+
+    YoriLibInitEmptyString(&UnescapedPath);
+    NameToUse = Filename;
+    szExt = YoriLibFindRightMostCharacter(Filename, '.');
+    if (szExt != NULL) {
+        YORI_STRING YsExt;
+
+        YoriLibInitEmptyString(&YsExt);
+        YsExt.StartOfString = szExt;
+        YsExt.LengthInChars = Filename->LengthInChars - (DWORD)(szExt - Filename->StartOfString);
+        if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
+            YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
+
+            if (YoriLibUnescapePath(Filename, &UnescapedPath)) {
+                NameToUse = &UnescapedPath;
+            }
+        }
+    }
+
+    YoriLibInitEmptyString(&InitNameWithQuotes);
+    YoriLibYPrintf(&InitNameWithQuotes, _T("\"%y\""), NameToUse);
+    if (InitNameWithQuotes.LengthInChars > 0) {
+        YoriShExecuteExpression(&InitNameWithQuotes);
+    }
+    YoriLibFreeStringContents(&InitNameWithQuotes);
+    YoriLibFreeStringContents(&UnescapedPath);
+    return TRUE;
+}
+
+/**
  Initialize the console and populate the shell's environment with default
  values.
  */
@@ -72,10 +131,6 @@ YoriShInit()
     DWORD Count;
     YORI_SH_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
     YORI_STRING RelativeYoriInitName;
-    YORI_STRING ExpandedUserYoriInitName;
-    YORI_STRING ExpandedSystemYoriInitName;
-    YORI_STRING FoundYoriInitName;
-    YORI_STRING InitNameWithQuotes;
 
     //
     //  Translate the constant builtin function mapping into dynamic function
@@ -231,65 +286,22 @@ YoriShInit()
     YoriShLoadSystemAliases(FALSE);
 
     //
-    //  Expand the path to the home directory's YoriInit script.
+    //  Execute all system YoriInit scripts.
     //
 
-    YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit"));
-    YoriLibInitEmptyString(&ExpandedUserYoriInitName);
-    YoriLibInitEmptyString(&ExpandedSystemYoriInitName);
-    if (!YoriLibExpandHomeDirectories(&RelativeYoriInitName, &ExpandedUserYoriInitName)) {
-        return FALSE;
-    }
-
-    YoriLibConstantString(&RelativeYoriInitName, _T("~AppDir\\YoriInit"));
-    if (!YoriLibExpandHomeDirectories(&RelativeYoriInitName, &ExpandedSystemYoriInitName)) {
-        YoriLibFreeStringContents(&ExpandedUserYoriInitName);
-        return FALSE;
-    }
-
-    if (ExpandedUserYoriInitName.LengthInChars > ExpandedSystemYoriInitName.LengthInChars) {
-        Count = ExpandedUserYoriInitName.LengthInChars;
-    } else {
-        Count = ExpandedSystemYoriInitName.LengthInChars;
-    }
+    YoriLibConstantString(&RelativeYoriInitName, _T("~AppDir\\YoriInit.d\\*"));
+    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+    YoriLibConstantString(&RelativeYoriInitName, _T("~AppDir\\YoriInit*"));
+    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
 
     //
-    //  We need enough space for the base name, including path, plus
-    //  any matching extension.  256 is the worst case for a single
-    //  file component in Windows.
+    //  Execute all user YoriInit scripts.
     //
 
-    Count = Count + 256;
-    if (!YoriLibAllocateString(&FoundYoriInitName, Count)) {
-        YoriLibFreeStringContents(&ExpandedUserYoriInitName);
-        YoriLibFreeStringContents(&ExpandedSystemYoriInitName);
-        return FALSE;
-    }
-
-
-    //
-    //  Search for any matching YoriInit script, and if one is found,
-    //  execute it.
-    //
-
-    YoriLibInitEmptyString(&InitNameWithQuotes);
-    if (YoriLibPathLocateUnknownExtensionKnownLocation(&ExpandedUserYoriInitName, NULL, NULL, &FoundYoriInitName) && FoundYoriInitName.LengthInChars > 0) {
-        YoriLibYPrintf(&InitNameWithQuotes, _T("\"%y\""), &FoundYoriInitName);
-        if (InitNameWithQuotes.LengthInChars > 0) {
-            YoriShExecuteExpression(&InitNameWithQuotes);
-        }
-        YoriLibFreeStringContents(&InitNameWithQuotes);
-    } else if (YoriLibPathLocateUnknownExtensionKnownLocation(&ExpandedSystemYoriInitName, NULL, NULL, &FoundYoriInitName) && FoundYoriInitName.LengthInChars > 0) {
-        YoriLibYPrintf(&InitNameWithQuotes, _T("\"%y\""), &FoundYoriInitName);
-        if (InitNameWithQuotes.LengthInChars > 0) {
-            YoriShExecuteExpression(&InitNameWithQuotes);
-        }
-        YoriLibFreeStringContents(&InitNameWithQuotes);
-    }
-
-    YoriLibFreeStringContents(&FoundYoriInitName);
-    YoriLibFreeStringContents(&ExpandedUserYoriInitName);
-    YoriLibFreeStringContents(&ExpandedSystemYoriInitName);
+    YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit.d\\*"));
+    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+    YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit*"));
+    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
 
     //
     //  Reload any state next time it's requested.
