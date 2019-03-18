@@ -3,7 +3,7 @@
  *
  * Yori table of supported builtins for the modular build of Yori (ie., none.)
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,46 +39,27 @@ YoriShBuiltins[] = {
  */
 CONST YORI_SH_DEFAULT_ALIAS_ENTRY
 YoriShDefaultAliasEntries[] = {
-    {_T("cal"),      _T("ycal $*$")},
     {_T("cd"),       _T("chdir $*$")},
-    {_T("clip"),     _T("yclip $*$")},
     {_T("cls"),      _T("ycls $*$")},
-    {_T("compact"),  _T("ycompact $*$")},
     {_T("copy"),     _T("ycopy $*$")},
     {_T("cut"),      _T("ycut $*$")},
     {_T("date"),     _T("ydate $*$")},
     {_T("del"),      _T("yerase $*$")},
-    {_T("df"),       _T("ydf $*$")},
     {_T("dir"),      _T("ydir $*$")},
-    {_T("du"),       _T("ydu $*$")},
     {_T("echo"),     _T("yecho $*$")},
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},
-    {_T("hash"),     _T("yhash $*$")},
     {_T("head"),     _T("ytype -h $*$")},
-    {_T("help"),     _T("yhelp $*$")},
-    {_T("htmlclip"), _T("yclip -h $*$")},
     {_T("md"),       _T("ymkdir $*$")},
-    {_T("md5sum"),   _T("yhash -a md5 $*$")},
     {_T("mkdir"),    _T("ymkdir $*$")},
     {_T("mklink"),   _T("ymklink $*$")},
-    {_T("more"),     _T("ymore $*$")},
-    {_T("mount"),    _T("ymount $*$")},
     {_T("move"),     _T("ymove $*$")},
-    {_T("paste"),    _T("yclip -p $*$")},
-    {_T("path"),     _T("ypath $*$")},
     {_T("pause"),    _T("ypause $*$")},
-    {_T("pwd"),      _T("ypath . $*$")},
     {_T("rd"),       _T("yrmdir $*$")},
     {_T("ren"),      _T("ymove $*$")},
     {_T("rename"),   _T("ymove $*$")},
     {_T("rmdir"),    _T("yrmdir $*$")},
-    {_T("sha1sum"),  _T("yhash -a sha1 $*$")},
-    {_T("sha256sum"),_T("yhash -a sha256 $*$")},
-    {_T("sha384sum"),_T("yhash -a sha384 $*$")},
-    {_T("sha512sum"),_T("yhash -a sha512 $*$")},
     {_T("start"),    _T("ystart $*$")},
-    {_T("split"),    _T("ysplit $*$")},
     {_T("time"),     _T("ydate -t $*$")},
     {_T("title"),    _T("ytitle $*$")},
     {_T("type"),     _T("ytype $*$")},
@@ -87,12 +68,21 @@ YoriShDefaultAliasEntries[] = {
 };
 
 /**
- Return the number of elements in the YoriShDefaultAliasEntries array.
+ Register default aliases in a standard build.  This includes core aliases
+ only, and is done to ensure a consistent baseline when scripts start
+ executing to extend these capabilities.
+
+ @return TRUE to indicate success.
  */
-DWORD
-YoriShDefaultAliasEntriesCount()
+BOOL
+YoriShRegisterDefaultAliases()
 {
-    return sizeof(YoriShDefaultAliasEntries)/sizeof(YoriShDefaultAliasEntries[0]);
+    DWORD Count;
+    for (Count = 0; Count < sizeof(YoriShDefaultAliasEntries)/sizeof(YoriShDefaultAliasEntries[0]); Count++) {
+        YoriShAddAliasLiteral(YoriShDefaultAliasEntries[Count].Alias, YoriShDefaultAliasEntries[Count].Value, TRUE);
+    }
+    return TRUE;
 }
 
 // vim:sw=4:ts=4:et:
+

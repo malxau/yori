@@ -362,7 +362,7 @@ YoriShPerformExecutableTabCompletion(
     //
 
     YoriLibInitEmptyString(&AliasStrings);
-    if (IncludeBuiltins && YoriShGetAliasStrings(TRUE, &AliasStrings)) {
+    if (IncludeBuiltins && YoriShGetAliasStrings(YORI_SH_GET_ALIAS_STRINGS_INCLUDE_INTERNAL | YORI_SH_GET_ALIAS_STRINGS_INCLUDE_USER, &AliasStrings)) {
         LPTSTR ThisAlias;
         LPTSTR AliasValue;
         DWORD AliasLength;

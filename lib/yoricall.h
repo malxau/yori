@@ -36,6 +36,12 @@ YoriCallAddHistoryString(
     );
 
 BOOL
+YoriCallAddSystemAlias(
+    __in PYORI_STRING Alias,
+    __in PYORI_STRING Value
+    );
+
+BOOL
 YoriCallBuiltinRegister(
     __in PYORI_STRING BuiltinCmd,
     __in PYORI_CMD_BUILTIN CallbackFn
@@ -120,6 +126,11 @@ YoriCallGetJobOutput(
 DWORD
 YoriCallGetNextJobId(
     __in DWORD PreviousJobId
+    );
+
+BOOL
+YoriCallGetSystemAliasStrings(
+    __out PYORI_STRING AliasStrings
     );
 
 BOOL

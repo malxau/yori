@@ -128,7 +128,6 @@ YoriShInit()
     TCHAR Letter;
     TCHAR AliasName[3];
     TCHAR AliasValue[16];
-    DWORD Count;
     YORI_SH_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
 
     //
@@ -261,9 +260,7 @@ YoriShInit()
     //  Register any builtin aliases, including drive letter colon commands.
     //
 
-    for (Count = 0; Count < YoriShDefaultAliasEntriesCount(); Count++) {
-        YoriShAddAliasLiteral(YoriShDefaultAliasEntries[Count].Alias, YoriShDefaultAliasEntries[Count].Value, TRUE);
-    }
+    YoriShRegisterDefaultAliases();
 
     AliasName[1] = ':';
     AliasName[2] = '\0';

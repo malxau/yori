@@ -144,6 +144,17 @@ YoriShAddAlias(
     DWORD ValueNameLengthInChars;
 
     if (YoriShAliasesHash != NULL) {
+        if (Internal) {
+            PYORI_HASH_ENTRY HashEntry;
+            PYORI_ALIAS ExistingAlias;
+            HashEntry = YoriLibHashLookupByKey(YoriShAliasesHash, Alias);
+            if (HashEntry != NULL) {
+                ExistingAlias = HashEntry->Context;
+                if (!ExistingAlias->Internal) {
+                    return FALSE;
+                }
+            }
+        }
         YoriShDeleteAlias(Alias);
     } else {
         YoriLibInitializeListHead(&YoriShAliasesList);
@@ -364,9 +375,11 @@ YoriShClearAllAliases()
  and return a pointer to the result.  This must be freed with a
  subsequent call to @ref YoriLibFreeStringContents .
 
- @param IncludeInternal TRUE if all aliases, including internal aliases,
-        should be included.  FALSE if only user defined aliases should
-        be included.
+ @param IncludeFlags Specifies whether the result should include user defined
+        aliases, system defined aliases, or both.  Valid flags are
+        YORI_SH_GET_ALIAS_STRINGS_INCLUDE_USER and
+        YORI_SH_GET_ALIAS_STRINGS_INCLUDE_INTERNAL, and these can be combined
+        to return both.
 
  @param AliasStrings On successful completion, populated with the set of
         alias strings.
@@ -375,7 +388,7 @@ YoriShClearAllAliases()
  */
 BOOL
 YoriShGetAliasStrings(
-    __in BOOL IncludeInternal,
+    __in DWORD IncludeFlags,
     __inout PYORI_STRING AliasStrings
     )
 {
@@ -383,12 +396,23 @@ YoriShGetAliasStrings(
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_ALIAS Alias;
     DWORD StringOffset;
+    BOOLEAN IncludeThisEntry;
 
     if (YoriShAliasesList.Next != NULL) {
         ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, NULL);
         while (ListEntry != NULL) {
             Alias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
-            if (IncludeInternal || !Alias->Internal) {
+            IncludeThisEntry = FALSE;
+            if (Alias->Internal) {
+                if (IncludeFlags & YORI_SH_GET_ALIAS_STRINGS_INCLUDE_INTERNAL) {
+                    IncludeThisEntry = TRUE;
+                }
+            } else {
+                if (IncludeFlags & YORI_SH_GET_ALIAS_STRINGS_INCLUDE_USER) {
+                    IncludeThisEntry = TRUE;
+                }
+            }
+            if (IncludeThisEntry) {
                 CharsNeeded += Alias->Alias.LengthInChars + Alias->Value.LengthInChars + 2;
             }
             ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, ListEntry);
@@ -410,7 +434,17 @@ YoriShGetAliasStrings(
         ListEntry = YoriLibGetNextListEntry(&YoriShAliasesList, NULL);
         while (ListEntry != NULL) {
             Alias = CONTAINING_RECORD(ListEntry, YORI_ALIAS, ListEntry);
-            if (IncludeInternal || !Alias->Internal) {
+            IncludeThisEntry = FALSE;
+            if (Alias->Internal) {
+                if (IncludeFlags & YORI_SH_GET_ALIAS_STRINGS_INCLUDE_INTERNAL) {
+                    IncludeThisEntry = TRUE;
+                }
+            } else {
+                if (IncludeFlags & YORI_SH_GET_ALIAS_STRINGS_INCLUDE_USER) {
+                    IncludeThisEntry = TRUE;
+                }
+            }
+            if (IncludeThisEntry) {
                 YoriLibSPrintf(&AliasStrings->StartOfString[StringOffset], _T("%y=%y"), &Alias->Alias, &Alias->Value);
                 StringOffset += Alias->Alias.LengthInChars + Alias->Value.LengthInChars + 2;
             }

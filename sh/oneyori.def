@@ -3,6 +3,7 @@ NAME ONEYORI
 EXPORTS
     YoriApiAddAlias
     YoriApiAddHistoryString
+    YoriApiAddSystemAlias
     YoriApiBuiltinRegister
     YoriApiBuiltinUnregister
     YoriApiClearHistoryStrings
@@ -19,6 +20,7 @@ EXPORTS
     YoriApiGetJobInformation
     YoriApiGetJobOutput
     YoriApiGetNextJobId
+    YoriApiGetSystemAliasStrings
     YoriApiGetYoriVersion
     YoriApiIncrementPromptRecursionDepth
     YoriApiPipeJobOutput

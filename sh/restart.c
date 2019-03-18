@@ -276,7 +276,7 @@ YoriShSaveRestartState()
     //  Write the current aliases
     //
 
-    if (YoriShGetAliasStrings(FALSE, &Env)) {
+    if (YoriShGetAliasStrings(YORI_SH_GET_ALIAS_STRINGS_INCLUDE_USER, &Env)) {
         LPTSTR ThisPair;
         LPTSTR ThisVar;
         LPTSTR ThisValue;

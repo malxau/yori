@@ -3,7 +3,7 @@
  *
  * Yori shell alias control
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,8 +37,10 @@ CHAR strAliasHelpText[] =
         "Displays or updates command aliases.\n"
         "\n"
         "ALIAS -license\n"
-        "ALIAS [<alias>=<value>]\n"
-        "ALIAS <alias to delete>=\n";
+        "ALIAS [-s] [<alias>=<value>]\n"
+        "ALIAS <alias to delete>=\n"
+        "\n"
+        "   -s             Display or set a system alias\n";
 
 /**
  Display usage text to the user.
@@ -74,6 +76,7 @@ YoriCmd_ALIAS(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
+    BOOLEAN SystemAlias = FALSE;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -89,8 +92,11 @@ YoriCmd_ALIAS(
                 AliasHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                SystemAlias = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -107,8 +113,15 @@ YoriCmd_ALIAS(
         YORI_STRING AliasStrings;
         LPTSTR ThisVar;
         DWORD VarLen;
+        BOOL Result;
 
-        if (YoriCallGetAliasStrings(&AliasStrings)) {
+        if (SystemAlias) {
+            Result = YoriCallGetSystemAliasStrings(&AliasStrings);
+        } else {
+            Result = YoriCallGetAliasStrings(&AliasStrings);
+        }
+
+        if (Result) {
             ThisVar = AliasStrings.StartOfString;
             while (*ThisVar != '\0') {
                 VarLen = _tcslen(ThisVar);
@@ -145,10 +158,18 @@ YoriCmd_ALIAS(
         if (Value.LengthInChars > 0) {
             YoriLibInitEmptyString(&ExpandedAlias);
             if (YoriCallExpandAlias(&Value, &ExpandedAlias)) {
-                YoriCallAddAlias(&Variable, &ExpandedAlias);
+                if (SystemAlias) {
+                    YoriCallAddSystemAlias(&Variable, &ExpandedAlias);
+                } else {
+                    YoriCallAddAlias(&Variable, &ExpandedAlias);
+                }
                 YoriCallFreeYoriString(&ExpandedAlias);
             } else {
-                YoriCallAddAlias(&Variable, &Value);
+                if (SystemAlias) {
+                    YoriCallAddSystemAlias(&Variable, &Value);
+                } else {
+                    YoriCallAddAlias(&Variable, &Value);
+                }
             }
         } else {
             YoriCallDeleteAlias(&Variable);

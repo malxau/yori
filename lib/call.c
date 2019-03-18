@@ -108,6 +108,49 @@ YoriCallAddHistoryString(
     return pYoriApiAddHistoryString(NewCmd);
 }
 
+/**
+ Prototype for the @ref YoriApiAddSystemAlias function.
+ */
+typedef BOOL YORI_API_ADD_SYSTEM_ALIAS(PYORI_STRING, PYORI_STRING);
+
+/**
+ Prototype for a pointer to the @ref YoriApiAddSystemAlias function.
+ */
+typedef YORI_API_ADD_SYSTEM_ALIAS *PYORI_API_ADD_SYSTEM_ALIAS;
+
+/**
+ Pointer to the @ref YoriApiAddSystemAlias function.
+ */
+PYORI_API_ADD_ALIAS pYoriApiAddSystemAlias;
+
+/**
+ Add a new, or replace an existing, shell alias.
+
+ @param Alias The alias to add or update.
+
+ @param Value The value to assign to the alias.
+
+ @return TRUE if the alias was successfully updated, FALSE if it was not.
+ */
+BOOL
+YoriCallAddSystemAlias(
+    __in PYORI_STRING Alias,
+    __in PYORI_STRING Value
+    )
+{
+    if (pYoriApiAddSystemAlias == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiAddSystemAlias = (PYORI_API_ADD_SYSTEM_ALIAS)GetProcAddress(hYori, "YoriApiAddSystemAlias");
+        if (pYoriApiAddSystemAlias == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiAddSystemAlias(Alias, Value);
+}
+
+
 
 /**
  Prototype for the @ref YoriApiBuiltinRegister function.
@@ -771,6 +814,47 @@ YoriCallGetNextJobId(
         }
     }
     return pYoriApiGetNextJobId(PreviousJobId);
+}
+
+/**
+ Prototype for the @ref YoriApiGetSystemAliasStrings function.
+ */
+typedef BOOL YORI_API_GET_SYSTEM_ALIAS_STRINGS(PYORI_STRING);
+
+/**
+ Prototype for a pointer to the @ref YoriApiGetSystemAliasStrings function.
+ */
+typedef YORI_API_GET_SYSTEM_ALIAS_STRINGS *PYORI_API_GET_SYSTEM_ALIAS_STRINGS;
+
+/**
+ Pointer to the @ref YoriApiGetSystemAliasStrings function.
+ */
+PYORI_API_GET_SYSTEM_ALIAS_STRINGS pYoriApiGetSystemAliasStrings;
+
+/**
+ Build the set of system defined aliases into a an array of key value pairs
+ and return a pointer to the result.  This must be freed with a
+ subsequent call to @ref YoriCallFreeYoriString .
+
+ @param AliasStrings On successful completion, populated with alias strings.
+
+ @return TRUE to indicate success, or FALSE to indicate failure.
+ */
+BOOL
+YoriCallGetSystemAliasStrings(
+    __out PYORI_STRING AliasStrings
+    )
+{
+    if (pYoriApiGetSystemAliasStrings == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiGetSystemAliasStrings = (PYORI_API_GET_SYSTEM_ALIAS_STRINGS)GetProcAddress(hYori, "YoriApiGetSystemAliasStrings");
+        if (pYoriApiGetSystemAliasStrings == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiGetSystemAliasStrings(AliasStrings);
 }
 
 /**

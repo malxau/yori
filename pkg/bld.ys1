@@ -45,10 +45,6 @@ mkdir %OUTDIR% >NUL 2>&1
 echo *** Building debug
 nmake /nologo PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
 
-REM This is a bad idea.  We should really generate setups from the hosted
-REM file tree to ensure the binaries in the setup are available/servicable
-REM from the web.
-
 echo *** Generating debug installer
 
 ypm -cs %OUTDIR%\yori-source-noarch.cab yori-source %BUILDSTRING% -filepath . &

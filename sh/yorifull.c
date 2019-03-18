@@ -568,12 +568,19 @@ YoriShDefaultAliasEntries[] = {
 };
 
 /**
- Return the number of elements in the YoriShDefaultAliasEntries array.
+ Register default aliases in a full static build.  This is done here to ensure
+ a static binary doesn't need other files to be useful.
+
+ @return TRUE to indicate success.
  */
-DWORD
-YoriShDefaultAliasEntriesCount()
+BOOL
+YoriShRegisterDefaultAliases()
 {
-    return sizeof(YoriShDefaultAliasEntries)/sizeof(YoriShDefaultAliasEntries[0]);
+    DWORD Count;
+    for (Count = 0; Count < sizeof(YoriShDefaultAliasEntries)/sizeof(YoriShDefaultAliasEntries[0]); Count++) {
+        YoriShAddAliasLiteral(YoriShDefaultAliasEntries[Count].Alias, YoriShDefaultAliasEntries[Count].Value, TRUE);
+    }
+    return TRUE;
 }
 
 // vim:sw=4:ts=4:et:

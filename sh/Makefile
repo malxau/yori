@@ -1,5 +1,6 @@
 
 BINARIES=yori.exe yorimin.exe oneyori.exe
+INITFILES=YoriInit.d\*
 
 !INCLUDE "..\config\common.mk"
 
@@ -47,13 +48,13 @@ FULL_BUILTINLIBS=\
 
 compile: $(OBJS) $(BUILTINTABLE_OBJS)
 
-yorimin.exe: $(OBJS) yorinone.obj
+yorimin.exe: $(OBJS) yorinone.obj yorimin.def
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) yorinone.obj $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(MIN_PDB) -out:$@
 
-yori.exe: $(OBJS) yoristd.obj
+yori.exe: $(OBJS) yoristd.obj yori.def
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yoristd.obj $(CRTLIB) ..\lib\yorilib.lib $(STD_BUILTINLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(STD_PDB) -out:$@
 
-oneyori.exe: $(OBJS) yorifull.obj
+oneyori.exe: $(OBJS) yorifull.obj oneyori.def yorifull.lst
 	@$(LIB32) $(LIBFLAGS) @yorifull.lst /out:yorifull.lib
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yorifull.obj $(CRTLIB) ..\lib\yorilib.lib $(FULL_BUILTINLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(FULL_PDB) -out:$@
 
