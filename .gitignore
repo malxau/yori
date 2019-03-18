@@ -14,4 +14,7 @@ pkg/out/**
 pkg/amd64/**
 pkg/win32/**
 pkg/arm64/**
+pkg/amd64-dbg/**
+pkg/win32-dbg/**
+pkg/arm64-dbg/**
 !crt/i386/*.obj
