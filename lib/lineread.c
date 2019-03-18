@@ -443,9 +443,8 @@ YoriLibReadLineToStringEx(
 
             WaitResult = WaitForMultipleObjects(HandleCount, HandleArray, FALSE, INFINITE);
             if (WaitResult == WAIT_OBJECT_0 && HandleCount > 1) {
-                UserString->LengthInChars = 0;
-                *LineTerminated = FALSE;
-                return NULL;
+                TerminateProcessing = TRUE;
+                break;
             }
 
             if (FileType != FILE_TYPE_PIPE) {
@@ -453,9 +452,8 @@ YoriLibReadLineToStringEx(
             }
 
             if (!PeekNamedPipe(FileHandle, NULL, 0, NULL, &BytesAvailable, NULL)) {
-                UserString->LengthInChars = 0;
-                *LineTerminated = FALSE;
-                return NULL;
+                TerminateProcessing = TRUE;
+                break;
             }
 
             if (BytesAvailable > 0) {
