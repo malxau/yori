@@ -1,5 +1,0 @@
-if intcmp -- %1%^>1; goto arg
-echo -- /executables
-goto :eof
-:arg
-echo -- /files
