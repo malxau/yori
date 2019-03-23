@@ -93,6 +93,13 @@ YoriShIsArgumentSeperator(
             }
         } else if (String->StartOfString[0] == '<') {
             CharsToConsume++;
+        } else if (String->StartOfString[0] == '1') {
+            if (String->LengthInChars >= 2 && String->StartOfString[1] == '>') {
+                CharsToConsume += 2;
+                if (String->LengthInChars >= 3 && String->StartOfString[2] == '>') {
+                    CharsToConsume++;
+                }
+            }
         } else if (String->StartOfString[0] == '2') {
             if (String->LengthInChars >= 2 && String->StartOfString[1] == '>') {
                 CharsToConsume += 2;
@@ -1184,6 +1191,24 @@ YoriShParseCmdContextToExecContext(
                                                          &ExecContext->StdOut.Overwrite.FileName);
                 }
                 RemoveThisArg = TRUE;
+            }
+
+            if (ThisArg->StartOfString[0] == '1') {
+                if (ThisArg->StartOfString[1] == '>') {
+                    YoriShExecContextCleanupStdOut(ExecContext);
+                    if (ThisArg->StartOfString[2] == '>') {
+                        ExecContext->StdOutType = StdOutTypeAppend;
+                        YoriShCheckForDeviceNameAndDuplicate(ThisArg,
+                                                             3,
+                                                             &ExecContext->StdOut.Append.FileName);
+                    } else {
+                        ExecContext->StdOutType = StdOutTypeOverwrite;
+                        YoriShCheckForDeviceNameAndDuplicate(ThisArg,
+                                                             2,
+                                                             &ExecContext->StdOut.Overwrite.FileName);
+                    }
+                    RemoveThisArg = TRUE;
+                }
             }
 
             if (ThisArg->StartOfString[0] == '2') {
