@@ -130,7 +130,6 @@ YoriShInit()
     TCHAR AliasValue[16];
     DWORD Count;
     YORI_SH_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
-    YORI_STRING RelativeYoriInitName;
 
     //
     //  Translate the constant builtin function mapping into dynamic function
@@ -285,6 +284,19 @@ YoriShInit()
     YoriShLoadSystemAliases(TRUE);
     YoriShLoadSystemAliases(FALSE);
 
+    return TRUE;
+}
+
+/**
+ Execute any system or user init scripts.
+
+ @return TRUE to indicate success.
+ */
+BOOL
+YoriShExecuteInitScripts()
+{
+    YORI_STRING RelativeYoriInitName;
+
     //
     //  Execute all system YoriInit scripts.
     //
@@ -339,6 +351,7 @@ YoriShParseArgs(
     DWORD StartArgToExec = 0;
     DWORD i;
     YORI_STRING Arg;
+    BOOL ExecuteStartupScripts = TRUE;
 
     *TerminateApp = FALSE;
 
@@ -375,6 +388,7 @@ YoriShParseArgs(
                     YoriShLoadSavedRestartState(&ArgV[i + 1]);
                     YoriShDiscardSavedRestartState(&ArgV[i + 1]);
                     i++;
+                    ExecuteStartupScripts = FALSE;
                     ArgumentUnderstood = TRUE;
                     break;
                 }
@@ -382,6 +396,7 @@ YoriShParseArgs(
                 if (ArgC > i + 1) {
                     YoriShGlobal.RecursionDepth++;
                     YoriShGlobal.SubShell = TRUE;
+                    ExecuteStartupScripts = FALSE;
                     *TerminateApp = TRUE;
                     StartArgToExec = i + 1;
                     ArgumentUnderstood = TRUE;
@@ -393,6 +408,10 @@ YoriShParseArgs(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (ExecuteStartupScripts) {
+        YoriShExecuteInitScripts();
     }
 
     if (StartArgToExec > 0) {
