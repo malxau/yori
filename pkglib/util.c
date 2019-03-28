@@ -476,10 +476,16 @@ YoriPkgPackagePathToLocalPath(
             goto Exit;
         }
 
+        //
+        //  This will attempt to create a temporary file.  If it fails, that
+        //  implies the temp directory is not writable, does not exist, or
+        //  is unusable for some other reason.
+        //
+
         if (GetTempFileName(TempPath.StartOfString, _T("ypm"), 0, TempFileName.StartOfString) == 0) {
             YoriLibFreeStringContents(&TempPath);
             YoriLibFreeStringContents(&TempFileName);
-            Result = ERROR_NOT_ENOUGH_MEMORY;
+            Result = ERROR_BAD_ENVIRONMENT;
             goto Exit;
         }
 
@@ -563,6 +569,9 @@ YoriPkgDisplayErrorStringForInstallFailure(
             break;
         case ERROR_NO_NETWORK:
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not download package from the network.\n"));
+            break;
+        case ERROR_BAD_ENVIRONMENT:
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("The temporary directory does not exist or cannot be written to.\n"));
             break;
         case ERROR_ACCESS_DENIED:
             YoriLibConstantString(&AdminName, _T("Administrators"));
