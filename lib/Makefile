@@ -41,6 +41,7 @@ OBJS=\
 	 scut.obj     \
 	 select.obj   \
 	 string.obj   \
+	 strmenum.obj \
 	 update.obj   \
 	 util.obj     \
 	 vt.obj       \

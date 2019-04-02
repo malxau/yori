@@ -1,7 +1,7 @@
 /**
  * @file lib/fileenum.c
  *
- * Yori file enumeration manipulation routines
+ * Yori file enumeration routines
  *
  * Copyright (c) 2017-2018 Malcolm J. Smith
  *
@@ -143,10 +143,17 @@ YoriLibForEachFileEnum(
     YoriLibInitEmptyString(&ForEachContext->RecurseCriteria);
 
     //
-    //  Check if there are home paths to expand
+    //  This is currently only needed for the GetFileAttributes call.  It may
+    //  be possible to relax this, possibly allocating within this routine if
+    //  it's really necessary.
     //
 
     ASSERT(YoriLibIsStringNullTerminated(FileSpec));
+
+    //
+    //  Check if there are home paths to expand
+    //
+
     YoriLibInitEmptyString(&ForEachContext->EffectiveFileSpec);
     ForEachContext->EffectiveFileSpec.StartOfString = FileSpec->StartOfString;
     ForEachContext->EffectiveFileSpec.LengthInChars = FileSpec->LengthInChars;
@@ -583,8 +590,6 @@ YoriLibForEachFile(
     //
 
     if (CharsToOperator == FileSpec->LengthInChars) {
-
-        ASSERT(YoriLibIsStringNullTerminated(FileSpec));
 
         if (YoriLibExpandHomeDirectories(FileSpec, &NewFileSpec)) {
             BOOL Result;

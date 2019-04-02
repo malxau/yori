@@ -423,7 +423,7 @@ DirFileFoundCallback(
                 DirOutputBeginningOfDirectorySummary(DirContext);
             }
         }
-
+        FilePart++;
     }
 
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
@@ -453,7 +453,7 @@ DirFileFoundCallback(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), FilePath);
             }
         } else {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), FileInfo->cFileName);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), FilePart);
         }
 
     } else {
@@ -516,15 +516,15 @@ DirFileFoundCallback(
 
         if (VtAttribute.LengthInChars > 0) {
             if (DirContext->DisplayShortNames) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %y%12s %s%c[0m\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, &VtAttribute, FileInfo->cAlternateFileName, FileInfo->cFileName, 27);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %y%12s %s%c[0m\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, &VtAttribute, FileInfo->cAlternateFileName, FilePart, 27);
             } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %y%s%c[0m\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, &VtAttribute, FileInfo->cFileName, 27);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %y%s%c[0m\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, &VtAttribute, FilePart, 27);
             }
         } else {
             if (DirContext->DisplayShortNames) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %12s %s\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, FileInfo->cAlternateFileName, FileInfo->cFileName);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %12s %s\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, FileInfo->cAlternateFileName, FilePart);
             } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %s\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, FileInfo->cFileName);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %s\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, FilePart);
             }
         }
 
@@ -546,15 +546,17 @@ DirFileFoundCallback(
 
                 do {
                     if (_tcscmp(FindStreamData.cStreamName, L"::$DATA") != 0) {
-                        if (DirContext->ColorRules.NumberCriteria) {
-                            DWORD StreamLength = (DWORD)_tcslen(FindStreamData.cStreamName);
+                        DWORD StreamLength = (DWORD)_tcslen(FindStreamData.cStreamName);
 
-                            //
-                            //  Truncate any trailing :$DATA attribute name
-                            //
-                            if (StreamLength > 6 && _tcscmp(FindStreamData.cStreamName + StreamLength - 6, L":$DATA") == 0) {
-                                FindStreamData.cStreamName[StreamLength - 6] = '\0';
-                            }
+                        //
+                        //  Truncate any trailing :$DATA attribute name
+                        //
+
+                        if (StreamLength > 6 && _tcscmp(FindStreamData.cStreamName + StreamLength - 6, L":$DATA") == 0) {
+                            FindStreamData.cStreamName[StreamLength - 6] = '\0';
+                        }
+
+                        if (DirContext->ColorRules.NumberCriteria) {
 
                             //
                             //  Generate a full path to the stream
@@ -566,7 +568,8 @@ DirFileFoundCallback(
                             //  Assume file state is stream state
                             //
 
-                            memcpy(&BogusFileInfo, FileInfo, sizeof(BogusFileInfo));
+                            memcpy(&BogusFileInfo, FileInfo, FIELD_OFFSET(WIN32_FIND_DATA, cFileName));
+                            BogusFileInfo.cAlternateFileName[0] = '\0';
 
                             //
                             //  Populate stream name
@@ -799,20 +802,20 @@ ENTRYPOINT(
     if (StartArg == 0) {
         YORI_STRING FilesInDirectorySpec;
         YoriLibConstantString(&FilesInDirectorySpec, _T("*"));
-        YoriLibForEachFile(&FilesInDirectorySpec,
-                           MatchFlags,
-                           0,
-                           DirFileFoundCallback,
-                           DirFileEnumerateErrorCallback,
-                           &DirContext);
+        YoriLibForEachStream(&FilesInDirectorySpec,
+                             MatchFlags,
+                             0,
+                             DirFileFoundCallback,
+                             DirFileEnumerateErrorCallback,
+                             &DirContext);
     } else {
         for (i = StartArg; i < ArgC; i++) {
-            YoriLibForEachFile(&ArgV[i],
-                               MatchFlags,
-                               0,
-                               DirFileFoundCallback,
-                               DirFileEnumerateErrorCallback,
-                               &DirContext);
+            YoriLibForEachStream(&ArgV[i],
+                                 MatchFlags,
+                                 0,
+                                 DirFileFoundCallback,
+                                 DirFileEnumerateErrorCallback,
+                                 &DirContext);
         }
     }
 

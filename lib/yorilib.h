@@ -2254,6 +2254,18 @@ YoriLibRecycleBinFile(
     __in PYORI_STRING FilePath
     );
 
+// *** STRMENUM.C ***
+
+BOOL
+YoriLibForEachStream(
+    __in PYORI_STRING FileSpec,
+    __in DWORD MatchFlags,
+    __in DWORD Depth,
+    __in PYORILIB_FILE_ENUM_FN Callback,
+    __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
+    __in PVOID Context
+    );
+
 // *** VT.C ***
 
 /**

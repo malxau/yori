@@ -305,12 +305,12 @@ ENTRYPOINT(
 
     for (i = StartArg; i < ArgC; i++) {
 
-        YoriLibForEachFile(&ArgV[i],
-                           MatchFlags,
-                           0,
-                           EraseFileFoundCallback,
-                           EraseFileEnumerateErrorCallback,
-                           &Context);
+        YoriLibForEachStream(&ArgV[i],
+                             MatchFlags,
+                             0,
+                             EraseFileFoundCallback,
+                             EraseFileEnumerateErrorCallback,
+                             &Context);
     }
 
     if (Context.FilesFound == 0) {

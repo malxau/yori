@@ -87,6 +87,14 @@ typedef ULONG SIZE_T;
 #endif
 #endif
 
+#ifndef FIELD_OFFSET
+/**
+ Macro to find the offset of a member of a structure if the compilation
+ environment doesn't already define it.
+ */
+#define FIELD_OFFSET(T, F) ((DWORD)&(((T*)0)->F))
+#endif
+
 /**
  Define the error type for HRESULT.
  */
