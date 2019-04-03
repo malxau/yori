@@ -443,12 +443,12 @@ ENTRYPOINT(
     
         for (i = StartArg; i < ArgC; i++) {
     
-            YoriLibForEachFile(&ArgV[i],
-                               MatchFlags,
-                               0,
-                               ReplFileFoundCallback,
-                               ReplFileEnumerateErrorCallback,
-                               &ReplContext);
+            YoriLibForEachStream(&ArgV[i],
+                                 MatchFlags,
+                                 0,
+                                 ReplFileFoundCallback,
+                                 ReplFileEnumerateErrorCallback,
+                                 &ReplContext);
         }
     }
 

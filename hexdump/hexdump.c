@@ -1313,19 +1313,19 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             if (Reverse) {
-                YoriLibForEachFile(&ArgV[i],
-                                   MatchFlags,
-                                   0,
-                                   HexDumpReverseFileFoundCallback,
-                                   HexDumpFileEnumerateErrorCallback,
-                                   &HexDumpContext);
+                YoriLibForEachStream(&ArgV[i],
+                                     MatchFlags,
+                                     0,
+                                     HexDumpReverseFileFoundCallback,
+                                     HexDumpFileEnumerateErrorCallback,
+                                     &HexDumpContext);
             } else {
-                YoriLibForEachFile(&ArgV[i],
-                                   MatchFlags,
-                                   0,
-                                   HexDumpFileFoundCallback,
-                                   HexDumpFileEnumerateErrorCallback,
-                                   &HexDumpContext);
+                YoriLibForEachStream(&ArgV[i],
+                                     MatchFlags,
+                                     0,
+                                     HexDumpFileFoundCallback,
+                                     HexDumpFileEnumerateErrorCallback,
+                                     &HexDumpContext);
             }
         }
     }

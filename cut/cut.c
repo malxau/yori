@@ -414,12 +414,12 @@ ENTRYPOINT(
         }
 
         for (i = StartArg; i < ArgC; i++) {
-            YoriLibForEachFile(&ArgV[i],
-                               MatchFlags,
-                               0,
-                               CutFileFoundCallback,
-                               CutFileEnumerateErrorCallback,
-                               &CutContext);
+            YoriLibForEachStream(&ArgV[i],
+                                 MatchFlags,
+                                 0,
+                                 CutFileFoundCallback,
+                                 CutFileEnumerateErrorCallback,
+                                 &CutContext);
         }
 
         if (CutContext.FilesFound == 0) {

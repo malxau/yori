@@ -361,12 +361,12 @@ ENTRYPOINT(
     
         for (i = StartArg; i < ArgC; i++) {
     
-            YoriLibForEachFile(&ArgV[i],
-                               MatchFlags,
-                               0,
-                               LinesFileFoundCallback,
-                               LinesFileEnumerateErrorCallback,
-                               &LinesContext);
+            YoriLibForEachStream(&ArgV[i],
+                                 MatchFlags,
+                                 0,
+                                 LinesFileFoundCallback,
+                                 LinesFileEnumerateErrorCallback,
+                                 &LinesContext);
         }
     }
 

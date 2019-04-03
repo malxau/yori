@@ -546,12 +546,12 @@ ENTRYPOINT(
     
         for (i = StartArg; i < ArgC; i++) {
     
-            YoriLibForEachFile(&ArgV[i],
-                               MatchFlags,
-                               0,
-                               HiliteFileFoundCallback,
-                               HiliteFileEnumerateErrorCallback,
-                               &HiliteContext);
+            YoriLibForEachStream(&ArgV[i],
+                                 MatchFlags,
+                                 0,
+                                 HiliteFileFoundCallback,
+                                 HiliteFileEnumerateErrorCallback,
+                                 &HiliteContext);
         }
     }
 

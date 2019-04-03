@@ -578,12 +578,12 @@ ENTRYPOINT(
         }
 
         for (i = StartArg; i < ArgC; i++) {
-            YoriLibForEachFile(&ArgV[i],
-                               MatchFlags,
-                               0,
-                               HashFileFoundCallback,
-                               HashFileEnumerateErrorCallback,
-                               &HashContext);
+            YoriLibForEachStream(&ArgV[i],
+                                 MatchFlags,
+                                 0,
+                                 HashFileFoundCallback,
+                                 HashFileEnumerateErrorCallback,
+                                 &HashContext);
         }
     }
     HashCleanupContext(&HashContext);
