@@ -757,6 +757,7 @@ ENTRYPOINT(
         Executable.LengthInChars == 0) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("setver: unable to find executable\n"));
+        YoriLibFreeStringContents(&Executable);
         return EXIT_FAILURE;
     }
 

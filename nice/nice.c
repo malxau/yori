@@ -157,6 +157,7 @@ ENTRYPOINT(
 
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("nice: unable to find executable\n"));
             YoriLibFree(ChildArgs);
+            YoriLibFreeStringContents(&Executable);
             return EXIT_FAILURE;
         }
 
