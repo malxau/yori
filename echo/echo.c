@@ -37,7 +37,7 @@ CHAR strEchoHelpText[] =
         "\n"
         "ECHO [-license] [-e] [-n] [-r <n>] [--] String\n"
         "\n"
-        "   --             Treat all further arguments as disaplay parameters\n"
+        "   --             Treat all further arguments as display parameters\n"
         "   -e             Display to standard error stream\n"
         "   -n             Do not display a newline after text\n"
         "   -r <n>         Repeat the display <n> times\n";
