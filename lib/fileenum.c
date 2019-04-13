@@ -359,10 +359,11 @@ YoriLibForEachFileEnum(
                 if ((ForEachContext->FullPath.LengthInChars == 3 && YoriLibIsDriveLetterWithColonAndSlash(&ForEachContext->FullPath)) ||
                     (ForEachContext->FullPath.LengthInChars == 7 && YoriLibIsPrefixedDriveLetterWithColonAndSlash(&ForEachContext->FullPath))) {
 
-                    YoriLibUpdateFindDataFromFileInformation(&ForEachContext->FileInfo, ForEachContext->FullPath.StartOfString, FALSE);
-                    ForEachContext->FileInfo.cFileName[0] = '\0';
-                    ForEachContext->FileInfo.cAlternateFileName[0] = '\0';
-                    hFind = NULL;
+                    if (YoriLibUpdateFindDataFromFileInformation(&ForEachContext->FileInfo, ForEachContext->FullPath.StartOfString, FALSE)) {
+                        ForEachContext->FileInfo.cFileName[0] = '\0';
+                        ForEachContext->FileInfo.cAlternateFileName[0] = '\0';
+                        hFind = NULL;
+                    }
                 }
             }
         }
