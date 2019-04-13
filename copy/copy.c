@@ -131,11 +131,11 @@ typedef struct _COPY_CONTEXT {
     DWORD FilesCopied;
 
     /**
-     The number of files that have been copied while expanding a particular
-     command argument.  If this is zero, the argument hasn't resolved to
-     any existing files.
+     The number of files that have been enumerated while expanding a
+     particular command argument.  If this is zero, the argument hasn't
+     resolved to any existing files.
      */
-    DWORD FilesCopiedThisArg;
+    DWORD FilesFoundThisArg;
 
     /**
      If TRUE, targets should be compressed.
@@ -714,9 +714,7 @@ CopyFileFoundCallback(
         CopyContext->CopyAsLinks &&
         (FileInfo->dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT || FileInfo->dwReserved0 == IO_REPARSE_TAG_SYMLINK)) {
 
-        if (CopyAsLink(FilePath->StartOfString, FullDest.StartOfString, ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0))) {
-            CopyContext->FilesCopiedThisArg++;
-        }
+        CopyAsLink(FilePath->StartOfString, FullDest.StartOfString, (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY));
 
     } else if (FileInfo != NULL &&
                FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
@@ -727,13 +725,9 @@ CopyFileFoundCallback(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %s: %s"), FullDest.StartOfString, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
             }
-        } else {
-            CopyContext->FilesCopiedThisArg++;
         }
     } else if (CopyContext->DestinationIsDevice || YoriLibIsFileNameDeviceName(FilePath)) {
-        if (CopyAsDumbDataMove(FilePath, &FullDest)) {
-            CopyContext->FilesCopiedThisArg++;
-        }
+        CopyAsDumbDataMove(FilePath, &FullDest);
     } else {
         if (!CopyFile(FilePath->StartOfString, FullDest.StartOfString, FALSE)) {
             DWORD LastError = GetLastError();
@@ -750,8 +744,6 @@ CopyFileFoundCallback(
             }
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
             YoriLibFreeWinErrorText(ErrText);
-        } else {
-            CopyContext->FilesCopiedThisArg++;
         }
 
         if (CopyContext->CompressDest) {
@@ -760,6 +752,7 @@ CopyFileFoundCallback(
         }
     }
 
+    CopyContext->FilesFoundThisArg++;
     CopyContext->FilesCopied++;
     YoriLibFreeStringContents(&FullDest);
     YoriLibFreeStringContents(&HumanSourcePath);
@@ -1031,9 +1024,9 @@ ENTRYPOINT(
                 }
             }
 
-            CopyContext.FilesCopiedThisArg = 0;
+            CopyContext.FilesFoundThisArg = 0;
             YoriLibForEachFile(&ArgV[i], MatchFlags, 0, CopyFileFoundCallback, NULL, &CopyContext);
-            if (CopyContext.FilesCopiedThisArg == 0) {
+            if (CopyContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 if (YoriLibUserStringToSingleFilePathOrDevice(&ArgV[i], TRUE, &FullPath)) {
                     CopyFileFoundCallback(&FullPath, NULL, 0, &CopyContext);
