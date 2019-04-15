@@ -37,6 +37,7 @@ CHAR strEraseHelpText[] =
         "\n"
         "ERASE [-license] [-b] [-r] [-s] <file> [<file>...]\n"
         "\n"
+        "   --             Treat all further arguments as files to delete\n"
         "   -b             Use basic search criteria for files only\n"
         "   -r             Send files to the recycle bin\n"
         "   -s             Erase all files matching the pattern in all subdirectories\n";
@@ -273,6 +274,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i + 1;
+                break;
             }
 
         } else {
