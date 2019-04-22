@@ -320,7 +320,7 @@ ENTRYPOINT(
     } else if (Op == YpmOpInstallRemote) {
         DWORD PkgCount;
         PkgCount = ArgC - StartArg;
-        if (PkgCount == 0) {
+        if (StartArg == 0 || PkgCount == 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing package name\n"));
             return EXIT_FAILURE;
         }

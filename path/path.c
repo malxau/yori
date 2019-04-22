@@ -248,7 +248,7 @@ ENTRYPOINT(
                     i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
-                StartArg = i;
+                StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
                 break;
             }
@@ -267,7 +267,7 @@ ENTRYPOINT(
         YoriLibConstantString(&YsFormatString, FormatString);
     }
 
-    if (StartArg == 0) {
+    if (StartArg == 0 || StartArg == ArgC) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("path: missing argument\n"));
         return EXIT_FAILURE;
     }

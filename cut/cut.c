@@ -376,6 +376,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 CutContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i + 1;
+                break;
             }
         } else {
             StartArg = i;
@@ -395,7 +399,7 @@ ENTRYPOINT(
     YoriLibCancelEnable();
 #endif
 
-    if (StartArg == 0) {
+    if (StartArg == 0 || StartArg == ArgC) {
         DWORD FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
         FileType = FileType & ~(FILE_TYPE_REMOTE);
         if (FileType == FILE_TYPE_CHAR) {

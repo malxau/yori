@@ -447,6 +447,10 @@ ENTRYPOINT(
                     YoriLibUserStringToSingleFilePath(&ArgV[i + 1], TRUE, &SplitContext.Prefix);
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                StartArg = i + 1;
+                ArgumentUnderstood = TRUE;
+                break;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -459,6 +463,10 @@ ENTRYPOINT(
         }
     }
 
+    if (StartArg == ArgC) {
+        StartArg = 0;
+    }
+
     if (SplitContext.Prefix.StartOfString == NULL) {
         if (StartArg != 0 && !JoinMode) {
             YORI_STRING DefaultPrefix;
@@ -469,7 +477,6 @@ ENTRYPOINT(
             YoriLibYPrintf(&SplitContext.Prefix, _T("%y."), &DefaultPrefix);
             YoriLibFreeStringContents(&DefaultPrefix);
         } else {
-            YoriLibFreeStringContents(&SplitContext.Prefix);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: no prefix specified\n"));
             return EXIT_FAILURE;
         }

@@ -106,6 +106,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i + 1;
+                break;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -118,7 +122,6 @@ ENTRYPOINT(
         }
     }
 
-    i = StartArg;
     if (ArgC - StartArg < 2) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("get: missing argument\n"));
         return EXIT_FAILURE;

@@ -749,6 +749,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("x")) == 0) {
                 DirContext.DisplayShortNames = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i + 1;
+                break;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -799,7 +803,7 @@ ENTRYPOINT(
         MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
     }
 
-    if (StartArg == 0) {
+    if (StartArg == 0 || StartArg == ArgC) {
         YORI_STRING FilesInDirectorySpec;
         YoriLibConstantString(&FilesInDirectorySpec, _T("*"));
         YoriLibForEachStream(&FilesInDirectorySpec,

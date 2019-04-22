@@ -915,6 +915,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
                 DuContext.WimBackedFilesAsZero = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i + 1;
+                break;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -964,7 +968,7 @@ ENTRYPOINT(
     //  If no file name is specified, use .
     //
 
-    if (StartArg == 0) {
+    if (StartArg == 0 || StartArg == ArgC) {
         YORI_STRING FilesInDirectorySpec;
         YoriLibConstantString(&FilesInDirectorySpec, _T("."));
         YoriLibForEachFile(&FilesInDirectorySpec, MatchFlags, 0, DuFileFoundCallback, NULL, &DuContext);
