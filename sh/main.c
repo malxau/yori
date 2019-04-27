@@ -519,7 +519,7 @@ YoriShDisplayWarnings()
             if (liNow.QuadPart > liWriteTime.QuadPart &&
                 liWriteTime.QuadPart + YORI_SH_DAYS_BEFORE_WARNING < liNow.QuadPart) {
 
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This build of Yori is %lli days old.  Run ypm -u to upgrade."), liNow.QuadPart - liWriteTime.QuadPart);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This build of Yori is %lli days old.  Run ypm -u to upgrade.\n"), liNow.QuadPart - liWriteTime.QuadPart);
             }
         }
     }
