@@ -229,6 +229,11 @@ YORI_CMD_BUILTIN YoriCmd_LSOF;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YMEM;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YMKDIR;
 
 /**
@@ -496,6 +501,7 @@ YoriShBuiltins[] = {
                     {_T("YGET"),      YoriCmd_YGET},
                     {_T("YHASH"),     YoriCmd_YHASH},
                     {_T("YHELP"),     YoriCmd_YHELP},
+                    {_T("YMEM"),      YoriCmd_YMEM},
                     {_T("YMKDIR"),    YoriCmd_YMKDIR},
                     {_T("YMKLINK"),   YoriCmd_YMKLINK},
                     {_T("YMORE"),     YoriCmd_YMORE},
@@ -541,6 +547,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("htmlclip"), _T("yclip -h $*$")},
     {_T("md"),       _T("ymkdir $*$")},
     {_T("md5sum"),   _T("yhash -a md5 $*$")},
+    {_T("mem"),      _T("ymem $*$")},
     {_T("mkdir"),    _T("ymkdir $*$")},
     {_T("mklink"),   _T("ymklink $*$")},
     {_T("more"),     _T("ymore $*$")},

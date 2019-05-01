@@ -348,7 +348,7 @@ typedef struct _YORI_FILE_INFO {
  added value.
  */
 #define YoriLibAddToPointer(PTR, OFFSET) \
-    (((PUCHAR)(PTR)) + (OFFSET))
+    (PVOID)(((PUCHAR)(PTR)) + (OFFSET))
 
 
 #ifdef _M_IX86

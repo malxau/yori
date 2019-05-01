@@ -7,6 +7,7 @@ builtin alias -s hash=yhash $*$
 builtin alias -s help=yhelp $*$
 builtin alias -s htmlclip=yclip -h $*$
 builtin alias -s md5sum=yhash -a md5 $*$
+builtin alias -s mem=ymem $*$
 builtin alias -s more=ymore $*$
 builtin alias -s mount=ymount $*$
 builtin alias -s paste=yclip -p $*$

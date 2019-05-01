@@ -112,6 +112,7 @@ CHAR strHelpHelpText2[] =
         "JOB       Displays or updates background job status\n"
         "LINES     Count the number of lines in one or more files\n"
         "LSOF      Display which processes have a file in use\n"
+        "MEM       Display memory usage information\n"
         "MKDIR     Creates directories\n"
         "MKLINK    Creates hardlinks, symbolic links, or junctions\n"
         "MORE      Displays text one page at a time with scrolling\n"

@@ -17,6 +17,7 @@ iconv.pdb
 initool.pdb
 lines.pdb
 lsof.pdb
+ymem.pdb
 ymore.pdb
 ymount.pdb
 nice.pdb

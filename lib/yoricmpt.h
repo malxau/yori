@@ -120,7 +120,7 @@ typedef long HRESULT;
  Definition for opening processes with very limited access for compilation
  environments that don't define it.
  */
-#define PROCESS_QUERY_LIMITED_INFORMATION  (0x1000)  
+#define PROCESS_QUERY_LIMITED_INFORMATION  (0x1000)
 #endif
 
 #ifndef SE_MANAGE_VOLUME_NAME
@@ -538,6 +538,78 @@ typedef struct _YORI_LIB_PEB64 {
 } YORI_LIB_PEB64, *PYORI_LIB_PEB64;
 
 /**
+ Definition of the system process information enumeration class for
+ NtQuerySystemInformation .
+ */
+#define SystemProcessInformation (5)
+
+/**
+ Information returned about every process in the system.
+ */
+typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
+
+    /**
+     Offset from the beginning of this structure to the next entry, in bytes.
+     */
+    ULONG NextEntryOffset;
+
+    /**
+     Ignored in this application.
+     */
+    BYTE Reserved1[52];
+
+    /**
+     The number of bytes in the image name.
+     */
+    USHORT ImageNameLengthInBytes;
+
+    /**
+     The number of bytes allocated for the image name.
+     */
+    USHORT ImageNameMaximumLengthInBytes;
+
+    /**
+     Pointer to the image name.
+     */
+    LPWSTR ImageName;
+
+    /**
+     Ignored in this application.
+     */
+    ULONG Reserved2;
+
+    /**
+     The process identifier.
+     */
+    DWORD_PTR ProcessId;
+
+    /**
+     Ignored in this application.
+     */
+    PVOID Reserved3[5];
+
+    /**
+     Ignored in this application.
+     */
+    ULONG Reserved4[3];
+
+    /**
+     The number of bytes in the working set of the process.
+     */
+    SIZE_T WorkingSetSize;
+
+    /**
+     Ignored in this application.
+     */
+    PVOID Reserved5[4];
+
+    /**
+     The number of bytes committed by the process.
+     */
+    SIZE_T CommitSize;
+} YORI_SYSTEM_PROCESS_INFORMATION, *PYORI_SYSTEM_PROCESS_INFORMATION;
+
+/**
  An implementation of the OSVERSIONINFO structure.
  */
 typedef struct _YORI_OS_VERSION_INFO {
@@ -645,6 +717,58 @@ typedef struct _YORI_SYSTEM_INFO {
      */
     WORD wProcessorRevision;
 } YORI_SYSTEM_INFO, *PYORI_SYSTEM_INFO;
+
+/**
+ Information about memory usage for the system and the process.
+ */
+typedef struct _YORI_MEMORYSTATUSEX {
+
+    /**
+     The length of the structure, in bytes.
+     */
+    DWORD dwLength;
+
+    /**
+     The percentage of memory used.
+     */
+    DWORD dwMemoryLoad;
+
+    /**
+     The amount of physical memory, in bytes.
+     */
+    DWORDLONG ullTotalPhys;
+
+    /**
+     The amount of available physical memory, in bytes.
+     */
+    DWORDLONG ullAvailPhys;
+
+    /**
+     The amount of physical memory plus page file size, in bytes.
+     */
+    DWORDLONG ullTotalPageFile;
+
+    /**
+     The amount of available physical memory plus page file size, in bytes.
+     */
+    DWORDLONG ullAvailPageFile;
+
+    /**
+     The amount of virtual address space in the process, in bytes.
+     */
+    DWORDLONG ullTotalVirtual;
+
+    /**
+     The amount of available virtual address space in the process, in bytes.
+     */
+    DWORDLONG ullAvailVirtual;
+
+    /**
+     The amount of virtual address space that is addressable but not available
+     to the process, in bytes.
+     */
+    DWORDLONG ullAvailExtendedVirtual;
+} YORI_MEMORYSTATUSEX, *PYORI_MEMORYSTATUSEX;
 
 #ifndef FSCTL_SET_REPARSE_POINT
 
@@ -2448,7 +2572,7 @@ typedef HRESULT STDMETHODCALLTYPE IPersistFile_SaveCompleted (IPersistFile * Thi
  Get the current file name associated with the object.
  */
 typedef HRESULT STDMETHODCALLTYPE IPersistFile_GetCurFile (IPersistFile * This, LPCWSTR *ppszFileName);
-    
+
 
 /**
  A set of functions defined by the IPersistFile interface.
@@ -2469,7 +2593,7 @@ typedef struct IPersistFileVtbl {
      Standard COM Release method.
      */
     IUnknown_Release * Release;
-    
+
     /**
      Indicates the GUID of the class implementing the functionality.
      */
@@ -2500,7 +2624,7 @@ typedef struct IPersistFileVtbl {
      Get the current file name associated with the object.
      */
     IPersistFile_GetCurFile * GetCurFile;
-    
+
 } IPersistFileVtbl;
 
 /**
@@ -2627,7 +2751,7 @@ struct IShellLinkWVtbl {
      Standard COM Release method.
      */
     IUnknown_Release * Release;
-    
+
 
     /**
      Get the path to the target on a shortcut.
@@ -2927,7 +3051,7 @@ typedef struct _ATTACH_VIRTUAL_DISK_PARAMETERS {
 /**
  A prototype for the NtQueryInformationFile function.
  */
-typedef 
+typedef
 LONG WINAPI
 NT_QUERY_INFORMATION_FILE(HANDLE, PIO_STATUS_BLOCK, PVOID, DWORD, DWORD);
 
@@ -2939,7 +3063,7 @@ typedef NT_QUERY_INFORMATION_FILE *PNT_QUERY_INFORMATION_FILE;
 /**
  A prototype for the NtQueryInformationProcess function..
  */
-typedef 
+typedef
 LONG WINAPI
 NT_QUERY_INFORMATION_PROCESS(HANDLE, DWORD, PVOID, DWORD, PDWORD);
 
@@ -2949,9 +3073,9 @@ NT_QUERY_INFORMATION_PROCESS(HANDLE, DWORD, PVOID, DWORD, PDWORD);
 typedef NT_QUERY_INFORMATION_PROCESS *PNT_QUERY_INFORMATION_PROCESS;
 
 /**
- A prototype for the NtQueryInformationThread function..
+ A prototype for the NtQueryInformationThread function.
  */
-typedef 
+typedef
 LONG WINAPI
 NT_QUERY_INFORMATION_THREAD(HANDLE, DWORD, PVOID, DWORD, PDWORD);
 
@@ -2961,9 +3085,21 @@ NT_QUERY_INFORMATION_THREAD(HANDLE, DWORD, PVOID, DWORD, PDWORD);
 typedef NT_QUERY_INFORMATION_THREAD *PNT_QUERY_INFORMATION_THREAD;
 
 /**
+ A prototype for the NtQuerySystemInformation function.
+ */
+typedef
+LONG WINAPI
+NT_QUERY_SYSTEM_INFORMATION(DWORD, PVOID, DWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the NtQuerySystemInformation function.
+ */
+typedef NT_QUERY_SYSTEM_INFORMATION *PNT_QUERY_SYSTEM_INFORMATION;
+
+/**
  A prototype for the RtlGetLastNtStatus function.
  */
-typedef 
+typedef
 LONG WINAPI
 RTL_GET_LAST_NT_STATUS();
 
@@ -3000,6 +3136,12 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      NtQueryInformationThread.
      */
     PNT_QUERY_INFORMATION_THREAD pNtQueryInformationThread;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtQuerySystemInformation.
+     */
+    PNT_QUERY_SYSTEM_INFORMATION pNtQuerySystemInformation;
 
     /**
      If it's available on the current system, a pointer to
@@ -3076,7 +3218,7 @@ typedef CREATE_SYMBOLIC_LINKW *PCREATE_SYMBOLIC_LINKW;
  A prototype for the FindFirstStreamW function.
  */
 typedef
-HANDLE WINAPI 
+HANDLE WINAPI
 FIND_FIRST_STREAMW(LPCWSTR, DWORD, PWIN32_FIND_STREAM_DATA, DWORD);
 
 /**
@@ -3088,7 +3230,7 @@ typedef FIND_FIRST_STREAMW *PFIND_FIRST_STREAMW;
  A prototype for the FindFirstVolumeW function.
  */
 typedef
-HANDLE WINAPI 
+HANDLE WINAPI
 FIND_FIRST_VOLUMEW(LPWSTR, DWORD);
 
 /**
@@ -3100,7 +3242,7 @@ typedef FIND_FIRST_VOLUMEW *PFIND_FIRST_VOLUMEW;
  A prototype for the FindNextStreamW function.
  */
 typedef
-BOOL WINAPI 
+BOOL WINAPI
 FIND_NEXT_STREAMW(HANDLE, PWIN32_FIND_STREAM_DATA);
 
 /**
@@ -3112,7 +3254,7 @@ typedef FIND_NEXT_STREAMW *PFIND_NEXT_STREAMW;
  A prototype for the FindNextVolumeW function.
  */
 typedef
-BOOL WINAPI 
+BOOL WINAPI
 FIND_NEXT_VOLUMEW(HANDLE, LPWSTR, DWORD);
 
 /**
@@ -3124,7 +3266,7 @@ typedef FIND_NEXT_VOLUMEW *PFIND_NEXT_VOLUMEW;
  A prototype for the FindVolumeClose function.
  */
 typedef
-BOOL WINAPI 
+BOOL WINAPI
 FIND_VOLUME_CLOSE(HANDLE);
 
 /**
@@ -3220,7 +3362,7 @@ typedef GET_CURRENT_CONSOLE_FONT_EX *PGET_CURRENT_CONSOLE_FONT_EX;
  A prototype for the GetDiskFreeSpaceExW function.
  */
 typedef
-BOOL WINAPI 
+BOOL WINAPI
 GET_DISK_FREE_SPACE_EXW(LPCWSTR, PLARGE_INTEGER, PLARGE_INTEGER, PLARGE_INTEGER);
 
 /**
@@ -3232,7 +3374,7 @@ typedef GET_DISK_FREE_SPACE_EXW *PGET_DISK_FREE_SPACE_EXW;
  A prototype for the GetEnvironmentStrings function.
  */
 typedef
-LPSTR WINAPI 
+LPSTR WINAPI
 GET_ENVIRONMENT_STRINGS();
 
 /**
@@ -3244,7 +3386,7 @@ typedef GET_ENVIRONMENT_STRINGS *PGET_ENVIRONMENT_STRINGS;
  A prototype for the GetEnvironmentStringsW function.
  */
 typedef
-LPWSTR WINAPI 
+LPWSTR WINAPI
 GET_ENVIRONMENT_STRINGSW();
 
 /**
@@ -3323,6 +3465,18 @@ GET_VOLUME_PATH_NAMEW(LPCWSTR, LPWSTR, DWORD);
  A prototype for a pointer to the GetVolumePathNameW function.
  */
 typedef GET_VOLUME_PATH_NAMEW *PGET_VOLUME_PATH_NAMEW;
+
+/**
+ A prototype for the GlobalMemoryStatusEx function.
+ */
+typedef
+BOOL WINAPI
+GLOBAL_MEMORY_STATUS_EX(PYORI_MEMORYSTATUSEX);
+
+/**
+ A prototype for a pointer to the GlobalMemoryStatusEx function.
+ */
+typedef GLOBAL_MEMORY_STATUS_EX *PGLOBAL_MEMORY_STATUS_EX;
 
 /**
  A prototype for the IsWow64Process function.
@@ -3572,6 +3726,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetVolumePathNameW.
      */
     PGET_VOLUME_PATH_NAMEW pGetVolumePathNameW;
+
+    /**
+     If it's available on the current system, a pointer to GlobalMemoryStatusEx.
+     */
+    PGLOBAL_MEMORY_STATUS_EX pGlobalMemoryStatusEx;
 
     /**
      If it's available on the current system, a pointer to IsWow64Process.
@@ -4156,7 +4315,7 @@ typedef struct _YORI_CABINET_FUNCTIONS {
 
 extern YORI_CABINET_FUNCTIONS DllCabinet;
 
- 
+
 /**
  A prototype for the MiniDumpWriteDump function.
  */

@@ -17,6 +17,7 @@ iconv.exe
 initool.exe
 lines.exe
 lsof.exe
+ymem.exe
 ymore.exe
 ymount.exe
 nice.exe

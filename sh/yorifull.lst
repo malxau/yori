@@ -27,6 +27,7 @@
 ..\intcmp\builtins.lib
 ..\lines\builtins.lib
 ..\lsof\builtins.lib
+..\mem\builtins.lib
 ..\mkdir\builtins.lib
 ..\mklink\builtins.lib
 ..\more\builtins.lib

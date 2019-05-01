@@ -75,6 +75,7 @@ DIRS=crt       \
      intcmp    \
      lines     \
      lsof      \
+     mem       \
      mkdir     \
      mklink    \
      more      \
