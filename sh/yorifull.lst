@@ -51,6 +51,7 @@
 ..\sync\builtins.lib
 ..\tail\builtins.lib
 ..\tee\builtins.lib
+..\timethis\builtins.lib
 ..\title\builtins.lib
 ..\touch\builtins.lib
 ..\type\builtins.lib

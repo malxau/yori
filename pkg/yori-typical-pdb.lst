@@ -30,6 +30,7 @@ setver.pdb
 sync.pdb
 tail.pdb
 tee.pdb
+timethis.pdb
 touch.pdb
 which.pdb
 wininfo.pdb

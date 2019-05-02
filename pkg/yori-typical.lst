@@ -30,6 +30,7 @@ setver.exe
 sync.exe
 tail.exe
 tee.exe
+timethis.exe
 touch.exe
 which.exe
 wininfo.exe

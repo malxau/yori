@@ -1645,6 +1645,53 @@ typedef struct _YORI_CONSOLE_SCREEN_BUFFER_INFOEX {
 } YORI_CONSOLE_SCREEN_BUFFER_INFOEX, *PYORI_CONSOLE_SCREEN_BUFFER_INFOEX;
 
 /**
+ Structure to change basic accounting information about a job.
+ */
+typedef struct _YORI_JOB_BASIC_ACCOUNTING_INFORMATION {
+
+    /**
+     The total amount of user mode processing consumed by the job.
+     */
+    LARGE_INTEGER TotalUserTime;
+
+    /**
+     The total amount of kernel mode processing consumed by the job.
+     */
+    LARGE_INTEGER TotalKernelTime;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    LARGE_INTEGER Unused1;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    LARGE_INTEGER Unused2;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    DWORD Unused3;
+
+    /**
+     The total number of processes that have been initiated.
+     */
+    DWORD TotalProcesses;
+
+    /**
+     The number of currently active processes.
+     */
+    DWORD ActiveProcesses;
+
+    /**
+     Field not needed/supported by YoriLib.
+     */
+    DWORD Unused4;
+
+} YORI_JOB_BASIC_ACCOUNTING_INFORMATION, *PYORI_JOB_BASIC_ACCOUNTING_INFORMATION;
+
+/**
  Structure to change basic information about a job.
  */
 typedef struct _YORI_JOB_BASIC_LIMIT_INFORMATION {
@@ -1695,6 +1742,24 @@ typedef struct _YORI_JOB_BASIC_LIMIT_INFORMATION {
      */
     DWORD Unused7;
 } YORI_JOB_BASIC_LIMIT_INFORMATION, *PYORI_JOB_BASIC_LIMIT_INFORMATION;
+
+/**
+ Information specifying how to associate a job object handle with a completion
+ port.
+ */
+typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
+
+    /**
+     A context pointer to associate with messages arriving on the completion
+     port.
+     */
+    PVOID Key;
+
+    /**
+     The completion port to associate the job object with.
+     */
+    HANDLE Port;
+} YORI_JOB_ASSOCIATE_COMPLETION_PORT, *PYORI_JOB_ASSOCIATE_COMPLETION_PORT;
 
 #ifndef WM_SETICON
 /**
@@ -3503,6 +3568,18 @@ QUERY_FULL_PROCESS_IMAGE_NAMEW(HANDLE, DWORD, LPTSTR, PDWORD);
 typedef QUERY_FULL_PROCESS_IMAGE_NAMEW *PQUERY_FULL_PROCESS_IMAGE_NAMEW;
 
 /**
+ A prototype for the QueryInformationJobObject function.
+ */
+typedef
+BOOL WINAPI
+QUERY_INFORMATION_JOB_OBJECT(HANDLE, DWORD, PVOID, DWORD, LPDWORD);
+
+/**
+ A prototype for a pointer to the QueryInformationJobObject function.
+ */
+typedef QUERY_INFORMATION_JOB_OBJECT *PQUERY_INFORMATION_JOB_OBJECT;
+
+/**
  A prototype for the RegisterApplicationRestart function.
  */
 typedef
@@ -3741,6 +3818,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to QueryFullProcessImageNameW.
      */
     PQUERY_FULL_PROCESS_IMAGE_NAMEW pQueryFullProcessImageNameW;
+
+    /**
+     If it's available on the current system, a pointer to QueryInformationJobObject.
+     */
+    PQUERY_INFORMATION_JOB_OBJECT pQueryInformationJobObject;
 
     /**
      If it's available on the current system, a pointer to RegisterApplicationRestart.

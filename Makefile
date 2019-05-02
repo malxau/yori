@@ -99,6 +99,7 @@ DIRS=crt       \
      sync      \
      tail      \
      tee       \
+     timethis  \
      title     \
      touch     \
      type      \

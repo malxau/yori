@@ -151,6 +151,7 @@ YoriLibLoadKernel32Functions()
     DllKernel32.pGlobalMemoryStatusEx = (PGLOBAL_MEMORY_STATUS_EX)GetProcAddress(DllKernel32.hDll, "GlobalMemoryStatusEx");
     DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(DllKernel32.hDll, "IsWow64Process");
     DllKernel32.pQueryFullProcessImageNameW = (PQUERY_FULL_PROCESS_IMAGE_NAMEW)GetProcAddress(DllKernel32.hDll, "QueryFullProcessImageNameW");
+    DllKernel32.pQueryInformationJobObject = (PQUERY_INFORMATION_JOB_OBJECT)GetProcAddress(DllKernel32.hDll, "QueryInformationJobObject");
     DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(DllKernel32.hDll, "RegisterApplicationRestart");
     DllKernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(DllKernel32.hDll, "SetConsoleScreenBufferInfoEx");
     DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "SetCurrentConsoleFontEx");

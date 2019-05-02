@@ -364,6 +364,11 @@ YORI_CMD_BUILTIN YoriCmd_TEE;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_TIMETHIS;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YTITLE;
 
 /**
@@ -477,6 +482,7 @@ YoriShBuiltins[] = {
                     {_T("SYNC"),      YoriCmd_SYNC},
                     {_T("TAIL"),      YoriCmd_TAIL},
                     {_T("TEE"),       YoriCmd_TEE},
+                    {_T("TIMETHIS"),  YoriCmd_TIMETHIS},
                     {_T("TOUCH"),     YoriCmd_TOUCH},
                     {_T("TRUE"),      YoriCmd_TRUE},
                     {_T("VER"),       YoriCmd_VER},
