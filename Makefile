@@ -92,6 +92,7 @@ DIRS=crt       \
      scut      \
      sdir      \
      setver    \
+     shutdn    \
      sleep     \
      split     \
      start     \

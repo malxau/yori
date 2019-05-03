@@ -329,6 +329,11 @@ YORI_CMD_BUILTIN YoriCmd_SETVER;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YSHUTDN;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_SLEEP;
 
 /**
@@ -518,6 +523,7 @@ YoriShBuiltins[] = {
                     {_T("YPM"),       YoriCmd_YPM},
                     {_T("YRMDIR"),    YoriCmd_YRMDIR},
                     {_T("YS"),        YoriCmd_YS},
+                    {_T("YSHUTDN"),   YoriCmd_YSHUTDN},
                     {_T("YSPLIT"),    YoriCmd_YSPLIT},
                     {_T("YSTART"),    YoriCmd_YSTART},
                     {_T("YTITLE"),    YoriCmd_YTITLE},
@@ -571,6 +577,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("sha256sum"),_T("yhash -a sha256 $*$")},
     {_T("sha384sum"),_T("yhash -a sha384 $*$")},
     {_T("sha512sum"),_T("yhash -a sha512 $*$")},
+    {_T("shutdn"),   _T("yshutdn $*$")},
     {_T("start"),    _T("ystart $*$")},
     {_T("split"),    _T("ysplit $*$")},
     {_T("time"),     _T("ydate -t $*$")},

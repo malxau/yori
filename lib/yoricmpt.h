@@ -770,6 +770,13 @@ typedef struct _YORI_MEMORYSTATUSEX {
     DWORDLONG ullAvailExtendedVirtual;
 } YORI_MEMORYSTATUSEX, *PYORI_MEMORYSTATUSEX;
 
+#ifndef EWX_POWEROFF
+/**
+ Flag to tell the system to power off after shutdown.
+ */
+#define EWX_POWEROFF 0x00000008
+#endif
+
 #ifndef FSCTL_SET_REPARSE_POINT
 
 /**
@@ -4723,6 +4730,18 @@ EMPTY_CLIPBOARD();
 typedef EMPTY_CLIPBOARD *PEMPTY_CLIPBOARD;
 
 /**
+ A prototype for the ExitWindowsEx function.
+ */
+typedef
+BOOL WINAPI
+EXIT_WINDOWS_EX(DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the ExitWindowsEx function.
+ */
+typedef EXIT_WINDOWS_EX *PEXIT_WINDOWS_EX;
+
+/**
  A prototype for the FindWindowW function.
  */
 typedef
@@ -4781,6 +4800,18 @@ GET_WINDOW_RECT(HWND, LPRECT);
  A prototype for a pointer to the GetWindowRect function.
  */
 typedef GET_WINDOW_RECT *PGET_WINDOW_RECT;
+
+/**
+ A prototype for the LockWorkStation function.
+ */
+typedef
+BOOL WINAPI
+LOCK_WORKSTATION();
+
+/**
+ A prototype for a pointer to the LockWorkStation function.
+ */
+typedef LOCK_WORKSTATION *PLOCK_WORKSTATION;
 
 /**
  A prototype for the MoveWindow function.
@@ -4904,6 +4935,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PEMPTY_CLIPBOARD pEmptyClipboard;
 
     /**
+     If it's available on the current system, a pointer to ExitWindowsEx.
+     */
+    PEXIT_WINDOWS_EX pExitWindowsEx;
+
+    /**
      If it's available on the current system, a pointer to FindWindowW.
      */
     PFIND_WINDOWW pFindWindowW;
@@ -4927,6 +4963,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to GetWindowRect.
      */
     PGET_WINDOW_RECT pGetWindowRect;
+
+    /**
+     If it's available on the current system, a pointer to LockWorkStation.
+     */
+    PLOCK_WORKSTATION pLockWorkStation;
 
     /**
      If it's available on the current system, a pointer to MoveWindow.

@@ -142,6 +142,7 @@ CHAR strHelpHelpText3[] =
         "SETLOCAL  Push the current directory and environment onto a saved stack\n"
         "SETVER    Lie about Windows version and launch a program\n"
         "SHIFT     Shift command arguments left by one (only valid in scripts)\n"
+        "SHUTDN    Shutdown, reboot or logoff the system\n"
         "SLEEP     Waits for a specified number of seconds\n"
         "SPLIT     Split a file into pieces\n"
         "START     Ask the shell to open a file\n"

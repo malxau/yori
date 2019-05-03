@@ -44,6 +44,7 @@
 ..\scut\builtins.lib
 ..\sdir\builtins.lib
 ..\setver\builtins.lib
+..\shutdn\builtins.lib
 ..\sleep\builtins.lib
 ..\split\builtins.lib
 ..\start\builtins.lib
