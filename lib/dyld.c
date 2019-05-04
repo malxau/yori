@@ -28,6 +28,23 @@
 #include "yorilib.h"
 
 /**
+ Map a function name to a location in memory to store a function pointer.
+ */
+typedef struct _YORI_DLL_NAME_MAP {
+
+    /**
+     Pointer to a memory location to be updated with a function pointer when
+     the specified function is resolved.
+     */
+    FARPROC * FnPtr;
+
+    /**
+     The name of the function to resolve.
+     */
+    LPCSTR FnName;
+} YORI_DLL_NAME_MAP, *PYORI_DLL_NAME_MAP;
+
+/**
  Load a DLL from the System32 directory.
 
  @param DllName Pointer to the name of the DLL to load.
@@ -104,6 +121,50 @@ YoriLibLoadNtDllFunctions()
 YORI_KERNEL32_FUNCTIONS DllKernel32;
 
 /**
+ The set of functions to resolve from kernel32.dll.
+ */
+CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
+    {(FARPROC *)&DllKernel32.pAddConsoleAliasW, "AddConsoleAliasW"},
+    {(FARPROC *)&DllKernel32.pAssignProcessToJobObject, "AssignProcessToJobObject"},
+    {(FARPROC *)&DllKernel32.pCreateHardLinkW, "CreateHardLinkW"},
+    {(FARPROC *)&DllKernel32.pCreateJobObjectW, "CreateJobObjectW"},
+    {(FARPROC *)&DllKernel32.pCreateSymbolicLinkW, "CreateSymbolicLinkW"},
+    {(FARPROC *)&DllKernel32.pFindFirstStreamW, "FindFirstStreamW"},
+    {(FARPROC *)&DllKernel32.pFindFirstVolumeW, "FindFirstVolumeW"},
+    {(FARPROC *)&DllKernel32.pFindNextStreamW, "FindNextStreamW"},
+    {(FARPROC *)&DllKernel32.pFindNextVolumeW, "FindNextVolumeW"},
+    {(FARPROC *)&DllKernel32.pFindVolumeClose, "FindVolumeClose"},
+    {(FARPROC *)&DllKernel32.pFreeEnvironmentStringsW, "FreeEnvironmentStringsW"},
+    {(FARPROC *)&DllKernel32.pGetCompressedFileSizeW, "GetCompressedFileSizeW"},
+    {(FARPROC *)&DllKernel32.pGetConsoleAliasesLengthW, "GetConsoleAliasesLengthW"},
+    {(FARPROC *)&DllKernel32.pGetConsoleAliasesW, "GetConsoleAliasesW"},
+    {(FARPROC *)&DllKernel32.pGetConsoleScreenBufferInfoEx, "GetConsoleScreenBufferEx"},
+    {(FARPROC *)&DllKernel32.pGetConsoleWindow, "GetConsoleWindow"},
+    {(FARPROC *)&DllKernel32.pGetCurrentConsoleFontEx, "GetCurrentConsoleFontEx"},
+    {(FARPROC *)&DllKernel32.pGetDiskFreeSpaceExW, "GetDiskFreeSpaceExW"},
+    {(FARPROC *)&DllKernel32.pGetEnvironmentStrings, "GetEnvironmentStrings"},
+    {(FARPROC *)&DllKernel32.pGetEnvironmentStringsW, "GetEnvironmentStringsW"},
+    {(FARPROC *)&DllKernel32.pGetFileInformationByHandleEx, "GetFileInformationByHandleEx"},
+    {(FARPROC *)&DllKernel32.pGetNativeSystemInfo, "GetNativeSystemInfo"},
+    {(FARPROC *)&DllKernel32.pGetPrivateProfileSectionNamesW, "GetPrivateProfileSectionNamesW"},
+    {(FARPROC *)&DllKernel32.pGetVersionExW, "GetVersionExW"},
+    {(FARPROC *)&DllKernel32.pGetVolumePathNamesForVolumeNameW, "GetVolumePathNamesForVolumeNameW"},
+    {(FARPROC *)&DllKernel32.pGetVolumePathNameW, "GetVolumePathNameW"},
+    {(FARPROC *)&DllKernel32.pGlobalMemoryStatusEx, "GlobalMemoryStatusEx"},
+    {(FARPROC *)&DllKernel32.pIsWow64Process, "IsWow64Process"},
+    {(FARPROC *)&DllKernel32.pQueryFullProcessImageNameW, "QueryFullProcessImageNameW"},
+    {(FARPROC *)&DllKernel32.pQueryInformationJobObject, "QueryInformationJobObject"},
+    {(FARPROC *)&DllKernel32.pRegisterApplicationRestart, "RegisterApplicationRestart"},
+    {(FARPROC *)&DllKernel32.pSetConsoleScreenBufferInfoEx, "SetConsoleScreenBufferInfoEx"},
+    {(FARPROC *)&DllKernel32.pSetCurrentConsoleFontEx, "SetCurrentConsoleFontEx"},
+    {(FARPROC *)&DllKernel32.pSetInformationJobObject, "SetInformationJobObject"},
+    {(FARPROC *)&DllKernel32.pWow64DisableWow64FsRedirection, "Wow64DisableWow64FsRedirection"},
+    {(FARPROC *)&DllKernel32.pWow64GetThreadContext, "Wow64GetThreadContext"},
+    {(FARPROC *)&DllKernel32.pWow64SetThreadContext, "Wow64SetThreadContext"},
+};
+
+
+/**
  Load pointers to all optional kernel32.dll functions.  Because kernel32.dll is
  effectively mandatory in any Win32 process, this uses GetModuleHandle rather
  than LoadLibrary and pointers are valid for the lifetime of the process.
@@ -113,6 +174,7 @@ YORI_KERNEL32_FUNCTIONS DllKernel32;
 BOOL
 YoriLibLoadKernel32Functions()
 {
+    DWORD Count;
     if (DllKernel32.hDll != NULL) {
         return TRUE;
     }
@@ -122,43 +184,9 @@ YoriLibLoadKernel32Functions()
         return FALSE;
     }
 
-    DllKernel32.pAddConsoleAliasW = (PADD_CONSOLE_ALIASW)GetProcAddress(DllKernel32.hDll, "AddConsoleAliasW");
-    DllKernel32.pAssignProcessToJobObject = (PASSIGN_PROCESS_TO_JOB_OBJECT)GetProcAddress(DllKernel32.hDll, "AssignProcessToJobObject");
-    DllKernel32.pCreateHardLinkW = (PCREATE_HARD_LINKW)GetProcAddress(DllKernel32.hDll, "CreateHardLinkW");
-    DllKernel32.pCreateJobObjectW = (PCREATE_JOB_OBJECTW)GetProcAddress(DllKernel32.hDll, "CreateJobObjectW");
-    DllKernel32.pCreateSymbolicLinkW = (PCREATE_SYMBOLIC_LINKW)GetProcAddress(DllKernel32.hDll, "CreateSymbolicLinkW");
-    DllKernel32.pFindFirstStreamW = (PFIND_FIRST_STREAMW)GetProcAddress(DllKernel32.hDll, "FindFirstStreamW");
-    DllKernel32.pFindFirstVolumeW = (PFIND_FIRST_VOLUMEW)GetProcAddress(DllKernel32.hDll, "FindFirstVolumeW");
-    DllKernel32.pFindNextStreamW = (PFIND_NEXT_STREAMW)GetProcAddress(DllKernel32.hDll, "FindNextStreamW");
-    DllKernel32.pFindNextVolumeW = (PFIND_NEXT_VOLUMEW)GetProcAddress(DllKernel32.hDll, "FindNextVolumeW");
-    DllKernel32.pFindVolumeClose = (PFIND_VOLUME_CLOSE)GetProcAddress(DllKernel32.hDll, "FindVolumeClose");
-    DllKernel32.pFreeEnvironmentStringsW = (PFREE_ENVIRONMENT_STRINGSW)GetProcAddress(DllKernel32.hDll, "FreeEnvironmentStringsW");
-    DllKernel32.pGetCompressedFileSizeW = (PGET_COMPRESSED_FILE_SIZEW)GetProcAddress(DllKernel32.hDll, "GetCompressedFileSizeW");
-    DllKernel32.pGetConsoleAliasesLengthW = (PGET_CONSOLE_ALIASES_LENGTHW)GetProcAddress(DllKernel32.hDll, "GetConsoleAliasesLengthW");
-    DllKernel32.pGetConsoleAliasesW = (PGET_CONSOLE_ALIASESW)GetProcAddress(DllKernel32.hDll, "GetConsoleAliasesW");
-    DllKernel32.pGetConsoleScreenBufferInfoEx = (PGET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(DllKernel32.hDll, "GetConsoleScreenBufferInfoEx");
-    DllKernel32.pGetConsoleWindow = (PGET_CONSOLE_WINDOW)GetProcAddress(DllKernel32.hDll, "GetConsoleWindow");
-    DllKernel32.pGetCurrentConsoleFontEx = (PGET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "GetCurrentConsoleFontEx");
-    DllKernel32.pGetDiskFreeSpaceExW = (PGET_DISK_FREE_SPACE_EXW)GetProcAddress(DllKernel32.hDll, "GetDiskFreeSpaceExW");
-    DllKernel32.pGetEnvironmentStrings = (PGET_ENVIRONMENT_STRINGS)GetProcAddress(DllKernel32.hDll, "GetEnvironmentStrings");
-    DllKernel32.pGetEnvironmentStringsW = (PGET_ENVIRONMENT_STRINGSW)GetProcAddress(DllKernel32.hDll, "GetEnvironmentStringsW");
-    DllKernel32.pGetFileInformationByHandleEx = (PGET_FILE_INFORMATION_BY_HANDLE_EX)GetProcAddress(DllKernel32.hDll, "GetFileInformationByHandleEx");
-    DllKernel32.pGetNativeSystemInfo = (PGET_NATIVE_SYSTEM_INFO)GetProcAddress(DllKernel32.hDll, "GetNativeSystemInfo");
-    DllKernel32.pGetPrivateProfileSectionNamesW = (PGET_PRIVATE_PROFILE_SECTION_NAMESW)GetProcAddress(DllKernel32.hDll, "GetPrivateProfileSectionNamesW");
-    DllKernel32.pGetVersionExW = (PGET_VERSION_EXW)GetProcAddress(DllKernel32.hDll, "GetVersionExW");
-    DllKernel32.pGetVolumePathNamesForVolumeNameW = (PGET_VOLUME_PATH_NAMES_FOR_VOLUME_NAMEW)GetProcAddress(DllKernel32.hDll, "GetVolumePathNamesForVolumeNameW");
-    DllKernel32.pGetVolumePathNameW = (PGET_VOLUME_PATH_NAMEW)GetProcAddress(DllKernel32.hDll, "GetVolumePathNameW");
-    DllKernel32.pGlobalMemoryStatusEx = (PGLOBAL_MEMORY_STATUS_EX)GetProcAddress(DllKernel32.hDll, "GlobalMemoryStatusEx");
-    DllKernel32.pIsWow64Process = (PIS_WOW64_PROCESS)GetProcAddress(DllKernel32.hDll, "IsWow64Process");
-    DllKernel32.pQueryFullProcessImageNameW = (PQUERY_FULL_PROCESS_IMAGE_NAMEW)GetProcAddress(DllKernel32.hDll, "QueryFullProcessImageNameW");
-    DllKernel32.pQueryInformationJobObject = (PQUERY_INFORMATION_JOB_OBJECT)GetProcAddress(DllKernel32.hDll, "QueryInformationJobObject");
-    DllKernel32.pRegisterApplicationRestart = (PREGISTER_APPLICATION_RESTART)GetProcAddress(DllKernel32.hDll, "RegisterApplicationRestart");
-    DllKernel32.pSetConsoleScreenBufferInfoEx = (PSET_CONSOLE_SCREEN_BUFFER_INFO_EX)GetProcAddress(DllKernel32.hDll, "SetConsoleScreenBufferInfoEx");
-    DllKernel32.pSetCurrentConsoleFontEx = (PSET_CURRENT_CONSOLE_FONT_EX)GetProcAddress(DllKernel32.hDll, "SetCurrentConsoleFontEx");
-    DllKernel32.pSetInformationJobObject = (PSET_INFORMATION_JOB_OBJECT)GetProcAddress(DllKernel32.hDll, "SetInformationJobObject");
-    DllKernel32.pWow64DisableWow64FsRedirection = (PWOW64_DISABLE_WOW64_FS_REDIRECTION)GetProcAddress(DllKernel32.hDll, "Wow64DisableWow64FsRedirection");
-    DllKernel32.pWow64GetThreadContext = (PWOW64_GET_THREAD_CONTEXT)GetProcAddress(DllKernel32.hDll, "Wow64GetThreadContext");
-    DllKernel32.pWow64SetThreadContext = (PWOW64_SET_THREAD_CONTEXT)GetProcAddress(DllKernel32.hDll, "Wow64SetThreadContext");
+    for (Count = 0; Count < sizeof(DllKernel32Symbols)/sizeof(DllKernel32Symbols[0]); Count++) {
+        *(DllKernel32Symbols[Count].FnPtr) = GetProcAddress(DllKernel32.hDll, DllKernel32Symbols[Count].FnName);
+    }
 
     return TRUE;
 }
@@ -177,6 +205,7 @@ YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
 BOOL
 YoriLibLoadAdvApi32Functions()
 {
+
     if (DllAdvApi32.hDll != NULL) {
         return TRUE;
     }
