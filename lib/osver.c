@@ -98,94 +98,6 @@ YoriLibGetOsVersionFromPeb(
 }
 
 /**
- Try to obtain Windows version numbers from version resources.
-
- @param MajorVersion On successful completion, updated to contain the Windows
-        major version number.
-
- @param MinorVersion On successful completion, updated to contain the Windows
-        minor version number.
-
- @param BuildNumber On successful completion, updated to contain the Windows
-        build number.
- */
-BOOL
-YoriLibGetOsVersionFromResource(
-    __out PDWORD MajorVersion,
-    __out PDWORD MinorVersion,
-    __out PDWORD BuildNumber
-    )
-{
-    LPTSTR Kernel32FileName;
-    TCHAR BlockString[sizeof("\\")];
-    VS_FIXEDFILEINFO * FixedVerInfo;
-    PVOID VerBuffer;
-    DWORD SystemFileNameLength;
-    DWORD Kernel32FileNameLength;
-    DWORD VerSize;
-    DWORD Junk;
-
-    YoriLibLoadVersionFunctions();
-
-    if (DllVersion.pGetFileVersionInfoSizeW == NULL ||
-        DllVersion.pGetFileVersionInfoW == NULL ||
-        DllVersion.pVerQueryValueW == NULL) {
-
-        return FALSE;
-    }
-
-    SystemFileNameLength = GetSystemDirectory(NULL, 0);
-    Kernel32FileNameLength = SystemFileNameLength + sizeof("\\KERNEL32.DLL");
-    Kernel32FileName = YoriLibMalloc(Kernel32FileNameLength * sizeof(TCHAR));
-    if (Kernel32FileName == NULL) {
-        return FALSE;
-    }
-
-    GetSystemDirectory(Kernel32FileName, SystemFileNameLength);
-    _tcscpy(&Kernel32FileName[SystemFileNameLength - 1], _T("\\KERNEL32.DLL"));
-
-    VerSize = DllVersion.pGetFileVersionInfoSizeW(Kernel32FileName, &Junk);
-    if (VerSize == 0) {
-        YoriLibFree(Kernel32FileName);
-        return FALSE;
-    }
-
-    VerBuffer = YoriLibMalloc(VerSize);
-    if (VerBuffer == NULL) {
-        YoriLibFree(Kernel32FileName);
-        return FALSE;
-    }
-
-    if (!DllVersion.pGetFileVersionInfoW(Kernel32FileName, 0, VerSize, VerBuffer)) {
-        YoriLibFree(VerBuffer);
-        YoriLibFree(Kernel32FileName);
-        return FALSE;
-    }
-
-    YoriLibFree(Kernel32FileName);
-
-    //
-    //  Old versions of version.dll modify this buffer while parsing
-    //  it, so we need to give them a writable stack based copy
-    //
-
-    YoriLibSPrintf(BlockString, _T("\\"));
-
-    if (!DllVersion.pVerQueryValueW(VerBuffer, BlockString, &FixedVerInfo, (PUINT)&Junk)) {
-        YoriLibFree(VerBuffer);
-        return FALSE;
-    }
-
-    *MajorVersion = HIWORD(FixedVerInfo->dwProductVersionMS);
-    *MinorVersion = LOWORD(FixedVerInfo->dwProductVersionMS);
-    *BuildNumber = HIWORD(FixedVerInfo->dwProductVersionLS);
-
-    YoriLibFree(VerBuffer);
-    return TRUE;
-}
-
-
-/**
  Return Windows version numbers.
 
  @param MajorVersion On successful completion, updated to contain the Windows
@@ -243,9 +155,7 @@ YoriLibGetOsVersion(
         LocalMinorVersion == 2 &&
         LocalBuildNumber == 9200) {
 
-        if (!YoriLibGetOsVersionFromPeb(&LocalMajorVersion, &LocalMinorVersion, &LocalBuildNumber)) {
-            YoriLibGetOsVersionFromResource(&LocalMajorVersion, &LocalMinorVersion, &LocalBuildNumber);
-        }
+        YoriLibGetOsVersionFromPeb(&LocalMajorVersion, &LocalMinorVersion, &LocalBuildNumber);
     }
 
     CachedMajorOsVersion = LocalMajorVersion;
