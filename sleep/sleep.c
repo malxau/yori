@@ -3,7 +3,7 @@
  *
  * Yori shell sleep for a specified number of seconds
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,9 @@ CHAR strSleepHelpText[] =
         "\n"
         "Waits for a specified amount of time.\n"
         "\n"
-        "SLEEP [-license] <time>[<suffix>]\n"
+        "SLEEP [-license] [-c] <time>[<suffix>]\n"
+        "\n"
+        "   -c             Display a countdown to zero from the specified time\n"
         "\n"
         "Suffix can be \"s\" for seconds, \"m\" for minutes, \"ms\" for milliseconds.\n" ;
 
@@ -81,6 +83,7 @@ ENTRYPOINT(
     )
 {
     BOOL ArgumentUnderstood;
+    BOOL CountdownMode = FALSE;
     DWORD StartArg;
     DWORD i;
     YORI_STRING Arg;
@@ -103,8 +106,11 @@ ENTRYPOINT(
                 SleepHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                CountdownMode = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i;
                 ArgumentUnderstood = TRUE;
@@ -153,10 +159,76 @@ ENTRYPOINT(
 
     CancelHandle = YoriLibCancelGetEvent();
 
-    if (CancelHandle != NULL) {
-        WaitForSingleObject(CancelHandle, TimeToSleep);
+    if (CountdownMode) {
+        SYSTEMTIME CurrentSystemTime;
+        FILETIME Temp;
+        DWORDLONG LongTimeToSleep;
+        DWORD WaitResult;
+        LARGE_INTEGER StartTime;
+        LARGE_INTEGER CurrentTime;
+        LARGE_INTEGER EndTime;
+        CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+        BOOL ConsoleMode;
+
+        ConsoleMode = FALSE;
+        if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
+            ConsoleMode = TRUE;
+        }
+
+        GetSystemTime(&CurrentSystemTime);
+        SystemTimeToFileTime(&CurrentSystemTime, &Temp);
+
+        StartTime.LowPart = Temp.dwLowDateTime;
+        StartTime.HighPart = Temp.dwHighDateTime;
+
+        LongTimeToSleep = TimeToSleep;
+        EndTime.QuadPart = StartTime.QuadPart + LongTimeToSleep * 1000 * 10;
+
+        while(TRUE) {
+
+            GetSystemTime(&CurrentSystemTime);
+            SystemTimeToFileTime(&CurrentSystemTime, &Temp);
+
+            CurrentTime.LowPart = Temp.dwLowDateTime;
+            CurrentTime.HighPart = Temp.dwHighDateTime;
+
+            if (CurrentTime.QuadPart > EndTime.QuadPart) {
+
+                break;
+            }
+
+            LongTimeToSleep = EndTime.QuadPart - CurrentTime.QuadPart;
+            LongTimeToSleep = LongTimeToSleep / (1000 * 10);
+
+            if (ConsoleMode) {
+                SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), ScreenInfo.dwCursorPosition);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli  "), LongTimeToSleep / (1000 * 60), LongTimeToSleep / 1000);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli\n"), LongTimeToSleep / (1000 * 60), LongTimeToSleep / 1000);
+            }
+
+            if (LongTimeToSleep > 970) {
+                LongTimeToSleep = 970;
+            }
+
+            TimeToSleep = (DWORD)LongTimeToSleep;
+
+            if (CancelHandle != NULL) {
+                WaitResult = WaitForSingleObject(CancelHandle, TimeToSleep);
+                if (WaitResult == WAIT_OBJECT_0) {
+                    break;
+                }
+            } else {
+                Sleep(TimeToSleep);
+            }
+
+        }
     } else {
-        Sleep(TimeToSleep);
+        if (CancelHandle != NULL) {
+            WaitForSingleObject(CancelHandle, TimeToSleep);
+        } else {
+            Sleep(TimeToSleep);
+        }
     }
 
     return EXIT_SUCCESS;

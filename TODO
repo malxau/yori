@@ -6,7 +6,8 @@ v1.1:
  - Wide char support in sdir
  - Env
  - Tool for creating VHDs
- - Stdout redirection by number
+ - Stderr to stdout redirection
+ - Ps/kill
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
