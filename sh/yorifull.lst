@@ -12,6 +12,7 @@
 ..\dir\builtins.lib
 ..\du\builtins.lib
 ..\echo\builtins.lib
+..\env\builtins.lib
 ..\erase\builtins.lib
 ..\expr\builtins.lib
 ..\finfo\builtins.lib

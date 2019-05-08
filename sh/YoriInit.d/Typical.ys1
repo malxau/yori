@@ -3,6 +3,7 @@ builtin alias -s clip=yclip $*$
 builtin alias -s compact=ycompact $*$
 builtin alias -s df=ydf $*$
 builtin alias -s du=ydu $*$
+builtin alias -s env=yenv $*$
 builtin alias -s hash=yhash $*$
 builtin alias -s help=yhelp $*$
 builtin alias -s htmlclip=yclip -h $*$

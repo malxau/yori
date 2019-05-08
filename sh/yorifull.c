@@ -119,6 +119,11 @@ YORI_CMD_BUILTIN YoriCmd_YECHO;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YENV;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YERASE;
 
 /**
@@ -507,6 +512,7 @@ YoriShBuiltins[] = {
                     {_T("YDIR"),      YoriCmd_YDIR},
                     {_T("YDU"),       YoriCmd_YDU},
                     {_T("YECHO"),     YoriCmd_YECHO},
+                    {_T("YENV"),      YoriCmd_YENV},
                     {_T("YERASE"),    YoriCmd_YERASE},
                     {_T("YEXPR"),     YoriCmd_YEXPR},
                     {_T("YGET"),      YoriCmd_YGET},
@@ -551,6 +557,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("dir"),      _T("ydir $*$")},
     {_T("du"),       _T("ydu $*$")},
     {_T("echo"),     _T("yecho $*$")},
+    {_T("env"),      _T("yenv $*$")},
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},
     {_T("hash"),     _T("yhash $*$")},

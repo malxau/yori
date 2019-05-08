@@ -59,6 +59,7 @@ DIRS=crt       \
      dir       \
      du        \
      echo      \
+     env       \
      erase     \
      expr      \
      finfo     \

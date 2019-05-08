@@ -398,6 +398,13 @@ YORI_BUILTIN_UNLOAD_NOTIFY();
  */
 typedef YORI_BUILTIN_UNLOAD_NOTIFY *PYORI_BUILTIN_UNLOAD_NOTIFY;
 
+// *** BUILTIN.C ***
+
+BOOL
+YoriLibBuiltinSetEnvironmentStrings(
+    __in PYORI_STRING NewEnvironment
+    );
+
 // *** CABINET.C ***
 
 /**

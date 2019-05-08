@@ -292,69 +292,9 @@ YoriCmd_ENDLOCAL(
     //
 
     if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_ENVIRONMENT) {
-        YORI_STRING CurrentEnvironment;
-        YORI_STRING VariableName;
-        YORI_STRING ValueName;
-
-        if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
+        if (!YoriLibBuiltinSetEnvironmentStrings(&StackLocation->PreviousEnvironment)) {
             SetlocalFreeStack(StackLocation);
             return EXIT_FAILURE;
-        }
-
-        YoriLibInitEmptyString(&VariableName);
-        YoriLibInitEmptyString(&ValueName);
-
-        ThisVar = CurrentEnvironment.StartOfString;
-        while (*ThisVar != '\0') {
-            VarLen = _tcslen(ThisVar);
-
-            //
-            //  We know there's at least one char.  Skip it if it's equals since
-            //  that's how drive current directories are recorded.
-            //
-
-            ThisValue = _tcschr(&ThisVar[1], '=');
-            if (ThisValue != NULL) {
-                ThisValue[0] = '\0';
-                VariableName.StartOfString = ThisVar;
-                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
-                VariableName.LengthAllocated = VariableName.LengthInChars + 1;
-                YoriCallSetEnvironmentVariable(&VariableName, NULL);
-            }
-
-            ThisVar += VarLen;
-            ThisVar++;
-        }
-        YoriLibFreeStringContents(&CurrentEnvironment);
-
-        //
-        //  Now restore the saved environment.
-        //
-
-        ThisVar = StackLocation->PreviousEnvironment.StartOfString;
-        while (*ThisVar != '\0') {
-            VarLen = _tcslen(ThisVar);
-
-            //
-            //  We know there's at least one char.  Skip it if it's equals since
-            //  that's how drive current directories are recorded.
-            //
-
-            ThisValue = _tcschr(&ThisVar[1], '=');
-            if (ThisValue != NULL) {
-                ThisValue[0] = '\0';
-                VariableName.StartOfString = ThisVar;
-                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
-                VariableName.LengthAllocated = VariableName.LengthInChars + 1;
-                ThisValue++;
-                ValueName.StartOfString = ThisValue;
-                ValueName.LengthInChars = VarLen - VariableName.LengthInChars - 1;
-                ValueName.LengthAllocated = ValueName.LengthInChars + 1;
-                YoriCallSetEnvironmentVariable(&VariableName, &ValueName);
-            }
-
-            ThisVar += VarLen;
-            ThisVar++;
         }
     }
 

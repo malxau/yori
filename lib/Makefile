@@ -6,6 +6,7 @@ compile: yorilib.lib
 DEBUG=0
 
 OBJS=\
+	 builtin.obj  \
 	 cabinet.obj  \
 	 call.obj     \
 	 cancel.obj   \

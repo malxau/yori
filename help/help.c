@@ -79,6 +79,7 @@ CHAR strHelpHelpText1[] =
         "DIR       Enumerate the contents of directories in a traditional way\n"
         "DU        Display disk space used within a directory tree\n"
         "ECHO      Outputs text\n"
+        "ENV       Set environment variables and launch a program\n"
         "ENDLOCAL  Pop a previous saved environment from the stack (only valid after\n"
         "            SETLOCAL)\n"
         "ERASE     Delete one or more files\n"
