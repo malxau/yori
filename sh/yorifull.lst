@@ -57,6 +57,7 @@
 ..\title\builtins.lib
 ..\touch\builtins.lib
 ..\type\builtins.lib
+..\vhdtool\builtins.lib
 ..\vol\builtins.lib
 ..\which\builtins.lib
 ..\wininfo\builtins.lib

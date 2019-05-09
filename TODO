@@ -4,9 +4,9 @@ v1.0:
 v1.1:
  - YORIQUICKEDIT behavior in more
  - Wide char support in sdir
- - Tool for creating VHDs
  - Stderr to stdout redirection
  - Ps/kill
+ - Vhdtool copy disk to ISO
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?

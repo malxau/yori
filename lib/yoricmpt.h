@@ -3120,6 +3120,200 @@ typedef struct _ATTACH_VIRTUAL_DISK_PARAMETERS {
  */
 #define ATTACH_VIRTUAL_DISK_FLAG_NO_SECURITY_DESCRIPTOR    (0x00000010)
 
+
+/**
+ If this flag is set, the file is created as fully allocated.  If it is not
+ set, the file allocation is created as needed.
+ */
+#define CREATE_VIRTUAL_DISK_FLAG_FULL_PHYSICAL_ALLOCATION  (0x00000001)
+
+/**
+ Information about how to create a VHD.
+ */
+typedef struct _CREATE_VIRTUAL_DISK_PARAMETERS {
+
+    /**
+     The version of this structure.  This program currently only uses version
+     1.
+     */
+    DWORD Version;
+    union {
+        struct {
+
+            /**
+             A unique identifier.  Set to zero to let the system determine it.
+             */
+            GUID UniqueId;
+
+            /**
+             The size of the VHD, in bytes.
+             */
+            DWORDLONG MaximumSize;
+
+            /**
+             For a differencing VHD, the size of the block to copy to the child
+             when a modification occurs.  Must be zero for a non-differencing
+             VHD.
+             */
+            DWORD BlockSizeInBytes;
+
+            /**
+             The sector size of the VHD.  VHD (version 1) only supports 512
+             bytes.
+             */
+            DWORD SectorSizeInBytes;
+
+            /**
+             Path to the parent VHD file when creating a differencing VHD.
+             */
+            PCWSTR ParentPath;
+
+            /**
+             Path to a device to provide data for the newly created VHD.
+             */
+            PCWSTR SourcePath;
+         } Version1;
+
+        struct {
+
+            /**
+             A unique identifier.  Set to zero to let the system determine it.
+             */
+            GUID UniqueId;
+
+            /**
+             The size of the VHD, in bytes.
+             */
+            DWORDLONG MaximumSize;
+
+            /**
+             For a differencing VHD, the size of the block to copy to the child
+             when a modification occurs.  Must be zero for a non-differencing
+             VHD.
+             */
+            DWORD BlockSizeInBytes;
+
+            /**
+             The sector size of the VHD.  VHD (version 1) only supports 512
+             bytes.
+             */
+            DWORD SectorSizeInBytes;
+
+            /**
+             The physical sector size of the VHD.
+             */
+            DWORD PhysicalSectorSizeInBytes;
+
+            /**
+             The open flags to apply to the handle.
+             */
+            DWORD OpenFlags;
+
+            /**
+             Path to the parent VHD file when creating a differencing VHD.
+             */
+            PCWSTR ParentPath;
+
+            /**
+             Path to a device to provide data for the newly created VHD.
+             */
+            PCWSTR SourcePath;
+
+            /**
+             The type of the parent.
+             */
+            DWORD ParentVirtualStorageType;
+
+            /**
+             The type of the source.
+             */
+            DWORD SourceVirtualStorageType;
+
+            GUID ResiliencyGuid;
+         } Version2;
+    };
+} CREATE_VIRTUAL_DISK_PARAMETERS, *PCREATE_VIRTUAL_DISK_PARAMETERS;
+
+/**
+ Information about how to compact a VHD.
+ */
+typedef struct _COMPACT_VIRTUAL_DISK_PARAMETERS {
+
+    /**
+     The version of this structure.
+     */
+    DWORD Version;
+    union {
+        struct {
+
+            /**
+             The new size for the VHD in bytes.
+             */
+            DWORD Unused;
+        } Version1;
+    };
+} COMPACT_VIRTUAL_DISK_PARAMETERS, *PCOMPACT_VIRTUAL_DISK_PARAMETERS;
+
+/**
+ Information about how to expand a VHD.
+ */
+typedef struct _EXPAND_VIRTUAL_DISK_PARAMETERS {
+
+    /**
+     The version of this structure.
+     */
+    DWORD Version;
+    union {
+        struct {
+
+            /**
+             The new size for the VHD in bytes.
+             */
+            DWORDLONG NewSizeInBytes;
+        } Version1;
+    };
+} EXPAND_VIRTUAL_DISK_PARAMETERS, *PEXPAND_VIRTUAL_DISK_PARAMETERS;
+
+/**
+ Information about how to resize a VHD.
+ */
+typedef struct _MERGE_VIRTUAL_DISK_PARAMETERS {
+
+    /**
+     The version of this structure.
+     */
+    DWORD Version;
+    union {
+        struct {
+
+            /**
+             The number of levels in the chain to merge.
+             */
+            DWORD DepthToMerge;
+        } Version1;
+    };
+} MERGE_VIRTUAL_DISK_PARAMETERS, *PMERGE_VIRTUAL_DISK_PARAMETERS;
+
+/**
+ Information about how to resize a VHD.
+ */
+typedef struct _RESIZE_VIRTUAL_DISK_PARAMETERS {
+
+    /**
+     The version of this structure.
+     */
+    DWORD Version;
+    union {
+        struct {
+
+            /**
+             The new size for the VHD in bytes.
+             */
+            DWORDLONG NewSizeInBytes;
+        } Version1;
+    };
+} RESIZE_VIRTUAL_DISK_PARAMETERS, *PRESIZE_VIRTUAL_DISK_PARAMETERS;
+
 /**
  A prototype for the NtQueryInformationFile function.
  */
@@ -3471,7 +3665,7 @@ typedef GET_ENVIRONMENT_STRINGSW *PGET_ENVIRONMENT_STRINGSW;
  */
 typedef
 BOOL WINAPI
-GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, ULONG, PVOID, DWORD);
+GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, DWORD, PVOID, DWORD);
 
 /**
  A prototype for a pointer to the GetFileInformationByHandleEx function.
@@ -5091,6 +5285,30 @@ ATTACH_VIRTUAL_DISK(HANDLE, PSECURITY_DESCRIPTOR, DWORD, DWORD, LPVOID, LPOVERLA
 typedef ATTACH_VIRTUAL_DISK *PATTACH_VIRTUAL_DISK;
 
 /**
+ A prototype for the CompactVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+COMPACT_VIRTUAL_DISK(HANDLE, DWORD, PCOMPACT_VIRTUAL_DISK_PARAMETERS, LPOVERLAPPED);
+
+/**
+ A prototype for a pointer to the CompactVirtualDisk function.
+ */
+typedef COMPACT_VIRTUAL_DISK *PCOMPACT_VIRTUAL_DISK;
+
+/**
+ A prototype for the CreateVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+CREATE_VIRTUAL_DISK(PVIRTUAL_STORAGE_TYPE, PCWSTR, DWORD, PSECURITY_DESCRIPTOR, DWORD, DWORD, LPVOID, LPOVERLAPPED, PHANDLE);
+
+/**
+ A prototype for a pointer to the CreateVirtualDisk function.
+ */
+typedef CREATE_VIRTUAL_DISK *PCREATE_VIRTUAL_DISK;
+
+/**
  A prototype for the DetachVirtualDisk function.
  */
 typedef
@@ -5101,6 +5319,18 @@ DETACH_VIRTUAL_DISK(HANDLE, DWORD, DWORD);
  A prototype for a pointer to the DetachVirtualDisk function.
  */
 typedef DETACH_VIRTUAL_DISK *PDETACH_VIRTUAL_DISK;
+
+/**
+ A prototype for the ExpandVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+EXPAND_VIRTUAL_DISK(HANDLE, DWORD, PEXPAND_VIRTUAL_DISK_PARAMETERS, LPOVERLAPPED);
+
+/**
+ A prototype for a pointer to the ExpandVirtualDisk function.
+ */
+typedef EXPAND_VIRTUAL_DISK *PEXPAND_VIRTUAL_DISK;
 
 /**
  A prototype for the GetVirtualDiskPhysicalPath function.
@@ -5115,6 +5345,18 @@ GET_VIRTUAL_DISK_PHYSICAL_PATH(HANDLE, PDWORD, LPWSTR);
 typedef GET_VIRTUAL_DISK_PHYSICAL_PATH *PGET_VIRTUAL_DISK_PHYSICAL_PATH;
 
 /**
+ A prototype for the MergeVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+MERGE_VIRTUAL_DISK(HANDLE, DWORD, PMERGE_VIRTUAL_DISK_PARAMETERS, LPOVERLAPPED);
+
+/**
+ A prototype for a pointer to the MergeVirtualDisk function.
+ */
+typedef MERGE_VIRTUAL_DISK *PMERGE_VIRTUAL_DISK;
+
+/**
  A prototype for the OpenVirtualDisk function.
  */
 typedef
@@ -5125,6 +5367,18 @@ OPEN_VIRTUAL_DISK(PVIRTUAL_STORAGE_TYPE, LPCWSTR, DWORD, DWORD, POPEN_VIRTUAL_DI
  A prototype for a pointer to the OpenVirtualDisk function.
  */
 typedef OPEN_VIRTUAL_DISK *POPEN_VIRTUAL_DISK;
+
+/**
+ A prototype for the ResizeVirtualDisk function.
+ */
+typedef
+DWORD WINAPI
+RESIZE_VIRTUAL_DISK(HANDLE, DWORD, PRESIZE_VIRTUAL_DISK_PARAMETERS, LPOVERLAPPED);
+
+/**
+ A prototype for a pointer to the ResizeVirtualDisk function.
+ */
+typedef RESIZE_VIRTUAL_DISK *PRESIZE_VIRTUAL_DISK;
 
 /**
  A structure containing optional function pointers to virtdisk.dll exported
@@ -5143,9 +5397,24 @@ typedef struct _YORI_VIRTDISK_FUNCTIONS {
     PATTACH_VIRTUAL_DISK pAttachVirtualDisk;
 
     /**
+     If it's available on the current system, a pointer to CompactVirtualDisk.
+     */
+    PCOMPACT_VIRTUAL_DISK pCompactVirtualDisk;
+
+    /**
+     If it's available on the current system, a pointer to CreateVirtualDisk.
+     */
+    PCREATE_VIRTUAL_DISK pCreateVirtualDisk;
+
+    /**
      If it's available on the current system, a pointer to DetachVirtualDisk.
      */
     PDETACH_VIRTUAL_DISK pDetachVirtualDisk;
+
+    /**
+     If it's available on the current system, a pointer to ExpandVirtualDisk.
+     */
+    PEXPAND_VIRTUAL_DISK pExpandVirtualDisk;
 
     /**
      If it's available on the current system, a pointer to GetVirtualDiskPhysicalPath.
@@ -5153,9 +5422,19 @@ typedef struct _YORI_VIRTDISK_FUNCTIONS {
     PGET_VIRTUAL_DISK_PHYSICAL_PATH pGetVirtualDiskPhysicalPath;
 
     /**
+     If it's available on the current system, a pointer to MergeVirtualDisk.
+     */
+    PMERGE_VIRTUAL_DISK pMergeVirtualDisk;
+
+    /**
      If it's available on the current system, a pointer to OpenVirtualDisk.
      */
     POPEN_VIRTUAL_DISK pOpenVirtualDisk;
+
+    /**
+     If it's available on the current system, a pointer to ResizeVirtualDisk.
+     */
+    PRESIZE_VIRTUAL_DISK pResizeVirtualDisk;
 
 } YORI_VIRTDISK_FUNCTIONS, *PYORI_VIRTDISK_FUNCTIONS;
 

@@ -569,9 +569,14 @@ YoriLibLoadVirtDiskFunctions()
     }
 
     DllVirtDisk.pAttachVirtualDisk = (PATTACH_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "AttachVirtualDisk");
+    DllVirtDisk.pCompactVirtualDisk = (PCOMPACT_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "CompactVirtualDisk");
+    DllVirtDisk.pCreateVirtualDisk = (PCREATE_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "CreateVirtualDisk");
     DllVirtDisk.pDetachVirtualDisk = (PDETACH_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "DetachVirtualDisk");
+    DllVirtDisk.pExpandVirtualDisk = (PEXPAND_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "ExpandVirtualDisk");
     DllVirtDisk.pGetVirtualDiskPhysicalPath = (PGET_VIRTUAL_DISK_PHYSICAL_PATH)GetProcAddress(DllVirtDisk.hDll, "GetVirtualDiskPhysicalPath");
     DllVirtDisk.pOpenVirtualDisk = (POPEN_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "OpenVirtualDisk");
+    DllVirtDisk.pMergeVirtualDisk = (PMERGE_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "MergeVirtualDisk");
+    DllVirtDisk.pResizeVirtualDisk = (PRESIZE_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "ResizeVirtualDisk");
 
     return TRUE;
 }

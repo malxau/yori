@@ -105,6 +105,7 @@ DIRS=crt       \
      title     \
      touch     \
      type      \
+     vhdtool   \
      vol       \
      which     \
      wininfo   \

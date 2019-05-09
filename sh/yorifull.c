@@ -404,6 +404,11 @@ YORI_CMD_BUILTIN YoriCmd_VER;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_VHDTOOL;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YVOL;
 
 /**
@@ -496,6 +501,7 @@ YoriShBuiltins[] = {
                     {_T("TOUCH"),     YoriCmd_TOUCH},
                     {_T("TRUE"),      YoriCmd_TRUE},
                     {_T("VER"),       YoriCmd_VER},
+                    {_T("VHDTOOL"),   YoriCmd_VHDTOOL},
                     {_T("WAIT"),      YoriCmd_WAIT},
                     {_T("WHICH"),     YoriCmd_WHICH},
                     {_T("WININFO"),   YoriCmd_WININFO},
