@@ -1,8 +1,14 @@
 set FIRSTCHAR=%2%
 if strcmp -- %FIRSTCHAR:~0,1%==/; goto arg
 if strcmp -- %FIRSTCHAR:~0,1%==-; goto arg
+if strcmp -- %FIRSTCHAR:~0,1%==~; goto special
 set FIRSTCHAR=
 echo -- /directories
+goto :eof
+
+:special
+set FIRSTCHAR=
+echo -- /insensitivelist ~ ~appdata ~appdir ~commonappdata ~commondesktop ~commondocuments ~commonprograms ~commonstart ~desktop ~documents ~downloads ~localappdata ~programfiles ~programs ~start ~startup ~system ~windows
 goto :eof
 
 :arg

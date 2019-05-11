@@ -1157,6 +1157,76 @@ YoriLibExpandShellDirectory(
 }
 
 /**
+ A mapping between a '~' prefixed special directory name and a CSIDL that the
+ shell uses to identify it.
+ */
+typedef struct _YORI_LIB_CSIDL_MAP {
+
+    /**
+     The special directory name.
+     */
+    LPTSTR DirName;
+
+    /**
+     The corresponding CSIDL.
+     */
+    DWORD Csidl;
+} YORI_LIB_CSIDL_MAP, *PYORI_LIB_CSIDL_MAP;
+
+/**
+ A table of special directory names whose locations can be obtained via
+ SHGetSpecialFolderPath or SHGetFolderPath.
+ */
+CONST YORI_LIB_CSIDL_MAP YoriLibSpecialDirectoryMap[] = {
+    {_T("~APPDATA"),            CSIDL_APPDATA},
+    {_T("~COMMONAPPDATA"),      CSIDL_COMMON_APPDATA},
+    {_T("~COMMONDESKTOP"),      CSIDL_COMMON_DESKTOPDIRECTORY},
+    {_T("~COMMONDOCUMENTS"),    CSIDL_COMMON_DOCUMENTS},
+    {_T("~COMMONPROGRAMS"),     CSIDL_COMMON_PROGRAMS},
+    {_T("~COMMONSTART"),        CSIDL_COMMON_STARTMENU},
+    {_T("~DESKTOP"),            CSIDL_DESKTOPDIRECTORY},
+    {_T("~DOCUMENTS"),          CSIDL_PERSONAL},
+    {_T("~LOCALAPPDATA"),       CSIDL_LOCALAPPDATA},
+    {_T("~PROGRAMFILES"),       CSIDL_PROGRAM_FILES},
+    {_T("~PROGRAMS"),           CSIDL_PROGRAMS},
+    {_T("~START"),              CSIDL_STARTMENU},
+    {_T("~STARTUP"),            CSIDL_STARTUP},
+    {_T("~SYSTEM"),             CSIDL_SYSTEM},
+    {_T("~WINDOWS"),            CSIDL_WINDOWS}
+};
+
+/**
+ Translate a special directory name into its expanded form if the directory
+ name is defined via a CSIDL that can be resolved with SHGetSpecialFolderPath
+ et al.
+
+ @param SymbolToExpand The special directory name, prefixed with '~'.
+
+ @param ExpandedSymbol On successful completion, populated with the directory
+        corresponding to the special directory name.
+
+ @return TRUE to indicate a match was found and expansion successfully
+         performed, FALSE if the symbol name should be checked for other
+         matches.
+ */
+BOOL
+YoriLibExpandDirectoryFromMap(
+    __in PYORI_STRING SymbolToExpand,
+    __inout PYORI_STRING ExpandedSymbol
+    )
+{
+    DWORD Index;
+
+    for (Index = 0; Index < sizeof(YoriLibSpecialDirectoryMap)/sizeof(YoriLibSpecialDirectoryMap[0]); Index++) {
+        if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, YoriLibSpecialDirectoryMap[Index].DirName) == 0) {
+            return YoriLibExpandShellDirectory(YoriLibSpecialDirectoryMap[Index].Csidl, ExpandedSymbol);
+        }
+    }
+
+    return FALSE;
+}
+
+/**
  Expand a directory component in a path, specified via a tilde and description,
  into its corresponding physical directory.
 
@@ -1181,8 +1251,6 @@ YoriLibExpandHomeSymbol(
         ExpandedSymbol->LengthInChars = GetEnvironmentVariable(_T("HOMEDRIVE"), ExpandedSymbol->StartOfString, ExpandedSymbol->LengthAllocated);
         ExpandedSymbol->LengthInChars += GetEnvironmentVariable(_T("HOMEPATH"), &ExpandedSymbol->StartOfString[ExpandedSymbol->LengthInChars], ExpandedSymbol->LengthAllocated - ExpandedSymbol->LengthInChars);
         return TRUE;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~APPDATA")) == 0) {
-        return YoriLibExpandShellDirectory(CSIDL_APPDATA, ExpandedSymbol);
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~APPDIR")) == 0) {
         LPTSTR FinalSlash;
 
@@ -1205,20 +1273,10 @@ YoriLibExpandHomeSymbol(
 
         ExpandedSymbol->LengthInChars = (DWORD)(FinalSlash - ExpandedSymbol->StartOfString);
         return TRUE;
-    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~DESKTOP")) == 0) {
-        return YoriLibExpandShellDirectory(CSIDL_DESKTOPDIRECTORY, ExpandedSymbol);
-    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~DOCUMENTS")) == 0) {
-        return YoriLibExpandShellDirectory(CSIDL_PERSONAL, ExpandedSymbol);
+    } else if (YoriLibExpandDirectoryFromMap(SymbolToExpand, ExpandedSymbol)) {
+        return TRUE;
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~DOWNLOADS")) == 0) {
         return YoriLibExpandShellDirectoryGuid(&FOLDERID_Downloads, ExpandedSymbol);
-    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~LOCALAPPDATA")) == 0) {
-        return YoriLibExpandShellDirectory(CSIDL_LOCALAPPDATA, ExpandedSymbol);
-    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~PROGRAMS")) == 0) {
-        return YoriLibExpandShellDirectory(CSIDL_PROGRAMS, ExpandedSymbol);
-    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~START")) == 0) {
-        return YoriLibExpandShellDirectory(CSIDL_STARTMENU, ExpandedSymbol);
-    } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~STARTUP")) == 0) {
-        return YoriLibExpandShellDirectory(CSIDL_STARTUP, ExpandedSymbol);
     }
 
     ExpandedSymbol->StartOfString = SymbolToExpand->StartOfString;

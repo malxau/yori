@@ -2367,41 +2367,103 @@ typedef struct _YORI_SHFILEOP {
  */
 #define CSIDL_APPDATA 0x001a
 #endif
-#ifndef CSIDL_LOCALAPPDATA
+
+#ifndef CSIDL_COMMON_APPDATA
 /**
- The identifier of the AppData local directory to ShGetSpecialFolderPath.
+ The identifier of the common AppData directory to ShGetSpecialFolderPath.
  */
-#define CSIDL_LOCALAPPDATA 0x001c
+#define CSIDL_COMMON_APPDATA 0x0023
 #endif
+
+#ifndef CSIDL_COMMON_DESKTOPDIRECTORY
+/**
+ The identifier of the common Desktop directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_COMMON_DESKTOPDIRECTORY 0x0019
+#endif
+
+#ifndef CSIDL_COMMON_DOCUMENTS
+/**
+ The identifier of the common Documents directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_COMMON_DOCUMENTS 0x002e
+#endif
+
+#ifndef CSIDL_COMMON_PROGRAMS
+/**
+ The identifier of the common Programs directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_COMMON_PROGRAMS 0x0017
+#endif
+
+#ifndef CSIDL_COMMON_STARTMENU
+/**
+ The identifier of the common Start Menu directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_COMMON_STARTMENU 0x0016
+#endif
+
 #ifndef CSIDL_DESKTOPDIRECTORY
 /**
  The identifier of the Desktop directory to ShGetSpecialFolderPath.
  */
 #define CSIDL_DESKTOPDIRECTORY 0x0010
 #endif
+
+#ifndef CSIDL_LOCALAPPDATA
+/**
+ The identifier of the AppData local directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_LOCALAPPDATA 0x001c
+#endif
+
 #ifndef CSIDL_PERSONAL
 /**
  The identifier of the Documents directory to ShGetSpecialFolderPath.
  */
 #define CSIDL_PERSONAL 0x0005
 #endif
+
+#ifndef CSIDL_PROGRAM_FILES
+/**
+ The identifier of the Program Files directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_PROGRAM_FILES 0x0026
+#endif
+
 #ifndef CSIDL_PROGRAMS
 /**
  The identifier of the Start Menu Programs directory to ShGetSpecialFolderPath.
  */
 #define CSIDL_PROGRAMS 0x0002
 #endif
+
 #ifndef CSIDL_STARTMENU
 /**
  The identifier of the Start Menu directory to ShGetSpecialFolderPath.
  */
 #define CSIDL_STARTMENU 0x000b
 #endif
+
 #ifndef CSIDL_STARTUP
 /**
  The identifier of the Start Menu startup directory to ShGetSpecialFolderPath.
  */
 #define CSIDL_STARTUP 0x0007
+#endif
+
+#ifndef CSIDL_SYSTEM
+/**
+ The identifier of the System32 directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_SYSTEM 0x0025
+#endif
+
+#ifndef CSIDL_WINDOWS
+/**
+ The identifier of the System32 directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_WINDOWS 0x0024
 #endif
 
 extern const GUID FOLDERID_Downloads;
