@@ -48,6 +48,7 @@
 ..\shutdn\builtins.lib
 ..\sleep\builtins.lib
 ..\split\builtins.lib
+..\sponge\builtins.lib
 ..\start\builtins.lib
 ..\strcmp\builtins.lib
 ..\sync\builtins.lib

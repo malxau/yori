@@ -349,6 +349,11 @@ YORI_CMD_BUILTIN YoriCmd_YSPLIT;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YSPONGE;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YSTART;
 
 /**
@@ -537,6 +542,7 @@ YoriShBuiltins[] = {
                     {_T("YS"),        YoriCmd_YS},
                     {_T("YSHUTDN"),   YoriCmd_YSHUTDN},
                     {_T("YSPLIT"),    YoriCmd_YSPLIT},
+                    {_T("YSPONGE"),   YoriCmd_YSPONGE},
                     {_T("YSTART"),    YoriCmd_YSTART},
                     {_T("YTITLE"),    YoriCmd_YTITLE},
                     {_T("YTYPE"),     YoriCmd_YTYPE},

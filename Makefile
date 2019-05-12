@@ -96,6 +96,7 @@ DIRS=crt       \
      shutdn    \
      sleep     \
      split     \
+     sponge    \
      start     \
      strcmp    \
      sync      \

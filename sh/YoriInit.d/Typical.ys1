@@ -18,3 +18,4 @@ builtin alias -s sha1sum=yhash -a sha1 $*$
 builtin alias -s sha256sum=yhash -a sha256 $*$
 builtin alias -s sha384sum=yhash -a sha384 $*$
 builtin alias -s sha512sum=yhash -a sha512 $*$
+builtin alias -s sponge=ysponge $*$

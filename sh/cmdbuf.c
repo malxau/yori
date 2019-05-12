@@ -3,7 +3,7 @@
  *
  * Facilities for managing buffers of executing processes
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,7 +31,7 @@
  A buffer for a single data stream.  A process may have a different buffered
  data stream for stdout as well as stderr.
  */
-typedef struct _YORI_PROCESS_BUFFER {
+typedef struct _YORI_SH_PROCESS_BUFFER {
 
     /**
      The number of bytes currently allocated to this buffer.
@@ -74,12 +74,12 @@ typedef struct _YORI_PROCESS_BUFFER {
      */
     PCHAR Buffer;
 
-} YORI_PROCESS_BUFFER, *PYORI_PROCESS_BUFFER;
+} YORI_SH_PROCESS_BUFFER, *PYORI_SH_PROCESS_BUFFER;
 
 /**
  A structure to record a buffered process.
  */
-typedef struct _YORI_BUFFERED_PROCESS {
+typedef struct _YORI_SH_BUFFERED_PROCESS {
 
     /**
      The link into the global list of buffered processes.
@@ -99,14 +99,14 @@ typedef struct _YORI_BUFFERED_PROCESS {
     /**
      A buffer corresponding to the output stream from the process.
      */
-    YORI_PROCESS_BUFFER OutputBuffer;
+    YORI_SH_PROCESS_BUFFER OutputBuffer;
 
     /**
      A buffer corresponding to the error stream from the process.
      */
-    YORI_PROCESS_BUFFER ErrorBuffer;
+    YORI_SH_PROCESS_BUFFER ErrorBuffer;
 
-} YORI_BUFFERED_PROCESS, *PYORI_BUFFERED_PROCESS;
+} YORI_SH_BUFFERED_PROCESS, *PYORI_SH_BUFFERED_PROCESS;
 
 /**
  The global list of active buffered processes.
@@ -134,7 +134,7 @@ AcquireMutex(
  */
 VOID
 YoriShFreeProcessBuffer(
-    __in PYORI_PROCESS_BUFFER ThisBuffer
+    __in PYORI_SH_PROCESS_BUFFER ThisBuffer
     )
 {
     if (ThisBuffer->Buffer != NULL) {
@@ -159,7 +159,7 @@ YoriShFreeProcessBuffer(
  */
 VOID
 YoriShFreeProcessBuffers(
-    __in PYORI_BUFFERED_PROCESS ThisBuffer
+    __in PYORI_SH_BUFFERED_PROCESS ThisBuffer
     )
 {
     YoriShFreeProcessBuffer(&ThisBuffer->OutputBuffer);
@@ -183,7 +183,7 @@ YoriShCmdBufferPumpToNextProcess(
     __in LPVOID Param
     )
 {
-    PYORI_PROCESS_BUFFER ThisBuffer = (PYORI_PROCESS_BUFFER)Param;
+    PYORI_SH_PROCESS_BUFFER ThisBuffer = (PYORI_SH_PROCESS_BUFFER)Param;
     DWORD BytesSent = 0;
     DWORD BytesWritten;
     DWORD BytesToWrite;
@@ -235,7 +235,7 @@ YoriShCmdBufferPump(
     __in LPVOID Param
     )
 {
-    PYORI_PROCESS_BUFFER ThisBuffer = (PYORI_PROCESS_BUFFER)Param;
+    PYORI_SH_PROCESS_BUFFER ThisBuffer = (PYORI_SH_PROCESS_BUFFER)Param;
     DWORD BytesRead;
 
     while (TRUE) {
@@ -251,8 +251,14 @@ YoriShCmdBufferPump(
             ThisBuffer->BytesPopulated += BytesRead;
             ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
             if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
-                DWORD NewBytesAllocated = ThisBuffer->BytesAllocated * 4;
+                DWORD NewBytesAllocated;
                 PCHAR NewBuffer;
+
+                if (ThisBuffer->BytesAllocated >= ((DWORD)-1) / 4) {
+                    break;
+                }
+
+                NewBytesAllocated = ThisBuffer->BytesAllocated * 4;
 
                 NewBuffer = YoriLibMalloc(NewBytesAllocated);
                 if (NewBuffer == NULL) {
@@ -331,7 +337,7 @@ YoriShCmdBufferPump(
  */
 BOOL
 YoriShAllocateSingleProcessBuffer(
-    __out PYORI_PROCESS_BUFFER Buffer
+    __out PYORI_SH_PROCESS_BUFFER Buffer
     )
 {
     Buffer->BytesAllocated = 1024;
@@ -361,19 +367,19 @@ YoriShCreateNewProcessBuffer(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
-    PYORI_BUFFERED_PROCESS ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBuffer;
     DWORD ThreadId;
 
     if (BufferedProcessList.Next == NULL) {
         YoriLibInitializeListHead(&BufferedProcessList);
     }
 
-    ThisBuffer = YoriLibMalloc(sizeof(YORI_BUFFERED_PROCESS));
+    ThisBuffer = YoriLibMalloc(sizeof(YORI_SH_BUFFERED_PROCESS));
     if (ThisBuffer == NULL) {
         return FALSE;
     }
 
-    ZeroMemory(ThisBuffer, sizeof(YORI_BUFFERED_PROCESS));
+    ZeroMemory(ThisBuffer, sizeof(YORI_SH_BUFFERED_PROCESS));
 
     //
     //  Create the buffer with two references: one for the ExecContext, and
@@ -447,7 +453,7 @@ YoriShAppendToExistingProcessBuffer(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
-    PYORI_BUFFERED_PROCESS ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBuffer;
     DWORD ThreadId;
 
     //
@@ -499,7 +505,7 @@ YoriShForwardProcessBufferToNextProcess(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
-    PYORI_BUFFERED_PROCESS ThisBuffer = ExecContext->StdOut.Buffer.ProcessBuffers;
+    PYORI_SH_BUFFERED_PROCESS ThisBuffer = ExecContext->StdOut.Buffer.ProcessBuffers;
     DWORD ThreadId;
     HANDLE ReadHandle, WriteHandle;
 
@@ -551,7 +557,7 @@ YoriShDereferenceProcessBuffer(
     __in PVOID ThisBuffer
     )
 {
-    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_SH_BUFFERED_PROCESS)ThisBuffer;
     ThisBufferNonOpaque->ReferenceCount--;
 
     if (ThisBufferNonOpaque->ReferenceCount == 0) {
@@ -570,7 +576,7 @@ YoriShReferenceProcessBuffer(
     __in PVOID ThisBuffer
     )
 {
-    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_SH_BUFFERED_PROCESS)ThisBuffer;
     ASSERT(ThisBufferNonOpaque->ReferenceCount > 0);
     ThisBufferNonOpaque->ReferenceCount++;
 }
@@ -588,7 +594,7 @@ YoriShReferenceProcessBuffer(
  */
 BOOL
 YoriShGetProcessBuffer(
-    __in PYORI_PROCESS_BUFFER ThisBuffer,
+    __in PYORI_SH_PROCESS_BUFFER ThisBuffer,
     __out PYORI_STRING String
     )
 {
@@ -639,7 +645,7 @@ YoriShGetProcessOutputBuffer(
     )
 {
     BOOL Result;
-    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_SH_BUFFERED_PROCESS)ThisBuffer;
     Result = YoriShGetProcessBuffer(&ThisBufferNonOpaque->OutputBuffer, String);
     return Result;
 }
@@ -663,7 +669,7 @@ YoriShGetProcessErrorBuffer(
     )
 {
     BOOL Result;
-    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_SH_BUFFERED_PROCESS)ThisBuffer;
     Result = YoriShGetProcessBuffer(&ThisBufferNonOpaque->ErrorBuffer, String);
     return Result;
 }
@@ -681,7 +687,7 @@ YoriShGetProcessErrorBuffer(
  */
 BOOL
 YoriShTeardownSingleProcessBuffer(
-    __in PYORI_PROCESS_BUFFER ThisBuffer,
+    __in PYORI_SH_PROCESS_BUFFER ThisBuffer,
     __in BOOL TeardownAll
     )
 {
@@ -718,7 +724,7 @@ YoriShScanProcessBuffersForTeardown(
     __in BOOL TeardownAll
     )
 {
-    PYORI_BUFFERED_PROCESS ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBuffer;
     PYORI_LIST_ENTRY ListEntry;
     DWORD ThreadsFound;
 
@@ -728,7 +734,7 @@ YoriShScanProcessBuffersForTeardown(
 
     ListEntry = YoriLibGetNextListEntry(&BufferedProcessList, NULL);
     while (ListEntry != NULL) {
-        ThisBuffer = CONTAINING_RECORD(ListEntry, YORI_BUFFERED_PROCESS, ListEntry);
+        ThisBuffer = CONTAINING_RECORD(ListEntry, YORI_SH_BUFFERED_PROCESS, ListEntry);
         ListEntry = YoriLibGetNextListEntry(&BufferedProcessList, ListEntry);
         if (ThisBuffer->hCancelPumpEvent != NULL && TeardownAll) {
             SetEvent(ThisBuffer->hCancelPumpEvent);
@@ -776,7 +782,7 @@ YoriShWaitForProcessBufferToFinalize(
     __in PVOID ThisBuffer
     )
 {
-    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_SH_BUFFERED_PROCESS)ThisBuffer;
     if (ThisBufferNonOpaque->OutputBuffer.hPumpThread != NULL) {
         if (WaitForSingleObject(ThisBufferNonOpaque->OutputBuffer.hPumpThread, INFINITE) != WAIT_OBJECT_0) {
             ASSERT(FALSE);
@@ -814,7 +820,7 @@ YoriShPipeProcessBuffers(
     BOOL HaveOutput;
     BOOL HaveErrors;
     BOOL Collision;
-    PYORI_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_BUFFERED_PROCESS)ThisBuffer;
+    PYORI_SH_BUFFERED_PROCESS ThisBufferNonOpaque = (PYORI_SH_BUFFERED_PROCESS)ThisBuffer;
 
     HaveOutput = FALSE;
     HaveErrors = FALSE;

@@ -146,6 +146,7 @@ CHAR strHelpHelpText3[] =
         "SHUTDN    Shutdown, reboot or logoff the system\n"
         "SLEEP     Waits for a specified number of seconds\n"
         "SPLIT     Split a file into pieces\n"
+        "SPONGE    Read input into memory then output, allowing rewrite of input\n"
         "START     Ask the shell to open a file\n"
         "STRCMP    Compare two strings\n"
         "SYNC      Flush a file, directory or volume\n"
