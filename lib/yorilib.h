@@ -3202,4 +3202,6 @@ YoriLibIsPathUrl(
     __in PYORI_STRING PackagePath
     );
 
+BOOL YoriLibIsStdInConsole();
+
 // vim:sw=4:ts=4:et:

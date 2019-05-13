@@ -248,6 +248,10 @@ YoriShCmdBufferPump(
 
             AcquireMutex(ThisBuffer->Mutex);
 
+            if (BytesRead == 0) {
+                break;
+            }
+
             ThisBuffer->BytesPopulated += BytesRead;
             ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
             if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {

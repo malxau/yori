@@ -103,6 +103,11 @@ SpongeBufferPump(
                      &BytesRead,
                      NULL)) {
 
+            if (BytesRead == 0) {
+                Result = TRUE;
+                break;
+            }
+
             ThisBuffer->BytesPopulated += BytesRead;
             ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
             if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
@@ -248,7 +253,6 @@ ENTRYPOINT(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
-    DWORD FileType;
     SPONGE_BUFFER SpongeBuffer;
     YORI_STRING FullFilePath;
     HANDLE hTarget;
@@ -287,9 +291,7 @@ ENTRYPOINT(
     YoriLibCancelEnable();
 #endif
 
-    FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
-    FileType = FileType & ~(FILE_TYPE_REMOTE);
-    if (FileType == FILE_TYPE_CHAR) {
+    if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &i)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
         return EXIT_FAILURE;
     }

@@ -309,4 +309,23 @@ YoriLibIsPathUrl(
     return FALSE;
 }
 
+/**
+ Returns TRUE if the standard input handle is to a console.  Yori tools
+ generally treat this as an error, indicating the user forgot to specify
+ a file or establish a pipe, rather than leave the console waiting for
+ typed input.
+
+ @return TRUE to indicate standard input is a console; FALSE if it is
+         from another source.
+ */
+BOOL
+YoriLibIsStdInConsole()
+{
+    DWORD ConsoleMode;
+    if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &ConsoleMode)) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 // vim:sw=4:ts=4:et:

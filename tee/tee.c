@@ -142,7 +142,6 @@ ENTRYPOINT(
     DWORD StartArg = 0;
     BOOL Append = FALSE;
     TEE_CONTEXT TeeContext;
-    DWORD FileType;
     YORI_STRING FileName;
     YORI_STRING Arg;
 
@@ -190,9 +189,7 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
-    FileType = FileType & ~(FILE_TYPE_REMOTE);
-    if (FileType == FILE_TYPE_CHAR) {
+    if (YoriLibIsStdInConsole()) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
         return EXIT_FAILURE;
     }

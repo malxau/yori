@@ -198,6 +198,9 @@ TailProcessStream(
         while (TRUE) {
 
             if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[0], &LineContext, FALSE, INFINITE, hSource, &LineTerminated, &TimeoutReached)) {
+                if (YoriLibIsOperationCancelled()) {
+                    break;
+                }
                 Sleep(200);
                 continue;
             }
@@ -446,9 +449,7 @@ ENTRYPOINT(
     //
 
     if (StartArg == 0 || StartArg == ArgC) {
-        DWORD FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
-        FileType = FileType & ~(FILE_TYPE_REMOTE);
-        if (FileType == FILE_TYPE_CHAR) {
+        if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
             YoriLibFree(TailContext.LinesArray);
             return EXIT_FAILURE;

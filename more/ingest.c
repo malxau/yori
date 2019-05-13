@@ -297,9 +297,7 @@ MoreIngestThread(
     //
 
     if (MoreContext->InputSourceCount == 0) {
-        DWORD FileMore = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
-        FileMore = FileMore & ~(FILE_TYPE_REMOTE);
-        if (FileMore == FILE_TYPE_CHAR) {
+        if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
             return 0;
         }

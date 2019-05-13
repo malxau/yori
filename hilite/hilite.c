@@ -530,9 +530,7 @@ ENTRYPOINT(
     //
 
     if (StartArg == 0 || StartArg == ArgC) {
-        DWORD FileType = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
-        FileType = FileType & ~(FILE_TYPE_REMOTE);
-        if (FileType == FILE_TYPE_CHAR) {
+        if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
             HiliteCleanupContext(&HiliteContext);
             return EXIT_FAILURE;

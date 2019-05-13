@@ -374,9 +374,7 @@ ENTRYPOINT(
     //
 
     if (StartArg == 0 || StartArg == ArgC) {
-        DWORD FileIconv = GetFileType(GetStdHandle(STD_INPUT_HANDLE));
-        FileIconv = FileIconv & ~(FILE_TYPE_REMOTE);
-        if (FileIconv == FILE_TYPE_CHAR) {
+        if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
             return EXIT_FAILURE;
         }

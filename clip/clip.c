@@ -807,8 +807,6 @@ ENTRYPOINT(
             hFile = GetStdHandle(STD_OUTPUT_HANDLE);
         } else {
 
-            DWORD FileType;
-
             FileSize = MAX_PIPE_SIZE;
             hFile = GetStdHandle(STD_INPUT_HANDLE);
 
@@ -818,9 +816,7 @@ ENTRYPOINT(
             //  isn't sure how to run this program and help them along.
             //
 
-            FileType = GetFileType(hFile);
-            FileType = FileType & ~(FILE_TYPE_REMOTE);
-            if (FileType == FILE_TYPE_CHAR) {
+            if (YoriLibIsStdInConsole()) {
                 ClipHelp();
                 return EXIT_FAILURE;
             }
