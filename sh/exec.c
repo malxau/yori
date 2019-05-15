@@ -716,6 +716,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     YORI_STRING OriginalAliases;
     DWORD Err;
     BOOL HaveOriginalAliases;
+    BOOL ApplyEnvironment = TRUE;
 
     YoriLibInitEmptyString(&OriginalAliases);
     HaveOriginalAliases = YoriShGetSystemAliasStrings(TRUE, &OriginalAliases);
@@ -802,7 +803,18 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
             DbgEvent.dwProcessId == ExecContext->dwProcessId) {
 
             YORI_STRING EnvString;
-            if (YoriShSuckEnv(ExecContext->hProcess, &EnvString)) {
+
+            //
+            //  If the user sent this task the background after starting it,
+            //  the environment should not be applied anymore.
+            //
+
+            if (!ExecContext->CaptureEnvironmentOnExit) {
+                ApplyEnvironment = FALSE;
+            }
+
+            if (ApplyEnvironment &&
+                YoriShSuckEnv(ExecContext->hProcess, &EnvString)) {
                 YoriShSetEnvironmentStrings(&EnvString);
                 YoriLibFreeStringContents(&EnvString);
             }
@@ -818,7 +830,8 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     WaitForSingleObject(ExecContext->hProcess, INFINITE);
     if (HaveOriginalAliases) {
         YORI_STRING NewAliases;
-        if (YoriShGetSystemAliasStrings(TRUE, &NewAliases)) {
+        if (ApplyEnvironment &&
+            YoriShGetSystemAliasStrings(TRUE, &NewAliases)) {
             YoriShMergeChangedAliasStrings(TRUE, &OriginalAliases, &NewAliases);
             YoriLibFreeStringContents(&NewAliases);
         }
@@ -1007,6 +1020,18 @@ YoriShWaitForProcessToTerminate(
                     Delay = 30;
                     continue;
                 } else {
+
+                    //
+                    //  If a process is being moved to the background, don't
+                    //  suck back any environment later when it completes.
+                    //  Note this is a race condition, since that logic
+                    //  is occurring on a different thread that is processing
+                    //  debug messages while this code is running.  For the
+                    //  same reason though, if process termination is racing
+                    //  with observing Ctrl+B, either outcome is possible.
+                    //
+
+                    ExecContext->CaptureEnvironmentOnExit = FALSE;
                     break;
                 }
             } else {
