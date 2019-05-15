@@ -1032,6 +1032,17 @@ YoriShWaitForProcessToTerminate(
                     //
 
                     ExecContext->CaptureEnvironmentOnExit = FALSE;
+
+                    //
+                    //  If the taskbar is showing an active task, clear it.
+                    //  We don't really know if the task failed or succeeded,
+                    //  but we do know the user is interacting with this
+                    //  console, so flashing the taskbar a random color is
+                    //  not helpful or desirable.
+                    //
+
+                    YoriShSetWindowState(YORI_SH_TASK_COMPLETE);
+
                     break;
                 }
             } else {
