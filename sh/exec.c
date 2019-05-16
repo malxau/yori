@@ -584,11 +584,16 @@ YoriShSuckEnv(
  @param ExecContext Pointer to the ExecContext to attempt to launch via
         CreateProcess.
 
+ @param FailedInRedirection Optionally points to a boolean value to be set to
+        TRUE if any error originated while setting up redirection, and FALSE
+        if it came from launching the process.
+
  @return Win32 error code, meaning zero indicates success.
  */
 DWORD
 YoriShCreateProcess(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __out PBOOL FailedInRedirection
     )
 {
     LPTSTR CmdLine;
@@ -602,6 +607,9 @@ YoriShCreateProcess(
 
     CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
     if (CmdLine == NULL) {
+        if (FailedInRedirection != NULL) {
+            *FailedInRedirection = FALSE;
+        }
         return ERROR_OUTOFMEMORY;
     }
 
@@ -621,6 +629,9 @@ YoriShCreateProcess(
     LastError = YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
     if (LastError != ERROR_SUCCESS) {
         YoriLibDereference(CmdLine);
+        if (FailedInRedirection != NULL) {
+            *FailedInRedirection = TRUE;
+        }
         return LastError;
     }
 
@@ -628,6 +639,9 @@ YoriShCreateProcess(
         LastError = GetLastError();
         YoriShRevertRedirection(&PreviousRedirectContext);
         YoriLibDereference(CmdLine);
+        if (FailedInRedirection != NULL) {
+            *FailedInRedirection = FALSE;
+        }
         return LastError;
     } else {
         YoriShRevertRedirection(&PreviousRedirectContext);
@@ -717,14 +731,19 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     DWORD Err;
     BOOL HaveOriginalAliases;
     BOOL ApplyEnvironment = TRUE;
+    BOOL FailedInRedirection = FALSE;
 
     YoriLibInitEmptyString(&OriginalAliases);
     HaveOriginalAliases = YoriShGetSystemAliasStrings(TRUE, &OriginalAliases);
 
-    Err = YoriShCreateProcess(ExecContext);
+    Err = YoriShCreateProcess(ExecContext, &FailedInRedirection);
     if (Err != NO_ERROR) {
         LPTSTR ErrText = YoriLibGetWinErrorText(Err);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed (%i): %s"), Err, ErrText);
+        if (FailedInRedirection) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failed to initialize redirection: %s"), ErrText);
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed: %s"), ErrText);
+        }
         YoriLibFreeWinErrorText(ErrText);
         YoriShCleanupFailedProcessLaunch(ExecContext);
         YoriLibFreeStringContents(&OriginalAliases);
@@ -1221,15 +1240,21 @@ YoriShExecuteSingleProgram(
 
     if (ExecProcess) {
 
+        BOOL FailedInRedirection = FALSE;
+
         if (!LaunchViaShellExecute && !ExecContext->CaptureEnvironmentOnExit) {
-            DWORD Err = YoriShCreateProcess(ExecContext);
+            DWORD Err = YoriShCreateProcess(ExecContext, &FailedInRedirection);
 
             if (Err != NO_ERROR) {
                 if (Err == ERROR_ELEVATION_REQUIRED) {
                     LaunchViaShellExecute = TRUE;
                 } else {
                     LPTSTR ErrText = YoriLibGetWinErrorText(Err);
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed (%i): %s"), Err, ErrText);
+                    if (FailedInRedirection) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failed to initialize redirection: %s"), ErrText);
+                    } else {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed: %s"), ErrText);
+                    }
                     YoriLibFreeWinErrorText(ErrText);
                     LaunchFailed = TRUE;
                 }
