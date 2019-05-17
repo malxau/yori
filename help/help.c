@@ -80,6 +80,13 @@ CHAR strHelpHelpText1[] =
         "DU        Display disk space used within a directory tree\n"
         "ECHO      Outputs text\n"
         "ENV       Set environment variables and launch a program\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpHelpText2[] =
         "ENDLOCAL  Pop a previous saved environment from the stack (only valid after\n"
         "            SETLOCAL)\n"
         "ERASE     Delete one or more files\n"
@@ -89,13 +96,6 @@ CHAR strHelpHelpText1[] =
         "FINFO     Output information about file metadata\n"
         "FG        Display the output of a background job in the foreground\n"
         "FOR       Enumerates through a list of strings or files\n"
-        ;
-
-/**
- More text to display to the user about Yori and its tools.
- */
-const
-CHAR strHelpHelpText2[] =
         "FSCMP     Test for file system conditions\n"
         "GET       Fetches objects from HTTP and stores them in local files\n"
         "GRPCMP    Returns true if the user is a member of the specified group\n"
@@ -112,6 +112,13 @@ CHAR strHelpHelpText2[] =
         "INTCMP    Compare two integer values\n"
         "JOB       Displays or updates background job status\n"
         "LINES     Count the number of lines in one or more files\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpHelpText3[] =
         "LSOF      Display which processes have a file in use\n"
         "MEM       Display memory usage information\n"
         "MKDIR     Creates directories\n"
@@ -128,13 +135,6 @@ CHAR strHelpHelpText2[] =
         "PUSHD     Push the current directory onto a stack and change to a new directory\n"
         "READLINE  Inputs a line and sends it to output\n"
         "REM       Ignore command\n"
-        ;
-
-/**
- More text to display to the user about Yori and its tools.
- */
-const
-CHAR strHelpHelpText3[] =
         "RETURN    Return from a subroutine (only valid after CALL)\n"
         "RMDIR     Removes directories\n"
         "SCUT      Create, modify, display or execute Windows shortcuts\n"
@@ -143,6 +143,13 @@ CHAR strHelpHelpText3[] =
         "SETLOCAL  Push the current directory and environment onto a saved stack\n"
         "SETVER    Lie about Windows version and launch a program\n"
         "SHIFT     Shift command arguments left by one (only valid in scripts)\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpHelpText4[] =
         "SHUTDN    Shutdown, reboot or logoff the system\n"
         "SLEEP     Waits for a specified number of seconds\n"
         "SPLIT     Split a file into pieces\n"
@@ -177,7 +184,8 @@ HelpText()
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText1);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText2);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpHelpText3);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText3);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpHelpText4);
     return TRUE;
 }
 
