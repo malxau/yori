@@ -132,6 +132,7 @@ CHAR strHelpHelpText3[] =
         "PAUSE     Prompt the user to press any key before continuing\n"
         "POPD      Pop a previous current directory from the stack (only valid after\n"
         "            PUSHD)\n"
+        "PS        Display a list of processes in the system\n"
         "PUSHD     Push the current directory onto a stack and change to a new directory\n"
         "READLINE  Inputs a line and sends it to output\n"
         "REM       Ignore command\n"

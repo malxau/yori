@@ -39,6 +39,7 @@
 ..\path\builtins.lib
 ..\pause\builtins.lib
 ..\pkglib\yoripkg.lib
+..\ps\builtins.lib
 ..\readline\builtins.lib
 ..\repl\builtins.lib
 ..\rmdir\builtins.lib

@@ -13,6 +13,7 @@ builtin alias -s more=ymore $*$
 builtin alias -s mount=ymount $*$
 builtin alias -s paste=yclip -p $*$
 builtin alias -s path=ypath $*$
+builtin alias -s ps=yps . $*$
 builtin alias -s pwd=ypath . $*$
 builtin alias -s sha1sum=yhash -a sha1 $*$
 builtin alias -s sha256sum=yhash -a sha256 $*$

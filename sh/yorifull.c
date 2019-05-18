@@ -284,6 +284,11 @@ YORI_CMD_BUILTIN YoriCmd_YPAUSE;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YPS;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_PUSHD;
 
 /**
@@ -538,6 +543,7 @@ YoriShBuiltins[] = {
                     {_T("YPATH"),     YoriCmd_YPATH},
                     {_T("YPAUSE"),    YoriCmd_YPAUSE},
                     {_T("YPM"),       YoriCmd_YPM},
+                    {_T("YPS"),       YoriCmd_YPS},
                     {_T("YRMDIR"),    YoriCmd_YRMDIR},
                     {_T("YS"),        YoriCmd_YS},
                     {_T("YSHUTDN"),   YoriCmd_YSHUTDN},
@@ -588,6 +594,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("path"),     _T("ypath $*$")},
     {_T("pause"),    _T("ypause $*$")},
     {_T("pwd"),      _T("ypath . $*$")},
+    {_T("ps"),       _T("yps $*$")},
     {_T("rd"),       _T("yrmdir $*$")},
     {_T("ren"),      _T("ymove $*$")},
     {_T("rename"),   _T("ymove $*$")},
@@ -599,6 +606,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("shutdn"),   _T("yshutdn $*$")},
     {_T("start"),    _T("ystart $*$")},
     {_T("split"),    _T("ysplit $*$")},
+    {_T("sponge"),   _T("ysponge $*$")},
     {_T("time"),     _T("ydate -t $*$")},
     {_T("title"),    _T("ytitle $*$")},
     {_T("type"),     _T("ytype $*$")},

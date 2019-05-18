@@ -87,6 +87,7 @@ DIRS=crt       \
      path      \
      pause     \
      pkglib    \
+     ps        \
      readline  \
      repl      \
      rmdir     \

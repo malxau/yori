@@ -210,12 +210,42 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS32 {
     /**
      Ignored for alignment.
      */
-    DWORD Ignored1[10];
+    DWORD Ignored1[4];
 
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR32 Ignored2[8];
+    YORI_LIB_PTR32 Ignored2[10];
+
+    /**
+     The number of bytes in the ImagePathName.
+     */
+    WORD ImagePathNameLengthInBytes;
+
+    /**
+     The number of bytes allocated for the ImagePathName.
+     */
+    WORD ImagePathNameMaximumLengthInBytes;
+
+    /**
+     Pointer to the ImagePathName.
+     */
+    YORI_LIB_PTR32 ImagePathName;
+
+    /**
+     The number of bytes in CommandLine.
+     */
+    WORD CommandLineLengthInBytes;
+
+    /**
+     The number of bytes allocated for CommandLine.
+     */
+    WORD CommandLineMaximumLengthInBytes;
+
+    /**
+     Pointer to the CommandLine.
+     */
+    YORI_LIB_PTR32 CommandLine;
 
     /**
      Pointer to the process environment block.
@@ -474,12 +504,52 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS64 {
     /**
      Ignored for alignment.
      */
-    DWORD Ignored1[16];
+    DWORD Ignored1[4];
 
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR64 Ignored2[8];
+    YORI_LIB_PTR64 Ignored2[10];
+
+    /**
+     The number of bytes in the ImagePathName.
+     */
+    WORD ImagePathNameLengthInBytes;
+
+    /**
+     The number of bytes allocated for the ImagePathName.
+     */
+    WORD ImagePathNameMaximumLengthInBytes;
+
+    /**
+     Padding in 64 bit
+     */
+    DWORD Ignored3;
+
+    /**
+     Pointer to the ImagePathName.
+     */
+    YORI_LIB_PTR64 ImagePathName;
+
+    /**
+     The number of bytes in CommandLine.
+     */
+    WORD CommandLineLengthInBytes;
+
+    /**
+     The number of bytes allocated for CommandLine.
+     */
+    WORD CommandLineMaximumLengthInBytes;
+
+    /**
+     Padding in 64 bit
+     */
+    DWORD Ignored4;
+
+    /**
+     Pointer to the CommandLine.
+     */
+    YORI_LIB_PTR64 CommandLine;
 
     /**
      Pointer to the process environment block.
@@ -3651,6 +3721,18 @@ GET_CONSOLE_ALIASESW(LPTSTR, DWORD, LPTSTR);
 typedef GET_CONSOLE_ALIASESW *PGET_CONSOLE_ALIASESW;
 
 /**
+ A prototype for the GetConsoleProcessList function.
+ */
+typedef
+DWORD WINAPI
+GET_CONSOLE_PROCESS_LIST(LPDWORD, DWORD);
+
+/**
+ A prototype for a pointer to the GetConsoleProcessList function.
+ */
+typedef GET_CONSOLE_PROCESS_LIST *PGET_CONSOLE_PROCESS_LIST;
+
+/**
  A prototype for the GetConsoleScreenBufferEx function.
  */
 typedef
@@ -4011,6 +4093,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetConsoleAliasesW.
      */
     PGET_CONSOLE_ALIASESW pGetConsoleAliasesW;
+
+    /**
+     If it's available on the current system, a pointer to GetConsoleProcessList.
+     */
+    PGET_CONSOLE_PROCESS_LIST pGetConsoleProcessList;
 
     /**
      If it's available on the current system, a pointer to GetConsoleWindow.

@@ -5,7 +5,6 @@ v1.1:
  - YORIQUICKEDIT behavior in more
  - Wide char support in sdir
  - Stderr to stdout redirection
- - Ps/kill
  - Vhdtool copy disk to ISO
 
 To consider:
