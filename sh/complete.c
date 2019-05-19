@@ -531,6 +531,134 @@ typedef struct _YORI_SH_FILE_COMPLETE_CONTEXT {
 } YORI_SH_FILE_COMPLETE_CONTEXT, *PYORI_SH_FILE_COMPLETE_CONTEXT;
 
 /**
+ Populates the list of matches for environment variable based tab completion.
+ This function searches the string for indications of an environment variable,
+ and if so matches all environment variables whose prefix match.
+
+ @param TabContext Pointer to the tab completion context.  This has its
+        match list populated with results on success.
+
+ @param SearchString Pointer to the string containing the argument to search
+        for.  The environment variable to search for is extracted from this
+        argument.
+ */
+VOID
+YoriShPerformEnvironmentTabCompletion(
+    __inout PYORI_SH_TAB_COMPLETE_CONTEXT TabContext,
+    __in PYORI_STRING SearchString
+    )
+{
+    DWORD Index;
+    DWORD MatchCount;
+    DWORD VarNameLength;
+    YORI_STRING EnvVarPrefix;
+    YORI_STRING EnvironmentStrings;
+    LPTSTR ThisVar;
+    LPTSTR Equals;
+    PYORI_SH_TAB_COMPLETE_MATCH Match;
+
+    YoriLibInitEmptyString(&EnvVarPrefix);
+
+
+    //
+    //  Count the number of environment variable delimiters in the string.
+    //  If there is an even number, then any variable has already been
+    //  completed, so this routine has no value to add.  An odd number
+    //  indicates the final % is the beginning of an unterminated variable.
+    //
+
+    MatchCount = 0;
+    for (Index = 0; Index < SearchString->LengthInChars; Index++) {
+        if (SearchString->StartOfString[Index] == '%') {
+            MatchCount++;
+        }
+    }
+
+    if ((MatchCount % 2) == 0) {
+        return;
+    }
+
+    //
+    //  Look backwards for the final unterminated variable.  When it is
+    //  found create a string describing the variable prefix we're looking
+    //  for.
+    //
+
+    for (Index = SearchString->LengthInChars; Index > 0; Index--) {
+        if (SearchString->StartOfString[Index - 1] == '%') {
+            EnvVarPrefix.StartOfString = &SearchString->StartOfString[Index];
+            EnvVarPrefix.LengthInChars = SearchString->LengthInChars - (DWORD)(EnvVarPrefix.StartOfString - SearchString->StartOfString);
+
+            if (EnvVarPrefix.LengthInChars > 0 && EnvVarPrefix.StartOfString[EnvVarPrefix.LengthInChars - 1] == '*') {
+                EnvVarPrefix.LengthInChars--;
+            }
+
+            break;
+        }
+    }
+
+    if (EnvVarPrefix.LengthInChars == 0) {
+        return;
+    }
+
+    if (!YoriLibGetEnvironmentStrings(&EnvironmentStrings)) {
+        return;
+    }
+
+    ThisVar = EnvironmentStrings.StartOfString;
+    while (*ThisVar != 0) {
+
+        if (YoriLibCompareStringWithLiteralInsensitiveCount(&EnvVarPrefix, ThisVar, EnvVarPrefix.LengthInChars) == 0) {
+            Equals = _tcschr(ThisVar, '=');
+            if (Equals != NULL) {
+
+                VarNameLength = (DWORD)(Equals - ThisVar);
+
+                //
+                //  Allocate a match entry for this variable.  This includes
+                //  text up to an including the '%', the name of the variable,
+                //  a trailing '%', and a NULL.
+                //
+        
+                Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (VarNameLength + Index + 1 + 1) * sizeof(TCHAR));
+                if (Match == NULL) {
+                    break;
+                }
+        
+                //
+                //  Populate the variable into the entry.
+                //
+        
+                YoriLibInitEmptyString(&Match->Value);
+                Match->Value.StartOfString = (LPTSTR)(Match + 1);
+                YoriLibReference(Match);
+                Match->Value.MemoryToFree = Match;
+        
+                Match->Value.LengthInChars = (DWORD)(Equals - ThisVar) + Index + 1;
+                Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
+                memcpy(Match->Value.StartOfString, SearchString->StartOfString, Index * sizeof(TCHAR));
+                memcpy(&Match->Value.StartOfString[Index], ThisVar, VarNameLength * sizeof(TCHAR));
+                Match->Value.StartOfString[Match->Value.LengthInChars - 1] = '%';
+                Match->Value.StartOfString[Match->Value.LengthInChars] = '\0';
+
+                //
+                //  MSFIX: Apply the KeepEntriesSorted logic? The environment
+                //  will always be sorted, so without this environment matches
+                //  come before file matches, which doesn't seem so bad...
+                //
+
+                YoriShAddMatchToTabContext(TabContext, NULL, Match);
+            }
+        }
+
+        ThisVar += _tcslen(ThisVar);
+        ThisVar++;
+    }
+
+    YoriLibFreeStringContents(&EnvironmentStrings);
+}
+
+/**
  Invoked for each file matching a file based tab completion pattern.
 
  @param Filename Pointer to a string containing the full file name.
@@ -815,6 +943,14 @@ YoriShPerformFileTabCompletion(
         YoriLibFreeStringContents(&SearchString);
         return;
     }
+
+    //
+    //  Before looking for files, look for environment matches.  This won't
+    //  do anything unless '%' is found in the string and there are variables
+    //  whose prefix is the string following it.
+    //
+
+    YoriShPerformEnvironmentTabCompletion(TabContext, &SearchString);
 
     //
     //  > and < are actually obscure wildcard characters in NT that nobody
