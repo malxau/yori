@@ -681,6 +681,7 @@ CopyFileFoundCallback(
     //
 
     if (CopyShouldExclude(CopyContext, &RelativePathFromSource, FileInfo)) {
+        CopyContext->FilesFoundThisArg++;
 
         if (CopyContext->Verbose) {
             if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
@@ -694,6 +695,7 @@ CopyFileFoundCallback(
     }
 
     if (!CopyBuildDestinationPath(CopyContext, &RelativePathFromSource, &FullDest)) {
+        CopyContext->FilesFoundThisArg++;
         return FALSE;
     }
 
