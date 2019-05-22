@@ -51,7 +51,8 @@ YoriShCaptureRedirectContext(
     RedirectContext->ResetInput = FALSE;
     RedirectContext->ResetOutput = FALSE;
     RedirectContext->ResetError = FALSE;
-    RedirectContext->StdErrAndOutSame = FALSE;
+    RedirectContext->StdErrRedirectsToStdOut = FALSE;
+    RedirectContext->StdOutRedirectsToStdErr = FALSE;
 
     //
     //  Always duplicate as noninherited.  If we don't override one of the
@@ -88,12 +89,14 @@ YoriShRevertRedirection(
 
     if (PreviousRedirectContext->ResetOutput) {
         SetStdHandle(STD_OUTPUT_HANDLE, PreviousRedirectContext->StdOutput);
-        CloseHandle(CurrentRedirectContext.StdOutput);
+        if (!PreviousRedirectContext->StdOutRedirectsToStdErr) {
+            CloseHandle(CurrentRedirectContext.StdOutput);
+        }
     }
 
     if (PreviousRedirectContext->ResetError) {
         SetStdHandle(STD_ERROR_HANDLE, PreviousRedirectContext->StdError);
-        if (!PreviousRedirectContext->StdErrAndOutSame) {
+        if (!PreviousRedirectContext->StdErrRedirectsToStdOut) {
             CloseHandle(CurrentRedirectContext.StdError);
         }
     }
@@ -185,6 +188,18 @@ YoriShInitializeRedirection(
             PreviousRedirectContext->ResetInput = TRUE;
             SetStdHandle(STD_INPUT_HANDLE, ExecContext->StdIn.Pipe.PipeFromPriorProcess);
             ExecContext->StdIn.Pipe.PipeFromPriorProcess = NULL;
+        } else {
+            HANDLE ReadHandle;
+            HANDLE WriteHandle;
+
+            if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
+                YoriLibMakeInheritableHandle(ReadHandle, &ReadHandle);
+                PreviousRedirectContext->ResetInput = TRUE;
+                SetStdHandle(STD_INPUT_HANDLE, ReadHandle);
+                CloseHandle(WriteHandle);
+            } else {
+                Error = GetLastError();
+            }
         }
     }
 
@@ -308,10 +323,6 @@ YoriShInitializeRedirection(
         } else {
             Error = GetLastError();
         }
-    } else if (ExecContext->StdErrType == StdErrTypeStdOut) {
-        PreviousRedirectContext->ResetError = TRUE;
-        PreviousRedirectContext->StdErrAndOutSame = TRUE;
-        SetStdHandle(STD_ERROR_HANDLE, GetStdHandle(STD_OUTPUT_HANDLE));
     } else if (ExecContext->StdErrType == StdErrTypeNull) {
         Handle = CreateFile(_T("NUL"),
                             GENERIC_WRITE,
@@ -345,6 +356,17 @@ YoriShInitializeRedirection(
     if (Error != ERROR_SUCCESS) {
         YoriShRevertRedirection(PreviousRedirectContext);
         return Error;
+    }
+
+    if (ExecContext->StdErrType == StdErrTypeStdOut) {
+        ASSERT(ExecContext->StdOutType != StdOutTypeStdErr);
+        PreviousRedirectContext->ResetError = TRUE;
+        PreviousRedirectContext->StdErrRedirectsToStdOut = TRUE;
+        SetStdHandle(STD_ERROR_HANDLE, GetStdHandle(STD_OUTPUT_HANDLE));
+    } else if (ExecContext->StdOutType == StdOutTypeStdErr) {
+        PreviousRedirectContext->ResetOutput = TRUE;
+        PreviousRedirectContext->StdOutRedirectsToStdErr = TRUE;
+        SetStdHandle(STD_OUTPUT_HANDLE, GetStdHandle(STD_ERROR_HANDLE));
     }
 
     return ERROR_SUCCESS;

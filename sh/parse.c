@@ -88,8 +88,11 @@ YoriShIsArgumentSeperator(
             Terminate = TRUE;
         } else if (String->StartOfString[0] == '>') {
             CharsToConsume++;
-            if (String->StartOfString[1] == '>') {
+            if (String->LengthInChars >= 2 && String->StartOfString[1] == '>') {
                 CharsToConsume++;
+            } else if (String->LengthInChars >= 3 && String->StartOfString[1] == '&' && String->StartOfString[2] == '2') {
+                CharsToConsume += 2;
+                Terminate = TRUE;
             }
         } else if (String->StartOfString[0] == '<') {
             CharsToConsume++;
@@ -98,6 +101,9 @@ YoriShIsArgumentSeperator(
                 CharsToConsume += 2;
                 if (String->LengthInChars >= 3 && String->StartOfString[2] == '>') {
                     CharsToConsume++;
+                } else if (String->LengthInChars >= 4 && String->StartOfString[2] == '&' && String->StartOfString[3] == '2') {
+                    CharsToConsume += 2;
+                    Terminate = TRUE;
                 }
             }
         } else if (String->StartOfString[0] == '2') {
@@ -1186,6 +1192,13 @@ YoriShParseCmdContextToExecContext(
                     ExecContext->StdOutType = StdOutTypeAppend;
                     CharOffset = 2;
                     ExecContextRedirectString = &ExecContext->StdOut.Append.FileName;
+                } else if (ThisArg->StartOfString[1] == '&') {
+                    if (ThisArg->StartOfString[2] == '2') {
+                        ExecContext->StdOutType = StdOutTypeStdErr;
+                        if (ExecContext->StdErrType == StdErrTypeStdOut) {
+                            ExecContext->StdErrType = StdErrTypeDefault;
+                        }
+                    }
                 } else {
                     ExecContext->StdOutType = StdOutTypeOverwrite;
                     CharOffset = 1;
@@ -1201,6 +1214,13 @@ YoriShParseCmdContextToExecContext(
                         ExecContext->StdOutType = StdOutTypeAppend;
                         CharOffset = 3;
                         ExecContextRedirectString = &ExecContext->StdOut.Append.FileName;
+                    } else if (ThisArg->StartOfString[2] == '&') {
+                        if (ThisArg->StartOfString[3] == '2') {
+                            ExecContext->StdOutType = StdOutTypeStdErr;
+                            if (ExecContext->StdErrType == StdErrTypeStdOut) {
+                                ExecContext->StdErrType = StdErrTypeDefault;
+                            }
+                        }
                     } else {
                         ExecContext->StdOutType = StdOutTypeOverwrite;
                         CharOffset = 2;
@@ -1221,6 +1241,9 @@ YoriShParseCmdContextToExecContext(
                     } else if (ThisArg->StartOfString[2] == '&') {
                         if (ThisArg->StartOfString[3] == '1') {
                             ExecContext->StdErrType = StdErrTypeStdOut;
+                            if (ExecContext->StdOutType == StdOutTypeStdErr) {
+                                ExecContext->StdOutType = StdOutTypeDefault;
+                            }
                         }
                     } else {
                         ExecContext->StdErrType = StdErrTypeOverwrite;

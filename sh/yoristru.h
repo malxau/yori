@@ -148,7 +148,8 @@ typedef struct _YORI_SH_SINGLE_EXEC_CONTEXT {
         StdOutTypeAppend = 3,
         StdOutTypeNull = 4,
         StdOutTypePipe = 5,
-        StdOutTypeBuffer = 6
+        StdOutTypeBuffer = 6,
+        StdOutTypeStdErr = 7
     } StdOutType;
 
     /**
@@ -297,7 +298,13 @@ typedef struct _YORI_SH_PREVIOUS_REDIRECT_CONTEXT {
      TRUE if stdout and stderr have been modified to refer to the same
      location.
      */
-    BOOLEAN StdErrAndOutSame;
+    BOOLEAN StdErrRedirectsToStdOut;
+
+    /**
+     TRUE if stdout and stderr have been modified to refer to the same
+     location.
+     */
+    BOOLEAN StdOutRedirectsToStdErr;
 
     /**
      A handle to the original stdin.
