@@ -1896,6 +1896,15 @@ YoriLibGetFullPathNameReturnAllocation(
     );
 
 BOOL
+YoriLibGetFullPathNameRelativeTo(
+    __in PYORI_STRING PrimaryDirectory,
+    __in PYORI_STRING FileName,
+    __in BOOL ReturnEscapedPath,
+    __inout PYORI_STRING Buffer,
+    __deref_opt_out LPTSTR* lpFilePart
+    );
+
+BOOL
 YoriLibExpandHomeDirectories(
     __in PYORI_STRING FileString,
     __inout PYORI_STRING ExpandedString

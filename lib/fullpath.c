@@ -532,13 +532,16 @@ DWORD
 YoriLibGetFullPathDeterminePathType(
     __in PYORI_STRING FileName,
     __out PYORI_LIB_FULL_PATH_TYPE PathType,
-    __out PYORI_STRING StartOfRelativePath
+    __out_opt PYORI_STRING StartOfRelativePath
     )
 {
     PathType->AllFlags = 0;
-    YoriLibInitEmptyString(StartOfRelativePath);
-    StartOfRelativePath->StartOfString = FileName->StartOfString;
-    StartOfRelativePath->LengthInChars = FileName->LengthInChars;
+
+    if (StartOfRelativePath != NULL) {
+        YoriLibInitEmptyString(StartOfRelativePath);
+        StartOfRelativePath->StartOfString = FileName->StartOfString;
+        StartOfRelativePath->LengthInChars = FileName->LengthInChars;
+    }
 
     //
     //  On NT 3.x, use \\.\ instead of \\?\ since the latter does not
@@ -585,8 +588,10 @@ YoriLibGetFullPathDeterminePathType(
             (FileName->LengthInChars >= 3 && !YoriLibIsSep(FileName->StartOfString[2]))) {
 
             PathType->Flags.DriveRelativePath = TRUE;
-            StartOfRelativePath->StartOfString += 2;
-            StartOfRelativePath->LengthInChars -= 2;
+            if (StartOfRelativePath != NULL) {
+                StartOfRelativePath->StartOfString += 2;
+                StartOfRelativePath->LengthInChars -= 2;
+            }
         }
     } else if (FileName->LengthInChars >= 1 && YoriLibIsSep(FileName->StartOfString[0])) {
         PathType->Flags.AbsoluteWithoutDrive = TRUE;
@@ -726,7 +731,6 @@ YoriLibFullPathMergeRootWithRelative(
                 //
 
                 CurrentDirectory.LengthInChars = 2;
-                CurrentDirectory.StartOfString[2] = '\0';
             }
         }
     }
@@ -1217,7 +1221,9 @@ YoriLibGetFullPathNameReturnAllocation(
 
     DWORD Result;
 
-    Result = YoriLibGetFullPathDeterminePathType(FileName, &PathType, &StartOfRelativePath);
+    Result = YoriLibGetFullPathDeterminePathType(FileName,
+                                                 &PathType,
+                                                 &StartOfRelativePath);
     if (Result != ERROR_SUCCESS) {
         SetLastError(Result);
         return FALSE;
@@ -1263,7 +1269,6 @@ YoriLibGetFullPathNameReturnAllocation(
 
             CurrentDirectory.LengthInChars = Result;
         }
-        ASSERT(YoriLibIsStringNullTerminated(&CurrentDirectory));
 
         Result = YoriLibFullPathMergeRootWithRelative(&CurrentDirectory,
                                                       &StartOfRelativePath,
@@ -1273,6 +1278,131 @@ YoriLibGetFullPathNameReturnAllocation(
                                                       &FreeOnFailure);
         YoriLibFreeStringContents(&CurrentDirectory);
 
+    } else {
+
+        Result = YoriLibFullPathNormalize(FileName,
+                                          ReturnEscapedPath,
+                                          &PathType,
+                                          Buffer,
+                                          &FreeOnFailure);
+
+    }
+
+    if (Result != ERROR_SUCCESS) {
+        if (FreeOnFailure) {
+            YoriLibFreeStringContents(Buffer);
+        }
+        SetLastError(Result);
+        return FALSE;
+    }
+
+    Result = YoriLibGetFullPathSquashRelativeComponents(Buffer, &PathType, ReturnEscapedPath, lpFilePart);
+    if (Result != ERROR_SUCCESS) {
+        if (FreeOnFailure) {
+            YoriLibFreeStringContents(Buffer);
+        }
+        SetLastError(Result);
+        return FALSE;
+    }
+
+    SetLastError(0);
+    return TRUE;
+}
+
+/**
+ GettFulPathName where the "current" directory is specified.  Note that this
+ version cannot traverse across drives without looking at the current
+ directory for each drive, which the function does not take as input, so
+ traversing drives is only possible with a fully formed path.
+ This function will update a YORI_STRING, including allocating if necessary,
+ to contain a buffer containing the path.  If this function allocates the
+ buffer, the caller is expected to free this by calling
+ @ref YoriLibFreeStringContents.
+
+ @param PrimaryDirectory The directory to use as a "current" directory.
+
+ @param FileName A file name, which may be fully specified or may be relative
+        to PrimaryDirectory.
+
+ @param ReturnEscapedPath If TRUE, the returned path is in \\?\ form.
+        If FALSE, it is in regular Win32 form.
+
+ @param Buffer On successful completion, updated to point to a newly
+        allocated buffer containing the full path form of the file name.
+        Note this is returned as a NULL terminated YORI_STRING, suitable
+        for use in YORI_STRING or NULL terminated functions.
+
+ @param lpFilePart If specified, on successful completion, updated to point
+        to the beginning of the file name component of the path, in the same
+        allocation as lpBuffer.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGetFullPathNameRelativeTo(
+    __in PYORI_STRING PrimaryDirectory,
+    __in PYORI_STRING FileName,
+    __in BOOL ReturnEscapedPath,
+    __inout PYORI_STRING Buffer,
+    __deref_opt_out LPTSTR* lpFilePart
+    )
+{
+    YORI_LIB_FULL_PATH_TYPE PathType;
+    BOOLEAN FreeOnFailure = FALSE;
+
+    YORI_STRING StartOfRelativePath;
+
+    DWORD Result;
+
+    Result = YoriLibGetFullPathDeterminePathType(FileName,
+                                                 &PathType,
+                                                 &StartOfRelativePath);
+    if (Result != ERROR_SUCCESS) {
+        SetLastError(Result);
+        return FALSE;
+    }
+
+    //
+    //  If it's a relative case, get the current directory, and generate an
+    //  "absolute" form of the name.  If it's an absolute case, prepend
+    //  \\?\ and have a buffer we allocate for subsequent munging.
+    //
+
+    if (PathType.Flags.DriveRelativePath) {
+        SetLastError(ERROR_BAD_PATHNAME);
+        return FALSE;
+    } else if (PathType.Flags.RelativePath ||
+               PathType.Flags.AbsoluteWithoutDrive) {
+
+        YORI_LIB_FULL_PATH_TYPE PrimaryDirPathType;
+        Result = YoriLibGetFullPathDeterminePathType(PrimaryDirectory,
+                                                     &PrimaryDirPathType,
+                                                     NULL);
+        if (Result != ERROR_SUCCESS) {
+            SetLastError(Result);
+            return FALSE;
+        }
+
+        //
+        //  This function can handle a drive letter or UNC primary directory
+        //  with and without an escape prefix, but it must still be a fully
+        //  specified directory.
+        //
+
+        if (PrimaryDirPathType.Flags.RelativePath ||
+            PrimaryDirPathType.Flags.AbsoluteWithoutDrive ||
+            PrimaryDirPathType.Flags.DriveRelativePath) {
+
+            SetLastError(ERROR_BAD_PATHNAME);
+            return FALSE;
+        }
+
+        Result = YoriLibFullPathMergeRootWithRelative(PrimaryDirectory,
+                                                      &StartOfRelativePath,
+                                                      ReturnEscapedPath,
+                                                      &PathType,
+                                                      Buffer,
+                                                      &FreeOnFailure);
     } else {
 
         Result = YoriLibFullPathNormalize(FileName,
@@ -1631,7 +1761,7 @@ YoriLibIsFileNameDeviceName(
     if (NameToCheck.LengthInChars < 3 || NameToCheck.LengthInChars > 4) {
         return FALSE;
     }
-        
+
     if (YoriLibCompareStringWithLiteralInsensitive(&NameToCheck, _T("CON")) == 0 ||
         YoriLibCompareStringWithLiteralInsensitive(&NameToCheck, _T("AUX")) == 0 ||
         YoriLibCompareStringWithLiteralInsensitive(&NameToCheck, _T("PRN")) == 0 ||

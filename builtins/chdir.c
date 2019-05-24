@@ -3,7 +3,7 @@
  *
  * Yori shell change directory
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -79,6 +79,8 @@ YoriCmd_CHDIR(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
+    DWORD LastError;
+    LPTSTR ErrText;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -94,7 +96,7 @@ YoriCmd_CHDIR(
                 ChdirHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 ArgumentUnderstood = TRUE;
@@ -128,9 +130,9 @@ YoriCmd_CHDIR(
     OldCurrentDirectory.LengthInChars = GetCurrentDirectory(OldCurrentDirectory.LengthAllocated, OldCurrentDirectory.StartOfString);
     if (OldCurrentDirectory.LengthInChars == 0 ||
         OldCurrentDirectory.LengthInChars >= OldCurrentDirectory.LengthAllocated) {
-        DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not query current directory: %s"), ErrText);
+        LastError = GetLastError();
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not query current directory: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&OldCurrentDirectory);
         return EXIT_FAILURE;
@@ -172,24 +174,135 @@ YoriCmd_CHDIR(
             return EXIT_FAILURE;
         }
 
+        //
+        //  Check if the current directory on another drive is still valid.
+        //  If it's not, truncate it.  Note because sizeof includes a NULL
+        //  the below check is that it's above or equal to 4 chars, so it's
+        //  safe to truncate back to 3.
+        //
+
+        if (NewCurrentDirectory.LengthInChars >= sizeof("x:\\") &&
+            GetFileAttributes(NewCurrentDirectory.StartOfString) == (DWORD)-1) {
+
+            NewCurrentDirectory.LengthInChars = 3;
+            NewCurrentDirectory.StartOfString[3] = '\0';
+        }
     } else {
 
-        if (!YoriLibUserStringToSingleFilePath(NewDir, SetToLongPath, &NewCurrentDirectory)) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could resolve full path: %y: %s"), NewDir, ErrText);
+        YORI_STRING CdPath;
+        YORI_STRING Component;
+        LPTSTR Sep;
+
+        //
+        //  The user specified a path name that's more than just a drive
+        //  letter.  Scan through all of the components in YORICDPATH to
+        //  find the first one that exists.
+        //
+
+        YoriLibInitEmptyString(&CdPath);
+        if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORICDPATH"), &CdPath)) {
+            LastError = GetLastError();
+            ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not query environment: %s"), ErrText);
             YoriLibFreeWinErrorText(ErrText);
             YoriLibFreeStringContents(&OldCurrentDirectory);
             return EXIT_FAILURE;
         }
 
+        if (CdPath.LengthInChars == 0) {
+            YoriLibConstantString(&CdPath, _T("."));
+        }
+
+        YoriLibInitEmptyString(&Component);
+        YoriLibInitEmptyString(&NewCurrentDirectory);
+        Component.StartOfString = CdPath.StartOfString;
+
+        while(TRUE) {
+            Component.LengthInChars = CdPath.LengthInChars - (DWORD)(Component.StartOfString - CdPath.StartOfString);
+
+            Sep = YoriLibFindLeftMostCharacter(&Component, ';');
+            if (Sep != NULL) {
+                Component.LengthInChars = (DWORD)(Sep - Component.StartOfString);
+            }
+
+            NewCurrentDirectory.LengthInChars = 0;
+
+            //
+            //  If the component is ".", special rules apply.  Here  we allow
+            //  paths to anywhere, including paths relative to the current
+            //  directory on another drive.
+            //
+
+            if (YoriLibCompareStringWithLiteral(&Component, _T(".")) == 0) {
+
+                if (!YoriLibUserStringToSingleFilePath(NewDir, SetToLongPath, &NewCurrentDirectory)) {
+                    LastError = GetLastError();
+                    ErrText = YoriLibGetWinErrorText(LastError);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not resolve full path: %y: %s"), NewDir, ErrText);
+                    YoriLibFreeWinErrorText(ErrText);
+                    YoriLibFreeStringContents(&OldCurrentDirectory);
+                    YoriLibFreeStringContents(&CdPath);
+                    return EXIT_FAILURE;
+                }
+            } else {
+
+                if (Component.LengthInChars > 0 &&
+                    !YoriLibGetFullPathNameRelativeTo(&Component, NewDir, SetToLongPath, &NewCurrentDirectory, NULL)) {
+                    LastError = GetLastError();
+
+                    //
+                    //  ERROR_BAD_PATHNAME is ignored because it may be
+                    //  the string the user entered is drive relative and
+                    //  hence cannot match against this component.
+                    //
+
+                    if (LastError != ERROR_BAD_PATHNAME) {
+                        ErrText = YoriLibGetWinErrorText(LastError);
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not resolve relative full path: %y: %y: %s"), NewDir, &Component, ErrText);
+                        YoriLibFreeWinErrorText(ErrText);
+                        YoriLibFreeStringContents(&OldCurrentDirectory);
+                        YoriLibFreeStringContents(&CdPath);
+                        return EXIT_FAILURE;
+                    }
+                    NewCurrentDirectory.LengthInChars = 0;
+                }
+            }
+
+            //
+            //  If we've found a directory that exists, try to use it
+            //
+
+            if (NewCurrentDirectory.LengthInChars > 0 &&
+                GetFileAttributes(NewCurrentDirectory.StartOfString) != (DWORD)-1) {
+                break;
+            }
+
+            //
+            //  If there are no more components, we can't find it
+            //
+
+            if (Sep == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not locate path: %y"), NewDir);
+                YoriLibFreeStringContents(&OldCurrentDirectory);
+                YoriLibFreeStringContents(&CdPath);
+                return EXIT_FAILURE;
+            }
+
+            //
+            //  If we haven't found it yet, and there are more components,
+            //  move to the next one
+            //
+
+            Component.StartOfString = Sep + 1;
+        }
+        YoriLibFreeStringContents(&CdPath);
     }
 
     Result = SetCurrentDirectory(NewCurrentDirectory.StartOfString);
     if (!Result) {
-        DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not change directory: %y: %s"), &NewCurrentDirectory, ErrText);
+        LastError = GetLastError();
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not change directory: %y: %s"), &NewCurrentDirectory, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&OldCurrentDirectory);
         YoriLibFreeStringContents(&NewCurrentDirectory);
