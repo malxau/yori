@@ -3050,6 +3050,97 @@ struct IShellLinkWVtbl {
     IShellLink_SetPath * SetPath;
 };
 
+/**
+ An instance of the IShellLinkDataList interface, consisting only of function
+ pointers.
+ */
+typedef struct IShellLinkDataList {
+
+    /**
+     The function pointer table associated with this object.
+     */
+    struct IShellLinkDataListVtbl * Vtbl;
+} IShellLinkDataList;
+
+typedef struct IShellLinkDataListVtbl IShellLinkDataListVtbl;
+
+/**
+ Add a block of data to a shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLinkDataList_AddDataBlock (IShellLinkDataList * This, LPVOID DataBlock);
+
+/**
+ Read (aka copy out) a block of data from a shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLinkDataList_CopyDataBlock (IShellLinkDataList * This, DWORD Signature, LPVOID * DataBlock);
+
+/**
+ Remove a block of data from a shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLinkDataList_RemoveDataBlock (IShellLinkDataList * This, DWORD Signature);
+
+/**
+ Get the flags from a shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLinkDataList_GetFlags (IShellLinkDataList * This, PDWORD Flags);
+
+/**
+ Set the flags from a shortcut.
+ */
+typedef HRESULT STDMETHODCALLTYPE IShellLinkDataList_SetFlags (IShellLinkDataList * This, DWORD Flags);
+
+/**
+ A set of functions defined by the IShellLinkDataList interface.
+ */
+struct IShellLinkDataListVtbl {
+
+    /**
+     Standard COM QueryInterface method.
+     */
+    IUnknown_QueryInterface * QueryInterface;
+
+    /**
+     Standard COM AddRef method.
+     */
+    IUnknown_AddRef * AddRef;
+
+    /**
+     Standard COM Release method.
+     */
+    IUnknown_Release * Release;
+
+
+    /**
+     Add a block of data to the shortcut.
+     */
+    IShellLinkDataList_AddDataBlock * AddDataBlock;
+
+    /**
+     Read (aka copy out) a block of data from the shortcut.
+     */
+    IShellLinkDataList_CopyDataBlock * CopyDataBlock;
+
+    /**
+     Remove a block of data from the shortcut.
+     */
+    IShellLinkDataList_RemoveDataBlock * RemoveDataBlock;
+
+    /**
+     Get the flags from the shortcut.
+     */
+    IShellLinkDataList_GetFlags * GetFlags;
+
+    /**
+     Set the flags on a shortcut.
+     */
+    IShellLinkDataList_SetFlags * SetFlags;
+};
+
+/**
+ The signature for console properties within a ShellLinkDataList.
+ */
+#define ISHELLLINKDATALIST_CONSOLE_PROPS_SIG (0xA0000002)
+
 #ifndef _VIRTUAL_STORAGE_TYPE_DEFINED
 /**
  A structure describing the underlying storage provider when accessing

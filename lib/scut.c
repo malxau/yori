@@ -45,6 +45,11 @@ const GUID CLSID_ShellLink = { 0x00021401L, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46
 const GUID IID_IShellLinkW = { 0x000214F9L, 0, 0, { 0xC0, 0, 0, 0, 0, 0, 0, 0x46 } };
 
 /**
+ The IShellLinkDataList interface.
+ */
+const GUID IID_IShellLinkDataList = { 0x45e2b4ae, 0xb1c3, 0x11d0, { 0xb9, 0x2f, 0x0, 0xa0, 0xc9, 0x3, 0x12, 0xe1 } };
+
+/**
  Create or modify a shortcut file.
 
  @param ShortcutFileName Path of the shortcut file.  The caller is expected

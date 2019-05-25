@@ -3,7 +3,7 @@
  *
  * A command line tool to manipulate shortcuts
  *
- * Copyright (c) 2004-2018 Malcolm Smith
+ * Copyright (c) 2004-2019 Malcolm Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -45,6 +45,11 @@ extern const GUID CLSID_ShellLink;
 extern const GUID IID_IShellLinkW;
 
 /**
+ The IShellLinkDataList interface.
+ */
+extern const GUID IID_IShellLinkDataList;
+
+/**
  A list of operations supported by scut.
  */
 typedef enum ScutOperations {
@@ -65,7 +70,7 @@ CHAR strScutHelpText[] =
         "\n"
         "SCUT -license\n"
         "SCUT -create|-modify <filename> [-target target] [-args args]\n"
-        "     [-desc description] [-hotkey hotkey]\n"
+        "     [-desc description] [-deleteconsolesettings] [-hotkey hotkey]\n"
         "     [-iconpath filename [-iconindex index]] [-show showcmd]\n"
         "     [-workingdir workingdir]\n"
         "SCUT -exec <filename> [-target target] [-args args] [-show showcmd]\n"
@@ -210,6 +215,7 @@ ENTRYPOINT(
     YORI_STRING szWorkingDir;
     IShellLinkW *scut     = NULL;
     IPersistFile *savedfile = NULL;
+    IShellLinkDataList *ShortcutDataList = NULL;
     YORI_STRING Arg;
     LONGLONG llTemp;
     DWORD   CharsConsumed;
@@ -225,6 +231,7 @@ ENTRYPOINT(
 
     HRESULT hRes;
     BOOL    ArgumentUnderstood;
+    BOOL    DeleteConsoleSettings = FALSE;
     DWORD   i;
     YORI_STRING YsFormatString;
 
@@ -247,88 +254,111 @@ ENTRYPOINT(
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2004-2018"));
+                YoriLibDisplayMitLicense(_T("2004-2019"));
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
-            } else if (i + 1 >= ArgC) {
-                //
-                //  Every parameter needs an argument
-                //
-                ScutHelp();
-                goto Exit;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("create")) == 0) {
+                if (i + 1 < ArgC) {
+                    op = ScutOperationCreate;
+                    YoriLibFreeStringContents(&szFile);
+                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("modify")) == 0) {
+                if (i + 1 < ArgC) {
+                    op = ScutOperationModify;
+                    YoriLibFreeStringContents(&szFile);
+                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("exec")) == 0) {
+                if (i + 1 < ArgC) {
+                    op = ScutOperationExec;
+                    YoriLibFreeStringContents(&szFile);
+                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("dump")) == 0) {
+                if (i + 1 < ArgC) {
+                    op = ScutOperationDump;
+                    YoriLibFreeStringContents(&szFile);
+                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("args")) == 0) {
+                if (i + 1 < ArgC) {
+                    szArgs = ArgV[i + 1].StartOfString;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desc")) == 0) {
+                if (i + 1 < ArgC) {
+                    szDesc = ArgV[i + 1].StartOfString;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("deleteconsolesettings")) == 0) {
+                if (op == ScutOperationModify || op == ScutOperationCreate) {
+                    DeleteConsoleSettings = TRUE;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+                if (i + 1 < ArgC) {
+                    YsFormatString.StartOfString = ArgV[i + 1].StartOfString;
+                    YsFormatString.LengthInChars = ArgV[i + 1].LengthInChars;
+                    YsFormatString.LengthAllocated = ArgV[i + 1].LengthAllocated;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("hotkey")) == 0) {
+                if (i + 1 < ArgC) {
+                    llTemp = 0;
+                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
+                    wHotkey = (WORD)llTemp;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("iconpath")) == 0) {
+                if (i + 1 < ArgC) {
+                    YoriLibFreeStringContents(&szIcon);
+                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szIcon);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("iconindex")) == 0) {
+                if (i + 1 < ArgC) {
+                    llTemp = 0;
+                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
+                    wIcon = (WORD)llTemp;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("show")) == 0) {
+                if (i + 1 < ArgC) {
+                    llTemp = 0;
+                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
+                    wShow = (WORD)llTemp;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("target")) == 0) {
+                if (i + 1 < ArgC) {
+                    szTarget = ArgV[i + 1].StartOfString;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("workingdir")) == 0) {
+                if (i + 1 < ArgC) {
+                    YoriLibFreeStringContents(&szWorkingDir);
+                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szWorkingDir);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("create")) == 0) {
-                op = ScutOperationCreate;
-                YoriLibFreeStringContents(&szFile);
-                YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("modify")) == 0) {
-                op = ScutOperationModify;
-                YoriLibFreeStringContents(&szFile);
-                YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("exec")) == 0) {
-                op = ScutOperationExec;
-                YoriLibFreeStringContents(&szFile);
-                YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("dump")) == 0) {
-                op = ScutOperationDump;
-                YoriLibFreeStringContents(&szFile);
-                YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
-                ArgumentUnderstood = TRUE;
-            }
-    
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("args")) == 0) {
-                szArgs = ArgV[i + 1].StartOfString;
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desc")) == 0) {
-                szDesc = ArgV[i + 1].StartOfString;
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
-                YsFormatString.StartOfString = ArgV[i + 1].StartOfString;
-                YsFormatString.LengthInChars = ArgV[i + 1].LengthInChars;
-                YsFormatString.LengthAllocated = ArgV[i + 1].LengthAllocated;
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("hotkey")) == 0) {
-                llTemp = 0;
-                YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-                wHotkey = (WORD)llTemp;
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("iconpath")) == 0) {
-                YoriLibFreeStringContents(&szIcon);
-                YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szIcon);
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("iconindex")) == 0) {
-                llTemp = 0;
-                YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-                wIcon = (WORD)llTemp;
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("show")) == 0) {
-                llTemp = 0;
-                YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-                wShow = (WORD)llTemp;
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("target")) == 0) {
-                szTarget = ArgV[i + 1].StartOfString;
-                ArgumentUnderstood = TRUE;
-            }
-            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("workingdir")) == 0) {
-                YoriLibFreeStringContents(&szWorkingDir);
-                YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szWorkingDir);
-                ArgumentUnderstood = TRUE;
-            }
-            i++;
         }
 
         if (!ArgumentUnderstood) {
@@ -353,20 +383,26 @@ ENTRYPOINT(
 
     hRes = DllOle32.pCoInitialize(NULL);
     if (!SUCCEEDED(hRes)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CoInitialize failure: %x\n"), (int)hRes);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CoInitialize failure: %x\n"), hRes);
         goto Exit;
     }
 
     hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&scut);
 
     if (!SUCCEEDED(hRes)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CoCreateInstance failure: %x\n"), (int)hRes);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CoCreateInstance failure: %x\n"), hRes);
         goto Exit;
     }
 
     hRes = scut->Vtbl->QueryInterface(scut, &IID_IPersistFile, (void **)&savedfile);
     if (!SUCCEEDED(hRes)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("QueryInstance IPersistFile failure: %x\n"), (int)hRes);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("QueryInstance IPersistFile failure: %x\n"), hRes);
+        goto Exit;
+    }
+
+    hRes = scut->Vtbl->QueryInterface(scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
+    if (!SUCCEEDED(hRes)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("QueryInstance IShellLinkDataList failure: %x\n"), hRes);
         goto Exit;
     }
 
@@ -375,7 +411,7 @@ ENTRYPOINT(
         op == ScutOperationDump) {
         hRes = savedfile->Vtbl->Load(savedfile, szFile.StartOfString, TRUE);
         if (!SUCCEEDED(hRes)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Load failure: %x\n"), (int)hRes);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Load failure: %x\n"), hRes);
             goto Exit;
         }
     }
@@ -441,11 +477,19 @@ ENTRYPOINT(
         }
     }
 
+    if (op == ScutOperationModify && DeleteConsoleSettings) {
+        hRes = ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
+        if (!SUCCEEDED(hRes)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RemoveDataBlock failure: %x\n"), hRes);
+            goto Exit;
+        }
+    }
+
     if (op == ScutOperationModify ||
         op == ScutOperationCreate) {
         hRes = savedfile->Vtbl->Save(savedfile, szFile.StartOfString, TRUE);
         if (!SUCCEEDED(hRes)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Save failure: %x\n"), (int)hRes);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Save failure: %x\n"), hRes);
             goto Exit;
         }
     } else if (op == ScutOperationExec) {
