@@ -1289,20 +1289,8 @@ YoriShConfigureInputSettings(
         //  applications.
         //
 
-        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), NULL, 0, NULL);
-        if (EnvVarLength > 0) {
-            if (EnvVarLength > EnvVar.LengthAllocated) {
-                YoriLibFreeStringContents(&EnvVar);
-                YoriLibAllocateString(&EnvVar, EnvVarLength);
-            }
-            if (EnvVarLength <= EnvVar.LengthAllocated) {
-                EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIQUICKEDIT"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
-                if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                    if (llTemp == 1) {
-                        YoriShGlobal.YoriQuickEdit = TRUE;
-                    }
-                }
-            }
+        if (YoriLibIsYoriQuickEditEnabled()) {
+            YoriShGlobal.YoriQuickEdit = TRUE;
         }
 
         //

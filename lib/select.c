@@ -1417,5 +1417,36 @@ YoriLibGetSelectionDoubleClickBreakChars(
     return TRUE;
 }
 
+/**
+ Indicates if Yori QuickEdit should be enabled based on the state of the
+ environment.  In this mode, the shell will disable QuickEdit support from
+ the console and implement its own selection logic, but reenable QuickEdit
+ for the benefit of applications.
+
+ @return TRUE to indicate YoriQuickEdit should be enabled, and FALSE to
+         leave the user's selection for QuickEdit behavior in effect.
+ */
+BOOL
+YoriLibIsYoriQuickEditEnabled()
+{
+    YORI_STRING EnvVar;
+    LONGLONG llTemp;
+    DWORD CharsConsumed;
+
+    YoriLibInitEmptyString(&EnvVar);
+    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORIQUICKEDIT"), &EnvVar)) {
+        return FALSE;
+    }
+
+    if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+        YoriLibFreeStringContents(&EnvVar);
+        if (llTemp == 1) {
+            return TRUE;
+        }
+    }
+    YoriLibFreeStringContents(&EnvVar);
+    return FALSE;
+}
+
 
 // vim:sw=4:ts=4:et:

@@ -2,7 +2,6 @@ v1.0:
  - General MSFIX review
 
 v1.1:
- - YORIQUICKEDIT behavior in more
  - Wide char support in sdir
  - Vhdtool copy disk to ISO
 

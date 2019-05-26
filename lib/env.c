@@ -188,7 +188,7 @@ YoriLibAreAnsiEnvironmentStringsValid(
 BOOL
 YoriLibAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
-    __out PYORI_STRING Value
+    __inout PYORI_STRING Value
     )
 {
     DWORD LengthNeeded;
@@ -199,8 +199,10 @@ YoriLibAllocateAndGetEnvironmentVariable(
         return TRUE;
     }
 
-    if (!YoriLibAllocateString(Value, LengthNeeded)) {
-        return FALSE;
+    if (LengthNeeded > Value->LengthAllocated) {
+        if (!YoriLibReallocateString(Value, LengthNeeded)) {
+            return FALSE;
+        }
     }
 
     Value->LengthInChars = GetEnvironmentVariable(Name, Value->StartOfString, Value->LengthAllocated);
@@ -574,5 +576,6 @@ YoriLibRemoveEnvironmentComponent(
     YoriLibFreeStringContents(&CombinedString);
     return TRUE;
 }
+
 
 // vim:sw=4:ts=4:et:

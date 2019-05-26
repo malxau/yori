@@ -1285,6 +1285,7 @@ YoriLibQueryConsoleCapabilities(
     //  Load any user specified support from the environment.
     //
 
+    YoriLibInitEmptyString(&TermString);
     if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORITERM"), &TermString)) {
         return TRUE;
     }

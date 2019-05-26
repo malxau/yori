@@ -3,7 +3,7 @@
  *
  * Yori shell more console display
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -2771,6 +2771,7 @@ MoreViewportDisplay(
     DWORD HandleCountToWait;
     DWORD PreviousMouseButtonState = 0;
     DWORD Timeout;
+    DWORD InputFlags;
     BOOL WaitForIngestThread = TRUE;
     BOOL WaitForNewLines = TRUE;
 
@@ -2779,7 +2780,20 @@ MoreViewportDisplay(
         return FALSE;
     }
 
-    SetConsoleMode(InHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+    //
+    //  If YoriQuickEdit is enabled, set the extended flags, which indicates
+    //  an intention to clear the console's quickedit functionality.  Note
+    //  that we have no way to know about the previous value and cannot
+    //  accurately restore it or other extended flags.
+    //
+
+    if (YoriLibIsYoriQuickEditEnabled()) {
+        InputFlags = ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS;
+    } else {
+        InputFlags = ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT;
+    }
+
+    SetConsoleMode(InHandle, InputFlags);
 
     //
     //  A better way to read this is "disable ENABLE_WRAP_AT_EOL_OUTPUT"

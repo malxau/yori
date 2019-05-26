@@ -2643,7 +2643,7 @@ YoriLibAreAnsiEnvironmentStringsValid(
 BOOL
 YoriLibAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
-    __out PYORI_STRING Value
+    __inout PYORI_STRING Value
     );
 
 BOOL
@@ -2904,6 +2904,10 @@ YoriLibSetSelectionColor(
     __in PYORILIB_SELECTION Selection,
     __in WORD SelectionColor
     );
+
+BOOL
+YoriLibIsYoriQuickEditEnabled();
+
 
 // *** STRING.C ***
 
