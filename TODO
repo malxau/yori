@@ -3,7 +3,6 @@ v1.0:
 
 v1.1:
  - Wide char support in sdir
- - Vhdtool copy disk to ISO
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?

@@ -36,6 +36,8 @@ CHAR strVhdToolHelpText[] =
         "Manage VHD files.\n"
         "\n"
         "VHDTOOL [-license]\n"
+        "VHDTOOL [-sector:512|-sector:512e|-sector:4096] -clonedynamic <file> <source>\n"
+        "VHDTOOL [-sector:512|-sector:512e|-sector:4096] -clonefixed <file> <source>\n"
         "VHDTOOL -compact <file>\n"
         "VHDTOOL -creatediff <file> <parent>\n"
         "VHDTOOL [-sector:512|-sector:512e|-sector:4096] -createdynamic <file> <size>\n"
@@ -79,6 +81,130 @@ typedef enum _VHDTOOL_SECTOR_SIZE {
 } VHDTOOL_SECTOR_SIZE;
 
 /**
+ Clone a fixed ISO file.
+
+ @param Path Pointer to the path of the file to create.
+
+ @param SourcePath Pointer to the path of the device to populate from.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+VhdToolCloneIso(
+    __in PYORI_STRING Path,
+    __in PYORI_STRING SourcePath
+    )
+{
+    HANDLE SourceHandle;
+    HANDLE TargetHandle;
+    YORI_STRING FullPath;
+    YORI_STRING FullSourcePath;
+    PVOID Buffer;
+    DWORD BufferSize;
+    DWORD BytesRead;
+    DWORD SectorsPerCluster;
+    DWORD BytesPerSector;
+    DWORD FreeClusters;
+    DWORD TotalClusters;
+    DISK_GEOMETRY DiskGeometry;
+    LPTSTR ErrText;
+    DWORD Err;
+
+
+    YoriLibInitEmptyString(&FullPath);
+    YoriLibInitEmptyString(&FullSourcePath);
+
+    if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
+        return FALSE;
+    }
+
+    if (!YoriLibUserStringToSingleFilePath(SourcePath, TRUE, &FullSourcePath)) {
+        YoriLibFreeStringContents(&FullPath);
+        return FALSE;
+    }
+
+    //
+    //  Open the source.  Note this can be a file or a device.
+    //
+
+    SourceHandle = CreateFile(FullSourcePath.StartOfString, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (SourceHandle == INVALID_HANDLE_VALUE) {
+        Err = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of source failed: %y: %s"), &FullSourcePath, ErrText);
+        YoriLibFreeStringContents(&FullPath);
+        YoriLibFreeStringContents(&FullSourcePath);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
+
+    TargetHandle = CreateFile(FullPath.StartOfString, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (SourceHandle == INVALID_HANDLE_VALUE) {
+        Err = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of target failed: %y: %s"), &FullPath, ErrText);
+        YoriLibFreeStringContents(&FullPath);
+        YoriLibFreeStringContents(&FullSourcePath);
+        CloseHandle(SourceHandle);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
+
+    //
+    //  Try to query the sector size of the source, first as a device, and if
+    //  that fails, as a file.
+    //
+
+    if (DeviceIoControl(SourceHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &DiskGeometry, sizeof(DiskGeometry), &BytesRead, NULL)) {
+        BytesPerSector = DiskGeometry.BytesPerSector;
+    } else if (!GetDiskFreeSpace(FullSourcePath.StartOfString, &SectorsPerCluster, &BytesPerSector, &FreeClusters, &TotalClusters)) {
+        BytesPerSector = 4096;
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("BytesPerSector could not be detected, using default %i\n"), BytesPerSector);
+    }
+
+    BufferSize = 1024 * 1024;
+    Buffer = YoriLibMalloc(BufferSize);
+    if (Buffer == NULL) {
+        YoriLibFreeStringContents(&FullPath);
+        YoriLibFreeStringContents(&FullSourcePath);
+        CloseHandle(SourceHandle);
+        CloseHandle(TargetHandle);
+        return FALSE;
+    }
+
+    //
+    //  Copy data.  Devices appear to fail outright if the end of the device
+    //  is reached, so the final portion is read one sector at a time.
+    //
+
+    while(TRUE) {
+        if (!ReadFile(SourceHandle, Buffer, BufferSize, &BytesRead, NULL)) {
+            Err = GetLastError();
+            if (Err == ERROR_INVALID_FUNCTION) {
+                if (BufferSize != BytesPerSector) {
+                    BufferSize = BytesPerSector;
+                    continue;
+                }
+            }
+            break;
+        }
+
+        if (BytesRead == 0) {
+            break;
+        }
+
+        WriteFile(TargetHandle, Buffer, BytesRead, &BytesRead, NULL);
+    }
+
+    YoriLibFree(Buffer);
+    YoriLibFreeStringContents(&FullPath);
+    YoriLibFreeStringContents(&FullSourcePath);
+    CloseHandle(SourceHandle);
+    CloseHandle(TargetHandle);
+    return TRUE;
+}
+
+/**
  Create a fixed or dynamic VHD file.
 
  @param Path Pointer to the path of the file to create.
@@ -91,14 +217,18 @@ typedef enum _VHDTOOL_SECTOR_SIZE {
 
  @param ExtType The extension type for the virtual disk.
 
+ @param SourceFile Optionally points to a source to populate from.  Note
+        that if this is specified SizeAsString is meaningless.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 VhdToolCreateNewVhd(
     __in PYORI_STRING Path,
-    __in PYORI_STRING SizeAsString,
+    __in_opt PYORI_STRING SizeAsString,
     __in BOOL Fixed,
-    __in VHDTOOL_EXT_TYPE ExtType
+    __in VHDTOOL_EXT_TYPE ExtType,
+    __in_opt PYORI_STRING SourceFile
     )
 {
     LARGE_INTEGER FileSize;
@@ -108,6 +238,7 @@ VhdToolCreateNewVhd(
     DWORD Flags;
     DWORD Err;
     YORI_STRING FullPath;
+    YORI_STRING FullSourcePath;
 
     YoriLibLoadVirtDiskFunctions();
     if (DllVirtDisk.pCreateVirtualDisk == NULL) {
@@ -125,19 +256,29 @@ VhdToolCreateNewVhd(
     ZeroMemory(&StorageType, sizeof(StorageType));
 
     YoriLibInitEmptyString(&FullPath);
+    YoriLibInitEmptyString(&FullSourcePath);
 
     if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
-    FileSize = YoriLibStringToFileSize(SizeAsString);
-
     CreateParams.Version = 1;
-    CreateParams.Version1.MaximumSize = FileSize.QuadPart;
+    if (SourceFile == NULL) {
+        FileSize = YoriLibStringToFileSize(SizeAsString);
+        CreateParams.Version1.MaximumSize = FileSize.QuadPart;
+    }
     CreateParams.Version1.BlockSizeInBytes = 0;
     CreateParams.Version1.SectorSizeInBytes = 0x200;
     CreateParams.Version1.ParentPath = NULL;
-    CreateParams.Version1.SourcePath = NULL;
+    if (SourceFile != NULL) {
+        if (!YoriLibUserStringToSingleFilePath(SourceFile, TRUE, &FullSourcePath)) {
+            YoriLibFreeStringContents(&FullPath);
+            return FALSE;
+        }
+        CreateParams.Version1.SourcePath = FullSourcePath.StartOfString;
+    } else {
+        CreateParams.Version1.SourcePath = NULL;
+    }
 
     StorageType.DeviceId = VIRTUAL_STORAGE_TYPE_DEVICE_VHD;
     memcpy(&StorageType.VendorId, &VIRTUAL_STORAGE_TYPE_VENDOR_MICROSOFT, sizeof(GUID));
@@ -162,11 +303,13 @@ VhdToolCreateNewVhd(
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Create of disk failed: %y: %s"), &FullPath, ErrText);
         YoriLibFreeStringContents(&FullPath);
+        YoriLibFreeStringContents(&FullSourcePath);
         YoriLibFreeWinErrorText(ErrText);
         return FALSE;
     }
 
     YoriLibFreeStringContents(&FullPath);
+    YoriLibFreeStringContents(&FullSourcePath);
     CloseHandle(Handle);
     return TRUE;
 }
@@ -184,14 +327,18 @@ VhdToolCreateNewVhd(
 
  @param SectorSize The size of each sector within the virtual disk.
 
+ @param SourceFile Optionally points to a source to populate from.  Note
+        that if this is specified SizeAsString is meaningless.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 VhdToolCreateNewVhdx(
     __in PYORI_STRING Path,
-    __in PYORI_STRING SizeAsString,
+    __in_opt PYORI_STRING SizeAsString,
     __in BOOL Fixed,
-    __in VHDTOOL_SECTOR_SIZE SectorSize
+    __in VHDTOOL_SECTOR_SIZE SectorSize,
+    __in_opt PYORI_STRING SourceFile
     )
 {
     LARGE_INTEGER FileSize;
@@ -201,6 +348,7 @@ VhdToolCreateNewVhdx(
     DWORD Flags;
     DWORD Err;
     YORI_STRING FullPath;
+    YORI_STRING FullSourcePath;
 
     YoriLibLoadVirtDiskFunctions();
     if (DllVirtDisk.pCreateVirtualDisk == NULL) {
@@ -213,15 +361,17 @@ VhdToolCreateNewVhdx(
     ZeroMemory(&StorageType, sizeof(StorageType));
 
     YoriLibInitEmptyString(&FullPath);
+    YoriLibInitEmptyString(&FullSourcePath);
 
     if (!YoriLibUserStringToSingleFilePath(Path, TRUE, &FullPath)) {
         return FALSE;
     }
 
-    FileSize = YoriLibStringToFileSize(SizeAsString);
-
     CreateParams.Version = 2;
-    CreateParams.Version2.MaximumSize = FileSize.QuadPart;
+    if (SourceFile == NULL) {
+        FileSize = YoriLibStringToFileSize(SizeAsString);
+        CreateParams.Version2.MaximumSize = FileSize.QuadPart;
+    }
     CreateParams.Version2.BlockSizeInBytes = 0;
     switch (SectorSize) {
         case VhdToolSector512e:
@@ -238,7 +388,14 @@ VhdToolCreateNewVhdx(
             break;
     }
     CreateParams.Version2.ParentPath = NULL;
-    CreateParams.Version2.SourcePath = NULL;
+    if (SourceFile != NULL) {
+        if (!YoriLibUserStringToSingleFilePath(SourceFile, TRUE, &FullSourcePath)) {
+            return FALSE;
+        }
+        CreateParams.Version2.SourcePath = FullSourcePath.StartOfString;
+    } else {
+        CreateParams.Version2.SourcePath = NULL;
+    }
     CreateParams.Version2.ParentVirtualStorageType = 0;
     CreateParams.Version2.SourceVirtualStorageType = 0;
 
@@ -265,11 +422,13 @@ VhdToolCreateNewVhdx(
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Create of disk failed: %y: %s"), &FullPath, ErrText);
         YoriLibFreeStringContents(&FullPath);
+        YoriLibFreeStringContents(&FullSourcePath);
         YoriLibFreeWinErrorText(ErrText);
         return FALSE;
     }
 
     YoriLibFreeStringContents(&FullPath);
+    YoriLibFreeStringContents(&FullSourcePath);
     CloseHandle(Handle);
     return TRUE;
 }
@@ -774,6 +933,8 @@ typedef enum _VHDTOOL_OP {
     VhdToolOpShrink = 5,
     VhdToolOpCreateDiffVhd = 6,
     VhdToolOpMerge = 7,
+    VhdToolOpCloneFixed = 8,
+    VhdToolOpCloneDynamic = 9,
 } VHDTOOL_OP;
 
 #ifdef YORI_BUILTIN
@@ -832,6 +993,20 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2019"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("clonedynamic")) == 0) {
+                if (ArgC > i + 2) {
+                    FileName = &ArgV[i + 1];
+                    FileParent = &ArgV[i + 2];
+                    Op = VhdToolOpCloneDynamic;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("clonefixed")) == 0) {
+                if (ArgC > i + 2) {
+                    FileName = &ArgV[i + 1];
+                    FileParent = &ArgV[i + 2];
+                    Op = VhdToolOpCloneFixed;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("compact")) == 0) {
                 if (ArgC > i + 1) {
                     FileName = &ArgV[i + 1];
@@ -926,18 +1101,34 @@ ENTRYPOINT(
     }
 
     switch(Op) {
+        case VhdToolOpCloneDynamic:
+            if (ExtType == VhdToolExtVhdx) {
+                VhdToolCreateNewVhdx(FileName, NULL, FALSE, SectorSize, FileParent);
+            } else {
+                VhdToolCreateNewVhd(FileName, NULL, FALSE, ExtType, FileParent);
+            }
+            break;
+        case VhdToolOpCloneFixed:
+            if (ExtType == VhdToolExtIso) {
+                VhdToolCloneIso(FileName, FileParent);
+            } else if (ExtType == VhdToolExtVhdx) {
+                VhdToolCreateNewVhdx(FileName, NULL, TRUE, SectorSize, FileParent);
+            } else {
+                VhdToolCreateNewVhd(FileName, NULL, TRUE, ExtType, FileParent);
+            }
+            break;
         case VhdToolOpCreateFixedVhd:
             if (ExtType == VhdToolExtVhdx) {
-                VhdToolCreateNewVhdx(FileName, FileSize, TRUE, SectorSize);
+                VhdToolCreateNewVhdx(FileName, FileSize, TRUE, SectorSize, NULL);
             } else {
-                VhdToolCreateNewVhd(FileName, FileSize, TRUE, ExtType);
+                VhdToolCreateNewVhd(FileName, FileSize, TRUE, ExtType, NULL);
             }
             break;
         case VhdToolOpCreateDynamicVhd:
             if (ExtType == VhdToolExtVhdx) {
-                VhdToolCreateNewVhdx(FileName, FileSize, FALSE, SectorSize);
+                VhdToolCreateNewVhdx(FileName, FileSize, FALSE, SectorSize, NULL);
             } else {
-                VhdToolCreateNewVhd(FileName, FileSize, FALSE, ExtType);
+                VhdToolCreateNewVhd(FileName, FileSize, FALSE, ExtType, NULL);
             }
             break;
         case VhdToolOpExpand:
