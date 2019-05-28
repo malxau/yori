@@ -476,6 +476,25 @@ YoriLibTrimSpaces(
     }
 }
 
+/**
+ Remove NULL terminated from the end of a Yori string.
+
+ @param String Pointer to the Yori string to remove NULLs from.
+ */
+VOID
+YoriLibTrimNullTerminators(
+    __in PYORI_STRING String
+    )
+{
+    while (String->LengthInChars > 0) {
+        if (String->StartOfString[String->LengthInChars - 1] == '\0') {
+            String->LengthInChars--;
+        } else {
+            break;
+        }
+    }
+}
+
 
 /**
  Compare a Yori string against a NULL terminated string up to a specified

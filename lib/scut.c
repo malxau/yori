@@ -203,4 +203,257 @@ Exit:
     return Result;
 }
 
+/**
+ Execute a specified shortcut file.
+
+ @param ShortcutFileName Pointer to the shortcut file to execute.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibExecuteShortcut(
+    __in PYORI_STRING ShortcutFileName
+    )
+{
+    YORI_STRING FileTarget;
+    YORI_STRING Arguments;
+    YORI_STRING WorkingDirectory;
+    YORI_STRING ExpandedFileTarget;
+    YORI_STRING ExpandedArguments;
+    YORI_STRING ExpandedWorkingDirectory;
+    INT nShow;
+    HINSTANCE hApp;
+    IShellLinkW *scut = NULL;
+    IPersistFile *savedfile = NULL;
+    BOOL Result = FALSE;
+    HRESULT hRes;
+    DWORD SizeNeeded;
+    LPTSTR Extension;
+
+    ASSERT(YoriLibIsStringNullTerminated(ShortcutFileName));
+
+    YoriLibLoadShell32Functions();
+
+    if (DllShell32.pShellExecuteW == NULL) {
+        return FALSE;
+    }
+
+    YoriLibLoadOle32Functions();
+    if (DllOle32.pCoCreateInstance == NULL || DllOle32.pCoInitialize == NULL) {
+        return FALSE;
+    }
+
+    hRes = DllOle32.pCoInitialize(NULL);
+    if (!SUCCEEDED(hRes)) {
+        return FALSE;
+    }
+
+    hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&scut);
+    if (!SUCCEEDED(hRes)) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&FileTarget);
+    YoriLibInitEmptyString(&Arguments);
+    YoriLibInitEmptyString(&WorkingDirectory);
+    YoriLibInitEmptyString(&ExpandedFileTarget);
+    YoriLibInitEmptyString(&ExpandedArguments);
+    YoriLibInitEmptyString(&ExpandedWorkingDirectory);
+
+    hRes = scut->Vtbl->QueryInterface(scut, &IID_IPersistFile, (void **)&savedfile);
+    if (!SUCCEEDED(hRes)) {
+        goto Exit;
+    }
+
+    hRes = savedfile->Vtbl->Load(savedfile, ShortcutFileName->StartOfString, 0);
+    if (!SUCCEEDED(hRes)) {
+        goto Exit;
+    }
+
+    //
+    //  The following code approximates how things should work, which is not
+    //  how they actually work.  As far as I can tell, and as far as the
+    //  documentation goes, these APIs don't return any indication of
+    //  required buffer size, and end up truncating the return value instead
+    //  which makes writing accurate code on these APIs basically impossible.
+    //
+
+    hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
+    while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+        SizeNeeded = WorkingDirectory.LengthAllocated * 4;
+        if (SizeNeeded == 0) {
+            SizeNeeded = 1024;
+        }
+        YoriLibFreeStringContents(&WorkingDirectory);
+
+        if (!YoriLibAllocateString(&WorkingDirectory, SizeNeeded)) {
+            goto Exit;
+        }
+        hRes = scut->Vtbl->GetWorkingDirectory(scut,
+                                               WorkingDirectory.StartOfString,
+                                               WorkingDirectory.LengthAllocated);
+    }
+
+    hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
+    while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+        SizeNeeded = Arguments.LengthAllocated * 4;
+        if (SizeNeeded == 0) {
+            SizeNeeded = 1024;
+        }
+        YoriLibFreeStringContents(&Arguments);
+
+        if (!YoriLibAllocateString(&Arguments, SizeNeeded)) {
+            goto Exit;
+        }
+        hRes = scut->Vtbl->GetArguments(scut,
+                                        Arguments.StartOfString,
+                                        Arguments.LengthAllocated);
+    }
+
+    hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
+    while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+        SizeNeeded = FileTarget.LengthAllocated * 4;
+        if (SizeNeeded == 0) {
+            SizeNeeded = 1024;
+        }
+        YoriLibFreeStringContents(&FileTarget);
+
+        if (!YoriLibAllocateString(&FileTarget, SizeNeeded)) {
+            goto Exit;
+        }
+        hRes = scut->Vtbl->GetPath(scut,
+                                   FileTarget.StartOfString,
+                                   FileTarget.LengthAllocated,
+                                   NULL,
+                                   0);
+    }
+
+    if (scut->Vtbl->GetShowCmd(scut, &nShow) != NOERROR) {
+        goto Exit;
+    }
+
+    //
+    //  Newer versions of Windows expand the environment variables in the
+    //  shortcut by default.  Older versions require us to do it manually
+    //  here.
+    //
+
+    SizeNeeded = ExpandEnvironmentStrings(FileTarget.StartOfString, NULL, 0);
+    if (SizeNeeded == 0) {
+        goto Exit;
+    }
+
+    if (!YoriLibAllocateString(&ExpandedFileTarget, SizeNeeded)) {
+        goto Exit;
+    }
+
+    ExpandedFileTarget.LengthInChars = ExpandEnvironmentStrings(FileTarget.StartOfString, ExpandedFileTarget.StartOfString, ExpandedFileTarget.LengthAllocated);
+
+    SizeNeeded = ExpandEnvironmentStrings(Arguments.StartOfString, NULL, 0);
+    if (SizeNeeded == 0) {
+        goto Exit;
+    }
+
+    if (!YoriLibAllocateString(&ExpandedArguments, SizeNeeded)) {
+        goto Exit;
+    }
+
+    ExpandedArguments.LengthInChars = ExpandEnvironmentStrings(Arguments.StartOfString, ExpandedArguments.StartOfString, ExpandedArguments.LengthAllocated);
+
+    SizeNeeded = ExpandEnvironmentStrings(WorkingDirectory.StartOfString, NULL, 0);
+    if (SizeNeeded == 0) {
+        goto Exit;
+    }
+
+    if (!YoriLibAllocateString(&ExpandedWorkingDirectory, SizeNeeded)) {
+        goto Exit;
+    }
+
+    ExpandedWorkingDirectory.LengthInChars = ExpandEnvironmentStrings(WorkingDirectory.StartOfString, ExpandedWorkingDirectory.StartOfString, ExpandedWorkingDirectory.LengthAllocated);
+
+    YoriLibTrimNullTerminators(&ExpandedFileTarget);
+    YoriLibTrimNullTerminators(&ExpandedArguments);
+    YoriLibTrimNullTerminators(&ExpandedWorkingDirectory);
+
+    Extension = YoriLibFindRightMostCharacter(&ExpandedFileTarget, '.');
+    if (Extension != NULL) {
+        YORI_STRING YsExt;
+        YoriLibInitEmptyString(&YsExt);
+        YsExt.StartOfString = Extension;
+        YsExt.LengthInChars = ExpandedFileTarget.LengthInChars - (DWORD)(Extension - ExpandedFileTarget.StartOfString);
+
+        if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) == 0 ||
+            YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
+
+            STARTUPINFO si;
+            PROCESS_INFORMATION pi;
+            YORI_STRING CmdLine;
+            ZeroMemory(&si, sizeof(si));
+            si.cb = sizeof(si);
+
+            si.dwFlags = STARTF_TITLEISLINKNAME;
+            si.lpTitle = ShortcutFileName->StartOfString;
+
+            if (!YoriLibAllocateString(&CmdLine, ExpandedFileTarget.LengthInChars + 1 + ExpandedArguments.LengthInChars + 1)) {
+                goto Exit;
+            }
+
+            CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("%y %y"), &ExpandedFileTarget, &ExpandedArguments);
+
+            Result = CreateProcess(ExpandedFileTarget.StartOfString,
+                                   CmdLine.StartOfString,
+                                   NULL,
+                                   NULL,
+                                   FALSE,
+                                   CREATE_NEW_PROCESS_GROUP | CREATE_NEW_CONSOLE,
+                                   NULL,
+                                   ExpandedWorkingDirectory.StartOfString,
+                                   &si,
+                                   &pi);
+
+            if (Result) {
+                CloseHandle(pi.hProcess);
+                CloseHandle(pi.hThread);
+            }
+
+            YoriLibFreeStringContents(&CmdLine);
+        }
+    }
+
+    if (!Result) {
+        hApp = DllShell32.pShellExecuteW(NULL,
+                                         NULL,
+                                         ExpandedFileTarget.StartOfString,
+                                         ExpandedArguments.StartOfString,
+                                         ExpandedWorkingDirectory.StartOfString,
+                                         nShow);
+        if ((ULONG_PTR)hApp <= 32) {
+            goto Exit;
+        }
+
+        Result = TRUE;
+    }
+
+Exit:
+
+    YoriLibFreeStringContents(&FileTarget);
+    YoriLibFreeStringContents(&WorkingDirectory);
+    YoriLibFreeStringContents(&Arguments);
+    YoriLibFreeStringContents(&ExpandedFileTarget);
+    YoriLibFreeStringContents(&ExpandedWorkingDirectory);
+    YoriLibFreeStringContents(&ExpandedArguments);
+
+    if (savedfile != NULL) {
+        savedfile->Vtbl->Release(savedfile);
+        savedfile = NULL;
+    }
+
+    if (scut != NULL) {
+        scut->Vtbl->Release(scut);
+        scut = NULL;
+    }
+
+    return Result;
+}
+
 // vim:sw=4:ts=4:et:

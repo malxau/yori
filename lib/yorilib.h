@@ -847,6 +847,9 @@ YoriLibLoadVersionFunctions();
 BOOL
 YoriLibLoadVirtDiskFunctions();
 
+BOOL
+YoriLibLoadWtsApi32Functions();
+
 // *** FILECOMP.C ***
 
 /**
@@ -2704,6 +2707,11 @@ YoriLibCreateShortcut(
     __in BOOL CreateNewIfNeeded
     );
 
+BOOL
+YoriLibExecuteShortcut(
+    __in PYORI_STRING ShortcutFileName
+    );
+
 // *** SELECT.C ***
 
 /**
@@ -2979,6 +2987,11 @@ YoriLibNumberToString(
 
 VOID
 YoriLibTrimSpaces(
+    __in PYORI_STRING String
+    );
+
+VOID
+YoriLibTrimNullTerminators(
     __in PYORI_STRING String
     );
 

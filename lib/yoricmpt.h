@@ -679,6 +679,151 @@ typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
     SIZE_T CommitSize;
 } YORI_SYSTEM_PROCESS_INFORMATION, *PYORI_SYSTEM_PROCESS_INFORMATION;
 
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ an unknown product.
+ */
+#define PRODUCT_UNDEFINED                           0x00000000
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the datacenter server core product.
+ */
+#define PRODUCT_DATACENTER_SERVER_CORE              0x0000000C
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the standard server core product.
+ */
+#define PRODUCT_STANDARD_SERVER_CORE                0x0000000D
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the enterprise server core product.
+ */
+#define PRODUCT_ENTERPRISE_SERVER_CORE              0x0000000E
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the web server core product.
+ */
+#define PRODUCT_WEB_SERVER_CORE                     0x0000001D
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the datacenter server core product without hyper-v.
+ */
+#define PRODUCT_DATACENTER_SERVER_CORE_V            0x00000027
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the standard server core product without hyper-v.
+ */
+#define PRODUCT_STANDARD_SERVER_CORE_V              0x00000028
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the enterprise server core product without hyper-v.
+ */
+#define PRODUCT_ENTERPRISE_SERVER_CORE_V            0x00000029
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the hyper-v server product.
+ */
+#define PRODUCT_HYPERV                              0x0000002A
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the express storage server core product.
+ */
+#define PRODUCT_STORAGE_EXPRESS_SERVER_CORE         0x0000002B
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the standard storage server core product.
+ */
+#define PRODUCT_STORAGE_STANDARD_SERVER_CORE        0x0000002C
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the workgroup storage server core product.
+ */
+#define PRODUCT_STORAGE_WORKGROUP_SERVER_CORE       0x0000002D
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the enterprise storage server core product.
+ */
+#define PRODUCT_STORAGE_ENTERPRISE_SERVER_CORE      0x0000002E
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the standard solutions server core product.
+ */
+#define PRODUCT_STANDARD_SERVER_SOLUTIONS_CORE      0x00000035
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the embedded solutions server core product.
+ */
+#define PRODUCT_SOLUTION_EMBEDDEDSERVER_CORE        0x00000039
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the small business server premium server core product.
+ */
+#define PRODUCT_SMALLBUSINESS_SERVER_PREMIUM_CORE   0x0000003F
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the datacenter server core product.
+ */
+#define PRODUCT_DATACENTER_A_SERVER_CORE            0x00000091
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the standard server core product.
+ */
+#define PRODUCT_STANDARD_A_SERVER_CORE              0x00000092
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the datacenter server core product.
+ */
+#define PRODUCT_DATACENTER_WS_SERVER_CORE           0x00000093
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the standard server core product.
+ */
+#define PRODUCT_STANDARD_WS_SERVER_CORE             0x00000094
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the datacenter server core product.
+ */
+#define PRODUCT_DATACENTER_EVALUATION_SERVER_CORE   0x0000009F
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the standard server core product.
+ */
+#define PRODUCT_STANDARD_EVALUATION_SERVER_CORE     0x000000A0
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ the azure server core product.
+ */
+#define PRODUCT_AZURE_SERVER_CORE                   0x000000A8
+
+/**
+ If not defined by the compilation environment, the product identifier for
+ an unlicensed product.
+ */
+#define PRODUCT_UNLICENSED                          0xABCDABCD
+
 /**
  An implementation of the OSVERSIONINFO structure.
  */
@@ -839,6 +984,14 @@ typedef struct _YORI_MEMORYSTATUSEX {
      */
     DWORDLONG ullAvailExtendedVirtual;
 } YORI_MEMORYSTATUSEX, *PYORI_MEMORYSTATUSEX;
+
+#ifndef STARTF_TITLEISLINKNAME
+/**
+ Indicate that the title field in STARTUPINFO is really a shortcut name so the
+ console can populate console properties from it.
+ */
+#define STARTF_TITLEISLINKNAME 0x800
+#endif
 
 #ifndef EWX_POWEROFF
 /**
@@ -1838,6 +1991,14 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
     HANDLE Port;
 } YORI_JOB_ASSOCIATE_COMPLETION_PORT, *PYORI_JOB_ASSOCIATE_COMPLETION_PORT;
 
+#ifndef HSHELL_RUDEAPPACTIVATED
+/**
+ A definition for HSHELL_RUDEAPPACTIVATED if it is not defined by the current
+ compilation environment.
+ */
+#define HSHELL_RUDEAPPACTIVATED (0x8000 | HSHELL_WINDOWACTIVATED)
+#endif
+
 #ifndef WM_SETICON
 /**
  A definition for WM_SETICON if it is not defined by the current compilation
@@ -2704,6 +2865,42 @@ typedef struct _YORI_BROWSEINFO {
     INT ImageIndex;
 } YORI_BROWSEINFO, *PYORI_BROWSEINFO;
 
+/**
+ A message structure that describes a shell app bar.
+ */
+typedef struct _YORI_APPBARDATA {
+
+    /**
+     The number of bytes in this structure.
+     */
+    DWORD cbSize;
+
+    /**
+     The window that is requesting app bar services.
+     */
+    HWND hWnd;
+
+    /**
+     A message to use to indicate back to the application app bar
+     notifications.
+     */
+    UINT uCallbackMessage;
+
+    /**
+     The edge of the screen to attach to.
+     */
+    UINT uEdge;
+
+    /**
+     The window coordinates to use.
+     */
+    RECT rc;
+
+    /**
+     Extra information.
+     */
+    LPARAM lParam;
+} YORI_APPBARDATA, *PYORI_APPBARDATA;
 
 
 #ifndef STDMETHODCALLTYPE
@@ -3537,6 +3734,16 @@ typedef struct _RESIZE_VIRTUAL_DISK_PARAMETERS {
     };
 } RESIZE_VIRTUAL_DISK_PARAMETERS, *PRESIZE_VIRTUAL_DISK_PARAMETERS;
 
+/** 
+ A pseudo handle indicating the current terminal server server.
+ */
+#define WTS_CURRENT_SERVER_HANDLE NULL
+
+/**
+ An identifier for the current terminal server session.
+ */
+#define WTS_CURRENT_SESSION ((DWORD)-1)
+
 /**
  A prototype for the NtQueryInformationFile function.
  */
@@ -3932,6 +4139,18 @@ GET_PRIVATE_PROFILE_SECTION_NAMESW(LPWSTR, DWORD, LPCWSTR);
 typedef GET_PRIVATE_PROFILE_SECTION_NAMESW *PGET_PRIVATE_PROFILE_SECTION_NAMESW;
 
 /**
+ A prototype for the GetProductInfo function.
+ */
+typedef
+BOOL WINAPI
+GET_PRODUCT_INFO(DWORD, DWORD, DWORD, DWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the GetProductInfo function.
+ */
+typedef GET_PRODUCT_INFO *PGET_PRODUCT_INFO;
+
+/**
  A prototype for the GetVersionExW function.
  */
 typedef
@@ -4229,6 +4448,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetPrivateProfileSectionNamesW.
      */
     PGET_PRIVATE_PROFILE_SECTION_NAMESW pGetPrivateProfileSectionNamesW;
+
+    /**
+     If it's available on the current system, a pointer to GetProductInfo.
+     */
+    PGET_PRODUCT_INFO pGetProductInfo;
 
     /**
      If it's available on the current system, a pointer to GetVersionExW.
@@ -4966,6 +5190,18 @@ typedef struct _YORI_PSAPI_FUNCTIONS {
 extern YORI_PSAPI_FUNCTIONS DllPsapi;
 
 /**
+ A prototype for the SHAppBarMessage function.
+ */
+typedef
+DWORD_PTR WINAPI
+SH_APP_BAR_MESSAGE(DWORD, PYORI_APPBARDATA);
+
+/**
+ A prototype for a pointer to the SHAppBarMessage function.
+ */
+typedef SH_APP_BAR_MESSAGE *PSH_APP_BAR_MESSAGE;
+
+/**
  A prototype for the SHBrowseForFolderW function.
  */
 typedef
@@ -5058,6 +5294,11 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to SHAppBarMessage.
+     */
+    PSH_APP_BAR_MESSAGE pSHAppBarMessage;
 
     /**
      If it's available on the current system, a pointer to SHBrowseForFolderW.
@@ -5284,6 +5525,18 @@ REGISTER_CLIPBOARD_FORMATW(LPCWSTR);
 typedef REGISTER_CLIPBOARD_FORMATW *PREGISTER_CLIPBOARD_FORMATW;
 
 /**
+ A prototype for the RegisterShellHookWindow function.
+ */
+typedef
+BOOL WINAPI
+REGISTER_SHELL_HOOK_WINDOW(HWND);
+
+/**
+ A prototype for a pointer to the RegisterShellHookWindow function.
+ */
+typedef REGISTER_SHELL_HOOK_WINDOW *PREGISTER_SHELL_HOOK_WINDOW;
+
+/**
  A prototype for the SetClipboardData function.
  */
 typedef
@@ -5417,6 +5670,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to RegisterClipboardFormatW.
      */
     PREGISTER_CLIPBOARD_FORMATW pRegisterClipboardFormatW;
+
+    /**
+     If it's available on the current system, a pointer to RegisterShellHookWindow.
+     */
+    PREGISTER_SHELL_HOOK_WINDOW pRegisterShellHookWindow;
 
     /**
      If it's available on the current system, a pointer to SetClipboardData.
@@ -5679,5 +5937,37 @@ typedef struct _YORI_VIRTDISK_FUNCTIONS {
 } YORI_VIRTDISK_FUNCTIONS, *PYORI_VIRTDISK_FUNCTIONS;
 
 extern YORI_VIRTDISK_FUNCTIONS DllVirtDisk;
+
+/**
+ A prototype for the WTSDisconnectSession function.
+ */
+typedef
+BOOL WINAPI
+WTS_DISCONNECT_SESSION(HANDLE, DWORD, BOOL);
+
+/**
+ A prototype for a pointer to the WTSDisconnectSession function.
+ */
+typedef WTS_DISCONNECT_SESSION *PWTS_DISCONNECT_SESSION;
+
+/**
+ A structure containing optional function pointers to wtsapi32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_WTSAPI32_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to WTSDisconnectSession.
+     */
+    PWTS_DISCONNECT_SESSION pWTSDisconnectSession;
+
+} YORI_WTSAPI32_FUNCTIONS, *PYORI_WTSAPI32_FUNCTIONS;
+
+extern YORI_WTSAPI32_FUNCTIONS DllWtsApi32;
 
 // vim:sw=4:ts=4:et:

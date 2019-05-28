@@ -253,6 +253,7 @@ clean:
 	-@erase if.com >NUL 2>NUL
 	@if exist *.exe erase *.exe
 	@if exist *.com erase *.com
+	@if exist *.dll erase *.dll
 	@if exist *.obj erase *.obj
 	@if exist *.pdb erase *.pdb
 	@if exist *.lib erase *.lib

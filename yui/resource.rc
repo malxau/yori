@@ -1,0 +1,20 @@
+
+#include <windows.h>
+#include "resource.h"
+
+1                       ICON    DISCARDABLE     "..\\lib\\yori.ico"
+
+RUNDIALOG DIALOGEX 0, 0, 400, 60
+STYLE WS_POPUP | WS_CAPTION | DS_MODALFRAME
+CAPTION "Run"
+FONT 8, "MS Sans Serif"
+{
+    LTEXT "Open:", -1, 8, 11, 50, 10
+    EDITTEXT IDC_RUNCMD, 60, 10, 330, 12
+    PUSHBUTTON "&Browse...", IDC_BROWSE, 340, 40, 50, 14
+
+    DEFPUSHBUTTON "Run", IDC_OK, 8, 40, 50, 14
+    PUSHBUTTON "Cancel", IDC_CANCEL, 68, 40, 50, 14
+}
+
+// vim:sw=4:ts=4:et:

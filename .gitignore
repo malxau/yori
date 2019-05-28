@@ -1,6 +1,7 @@
 cache.mk
 **/*.cab
 **/*.com
+**/*.dll
 **/*.exe
 **/*.exp
 **/*.lib

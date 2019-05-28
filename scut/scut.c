@@ -409,7 +409,19 @@ ENTRYPOINT(
     if (op == ScutOperationModify ||
         op == ScutOperationExec ||
         op == ScutOperationDump) {
-        hRes = savedfile->Vtbl->Load(savedfile, szFile.StartOfString, TRUE);
+
+        DWORD OpenMode;
+
+        //
+        //  Open for read only unless we intend to modify
+        //
+
+        OpenMode = 0;
+        if (op == ScutOperationModify) {
+            OpenMode = 1;
+        }
+
+        hRes = savedfile->Vtbl->Load(savedfile, szFile.StartOfString, OpenMode);
         if (!SUCCEEDED(hRes)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Load failure: %x\n"), hRes);
             goto Exit;

@@ -148,6 +148,7 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pGetFileInformationByHandleEx, "GetFileInformationByHandleEx"},
     {(FARPROC *)&DllKernel32.pGetNativeSystemInfo, "GetNativeSystemInfo"},
     {(FARPROC *)&DllKernel32.pGetPrivateProfileSectionNamesW, "GetPrivateProfileSectionNamesW"},
+    {(FARPROC *)&DllKernel32.pGetProductInfo, "GetProductInfo"},
     {(FARPROC *)&DllKernel32.pGetVersionExW, "GetVersionExW"},
     {(FARPROC *)&DllKernel32.pGetVolumePathNamesForVolumeNameW, "GetVolumePathNamesForVolumeNameW"},
     {(FARPROC *)&DllKernel32.pGetVolumePathNameW, "GetVolumePathNameW"},
@@ -421,6 +422,7 @@ YoriLibLoadShell32Functions()
         return FALSE;
     }
 
+    DllShell32.pSHAppBarMessage = (PSH_APP_BAR_MESSAGE)GetProcAddress(DllShell32.hDll, "SHAppBarMessage");
     DllShell32.pSHBrowseForFolderW = (PSH_BROWSE_FOR_FOLDERW)GetProcAddress(DllShell32.hDll, "SHBrowseForFolderW");
     DllShell32.pSHFileOperationW = (PSH_FILE_OPERATIONW)GetProcAddress(DllShell32.hDll, "SHFileOperationW");
     DllShell32.pSHGetKnownFolderPath = (PSH_GET_KNOWN_FOLDER_PATH)GetProcAddress(DllShell32.hDll, "SHGetKnownFolderPath");
@@ -495,6 +497,7 @@ YoriLibLoadUser32Functions()
     DllUser32.pMoveWindow = (PMOVE_WINDOW)GetProcAddress(DllUser32.hDll, "MoveWindow");
     DllUser32.pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(DllUser32.hDll, "OpenClipboard");
     DllUser32.pRegisterClipboardFormatW = (PREGISTER_CLIPBOARD_FORMATW)GetProcAddress(DllUser32.hDll, "RegisterClipboardFormatW");
+    DllUser32.pRegisterShellHookWindow = (PREGISTER_SHELL_HOOK_WINDOW)GetProcAddress(DllUser32.hDll, "RegisterShellHookWindow");
     DllUser32.pSetClipboardData = (PSET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "SetClipboardData");
     DllUser32.pSetForegroundWindow = (PSET_FOREGROUND_WINDOW)GetProcAddress(DllUser32.hDll, "SetForegroundWindow");
     DllUser32.pSetWindowTextW = (PSET_WINDOW_TEXTW)GetProcAddress(DllUser32.hDll, "SetWindowTextW");
@@ -581,6 +584,38 @@ YoriLibLoadVirtDiskFunctions()
 
     return TRUE;
 }
+
+/**
+ A structure containing pointers to wtsapi32.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_WTSAPI32_FUNCTIONS DllWtsApi32;
+
+/**
+ Load pointers to all optional WtsApi32.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadWtsApi32Functions()
+{
+
+    if (DllWtsApi32.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllWtsApi32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("WTSAPI32.DLL"));
+    if (DllWtsApi32.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllWtsApi32.pWTSDisconnectSession = (PWTS_DISCONNECT_SESSION)GetProcAddress(DllWtsApi32.hDll, "WTSDisconnectSession");
+
+    return TRUE;
+}
+
+
+// vim:sw=4:ts=4:et:
 
 
 // vim:sw=4:ts=4:et:

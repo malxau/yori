@@ -115,6 +115,7 @@ DIRS=crt       \
      ydbg      \
      ypm       \
      ysetup    \
+     yui       \
 
 all.real: writeconfigcache
 	@$(CURRENTTIME)
