@@ -2969,6 +2969,15 @@ YoriLibDecimalStringToInt(
     );
 
 BOOL
+YoriLibStringToNumberSpecifyBase(
+    __in PYORI_STRING String,
+    __in DWORD Base,
+    __in BOOL IgnoreSeperators,
+    __out PLONGLONG Number,
+    __out PDWORD CharsConsumed
+    );
+
+BOOL
 YoriLibStringToNumber(
     __in PYORI_STRING String,
     __in BOOL IgnoreSeperators,
@@ -3204,6 +3213,11 @@ YoriLibMakeInheritableHandle(
 
 LPTSTR
 YoriLibGetWinErrorText(
+    __in DWORD ErrorCode
+    );
+
+LPTSTR
+YoriLibGetNtErrorText(
     __in DWORD ErrorCode
     );
 

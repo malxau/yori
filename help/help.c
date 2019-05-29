@@ -90,6 +90,7 @@ CHAR strHelpHelpText2[] =
         "ENDLOCAL  Pop a previous saved environment from the stack (only valid after\n"
         "            SETLOCAL)\n"
         "ERASE     Delete one or more files\n"
+        "ERR       Display the text for a Windows error code\n"
         "EXIT      Exits the shell\n"
         "EXPR      Evaluate simple arithmetic expressions\n"
         "FALSE     Return false\n"

@@ -61,6 +61,7 @@ DIRS=crt       \
      echo      \
      env       \
      erase     \
+     err       \
      expr      \
      finfo     \
      for       \

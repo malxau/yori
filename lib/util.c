@@ -117,6 +117,40 @@ YoriLibGetWinErrorText(
 }
 
 /**
+ Lookup an NT status code and return a pointer to the error string.
+ If the string could not be located, returns NULL.  The returned string
+ should be freed with @ref YoriLibFreeWinErrorText.
+
+ @param ErrorCode The error code to fetch a string for.
+
+ @return Pointer to the error string on success, NULL on failure.
+ */
+LPTSTR
+YoriLibGetNtErrorText(
+    __in DWORD ErrorCode
+    )
+{
+    LPTSTR OutputBuffer = NULL;
+    HANDLE NtdllHandle;
+
+    NtdllHandle = GetModuleHandle(_T("NTDLL"));
+
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+                  NtdllHandle,
+                  ErrorCode,
+                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                  (LPTSTR)&OutputBuffer,
+                  0,
+                  NULL);
+    
+    if (OutputBuffer == NULL) {
+        OutputBuffer = NoWinErrorText;
+    }
+
+    return OutputBuffer;
+}
+
+/**
  Free an error string previously allocated with @ref YoriLibGetWinErrorText .
 
  @param ErrText Pointer to the error text string.

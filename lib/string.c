@@ -258,6 +258,88 @@ YoriLibDecimalStringToInt(
 }
 
 /**
+ This routine attempts to convert a string to a number using a specified
+ number base (ie., decimal or hexadecimal.)  
+
+ @param String Pointer to the string to convert into integer form.
+
+ @param Base The number base.  Must be 10 or 16.
+
+ @param IgnoreSeperators If TRUE, continue to generate a number across comma
+        delimiters.  If FALSE, terminate on a comma.
+
+ @param Number On successful completion, this is updated to contain the
+        resulting number.
+
+ @param CharsConsumed On successful completion, this is updated to indicate
+        the number of characters from the string that were used to generate
+        the number.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibStringToNumberSpecifyBase(
+    __in PYORI_STRING String,
+    __in DWORD Base,
+    __in BOOL IgnoreSeperators,
+    __out PLONGLONG Number,
+    __out PDWORD CharsConsumed
+    )
+{
+    LONGLONG Result;
+    DWORD Index;
+    BOOL Negative = FALSE;
+
+    Result = 0;
+    Index = 0;
+
+    while (String->LengthInChars > Index) {
+        if (String->StartOfString[Index] == '-') {
+            if (Negative) {
+                Negative = FALSE;
+            } else {
+                Negative = TRUE;
+            }
+            Index++;
+        } else {
+            break;
+        }
+    }
+
+    for (; String->LengthInChars > Index; Index++) {
+        if (!IgnoreSeperators || String->StartOfString[Index] != ',') {
+            if (Base == 10) {
+                if (String->StartOfString[Index] < '0' || String->StartOfString[Index] > '9') {
+                    break;
+                }
+                Result *= Base;
+                Result += String->StartOfString[Index] - '0';
+            } else if (Base == 16) {
+                TCHAR Char;
+                Char = YoriLibUpcaseChar(String->StartOfString[Index]);
+                if (Char >= '0' && Char <= '9') {
+                    Result *= Base;
+                    Result += Char - '0';
+                } else if (Char >= 'A' && Char <= 'F') {
+                    Result *= Base;
+                    Result += Char - 'A' + 10;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (Negative) {
+        Result = 0 - Result;
+    }
+
+    *CharsConsumed = Index;
+    *Number = Result;
+    return TRUE;
+}
+
+/**
  This routine attempts to convert a string to a number using all available
  parsing.  As of this writing, it understands 0x and 0n prefixes as well
  as negative numbers.

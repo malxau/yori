@@ -129,6 +129,11 @@ YORI_CMD_BUILTIN YoriCmd_YERASE;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YERR;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_EXIT;
 
 /**
@@ -530,6 +535,7 @@ YoriShBuiltins[] = {
                     {_T("YECHO"),     YoriCmd_YECHO},
                     {_T("YENV"),      YoriCmd_YENV},
                     {_T("YERASE"),    YoriCmd_YERASE},
+                    {_T("YERR"),      YoriCmd_YERR},
                     {_T("YEXPR"),     YoriCmd_YEXPR},
                     {_T("YGET"),      YoriCmd_YGET},
                     {_T("YHASH"),     YoriCmd_YHASH},
