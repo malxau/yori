@@ -37,7 +37,9 @@ CHAR strPsHelpText[] =
         "\n"
         "PS [-license]\n"
         "\n"
-        "   -c             Display memory usage of processes the user has access to\n";
+        "   -a             Display all processes\n"
+        "   -f             Display full format including command line\n"
+        "   -l             Display long format including memory usage\n";
 
 /**
  Display usage text to the user.
