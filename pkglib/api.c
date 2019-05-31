@@ -47,10 +47,12 @@ YoriPkgUpgradeInstalledPackages(
     LPTSTR ThisLine;
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
+    YORI_STRING InstalledVersion;
     YORI_STRING UpgradePath;
     DWORD LineLength;
     DWORD Error;
     BOOL Result;
+    BOOL UpgradeThisPackage;
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
 
     if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
@@ -88,22 +90,30 @@ YoriPkgUpgradeInstalledPackages(
         if (Equals != NULL) {
             PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
             *Equals = '\0';
+            YoriLibConstantString(&InstalledVersion, Equals + 1);
         } else {
             PkgNameOnly.LengthInChars = LineLength;
+            YoriLibInitEmptyString(&InstalledVersion);
         }
 
         UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradePath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
         if (UpgradePath.LengthInChars > 0) {
+            UpgradeThisPackage = TRUE;
             if (NewArchitecture != NULL) {
                 YoriPkgBuildUpgradeLocationForNewArchitecture(&PkgNameOnly, NewArchitecture, &PkgIniFile, &UpgradePath);
+            } else if (!YoriPkgIsNewerVersionAvailable(&PendingPackages, &PkgIniFile, &UpgradePath, &InstalledVersion)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y version %y is already installed\n"), &PkgNameOnly, &InstalledVersion);
+                UpgradeThisPackage = FALSE;
             }
-            if (YoriLibIsPathUrl(&UpgradePath)) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &UpgradePath);
-            }
-            Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &UpgradePath);
-            if (Error != ERROR_SUCCESS) {
-                YoriPkgDisplayErrorStringForInstallFailure(Error);
-                goto Exit;
+            if (UpgradeThisPackage) {
+                if (YoriLibIsPathUrl(&UpgradePath)) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), &UpgradePath);
+                }
+                Error = YoriPkgPreparePackageForInstall(&PkgIniFile, NULL, &PendingPackages, &UpgradePath);
+                if (Error != ERROR_SUCCESS) {
+                    YoriPkgDisplayErrorStringForInstallFailure(Error);
+                    goto Exit;
+                }
             }
         }
         if (Equals) {

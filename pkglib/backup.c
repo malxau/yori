@@ -640,6 +640,7 @@ YoriPkgInitializePendingPackages(
 {
     YoriLibInitializeListHead(&PendingPackages->PackageList);
     YoriLibInitializeListHead(&PendingPackages->BackupPackages);
+    YoriLibInitializeListHead(&PendingPackages->KnownPackages);
     PendingPackages->ExistingFilesTable = YoriLibAllocateHashTable(253);
     if (PendingPackages->ExistingFilesTable == NULL) {
         return FALSE;
@@ -697,6 +698,8 @@ YoriPkgDeletePendingPackages(
     //
 
     ASSERT(YoriLibIsListEmpty(&PendingPackages->BackupPackages));
+
+    YoriPkgFreeAllSourcesAndPackages(NULL, &PendingPackages->KnownPackages);
 
     ListEntry = YoriLibGetNextListEntry(&PendingPackages->PackageList, ListEntry);
     while (ListEntry != NULL) {
@@ -915,5 +918,6 @@ Exit:
     YoriPkgDeletePendingPackage(PendingPackage);
     return Result;
 }
+
 
 // vim:sw=4:ts=4:et:

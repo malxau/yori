@@ -3,7 +3,7 @@
  *
  * Private/internal header for Yori package routines
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -156,6 +156,17 @@ typedef struct _YORIPKG_PACKAGES_PENDING_INSTALL {
     YORI_LIST_ENTRY BackupPackages;
 
     /**
+     A list of known packages, including their URLs and versions.  When an
+     upgrade is attempted, this is populated with packages from the
+     pkglist.ini files in each directory, and if an upgrade URL maps to the
+     same version of the package as the installed version, upgrade is not
+     attempted, without downloading the entire package to make the decision.
+
+     This is paired with @ref YORIPKG_REMOTE_PACKAGE::PackageList .
+     */
+    YORI_LIST_ENTRY KnownPackages;
+
+    /**
      A hash table containing files that are currently installed by other
      packages that are not being upgraded or replaced by this installation
      operation.
@@ -276,12 +287,33 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     __inout PYORI_STRING UpgradePath
     );
 
+BOOL
+YoriPkgConvertUserPackagePathToMirroredPath(
+    __in PYORI_STRING PackagePath,
+    __in PYORI_STRING IniFilePath,
+    __out PYORI_STRING MirroredPath
+    );
+
 DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
     __in PYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
     __out PBOOL DeleteWhenFinished
+    );
+
+BOOL
+YoriPkgIsNewerVersionAvailable(
+    __inout PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
+    __in PYORI_STRING PackagesIni,
+    __in PYORI_STRING UpgradePath,
+    __in PYORI_STRING ExistingVersion
+    );
+
+VOID
+YoriPkgFreeAllSourcesAndPackages(
+    __in_opt PYORI_LIST_ENTRY SourcesList,
+    __in_opt PYORI_LIST_ENTRY PackageList
     );
 
 VOID

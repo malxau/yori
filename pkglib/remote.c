@@ -3,7 +3,7 @@
  *
  * Yori package manager remote source query and search
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -277,7 +277,7 @@ YoriPkgFreeRemotePackage(
 BOOL
 YoriPkgCollectSourcesFromIni(
     __in PYORI_STRING IniPath,
-    __inout PYORI_LIST_ENTRY SourcesList
+    __inout_opt PYORI_LIST_ENTRY SourcesList
     )
 {
     YORI_STRING IniValue;
@@ -300,38 +300,40 @@ YoriPkgCollectSourcesFromIni(
         goto Exit;
     }
 
-    Index = 1;
-    while (TRUE) {
-        IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
-        IniValue.LengthInChars = GetPrivateProfileString(_T("Sources"), IniKey.StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, IniPath->StartOfString);
-        if (IniValue.LengthInChars == 0) {
-            break;
-        }
-
-        Source = YoriPkgAllocateRemoteSource(&IniValue);
-        if (Source == NULL) {
-            goto Exit;
-        }
-
-        DuplicateFound = FALSE;
-
-        ListEntry = YoriLibGetNextListEntry(SourcesList, NULL);
-        while (ListEntry != NULL) {
-            ExistingSource = CONTAINING_RECORD(ListEntry, YORIPKG_REMOTE_SOURCE, SourceList);
-            if (YoriLibCompareStringInsensitive(&ExistingSource->SourceRootUrl, &Source->SourceRootUrl) == 0) {
-                DuplicateFound = TRUE;
+    if (SourcesList != NULL) {
+        Index = 1;
+        while (TRUE) {
+            IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
+            IniValue.LengthInChars = GetPrivateProfileString(_T("Sources"), IniKey.StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, IniPath->StartOfString);
+            if (IniValue.LengthInChars == 0) {
                 break;
             }
-            ListEntry = YoriLibGetNextListEntry(SourcesList, ListEntry);
-        }
 
-        if (DuplicateFound) {
-            YoriPkgFreeRemoteSource(Source);
-        } else {
-            YoriLibAppendList(SourcesList, &Source->SourceList);
-        }
+            Source = YoriPkgAllocateRemoteSource(&IniValue);
+            if (Source == NULL) {
+                goto Exit;
+            }
 
-        Index++;
+            DuplicateFound = FALSE;
+
+            ListEntry = YoriLibGetNextListEntry(SourcesList, NULL);
+            while (ListEntry != NULL) {
+                ExistingSource = CONTAINING_RECORD(ListEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+                if (YoriLibCompareStringInsensitive(&ExistingSource->SourceRootUrl, &Source->SourceRootUrl) == 0) {
+                    DuplicateFound = TRUE;
+                    break;
+                }
+                ListEntry = YoriLibGetNextListEntry(SourcesList, ListEntry);
+            }
+
+            if (DuplicateFound) {
+                YoriPkgFreeRemoteSource(Source);
+            } else {
+                YoriLibAppendList(SourcesList, &Source->SourceList);
+            }
+
+            Index++;
+        }
     }
 
     Result = TRUE;
@@ -364,7 +366,7 @@ YoriPkgCollectPackagesFromSource(
     __in PYORIPKG_REMOTE_SOURCE Source,
     __in PYORI_STRING PackagesIni,
     __inout PYORI_LIST_ENTRY PackageList,
-    __inout PYORI_LIST_ENTRY SourcesList
+    __inout_opt PYORI_LIST_ENTRY SourcesList
     )
 {
     YORI_STRING LocalPath;
@@ -1016,6 +1018,170 @@ YoriPkgGetRemotePackageUrls(
     *PackageUrls = LocalPackageUrls;
 
     return PkgIndex;
+}
+
+/**
+ Consult with an in memory cache to see if a newer version of a package is
+ available.
+
+ @param PendingPackages The set of packages being operated on.  This contains
+        a cache of URLs that are known.
+
+ @param UpgradePath Points to a URL (local or remote) of a package which is
+        being upgraded, where the parent directory should be probed for a
+        pkglist.ini to see if the package should not be upgraded.
+
+ @param ExistingVersion Points to the existing version to check against.
+
+ @param NewerVersionAvailable On successful completion, set to TRUE to
+        indicate a newer version is available, and set to FALSE to indicate
+        the currently installed version is current.
+
+ @return TRUE if the cache contains the URL of the package being upgraded,
+         so the version has been compared for whether it is current.  FALSE
+         if the URL is not found, so it is unknown whether the installed
+         package is current.
+ */
+BOOL
+YoriPkgIsNewerVersionAvailableFromCache(
+    __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
+    __in PYORI_STRING UpgradePath,
+    __in PYORI_STRING ExistingVersion,
+    __out PBOOLEAN NewerVersionAvailable
+    )
+{
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PYORIPKG_REMOTE_PACKAGE KnownPackage;
+
+    ListEntry = YoriLibGetNextListEntry(&PendingPackages->KnownPackages, ListEntry);
+    while (ListEntry != NULL) {
+        KnownPackage = CONTAINING_RECORD(ListEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
+        ListEntry = YoriLibGetNextListEntry(&PendingPackages->KnownPackages, ListEntry);
+        if (YoriLibCompareString(UpgradePath, &KnownPackage->InstallUrl) == 0) {
+            if (YoriLibCompareString(ExistingVersion, &KnownPackage->Version) == 0) {
+                *NewerVersionAvailable = FALSE;
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cache indicates package is current %y\n"), UpgradePath);
+            } else {
+                *NewerVersionAvailable = TRUE;
+            }
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+
+/**
+ Consult with pkglist.ini in a Url's parent directory to see if a newer
+ version is available.  Note that there is no guarantee that pkglist.ini
+ even exists; this is simply to avoid downloading an entire package
+ wherever possible.  Because this function can only really know that a
+ newer package is _not_ available, any errors translate to a new package
+ _is_ available, indicating that we should fall back to downloading the
+ URL to see if the package there is really newer.
+
+ @param PendingPackages The set of packages being operated on.  Note that
+        this contains a cache of URLs that are known, because during upgrade
+        we will frequently have multiple packages from the same directory on
+        a server, so having processed one package we know the result for
+        all later packages.
+
+ @param PackagesIni Points to the system's packages.ini file so that
+        mirroring can be applied.
+
+ @param UpgradePath Points to a URL (local or remote) of a package which is
+        being upgraded, where the parent directory should be probed for a
+        pkglist.ini to see if the package should not be upgraded.
+
+ @param ExistingVersion Points to the existing version to check against.
+
+ @return TRUE to indicate that either we know a newer version is available
+         or were unable to complete the check, suggesting that the
+         complete package should be downloaded.  FALSE to indicate that
+         pkglist.ini was processed successfully and we know for certain that
+         the current package version remains current.
+ */
+BOOL
+YoriPkgIsNewerVersionAvailable(
+    __inout PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
+    __in PYORI_STRING PackagesIni,
+    __in PYORI_STRING UpgradePath,
+    __in PYORI_STRING ExistingVersion
+    )
+{
+    DWORD Index;
+    DWORD Err;
+    YORI_STRING Substring;
+    YORI_STRING MirroredPath;
+    PYORIPKG_REMOTE_SOURCE RemoteSource;
+    BOOLEAN NewerVersionAvailable;
+
+    YoriLibInitEmptyString(&MirroredPath);
+    if (!YoriPkgConvertUserPackagePathToMirroredPath(UpgradePath, PackagesIni, &MirroredPath)) {
+        YoriLibCloneString(&MirroredPath, UpgradePath);
+    }
+
+    //
+    //  First consult the cache.  If we find a match for the MirroredPath.
+    //  check the corresponding version for a match.
+    //
+
+    if (YoriPkgIsNewerVersionAvailableFromCache(PendingPackages, &MirroredPath, ExistingVersion, &NewerVersionAvailable)) {
+        YoriLibFreeStringContents(&MirroredPath);
+        if (NewerVersionAvailable) {
+            return TRUE;
+        }
+        return FALSE;
+    }
+
+    //
+    //  This implies we haven't found the URL in the cache.  Cook up a URL for
+    //  the remote source
+    //
+
+    RemoteSource = NULL;
+    for (Index = MirroredPath.LengthInChars; Index > 0; Index--) {
+        if (YoriLibIsSep(MirroredPath.StartOfString[Index - 1])) {
+            YoriLibInitEmptyString(&Substring);
+            Substring.StartOfString = MirroredPath.StartOfString;
+            Substring.LengthInChars = Index - 1;
+            RemoteSource = YoriPkgAllocateRemoteSource(&Substring);
+            break;
+        }
+    }
+
+    if (RemoteSource == NULL) {
+        YoriLibFreeStringContents(&MirroredPath);
+        return TRUE;
+    }
+
+    //
+    //  Collect any packages from the remote source
+    //
+
+    Err = YoriPkgCollectPackagesFromSource(RemoteSource, PackagesIni, &PendingPackages->KnownPackages, NULL);
+    YoriPkgFreeRemoteSource(RemoteSource);
+    if (Err != ERROR_SUCCESS) {
+        YoriLibFreeStringContents(&MirroredPath);
+        return TRUE;
+    }
+
+    //
+    //  Check the cache again
+    //
+
+    if (!YoriPkgIsNewerVersionAvailableFromCache(PendingPackages, &MirroredPath, ExistingVersion, &NewerVersionAvailable)) {
+        YoriLibFreeStringContents(&MirroredPath);
+        return TRUE;
+    }
+    YoriLibFreeStringContents(&MirroredPath);
+
+    if (!NewerVersionAvailable) {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 // vim:sw=4:ts=4:et:
