@@ -92,6 +92,20 @@ BOOL
 YoriPkgDisplayAvailableRemotePackages();
 
 BOOL
+YoriPkgDisplaySources();
+
+BOOL
+YoriPkgAddNewSource(
+    __in PYORI_STRING SourcePath,
+    __in BOOLEAN InstallAsFirst
+    );
+
+BOOL
+YoriPkgDeleteSource(
+    __in PYORI_STRING SourcePath
+    );
+
+BOOL
 YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,

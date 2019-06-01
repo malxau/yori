@@ -45,6 +45,9 @@ CHAR strYpmHelpText[] =
         "YPM -l\n"
         "YPM -ri [-a <arch>] [-v <version>] <pkgname>...\n"
         "YPM -rl\n"
+        "YPM -rsa <server>\n"
+        "YPM -rsi <server>\n"
+        "YPM -rsl\n"
         "YPM -src [<pkg>]\n"
         "YPM -sym [<pkg>]\n"
         "YPM [-a <arch>] -u [<pkg>]\n"
@@ -57,6 +60,9 @@ CHAR strYpmHelpText[] =
         "   -l             List all currently installed packages\n"
         "   -ri            Install packages from remote servers\n"
         "   -rl            List available packages on remote servers\n"
+        "   -rsa           Install a new remote server as the last server\n"
+        "   -rsi           Install a new remote server as the first server\n"
+        "   -rsl           List remote servers\n"
         "   -src           Install source for specified package or all packages\n"
         "   -sym           Install debug symbols for specified package or all packages\n"
         "   -u             Upgrade a package or all currently installed packages\n";
@@ -89,7 +95,11 @@ typedef enum _YPM_OPERATION {
     YpmOpRemoteList = 7,
     YpmOpInstallRemote = 8,
     YpmOpInstallSource = 9,
-    YpmOpInstallSymbol = 10
+    YpmOpInstallSymbol = 10,
+    YpmOpRemoteSourcesList = 11,
+    YpmOpRemoteSourceInstallFirst = 12,
+    YpmOpRemoteSourceInstallLast = 13,
+    YpmOpRemoteSourceDelete = 14
 } YPM_OPERATION;
 
 #ifdef YORI_BUILTIN
@@ -218,6 +228,30 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rl")) == 0) {
                 Op = YpmOpRemoteList;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rsa")) == 0) {
+                if (i + 1 < ArgC) {
+                    Op = YpmOpRemoteSourceInstallLast;
+                    SourcePath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rsd")) == 0) {
+                if (i + 1 < ArgC) {
+                    Op = YpmOpRemoteSourceDelete;
+                    SourcePath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rsi")) == 0) {
+                if (i + 1 < ArgC) {
+                    Op = YpmOpRemoteSourceInstallFirst;
+                    SourcePath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("rsl")) == 0) {
+                Op = YpmOpRemoteSourcesList;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("sourcepath")) == 0) {
                 if (i + 1 < ArgC) {
                     SourcePath = &ArgV[i + 1];
@@ -317,6 +351,14 @@ ENTRYPOINT(
         YoriPkgCreateSourcePackage(NewFileName, NewName, NewVersion, FilePath);
     } else if (Op == YpmOpRemoteList) {
         YoriPkgDisplayAvailableRemotePackages();
+    } else if (Op == YpmOpRemoteSourceDelete) {
+        YoriPkgDeleteSource(SourcePath);
+    } else if (Op == YpmOpRemoteSourceInstallFirst) {
+        YoriPkgAddNewSource(SourcePath, TRUE);
+    } else if (Op == YpmOpRemoteSourceInstallLast) {
+        YoriPkgAddNewSource(SourcePath, FALSE);
+    } else if (Op == YpmOpRemoteSourcesList) {
+        YoriPkgDisplaySources();
     } else if (Op == YpmOpInstallRemote) {
         DWORD PkgCount;
         PkgCount = ArgC - StartArg;

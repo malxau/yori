@@ -343,6 +343,59 @@ Exit:
     return Result;
 }
 
+/**
+ Collect the set of remote sources from the system local INI file, and if no
+ sources are present, initialize some default sources.
+
+ @param PackagesIni Pointer to the local copy of the INI file.
+
+ @param SourcesList Pointer to the list of sources which can be updated with
+        newly found sources.
+
+ @param DefaultsUsed Optionally points to a boolean which is set to TRUE to
+        indicate that default sources were used because the INI file contained
+        no entries, or FALSE to indicate the INI's sources were used.
+ 
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgCollectSourcesFromIniWithDefaults(
+    __in PYORI_STRING PackagesIni,
+    __inout PYORI_LIST_ENTRY SourcesList,
+    __out_opt PBOOLEAN DefaultsUsed
+    )
+{
+    PYORIPKG_REMOTE_SOURCE Source;
+    YoriPkgCollectSourcesFromIni(PackagesIni, SourcesList);
+
+    //
+    //  If the INI file provides no place to search, default to malsmith.net
+    //
+
+    if (YoriLibIsListEmpty(SourcesList)) {
+        YORI_STRING DummySource;
+        if (DefaultsUsed != NULL) {
+            *DefaultsUsed = TRUE;
+        }
+#if YORI_BUILD_ID
+        YoriLibConstantString(&DummySource, _T("http://www.malsmith.net/testing"));
+        Source = YoriPkgAllocateRemoteSource(&DummySource);
+        if (Source != NULL) {
+            YoriLibAppendList(SourcesList, &Source->SourceList);
+        }
+#endif
+        YoriLibConstantString(&DummySource, _T("http://www.malsmith.net"));
+        Source = YoriPkgAllocateRemoteSource(&DummySource);
+        if (Source != NULL) {
+            YoriLibAppendList(SourcesList, &Source->SourceList);
+        }
+    } else if (DefaultsUsed != NULL) {
+        *DefaultsUsed = FALSE;
+    }
+
+    return TRUE;
+}
+
 
 /**
  Scan a repository of packages and collect all packages it contains into a
@@ -483,39 +536,21 @@ YoriPkgCollectAllSourcesAndPackages(
     __out PYORI_LIST_ENTRY PackageList
     )
 {
-    YORI_STRING PackagesIni;
     PYORI_LIST_ENTRY SourceEntry;
     PYORIPKG_REMOTE_SOURCE Source;
     DWORD Result;
-
-    YoriLibInitializeListHead(PackageList);
-    YoriLibInitializeListHead(SourcesList);
+    YORI_STRING PackagesIni;
 
     if (!YoriPkgGetPackageIniFile(NewDirectory, &PackagesIni)) {
         return FALSE;
     }
 
-    YoriPkgCollectSourcesFromIni(&PackagesIni, SourcesList);
-    YoriLibFreeStringContents(&PackagesIni);
+    YoriLibInitializeListHead(PackageList);
+    YoriLibInitializeListHead(SourcesList);
 
-    //
-    //  If the INI file provides no place to search, default to malsmith.net
-    //
-
-    if (YoriLibIsListEmpty(SourcesList)) {
-        YORI_STRING DummySource;
-#if YORI_BUILD_ID
-        YoriLibConstantString(&DummySource, _T("http://www.malsmith.net/testing"));
-        Source = YoriPkgAllocateRemoteSource(&DummySource);
-        if (Source != NULL) {
-            YoriLibAppendList(SourcesList, &Source->SourceList);
-        }
-#endif
-        YoriLibConstantString(&DummySource, _T("http://www.malsmith.net"));
-        Source = YoriPkgAllocateRemoteSource(&DummySource);
-        if (Source != NULL) {
-            YoriLibAppendList(SourcesList, &Source->SourceList);
-        }
+    if (!YoriPkgCollectSourcesFromIniWithDefaults(&PackagesIni, SourcesList, NULL)) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return FALSE;
     }
 
     //
@@ -534,6 +569,7 @@ YoriPkgCollectAllSourcesAndPackages(
         }
         SourceEntry = YoriLibGetNextListEntry(SourcesList, SourceEntry);
     }
+    YoriLibFreeStringContents(&PackagesIni);
 
     return TRUE;
 }
@@ -1180,6 +1216,212 @@ YoriPkgIsNewerVersionAvailable(
     if (!NewerVersionAvailable) {
         return FALSE;
     }
+
+    return TRUE;
+}
+
+/**
+ Query the configured sources and display them on the console.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDisplaySources()
+{
+    YORI_LIST_ENTRY SourcesList;
+    PYORI_LIST_ENTRY SourceEntry;
+    PYORIPKG_REMOTE_SOURCE Source;
+    BOOLEAN DefaultsUsed;
+    YORI_STRING PackagesIni;
+
+    YoriLibInitializeListHead(&SourcesList);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PackagesIni)) {
+        return FALSE;
+    }
+
+    if (!YoriPkgCollectSourcesFromIniWithDefaults(&PackagesIni, &SourcesList, &DefaultsUsed)) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return TRUE;
+    }
+
+    //
+    //  Display the sources we found.
+    //
+
+    SourceEntry = NULL;
+    SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+    while (SourceEntry != NULL) {
+        Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &Source->SourceRootUrl);
+        SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+    }
+
+    YoriPkgFreeAllSourcesAndPackages(&SourcesList, NULL);
+    YoriLibFreeStringContents(&PackagesIni);
+
+    return TRUE;
+}
+
+/**
+ Install a new remote source and add it to packages.ini
+
+ @param SourcePath The new source to install
+
+ @param InstallAsFirst If TRUE, the new source is added to the beginning of
+        the list.  If FALSE, it is added to the end.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgAddNewSource(
+    __in PYORI_STRING SourcePath,
+    __in BOOLEAN InstallAsFirst
+    )
+{
+    YORI_LIST_ENTRY SourcesList;
+    PYORI_LIST_ENTRY SourceEntry;
+    PYORIPKG_REMOTE_SOURCE Source;
+    BOOLEAN DefaultsUsed;
+    YORI_STRING PackagesIni;
+    DWORD Index;
+    YORI_STRING IniKey;
+
+    YoriLibInitializeListHead(&SourcesList);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PackagesIni)) {
+        return FALSE;
+    }
+
+    if (!YoriPkgCollectSourcesFromIniWithDefaults(&PackagesIni, &SourcesList, &DefaultsUsed)) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return TRUE;
+    }
+
+    //
+    //  Go through the list.  If we find a matching entry, remove it.
+    //
+
+    SourceEntry = NULL;
+    SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+    while (SourceEntry != NULL) {
+        Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+        SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+        if (YoriLibCompareString(&Source->SourceRootUrl, SourcePath) == 0) {
+            YoriLibRemoveListItem(&Source->SourceList);
+            YoriPkgFreeRemoteSource(Source);
+        }
+    }
+
+    //
+    //  Create a new source and insert it at the beginning or the end
+    //
+
+    Source = YoriPkgAllocateRemoteSource(SourcePath);
+    if (InstallAsFirst) {
+        YoriLibInsertList(&SourcesList, &Source->SourceList);
+    } else {
+        YoriLibAppendList(&SourcesList, &Source->SourceList);
+    }
+
+    //
+    //  Delete the existing sources section and write the new list
+    //
+
+    if (!YoriLibAllocateString(&IniKey, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgFreeAllSourcesAndPackages(&SourcesList, NULL);
+        YoriLibFreeStringContents(&PackagesIni);
+        return FALSE;
+    }
+    WritePrivateProfileString(_T("Sources"), NULL, NULL, PackagesIni.StartOfString);
+    SourceEntry = NULL;
+    Index = 1;
+    SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+    while (SourceEntry != NULL) {
+        Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+        SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+        IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
+        WritePrivateProfileString(_T("Sources"), IniKey.StartOfString, Source->SourceRootUrl.StartOfString, PackagesIni.StartOfString);
+        Index++;
+    }
+
+    YoriLibFreeStringContents(&IniKey);
+    YoriPkgFreeAllSourcesAndPackages(&SourcesList, NULL);
+    YoriLibFreeStringContents(&PackagesIni);
+
+    return TRUE;
+}
+
+/**
+ Delete a package source and update packages.ini
+
+ @param SourcePath The new source to remove
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDeleteSource(
+    __in PYORI_STRING SourcePath
+    )
+{
+    YORI_LIST_ENTRY SourcesList;
+    PYORI_LIST_ENTRY SourceEntry;
+    PYORIPKG_REMOTE_SOURCE Source;
+    BOOLEAN DefaultsUsed;
+    YORI_STRING PackagesIni;
+    DWORD Index;
+    YORI_STRING IniKey;
+
+    YoriLibInitializeListHead(&SourcesList);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PackagesIni)) {
+        return FALSE;
+    }
+
+    if (!YoriPkgCollectSourcesFromIniWithDefaults(&PackagesIni, &SourcesList, &DefaultsUsed)) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return TRUE;
+    }
+
+    //
+    //  Go through the list.  If we find a matching entry, remove it.
+    //
+
+    SourceEntry = NULL;
+    SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+    while (SourceEntry != NULL) {
+        Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+        SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+        if (YoriLibCompareString(&Source->SourceRootUrl, SourcePath) == 0) {
+            YoriLibRemoveListItem(&Source->SourceList);
+            YoriPkgFreeRemoteSource(Source);
+        }
+    }
+
+    //
+    //  Delete the existing sources section and write the new list
+    //
+
+    if (!YoriLibAllocateString(&IniKey, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriPkgFreeAllSourcesAndPackages(&SourcesList, NULL);
+        YoriLibFreeStringContents(&PackagesIni);
+        return FALSE;
+    }
+    WritePrivateProfileString(_T("Sources"), NULL, NULL, PackagesIni.StartOfString);
+    SourceEntry = NULL;
+    Index = 1;
+    SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+    while (SourceEntry != NULL) {
+        Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
+        SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
+        IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
+        WritePrivateProfileString(_T("Sources"), IniKey.StartOfString, Source->SourceRootUrl.StartOfString, PackagesIni.StartOfString);
+        Index++;
+    }
+
+    YoriLibFreeStringContents(&IniKey);
+    YoriPkgFreeAllSourcesAndPackages(&SourcesList, NULL);
+    YoriLibFreeStringContents(&PackagesIni);
 
     return TRUE;
 }
