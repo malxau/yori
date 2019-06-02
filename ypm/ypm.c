@@ -3,7 +3,7 @@
  *
  * Yori shell update tool
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,9 +43,13 @@ CHAR strYpmHelpText[] =
         "YPM -d <pkg>\n"
         "YPM -i <file>\n"
         "YPM -l\n"
+        "YPM -md <source>\n"
+        "YPM -mi <source> <target>\n"
+        "YPM -ml\n"
         "YPM -ri [-a <arch>] [-v <version>] <pkgname>...\n"
         "YPM -rl\n"
         "YPM -rsa <server>\n"
+        "YPM -rsd <server>\n"
         "YPM -rsi <server>\n"
         "YPM -rsl\n"
         "YPM -src [<pkg>]\n"
@@ -58,9 +62,13 @@ CHAR strYpmHelpText[] =
         "   -d             Delete an installed package\n"
         "   -i             Install a package from a specified file or URL\n"
         "   -l             List all currently installed packages\n"
+        "   -md            Delete a mirror\n"
+        "   -mi            Install a new mirror\n"
+        "   -ml            List mirrors\n"
         "   -ri            Install packages from remote servers\n"
         "   -rl            List available packages on remote servers\n"
         "   -rsa           Install a new remote server as the last server\n"
+        "   -rsd           Delete a remote server\n"
         "   -rsi           Install a new remote server as the first server\n"
         "   -rsl           List remote servers\n"
         "   -src           Install source for specified package or all packages\n"
@@ -99,7 +107,10 @@ typedef enum _YPM_OPERATION {
     YpmOpRemoteSourcesList = 11,
     YpmOpRemoteSourceInstallFirst = 12,
     YpmOpRemoteSourceInstallLast = 13,
-    YpmOpRemoteSourceDelete = 14
+    YpmOpRemoteSourceDelete = 14,
+    YpmOpMirrorsList = 15,
+    YpmOpMirrorInstall = 16,
+    YpmOpMirrorDelete = 17,
 } YPM_OPERATION;
 
 #ifdef YORI_BUILTIN
@@ -144,6 +155,8 @@ ENTRYPOINT(
     PYORI_STRING FileList = NULL;
     PYORI_STRING FilePath = NULL;
     PYORI_STRING Replaces = NULL;
+    PYORI_STRING MirrorSource = NULL;
+    PYORI_STRING MirrorTarget = NULL;
     DWORD ReplaceCount = 0;
     YPM_OPERATION Op;
 
@@ -207,6 +220,24 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 Op = YpmOpListPackages;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("md")) == 0) {
+                if (i + 1 < ArgC) {
+                    Op = YpmOpMirrorDelete;
+                    MirrorSource = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("mi")) == 0) {
+                if (i + 2 < ArgC) {
+                    Op = YpmOpMirrorInstall;
+                    MirrorSource = &ArgV[i + 1];
+                    MirrorTarget = &ArgV[i + 2];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ml")) == 0) {
+                Op = YpmOpMirrorsList;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("replaces")) == 0) {
                 if (Op == YpmOpCreateBinaryPackage &&
@@ -349,6 +380,12 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
         YoriPkgCreateSourcePackage(NewFileName, NewName, NewVersion, FilePath);
+    } else if (Op == YpmOpMirrorDelete) {
+        YoriPkgDeleteMirror(MirrorSource);
+    } else if (Op == YpmOpMirrorInstall) {
+        YoriPkgAddNewMirror(MirrorSource, MirrorTarget, TRUE);
+    } else if (Op == YpmOpMirrorsList) {
+        YoriPkgDisplayMirrors();
     } else if (Op == YpmOpRemoteList) {
         YoriPkgDisplayAvailableRemotePackages();
     } else if (Op == YpmOpRemoteSourceDelete) {

@@ -1295,7 +1295,7 @@ YoriPkgAddNewSource(
 
     if (!YoriPkgCollectSourcesFromIniWithDefaults(&PackagesIni, &SourcesList, &DefaultsUsed)) {
         YoriLibFreeStringContents(&PackagesIni);
-        return TRUE;
+        return FALSE;
     }
 
     //

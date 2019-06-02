@@ -106,6 +106,21 @@ YoriPkgDeleteSource(
     );
 
 BOOL
+YoriPkgDisplayMirrors();
+
+BOOL
+YoriPkgAddNewMirror(
+    __in PYORI_STRING SourceName,
+    __in PYORI_STRING TargetName,
+    __in BOOLEAN InstallAsFirst
+    );
+
+BOOL
+YoriPkgDeleteMirror(
+    __in PYORI_STRING SourceName
+    );
+
+BOOL
 YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,

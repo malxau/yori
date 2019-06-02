@@ -278,6 +278,432 @@ YoriPkgGetInstalledPackageInfo(
 }
 
 /**
+ A structure identifying the mapping from one source location to a mirrored
+ location.
+ */
+typedef struct _YORIPKG_MIRROR {
+
+    /**
+     The item of this mirror within a list of mirrors.
+     */
+    YORI_LIST_ENTRY MirrorList;
+
+    /**
+     The source path, meaning the path that packages refer to.
+     */
+    YORI_STRING SourceName;
+
+    /**
+     The target path, meaning the path that should be used instead of the
+     path contained in packages.
+     */
+    YORI_STRING TargetName;
+} YORIPKG_MIRROR, *PYORIPKG_MIRROR;
+
+/**
+ Load mirrors from the Ini file into a list.
+
+ @param IniFilePath Pointer to the path to the packages.ini file.
+
+ @param MirrorsList On input, contains an initialized list, which will be
+        populated with mirrors found in the INI file.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgLoadMirrorsFromIni(
+    __in PYORI_STRING IniFilePath,
+    __inout PYORI_LIST_ENTRY MirrorsList
+    )
+{
+    YORI_STRING IniSection;
+    YORI_STRING Find;
+    YORI_STRING Replace;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    BOOL Result = FALSE;
+    DWORD Index;
+    PYORIPKG_MIRROR Mirror;
+
+    YoriLibInitEmptyString(&IniSection);
+    YoriLibInitEmptyString(&Find);
+    YoriLibInitEmptyString(&Replace);
+
+    if (!YoriLibAllocateString(&IniSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        goto Exit;
+    }
+
+    IniSection.LengthInChars = GetPrivateProfileSection(_T("Mirrors"), IniSection.StartOfString, IniSection.LengthAllocated, IniFilePath->StartOfString);
+
+    ThisLine = IniSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        Find.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals == NULL) {
+            ThisLine += _tcslen(ThisLine);
+            ThisLine++;
+            continue;
+        }
+
+        Find.LengthInChars = (DWORD)(Equals - ThisLine);
+
+        //
+        //  In order to allow '=' to be in the find/replace strings, which are
+        //  not describable in an INI file, interpret '%' as '='.
+        //
+
+        for (Index = 0; Index < Find.LengthInChars; Index++) {
+            if (Find.StartOfString[Index] == '%') {
+                Find.StartOfString[Index] = '=';
+            }
+        }
+
+        Replace.StartOfString = Equals + 1;
+        Replace.LengthInChars = _tcslen(Replace.StartOfString);
+
+        ThisLine += Find.LengthInChars + 1 + Replace.LengthInChars + 1;
+
+        Equals[0] = '\0';
+
+        //
+        //  In order to allow '=' to be in the find/replace strings, which are
+        //  not describable in an INI file, interpret '%' as '='.
+        //
+
+        for (Index = 0; Index < Replace.LengthInChars; Index++) {
+            if (Replace.StartOfString[Index] == '%') {
+                Replace.StartOfString[Index] = '=';
+            }
+        }
+
+        Mirror = YoriLibReferencedMalloc(sizeof(YORIPKG_MIRROR) + (Find.LengthInChars + 1 + Replace.LengthInChars + 1) * sizeof(TCHAR));
+        if (Mirror == NULL) {
+            goto Exit;
+        }
+
+        YoriLibInitEmptyString(&Mirror->SourceName);
+        Mirror->SourceName.StartOfString = (LPTSTR)(Mirror + 1);
+        Mirror->SourceName.LengthInChars = Find.LengthInChars;
+        memcpy(Mirror->SourceName.StartOfString, Find.StartOfString, Find.LengthInChars * sizeof(TCHAR));
+        Mirror->SourceName.StartOfString[Mirror->SourceName.LengthInChars] = '\0';
+        Mirror->SourceName.LengthAllocated = Mirror->SourceName.LengthInChars + 1;
+        YoriLibInitEmptyString(&Mirror->TargetName);
+        Mirror->TargetName.StartOfString = (LPTSTR)(Mirror->SourceName.StartOfString + Mirror->SourceName.LengthAllocated);
+        Mirror->TargetName.LengthInChars = Replace.LengthInChars;
+        memcpy(Mirror->TargetName.StartOfString, Replace.StartOfString, Replace.LengthInChars * sizeof(TCHAR));
+        Mirror->TargetName.StartOfString[Mirror->TargetName.LengthInChars] = '\0';
+        Mirror->TargetName.LengthAllocated = Mirror->TargetName.LengthInChars + 1;
+
+        YoriLibAppendList(MirrorsList, &Mirror->MirrorList);
+    }
+
+    Result = TRUE;
+
+Exit:
+    YoriLibFreeStringContents(&IniSection);
+    return Result;
+}
+
+/**
+ Free a list of allocated mirrors.
+
+ @param MirrorsList Pointer to the list of mirrors to free.
+ */
+VOID
+YoriPkgFreeMirrorList(
+    __in PYORI_LIST_ENTRY MirrorsList
+    )
+{
+    PYORI_LIST_ENTRY MirrorEntry;
+    PYORIPKG_MIRROR Mirror;
+
+    MirrorEntry = NULL;
+    MirrorEntry = YoriLibGetNextListEntry(MirrorsList, MirrorEntry);
+    while (MirrorEntry != NULL) {
+        Mirror = CONTAINING_RECORD(MirrorEntry, YORIPKG_MIRROR, MirrorList);
+        MirrorEntry = YoriLibGetNextListEntry(MirrorsList, MirrorEntry);
+        YoriLibRemoveListItem(&Mirror->MirrorList);
+        YoriLibDereference(Mirror);
+    }
+
+}
+
+/**
+ Read the current list of mirrors from the system global packages.ini file
+ and display the result to output.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDisplayMirrors()
+{
+    YORI_LIST_ENTRY MirrorsList;
+    PYORI_LIST_ENTRY MirrorEntry;
+    PYORIPKG_MIRROR Mirror;
+    YORI_STRING PackagesIni;
+
+    YoriLibInitializeListHead(&MirrorsList);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PackagesIni)) {
+        return FALSE;
+    }
+
+    if (!YoriPkgLoadMirrorsFromIni(&PackagesIni, &MirrorsList)) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return TRUE;
+    }
+
+    YoriLibFreeStringContents(&PackagesIni);
+
+    //
+    //  Display the mirrors we found.
+    //
+
+    MirrorEntry = NULL;
+    MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+    while (MirrorEntry != NULL) {
+        Mirror = CONTAINING_RECORD(MirrorEntry, YORIPKG_MIRROR, MirrorList);
+        MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y\n"), &Mirror->SourceName, &Mirror->TargetName);
+    }
+
+    //
+    //  Free the mirrors we found.
+    //
+
+    YoriPkgFreeMirrorList(&MirrorsList);
+    return TRUE;
+}
+
+/**
+ Install a new mirror and add it to packages.ini
+
+ @param SourceName The new source path that is being mirrored
+
+ @param TargetName The new target containing mirrored contents
+
+ @param InstallAsFirst If TRUE, the new source is added to the beginning of
+        the list.  If FALSE, it is added to the end.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgAddNewMirror(
+    __in PYORI_STRING SourceName,
+    __in PYORI_STRING TargetName,
+    __in BOOLEAN InstallAsFirst
+    )
+{
+    YORI_LIST_ENTRY MirrorsList;
+    PYORI_LIST_ENTRY MirrorEntry;
+    PYORIPKG_MIRROR Mirror;
+    PYORIPKG_MIRROR NewMirror;
+    YORI_STRING PackagesIni;
+    DWORD Index;
+
+    YoriLibInitializeListHead(&MirrorsList);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PackagesIni)) {
+        return FALSE;
+    }
+
+    if (!YoriPkgLoadMirrorsFromIni(&PackagesIni, &MirrorsList)) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return FALSE;
+    }
+
+    //
+    //  Allocate a new mirror entry for the user's request.
+    //
+
+    NewMirror = YoriLibReferencedMalloc(sizeof(YORIPKG_MIRROR) + (SourceName->LengthInChars + 1 + TargetName->LengthInChars + 1) * sizeof(TCHAR));
+    if (NewMirror == NULL) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&NewMirror->SourceName);
+    NewMirror->SourceName.StartOfString = (LPTSTR)(NewMirror + 1);
+    NewMirror->SourceName.LengthInChars = SourceName->LengthInChars;
+    memcpy(NewMirror->SourceName.StartOfString, SourceName->StartOfString, SourceName->LengthInChars * sizeof(TCHAR));
+    NewMirror->SourceName.StartOfString[NewMirror->SourceName.LengthInChars] = '\0';
+    NewMirror->SourceName.LengthAllocated = NewMirror->SourceName.LengthInChars + 1;
+    YoriLibInitEmptyString(&NewMirror->TargetName);
+    NewMirror->TargetName.StartOfString = (LPTSTR)(NewMirror->SourceName.StartOfString + NewMirror->SourceName.LengthAllocated);
+    NewMirror->TargetName.LengthInChars = TargetName->LengthInChars;
+    memcpy(NewMirror->TargetName.StartOfString, TargetName->StartOfString, TargetName->LengthInChars * sizeof(TCHAR));
+    NewMirror->TargetName.StartOfString[NewMirror->TargetName.LengthInChars] = '\0';
+    NewMirror->TargetName.LengthAllocated = NewMirror->TargetName.LengthInChars + 1;
+
+    //
+    //  Replace = with %
+    //
+
+    for (Index = 0; Index < NewMirror->SourceName.LengthInChars; Index++) {
+        if (NewMirror->SourceName.StartOfString[Index] == '=') {
+            NewMirror->SourceName.StartOfString[Index] = '%';
+        }
+    }
+
+    for (Index = 0; Index < NewMirror->TargetName.LengthInChars; Index++) {
+        if (NewMirror->TargetName.StartOfString[Index] == '=') {
+            NewMirror->TargetName.StartOfString[Index] = '%';
+        }
+    }
+
+    //
+    //  Go through the list.  If we find a matching entry, remove it.
+    //
+
+    MirrorEntry = NULL;
+    MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+    while (MirrorEntry != NULL) {
+        Mirror = CONTAINING_RECORD(MirrorEntry, YORIPKG_MIRROR, MirrorList);
+        MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+
+        //
+        //  Convert each loaded entry back into its storage format.  We need
+        //  to do this before writing them, and need the entries to be
+        //  consistent for the compare.
+        //
+
+        for (Index = 0; Index < Mirror->SourceName.LengthInChars; Index++) {
+            if (Mirror->SourceName.StartOfString[Index] == '=') {
+                Mirror->SourceName.StartOfString[Index] = '%';
+            }
+        }
+
+        for (Index = 0; Index < Mirror->TargetName.LengthInChars; Index++) {
+            if (Mirror->TargetName.StartOfString[Index] == '=') {
+                Mirror->TargetName.StartOfString[Index] = '%';
+            }
+        }
+
+        if (YoriLibCompareString(&Mirror->SourceName, &NewMirror->SourceName) == 0) {
+            YoriLibRemoveListItem(&Mirror->MirrorList);
+            YoriLibDereference(Mirror);
+        }
+    }
+
+    //
+    //  Insert the new item at the beginning or end per request
+    //
+
+    if (InstallAsFirst) {
+        YoriLibInsertList(&MirrorsList, &NewMirror->MirrorList);
+    } else {
+        YoriLibAppendList(&MirrorsList, &NewMirror->MirrorList);
+    }
+
+    //
+    //  Rewrite the section
+    //
+
+    WritePrivateProfileString(_T("Mirrors"), NULL, NULL, PackagesIni.StartOfString);
+    MirrorEntry = NULL;
+    MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+    while (MirrorEntry != NULL) {
+        Mirror = CONTAINING_RECORD(MirrorEntry, YORIPKG_MIRROR, MirrorList);
+        MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+        WritePrivateProfileString(_T("Mirrors"), Mirror->SourceName.StartOfString, Mirror->TargetName.StartOfString, PackagesIni.StartOfString);
+    }
+
+    //
+    //  Free the mirrors we found.
+    //
+
+    YoriPkgFreeMirrorList(&MirrorsList);
+    YoriLibFreeStringContents(&PackagesIni);
+    return TRUE;
+}
+
+/**
+ Delete a mirror from packages.ini
+
+ @param SourceName The source path that was being mirrored
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDeleteMirror(
+    __in PYORI_STRING SourceName
+    )
+{
+    YORI_LIST_ENTRY MirrorsList;
+    PYORI_LIST_ENTRY MirrorEntry;
+    PYORIPKG_MIRROR Mirror;
+    YORI_STRING PackagesIni;
+    DWORD Index;
+
+    YoriLibInitializeListHead(&MirrorsList);
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PackagesIni)) {
+        return FALSE;
+    }
+
+    if (!YoriPkgLoadMirrorsFromIni(&PackagesIni, &MirrorsList)) {
+        YoriLibFreeStringContents(&PackagesIni);
+        return FALSE;
+    }
+
+    //
+    //  Go through the list.  If we find a matching entry, remove it.
+    //
+
+    MirrorEntry = NULL;
+    MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+    while (MirrorEntry != NULL) {
+        Mirror = CONTAINING_RECORD(MirrorEntry, YORIPKG_MIRROR, MirrorList);
+        MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+
+        if (YoriLibCompareString(&Mirror->SourceName, SourceName) == 0) {
+            YoriLibRemoveListItem(&Mirror->MirrorList);
+            YoriLibDereference(Mirror);
+        } else {
+
+            //
+            //  Convert each loaded entry back into its storage format.
+            //
+
+            for (Index = 0; Index < Mirror->SourceName.LengthInChars; Index++) {
+                if (Mirror->SourceName.StartOfString[Index] == '=') {
+                    Mirror->SourceName.StartOfString[Index] = '%';
+                }
+            }
+
+            for (Index = 0; Index < Mirror->TargetName.LengthInChars; Index++) {
+                if (Mirror->TargetName.StartOfString[Index] == '=') {
+                    Mirror->TargetName.StartOfString[Index] = '%';
+                }
+            }
+        }
+    }
+
+    //
+    //  Rewrite the section
+    //
+
+    WritePrivateProfileString(_T("Mirrors"), NULL, NULL, PackagesIni.StartOfString);
+    MirrorEntry = NULL;
+    MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+    while (MirrorEntry != NULL) {
+        Mirror = CONTAINING_RECORD(MirrorEntry, YORIPKG_MIRROR, MirrorList);
+        MirrorEntry = YoriLibGetNextListEntry(&MirrorsList, MirrorEntry);
+        WritePrivateProfileString(_T("Mirrors"), Mirror->SourceName.StartOfString, Mirror->TargetName.StartOfString, PackagesIni.StartOfString);
+    }
+
+    //
+    //  Free the mirrors we found.
+    //
+
+    YoriPkgFreeMirrorList(&MirrorsList);
+    YoriLibFreeStringContents(&PackagesIni);
+    return TRUE;
+}
+
+
+/**
  Expand a user specified package path into a full path if local, and compare
  the full path or URL against any mirrors in the INI file to determine if
  the path should be adjusted to refer to a mirrored location.
