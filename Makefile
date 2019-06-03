@@ -132,8 +132,8 @@ beta: all.real
 	@move $(BINDIR) beta\$(ARCH)
 	@move $(SYMDIR) beta\$(ARCH)\sym
 
-clean:
-	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) PROBECOMPILER=0 PROBELINKER=0 clean & cd ..$(STARTCMD)
+clean: writeconfigcache
+	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) clean READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@if exist *~ erase *~
 	@$(FOR_ST) /D %%i in ($(MODDIR) $(BINDIR) $(SYMDIR)) do @if exist %%i $(RMDIR) /s/q %%i
 	@if exist $(WRITECONFIGCACHEFILE) erase $(WRITECONFIGCACHEFILE)
