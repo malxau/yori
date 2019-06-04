@@ -79,6 +79,7 @@ YoriShLoadDll(
     PYORI_SH_LOADED_MODULE FoundEntry = NULL;
     PYORI_LIST_ENTRY ListEntry;
     DWORD DllNameLength;
+    DWORD OldErrorMode;
 
     if (YoriShLoadedModules.Next != NULL) {
         ListEntry = YoriLibGetNextListEntry(&YoriShLoadedModules, NULL);
@@ -106,11 +107,20 @@ YoriShLoadDll(
     FoundEntry->ReferenceCount = 1;
     FoundEntry->UnloadNotify = NULL;
 
+    //
+    //  Disable the dialog if the file is not a valid DLL.  This might really
+    //  be a DOS executable, not a DLL.
+    //
+
+    OldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
+
     FoundEntry->ModuleHandle = LoadLibrary(DllName);
     if (FoundEntry->ModuleHandle == NULL) {
+        SetErrorMode(OldErrorMode);
         YoriLibFree(FoundEntry);
         return NULL;
     }
+    SetErrorMode(OldErrorMode);
 
     if (YoriShLoadedModules.Next == NULL) {
         YoriLibInitializeListHead(&YoriShLoadedModules);
