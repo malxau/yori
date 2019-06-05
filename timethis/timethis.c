@@ -484,7 +484,7 @@ ENTRYPOINT(
             DllKernel32.pQueryInformationJobObject(hJob, 1, &JobInfo, sizeof(JobInfo), &BytesReturned)) {
 
             TimeThisContext.KernelTimeTreeInMs.QuadPart = JobInfo.TotalKernelTime.QuadPart / (10 * 1000);
-            TimeThisContext.UserTimeTreeInMs.QuadPart = JobInfo.TotalKernelTime.QuadPart / (10 * 1000);
+            TimeThisContext.UserTimeTreeInMs.QuadPart = JobInfo.TotalUserTime.QuadPart / (10 * 1000);
         }
         CloseHandle(hJob);
     }
