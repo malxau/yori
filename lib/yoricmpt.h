@@ -115,6 +115,14 @@ typedef long HRESULT;
 #define ERROR_ELEVATION_REQUIRED 740
 #endif
 
+#ifndef ERROR_OLD_WIN_VERSION
+/**
+ Define for the error indicating than an executable requires a newer version
+ of Windows.
+ */
+#define ERROR_OLD_WIN_VERSION 1150
+#endif
+
 #ifndef PROCESS_QUERY_LIMITED_INFORMATION
 /**
  Definition for opening processes with very limited access for compilation

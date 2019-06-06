@@ -3,7 +3,7 @@
  *
  * Yori package manager move existing files to backups and restore from them
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -669,6 +669,8 @@ YoriPkgDeletePendingPackage(
     YoriLibFreeStringContents(&PendingPackage->PackageName);
     YoriLibFreeStringContents(&PendingPackage->Version);
     YoriLibFreeStringContents(&PendingPackage->Architecture);
+    YoriLibFreeStringContents(&PendingPackage->MinimumOSBuild);
+    YoriLibFreeStringContents(&PendingPackage->PackagePathForOlderBuilds);
     YoriLibFreeStringContents(&PendingPackage->UpgradePath);
     YoriLibFreeStringContents(&PendingPackage->SourcePath);
     YoriLibFreeStringContents(&PendingPackage->SymbolPath);
@@ -741,14 +743,21 @@ YoriPkgDeletePendingPackages(
  @param PackageUrl Pointer to a source for the package.  This can be a remote
         URL or a local file.
 
- @return TRUE to indicate success, or FALSE to indicate failure.
+ @param RedirectToPackageUrl On completion may be updated to contain a
+        referenced string to a version of the package which should be
+        attempted on this system because the PackageUrl requires a newer
+        host operating system.  This is only meaningful if
+        ERROR_OLD_WIN_VERSION is returned.
+
+ @return A Win32 error code, including ERROR_SUCCESS to indicate success.
  */
 DWORD
 YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
-    __in PYORI_STRING PackageUrl
+    __in PYORI_STRING PackageUrl,
+    __out_opt PYORI_STRING RedirectToPackageUrl
     )
 {
     PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
@@ -759,6 +768,8 @@ YoriPkgPreparePackageForInstall(
     YORI_STRING PkgInstalled;
     YORI_STRING PkgToReplace;
     DWORD LineLength;
+    LONGLONG RequiredBuildNumber;
+    DWORD CharsConsumed;
     LPTSTR ThisLine;
     LPTSTR Equals;
     PYORIPKG_BACKUP_PACKAGE BackupPackage;
@@ -812,6 +823,8 @@ YoriPkgPreparePackageForInstall(
                                &PendingPackage->PackageName,
                                &PendingPackage->Version,
                                &PendingPackage->Architecture,
+                               &PendingPackage->MinimumOSBuild,
+                               &PendingPackage->PackagePathForOlderBuilds,
                                &PendingPackage->UpgradePath,
                                &PendingPackage->SourcePath,
                                &PendingPackage->SymbolPath)) {
@@ -842,6 +855,30 @@ YoriPkgPreparePackageForInstall(
         goto Exit;
     }
 
+    //
+    //  Check if the new version can run on this host by build number.  This
+    //  field may be empty, so ignore failures.
+    //
+
+    RequiredBuildNumber = 0;
+    YoriLibStringToNumber(&PendingPackage->MinimumOSBuild, FALSE, &RequiredBuildNumber, &CharsConsumed);
+    if (RequiredBuildNumber != 0) {
+        DWORD OsMajor;
+        DWORD OsMinor;
+        DWORD OsBuild;
+
+        YoriLibGetOsVersion(&OsMajor, &OsMinor, &OsBuild);
+        if (RequiredBuildNumber > OsBuild) {
+            if (RedirectToPackageUrl != NULL &&
+                PendingPackage->PackagePathForOlderBuilds.LengthInChars > 0) {
+
+                YoriLibCloneString(RedirectToPackageUrl, &PendingPackage->PackagePathForOlderBuilds);
+            }
+            Result = ERROR_OLD_WIN_VERSION;
+            YoriLibFreeStringContents(&PkgInstalled);
+            goto Exit;
+        }
+    }
 
     //
     //  Backup the current version
@@ -917,6 +954,74 @@ Exit:
     YoriLibFreeStringContents(&TempPath);
     YoriPkgDeletePendingPackage(PendingPackage);
     return Result;
+}
+
+/**
+ Given a package URL, download if necessary, extract metadata, check if an
+ alternate version of the package should be used instead, check if an existing
+ package needs to be upgraded or replaced, back up any packages that should be
+ upgraded or replaced, and add the package metadata to a list of packages
+ awaiting installation.  After this function has been called, the caller is
+ responsible for calling either @ref YoriPkgCommitAndFreeBackupPackageList or 
+ @ref YoriPkgRollbackAndFreeBackupPackageList followed by
+ @ref YoriPkgDeletePendingPackages to ensure any backed up files are either
+ deleted or restored, and the memory allocated by this routine is freed.
+
+ @param PkgIniFile Pointer to the system global INI file.
+
+ @param TargetDirectory Optionally points to a string containing the install
+        directory to back up data from.  If not specified, the application
+        directory is used.
+
+ @param PackageList Pointer to an initialized list of packages to add this
+        package to.  This list should be initialized with
+        @ref YoriPkgInitializePendingPackages.
+
+ @param PackageUrl Pointer to a source for the package.  This can be a remote
+        URL or a local file.  This may not be the URL that is actually used to
+        install if the URL is not applicable for this version of the OS.
+
+ @return A Win32 error code, including ERROR_SUCCESS to indicate success.
+ */
+DWORD
+YoriPkgPreparePackageForInstallRedirectBuild(
+    __in PYORI_STRING PkgIniFile,
+    __in_opt PYORI_STRING TargetDirectory,
+    __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
+    __in PYORI_STRING PackageUrl
+    )
+{
+    DWORD Error;
+    YORI_STRING RedirectedUrl;
+    YORI_STRING PreviousRedirectedUrl;
+    PYORI_STRING UrlToInstall;
+
+    Error = ERROR_SUCCESS;
+    YoriLibInitEmptyString(&RedirectedUrl);
+    YoriLibInitEmptyString(&PreviousRedirectedUrl);
+    UrlToInstall = PackageUrl;
+    do {
+        if (YoriLibIsPathUrl(UrlToInstall)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Downloading %y...\n"), UrlToInstall);
+        }
+        YoriLibInitEmptyString(&RedirectedUrl);
+        Error = YoriPkgPreparePackageForInstall(PkgIniFile, TargetDirectory, PackageList, UrlToInstall, &RedirectedUrl);
+        YoriLibFreeStringContents(&PreviousRedirectedUrl);
+        YoriLibInitEmptyString(&PreviousRedirectedUrl);
+
+        if (Error == ERROR_OLD_WIN_VERSION) {
+            memcpy(&PreviousRedirectedUrl, &RedirectedUrl, sizeof(YORI_STRING));
+            UrlToInstall = &PreviousRedirectedUrl;
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Version not supported on this version of Windows, attempting %y...\n"), UrlToInstall);
+            continue;
+        }
+        if (Error != ERROR_SUCCESS && Error != ERROR_OLD_WIN_VERSION) {
+            ASSERT(RedirectedUrl.MemoryToFree == NULL);
+            break;
+        }
+    } while (Error == ERROR_OLD_WIN_VERSION);
+
+    return Error;
 }
 
 

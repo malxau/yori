@@ -37,8 +37,10 @@ CHAR strYpmHelpText[] =
         "Installs or upgrades packages.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -c <file> <pkgname> <version> <arch> -filelist <file> [-upgradepath <path>]\n"
-        "       [-sourcepath <path>] [-symbolpath <path>] [-replaces <packages>]\n"
+        "YPM -c <file> <pkgname> <version> <arch> -filelist <file>\n"
+        "       [-minimumosbuild <number>] [-packagepathforolderbuilds <path>]\n"
+        "       [-upgradepath <path>] [-sourcepath <path>] [-symbolpath <path>]\n"
+        "       [-replaces <packages>]\n"
         "YPM -cs <file> <pkgname> <version> -filepath <directory>\n"
         "YPM -d <pkg>\n"
         "YPM -i <file>\n"
@@ -157,6 +159,8 @@ ENTRYPOINT(
     PYORI_STRING Replaces = NULL;
     PYORI_STRING MirrorSource = NULL;
     PYORI_STRING MirrorTarget = NULL;
+    PYORI_STRING MinimumOSBuild = NULL;
+    PYORI_STRING PackagePathForOlderBuilds = NULL;
     DWORD ReplaceCount = 0;
     YPM_OPERATION Op;
 
@@ -173,7 +177,7 @@ ENTRYPOINT(
                 YpmHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 if (i + 1 < ArgC) {
@@ -236,9 +240,26 @@ ENTRYPOINT(
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("minimumosbuild")) == 0) {
+                if (Op == YpmOpCreateBinaryPackage &&
+                    i + 1 < ArgC) {
+
+                    MinimumOSBuild = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ml")) == 0) {
                 Op = YpmOpMirrorsList;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("packagepathforolderbuilds")) == 0) {
+                if (Op == YpmOpCreateBinaryPackage &&
+                    i + 1 < ArgC) {
+
+                    PackagePathForOlderBuilds = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("replaces")) == 0) {
                 if (Op == YpmOpCreateBinaryPackage &&
                     i + 1 < ArgC) {
@@ -372,7 +393,18 @@ ENTRYPOINT(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file list\n"));
             return EXIT_FAILURE;
         }
-        YoriPkgCreateBinaryPackage(NewFileName, NewName, NewVersion, NewArch, FileList, UpgradePath, SourcePath, SymbolPath, Replaces, ReplaceCount);
+        YoriPkgCreateBinaryPackage(NewFileName,
+                                   NewName,
+                                   NewVersion,
+                                   NewArch,
+                                   FileList,
+                                   MinimumOSBuild,
+                                   PackagePathForOlderBuilds,
+                                   UpgradePath,
+                                   SourcePath,
+                                   SymbolPath,
+                                   Replaces,
+                                   ReplaceCount);
     } else if (Op == YpmOpCreateSourcePackage) {
         ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL);
         if (FilePath == NULL) {

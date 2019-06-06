@@ -3,7 +3,7 @@
  *
  * Master header for Yori package routines
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,6 +31,8 @@ YoriPkgCreateBinaryPackage(
     __in PYORI_STRING Version,
     __in PYORI_STRING Architecture,
     __in PYORI_STRING FileListFile,
+    __in_opt PYORI_STRING MinimumOSBuild,
+    __in_opt PYORI_STRING PackagePathForOlderBuilds,
     __in_opt PYORI_STRING UpgradePath,
     __in_opt PYORI_STRING SourcePath,
     __in_opt PYORI_STRING SymbolPath,

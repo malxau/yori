@@ -202,6 +202,19 @@ typedef struct _YORIPKG_PACKAGE_PENDING_INSTALL {
     YORI_STRING Architecture;
 
     /**
+     A string indicating the minimum build of Windows needed to run the
+     package.  Note that this may be an empty string.
+     */
+    YORI_STRING MinimumOSBuild;
+
+    /**
+     A string for the path for a version of the package suitable for systems
+     older than MinimumOSBuild.  Note that this may recurse multiple times.
+     This is meaningless unless MinimumOSBuild is specified.
+     */
+    YORI_STRING PackagePathForOlderBuilds;
+
+    /**
      A string for the path to upgrade the package from.  This can be an empty
      string if the package does not support upgrade.
      */
@@ -263,6 +276,8 @@ YoriPkgGetPackageInfo(
     __out PYORI_STRING PackageName,
     __out PYORI_STRING PackageVersion,
     __out PYORI_STRING PackageArch,
+    __out PYORI_STRING MinimumOSBuild,
+    __out PYORI_STRING PackagePathForOlderBuilds,
     __out PYORI_STRING UpgradePath,
     __out PYORI_STRING SourcePath,
     __out PYORI_STRING SymbolPath
@@ -307,7 +322,8 @@ YoriPkgIsNewerVersionAvailable(
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
     __in PYORI_STRING PackagesIni,
     __in PYORI_STRING UpgradePath,
-    __in PYORI_STRING ExistingVersion
+    __in PYORI_STRING ExistingVersion,
+    __out PYORI_STRING RedirectToPackageUrl
     );
 
 VOID
@@ -375,6 +391,15 @@ YoriPkgDeletePendingPackages(
 
 DWORD
 YoriPkgPreparePackageForInstall(
+    __in PYORI_STRING PkgIniFile,
+    __in_opt PYORI_STRING TargetDirectory,
+    __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
+    __in PYORI_STRING PackageUrl,
+    __out_opt PYORI_STRING RedirectToPackageUrl
+    );
+
+DWORD
+YoriPkgPreparePackageForInstallRedirectBuild(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,

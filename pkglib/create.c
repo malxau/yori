@@ -3,7 +3,7 @@
  *
  * Yori shell create packages
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -44,6 +44,13 @@
         of files that should be included in the package.  This file contains
         one file per line, no wildcards.
 
+ @param MinimumOSBuild Optionally points to a string containing the minimum
+        build of Windows required to install the package.
+
+ @param PackagePathForOlderBuilds Optionally points to a PackageName for use
+        when installing on OS builds below MinimumOSBuild.  If MinimumOSBuild
+        is not specified, this value is meaningless.
+
  @param UpgradePath Optionally points to a URL to upgrade to the latest
         version of the package from.  If not specified, no UpgradePath is
         included in the package.
@@ -70,6 +77,8 @@ YoriPkgCreateBinaryPackage(
     __in PYORI_STRING Version,
     __in PYORI_STRING Architecture,
     __in PYORI_STRING FileListFile,
+    __in_opt PYORI_STRING MinimumOSBuild,
+    __in_opt PYORI_STRING PackagePathForOlderBuilds,
     __in_opt PYORI_STRING UpgradePath,
     __in_opt PYORI_STRING SourcePath,
     __in_opt PYORI_STRING SymbolPath,
@@ -119,6 +128,12 @@ YoriPkgCreateBinaryPackage(
     WritePrivateProfileString(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
     WritePrivateProfileString(_T("Package"), _T("Architecture"), Architecture->StartOfString, TempFile.StartOfString);
     WritePrivateProfileString(_T("Package"), _T("Version"), Version->StartOfString, TempFile.StartOfString);
+    if (MinimumOSBuild != NULL) {
+        WritePrivateProfileString(_T("Package"), _T("MinimumOSBuild"), MinimumOSBuild->StartOfString, TempFile.StartOfString);
+        if (PackagePathForOlderBuilds != NULL) {
+            WritePrivateProfileString(_T("Package"), _T("PackagePathForOlderBuilds"), PackagePathForOlderBuilds->StartOfString, TempFile.StartOfString);
+        }
+    }
     if (UpgradePath != NULL) {
         WritePrivateProfileString(_T("Package"), _T("UpgradePath"), UpgradePath->StartOfString, TempFile.StartOfString);
     }

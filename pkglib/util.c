@@ -130,6 +130,13 @@ YoriPkgGetPackageIniFile(
  @param PackageArch On successful completion, populated with the package
         architecture.
 
+ @param MinimumOSBuild On successful completion, populated with the minimum
+        OS build needed to install the package.
+
+ @param PackagePathForOlderBuilds On successful completion, populated with a
+        URL that will return a version of the package suitable for use on
+        systems with less than MinimumOSBuild.
+
  @param UpgradePath On successful completion, populated with a URL that will
         return the latest version of the package.
 
@@ -147,6 +154,8 @@ YoriPkgGetPackageInfo(
     __out PYORI_STRING PackageName,
     __out PYORI_STRING PackageVersion,
     __out PYORI_STRING PackageArch,
+    __out PYORI_STRING MinimumOSBuild,
+    __out PYORI_STRING PackagePathForOlderBuilds,
     __out PYORI_STRING UpgradePath,
     __out PYORI_STRING SourcePath,
     __out PYORI_STRING SymbolPath
@@ -155,7 +164,7 @@ YoriPkgGetPackageInfo(
     YORI_STRING TempBuffer;
     DWORD MaxFieldSize = YORIPKG_MAX_FIELD_LENGTH;
 
-    if (!YoriLibAllocateString(&TempBuffer, 6 * MaxFieldSize)) {
+    if (!YoriLibAllocateString(&TempBuffer, 8 * MaxFieldSize)) {
         return FALSE;
     }
 
@@ -176,20 +185,32 @@ YoriPkgGetPackageInfo(
 
     PackageArch->LengthInChars = GetPrivateProfileString(_T("Package"), _T("Architecture"), _T(""), PackageArch->StartOfString, PackageArch->LengthAllocated, IniPath->StartOfString);
 
+    YoriLibCloneString(MinimumOSBuild, &TempBuffer);
+    MinimumOSBuild->StartOfString += 3 * MaxFieldSize;
+    MinimumOSBuild->LengthAllocated = MaxFieldSize;
+
+    MinimumOSBuild->LengthInChars = GetPrivateProfileString(_T("Package"), _T("MinimumOSBuild"), _T(""), MinimumOSBuild->StartOfString, MinimumOSBuild->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(PackagePathForOlderBuilds, &TempBuffer);
+    PackagePathForOlderBuilds->StartOfString += 4 * MaxFieldSize;
+    PackagePathForOlderBuilds->LengthAllocated = MaxFieldSize;
+
+    PackagePathForOlderBuilds->LengthInChars = GetPrivateProfileString(_T("Package"), _T("PackagePathForOlderBuilds"), _T(""), PackagePathForOlderBuilds->StartOfString, PackagePathForOlderBuilds->LengthAllocated, IniPath->StartOfString);
+
     YoriLibCloneString(UpgradePath, &TempBuffer);
-    UpgradePath->StartOfString += 3 * MaxFieldSize;
+    UpgradePath->StartOfString += 5 * MaxFieldSize;
     UpgradePath->LengthAllocated = MaxFieldSize;
 
     UpgradePath->LengthInChars = GetPrivateProfileString(_T("Package"), _T("UpgradePath"), _T(""), UpgradePath->StartOfString, UpgradePath->LengthAllocated, IniPath->StartOfString);
 
     YoriLibCloneString(SourcePath, &TempBuffer);
-    SourcePath->StartOfString += 4 * MaxFieldSize;
+    SourcePath->StartOfString += 6 * MaxFieldSize;
     SourcePath->LengthAllocated = MaxFieldSize;
 
     SourcePath->LengthInChars = GetPrivateProfileString(_T("Package"), _T("SourcePath"), _T(""), SourcePath->StartOfString, SourcePath->LengthAllocated, IniPath->StartOfString);
 
     YoriLibCloneString(SymbolPath, &TempBuffer);
-    SymbolPath->StartOfString += 5 * MaxFieldSize;
+    SymbolPath->StartOfString += 7 * MaxFieldSize;
     SymbolPath->LengthAllocated = MaxFieldSize;
 
     SymbolPath->LengthInChars = GetPrivateProfileString(_T("Package"), _T("SymbolPath"), _T(""), SymbolPath->StartOfString, SymbolPath->LengthAllocated, IniPath->StartOfString);
