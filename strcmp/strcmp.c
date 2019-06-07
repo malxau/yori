@@ -3,7 +3,7 @@
  *
  * Yori shell compare strings
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,8 @@ CHAR strStrCmpHelpText[] =
         "\n"
         "Operators are:\n"
         "   ==             Strings match exactly\n"
-        "   !=             Strings do not match\n";
+        "   !=             Strings do not match\n"
+        "   *=             First string is contained in the second string\n";
 
 /**
  Display usage text to the user.
@@ -69,9 +70,14 @@ StrCmpHelp()
 #define STRCMP_OPERATOR_NO_MATCH    1
 
 /**
+ An array index for an operator indicating a substring.
+ */
+#define STRCMP_OPERATOR_SUBSTRING   2
+
+/**
  An array index beyond the array, ie., the number of elements in the array.
  */
-#define STRCMP_OPERATOR_BEYOND_MAX  2
+#define STRCMP_OPERATOR_BEYOND_MAX  3
 
 #ifdef YORI_BUILTIN
 /**
@@ -109,6 +115,7 @@ ENTRYPOINT(
     YORI_STRING SecondPart;
     YORI_STRING OperatorMatches[STRCMP_OPERATOR_BEYOND_MAX];
     PYORI_STRING MatchingOperator;
+    PYORI_STRING FoundMatch;
     DWORD OperatorIndex;
     BOOL MatchInsensitive;
     DWORD Result;
@@ -126,7 +133,7 @@ ENTRYPOINT(
                 StrCmpHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 MatchInsensitive = TRUE;
@@ -160,6 +167,7 @@ ENTRYPOINT(
 
     YoriLibConstantString(&OperatorMatches[STRCMP_OPERATOR_EXACT_MATCH], _T("=="));
     YoriLibConstantString(&OperatorMatches[STRCMP_OPERATOR_NO_MATCH], _T("!="));
+    YoriLibConstantString(&OperatorMatches[STRCMP_OPERATOR_SUBSTRING], _T("*="));
 
     MatchingOperator = YoriLibFindFirstMatchingSubstring(&Expression, sizeof(OperatorMatches)/sizeof(OperatorMatches[0]), OperatorMatches, &OperatorIndex);
     if (MatchingOperator == NULL) {
@@ -209,6 +217,24 @@ ENTRYPOINT(
                 Result = EXIT_FAILURE;
             } else {
                 Result = EXIT_SUCCESS;
+            }
+        }
+
+    } else if (MatchingOperator == &OperatorMatches[STRCMP_OPERATOR_SUBSTRING]) {
+
+        if (MatchInsensitive) {
+            FoundMatch = YoriLibFindFirstMatchingSubstringInsensitive(&SecondPart, 1, &FirstPart, NULL);
+            if (FoundMatch != NULL) {
+                Result = EXIT_SUCCESS;
+            } else {
+                Result = EXIT_FAILURE;
+            }
+        } else {
+            FoundMatch = YoriLibFindFirstMatchingSubstring(&SecondPart, 1, &FirstPart, NULL);
+            if (FoundMatch != NULL) {
+                Result = EXIT_SUCCESS;
+            } else {
+                Result = EXIT_FAILURE;
             }
         }
 
