@@ -120,6 +120,7 @@ OSVER_BUILD_DESCRIPTION OsVerBuildDescriptions[] = {
     {6000, "Vista"},
     {6001, "Vista SP1/Server 2008"},
     {6002, "Vista SP2/Server 2008 SP2"},
+    {6003, "Vista SP2/Server 2008 SP2"},
     {7600, "Windows 7/Server 2008 R2"},
     {7601, "Windows 7 SP1/Server 2008 R2 SP1"},
     {9200, "Windows 8/Server 2012"},
@@ -130,7 +131,8 @@ OSVER_BUILD_DESCRIPTION OsVerBuildDescriptions[] = {
     {15063, "Windows 10 RS2 1703"},
     {16299, "Windows 10 RS3 1709"},
     {17134, "Windows 10 RS4 1803"},
-    {17763, "Windows 10 RS5 1809/Server 2019"}
+    {17763, "Windows 10 RS5 1809/Server 2019"},
+    {18362, "Windows 10 19H1 1903"}
 };
 
 /**
