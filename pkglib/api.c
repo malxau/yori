@@ -660,16 +660,23 @@ Exit:
 /**
  List all installed packages in the system.
 
+ @param Verbose If TRUE, display package version and architecture in addition
+        to name.  If FALSE, only package names are displayed.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgListInstalledPackages()
+YoriPkgListInstalledPackages(
+    __in BOOL Verbose
+    )
 {
     YORI_STRING PkgIniFile;
     YORI_STRING InstalledSection;
     LPTSTR ThisLine;
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
+    YORI_STRING PkgVersion;
+    YORI_STRING PkgArch;
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
@@ -680,9 +687,16 @@ YoriPkgListInstalledPackages()
         return FALSE;
     }
 
+    if (!YoriLibAllocateString(&PkgArch, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&InstalledSection);
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
     InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
 
     YoriLibInitEmptyString(&PkgNameOnly);
+    YoriLibInitEmptyString(&PkgVersion);
     ThisLine = InstalledSection.StartOfString;
 
     while (*ThisLine != '\0') {
@@ -690,16 +704,31 @@ YoriPkgListInstalledPackages()
         Equals = _tcschr(ThisLine, '=');
         if (Equals != NULL) {
             PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+            PkgVersion.StartOfString = Equals + 1;
+            PkgVersion.LengthInChars = _tcslen(Equals + 1);
         } else {
             PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+            PkgVersion.StartOfString = NULL;
+            PkgVersion.LengthInChars = 0;
         }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &PkgNameOnly);
+
         ThisLine += _tcslen(ThisLine);
         ThisLine++;
+
+        PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
+
+        PkgArch.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("Architecture"), _T(""), PkgArch.StartOfString, PkgArch.LengthAllocated, PkgIniFile.StartOfString);
+
+        if (Verbose) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y (%y)\n"), &PkgNameOnly, &PkgVersion, &PkgArch);
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &PkgNameOnly);
+        }
     }
 
     YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&InstalledSection);
+    YoriLibFreeStringContents(&PkgArch);
 
     return TRUE;
 }

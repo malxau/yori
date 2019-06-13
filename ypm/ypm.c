@@ -45,6 +45,7 @@ CHAR strYpmHelpText[] =
         "YPM -d <pkg>\n"
         "YPM -i <file>\n"
         "YPM -l\n"
+        "YPM -lv\n"
         "YPM -md <source>\n"
         "YPM -mi <source> <target>\n"
         "YPM -ml\n"
@@ -64,6 +65,7 @@ CHAR strYpmHelpText[] =
         "   -d             Delete an installed package\n"
         "   -i             Install a package from a specified file or URL\n"
         "   -l             List all currently installed packages\n"
+        "   -lv            List all currently installed packages verbosely\n"
         "   -md            Delete a mirror\n"
         "   -mi            Install a new mirror\n"
         "   -ml            List mirrors\n"
@@ -113,6 +115,7 @@ typedef enum _YPM_OPERATION {
     YpmOpMirrorsList = 15,
     YpmOpMirrorInstall = 16,
     YpmOpMirrorDelete = 17,
+    YpmOpListPackagesVerbose = 18,
 } YPM_OPERATION;
 
 #ifdef YORI_BUILTIN
@@ -224,6 +227,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 Op = YpmOpListPackages;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("lv")) == 0) {
+                Op = YpmOpListPackagesVerbose;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("md")) == 0) {
                 if (i + 1 < ArgC) {
@@ -369,7 +375,9 @@ ENTRYPOINT(
         }
 
     } else if (Op == YpmOpListPackages) {
-        YoriPkgListInstalledPackages();
+        YoriPkgListInstalledPackages(FALSE);
+    } else if (Op == YpmOpListPackagesVerbose) {
+        YoriPkgListInstalledPackages(TRUE);
     } else if (Op == YpmOpUpgradeInstalled) {
         if (StartArg == 0 || StartArg >= ArgC) {
             YoriPkgUpgradeInstalledPackages(NewArch);
