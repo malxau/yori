@@ -404,6 +404,11 @@ DirFileFoundCallback(
         YoriLibInitEmptyString(&ThisDirName);
         ThisDirName.StartOfString = FilePath->StartOfString;
         ThisDirName.LengthInChars = (DWORD)(FilePart - FilePath->StartOfString);
+        if (ThisDirName.LengthInChars == (sizeof("\\\\?\\c:") - 1) &&
+            YoriLibIsPrefixedDriveLetterWithColon(&ThisDirName)) {
+
+            ThisDirName.LengthInChars++;
+        }
         if (YoriLibCompareString(&ThisDirName, &DirContext->CurrentDirectoryName) != 0) {
             if (DirContext->ObjectsFoundInThisDir != 0 && !DirContext->MinimalDisplay) {
                 DirOutputEndOfDirectorySummary(DirContext);

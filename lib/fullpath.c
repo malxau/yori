@@ -117,6 +117,38 @@ YoriLibIsPathPrefixed(
 }
 
 /**
+ Return TRUE if the path consists of a prefix, drive letter and colon,
+ potentially followed by other characters.
+
+ @param Path Pointer to the string to check.
+
+ @return TRUE if the string starts with a prefix, drive letter and colon;
+         FALSE otherwise.
+ */
+BOOL
+YoriLibIsPrefixedDriveLetterWithColon(
+    __in PYORI_STRING Path
+    )
+{
+    if (Path->LengthInChars < 6) {
+        return FALSE;
+    }
+
+    if (!YoriLibIsPathPrefixed(Path)) {
+        return FALSE;
+    }
+
+    if (((Path->StartOfString[4] >= 'A' && Path->StartOfString[4] <= 'Z') ||
+         (Path->StartOfString[4] >= 'a' && Path->StartOfString[4] <= 'z')) &&
+        Path->StartOfString[5] == ':') {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Return TRUE if the path consists of a prefix, drive letter, colon, and path
  seperator, potentially followed by other characters.
 
