@@ -3,7 +3,7 @@
  *
  * Yori shell perform simple math operations
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -51,9 +51,9 @@ CHAR strCopyHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-p] [-v] [-x exclude]\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-p] [-s] [-t] [-v] [-x exclude]\n"
         "      <src>\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-s] [-n] [-p] [-v] [-x exclude]\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-p] [-s] [-t] [-v] [-x exclude]\n"
         "      <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
@@ -63,6 +63,7 @@ CHAR strCopyHelpText[] =
         "   -n             Copy new or changed files only\n"
         "   -p             Preserve existing files, no overwriting\n"
         "   -s             Copy subdirectories as well as files\n"
+        "   -t             Copy timestamps only, no data\n"
         "   -v             Verbose output\n"
         "   -x             Exclude files matching specified pattern\n";
 
@@ -140,38 +141,50 @@ typedef struct _COPY_CONTEXT {
     /**
      If TRUE, targets should be compressed.
      */
-    BOOL CompressDest;
+    BOOLEAN CompressDest;
 
     /**
      If TRUE, links are copied as links rather than having their contents
      copied.
      */
-    BOOL CopyAsLinks;
+    BOOLEAN CopyAsLinks;
 
     /**
      If TRUE, files are copied if they are not on the target, or if the size
      on the source is different to the target, or if the last written time
      on the source is significantly different to the target.
      */
-    BOOL CopyNewOnly;
+    BOOLEAN CopyNewOnly;
 
     /**
      If TRUE, files are copied if they do not already exists.  Any existing
      file will be skipped.
      */
-    BOOL PreserveExisting;
+    BOOLEAN PreserveExisting;
+
+    /**
+     If TRUE, times from the source are explicitly copied to the target. If
+     FALSE, this task is left to CopyFile's defaults.
+     */
+    BOOLEAN CopyTimestamps;
+
+    /**
+     If TRUE, data copies are skipped.  This is done when timestamps are
+     being copied on existing files without moving any data.
+     */
+    BOOLEAN SkipDataCopy;
 
     /**
      If TRUE, the destination is a device rather than a file, and CopyFile
      should not be used since setting file metadata on the device is
      expected to fail.
      */
-    BOOL DestinationIsDevice;
+    BOOLEAN DestinationIsDevice;
 
     /**
      If TRUE, output is generated for each object copied.
      */
-    BOOL Verbose;
+    BOOLEAN Verbose;
 } COPY_CONTEXT, *PCOPY_CONTEXT;
 
 /**
@@ -616,6 +629,49 @@ CopyAsDumbDataMove(
 }
 
 /**
+ Apply the timestamps from the source enumeration to the target file.  This
+ can be done as a standalone operation or as part of updating files to
+ newer contents, where it is important that the timestamps of the target are
+ updated.
+
+ @param SourceFindData Pointer to the enumeration from the source specifying
+        file times to apply.
+
+ @param DestFile Points to the fully qualified pathname to the target to
+        apply timestamps to.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+CopyTimestamps(
+    __in PWIN32_FIND_DATA SourceFindData,
+    __in PYORI_STRING DestFile
+    )
+{
+    HANDLE DestFileHandle;
+
+    DestFileHandle = CreateFile(DestFile->StartOfString,
+                                FILE_WRITE_ATTRIBUTES,
+                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL|FILE_FLAG_BACKUP_SEMANTICS,
+                                NULL);
+
+    if (DestFileHandle == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    if (!SetFileTime(DestFileHandle, &SourceFindData->ftCreationTime, &SourceFindData->ftLastAccessTime, &SourceFindData->ftLastWriteTime)) {
+        CloseHandle(DestFileHandle);
+        return FALSE;
+    }
+
+    CloseHandle(DestFileHandle);
+    return TRUE;
+}
+
+/**
  A callback that is invoked when a file is found that matches a search criteria
  specified in the set of strings to enumerate.
 
@@ -711,47 +767,54 @@ CopyFileFoundCallback(
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Copying %y to %y\n"), SourceNameToDisplay, DestNameToDisplay);
     }
 
-    if (FileInfo != NULL &&
-        FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT &&
-        CopyContext->CopyAsLinks &&
-        (FileInfo->dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT || FileInfo->dwReserved0 == IO_REPARSE_TAG_SYMLINK)) {
 
-        CopyAsLink(FilePath->StartOfString, FullDest.StartOfString, (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+    if (!CopyContext->SkipDataCopy) {
+        if (FileInfo != NULL &&
+            FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT &&
+            CopyContext->CopyAsLinks &&
+            (FileInfo->dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT || FileInfo->dwReserved0 == IO_REPARSE_TAG_SYMLINK)) {
 
-    } else if (FileInfo != NULL &&
-               FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-        if (!CreateDirectory(FullDest.StartOfString, NULL)) {
-            DWORD LastError = GetLastError();
-            if (LastError != ERROR_ALREADY_EXISTS) {
+            CopyAsLink(FilePath->StartOfString, FullDest.StartOfString, (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+
+        } else if (FileInfo != NULL &&
+                   FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            if (!CreateDirectory(FullDest.StartOfString, NULL)) {
+                DWORD LastError = GetLastError();
+                if (LastError != ERROR_ALREADY_EXISTS) {
+                    LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %s: %s"), FullDest.StartOfString, ErrText);
+                    YoriLibFreeWinErrorText(ErrText);
+                }
+            }
+        } else if (CopyContext->DestinationIsDevice || YoriLibIsFileNameDeviceName(FilePath)) {
+            CopyAsDumbDataMove(FilePath, &FullDest);
+        } else {
+            if (!CopyFile(FilePath->StartOfString, FullDest.StartOfString, FALSE)) {
+                DWORD LastError = GetLastError();
                 LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %s: %s"), FullDest.StartOfString, ErrText);
+                if (SourceNameToDisplay != &HumanSourcePath) {
+                    if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
+                        SourceNameToDisplay = &HumanSourcePath;
+                    }
+                }
+                if (DestNameToDisplay != &HumanDestPath) {
+                    if (YoriLibUnescapePath(&FullDest, &HumanDestPath)) {
+                        DestNameToDisplay = &HumanDestPath;
+                    }
+                }
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
             }
-        }
-    } else if (CopyContext->DestinationIsDevice || YoriLibIsFileNameDeviceName(FilePath)) {
-        CopyAsDumbDataMove(FilePath, &FullDest);
-    } else {
-        if (!CopyFile(FilePath->StartOfString, FullDest.StartOfString, FALSE)) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            if (SourceNameToDisplay != &HumanSourcePath) {
-                if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
-                    SourceNameToDisplay = &HumanSourcePath;
-                }
-            }
-            if (DestNameToDisplay != &HumanDestPath) {
-                if (YoriLibUnescapePath(&FullDest, &HumanDestPath)) {
-                    DestNameToDisplay = &HumanDestPath;
-                }
-            }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
-        }
 
-        if (CopyContext->CompressDest) {
+            if (CopyContext->CompressDest) {
 
-            YoriLibCompressFileInBackground(&CopyContext->CompressContext, &FullDest);
+                YoriLibCompressFileInBackground(&CopyContext->CompressContext, &FullDest);
+            }
         }
+    }
+
+    if (CopyContext->CopyTimestamps && FileInfo != NULL) {
+        CopyTimestamps(FileInfo, &FullDest);
     }
 
     CopyContext->FilesFoundThisArg++;
@@ -881,7 +944,7 @@ ENTRYPOINT(
                 CopyHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -918,14 +981,21 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 CopyContext.PreserveExisting = FALSE;
+                CopyContext.SkipDataCopy = FALSE;
                 CopyContext.CopyNewOnly = TRUE;
+                CopyContext.CopyTimestamps = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
                 CopyContext.CopyNewOnly = FALSE;
+                CopyContext.SkipDataCopy = FALSE;
                 CopyContext.PreserveExisting = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+                CopyContext.CopyTimestamps = TRUE;
+                CopyContext.SkipDataCopy = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
                 CopyContext.Verbose = TRUE;
