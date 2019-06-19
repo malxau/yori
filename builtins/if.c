@@ -55,9 +55,11 @@ IfHelp()
 
 /**
  Escape any redirection operators.  This is used on the test condition which
- frequently contains characters like > or < but these are intended to describe
- evaluation conditions (and should be passed to the test application) not IO 
- redirection.
+ frequently contains characters like > or < which may be intended to describe
+ the evaluation condition (and should be passed to the test application.) IO
+ redirection is heuristically detected by checking if the characters following
+ the redirection operator is numeric (implying comparison), or anything else
+ (implying redirection.)
 
  @param String The string to expand redirection operators in.  This string may
         be reallocated to be large enough to contain the escaped string.
@@ -79,7 +81,19 @@ IfExpandRedirectOperators(
         if (String->StartOfString[Index] == '>' ||
             String->StartOfString[Index] == '<') {
 
-            MatchCount++;
+            if (Index + 1 >= String->LengthInChars) {
+                MatchCount++;
+            } else {
+                TCHAR TestChar;
+
+                TestChar = String->StartOfString[Index + 1];
+                if (TestChar == '-' ||
+                    (TestChar <= '9' &&
+                     TestChar >= '0')) {
+
+                    MatchCount++;
+                }
+            }
         }
     }
 
@@ -97,8 +111,21 @@ IfExpandRedirectOperators(
         if (String->StartOfString[Index] == '>' ||
             String->StartOfString[Index] == '<') {
 
-            NewAllocation[DestIndex] = '^';
-            DestIndex++;
+            if (Index + 1 >= String->LengthInChars) {
+                NewAllocation[DestIndex] = '^';
+                DestIndex++;
+            } else {
+                TCHAR TestChar;
+
+                TestChar = String->StartOfString[Index + 1];
+                if (TestChar == '-' ||
+                    (TestChar <= '9' &&
+                     TestChar >= '0')) {
+
+                    NewAllocation[DestIndex] = '^';
+                    DestIndex++;
+                }
+            }
         }
         NewAllocation[DestIndex] = String->StartOfString[Index];
         DestIndex++;
