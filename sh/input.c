@@ -328,12 +328,23 @@ YoriShDisplayAfterKeyPress(
 
         //
         //  Calculate the locations to write both the new text as well as where
-        //  to erase any previous test.
+        //  to erase any previous text.
         //
-        //  Calculate where the buffer will end and discard the result; this is
-        //  done to ensure the screen buffer is scrolled so the whole output
-        //  has somewhere to go.
+        //  Calculate where the buffer will end in order to force the display
+        //  to scroll so the whole output has somewhere to go.  The suggestion
+        //  is scrolled first because it must be longer than the buffer alone,
+        //  so doing this ensures sufficient scrolling has performed for both
+        //  WritePosition and SelectionPosition to be valid.
         //
+
+        if (Buffer->SuggestionString.LengthInChars > 0) {
+            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, NULL)) {
+                return FALSE;
+            }
+            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars, &SuggestionPosition)) {
+                return FALSE;
+            }
+        }
 
         if (Buffer->DirtyBeginOffset < Buffer->String.LengthInChars && Buffer->DirtyLength > 0) {
             if (Buffer->DirtyBeginOffset + Buffer->DirtyLength > Buffer->String.LengthInChars) {
@@ -350,14 +361,6 @@ YoriShDisplayAfterKeyPress(
             }
         }
 
-        if (Buffer->SuggestionString.LengthInChars > 0) {
-            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, NULL)) {
-                return FALSE;
-            }
-            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars, &SuggestionPosition)) {
-                return FALSE;
-            }
-        }
 
         if (NumberToFill) {
             if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill, NULL)) {
