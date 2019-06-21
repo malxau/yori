@@ -29,6 +29,106 @@
 /**
  Returns the coordinates in the console if the cursor is moved by a given
  number of cells.  Note the input value is signed, as this routine can move
+ forwards (positive values) or backwards (negative values.)  This function
+ uses a preexisting handle and screen buffer info structure which it keeps
+ up to date for repetitive calling.
+
+ @param ConsoleHandle A handle to the console output.
+
+ @param ScreenInfo Pointer to information about the current screen layout.
+        This function may scroll the buffer, but if it does, it will update
+        the values in this structure to remain correct.
+
+ @param PlacesToMove The number of cells to move relative to the cursor.
+
+ @param NewLocation If specified, on successful completion populated with the
+        X/Y coordinates of the cell if the cursor was moved the specified
+        number of places.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShDetermineCellLocationIfMovedCacheResult(
+    __in HANDLE ConsoleHandle,
+    __inout PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
+    __in INT PlacesToMove,
+    __out_opt PCOORD NewLocation
+    )
+{
+    INT PlacesToMoveDown;
+    INT PlacesToMoveRight;
+    COORD NewPosition;
+
+    PlacesToMoveDown = PlacesToMove / ScreenInfo->dwSize.X;
+    PlacesToMoveRight = PlacesToMove % ScreenInfo->dwSize.X;
+    if (PlacesToMoveRight > 0) {
+        if (PlacesToMoveRight + ScreenInfo->dwCursorPosition.X >= ScreenInfo->dwSize.X) {
+            PlacesToMoveRight -= ScreenInfo->dwSize.X;
+            PlacesToMoveDown++;
+        }
+    } else {
+
+        if (PlacesToMoveRight + ScreenInfo->dwCursorPosition.X < 0) {
+            PlacesToMoveRight += ScreenInfo->dwSize.X;
+            PlacesToMoveDown--;
+        }
+    }
+
+    NewPosition.Y = (WORD)(ScreenInfo->dwCursorPosition.Y + PlacesToMoveDown);
+    NewPosition.X = (WORD)(ScreenInfo->dwCursorPosition.X + PlacesToMoveRight);
+
+    //
+    //  If the new position is off the end of the buffer, scroll the buffer up.
+    //  Adjust the cursor so it's with the same text it currently is, implying
+    //  that it's on a different buffer line.
+    //
+
+    if (NewPosition.Y >= ScreenInfo->dwSize.Y) {
+        SMALL_RECT ContentsToPreserve;
+        SMALL_RECT ContentsToErase;
+        COORD Origin;
+        CHAR_INFO NewChar;
+        WORD LinesToMove;
+
+        LinesToMove = (WORD)(NewPosition.Y - ScreenInfo->dwSize.Y + 1);
+
+        ContentsToPreserve.Left = 0;
+        ContentsToPreserve.Right = (WORD)(ScreenInfo->dwSize.X - 1);
+        ContentsToPreserve.Top = LinesToMove;
+        ContentsToPreserve.Bottom = (WORD)(ScreenInfo->dwSize.Y - 1);
+
+        ContentsToErase.Left = 0;
+        ContentsToErase.Right = (WORD)(ScreenInfo->dwSize.X - 1);
+        ContentsToErase.Top = (WORD)(ScreenInfo->dwSize.Y - LinesToMove);
+        ContentsToErase.Bottom = (WORD)(ScreenInfo->dwSize.Y - 1);
+
+        Origin.X = 0;
+        Origin.Y = 0;
+
+        NewChar.Char.UnicodeChar = ' ';
+        NewChar.Attributes = ScreenInfo->wAttributes;
+        if (!ScrollConsoleScreenBuffer(ConsoleHandle, &ContentsToPreserve, NULL, Origin, &NewChar)) {
+            return FALSE;
+        }
+
+        ScreenInfo->dwCursorPosition.Y = (WORD)(ScreenInfo->dwCursorPosition.Y - LinesToMove);
+        if (!SetConsoleCursorPosition(ConsoleHandle, ScreenInfo->dwCursorPosition)) {
+            return FALSE;
+        }
+
+        NewPosition.Y = (WORD)(NewPosition.Y - LinesToMove);
+    }
+
+    if (NewLocation != NULL) {
+        *NewLocation = NewPosition;
+    }
+
+    return TRUE;
+}
+
+/**
+ Returns the coordinates in the console if the cursor is moved by a given
+ number of cells.  Note the input value is signed, as this routine can move
  forwards (positive values) or backwards (negative values.)
 
  @param PlacesToMove The number of cells to move relative to the cursor.
@@ -46,80 +146,14 @@ YoriShDetermineCellLocationIfMoved(
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    INT PlacesToMoveDown;
-    INT PlacesToMoveRight;
-    COORD NewPosition;
     HANDLE ConsoleHandle;
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
     if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
         return FALSE;
     }
 
-    PlacesToMoveDown = PlacesToMove / ScreenInfo.dwSize.X;
-    PlacesToMoveRight = PlacesToMove % ScreenInfo.dwSize.X;
-    if (PlacesToMoveRight > 0) {
-        if (PlacesToMoveRight + ScreenInfo.dwCursorPosition.X >= ScreenInfo.dwSize.X) {
-            PlacesToMoveRight -= ScreenInfo.dwSize.X;
-            PlacesToMoveDown++;
-        }
-    } else {
-
-        if (PlacesToMoveRight + ScreenInfo.dwCursorPosition.X < 0) {
-            PlacesToMoveRight += ScreenInfo.dwSize.X;
-            PlacesToMoveDown--;
-        }
-    }
-
-    NewPosition.Y = (WORD)(ScreenInfo.dwCursorPosition.Y + PlacesToMoveDown);
-    NewPosition.X = (WORD)(ScreenInfo.dwCursorPosition.X + PlacesToMoveRight);
-
-    //
-    //  If the new position is off the end of the buffer, scroll the buffer up.
-    //
-
-    if (NewPosition.Y >= ScreenInfo.dwSize.Y) {
-        SMALL_RECT ContentsToPreserve;
-        SMALL_RECT ContentsToErase;
-        COORD Origin;
-        CHAR_INFO NewChar;
-        WORD LinesToMove;
-
-        LinesToMove = (WORD)(NewPosition.Y - ScreenInfo.dwSize.Y + 1);
-
-        ContentsToPreserve.Left = 0;
-        ContentsToPreserve.Right = (WORD)(ScreenInfo.dwSize.X - 1);
-        ContentsToPreserve.Top = LinesToMove;
-        ContentsToPreserve.Bottom = (WORD)(ScreenInfo.dwSize.Y - 1);
-
-        ContentsToErase.Left = 0;
-        ContentsToErase.Right = (WORD)(ScreenInfo.dwSize.X - 1);
-        ContentsToErase.Top = (WORD)(ScreenInfo.dwSize.Y - LinesToMove);
-        ContentsToErase.Bottom = (WORD)(ScreenInfo.dwSize.Y - 1);
-
-        Origin.X = 0;
-        Origin.Y = 0;
-
-        NewChar.Char.UnicodeChar = ' ';
-        NewChar.Attributes = ScreenInfo.wAttributes;
-        if (!ScrollConsoleScreenBuffer(ConsoleHandle, &ContentsToPreserve, NULL, Origin, &NewChar)) {
-            return FALSE;
-        }
-
-        ScreenInfo.dwCursorPosition.Y = (WORD)(ScreenInfo.dwCursorPosition.Y - LinesToMove);
-        if (!SetConsoleCursorPosition(ConsoleHandle, ScreenInfo.dwCursorPosition)) {
-            return FALSE;
-        }
-
-        NewPosition.Y = (WORD)(NewPosition.Y - LinesToMove);
-    }
-
-    if (NewLocation != NULL) {
-        *NewLocation = NewPosition;
-    }
-
-    return TRUE;
+    return YoriShDetermineCellLocationIfMovedCacheResult(ConsoleHandle, &ScreenInfo, PlacesToMove, NewLocation);
 }
 
 /**
@@ -202,6 +236,37 @@ YoriShMoveCursor(
 }
 
 /**
+ Move the cursor from its current position.  Note the input value is signed,
+ as this routine can move forwards (positive values) or backwards (negative
+ values.)
+
+ @param ConsoleHandle A handle to the console output.
+
+ @param ScreenInfo Pointer to information about the current screen layout.
+        This function may scroll the buffer, but if it does, it will update
+        the values in this structure to remain correct.
+
+ @param PlacesToMove The number of cells to move the cursor.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShMoveCursorCacheResult(
+    __in HANDLE ConsoleHandle,
+    __inout PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
+    __in INT PlacesToMove
+    )
+{
+    COORD NewPosition;
+    if (YoriShDetermineCellLocationIfMovedCacheResult(ConsoleHandle, ScreenInfo, PlacesToMove, &NewPosition)) {
+        if (SetConsoleCursorPosition(ConsoleHandle, NewPosition)) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/**
  After a key has been pressed, capture the current state of the buffer so
  that it is ready to accept transformations as a result of the key
  being pressed.
@@ -257,7 +322,6 @@ YoriShDisplayAfterKeyPress(
     COORD FillPosition;
     COORD SuggestionPosition;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    WORD FillAttributes;
     HANDLE hConsole;
 
     //
@@ -311,10 +375,8 @@ YoriShDisplayAfterKeyPress(
         Buffer->PreviousCurrentOffset != Buffer->CurrentOffset) {
 
         hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        if (GetConsoleScreenBufferInfo(hConsole, &ScreenInfo)) {
-            FillAttributes = ScreenInfo.wAttributes;
-        } else {
-            FillAttributes = YoriLibVtGetDefaultColor();
+        if (!GetConsoleScreenBufferInfo(hConsole, &ScreenInfo)) {
+            return FALSE;
         }
 
         //
@@ -338,10 +400,10 @@ YoriShDisplayAfterKeyPress(
         //
 
         if (Buffer->SuggestionString.LengthInChars > 0) {
-            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars, &SuggestionPosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars, &SuggestionPosition)) {
                 return FALSE;
             }
         }
@@ -353,20 +415,20 @@ YoriShDisplayAfterKeyPress(
                 NumberToWrite = Buffer->DirtyLength;
             }
 
-            if (!YoriShDetermineCellLocationIfMoved((-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset + NumberToWrite, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset + NumberToWrite, NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMoved((-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset, &WritePosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset, &WritePosition)) {
                 return FALSE;
             }
         }
 
 
         if (NumberToFill) {
-            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill, NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMoved(-1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, &FillPosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, &FillPosition)) {
                 return FALSE;
             }
         }
@@ -380,7 +442,7 @@ YoriShDisplayAfterKeyPress(
             //  and render the text.
             //
 
-            if (!YoriShMoveCursor(Buffer->CurrentOffset - Buffer->PreviousCurrentOffset)) {
+            if (!YoriShMoveCursorCacheResult(hConsole, &ScreenInfo, Buffer->CurrentOffset - Buffer->PreviousCurrentOffset)) {
                 return FALSE;
             }
 
