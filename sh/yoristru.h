@@ -483,6 +483,16 @@ typedef struct _YORI_SH_TAB_COMPLETE_CONTEXT {
 typedef struct _YORI_SH_INPUT_BUFFER {
 
     /**
+     Handle to standard input when it's a console.
+     */
+    HANDLE ConsoleInputHandle;
+
+    /**
+     Handle to standard output when it's a console.
+     */
+    HANDLE ConsoleOutputHandle;
+
+    /**
      Pointer to a string containing the text as being entered by the user.
      */
     YORI_STRING String;
@@ -557,6 +567,12 @@ typedef struct _YORI_SH_INPUT_BUFFER {
     DWORD PreviousMouseButtonState;
 
     /**
+     The tick count when the window was last made active, or zero if a
+     window activation has not been observed since this input line began.
+     */
+    DWORD WindowActivatedTick;
+
+    /**
      Description of the current selected region.
      */
     YORILIB_SELECTION Selection;
@@ -599,7 +615,6 @@ typedef struct _YORI_SH_INPUT_BUFFER {
      The current search string, when searching within the buffer itself.
      */
     YORI_STRING SearchString;
-
 
 } YORI_SH_INPUT_BUFFER, *PYORI_SH_INPUT_BUFFER;
 

@@ -179,16 +179,13 @@ YoriShStringOffsetFromCoordinates(
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    HANDLE ConsoleHandle;
     DWORD StartOfString;
     DWORD CursorPosition;
     DWORD TargetPosition;
 
     UNREFERENCED_PARAMETER(TargetCoordinates);
 
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+    if (!GetConsoleScreenBufferInfo(Buffer->ConsoleOutputHandle, &ScreenInfo)) {
         return FALSE;
     }
 
@@ -374,7 +371,7 @@ YoriShDisplayAfterKeyPress(
         Buffer->SuggestionDirty ||
         Buffer->PreviousCurrentOffset != Buffer->CurrentOffset) {
 
-        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        hConsole = Buffer->ConsoleOutputHandle;
         if (!GetConsoleScreenBufferInfo(hConsole, &ScreenInfo)) {
             return FALSE;
         }
@@ -514,16 +511,15 @@ YoriShEnsureStringHasEnoughCharacters(
  */
 BOOL
 YoriShConfigureMouseForPrompt(
+    __in HANDLE ConsoleInputHandle
     )
 {
-    HANDLE ConsoleHandle;
     DWORD ConsoleMode;
     if (!YoriShGlobal.YoriQuickEdit) {
         return TRUE;
     }
 
-    ConsoleHandle = GetStdHandle(STD_INPUT_HANDLE);
-    if (!GetConsoleMode(ConsoleHandle, &ConsoleMode)) {
+    if (!GetConsoleMode(ConsoleInputHandle, &ConsoleMode)) {
         return FALSE;
     }
 
@@ -533,7 +529,7 @@ YoriShConfigureMouseForPrompt(
     //  this has the effect of turning off console's quickedit.
     //
 
-    SetConsoleMode(ConsoleHandle, ConsoleMode | ENABLE_EXTENDED_FLAGS);
+    SetConsoleMode(ConsoleInputHandle, ConsoleMode | ENABLE_EXTENDED_FLAGS);
     return TRUE;
 }
 
@@ -545,16 +541,15 @@ YoriShConfigureMouseForPrompt(
  */
 BOOL
 YoriShConfigureMouseForPrograms(
+    __in HANDLE ConsoleInputHandle
     )
 {
-    HANDLE ConsoleHandle;
     DWORD ConsoleMode;
     if (!YoriShGlobal.YoriQuickEdit) {
         return TRUE;
     }
 
-    ConsoleHandle = GetStdHandle(STD_INPUT_HANDLE);
-    if (!GetConsoleMode(ConsoleHandle, &ConsoleMode)) {
+    if (!GetConsoleMode(ConsoleInputHandle, &ConsoleMode)) {
         return FALSE;
     }
 
@@ -563,7 +558,7 @@ YoriShConfigureMouseForPrograms(
     //  QuickEdit.
     //
 
-    SetConsoleMode(ConsoleHandle, ConsoleMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS);
+    SetConsoleMode(ConsoleInputHandle, ConsoleMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS);
     return TRUE;
 }
 
@@ -627,7 +622,7 @@ YoriShTerminateInput(
     YoriLibCleanupSelection(&Buffer->Mouseover);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
     YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
-    YoriShConfigureMouseForPrograms();
+    YoriShConfigureMouseForPrograms(Buffer->ConsoleInputHandle);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 }
 
@@ -1410,8 +1405,7 @@ YoriShClearScreen(
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     DWORD CharsWritten;
 
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-
+    ConsoleHandle = Buffer->ConsoleOutputHandle;
     if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
         return;
     }
@@ -1597,7 +1591,7 @@ YoriShProcessEnhancedKeyDown(
             Buffer->InsertMode = TRUE;
             Buffer->CursorInfo.dwSize = 20;
         }
-        SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &Buffer->CursorInfo);
+        SetConsoleCursorInfo(Buffer->ConsoleOutputHandle, &Buffer->CursorInfo);
     } else if (KeyCode == VK_HOME) {
         Buffer->CurrentOffset = 0;
     } else if (KeyCode == VK_END) {
@@ -2065,7 +2059,7 @@ YoriShProcessMouseButtonDown(
         COORD EndRange;
         HANDLE ConsoleHandle;
 
-        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        ConsoleHandle = Buffer->ConsoleOutputHandle;
 
         if (YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange) && BeginRange.Y == EndRange.Y) {
 
@@ -2183,7 +2177,7 @@ YoriShProcessMouseDoubleClick(
     BOOL BufferChanged = FALSE;
     HANDLE ConsoleHandle;
 
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    ConsoleHandle = Buffer->ConsoleOutputHandle;
 
     UNREFERENCED_PARAMETER(TerminateInput);
 
@@ -2229,6 +2223,7 @@ YoriShProcessMouseMove(
     __out PBOOL TerminateInput
     )
 {
+    DWORD CurrentTickCount;
 
     UNREFERENCED_PARAMETER(TerminateInput);
 
@@ -2236,16 +2231,28 @@ YoriShProcessMouseMove(
 
         if (YoriLibSelectionInitialSpecified(&Buffer->Selection)) {
 
-            YoriLibUpdateSelectionToPoint(&Buffer->Selection,
-                                          InputRecord->Event.MouseEvent.dwMousePosition.X,
-                                          InputRecord->Event.MouseEvent.dwMousePosition.Y);
-
             //
-            //  Do one scroll immediately.  This allows the user to force scrolling
-            //  by moving the mouse outside the window.
+            //  If the window has been activated in the last 200ms, don't
+            //  update the selection.  The user is probably trying to click
+            //  in the window to activate it.  If the user is still holding
+            //  down the button and moving around after 200ms, then it'll
+            //  be treated as a selection.
             //
 
-            YoriLibPeriodicScrollForSelection(&Buffer->Selection);
+            CurrentTickCount = GetTickCount();
+            if (Buffer->WindowActivatedTick + 200 < CurrentTickCount) {
+
+                YoriLibUpdateSelectionToPoint(&Buffer->Selection,
+                                              InputRecord->Event.MouseEvent.dwMousePosition.X,
+                                              InputRecord->Event.MouseEvent.dwMousePosition.Y);
+
+                //
+                //  Do one scroll immediately.  This allows the user to force scrolling
+                //  by moving the mouse outside the window.
+                //
+
+                YoriLibPeriodicScrollForSelection(&Buffer->Selection);
+            }
 
             return TRUE;
         }
@@ -2256,7 +2263,7 @@ YoriShProcessMouseMove(
         COORD EndRange;
         HANDLE ConsoleHandle;
 
-        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        ConsoleHandle = Buffer->ConsoleOutputHandle;
 
         if (YoriShFindAutoBreakSelectionRange(ConsoleHandle, InputRecord->Event.MouseEvent.dwMousePosition, &BeginRange, &EndRange) && BeginRange.Y == EndRange.Y) {
 
@@ -2306,7 +2313,7 @@ YoriShProcessMouseScroll(
     UNREFERENCED_PARAMETER(ButtonsPressed);
     UNREFERENCED_PARAMETER(TerminateInput);
 
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    ConsoleHandle = Buffer->ConsoleOutputHandle;
     Direction = HIWORD(InputRecord->Event.MouseEvent.dwButtonState);
     if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
         return FALSE;
@@ -2349,10 +2356,16 @@ YoriShProcessMouseScroll(
  @param Expression On successful completion, updated to point to the
         entered expression.
 
+ @param InputHandle The handle to the console input.
+
+ @param OutputHandle The handle to the console output.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriShGetExpressionFromConsole(
+    __in HANDLE InputHandle,
+    __in HANDLE OutputHandle,
     __inout PYORI_STRING Expression
     )
 {
@@ -2366,16 +2379,14 @@ YoriShGetExpressionFromConsole(
     BOOL TerminateInput;
     BOOL RestartStateSaved = FALSE;
     BOOL SuggestionPopulated = FALSE;
-    HANDLE InputHandle;
-    HANDLE OutputHandle;
 
     ZeroMemory(&Buffer, sizeof(Buffer));
     Buffer.InsertMode = TRUE;
     Buffer.CursorInfo.bVisible = TRUE;
     Buffer.CursorInfo.dwSize = 20;
 
-    InputHandle = GetStdHandle(STD_INPUT_HANDLE);
-    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    Buffer.ConsoleInputHandle = InputHandle;
+    Buffer.ConsoleOutputHandle = OutputHandle;
 
     SetConsoleCursorInfo(OutputHandle, &Buffer.CursorInfo);
     SetConsoleMode(InputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
@@ -2386,7 +2397,7 @@ YoriShGetExpressionFromConsole(
     }
 
     YoriShConfigureInputSettings();
-    YoriShConfigureMouseForPrompt();
+    YoriShConfigureMouseForPrompt(InputHandle);
     SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, TRUE);
 
     while (TRUE) {
@@ -2440,6 +2451,7 @@ YoriShGetExpressionFromConsole(
                 ReDisplayRequired |= YoriShClearInputSelections(&Buffer);
             } else if (InputRecord->EventType == FOCUS_EVENT) {
                 if (InputRecord->Event.FocusEvent.bSetFocus) {
+                    Buffer.WindowActivatedTick = GetTickCount();
                     YoriShSetWindowState(YORI_SH_TASK_COMPLETE);
                 }
             }
@@ -2574,7 +2586,7 @@ YoriShGetExpression(
     InputHandle = GetStdHandle(STD_INPUT_HANDLE);
     OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     if (GetConsoleMode(InputHandle, &ConsoleMode) && GetConsoleMode(OutputHandle, &ConsoleMode)) {
-        return YoriShGetExpressionFromConsole(Expression);
+        return YoriShGetExpressionFromConsole(InputHandle, OutputHandle, Expression);
     }
 
     SetConsoleMode(InputHandle, ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_ECHO_INPUT);
