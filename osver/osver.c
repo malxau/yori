@@ -364,6 +364,7 @@ OsVerGetArchitecture(
             case YORI_PROCESSOR_INTEL_386:
             case YORI_PROCESSOR_INTEL_486:
             case YORI_PROCESSOR_INTEL_PENTIUM:
+            case YORI_PROCESSOR_INTEL_686:
                 VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_INTEL;
                 break;
             case YORI_PROCESSOR_MIPS_R4000:

@@ -1757,6 +1757,12 @@ typedef struct _GUID {
 #define YORI_PROCESSOR_INTEL_PENTIUM                586
 
 /**
+ A processor identifier for a 686.  This processor is part of the
+ YORI_PROCESSOR_ARCHITECTURE_INTEL family.
+ */
+#define YORI_PROCESSOR_INTEL_686                    686
+
+/**
  A processor identifier for an R4000.  This processor is part of the
  YORI_PROCESSOR_ARCHITECTURE_MIPS family.
  */
