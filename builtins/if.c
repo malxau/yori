@@ -88,6 +88,7 @@ IfExpandRedirectOperators(
 
                 TestChar = String->StartOfString[Index + 1];
                 if (TestChar == '-' ||
+                    TestChar == '=' ||
                     (TestChar <= '9' &&
                      TestChar >= '0')) {
 
@@ -119,6 +120,7 @@ IfExpandRedirectOperators(
 
                 TestChar = String->StartOfString[Index + 1];
                 if (TestChar == '-' ||
+                    TestChar == '=' ||
                     (TestChar <= '9' &&
                      TestChar >= '0')) {
 
