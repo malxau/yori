@@ -2085,6 +2085,7 @@ YoriShProcessMouseButtonDown(
 
         BufferChanged = YoriShClearMouseoverSelection(Buffer);
 
+        Buffer->SelectionStartedTick = GetTickCount();
         BufferChanged |= YoriLibCreateSelectionFromPoint(&Buffer->Selection,
                                                          InputRecord->Event.MouseEvent.dwMousePosition.X,
                                                          InputRecord->Event.MouseEvent.dwMousePosition.Y);
@@ -2195,6 +2196,7 @@ YoriShProcessMouseDoubleClick(
             return FALSE;
         }
 
+        Buffer->SelectionStartedTick = GetTickCount();
         YoriLibCreateSelectionFromRange(&Buffer->Selection, BeginRange.X, BeginRange.Y, EndRange.X, EndRange.Y);
 
         BufferChanged = TRUE;
@@ -2240,7 +2242,8 @@ YoriShProcessMouseMove(
             //
 
             CurrentTickCount = GetTickCount();
-            if (Buffer->WindowActivatedTick + 200 < CurrentTickCount) {
+            if (Buffer->WindowActivatedTick + 200 < CurrentTickCount &&
+                Buffer->SelectionStartedTick + 125 < CurrentTickCount) {
 
                 YoriLibUpdateSelectionToPoint(&Buffer->Selection,
                                               InputRecord->Event.MouseEvent.dwMousePosition.X,

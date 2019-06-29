@@ -573,6 +573,12 @@ typedef struct _YORI_SH_INPUT_BUFFER {
     DWORD WindowActivatedTick;
 
     /**
+     The tick count when the selection was started, or zero if no selection
+     has been started.
+     */
+    DWORD SelectionStartedTick;
+
+    /**
      Description of the current selected region.
      */
     YORILIB_SELECTION Selection;
