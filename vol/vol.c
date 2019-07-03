@@ -3,7 +3,7 @@
  *
  * Yori shell display volume properties
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,9 +38,14 @@ CHAR strVolHelpText[] =
         "VOL [-license] [-f <fmt>] [<vol>]\n"
         "\n"
         "Format specifiers are:\n"
+        "   $clustersize$  The size of each cluster in bytes\n"
+        "   $free$         Free space in bytes\n"
         "   $label$        The volume label\n"
         "   $fsname$       The file system name\n"
-        "   $serial$       The 32 bit serial number\n";
+        "   $sectorsize$   The size of each sector in bytes\n"
+        "   $serial$       The 32 bit serial number\n"
+        "   $size$         Volume size in bytes\n"
+        ;
 
 /**
  Display usage text to the user.
@@ -84,6 +89,26 @@ typedef struct _VOL_RESULT {
      */
     DWORD Capabilities;
 
+    /**
+     The size of each sector in bytes.
+     */
+    DWORD SectorSize;
+
+    /**
+     The size of each cluster in bytes.
+     */
+    DWORD ClusterSize;
+
+    /**
+     The size of the volume, in bytes.
+     */
+    LARGE_INTEGER VolumeSize;
+
+    /**
+     Free space on the volume, in bytes.
+     */
+    LARGE_INTEGER FreeSpace;
+
 } VOL_RESULT, *PVOL_RESULT;
 
 /**
@@ -113,12 +138,20 @@ VolExpandVariables(
     DWORD CharsNeeded;
     PVOL_RESULT VolContext = (PVOL_RESULT)Context;
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
+    if (YoriLibCompareStringWithLiteral(VariableName, _T("clustersize")) == 0) {
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), VolContext->ClusterSize);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("free")) == 0) {
+        CharsNeeded = YoriLibSPrintfSize(_T("%lli"), VolContext->FreeSpace.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
         CharsNeeded = VolContext->FsName.LengthInChars;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("label")) == 0) {
         CharsNeeded = VolContext->VolumeLabel.LengthInChars;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("sectorsize")) == 0) {
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), VolContext->SectorSize);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("serial")) == 0) {
         CharsNeeded = 8;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("size")) == 0) {
+        CharsNeeded = YoriLibSPrintfSize(_T("%lli"), VolContext->VolumeSize.QuadPart);
     } else {
         return 0;
     }
@@ -127,12 +160,20 @@ VolExpandVariables(
         return CharsNeeded;
     }
 
-    if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
+    if (YoriLibCompareStringWithLiteral(VariableName, _T("clustersize")) == 0) {
+        YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->ClusterSize);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("free")) == 0) {
+        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->FreeSpace.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->FsName);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("label")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->VolumeLabel);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("sectorsize")) == 0) {
+        YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->SectorSize);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("serial")) == 0) {
         YoriLibSPrintf(OutputString->StartOfString, _T("%08x"), VolContext->ShortSerialNumber);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("size")) == 0) {
+        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->VolumeSize.QuadPart);
     }
 
     OutputString->LengthInChars = CharsNeeded;
@@ -170,14 +211,22 @@ ENTRYPOINT(
     VOL_RESULT VolResult;
     BOOL ArgumentUnderstood;
     DWORD MaxComponentLength;
-    LPTSTR FormatString = _T("File system: $fsname$\n")
+    LPTSTR FormatString = 
+                          _T("Cluster size: $clustersize$\n")
+                          _T("Free space (bytes): $free$\n")
+                          _T("File system: $fsname$\n")
                           _T("Label: $label$\n")
-                          _T("Serial number: $serial$\n");
+                          _T("Sector size: $sectorsize$\n")
+                          _T("Serial number: $serial$\n")
+                          _T("Size (bytes): $size$\n");
     YORI_STRING DisplayString;
     YORI_STRING YsFormatString;
     LPTSTR VolName = _T("\\");
     DWORD StartArg = 0;
     DWORD i;
+    DWORD SectorsPerCluster;
+    DWORD NumberOfFreeClusters;
+    DWORD TotalNumberOfClusters;
     YORI_STRING Arg;
 
     YoriLibInitEmptyString(&YsFormatString);
@@ -193,7 +242,7 @@ ENTRYPOINT(
                 VolHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
@@ -223,6 +272,8 @@ ENTRYPOINT(
         VolName = ArgV[StartArg].StartOfString;
     }
 
+    ZeroMemory(&VolResult, sizeof(VolResult));
+
     if (!YoriLibAllocateString(&VolResult.VolumeLabel, 256)) {
         return FALSE;
     }
@@ -241,9 +292,20 @@ ENTRYPOINT(
         YoriLibFreeStringContents(&VolResult.FsName);
         return EXIT_FAILURE;
     }
-
     VolResult.VolumeLabel.LengthInChars = _tcslen(VolResult.VolumeLabel.StartOfString);
     VolResult.FsName.LengthInChars = _tcslen(VolResult.FsName.StartOfString);
+
+    //
+    //  Get the total and free space using the best available API.
+    //
+
+    YoriLibGetDiskFreeSpace(VolName, NULL, &VolResult.VolumeSize, &VolResult.FreeSpace);
+    //
+    //  Get the sector size and calculate the cluster size.
+    //
+
+    GetDiskFreeSpace(VolName, &SectorsPerCluster, &VolResult.SectorSize, &NumberOfFreeClusters, &TotalNumberOfClusters);
+    VolResult.ClusterSize = VolResult.SectorSize * SectorsPerCluster;
 
     YoriLibInitEmptyString(&DisplayString);
     YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, VolExpandVariables, &VolResult, &DisplayString);
