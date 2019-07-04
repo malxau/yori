@@ -35,10 +35,11 @@ CHAR strTypeHelpText[] =
         "\n"
         "Output the contents of one or more files.\n"
         "\n"
-        "TYPE [-license] [-b] [-s] [-h <num>] [<file>...]\n"
+        "TYPE [-license] [-b] [-s] [-h <num>] [-n] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -h <num>       Display <num> lines from the beginning of each file\n"
+        "   -n             Display line numbers\n"
         "   -s             Process files from all subdirectories\n";
 
 /**
@@ -64,6 +65,11 @@ typedef struct _TYPE_CONTEXT {
      TRUE to indicate that files are being enumerated recursively.
      */
     BOOL Recursive;
+
+    /**
+     TRUE to indicate that line numbers should be displayed.
+     */
+    BOOL DisplayLineNumbers;
 
     /**
      Specifies the number of lines from the top of each file to display.
@@ -104,6 +110,7 @@ TypeProcessStream(
     YORI_STRING LineString;
     BOOL OutputIsConsole;
     DWORD dwMode;
+    DWORD CharactersDisplayed;
     HANDLE OutputHandle;
 
     OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -127,8 +134,14 @@ TypeProcessStream(
         TypeContext->FileLinesFound++;
 
         if ((TypeContext->HeadLines == 0 || TypeContext->FileLinesFound <= TypeContext->HeadLines)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &LineString);
-            if (LineString.LengthInChars == 0 ||
+            if (TypeContext->DisplayLineNumbers) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%8lli: %y"), TypeContext->FileLinesFound, &LineString);
+                CharactersDisplayed = LineString.LengthInChars + 10;
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &LineString);
+                CharactersDisplayed = LineString.LengthInChars;
+            }
+            if (CharactersDisplayed == 0 ||
                 !OutputIsConsole ||
                 !GetConsoleScreenBufferInfo(OutputHandle, &ScreenInfo) ||
                 ScreenInfo.dwCursorPosition.X != 0) {
@@ -345,6 +358,9 @@ ENTRYPOINT(
                         i++;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+                TypeContext.DisplayLineNumbers = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 TypeContext.Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
