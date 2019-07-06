@@ -516,7 +516,26 @@ YoriShDisplayWarnings()
             if (liNow.QuadPart > liWriteTime.QuadPart &&
                 liWriteTime.QuadPart + YORI_SH_DAYS_BEFORE_WARNING < liNow.QuadPart) {
 
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This build of Yori is %lli days old.  Run ypm -u to upgrade.\n"), liNow.QuadPart - liWriteTime.QuadPart);
+                DWORD DaysOld;
+                DWORD UnitToDisplay;
+                LPTSTR UnitLabel;
+
+                DaysOld = (DWORD)(liNow.QuadPart - liWriteTime.QuadPart);
+                if (DaysOld > 2 * 365) {
+                    UnitToDisplay = DaysOld / 365;
+                    UnitLabel = _T("years");
+                } else if (DaysOld > 3 * 30) {
+                    UnitToDisplay = DaysOld / 30;
+                    UnitLabel = _T("months");
+                } else {
+                    UnitToDisplay = DaysOld;
+                    UnitLabel = _T("days");
+                }
+
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("Warning: This build of Yori is %i %s old.  Run ypm -u to upgrade.\n"),
+                              UnitToDisplay,
+                              UnitLabel);
             }
         }
     }
