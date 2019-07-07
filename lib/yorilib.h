@@ -1896,6 +1896,12 @@ YoriLibIsFullPathUnc(
     );
 
 BOOL
+YoriLibFindEffectiveRoot(
+    __in PYORI_STRING Path,
+    __out PYORI_STRING EffectiveRoot
+    );
+
+BOOL
 YoriLibGetFullPathNameReturnAllocation(
     __in PYORI_STRING FileName,
     __in BOOL bReturnEscapedPath,

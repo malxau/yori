@@ -1116,6 +1116,183 @@ typedef struct _YORI_MEMORYSTATUSEX {
 #define COMPRESSION_FORMAT_LZNT1        (0x0002)
 #endif
 
+#ifndef FSCTL_GET_NTFS_VOLUME_DATA
+/**
+ Specifies the FSCTL_GET_NTFS_VOLUME_DATA numerical representation if the
+ compilation environment doesn't provide it.
+ */
+#define FSCTL_GET_NTFS_VOLUME_DATA       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 25,  METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/**
+ Information returned from FSCTL_GET_NTFS_VOLUME_DATA.
+ */
+typedef struct {
+
+    /**
+     The full 64 bit serial number.
+     */
+    LARGE_INTEGER SerialNumber;
+
+    /**
+     The number of sectors on the volume.
+     */
+    LARGE_INTEGER NumberSectors;
+
+    /**
+     The number of clusters on the volume.
+     */
+    LARGE_INTEGER TotalClusters;
+
+    /**
+     The number of free clusters on the volume.
+     */
+    LARGE_INTEGER FreeClusters;
+
+    /**
+     The number of reserved clusters on the volume.
+     */
+    LARGE_INTEGER TotalReserved;
+
+    /**
+     The bytes in each logical sector.
+     */
+    DWORD BytesPerSector;
+
+    /**
+     The bytes in each file system allocation unit.
+     */
+    DWORD BytesPerCluster;
+
+    /**
+     The bytes in each MFT file record.
+     */
+    DWORD BytesPerFileRecordSegment;
+
+    /**
+     The clusters in each file record.
+     */
+    DWORD ClustersPerFileRecordSegment;
+
+    /**
+     The amount of space ever used in the MFT for file records.
+     */
+    LARGE_INTEGER MftValidDataLength;
+
+    /**
+     The volume offset of the first extent of the MFT.
+     */
+    LARGE_INTEGER MftStartLcn;
+
+    /**
+     The volume offset of the first extent of the MFT backup.
+     */
+    LARGE_INTEGER Mft2StartLcn;
+
+    /**
+     The beginning of the region of the volume used to host MFT allocations.
+     */
+    LARGE_INTEGER MftZoneStart;
+
+    /**
+     The end of the region of the volume used to host MFT allocations.
+     */
+    LARGE_INTEGER MftZoneEnd;
+
+} NTFS_VOLUME_DATA_BUFFER;
+
+/**
+ Pointer to information returned from FSCTL_GET_NTFS_VOLUME_DATA.
+ */
+typedef NTFS_VOLUME_DATA_BUFFER *PNTFS_VOLUME_DATA_BUFFER;
+
+#endif
+
+#ifndef FSCTL_GET_REFS_VOLUME_DATA
+/**
+ Specifies the FSCTL_GET_REFS_VOLUME_DATA numerical representation if the
+ compilation environment doesn't provide it.
+ */
+#define FSCTL_GET_REFS_VOLUME_DATA       CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 182, METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/**
+ Information returned from FSCTL_GET_REFS_VOLUME_DATA.
+ */
+typedef struct {
+
+    /**
+     The number of bytes populated into the output structure.
+     */
+    DWORD ByteCount;
+
+    /**
+     The major version of the file system.
+     */
+    DWORD MajorVersion;
+
+    /**
+     The minor version of the file system.
+     */
+    DWORD MinorVersion;
+
+    /**
+     The bytes in each physical sector.
+     */
+    DWORD BytesPerPhysicalSector;
+
+    /**
+     The full 64 bit serial number.
+     */
+    LARGE_INTEGER SerialNumber;
+
+    /**
+     The number of sectors on the volume.
+     */
+    LARGE_INTEGER NumberSectors;
+
+    /**
+     The number of clusters on the volume.
+     */
+    LARGE_INTEGER TotalClusters;
+
+    /**
+     The number of free clusters on the volume.
+     */
+    LARGE_INTEGER FreeClusters;
+
+    /**
+     The number of reserved clusters on the volume.
+     */
+    LARGE_INTEGER TotalReserved;
+
+    /**
+     The bytes in each logical sector.
+     */
+    DWORD BytesPerSector;
+
+    /**
+     The bytes in each file system allocation unit.
+     */
+    DWORD BytesPerCluster;
+
+    /**
+     The largest file that may be stored directly in the directory.
+     */
+    LARGE_INTEGER MaximumSizeOfResidentFile;
+
+    /**
+     Reserved space to add extra pieces of information without needing to
+     recompile all code using this structure.
+     */
+    LARGE_INTEGER Reserved[10];
+
+} REFS_VOLUME_DATA_BUFFER;
+
+/**
+ Pointer to information returned from FSCTL_GET_REFS_VOLUME_DATA.
+ */
+typedef REFS_VOLUME_DATA_BUFFER *PREFS_VOLUME_DATA_BUFFER;
+
+#endif
 
 #ifndef FSCTL_GET_RETRIEVAL_POINTERS
 /**
@@ -1331,6 +1508,69 @@ typedef struct {
 typedef USN_RECORD *PUSN_RECORD;
 #endif
 
+#ifndef FSCTL_QUERY_USN_JOURNAL
+
+/**
+ Specifies the FSCTL_QUERY_USN_JOURNAL numerical representation if the
+ compilation environment doesn't provide it.
+ */
+#define FSCTL_QUERY_USN_JOURNAL         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 61,  METHOD_BUFFERED, FILE_ANY_ACCESS)
+
+/**
+ Information returned from FSCTL_QUERY_USN_JOURNAL where compiler doesn't
+ define it.
+ */
+typedef struct {
+
+    /**
+     The USN journal identifier. This is generated each time a new journal is
+     created.
+     */
+    DWORDLONG UsnJournalID;
+
+    /**
+     The first valid USN record within the journal.
+     */
+    DWORDLONG FirstUsn;
+
+    /**
+     The next USN number to allocate.  All numbers between FirstUsn and
+     NextUsn exclusive are valid in the journal.
+     */
+    DWORDLONG NextUsn;
+
+    /**
+     The lowest valid USN number.
+     */
+    DWORDLONG LowestValidUsn;
+
+    /**
+     The maximum valid USN number.
+     */
+    DWORDLONG MaxUsn;
+
+    /**
+     The maximum size of the journal in bytes.
+     */
+    DWORDLONG MaximumSize;
+
+    /**
+     The amount of allocation to add and remove from a journal in a single
+     operation.
+     */
+    DWORDLONG AllocationDelta;
+
+} USN_JOURNAL_DATA;
+
+/**
+ Pointer to information returned from FSCTL_QUERY_USN_JOURNAL where compiler
+ doesn't define it.
+ */
+typedef USN_JOURNAL_DATA *PUSN_JOURNAL_DATA;
+
+#endif
+
+
 #ifndef FSCTL_GET_EXTERNAL_BACKING
 
 /**
@@ -1520,6 +1760,63 @@ typedef struct _FILE_STANDARD_INFO {
  The identifier of the request type that returns the above structure.
  */
 #define FileStandardInfo    (0x000000001)
+#endif
+
+#ifndef STORAGE_INFO_FLAGS_ALIGNED_DEVICE
+
+/**
+ A structure describing sector information about a storage device.
+ */
+typedef struct _FILE_STORAGE_INFO {
+
+    /**
+     The traditional sector size describing the smallest unit that can be
+     read or written to the device via its interface.
+     */
+    ULONG LogicalBytesPerSector;
+
+    /**
+     The smallest unit that the device can write in a single operation. A
+     device may write a larger amount internally than it is willing to
+     accept via its interface by performing reading and writing internally.
+     */
+    ULONG PhysicalBytesPerSectorForAtomicity;
+
+    /**
+     The unit that a device can read or write without incurring a performance
+     penalty.
+     */
+    ULONG PhysicalBytesPerSectorForPerformance;
+
+    /**
+     The smallest unit that the file system is going to treat as an atomic
+     write.  This value may have adjustments applied over the raw device
+     requirement.
+     */
+    ULONG FileSystemEffectivePhysicalBytesPerSectorForAtomicity;
+
+    /**
+     Flags, unused in this program.
+     */
+    ULONG Flags;
+
+    /**
+     Alignment within the first physical sector of the first logical sector.
+     */
+    ULONG ByteOffsetForSectorAlignment;
+
+    /**
+     Alignment of partitions on the device to ensure physical sector
+     alignment.
+     */
+    ULONG ByteOffsetForPartitionAlignment;
+} FILE_STORAGE_INFO, *PFILE_STORAGE_INFO;
+
+/**
+ The identifier of the request type that returns the above structure.
+ */
+#define FileStorageInfo    (0x000000010)
+
 #endif
 
 #ifndef IMAGE_FILE_MACHINE_AMD64
