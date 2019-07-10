@@ -121,6 +121,17 @@ typedef struct _HASH_CONTEXT {
      */
     YORI_STRING HashString;
 
+    /**
+     Records the total number of files processed.
+     */
+    LONGLONG FilesFound;
+
+    /**
+     Records the total number of files processed within a single command line
+     argument.
+     */
+    LONGLONG FilesFoundThisArg;
+
 } HASH_CONTEXT, *PHASH_CONTEXT;
 
 /**
@@ -142,6 +153,9 @@ HashProcessStream(
     LONG Status;
     PVOID hHash;
     DWORD BytesRead;
+
+    HashContext->FilesFound++;
+    HashContext->FilesFoundThisArg++;
 
     Status = DllBCrypt.pBCryptCreateHash(HashContext->Algorithm, &hHash, HashContext->ScratchBuffer, HashContext->ScratchBufferLength, NULL, 0, 0);
 
@@ -191,7 +205,8 @@ HashProcessStream(
 
  @param FilePath Pointer to the file path that was found.
 
- @param FileInfo Information about the file.
+ @param FileInfo Information about the file.  This can be NULL if the file
+        was not found by enumeration.
 
  @param Depth Indicates the recursion depth.
 
@@ -202,7 +217,7 @@ HashProcessStream(
 BOOL
 HashFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -580,15 +595,33 @@ ENTRYPOINT(
         }
 
         for (i = StartArg; i < ArgC; i++) {
+
+            HashContext.FilesFoundThisArg = 0;
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,
                                  HashFileFoundCallback,
                                  HashFileEnumerateErrorCallback,
                                  &HashContext);
+
+            if (HashContext.FilesFoundThisArg == 0) {
+                YORI_STRING FullPath;
+                YoriLibInitEmptyString(&FullPath);
+                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    HashFileFoundCallback(&FullPath, NULL, 0, &HashContext);
+                    YoriLibFreeStringContents(&FullPath);
+                }
+            }
         }
     }
+
     HashCleanupContext(&HashContext);
+
+    if (HashContext.FilesFound == 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lines: no matching files found\n"));
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }

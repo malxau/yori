@@ -75,6 +75,12 @@ typedef struct _HEXDUMP_CONTEXT {
     LONGLONG FilesFound;
 
     /**
+     Records the total number of files processed within a single command line
+     argument.
+     */
+    LONGLONG FilesFoundThisArg;
+
+    /**
      Offset within each stream to display.
      */
     LONGLONG OffsetToDisplay;
@@ -593,6 +599,7 @@ HexDumpReverseProcessStream(
 
     YoriLibInitEmptyString(&LineString);
     HexDumpContext->FilesFound++;
+    HexDumpContext->FilesFoundThisArg++;
 
     if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
         return TRUE;
@@ -651,6 +658,7 @@ HexDumpProcessStream(
     LARGE_INTEGER StreamOffset;
 
     HexDumpContext->FilesFound++;
+    HexDumpContext->FilesFoundThisArg++;
 
     BufferSize = 64 * 1024;
     Buffer = YoriLibMalloc(BufferSize);
@@ -729,7 +737,8 @@ HexDumpProcessStream(
 
  @param FilePath Pointer to the file path that was found.
 
- @param FileInfo Information about the file.
+ @param FileInfo Information about the file.  Can be NULL if the file being
+        opened was not found by enumeration.
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
@@ -741,7 +750,7 @@ HexDumpProcessStream(
 BOOL
 HexDumpFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -753,7 +762,9 @@ HexDumpFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
-    if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+    if (FileInfo == NULL ||
+        (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+
         FileHandle = CreateFile(FilePath->StartOfString,
                                 GENERIC_READ,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -784,7 +795,8 @@ HexDumpFileFoundCallback(
 
  @param FilePath Pointer to the file path that was found.
 
- @param FileInfo Information about the file.
+ @param FileInfo Information about the file.  Can be NULL if the file being
+        opened was not found by enumeration.
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
@@ -796,7 +808,7 @@ HexDumpFileFoundCallback(
 BOOL
 HexDumpReverseFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -808,7 +820,9 @@ HexDumpReverseFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
-    if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+    if (FileInfo == NULL ||
+        (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+
         FileHandle = CreateFile(FilePath->StartOfString,
                                 GENERIC_READ,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -1314,6 +1328,8 @@ ENTRYPOINT(
 
         for (i = StartArg; i < ArgC; i++) {
 
+            HexDumpContext.FilesFoundThisArg = 0;
+
             if (Reverse) {
                 YoriLibForEachStream(&ArgV[i],
                                      MatchFlags,
@@ -1328,6 +1344,19 @@ ENTRYPOINT(
                                      HexDumpFileFoundCallback,
                                      HexDumpFileEnumerateErrorCallback,
                                      &HexDumpContext);
+            }
+
+            if (HexDumpContext.FilesFoundThisArg == 0) {
+                YORI_STRING FullPath;
+                YoriLibInitEmptyString(&FullPath);
+                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    if (Reverse) {
+                        HexDumpReverseFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
+                    } else {
+                        HexDumpFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
+                    }
+                    YoriLibFreeStringContents(&FullPath);
+                }
             }
         }
     }

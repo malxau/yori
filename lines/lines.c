@@ -77,6 +77,12 @@ typedef struct _LINES_CONTEXT {
     LONGLONG FilesFound;
 
     /**
+     Records the total number of files processed within a single command line
+     argument.
+     */
+    LONGLONG FilesFoundThisArg;
+
+    /**
      Records the number of lines found in a single file.
      */
     LONGLONG FileLinesFound;
@@ -108,6 +114,7 @@ LinesProcessStream(
     YoriLibInitEmptyString(&LineString);
 
     LinesContext->FilesFound++;
+    LinesContext->FilesFoundThisArg++;
     LinesContext->FileLinesFound = 0;
 
     while (TRUE) {
@@ -132,7 +139,8 @@ LinesProcessStream(
 
  @param FilePath Pointer to the file path that was found.
 
- @param FileInfo Information about the file.
+ @param FileInfo Information about the file.  This can be NULL if the file
+        was not found by enumeration.
 
  @param Depth Specifies the recursion depth.  Ignored in this application.
 
@@ -144,7 +152,7 @@ LinesProcessStream(
 BOOL
 LinesFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -156,7 +164,9 @@ LinesFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
-    if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+    if (FileInfo == NULL ||
+        (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+
         FileHandle = CreateFile(FilePath->StartOfString,
                                 GENERIC_READ,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -362,6 +372,8 @@ ENTRYPOINT(
         }
     
         for (i = StartArg; i < ArgC; i++) {
+
+            LinesContext.FilesFoundThisArg = 0;
     
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
@@ -369,6 +381,15 @@ ENTRYPOINT(
                                  LinesFileFoundCallback,
                                  LinesFileEnumerateErrorCallback,
                                  &LinesContext);
+
+            if (LinesContext.FilesFoundThisArg == 0) {
+                YORI_STRING FullPath;
+                YoriLibInitEmptyString(&FullPath);
+                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    LinesFileFoundCallback(&FullPath, NULL, 0, &LinesContext);
+                    YoriLibFreeStringContents(&FullPath);
+                }
+            }
         }
     }
 

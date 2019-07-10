@@ -67,7 +67,16 @@ typedef struct _YORI_LIB_LINE_READ_CONTEXT {
      matters because it defines the form of the newlines that this module is
      looking for.
      */
-    BOOL ReadWChars;
+    BOOLEAN ReadWChars;
+
+    /**
+     If TRUE, the operation has been terminated for some reason, and future
+     operations should fail.  This exists because the operation may terminate
+     but successfully return the trailing portion of a buffer, and the
+     enumerator can be invoked again even though a previous call determined
+     no further processing should occur.
+     */
+    BOOLEAN Terminated;
 
 } YORI_LIB_LINE_READ_CONTEXT, *PYORI_LIB_LINE_READ_CONTEXT;
 
@@ -252,8 +261,12 @@ YoriLibReadLineToStringEx(
         } else {
             ReadContext->ReadWChars = FALSE;
         }
+        ReadContext->Terminated = FALSE;
     } else {
         ReadContext = *Context;
+        if (ReadContext->Terminated) {
+            return NULL;
+        }
     }
 
     //
@@ -269,6 +282,7 @@ YoriLibReadLineToStringEx(
         if (ReadContext->PreviousBuffer == NULL) {
             UserString->LengthInChars = 0;
             *LineTerminated = FALSE;
+            ReadContext->Terminated = TRUE;
             return NULL;
         }
     }
@@ -326,6 +340,7 @@ YoriLibReadLineToStringEx(
                         } else {
                             UserString->LengthInChars = 0;
                             *LineTerminated = FALSE;
+                            ReadContext->Terminated = TRUE;
                             return NULL;
                         }
                     }
@@ -372,6 +387,7 @@ YoriLibReadLineToStringEx(
                         } else {
                             UserString->LengthInChars = 0;
                             *LineTerminated = FALSE;
+                            ReadContext->Terminated = TRUE;
                             return NULL;
                         }
                     }
@@ -400,6 +416,7 @@ YoriLibReadLineToStringEx(
         if (ReadContext->LengthOfBuffer == ReadContext->BytesInBuffer) {
             UserString->LengthInChars = 0;
             *LineTerminated = FALSE;
+            ReadContext->Terminated = TRUE;
             return NULL;
         }
 
@@ -494,7 +511,20 @@ YoriLibReadLineToStringEx(
             if (!ReadFile(FileHandle, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->BytesInBuffer), ReadContext->LengthOfBuffer - ReadContext->BytesInBuffer, &BytesRead, NULL)) {
 #if DBG
                 DWORD LastError = GetLastError();
-                ASSERT(LastError == ERROR_BROKEN_PIPE || LastError == ERROR_NO_DATA || LastError == ERROR_HANDLE_EOF);
+
+                //
+                //  Most of these indicate the source has gone away or ended.
+                //  ERROR_INVALID_PARAMETER happens when we're trying to
+                //  perform an unaligned read on a noncached handle, which
+                //  is crazy, but Windows will silently allow cached opens to
+                //  devices to be noncached opens, which inconveniently means
+                //  the detection of the problem happens later than it should.
+                //
+
+                ASSERT(LastError == ERROR_BROKEN_PIPE ||
+                       LastError == ERROR_NO_DATA ||
+                       LastError == ERROR_HANDLE_EOF ||
+                       LastError == ERROR_INVALID_PARAMETER);
 #endif
                 TerminateProcessing = TRUE;
             }
@@ -506,6 +536,7 @@ YoriLibReadLineToStringEx(
         }
 
         if (TerminateProcessing) {
+            ReadContext->Terminated = TRUE;
             if (ReadContext->BytesInBuffer > 0 && ReturnFinalNonTerminatedLine) {
 
                 //

@@ -82,6 +82,12 @@ typedef struct _TYPE_CONTEXT {
     LONGLONG FilesFound;
 
     /**
+     Records the total number of files processed for this command line
+     argument.
+     */
+    LONGLONG FilesFoundThisArg;
+
+    /**
      Records the number of lines found from a specific file.
      */
     LONGLONG FileLinesFound;
@@ -118,6 +124,7 @@ TypeProcessStream(
     YoriLibInitEmptyString(&LineString);
 
     TypeContext->FilesFound++;
+    TypeContext->FilesFoundThisArg++;
     TypeContext->FileLinesFound = 0;
 
     OutputIsConsole = FALSE;
@@ -165,7 +172,8 @@ TypeProcessStream(
 
  @param FilePath Pointer to the file path that was found.
 
- @param FileInfo Information about the file.
+ @param FileInfo Information about the file.  This can be NULL if the file
+        was not found by enumeration.
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
@@ -177,7 +185,7 @@ TypeProcessStream(
 BOOL
 TypeFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -189,7 +197,9 @@ TypeFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
-    if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+    if (FileInfo == NULL ||
+        (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+
         FileHandle = CreateFile(FilePath->StartOfString,
                                 GENERIC_READ,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -407,12 +417,23 @@ ENTRYPOINT(
 
         for (i = StartArg; i < ArgC; i++) {
 
+            TypeContext.FilesFoundThisArg = 0;
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,
                                  TypeFileFoundCallback,
                                  TypeFileEnumerateErrorCallback,
                                  &TypeContext);
+
+            if (TypeContext.FilesFoundThisArg == 0) {
+                YORI_STRING FullPath;
+                YoriLibInitEmptyString(&FullPath);
+                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    TypeFileFoundCallback(&FullPath, NULL, 0, &TypeContext);
+                    YoriLibFreeStringContents(&FullPath);
+                }
+            }
         }
     }
 

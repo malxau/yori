@@ -101,7 +101,14 @@ typedef struct _CUT_CONTEXT {
     /**
      Counts the number of files encountered as files are processed.
      */
-    DWORD FilesFound;
+    LONGLONG FilesFound;
+
+    /**
+     Counts the number of files encountered as files are processed within each
+     command line argument.
+     */
+    LONGLONG FilesFoundThisArg;
+
 } CUT_CONTEXT, *PCUT_CONTEXT;
 
 /**
@@ -185,7 +192,8 @@ CutFilterHandle(
 
  @param Filename Pointer to the file path that was found.
 
- @param FindData Information about the file.
+ @param FindData Information about the file.  This can be NULL if the file
+        was not found by enumeration.
 
  @param Depth Recursion depth, unused in this application.
 
@@ -197,7 +205,7 @@ CutFilterHandle(
 BOOL
 CutFileFoundCallback(
     __in PYORI_STRING Filename,
-    __in PWIN32_FIND_DATA FindData,
+    __in_opt PWIN32_FIND_DATA FindData,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -210,7 +218,14 @@ CutFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(Filename));
 
-    hSource = CreateFile(Filename->StartOfString, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    hSource = CreateFile(Filename->StartOfString,
+                         GENERIC_READ,
+                         FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                         NULL,
+                         OPEN_EXISTING,
+                         FILE_ATTRIBUTE_NORMAL,
+                         NULL);
+
     if (hSource == INVALID_HANDLE_VALUE) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
@@ -220,6 +235,7 @@ CutFileFoundCallback(
     }
 
     CutContext->FilesFound++;
+    CutContext->FilesFoundThisArg++;
     CutFilterHandle(hSource, CutContext);
 
     CloseHandle(hSource);
@@ -416,12 +432,24 @@ ENTRYPOINT(
         }
 
         for (i = StartArg; i < ArgC; i++) {
+
+            CutContext.FilesFoundThisArg = 0;
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,
                                  CutFileFoundCallback,
                                  CutFileEnumerateErrorCallback,
                                  &CutContext);
+
+            if (CutContext.FilesFoundThisArg == 0) {
+                YORI_STRING FullPath;
+                YoriLibInitEmptyString(&FullPath);
+                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    CutFileFoundCallback(&FullPath, NULL, 0, &CutContext);
+                    YoriLibFreeStringContents(&FullPath);
+                }
+            }
         }
 
         if (CutContext.FilesFound == 0) {

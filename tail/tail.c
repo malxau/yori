@@ -70,6 +70,12 @@ typedef struct _TAIL_CONTEXT {
     LONGLONG FilesFound;
 
     /**
+     Records the total number of files processed within a single command line
+     argument.
+     */
+    LONGLONG FilesFoundThisArg;
+
+    /**
      Specifies the number of lines to display in each matching file.
      */
     ULONG LinesToDisplay;
@@ -143,6 +149,7 @@ TailProcessStream(
     }
 
     TailContext->FilesFound++;
+    TailContext->FilesFoundThisArg++;
 
     while (TRUE) {
 
@@ -218,7 +225,8 @@ TailProcessStream(
 
  @param FilePath Pointer to the file path that was found.
 
- @param FileInfo Information about the file.
+ @param FileInfo Information about the file.  This can be NULL if the file
+        was not found by enumeration.
 
  @param Depth Specifies recursion depth.  Ignored in this application.
 
@@ -230,7 +238,7 @@ TailProcessStream(
 BOOL
 TailFileFoundCallback(
     __in PYORI_STRING FilePath,
-    __in PWIN32_FIND_DATA FileInfo,
+    __in_opt PWIN32_FIND_DATA FileInfo,
     __in DWORD Depth,
     __in PVOID Context
     )
@@ -242,7 +250,9 @@ TailFileFoundCallback(
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
-    if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+    if (FileInfo == NULL ||
+        (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+
         FileHandle = CreateFile(FilePath->StartOfString,
                                 GENERIC_READ,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -467,12 +477,23 @@ ENTRYPOINT(
 
         for (i = StartArg; i < ArgC; i++) {
 
+            TailContext.FilesFoundThisArg = 0;
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,
                                  TailFileFoundCallback,
                                  TailFileEnumerateErrorCallback,
                                  &TailContext);
+
+            if (TailContext.FilesFoundThisArg == 0) {
+                YORI_STRING FullPath;
+                YoriLibInitEmptyString(&FullPath);
+                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                    TailFileFoundCallback(&FullPath, NULL, 0, &TailContext);
+                    YoriLibFreeStringContents(&FullPath);
+                }
+            }
         }
     }
 
