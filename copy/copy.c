@@ -597,8 +597,19 @@ CopyAsDumbDataMove(
                             FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
+    LastError = GetLastError();
+
+    if (LastError == ERROR_INVALID_PARAMETER) {
+        DestHandle = CreateFile(DestFile->StartOfString,
+                                GENERIC_WRITE,
+                                FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                NULL,
+                                OPEN_EXISTING,
+                                0,
+                                NULL);
+    }
+
     if (DestHandle == INVALID_HANDLE_VALUE) {
-        LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Open of destination failed: %y: %s"), DestFile, ErrText);
         YoriLibFreeWinErrorText(ErrText);
@@ -619,7 +630,16 @@ CopyAsDumbDataMove(
             break;
         }
 
-        WriteFile(DestHandle, Buffer, BytesCopied, &BytesCopied, NULL);
+        if (!WriteFile(DestHandle, Buffer, BytesCopied, &BytesCopied, NULL)) {
+            LastError = GetLastError();
+            ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Write to destination failed: %y: %s"), DestFile, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            YoriLibFree(Buffer);
+            CloseHandle(SourceHandle);
+            CloseHandle(DestHandle);
+            return FALSE;
+        }
     }
 
     YoriLibFree(Buffer);
@@ -791,19 +811,31 @@ CopyFileFoundCallback(
         } else {
             if (!CopyFile(FilePath->StartOfString, FullDest.StartOfString, FALSE)) {
                 DWORD LastError = GetLastError();
-                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-                if (SourceNameToDisplay != &HumanSourcePath) {
-                    if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
-                        SourceNameToDisplay = &HumanSourcePath;
+
+                //
+                //  If it failed with an error indicating CopyFile couldn't
+                //  handle it, fall back to dumb data copy.  Note that this
+                //  function will output its own errors, so from this point,
+                //  error handling is over.
+                //
+
+                if (LastError == ERROR_INVALID_PARAMETER) {
+                    CopyAsDumbDataMove(FilePath, &FullDest);
+                } else {
+                    LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                    if (SourceNameToDisplay != &HumanSourcePath) {
+                        if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
+                            SourceNameToDisplay = &HumanSourcePath;
+                        }
                     }
-                }
-                if (DestNameToDisplay != &HumanDestPath) {
-                    if (YoriLibUnescapePath(&FullDest, &HumanDestPath)) {
-                        DestNameToDisplay = &HumanDestPath;
+                    if (DestNameToDisplay != &HumanDestPath) {
+                        if (YoriLibUnescapePath(&FullDest, &HumanDestPath)) {
+                            DestNameToDisplay = &HumanDestPath;
+                        }
                     }
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
+                    YoriLibFreeWinErrorText(ErrText);
                 }
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CopyFile failed: %y to %y: %s"), SourceNameToDisplay, DestNameToDisplay, ErrText);
-                YoriLibFreeWinErrorText(ErrText);
             }
 
             if (CopyContext->CompressDest) {
