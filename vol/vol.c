@@ -639,7 +639,7 @@ ENTRYPOINT(
 
             VolResult.Have.NtfsData = TRUE;
 
-            VolResult.FullSerialNumber = VolResult.NtfsData.SerialNumber.QuadPart;
+            VolResult.FullSerialNumber = VolResult.NtfsData.VolumeSerialNumber.QuadPart;
             VolResult.Have.FullSerial = TRUE;
             VolResult.ReservedSize = VolResult.NtfsData.TotalReserved.QuadPart * VolResult.NtfsData.BytesPerCluster;
             VolResult.Have.Reserved = TRUE;
@@ -656,7 +656,7 @@ ENTRYPOINT(
 
             VolResult.Have.RefsData = TRUE;
 
-            VolResult.FullSerialNumber = VolResult.RefsData.SerialNumber.QuadPart;
+            VolResult.FullSerialNumber = VolResult.RefsData.VolumeSerialNumber.QuadPart;
             VolResult.Have.FullSerial = TRUE;
             VolResult.ReservedSize = VolResult.RefsData.TotalReserved.QuadPart * VolResult.RefsData.BytesPerCluster;
             VolResult.Have.Reserved = TRUE;

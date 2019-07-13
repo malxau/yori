@@ -1131,7 +1131,7 @@ typedef struct {
     /**
      The full 64 bit serial number.
      */
-    LARGE_INTEGER SerialNumber;
+    LARGE_INTEGER VolumeSerialNumber;
 
     /**
      The number of sectors on the volume.
@@ -1242,7 +1242,7 @@ typedef struct {
     /**
      The full 64 bit serial number.
      */
-    LARGE_INTEGER SerialNumber;
+    LARGE_INTEGER VolumeSerialNumber;
 
     /**
      The number of sectors on the volume.
