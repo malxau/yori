@@ -616,6 +616,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("time"),     _T("ydate -t $*$")},
     {_T("title"),    _T("ytitle $*$")},
     {_T("type"),     _T("ytype $*$")},
+    {_T("umount"),   _T("ymount -u $*$")},
     {_T("vol"),      _T("yvol $*$")},
     {_T("?"),        _T("yexpr $*$")}
 };

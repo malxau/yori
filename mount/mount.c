@@ -464,6 +464,19 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+    //
+    //  This is a hack in case the user specifies -u -? or similar.
+    //
+
+    if (FileName != NULL &&
+        YoriLibIsCommandLineOption(FileName, &Arg)) {
+        
+        if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+            MountHelp();
+            return EXIT_SUCCESS;
+        }
+    }
+
     switch(Op) {
         case MountOpMountIso:
             MountMountIso(FileName);
