@@ -104,8 +104,14 @@ IconvProcessStream(
     PVOID LineContext = NULL;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     YORI_STRING LineString;
+    DWORD OriginalInputEncoding;
+    DWORD OriginalOutputEncoding;
 
     IconvContext->FilesFound++;
+
+    OriginalInputEncoding = YoriLibGetMultibyteInputEncoding();
+    OriginalOutputEncoding = YoriLibGetMultibyteOutputEncoding();
+
     YoriLibSetMultibyteInputEncoding(IconvContext->SourceEncoding);
     YoriLibSetMultibyteOutputEncoding(IconvContext->TargetEncoding);
 
@@ -122,6 +128,9 @@ IconvProcessStream(
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
     }
+
+    YoriLibSetMultibyteInputEncoding(OriginalInputEncoding);
+    YoriLibSetMultibyteOutputEncoding(OriginalOutputEncoding);
 
     YoriLibLineReadClose(LineContext);
     YoriLibFreeStringContents(&LineString);
