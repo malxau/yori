@@ -36,7 +36,7 @@ CHAR strReplHelpText[] =
         "Output the contents of one or more files with specified text replaced\n"
         "with alternate text.\n"
         "\n"
-        "REPL [-license] [-b] [-i] [-s] <old text> <new text> [<file>...]\n"
+        "REPL [-license] [-b] [-i] [-s] <old text> [<new text> [<file>...]]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -i             Match insensitively\n"
@@ -368,6 +368,7 @@ ENTRYPOINT(
     BOOL BasicEnumeration = FALSE;
     REPL_CONTEXT ReplContext;
     YORI_STRING Arg;
+    YORI_STRING EmptyString;
 
     ZeroMemory(&ReplContext, sizeof(ReplContext));
 
@@ -414,20 +415,25 @@ ENTRYPOINT(
     //  the file and use that
     //
 
-    if (StartArg == 0 || StartArg + 2 >= ArgC) {
+    if (StartArg == 0 || StartArg >= ArgC) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("repl: missing argument\n"));
         return EXIT_FAILURE;
     }
 
+    YoriLibInitEmptyString(&EmptyString);
     ReplContext.MatchString = &ArgV[StartArg];
-    ReplContext.NewString = &ArgV[StartArg + 1];
+    if (StartArg + 1 >= ArgC) {
+        ReplContext.NewString = &EmptyString;
+    } else {
+        ReplContext.NewString = &ArgV[StartArg + 1];
+    }
     StartArg += 2;
 
 #if YORI_BUILTIN
     YoriLibCancelEnable();
 #endif
 
-    if (StartArg == 0) {
+    if (StartArg == 0 || StartArg >= ArgC) {
         if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
             return EXIT_FAILURE;
