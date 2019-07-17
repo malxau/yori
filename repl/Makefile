@@ -4,7 +4,6 @@ BINARIES=repl.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdrepl.pdb
 LINKPDB=/Pdb:repl.pdb
 !ENDIF
 

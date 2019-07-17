@@ -4,7 +4,6 @@ BINARIES=ypause.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdypause.pdb
 LINKPDB=/Pdb:ypause.pdb
 !ENDIF
 

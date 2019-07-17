@@ -4,7 +4,6 @@ BINARIES=initool.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdinitool.pdb
 LINKPDB=/Pdb:initool.pdb
 !ENDIF
 

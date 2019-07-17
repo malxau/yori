@@ -4,7 +4,6 @@ BINARIES=yrmdir.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyrmdir.pdb
 LINKPDB=/Pdb:yrmdir.pdb
 !ENDIF
 

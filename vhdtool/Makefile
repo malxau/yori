@@ -4,7 +4,6 @@ BINARIES=vhdtool.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdvhdtool.pdb
 LINKPDB=/Pdb:vhdtool.pdb
 !ENDIF
 

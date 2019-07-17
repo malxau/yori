@@ -4,7 +4,6 @@ BINARIES=yerr.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyerr.pdb
 LINKPDB=/Pdb:yerr.pdb
 !ENDIF
 

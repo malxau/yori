@@ -4,7 +4,6 @@ BINARIES=yvol.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyvol.pdb
 LINKPDB=/Pdb:yvol.pdb
 !ENDIF
 

@@ -4,7 +4,6 @@ BINARIES=yhelp.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyhelp.pdb
 LINKPDB=/Pdb:yhelp.pdb
 !ENDIF
 

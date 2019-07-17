@@ -4,7 +4,6 @@ BINARIES=wininfo.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdwininfo.pdb
 LINKPDB=/Pdb:wininfo.pdb
 !ENDIF
 

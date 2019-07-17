@@ -4,7 +4,6 @@ BINARIES=lsof.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdlsof.pdb
 LINKPDB=/Pdb:lsof.pdb
 !ENDIF
 

@@ -4,7 +4,6 @@ BINARIES=setver.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdsetver.pdb
 LINKPDB=/Pdb:setver.pdb
 !ENDIF
 

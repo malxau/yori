@@ -4,7 +4,6 @@ BINARIES=winpos.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdwinpos.pdb
 LINKPDB=/Pdb:winpos.pdb
 !ENDIF
 

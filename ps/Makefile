@@ -4,7 +4,6 @@ BINARIES=yps.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyps.pdb
 LINKPDB=/Pdb:yps.pdb
 !ENDIF
 

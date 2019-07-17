@@ -4,7 +4,6 @@ BINARIES=yecho.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyecho.pdb
 LINKPDB=/Pdb:yecho.pdb
 !ENDIF
 

@@ -4,7 +4,6 @@ BINARIES=ydbg.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdydbg.pdb
 LINKPDB=/Pdb:ydbg.pdb
 !ENDIF
 

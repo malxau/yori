@@ -4,7 +4,6 @@ BINARIES=timethis.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdtimethis.pdb
 LINKPDB=/Pdb:timethis.pdb
 !ENDIF
 

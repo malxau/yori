@@ -8,7 +8,6 @@ YORIMINPDB=
 YORISTDPDB=
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyori.pdb
 MIN_PDB=/Pdb:yorimin.pdb
 STD_PDB=/Pdb:yori.pdb
 FULL_PDB=/Pdb:oneyori.pdb

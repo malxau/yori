@@ -4,7 +4,6 @@ BINARIES=tail.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdtail.pdb
 LINKPDB=/Pdb:tail.pdb
 !ENDIF
 

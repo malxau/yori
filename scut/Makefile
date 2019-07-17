@@ -4,7 +4,6 @@ BINARIES=scut.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdscut.pdb
 LINKPDB=/Pdb:scut.pdb
 !ENDIF
 

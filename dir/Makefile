@@ -4,7 +4,6 @@ BINARIES=ydir.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdydir.pdb
 LINKPDB=/Pdb:ydir.pdb
 !ENDIF
 

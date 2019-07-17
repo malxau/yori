@@ -4,7 +4,6 @@ BINARIES=nice.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdnice.pdb
 LINKPDB=/Pdb:nice.pdb
 !ENDIF
 

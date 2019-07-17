@@ -6,7 +6,6 @@ BINARIES=ypm.exe
 CFLAGS=$(CFLAGS) -DYPM_VER_MAJOR=$(YPM_VER_MAJOR) -DYPM_VER_MINOR=$(YPM_VER_MINOR) -I..\pkglib
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdypm.pdb
 LINKPDB=/Pdb:ypm.pdb
 !ENDIF
 

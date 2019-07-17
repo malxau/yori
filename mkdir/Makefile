@@ -4,7 +4,6 @@ BINARIES=ymkdir.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdymkdir.pdb
 LINKPDB=/Pdb:ymkdir.pdb
 !ENDIF
 

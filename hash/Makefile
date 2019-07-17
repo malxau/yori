@@ -4,7 +4,6 @@ BINARIES=yhash.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyhash.pdb
 LINKPDB=/Pdb:yhash.pdb
 !ENDIF
 

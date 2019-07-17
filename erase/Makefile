@@ -4,7 +4,6 @@ BINARIES=yerase.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyerase.pdb
 LINKPDB=/Pdb:yerase.pdb
 !ENDIF
 

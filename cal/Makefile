@@ -4,7 +4,6 @@ BINARIES=ycal.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdycal.pdb
 LINKPDB=/Pdb:ycal.pdb
 !ENDIF
 

@@ -4,7 +4,6 @@ BINARIES=ymklink.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdymklink.pdb
 LINKPDB=/Pdb:ymklink.pdb
 !ENDIF
 

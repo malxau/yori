@@ -4,7 +4,6 @@ BINARIES=iconv.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdiconv.pdb
 LINKPDB=/Pdb:iconv.pdb
 !ENDIF
 

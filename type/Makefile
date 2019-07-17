@@ -4,7 +4,6 @@ BINARIES=ytype.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdytype.pdb
 LINKPDB=/Pdb:ytype.pdb
 !ENDIF
 

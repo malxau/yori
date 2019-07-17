@@ -4,7 +4,6 @@ BINARIES=yenv.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyenv.pdb
 LINKPDB=/Pdb:yenv.pdb
 !ENDIF
 

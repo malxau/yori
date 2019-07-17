@@ -4,7 +4,6 @@ BINARIES=lines.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdlines.pdb
 LINKPDB=/Pdb:lines.pdb
 !ENDIF
 

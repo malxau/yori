@@ -4,7 +4,6 @@ BINARIES=ycut.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdycut.pdb
 LINKPDB=/Pdb:ycut.pdb
 !ENDIF
 

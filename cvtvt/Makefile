@@ -4,7 +4,6 @@ BINARIES=cvtvt.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdcvtvt.pdb
 LINKPDB=/Pdb:cvtvt.pdb
 !ENDIF
 

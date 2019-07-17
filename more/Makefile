@@ -4,7 +4,6 @@ BINARIES=ymore.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdymore.pdb
 LINKPDB=/Pdb:ymore.pdb
 !ENDIF
 

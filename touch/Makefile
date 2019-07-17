@@ -4,7 +4,6 @@ BINARIES=touch.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdtouch.pdb
 LINKPDB=/Pdb:touch.pdb
 !ENDIF
 

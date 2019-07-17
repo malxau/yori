@@ -4,7 +4,6 @@ BINARIES=ymem.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdymem.pdb
 LINKPDB=/Pdb:ymem.pdb
 !ENDIF
 

@@ -4,7 +4,6 @@ BINARIES=cshot.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdcshot.pdb
 LINKPDB=/Pdb:cshot.pdb
 !ENDIF
 

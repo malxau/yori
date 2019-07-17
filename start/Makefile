@@ -4,7 +4,6 @@ BINARIES=ystart.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdystart.pdb
 LINKPDB=/Pdb:ystart.pdb
 !ENDIF
 

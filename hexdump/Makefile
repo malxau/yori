@@ -4,7 +4,6 @@ BINARIES=hexdump.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdhexdump.pdb
 LINKPDB=/Pdb:hexdump.pdb
 !ENDIF
 

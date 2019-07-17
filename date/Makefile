@@ -4,7 +4,6 @@ BINARIES=ydate.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdydate.pdb
 LINKPDB=/Pdb:ydate.pdb
 !ENDIF
 

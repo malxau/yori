@@ -4,7 +4,6 @@ BINARIES=yui.exe yuishook.dll
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyui.pdb
 LINKPDB=/Pdb:yui.pdb
 LINKPDB_YUISHOOK=/Pdb:yuishook.pdb
 !ENDIF

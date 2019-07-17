@@ -4,7 +4,6 @@ BINARIES=yexpr.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdyexpr.pdb
 LINKPDB=/Pdb:yexpr.pdb
 !ENDIF
 

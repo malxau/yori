@@ -4,7 +4,6 @@ BINARIES=sync.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdsync.pdb
 LINKPDB=/Pdb:sync.pdb
 !ENDIF
 

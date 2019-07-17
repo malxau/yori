@@ -4,7 +4,6 @@ BINARIES=ydu.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdydu.pdb
 LINKPDB=/Pdb:ydu.pdb
 !ENDIF
 

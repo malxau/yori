@@ -4,7 +4,6 @@ BINARIES=sleep.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdsleep.pdb
 LINKPDB=/Pdb:sleep.pdb
 !ENDIF
 

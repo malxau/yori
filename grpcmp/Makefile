@@ -4,7 +4,6 @@ BINARIES=grpcmp.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdgrpcmp.pdb
 LINKPDB=/Pdb:grpcmp.pdb
 !ENDIF
 

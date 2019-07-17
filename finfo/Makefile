@@ -4,7 +4,6 @@ BINARIES=finfo.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdfinfo.pdb
 LINKPDB=/Pdb:finfo.pdb
 !ENDIF
 

@@ -4,7 +4,6 @@ BINARIES=ycls.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdycls.pdb
 LINKPDB=/Pdb:ycls.pdb
 !ENDIF
 

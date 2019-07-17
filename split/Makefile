@@ -4,7 +4,6 @@ BINARIES=ysplit.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdysplit.pdb
 LINKPDB=/Pdb:ysplit.pdb
 !ENDIF
 

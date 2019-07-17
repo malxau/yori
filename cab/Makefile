@@ -4,7 +4,6 @@ BINARIES=cab.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdcab.pdb
 LINKPDB=/Pdb:cab.pdb
 !ENDIF
 

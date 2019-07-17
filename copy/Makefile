@@ -4,7 +4,6 @@ BINARIES=ycopy.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdycopy.pdb
 LINKPDB=/Pdb:ycopy.pdb
 !ENDIF
 

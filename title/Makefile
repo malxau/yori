@@ -4,7 +4,6 @@ BINARIES=ytitle.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdytitle.pdb
 LINKPDB=/Pdb:ytitle.pdb
 !ENDIF
 

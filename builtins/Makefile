@@ -49,7 +49,6 @@ all: compile link
 compile: builtins.lib
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdbuiltins.pdb
 !ENDIF
 
 builtins.lib: $(BUILTINS) 

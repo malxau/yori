@@ -4,7 +4,6 @@ BINARIES=ysponge.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdysponge.pdb
 LINKPDB=/Pdb:ysponge.pdb
 !ENDIF
 

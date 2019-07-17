@@ -4,7 +4,6 @@ BINARIES=tee.exe
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-CFLAGS=$(CFLAGS) /Fdtee.pdb
 LINKPDB=/Pdb:tee.pdb
 !ENDIF
 
