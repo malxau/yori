@@ -583,6 +583,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("echo"),     _T("yecho $*$")},
     {_T("env"),      _T("yenv $*$")},
     {_T("erase"),    _T("yerase $*$")},
+    {_T("err"),      _T("yerr $*$")},
     {_T("expr"),     _T("yexpr $*$")},
     {_T("hash"),     _T("yhash $*$")},
     {_T("head"),     _T("ytype -h $*$")},
