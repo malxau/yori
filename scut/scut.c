@@ -400,11 +400,12 @@ ENTRYPOINT(
         goto Exit;
     }
 
-    hRes = scut->Vtbl->QueryInterface(scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
-    if (!SUCCEEDED(hRes)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("QueryInstance IShellLinkDataList failure: %x\n"), hRes);
-        goto Exit;
-    }
+    //
+    //  This doesn't exist on original NT4.  Don't explode if it's
+    //  missing.
+    //
+
+    scut->Vtbl->QueryInterface(scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
 
     if (op == ScutOperationModify ||
         op == ScutOperationExec ||
@@ -489,11 +490,16 @@ ENTRYPOINT(
         }
     }
 
-    if (op == ScutOperationModify && DeleteConsoleSettings) {
-        hRes = ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
-        if (!SUCCEEDED(hRes)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RemoveDataBlock failure: %x\n"), hRes);
+    if (op == ScutOperationModify && DeleteConsoleSettings && ShortcutDataList != NULL) {
+        if (ShortcutDataList == NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("scut: OS support not present\n"));
             goto Exit;
+        } else {
+            hRes = ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
+            if (!SUCCEEDED(hRes)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RemoveDataBlock failure: %x\n"), hRes);
+                goto Exit;
+            }
         }
     }
 
