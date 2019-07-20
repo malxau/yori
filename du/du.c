@@ -436,12 +436,31 @@ DuInitializeDirectoryStack(
     DirStack->DirectoryName.LengthInChars = DirName->LengthInChars;
 
     //
-    //  If GetDiskFreeSpace fails, assume a 4Kb cluster size.
+    //  If GetDiskFreeSpace fails, see if it works on the effective root.
+    //  This is to support systems without mount points where this call can
+    //  fail when called on a directory.
     //
 
     if (DuContext->AllocationSize) {
         if (!GetDiskFreeSpace(DirStack->DirectoryName.StartOfString, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters)) {
+            YORI_STRING EffectiveRoot;
+
             DirStack->AllocationSize = 4096;
+
+            if (YoriLibFindEffectiveRoot(&DirStack->DirectoryName, &EffectiveRoot) &&
+                EffectiveRoot.LengthInChars < DirStack->DirectoryName.LengthInChars) {
+
+                TCHAR SavedChar;
+                SavedChar = EffectiveRoot.StartOfString[EffectiveRoot.LengthInChars];
+                EffectiveRoot.StartOfString[EffectiveRoot.LengthInChars] = '\0';
+
+                if (GetDiskFreeSpace(EffectiveRoot.StartOfString, &SectorsPerCluster, &BytesPerSector, &NumberOfFreeClusters, &TotalNumberOfClusters)) {
+                    DirStack->AllocationSize = SectorsPerCluster * BytesPerSector;
+                }
+
+                EffectiveRoot.StartOfString[EffectiveRoot.LengthInChars] = SavedChar;
+            }
+
         } else {
             DirStack->AllocationSize = SectorsPerCluster * BytesPerSector;
         }

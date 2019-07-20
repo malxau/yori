@@ -223,8 +223,11 @@ YoriLibCollectAllocatedRangeCount (
         DWORD BytesReturned;
         DWORD ElementCount;
 
-        LARGE_INTEGER PriorRunLength = {0};
-        LARGE_INTEGER PriorRunOffset = {0};
+        LARGE_INTEGER PriorRunLength;
+        LARGE_INTEGER PriorRunOffset;
+
+        PriorRunLength.QuadPart = 0;
+        PriorRunOffset.QuadPart = 0;
 
         StartBuffer.FileOffset.QuadPart = 0;
         StartBuffer.Length.LowPart = FindData->nFileSizeLow;
@@ -340,7 +343,24 @@ YoriLibCollectAllocationSize (
             DWORD SectorsPerCluster;
             DWORD FreeClusters;
             DWORD TotalClusters;
-            GetDiskFreeSpace(ParentPath.StartOfString, &SectorsPerCluster, &BytesPerSector, &FreeClusters, &TotalClusters);
+
+            if (!GetDiskFreeSpace(ParentPath.StartOfString, &SectorsPerCluster, &BytesPerSector, &FreeClusters, &TotalClusters)) {
+                YORI_STRING EffectiveRoot;
+
+                BytesPerSector = 512;
+                SectorsPerCluster = 8;
+
+                //
+                //  On NT4 and below (which don't support mount points) use the
+                //  root of the drive or share to find cluster size.  These
+                //  systems can fail when given a directory to GetDiskFreeSpace.
+                //
+
+                if (YoriLibFindEffectiveRoot(&ParentPath, &EffectiveRoot)) {
+                    EffectiveRoot.StartOfString[EffectiveRoot.LengthInChars] = '\0';
+                    GetDiskFreeSpace(EffectiveRoot.StartOfString, &SectorsPerCluster, &BytesPerSector, &FreeClusters, &TotalClusters);
+                }
+            }
 
             ClusterSize = SectorsPerCluster * BytesPerSector;
             YoriLibFreeStringContents(&ParentPath);
@@ -750,7 +770,7 @@ YoriLibCollectEffectivePermissions (
     DWORD dwSdRequired = 0;
     HANDLE TokenHandle = NULL;
     BOOL AccessGranted;
-    GENERIC_MAPPING Mapping = {0};
+    GENERIC_MAPPING Mapping;
     PRIVILEGE_SET Privilege;
     DWORD PrivilegeLength = sizeof(Privilege);
     DWORD Index;
@@ -800,6 +820,7 @@ YoriLibCollectEffectivePermissions (
         goto Exit;
     }
 
+    memset(&Mapping, 0, sizeof(Mapping));
     DllAdvApi32.pAccessCheck((PSECURITY_DESCRIPTOR)SecurityDescriptor, TokenHandle, MAXIMUM_ALLOWED, &Mapping, &Privilege, &PrivilegeLength, &Entry->EffectivePermissions, &AccessGranted);
 
 Exit:
@@ -1126,10 +1147,13 @@ YoriLibCollectFragmentCount (
         } u;
         DWORD BytesReturned;
 
-        LARGE_INTEGER PriorRunLength = {0};
-        LARGE_INTEGER PriorNextVcn = {0};
-        LARGE_INTEGER PriorLcn = {0};
+        LARGE_INTEGER PriorRunLength;
+        LARGE_INTEGER PriorNextVcn;
+        LARGE_INTEGER PriorLcn;
 
+        PriorRunLength.QuadPart = 0;
+        PriorNextVcn.QuadPart = 0;
+        PriorLcn.QuadPart = 0;
         StartBuffer.StartingVcn.QuadPart = 0;
 
         while ((DeviceIoControl(hFile, FSCTL_GET_RETRIEVAL_POINTERS, &StartBuffer, sizeof(StartBuffer), &u.Extents, sizeof(u), &BytesReturned, NULL) || GetLastError() == ERROR_MORE_DATA) &&
@@ -3369,7 +3393,7 @@ YoriLibGenerateVersion(
     __in PYORI_STRING String
     )
 {
-    LARGE_INTEGER FileVersion = {0};
+    LARGE_INTEGER FileVersion;
     YORI_STRING Substring;
     DWORD CharsConsumed;
     LONGLONG llTemp;
@@ -3385,6 +3409,7 @@ YoriLibGenerateVersion(
     }
 
     FileVersion.HighPart = (DWORD)llTemp << 16;
+    FileVersion.LowPart = 0;
 
     if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '.') {
         Substring.LengthInChars -= CharsConsumed + 1;
