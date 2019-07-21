@@ -540,8 +540,11 @@ YoriShSuckEnv(
         } else {
 
 #if YORI_SH_DEBUG_DEBUGGER
+            if (BytesReturned > 0x2000) {
+                BytesReturned = 0x2000;
+            }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Environment contents:\n"));
-            YoriLibHexDump(EnvString->StartOfString,
+            YoriLibHexDump((PUCHAR)EnvString->StartOfString,
                            0,
                            (DWORD)BytesReturned,
                            sizeof(UCHAR),
@@ -735,6 +738,42 @@ YoriShCommenceProcessBuffersIfNeeded(
 }
 
 /**
+ Find a process in the list of known debugged child processes by its process
+ ID.
+
+ @param ListHead Pointer to the list of known processes.
+
+ @param dwProcessId The process identifier of the process whose information is
+        requested.
+
+ @return Pointer to the information block about the child process.
+ */
+PYORI_SH_DEBUGGED_CHILD_PROCESS
+YoriShFindDebuggedChildProcess(
+    __in PYORI_LIST_ENTRY ListHead,
+    __in DWORD dwProcessId
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_SH_DEBUGGED_CHILD_PROCESS Process;
+
+    ListEntry = NULL;
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(ListHead, ListEntry);
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        Process = CONTAINING_RECORD(ListEntry, YORI_SH_DEBUGGED_CHILD_PROCESS, ListEntry);
+        if (Process->dwProcessId == dwProcessId) {
+            return Process;
+        }
+    }
+
+    return NULL;
+}
+
+/**
  Pump debug messages from a child process, and when the child process has
  completed execution, extract its environment and apply it to the currently
  executing process.
@@ -749,11 +788,15 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     )
 {
     PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext = (PYORI_SH_SINGLE_EXEC_CONTEXT)Context;
+    PYORI_SH_DEBUGGED_CHILD_PROCESS DebuggedChild;
     YORI_STRING OriginalAliases;
     DWORD Err;
     BOOL HaveOriginalAliases;
     BOOL ApplyEnvironment = TRUE;
     BOOL FailedInRedirection = FALSE;
+#if _M_MRX000
+    BOOL ProcessStarted = FALSE;
+#endif
 
     YoriLibInitEmptyString(&OriginalAliases);
     HaveOriginalAliases = YoriShGetSystemAliasStrings(TRUE, &OriginalAliases);
@@ -793,6 +836,46 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
         switch(DbgEvent.dwDebugEventCode) {
             case CREATE_PROCESS_DEBUG_EVENT:
                 CloseHandle(DbgEvent.u.CreateProcessInfo.hFile);
+
+                DebuggedChild = YoriLibReferencedMalloc(sizeof(YORI_SH_DEBUGGED_CHILD_PROCESS));
+                if (DebuggedChild == NULL) {
+                    break;
+                }
+
+                ZeroMemory(DebuggedChild, sizeof(YORI_SH_DEBUGGED_CHILD_PROCESS));
+                if (!DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hProcess, GetCurrentProcess(), &DebuggedChild->hProcess, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+                    YoriLibDereference(DebuggedChild);
+                    break;
+                }
+                if (!DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hThread, GetCurrentProcess(), &DebuggedChild->hInitialThread, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+                    CloseHandle(DebuggedChild->hProcess);
+                    YoriLibDereference(DebuggedChild);
+                    break;
+                }
+
+                DebuggedChild->dwProcessId = DbgEvent.dwProcessId;
+                DebuggedChild->dwInitialThreadId = DbgEvent.dwThreadId;
+#if YORI_SH_DEBUG_DEBUGGER
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PROCESS CREATE recorded for Pid %x Tid %x\n"), DbgEvent.dwProcessId, DbgEvent.dwThreadId);
+#endif
+
+                YoriLibAppendList(&ExecContext->DebuggedChildren, &DebuggedChild->ListEntry);
+                DebuggedChild = NULL;
+
+                break;
+            case EXIT_PROCESS_DEBUG_EVENT:
+                DebuggedChild = YoriShFindDebuggedChildProcess(&ExecContext->DebuggedChildren, DbgEvent.dwProcessId);
+                ASSERT(DebuggedChild != NULL);
+                if (DebuggedChild != NULL) {
+#if YORI_SH_DEBUG_DEBUGGER
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PROCESS DELETE recorded for Pid %x\n"), DbgEvent.dwProcessId);
+#endif
+                    YoriLibRemoveListItem(&DebuggedChild->ListEntry);
+                    CloseHandle(DebuggedChild->hProcess);
+                    CloseHandle(DebuggedChild->hInitialThread);
+                    YoriLibDereference(DebuggedChild);
+                    DebuggedChild = NULL;
+                }
                 break;
             case LOAD_DLL_DEBUG_EVENT:
 #if YORI_SH_DEBUG_DEBUGGER
@@ -828,8 +911,31 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
                 dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
 
                 if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
-
                     dwContinueStatus = DBG_CONTINUE;
+#if _M_MRX000
+                    DebuggedChild = YoriShFindDebuggedChildProcess(&ExecContext->DebuggedChildren, DbgEvent.dwProcessId);
+                    ASSERT(DebuggedChild != NULL);
+
+                    //
+                    //  MIPS appears to continue from the instruction that
+                    //  raised the exception.  We want to skip over it, and
+                    //  fortunately we know all instructions are 4 bytes.  We
+                    //  only do this for the initial breakpoint, which is on
+                    //  the initial thread; other threads would crash the
+                    //  process if the debugger wasn't here, so let it die.
+                    //
+
+                    if (DbgEvent.dwThreadId == DebuggedChild->dwInitialThreadId) {
+                        CONTEXT ThreadContext;
+                        ZeroMemory(&ThreadContext, sizeof(ThreadContext));
+                        ThreadContext.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+                        GetThreadContext(DebuggedChild->hInitialThread, &ThreadContext);
+                        ThreadContext.Fir += 4;
+                        SetThreadContext(DebuggedChild->hInitialThread, &ThreadContext);
+                    } else {
+                        dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
+                    }
+#endif
                 }
 
                 if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001F) {

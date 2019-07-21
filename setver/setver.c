@@ -307,6 +307,11 @@ typedef struct _SETVER_OUTSTANDING_PROCESS {
     DWORD dwProcessId;
 
     /**
+     The identifier for the initial thread within the process.
+     */
+    DWORD dwInitialThreadId;
+
+    /**
      A saved copy of the first byte in the StartRoutine.  This may be an
      entire instruction or may be part of one, but since the breakpoint is
      a single byte, this byte must be restored before execution can
@@ -452,6 +457,7 @@ SetVerPumpDebugEvents(
                 DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hThread, GetCurrentProcess(), &Process->hInitialThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
                 Process->StartRoutine = DbgEvent.u.CreateProcessInfo.lpStartAddress;
                 Process->dwProcessId = DbgEvent.dwProcessId;
+                Process->dwInitialThreadId = DbgEvent.dwThreadId;
 
 #if SETVER_DEBUG
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("StartRoutine of Pid %x at %p\n"), DbgEvent.dwProcessId, Process->StartRoutine);
@@ -550,7 +556,36 @@ SetVerPumpDebugEvents(
 
                     dwContinueStatus = DBG_CONTINUE;
 
-#if defined(_M_AMD64) || defined(_M_IX86)
+#if defined(_M_MRX000)
+                    //
+                    //  MIPS appears to continue from the instruction that
+                    //  raised the exception.  We want to skip over it, and
+                    //  fortunately we know all instructions are 4 bytes.
+                    //  Note we only have a thread handle for the initial
+                    //  thread, so we only process that; other threads will
+                    //  crash the process.
+                    //
+
+                    Process = SetVerFindProcess(&Processes, DbgEvent.dwProcessId);
+                    ASSERT(Process != NULL);
+                    if (Process != NULL &&
+                        Process->dwInitialThreadId == DbgEvent.dwThreadId) {
+
+                        CONTEXT ThreadContext;
+                        ZeroMemory(&ThreadContext, sizeof(ThreadContext));
+
+                        ThreadContext.ContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+                        GetThreadContext(Process->hInitialThread, &ThreadContext);
+
+                        ThreadContext.Fir += 4;
+#if SETVER_DEBUG
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Advancing Fir to %p\n"), ThreadContext.Fir);
+#endif
+                        SetThreadContext(Process->hInitialThread, &ThreadContext);
+                    } else {
+                        dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
+                    }
+#elif defined(_M_AMD64) || defined(_M_IX86)
                     Process = SetVerFindProcess(&Processes, DbgEvent.dwProcessId);
                     ASSERT(Process != NULL);
                     if (Process != NULL &&
@@ -576,6 +611,7 @@ SetVerPumpDebugEvents(
                         
                         WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
                         FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
+
                         SetThreadContext(Process->hInitialThread, &ThreadContext);
                         Process->ProcessStarted = TRUE;
 

@@ -253,6 +253,9 @@ SdirDisplayArch (
             case IMAGE_FILE_MACHINE_ARM64:
                 StrFixed = _T("arm64");
                 break;
+            case IMAGE_FILE_MACHINE_R4000:
+                StrFixed = _T("mips ");
+                break;
             default:
                 StrFixed = _T("New? ");
                 break;

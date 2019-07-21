@@ -1133,6 +1133,7 @@ YoriShParseCmdContextToExecContext(
     ExecContext->RunOnSecondConsole = FALSE;
     ExecContext->TaskCompletionDisplayed = FALSE;
     ExecContext->SuppressTaskCompletion = FALSE;
+    YoriLibInitializeListHead(&ExecContext->DebuggedChildren);
 
     //
     //  First, count the number of arguments that will be consumed by this
@@ -1305,6 +1306,8 @@ YoriShFreeExecContext(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_SH_DEBUGGED_CHILD_PROCESS DebuggedChild;
 
     ASSERT(ExecContext->ReferenceCount == 0);
 
@@ -1317,6 +1320,30 @@ YoriShFreeExecContext(
         ASSERT(WaitForSingleObject(ExecContext->hDebuggerThread, 0) == WAIT_OBJECT_0 || ExecContext->DebugPumpThreadFinished);
         CloseHandle(ExecContext->hDebuggerThread);
         ExecContext->hDebuggerThread = NULL;
+    }
+
+    //
+    //  Free any ancestor processes that are being tracked by the
+    //  debugger.
+    //
+
+    ListEntry = NULL;
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(&ExecContext->DebuggedChildren, ListEntry);
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        DebuggedChild = CONTAINING_RECORD(ListEntry, YORI_SH_DEBUGGED_CHILD_PROCESS, ListEntry);
+        YoriLibRemoveListItem(&DebuggedChild->ListEntry);
+        if (DebuggedChild->hProcess != NULL) {
+            CloseHandle(DebuggedChild->hProcess);
+        }
+        if (DebuggedChild->hInitialThread != NULL) {
+            CloseHandle(DebuggedChild->hInitialThread);
+        }
+        YoriLibDereference(DebuggedChild);
+        ListEntry = NULL;
     }
 
     YoriShFreeCmdContext(&ExecContext->CmdToExec);

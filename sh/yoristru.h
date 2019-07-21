@@ -80,6 +80,46 @@ typedef struct _YORI_SH_CMD_CONTEXT {
 } YORI_SH_CMD_CONTEXT, *PYORI_SH_CMD_CONTEXT;
 
 /**
+ For every process that the shell launches which is subject to debugging, it
+ may receive debug events from child processes launched by that process.
+ These are otherwise unknown to the shell.  For the most part, it has no
+ reason to care about these processes, except the minimum to allow the
+ debugging logic to operate correctly.
+ */
+typedef struct _YORI_SH_DEBUGGED_CHILD_PROCESS {
+
+    /**
+     The list of this debugged child within the process that was launched
+     directly from the shell.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     A handle to the process.  This has been duplicated within this program
+     and must be closed when freeing this structure.
+     */
+    HANDLE hProcess;
+
+    /**
+     A handle to the initial thread within the process.  This has been
+     duplicated within this program and must be closed when freeing this
+     structure.
+     */
+    HANDLE hInitialThread;
+
+    /**
+     The process identifier for this process.
+     */
+    DWORD dwProcessId;
+
+    /**
+     The identifier for the initial thread within the process.
+     */
+    DWORD dwInitialThreadId;
+
+} YORI_SH_DEBUGGED_CHILD_PROCESS, *PYORI_SH_DEBUGGED_CHILD_PROCESS;
+
+/**
  Information about how to execute a single program.  The program may be
  internal or external.
  */
@@ -208,6 +248,12 @@ typedef struct _YORI_SH_SINGLE_EXEC_CONTEXT {
      Handle to the primary thread of the child process.
      */
     HANDLE hPrimaryThread;
+
+    /**
+     If the child process is being debugged, a list of ancestor processes
+     which the debugging engine needs to reason about.
+     */
+    YORI_LIST_ENTRY DebuggedChildren;
 
     /**
      Handle to a debugger thread, if the child process is being debugged.

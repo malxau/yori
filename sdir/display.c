@@ -65,7 +65,7 @@ SdirWriteRawStringToOutputDevice(
  The most recently written attribute to the output.  This is used to ensure
  we only sent VT escapes to a device when the color is actually changing.
  */
-YORILIB_COLOR_ATTRIBUTES SdirCurrentAttribute = {0};
+YORILIB_COLOR_ATTRIBUTES SdirCurrentAttribute;
 
 /**
  Sent a VT escape sequence to the output device if the new color is

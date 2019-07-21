@@ -12,6 +12,10 @@ ARCH=amd64
 !ELSE
 !IF [$(CC) -? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1]==0
 ARCH=arm64
+!ELSE
+!IF [$(CC) -? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1]==0
+ARCH=mips
+!ENDIF
 !ENDIF
 !ENDIF
 !ENDIF

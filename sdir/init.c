@@ -216,6 +216,8 @@ BOOL
 SdirOptInitialize()
 {
     ULONG i, j;
+    YORILIB_COLOR_ATTRIBUTES Attr;
+    memset(&Attr, 0, sizeof(Attr));
 
     //
     //  Calculate the amount of metadata in each column
@@ -260,8 +262,6 @@ SdirOptInitialize()
 
         if ((Feature->Flags & SDIR_FEATURE_DISPLAY) &&
                SdirOptions[i].WidthFn) {
-
-            YORILIB_COLOR_ATTRIBUTES Attr = {0};
 
             Opts->MetadataWidth += SdirOptions[i].WidthFn(NULL, Attr, NULL);
         }

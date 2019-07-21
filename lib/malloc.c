@@ -123,6 +123,11 @@ YoriLibMalloc(
     PYORI_SPECIAL_HEAP_HEADER Header;
     PYORI_SPECIAL_HEAP_HEADER Commit;
     DWORD OldAccess;
+#if _M_MRX000
+    DWORD Alignment = sizeof(DWORD);
+#else
+    DWORD Alignment = sizeof(UCHAR);
+#endif
 
     if (DbgHeapMutex == NULL) {
         DbgHeapMutex = CreateMutex(NULL, FALSE, NULL);
@@ -156,7 +161,7 @@ YoriLibMalloc(
     FillMemory(Header, (TotalPagesNeeded - 1) * PAGE_SIZE, '@');
 
     Header->PagesInAllocation = TotalPagesNeeded;
-    Header->OffsetToData = (TotalPagesNeeded - 1) * PAGE_SIZE - Bytes;
+    Header->OffsetToData = ((TotalPagesNeeded - 1) * PAGE_SIZE - Bytes) & ~(Alignment - 1);
     ASSERT(Header->OffsetToData < (PAGE_SIZE + sizeof(YORI_SPECIAL_HEAP_HEADER)));
 #ifdef CaptureStackBackTrace
     CaptureStackBackTrace(1, sizeof(Header->AllocateStack)/sizeof(Header->AllocateStack[0]), Header->AllocateStack, NULL);
@@ -164,7 +169,7 @@ YoriLibMalloc(
 
     WaitForSingleObject(DbgHeapMutex, INFINITE);
     NumberAllocated++;
-    BytesCurrentlyAllocated += Bytes;
+    BytesCurrentlyAllocated += (Bytes + Alignment - 1) & ~(Alignment - 1);
     YoriLibAppendList(&ActiveAllocationsList, &Header->ListEntry);
     ReleaseMutex(DbgHeapMutex);
 

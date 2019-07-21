@@ -87,13 +87,15 @@ YoriLibAttributeFromString(
     __in PYORI_STRING String
     )
 {
-    YORILIB_COLOR_ATTRIBUTES Attribute = {0};
+    YORILIB_COLOR_ATTRIBUTES Attribute;
     YORI_STRING SingleElement;
     DWORD Element;
     BOOL Background = FALSE;
     BOOL ExplicitBackground = FALSE;
     BOOL ExplicitForeground = FALSE;
     DWORD Index;
+
+    memset(&Attribute, 0, sizeof(Attribute));
 
     //
     //  Loop through the list of color keywords

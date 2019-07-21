@@ -19,6 +19,8 @@ cl /? 2>&1 | findstr /C:"for AMD64" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=amd64
 cl /? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=arm64
+cl /? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=mips
 
 pushd ..
 
