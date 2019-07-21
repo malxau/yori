@@ -1117,7 +1117,27 @@ ENTRYPOINT(
 
     for (i = FirstFileArg; i <= LastFileArg; i++) {
         if (!YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
-            MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
+
+            //
+            //  Cmd's copy and xcopy both treat any specified directory as
+            //  referring to the contents of the directory.  So if you use:
+            //
+            //  xcopy /s dir_a dir_b
+            //
+            //  The files in dir_a are copied to dir_b, and there is no dir_a
+            //  in the result.
+            //
+            //  Here we deliberately deviate from that behavior, and copy
+            //  the object known as dir_a under dir_b.  Referring to files
+            //  requires specifying dir_a\* .  This seems more logical and
+            //  flexible than cmd/xcopy, even though it is different.
+            //
+            //  The "copy directory contents" case is retained in
+            //  non-recursive copies, because in that case presumably the
+            //  intent was not to copy an empty directory.
+            //
+
+            MatchFlags = YORILIB_FILEENUM_RETURN_FILES;
             if (BasicEnumeration) {
                 MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
             }
@@ -1126,6 +1146,8 @@ ENTRYPOINT(
                 if (CopyContext.CopyAsLinks) {
                     MatchFlags |= YORILIB_FILEENUM_NO_LINK_TRAVERSE;
                 }
+            } else {
+                MatchFlags |= YORILIB_FILEENUM_DIRECTORY_CONTENTS;
             }
 
             CopyContext.FilesFoundThisArg = 0;
