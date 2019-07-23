@@ -832,6 +832,12 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD InputParamsGeneration;
 
     /**
+     A handle to a thread which is saving restart state.  Note that this may
+     be NULL if no thread has been created or if it has completed.
+     */
+    HANDLE RestartSaveThread;
+
+    /**
      List of command history.
      */
     YORI_LIST_ENTRY CommandHistory;

@@ -544,6 +544,9 @@ YoriShDisplayPrompt();
 BOOL
 YoriShSaveRestartState();
 
+VOID
+YoriShCleanupRestartSaveThreadIfCompleted();
+
 BOOL
 YoriShLoadSavedRestartState(
     __in PYORI_STRING ProcessId

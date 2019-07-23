@@ -618,6 +618,7 @@ YoriShPostCommand()
 VOID
 YoriShPreCommand()
 {
+    YoriShCleanupRestartSaveThreadIfCompleted();
     YoriLibCancelEnable();
     YoriLibCancelIgnore();
     YoriLibCancelReset();

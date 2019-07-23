@@ -74,8 +74,10 @@ YoriShGetTempPath(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
-YoriShSaveRestartState()
+DWORD WINAPI
+YoriShSaveRestartStateWorker(
+    __in PVOID Ignored
+    )
 {
     YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenBufferInfo;
     YORI_CONSOLE_FONT_INFOEX FontInfo;
@@ -84,7 +86,11 @@ YoriShSaveRestartState()
     YORI_STRING RestartFileName;
     YORI_STRING RestartBufferFileName;
     YORI_STRING Env;
+    LPTSTR Comma;
     DWORD Count;
+    DWORD LineCount;
+
+    UNREFERENCED_PARAMETER(Ignored);
 
     //
     //  The restart APIs are available in Vista+.  By happy coincidence, so
@@ -97,7 +103,7 @@ YoriShSaveRestartState()
         DllKernel32.pGetConsoleScreenBufferInfoEx == NULL ||
         DllKernel32.pGetCurrentConsoleFontEx == NULL) {
 
-        return FALSE;
+        return 0;
     }
 
     //
@@ -106,23 +112,49 @@ YoriShSaveRestartState()
 
     Count = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"), NULL, 0, NULL);
     if (Count == 0) {
-        return FALSE;
+        return 0;
     }
 
     if (!YoriLibAllocateString(&RestartFileName, Count)) {
         YoriLibFreeStringContents(&RestartFileName);
-        return FALSE;
+        return 0;
     }
 
     RestartFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"), RestartFileName.StartOfString, RestartFileName.LengthAllocated, NULL);
     if (RestartFileName.LengthInChars == 0) {
         YoriLibFreeStringContents(&RestartFileName);
-        return FALSE;
+        return 0;
+    }
+
+    //
+    //  If the user has specified a line count in YORIAUTORESTART, fish it out
+    //  and convert it to a number.
+    //
+
+    LineCount = 0;
+    Comma = YoriLibFindLeftMostCharacter(&RestartFileName, ',');
+    if (Comma != NULL) {
+        YORI_STRING LineCountAsString;
+        DWORD CharsConsumed;
+        LONGLONG llTemp;
+
+        YoriLibInitEmptyString(&LineCountAsString);
+        LineCountAsString.StartOfString = Comma + 1;
+        LineCountAsString.LengthInChars = RestartFileName.LengthInChars - (DWORD)(Comma - RestartFileName.StartOfString + 1);
+
+        if (YoriLibStringToNumber(&LineCountAsString, TRUE, &llTemp, &CharsConsumed) &&
+            CharsConsumed > 0) {
+
+            LineCount = (DWORD)llTemp;
+        }
+
+        RestartFileName.LengthInChars = (DWORD)(Comma - RestartFileName.StartOfString);
+        Comma[0] = '\0';
     }
 
     if (YoriLibCompareStringWithLiteral(&RestartFileName, _T("1")) != 0) {
         YoriLibFreeStringContents(&RestartFileName);
-        return FALSE;
+        return 0;
     }
     YoriLibFreeStringContents(&RestartFileName);
 
@@ -134,11 +166,11 @@ YoriShSaveRestartState()
     ScreenBufferInfo.cbSize = sizeof(ScreenBufferInfo);
 
     if (!DllKernel32.pGetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo)) {
-        return FALSE;
+        return 0;
     }
 
     if (!YoriShGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
-        return FALSE;
+        return 0;
     }
 
     YoriLibSPrintf(RestartFileName.StartOfString + RestartFileName.LengthInChars,
@@ -147,7 +179,7 @@ YoriShSaveRestartState()
 
     if (!YoriLibAllocateString(&WriteBuffer, 64 * 1024)) {
         YoriLibFreeStringContents(&RestartFileName);
-        return FALSE;
+        return 0;
     }
 
     YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.dwSize.X);
@@ -342,7 +374,7 @@ YoriShSaveRestartState()
                                  NULL);
 
         if (hBufferFile != INVALID_HANDLE_VALUE) {
-            YoriLibRewriteConsoleContents(hBufferFile, 0, 0);
+            YoriLibRewriteConsoleContents(hBufferFile, LineCount, 0);
             WritePrivateProfileString(_T("Window"), _T("Contents"), RestartBufferFileName.StartOfString, RestartFileName.StartOfString);
             CloseHandle(hBufferFile);
         }
@@ -364,9 +396,57 @@ YoriShSaveRestartState()
     YoriLibFreeStringContents(&RestartFileName);
     YoriLibFreeStringContents(&WriteBuffer);
 
+    return 0;
+}
+
+/**
+ Try to save the current state of the process so that it can be recovered
+ from this state after a subsequent unexpected termination.  This operation
+ occurs on a background thread and this function makes no attempt to wait for
+ completion or determine success or failure.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShSaveRestartState()
+{
+    DWORD ThreadId;
+
+    //
+    //  If there's a previous restart save thread, see if it's completed.
+    //  If so, close the handle and prepare for a new thread.  If it's
+    //  still active just return since that implies a save is in progress.
+    //
+
+    if (YoriShGlobal.RestartSaveThread != NULL) {
+        if (WaitForSingleObject(YoriShGlobal.RestartSaveThread, 0) == WAIT_OBJECT_0) {
+            CloseHandle(YoriShGlobal.RestartSaveThread);
+            YoriShGlobal.RestartSaveThread = NULL;
+        } else {
+            return FALSE;
+        }
+    }
+
+    YoriShGlobal.RestartSaveThread = CreateThread(NULL, 0, YoriShSaveRestartStateWorker, NULL, 0, &ThreadId);
+
     return TRUE;
 }
 
+/**
+ Check if a restart thread has been created, and if it has finished.  If it
+ has finished, close the handle to allow the thread to be cleaned up from
+ the system.
+ */
+VOID
+YoriShCleanupRestartSaveThreadIfCompleted()
+{
+    if (YoriShGlobal.RestartSaveThread != NULL) {
+        if (WaitForSingleObject(YoriShGlobal.RestartSaveThread, 0) == WAIT_OBJECT_0) {
+            CloseHandle(YoriShGlobal.RestartSaveThread);
+            YoriShGlobal.RestartSaveThread = NULL;
+        }
+    }
+}
 
 /**
  Try to recover a previous process ID that terminated unexpectedly.
@@ -661,6 +741,12 @@ YoriShDiscardSavedRestartState(
 {
     YORI_STRING RestartFileName;
 
+    if (YoriShGlobal.RestartSaveThread != NULL) {
+        WaitForSingleObject(YoriShGlobal.RestartSaveThread, INFINITE);
+        CloseHandle(YoriShGlobal.RestartSaveThread);
+        YoriShGlobal.RestartSaveThread = NULL;
+    }
+
     if (!YoriShGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
         return;
     }
@@ -690,7 +776,5 @@ YoriShDiscardSavedRestartState(
     DeleteFile(RestartFileName.StartOfString);
     YoriLibFreeStringContents(&RestartFileName);
 }
-
-
 
 // vim:sw=4:ts=4:et:
