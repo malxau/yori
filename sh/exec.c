@@ -142,6 +142,15 @@ YoriShInitializeRedirection(
 
     YoriShCaptureRedirectContext(PreviousRedirectContext);
 
+    //
+    //  MSFIX: What this is doing is allowing child processes to see Ctrl+C,
+    //  which is wrong, because we only want the foreground process to see it
+    //  which implies handling it in the shell.  Unfortunately
+    //  GenerateConsoleCtrlEvent has a nasty bug where it can only safely be
+    //  called on console processes remaining in this console, which will
+    //  require more processing to determine.
+    //
+
     if (!PrepareForBuiltIn) {
         SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
         SetConsoleCtrlHandler(NULL, FALSE);
@@ -774,6 +783,27 @@ YoriShFindDebuggedChildProcess(
 }
 
 /**
+ A structure passed into a debugger thread to indicate which actions to
+ perform.
+ */
+typedef struct _YORI_SH_DEBUG_THREAD_CONTEXT {
+
+    /**
+     A referenced ExecContext indicating the process to launch.
+     */
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
+
+    /**
+     An event to signal once the process has been launched, indicating that
+     redirection has been initiated, the process has started, and redirection
+     has been reverted.  This indicates the calling thread is free to reason
+     about stdin/stdout and console state.
+     */
+    HANDLE InitializedEvent;
+
+} YORI_SH_DEBUG_THREAD_CONTEXT, *PYORI_SH_DEBUG_THREAD_CONTEXT;
+
+/**
  Pump debug messages from a child process, and when the child process has
  completed execution, extract its environment and apply it to the currently
  executing process.
@@ -787,7 +817,9 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     __in PVOID Context
     )
 {
-    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext = (PYORI_SH_SINGLE_EXEC_CONTEXT)Context;
+    PYORI_SH_DEBUG_THREAD_CONTEXT ThreadContext = (PYORI_SH_DEBUG_THREAD_CONTEXT)Context;
+    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext = ThreadContext->ExecContext;
+    HANDLE InitializedEvent = ThreadContext->InitializedEvent;
     PYORI_SH_DEBUGGED_CHILD_PROCESS DebuggedChild;
     YORI_STRING OriginalAliases;
     DWORD Err;
@@ -813,10 +845,12 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
         YoriShCleanupFailedProcessLaunch(ExecContext);
         YoriLibFreeStringContents(&OriginalAliases);
         YoriShDereferenceExecContext(ExecContext, TRUE);
+        SetEvent(InitializedEvent);
         return 0;
     }
 
     YoriShCommenceProcessBuffersIfNeeded(ExecContext);
+    SetEvent(InitializedEvent);
 
     while (TRUE) {
         DEBUG_EVENT DbgEvent;
@@ -1018,27 +1052,52 @@ YoriShWaitForProcessToTerminate(
     BOOLEAN LoseFocusFoundThisPass;
 
     //
-    //  By this point redirection has been established and then reverted.
-    //  This should be dealing with the original input handle.
+    //  If the child isn't running under a debugger, by this point redirection
+    //  has been established and then reverted.  This should be dealing with
+    //  the original input handle.  If it's running under a debugger, we haven't
+    //  started redirecting yet.
     //
 
-    YoriLibCancelEnable();
-
     if (ExecContext->CaptureEnvironmentOnExit) {
+        YORI_SH_DEBUG_THREAD_CONTEXT ThreadContext;
         DWORD ThreadId;
-        YoriShReferenceExecContext(ExecContext);
-        ExecContext->hDebuggerThread = CreateThread(NULL, 0, YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit, ExecContext, 0, &ThreadId);
-        if (ExecContext->hDebuggerThread == NULL) {
-            YoriShDereferenceExecContext(ExecContext, TRUE);
+
+        //
+        //  Because the debugger thread needs to initialize redirection,
+        //  start the thread and wait for it to indicate this process is done.
+        //
+        //  This thread can't reason about the stdin handle and console state
+        //  until that is finished.
+        //
+
+        ThreadContext.InitializedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+        if (ThreadContext.InitializedEvent == NULL) {
+            YoriLibCancelEnable();
             YoriLibCancelIgnore();
             return;
         }
+
+        YoriShReferenceExecContext(ExecContext);
+        ThreadContext.ExecContext = ExecContext;
+        ExecContext->hDebuggerThread = CreateThread(NULL, 0, YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit, &ThreadContext, 0, &ThreadId);
+        if (ExecContext->hDebuggerThread == NULL) {
+            YoriShDereferenceExecContext(ExecContext, TRUE);
+            CloseHandle(ThreadContext.InitializedEvent);
+            YoriLibCancelEnable();
+            YoriLibCancelIgnore();
+            return;
+        }
+
+        WaitForSingleObject(ThreadContext.InitializedEvent, INFINITE);
+        CloseHandle(ThreadContext.InitializedEvent);
 
         WaitOn[0] = ExecContext->hDebuggerThread;
     } else {
         ASSERT(ExecContext->hProcess != NULL);
         WaitOn[0] = ExecContext->hProcess;
     }
+
+    YoriLibCancelEnable();
     WaitOn[1] = YoriLibCancelGetEvent();
     WaitOn[2] = GetStdHandle(STD_INPUT_HANDLE);
 
