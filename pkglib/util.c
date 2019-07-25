@@ -879,7 +879,7 @@ Exit:
 DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
-    __in PYORI_STRING IniFilePath,
+    __in_opt PYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
     __out PBOOL DeleteWhenFinished
     )
@@ -891,10 +891,20 @@ YoriPkgPackagePathToLocalPath(
 
     //
     //  See if there's a mirror for the package.  If anything goes wrong in
-    //  this process, just keep using the original path.
+    //  this process, just keep using the original path.  If there's no INI
+    //  file, there's no possibility of a mirror, so perform path expansion
+    //  on local paths and keep URLs verbatim.
     //
 
-    if (!YoriPkgConvertUserPackagePathToMirroredPath(PackagePath, IniFilePath, &MirroredPath)) {
+    if (IniFilePath == NULL) {
+        if (!YoriLibIsPathUrl(PackagePath)) {
+            if (!YoriLibUserStringToSingleFilePath(PackagePath, FALSE, &MirroredPath)) {
+                YoriLibCloneString(&MirroredPath, PackagePath);
+            }
+        } else {
+            YoriLibCloneString(&MirroredPath, PackagePath);
+        }
+    } else if (!YoriPkgConvertUserPackagePathToMirroredPath(PackagePath, IniFilePath, &MirroredPath)) {
         YoriLibCloneString(&MirroredPath, PackagePath);
     }
 

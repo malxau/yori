@@ -763,6 +763,150 @@ YoriPkgDisplayAvailableRemotePackages()
 }
 
 /**
+ Enumerate all packages on a server from its pkglist.ini, download all of the
+ packages to a local directory, and generate a pkglist.ini in that directory
+ from the contents.
+
+ @param Source Pointer to a remote path from which to download packages.
+
+ @param DownloadPath Pointer to a local path to save packages.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDownloadRemotePackages(
+    __in PYORI_STRING Source,
+    __in PYORI_STRING DownloadPath
+    )
+{
+    YORI_LIST_ENTRY SourcesList;
+    YORI_LIST_ENTRY PackageList;
+    PYORI_LIST_ENTRY PackageEntry;
+    PYORIPKG_REMOTE_PACKAGE Package;
+    YORI_STRING FinalFileName;
+    YORI_STRING FullFinalName;
+    YORI_STRING TempLocalPath;
+    YORI_STRING PackagesIni;
+    DWORD Index;
+    DWORD Err;
+    BOOL DeleteWhenFinished;
+
+    YoriPkgCollectAllSourcesAndPackages(Source, NULL, &SourcesList, &PackageList);
+
+    YoriLibInitEmptyString(&PackagesIni);
+    YoriLibYPrintf(&PackagesIni, _T("%y\\pkglist.ini"), DownloadPath);
+    if (PackagesIni.StartOfString == NULL) {
+        YoriPkgFreeAllSourcesAndPackages(&SourcesList, &PackageList);
+        return FALSE;
+    }
+
+    //
+    //  Download the packages we found.
+    //
+
+    PackageEntry = NULL;
+    PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
+    while (PackageEntry != NULL) {
+        Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
+
+        //
+        //  Find the final file component in the URL
+        //
+
+        YoriLibInitEmptyString(&FinalFileName);
+        for (Index = Package->InstallUrl.LengthInChars; Index > 0; Index--) {
+            if (YoriLibIsSep(Package->InstallUrl.StartOfString[Index - 1])) {
+                FinalFileName.StartOfString = &Package->InstallUrl.StartOfString[Index];
+                FinalFileName.LengthInChars = Package->InstallUrl.LengthInChars - Index;
+                break;
+            }
+        }
+
+        YoriLibInitEmptyString(&FullFinalName);
+        if (FinalFileName.LengthInChars > 0) {
+
+            //
+            //  Download the package, build a local path with the final file
+            //  component from the URL, and copy or move the package into
+            //  place.
+            //
+
+            YoriLibInitEmptyString(&TempLocalPath);
+            Err = YoriPkgPackagePathToLocalPath(&Package->InstallUrl, NULL, &TempLocalPath, &DeleteWhenFinished);
+            if (Err == ERROR_SUCCESS) {
+                YoriLibYPrintf(&FullFinalName, _T("%y\\%y"), DownloadPath, &FinalFileName);
+                if (FullFinalName.LengthInChars == 0) {
+                    Err = ERROR_NOT_ENOUGH_MEMORY;
+                }
+                if (Err == ERROR_SUCCESS) {
+                    if (DeleteWhenFinished) {
+                        if (!MoveFileEx(TempLocalPath.StartOfString, FullFinalName.StartOfString, MOVEFILE_REPLACE_EXISTING)) {
+                            Err = GetLastError();
+                            DeleteFile(TempLocalPath.StartOfString);
+                        }
+                    } else {
+                        if (!CopyFile(TempLocalPath.StartOfString, FullFinalName.StartOfString, FALSE)) {
+                            Err = GetLastError();
+                        }
+                    }
+                }
+
+                YoriLibFreeStringContents(&TempLocalPath);
+            }
+
+            //
+            //  Write INI entries for the package that has been found on the
+            //  remote source.  Note all this can do is propagate the values
+            //  that this version of the code understands.
+            //
+
+            if (Err == ERROR_SUCCESS) {
+                YORI_STRING TempKeyString;
+                WritePrivateProfileString(_T("Provides"), Package->PackageName.StartOfString, Package->Version.StartOfString, PackagesIni.StartOfString);
+                WritePrivateProfileString(Package->PackageName.StartOfString, _T("Version"), Package->Version.StartOfString, PackagesIni.StartOfString);
+                WritePrivateProfileString(Package->PackageName.StartOfString, Package->Architecture.StartOfString, FinalFileName.StartOfString, PackagesIni.StartOfString);
+
+                if (Package->MinimumOSBuild.LengthInChars != 0) {
+                    YoriLibInitEmptyString(&TempKeyString);
+                    YoriLibYPrintf(&TempKeyString, _T("%y.minimumosbuild"), &Package->Architecture);
+                    if (TempKeyString.LengthInChars > 0) {
+                        WritePrivateProfileString(Package->PackageName.StartOfString, TempKeyString.StartOfString, Package->MinimumOSBuild.StartOfString, PackagesIni.StartOfString);
+                        YoriLibFreeStringContents(&TempKeyString);
+                    }
+
+                }
+
+                if (Package->PackagePathForOlderBuilds.LengthInChars != 0) {
+                    YoriLibInitEmptyString(&TempKeyString);
+                    YoriLibYPrintf(&TempKeyString, _T("%y.packagepathforolderbuilds"), &Package->Architecture);
+                    if (TempKeyString.LengthInChars > 0) {
+                        WritePrivateProfileString(Package->PackageName.StartOfString, TempKeyString.StartOfString, Package->PackagePathForOlderBuilds.StartOfString, PackagesIni.StartOfString);
+                        YoriLibFreeStringContents(&TempKeyString);
+                    }
+
+                }
+            }
+
+            if (Err == ERROR_SUCCESS) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Saved %y to %y\n"), &Package->InstallUrl, &FullFinalName);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Error saving %y to %y: "), &Package->InstallUrl, &FullFinalName);
+                YoriPkgDisplayErrorStringForInstallFailure(Err);
+            }
+
+            YoriLibFreeStringContents(&FullFinalName);
+        }
+
+        PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
+    }
+
+    YoriPkgFreeAllSourcesAndPackages(&SourcesList, &PackageList);
+    YoriLibFreeStringContents(&PackagesIni);
+
+    return TRUE;
+}
+
+/**
  Process a list of packages which match a given package name and desired
  version, find any with the matching architecture and if it is found, insert
  it into the list of matches.

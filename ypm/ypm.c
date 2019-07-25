@@ -43,6 +43,9 @@ CHAR strYpmHelpText[] =
         "       [-replaces <packages>]\n"
         "YPM -cs <file> <pkgname> <version> -filepath <directory>\n"
         "YPM -d <pkg>\n"
+        "YPM -download <source> <target>\n"
+        "YPM -download-daily <target>\n"
+        "YPM -download-stable <target>\n"
         "YPM -i <file>\n"
         "YPM -l\n"
         "YPM -lv\n"
@@ -116,6 +119,9 @@ typedef enum _YPM_OPERATION {
     YpmOpMirrorInstall = 16,
     YpmOpMirrorDelete = 17,
     YpmOpListPackagesVerbose = 18,
+    YpmOpDownload = 19,
+    YpmOpDownloadStable = 20,
+    YpmOpDownloadDaily = 21,
 } YPM_OPERATION;
 
 #ifdef YORI_BUILTIN
@@ -210,6 +216,28 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 Op = YpmOpDeleteInstalled;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("download")) == 0) {
+                if (i + 2 < ArgC) {
+                    SourcePath = &ArgV[i + 1];
+                    FilePath = &ArgV[i + 2];
+                    i += 2;
+                    ArgumentUnderstood = TRUE;
+                    Op = YpmOpDownload;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("download-daily")) == 0) {
+                if (i + 1 < ArgC) {
+                    FilePath = &ArgV[i + 1];
+                    i += 1;
+                    ArgumentUnderstood = TRUE;
+                    Op = YpmOpDownloadDaily;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("download-stable")) == 0) {
+                if (i + 1 < ArgC) {
+                    FilePath = &ArgV[i + 1];
+                    i += 1;
+                    ArgumentUnderstood = TRUE;
+                    Op = YpmOpDownloadStable;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("filelist")) == 0) {
                 if (i + 1 < ArgC) {
                     FileList = &ArgV[i + 1];
@@ -460,6 +488,16 @@ ENTRYPOINT(
                 YoriPkgInstallSymbolForSinglePackage(&ArgV[i]);
             }
         }
+    } else if (Op == YpmOpDownload) {
+        YoriPkgDownloadRemotePackages(SourcePath, FilePath);
+    } else if (Op == YpmOpDownloadStable) {
+        YORI_STRING LocalSourcePath;
+        YoriLibConstantString(&LocalSourcePath, _T("http://www.malsmith.net/download/?obj=yori/latest-stable/"));
+        YoriPkgDownloadRemotePackages(&LocalSourcePath, FilePath);
+    } else if (Op == YpmOpDownloadDaily) {
+        YORI_STRING LocalSourcePath;
+        YoriLibConstantString(&LocalSourcePath, _T("http://www.malsmith.net/download/?obj=yori/latest-daily/"));
+        YoriPkgDownloadRemotePackages(&LocalSourcePath, FilePath);
     }
 
     return EXIT_SUCCESS;

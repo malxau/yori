@@ -146,4 +146,10 @@ YoriPkgListInstalledPackages(
     __in BOOL Verbose
     );
 
+BOOL
+YoriPkgDownloadRemotePackages(
+    __in PYORI_STRING Source,
+    __in PYORI_STRING DownloadPath
+    );
+
 // vim:sw=4:ts=4:et:

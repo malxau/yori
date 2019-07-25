@@ -312,7 +312,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
 DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
-    __in PYORI_STRING IniFilePath,
+    __in_opt PYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
     __out PBOOL DeleteWhenFinished
     );
