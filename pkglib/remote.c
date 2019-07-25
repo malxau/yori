@@ -613,6 +613,10 @@ Exit:
  including any sources they refer to, and build a complete list of packages
  found from all sources.
 
+ @param CustomSource Optionally specifies a source for packages.  If not
+        specified, the INI from NewDirectory is used, and if that's not
+        present, fallback to default sources.
+
  @param NewDirectory Optionally specifies an install directory.  If not
         specified, the directory of the currently running application is
         used.
@@ -627,6 +631,7 @@ Exit:
  */
 BOOL
 YoriPkgCollectAllSourcesAndPackages(
+    __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
     __out PYORI_LIST_ENTRY SourcesList,
     __out PYORI_LIST_ENTRY PackageList
@@ -644,9 +649,18 @@ YoriPkgCollectAllSourcesAndPackages(
     YoriLibInitializeListHead(PackageList);
     YoriLibInitializeListHead(SourcesList);
 
-    if (!YoriPkgCollectSourcesFromIniWithDefaults(&PackagesIni, SourcesList, NULL)) {
-        YoriLibFreeStringContents(&PackagesIni);
-        return FALSE;
+    if (CustomSource != NULL) {
+        Source = YoriPkgAllocateRemoteSource(CustomSource);
+        if (Source == NULL) {
+            YoriLibFreeStringContents(&PackagesIni);
+            return FALSE;
+        }
+        YoriLibAppendList(SourcesList, &Source->SourceList);
+    } else {
+        if (!YoriPkgCollectSourcesFromIniWithDefaults(&PackagesIni, SourcesList, NULL)) {
+            YoriLibFreeStringContents(&PackagesIni);
+            return FALSE;
+        }
     }
 
     //
@@ -729,7 +743,7 @@ YoriPkgDisplayAvailableRemotePackages()
     PYORI_LIST_ENTRY PackageEntry;
     PYORIPKG_REMOTE_PACKAGE Package;
 
-    YoriPkgCollectAllSourcesAndPackages(NULL, &SourcesList, &PackageList);
+    YoriPkgCollectAllSourcesAndPackages(NULL, NULL, &SourcesList, &PackageList);
 
     //
     //  Display the packages we found.
@@ -795,6 +809,10 @@ YoriPkgFindRemotePackageMatchingArchitecture(
 
  @param PackageNameCount The number of elements in the PackageName array.
 
+ @param CustomSource Optionally specifies a source for packages.  If not
+        specified, the INI from NewDirectory is used, and if that's not
+        present, fallback to default sources.
+
  @param NewDirectory Optionally specifies an install directory.  If not
         specified, the directory of the currently running application is
         used.
@@ -816,6 +834,7 @@ DWORD
 YoriPkgFindRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
     __in_opt PYORI_STRING MatchArch,
@@ -833,7 +852,7 @@ YoriPkgFindRemotePackages(
     DWORD InstallCount = 0;
     BOOL PkgInstalled;
 
-    YoriPkgCollectAllSourcesAndPackages(NewDirectory, &SourcesList, &PackageList);
+    YoriPkgCollectAllSourcesAndPackages(CustomSource, NewDirectory, &SourcesList, &PackageList);
 
     for (PkgIndex = 0; PkgIndex < PackageNameCount; PkgIndex++) {
         YoriLibInitializeListHead(&PackagesMatchingName);
@@ -956,6 +975,10 @@ YoriPkgFindRemotePackages(
 
  @param PackageNameCount The number of elements in the PackageName array.
 
+ @param CustomSource Optionally specifies a source for packages.  If not
+        specified, the INI from NewDirectory is used, and if that's not
+        present, fallback to default sources.
+
  @param NewDirectory Optionally specifies an install directory.  If not
         specified, the directory of the currently running application is
         used.
@@ -973,6 +996,7 @@ BOOL
 YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
     __in_opt PYORI_STRING MatchArch
@@ -1013,6 +1037,7 @@ YoriPkgInstallRemotePackages(
 
     MatchingPackageCount = YoriPkgFindRemotePackages(PackageNames,
                                                      PackageNameCount,
+                                                     CustomSource,
                                                      NewDirectory,
                                                      MatchVersion,
                                                      MatchArch,
@@ -1070,6 +1095,10 @@ Exit:
 
  @param PackageNameCount The number of elements in the PackageName array.
 
+ @param CustomSource Optionally specifies a source for packages.  If not
+        specified, the INI from NewDirectory is used, and if that's not
+        present, fallback to default sources.
+
  @param NewDirectory Optionally specifies an install directory.  If not
         specified, the directory of the currently running application is
         used.
@@ -1084,6 +1113,7 @@ DWORD
 YoriPkgGetRemotePackageUrls(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
     __out PYORI_STRING * PackageUrls
     )
@@ -1101,6 +1131,7 @@ YoriPkgGetRemotePackageUrls(
 
     MatchingPackageCount = YoriPkgFindRemotePackages(PackageNames,
                                                      PackageNameCount,
+                                                     CustomSource,
                                                      NewDirectory,
                                                      NULL,
                                                      NULL,

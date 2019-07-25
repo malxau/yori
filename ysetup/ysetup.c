@@ -60,6 +60,98 @@ YsetupHelp()
 }
 
 /**
+ A list of subdirectories from the application to check for packages.
+ */
+CONST LPTSTR SetupLocalPathsToCheck[] = {
+    _T("pkg"),
+    _T("yori"),
+    _T("ypm"),
+    _T("ysetup")
+};
+
+/**
+ See if there are local packages for installation without using the internet.
+ This probes subdirectories of the application's directory.  Subdirectories
+ are used to avoid squatting in the downloads folder, ie., not allowing a
+ website drive-by to populate the downloads folder with a file that would
+ manipulate the installer.
+
+ @param LocalPath On successful completion, populated with a referenced string
+        describing the local package location to use.
+
+ @return TRUE to indicate that a local package location has been found which
+         should be used, and FALSE to indicate default package locations
+         should be used instead.
+ */
+BOOL
+SetupFindLocalPkgPath(
+    __out PYORI_STRING LocalPath
+    )
+{
+    DWORD Index;
+    int Result;
+    YORI_STRING RelativePathToProbe;
+    YORI_STRING FullPathToProbe;
+
+    YoriLibInitEmptyString(&RelativePathToProbe);
+    YoriLibInitEmptyString(&FullPathToProbe);
+    for (Index = 0; Index < sizeof(SetupLocalPathsToCheck)/sizeof(SetupLocalPathsToCheck[0]); Index++) {
+
+        //
+        //  Create a path using the specification for the directory of the
+        //  running process
+        //
+
+        Result = YoriLibYPrintf(&RelativePathToProbe, _T("~APPDIR\\%s\\pkglist.ini"), SetupLocalPathsToCheck[Index]);
+        if (Result == -1) {
+            YoriLibFreeStringContents(&RelativePathToProbe);
+            YoriLibFreeStringContents(&FullPathToProbe);
+            return FALSE;
+        }
+
+        //
+        //  Turn that into a full path for the benefit of Win32
+        //
+
+        if (!YoriLibUserStringToSingleFilePath(&RelativePathToProbe, TRUE, &FullPathToProbe)) {
+            YoriLibFreeStringContents(&RelativePathToProbe);
+            YoriLibFreeStringContents(&FullPathToProbe);
+            return FALSE;
+        }
+
+        //
+        //  See if it exists
+        //
+
+        if (GetFileAttributes(FullPathToProbe.StartOfString) != (DWORD)-1) {
+            YoriLibFreeStringContents(&RelativePathToProbe);
+
+            //
+            //  Remove pkglist.ini.  Note that sizeof includes the NULL so
+            //  this removes the trailing slash too
+            //
+
+            FullPathToProbe.LengthInChars -= sizeof("pkglist.ini");
+            FullPathToProbe.StartOfString[FullPathToProbe.LengthInChars] = '\0';
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Found local packages at %y\n"), &FullPathToProbe);
+            memcpy(LocalPath, &FullPathToProbe, sizeof(YORI_STRING));
+            return TRUE;
+        }
+
+        YoriLibFreeStringContents(&FullPathToProbe);
+
+    }
+
+    //
+    //  No local path found, try the internet
+    //
+
+    YoriLibFreeStringContents(&RelativePathToProbe);
+    YoriLibFreeStringContents(&FullPathToProbe);
+    return FALSE;
+}
+
+/**
  Install the default set of packages to a specified directory.
 
  @param InstallDirectory Specifies the directory to install to.
@@ -71,13 +163,23 @@ SetupInstallToDirectory(
     __inout PYORI_STRING InstallDirectory
     )
 {
+    YORI_STRING LocalPath;
+    PYORI_STRING CustomSource;
     YORI_STRING PkgNames[4];
+
+    YoriLibInitEmptyString(&LocalPath);
+    CustomSource = NULL;
+
+    if (SetupFindLocalPkgPath(&LocalPath)) {
+        CustomSource = &LocalPath;
+    }
 
     if (!YoriLibCreateDirectoryAndParents(InstallDirectory)) {
         DWORD Err = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: Could not create installation directory %y: %s\n"), InstallDirectory, ErrText);
         YoriLibFreeWinErrorText(ErrText);
+        YoriLibFreeStringContents(&LocalPath);
         return FALSE;
     }
 
@@ -86,9 +188,12 @@ SetupInstallToDirectory(
     YoriLibConstantString(&PkgNames[2], _T("yori-typical"));
     YoriLibConstantString(&PkgNames[3], _T("yori-completion"));
 
-    if (YoriPkgInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), InstallDirectory, NULL, NULL)) {
+    if (YoriPkgInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), CustomSource, InstallDirectory, NULL, NULL)) {
+        YoriLibFreeStringContents(&LocalPath);
         return TRUE;
     }
+
+    YoriLibFreeStringContents(&LocalPath);
     return FALSE;
 }
 
@@ -180,6 +285,8 @@ SetupInstallSelectedFromDialog(
     YORI_STRING StatusText;
     PYORI_STRING PkgNames;
     PYORI_STRING PackageUrls;
+    YORI_STRING LocalPath;
+    PYORI_STRING CustomSource;
     DWORD PkgCount;
     DWORD PkgIndex;
     DWORD PkgUrlCount;
@@ -189,6 +296,9 @@ SetupInstallSelectedFromDialog(
         InstallTypeTypical = 2,
         InstallTypeComplete = 3
     } InstallType;
+
+    YoriLibInitEmptyString(&LocalPath);
+    CustomSource = NULL;
 
     //
     //  Query the install directory and attempt to create it
@@ -307,9 +417,12 @@ SetupInstallSelectedFromDialog(
     //  Obtain URLs for the specified packages.
     //
 
+    if (SetupFindLocalPkgPath(&LocalPath)) {
+        CustomSource = &LocalPath;
+    }
     YoriLibInitEmptyString(&StatusText);
     SetDlgItemText(hDlg, IDC_STATUS, _T("Obtaining package URLs..."));
-    PkgUrlCount = YoriPkgGetRemotePackageUrls(PkgNames, PkgIndex, &InstallDir, &PackageUrls);
+    PkgUrlCount = YoriPkgGetRemotePackageUrls(PkgNames, PkgIndex, CustomSource, &InstallDir, &PackageUrls);
 
     if (PkgUrlCount != PkgCount) {
         MessageBox(hDlg, _T("Could not locate selected package files."), _T("Installation failed."), MB_ICONSTOP);
@@ -422,6 +535,7 @@ Exit:
     YoriLibDereference(PackageUrls);
     YoriLibFreeStringContents(&InstallDir);
     YoriLibFreeStringContents(&StatusText);
+    YoriLibFreeStringContents(&LocalPath);
     YoriLibFree(PkgNames);
     return Result;
 }

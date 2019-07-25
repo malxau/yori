@@ -443,7 +443,7 @@ ENTRYPOINT(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing package name\n"));
             return EXIT_FAILURE;
         }
-        YoriPkgInstallRemotePackages(&ArgV[StartArg], PkgCount, NULL, NewVersion, NewArch);
+        YoriPkgInstallRemotePackages(&ArgV[StartArg], PkgCount, NULL, NULL, NewVersion, NewArch);
     } else if (Op == YpmOpInstallSource) {
         if (StartArg == 0 || StartArg >= ArgC) {
             YoriPkgInstallSourceForInstalledPackages();

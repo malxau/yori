@@ -126,6 +126,7 @@ BOOL
 YoriPkgInstallRemotePackages(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
     __in_opt PYORI_STRING MatchVersion,
     __in_opt PYORI_STRING MatchArch
@@ -135,6 +136,7 @@ DWORD
 YoriPkgGetRemotePackageUrls(
     __in PYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
+    __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
     __out PYORI_STRING * PackageUrls
     );
