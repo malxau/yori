@@ -1409,6 +1409,7 @@ YoriShExecuteSingleProgram(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
                 ExecProcess = FALSE;
+                YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
                 ExitCode = YoriShBuckPass(ExecContext, 1, _T("ys"));
             } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
                        YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
