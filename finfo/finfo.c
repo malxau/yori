@@ -1420,7 +1420,7 @@ FInfoFileFoundCallback(
     }
 
     FInfoContext->FilePath = FilePath;
-    FInfoContext->FileInfo = &LocalFileInfo;
+    FInfoContext->FileInfo = FileInfoToUse;
     FInfoContext->FilesFound++;
     FInfoContext->FilesFoundThisArg++;
 
