@@ -1343,8 +1343,11 @@ YoriLibFileSizeToString(
 {
     TCHAR Suffixes[] = {'b', 'k', 'm', 'g', 't', '?'};
     DWORD SuffixLevel = 0;
-    LARGE_INTEGER Size = *FileSize;
-    LARGE_INTEGER OldSize = Size;
+    LARGE_INTEGER Size;
+    LARGE_INTEGER OldSize;
+
+    Size.QuadPart = FileSize->QuadPart;
+    OldSize.QuadPart = Size.QuadPart;
 
     if (String->LengthAllocated < sizeof("12.3k")) {
         return FALSE;
@@ -1353,7 +1356,7 @@ YoriLibFileSizeToString(
 
     while (Size.HighPart != 0 || Size.LowPart > 9999) {
         SuffixLevel++;
-        OldSize = Size;
+        OldSize.QuadPart = Size.QuadPart;
 
         //
         //  Conceptually we want to divide by 1024.  We do this

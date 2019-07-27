@@ -142,16 +142,22 @@ LDFLAGS=$(LDFLAGS) -MACHINE:AMD64
 !IF [$(CC) 2>&1 | find "for ARM64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM64
 !ELSE
+!IF [$(CC) 2>&1 | find "for ARM" >NUL]==0
+LDFLAGS=$(LDFLAGS) -MACHINE:ARM
+# Add back msvcrt to provide 64 bit math assembly
+CRTLIB=$(CRTLIB) msvcrt.lib libvcruntime.lib
+!ELSE
 !IF [$(CC) 2>&1 | find "for MIPS" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:MIPS
 # Add back msvcrt to provide 64 bit math assembly
 CRTLIB=$(CRTLIB) msvcrt.lib
-!ENDIF
-!ENDIF
-!ENDIF
-!ENDIF
-!ENDIF
-!ENDIF
+!ENDIF # MIPS
+!ENDIF # ARM (32)
+!ENDIF # ARM64
+!ENDIF # AMD64
+!ENDIF # x64
+!ENDIF # x86
+!ENDIF # 80x86
 
 #
 # Look for the oldest subsystem version the linker is willing to generate
