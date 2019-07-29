@@ -142,6 +142,9 @@ LDFLAGS=$(LDFLAGS) -MACHINE:AMD64
 !IF [$(CC) 2>&1 | find "for ARM64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM64
 !ELSE
+!IF [$(CC) 2>&1 | find "for Itanium" >NUL]==0
+LDFLAGS=$(LDFLAGS) -MACHINE:IA64
+!ELSE
 !IF [$(CC) 2>&1 | find "for ARM" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM
 # Add back msvcrt to provide 64 bit math assembly
@@ -153,6 +156,7 @@ LDFLAGS=$(LDFLAGS) -MACHINE:MIPS
 CRTLIB=$(CRTLIB) msvcrt.lib
 !ENDIF # MIPS
 !ENDIF # ARM (32)
+!ENDIF # Itanium
 !ENDIF # ARM64
 !ENDIF # AMD64
 !ENDIF # x64

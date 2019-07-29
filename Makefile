@@ -13,12 +13,20 @@ ARCH=amd64
 !IF [$(CC) -? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1]==0
 ARCH=arm64
 !ELSE
+!IF [$(CC) -? 2>&1 | findstr /C:"for ARM" >NUL 2>&1]==0
+ARCH=arm
+!ELSE
+!IF [$(CC) -? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1]==0
+ARCH=ia64
+!ELSE
 !IF [$(CC) -? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1]==0
 ARCH=mips
-!ENDIF
-!ENDIF
-!ENDIF
-!ENDIF
+!ENDIF # MIPS
+!ENDIF # Itanium
+!ENDIF # ARM (32)
+!ENDIF # ARM64
+!ENDIF # AMD64
+!ENDIF # x64
 
 BINDIR=bin\$(ARCH)
 SYMDIR=sym\$(ARCH)
@@ -74,7 +82,7 @@ DIRS=crt       \
      grpcmp    \
      hash      \
      help      \
-	 hexdump   \
+     hexdump   \
      hilite    \
      iconv     \
      initool   \

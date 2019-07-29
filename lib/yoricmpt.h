@@ -1843,6 +1843,14 @@ typedef struct _FILE_STORAGE_INFO {
 #define IMAGE_FILE_MACHINE_ARM64   0xAA64
 #endif
 
+#ifndef IMAGE_FILE_MACHINE_IA64
+/**
+ If the compilation environment doesn't provide it, the value for an
+ executable file that is for an IA64 machine.
+ */
+#define IMAGE_FILE_MACHINE_IA64    0x0200
+#endif
+
 #ifndef IMAGE_SUBSYSTEM_NATIVE_WINDOWS
 /**
  If the compilation environment doesn't provide it, the value for an
