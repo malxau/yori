@@ -51,16 +51,17 @@ CHAR strCopyHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-p] [-s] [-t] [-v] [-x exclude]\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-nt|-p] [-s] [-t] [-v] [-x exclude]\n"
         "      <src>\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-p] [-s] [-t] [-v] [-x exclude]\n"
+        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-nt|-p] [-s] [-t] [-v] [-x exclude]\n"
         "      <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Compress targets with specified algorithm.  Options are:\n"
         "                    lzx, ntfs, xp4k, xp8k, xp16k\n"
         "   -l             Copy links as links rather than contents\n"
-        "   -n             Copy new or changed files only\n"
+        "   -n             Copy new or files whose size have changed only\n"
+        "   -nt            Copy new or files whose size or timestamps have changed only\n"
         "   -p             Preserve existing files, no overwriting\n"
         "   -s             Copy subdirectories as well as files\n"
         "   -t             Copy timestamps only, no data\n"
@@ -151,10 +152,19 @@ typedef struct _COPY_CONTEXT {
 
     /**
      If TRUE, files are copied if they are not on the target, or if the size
-     on the source is different to the target, or if the last written time
-     on the source is significantly different to the target.
+     on the source is different to the target.  Depending on the value of
+     CopyChangedTimestamps, a file may be copied if its size is identical
+     on the source and target but the timestamp has changed.
      */
     BOOLEAN CopyNewOnly;
+
+    /**
+     If TRUE, files are copied if the timestamp has changed despite other
+     attributes being the same.  If FALSE, the timestamp is ignored, and
+     files will not be copied unless other attributes have changed.  This
+     field is only meaningful if CopyNewOnly is TRUE.
+     */
+    BOOLEAN CopyChangedTimestamps;
 
     /**
      If TRUE, files are copied if they do not already exists.  Any existing
@@ -381,23 +391,25 @@ CopyShouldExclude(
             return FALSE;
         }
 
-        DestWriteTime.HighPart = DestFileInfo.ftLastWriteTime.dwHighDateTime;
-        DestWriteTime.LowPart = DestFileInfo.ftLastWriteTime.dwLowDateTime;
-        SourceWriteTime.HighPart = SourceFindData->ftLastWriteTime.dwHighDateTime;
-        SourceWriteTime.LowPart = SourceFindData->ftLastWriteTime.dwLowDateTime;
+        if (CopyContext->CopyChangedTimestamps) {
 
+            DestWriteTime.HighPart = DestFileInfo.ftLastWriteTime.dwHighDateTime;
+            DestWriteTime.LowPart = DestFileInfo.ftLastWriteTime.dwLowDateTime;
+            SourceWriteTime.HighPart = SourceFindData->ftLastWriteTime.dwHighDateTime;
+            SourceWriteTime.LowPart = SourceFindData->ftLastWriteTime.dwLowDateTime;
 
-        //
-        //  Due to file system timing granularity, if the source was written
-        //  to more than 5 seconds before or after the target, consider it
-        //  a timestamp change.
-        //
+            //
+            //  Due to file system timing granularity, if the source was written
+            //  to more than 5 seconds before or after the target, consider it
+            //  a timestamp change.
+            //
 
-        if (SourceWriteTime.QuadPart < DestWriteTime.QuadPart - 10 * 1000 * 1000 * 5 ||
-            SourceWriteTime.QuadPart > DestWriteTime.QuadPart + 10 * 1000 * 1000 * 5) {
+            if (SourceWriteTime.QuadPart < DestWriteTime.QuadPart - 10 * 1000 * 1000 * 5 ||
+                SourceWriteTime.QuadPart > DestWriteTime.QuadPart + 10 * 1000 * 1000 * 5) {
 
-            CloseHandle(DestFileHandle);
-            return FALSE;
+                CloseHandle(DestFileHandle);
+                return FALSE;
+            }
         }
 
         CloseHandle(DestFileHandle);
@@ -1015,6 +1027,14 @@ ENTRYPOINT(
                 CopyContext.PreserveExisting = FALSE;
                 CopyContext.SkipDataCopy = FALSE;
                 CopyContext.CopyNewOnly = TRUE;
+                CopyContext.CopyChangedTimestamps = FALSE;
+                CopyContext.CopyTimestamps = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nt")) == 0) {
+                CopyContext.PreserveExisting = FALSE;
+                CopyContext.SkipDataCopy = FALSE;
+                CopyContext.CopyNewOnly = TRUE;
+                CopyContext.CopyChangedTimestamps = TRUE;
                 CopyContext.CopyTimestamps = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
