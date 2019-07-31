@@ -683,6 +683,7 @@ ymain (
     YoriShBuiltinUnregisterAll();
     YoriShDiscardSavedRestartState(NULL);
     YoriShCleanupInputContext();
+    YoriLibFreeStringContents(&YoriShGlobal.PrecmdVariable);
     YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);
     YoriLibFreeStringContents(&YoriShGlobal.TitleVariable);
 

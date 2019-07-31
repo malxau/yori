@@ -49,6 +49,11 @@ YORI_CMD_BUILTIN YoriCmd_COLOR;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_DIRENV;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_EXIT;
 
 /**
@@ -140,6 +145,7 @@ YoriShBuiltins[] = {
                     {_T("BUILTIN"),   YoriCmd_BUILTIN},
                     {_T("CHDIR"),     YoriCmd_CHDIR},
                     {_T("COLOR"),     YoriCmd_COLOR},
+                    {_T("DIRENV"),    YoriCmd_DIRENV},
                     {_T("EXIT"),      YoriCmd_EXIT},
                     {_T("FALSE"),     YoriCmd_FALSE},
                     {_T("FG"),        YoriCmd_FG},

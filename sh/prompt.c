@@ -193,6 +193,38 @@ YoriShDisplayPrompt()
 
     YoriShGlobal.SuppressTaskUi = TRUE;
 
+    //
+    //  See if the environment has changed, and if so, reload the YORIPRECMD
+    //  variable.
+    //
+
+    if (YoriShGlobal.PrecmdGeneration != YoriShGlobal.EnvironmentGeneration) {
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (YoriLibAllocateString(&PromptVar, EnvVarLength)) {
+
+                YoriLibFreeStringContents(&YoriShGlobal.PrecmdVariable);
+                memcpy(&YoriShGlobal.PrecmdVariable, &PromptVar, sizeof(YORI_STRING));
+                YoriShGlobal.PrecmdVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"), YoriShGlobal.PrecmdVariable.StartOfString, YoriShGlobal.PrecmdVariable.LengthAllocated, &YoriShGlobal.PrecmdGeneration);
+            }
+        } else {
+            YoriLibFreeStringContents(&YoriShGlobal.PrecmdVariable);
+        }
+    }
+
+    //
+    //  If YORIPRECMD is defined, execute it
+    //
+
+    if (YoriShGlobal.PrecmdVariable.LengthInChars > 0) {
+        YoriShExecuteExpression(&YoriShGlobal.PrecmdVariable);
+    }
+
+    //
+    //  See if the environment has changed, and if so, reload the YORIPROMPT
+    //  variable.
+    //
+
     if (YoriShGlobal.PromptGeneration != YoriShGlobal.EnvironmentGeneration) {
         EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), NULL, 0, NULL);
         if (EnvVarLength > 0) {
@@ -206,6 +238,10 @@ YoriShDisplayPrompt()
             YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);
         }
     }
+
+    //
+    //  Expand and display the prompt
+    //
 
     if (YoriShGlobal.PromptVariable.LengthInChars > 0) {
 

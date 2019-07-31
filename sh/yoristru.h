@@ -848,6 +848,16 @@ typedef struct _YORI_SH_GLOBALS {
     YORI_LIST_ENTRY BuiltinCallbacks;
 
     /**
+     The contents of the YORIPRECMD environment variable.
+     */
+    YORI_STRING PrecmdVariable;
+
+    /**
+     The generation of the environment at the time the variable was queried.
+     */
+    DWORD PrecmdGeneration;
+
+    /**
      The contents of the YORIPROMPT environment variable.
      */
     YORI_STRING PromptVariable;

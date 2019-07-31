@@ -6,6 +6,7 @@ MODULES =  alias.com     \
            builtin.com   \
            chdir.com     \
            color.com     \
+           direnv.com    \
            exit.com      \
            false.com     \
            fg.com        \
@@ -26,6 +27,7 @@ BUILTINS = alias.obj     \
            builtin.obj   \
            chdir.obj     \
            color.obj     \
+           direnv.obj    \
            exit.obj      \
            false.obj     \
            fg.obj        \

@@ -1,0 +1,23 @@
+if strcmp -- %1%==-undo; goto undo
+
+alias mk=nmake -nologo DEBUG=1 $*$
+alias F3=nmake -nologo DEBUG=1
+alias F5=nmake -nologo distclean
+alias F8=doxygen
+set SAVEDPROMPT=%YORIPROMPT%
+set YORIPROMPT=[$E$[32;1m^`git rev-parse --abbrev-ref HEAD 2^>NUL^`$E$[0m] $E$[35;1m$P$$E$[0m$G_OR_ADMIN_G$
+set YORICDPATH=.;`ypath -f $PARENT$ %~SCRIPTNAME%`
+
+goto :eof
+:undo
+
+set YORIPROMPT=%SAVEDPROMPT%
+set SAVEDPROMPT=
+alias mk=
+alias F3=
+alias F5=
+alias F8=
+set YORICDPATH=
+
+goto :eof
+

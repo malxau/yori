@@ -2,6 +2,7 @@ yorimin.exe
 modules\alias.com
 modules\chdir.com
 modules\color.com
+modules\direnv.com
 modules\exit.com
 modules\false.com
 modules\fg.com
