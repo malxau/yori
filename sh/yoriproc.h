@@ -223,6 +223,13 @@ YoriShClearTabCompletionMatches(
  */
 #define YORI_SH_TAB_COMPLETE_BACKWARDS      (0x00000004)
 
+/**
+ If this flag is set, completion is for suggestions and should not populate
+ with entries except containing a complete prefix match (ie., the suggestion
+ is at the end.)
+ */
+#define YORI_SH_TAB_SUGGESTIONS             (0x00000008)
+
 VOID
 YoriShTabCompletion(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
@@ -507,7 +514,8 @@ YoriShParseCmdContextToExecPlan(
     __out PYORI_SH_EXEC_PLAN ExecPlan,
     __out_opt PYORI_SH_SINGLE_EXEC_CONTEXT* CurrentExecContext,
     __out_opt PBOOL CurrentArgIsForProgram,
-    __out_opt PDWORD CurrentArgIndex
+    __out_opt PDWORD CurrentArgIndex,
+    __out_opt PDWORD CurrentArgOffset
     );
 
 BOOL

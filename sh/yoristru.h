@@ -66,6 +66,13 @@ typedef struct _YORI_SH_CMD_CONTEXT {
     DWORD CurrentArg;
 
     /**
+     When generating the command context, if a string offset is specified,
+     this value contains the offset within the current argument that it would
+     correspond to.
+     */
+    DWORD CurrentArgOffset;
+
+    /**
      Memory to dereference when the context is torn down.  Typically this
      single allocation backs the argv and ArgContexts array, and often backs
      the contents of each of the arguments also.
@@ -448,6 +455,14 @@ typedef struct _YORI_SH_TAB_COMPLETE_MATCH {
      */
     YORI_STRING Value;
 
+    /**
+     The offset to place the cursor within the match.  If zero, the cursor
+     is placed at the end of the string.  Note that it generally wouldn't
+     make sense for tab complete (which is generating characters) to then
+     want the cursor to be at the true beginning of the string.
+     */
+    DWORD CursorOffset;
+
 } YORI_SH_TAB_COMPLETE_MATCH, *PYORI_SH_TAB_COMPLETE_MATCH;
 
 /**
@@ -495,7 +510,14 @@ typedef struct _YORI_SH_TAB_COMPLETE_CONTEXT {
      TRUE if later compares should be case sensitive.  This is used when
      refining suggestions.
      */
-    BOOL CaseSensitive;
+    BOOLEAN CaseSensitive;
+
+    /**
+     TRUE if when populating suggestions entries were skipped due to not
+     being a full prefix match.  This implies a subsequent tab completion
+     needs to recompute.
+     */
+    BOOLEAN PotentialNonPrefixMatch;
 
     /**
      A list of matches that apply to the criteria that was searched.
@@ -520,6 +542,12 @@ typedef struct _YORI_SH_TAB_COMPLETE_CONTEXT {
      a "*".
      */
     YORI_STRING SearchString;
+
+    /**
+     The offset in characters from the beginning of SearchString to where
+     the cursor currently is.
+     */
+    DWORD SearchStringOffset;
 
 } YORI_SH_TAB_COMPLETE_CONTEXT, *PYORI_SH_TAB_COMPLETE_CONTEXT;
 

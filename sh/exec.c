@@ -1771,7 +1771,7 @@ YoriShExecuteExpressionAndCaptureOutput(
         return FALSE;
     }
 
-    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL)) {
+    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         YoriShFreeCmdContext(&CmdContext);
         return FALSE;
@@ -1971,7 +1971,7 @@ YoriShExecuteExpression(
         return FALSE;
     }
 
-    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL)) {
+    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         YoriLibFreeStringContents(&CurrentFullExpression);
         YoriShFreeCmdContext(&CmdContext);

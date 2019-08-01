@@ -146,6 +146,7 @@ YoriShPerformHistoryTabCompletion(
             Match->Value.MemoryToFree = Match;
             YoriLibSPrintf(Match->Value.StartOfString, _T("%y"), &HistoryEntry->CmdLine);
             Match->Value.LengthInChars = HistoryEntry->CmdLine.LengthInChars;
+            Match->CursorOffset = Match->Value.LengthInChars;
 
             //
             //  Append to the list.
@@ -288,6 +289,7 @@ YoriShAddExecutableToTabList(
     Match->Value.MemoryToFree = Match;
     Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y"), &StringToFinalSlash, &PathToReturn);
     Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
+    Match->CursorOffset = Match->Value.LengthInChars;
 
     //
     //  Insert into the list if no duplicate is found.
@@ -407,6 +409,7 @@ YoriShPerformExecutableTabCompletion(
                 Match->Value.MemoryToFree = Match;
                 Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%s"), ThisAlias);
                 Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
+                Match->CursorOffset = Match->Value.LengthInChars;
 
                 //
                 //  Append to the list.
@@ -469,6 +472,7 @@ YoriShPerformExecutableTabCompletion(
                 Match->Value.MemoryToFree = Match;
                 Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y"), &Callback->BuiltinName);
                 Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
+                Match->CursorOffset = Match->Value.LengthInChars;
 
                 //
                 //  Append to the list.
@@ -495,6 +499,11 @@ typedef struct _YORI_SH_FILE_COMPLETE_CONTEXT {
      Extra characters to include at the beginning of any found match.
      */
     YORI_STRING Prefix;
+
+    /**
+     Extra characters to include at the end of any found match.
+     */
+    YORI_STRING Suffix;
 
     /**
      The string to search for.
@@ -559,7 +568,6 @@ YoriShPerformEnvironmentTabCompletion(
 
     YoriLibInitEmptyString(&EnvVarPrefix);
 
-
     //
     //  Count the number of environment variable delimiters in the string.
     //  If there is an even number, then any variable has already been
@@ -619,27 +627,28 @@ YoriShPerformEnvironmentTabCompletion(
                 //  text up to an including the '%', the name of the variable,
                 //  a trailing '%', and a NULL.
                 //
-        
+
                 Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (VarNameLength + Index + 1 + 1) * sizeof(TCHAR));
                 if (Match == NULL) {
                     break;
                 }
-        
+
                 //
                 //  Populate the variable into the entry.
                 //
-        
+
                 YoriLibInitEmptyString(&Match->Value);
                 Match->Value.StartOfString = (LPTSTR)(Match + 1);
                 YoriLibReference(Match);
                 Match->Value.MemoryToFree = Match;
-        
+
                 Match->Value.LengthInChars = (DWORD)(Equals - ThisVar) + Index + 1;
                 Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
                 memcpy(Match->Value.StartOfString, SearchString->StartOfString, Index * sizeof(TCHAR));
                 memcpy(&Match->Value.StartOfString[Index], ThisVar, VarNameLength * sizeof(TCHAR));
                 Match->Value.StartOfString[Match->Value.LengthInChars - 1] = '%';
                 Match->Value.StartOfString[Match->Value.LengthInChars] = '\0';
+                Match->CursorOffset = Match->Value.LengthInChars;
 
                 //
                 //  MSFIX: Apply the KeepEntriesSorted logic? The environment
@@ -695,7 +704,7 @@ YoriShFileTabCompletionCallback(
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + Filename->LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + Filename->LengthInChars + 1 + FileCompleteContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -709,7 +718,13 @@ YoriShFileTabCompletionCallback(
         YoriLibReference(Match);
         Match->Value.MemoryToFree = Match;
 
-        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y"), &FileCompleteContext->Prefix, Filename);
+        if (FileCompleteContext->Suffix.LengthInChars > 0) {
+            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y\\%y"), &FileCompleteContext->Prefix, Filename, &FileCompleteContext->Suffix);
+            Match->CursorOffset = Match->Value.LengthInChars - FileCompleteContext->Suffix.LengthInChars;
+        } else {
+            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y"), &FileCompleteContext->Prefix, Filename);
+            Match->CursorOffset = Match->Value.LengthInChars;
+        }
 
         Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
     } else {
@@ -750,7 +765,7 @@ YoriShFileTabCompletionCallback(
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + FileCompleteContext->CharsToFinalSlash + FileNameToUse->LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + FileCompleteContext->CharsToFinalSlash + FileNameToUse->LengthInChars + 1 + FileCompleteContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -769,7 +784,13 @@ YoriShFileTabCompletionCallback(
         StringToFinalSlash.LengthInChars = FileCompleteContext->CharsToFinalSlash;
 
 
-        Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
+        if (FileCompleteContext->Suffix.LengthInChars > 0) {
+            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y\\%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse, &FileCompleteContext->Suffix);
+            Match->CursorOffset = Match->Value.LengthInChars - FileCompleteContext->Suffix.LengthInChars;
+        } else {
+            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
+            Match->CursorOffset = Match->Value.LengthInChars;
+        }
 
         Match->Value.LengthAllocated = Match->Value.LengthInChars + 1;
     }
@@ -861,6 +882,140 @@ YORI_SH_TAB_FILE_HEURISTIC_MATCH YoriShTabHeuristicMatches[] = {
 };
 
 /**
+ Perform stream enumerate logic on the entire search string.  If the current
+ cursor offset is in the middle of the string, search for matches assuming
+ there are missing characters at the cursor position, or that new directories
+ need to be completed within the middle of the string.
+
+ @param TabContext Pointer to the tab completion context.  This indicates
+        whether completion is for suggestions or a tab operation.  For
+        suggestions, the enhancements provided by this routine must be
+        disabled because it only makes sense to suggest at the end of the
+        string.  However, when this occurs, the context is updated to
+        indicate that suggestion results cannot be applied to a subsequent
+        tab operation.
+
+ @param SearchString The string to search for, which ends with a trailing
+        '*' character.
+
+ @param MatchFlags The flags to match against when enumerating streams.
+
+ @param CursorOffset The offset within the search string where the cursor is
+        currently located.
+
+ @param EnumContext Pointer to a context structure used when enumerating
+        files and streams for the purpose of tab completion.
+ */
+VOID
+YoriShFindMatchingStreamsForStringOrCursorPosition(
+    __inout PYORI_SH_TAB_COMPLETE_CONTEXT TabContext,
+    __in PYORI_STRING SearchString,
+    __in DWORD MatchFlags,
+    __in DWORD CursorOffset,
+    __in PYORI_SH_FILE_COMPLETE_CONTEXT EnumContext
+    )
+{
+    YORI_STRING FileMidpointSearchString;
+    DWORD Index;
+
+    //
+    //  First check for a match for the whole string
+    //
+
+    EnumContext->SearchString = SearchString->StartOfString;
+    YoriLibForEachStream(SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, EnumContext);
+
+    //
+    //  Now check for a match based on the cursor offset
+    //
+
+    if (CursorOffset > 0 && CursorOffset + 1 < SearchString->LengthInChars) {
+
+        //
+        //  When generating suggestions, only matches at the end of the string
+        //  can be used.  Note that we skipped this processing so that a
+        //  subsequent tab operation knows to regenerate matches.
+        //
+
+        if ((TabContext->TabFlagsUsedCreatingList & YORI_SH_TAB_SUGGESTIONS) != 0) {
+            TabContext->PotentialNonPrefixMatch = TRUE;
+            return;
+        }
+
+        if (!YoriLibAllocateString(&FileMidpointSearchString, SearchString->LengthInChars + 1)) {
+            return;
+        }
+
+        //
+        //  Search for files with the specified prefix string (up to the
+        //  cursor) and the suffix string (after the cursor)
+
+        for (Index = 0; Index < CursorOffset; Index++) {
+            FileMidpointSearchString.StartOfString[Index] = SearchString->StartOfString[Index];
+        }
+
+        FileMidpointSearchString.StartOfString[Index] = '*';
+
+        //
+        //  Don't copy the final char which should be '*'
+        //
+
+        for (;Index < SearchString->LengthInChars - 1; Index++) {
+            FileMidpointSearchString.StartOfString[Index + 1] = SearchString->StartOfString[Index];
+        }
+
+        FileMidpointSearchString.StartOfString[Index + 1] = '\0';
+        FileMidpointSearchString.LengthInChars = Index + 1;
+
+        EnumContext->SearchString = FileMidpointSearchString.StartOfString;
+        YoriLibForEachStream(&FileMidpointSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, EnumContext);
+
+        //
+        //  Now search for anything up to the cursor, and add back whatever
+        //  follows it
+        //
+
+        EnumContext->Suffix.StartOfString = &SearchString->StartOfString[CursorOffset];
+        EnumContext->Suffix.LengthInChars = SearchString->LengthInChars - CursorOffset;
+
+        //
+        //  The search string ends in a '*' which isn't something that should
+        //  be preserved in the result
+        //
+
+        if (EnumContext->Suffix.LengthInChars > 0 &&
+            EnumContext->Suffix.StartOfString[EnumContext->Suffix.LengthInChars - 1] == '*') {
+            EnumContext->Suffix.LengthInChars--;
+        }
+
+        //
+        //  Find the next seperator in the suffix and trim up to it.  Note
+        //  there may be none, in which case this code currently preserves
+        //  that text.
+        //
+
+        for (Index =  0; Index < EnumContext->Suffix.LengthInChars; Index++) {
+            if (YoriLibIsSep(EnumContext->Suffix.StartOfString[Index])) {
+                EnumContext->Suffix.StartOfString += Index + 1;
+                EnumContext->Suffix.LengthInChars -= Index + 1;
+                break;
+            }
+        }
+
+        FileMidpointSearchString.StartOfString[CursorOffset + 1] = '\0';
+        FileMidpointSearchString.LengthInChars = CursorOffset + 1;
+        EnumContext->CharsToFinalSlash = YoriShFindFinalSlashIfSpecified(&FileMidpointSearchString);
+        EnumContext->SearchString = FileMidpointSearchString.StartOfString;
+
+        YoriLibForEachStream(&FileMidpointSearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, YoriShFileTabCompletionCallback, NULL, EnumContext);
+
+        YoriLibInitEmptyString(&EnumContext->Suffix);
+        YoriLibFreeStringContents(&FileMidpointSearchString);
+        EnumContext->SearchString = SearchString->StartOfString;
+    }
+}
+
+/**
  Populates the list of matches for a file based tab completion.  This
  function searches the path for matching files in lexicographic order
  and populates the list with the result.
@@ -896,12 +1051,14 @@ YoriShPerformFileTabCompletion(
     YORI_SH_FILE_COMPLETE_CONTEXT EnumContext;
     YORI_STRING SearchString;
     DWORD PrefixLen;
+    DWORD SearchStringOffset;
     DWORD MatchFlags = 0;
 
     YoriLibInitEmptyString(&SearchString);
     SearchString.StartOfString = TabContext->SearchString.StartOfString;
     SearchString.LengthInChars = TabContext->SearchString.LengthInChars;
     SearchString.LengthAllocated = TabContext->SearchString.LengthAllocated;
+    SearchStringOffset = TabContext->SearchStringOffset;
 
     //
     //  Strip off any file:/// prefix
@@ -913,9 +1070,15 @@ YoriShPerformFileTabCompletion(
         SearchString.StartOfString += PrefixLen;
         SearchString.LengthInChars -= PrefixLen;
         SearchString.LengthAllocated -= PrefixLen;
+        if (SearchStringOffset > PrefixLen) {
+            SearchStringOffset -= PrefixLen;
+        } else {
+            SearchStringOffset = 0;
+        }
     }
 
     YoriLibInitEmptyString(&EnumContext.Prefix);
+    YoriLibInitEmptyString(&EnumContext.Suffix);
     EnumContext.KeepCompletionsSorted = KeepCompletionsSorted;
 
     EnumContext.ExpandFullPath = ExpandFullPath;
@@ -963,8 +1126,9 @@ YoriShPerformFileTabCompletion(
     if (SearchString.LengthInChars < 1 ||
         (SearchString.StartOfString[0] != '>' && SearchString.StartOfString[0] != '<')) {
 
-        YoriLibForEachStream(&SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, &EnumContext);
+        YoriShFindMatchingStreamsForStringOrCursorPosition(TabContext, &SearchString, MatchFlags, SearchStringOffset, &EnumContext);
     }
+
 
     //
     //  If we haven't found any matches against the literal file name, strip
@@ -1074,8 +1238,13 @@ YoriShPerformFileTabCompletion(
 
         EnumContext.CharsToFinalSlash = YoriShFindFinalSlashIfSpecified(&SearchString);
         EnumContext.SearchString = SearchString.StartOfString;
+        if (SearchStringOffset > EnumContext.Prefix.LengthInChars) {
+            SearchStringOffset -= EnumContext.Prefix.LengthInChars;
+        } else {
+            SearchStringOffset = 0;
+        }
 
-        YoriLibForEachStream(&SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, &EnumContext);
+        YoriShFindMatchingStreamsForStringOrCursorPosition(TabContext, &SearchString, MatchFlags, SearchStringOffset, &EnumContext);
 
         YoriLibFree(MatchArray);
     }
@@ -1272,6 +1441,7 @@ YoriShResolveTabCompletionStringToAction(
             Match->Value.MemoryToFree = Match;
             YoriLibSPrintf(Match->Value.StartOfString, _T("%y"), &CmdContext.ArgV[Count]);
             Match->Value.LengthInChars = CmdContext.ArgV[Count].LengthInChars;
+            Match->CursorOffset = Match->Value.LengthInChars;
 
             //
             //  Append to the list.
@@ -1447,6 +1617,7 @@ YoriShPerformArgumentTabCompletion(
     YORI_SH_EXEC_PLAN ExecPlan;
     PYORI_SH_SINGLE_EXEC_CONTEXT CurrentExecContext;
     DWORD CurrentExecContextArg;
+    DWORD CurrentExecContextArgOffset;
     BOOL ActiveExecContextArg;
     BOOL ExecutableFound;
     PYORI_LIST_ENTRY ListEntry;
@@ -1500,11 +1671,23 @@ YoriShPerformArgumentTabCompletion(
 
     ActiveExecContextArg = FALSE;
     CurrentExecContextArg = 0;
+    CurrentExecContextArgOffset = 0;
     CurrentExecContext = NULL;
 
-    if (!YoriShParseCmdContextToExecPlan(CmdContext, &ExecPlan, &CurrentExecContext, &ActiveExecContextArg, &CurrentExecContextArg)) {
+    if (!YoriShParseCmdContextToExecPlan(CmdContext, &ExecPlan, &CurrentExecContext, &ActiveExecContextArg, &CurrentExecContextArg, &CurrentExecContextArgOffset)) {
         return;
     }
+
+    TabContext->SearchStringOffset = CurrentExecContextArgOffset;
+
+    //
+    //  Assuming we've found the right argument, the search string should have
+    //  an extra "*" so should be longer than any legitimate cursor position.
+    //  Note that the cursor position may be zero if the argument is empty,
+    //  terminates unusually, isn't a real argument to the program, etc.
+    //
+
+    ASSERT(TabContext->SearchStringOffset < TabContext->SearchString.LengthInChars);
 
     if (!ActiveExecContextArg) {
 
@@ -1676,6 +1859,8 @@ YoriShPopulateTabCompletionMatches(
         Buffer->TabContext.SearchType = YoriTabCompleteSearchArguments;
     }
 
+    Buffer->TabContext.TabFlagsUsedCreatingList = TabFlags;
+
     if (Buffer->TabContext.SearchType == YoriTabCompleteSearchExecutables) {
         YoriShPerformExecutableTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE);
     } else if (Buffer->TabContext.SearchType == YoriTabCompleteSearchHistory) {
@@ -1685,8 +1870,6 @@ YoriShPopulateTabCompletionMatches(
     } else {
         YoriShPerformFileTabCompletion(&Buffer->TabContext, ExpandFullPath, TRUE, TRUE, KeepSorted);
     }
-
-    Buffer->TabContext.TabFlagsUsedCreatingList = TabFlags;
 }
 
 /**
@@ -1820,7 +2003,8 @@ YoriShTabCompletion(
     //
 
     if (Buffer->TabContext.MatchList.Next != NULL) {
-        if ((TabFlags & YORI_SH_TAB_COMPLETE_COMPAT_MASK) != Buffer->TabContext.TabFlagsUsedCreatingList) {
+        if ((TabFlags & YORI_SH_TAB_COMPLETE_COMPAT_MASK) != Buffer->TabContext.TabFlagsUsedCreatingList ||
+             Buffer->TabContext.PotentialNonPrefixMatch) {
             if (Buffer->SuggestionString.LengthInChars > 0) {
                 YoriLibFreeStringContents(&Buffer->SuggestionString);
             }
@@ -1897,7 +2081,7 @@ YoriShTabCompletion(
         DWORD BeginCurrentArg;
         DWORD EndCurrentArg;
         LPTSTR NewString;
-        BOOL FreeNewString = FALSE;
+        BOOLEAN FreeNewString = FALSE;
         DWORD NewStringLen;
 
         //
@@ -1940,6 +2124,24 @@ YoriShTabCompletion(
             YoriLibCloneString(&CmdContext.ArgV[CmdContext.CurrentArg], &Match->Value);
             CmdContext.ArgContexts[CmdContext.CurrentArg].Quoted = FALSE;
             YoriShCheckIfArgNeedsQuotes(&CmdContext, CmdContext.CurrentArg);
+
+            //
+            //  If the new arg has quotes, and the cursor should be partway
+            //  with in it, add one char for the first quote.  If the cursor
+            //  should be at the end of the arg, add two chars, one for each
+            //  quote.
+            //
+
+            if (CmdContext.ArgContexts[CmdContext.CurrentArg].Quoted) {
+                if (Match->CursorOffset > 0) {
+                    if (Match->CursorOffset == CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars) {
+                        Match->CursorOffset += 2;
+                    } else {
+                        Match->CursorOffset += 1;
+                    }
+                }
+            }
+
             NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
 
             if (OldArgv != NULL) {
@@ -1956,7 +2158,7 @@ YoriShTabCompletion(
             }
 
             FreeNewString = TRUE;
-            Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring.LengthInChars + EndCurrentArg + 1;
+            Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring.LengthInChars + BeginCurrentArg + Match->CursorOffset;
             NewStringLen = _tcslen(NewString);
 
         } else {
@@ -2249,7 +2451,7 @@ YoriShCompleteSuggestion(
     //  criteria and populate the list of matches.
     //
 
-    YoriShPopulateTabCompletionMatches(Buffer, &CmdContext, 0);
+    YoriShPopulateTabCompletionMatches(Buffer, &CmdContext, YORI_SH_TAB_SUGGESTIONS);
 
     //
     //  Check if we have any match.  If we do, try to use it.  If not, leave

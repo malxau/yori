@@ -178,6 +178,7 @@ YoriShParseCmdlineToCmdContext(
     )
 {
     DWORD ArgCount = 0;
+    DWORD ArgOffset = 0;
     DWORD RequiredCharCount = 0;
     DWORD CharsToConsume = 0;
     BOOL TerminateArg;
@@ -218,10 +219,12 @@ YoriShParseCmdlineToCmdContext(
             Char.StartOfString++;
             Char.LengthInChars--;
             RequiredCharCount++;
+            ArgOffset++;
             if (Char.LengthInChars > 0) {
                 Char.StartOfString++;
                 Char.LengthInChars--;
                 RequiredCharCount++;
+                ArgOffset++;
                 if (Char.LengthInChars == 0) {
                     ArgCount++;
                 }
@@ -245,8 +248,10 @@ YoriShParseCmdlineToCmdContext(
                 if (!CurrentArgFound) {
                     CurrentArgFound = TRUE;
                     CmdContext->CurrentArg = ArgCount;
+                    CmdContext->CurrentArgOffset = ArgOffset;
                 }
                 ArgCount++;
+                ArgOffset = 0;
             }
             continue;
         }
@@ -265,8 +270,10 @@ YoriShParseCmdlineToCmdContext(
                     if (!CurrentArgFound) {
                         CurrentArgFound = TRUE;
                         CmdContext->CurrentArg = ArgCount;
+                        CmdContext->CurrentArgOffset = ArgOffset;
                     }
                     ArgCount++;
+                    ArgOffset = 0;
                 }
                 continue;
             }
@@ -308,9 +315,11 @@ YoriShParseCmdlineToCmdContext(
 
                 CurrentArgFound = TRUE;
                 CmdContext->CurrentArg = ArgCount;
+                CmdContext->CurrentArgOffset = ArgOffset;
             }
 
             ArgCount++;
+            ArgOffset = 0;
 
             //
             //  Note this is intentionally not trying to set CurrentArg.
@@ -335,6 +344,7 @@ YoriShParseCmdlineToCmdContext(
             }
 
             RequiredCharCount += CharsToConsume;
+            ArgOffset += CharsToConsume;
             Char.StartOfString += CharsToConsume;
             Char.LengthInChars -= CharsToConsume;
 
@@ -342,13 +352,16 @@ YoriShParseCmdlineToCmdContext(
                 if (!CurrentArgFound) {
                     CurrentArgFound = TRUE;
                     CmdContext->CurrentArg = ArgCount;
+                    CmdContext->CurrentArgOffset = ArgOffset;
                 }
                 ArgCount++;
+                ArgOffset = 0;
                 break;
             }
 
             if (TerminateNextArg) {
                 RequiredCharCount++;
+                ArgOffset++;
 
                 YoriShTrimSpacesFromBeginning(&Char);
 
@@ -357,9 +370,11 @@ YoriShParseCmdlineToCmdContext(
 
                     CurrentArgFound = TRUE;
                     CmdContext->CurrentArg = ArgCount;
+                    CmdContext->CurrentArgOffset = ArgOffset;
                 }
 
                 ArgCount++;
+                ArgOffset = 0;
             }
 
             if (Char.LengthInChars > 0 && Char.StartOfString[0] == '"') {
@@ -372,8 +387,17 @@ YoriShParseCmdlineToCmdContext(
         } else {
 
             RequiredCharCount++;
+            ArgOffset++;
             Char.StartOfString++;
             Char.LengthInChars--;
+
+            if (!CurrentArgFound &&
+                (Char.StartOfString - CmdLine->StartOfString >= (LONG)CurrentOffset)) {
+
+                CurrentArgFound = TRUE;
+                CmdContext->CurrentArg = ArgCount;
+                CmdContext->CurrentArgOffset = ArgOffset;
+            }
 
             //
             //  If we hit a break char, we count the argument then.
@@ -386,17 +410,21 @@ YoriShParseCmdlineToCmdContext(
                 if (!CurrentArgFound) {
                     CurrentArgFound = TRUE;
                     CmdContext->CurrentArg = ArgCount;
+                    CmdContext->CurrentArgOffset = ArgOffset;
                 }
+                ArgOffset = 0;
                 ArgCount++;
             }
         }
     }
 
     RequiredCharCount++;
+    ArgOffset++;
 
     if (!CurrentArgFound) {
         CurrentArgFound = TRUE;
         CmdContext->CurrentArg = ArgCount;
+        CmdContext->CurrentArgOffset = ArgOffset;
     }
 
     CmdContext->ArgC = ArgCount;
@@ -853,6 +881,7 @@ YoriShCopyCmdContext(
 
     DestCmdContext->ArgC = SrcCmdContext->ArgC;
     DestCmdContext->CurrentArg = SrcCmdContext->CurrentArg;
+    DestCmdContext->CurrentArgOffset = SrcCmdContext->CurrentArgOffset;
 
     for (Count = 0; Count < DestCmdContext->ArgC; Count++) {
         YoriShCopyArg(SrcCmdContext, Count, DestCmdContext, Count);
@@ -1104,6 +1133,10 @@ YoriShCheckForDeviceNameAndDuplicate(
         command context.  This is only meaningful if CurrentArgIsForProgram
         is TRUE.
 
+ @param CurrentArgOffset If specified, this routine populates this value with
+        the character offset within the current argument for the cursor
+        location.
+
  @return The number of arguments consumed while creating information about
          how to execute a single program.
  */
@@ -1113,7 +1146,8 @@ YoriShParseCmdContextToExecContext(
     __in DWORD InitialArgument,
     __out PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
     __out_opt PBOOL CurrentArgIsForProgram,
-    __out_opt PDWORD CurrentArgIndex
+    __out_opt PDWORD CurrentArgIndex,
+    __out_opt PDWORD CurrentArgOffset
     )
 {
     DWORD Count;
@@ -1284,9 +1318,14 @@ YoriShParseCmdContextToExecContext(
                 if (CmdContext->CurrentArg == Count) {
                     *CurrentArgIsForProgram = TRUE;
                     *CurrentArgIndex = CmdToExec->ArgC;
+                    *CurrentArgOffset = CmdContext->CurrentArgOffset;
                 }
             }
             CmdToExec->ArgC++;
+        } else if (CurrentArgOffset != NULL) {
+            if (CmdContext->CurrentArg == Count) {
+                *CurrentArgOffset = CmdContext->CurrentArgOffset;
+            }
         }
     }
 
@@ -1452,6 +1491,10 @@ YoriShFreeExecPlan(
         command context.  This is only meaningful if CurrentArgIsForProgram
         is TRUE.
 
+ @param CurrentArgOffset If specified, this routine populates this value with
+        the character offset within the current argument for the cursor
+        location.
+
  @return TRUE to indicate parsing success, FALSE to indicate failure.
  */
 BOOL
@@ -1460,7 +1503,8 @@ YoriShParseCmdContextToExecPlan(
     __out PYORI_SH_EXEC_PLAN ExecPlan,
     __out_opt PYORI_SH_SINGLE_EXEC_CONTEXT* CurrentExecContext,
     __out_opt PBOOL CurrentArgIsForProgram,
-    __out_opt PDWORD CurrentArgIndex
+    __out_opt PDWORD CurrentArgIndex,
+    __out_opt PDWORD CurrentArgOffset
     )
 {
     DWORD CurrentArg = 0;
@@ -1471,6 +1515,7 @@ YoriShParseCmdContextToExecPlan(
     BOOL LocalCurrentArgIsForProgram;
     BOOL FoundProgramMatch;
     DWORD LocalCurrentArgIndex;
+    DWORD LocalCurrentArgOffset;
 
     ZeroMemory(ExecPlan, sizeof(YORI_SH_EXEC_PLAN));
     FoundProgramMatch = FALSE;
@@ -1497,8 +1542,9 @@ YoriShParseCmdContextToExecPlan(
 
         LocalCurrentArgIsForProgram = FALSE;
         LocalCurrentArgIndex = 0;
+        LocalCurrentArgOffset = 0;
 
-        ArgsConsumed = YoriShParseCmdContextToExecContext(CmdContext, CurrentArg, ThisProgram, &LocalCurrentArgIsForProgram, &LocalCurrentArgIndex);
+        ArgsConsumed = YoriShParseCmdContextToExecContext(CmdContext, CurrentArg, ThisProgram, &LocalCurrentArgIsForProgram, &LocalCurrentArgIndex, &LocalCurrentArgOffset);
         if (ArgsConsumed == 0) {
             YoriShDereferenceExecContext(ThisProgram, TRUE);
             YoriShFreeExecPlan(ExecPlan);
@@ -1577,6 +1623,10 @@ YoriShParseCmdContextToExecPlan(
                 *CurrentArgIndex = LocalCurrentArgIndex;
             }
 
+            if (CurrentArgOffset != NULL) {
+                *CurrentArgOffset = LocalCurrentArgOffset;
+            }
+
             if (CurrentArgIsForProgram != NULL) {
                 *CurrentArgIsForProgram = LocalCurrentArgIsForProgram;
             }
@@ -1636,6 +1686,10 @@ YoriShParseCmdContextToExecPlan(
 
         if (CurrentArgIndex != NULL) {
             *CurrentArgIndex = PreviousProgram->CmdToExec.ArgC + 1;
+        }
+
+        if (CurrentArgOffset != NULL) {
+            *CurrentArgOffset = 0;
         }
 
         if (CurrentArgIsForProgram != NULL) {
