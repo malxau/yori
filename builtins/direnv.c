@@ -185,7 +185,7 @@ DirenvInstall()
         return TRUE;
     }
 
-    DirenvPreviousExecutedScript.LengthInChars = GetEnvironmentVariable(_T("DIRENVACTIVESCRIPT"), DirenvPreviousExecutedScript.StartOfString, DirenvPreviousExecutedScript.LengthInChars);
+    DirenvPreviousExecutedScript.LengthInChars = GetEnvironmentVariable(_T("DIRENVACTIVESCRIPT"), DirenvPreviousExecutedScript.StartOfString, DirenvPreviousExecutedScript.LengthAllocated);
 
     DirenvInstalled = TRUE;
     return TRUE;
