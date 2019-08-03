@@ -47,6 +47,7 @@ YoriShAddMatchToTabContext(
 {
     ASSERT(TabContext->MatchHashTable != NULL);
     ASSERT(Match->Value.MemoryToFree != NULL);
+    ASSERT(Match->CursorOffset <= Match->Value.LengthInChars);
     YoriLibHashInsertByKey(TabContext->MatchHashTable, &Match->Value, Match, &Match->HashEntry);
     if (EntryToInsertBefore == NULL) {
         YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
@@ -2083,6 +2084,7 @@ YoriShTabCompletion(
         LPTSTR NewString;
         BOOLEAN FreeNewString = FALSE;
         DWORD NewStringLen;
+        DWORD CursorOffset;
 
         //
         //  MSFIX This isn't updating the referenced memory.  This works because
@@ -2132,12 +2134,14 @@ YoriShTabCompletion(
             //  quote.
             //
 
+            CursorOffset = Match->CursorOffset;
+            ASSERT(CursorOffset <= CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars);
             if (CmdContext.ArgContexts[CmdContext.CurrentArg].Quoted) {
-                if (Match->CursorOffset > 0) {
-                    if (Match->CursorOffset == CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars) {
-                        Match->CursorOffset += 2;
+                if (CursorOffset > 0) {
+                    if (CursorOffset == CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars) {
+                        CursorOffset += 2;
                     } else {
-                        Match->CursorOffset += 1;
+                        CursorOffset += 1;
                     }
                 }
             }
@@ -2158,7 +2162,7 @@ YoriShTabCompletion(
             }
 
             FreeNewString = TRUE;
-            Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring.LengthInChars + BeginCurrentArg + Match->CursorOffset;
+            Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring.LengthInChars + BeginCurrentArg + CursorOffset;
             NewStringLen = _tcslen(NewString);
 
         } else {
