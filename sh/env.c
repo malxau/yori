@@ -499,23 +499,35 @@ YoriShGetEnvironmentExpandedText(
         @ref YoriLibDereference on this value if it is different to
         Expression.
 
+ @param CurrentOffset Optionally specifies the offset of the cursor within
+        the source expression.  If specified, on output, this value is
+        updated to contain the cursor position after environment expansion.
+
  @return TRUE to indicate variables were successfully expanded, or FALSE to
          indicate a failure to expand.
  */
 BOOL
 YoriShExpandEnvironmentVariables(
     __in PYORI_STRING Expression,
-    __out PYORI_STRING ResultingExpression
+    __out PYORI_STRING ResultingExpression,
+    __inout_opt PDWORD CurrentOffset
     )
 {
     DWORD SrcIndex;
     DWORD EndVarIndex;
     DWORD DestIndex;
     DWORD ExpandResult;
+    DWORD LocalCurrentOffset;
+    BOOLEAN CurrentOffsetFound = FALSE;
     BOOLEAN VariableExpanded;
     BOOLEAN AnyVariableExpanded = FALSE;
     YORI_STRING VariableName;
     YORI_STRING ExpandedVariable;
+
+    LocalCurrentOffset = 0;
+    if (CurrentOffset != NULL) {
+        LocalCurrentOffset = *CurrentOffset;
+    }
 
     //
     //  First, scan through looking for environment variables to expand, and
@@ -603,12 +615,28 @@ YoriShExpandEnvironmentVariables(
     for (SrcIndex = 0, DestIndex = 0; SrcIndex < Expression->LengthInChars; SrcIndex++) {
 
         if (YoriLibIsEscapeChar(Expression->StartOfString[SrcIndex])) {
+
+            if (!CurrentOffsetFound &&
+                LocalCurrentOffset == SrcIndex) {
+
+                LocalCurrentOffset = DestIndex;
+                CurrentOffsetFound = FALSE;
+            }
+
             ResultingExpression->StartOfString[DestIndex] = Expression->StartOfString[SrcIndex];
             SrcIndex++;
             DestIndex++;
             if (SrcIndex >= Expression->LengthInChars) {
                 break;
             }
+
+            if (!CurrentOffsetFound &&
+                LocalCurrentOffset == SrcIndex) {
+
+                LocalCurrentOffset = DestIndex;
+                CurrentOffsetFound = FALSE;
+            }
+
             ResultingExpression->StartOfString[DestIndex] = Expression->StartOfString[SrcIndex];
             DestIndex++;
             continue;
@@ -638,6 +666,14 @@ YoriShExpandEnvironmentVariables(
                         return FALSE;
                     }
 
+                    if (!CurrentOffsetFound &&
+                        LocalCurrentOffset >= SrcIndex &&
+                        LocalCurrentOffset <= EndVarIndex) {
+
+                        LocalCurrentOffset = DestIndex + ExpandResult;
+                        CurrentOffsetFound = FALSE;
+                    }
+
                     SrcIndex = EndVarIndex;
                     DestIndex += ExpandResult;
                     VariableExpanded = TRUE;
@@ -646,6 +682,14 @@ YoriShExpandEnvironmentVariables(
             }
 
             if (!VariableExpanded) {
+                if (!CurrentOffsetFound &&
+                    LocalCurrentOffset >= SrcIndex &&
+                    LocalCurrentOffset <= EndVarIndex) {
+
+                    LocalCurrentOffset = DestIndex + (EndVarIndex - SrcIndex);
+                    CurrentOffsetFound = FALSE;
+                }
+
                 memcpy(&ResultingExpression->StartOfString[DestIndex], &Expression->StartOfString[SrcIndex], (EndVarIndex - SrcIndex) * sizeof(TCHAR));
                 DestIndex += (EndVarIndex - SrcIndex);
                 SrcIndex = EndVarIndex;
@@ -654,9 +698,29 @@ YoriShExpandEnvironmentVariables(
                 }
             }
         } else {
+
+            if (!CurrentOffsetFound &&
+                LocalCurrentOffset == SrcIndex) {
+
+                LocalCurrentOffset = DestIndex;
+                CurrentOffsetFound = FALSE;
+            }
+
             ResultingExpression->StartOfString[DestIndex] = Expression->StartOfString[SrcIndex];
             DestIndex++;
         }
+    }
+
+    if (!CurrentOffsetFound) {
+        LocalCurrentOffset = DestIndex;
+        CurrentOffsetFound = FALSE;
+        if (LocalCurrentOffset > 0) {
+            LocalCurrentOffset--;
+        }
+    }
+
+    if (CurrentOffset != NULL) {
+        *CurrentOffset = LocalCurrentOffset;
     }
 
     ResultingExpression->StartOfString[DestIndex] = '\0';

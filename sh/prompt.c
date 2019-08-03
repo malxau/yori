@@ -270,7 +270,7 @@ YoriShDisplayPrompt()
         //  string.
         //
 
-        if (YoriShExpandEnvironmentVariables(StringToUse, &PromptAfterEnvExpansion)) {
+        if (YoriShExpandEnvironmentVariables(StringToUse, &PromptAfterEnvExpansion, NULL)) {
             StringToUse = &PromptAfterEnvExpansion;
         }
 
@@ -368,7 +368,7 @@ YoriShDisplayPrompt()
         //  string.
         //
 
-        if (YoriShExpandEnvironmentVariables(StringToUse, &PromptAfterEnvExpansion)) {
+        if (YoriShExpandEnvironmentVariables(StringToUse, &PromptAfterEnvExpansion, NULL)) {
             StringToUse = &PromptAfterEnvExpansion;
         }
 

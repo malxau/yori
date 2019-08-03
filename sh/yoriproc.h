@@ -281,7 +281,8 @@ YoriShAllocateAndGetEnvironmentVariable(
 BOOL
 YoriShExpandEnvironmentVariables(
     __in PYORI_STRING Expression,
-    __out PYORI_STRING ResultingExpression
+    __out PYORI_STRING ResultingExpression,
+    __inout_opt PDWORD CurrentOffset
     );
 
 BOOL

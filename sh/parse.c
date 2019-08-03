@@ -648,8 +648,17 @@ YoriShParseCmdlineToCmdContext(
     for (ArgCount = 0; ArgCount < CmdContext->ArgC; ArgCount++) {
         YORI_STRING EnvExpandedString;
         ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
-        if (YoriShExpandEnvironmentVariables(&CmdContext->ArgV[ArgCount], &EnvExpandedString)) {
+
+        ArgOffset = 0;
+        if (ArgCount == CmdContext->CurrentArg) {
+            ArgOffset = CmdContext->CurrentArgOffset;
+        }
+        if (YoriShExpandEnvironmentVariables(&CmdContext->ArgV[ArgCount], &EnvExpandedString, &ArgOffset)) {
             if (EnvExpandedString.StartOfString != CmdContext->ArgV[ArgCount].StartOfString) {
+                if (ArgCount == CmdContext->CurrentArg) {
+                    CmdContext->CurrentArgOffset = ArgOffset;
+                }
+
                 YoriLibFreeStringContents(&CmdContext->ArgV[ArgCount]);
                 memcpy(&CmdContext->ArgV[ArgCount], &EnvExpandedString, sizeof(YORI_STRING));
                 ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
