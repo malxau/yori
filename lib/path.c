@@ -1014,7 +1014,10 @@ YoriLibLocateExecutableInPath(
     if (!SearchPath && !SearchPathExt) {
 
         HANDLE hFind;
+        DWORD Index;
         WIN32_FIND_DATA FindData;
+        YORI_STRING SearchDirectory;
+        YORI_STRING FoundFile;
 
         hFind = FindFirstFile(SearchFor->StartOfString, &FindData);
 
@@ -1022,12 +1025,32 @@ YoriLibLocateExecutableInPath(
 
             FindClose(hFind);
 
-            if (!YoriLibAllocateString(PathName, SearchFor->LengthInChars + 1)) {
+            //
+            //  Search backwards to find if there's a seperator.  That char
+            //  and all before it are the directory part.
+            //
+
+            SearchDirectory.StartOfString = SearchFor->StartOfString;
+            SearchDirectory.LengthInChars = 0;
+            for (Index = SearchFor->LengthInChars; Index > 0; Index--) {
+                if (YoriLibIsSep(SearchFor->StartOfString[Index - 1])) {
+                    SearchDirectory.LengthInChars = Index;
+                    break;
+                }
+            }
+
+            //
+            //  Take the file part from the enumerate.
+            //
+
+            YoriLibConstantString(&FoundFile, FindData.cFileName);
+
+            if (!YoriLibAllocateString(PathName, SearchDirectory.LengthInChars + FoundFile.LengthInChars + 1)) {
                 return FALSE;
             }
-            PathName->LengthInChars = YoriLibSPrintf(PathName->StartOfString, _T("%y"), SearchFor);
+            PathName->LengthInChars = YoriLibSPrintf(PathName->StartOfString, _T("%y%y"), &SearchDirectory, &FoundFile);
             if (MatchAllCallback) {
-                if (!MatchAllCallback(&FoundPath, MatchAllContext)) {
+                if (!MatchAllCallback(PathName, MatchAllContext)) {
                     YoriLibFreeStringContents(PathName);
                     return FALSE;
                 } else {
