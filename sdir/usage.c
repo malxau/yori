@@ -204,6 +204,7 @@ CHAR strCmdLineOpts[] =
                    "\n"
                    "   -?           Display help\n"
                    "\n"
+                   "   -b           Use basic search criteria for files only\n"
                    "   -cw[num]     Width of console when writing to files\n"
                    "   -fc[string]  Apply custom file color string, see file color section\n"
                    "   -fe[string]  Exclude files matching criteria, see file color section\n"

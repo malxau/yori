@@ -493,6 +493,12 @@ typedef struct _SDIR_OPTS {
     BOOLEAN         OutputExtendedCharacters:1;
 
     /**
+     TRUE if enumeration should be basic only, treating {} and [] characters
+     as literals.
+     */
+    BOOLEAN         BasicEnumeration:1;
+
+    /**
      The color attributes from when the program was started, that should
      be restored on exit.
      */

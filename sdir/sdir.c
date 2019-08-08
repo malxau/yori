@@ -706,7 +706,7 @@ SdirEnumeratePathWithDepth (
         //  a prior enumerate.
         //
 
-        if (Depth > 0) {
+        if (Depth > 0 || Opts->BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
 

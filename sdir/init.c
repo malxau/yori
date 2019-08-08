@@ -293,6 +293,9 @@ SdirParseOpt (
             Opt[1] == 's') {
 
             SdirWriteString(_T("Brief recurse has been removed.  Use du instead.\n"));
+        } else if (Opt[1] == '\0') {
+            Opts->BasicEnumeration = TRUE;
+            OptParsed = TRUE;
         }
     } else if (Opt[0] == 'c') {
         if (Opt[1] == 'w') {
