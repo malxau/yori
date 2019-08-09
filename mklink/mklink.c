@@ -133,52 +133,6 @@ MklinkCreateSymbolicLink(
 }
 
 /**
- The basic reparse data to attach to a junction.
- */
-typedef struct _MKLINK_JUNCTION_DATA {
-
-    /**
-     The reparse tag.  For a junction, this is 0xa0000003 .
-     */
-    ULONG ReparseTag;
-
-    /**
-     The length of the reparse data.  This means the length in bytes
-     from the RealNameOffsetInBytes field.
-     */
-    USHORT ReparseDataLength;
-
-    /**
-     Currently unused.
-     */
-    USHORT Reserved;
-
-    /**
-     For a junction, the offset in bytes following this structure to the
-     beginning of the name to substitute when the link is traversed.
-     */
-    USHORT RealNameOffsetInBytes;
-
-    /**
-     For a junction, the length in bytes of the name to substitute when the
-     link is traversed.
-     */
-    USHORT RealNameLengthInBytes;
-
-    /**
-     For a junction, the offset in bytes following this structure to the
-     beginning of the name to display when the user queries the link.
-     */
-    USHORT PrintNameOffsetInBytes;
-
-    /**
-     For a junction, the length in bytes of the name to display when the user
-     queries the link.
-     */
-    USHORT PrintNameLengthInBytes;
-} MKLINK_JUNCTION_DATA, *PMKLINK_JUNCTION_DATA;
-
-/**
  Create a junction.
 
  @param NewLink Pointer to a NULL terminated string containing the name of the
@@ -195,7 +149,7 @@ MklinkCreateJunction(
     __in LPTSTR ExistingFile
     )
 {
-    PMKLINK_JUNCTION_DATA ReparseData;
+    PYORI_REPARSE_DATA_BUFFER ReparseData;
     USHORT ReparseDataLength;
     DWORD ExistingFileLength;
     HANDLE NewFileHandle;
@@ -209,28 +163,28 @@ MklinkCreateJunction(
     }
     ReparseDataLength = (WORD)((ExistingFileLength + 1) * 2 * sizeof(TCHAR) - 4 * sizeof(TCHAR));
 
-    ReparseData = YoriLibMalloc(sizeof(MKLINK_JUNCTION_DATA) + ReparseDataLength);
+    ReparseData = YoriLibMalloc(sizeof(YORI_REPARSE_DATA_BUFFER) + ReparseDataLength);
     if (ReparseData == NULL) {
         return FALSE;
     }
 
     ReparseData->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
-    ReparseData->ReparseDataLength = (WORD)(ReparseDataLength + sizeof(MKLINK_JUNCTION_DATA) - FIELD_OFFSET(MKLINK_JUNCTION_DATA, RealNameOffsetInBytes));
-    ReparseData->Reserved = 0;
-    ReparseData->RealNameOffsetInBytes = 0;
-    ReparseData->RealNameLengthInBytes = (WORD)(ExistingFileLength * sizeof(TCHAR));
-    ReparseData->PrintNameOffsetInBytes = (WORD)(ExistingFileLength * sizeof(TCHAR) + sizeof(TCHAR));
-    ReparseData->PrintNameLengthInBytes = (WORD)((ExistingFileLength - 4) * sizeof(TCHAR));
+    ReparseData->ReparseDataLength = (WORD)(ReparseDataLength + FIELD_OFFSET(YORI_REPARSE_DATA_BUFFER, u.MountPoint.Buffer) - FIELD_OFFSET(YORI_REPARSE_DATA_BUFFER, u.MountPoint));
+    ReparseData->ReservedForAlignment = 0;
+    ReparseData->u.MountPoint.RealNameOffsetInBytes = 0;
+    ReparseData->u.MountPoint.RealNameLengthInBytes = (WORD)(ExistingFileLength * sizeof(TCHAR));
+    ReparseData->u.MountPoint.DisplayNameOffsetInBytes = (WORD)(ExistingFileLength * sizeof(TCHAR) + sizeof(TCHAR));
+    ReparseData->u.MountPoint.DisplayNameLengthInBytes = (WORD)((ExistingFileLength - 4) * sizeof(TCHAR));
 
-    memcpy(YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->RealNameOffsetInBytes),
+    memcpy(YoriLibAddToPointer(ReparseData->u.MountPoint.Buffer, ReparseData->u.MountPoint.RealNameOffsetInBytes),
            ExistingFile,
            ExistingFileLength * sizeof(TCHAR) + sizeof(TCHAR));
 
-    *(TCHAR*)YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->RealNameOffsetInBytes + sizeof(TCHAR)) = '?';
+    *(TCHAR*)YoriLibAddToPointer(ReparseData->u.MountPoint.Buffer, ReparseData->u.MountPoint.RealNameOffsetInBytes + sizeof(TCHAR)) = '?';
 
-    memcpy(YoriLibAddToPointer(ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseData->PrintNameOffsetInBytes),
+    memcpy(YoriLibAddToPointer(ReparseData->u.MountPoint.Buffer, ReparseData->u.MountPoint.DisplayNameOffsetInBytes),
            ExistingFile + 4,
-           (ExistingFileLength - 4)* sizeof(TCHAR) + sizeof(TCHAR));
+           (ExistingFileLength - 4) * sizeof(TCHAR) + sizeof(TCHAR));
 
     if (!CreateDirectory(NewLink, NULL)) {
         LastError = GetLastError();
@@ -252,7 +206,7 @@ MklinkCreateJunction(
         return FALSE;
     }
 
-    if (!DeviceIoControl(NewFileHandle, FSCTL_SET_REPARSE_POINT, ReparseData, sizeof(MKLINK_JUNCTION_DATA) + ReparseDataLength, NULL, 0, &BytesReturned, NULL)) {
+    if (!DeviceIoControl(NewFileHandle, FSCTL_SET_REPARSE_POINT, ReparseData, FIELD_OFFSET(YORI_REPARSE_DATA_BUFFER, u.MountPoint.Buffer) + ReparseDataLength, NULL, 0, &BytesReturned, NULL)) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: setting junction reparse data failed: %s"), ErrText);

@@ -91,23 +91,23 @@ typedef struct _DIR_CONTEXT {
      TRUE if the directory enumeration should display short file names as well
      as long file names.  FALSE if only long names should be displayed.
      */
-    BOOL DisplayShortNames;
+    BOOLEAN DisplayShortNames;
 
     /**
      TRUE if the directory enumeration should display named streams on files.
      */
-    BOOL DisplayStreams;
+    BOOLEAN DisplayStreams;
 
     /**
      TRUE if the display should be minimal and only include file names.
      */
-    BOOL MinimalDisplay;
+    BOOLEAN MinimalDisplay;
 
     /**
      TRUE if the directory enumerate is recursively scanning through
      directories, FALSE if it is one directory only.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
     /**
      Records the total number of files processed.
@@ -155,6 +155,18 @@ typedef struct _DIR_CONTEXT {
      Color information to display against matching files.
      */
     YORI_LIB_FILE_FILTER ColorRules;
+
+    /**
+     A buffer allocated to fetch reparse data.  This is here because we
+     probably won't allocate it, but if we do, it makes sense to reuse it
+     until enumeration is complete.
+     */
+    PYORI_REPARSE_DATA_BUFFER ReparseDataBuffer;
+
+    /**
+     The number of bytes in ReparseDataBuffer allocation.
+     */
+    DWORD ReparseDataBufferLength;
 
 } DIR_CONTEXT, *PDIR_CONTEXT;
 
@@ -361,6 +373,75 @@ DirOutputEndOfRecursiveSummary(
     return TRUE;
 }
 
+/**
+ Load the reparse buffer from a file.
+
+ @param FilePath Pointer to the full path to the file.
+
+ @param DirContext Pointer to the context for the application.  This contains
+        the buffer to populate with reparse data.
+
+ @return TRUE to indicate the reparse data was successfully obtained, FALSE to
+         indicate it was not.
+ */
+BOOL
+DirLoadReparseData(
+    __in PYORI_STRING FilePath,
+    __inout PDIR_CONTEXT DirContext
+    )
+{
+    HANDLE FileHandle;
+    DWORD BytesReturned;
+
+    FileHandle = CreateFile(FilePath->StartOfString,
+                            FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
+                            NULL);
+
+    if (FileHandle == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    //
+    //  Get the reparse data
+    //
+
+    if (!DeviceIoControl(FileHandle, FSCTL_GET_REPARSE_POINT, NULL, 0, DirContext->ReparseDataBuffer, DirContext->ReparseDataBufferLength, &BytesReturned, NULL)) {
+        CloseHandle(FileHandle);
+        return FALSE;
+    }
+
+    //
+    //  Check if kernel lied and overflowed the buffer
+    //
+
+    if (BytesReturned > DirContext->ReparseDataBufferLength) {
+        CloseHandle(FileHandle);
+        return FALSE;
+    }
+
+    //
+    //  Check that the length in the buffer is consistent with the length
+    //  returned
+    //
+
+    if (BytesReturned < sizeof(DWORDLONG)) {
+        CloseHandle(FileHandle);
+        return FALSE;
+    }
+
+    if (DirContext->ReparseDataBuffer->ReparseDataLength > BytesReturned - sizeof(DWORDLONG)) {
+        CloseHandle(FileHandle);
+        return FALSE;
+    }
+
+    CloseHandle(FileHandle);
+    return TRUE;
+}
+
 
 /**
  A callback that is invoked when a file is found that matches a search criteria
@@ -394,7 +475,6 @@ DirFileFoundCallback(
     PDIR_CONTEXT DirContext = (PDIR_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
-
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
     FilePart = YoriLibFindRightMostCharacter(FilePath, '\\');
@@ -464,21 +544,113 @@ DirFileFoundCallback(
     } else {
 
         YORI_STRING VtAttribute;
+        YORI_STRING LocalFileName;
         TCHAR VtAttributeBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
         YORILIB_COLOR_ATTRIBUTES Attribute;
+        BOOLEAN DisplayReparseBuffer;
 
         YoriLibInitEmptyString(&VtAttribute);
+        YoriLibInitEmptyString(&LocalFileName);
 
         FileTimeToLocalFileTime(&FileInfo->ftLastWriteTime, &LocalFileTime);
         FileTimeToSystemTime(&LocalFileTime, &FileWriteTime);
         SizeString.StartOfString = SizeStringBuffer;
         SizeString.LengthAllocated = sizeof(SizeStringBuffer)/sizeof(SizeStringBuffer[0]);
+        DisplayReparseBuffer = FALSE;
 
         if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) {
             if (FileInfo->dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT) {
-                YoriLibYPrintf(&SizeString, _T(" <MNT>"));
+                YoriLibYPrintf(&SizeString, _T(" <JUNCTION>"));
+                DisplayReparseBuffer = TRUE;
             } else if (FileInfo->dwReserved0 == IO_REPARSE_TAG_SYMLINK) {
-                YoriLibYPrintf(&SizeString, _T(" <LNK>"));
+                if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+                    YoriLibYPrintf(&SizeString, _T(" <SYMLINKD>"));
+                } else {
+                    YoriLibYPrintf(&SizeString, _T(" <SYMLINK>"));
+                }
+                DisplayReparseBuffer = TRUE;
+            } else if (FileInfo->dwReserved0 == IO_REPARSE_TAG_APPEXECLINK) {
+                YoriLibYPrintf(&SizeString, _T(" <APP>"));
+                DisplayReparseBuffer = TRUE;
+            }
+
+            //
+            //  If the entry should display the reparse buffer contents after
+            //  the file name, allocate memory for the buffer if necessary and
+            //  load the buffer
+            //
+
+            if (DisplayReparseBuffer) {
+                if (DirContext->ReparseDataBuffer == NULL) {
+                    DirContext->ReparseDataBuffer = YoriLibMalloc(64 * 1024);
+                    if (DirContext->ReparseDataBuffer == NULL) {
+                        DisplayReparseBuffer = FALSE;
+                    } else {
+                        DirContext->ReparseDataBufferLength = 64 * 1024;
+                    }
+                }
+            }
+
+            if (DisplayReparseBuffer) {
+                if (!DirLoadReparseData(FilePath, DirContext)) {
+                    DisplayReparseBuffer = FALSE;
+                }
+            }
+
+            //
+            //  Find the string within the reparse buffer to display
+            //
+
+            if (DisplayReparseBuffer) {
+                YORI_STRING ReparseString;
+                YoriLibInitEmptyString(&ReparseString);
+
+                if (FileInfo->dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT) {
+                    if ((DWORD)DirContext->ReparseDataBuffer->u.MountPoint.DisplayNameOffsetInBytes + DirContext->ReparseDataBuffer->u.MountPoint.DisplayNameLengthInBytes <= DirContext->ReparseDataBufferLength) {
+                        ReparseString.StartOfString = YoriLibAddToPointer(&DirContext->ReparseDataBuffer->u.MountPoint.Buffer, DirContext->ReparseDataBuffer->u.MountPoint.DisplayNameOffsetInBytes);
+                        ReparseString.LengthInChars = DirContext->ReparseDataBuffer->u.MountPoint.DisplayNameLengthInBytes / sizeof(WCHAR);
+                    }
+                } else if (FileInfo->dwReserved0 == IO_REPARSE_TAG_SYMLINK) {
+                    if ((DWORD)DirContext->ReparseDataBuffer->u.SymLink.DisplayNameOffsetInBytes + DirContext->ReparseDataBuffer->u.SymLink.DisplayNameLengthInBytes <= DirContext->ReparseDataBufferLength) {
+                        ReparseString.StartOfString = YoriLibAddToPointer(&DirContext->ReparseDataBuffer->u.SymLink.Buffer, DirContext->ReparseDataBuffer->u.SymLink.DisplayNameOffsetInBytes);
+                        ReparseString.LengthInChars = DirContext->ReparseDataBuffer->u.SymLink.DisplayNameLengthInBytes / sizeof(WCHAR);
+                    }
+                } else if (FileInfo->dwReserved0 == IO_REPARSE_TAG_APPEXECLINK) {
+                    DWORD CharCount;
+                    DWORD CharIndex;
+                    DWORD StringIndex;
+                    LPTSTR StartOfString;
+                    if (DirContext->ReparseDataBuffer->ReparseDataLength > sizeof(DWORD)) {
+                        CharCount = (DirContext->ReparseDataBuffer->ReparseDataLength - sizeof(DWORD)) / sizeof(WCHAR);
+                        StartOfString = DirContext->ReparseDataBuffer->u.AppxLink.Buffer;
+                        StringIndex = 0;
+
+                        for (CharIndex = 0; CharIndex < CharCount; CharIndex++) {
+                            if (StartOfString[CharIndex] == '\0') {
+                                StringIndex++;
+                                if (StringIndex == 2) {
+                                    ReparseString.StartOfString = &StartOfString[CharIndex + 1];
+                                } else if (StringIndex == 3) {
+                                    ReparseString.LengthInChars = (DWORD)(&StartOfString[CharIndex] - ReparseString.StartOfString);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                //
+                //  Allocate a new buffer to contain both the file name and
+                //  reparse string, and alter the display name to point to
+                //  it
+                //
+
+                if (ReparseString.LengthInChars > 0) {
+                    YoriLibYPrintf(&LocalFileName, _T("%s [%y]"), FilePart, &ReparseString);
+                    if (LocalFileName.StartOfString != NULL) {
+                        FilePart = LocalFileName.StartOfString;
+                    }
+                }
+
             }
         }
 
@@ -619,6 +791,7 @@ DirFileFoundCallback(
         }
 
         YoriLibFreeStringContents(&SizeString);
+        YoriLibFreeStringContents(&LocalFileName);
     }
 
     return TRUE;
@@ -834,6 +1007,9 @@ ENTRYPOINT(
 
     YoriLibFreeStringContents(&DirContext.CurrentDirectoryName);
     YoriLibFileFiltFreeFilter(&DirContext.ColorRules);
+    if (DirContext.ReparseDataBuffer != NULL) {
+        YoriLibFree(DirContext.ReparseDataBuffer);
+    }
 
     if (DirContext.FilesFound == 0 && DirContext.DirsFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("dir: no matching files found\n"));

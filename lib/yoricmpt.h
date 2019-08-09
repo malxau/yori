@@ -1036,6 +1036,130 @@ typedef struct _YORI_MEMORYSTATUSEX {
 #define IO_REPARSE_TAG_SYMLINK     (0xA000000C)
 #endif
 
+#ifndef IO_REPARSE_TAG_APPEXECLINK
+/**
+ The reparse tag indicating a modern app link.
+ */
+#define IO_REPARSE_TAG_APPEXECLINK (0x8000001B)
+#endif
+
+/**
+ A structure recording reparse data on a file.
+ */
+typedef struct _YORI_REPARSE_DATA_BUFFER {
+
+    /**
+     The reparse tag.
+     */
+    DWORD ReparseTag;
+
+    /**
+     The size of this structure in bytes.
+     */
+    WORD  ReparseDataLength;
+
+    /**
+     Reserved field to ensure alignment of later structures.
+     */
+    WORD  ReservedForAlignment;
+
+    /**
+     Reparse tag specific structure information.
+     */
+    union {
+        struct {
+
+            /**
+             The offset to the name to substitute on reparse.  This is in
+             bytes from the Buffer field.
+             */
+            WORD RealNameOffsetInBytes;
+
+            /**
+             The length of the name to substitute on reparse.  This is in
+             bytes.
+             */
+            WORD RealNameLengthInBytes;
+
+            /**
+             The offset to the name to display.  This is in bytes from the
+             Buffer field.
+             */
+            WORD DisplayNameOffsetInBytes;
+
+            /**
+             The length of the name to display.  This is in bytes.
+             */
+            WORD DisplayNameLengthInBytes;
+            
+            /**
+             Flags, unused in this application.
+             */
+            DWORD Flags;
+
+            /**
+             The buffer containing the substitute name and display name.
+             */
+            WCHAR Buffer[1];
+
+        } SymLink;
+
+        struct {
+
+            /**
+             The offset to the name to substitute on reparse.  This is in
+             bytes from the Buffer field.
+             */
+            WORD RealNameOffsetInBytes;
+
+            /**
+             The length of the name to substitute on reparse.  This is in
+             bytes.
+             */
+            WORD RealNameLengthInBytes;
+
+            /**
+             The offset to the name to display.  This is in bytes from the
+             Buffer field.
+             */
+            WORD DisplayNameOffsetInBytes;
+
+            /**
+             The length of the name to display.  This is in bytes.
+             */
+            WORD DisplayNameLengthInBytes;
+
+            /**
+             The buffer containing the substitute name and display name.
+             */
+            WCHAR Buffer[1];
+
+        } MountPoint;
+
+        struct {
+
+            /**
+             The number of strings in the buffer.
+             */
+            DWORD StringCount;
+
+            /**
+             The buffer containing application name and executable name.
+             */
+            WCHAR Buffer[1];
+
+        } AppxLink;
+
+        struct {
+
+            /**
+             A generic buffer of unknown contents.
+             */
+            UCHAR Buffer[1];
+        } Generic;
+    } u;
+} YORI_REPARSE_DATA_BUFFER, *PYORI_REPARSE_DATA_BUFFER;
+
 #ifndef FILE_FLAG_OPEN_REPARSE_POINT
 /**
  The open flag to open a reparse point rather than any link target.

@@ -605,6 +605,8 @@ SdirDisplayFileSize (
                 SdirPasteStr(Buffer, _T(" <LNK>"), Entry->RenderAttributes, 6);
             } else if (Entry->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT) {
                 SdirPasteStr(Buffer, _T(" <MNT>"), Entry->RenderAttributes, 6);
+            } else if (Entry->ReparseTag == IO_REPARSE_TAG_APPEXECLINK) {
+                SdirPasteStr(Buffer, _T(" <APP>"), Entry->RenderAttributes, 6);
             } else {
                 return SdirDisplayGenericSize(Buffer, Attributes, &Entry->FileSize);
             }
