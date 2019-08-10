@@ -1594,6 +1594,12 @@ CONST YORI_LIB_CSIDL_MAP YoriLibSpecialDirectoryMap[] = {
     {_T("~DOCUMENTS"),          CSIDL_PERSONAL},
     {_T("~LOCALAPPDATA"),       CSIDL_LOCALAPPDATA},
     {_T("~PROGRAMFILES"),       CSIDL_PROGRAM_FILES},
+#ifdef _WIN64
+    {_T("~PROGRAMFILES32"),     CSIDL_PROGRAM_FILESX86},
+    {_T("~PROGRAMFILES64"),     CSIDL_PROGRAM_FILES},
+#else
+    {_T("~PROGRAMFILES32"),     CSIDL_PROGRAM_FILES},
+#endif
     {_T("~PROGRAMS"),           CSIDL_PROGRAMS},
     {_T("~START"),              CSIDL_STARTMENU},
     {_T("~STARTUP"),            CSIDL_STARTUP},

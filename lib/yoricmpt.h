@@ -3105,6 +3105,13 @@ typedef struct _YORI_SHFILEOP {
 #define CSIDL_PROGRAM_FILES 0x0026
 #endif
 
+#ifndef CSIDL_PROGRAM_FILESX86
+/**
+ The identifier of the Program Files (x86) directory to ShGetSpecialFolderPath.
+ */
+#define CSIDL_PROGRAM_FILESX86 0x002a
+#endif
+
 #ifndef CSIDL_PROGRAMS
 /**
  The identifier of the Start Menu Programs directory to ShGetSpecialFolderPath.
