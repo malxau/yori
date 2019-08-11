@@ -68,19 +68,27 @@ typedef struct _CUT_CONTEXT {
      TRUE if the input should be delimited by fields.  If FALSE, the input
      is delimited via bytes.
      */
-    BOOL FieldDelimited;
+    BOOLEAN FieldDelimited;
 
     /**
      TRUE if file enumeration is being performed recursively; FALSE if it is
      in one directory only.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
     /**
      For a field delimited stream, contains the NULL terminated string
      indicating one or more characters to interpret as delimiters.
      */
     LPTSTR FieldSeperator;
+
+    /**
+     The first error encountered when enumerating objects from a single arg.
+     This is used to preserve file not found/path not found errors so that
+     when the program falls back to interpreting the argument as a literal,
+     if that still doesn't work, this is the error code that is displayed.
+     */
+    DWORD SavedErrorThisArg;
 
     /**
      For a field delimited stream, indicates the field number that should
@@ -227,13 +235,16 @@ CutFileFoundCallback(
                          NULL);
 
     if (hSource == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: open file failed: %s"), ErrText);
-        YoriLibFreeWinErrorText(ErrText);
+        if (CutContext->SavedErrorThisArg == ERROR_SUCCESS) {
+            DWORD LastError = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: open file failed: %s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+        }
         return EXIT_FAILURE;
     }
 
+    CutContext->SavedErrorThisArg = ERROR_SUCCESS;
     CutContext->FilesFound++;
     CutContext->FilesFoundThisArg++;
     CutFilterHandle(hSource, CutContext);
@@ -280,7 +291,7 @@ CutFileEnumerateErrorCallback(
 
     if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
         if (!CutContext->Recursive) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+            CutContext->SavedErrorThisArg = ErrorCode;
         }
         Result = TRUE;
     } else {
@@ -434,6 +445,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             CutContext.FilesFoundThisArg = 0;
+            CutContext.SavedErrorThisArg = ERROR_SUCCESS;
 
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
@@ -448,6 +460,9 @@ ENTRYPOINT(
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     CutFileFoundCallback(&FullPath, NULL, 0, &CutContext);
                     YoriLibFreeStringContents(&FullPath);
+                }
+                if (CutContext.SavedErrorThisArg != ERROR_SUCCESS) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
         }

@@ -64,33 +64,41 @@ typedef struct _TYPE_CONTEXT {
     /**
      TRUE to indicate that files are being enumerated recursively.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
     /**
      TRUE to indicate that line numbers should be displayed.
      */
-    BOOL DisplayLineNumbers;
+    BOOLEAN DisplayLineNumbers;
+
+    /**
+     The first error encountered when enumerating objects from a single arg.
+     This is used to preserve file not found/path not found errors so that
+     when the program falls back to interpreting the argument as a literal,
+     if that still doesn't work, this is the error code that is displayed.
+     */
+    DWORD SavedErrorThisArg;
 
     /**
      Specifies the number of lines from the top of each file to display.
      */
-    ULONG HeadLines;
+    DWORD HeadLines;
 
     /**
      Records the total number of files processed.
      */
-    LONGLONG FilesFound;
+    DWORDLONG FilesFound;
 
     /**
      Records the total number of files processed for this command line
      argument.
      */
-    LONGLONG FilesFoundThisArg;
+    DWORDLONG FilesFoundThisArg;
 
     /**
      Records the number of lines found from a specific file.
      */
-    LONGLONG FileLinesFound;
+    DWORDLONG FileLinesFound;
 
 } TYPE_CONTEXT, *PTYPE_CONTEXT;
 
@@ -209,13 +217,16 @@ TypeFileFoundCallback(
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("type: open of %y failed: %s"), FilePath, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
+            if (TypeContext->SavedErrorThisArg == ERROR_SUCCESS) {
+                DWORD LastError = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("type: open of %y failed: %s"), FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
             return TRUE;
         }
 
+        TypeContext->SavedErrorThisArg = ERROR_SUCCESS;
         TypeProcessStream(FileHandle, TypeContext);
 
         CloseHandle(FileHandle);
@@ -262,7 +273,7 @@ TypeFileEnumerateErrorCallback(
 
     if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
         if (!TypeContext->Recursive) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+            TypeContext->SavedErrorThisArg = ErrorCode;
         }
         Result = TRUE;
     } else {
@@ -418,6 +429,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             TypeContext.FilesFoundThisArg = 0;
+            TypeContext.SavedErrorThisArg = ERROR_SUCCESS;
 
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
@@ -432,6 +444,9 @@ ENTRYPOINT(
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     TypeFileFoundCallback(&FullPath, NULL, 0, &TypeContext);
                     YoriLibFreeStringContents(&FullPath);
+                }
+                if (TypeContext.SavedErrorThisArg != ERROR_SUCCESS) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
         }

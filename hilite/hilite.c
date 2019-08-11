@@ -110,13 +110,13 @@ typedef struct _HILITE_CONTEXT {
      TRUE if matches should be applied case insensitively, FALSE if they
      should be applied case sensitively.
      */
-    BOOL Insensitive;
+    BOOLEAN Insensitive;
 
     /**
      TRUE if file enumeration is being performed recursively; FALSE if it is
      in one directory only.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
     /**
      The color to apply if none of the matches match.

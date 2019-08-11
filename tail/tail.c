@@ -67,31 +67,39 @@ typedef struct _TAIL_CONTEXT {
     /**
      Records the total number of files processed.
      */
-    LONGLONG FilesFound;
+    DWORDLONG FilesFound;
 
     /**
      Records the total number of files processed within a single command line
      argument.
      */
-    LONGLONG FilesFoundThisArg;
+    DWORDLONG FilesFoundThisArg;
 
     /**
      Specifies the number of lines to display in each matching file.
      */
-    ULONG LinesToDisplay;
+    DWORD LinesToDisplay;
+
+    /**
+     The first error encountered when enumerating objects from a single arg.
+     This is used to preserve file not found/path not found errors so that
+     when the program falls back to interpreting the argument as a literal,
+     if that still doesn't work, this is the error code that is displayed.
+     */
+    DWORD SavedErrorThisArg;
 
     /**
      If nonzero, specifies the final line to display from each file.  This
      implies that tail is running in context mode, looking for a region in
      the middle of the file.
      */
-    LONGLONG FinalLine;
+    DWORDLONG FinalLine;
 
     /**
      Specifies the number of lines that have been found from the current
      stream.
      */
-    LONGLONG LinesFound;
+    DWORDLONG LinesFound;
 
     /**
      An array of LinesToDisplay YORI_STRING structures.
@@ -102,12 +110,12 @@ typedef struct _TAIL_CONTEXT {
      If TRUE, continue outputting results as more arrive.  If FALSE, terminate
      as soon as the requested lines have been output.
      */
-    BOOL WaitForMore;
+    BOOLEAN WaitForMore;
 
     /**
      TRUE to indicate that files are being enumerated recursively.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
 } TAIL_CONTEXT, *PTAIL_CONTEXT;
 
@@ -129,8 +137,8 @@ TailProcessStream(
     )
 {
     PVOID LineContext = NULL;
-    LONGLONG StartLine = 0;
-    LONGLONG CurrentLine;
+    DWORDLONG StartLine = 0;
+    DWORDLONG CurrentLine;
     PYORI_STRING LineString;
     BOOL LineTerminated;
     BOOL TimeoutReached;
@@ -262,13 +270,16 @@ TailFileFoundCallback(
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("tail: open of %y failed: %s"), FilePath, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
+            if (TailContext->SavedErrorThisArg == ERROR_SUCCESS) {
+                DWORD LastError = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("tail: open of %y failed: %s"), FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
             return TRUE;
         }
 
+        TailContext->SavedErrorThisArg = ERROR_SUCCESS;
         TailProcessStream(FileHandle, TailContext);
 
         CloseHandle(FileHandle);
@@ -315,7 +326,7 @@ TailFileEnumerateErrorCallback(
 
     if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
         if (!TailContext->Recursive) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+            TailContext->SavedErrorThisArg = ErrorCode;
         }
         Result = TRUE;
     } else {
@@ -478,6 +489,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             TailContext.FilesFoundThisArg = 0;
+            TailContext.SavedErrorThisArg = ERROR_SUCCESS;
 
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
@@ -492,6 +504,10 @@ ENTRYPOINT(
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     TailFileFoundCallback(&FullPath, NULL, 0, &TailContext);
                     YoriLibFreeStringContents(&FullPath);
+                }
+
+                if (TailContext.SavedErrorThisArg != ERROR_SUCCESS) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
         }

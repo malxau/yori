@@ -75,7 +75,7 @@ typedef struct _HASH_CONTEXT {
      TRUE if file enumeration is being performed recursively; FALSE if it is
      in one directory only.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
     /**
      BCrypt handle to the algorithm provider.  If NULL, the algorithm provider
@@ -88,6 +88,14 @@ typedef struct _HASH_CONTEXT {
      the hash.
      */
     PVOID ScratchBuffer;
+
+    /**
+     The first error encountered when enumerating objects from a single arg.
+     This is used to preserve file not found/path not found errors so that
+     when the program falls back to interpreting the argument as a literal,
+     if that still doesn't work, this is the error code that is displayed.
+     */
+    DWORD SavedErrorThisArg;
 
     /**
      Specifies the number of bytes in ScratchBuffer.
@@ -259,12 +267,16 @@ HashFileFoundCallback(
                             NULL);
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-        DWORD LastError = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: open of %y failed: %s"), FilePath, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
+        if (HashContext->SavedErrorThisArg == ERROR_SUCCESS) {
+            DWORD LastError = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: open of %y failed: %s"), FilePath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+        }
         return TRUE;
     }
+
+    HashContext->SavedErrorThisArg = ERROR_SUCCESS;
 
     if (HashProcessStream(FileHandle, HashContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y %y\n"), &HashContext->HashString, &RelativePathFrom);
@@ -419,7 +431,7 @@ HashFileEnumerateErrorCallback(
 
     if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
         if (!HashContext->Recursive) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+            HashContext->SavedErrorThisArg = ErrorCode;
         }
         Result = TRUE;
     } else {
@@ -597,6 +609,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             HashContext.FilesFoundThisArg = 0;
+            HashContext.SavedErrorThisArg = ERROR_SUCCESS;
 
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
@@ -611,6 +624,9 @@ ENTRYPOINT(
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     HashFileFoundCallback(&FullPath, NULL, 0, &HashContext);
                     YoriLibFreeStringContents(&FullPath);
+                }
+                if (HashContext.SavedErrorThisArg != ERROR_SUCCESS) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
         }

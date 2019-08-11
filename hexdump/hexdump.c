@@ -96,20 +96,28 @@ typedef struct _HEXDUMP_CONTEXT {
     DWORD BytesPerGroup;
 
     /**
+     The first error encountered when enumerating objects from a single arg.
+     This is used to preserve file not found/path not found errors so that
+     when the program falls back to interpreting the argument as a literal,
+     if that still doesn't work, this is the error code that is displayed.
+     */
+    DWORD SavedErrorThisArg;
+
+    /**
      If TRUE, hide the offset display within the buffer.
      */
-    BOOL HideOffset;
+    BOOLEAN HideOffset;
 
     /**
      If TRUE, hide the character display within the buffer.
      */
-    BOOL HideCharacters;
+    BOOLEAN HideCharacters;
 
     /**
      TRUE if file enumeration is being performed recursively; FALSE if it is
      in one directory only.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
 } HEXDUMP_CONTEXT, *PHEXDUMP_CONTEXT;
 
@@ -774,13 +782,16 @@ HexDumpFileFoundCallback(
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), FilePath, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
+            if (HexDumpContext->SavedErrorThisArg == ERROR_SUCCESS) {
+                DWORD LastError = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
             return TRUE;
         }
 
+        HexDumpContext->SavedErrorThisArg = ERROR_SUCCESS;
         HexDumpProcessStream(FileHandle, HexDumpContext);
 
         CloseHandle(FileHandle);
@@ -832,13 +843,16 @@ HexDumpReverseFileFoundCallback(
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), FilePath, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
+            if (HexDumpContext->SavedErrorThisArg == ERROR_SUCCESS) {
+                DWORD LastError = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
             return TRUE;
         }
 
+        HexDumpContext->SavedErrorThisArg = ERROR_SUCCESS;
         HexDumpReverseProcessStream(FileHandle, HexDumpContext);
 
         CloseHandle(FileHandle);
@@ -886,7 +900,7 @@ HexDumpFileEnumerateErrorCallback(
 
     if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
         if (!HexDumpContext->Recursive) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+            HexDumpContext->SavedErrorThisArg = ErrorCode;
         }
         Result = TRUE;
     } else {
@@ -1329,6 +1343,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             HexDumpContext.FilesFoundThisArg = 0;
+            HexDumpContext.SavedErrorThisArg = ERROR_SUCCESS;
 
             if (Reverse) {
                 YoriLibForEachStream(&ArgV[i],
@@ -1356,6 +1371,9 @@ ENTRYPOINT(
                         HexDumpFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
                     }
                     YoriLibFreeStringContents(&FullPath);
+                }
+                if (HexDumpContext.SavedErrorThisArg != ERROR_SUCCESS) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
         }

@@ -64,12 +64,20 @@ typedef struct _LINES_CONTEXT {
      TRUE to indicate that the only output should be the total number of
      lines, after all files have been processed.
      */
-    BOOL SummaryOnly;
+    BOOLEAN SummaryOnly;
 
     /**
      TRUE to indicate that files are being enumerated recursively.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
+
+    /**
+     The first error encountered when enumerating objects from a single arg.
+     This is used to preserve file not found/path not found errors so that
+     when the program falls back to interpreting the argument as a literal,
+     if that still doesn't work, this is the error code that is displayed.
+     */
+    DWORD SavedErrorThisArg;
 
     /**
      Records the total number of files processed.
@@ -176,13 +184,16 @@ LinesFileFoundCallback(
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            DWORD LastError = GetLastError();
-            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lines: open of %y failed: %s"), FilePath, ErrText);
-            YoriLibFreeWinErrorText(ErrText);
+            if (LinesContext->SavedErrorThisArg == ERROR_SUCCESS) {
+                DWORD LastError = GetLastError();
+                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lines: open of %y failed: %s"), FilePath, ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+            }
             return TRUE;
         }
 
+        LinesContext->SavedErrorThisArg = ERROR_SUCCESS;
         LinesProcessStream(FileHandle, LinesContext);
 
         if (!LinesContext->SummaryOnly) {
@@ -245,7 +256,7 @@ LinesFileEnumerateErrorCallback(
 
     if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
         if (!LinesContext->Recursive) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &UnescapedFilePath);
+            LinesContext->SavedErrorThisArg = ErrorCode;
         }
         Result = TRUE;
     } else {
@@ -374,6 +385,7 @@ ENTRYPOINT(
         for (i = StartArg; i < ArgC; i++) {
 
             LinesContext.FilesFoundThisArg = 0;
+            LinesContext.SavedErrorThisArg = ERROR_SUCCESS;
     
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
@@ -388,6 +400,9 @@ ENTRYPOINT(
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     LinesFileFoundCallback(&FullPath, NULL, 0, &LinesContext);
                     YoriLibFreeStringContents(&FullPath);
+                }
+                if (LinesContext.SavedErrorThisArg != ERROR_SUCCESS) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
         }
