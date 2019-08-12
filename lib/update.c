@@ -69,7 +69,7 @@ YoriLibUpdateBinaryFromFile(
         //  If the file name to replace is NULL, replace the currently
         //  existing binary.
         //
-    
+
         if (GetModuleFileName(NULL, MyPath, sizeof(MyPath)/sizeof(MyPath[0])) == 0) {
             return FALSE;
         }
@@ -323,6 +323,7 @@ YoriLibUpdateBinaryFromUrl(
     TCHAR TempPath[MAX_PATH];
     HANDLE hTempFile = INVALID_HANDLE_VALUE;
     BOOL SuccessfullyComplete = FALSE;
+    BOOL WinInetOnlySupportsAnsi = FALSE;
     HINSTANCE hWinInet = NULL;
     DWORD dwError;
     YoriLibUpdError Return = YoriLibUpdErrorSuccess;
@@ -383,6 +384,62 @@ YoriLibUpdateBinaryFromUrl(
                          0);
 
     if (hInternet == NULL) {
+        DWORD LastError;
+        LastError = GetLastError();
+
+        //
+        //  Internet Explorer 3 helpfully exports Unicode functions and then
+        //  doesn't implement them.  In this case we have to downconvert to
+        //  ANSI ourselves.  If a resource needs a particular encoding (ie.,
+        //  goes beyond 7 bit ASCII) then this will likely fail, but typically
+        //  the resources we use fit within that limitation.
+        //
+
+        if (LastError == ERROR_CALL_NOT_IMPLEMENTED) {
+            LPSTR AnsiAgent;
+            DWORD AgentLen;
+            DWORD BytesForAnsiAgent;
+
+            WinInetOnlySupportsAnsi = TRUE;
+
+            InetOpen = (PINTERNET_OPEN)GetProcAddress(hWinInet, "InternetOpenA");
+            InetOpenUrl = (PINTERNET_OPEN_URL)GetProcAddress(hWinInet, "InternetOpenUrlA");
+            HttpQueryInfo = (PHTTP_QUERY_INFO)GetProcAddress(hWinInet, "HttpQueryInfoA");
+            if (InetOpen == NULL ||
+                InetOpenUrl == NULL ||
+                HttpQueryInfo == NULL) {
+
+                Return = YoriLibUpdErrorInetInit;
+                goto Exit;
+            }
+
+            AgentLen = _tcslen(Agent);
+            BytesForAnsiAgent = WideCharToMultiByte(CP_ACP, 0, Agent, AgentLen, NULL, 0, NULL, NULL);
+
+            AnsiAgent = YoriLibMalloc(BytesForAnsiAgent + 1);
+            if (AnsiAgent == NULL) {
+                Return = YoriLibUpdErrorInetInit;
+                return FALSE;
+            }
+
+            WideCharToMultiByte(CP_ACP, 0, Agent, AgentLen, AnsiAgent, BytesForAnsiAgent, NULL, NULL);
+            AnsiAgent[BytesForAnsiAgent] = '\0';
+
+            hInternet = InetOpen((LPCTSTR)AnsiAgent,
+                                 0,
+                                 NULL,
+                                 NULL,
+                                 0);
+
+            YoriLibFree(AnsiAgent);
+        }
+    }
+
+
+    if (hInternet == NULL) {
+        DWORD LastError;
+        LastError = GetLastError();
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("InternetOpen returned %i\n"), LastError);
         Return = YoriLibUpdErrorInetInit;
         goto Exit;
     }
@@ -446,13 +503,53 @@ YoriLibUpdateBinaryFromUrl(
     YoriLibFreeStringContents(&HostHeader);
     YoriLibFreeStringContents(&IfModifiedSinceHeader);
 
+
     //
     //  Request the desired URL and check the status is HTTP success.
     //
 
-    NewBinary = InetOpenUrl(hInternet, Url, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, 0, 0);
+    if (WinInetOnlySupportsAnsi) {
+        DWORD AnsiCombinedHeaderLength;
+        LPSTR AnsiCombinedHeader;
+        DWORD UrlLength;
+        DWORD AnsiUrlLength;
+        LPSTR AnsiUrl;
+
+        AnsiCombinedHeaderLength = WideCharToMultiByte(CP_ACP, 0, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, NULL, 0, NULL, NULL);
+        UrlLength = _tcslen(Url);
+        AnsiUrlLength = WideCharToMultiByte(CP_ACP, 0, Url, UrlLength, NULL, 0, NULL, NULL);
+
+        AnsiCombinedHeader = YoriLibMalloc(AnsiCombinedHeaderLength + 1);
+        if (AnsiCombinedHeader == NULL) {
+            YoriLibFreeStringContents(&CombinedHeader);
+            Return = YoriLibUpdErrorInetInit;
+            goto Exit;
+        }
+
+        AnsiUrl = YoriLibMalloc(AnsiUrlLength + 1);
+        if (AnsiUrl == NULL) {
+            YoriLibFree(AnsiCombinedHeader);
+            YoriLibFreeStringContents(&CombinedHeader);
+            Return = YoriLibUpdErrorInetInit;
+            goto Exit;
+        }
+
+        WideCharToMultiByte(CP_ACP, 0, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, AnsiCombinedHeader, AnsiCombinedHeaderLength, NULL, NULL);
+        AnsiCombinedHeader[AnsiCombinedHeaderLength] = '\0';
+
+        WideCharToMultiByte(CP_ACP, 0, Url, UrlLength, AnsiUrl, AnsiUrlLength, NULL, NULL);
+        AnsiUrl[AnsiUrlLength] = '\0';
+
+        NewBinary = InetOpenUrl(hInternet, (LPCTSTR)AnsiUrl, (LPCTSTR)AnsiCombinedHeader, AnsiCombinedHeaderLength, 0, 0);
+        YoriLibFree(AnsiUrl);
+        YoriLibFree(AnsiCombinedHeader);
+
+    } else {
+
+        NewBinary = InetOpenUrl(hInternet, Url, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, 0, 0);
+    }
+
     if (NewBinary == NULL) {
-        dwError = GetLastError();
         YoriLibFreeStringContents(&CombinedHeader);
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
