@@ -848,6 +848,9 @@ BOOL
 YoriLibLoadVirtDiskFunctions();
 
 BOOL
+YoriLibLoadWinInetFunctions();
+
+BOOL
 YoriLibLoadWtsApi32Functions();
 
 // *** FILECOMP.C ***

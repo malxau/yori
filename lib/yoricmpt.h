@@ -4,7 +4,7 @@
  * Yori shell header file to define OS things that the compilation environment
  * doesn't support.
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -6387,6 +6387,157 @@ typedef struct _YORI_VIRTDISK_FUNCTIONS {
 } YORI_VIRTDISK_FUNCTIONS, *PYORI_VIRTDISK_FUNCTIONS;
 
 extern YORI_VIRTDISK_FUNCTIONS DllVirtDisk;
+
+/**
+ A prototype for the InternetOpenA function.
+ */
+typedef
+LPVOID WINAPI
+INTERNET_OPENA(LPCSTR, DWORD, LPCSTR, LPCSTR, DWORD);
+
+/**
+ A prototype for a pointer to the InternetOpenA function.
+ */
+typedef INTERNET_OPENA *PINTERNET_OPENA;
+
+/**
+ A prototype for the InternetOpenW function.
+ */
+typedef
+LPVOID WINAPI
+INTERNET_OPENW(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD);
+
+/**
+ A prototype for a pointer to the InternetOpenW function.
+ */
+typedef INTERNET_OPENW *PINTERNET_OPENW;
+
+/**
+ A prototype for the InternetOpenUrlA function.
+ */
+typedef
+LPVOID WINAPI
+INTERNET_OPEN_URLA(LPVOID, LPCSTR, LPCSTR, DWORD, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the InternetOpenUrlA function.
+ */
+typedef INTERNET_OPEN_URLA *PINTERNET_OPEN_URLA;
+
+/**
+ A prototype for the InternetOpenUrlW function.
+ */
+typedef
+LPVOID WINAPI
+INTERNET_OPEN_URLW(LPVOID, LPCWSTR, LPCWSTR, DWORD, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the InternetOpenUrlW function.
+ */
+typedef INTERNET_OPEN_URLW *PINTERNET_OPEN_URLW;
+
+/**
+ A prototype for the HttpQueryInfoA function.
+ */
+typedef
+BOOL WINAPI
+HTTP_QUERY_INFOA(LPVOID, DWORD, LPVOID, LPDWORD, LPDWORD);
+
+/**
+ A prototype for a pointer to the HttpQueryInfoA function.
+ */
+typedef HTTP_QUERY_INFOA *PHTTP_QUERY_INFOA;
+
+/**
+ A prototype for the HttpQueryInfoW function.
+ */
+typedef
+BOOL WINAPI
+HTTP_QUERY_INFOW(LPVOID, DWORD, LPVOID, LPDWORD, LPDWORD);
+
+/**
+ A prototype for a pointer to the HttpQueryInfoW function.
+ */
+typedef HTTP_QUERY_INFOW *PHTTP_QUERY_INFOW;
+
+/**
+ A prototype for the InternetReadFile function.
+ */
+typedef
+BOOL WINAPI
+INTERNET_READ_FILE(LPVOID, LPVOID, DWORD, LPDWORD);
+
+/**
+ A prototype for a pointer to the InternetReadFile function.
+ */
+typedef INTERNET_READ_FILE *PINTERNET_READ_FILE;
+
+/**
+ A prototype for the InternetCloseHandle function.
+ */
+typedef
+BOOL WINAPI
+INTERNET_CLOSE_HANDLE(LPVOID);
+
+/**
+ A prototype for a pointer to the InternetCloseHandle function.
+ */
+typedef INTERNET_CLOSE_HANDLE *PINTERNET_CLOSE_HANDLE;
+
+/**
+ A structure containing optional function pointers to wininet.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_WININET_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to HttpQueryInfoA.
+     */
+    PHTTP_QUERY_INFOA pHttpQueryInfoA;
+
+    /**
+     If it's available on the current system, a pointer to HttpQueryInfoW.
+     */
+    PHTTP_QUERY_INFOW pHttpQueryInfoW;
+
+    /**
+     If it's available on the current system, a pointer to InternetCloseHandle.
+     */
+    PINTERNET_CLOSE_HANDLE pInternetCloseHandle;
+
+    /**
+     If it's available on the current system, a pointer to InternetOpenA.
+     */
+    PINTERNET_OPENA pInternetOpenA;
+
+    /**
+     If it's available on the current system, a pointer to InternetOpenW.
+     */
+    PINTERNET_OPENW pInternetOpenW;
+
+    /**
+     If it's available on the current system, a pointer to InternetOpenUrlA.
+     */
+    PINTERNET_OPEN_URLA pInternetOpenUrlA;
+
+    /**
+     If it's available on the current system, a pointer to InternetOpenUrlW.
+     */
+    PINTERNET_OPEN_URLW pInternetOpenUrlW;
+
+    /**
+     If it's available on the current system, a pointer to InternetReadFile.
+     */
+    PINTERNET_READ_FILE pInternetReadFile;
+
+} YORI_WININET_FUNCTIONS, *PYORI_WININET_FUNCTIONS;
+
+extern YORI_WININET_FUNCTIONS DllWinInet;
 
 /**
  A prototype for the WTSDisconnectSession function.
