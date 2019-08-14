@@ -35,9 +35,16 @@ CHAR strExprHelpText[] =
         "\n"
         "Evaluate simple arithmetic expressions.\n"
         "\n"
-        "EXPR [-license] [-h] <Number>[+|-|*|/|%|<|>|^]<Number>...\n"
+        "EXPR [-license] [-h] [-int8|-int16|-int32|-uint8|-uint16|-uint32]\n"
+        "     <Number>[+|-|*|/|%|<|>|^]<Number>...\n"
         "\n"
-        "   -h             Output result as hex rather than decimal\n";
+        "   -h             Output result as hex rather than decimal\n"
+        "   -int8          Output result as a signed 8 bit value\n"
+        "   -int16         Output result as a signed 16 bit value\n"
+        "   -int32         Output result as a signed 32 bit value\n"
+        "   -uint8         Output result as an unsigned 8 bit value\n"
+        "   -uint16        Output result as an unsigned 16 bit value\n"
+        "   -uint32        Output result as an unsigned 32 bit value\n";
 
 /**
  Display usage text to the user.
@@ -158,6 +165,7 @@ ENTRYPOINT(
     DWORD i;
     DWORD StartArg = 0;
     DWORD CharsConsumed;
+    DWORD BitsInOutput = 63;
     YORI_STRING RemainingString;
     EXPR_NUMBER Temp;
     EXPR_NUMBER Result;
@@ -181,8 +189,26 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 OutputHex = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("int8")) == 0) {
+                BitsInOutput = 7;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("int16")) == 0) {
+                BitsInOutput = 15;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("int32")) == 0) {
+                BitsInOutput = 31;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 OutputSeperator = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uint8")) == 0) {
+                BitsInOutput = 8;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uint16")) == 0) {
+                BitsInOutput = 16;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uint32")) == 0) {
+                BitsInOutput = 32;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i;
@@ -314,6 +340,27 @@ ENTRYPOINT(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Operator not understood, terminating: %c\n"), RemainingString.StartOfString[0]);
             break;
         }
+    }
+
+    switch (BitsInOutput) {
+        case 32:
+            Result.Value = (LONGLONG)(DWORD)Result.Value;
+            break;
+        case 31:
+            Result.Value = (LONGLONG)(INT)Result.Value;
+            break;
+        case 16:
+            Result.Value = (LONGLONG)(WORD)Result.Value;
+            break;
+        case 15:
+            Result.Value = (LONGLONG)(SHORT)Result.Value;
+            break;
+        case 8:
+            Result.Value = (LONGLONG)(UCHAR)Result.Value;
+            break;
+        case 7:
+            Result.Value = (LONGLONG)(CHAR)Result.Value;
+            break;
     }
 
     YoriLibFreeStringContents(&RemainingString);
