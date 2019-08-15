@@ -174,6 +174,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
                 ErrType = ErrTypeWindows;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("0"), 1) >= 0 &&
+                       YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("9"), 1) <= 0) {
+                StartArg = i;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
