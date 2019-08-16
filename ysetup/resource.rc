@@ -19,7 +19,7 @@
 
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "ysetup.manifest"
 
-SETUPDIALOG DIALOGEX 0, 0, 400, 220
+SETUPDIALOG DIALOGEX 0, 0, 400, 230
 STYLE WS_POPUP | WS_CAPTION | DS_MODALFRAME
 CAPTION "Yori setup"
 FONT 8, "MS Sans Serif"
@@ -29,29 +29,29 @@ FONT 8, "MS Sans Serif"
     PUSHBUTTON "&Browse...", IDC_BROWSE, 340, 8, 50, 14
 
 
-    GROUPBOX "Install Type", -5, 12, 34, 210, 137
+    GROUPBOX "Install Type", -5, 12, 34, 210, 147
     CONTROL "Install Core", IDC_COREONLY,"Button",BS_RADIOBUTTON,20, 50, 80, 10
     CONTROL "Install Typical", IDC_TYPICAL,"Button",BS_RADIOBUTTON,20, 90, 80, 10
-    CONTROL "Install Complete", IDC_COMPLETE,"Button",BS_RADIOBUTTON,20, 130, 80, 10
+    CONTROL "Install Complete", IDC_COMPLETE,"Button",BS_RADIOBUTTON,20, 140, 80, 10
 
     LTEXT "Core includes the Yori shell and commands that are equivalent to those included in CMD", -2, 32, 63, 180, 20
-    LTEXT "Typical includes Core plus useful tools and utilities such as cvtvt, iconv, nice, sdir, tail, tee, touch and which", -3, 32, 103, 180, 20
-    LTEXT "Complete includes Typical plus a CMD version of for and clmp multiprocessor compiler wrapper", -4, 32, 143, 180, 20
+    LTEXT "Typical includes Core plus useful tools and utilities such as cvtvt, df, du, hash, hexdump, iconv, lines, lsof, mount, nice, sdir, tail, tee, touch and which", -3, 32, 103, 180, 30
+    LTEXT "Complete includes Typical plus a CMD version of for and clmp multiprocessor compiler wrapper", -4, 32, 153, 180, 20
 
-    GROUPBOX "Install Options", -6, 230, 34, 160, 137
-    CONTROL "Install Desktop shortcut", IDC_DESKTOP_SHORTCUT,"Button",BS_CHECKBOX|WS_GROUP,240, 50, 120, 10
-    CONTROL "Install Start Menu shortcut", IDC_START_SHORTCUT,"Button",BS_CHECKBOX,240, 69, 120, 10
-    CONTROL "Add Yori to system path", IDC_SYSTEM_PATH,"Button",BS_CHECKBOX,240, 88, 120, 10
-    CONTROL "Add Yori to user path", IDC_USER_PATH,"Button",BS_CHECKBOX,240, 107, 120, 10
-    CONTROL "Install source code", IDC_SOURCE,"Button",BS_CHECKBOX,240, 126, 120, 10
-    CONTROL "Install debugging symbols", IDC_SYMBOLS,"Button",BS_CHECKBOX,240, 145, 120, 10
+    GROUPBOX "Install Options", -6, 230, 34, 160, 147
+    CONTROL "Install Desktop shortcut", IDC_DESKTOP_SHORTCUT,"Button",BS_CHECKBOX|WS_GROUP,240, 53, 120, 10
+    CONTROL "Install Start Menu shortcut", IDC_START_SHORTCUT,"Button",BS_CHECKBOX,240, 73, 120, 10
+    CONTROL "Add Yori to system path", IDC_SYSTEM_PATH,"Button",BS_CHECKBOX,240, 93, 120, 10
+    CONTROL "Add Yori to user path", IDC_USER_PATH,"Button",BS_CHECKBOX,240, 113, 120, 10
+    CONTROL "Install source code", IDC_SOURCE,"Button",BS_CHECKBOX,240, 133, 120, 10
+    CONTROL "Install debugging symbols", IDC_SYMBOLS,"Button",BS_CHECKBOX,240, 153, 120, 10
 
-    LTEXT "Please select installation options", IDC_STATUS, 12, 177, 380, 19
+    LTEXT "Please select installation options", IDC_STATUS, 12, 187, 380, 19
 
-    DEFPUSHBUTTON "Install", IDC_OK, 8, 198, 50, 14
-    PUSHBUTTON "Cancel", IDC_CANCEL, 68, 198, 50, 14
+    DEFPUSHBUTTON "Install", IDC_OK, 8, 208, 50, 14
+    PUSHBUTTON "Cancel", IDC_CANCEL, 68, 208, 50, 14
 
-    LTEXT "Version", IDC_VERSION, 330, 200, 60, 19, WS_DISABLED
+    LTEXT "Version", IDC_VERSION, 335, 211, 60, 19, WS_DISABLED
 }
 
 // vim:sw=4:ts=4:et:
