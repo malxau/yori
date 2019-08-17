@@ -583,6 +583,7 @@ ymain(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
 
     ZeroMemory(&YuiContext, sizeof(YuiContext));
     YoriLibInitializeListHead(&YuiContext.ProgramsDirectory.ListEntry);
@@ -634,9 +635,11 @@ ymain(
         }
     }
 
-#if !defined(DBG)
-    FreeConsole();
-#endif
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
+        if (ScreenInfo.dwCursorPosition.X == 0 && ScreenInfo.dwCursorPosition.Y == 0) {
+            FreeConsole();
+        }
+    }
 
     YuiMenuPopulate(&YuiContext);
     YuiCreateWindow(&YuiContext);
