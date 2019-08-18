@@ -3,7 +3,7 @@
  *
  * Yori shell display command line output
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,8 @@ CHAR strDateHelpText[] =
         "   -u             Display UTC rather than local time\n"
         "\n"
         "Format specifiers are:\n"
+        "   $COUNT_MS$     The number of milliseconds since epoch with leading zero\n"
+        "   $count_ms$     The number of milliseconds since epoch without leading zero\n"
         "   $DAY$          The current numeric day of the month with leading zero\n"
         "   $day$          The current numeric day of the month without leading zero\n"
         "   $HOUR$         The current hour in 24 hour format with leading zero\n"
@@ -53,6 +55,8 @@ CHAR strDateHelpText[] =
         "   $ms$           The current number of milliseconds without leading zero\n"
         "   $SEC$          The current second with leading zero\n"
         "   $sec$          The current second without leading zero\n"
+        "   $TICK$         The number of milliseconds since boot with leading zero\n"
+        "   $tick$         The number of milliseconds since boot without leading zero\n"
         "   $YEAR$         The current year as four digits\n"
         "   $year$         The current year as two digits\n";
 
@@ -69,6 +73,23 @@ DateHelp()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strDateHelpText);
     return TRUE;
 }
+
+/**
+ Context structure to provide information needed to expand format variables.
+ */
+typedef struct _DATE_CONTEXT {
+
+    /**
+     The current system time.
+     */
+    SYSTEMTIME Time;
+
+    /**
+     The current tick count.
+     */
+    LARGE_INTEGER Tick;
+
+} DATE_CONTEXT, *PDATE_CONTEXT;
 
 /**
  A callback function to expand any known variables found when parsing the
@@ -94,7 +115,11 @@ DateExpandVariables(
     )
 {
     DWORD CharsNeeded;
-    PSYSTEMTIME DateContext = (PSYSTEMTIME)Context;
+    PDATE_CONTEXT DateContext = (PDATE_CONTEXT)Context;
+    FILETIME Clock;
+    LARGE_INTEGER liClock;
+
+    liClock.QuadPart = 0;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("YEAR")) == 0) {
         CharsNeeded = 4;
@@ -124,6 +149,22 @@ DateExpandVariables(
         CharsNeeded = 4;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ms")) == 0) {
         CharsNeeded = 4;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COUNT_MS")) == 0) {
+        SystemTimeToFileTime(&DateContext->Time, &Clock);
+        liClock.HighPart = Clock.dwHighDateTime;
+        liClock.LowPart = Clock.dwLowDateTime;
+        liClock.QuadPart = liClock.QuadPart / 10000;
+        CharsNeeded = YoriLibSPrintfSize(_T("%016lli"), liClock.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("count_ms")) == 0) {
+        SystemTimeToFileTime(&DateContext->Time, &Clock);
+        liClock.HighPart = Clock.dwHighDateTime;
+        liClock.LowPart = Clock.dwLowDateTime;
+        liClock.QuadPart = liClock.QuadPart / 10000;
+        CharsNeeded = YoriLibSPrintfSize(_T("%lli"), liClock.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TICK")) == 0) {
+        CharsNeeded = YoriLibSPrintfSize(_T("%016lli"), DateContext->Tick.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("tick")) == 0) {
+        CharsNeeded = YoriLibSPrintfSize(_T("%lli"), DateContext->Tick.QuadPart);
     } else {
         return 0;
     }
@@ -133,57 +174,65 @@ DateExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("YEAR")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->wYear);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->Time.wYear);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("year")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wYear % 100);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wYear % 100);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MON")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wMonth);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wMonth);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("mon")) == 0) {
-        if (DateContext->wMonth < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wMonth);
+        if (DateContext->Time.wMonth < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wMonth);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DAY")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wDay);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wDay);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("day")) == 0) {
-        if (DateContext->wDay < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wDay);
+        if (DateContext->Time.wDay < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wDay);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HOUR")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wHour);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wHour);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("hour")) == 0) {
-        if (DateContext->wHour < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wHour);
+        if (DateContext->Time.wHour < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wHour);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MIN")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wMinute);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wMinute);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("min")) == 0) {
-        if (DateContext->wMinute < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wMinute);
+        if (DateContext->Time.wMinute < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wMinute);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SEC")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->wSecond);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%02i"), DateContext->Time.wSecond);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("sec")) == 0) {
-        if (DateContext->wSecond < 100) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wSecond);
+        if (DateContext->Time.wSecond < 100) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wSecond);
         } else {
             CharsNeeded = 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MS")) == 0) {
-        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->wMilliseconds);
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%04i"), DateContext->Time.wMilliseconds);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ms")) == 0) {
-        if (DateContext->wMilliseconds < 10000) {
-            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->wMilliseconds);
+        if (DateContext->Time.wMilliseconds < 10000) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i"), DateContext->Time.wMilliseconds);
         } else {
             CharsNeeded = 0;
         }
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COUNT_MS")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%016lli"), liClock.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("count_ms")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%lli"), liClock.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("TICK")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%016lli"), DateContext->Tick.QuadPart);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("tick")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%lli"), DateContext->Tick.QuadPart);
     }
 
     return CharsNeeded;
@@ -217,7 +266,6 @@ ENTRYPOINT(
     __in YORI_STRING ArgV[]
     )
 {
-    SYSTEMTIME CurrentTime;
     BOOL ArgumentUnderstood;
     BOOL UseUtc;
     BOOL DisplayTime;
@@ -228,6 +276,7 @@ ENTRYPOINT(
     DWORD StartArg;
     DWORD i;
     YORI_STRING Arg;
+    DATE_CONTEXT DateContext;
 
     StartArg = 0;
     UseUtc = FALSE;
@@ -246,7 +295,7 @@ ENTRYPOINT(
                 DateHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
                 DisplayTime = TRUE;
@@ -278,12 +327,20 @@ ENTRYPOINT(
     }
 
     if (UseUtc) {
-        GetSystemTime(&CurrentTime);
+        GetSystemTime(&DateContext.Time);
     } else {
-        GetLocalTime(&CurrentTime);
+        GetLocalTime(&DateContext.Time);
     }
+
+    if (DllKernel32.pGetTickCount64 != NULL) {
+        DateContext.Tick.QuadPart = DllKernel32.pGetTickCount64();
+    } else {
+        DateContext.Tick.HighPart = 0;
+        DateContext.Tick.LowPart = GetTickCount();
+    }
+
     YoriLibInitEmptyString(&DisplayString);
-    YoriLibExpandCommandVariables(&AllocatedFormatString, '$', FALSE, DateExpandVariables, &CurrentTime, &DisplayString);
+    YoriLibExpandCommandVariables(&AllocatedFormatString, '$', FALSE, DateExpandVariables, &DateContext, &DisplayString);
     if (DisplayString.StartOfString != NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
         YoriLibFreeStringContents(&DisplayString);

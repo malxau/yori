@@ -4601,6 +4601,18 @@ GET_PRODUCT_INFO(DWORD, DWORD, DWORD, DWORD, PDWORD);
 typedef GET_PRODUCT_INFO *PGET_PRODUCT_INFO;
 
 /**
+ A prototype for the GetTickCount64 function.
+ */
+typedef
+DWORDLONG WINAPI
+GET_TICK_COUNT_64();
+
+/**
+ A prototype for a pointer to the GetTickCount64 function.
+ */
+typedef GET_TICK_COUNT_64 *PGET_TICK_COUNT_64;
+
+/**
  A prototype for the GetVersionExW function.
  */
 typedef
@@ -4903,6 +4915,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetProductInfo.
      */
     PGET_PRODUCT_INFO pGetProductInfo;
+
+    /**
+     If it's available on the current system, a pointer to GetTickCount64.
+     */
+    PGET_TICK_COUNT_64 pGetTickCount64;
 
     /**
      If it's available on the current system, a pointer to GetVersionExW.
