@@ -200,19 +200,19 @@ DirenvInstall()
 BOOL
 DirenvInstallApplyHook()
 {
-    YORI_STRING YoriPrecmd;
-    YORI_STRING YoriPrecmdName;
+    YORI_STRING YoriPostcmd;
+    YORI_STRING YoriPostcmdName;
     YORI_STRING NewPrecmdComponent;
     DWORD PrecmdLength;
 
     //
-    //  Get the current YORIPRECMD.  Allocate an extra three chars for
+    //  Get the current YORIPOSTCMD.  Allocate an extra three chars for
     //  " & ", plus the direnvapply command.
     //
 
     YoriLibConstantString(&NewPrecmdComponent, _T("direnv -a"));
-    PrecmdLength = GetEnvironmentVariable(_T("YORIPRECMD"), NULL, 0);
-    if (!YoriLibAllocateString(&YoriPrecmd, PrecmdLength + 3 + NewPrecmdComponent.LengthInChars + 1)) {
+    PrecmdLength = GetEnvironmentVariable(_T("YORIPOSTCMD"), NULL, 0);
+    if (!YoriLibAllocateString(&YoriPostcmd, PrecmdLength + 3 + NewPrecmdComponent.LengthInChars + 1)) {
         return FALSE;
     }
 
@@ -221,31 +221,31 @@ DirenvInstallApplyHook()
     //  it
     //
 
-    YoriPrecmd.LengthInChars = GetEnvironmentVariable(_T("YORIPRECMD"), YoriPrecmd.StartOfString, YoriPrecmd.LengthAllocated);
-    if (YoriLibFindFirstMatchingSubstring(&YoriPrecmd, 1, &NewPrecmdComponent, NULL) == NULL) {
+    YoriPostcmd.LengthInChars = GetEnvironmentVariable(_T("YORIPOSTCMD"), YoriPostcmd.StartOfString, YoriPostcmd.LengthAllocated);
+    if (YoriLibFindFirstMatchingSubstring(&YoriPostcmd, 1, &NewPrecmdComponent, NULL) == NULL) {
 
         //
         //  Add " & " if the command already contains something
         //
 
-        if (YoriPrecmd.LengthInChars > 0) {
-            memcpy(&YoriPrecmd.StartOfString[YoriPrecmd.LengthInChars], _T(" & "), 3 * sizeof(TCHAR));
-            YoriPrecmd.LengthInChars += 3;
+        if (YoriPostcmd.LengthInChars > 0) {
+            memcpy(&YoriPostcmd.StartOfString[YoriPostcmd.LengthInChars], _T(" & "), 3 * sizeof(TCHAR));
+            YoriPostcmd.LengthInChars += 3;
         }
 
         //
         //  Add direnvapply
         //
 
-        memcpy(&YoriPrecmd.StartOfString[YoriPrecmd.LengthInChars], NewPrecmdComponent.StartOfString, NewPrecmdComponent.LengthInChars * sizeof(TCHAR));
-        YoriPrecmd.LengthInChars += NewPrecmdComponent.LengthInChars;
+        memcpy(&YoriPostcmd.StartOfString[YoriPostcmd.LengthInChars], NewPrecmdComponent.StartOfString, NewPrecmdComponent.LengthInChars * sizeof(TCHAR));
+        YoriPostcmd.LengthInChars += NewPrecmdComponent.LengthInChars;
 
-        YoriPrecmd.StartOfString[YoriPrecmd.LengthInChars] = '\0';
-        YoriLibConstantString(&YoriPrecmdName, _T("YORIPRECMD"));
-        YoriCallSetEnvironmentVariable(&YoriPrecmdName, &YoriPrecmd);
+        YoriPostcmd.StartOfString[YoriPostcmd.LengthInChars] = '\0';
+        YoriLibConstantString(&YoriPostcmdName, _T("YORIPOSTCMD"));
+        YoriCallSetEnvironmentVariable(&YoriPostcmdName, &YoriPostcmd);
     }
 
-    YoriLibFreeStringContents(&YoriPrecmd);
+    YoriLibFreeStringContents(&YoriPostcmd);
     return TRUE;
 }
 
@@ -273,30 +273,30 @@ DirenvUninstall()
 BOOL
 DirenvUninstallApplyHook()
 {
-    YORI_STRING YoriPrecmd;
-    YORI_STRING YoriPrecmdName;
+    YORI_STRING YoriPostcmd;
+    YORI_STRING YoriPostcmdName;
     YORI_STRING NewPrecmdComponent;
     DWORD PrecmdLength;
     DWORD FoundOffset;
     DWORD FoundLength;
 
     //
-    //  Get the current YORIPRECMD.
+    //  Get the current YORIPOSTCMD.
     //
 
     YoriLibConstantString(&NewPrecmdComponent, _T("direnv -a"));
-    PrecmdLength = GetEnvironmentVariable(_T("YORIPRECMD"), NULL, 0);
-    if (!YoriLibAllocateString(&YoriPrecmd, PrecmdLength + 1)) {
+    PrecmdLength = GetEnvironmentVariable(_T("YORIPOSTCMD"), NULL, 0);
+    if (!YoriLibAllocateString(&YoriPostcmd, PrecmdLength + 1)) {
         return FALSE;
     }
 
-    YoriPrecmd.LengthInChars = GetEnvironmentVariable(_T("YORIPRECMD"), YoriPrecmd.StartOfString, YoriPrecmd.LengthAllocated);
+    YoriPostcmd.LengthInChars = GetEnvironmentVariable(_T("YORIPOSTCMD"), YoriPostcmd.StartOfString, YoriPostcmd.LengthAllocated);
 
     //
     //  Look for direnvapply.
     //
 
-    if (YoriLibFindFirstMatchingSubstring(&YoriPrecmd, 1, &NewPrecmdComponent, &FoundOffset) != NULL) {
+    if (YoriLibFindFirstMatchingSubstring(&YoriPostcmd, 1, &NewPrecmdComponent, &FoundOffset) != NULL) {
 
         //
         //  Remove any spaces or '&' from before the direnvapply that we
@@ -305,8 +305,8 @@ DirenvUninstallApplyHook()
 
         FoundLength = NewPrecmdComponent.LengthInChars;
         while (FoundOffset > 0) {
-            if (YoriPrecmd.StartOfString[FoundOffset - 1] != ' ' &&
-                YoriPrecmd.StartOfString[FoundOffset - 1] != '&') {
+            if (YoriPostcmd.StartOfString[FoundOffset - 1] != ' ' &&
+                YoriPostcmd.StartOfString[FoundOffset - 1] != '&') {
                 break;
             }
             FoundOffset--;
@@ -318,21 +318,21 @@ DirenvUninstallApplyHook()
         //  remove
         //
 
-        if (YoriPrecmd.LengthInChars > FoundOffset + FoundLength) {
-            memmove(&YoriPrecmd.StartOfString[FoundOffset], &YoriPrecmd.StartOfString[FoundOffset + FoundLength], YoriPrecmd.LengthInChars - FoundOffset - FoundLength);
+        if (YoriPostcmd.LengthInChars > FoundOffset + FoundLength) {
+            memmove(&YoriPostcmd.StartOfString[FoundOffset], &YoriPostcmd.StartOfString[FoundOffset + FoundLength], YoriPostcmd.LengthInChars - FoundOffset - FoundLength);
         }
 
         // 
         //  Truncate and save
         //
 
-        YoriPrecmd.LengthInChars -= FoundLength;
-        YoriPrecmd.StartOfString[YoriPrecmd.LengthInChars] = '\0';
-        YoriLibConstantString(&YoriPrecmdName, _T("YORIPRECMD"));
-        if (YoriPrecmd.LengthInChars == 0) {
-            YoriCallSetEnvironmentVariable(&YoriPrecmdName, NULL);
+        YoriPostcmd.LengthInChars -= FoundLength;
+        YoriPostcmd.StartOfString[YoriPostcmd.LengthInChars] = '\0';
+        YoriLibConstantString(&YoriPostcmdName, _T("YORIPOSTCMD"));
+        if (YoriPostcmd.LengthInChars == 0) {
+            YoriCallSetEnvironmentVariable(&YoriPostcmdName, NULL);
         } else {
-            YoriCallSetEnvironmentVariable(&YoriPrecmdName, &YoriPrecmd);
+            YoriCallSetEnvironmentVariable(&YoriPostcmdName, &YoriPostcmd);
         }
     }
     return TRUE;

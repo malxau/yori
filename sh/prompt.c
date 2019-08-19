@@ -194,30 +194,30 @@ YoriShDisplayPrompt()
     YoriShGlobal.SuppressTaskUi = TRUE;
 
     //
-    //  See if the environment has changed, and if so, reload the YORIPRECMD
+    //  See if the environment has changed, and if so, reload the YORIPOSTCMD
     //  variable.
     //
 
-    if (YoriShGlobal.PrecmdGeneration != YoriShGlobal.EnvironmentGeneration) {
-        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"), NULL, 0, NULL);
+    if (YoriShGlobal.PostCmdGeneration != YoriShGlobal.EnvironmentGeneration) {
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPOSTCMD"), NULL, 0, NULL);
         if (EnvVarLength > 0) {
             if (YoriLibAllocateString(&PromptVar, EnvVarLength)) {
 
-                YoriLibFreeStringContents(&YoriShGlobal.PrecmdVariable);
-                memcpy(&YoriShGlobal.PrecmdVariable, &PromptVar, sizeof(YORI_STRING));
-                YoriShGlobal.PrecmdVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"), YoriShGlobal.PrecmdVariable.StartOfString, YoriShGlobal.PrecmdVariable.LengthAllocated, &YoriShGlobal.PrecmdGeneration);
+                YoriLibFreeStringContents(&YoriShGlobal.PostCmdVariable);
+                memcpy(&YoriShGlobal.PostCmdVariable, &PromptVar, sizeof(YORI_STRING));
+                YoriShGlobal.PostCmdVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPOSTCMD"), YoriShGlobal.PostCmdVariable.StartOfString, YoriShGlobal.PostCmdVariable.LengthAllocated, &YoriShGlobal.PostCmdGeneration);
             }
         } else {
-            YoriLibFreeStringContents(&YoriShGlobal.PrecmdVariable);
+            YoriLibFreeStringContents(&YoriShGlobal.PostCmdVariable);
         }
     }
 
     //
-    //  If YORIPRECMD is defined, execute it
+    //  If YORIPOSTCMD is defined, execute it
     //
 
-    if (YoriShGlobal.PrecmdVariable.LengthInChars > 0) {
-        YoriShExecuteExpression(&YoriShGlobal.PrecmdVariable);
+    if (YoriShGlobal.PostCmdVariable.LengthInChars > 0) {
+        YoriShExecuteExpression(&YoriShGlobal.PostCmdVariable);
     }
 
     //
@@ -410,5 +410,58 @@ YoriShDisplayPrompt()
 
     return TRUE;
 }
+
+/**
+ Execute any command that needs to run before every user initiated command.
+
+ @return TRUE to indicate a command was run, FALSE to indicate it was not.
+ */
+BOOL
+YoriShExecPreCommandString()
+{
+    DWORD EnvVarLength;
+    YORI_STRING EnvVar;
+
+
+    //
+    //  See if the environment has changed, and if so, reload the YORIPRECMD
+    //  variable.
+    //
+
+    if (YoriShGlobal.PreCmdGeneration != YoriShGlobal.EnvironmentGeneration) {
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (YoriLibAllocateString(&EnvVar, EnvVarLength)) {
+
+                YoriLibFreeStringContents(&YoriShGlobal.PreCmdVariable);
+                memcpy(&YoriShGlobal.PreCmdVariable, &EnvVar, sizeof(YORI_STRING));
+                YoriShGlobal.PreCmdVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"), YoriShGlobal.PreCmdVariable.StartOfString, YoriShGlobal.PreCmdVariable.LengthAllocated, &YoriShGlobal.PreCmdGeneration);
+            }
+        } else {
+            YoriLibFreeStringContents(&YoriShGlobal.PreCmdVariable);
+        }
+    }
+
+    //
+    //  If YORIPRECMD is defined, execute it
+    //
+
+    if (YoriShGlobal.PreCmdVariable.LengthInChars > 0) {
+
+        //
+        //  Don't update taskbar UI while executing processes executed as part of
+        //  the environment
+        //
+
+        YoriShGlobal.SuppressTaskUi = TRUE;
+        YoriShExecuteExpression(&YoriShGlobal.PreCmdVariable);
+        YoriShPreCommand();
+        YoriShGlobal.SuppressTaskUi = FALSE;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
 
 // vim:sw=4:ts=4:et:

@@ -548,6 +548,9 @@ YoriShFindBestBackquoteSubstringAtOffset(
 BOOL
 YoriShDisplayPrompt();
 
+BOOL
+YoriShExecPreCommandString();
+
 // *** RESTART.C ***
 
 BOOL

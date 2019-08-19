@@ -667,6 +667,7 @@ ymain (
             if (YoriShGlobal.ExitProcess) {
                 break;
             }
+            YoriShExecPreCommandString();
             if (CurrentExpression.LengthInChars > 0) {
                 YoriShExecuteExpression(&CurrentExpression);
             }
@@ -683,7 +684,8 @@ ymain (
     YoriShBuiltinUnregisterAll();
     YoriShDiscardSavedRestartState(NULL);
     YoriShCleanupInputContext();
-    YoriLibFreeStringContents(&YoriShGlobal.PrecmdVariable);
+    YoriLibFreeStringContents(&YoriShGlobal.PreCmdVariable);
+    YoriLibFreeStringContents(&YoriShGlobal.PostCmdVariable);
     YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);
     YoriLibFreeStringContents(&YoriShGlobal.TitleVariable);
 

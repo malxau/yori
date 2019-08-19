@@ -878,12 +878,22 @@ typedef struct _YORI_SH_GLOBALS {
     /**
      The contents of the YORIPRECMD environment variable.
      */
-    YORI_STRING PrecmdVariable;
+    YORI_STRING PreCmdVariable;
 
     /**
      The generation of the environment at the time the variable was queried.
      */
-    DWORD PrecmdGeneration;
+    DWORD PreCmdGeneration;
+
+    /**
+     The contents of the YORIPOSTCMD environment variable.
+     */
+    YORI_STRING PostCmdVariable;
+
+    /**
+     The generation of the environment at the time the variable was queried.
+     */
+    DWORD PostCmdGeneration;
 
     /**
      The contents of the YORIPROMPT environment variable.
