@@ -24,21 +24,21 @@ STYLE WS_POPUP | WS_CAPTION | DS_MODALFRAME
 CAPTION "Yori setup"
 FONT 8, "MS Sans Serif"
 {
-    LTEXT "Install directory:", -1, 8, 11, 60, 10
+    LTEXT "Install directory:", IDC_LABEL_INSTALLDIR, 8, 11, 60, 10
     EDITTEXT IDC_INSTALLDIR, 70, 10, 260, 12
     PUSHBUTTON "&Browse...", IDC_BROWSE, 340, 8, 50, 14
 
 
-    GROUPBOX "Install Type", -5, 12, 34, 210, 147
+    GROUPBOX "Install Type", IDC_LABEL_INSTALLTYPE, 12, 34, 210, 147
     CONTROL "Install Core", IDC_COREONLY,"Button",BS_RADIOBUTTON,20, 50, 80, 10
     CONTROL "Install Typical", IDC_TYPICAL,"Button",BS_RADIOBUTTON,20, 90, 80, 10
     CONTROL "Install Complete", IDC_COMPLETE,"Button",BS_RADIOBUTTON,20, 140, 80, 10
 
-    LTEXT "Core includes the Yori shell and commands that are equivalent to those included in CMD", -2, 32, 63, 180, 20
-    LTEXT "Typical includes Core plus useful tools and utilities such as cvtvt, df, du, hash, hexdump, iconv, lines, lsof, mount, nice, sdir, tail, tee, touch and which", -3, 32, 103, 180, 30
-    LTEXT "Complete includes Typical plus a CMD version of for and clmp multiprocessor compiler wrapper", -4, 32, 153, 180, 20
+    LTEXT "Core includes the Yori shell and commands that are equivalent to those included in CMD", IDC_LABEL_COREDESC, 32, 63, 180, 20
+    LTEXT "Typical includes Core plus useful tools and utilities such as cvtvt, df, du, hash, hexdump, iconv, lines, lsof, mount, nice, sdir, tail, tee, touch and which", IDC_LABEL_TYPICALDESC, 32, 103, 180, 30
+    LTEXT "Complete includes Typical plus a CMD version of for and clmp multiprocessor compiler wrapper", IDC_LABEL_COMPLETEDESC, 32, 153, 180, 20
 
-    GROUPBOX "Install Options", -6, 230, 34, 160, 147
+    GROUPBOX "Install Options", IDC_LABEL_INSTALLOPTIONS, 230, 34, 160, 147
     CONTROL "Install Desktop shortcut", IDC_DESKTOP_SHORTCUT,"Button",BS_CHECKBOX|WS_GROUP,240, 53, 120, 10
     CONTROL "Install Start Menu shortcut", IDC_START_SHORTCUT,"Button",BS_CHECKBOX,240, 73, 120, 10
     CONTROL "Add Yori to system path", IDC_SYSTEM_PATH,"Button",BS_CHECKBOX,240, 93, 120, 10

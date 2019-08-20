@@ -649,6 +649,9 @@ SetupUiDialogProc(
     WORD CtrlId;
     HICON hIcon;
     YORI_STRING InstallDir;
+    DWORD OsVerMajor;
+    DWORD OsVerMinor;
+    DWORD OsBuildNumber;
 
     UNREFERENCED_PARAMETER(lParam);
 
@@ -740,6 +743,79 @@ SetupUiDialogProc(
             SetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
             YoriLibFreeStringContents(&InstallDir);
             CheckDlgButton(hDlg, IDC_TYPICAL, TRUE);
+
+            //
+            //  On NT 3.51 try to set the font to something not bold that has
+            //  similar geometry to NT 4.0.  This helps ensure the text fits
+            //  within the controls, and it just looks nicer.  Unfortunately
+            //  the dialog has already been created by this point, so the size
+            //  of the controls and the dialog is set according to the default
+            //  font's specification.  Since the default font is larger than
+            //  this one, the result is typically a needlessly large window.
+            //
+
+            YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
+            if (OsVerMajor < 4) {
+
+                HFONT hFont;
+                HDC hDC;
+                DWORD Index;
+                UINT ControlArray[] = {
+                    IDC_INSTALLDIR,
+                    IDC_OK,
+                    IDC_CANCEL,
+                    IDC_BROWSE,
+                    IDC_STATUS,
+                    IDC_VERSION,
+                    IDC_LABEL_INSTALLDIR,
+                    IDC_LABEL_INSTALLTYPE,
+                    IDC_LABEL_COREDESC,
+                    IDC_LABEL_TYPICALDESC,
+                    IDC_LABEL_COMPLETEDESC,
+                    IDC_LABEL_INSTALLOPTIONS,
+                    IDC_COREONLY,
+                    IDC_TYPICAL,
+                    IDC_COMPLETE,
+                    IDC_DESKTOP_SHORTCUT,
+                    IDC_START_SHORTCUT,
+                    IDC_SYSTEM_PATH,
+                    IDC_USER_PATH,
+                    IDC_SOURCE,
+                    IDC_SYMBOLS,
+                };
+
+                hDC = GetWindowDC(hDlg);
+                hFont = CreateFont(-MulDiv(8, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+                                   0,
+                                   0,
+                                   0,
+                                   FW_NORMAL,
+                                   FALSE,
+                                   FALSE,
+                                   FALSE,
+                                   DEFAULT_CHARSET,
+                                   OUT_DEFAULT_PRECIS,
+                                   CLIP_DEFAULT_PRECIS,
+                                   DEFAULT_QUALITY,
+                                   FF_DONTCARE,
+                                   _T("MS Sans Serif"));
+                ReleaseDC(hDlg, hDC);
+
+                for (Index = 0; Index < sizeof(ControlArray)/sizeof(ControlArray[0]); Index++) {
+                    SendDlgItemMessage(hDlg, ControlArray[Index], WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
+                }
+                SendMessage(hDlg, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(TRUE, 0));
+
+                //
+                //  Since we already have an NT 3.51 branch, disable controls
+                //  that depend on explorer
+                //
+
+                EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
+                EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
+                EnableWindow(GetDlgItem(hDlg, IDC_START_SHORTCUT), FALSE);
+            }
+
             return TRUE;
 
     }

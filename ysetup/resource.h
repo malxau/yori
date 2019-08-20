@@ -60,6 +60,36 @@
  */
 #define IDC_VERSION 206
 
+/**
+ The text label for the install directory.
+ */
+#define IDC_LABEL_INSTALLDIR 250
+
+/**
+ The text label for the install type.
+ */
+#define IDC_LABEL_INSTALLTYPE 251
+
+/**
+ The text label for the core installation option.
+ */
+#define IDC_LABEL_COREDESC 252
+
+/**
+ The text label for the typical installation option.
+ */
+#define IDC_LABEL_TYPICALDESC 253
+
+/**
+ The text label for the complete installation option.
+ */
+#define IDC_LABEL_COMPLETEDESC 254
+
+/**
+ The text label for the installation options.
+ */
+#define IDC_LABEL_INSTALLOPTIONS 255
+
 //
 //  Code depends on these being sequential
 //
