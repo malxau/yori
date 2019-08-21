@@ -294,6 +294,11 @@ YORI_CMD_BUILTIN YoriCmd_YPAUSE;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_PROCINFO;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YPS;
 
 /**
@@ -504,6 +509,7 @@ YoriShBuiltins[] = {
                     {_T("LSOF"),      YoriCmd_LSOF},
                     {_T("NICE"),      YoriCmd_NICE},
                     {_T("OSVER"),     YoriCmd_OSVER},
+                    {_T("PROCINFO"),  YoriCmd_PROCINFO},
                     {_T("PUSHD"),     YoriCmd_PUSHD},
                     {_T("REM"),       YoriCmd_REM},
                     {_T("READLINE"),  YoriCmd_READLINE},

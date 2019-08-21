@@ -100,6 +100,7 @@ DIRS=crt       \
      path      \
      pause     \
      pkglib    \
+     procinfo  \
      ps        \
      readline  \
      repl      \

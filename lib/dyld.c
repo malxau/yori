@@ -148,6 +148,7 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pGetFileInformationByHandleEx, "GetFileInformationByHandleEx"},
     {(FARPROC *)&DllKernel32.pGetNativeSystemInfo, "GetNativeSystemInfo"},
     {(FARPROC *)&DllKernel32.pGetPrivateProfileSectionNamesW, "GetPrivateProfileSectionNamesW"},
+    {(FARPROC *)&DllKernel32.pGetProcessIoCounters, "GetProcessIoCounters"},
     {(FARPROC *)&DllKernel32.pGetProductInfo, "GetProductInfo"},
     {(FARPROC *)&DllKernel32.pGetTickCount64, "GetTickCount64"},
     {(FARPROC *)&DllKernel32.pGetVersionExW, "GetVersionExW"},

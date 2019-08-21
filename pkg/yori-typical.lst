@@ -24,6 +24,7 @@ ymore.exe
 ymount.exe
 nice.exe
 osver.exe
+procinfo.exe
 yps.exe
 readline.exe
 repl.exe
