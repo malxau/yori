@@ -63,6 +63,7 @@ DIRS=crt       \
      cls       \
      compact   \
      copy      \
+     cpuinfo   \
      cshot     \
      cut       \
      cvtvt     \

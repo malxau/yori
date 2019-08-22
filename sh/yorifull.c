@@ -79,6 +79,11 @@ YORI_CMD_BUILTIN YoriCmd_YCOPY;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YCPUINFO;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_CSHOT;
 
 /**
@@ -538,6 +543,7 @@ YoriShBuiltins[] = {
                     {_T("YCLS"),      YoriCmd_YCLS},
                     {_T("YCOMPACT"),  YoriCmd_YCOMPACT},
                     {_T("YCOPY"),     YoriCmd_YCOPY},
+                    {_T("YCPUINFO"),  YoriCmd_YCPUINFO},
                     {_T("YCUT"),      YoriCmd_YCUT},
                     {_T("YDATE"),     YoriCmd_YDATE},
                     {_T("YDBG"),      YoriCmd_YDBG},
@@ -586,6 +592,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("cls"),      _T("ycls $*$")},
     {_T("compact"),  _T("ycompact $*$")},
     {_T("copy"),     _T("ycopy $*$")},
+    {_T("cpuinfo"),  _T("ycpuinfo $*$")},
     {_T("cut"),      _T("ycut $*$")},
     {_T("date"),     _T("ydate $*$")},
     {_T("del"),      _T("yerase $*$")},

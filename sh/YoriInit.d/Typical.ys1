@@ -1,6 +1,7 @@
 builtin alias -s cal=ycal $*$
 builtin alias -s clip=yclip $*$
 builtin alias -s compact=ycompact $*$
+builtin alias -s cpuinfo=ycpuinfo $*$
 builtin alias -s df=ydf $*$
 builtin alias -s du=ydu $*$
 builtin alias -s env=yenv $*$

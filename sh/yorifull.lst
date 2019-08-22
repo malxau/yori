@@ -4,6 +4,7 @@
 ..\cls\builtins.lib
 ..\compact\builtins.lib
 ..\copy\builtins.lib
+..\cpuinfo\builtins.lib
 ..\cshot\builtins.lib
 ..\cut\builtins.lib
 ..\cvtvt\builtins.lib

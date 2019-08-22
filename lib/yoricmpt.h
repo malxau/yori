@@ -1082,7 +1082,315 @@ typedef struct _YORI_IO_COUNTERS {
      The number of bytes transferred by other IO requests from the process.
      */
     DWORDLONG OtherBytes;
+
 } YORI_IO_COUNTERS, *PYORI_IO_COUNTERS;
+
+/**
+ A set of processor property relationships that are known to
+ GetLogicalProcessorInformationEx.
+ */
+typedef enum _YORI_LOGICAL_PROCESSOR_RELATIONSHIP {
+    YoriProcessorRelationProcessorCore = 0,
+    YoriProcessorRelationNumaNode = 1,
+    YoriProcessorRelationCache = 2,
+    YoriProcessorRelationProcessorPackage = 3,
+    YoriProcessorRelationGroup = 4,
+    YoriProcessorRelationAll = 0xFFFF
+} YORI_LOGICAL_PROCESSOR_RELATIONSHIP;
+
+/**
+ Different types of processor caches.
+ */
+typedef enum _YORI_PROCESSOR_CACHE_TYPE {
+    YoriProcessorCacheUnified = 0,
+    YoriProcessorCacheInstruction = 1,
+    YoriProcessorCacheData = 2,
+    YoriProcessorCacheTrace = 3
+} YORI_PROCESSOR_CACHE_TYPE;
+
+/**
+ Information about a single level and type of processor cache.
+ */
+typedef struct _YORI_PROCESSOR_CACHE_DESCRIPTOR {
+
+    /**
+     The level of the processor cache (L1, L2, L3 etc.)
+     */
+    UCHAR Level;
+
+    /**
+     Cache associativity.  0xff indicates a fully associative cache and no
+     other value is explicitly documented.
+     */
+    UCHAR Associativity;
+
+    /**
+     The number of bytes in each cache line.
+     */
+    WORD  LineSize;
+
+    /**
+     The number of bytes in the cache.
+     */
+    DWORD SizeInBytes;
+
+    /**
+     The type of information that is stored in the cache.
+     */
+    YORI_PROCESSOR_CACHE_TYPE Type;
+} YORI_PROCESSOR_CACHE_DESCRIPTOR, *PYORI_PROCESSOR_CACHE_DESCRIPTOR;
+
+/**
+ Information returned from GetLogicalProcessorInformation describing processor
+ relationships.  This information is available on 2003+.
+ */
+typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION {
+
+    /**
+     The mask of logical processors which this information pertains to.
+     */
+    DWORD_PTR ProcessorMask;
+
+    /**
+     The type of relationship described by this structure.
+     */
+    YORI_LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
+
+    /**
+     Information specific to the type of the relationship.
+     */
+    union {
+
+        /**
+         If the below flag contains 1, it indicates that the set of processors
+         share hardware resources.
+         */
+        struct {
+            UCHAR Flags;
+        } ProcessorCore;
+
+        /**
+         The NUMA node that these logical processors are associated with.
+         */
+        struct {
+            DWORD NodeNumber;
+        } NumaNode;
+
+        /**
+         Information about a processor cache.
+         */
+        YORI_PROCESSOR_CACHE_DESCRIPTOR Cache;
+
+        /**
+         Reserved space for future use.
+         */
+        DWORDLONG Reserved[2];
+    } u;
+} YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION, *PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION;
+
+/**
+ Information about logical processors within a processor group.
+ */
+typedef struct _YORI_PROCESSOR_GROUP_AFFINITY {
+
+    /**
+     The set of logical processors active within this processor group.
+     */
+    DWORD_PTR Mask;
+
+    /**
+     The number of this processor group.
+     */
+    WORD      Group;
+
+    /**
+     Reserved space for future use.
+     */
+    WORD      Reserved[3];
+} YORI_PROCESSOR_GROUP_AFFINITY, *PYORI_PROCESSOR_GROUP_AFFINITY;
+
+/**
+ Information about logical processors within a processor core.
+ */
+typedef struct _YORI_PROCESSOR_RELATIONSHIP {
+
+    /**
+     If the below flag contains 1, it indicates that the device contains more
+     than one logical processor, otherwise it contains exactly one logical
+     processor.
+     */
+    UCHAR Flags;
+
+    /**
+     Indicates the performance and power draw of the device.  The higher the
+     value, the higher performance and power consumption.
+     */
+    UCHAR EfficiencyClass;
+
+    /**
+     Reserved space for future use.
+     */
+    UCHAR Reserved[20];
+
+    /**
+     The number of processor groups in the array below.
+     */
+    WORD  GroupCount;
+
+    /**
+     An array of processor groups each of which describe logical processors
+     that are part of this relationship.
+     */
+    YORI_PROCESSOR_GROUP_AFFINITY GroupMask[ANYSIZE_ARRAY];
+} YORI_PROCESSOR_RELATIONSHIP, *PYORI_PROCESSOR_RELATIONSHIP;
+
+/**
+ Information about logical processors within a NUMA node.
+ */
+typedef struct _YORI_NUMA_NODE_RELATIONSHIP {
+
+    /**
+     The number of this NUMA node.
+     */
+    DWORD NodeNumber;
+
+    /**
+     Reserved space for future use.
+     */
+    UCHAR Reserved[20];
+
+    /**
+     Logical processors which are part of this NUMA node, including their
+     processor group.
+     */
+    YORI_PROCESSOR_GROUP_AFFINITY GroupMask;
+} YORI_NUMA_NODE_RELATIONSHIP, *PYORI_NUMA_NODE_RELATIONSHIP;
+
+/**
+ Information about a processor cache.
+ */
+typedef struct _YORI_PROCESSOR_CACHE_RELATIONSHIP {
+
+    /**
+     Information about the cache.
+     */
+    YORI_PROCESSOR_CACHE_DESCRIPTOR Cache;
+
+    /**
+     Reserved space for future use.
+     */
+    UCHAR Reserved[20];
+
+    /**
+     Logical processors which use this processor cache.
+     */
+    YORI_PROCESSOR_GROUP_AFFINITY GroupMask;
+} YORI_PROCESSOR_CACHE_RELATIONSHIP, *PYORI_PROCESSOR_CACHE_RELATIONSHIP;
+
+/**
+ Information about logical processors within a processor group.
+ */
+typedef struct _YORI_PROCESSOR_GROUP_INFORMATION {
+
+    /**
+     The maximum number of logical processors within this processor group.
+     */
+    UCHAR MaximumProcessorCount;
+
+    /**
+     The number of logical processors within this processor group that are
+     currently active.
+     */
+    UCHAR ActiveProcessorCount;
+
+    /**
+     Reserved space for future use.
+     */
+    UCHAR Reserved[38];
+
+    /**
+     A bitmap of the processors that are currently active within this
+     processor group.
+     */
+    DWORD_PTR ActiveProcessorMask;
+} YORI_PROCESSOR_GROUP_INFORMATION, *PYORI_PROCESSOR_GROUP_INFORMATION;
+
+/**
+ Information about the set of processor groups in the system.
+ */
+typedef struct _YORI_PROCESSOR_GROUP_RELATIONSHIP {
+
+    /**
+     The maximum number of processor groups.
+     */
+    WORD  MaximumGroupCount;
+
+    /**
+     The number of currently active processor groups.
+     */
+    WORD  ActiveGroupCount;
+
+    /**
+     Reserved space for future use.
+     */
+    UCHAR Reserved[20];
+
+    /**
+     An array of information about each processor group.  Documentation is
+     unclear about whether this has MaximumGroupCount of ActiveGroupCount
+     members although the situation where these values are not identical is
+     extremely rare.
+     */
+    YORI_PROCESSOR_GROUP_INFORMATION GroupInfo[ANYSIZE_ARRAY];
+
+} YORI_PROCESSOR_GROUP_RELATIONSHIP, *PYORI_PROCESSOR_GROUP_RELATIONSHIP;
+
+/**
+ Information returned from GetLogicalProcessorInformationEx describing
+ processor relationships.  This information is available on Win7+.
+ */
+typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
+
+    /**
+     The type of relationship described by this structure.
+     */
+    YORI_LOGICAL_PROCESSOR_RELATIONSHIP Relationship;
+
+    /**
+     The size of this element in bytes.  This allows the structure to be
+     extended in future.
+     */
+    DWORD SizeInBytes;
+
+    /**
+     Information specific to the type of the relationship.
+     */
+    union {
+        /**
+         Information describing the relationship between a processor core and
+         its logical processors.
+         */
+        YORI_PROCESSOR_RELATIONSHIP Processor;
+
+        /**
+         Information describing the relationship between a NUMA node and its
+         logical processors.
+         */
+        YORI_NUMA_NODE_RELATIONSHIP NumaNode;
+
+        /**
+         Information describing the relationship between a processor cache and
+         its logical processors.
+         */
+        YORI_PROCESSOR_CACHE_RELATIONSHIP Cache;
+
+        /**
+         Information describing the relationship between a processor group and
+         its logical processors.
+         */
+        YORI_PROCESSOR_GROUP_RELATIONSHIP Group;
+    } u;
+} YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, *PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
 
 #ifndef STARTF_TITLEISLINKNAME
 /**
@@ -4656,6 +4964,30 @@ GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, DWORD, PVOID, DWORD);
 typedef GET_FILE_INFORMATION_BY_HANDLE_EX *PGET_FILE_INFORMATION_BY_HANDLE_EX;
 
 /**
+ A prototype for the GetLogicalProcessorInformation function.
+ */
+typedef
+BOOL WINAPI
+GET_LOGICAL_PROCESSOR_INFORMATION(PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION, PDWORD);
+
+/**
+ A prototype for a pointer to the GetLogicalProcessorInformation function.
+ */
+typedef GET_LOGICAL_PROCESSOR_INFORMATION *PGET_LOGICAL_PROCESSOR_INFORMATION;
+
+/**
+ A prototype for the GetLogicalProcessorInformationEx function.
+ */
+typedef
+BOOL WINAPI
+GET_LOGICAL_PROCESSOR_INFORMATION_EX(YORI_LOGICAL_PROCESSOR_RELATIONSHIP, PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, PDWORD);
+
+/**
+ A prototype for a pointer to the GetLogicalProcessorInformationEx function.
+ */
+typedef GET_LOGICAL_PROCESSOR_INFORMATION_EX *PGET_LOGICAL_PROCESSOR_INFORMATION_EX;
+
+/**
  A prototype for the GetNativeSystemInfo function.
  */
 typedef
@@ -5003,6 +5335,16 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetFileInformationByHandleEx.
      */
     PGET_FILE_INFORMATION_BY_HANDLE_EX pGetFileInformationByHandleEx;
+
+    /**
+     If it's available on the current system, a pointer to GetLogicalProcessorInformation.
+     */
+    PGET_LOGICAL_PROCESSOR_INFORMATION pGetLogicalProcessorInformation;
+
+    /**
+     If it's available on the current system, a pointer to GetLogicalProcessorInformationEx.
+     */
+    PGET_LOGICAL_PROCESSOR_INFORMATION_EX pGetLogicalProcessorInformationEx;
 
     /**
      If it's available on the current system, a pointer to GetNativeSystemInfo.
