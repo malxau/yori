@@ -766,15 +766,21 @@ YoriShBuildCmdlineFromCmdContext(
  builtin which expects ArgC/ArgV formed arguments, but does not want escapes
  preserved.
 
- @param CmdContext Pointer to the command context.  Individual arguments
-        within this string may be modified.
+ @param EscapedCmdContext Pointer to the command context which may contain
+        escapes.
+
+ @param NoEscapedCmdContext On successful completion, updated to contain a
+        CmdContext which does not contain escapes.  This may refer to
+        referenced instances of the strings from EscapedCmdContext if no
+        changes needed to be made.
 
  @return TRUE to indicate all escapes were removed, FALSE if not all could
          be successfully processed.
  */
 BOOL
 YoriShRemoveEscapesFromCmdContext(
-    __in PYORI_SH_CMD_CONTEXT CmdContext
+    __in PYORI_SH_CMD_CONTEXT EscapedCmdContext,
+    __out PYORI_SH_CMD_CONTEXT NoEscapedCmdContext
     )
 {
     DWORD ArgIndex;
@@ -783,8 +789,17 @@ YoriShRemoveEscapesFromCmdContext(
     BOOLEAN EscapeFound;
     PYORI_STRING ThisArg;
 
-    for (ArgIndex = 0; ArgIndex < CmdContext->ArgC; ArgIndex++) {
-        ThisArg = &CmdContext->ArgV[ArgIndex];
+    //
+    //  MSFIX: This will perform a memory allocation which could be
+    //  optimized away if no escapes are found
+    //
+
+    if (!YoriShCopyCmdContext(NoEscapedCmdContext, EscapedCmdContext)) {
+        return FALSE;
+    }
+
+    for (ArgIndex = 0; ArgIndex < NoEscapedCmdContext->ArgC; ArgIndex++) {
+        ThisArg = &NoEscapedCmdContext->ArgV[ArgIndex];
 
         EscapeFound = FALSE;
 
@@ -822,9 +837,9 @@ YoriShRemoveEscapesFromCmdContext(
             NewArg.StartOfString[DestIndex] = '\0';
             NewArg.LengthInChars = DestIndex;
 
-            YoriLibFreeStringContents(&CmdContext->ArgV[ArgIndex]);
+            YoriLibFreeStringContents(&NoEscapedCmdContext->ArgV[ArgIndex]);
 
-            memcpy(&CmdContext->ArgV[ArgIndex], &NewArg, sizeof(YORI_STRING));
+            memcpy(&NoEscapedCmdContext->ArgV[ArgIndex], &NewArg, sizeof(YORI_STRING));
         }
     }
 

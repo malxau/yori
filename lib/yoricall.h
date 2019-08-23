@@ -97,8 +97,20 @@ YoriCallGetAliasStrings(
     __out PYORI_STRING AliasStrings
     );
 
+BOOL
+YoriCallGetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __out PYORI_STRING Value
+    );
+
 DWORD
 YoriCallGetErrorLevel(
+    );
+
+BOOL
+YoriCallGetEscapedArguments(
+    __out PDWORD ArgC,
+    __out PYORI_STRING * ArgV
     );
 
 BOOL

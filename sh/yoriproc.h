@@ -279,6 +279,12 @@ YoriShAllocateAndGetEnvironmentVariable(
     );
 
 BOOL
+YoriShGetEnvironmentVariableYS(
+    __in PYORI_STRING VariableName,
+    __out PYORI_STRING Value
+    );
+
+BOOL
 YoriShExpandEnvironmentVariables(
     __in PYORI_STRING Expression,
     __out PYORI_STRING ResultingExpression,
@@ -465,7 +471,8 @@ YoriShBuildCmdlineFromCmdContext(
 
 BOOL
 YoriShRemoveEscapesFromCmdContext(
-    __in PYORI_SH_CMD_CONTEXT CmdContext
+    __in PYORI_SH_CMD_CONTEXT EscapedCmdContext,
+    __out PYORI_SH_CMD_CONTEXT NoEscapedCmdContext
     );
 
 VOID

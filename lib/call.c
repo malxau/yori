@@ -592,6 +592,50 @@ YoriCallGetAliasStrings(
 }
 
 /**
+ Prototype for the YoriApiGetEnvironmentVariable function.
+ */
+typedef BOOL YORI_API_GET_ENVIRONMENT_VARIABLE(PYORI_STRING, PYORI_STRING);
+
+/**
+ Prototype for a pointer to the YoriApiGetEnvironmentVariable function.
+ */
+typedef YORI_API_GET_ENVIRONMENT_VARIABLE *PYORI_API_GET_ENVIRONMENT_VARIABLE;
+
+/**
+ Pointer to the @ref YoriApiGetEnvironmentVariable function.
+ */
+PYORI_API_GET_ENVIRONMENT_VARIABLE pYoriApiGetEnvironmentVariable;
+
+/**
+ Get an environment variable from the Yori shell process.
+
+ @param VariableName The variable name to get.
+
+ @param Value Pointer to the string to receive the value.  The string is
+        allocated within this function and should be freed with
+        @ref YoriCallFreeYoriString .
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriCallGetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __out PYORI_STRING Value
+    )
+{
+    if (pYoriApiGetEnvironmentVariable == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiGetEnvironmentVariable = (PYORI_API_GET_ENVIRONMENT_VARIABLE)GetProcAddress(hYori, "YoriApiGetEnvironmentVariable");
+        if (pYoriApiGetEnvironmentVariable == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiGetEnvironmentVariable(VariableName, Value);
+}
+
+/**
  Prototype for the @ref YoriApiGetErrorLevel function.
  */
 typedef DWORD YORI_API_GET_ERRORLEVEL();
@@ -625,6 +669,49 @@ YoriCallGetErrorLevel(
         }
     }
     return pYoriApiGetErrorLevel();
+}
+
+/**
+ Prototype for the @ref YoriApiGetEscapedArguments function.
+ */
+typedef BOOL YORI_API_GET_ESCAPED_ARGUMENTS(PDWORD, PYORI_STRING*);
+
+/**
+ Prototype for a pointer to the @ref YoriApiGetEscapedArguments function.
+ */
+typedef YORI_API_GET_ESCAPED_ARGUMENTS *PYORI_API_GET_ESCAPED_ARGUMENTS;
+
+/**
+ Pointer to the @ref YoriApiGetEscapedArguments function.
+ */
+PYORI_API_GET_ESCAPED_ARGUMENTS pYoriApiGetEscapedArguments;
+
+/**
+ Return the original arguments before escapes have been removed when calling
+ a builtin.
+
+ @param ArgC Pointer to a location to receive the number of arguments.
+
+ @param ArgV Pointer to a location to receive the array of strings.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriCallGetEscapedArguments(
+    __out PDWORD ArgC,
+    __out PYORI_STRING * ArgV
+    )
+{
+    if (pYoriApiGetEscapedArguments == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiGetEscapedArguments = (PYORI_API_GET_ESCAPED_ARGUMENTS)GetProcAddress(hYori, "YoriApiGetEscapedArguments");
+        if (pYoriApiGetEscapedArguments == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiGetEscapedArguments(ArgC, ArgV);
 }
 
 /**

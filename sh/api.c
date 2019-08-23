@@ -261,12 +261,52 @@ YoriApiGetAliasStrings(
 }
 
 /**
+ Get an environment variable.
+
+ @param VariableName The variable name to get.
+
+ @param Value Pointer to a string structure to populate with a newly allocated
+        string containing the variable value.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiGetEnvironmentVariable(
+    __in PYORI_STRING VariableName,
+    __out PYORI_STRING Value
+    )
+{
+    return YoriShGetEnvironmentVariableYS(VariableName, Value);
+}
+
+/**
  Return the most recently set exit code after a previous command completion.
  */
 DWORD
 YoriApiGetErrorLevel()
 {
     return YoriShGlobal.ErrorLevel;
+}
+
+/**
+ Return the original arguments before escapes have been removed when calling
+ a builtin.
+
+ @param ArgC Pointer to a location to receive the number of arguments.
+
+ @param ArgV Pointer to a location to receive the array of strings.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiGetEscapedArguments(
+    __out PDWORD ArgC,
+    __out PYORI_STRING * ArgV
+    )
+{
+    *ArgC = YoriShGlobal.EscapedCmdContext->ArgC;
+    *ArgV = YoriShGlobal.EscapedCmdContext->ArgV;
+    return TRUE;
 }
 
 /**

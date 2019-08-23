@@ -822,6 +822,13 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD PreviousJobId;
 
     /**
+     A pointer to the command context of the currently active builtin
+     command before escapes have been removed.  This can be given to a
+     builtin if it needs to know the original escaped string.
+     */
+    PYORI_SH_CMD_CONTEXT EscapedCmdContext;
+
+    /**
      Count of recursion depth.  This is incremented when calling a builtin
      or when the shell is invoked from a subshell, and decremented when
      these return.  A recursion depth of zero implies a shell ready for user

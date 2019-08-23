@@ -60,6 +60,136 @@ SetHelp()
 }
 
 /**
+ Normally when running a command if a variable does not define any contents,
+ the variable name is preserved in the command.  This does not occur with the
+ set command, where if a variable contains no contents the variable name is
+ removed from the result.  Unfortunately this is ambiguous when the variable
+ name is found, because we don't know if the variable was not expanded by the
+ shell due to no contents or because it was escaped.  So if it has no contents
+ it is removed here.  But this still can't distinguish between an escaped
+ variable that points to something and an escaped variable which points to
+ nothing, both of which presumably should be retained.
+
+ @param Value Pointer to a NULL terminated string containing the value part
+        of the set command (ie., what to set a variable to.)
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SetRemoveEmptyVariables(
+    __inout LPTSTR Value
+    )
+{
+    DWORD StartOfVariableName;
+    DWORD ReadIndex = 0;
+    DWORD WriteIndex = 0;
+
+    while (TRUE) {
+        if (YoriLibIsEscapeChar(Value[ReadIndex])) {
+
+            //
+            //  If the character is an escape, copy it to the destination
+            //  and skip the check for the environment variable character
+            //  so we fall into the below case and copy the next character
+            //  too
+            //
+
+            if (ReadIndex != WriteIndex) {
+                Value[WriteIndex] = Value[ReadIndex];
+            }
+            ReadIndex++;
+            WriteIndex++;
+
+        } else if (Value[ReadIndex] == '%') {
+
+            //
+            //  We found the first %, scan ahead looking for the next
+            //  one
+            //
+
+            StartOfVariableName = ReadIndex;
+            do {
+                if (YoriLibIsEscapeChar(Value[ReadIndex])) {
+                    ReadIndex++;
+                }
+                ReadIndex++;
+            } while (Value[ReadIndex] != '%' && Value[ReadIndex] != '\0');
+
+            //
+            //  If we found a well formed variable, check if it refers
+            //  to anything.  If it does, that means the shell didn't
+            //  expand it because it was escaped, so preserve it here.
+            //  If it doesn't, that means it may not refer to anything,
+            //  so remove it.
+            //
+
+            if (Value[ReadIndex] == '%') {
+                YORI_STRING YsVariableName;
+                YORI_STRING YsVariableValue;
+
+                YsVariableName.StartOfString = &Value[StartOfVariableName + 1];
+                YsVariableName.LengthInChars = ReadIndex - StartOfVariableName - 1;
+
+                ReadIndex++;
+                YoriLibInitEmptyString(&YsVariableValue);
+                if (YoriCallGetEnvironmentVariable(&YsVariableName, &YsVariableValue)) {
+                    if (WriteIndex != StartOfVariableName) {
+                        memmove(&Value[WriteIndex], &Value[StartOfVariableName], (ReadIndex - StartOfVariableName) * sizeof(TCHAR));
+                    }
+                    WriteIndex += (ReadIndex - StartOfVariableName);
+                    YoriCallFreeYoriString(&YsVariableValue);
+                }
+                continue;
+            } else {
+                ReadIndex = StartOfVariableName;
+            }
+        }
+        if (ReadIndex != WriteIndex) {
+            Value[WriteIndex] = Value[ReadIndex];
+        }
+        if (Value[ReadIndex] == '\0') {
+            break;
+        }
+        ReadIndex++;
+        WriteIndex++;
+    }
+    return TRUE;
+}
+
+/**
+ Perform an in place removal of escape characters.  This function assumes the
+ string is NULL terminated and will leave it NULL terminated on completion.
+
+ @param String Pointer to the string to remove escape characters from.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SetRemoveEscapes(
+    __inout PYORI_STRING String
+    )
+{
+    DWORD CharIndex;
+    DWORD DestIndex;
+
+    for (CharIndex = 0, DestIndex = 0; CharIndex < String->LengthInChars; CharIndex++, DestIndex++) {
+        if (YoriLibIsEscapeChar(String->StartOfString[CharIndex])) {
+            CharIndex++;
+            if (CharIndex >= String->LengthInChars) {
+                break;
+            }
+        }
+
+        if (CharIndex != DestIndex) {
+            String->StartOfString[DestIndex] = String->StartOfString[CharIndex];
+        }
+    }
+    String->StartOfString[DestIndex] = '\0';
+    String->LengthInChars = DestIndex;
+    return TRUE;
+}
+
+/**
  Main entrypoint for the set builtin.
 
  @param ArgC The number of arguments.
@@ -83,15 +213,23 @@ YoriCmd_SET(
     DWORD StartArg = 0;
     YORI_STRING Arg;
 
+    DWORD UnescapedArgC;
+    PYORI_STRING UnescapedArgV;
+
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
 
-    for (i = 1; i < ArgC; i++) {
+    if (!YoriCallGetEscapedArguments(&UnescapedArgC, &UnescapedArgV)) {
+        UnescapedArgC = ArgC;
+        UnescapedArgV = ArgV;
+    }
+
+    for (i = 1; i < UnescapedArgC; i++) {
 
         ArgumentUnderstood = FALSE;
-        ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
+        ASSERT(YoriLibIsStringNullTerminated(&UnescapedArgV[i]));
 
-        if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
+        if (YoriLibIsCommandLineOption(&UnescapedArgV[i], &Arg)) {
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
                 SetHelp();
@@ -126,7 +264,7 @@ YoriCmd_SET(
         }
 
         if (!ArgumentUnderstood) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &UnescapedArgV[i]);
         }
     }
 
@@ -152,13 +290,19 @@ YoriCmd_SET(
         YORI_STRING CmdLine;
         YORI_STRING YsVariable;
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(UnescapedArgC - StartArg, &UnescapedArgV[StartArg], FALSE, &CmdLine)) {
             return EXIT_FAILURE;
         }
 
         YoriLibInitEmptyString(&YsVariable);
         YsVariable.StartOfString = CmdLine.StartOfString;
         Variable = CmdLine.StartOfString;
+
+        //
+        //  At this point escapes are still present but it's never valid to
+        //  have an '=' in a variable name, escape or not.
+        //
+
         Value = _tcschr(Variable, '=');
         if (Value) {
             *Value = '\0';
@@ -169,74 +313,16 @@ YoriCmd_SET(
             YsVariable.LengthAllocated = CmdLine.LengthAllocated;
             YsVariable.LengthInChars = CmdLine.LengthInChars;
         }
+        SetRemoveEscapes(&YsVariable);
 
         if (Value != NULL) {
-
-            DWORD StartOfVariableName;
-            DWORD ReadIndex = 0;
-            DWORD WriteIndex = 0;
 
             //
             //  Scan through the value looking for any unexpanded environment
             //  variables.
             //
 
-            while (TRUE) {
-                if (Value[ReadIndex] == '%') {
-
-                    //
-                    //  We found the first %, scan ahead looking for the next
-                    //  one
-                    //
-
-                    StartOfVariableName = ReadIndex;
-                    do {
-                        ReadIndex++;
-                    } while (Value[ReadIndex] != '%' && Value[ReadIndex] != '\0');
-
-                    //
-                    //  If we found a well formed variable, check if it refers
-                    //  to anything.  If it does, that means the shell didn't
-                    //  expand it because it was escaped, so preserve it here.
-                    //  If it doesn't, that means it may not refer to anything,
-                    //  so remove it.
-                    //
-
-                    if (Value[ReadIndex] == '%') {
-                        LPTSTR VariableName;
-                        YORI_STRING YsVariableName;
-
-                        YsVariableName.StartOfString = &Value[StartOfVariableName + 1];
-                        YsVariableName.LengthInChars = ReadIndex - StartOfVariableName - 1;
-
-                        VariableName = YoriLibMalloc((YsVariableName.LengthInChars + 1) * sizeof(TCHAR));
-
-                        ReadIndex++;
-                        if (VariableName != NULL) {
-
-                            YoriLibSPrintf(VariableName, _T("%y"), &YsVariableName);
-                            if (GetEnvironmentVariable(VariableName, NULL, 0) > 0) {
-                                if (WriteIndex != StartOfVariableName) {
-                                    memmove(&Value[WriteIndex], &Value[StartOfVariableName], (ReadIndex - StartOfVariableName) * sizeof(TCHAR));
-                                }
-                                WriteIndex += (ReadIndex - StartOfVariableName);
-                            }
-                        }
-                        YoriLibFree(VariableName);
-                        continue;
-                    } else {
-                        ReadIndex = StartOfVariableName;
-                    }
-                }
-                if (ReadIndex != WriteIndex) {
-                    Value[WriteIndex] = Value[ReadIndex];
-                }
-                if (Value[ReadIndex] == '\0') {
-                    break;
-                }
-                ReadIndex++;
-                WriteIndex++;
-            }
+            SetRemoveEmptyVariables(Value);
             
             if (*Value == '\0') {
                 YoriCallSetEnvironmentVariable(&YsVariable, NULL);
@@ -244,6 +330,7 @@ YoriCmd_SET(
                 YORI_STRING YsValue;
                 YORI_STRING CombinedValue;
                 YoriLibConstantString(&YsValue, Value);
+                SetRemoveEscapes(&YsValue);
                 if (IncludeComponent) {
                     if (YoriLibAddEnvironmentComponentReturnString(Variable, &YsValue, TRUE, &CombinedValue)) {
                         YoriCallSetEnvironmentVariable(&YsVariable, &CombinedValue);

@@ -129,7 +129,8 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
  @param Generation Optionally points to a location to populate with the
         generation of the environment at the time of the query.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @return TRUE to indicate success, FALSE to indicate failure.  In particular,
+         returns FALSE to indicate that the variable was not found.
  */
 BOOL
 YoriShGetEnvironmentVariable(
@@ -421,6 +422,71 @@ YoriShAllocateAndGetEnvironmentVariable(
 
         YoriLibFreeStringContents(Value);
         return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Get an environment variable from a variable named as a Yori string.
+
+ @param VariableName Pointer to the name of the variable to obtain.
+
+ @param Value On successful completion, populated with a newly allocated
+        string containing the environment variable's contents.
+
+ @return TRUE to indicate success, FALSE to indicate failure.  In particular,
+         returns FALSE to indicate that the variable was not found.
+ */
+BOOL
+YoriShGetEnvironmentVariableYS(
+    __in PYORI_STRING VariableName,
+    __out PYORI_STRING Value
+    )
+{
+    LPTSTR NullTerminatedVariable;
+    BOOL AllocatedVariable;
+    DWORD LengthNeeded;
+
+    if (YoriLibIsStringNullTerminated(VariableName)) {
+        NullTerminatedVariable = VariableName->StartOfString;
+        AllocatedVariable = FALSE;
+    } else {
+        NullTerminatedVariable = YoriLibCStringFromYoriString(VariableName);
+        if (NullTerminatedVariable == NULL) {
+            return FALSE;
+        }
+        AllocatedVariable = TRUE;
+    }
+
+    if (!YoriShGetEnvironmentVariable(NullTerminatedVariable, NULL, 0, &LengthNeeded, NULL)) {
+        YoriLibInitEmptyString(Value);
+        if (AllocatedVariable) {
+            YoriLibDereference(NullTerminatedVariable);
+        }
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(Value, LengthNeeded)) {
+        if (AllocatedVariable) {
+            YoriLibDereference(NullTerminatedVariable);
+        }
+        return FALSE;
+    }
+
+    if (!YoriShGetEnvironmentVariable(NullTerminatedVariable, Value->StartOfString, Value->LengthAllocated, &Value->LengthInChars, NULL) ||
+        Value->LengthInChars >= Value->LengthAllocated) {
+
+        if (AllocatedVariable) {
+            YoriLibDereference(NullTerminatedVariable);
+        }
+
+        YoriLibFreeStringContents(Value);
+        return FALSE;
+    }
+
+    if (AllocatedVariable) {
+        YoriLibDereference(NullTerminatedVariable);
     }
 
     return TRUE;

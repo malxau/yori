@@ -284,12 +284,18 @@ YoriShExecuteInProc(
 {
     YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     BOOLEAN WasPipe = FALSE;
-    PYORI_SH_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
+    PYORI_SH_CMD_CONTEXT OriginalCmdContext = &ExecContext->CmdToExec;
+    PYORI_SH_CMD_CONTEXT SavedEscapedCmdContext;
+    YORI_SH_CMD_CONTEXT NoEscapesCmdContext;
     LPTSTR CmdLine;
     PYORI_STRING ArgV;
     DWORD ArgC;
     DWORD Count;
     DWORD ExitCode = 0;
+
+    if (!YoriShRemoveEscapesFromCmdContext(OriginalCmdContext, &NoEscapesCmdContext)) {
+        return ERROR_OUTOFMEMORY;
+    }
 
     //
     //  We execute builtins on a single thread due to the amount of
@@ -306,8 +312,6 @@ YoriShExecuteInProc(
         ExecContext->StdOutType = StdOutTypeBuffer;
     }
 
-    YoriShRemoveEscapesFromCmdContext(CmdContext);
-
     //
     //  Check if an argument isn't quoted but requires quotes.  This implies
     //  something happened outside the user's immediate control, such as
@@ -316,17 +320,18 @@ YoriShExecuteInProc(
     //  same routines as would occur for an external process.
     //
 
-    ArgC = CmdContext->ArgC;
-    ArgV = CmdContext->ArgV;
+    ArgC = NoEscapesCmdContext.ArgC;
+    ArgV = NoEscapesCmdContext.ArgV;
 
-    for (Count = 0; Count < CmdContext->ArgC; Count++) {
-        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[Count]));
-        if (!CmdContext->ArgContexts[Count].Quoted &&
-            YoriLibCheckIfArgNeedsQuotes(&CmdContext->ArgV[Count]) &&
-            ArgV == CmdContext->ArgV) {
+    for (Count = 0; Count < NoEscapesCmdContext.ArgC; Count++) {
+        ASSERT(YoriLibIsStringNullTerminated(&NoEscapesCmdContext.ArgV[Count]));
+        if (!NoEscapesCmdContext.ArgContexts[Count].Quoted &&
+            YoriLibCheckIfArgNeedsQuotes(&NoEscapesCmdContext.ArgV[Count]) &&
+            ArgV == NoEscapesCmdContext.ArgV) {
 
-            CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, TRUE, NULL, NULL);
+            CmdLine = YoriShBuildCmdlineFromCmdContext(&NoEscapesCmdContext, TRUE, NULL, NULL);
             if (CmdLine == NULL) {
+                YoriShFreeCmdContext(&NoEscapesCmdContext);
                 return ERROR_OUTOFMEMORY;
             }
 
@@ -334,6 +339,7 @@ YoriShExecuteInProc(
             YoriLibDereference(CmdLine);
 
             if (ArgV == NULL) {
+                YoriShFreeCmdContext(&NoEscapesCmdContext);
                 return ERROR_OUTOFMEMORY;
             }
         }
@@ -341,12 +347,13 @@ YoriShExecuteInProc(
 
     ExitCode = YoriShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
     if (ExitCode != ERROR_SUCCESS) {
-        if (ArgV != CmdContext->ArgV) {
+        if (ArgV != NoEscapesCmdContext.ArgV) {
             for (Count = 0; Count < ArgC; Count++) {
                 YoriLibFreeStringContents(&ArgV[Count]);
             }
             YoriLibDereference(ArgV);
         }
+        YoriShFreeCmdContext(&NoEscapesCmdContext);
 
         return ExitCode;
     }
@@ -371,9 +378,12 @@ YoriShExecuteInProc(
         }
     }
 
+    SavedEscapedCmdContext = YoriShGlobal.EscapedCmdContext;
+    YoriShGlobal.EscapedCmdContext = OriginalCmdContext;
     YoriShGlobal.RecursionDepth++;
     ExitCode = Fn(ArgC, ArgV);
     YoriShGlobal.RecursionDepth--;
+    YoriShGlobal.EscapedCmdContext = SavedEscapedCmdContext;
     YoriShRevertRedirection(&PreviousRedirectContext);
 
     if (WasPipe) {
@@ -398,12 +408,13 @@ YoriShExecuteInProc(
         }
     }
 
-    if (ArgV != CmdContext->ArgV) {
+    if (ArgV != NoEscapesCmdContext.ArgV) {
         for (Count = 0; Count < ArgC; Count++) {
             YoriLibFreeStringContents(&ArgV[Count]);
         }
         YoriLibDereference(ArgV);
     }
+    YoriShFreeCmdContext(&NoEscapesCmdContext);
 
     return ExitCode;
 }
