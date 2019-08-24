@@ -3,7 +3,7 @@
  *
  * Yori shell perform simple math operations
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -184,7 +184,7 @@ ENTRYPOINT(
                 ExprHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 OutputHex = TRUE;
@@ -283,7 +283,13 @@ ENTRYPOINT(
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
-                Result.Value /= Temp.Value;
+                if (Temp.Value != 0) {
+                    Result.Value /= Temp.Value;
+                } else {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("err: divide by zero\n"));
+                    YoriLibFreeStringContents(&RemainingString);
+                    return EXIT_FAILURE;
+                }
                 RemainingString.StartOfString += CharsConsumed;
                 RemainingString.LengthInChars -= CharsConsumed;
                 ArgumentUnderstood = TRUE;
@@ -293,7 +299,13 @@ ENTRYPOINT(
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
                 ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
-                Result.Value %= Temp.Value;
+                if (Temp.Value != 0) {
+                    Result.Value %= Temp.Value;
+                } else {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("err: divide by zero\n"));
+                    YoriLibFreeStringContents(&RemainingString);
+                    return EXIT_FAILURE;
+                }
                 RemainingString.StartOfString += CharsConsumed;
                 RemainingString.LengthInChars -= CharsConsumed;
                 ArgumentUnderstood = TRUE;
