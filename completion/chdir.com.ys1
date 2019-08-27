@@ -8,7 +8,7 @@ goto :eof
 
 :special
 set FIRSTCHAR=
-echo -- /insensitivelist ~ ~appdata ~appdir ~commonappdata ~commondesktop ~commondocuments ~commonprograms ~commonstart ~desktop ~documents ~downloads ~localappdata ~programfiles ~programs ~start ~startup ~system ~windows
+echo -- /insensitivelist ~ ~appdata ~appdir ~commonappdata ~commondesktop ~commondocuments ~commonprograms ~commonstart ~desktop ~documents ~downloads ~localappdata ~programfiles ~programfiles32 ~programfiles64 ~programs ~start ~startup ~system ~windows
 goto :eof
 
 :arg
