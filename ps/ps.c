@@ -35,7 +35,7 @@ CHAR strPsHelpText[] =
         "\n"
         "Display process list.\n"
         "\n"
-        "PS [-license]\n"
+        "PS [-license] [-a] [-f] [-l]\n"
         "\n"
         "   -a             Display all processes\n"
         "   -f             Display full format including command line\n"
