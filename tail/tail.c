@@ -162,7 +162,10 @@ TailProcessStream(
     while (TRUE) {
 
         if (SeekToEndOffset != 0) {
-            SetFilePointer(hSource, -1 * SeekToEndOffset, NULL, FILE_END);
+            if (!SetFilePointer(hSource, -1 * SeekToEndOffset, NULL, FILE_END)) {
+                SeekToEndOffset = 0;
+                SetFilePointer(hSource, 0, NULL, FILE_BEGIN);
+            }
         }
         TailContext->LinesFound = 0;
 
@@ -197,6 +200,8 @@ TailProcessStream(
                 SeekToEndOffset = 0;
                 SetFilePointer(hSource, 0, NULL, FILE_BEGIN);
             }
+            YoriLibLineReadClose(LineContext);
+            LineContext = NULL;
             continue;
         } else {
             StartLine = 0;

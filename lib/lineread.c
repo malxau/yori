@@ -536,30 +536,32 @@ YoriLibReadLineToStringEx(
         }
 
         if (TerminateProcessing) {
-            ReadContext->Terminated = TRUE;
-            if (ReadContext->BytesInBuffer > 0 && ReturnFinalNonTerminatedLine) {
+            if (ReturnFinalNonTerminatedLine) {
+                ReadContext->Terminated = TRUE;
+                if (ReadContext->BytesInBuffer > 0) {
 
-                //
-                //  We're at the end of the file.  Return what we have, even if
-                //  there's not a newline character.
-                //
+                    //
+                    //  We're at the end of the file.  Return what we have, even if
+                    //  there's not a newline character.
+                    //
 
-                CharsToSkip = 0;
-                CharsToCopy = ReadContext->BytesInBuffer;
-                if (!BomFound && ReadContext->LinesRead == 0) {
-                    CharsToSkip = YoriLibBytesInBom(ReadContext->PreviousBuffer, CharsToCopy);
-                    if (CharsToSkip > 0) {
-                        BomFound = TRUE;
-                        CharsToCopy -= CharsToSkip;
+                    CharsToSkip = 0;
+                    CharsToCopy = ReadContext->BytesInBuffer;
+                    if (!BomFound && ReadContext->LinesRead == 0) {
+                        CharsToSkip = YoriLibBytesInBom(ReadContext->PreviousBuffer, CharsToCopy);
+                        if (CharsToSkip > 0) {
+                            BomFound = TRUE;
+                            CharsToCopy -= CharsToSkip;
+                        }
                     }
-                }
-                if (ReadContext->ReadWChars) {
-                    CharsToCopy = CharsToCopy / sizeof(WCHAR);
-                }
-                if (YoriLibCopyLineToUserBufferW(UserString, &ReadContext->PreviousBuffer[CharsToSkip], CharsToCopy)) {
-                    ReadContext->BytesInBuffer = 0;
-                    *LineTerminated = FALSE;
-                    return UserString->StartOfString;
+                    if (ReadContext->ReadWChars) {
+                        CharsToCopy = CharsToCopy / sizeof(WCHAR);
+                    }
+                    if (YoriLibCopyLineToUserBufferW(UserString, &ReadContext->PreviousBuffer[CharsToSkip], CharsToCopy)) {
+                        ReadContext->BytesInBuffer = 0;
+                        *LineTerminated = FALSE;
+                        return UserString->StartOfString;
+                    }
                 }
             }
             UserString->LengthInChars = 0;
