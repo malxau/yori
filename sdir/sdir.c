@@ -98,13 +98,18 @@ SdirDisplayCollection();
 
  @param FullPath Pointer to a string referring to the full path to the file.
 
+ @param ForceDisplay If TRUE, suppress processing to hide the entry because it
+        needs to be displayed unconditionally.  This is used for directory
+        headers etc.  If FALSE, the regular user specified rules are applied.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 SdirCaptureFoundItemIntoDirent (
     __out PYORI_FILE_INFO CurrentEntry,
     __in PWIN32_FIND_DATA FindData,
-    __in PYORI_STRING FullPath
+    __in PYORI_STRING FullPath,
+    __in BOOL ForceDisplay
     ) 
 {
     DWORD i;
@@ -131,11 +136,9 @@ SdirCaptureFoundItemIntoDirent (
 
     //
     //  Determine the color to display each entry from extensions and attributes.
-    //  If we're asked to hide, just walk away from the entry we created and
-    //  continue.
     //
     
-    SdirApplyAttribute(CurrentEntry, &CurrentEntry->RenderAttributes);
+    SdirApplyAttribute(CurrentEntry, ForceDisplay, &CurrentEntry->RenderAttributes);
 
     return TRUE;
 }
@@ -164,7 +167,7 @@ SdirRenderAttributesFromPath (
 
     hFind = FindFirstFile(FullPath->StartOfString, &FindData);
     if (hFind != INVALID_HANDLE_VALUE) {
-        SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, FullPath);
+        SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, FullPath, TRUE);
         FindClose(hFind);
         return CurrentEntry.RenderAttributes;
     } else {
@@ -177,7 +180,7 @@ SdirRenderAttributesFromPath (
         memset(&FindData, 0, sizeof(FindData));
         DummyString.LengthInChars = YoriLibSPrintfS(DummyString.StartOfString, DummyString.LengthAllocated, _T("%s\\"), FullPath);
         YoriLibUpdateFindDataFromFileInformation(&FindData, DummyString.StartOfString, FALSE);
-        SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, &DummyString);
+        SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, &DummyString, TRUE);
         YoriLibFreeStringContents(&DummyString);
         return CurrentEntry.RenderAttributes;
     }
@@ -214,7 +217,7 @@ SdirAddToCollection (
 
     SdirDirCollectionCurrent++;
 
-    SdirCaptureFoundItemIntoDirent(CurrentEntry, FindData, FullPath);
+    SdirCaptureFoundItemIntoDirent(CurrentEntry, FindData, FullPath, FALSE);
 
     if (CurrentEntry->RenderAttributes.Ctrl & YORILIB_ATTRCTRL_HIDE) {
 

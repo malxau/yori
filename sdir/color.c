@@ -391,6 +391,10 @@ error_return:
 
  @param DirEnt Pointer to the found file, with all relevant information loaded.
 
+ @param ForceDisplay If TRUE, the entry needs to be displayed and all rules
+        indicating that it should be hidden are ignored.  This is used to
+        ensure things like directory headings are not displayed as hidden.
+
  @param Attribute On successful completion, indicates the color to use to
         display the file.
 
@@ -399,6 +403,7 @@ error_return:
 BOOL
 SdirApplyAttribute(
     __in PYORI_FILE_INFO DirEnt,
+    __in BOOL ForceDisplay,
     __out PYORILIB_COLOR_ATTRIBUTES Attribute
     )
 {
@@ -410,7 +415,8 @@ SdirApplyAttribute(
     //  First check for files to hide.
     //
 
-    {
+    if (!ForceDisplay) {
+
         PYORI_LIB_FILE_FILT_MATCH_CRITERIA ThisMatch;
         PYORI_LIB_FILE_FILT_MATCH_CRITERIA Matches;
 
@@ -455,7 +461,8 @@ SdirApplyAttribute(
             ThisApply = &ColorsToApply[Index];
             if (ThisApply->Match.TruthStates[ThisApply->Match.CompareFn(DirEnt, &ThisApply->Match.CompareEntry)]) {
                 ThisAttribute = YoriLibCombineColors(ThisAttribute, ThisApply->Color);
-                if ((ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
+                if ((!ForceDisplay || (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_HIDE) == 0) &&
+                    (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
     
                     ThisAttribute = YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, FALSE);
     

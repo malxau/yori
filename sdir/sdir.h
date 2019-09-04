@@ -798,6 +798,7 @@ SdirParseMetadataAttributeString();
 BOOL
 SdirApplyAttribute(
     __in PYORI_FILE_INFO DirEnt,
+    __in BOOL ForceDisplay,
     __out PYORILIB_COLOR_ATTRIBUTES Attribute
     );
 
