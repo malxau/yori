@@ -538,6 +538,13 @@ typedef struct _YORI_SH_FILE_COMPLETE_CONTEXT {
      */
     BOOL KeepCompletionsSorted;
 
+    /**
+     This can be set to TRUE if an enumeration fails with an error that is
+     sufficiently fatal that no further heuristic matching should be
+     performed.
+     */
+    BOOL AbortMatching;
+
 } YORI_SH_FILE_COMPLETE_CONTEXT, *PYORI_SH_FILE_COMPLETE_CONTEXT;
 
 /**
@@ -842,6 +849,46 @@ YoriShFileTabCompletionCallback(
 }
 
 /**
+ A callback that is invoked when a directory cannot be successfully enumerated.
+ This routine checks for errors that seem sufficiently permanent that no
+ further heuristic matching should be performed.
+
+ @param FilePath Pointer to the file path that could not be enumerated.
+
+ @param ErrorCode The Win32 error code describing the failure.
+
+ @param Depth Recursion depth, ignored in this application.
+
+ @param Context Pointer to the file enumeration context.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+YoriShFileTabCompletionErrorCallback(
+    __in PYORI_STRING FilePath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PYORI_SH_FILE_COMPLETE_CONTEXT FileCompleteContext = (PYORI_SH_FILE_COMPLETE_CONTEXT)Context;
+
+    UNREFERENCED_PARAMETER(FilePath);
+    UNREFERENCED_PARAMETER(Depth);
+
+    if (ErrorCode == ERROR_BAD_NET_NAME ||
+        ErrorCode == ERROR_NETNAME_DELETED ||
+        ErrorCode == ERROR_NETWORK_ACCESS_DENIED ||
+        ErrorCode == ERROR_BAD_NETPATH) {
+
+        FileCompleteContext->AbortMatching = TRUE;
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
  A structure describing a string which when encountered in a string used for
  file tab completion may indicate the existence of a file.
  */
@@ -924,7 +971,13 @@ YoriShFindMatchingStreamsForStringOrCursorPosition(
     //
 
     EnumContext->SearchString = SearchString->StartOfString;
-    YoriLibForEachStream(SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, EnumContext);
+    if (!YoriLibForEachStream(SearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, YoriShFileTabCompletionErrorCallback, EnumContext)) {
+        return;
+    }
+
+    if (EnumContext->AbortMatching) {
+        return;
+    }
 
     //
     //  Now check for a match based on the cursor offset
@@ -950,6 +1003,7 @@ YoriShFindMatchingStreamsForStringOrCursorPosition(
         //
         //  Search for files with the specified prefix string (up to the
         //  cursor) and the suffix string (after the cursor)
+        //
 
         for (Index = 0; Index < CursorOffset; Index++) {
             FileMidpointSearchString.StartOfString[Index] = SearchString->StartOfString[Index];
@@ -969,7 +1023,12 @@ YoriShFindMatchingStreamsForStringOrCursorPosition(
         FileMidpointSearchString.LengthInChars = Index + 1;
 
         EnumContext->SearchString = FileMidpointSearchString.StartOfString;
-        YoriLibForEachStream(&FileMidpointSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, NULL, EnumContext);
+        YoriLibForEachStream(&FileMidpointSearchString, MatchFlags, 0, YoriShFileTabCompletionCallback, YoriShFileTabCompletionErrorCallback, EnumContext);
+        if (EnumContext->AbortMatching) {
+            YoriLibFreeStringContents(&FileMidpointSearchString);
+            EnumContext->SearchString = SearchString->StartOfString;
+            return;
+        }
 
         //
         //  Now search for anything up to the cursor, and add back whatever
@@ -1008,7 +1067,7 @@ YoriShFindMatchingStreamsForStringOrCursorPosition(
         EnumContext->CharsToFinalSlash = YoriShFindFinalSlashIfSpecified(&FileMidpointSearchString);
         EnumContext->SearchString = FileMidpointSearchString.StartOfString;
 
-        YoriLibForEachStream(&FileMidpointSearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, YoriShFileTabCompletionCallback, NULL, EnumContext);
+        YoriLibForEachStream(&FileMidpointSearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, YoriShFileTabCompletionCallback, YoriShFileTabCompletionErrorCallback, EnumContext);
 
         YoriLibInitEmptyString(&EnumContext->Suffix);
         YoriLibFreeStringContents(&FileMidpointSearchString);
@@ -1087,6 +1146,7 @@ YoriShPerformFileTabCompletion(
     EnumContext.SearchString = SearchString.StartOfString;
     EnumContext.TabContext = TabContext;
     EnumContext.FilesFound = 0;
+    EnumContext.AbortMatching = FALSE;
 
     //
     //  Set flags indicating what to find
@@ -1138,7 +1198,7 @@ YoriShPerformFileTabCompletion(
     //  file name but it's prefixed with some other string.
     //
 
-    if (EnumContext.FilesFound == 0) {
+    if (EnumContext.FilesFound == 0 && !EnumContext.AbortMatching) {
         DWORD MatchCount = sizeof(YoriShTabHeuristicMatches)/sizeof(YoriShTabHeuristicMatches[0]);
         DWORD MismatchCount = sizeof(YoriShTabHeuristicMismatches)/sizeof(YoriShTabHeuristicMismatches[0]);
         DWORD AllocCount;
