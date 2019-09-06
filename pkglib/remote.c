@@ -1134,7 +1134,9 @@ YoriPkgFindRemotePackages(
         install.  If not specified, determined from the host operaitng
         system.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @return TRUE to indicate that all specified packages that required upgrading
+         were found and installed.  FALSE if one or more packages could not
+         be found or installed.
  */
 BOOL
 YoriPkgInstallRemotePackages(
@@ -1148,7 +1150,7 @@ YoriPkgInstallRemotePackages(
 {
     DWORD MatchingPackageCount;
     DWORD AttemptedCount;
-    DWORD InstallCount = 0;
+    BOOL Result;
     YORI_LIST_ENTRY PackagesMatchingCriteria;
     PYORI_LIST_ENTRY PackageEntry;
     PYORIPKG_REMOTE_PACKAGE Package;
@@ -1157,19 +1159,21 @@ YoriPkgInstallRemotePackages(
     YORIPKG_PACKAGES_PENDING_INSTALL PendingPackages;
     DWORD Error;
 
+    Result = FALSE;
+
     if (!YoriPkgInitializePendingPackages(&PendingPackages)) {
-        return FALSE;
+        return Result;
     }
 
     if (!YoriPkgGetPackageIniFile(NewDirectory, &IniFile)) {
         YoriPkgDeletePendingPackages(&PendingPackages);
-        return 0;
+        return Result;
     }
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         YoriPkgDeletePendingPackages(&PendingPackages);
         YoriLibFreeStringContents(&IniFile);
-        return 0;
+        return Result;
     }
 
     YoriLibInitializeListHead(&PackagesMatchingCriteria);
@@ -1208,7 +1212,9 @@ YoriPkgInstallRemotePackages(
     }
 
     if (YoriPkgInstallPendingPackages(&IniFile, NewDirectory, &PendingPackages)) {
-        InstallCount = AttemptedCount;
+        if (MatchingPackageCount == PackageNameCount) {
+            Result = TRUE;
+        }
     }
 
 Exit:
@@ -1229,7 +1235,7 @@ Exit:
     YoriLibFreeStringContents(&IniFile);
     YoriLibFreeStringContents(&IniValue);
 
-    return InstallCount;
+    return Result;
 }
 
 /**
