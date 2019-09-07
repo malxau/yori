@@ -2232,11 +2232,35 @@ YoriLibIsListEmpty(
     );
 
 // *** MALLOC.C ***
+//
 
+#if DBG
+#define YORI_SPECIAL_HEAP 1
+#endif
+
+#if YORI_SPECIAL_HEAP
+
+PVOID
+YoriLibMallocSpecialHeap(
+    __in DWORD Bytes,
+    __in LPCSTR Function,
+    __in LPCSTR File,
+    __in DWORD Line
+    );
+
+#ifndef __FUNCTION__
+#define __FUNCTION__ ""
+#endif
+
+#define YoriLibMalloc(Bytes) \
+    YoriLibMallocSpecialHeap(Bytes, __FUNCTION__, __FILE__, __LINE__);
+
+#else
 PVOID
 YoriLibMalloc(
     __in DWORD Bytes
     );
+#endif
 
 VOID
 YoriLibFree(
