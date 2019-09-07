@@ -3,7 +3,7 @@
  *
  * Yori memory allocation wrappers
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,10 +26,6 @@
 
 #include "yoripch.h"
 #include "yorilib.h"
-
-#if DBG
-#define YORI_SPECIAL_HEAP 1
-#endif
 
 #if YORI_SPECIAL_HEAP
 
@@ -54,6 +50,21 @@ typedef struct _YORI_SPECIAL_HEAP_HEADER {
      */
     YORI_LIST_ENTRY ListEntry;
 
+    /**
+     The function that allocated the memory.
+     */
+    LPCSTR Function;
+
+    /**
+     The source file that allocated the memory.
+     */
+    LPCSTR File;
+
+    /**
+     The line number that allocated the memory.
+     */
+    DWORD Line;
+
 #ifdef CaptureStackBackTrace
     /**
      The stack that allocated this allocation.
@@ -68,41 +79,48 @@ typedef struct _YORI_SPECIAL_HEAP_HEADER {
  */
 #define PAGE_SIZE (0x1000)
 
-/**
- The number of allocations that have previously been allocated by the caller.
- */
-DWORD NumberAllocated;
+typedef struct _YORI_SPECIAL_HEAP_GLOBAL {
 
-/**
- The number of allocations that have previously been freed by the caller.
- */
-DWORD NumberFreed;
+    /**
+     The number of allocations that have previously been allocated by the caller.
+     */
+    DWORD NumberAllocated;
 
-/**
- The number of bytes currently allocated, from the user's perspective.
- */
-DWORD BytesCurrentlyAllocated;
+    /**
+     The number of allocations that have previously been freed by the caller.
+     */
+    DWORD NumberFreed;
 
-/**
- A list of all active allocations in the system.
- */
-YORI_LIST_ENTRY ActiveAllocationsList;
+    /**
+     The number of bytes currently allocated, from the user's perspective.
+     */
+    DWORD BytesCurrentlyAllocated;
 
-/**
- An array of recently freed allocations.  Each of these is accessed in a
- circular fashion, so that the least recently freed object is replaced by
- a new incoming free.  While on this array allocations are not readable
- or writable so that use after free bugs become visibly apparent.
- */
-PYORI_SPECIAL_HEAP_HEADER RecentlyFreed[8];
+    /**
+     A list of all active allocations in the system.
+     */
+    YORI_LIST_ENTRY ActiveAllocationsList;
 
-/**
- A handle to a mutex to synchronize the debug heap.
- */
-HANDLE DbgHeapMutex;
+    /**
+     An array of recently freed allocations.  Each of these is accessed in a
+     circular fashion, so that the least recently freed object is replaced by
+     a new incoming free.  While on this array allocations are not readable
+     or writable so that use after free bugs become visibly apparent.
+     */
+    PYORI_SPECIAL_HEAP_HEADER RecentlyFreed[8];
+
+    /**
+     A handle to a mutex to synchronize the debug heap.
+     */
+    HANDLE Mutex;
+
+} YORI_SPECIAL_HEAP_GLOBAL, PYORI_SPECIAL_HEAP_GLOBAL;
+
+YORI_SPECIAL_HEAP_GLOBAL YoriLibSpecialHeap;
 
 #endif
 
+#if !YORI_SPECIAL_HEAP
 /**
  Allocate memory.  This should be freed with @ref YoriLibFree when it is no
  longer needed.
@@ -114,11 +132,19 @@ YoriLibMalloc(
     __in DWORD Bytes
     )
 {
-#if !YORI_SPECIAL_HEAP
     PVOID Alloc;
     Alloc = HeapAlloc(GetProcessHeap(), 0, Bytes);
     return Alloc;
+}
 #else
+PVOID
+YoriLibMallocSpecialHeap(
+    __in DWORD Bytes,
+    __in LPCSTR Function,
+    __in LPCSTR File,
+    __in DWORD Line
+    )
+{
     DWORD TotalPagesNeeded = (Bytes + sizeof(YORI_SPECIAL_HEAP_HEADER) + 2 * PAGE_SIZE - 1) / PAGE_SIZE;
     PYORI_SPECIAL_HEAP_HEADER Header;
     PYORI_SPECIAL_HEAP_HEADER Commit;
@@ -129,16 +155,16 @@ YoriLibMalloc(
     DWORD Alignment = sizeof(UCHAR);
 #endif
 
-    if (DbgHeapMutex == NULL) {
-        DbgHeapMutex = CreateMutex(NULL, FALSE, NULL);
+    if (YoriLibSpecialHeap.Mutex == NULL) {
+        YoriLibSpecialHeap.Mutex = CreateMutex(NULL, FALSE, NULL);
     }
 
-    if (DbgHeapMutex == NULL) {
+    if (YoriLibSpecialHeap.Mutex == NULL) {
         return NULL;
     }
 
-    if (ActiveAllocationsList.Next == NULL) {
-        YoriLibInitializeListHead(&ActiveAllocationsList);
+    if (YoriLibSpecialHeap.ActiveAllocationsList.Next == NULL) {
+        YoriLibInitializeListHead(&YoriLibSpecialHeap.ActiveAllocationsList);
     }
 
     Header = VirtualAlloc(NULL, TotalPagesNeeded * PAGE_SIZE, MEM_RESERVE, PAGE_READWRITE);
@@ -162,20 +188,23 @@ YoriLibMalloc(
 
     Header->PagesInAllocation = TotalPagesNeeded;
     Header->OffsetToData = ((TotalPagesNeeded - 1) * PAGE_SIZE - Bytes) & ~(Alignment - 1);
+    Header->Function = Function;
+    Header->File = File;
+    Header->Line = Line;
     ASSERT(Header->OffsetToData < (PAGE_SIZE + sizeof(YORI_SPECIAL_HEAP_HEADER)));
 #ifdef CaptureStackBackTrace
     CaptureStackBackTrace(1, sizeof(Header->AllocateStack)/sizeof(Header->AllocateStack[0]), Header->AllocateStack, NULL);
 #endif
 
-    WaitForSingleObject(DbgHeapMutex, INFINITE);
-    NumberAllocated++;
-    BytesCurrentlyAllocated += (Bytes + Alignment - 1) & ~(Alignment - 1);
-    YoriLibAppendList(&ActiveAllocationsList, &Header->ListEntry);
-    ReleaseMutex(DbgHeapMutex);
+    WaitForSingleObject(YoriLibSpecialHeap.Mutex, INFINITE);
+    YoriLibSpecialHeap.NumberAllocated++;
+    YoriLibSpecialHeap.BytesCurrentlyAllocated += (Bytes + Alignment - 1) & ~(Alignment - 1);
+    YoriLibAppendList(&YoriLibSpecialHeap.ActiveAllocationsList, &Header->ListEntry);
+    ReleaseMutex(YoriLibSpecialHeap.Mutex);
 
     return (PUCHAR)Header + Header->OffsetToData;
-#endif
 }
+#endif
 
 /**
  Free memory previously allocated with @ref YoriLibMalloc.
@@ -210,18 +239,18 @@ YoriLibFree(
 
     BytesToFree = (Header->PagesInAllocation - 1) * PAGE_SIZE - Header->OffsetToData;
 
-    WaitForSingleObject(DbgHeapMutex, INFINITE);
+    WaitForSingleObject(YoriLibSpecialHeap.Mutex, INFINITE);
 
-    MyEntry = NumberFreed % (sizeof(RecentlyFreed)/sizeof(RecentlyFreed[0]));
-    NumberFreed++;
-    BytesCurrentlyAllocated -= BytesToFree;
+    MyEntry = YoriLibSpecialHeap.NumberFreed % (sizeof(YoriLibSpecialHeap.RecentlyFreed)/sizeof(YoriLibSpecialHeap.RecentlyFreed[0]));
+    YoriLibSpecialHeap.NumberFreed++;
+    YoriLibSpecialHeap.BytesCurrentlyAllocated -= BytesToFree;
     YoriLibRemoveListItem(&Header->ListEntry);
 
-    if (RecentlyFreed[MyEntry] != NULL) {
+    if (YoriLibSpecialHeap.RecentlyFreed[MyEntry] != NULL) {
 
         PYORI_SPECIAL_HEAP_HEADER OldHeader;
 
-        OldHeader = RecentlyFreed[MyEntry];
+        OldHeader = YoriLibSpecialHeap.RecentlyFreed[MyEntry];
 
         if (!VirtualProtect(OldHeader, PAGE_SIZE, PAGE_READWRITE, &OldAccess)) {
             ASSERT(!"VirtualProtect failure");
@@ -238,9 +267,9 @@ YoriLibFree(
         ASSERT(!"VirtualProtect failure");
     }
 
-    RecentlyFreed[MyEntry] = Header;
+    YoriLibSpecialHeap.RecentlyFreed[MyEntry] = Header;
 
-    ReleaseMutex(DbgHeapMutex);
+    ReleaseMutex(YoriLibSpecialHeap.Mutex);
 
 #endif
 }
@@ -254,9 +283,22 @@ VOID
 YoriLibDisplayMemoryUsage()
 {
 #if YORI_SPECIAL_HEAP
-    if (BytesCurrentlyAllocated > 0 ||
-        (NumberAllocated - NumberFreed > 0)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%i bytes allocated in %i allocations\n"), BytesCurrentlyAllocated, NumberAllocated - NumberFreed);
+    if (YoriLibSpecialHeap.BytesCurrentlyAllocated > 0 ||
+        (YoriLibSpecialHeap.NumberAllocated - YoriLibSpecialHeap.NumberFreed > 0)) {
+
+        PYORI_LIST_ENTRY Entry;
+        PYORI_SPECIAL_HEAP_HEADER Header;
+        DWORD BytesAllocated;
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%i bytes allocated in %i allocations\n"), YoriLibSpecialHeap.BytesCurrentlyAllocated, YoriLibSpecialHeap.NumberAllocated - YoriLibSpecialHeap.NumberFreed);
+
+        Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, NULL);
+        while (Entry != NULL) {
+            Header = CONTAINING_RECORD(Entry, YORI_SPECIAL_HEAP_HEADER, ListEntry);
+            BytesAllocated = (Header->PagesInAllocation - 1) * PAGE_SIZE - Header->OffsetToData;
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs (%hs:%i) allocated %i bytes"), Header->Function, Header->File, Header->Line, BytesAllocated);
+            Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, Entry);
+        }
     }
 #endif
 }
