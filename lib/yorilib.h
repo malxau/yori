@@ -2248,6 +2248,14 @@ YoriLibMallocSpecialHeap(
     __in DWORD Line
     );
 
+PVOID
+YoriLibReferencedMallocSpecialHeap(
+    __in DWORD Bytes,
+    __in LPCSTR Function,
+    __in LPCSTR File,
+    __in DWORD Line
+    );
+
 #ifndef __FUNCTION__
 #define __FUNCTION__ ""
 #endif
@@ -2255,9 +2263,17 @@ YoriLibMallocSpecialHeap(
 #define YoriLibMalloc(Bytes) \
     YoriLibMallocSpecialHeap(Bytes, __FUNCTION__, __FILE__, __LINE__);
 
+#define YoriLibReferencedMalloc(Bytes) \
+    YoriLibReferencedMallocSpecialHeap(Bytes, __FUNCTION__, __FILE__, __LINE__);
+
 #else
 PVOID
 YoriLibMalloc(
+    __in DWORD Bytes
+    );
+
+PVOID
+YoriLibReferencedMalloc(
     __in DWORD Bytes
     );
 #endif
@@ -2270,10 +2286,6 @@ YoriLibFree(
 VOID
 YoriLibDisplayMemoryUsage();
 
-PVOID
-YoriLibReferencedMalloc(
-    __in DWORD Bytes
-    );
 
 VOID
 YoriLibReference(
