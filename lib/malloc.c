@@ -126,6 +126,8 @@ YORI_SPECIAL_HEAP_GLOBAL YoriLibSpecialHeap;
  longer needed.
 
  @param Bytes The number of bytes to allocate.
+
+ @return A pointer to the newly allocated memory, or NULL on failure.
  */
 PVOID
 YoriLibMalloc(
@@ -137,6 +139,23 @@ YoriLibMalloc(
     return Alloc;
 }
 #else
+/**
+ Allocate memory.  This should be freed with @ref YoriLibFree when it is no
+ longer needed.
+
+ @param Bytes The number of bytes to allocate.
+
+ @param Function Pointer to a constant string indicating the function that is
+        allocating the memory.
+
+ @param File Pointer to a constant string indicating the source file that is
+        allocating the memory.
+
+ @param Line Specifies the line number within the source file that is
+        allocating the memory.
+
+ @return A pointer to the newly allocated memory, or NULL on failure.
+ */
 PVOID
 YoriLibMallocSpecialHeap(
     __in DWORD Bytes,
@@ -296,7 +315,7 @@ YoriLibDisplayMemoryUsage()
         while (Entry != NULL) {
             Header = CONTAINING_RECORD(Entry, YORI_SPECIAL_HEAP_HEADER, ListEntry);
             BytesAllocated = (Header->PagesInAllocation - 1) * PAGE_SIZE - Header->OffsetToData;
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs (%hs:%i) allocated %i bytes"), Header->Function, Header->File, Header->Line, BytesAllocated);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs (%hs:%i) allocated %i bytes\n"), Header->Function, Header->File, Header->Line, BytesAllocated);
             Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, Entry);
         }
     }
@@ -315,6 +334,7 @@ typedef struct _YORILIB_REFERENCED_MALLOC_HEADER {
     ULONG ReferenceCount;
 } YORILIB_REFERENCED_MALLOC_HEADER, *PYORILIB_REFERENCED_MALLOC_HEADER;
 
+#if !YORI_SPECIAL_HEAP
 /**
  Allocate a block of memory that can be reference counted and will be freed
  on final dereference.
@@ -339,6 +359,44 @@ YoriLibReferencedMalloc(
 
     return (PVOID)(Header + 1);
 }
+#else
+/**
+ Allocate a block of memory that can be reference counted and will be freed
+ on final dereference.
+
+ @param Bytes The number of bytes to allocate.
+
+ @param Function Pointer to a constant string indicating the function that is
+        allocating the memory.
+
+ @param File Pointer to a constant string indicating the source file that is
+        allocating the memory.
+
+ @param Line Specifies the line number within the source file that is
+        allocating the memory.
+
+ @return Pointer to the allocated block of memory, or NULL on failure.
+ */
+PVOID
+YoriLibReferencedMallocSpecialHeap(
+    __in DWORD Bytes,
+    __in LPCSTR Function,
+    __in LPCSTR File,
+    __in DWORD Line
+    )
+{
+    PYORILIB_REFERENCED_MALLOC_HEADER Header;
+
+    Header = YoriLibMallocSpecialHeap(Bytes + sizeof(YORILIB_REFERENCED_MALLOC_HEADER), Function, File, Line);
+    if (Header == NULL) {
+        return NULL;
+    }
+
+    Header->ReferenceCount = 1;
+
+    return (PVOID)(Header + 1);
+}
+#endif
 
 /**
  Reference a previously allocated block of reference counted memory.
