@@ -1597,14 +1597,14 @@ YoriShParseCmdContextToExecPlan(
                     ExecPlan->EntireCmd.StdInType = StdInTypeNull;
                     ExecPlan->EntireCmd.StdOutType = StdOutTypeBuffer;
                     ExecPlan->EntireCmd.StdOut.Buffer.RetainBufferData = TRUE;
-                    ExecPlan->EntireCmd.StdErrType = StdOutTypeBuffer;
+                    ExecPlan->EntireCmd.StdErrType = StdErrTypeBuffer;
                     ExecPlan->EntireCmd.StdErr.Buffer.RetainBufferData = TRUE;
 
                     ThisProgram->WaitForCompletion = FALSE;
                     ThisProgram->StdInType = StdInTypeNull;
                     ThisProgram->StdOutType = StdOutTypeBuffer;
                     ThisProgram->StdOut.Buffer.RetainBufferData = TRUE;
-                    ThisProgram->StdErrType = StdOutTypeBuffer;
+                    ThisProgram->StdErrType = StdErrTypeBuffer;
                     ThisProgram->StdErr.Buffer.RetainBufferData = TRUE;
 
                     YoriLibFreeStringContents(&ExecPlan->EntireCmd.CmdToExec.ArgV[CurrentArg + ArgsConsumed]);

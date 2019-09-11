@@ -739,8 +739,12 @@ YoriShCommenceProcessBuffersIfNeeded(
             }
         } else {
             if (YoriShCreateNewProcessBuffer(ExecContext)) {
-                ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
-                ExecContext->StdErr.Buffer.PipeFromProcess = NULL;
+                if (ExecContext->StdOutType == StdOutTypeBuffer) {
+                    ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
+                }
+                if (ExecContext->StdErrType == StdErrTypeBuffer) {
+                    ExecContext->StdErr.Buffer.PipeFromProcess = NULL;
+                }
             }
         }
     }
