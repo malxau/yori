@@ -464,7 +464,7 @@ mini_tcsncmp(const TCHAR * str1, const TCHAR * str2, unsigned int count)
     const TCHAR * ptr2 = str2;
     unsigned int remaining = count;
 
-    while(TRUE) {
+    while(remaining > 0) {
         if (*ptr1 < *ptr2) {
             return -1;
         } else if (*ptr1 > *ptr2) {
@@ -476,10 +476,6 @@ mini_tcsncmp(const TCHAR * str1, const TCHAR * str2, unsigned int count)
         ptr1++;
         ptr2++;
         remaining--;
-
-        if (remaining == 0) {
-            return 0;
-        }
     }
     return 0;
 }
@@ -552,7 +548,7 @@ mini_tcsnicmp(const TCHAR * str1, const TCHAR * str2, unsigned int count)
     const TCHAR * ptr2 = str2;
     unsigned int remaining = count;
 
-    while(TRUE) {
+    while(remaining > 0) {
         if (mini_ttoupper(*ptr1) < mini_ttoupper(*ptr2)) {
             return -1;
         } else if (mini_ttoupper(*ptr1) > mini_ttoupper(*ptr2)) {
@@ -563,10 +559,6 @@ mini_tcsnicmp(const TCHAR * str1, const TCHAR * str2, unsigned int count)
         ptr1++;
         ptr2++;
         remaining--;
-
-        if (remaining == 0) {
-            return 0;
-        }
     }
     return 0;
 }
