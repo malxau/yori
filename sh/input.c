@@ -1903,7 +1903,7 @@ YoriShProcessKeyUp(
     if ((InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
         Buffer->NumericKeyValue != 0) {
 
-        CHAR SmallKeyValue = (CHAR)Buffer->NumericKeyValue;
+        UCHAR SmallKeyValue = (UCHAR)Buffer->NumericKeyValue;
         TCHAR HostKeyValue[2];
 
         HostKeyValue[0] = HostKeyValue[1] = 0;
