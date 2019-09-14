@@ -1391,6 +1391,31 @@ YoriShConfigureInputSettings(
 }
 
 /**
+ Configure the console input and output state to be prepared for receiving
+ input as part of entering a command.  This is used when initially preparing
+ for input but also after invoking any command as part of tab completion or
+ suggestions which could have altered console state.
+
+ @param Buffer Pointer to the input buffer which specifies the console handles
+        as well as the state of the cursor.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShConfigureConsoleForInput(
+    __in PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    SetConsoleCursorInfo(Buffer->ConsoleOutputHandle, &Buffer->CursorInfo);
+    SetConsoleMode(Buffer->ConsoleInputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+    SetConsoleMode(Buffer->ConsoleOutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    YoriShConfigureInputSettings();
+    YoriShConfigureMouseForPrompt(Buffer->ConsoleInputHandle);
+    SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, TRUE);
+    return TRUE;
+}
+
+/**
  Clear the screen, redisplay the prompt and resume editing the current
  input buffer.
 
@@ -1713,6 +1738,7 @@ YoriShProcessKeyDown(
             } else {
                 YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_BACKWARDS);
             }
+            YoriShConfigureConsoleForInput(Buffer);
         } else if (Char == '\b') {
             if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
                 YoriShBackspace(Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
@@ -1758,6 +1784,7 @@ YoriShProcessKeyDown(
             Buffer->PreSearchOffset = Buffer->CurrentOffset;
         } else if (KeyCode == VK_TAB) {
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
+            YoriShConfigureConsoleForInput(Buffer);
         } else if (KeyCode == '\b') {
             if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
                 YoriShDeleteArgument(Buffer);
@@ -1768,6 +1795,7 @@ YoriShProcessKeyDown(
                CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED)) {
         if (KeyCode == VK_TAB) {
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
+            YoriShConfigureConsoleForInput(Buffer);
         }
     } else if (CtrlMask == ENHANCED_KEY) {
         if (YoriShProcessEnhancedKeyDown(Buffer, InputRecord, TerminateInput)) {
@@ -1783,8 +1811,10 @@ YoriShProcessKeyDown(
             YoriShMoveCursorToNextArgument(Buffer);
         } else if (KeyCode == VK_UP) {
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
+            YoriShConfigureConsoleForInput(Buffer);
         } else if (KeyCode == VK_DOWN) {
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
+            YoriShConfigureConsoleForInput(Buffer);
         } else if (KeyCode == VK_DELETE) {
             if (Buffer->HistoryEntryToUse != NULL) {
                 PYORI_LIST_ENTRY NewEntry = NULL;
@@ -2369,6 +2399,7 @@ YoriShProcessMouseScroll(
 
 
 
+
 /**
  Get a new expression from the user through the console.
 
@@ -2407,17 +2438,11 @@ YoriShGetExpressionFromConsole(
     Buffer.ConsoleInputHandle = InputHandle;
     Buffer.ConsoleOutputHandle = OutputHandle;
 
-    SetConsoleCursorInfo(OutputHandle, &Buffer.CursorInfo);
-    SetConsoleMode(InputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
-    SetConsoleMode(OutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-
     if (!YoriLibAllocateString(&Buffer.String, 256)) {
         return FALSE;
     }
 
-    YoriShConfigureInputSettings();
-    YoriShConfigureMouseForPrompt(InputHandle);
-    SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, TRUE);
+    YoriShConfigureConsoleForInput(&Buffer);
 
     while (TRUE) {
 
@@ -2534,6 +2559,7 @@ YoriShGetExpressionFromConsole(
                 if (err == WAIT_TIMEOUT) {
                     ASSERT(!SuggestionPopulated);
                     YoriShCompleteSuggestion(&Buffer);
+                    YoriShConfigureConsoleForInput(&Buffer);
                     SuggestionPopulated = TRUE;
                     Buffer.SuggestionDirty = TRUE;
                     if (Buffer.SuggestionString.LengthInChars > 0) {
