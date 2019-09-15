@@ -1013,7 +1013,7 @@ MoreDrawStatusLine(
                       FirstViewportLine,
                       LastViewportLine,
                       TotalLines,
-                      LastViewportLine * 100 / TotalLines,
+                      (DWORD)(LastViewportLine * 100 / TotalLines),
                       &MoreContext->SearchString);
     } else {
         YoriLibYPrintf(&LineToDisplay,
@@ -1022,7 +1022,7 @@ MoreDrawStatusLine(
                       FirstViewportLine,
                       LastViewportLine,
                       TotalLines,
-                      LastViewportLine * 100 / TotalLines);
+                      (DWORD)(LastViewportLine * 100 / TotalLines));
     }
 
     //
