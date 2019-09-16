@@ -1681,6 +1681,7 @@ YoriShPerformArgumentTabCompletion(
     DWORD CurrentExecContextArgOffset;
     BOOL ActiveExecContextArg;
     BOOL ExecutableFound;
+    BOOL KeepSorted;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_SH_TAB_COMPLETE_MATCH Match;
 
@@ -1734,6 +1735,7 @@ YoriShPerformArgumentTabCompletion(
     CurrentExecContextArg = 0;
     CurrentExecContextArgOffset = 0;
     CurrentExecContext = NULL;
+    KeepSorted = TRUE;
 
     if (!YoriShParseCmdContextToExecPlan(CmdContext, &ExecPlan, &CurrentExecContext, &ActiveExecContextArg, &CurrentExecContextArg, &CurrentExecContextArgOffset)) {
         return;
@@ -1763,11 +1765,16 @@ YoriShPerformArgumentTabCompletion(
 
         //
         //  The active argument is the first one, to launch a program.  Default
-        //  to handing it to executable completion.
+        //  to handing it to executable completion, and fall back to generic
+        //  files after that.
         //
 
-        CompletionAction.CompletionAction = CompletionActionTypeExecutablesAndBuiltins;
         YoriLibInitializeListHead(&CompletionAction.List);
+        YoriShPerformExecutableTabCompletion(TabContext, ExpandFullPath, TRUE);
+        CompletionAction.CompletionAction = CompletionActionTypeFilesAndDirectories;
+        if (YoriLibGetNextListEntry(&TabContext->MatchList, NULL) != NULL) {
+            KeepSorted = FALSE;
+        }
     } else {
 
         ASSERT(CurrentExecContext != NULL);
@@ -1798,13 +1805,13 @@ YoriShPerformArgumentTabCompletion(
 
     switch(CompletionAction.CompletionAction) {
         case CompletionActionTypeFilesAndDirectories:
-            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, TRUE, TRUE);
+            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, TRUE, KeepSorted);
             break;
         case CompletionActionTypeFiles:
-            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, FALSE, TRUE, TRUE);
+            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, FALSE, TRUE, KeepSorted);
             break;
         case CompletionActionTypeDirectories:
-            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, FALSE, TRUE);
+            YoriShPerformFileTabCompletion(TabContext, ExpandFullPath, TRUE, FALSE, KeepSorted);
             break;
         case CompletionActionTypeExecutables:
             YoriShPerformExecutableTabCompletion(TabContext, ExpandFullPath, FALSE);
