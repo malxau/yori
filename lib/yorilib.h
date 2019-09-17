@@ -405,6 +405,11 @@ YoriLibBuiltinSetEnvironmentStrings(
     __in PYORI_STRING NewEnvironment
     );
 
+BOOL
+YoriLibBuiltinRemoveEmptyVariables(
+    __inout PYORI_STRING Value
+    );
+
 // *** CABINET.C ***
 
 /**
@@ -2714,7 +2719,7 @@ YoriLibAddEnvironmentComponentToString(
 
 BOOL
 YoriLibAddEnvironmentComponentReturnString(
-    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING EnvironmentVariable,
     __in PYORI_STRING NewComponent,
     __in BOOL InsertAtFront,
     __out PYORI_STRING Result
@@ -2729,7 +2734,7 @@ YoriLibAddEnvironmentComponent(
 
 BOOL
 YoriLibRemoveEnvironmentComponentReturnString(
-    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING EnvironmentVariable,
     __in PYORI_STRING ComponentToRemove,
     __out PYORI_STRING Result
     );
