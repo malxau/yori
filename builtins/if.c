@@ -4,7 +4,7 @@
  * Yori shell invoke an expression and perform different actions based on
  * the result
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -211,19 +211,29 @@ YoriCmd_IF(
     BOOL ArgumentUnderstood;
     BOOL Result;
     YORI_STRING CmdLine;
+    YORI_STRING EscapedCmdLine;
     DWORD ErrorLevel;
     DWORD CharIndex;
     DWORD i;
     DWORD StartArg = 0;
+    DWORD EscapedStartArg = 0;
     YORI_STRING TestCommand;
     YORI_STRING TrueCommand;
     YORI_STRING FalseCommand;
     YORI_STRING Arg;
     DWORD SavedErrorLevel;
 
+    DWORD EscapedArgC;
+    PYORI_STRING EscapedArgV;
+
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
     SavedErrorLevel = YoriCallGetErrorLevel();
+
+    if (!YoriCallGetEscapedArguments(&EscapedArgC, &EscapedArgV)) {
+        EscapedArgC = ArgC;
+        EscapedArgV = ArgV;
+    }
 
     for (i = 1; i < ArgC; i++) {
 
@@ -235,7 +245,7 @@ YoriCmd_IF(
                 IfHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2019"));
                 return EXIT_SUCCESS;
             }
         } else {
@@ -249,12 +259,34 @@ YoriCmd_IF(
         }
     }
 
-    if (StartArg == 0) {
+    for (i = 1; i < EscapedArgC; i++) {
+        if (!YoriLibIsCommandLineOption(&EscapedArgV[i], &Arg)) {
+            EscapedStartArg = i;
+            break;
+        }
+    }
+
+    if (StartArg == 0 || EscapedStartArg == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("if: missing argument\n"));
         return EXIT_FAILURE;
     }
 
+    //
+    //  Parse the arguments including escape characters.  This will be used
+    //  for the test condition.
+    //
+
+    if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - EscapedStartArg, &EscapedArgV[EscapedStartArg], FALSE, &EscapedCmdLine)) {
+        return EXIT_FAILURE;
+    }
+
+    //
+    //  Parse the arguments after removing escape characters.  This will be used
+    //  for the execution conditions.
+    //
+
     if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &CmdLine)) {
+        YoriLibFreeStringContents(&EscapedCmdLine);
         return EXIT_FAILURE;
     }
 
@@ -266,14 +298,18 @@ YoriCmd_IF(
     Arg.StartOfString = CmdLine.StartOfString;
     Arg.LengthInChars = CmdLine.LengthInChars;
 
-    TestCommand.StartOfString = CmdLine.StartOfString;
-    TestCommand.LengthInChars = CmdLine.LengthInChars;
-    if (IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
+    TestCommand.StartOfString = EscapedCmdLine.StartOfString;
+    TestCommand.LengthInChars = EscapedCmdLine.LengthInChars;
+    if (IfFindOffsetOfNextComponent(&TestCommand, &CharIndex)) {
         TestCommand.LengthInChars = CharIndex;
     }
 
-    Arg.StartOfString += TestCommand.LengthInChars;
-    Arg.LengthInChars -= TestCommand.LengthInChars;
+    if (!IfFindOffsetOfNextComponent(&Arg, &CharIndex)) {
+        CharIndex = Arg.LengthInChars;
+    }
+
+    Arg.StartOfString += CharIndex;
+    Arg.LengthInChars -= CharIndex;
 
     if (Arg.LengthInChars > 0) {
         Arg.StartOfString++;
@@ -297,7 +333,8 @@ YoriCmd_IF(
         }
     }
 
-    IfExpandRedirectOperators(&TestCommand);
+    YoriLibBuiltinRemoveEmptyVariables(&TestCommand);
+    TestCommand.StartOfString[TestCommand.LengthInChars] = '\0';
 
     Result = YoriCallExecuteExpression(&TestCommand);
     if (!Result) {
@@ -313,6 +350,7 @@ YoriCmd_IF(
             if (!Result) {
                 YoriLibFreeStringContents(&TestCommand);
                 YoriLibFreeStringContents(&CmdLine);
+                YoriLibFreeStringContents(&EscapedCmdLine);
                 return EXIT_FAILURE;
             }
         }
@@ -322,6 +360,7 @@ YoriCmd_IF(
             if (!Result) {
                 YoriLibFreeStringContents(&TestCommand);
                 YoriLibFreeStringContents(&CmdLine);
+                YoriLibFreeStringContents(&EscapedCmdLine);
                 return EXIT_FAILURE;
             }
         }
@@ -329,6 +368,7 @@ YoriCmd_IF(
 
     YoriLibFreeStringContents(&TestCommand);
     YoriLibFreeStringContents(&CmdLine);
+    YoriLibFreeStringContents(&EscapedCmdLine);
     return SavedErrorLevel;
 }
 

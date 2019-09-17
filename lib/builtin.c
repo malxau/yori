@@ -117,5 +117,101 @@ YoriLibBuiltinSetEnvironmentStrings(
     return TRUE;
 }
 
+/**
+ Normally when running a command if a variable does not define any contents,
+ the variable name is preserved in the command.  This does not occur with the
+ set or if command, where if a variable contains no contents the variable name
+ is removed from the result.  Unfortunately this is ambiguous when the variable
+ name is found, because we don't know if the variable was not expanded by the
+ shell due to no contents or because it was escaped.  So if it has no contents
+ it is removed here.  But this still can't distinguish between an escaped
+ variable that points to something and an escaped variable which points to
+ nothing, both of which presumably should be retained.
+
+ @param Value Pointer to a string containing the value part of the set
+        command (ie., what to set a variable to.)
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibBuiltinRemoveEmptyVariables(
+    __inout PYORI_STRING Value
+    )
+{
+    DWORD StartOfVariableName;
+    DWORD ReadIndex = 0;
+    DWORD WriteIndex = 0;
+
+    while (ReadIndex < Value->LengthInChars) {
+        if (YoriLibIsEscapeChar(Value->StartOfString[ReadIndex])) {
+
+            //
+            //  If the character is an escape, copy it to the destination
+            //  and skip the check for the environment variable character
+            //  so we fall into the below case and copy the next character
+            //  too
+            //
+
+            if (ReadIndex != WriteIndex) {
+                Value->StartOfString[WriteIndex] = Value->StartOfString[ReadIndex];
+            }
+            ReadIndex++;
+            WriteIndex++;
+
+        } else if (Value->StartOfString[ReadIndex] == '%') {
+
+            //
+            //  We found the first %, scan ahead looking for the next
+            //  one
+            //
+
+            StartOfVariableName = ReadIndex;
+            do {
+                if (YoriLibIsEscapeChar(Value->StartOfString[ReadIndex])) {
+                    ReadIndex++;
+                }
+                ReadIndex++;
+            } while (ReadIndex < Value->LengthInChars && Value->StartOfString[ReadIndex] != '%');
+
+            //
+            //  If we found a well formed variable, check if it refers
+            //  to anything.  If it does, that means the shell didn't
+            //  expand it because it was escaped, so preserve it here.
+            //  If it doesn't, that means it may not refer to anything,
+            //  so remove it.
+            //
+
+            if (ReadIndex < Value->LengthInChars && Value->StartOfString[ReadIndex] == '%') {
+                YORI_STRING YsVariableName;
+                YORI_STRING YsVariableValue;
+
+                YsVariableName.StartOfString = &Value->StartOfString[StartOfVariableName + 1];
+                YsVariableName.LengthInChars = ReadIndex - StartOfVariableName - 1;
+
+                ReadIndex++;
+                YoriLibInitEmptyString(&YsVariableValue);
+                if (YoriCallGetEnvironmentVariable(&YsVariableName, &YsVariableValue)) {
+                    if (WriteIndex != StartOfVariableName) {
+                        memmove(&Value->StartOfString[WriteIndex], &Value->StartOfString[StartOfVariableName], (ReadIndex - StartOfVariableName) * sizeof(TCHAR));
+                    }
+                    WriteIndex += (ReadIndex - StartOfVariableName);
+                    YoriCallFreeYoriString(&YsVariableValue);
+                }
+                continue;
+            } else {
+                ReadIndex = StartOfVariableName;
+            }
+        }
+        if (ReadIndex != WriteIndex) {
+            Value->StartOfString[WriteIndex] = Value->StartOfString[ReadIndex];
+        }
+        ReadIndex++;
+        WriteIndex++;
+    }
+    Value->LengthInChars = WriteIndex;
+    return TRUE;
+}
+
+
 
 // vim:sw=4:ts=4:et:
