@@ -1,9 +1,9 @@
 /**
- * @file input.c
+ * @file sh/input.c
  *
  * Yori shell command entry from a console
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,7 +33,9 @@
  uses a preexisting handle and screen buffer info structure which it keeps
  up to date for repetitive calling.
 
- @param ConsoleHandle A handle to the console output.
+ @param Buffer Pointer to the input buffer which includes a handle to the
+        console device and any selections whose state need to be updated on
+        scroll.
 
  @param ScreenInfo Pointer to information about the current screen layout.
         This function may scroll the buffer, but if it does, it will update
@@ -49,7 +51,7 @@
  */
 BOOL
 YoriShDetermineCellLocationIfMovedCacheResult(
-    __in HANDLE ConsoleHandle,
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
     __inout PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
     __in INT PlacesToMove,
     __out_opt PCOORD NewLocation
@@ -107,13 +109,17 @@ YoriShDetermineCellLocationIfMovedCacheResult(
 
         NewChar.Char.UnicodeChar = ' ';
         NewChar.Attributes = ScreenInfo->wAttributes;
-        if (!ScrollConsoleScreenBuffer(ConsoleHandle, &ContentsToPreserve, NULL, Origin, &NewChar)) {
+        if (!ScrollConsoleScreenBuffer(Buffer->ConsoleOutputHandle, &ContentsToPreserve, NULL, Origin, &NewChar)) {
             return FALSE;
         }
 
         ScreenInfo->dwCursorPosition.Y = (WORD)(ScreenInfo->dwCursorPosition.Y - LinesToMove);
-        if (!SetConsoleCursorPosition(ConsoleHandle, ScreenInfo->dwCursorPosition)) {
+        if (!SetConsoleCursorPosition(Buffer->ConsoleOutputHandle, ScreenInfo->dwCursorPosition)) {
             return FALSE;
+        }
+
+        if (YoriLibIsPreviousSelectionActive(&Buffer->Mouseover)) {
+            YoriLibNotifyScrollBufferMoved(&Buffer->Mouseover, (SHORT)(-1 * LinesToMove));
         }
 
         NewPosition.Y = (WORD)(NewPosition.Y - LinesToMove);
@@ -131,6 +137,10 @@ YoriShDetermineCellLocationIfMovedCacheResult(
  number of cells.  Note the input value is signed, as this routine can move
  forwards (positive values) or backwards (negative values.)
 
+ @param Buffer Pointer to the input buffer which includes a handle to the
+        console device and any selections whose state need to be updated on
+        scroll.
+
  @param PlacesToMove The number of cells to move relative to the cursor.
 
  @param NewLocation If specified, on successful completion populated with the
@@ -141,19 +151,18 @@ YoriShDetermineCellLocationIfMovedCacheResult(
  */
 BOOL
 YoriShDetermineCellLocationIfMoved(
+    __in PYORI_SH_INPUT_BUFFER Buffer,
     __in INT PlacesToMove,
     __out_opt PCOORD NewLocation
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    HANDLE ConsoleHandle;
 
-    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (!GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo)) {
+    if (!GetConsoleScreenBufferInfo(Buffer->ConsoleOutputHandle, &ScreenInfo)) {
         return FALSE;
     }
 
-    return YoriShDetermineCellLocationIfMovedCacheResult(ConsoleHandle, &ScreenInfo, PlacesToMove, NewLocation);
+    return YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, PlacesToMove, NewLocation);
 }
 
 /**
@@ -214,18 +223,23 @@ YoriShStringOffsetFromCoordinates(
  as this routine can move forwards (positive values) or backwards (negative
  values.)
 
+ @param Buffer Pointer to the input buffer which includes a handle to the
+        console device and any selections whose state need to be updated on
+        scroll.
+
  @param PlacesToMove The number of cells to move the cursor.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriShMoveCursor(
+    __in PYORI_SH_INPUT_BUFFER Buffer,
     __in INT PlacesToMove
     )
 {
     COORD NewPosition;
-    if (YoriShDetermineCellLocationIfMoved(PlacesToMove, &NewPosition)) {
-        if (SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), NewPosition)) {
+    if (YoriShDetermineCellLocationIfMoved(Buffer, PlacesToMove, &NewPosition)) {
+        if (SetConsoleCursorPosition(Buffer->ConsoleOutputHandle, NewPosition)) {
             return TRUE;
         }
     }
@@ -237,7 +251,9 @@ YoriShMoveCursor(
  as this routine can move forwards (positive values) or backwards (negative
  values.)
 
- @param ConsoleHandle A handle to the console output.
+ @param Buffer Pointer to the input buffer which includes a handle to the
+        console device and any selections whose state need to be updated on
+        scroll.
 
  @param ScreenInfo Pointer to information about the current screen layout.
         This function may scroll the buffer, but if it does, it will update
@@ -249,14 +265,14 @@ YoriShMoveCursor(
  */
 BOOL
 YoriShMoveCursorCacheResult(
-    __in HANDLE ConsoleHandle,
+    __in PYORI_SH_INPUT_BUFFER Buffer,
     __inout PCONSOLE_SCREEN_BUFFER_INFO ScreenInfo,
     __in INT PlacesToMove
     )
 {
     COORD NewPosition;
-    if (YoriShDetermineCellLocationIfMovedCacheResult(ConsoleHandle, ScreenInfo, PlacesToMove, &NewPosition)) {
-        if (SetConsoleCursorPosition(ConsoleHandle, NewPosition)) {
+    if (YoriShDetermineCellLocationIfMovedCacheResult(Buffer, ScreenInfo, PlacesToMove, &NewPosition)) {
+        if (SetConsoleCursorPosition(Buffer->ConsoleOutputHandle, NewPosition)) {
             return TRUE;
         }
     }
@@ -397,10 +413,10 @@ YoriShDisplayAfterKeyPress(
         //
 
         if (Buffer->SuggestionString.LengthInChars > 0) {
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars, &SuggestionPosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars, &SuggestionPosition)) {
                 return FALSE;
             }
         }
@@ -412,20 +428,20 @@ YoriShDisplayAfterKeyPress(
                 NumberToWrite = Buffer->DirtyLength;
             }
 
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset + NumberToWrite, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset + NumberToWrite, NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset, &WritePosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset, &WritePosition)) {
                 return FALSE;
             }
         }
 
 
         if (NumberToFill) {
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill, NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(hConsole, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, &FillPosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, &FillPosition)) {
                 return FALSE;
             }
         }
@@ -439,7 +455,7 @@ YoriShDisplayAfterKeyPress(
             //  and render the text.
             //
 
-            if (!YoriShMoveCursorCacheResult(hConsole, &ScreenInfo, Buffer->CurrentOffset - Buffer->PreviousCurrentOffset)) {
+            if (!YoriShMoveCursorCacheResult(Buffer, &ScreenInfo, Buffer->CurrentOffset - Buffer->PreviousCurrentOffset)) {
                 return FALSE;
             }
 
@@ -621,7 +637,7 @@ YoriShTerminateInput(
     YoriLibCleanupSelection(&Buffer->Selection);
     YoriLibCleanupSelection(&Buffer->Mouseover);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
-    YoriShMoveCursor(Buffer->String.LengthInChars - Buffer->CurrentOffset);
+    YoriShMoveCursor(Buffer, Buffer->String.LengthInChars - Buffer->CurrentOffset);
     YoriShConfigureMouseForPrograms(Buffer->ConsoleInputHandle);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
 }
@@ -1469,14 +1485,14 @@ YoriShSelectLeftChar(
     COORD StartCoord;
     COORD NewCoord;
     if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
-        if (!YoriShDetermineCellLocationIfMoved(0, &StartCoord)) {
+        if (!YoriShDetermineCellLocationIfMoved(Buffer, 0, &StartCoord)) {
             return FALSE;
         }
     } else {
         StartCoord.X = Buffer->Selection.CurrentlyDisplayed.Left;
         StartCoord.Y = Buffer->Selection.CurrentlyDisplayed.Top;
     }
-    if (!YoriShDetermineCellLocationIfMoved(-1, &NewCoord)) {
+    if (!YoriShDetermineCellLocationIfMoved(Buffer, -1, &NewCoord)) {
         return FALSE;
     }
 
@@ -1517,7 +1533,7 @@ YoriShSelectRightChar(
     COORD StartCoord;
     COORD NewCoord;
     if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
-        if (!YoriShDetermineCellLocationIfMoved(0, &StartCoord)) {
+        if (!YoriShDetermineCellLocationIfMoved(Buffer, 0, &StartCoord)) {
             return FALSE;
         }
     } else {
@@ -1525,7 +1541,7 @@ YoriShSelectRightChar(
         StartCoord.Y = Buffer->Selection.CurrentlyDisplayed.Top;
     }
 
-    if (!YoriShDetermineCellLocationIfMoved(1, &NewCoord)) {
+    if (!YoriShDetermineCellLocationIfMoved(Buffer, 1, &NewCoord)) {
         return FALSE;
     }
 
