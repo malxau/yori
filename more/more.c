@@ -136,6 +136,13 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+    //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
     if (StartArg == 0 || StartArg == ArgC) {
         InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay);
     } else {

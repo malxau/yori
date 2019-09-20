@@ -218,6 +218,13 @@ ENTRYPOINT(
     }
 
     //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
+    //
     //  If we have a file name, read it; otherwise read from stdin
     //
 
@@ -323,7 +330,13 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
 
-        hSource = CreateFile(FileName.StartOfString, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,NULL);
+        hSource = CreateFile(FileName.StartOfString,
+                             GENERIC_READ,
+                             FILE_SHARE_READ|FILE_SHARE_DELETE,
+                             NULL,
+                             OPEN_EXISTING,
+                             FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
+                             NULL);
         if (hSource == INVALID_HANDLE_VALUE) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cvtvt: could not open file, error %i\n"), (int)GetLastError());
             return EXIT_FAILURE;

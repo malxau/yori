@@ -238,7 +238,7 @@ YoriLibCabFciFileOpen(
                         ShareMode,
                         NULL,
                         Disposition,
-                        FILE_ATTRIBUTE_NORMAL,
+                        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                         NULL);
     return (DWORD_PTR)hFile;
 }
@@ -406,7 +406,7 @@ YoriLibCabFileOpenForExtract(
                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                            NULL,
                            CREATE_ALWAYS,
-                           FILE_ATTRIBUTE_NORMAL,
+                           FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                            NULL);
 
         if (hFile != INVALID_HANDLE_VALUE) {
@@ -445,7 +445,7 @@ YoriLibCabFileOpenForExtract(
                                    FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                    NULL,
                                    CREATE_NEW,
-                                   FILE_ATTRIBUTE_NORMAL,
+                                   FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                                    NULL);
 
                 if (hFile == INVALID_HANDLE_VALUE) {

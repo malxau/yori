@@ -2321,6 +2321,11 @@ YoriLibDoesProcessHave32BitPeb(
     __in HANDLE ProcessHandle
     );
 
+// *** PRIV.C ***
+
+BOOL
+YoriLibEnableBackupPrivilege();
+
 // *** RECYCLE.C ***
 
 BOOL

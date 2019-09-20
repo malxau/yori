@@ -241,6 +241,13 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+    //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
     LsofContext.BufferLength = 16 * 1024;
     LsofContext.Buffer = YoriLibMalloc(LsofContext.BufferLength);
     if (LsofContext.Buffer == NULL) {

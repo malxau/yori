@@ -300,6 +300,13 @@ ENTRYPOINT(
     YoriLibCancelEnable();
 #endif
 
+    //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
     MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_DIRECTORY_CONTENTS;
     if (Recursive) {
         MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;

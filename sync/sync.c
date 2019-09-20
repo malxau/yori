@@ -310,6 +310,13 @@ ENTRYPOINT(
     }
 
     //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
+    //
     //  If no file name is specified, we have nothing to flush.
     //
 

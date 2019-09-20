@@ -58,7 +58,6 @@ SdirAppInitialize()
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    HANDLE ProcessToken;
     DWORD CurrentMode;
 
     Opts = YoriLibMalloc(sizeof(SDIR_OPTS));
@@ -164,30 +163,12 @@ SdirAppInitialize()
         DllKernel32.pWow64DisableWow64FsRedirection(&DontCare);
     }
 
-    YoriLibLoadAdvApi32Functions();
-
     //
     //  Attempt to enable backup privilege.  This allows us to enumerate and recurse
     //  through objects which normally ACLs would prevent.
     //
 
-    if (DllAdvApi32.pOpenProcessToken != NULL &&
-        DllAdvApi32.pLookupPrivilegeValueW != NULL &&
-        DllAdvApi32.pAdjustTokenPrivileges != NULL &&
-        DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &ProcessToken)) {
-        struct {
-            TOKEN_PRIVILEGES TokenPrivileges;
-            LUID_AND_ATTRIBUTES BackupPrivilege;
-        } PrivilegesToChange;
-
-        DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_BACKUP_NAME, &PrivilegesToChange.TokenPrivileges.Privileges[0].Luid);
-
-        PrivilegesToChange.TokenPrivileges.PrivilegeCount = 1;
-        PrivilegesToChange.TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-        DllAdvApi32.pAdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL);
-        CloseHandle(ProcessToken);
-    }
+    YoriLibEnableBackupPrivilege();
 
     //
     //  Grab the version of the running OS so we can highlight binaries that

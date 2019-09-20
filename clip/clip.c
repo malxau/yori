@@ -782,9 +782,21 @@ ENTRYPOINT(
             for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
                 if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
                     if (!Paste) {
-                        hFile = CreateFile(ArgV[CurrentArg].StartOfString, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,NULL);
+                        hFile = CreateFile(ArgV[CurrentArg].StartOfString,
+                                           GENERIC_READ,
+                                           FILE_SHARE_READ|FILE_SHARE_DELETE,
+                                           NULL,
+                                           OPEN_EXISTING,
+                                           FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
+                                           NULL);
                     } else {
-                        hFile = CreateFile(ArgV[CurrentArg].StartOfString, GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_DELETE, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,NULL);
+                        hFile = CreateFile(ArgV[CurrentArg].StartOfString,
+                                           GENERIC_WRITE,
+                                           FILE_SHARE_READ|FILE_SHARE_DELETE,
+                                           NULL,
+                                           OPEN_ALWAYS,
+                                           FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
+                                           NULL);
                     }
                     if (hFile == INVALID_HANDLE_VALUE) {
                         Err = GetLastError();

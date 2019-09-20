@@ -131,6 +131,13 @@ YoriShInit()
     YORI_SH_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = YoriShBuiltins;
 
     //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
+    //
     //  Translate the constant builtin function mapping into dynamic function
     //  mappings.
     //
@@ -489,7 +496,7 @@ YoriShDisplayWarnings()
                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                NULL,
                                OPEN_EXISTING,
-                               FILE_ATTRIBUTE_NORMAL,
+                               FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                                NULL);
         if (ExeHandle != INVALID_HANDLE_VALUE) {
             FILETIME CreationTime;

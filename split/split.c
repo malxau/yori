@@ -123,7 +123,13 @@ SplitOpenTargetForCurrentPart(
     YoriLibSPrintf(NewFileName, _T("%y%y"), &SplitContext->Prefix, &NumberString);
     YoriLibFreeStringContents(&NumberString);
 
-    hDestFile = CreateFile(NewFileName, GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    hDestFile = CreateFile(NewFileName,
+                           GENERIC_WRITE,
+                           FILE_SHARE_READ|FILE_SHARE_DELETE,
+                           NULL,
+                           CREATE_ALWAYS,
+                           FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+                           NULL);
     if (hDestFile == INVALID_HANDLE_VALUE) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
@@ -277,7 +283,7 @@ SplitJoin(
                               FILE_SHARE_READ | FILE_SHARE_DELETE,
                               NULL,
                               CREATE_ALWAYS,
-                              FILE_ATTRIBUTE_NORMAL,
+                              FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                               NULL);
 
     if (TargetHandle == NULL || TargetHandle == INVALID_HANDLE_VALUE) {
@@ -311,7 +317,13 @@ SplitJoin(
         YoriLibSPrintf(FragmentFileName, _T("%y%y"), Prefix, &NumberString);
         YoriLibFreeStringContents(&NumberString);
 
-        SourceHandle = CreateFile(FragmentFileName, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        SourceHandle = CreateFile(FragmentFileName,
+                                  GENERIC_READ,
+                                  FILE_SHARE_READ|FILE_SHARE_DELETE,
+                                  NULL,
+                                  OPEN_EXISTING,
+                                  FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+                                  NULL);
         if (SourceHandle == INVALID_HANDLE_VALUE) {
             LastError = GetLastError();
             if (LastError == ERROR_FILE_NOT_FOUND && CurrentFragment > 0) {
@@ -510,6 +522,13 @@ ENTRYPOINT(
         }
 
         //
+        //  Attempt to enable backup privilege so an administrator can access more
+        //  objects successfully.
+        //
+
+        YoriLibEnableBackupPrivilege();
+
+        //
         //  If no file name is specified, use stdin; otherwise open
         //  the file and use that
         //
@@ -537,7 +556,7 @@ ENTRYPOINT(
                                     FILE_SHARE_READ | FILE_SHARE_DELETE,
                                     NULL,
                                     OPEN_EXISTING,
-                                    FILE_ATTRIBUTE_NORMAL,
+                                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                                     NULL);
 
             if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {

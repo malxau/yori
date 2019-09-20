@@ -294,7 +294,7 @@ YoriLibRenameFileToBackupName(
                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                NULL,
                                OPEN_EXISTING,
-                               FILE_FLAG_DELETE_ON_CLOSE,
+                               FILE_FLAG_DELETE_ON_CLOSE | FILE_FLAG_BACKUP_SEMANTICS,
                                NULL);
 
         if (hDeadFile != INVALID_HANDLE_VALUE) {

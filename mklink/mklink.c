@@ -196,7 +196,13 @@ MklinkCreateJunction(
             return FALSE;
         }
     }
-    NewFileHandle = CreateFile(NewLink, FILE_WRITE_ATTRIBUTES | FILE_WRITE_DATA | SYNCHRONIZE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
+    NewFileHandle = CreateFile(NewLink,
+                               FILE_WRITE_ATTRIBUTES | FILE_WRITE_DATA | SYNCHRONIZE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT,
+                               NULL);
     if (NewFileHandle == NULL || NewFileHandle == INVALID_HANDLE_VALUE) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
@@ -329,6 +335,13 @@ ENTRYPOINT(
         YoriLibFreeStringContents(&NewLinkName);
         return EXIT_FAILURE;
     }
+
+    //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
 
     ExitCode = EXIT_SUCCESS;
 

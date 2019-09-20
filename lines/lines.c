@@ -180,7 +180,7 @@ LinesFileFoundCallback(
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                 NULL,
                                 OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL,
+                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                                 NULL);
 
         if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
@@ -358,6 +358,13 @@ ENTRYPOINT(
 #if YORI_BUILTIN
     YoriLibCancelEnable();
 #endif
+
+    //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
 
     //
     //  If no file name is specified, use stdin; otherwise open

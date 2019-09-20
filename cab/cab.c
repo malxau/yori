@@ -617,6 +617,13 @@ ENTRYPOINT(
     YoriLibCancelEnable();
 #endif
 
+    //
+    //  Attempt to enable backup privilege so an administrator can access more
+    //  objects successfully.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
     if (CompressEachFile) {
         CAB_CREATE_CONTEXT CreateContext;
 

@@ -164,7 +164,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {
@@ -179,7 +179,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {
@@ -224,7 +224,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {
@@ -240,7 +240,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             OPEN_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {
@@ -255,7 +255,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {
@@ -307,7 +307,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {
@@ -323,7 +323,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             OPEN_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {
@@ -338,7 +338,7 @@ YoriShInitializeRedirection(
                             FILE_SHARE_DELETE | FILE_SHARE_READ,
                             &InheritHandle,
                             CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL,
+                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
                             NULL);
 
         if (Handle != INVALID_HANDLE_VALUE) {

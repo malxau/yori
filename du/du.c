@@ -761,54 +761,11 @@ DuFileFoundCallback(
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
         LARGE_INTEGER FileSize;
         FileSize = DuCalculateSpaceUsedByFile(DuContext, &DuContext->DirStack[Depth], FilePath, FileInfo);
-        //YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("   adding %lli bytes for %y to %y Depth %i\n"), FileSize.QuadPart, FilePath, &DuContext->DirStack[Depth].DirectoryName, Depth);
         DuContext->DirStack[Depth].SpaceConsumedThisDirectory += FileSize.QuadPart;
     }
 
     return TRUE;
 }
-
-/**
- Attempt to enable backup privilege to allow Administrators to enumerate and
- open more objects successfully.  If this fails the application may encounter
- more objects it cannot accurately account for, but it is not fatal, or
- unexpected.
-
- @return TRUE to indicate that the privilege enablement was attempted
-         successfully.
- */
-BOOL
-DuEnableBackupPrivilege()
-{
-    HANDLE ProcessToken;
-    YoriLibLoadAdvApi32Functions();
-
-    //
-    //  Attempt to enable backup privilege.  This allows us to enumerate and recurse
-    //  through objects which normally ACLs would prevent.
-    //
-
-    if (DllAdvApi32.pOpenProcessToken != NULL &&
-        DllAdvApi32.pLookupPrivilegeValueW != NULL &&
-        DllAdvApi32.pAdjustTokenPrivileges != NULL &&
-        DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &ProcessToken)) {
-        struct {
-            TOKEN_PRIVILEGES TokenPrivileges;
-            LUID_AND_ATTRIBUTES BackupPrivilege;
-        } PrivilegesToChange;
-
-        DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_BACKUP_NAME, &PrivilegesToChange.TokenPrivileges.Privileges[0].Luid);
-
-        PrivilegesToChange.TokenPrivileges.PrivilegeCount = 1;
-        PrivilegesToChange.TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-
-        DllAdvApi32.pAdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL);
-        CloseHandle(ProcessToken);
-    }
-
-    return TRUE;
-}
-
 
 /**
  A callback that is invoked when a directory cannot be successfully enumerated.
@@ -969,7 +926,7 @@ ENTRYPOINT(
 
     YoriLibVtStringForTextAttribute(&DuContext.FileSizeColorString, DuContext.FileSizeColor.Ctrl, DuContext.FileSizeColor.Win32Attr);
 
-    DuEnableBackupPrivilege();
+    YoriLibEnableBackupPrivilege();
 
 #if YORI_BUILTIN
     YoriLibCancelEnable();

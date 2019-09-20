@@ -35,10 +35,11 @@ OBJS=\
 	 list.obj     \
 	 malloc.obj   \
 	 osver.obj    \
-	 recycle.obj  \
 	 path.obj     \
 	 printf.obj   \
 	 printfa.obj  \
+	 priv.obj     \
+	 recycle.obj  \
 	 scut.obj     \
 	 select.obj   \
 	 string.obj   \
