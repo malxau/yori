@@ -1407,6 +1407,25 @@ YoriShConfigureInputSettings(
 }
 
 /**
+ Configure the console to support executing an external command as part of
+ tab completion or suggestions.
+
+ @param Buffer Pointer to the input buffer which specifies the console
+        handles.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriShConfigureConsoleForTabComplete(
+    __in PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    UNREFERENCED_PARAMETER(Buffer);
+    SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, FALSE);
+    return TRUE;
+}
+
+/**
  Configure the console input and output state to be prepared for receiving
  input as part of entering a command.  This is used when initially preparing
  for input but also after invoking any command as part of tab completion or
@@ -1749,6 +1768,7 @@ YoriShProcessKeyDown(
                 YoriShClearInput(Buffer);
             }
         } else if (Char == '\t') {
+            YoriShConfigureConsoleForTabComplete(Buffer);
             if ((CtrlMask & SHIFT_PRESSED) == 0) {
                 YoriShTabCompletion(Buffer, 0);
             } else {
@@ -1799,6 +1819,7 @@ YoriShProcessKeyDown(
             Buffer->SearchMode = TRUE;
             Buffer->PreSearchOffset = Buffer->CurrentOffset;
         } else if (KeyCode == VK_TAB) {
+            YoriShConfigureConsoleForTabComplete(Buffer);
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
             YoriShConfigureConsoleForInput(Buffer);
         } else if (KeyCode == '\b') {
@@ -1810,6 +1831,7 @@ YoriShProcessKeyDown(
                CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||
                CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED)) {
         if (KeyCode == VK_TAB) {
+            YoriShConfigureConsoleForTabComplete(Buffer);
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
             YoriShConfigureConsoleForInput(Buffer);
         }
@@ -1826,9 +1848,11 @@ YoriShProcessKeyDown(
         } else if (KeyCode == VK_RIGHT) {
             YoriShMoveCursorToNextArgument(Buffer);
         } else if (KeyCode == VK_UP) {
+            YoriShConfigureConsoleForTabComplete(Buffer);
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
             YoriShConfigureConsoleForInput(Buffer);
         } else if (KeyCode == VK_DOWN) {
+            YoriShConfigureConsoleForTabComplete(Buffer);
             YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
             YoriShConfigureConsoleForInput(Buffer);
         } else if (KeyCode == VK_DELETE) {
@@ -2574,6 +2598,7 @@ YoriShGetExpressionFromConsole(
                 }
                 if (err == WAIT_TIMEOUT) {
                     ASSERT(!SuggestionPopulated);
+                    YoriShConfigureConsoleForTabComplete(&Buffer);
                     YoriShCompleteSuggestion(&Buffer);
                     YoriShConfigureConsoleForInput(&Buffer);
                     SuggestionPopulated = TRUE;
