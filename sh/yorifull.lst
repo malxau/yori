@@ -55,6 +55,7 @@
 ..\sponge\builtins.lib
 ..\start\builtins.lib
 ..\strcmp\builtins.lib
+..\stride\builtins.lib
 ..\sync\builtins.lib
 ..\tail\builtins.lib
 ..\tee\builtins.lib

@@ -115,6 +115,7 @@ DIRS=crt       \
      sponge    \
      start     \
      strcmp    \
+     stride    \
      sync      \
      tail      \
      tee       \

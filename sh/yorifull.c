@@ -389,6 +389,11 @@ YORI_CMD_BUILTIN YoriCmd_STRCMP;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YSTRIDE;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_SYNC;
 
 /**
@@ -574,6 +579,7 @@ YoriShBuiltins[] = {
                     {_T("YSPLIT"),    YoriCmd_YSPLIT},
                     {_T("YSPONGE"),   YoriCmd_YSPONGE},
                     {_T("YSTART"),    YoriCmd_YSTART},
+                    {_T("YSTRIDE"),   YoriCmd_YSTRIDE},
                     {_T("YTITLE"),    YoriCmd_YTITLE},
                     {_T("YTYPE"),     YoriCmd_YTYPE},
                     {_T("YVOL"),      YoriCmd_YVOL},
@@ -630,9 +636,10 @@ YoriShDefaultAliasEntries[] = {
     {_T("sha384sum"),_T("yhash -a sha384 $*$")},
     {_T("sha512sum"),_T("yhash -a sha512 $*$")},
     {_T("shutdn"),   _T("yshutdn $*$")},
-    {_T("start"),    _T("ystart $*$")},
     {_T("split"),    _T("ysplit $*$")},
     {_T("sponge"),   _T("ysponge $*$")},
+    {_T("start"),    _T("ystart $*$")},
+    {_T("stride"),   _T("ystride $*$")},
     {_T("time"),     _T("ydate -t $*$")},
     {_T("title"),    _T("ytitle $*$")},
     {_T("type"),     _T("ytype $*$")},

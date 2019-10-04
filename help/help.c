@@ -159,6 +159,7 @@ CHAR strHelpHelpText4[] =
         "SPONGE    Read input into memory then output, allowing rewrite of input\n"
         "START     Ask the shell to open a file\n"
         "STRCMP    Compare two strings\n"
+        "STRIDE    Output lines periodically from input stream\n"
         "SYNC      Flush a file, directory or volume\n"
         "TAIL      Output the final lines of one or more files\n"
         "TEE       Output the contents of standard input to standard output and a file\n"
