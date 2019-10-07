@@ -288,10 +288,6 @@ clean:
 	@if exist *.exe.manifest erase *.exe.manifest
 
 install:
-	@if not exist $(BINDIR) $(MKDIR) $(BINDIR) >NUL
-	@if not exist $(BINDIR)\YoriInit.d $(MKDIR) $(BINDIR)\YoriInit.d >NUL
-	@if not exist $(MODDIR) $(MKDIR) $(MODDIR) >NUL
-	@if not exist $(SYMDIR) $(MKDIR) $(SYMDIR) >NUL
 	@if not "$(BINARIES)."=="." for %%i in ($(BINARIES)) do @copy %%i $(BINDIR) >NUL
 	@if not "$(BINARIES)."=="." for %%i in ($(BINARIES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
 	@if not "$(MODULES)."=="." for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL

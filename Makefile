@@ -135,7 +135,7 @@ DIRS=crt       \
 
 all.real: writeconfigcache
 	@$(CURRENTTIME)
-	@$(FOR) %%i in ($(BINDIR) $(SYMDIR) $(MODDIR)) do $(STARTCMD)@if not exist %%i $(MKDIR) %%i$(STARTCMD)
+	@$(FOR) %%i in ($(BINDIR) $(SYMDIR) $(MODDIR) $(BINDIR)\YoriInit.d) do $(STARTCMD)@if not exist %%i $(MKDIR) %%i$(STARTCMD)
 	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Compiling %%i & cd %%i & $(BUILD) compile READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(DIRS)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) link READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(SHDIRS)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) link READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
