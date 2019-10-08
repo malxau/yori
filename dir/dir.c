@@ -39,6 +39,7 @@ CHAR strDirHelpText[] =
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -color         Use file color highlighting\n"
+        "   -h             Hide hidden and system files\n"
         "   -m             Minimal display, file names only\n"
         "   -r             Display named streams\n"
         "   -s             Process files from all subdirectories\n"
@@ -108,6 +109,12 @@ typedef struct _DIR_CONTEXT {
      directories, FALSE if it is one directory only.
      */
     BOOLEAN Recursive;
+
+    /**
+     TRUE if hidden and system files should be hidden.  FALSE if they should
+     be displayed.
+     */
+    BOOLEAN HideHidden;
 
     /**
      Records the total number of files processed.
@@ -509,6 +516,12 @@ DirFileFoundCallback(
             }
         }
         FilePart++;
+    }
+
+    if (DirContext->HideHidden &&
+        (FileInfo->dwFileAttributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) != 0) {
+
+        return TRUE;
     }
 
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
@@ -914,6 +927,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("color")) == 0) {
                 DisplayColor = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+                DirContext.HideHidden = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
                 DirContext.MinimalDisplay = TRUE;
