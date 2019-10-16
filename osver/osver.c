@@ -132,7 +132,8 @@ OSVER_BUILD_DESCRIPTION OsVerBuildDescriptions[] = {
     {16299, "Windows 10 RS3 1709"},
     {17134, "Windows 10 RS4 1803"},
     {17763, "Windows 10 RS5 1809/Server 2019"},
-    {18362, "Windows 10 19H1 1903"}
+    {18362, "Windows 10 19H1 1903"},
+    {18363, "Windows 10 19H2"}
 };
 
 /**
