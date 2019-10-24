@@ -277,6 +277,7 @@ YoriLibDecimalStringToInt(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibStringToNumberSpecifyBase(
     __in PYORI_STRING String,
@@ -358,6 +359,7 @@ YoriLibStringToNumberSpecifyBase(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibStringToNumber(
     __in PYORI_STRING String,
@@ -451,6 +453,7 @@ YoriLibStringToNumber(
          fail if passed a string with sufficient allocation to contain
          the result.
  */
+__success(return)
 BOOL
 YoriLibNumberToString(
     __inout PYORI_STRING String,
@@ -1146,10 +1149,11 @@ YoriLibFindRightMostCharacter(
          occurs if the input stream is not compliant hex, or is not aligned in
          two character pairs.
  */
+__success(return)
 BOOL
 YoriLibStringToHexBuffer(
     __in PYORI_STRING String,
-    __out PUCHAR Buffer,
+    __out_ecount(BufferSize) PUCHAR Buffer,
     __in DWORD BufferSize
     )
 {
@@ -1224,6 +1228,7 @@ YoriLibStringToHexBuffer(
 
  @return TRUE to indicate parse success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHexBufferToString(
     __in PUCHAR Buffer,
@@ -1335,9 +1340,10 @@ YoriLibStringToFileSize(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileSizeToString(
-    __out PYORI_STRING String,
+    __inout PYORI_STRING String,
     __in PLARGE_INTEGER FileSize
     )
 {
@@ -1402,6 +1408,7 @@ YoriLibFileSizeToString(
 
  @return TRUE to indicate success, FALSE to indicate parse failure.
  */
+__success(return)
 BOOL
 YoriLibStringToDate(
     __in PYORI_STRING String,
@@ -1470,6 +1477,7 @@ YoriLibStringToDate(
 
  @return TRUE to indicate success, FALSE to indicate parse failure.
  */
+__success(return)
 BOOL
 YoriLibStringToTime(
     __in PYORI_STRING String,
@@ -1525,6 +1533,7 @@ YoriLibStringToTime(
 
  @return TRUE to indicate success, FALSE to indicate parse failure.
  */
+__success(return)
 BOOL
 YoriLibStringToDateTime(
     __in PYORI_STRING String,

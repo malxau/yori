@@ -151,6 +151,17 @@ ForWaitForProcessToComplete(
     CloseHandle(ExecContext->HandleArray[Index]);
 
     for (Count = Index; Count < ExecContext->CurrentConcurrentCount - 1; Count++) {
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+        //
+        //  The "correct" annotation here would describe that HandleArray is
+        //  of TargetConcurrentCount elements, CurrentConcurrentCount of which
+        //  are readable, and CurrentConcurrentCount needs to be less than or
+        //  equal to TargetConcurrentCount.  This is something that I don't
+        //  see a way to express as of this writing.
+        //
+#pragma warning(suppress: 6001)
+#endif
         ExecContext->HandleArray[Count] = ExecContext->HandleArray[Count + 1];
     }
 

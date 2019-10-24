@@ -365,6 +365,7 @@ ZResolveSpecificationToFullPath(
 
  @return TRUE if a match was found, FALSE if it was not.
  */
+__success(return)
 BOOL
 ZBuildScoreboardAndSelectBest(
     __in PYORI_STRING UserSpecification,

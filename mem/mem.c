@@ -166,7 +166,7 @@ typedef struct _MEM_CONTEXT {
  */
 DWORD
 MemExpandVariables(
-    __out PYORI_STRING OutputBuffer,
+    __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
@@ -483,6 +483,14 @@ ENTRYPOINT(
         MemContext.AvailableVirtual.QuadPart = MemStatusEx.ullAvailVirtual;
     } else {
         MEMORYSTATUS MemStatus;
+        //
+        //  Warning about using a deprecated function and how we should use
+        //  GlobalMemoryStatusEx instead.  The analyzer isn't smart enough to
+        //  notice that when it's available, that's what we do.
+        //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 28159)
+#endif
         GlobalMemoryStatus(&MemStatus);
         MemContext.TotalPhysical.QuadPart = MemStatus.dwTotalPhys;
         MemContext.AvailablePhysical.QuadPart = MemStatus.dwAvailPhys;

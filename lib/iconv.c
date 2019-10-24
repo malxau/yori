@@ -153,6 +153,13 @@ YoriLibGetMultibyteOutputSizeNeeded(
     return Return;
 }
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(disable: 6054) // Buffer might not be NULL terminated.
+                               // This occurs when UTF16 invokes memcpy
+                               // and trusts the caller to provide sane
+                               // input
+#endif
+
 /**
  Convert a UTF16 string into the output encoding.
 
@@ -167,9 +174,9 @@ YoriLibGetMultibyteOutputSizeNeeded(
  */
 VOID
 YoriLibMultibyteOutput(
-    __in LPCTSTR InputStringBuffer,
+    __in_ecount(InputBufferLength) LPCTSTR InputStringBuffer,
     __in DWORD InputBufferLength,
-    __out LPSTR OutputStringBuffer,
+    __out_ecount(OutputBufferLength) LPSTR OutputStringBuffer,
     __in DWORD OutputBufferLength
     )
 {
@@ -234,9 +241,9 @@ YoriLibGetMultibyteInputSizeNeeded(
  */
 VOID
 YoriLibMultibyteInput(
-    __in LPCSTR InputStringBuffer,
+    __in_ecount(InputBufferLength) LPCSTR InputStringBuffer,
     __in DWORD InputBufferLength,
-    __out LPTSTR OutputStringBuffer,
+    __out_ecount(OutputBufferLength) LPTSTR OutputStringBuffer,
     __in DWORD OutputBufferLength
     )
 {

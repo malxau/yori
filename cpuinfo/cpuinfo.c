@@ -158,7 +158,7 @@ typedef struct _CPUINFO_CONTEXT {
  */
 DWORD
 CpuInfoExpandVariables(
-    __out PYORI_STRING OutputBuffer,
+    __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
@@ -556,6 +556,11 @@ CpuInfoLoadAndUpconvertProcessorInfo(
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Query failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
+
+    if (ProcInfo == NULL) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cpuinfo: no processors\n"));
         return FALSE;
     }
 

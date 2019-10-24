@@ -56,6 +56,7 @@ YoriLibIsEscapeChar(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibMakeInheritableHandle(
     __in HANDLE OriginalHandle,
@@ -177,6 +178,7 @@ YoriLibFreeWinErrorText(
  @return TRUE to indicate success, FALSE to indicate failure.  On failure,
          Win32 LastError will indicate the reason.
  */
+__success(return)
 BOOL
 YoriLibCreateDirectoryAndParents(
     __inout PYORI_STRING DirName
@@ -261,6 +263,7 @@ YoriLibCreateDirectoryAndParents(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRenameFileToBackupName(
     __in PYORI_STRING FullPath,

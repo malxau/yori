@@ -52,6 +52,7 @@ PYORI_API_ADD_ALIAS pYoriApiAddAlias;
 
  @return TRUE if the alias was successfully updated, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriCallAddAlias(
     __in PYORI_STRING Alias,
@@ -91,6 +92,7 @@ PYORI_API_ADD_HISTORY_STRING pYoriApiAddHistoryString;
 
  @return TRUE if the string was successfully added, FALSE if not.
  */
+__success(return)
 BOOL
 YoriCallAddHistoryString(
     __in PYORI_STRING NewCmd
@@ -132,6 +134,7 @@ PYORI_API_ADD_ALIAS pYoriApiAddSystemAlias;
 
  @return TRUE if the alias was successfully updated, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriCallAddSystemAlias(
     __in PYORI_STRING Alias,
@@ -149,8 +152,6 @@ YoriCallAddSystemAlias(
     }
     return pYoriApiAddSystemAlias(Alias, Value);
 }
-
-
 
 /**
  Prototype for the @ref YoriApiBuiltinRegister function.
@@ -176,6 +177,7 @@ PYORI_API_BUILTIN_REGISTER pYoriApiBuiltinRegister;
 
  @return TRUE if the callback was successfully updated, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriCallBuiltinRegister(
     __in PYORI_STRING BuiltinCmd,
@@ -218,6 +220,7 @@ PYORI_API_BUILTIN_UNREGISTER pYoriApiBuiltinUnregister;
 
  @return TRUE if the callback was successfully updated, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriCallBuiltinUnregister(
     __in PYORI_STRING BuiltinCmd,
@@ -257,6 +260,7 @@ PYORI_API_CLEAR_HISTORY_STRINGS pYoriApiClearHistoryStrings;
 
  @return TRUE if the history strings were successfully deleted, FALSE if not.
  */
+__success(return)
 BOOL
 YoriCallClearHistoryStrings(
     )
@@ -294,6 +298,7 @@ PYORI_API_DECREMENT_PROMPT_RECURSION_DEPTH pYoriApiDecrementPromptRecursionDepth
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallDecrementPromptRecursionDepth(
     )
@@ -334,6 +339,7 @@ PYORI_API_DELETE_ALIAS pYoriApiDeleteAlias;
  @return TRUE if the alias was successfully deleted, FALSE if it was not
          found.
  */
+__success(return)
 BOOL
 YoriCallDeleteAlias(
     __in PYORI_STRING Alias
@@ -373,6 +379,7 @@ PYORI_API_EXECUTE_BUILTIN pYoriApiExecuteBuiltin;
 
  @return TRUE to indicate it was successfully executed, FALSE otherwise.
  */
+__success(return)
 BOOL
 YoriCallExecuteBuiltin(
     __in PYORI_STRING Expression
@@ -414,6 +421,7 @@ PYORI_API_EXECUTE_EXPRESSION pYoriApiExecuteExpression;
 
  @return TRUE to indicate it was successfully executed, FALSE otherwise.
  */
+__success(return)
 BOOL
 YoriCallExecuteExpression(
     __in PYORI_STRING Expression
@@ -456,6 +464,7 @@ PYORI_API_EXPAND_ALIAS pYoriApiExpandAlias;
 
  @return TRUE to indicate expansion was performed, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriCallExpandAlias(
     __in PYORI_STRING CommandString,
@@ -574,6 +583,7 @@ PYORI_API_GET_ALIAS_STRINGS pYoriApiGetAliasStrings;
 
  @return TRUE to indicate success, or FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetAliasStrings(
     __out PYORI_STRING AliasStrings
@@ -617,6 +627,7 @@ PYORI_API_GET_ENVIRONMENT_VARIABLE pYoriApiGetEnvironmentVariable;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetEnvironmentVariable(
     __in PYORI_STRING VariableName,
@@ -696,6 +707,7 @@ PYORI_API_GET_ESCAPED_ARGUMENTS pYoriApiGetEscapedArguments;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetEscapedArguments(
     __out PDWORD ArgC,
@@ -743,6 +755,7 @@ PYORI_API_GET_HISTORY_STRINGS pYoriApiGetHistoryStrings;
 
  @return Return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetHistoryStrings(
     __in DWORD MaximumNumber,
@@ -796,6 +809,7 @@ PYORI_API_GET_JOB_INFORMATION pYoriApiGetJobInformation;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetJobInformation(
     __in DWORD JobId,
@@ -843,6 +857,7 @@ PYORI_API_GET_JOB_OUTPUT pYoriApiGetJobOutput;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetJobOutput(
     __in DWORD JobId,
@@ -927,6 +942,7 @@ PYORI_API_GET_SYSTEM_ALIAS_STRINGS pYoriApiGetSystemAliasStrings;
 
  @return TRUE to indicate success, or FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetSystemAliasStrings(
     __out PYORI_STRING AliasStrings
@@ -970,6 +986,7 @@ PYORI_API_GET_YORI_VERSION pYoriApiGetYoriVersion;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallGetYoriVersion(
     __out PDWORD MajorVersion,
@@ -1009,6 +1026,7 @@ PYORI_API_INCREMENT_PROMPT_RECURSION_DEPTH pYoriApiIncrementPromptRecursionDepth
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallIncrementPromptRecursionDepth(
     )
@@ -1052,6 +1070,7 @@ PYORI_API_PIPE_JOB_OUTPUT pYoriApiPipeJobOutput;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallPipeJobOutput(
     __in DWORD JobId,
@@ -1097,6 +1116,7 @@ PYORI_API_SET_DEFAULT_COLOR pYoriApiSetDefaultColor;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallSetDefaultColor(
     __in WORD NewDefaultColor
@@ -1139,6 +1159,7 @@ PYORI_API_SET_ENVIRONMENT_VARIABLE pYoriApiSetEnvironmentVariable;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriCallSetEnvironmentVariable(
     __in PYORI_STRING VariableName,
@@ -1183,6 +1204,7 @@ PYORI_API_SET_JOB_PRIORITY pYoriApiSetJobPriority;
  @return TRUE to indicate that the priority class was changed, FALSE if it
          was not.
  */
+__success(return)
 BOOL
 YoriCallSetJobPriority(
     __in DWORD JobId,
@@ -1224,6 +1246,7 @@ PYORI_API_SET_UNLOAD_ROUTINE pYoriApiSetUnloadRoutine;
  @return TRUE to indicate that the notification function was registered,
          FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriCallSetUnloadRoutine(
     __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
@@ -1264,6 +1287,7 @@ PYORI_API_TERMINATE_JOB pYoriApiTerminateJob;
  @return TRUE to indicate that the job was requested to terminate, FALSE if it
          was not.
  */
+__success(return)
 BOOL
 YoriCallTerminateJob(
     __in DWORD JobId

@@ -57,6 +57,7 @@ BOOL YoriShHistoryInitialized;
  @return TRUE to indicate an entry was successfully added, FALSE if it was
          not.
  */
+__success(return)
 BOOL
 YoriShAddToHistory(
     __in PYORI_STRING NewCmd
@@ -152,6 +153,7 @@ YoriShClearAllHistory()
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShInitHistory()
 {
@@ -216,6 +218,7 @@ YoriShInitHistory()
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShLoadHistoryFromFile()
 {
@@ -314,6 +317,7 @@ YoriShLoadHistoryFromFile()
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShSaveHistoryToFile()
 {
@@ -400,6 +404,7 @@ YoriShSaveHistoryToFile()
 
  @return Return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetHistoryStrings(
     __in DWORD MaximumNumber,
@@ -470,6 +475,7 @@ YoriShGetHistoryStrings(
  @return TRUE to indicate an entry was successfully added, FALSE if it was
          not.
  */
+__success(return)
 BOOL
 YoriShAddToHistoryAndReallocate(
     __in PYORI_STRING NewCmd

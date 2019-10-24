@@ -83,6 +83,7 @@ CONST LPTSTR SetupLocalPathsToCheck[] = {
          should be used, and FALSE to indicate default package locations
          should be used instead.
  */
+__success(return)
 BOOL
 SetupFindLocalPkgPath(
     __out PYORI_STRING LocalPath
@@ -585,6 +586,10 @@ SetupGetDefaultInstallDir(
             }
             InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
             if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6260) // sizeof*sizeof is used for character size
+                                // flexibility
+#endif
                 memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
                 InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
             } else {
@@ -607,6 +612,10 @@ SetupGetDefaultInstallDir(
             }
             InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
             if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6260) // sizeof*sizeof is used for character size
+                                // flexibility
+#endif
                 memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
                 InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
             } else {

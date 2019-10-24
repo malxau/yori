@@ -67,6 +67,7 @@ DWORD CachedBuildNumber;
  @param BuildNumber On successful completion, updated to contain the Windows
         build number.
  */
+__success(return)
 BOOL
 YoriLibGetOsVersionFromPeb(
     __out PDWORD MajorVersion,
@@ -96,6 +97,14 @@ YoriLibGetOsVersionFromPeb(
 
     return TRUE;
 }
+
+//
+//  Disable warning about using deprecated GetVersion.
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(disable: 28159)
+#endif
 
 /**
  Return Windows version numbers.
@@ -176,6 +185,7 @@ YoriLibGetOsVersion(
  @return TRUE to indicate the process is 32 bit, FALSE to indicate the target
          is 64 bit.
  */
+__success(return)
 BOOL
 YoriLibIsProcess32Bit(
     __in HANDLE ProcessHandle
@@ -215,6 +225,7 @@ YoriLibIsProcess32Bit(
 
  @return TRUE if the PEB is in 32 bit form, FALSE if it's in 64 bit form.
  */
+__success(return)
 BOOL
 YoriLibDoesProcessHave32BitPeb(
     __in HANDLE ProcessHandle

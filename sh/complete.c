@@ -236,7 +236,10 @@ YoriShFindFinalSlashIfSpecified(
 
  @param Context Pointer to the tab complete context to populate with the new
         match.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShAddExecutableToTabList(
     __in PYORI_STRING FoundPath,
@@ -1358,6 +1361,7 @@ typedef struct _YORI_SH_ARG_TAB_COMPLETION_ACTION {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShPerformListTabCompletion(
     __inout PYORI_SH_TAB_COMPLETE_CONTEXT TabContext,
@@ -1433,6 +1437,7 @@ YoriShPerformListTabCompletion(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShResolveTabCompletionStringToAction(
     __in PYORI_STRING TabCompletionString,
@@ -1731,10 +1736,6 @@ YoriShPerformArgumentTabCompletion(
     //  run), and find which program is the one the argument is for
     //
 
-    ActiveExecContextArg = FALSE;
-    CurrentExecContextArg = 0;
-    CurrentExecContextArgOffset = 0;
-    CurrentExecContext = NULL;
     KeepSorted = TRUE;
 
     if (!YoriShParseCmdContextToExecPlan(CmdContext, &ExecPlan, &CurrentExecContext, &ActiveExecContextArg, &CurrentExecContextArg, &CurrentExecContextArgOffset)) {

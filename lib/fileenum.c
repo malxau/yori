@@ -110,6 +110,7 @@ typedef struct _YORILIB_FOREACHFILE_CONTEXT {
 
  @param Context Caller provided context to pass to the callback.
  */
+__success(return)
 BOOL
 YoriLibForEachFileEnum(
     __in PYORI_STRING FileSpec,
@@ -117,7 +118,7 @@ YoriLibForEachFileEnum(
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
-    __in PVOID Context
+    __in_opt PVOID Context
     )
 {
     HANDLE hFind;
@@ -560,6 +561,7 @@ YoriLibForEachFileEnum(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibForEachFile(
     __in PYORI_STRING FileSpec,
@@ -567,7 +569,7 @@ YoriLibForEachFile(
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
-    __in PVOID Context
+    __in_opt PVOID Context
     )
 {
     YORI_STRING BeforeOperator;
@@ -693,6 +695,7 @@ YoriLibForEachFile(
 
  @return TRUE to indicate a match, FALSE to indicate no match.
  */
+__success(return)
 BOOL
 YoriLibDoesFileMatchExpression (
     __in PYORI_STRING FileName,
@@ -811,6 +814,7 @@ YoriLibDoesFileMatchExpression (
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibUpdateFindDataFromFileInformation (
     __out PWIN32_FIND_DATA FindData,

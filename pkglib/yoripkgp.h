@@ -259,17 +259,20 @@ typedef struct _YORIPKG_PACKAGE_PENDING_INSTALL {
  */
 #define YORIPKG_MAX_SECTION_LENGTH (64 * 1024)
 
+__success(return)
 BOOL
 YoriPkgGetApplicationDirectory(
     __out PYORI_STRING AppDirectory
     );
 
+__success(return)
 BOOL
 YoriPkgGetPackageIniFile(
     __in_opt PYORI_STRING InstallDirectory,
     __out PYORI_STRING IniFileName
     );
 
+__success(return)
 BOOL
 YoriPkgGetPackageInfo(
     __in PYORI_STRING IniPath,
@@ -283,6 +286,7 @@ YoriPkgGetPackageInfo(
     __out PYORI_STRING SymbolPath
     );
 
+__success(return)
 BOOL
 YoriPkgGetInstalledPackageInfo(
     __in PYORI_STRING IniPath,
@@ -302,6 +306,7 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     __inout PYORI_STRING UpgradePath
     );
 
+__success(return)
 BOOL
 YoriPkgConvertUserPackagePathToMirroredPath(
     __in PYORI_STRING PackagePath,
@@ -309,6 +314,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
     __out PYORI_STRING MirroredPath
     );
 
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
@@ -317,6 +323,7 @@ YoriPkgPackagePathToLocalPath(
     __out PBOOL DeleteWhenFinished
     );
 
+__success(return)
 BOOL
 YoriPkgIsNewerVersionAvailable(
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
@@ -348,6 +355,7 @@ YoriPkgRollbackPackage(
     __in PYORIPKG_BACKUP_PACKAGE PackageBackup
     );
 
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgBackupPackage(
     __in PYORI_STRING IniPath,
@@ -389,6 +397,7 @@ YoriPkgDeletePendingPackages(
     __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
     );
 
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PkgIniFile,

@@ -112,7 +112,7 @@ YoriLibGetFilePermissionPairs(
 
  @param Src Pointer to the string to copy the file name from.
 
- @param MaxLength Specifies the size of dest, in bytes.  No characters will be
+ @param MaxLength Specifies the size of dest, in chars.  No characters will be
         written beyond this value (ie., this value includes space for NULL.)
 
  @param ValidCharCount Optionally points to an integer to populate with the
@@ -121,16 +121,23 @@ YoriLibGetFilePermissionPairs(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCopyFileName(
-    __out LPTSTR Dest,
+    __out_ecount(MaxLength) LPTSTR Dest,
     __in LPCTSTR Src,
     __in DWORD MaxLength,
     __out_opt PDWORD ValidCharCount
     )
 {
     DWORD Index;
-    DWORD Length = MaxLength - 1;
+    DWORD Length;
+
+    if (MaxLength == 0) {
+        return FALSE;
+    }
+
+    Length = MaxLength - 1;
 
     for (Index = 0; Index < Length; Index++) {
         if (Src[Index] == 0) {
@@ -141,6 +148,11 @@ YoriLibCopyFileName(
             Dest[Index] = Src[Index];
         }
     }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6386) // Index is less than or equal to Length which
+                                // is less than MaxLength
+#endif
     Dest[Index] = '\0';
 
     if (ValidCharCount != NULL) {
@@ -407,6 +419,7 @@ typedef struct _YORILIB_PE_HEADERS {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCapturePeHeaders (
     __in PYORI_STRING FullPath,
@@ -1374,7 +1387,7 @@ YoriLibCollectOwner (
     if (DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(SecurityDescriptor), &dwSdRequired)) {
         if (DllAdvApi32.pGetSecurityDescriptorOwner((PSECURITY_DESCRIPTOR)SecurityDescriptor, &pOwnerSid, &OwnerDefaulted)) {
             if (DllAdvApi32.pLookupAccountSidW(NULL, pOwnerSid, UserName, &NameLength, DomainName, &DomainLength, &eUse)) {
-                UserName[sizeof(Entry->Owner) - 1] = '\0';
+                UserName[(sizeof(Entry->Owner)/sizeof(Entry->Owner[0])) - 1] = '\0';
                 memcpy(Entry->Owner, UserName, sizeof(Entry->Owner));
             }
         }
@@ -1437,12 +1450,12 @@ YoriLibCollectShortName (
         DWORD FileNameLength = (DWORD)_tcslen(FindData->cFileName);
 
         if (FileNameLength <= 12) {
-            YoriLibCopyFileName(Entry->ShortFileName, FindData->cFileName, sizeof(Entry->ShortFileName), NULL);
+            YoriLibCopyFileName(Entry->ShortFileName, FindData->cFileName, sizeof(Entry->ShortFileName)/sizeof(Entry->ShortFileName[0]), NULL);
         } else {
             Entry->ShortFileName[0] = '\0';
         }
     } else {
-        YoriLibCopyFileName(Entry->ShortFileName, FindData->cAlternateFileName, sizeof(Entry->ShortFileName), NULL);
+        YoriLibCopyFileName(Entry->ShortFileName, FindData->cAlternateFileName, sizeof(Entry->ShortFileName)/sizeof(Entry->ShortFileName[0]), NULL);
     }
     return TRUE;
 }

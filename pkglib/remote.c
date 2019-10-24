@@ -119,6 +119,10 @@ YoriPkgAllocateRemoteSource(
     PYORIPKG_REMOTE_SOURCE RemoteSource;
     DWORD SizeToAllocate;
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6260) // sizeof*sizeof is used for character size
+                                // flexibility
+#endif
     SizeToAllocate = sizeof(YORIPKG_REMOTE_SOURCE) +
                      (2 * (RemoteSourceUrl->LengthInChars + 1)) * sizeof(TCHAR) +
                      sizeof("/pkglist.ini") * sizeof(TCHAR);
@@ -629,6 +633,7 @@ Exit:
 
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriPkgCollectAllSourcesAndPackages(
     __in_opt PYORI_STRING CustomSource,
@@ -1265,7 +1270,7 @@ YoriPkgGetRemotePackageUrls(
     __in DWORD PackageNameCount,
     __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
-    __out PYORI_STRING * PackageUrls
+    __deref_out_opt PYORI_STRING * PackageUrls
     )
 {
     DWORD MatchingPackageCount;
@@ -1299,6 +1304,7 @@ YoriPkgGetRemotePackageUrls(
     LocalPackageUrls = YoriLibReferencedMalloc(CharsNeeded * sizeof(TCHAR) + MatchingPackageCount * sizeof(YORI_STRING));
     if (LocalPackageUrls == NULL) {
         YoriPkgFreeAllSourcesAndPackages(NULL, &PackagesMatchingCriteria);
+        *PackageUrls = NULL;
         return 0;
     }
 
@@ -1358,6 +1364,7 @@ YoriPkgGetRemotePackageUrls(
          if the URL is not found, so it is unknown whether the installed
          package is current.
  */
+__success(return)
 BOOL
 YoriPkgIsNewerVersionAvailableFromCache(
     __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
@@ -1369,6 +1376,8 @@ YoriPkgIsNewerVersionAvailableFromCache(
 {
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORIPKG_REMOTE_PACKAGE KnownPackage;
+
+    YoriLibInitEmptyString(RedirectToPackageUrl);
 
     ListEntry = YoriLibGetNextListEntry(&PendingPackages->KnownPackages, ListEntry);
     while (ListEntry != NULL) {
@@ -1447,6 +1456,7 @@ YoriPkgIsNewerVersionAvailableFromCache(
          pkglist.ini was processed successfully and we know for certain that
          the current package version remains current.
  */
+__success(return)
 BOOL
 YoriPkgIsNewerVersionAvailable(
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,

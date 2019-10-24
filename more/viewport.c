@@ -325,7 +325,7 @@ MoreCountLogicalLinesOnPhysicalLine(
  */
 VOID
 MoreMoveLogicalLine(
-    __out PMORE_LOGICAL_LINE Dest,
+    __inout PMORE_LOGICAL_LINE Dest,
     __in PMORE_LOGICAL_LINE Src
     )
 {
@@ -348,7 +348,7 @@ MoreMoveLogicalLine(
  */
 VOID
 MoreCloneLogicalLine(
-    __out PMORE_LOGICAL_LINE Dest,
+    __inout PMORE_LOGICAL_LINE Dest,
     __in PMORE_LOGICAL_LINE Src
     )
 {
@@ -558,7 +558,7 @@ MoreGenerateLogicalLinesFromPhysicalLine(
     __in PMORE_PHYSICAL_LINE PhysicalLine,
     __in DWORD FirstLogicalLineIndex,
     __in DWORD NumberLogicalLines,
-    __out PMORE_LOGICAL_LINE OutputLines
+    __out_ecount(NumberLogicalLines) PMORE_LOGICAL_LINE OutputLines
     )
 {
     DWORD Count = 0;
@@ -633,12 +633,13 @@ MoreGenerateLogicalLinesFromPhysicalLine(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 MoreGetPreviousLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
     __in PMORE_LOGICAL_LINE CurrentLine,
     __in DWORD LinesToOutput,
-    __out PMORE_LOGICAL_LINE OutputLines,
+    __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
     __out PDWORD NumberLinesGenerated
     )
 {
@@ -757,13 +758,14 @@ MoreGetPreviousLogicalLines(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 DWORD
 MoreGetNextLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE CurrentLine,
     __in BOOL StartFromNextLine,
     __in DWORD LinesToOutput,
-    __out PMORE_LOGICAL_LINE OutputLines,
+    __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
     __out PDWORD NumberLinesGenerated
     )
 {
@@ -2056,8 +2058,8 @@ VOID
 MoreProcessKeyDown(
     __inout PMORE_CONTEXT MoreContext,
     __in PINPUT_RECORD InputRecord,
-    __out PBOOL Terminate,
-    __out PBOOL RedrawStatus
+    __inout PBOOL Terminate,
+    __inout PBOOL RedrawStatus
     )
 {
     DWORD CtrlMask;
@@ -2467,7 +2469,7 @@ MoreProcessMouseButtonDown(
     __inout PMORE_CONTEXT MoreContext,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     BOOL BufferChanged = FALSE;
@@ -2512,7 +2514,7 @@ MoreProcessMouseButtonUp(
     __inout PMORE_CONTEXT MoreContext,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsReleased,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     UNREFERENCED_PARAMETER(InputRecord);
@@ -2552,7 +2554,7 @@ MoreProcessMouseDoubleClick(
     __inout PMORE_CONTEXT MoreContext,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     BOOL BufferChanged = FALSE;
@@ -2647,8 +2649,8 @@ BOOL
 MoreProcessMouseMove(
     __inout PMORE_CONTEXT MoreContext,
     __in PINPUT_RECORD InputRecord,
-    __out PBOOL TerminateInput,
-    __out PBOOL RedrawStatus
+    __inout PBOOL TerminateInput,
+    __inout PBOOL RedrawStatus
     )
 {
     HANDLE ConsoleHandle;
@@ -2705,7 +2707,7 @@ MoreProcessMouseScroll(
     __inout PMORE_CONTEXT MoreContext,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     HANDLE ConsoleHandle;

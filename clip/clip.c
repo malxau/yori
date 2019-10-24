@@ -142,6 +142,10 @@ ClipCopyAsHtml(
     }
 
     pMem = GlobalLock(hMem);
+    if (pMem == NULL) {
+        GlobalFree(hMem);
+        return FALSE;
+    }
 
     //
     //  Note this is not Unicode.
@@ -354,8 +358,23 @@ ClipCopyAsRtf(
     }
 
     pMem = GlobalLock(hMem);
+    if (pMem == NULL) {
+        GlobalFree(hMem);
+        YoriLibFree(AnsiBuffer);
+        return FALSE;
+    }
 
     for (CurrentOffset = 0; CurrentOffset < AllocSize; CurrentOffset++) {
+
+        //
+        //  Analyze gets really confused here and thinks AnsiBuffer is
+        //  of size BytesTransferred (ie., it doesn't understand that
+        //  the read started partway through the buffer.)  At this point,
+        //  it is of size CurrentOffset.
+        //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6385)
+#endif
         pMem[CurrentOffset] = (CHAR)(AnsiBuffer[CurrentOffset] & 0x7f);
     }
 
@@ -489,7 +508,21 @@ ClipCopyAsText(
     }
 
     pMem = GlobalLock(hMem);
+    if (pMem == NULL) {
+        GlobalFree(hMem);
+        YoriLibFree(AnsiBuffer);
+        return FALSE;
+    }
 
+    //
+    //  Analyze gets really confused here and thinks AnsiBuffer is
+    //  of size BytesTransferred (ie., it doesn't understand that
+    //  the read started partway through the buffer.)  At this point,
+    //  it is of size CurrentOffset.
+    //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6385)
+#endif
     YoriLibMultibyteInput(AnsiBuffer, CurrentOffset, pMem, AllocSize);
 
     pMem[AllocSize] = '\0';

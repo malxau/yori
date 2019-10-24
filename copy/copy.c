@@ -270,11 +270,12 @@ CopyFreeExcludes(
  @return TRUE to indicate success, FALSE to indicate failure.  Note this
          function can display errors to the console.
  */
+__success(return)
 BOOL
 CopyBuildDestinationPath(
     __in PCOPY_CONTEXT CopyContext,
     __in PYORI_STRING RelativePathFromSource,
-    __out PYORI_STRING FullDest
+    __inout PYORI_STRING FullDest
     )
 {
     //

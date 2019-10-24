@@ -138,7 +138,7 @@ YoriPkgGetRemotePackageUrls(
     __in DWORD PackageNameCount,
     __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
-    __out PYORI_STRING * PackageUrls
+    __deref_out_opt PYORI_STRING * PackageUrls
     );
 
 BOOL

@@ -92,6 +92,8 @@ SdirColorStringFromFeature(
         YoriLibSPrintfS(String, StringSize, _T("bg_%s"), Backstring);
     } else if (Forestring != NULL) {
         YoriLibSPrintfS(String, StringSize, _T("%s"), Forestring);
+    } else {
+        YoriLibSPrintfS(String, StringSize, _T(""));
     }
 
     return TRUE;

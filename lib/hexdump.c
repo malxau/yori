@@ -47,7 +47,7 @@
  */
 BOOL
 YoriLibHexByteLine(
-    __in UCHAR CONST * Buffer,
+    __in_ecount(BytesToDisplay) UCHAR CONST * Buffer,
     __in DWORD BytesToDisplay,
     __in DWORD HilightBits,
     __in BOOLEAN DisplaySeperator

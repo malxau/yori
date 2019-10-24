@@ -402,6 +402,7 @@ YoriShInitializeRedirection(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShSuckEnv(
     __in HANDLE ProcessHandle,
@@ -627,7 +628,7 @@ YoriShSuckEnv(
 DWORD
 YoriShCreateProcess(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
-    __out PBOOL FailedInRedirection
+    __out_opt PBOOL FailedInRedirection
     )
 {
     LPTSTR CmdLine;
@@ -638,12 +639,12 @@ YoriShCreateProcess(
     DWORD LastError;
 
     ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+    if (FailedInRedirection != NULL) {
+        *FailedInRedirection = FALSE;
+    }
 
     CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
     if (CmdLine == NULL) {
-        if (FailedInRedirection != NULL) {
-            *FailedInRedirection = FALSE;
-        }
         return ERROR_OUTOFMEMORY;
     }
 
@@ -673,9 +674,6 @@ YoriShCreateProcess(
         LastError = GetLastError();
         YoriShRevertRedirection(&PreviousRedirectContext);
         YoriLibDereference(CmdLine);
-        if (FailedInRedirection != NULL) {
-            *FailedInRedirection = FALSE;
-        }
         return LastError;
     } else {
         YoriShRevertRedirection(&PreviousRedirectContext);
@@ -1167,7 +1165,7 @@ YoriShWaitForProcessToTerminate(
 
         GetNumberOfConsoleInputEvents(GetStdHandle(STD_INPUT_HANDLE), &RecordsNeeded);
 
-        if (RecordsNeeded > RecordsAllocated) {
+        if (RecordsNeeded > RecordsAllocated || InputRecords == NULL) {
             if (InputRecords != NULL) {
                 YoriLibFree(InputRecords);
             }
@@ -1181,6 +1179,7 @@ YoriShWaitForProcessToTerminate(
 
             InputRecords = YoriLibMalloc(RecordsNeeded * sizeof(INPUT_RECORD));
             if (InputRecords == NULL) {
+                RecordsAllocated = 0;
                 Sleep(50);
                 continue;
             }
@@ -1303,6 +1302,7 @@ YoriShWaitForProcessToTerminate(
  
  @return TRUE to indicate success, FALSE on failure.
  */
+__success(return)
 BOOL
 YoriShExecViaShellExecute(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
@@ -1476,7 +1476,6 @@ YoriShExecuteSingleProgram(
             YoriShCommenceProcessBuffersIfNeeded(ExecContext);
         }
 
-
         //
         //  We may not have a process handle but still be successful if
         //  ShellExecute decided to interact with an existing process
@@ -1484,11 +1483,23 @@ YoriShExecuteSingleProgram(
         //  common in any interactive shell, and it's clearly going to break
         //  things, but there's not much we can do about it from here.
         //
+        //  When launching under a debugger, the launch occurs from the
+        //  debugging thread, so a process handle may not be present
+        //  until the call to wait on it.
+        //
 
         if (ExecContext->hProcess != NULL || ExecContext->CaptureEnvironmentOnExit) {
+            if (ExecContext->CaptureEnvironmentOnExit) {
+                ASSERT(ExecContext->WaitForCompletion);
+                ExecContext->WaitForCompletion = TRUE;
+            }
             if (ExecContext->WaitForCompletion) {
                 YoriShWaitForProcessToTerminate(ExecContext);
-                GetExitCodeProcess(ExecContext->hProcess, &ExitCode);
+                if (ExecContext->hProcess != NULL) {
+                    GetExitCodeProcess(ExecContext->hProcess, &ExitCode);
+                } else {
+                    ExitCode = EXIT_FAILURE;
+                }
             } else if (ExecContext->StdOutType != StdOutTypePipe) {
                 ASSERT(!ExecContext->CaptureEnvironmentOnExit);
                 if (YoriShCreateNewJob(ExecContext, ExecContext->hProcess, ExecContext->dwProcessId)) {
@@ -1749,6 +1760,7 @@ YoriShExecExecPlan(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShExecuteExpressionAndCaptureOutput(
     __in PYORI_STRING Expression,
@@ -1854,6 +1866,7 @@ YoriShExecuteExpressionAndCaptureOutput(
 
  @return TRUE to indicate it was successfully executed, FALSE otherwise.
  */
+__success(return)
 BOOL
 YoriShExpandBackquotes(
     __in PYORI_STRING Expression,
@@ -1940,6 +1953,7 @@ YoriShExpandBackquotes(
 
  @return TRUE to indicate it was successfully executed, FALSE otherwise.
  */
+__success(return)
 BOOL
 YoriShExecuteExpression(
     __in PYORI_STRING Expression

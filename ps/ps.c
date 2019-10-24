@@ -119,6 +119,7 @@ typedef struct _PS_CONTEXT {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 PsDisplayHeader(
     __in PPS_CONTEXT PsContext
@@ -145,6 +146,7 @@ PsDisplayHeader(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 PsDisplayProcessCommandLine(
     __in DWORD_PTR ProcessId
@@ -266,6 +268,7 @@ PsDisplayProcessCommandLine(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 PsDisplayProcessByStructure(
     __in PPS_CONTEXT PsContext,
@@ -331,6 +334,7 @@ PsDisplayProcessByStructure(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 PsDisplayProcessByPid(
     __in PPS_CONTEXT PsContext,
@@ -365,6 +369,7 @@ PsDisplayProcessByPid(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 PsGetSystemProcessList(
     __out PYORI_SYSTEM_PROCESS_INFORMATION *ProcessInfo
@@ -426,6 +431,7 @@ PsGetSystemProcessList(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 PsDisplayAllProcesses(
     __in PPS_CONTEXT PsContext

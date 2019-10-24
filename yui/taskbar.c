@@ -746,6 +746,14 @@ YuiTaskbarUpdateClock(
 
             YuiContext->ClockDisplayedValue.LengthInChars = DisplayTime.LengthInChars;
         }
+
+        //
+        //  YoriLibYPrintf will NULL terminate, but that is hard to express
+        //  given that yori strings are not always NULL terminated
+        //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6054)
+#endif
         SetWindowText(YuiContext->hWndClock, DisplayTime.StartOfString);
     }
     YoriLibFreeStringContents(&DisplayTime);

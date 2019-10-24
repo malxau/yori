@@ -62,7 +62,7 @@
  */
 int
 YoriLibSPrintfS(
-    __out LPTSTR szDest,
+    __out_ecount(len) LPTSTR szDest,
     __in DWORD len,
     __in LPCTSTR szFmt,
     ...
@@ -99,6 +99,9 @@ YoriLibSPrintf(
     int out_len;
 
     va_start( marker, szFmt );
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6386) // Obviously this is the buffer unsafe version
+#endif
     out_len = YoriLibVSPrintf(szDest, (DWORD)-1, szFmt, marker);
     va_end( marker );
     return out_len;
@@ -118,6 +121,7 @@ YoriLibSPrintf(
  @return The number of characters successfully populated into the buffer, or
          -1 on error.
  */
+__success(return >= 0)
 int
 YoriLibYPrintfInternal(
     __inout PYORI_STRING Dest,
@@ -163,6 +167,7 @@ YoriLibYPrintfInternal(
  @return The number of characters successfully populated into the buffer, or
          -1 on error.
  */
+__success(return >= 0)
 int
 YoriLibYPrintf(
     __inout PYORI_STRING Dest,

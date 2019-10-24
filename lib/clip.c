@@ -80,6 +80,7 @@ static const CHAR DummyFragEnd[] =
 
  @return TRUE to indicate success or FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibBuildHtmlClipboardBuffer(
     __in PYORI_STRING TextToCopy,
@@ -123,6 +124,10 @@ YoriLibBuildHtmlClipboardBuffer(
     }
 
     pMem = GlobalLock(hMem);
+    if (pMem == NULL) {
+        GlobalFree(hMem);
+        return FALSE;
+    }
 
     //
     //  Note this is not Unicode.
@@ -175,6 +180,7 @@ YoriLibBuildHtmlClipboardBuffer(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibPasteText(
     __inout PYORI_STRING Buffer
@@ -247,6 +253,7 @@ YoriLibPasteText(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCopyText(
     __in PYORI_STRING Buffer
@@ -317,6 +324,7 @@ YoriLibCopyText(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCopyTextRtfAndHtml(
     __in PYORI_STRING TextVersion,

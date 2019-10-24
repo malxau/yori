@@ -98,7 +98,7 @@ typedef ULONG SIZE_T;
 /**
  Define the error type for HRESULT.
  */
-typedef long HRESULT;
+typedef _Return_type_success_(return >= 0) long HRESULT;
 
 #ifndef MOUSE_WHEELED
 /**

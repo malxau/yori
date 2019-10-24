@@ -132,10 +132,16 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
  @return TRUE to indicate success, FALSE to indicate failure.  In particular,
          returns FALSE to indicate that the variable was not found.
  */
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6054) // Can return non-NULL terminated string,
+                                // which is detected by the caller as
+                                // ReturnedSize > Size
+#endif
+__success(return)
 BOOL
 YoriShGetEnvironmentVariable(
     __in LPCTSTR Name,
-    __out_opt LPTSTR Variable,
+    __out_ecount(Size) LPTSTR Variable,
     __in DWORD Size,
     __out PDWORD ReturnedSize,
     __out_opt PDWORD Generation
@@ -395,6 +401,7 @@ YoriShGetEnvironmentVariable(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
@@ -438,6 +445,7 @@ YoriShAllocateAndGetEnvironmentVariable(
  @return TRUE to indicate success, FALSE to indicate failure.  In particular,
          returns FALSE to indicate that the variable was not found.
  */
+__success(return)
 BOOL
 YoriShGetEnvironmentVariableYS(
     __in PYORI_STRING VariableName,
@@ -513,6 +521,7 @@ YoriShGetEnvironmentVariableYS(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetEnvironmentExpandedText(
     __in PYORI_STRING Name,
@@ -572,6 +581,7 @@ YoriShGetEnvironmentExpandedText(
  @return TRUE to indicate variables were successfully expanded, or FALSE to
          indicate a failure to expand.
  */
+__success(return)
 BOOL
 YoriShExpandEnvironmentVariables(
     __in PYORI_STRING Expression,
@@ -803,6 +813,7 @@ YoriShExpandEnvironmentVariables(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShSetEnvironmentVariable(
     __in PYORI_STRING VariableName,
@@ -866,6 +877,7 @@ YoriShSetEnvironmentVariable(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShSetEnvironmentStrings(
     __in PYORI_STRING NewEnv

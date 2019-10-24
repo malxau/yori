@@ -276,9 +276,10 @@ YoriLibFileFiltHelp()
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileFiltParseFilterOperator(
-    __inout PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
+    __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
     __in PYORI_STRING Operator,
     __in PYORI_STRING Value,
     __in PCYORI_LIB_FILE_FILT_FILTER_OPT MatchedOption,
@@ -292,6 +293,7 @@ YoriLibFileFiltParseFilterOperator(
     //  or not.
     //
 
+    YoriLibInitEmptyString(ErrorSubstring);
     if (YoriLibCompareStringWithLiteral(Operator, _T(">")) == 0) {
         Criteria->CompareFn = MatchedOption->CompareFn;
         Criteria->TruthStates[YORI_LIB_LESS_THAN] = FALSE;
@@ -331,7 +333,6 @@ YoriLibFileFiltParseFilterOperator(
         Criteria->TruthStates[YORI_LIB_EQUAL] = FALSE;
         Criteria->TruthStates[YORI_LIB_NOT_EQUAL] = TRUE;
     } else {
-        YoriLibInitEmptyString(ErrorSubstring);
         ErrorSubstring->StartOfString = Operator->StartOfString;
         ErrorSubstring->LengthInChars = Operator->LengthInChars;
         return FALSE;
@@ -343,7 +344,6 @@ YoriLibFileFiltParseFilterOperator(
     //
 
     if (Criteria->CompareFn == NULL) {
-        YoriLibInitEmptyString(ErrorSubstring);
         ErrorSubstring->StartOfString = Operator->StartOfString;
         ErrorSubstring->LengthInChars = Operator->LengthInChars;
         return FALSE;
@@ -357,7 +357,6 @@ YoriLibFileFiltParseFilterOperator(
     //
 
     if (!MatchedOption->GenerateFromStringFn(&Criteria->CompareEntry, Value)) {
-        YoriLibInitEmptyString(ErrorSubstring);
         ErrorSubstring->StartOfString = Value->StartOfString;
         ErrorSubstring->LengthInChars = Value->LengthInChars;
         return FALSE;
@@ -388,6 +387,7 @@ YoriLibFileFiltParseFilterOperator(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileFiltParseFilterOptAndOperator(
     __in PYORI_STRING FilterElement,
@@ -401,6 +401,8 @@ YoriLibFileFiltParseFilterOptAndOperator(
     PCYORI_LIB_FILE_FILT_FILTER_OPT FoundOpt;
 
     YoriLibInitEmptyString(&SwitchName);
+    YoriLibInitEmptyString(ErrorSubstring);
+
     SwitchName.StartOfString = FilterElement->StartOfString;
     SwitchName.LengthInChars = FilterElement->LengthInChars;
 
@@ -417,7 +419,6 @@ YoriLibFileFiltParseFilterOptAndOperator(
     }
 
     if (FoundOpt == NULL) {
-        YoriLibInitEmptyString(ErrorSubstring);
         ErrorSubstring->StartOfString = SwitchName.StartOfString;
         ErrorSubstring->LengthInChars = SwitchName.LengthInChars;
         return FALSE;
@@ -452,6 +453,7 @@ YoriLibFileFiltParseFilterOptAndOperator(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileFiltParseFilterElement(
     __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
@@ -496,6 +498,7 @@ YoriLibFileFiltParseFilterElement(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileFiltParseColorElement(
     __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
@@ -576,6 +579,7 @@ typedef YORI_LIB_FILE_FILT_PARSE_FN *PYORI_LIB_FILE_FILT_PARSE_FN;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileFiltParseFilterStringInternal(
     __out PYORI_LIB_FILE_FILTER Filter,
@@ -598,6 +602,7 @@ YoriLibFileFiltParseFilterStringInternal(
 
     YoriLibInitEmptyString(&Remaining);
     YoriLibInitEmptyString(&Element);
+    YoriLibInitEmptyString(ErrorSubstring);
 
     ElementCount = 0;
     for (Phase = 0; Phase < 2; Phase++) {
@@ -695,6 +700,7 @@ YoriLibFileFiltParseFilterStringInternal(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileFiltParseFilterString(
     __out PYORI_LIB_FILE_FILTER Filter,
@@ -721,6 +727,7 @@ YoriLibFileFiltParseFilterString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFileFiltParseColorString(
     __out PYORI_LIB_FILE_FILTER Filter,
@@ -747,6 +754,7 @@ YoriLibFileFiltParseColorString(
          should be included, FALSE to indicate the file has failed one or
          more criteria and should be excluded.
  */
+__success(return)
 BOOL
 YoriLibFileFiltCheckFilterMatch(
     __in PYORI_LIB_FILE_FILTER Filter,
@@ -800,6 +808,7 @@ YoriLibFileFiltCheckFilterMatch(
  @return TRUE to indicate a color has been found, FALSE if no color has
          been determined.
  */
+__success(return)
 BOOL
 YoriLibFileFiltCheckColorMatch(
     __in PYORI_LIB_FILE_FILTER Filter,

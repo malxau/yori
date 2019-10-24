@@ -166,24 +166,30 @@ ClmpWaitOnProcess (
     DWORD PipeNum;
     DWORD WaitResult;
 
+    ASSERT(Process->WindowsProcessInfo.hProcess != NULL);
+
     if (Process->WindowsProcessInfo.hProcess != NULL) {
         WaitResult = WaitForSingleObject(Process->WindowsProcessInfo.hProcess, INFINITE);
         ASSERT(WaitResult == WAIT_OBJECT_0);
+        GetExitCodeProcess(Process->WindowsProcessInfo.hProcess, &ExitCode);
+    } else {
+        ExitCode = EXIT_FAILURE;
     }
 
     for (PipeNum = 0; PipeNum < sizeof(Process->Pipes)/sizeof(Process->Pipes[0]); PipeNum++) {
         if (Process->Pipes[PipeNum].hPumpThread != NULL) {
             WaitResult = WaitForSingleObject(Process->Pipes[PipeNum].hPumpThread, INFINITE);
             ASSERT(WaitResult == WAIT_OBJECT_0);
+            CloseHandle(Process->Pipes[PipeNum].hPumpThread);
+            Process->Pipes[PipeNum].hPumpThread = NULL;
         }
 
-        CloseHandle(Process->Pipes[PipeNum].hPumpThread);
-        Process->Pipes[PipeNum].hPumpThread = NULL;
-        CloseHandle(Process->Pipes[PipeNum].Pipe);
-        Process->Pipes[PipeNum].Pipe = NULL;
+        if (Process->Pipes[PipeNum].Pipe) {
+            CloseHandle(Process->Pipes[PipeNum].Pipe);
+            Process->Pipes[PipeNum].Pipe = NULL;
+        }
     }
 
-    GetExitCodeProcess(Process->WindowsProcessInfo.hProcess, &ExitCode);
 
     //
     //  If a child failed and the parent is still going, fail with
@@ -199,11 +205,15 @@ ClmpWaitOnProcess (
     //  necessary.
     //
 
-    CloseHandle(Process->WindowsProcessInfo.hProcess);
-    CloseHandle(Process->WindowsProcessInfo.hThread);
+    if (Process->WindowsProcessInfo.hProcess != NULL) {
+        CloseHandle(Process->WindowsProcessInfo.hProcess);
+        Process->WindowsProcessInfo.hProcess = NULL;
+    }
 
-    Process->WindowsProcessInfo.hProcess = NULL;
-    Process->WindowsProcessInfo.hThread = NULL;
+    if (Process->WindowsProcessInfo.hThread != NULL) {
+        CloseHandle(Process->WindowsProcessInfo.hThread);
+        Process->WindowsProcessInfo.hThread = NULL;
+    }
 }
 
 /**

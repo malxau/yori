@@ -358,6 +358,7 @@ YoriShParseArgs(
     BOOL ExecuteStartupScripts = TRUE;
 
     *TerminateApp = FALSE;
+    *ExitCode = 0;
 
     for (i = 1; i < ArgC; i++) {
 

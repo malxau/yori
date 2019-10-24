@@ -372,7 +372,7 @@ VOID
 YoriLibCreateNewAttributeBufferFromPreviousBuffer(
     __in PYORILIB_PREVIOUS_SELECTION_BUFFER OldAttributes,
     __in PSMALL_RECT OldRegion,
-    __out PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes,
+    __inout PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes,
     __in PSMALL_RECT NewRegion,
     __in BOOL UpdateNewRegionDisplay,
     __in WORD SelectionColor

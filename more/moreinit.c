@@ -66,6 +66,7 @@ MoreGetViewportDimensions(
  @return TRUE to indicate success, meaning both structures are allocated and
          returned.  FALSE if neither are being returned.
  */
+__success(return)
 BOOL
 MoreAllocateViewportStructures(
     __in DWORD ViewportWidth,
@@ -127,7 +128,7 @@ BOOL
 MoreInitContext(
     __inout PMORE_CONTEXT MoreContext,
     __in DWORD ArgCount,
-    __in PYORI_STRING ArgStrings,
+    __in_opt PYORI_STRING ArgStrings,
     __in BOOL Recursive,
     __in BOOL BasicEnumeration,
     __in BOOL DebugDisplay

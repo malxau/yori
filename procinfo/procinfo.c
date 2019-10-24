@@ -212,7 +212,7 @@ typedef struct _PROCINFO_CONTEXT {
  */
 DWORD
 ProcInfoExpandVariables(
-    __out PYORI_STRING OutputBuffer,
+    __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )

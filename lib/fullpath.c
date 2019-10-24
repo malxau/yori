@@ -226,10 +226,11 @@ YoriLibIsFullPathUnc(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
-    __inout PYORI_STRING DriveCurrentDirectory
+    __out PYORI_STRING DriveCurrentDirectory
     )
 {
     TCHAR EnvVariableName[4];
@@ -273,6 +274,7 @@ YoriLibGetCurrentDirectoryOnDrive(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibSetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
@@ -323,6 +325,7 @@ YoriLibSetCurrentDirectoryOnDrive(
  @return TRUE to indicate a root was found, FALSE to indicate a parsing
          error.
  */
+__success(return)
 BOOL
 YoriLibFindEffectiveRootInternal(
     __in PYORI_STRING Path,
@@ -455,6 +458,7 @@ YoriLibFindEffectiveRootInternal(
  @return TRUE to indicate a root was found, FALSE to indicate a parsing
          error.
  */
+__success(return)
 BOOL
 YoriLibFindEffectiveRoot(
     __in PYORI_STRING Path,
@@ -526,6 +530,14 @@ typedef union _YORI_LIB_FULL_PATH_TYPE {
     } Flags;
 } YORI_LIB_FULL_PATH_TYPE, *PYORI_LIB_FULL_PATH_TYPE;
 
+//
+//  Disable warning about using deprecated GetVersion.
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(disable: 28159)
+#endif
+
 /**
  This function parses a path name to determine which type of path it is.
  There are four basic types of paths that need to be recognized:
@@ -560,6 +572,7 @@ typedef union _YORI_LIB_FULL_PATH_TYPE {
  @return A win32 error code, or ERROR_SUCCESS to indicate successful
          completion.
  */
+__success(return)
 DWORD
 YoriLibGetFullPathDeterminePathType(
     __in PYORI_STRING FileName,
@@ -984,12 +997,13 @@ YoriLibFullPathNormalize(
  @return A win32 error code, including ERROR_SUCCESS to indicate successful
          completion.
  */
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriLibGetFullPathSquashRelativeComponents(
     __inout PYORI_STRING Buffer,
     __in PYORI_LIB_FULL_PATH_TYPE PathType,
     __in BOOL ReturnEscapedPath,
-    __deref_opt_out LPTSTR* lpFilePart
+    __deref_opt_out_opt LPTSTR* lpFilePart
     )
 {
 
@@ -1226,12 +1240,13 @@ YoriLibGetFullPathSquashRelativeComponents(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetFullPathNameReturnAllocation(
     __in PYORI_STRING FileName,
     __in BOOL ReturnEscapedPath,
     __inout PYORI_STRING Buffer,
-    __deref_opt_out LPTSTR* lpFilePart
+    __deref_opt_out_opt LPTSTR* lpFilePart
     )
 {
     //
@@ -1342,7 +1357,7 @@ YoriLibGetFullPathNameReturnAllocation(
 }
 
 /**
- GettFulPathName where the "current" directory is specified.  Note that this
+ GetFullPathName where the "current" directory is specified.  Note that this
  version cannot traverse across drives without looking at the current
  directory for each drive, which the function does not take as input, so
  traversing drives is only possible with a fully formed path.
@@ -1370,13 +1385,14 @@ YoriLibGetFullPathNameReturnAllocation(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetFullPathNameRelativeTo(
     __in PYORI_STRING PrimaryDirectory,
     __in PYORI_STRING FileName,
     __in BOOL ReturnEscapedPath,
     __inout PYORI_STRING Buffer,
-    __deref_opt_out LPTSTR* lpFilePart
+    __deref_opt_out_opt LPTSTR* lpFilePart
     )
 {
     YORI_LIB_FULL_PATH_TYPE PathType;
@@ -1478,6 +1494,7 @@ YoriLibGetFullPathNameRelativeTo(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibExpandShellDirectoryGuid(
     __in CONST GUID * FolderType,
@@ -1525,6 +1542,7 @@ YoriLibExpandShellDirectoryGuid(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibExpandShellDirectory(
     __in INT FolderType,
@@ -1621,6 +1639,7 @@ CONST YORI_LIB_CSIDL_MAP YoriLibSpecialDirectoryMap[] = {
          performed, FALSE if the symbol name should be checked for other
          matches.
  */
+__success(return)
 BOOL
 YoriLibExpandDirectoryFromMap(
     __in PYORI_STRING SymbolToExpand,
@@ -1649,6 +1668,7 @@ YoriLibExpandDirectoryFromMap(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibExpandHomeSymbol(
     __in PYORI_STRING SymbolToExpand,
@@ -1708,10 +1728,11 @@ YoriLibExpandHomeSymbol(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibExpandHomeDirectories(
     __in PYORI_STRING FileString,
-    __inout PYORI_STRING ExpandedString
+    __out PYORI_STRING ExpandedString
     )
 {
     DWORD CharIndex;
@@ -1844,11 +1865,12 @@ YoriLibIsFileNameDeviceName(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibUserStringToSingleFilePath(
     __in PYORI_STRING UserString,
     __in BOOL ReturnEscapedPath,
-    __inout PYORI_STRING FullPath
+    __out PYORI_STRING FullPath
     )
 {
     YORI_STRING PathToTranslate;
@@ -1904,11 +1926,12 @@ YoriLibUserStringToSingleFilePath(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibUserStringToSingleFilePathOrDevice(
     __in PYORI_STRING UserString,
     __in BOOL ReturnEscapedPath,
-    __inout PYORI_STRING FullPath
+    __out PYORI_STRING FullPath
     )
 {
     if (YoriLibIsFileNameDeviceName(UserString)) {
@@ -1941,6 +1964,7 @@ YoriLibUserStringToSingleFilePathOrDevice(
 
  @return TRUE if the path could be converted successfully, FALSE if not.
  */
+__success(return)
 BOOL
 YoriLibUnescapePath(
     __in PYORI_STRING Path,
@@ -2025,6 +2049,7 @@ YoriLibUnescapePath(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetVolumePathName(
     __in PYORI_STRING FileName,
@@ -2171,15 +2196,13 @@ typedef struct _YORI_LIB_FIND_VOLUME_CONTEXT {
  @param BufferLength Specifies the length, in characters, of the VolumeName
         buffer.
 
- @return On successful completion, an opaque handle to use for subsequent
-         matches by calling @ref YoriLibFindNextVolume , and terminated by
-         calling @ref YoriLibFindVolumeClose .  On failure,
-         INVALID_HANDLE_VALUE.
+ @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFindNextVolume(
     __in HANDLE FindHandle,
-    __out LPWSTR VolumeName,
+    __out_ecount(BufferLength) LPWSTR VolumeName,
     __in DWORD BufferLength
     )
 {
@@ -2210,7 +2233,8 @@ YoriLibFindNextVolume(
                 DriveType != DRIVE_NO_ROOT_DIR) {
 
                 if (BufferLength >= sizeof(ProbeString)/sizeof(ProbeString[0])) {
-                    memcpy(VolumeName, ProbeString, sizeof(ProbeString)/sizeof(ProbeString[0]) * sizeof(TCHAR));
+                    memcpy(VolumeName, ProbeString, (sizeof(ProbeString)/sizeof(ProbeString[0]) - 1) * sizeof(TCHAR));
+                    VolumeName[sizeof(ProbeString)/sizeof(ProbeString[0]) - 1] = '\0';
                     FindContext->NextDriveLetter++;
                     return TRUE;
                 } else {
@@ -2233,6 +2257,7 @@ YoriLibFindNextVolume(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibFindVolumeClose(
     __in HANDLE FindHandle
@@ -2266,6 +2291,7 @@ YoriLibFindVolumeClose(
          calling @ref YoriLibFindVolumeClose .  On failure,
          INVALID_HANDLE_VALUE.
  */
+__success(return != INVALID_HANDLE_VALUE)
 HANDLE
 YoriLibFindFirstVolume(
     __out LPWSTR VolumeName,
@@ -2324,6 +2350,7 @@ YoriLibFindFirstVolume(
 
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetDiskFreeSpace(
     __in LPCTSTR DirectoryName,

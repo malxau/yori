@@ -90,6 +90,7 @@ PYORI_HASH_TABLE YoriShAliasesHash;
  @return TRUE if the alias was successfully deleted, FALSE if it was not
          found.
  */
+__success(return)
 BOOL
 YoriShDeleteAlias(
     __in PYORI_STRING Alias
@@ -132,6 +133,7 @@ YoriShDeleteAlias(
 
  @return TRUE if the alias was successfully updated, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriShAddAlias(
     __in PYORI_STRING Alias,
@@ -267,6 +269,7 @@ YoriShExpandAliasHelper(
 
  @return TRUE if an alias match was found, FALSE if not.
  */
+__success(return)
 BOOL
 YoriShExpandAlias(
     __inout PYORI_SH_CMD_CONTEXT CmdContext
@@ -315,6 +318,7 @@ YoriShExpandAlias(
  @return TRUE to indicate aliases were successfully expanded, FALSE to
          indicate no aliases required expansion.
  */
+__success(return)
 BOOL
 YoriShExpandAliasFromString(
     __in PYORI_STRING CommandString,
@@ -334,6 +338,10 @@ YoriShExpandAliasFromString(
     }
 
     NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, NULL, NULL);
+    if (NewString == NULL) {
+        YoriShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
     YoriShFreeCmdContext(&CmdContext);
 
     YoriLibConstantString(ExpandedString, NewString);
@@ -386,6 +394,7 @@ YoriShClearAllAliases()
 
  @return Return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetAliasStrings(
     __in DWORD IncludeFlags,
@@ -468,6 +477,7 @@ YoriShGetAliasStrings(
 
  @return TRUE if the alias was successfully updated, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriShAddAliasLiteral(
     __in LPTSTR Alias,
@@ -497,6 +507,7 @@ YoriShAddAliasLiteral(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShImportAliasValue(
     __in LPTSTR CmdAliasValue,
@@ -569,6 +580,7 @@ YoriShImportAliasValue(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetSystemAliasStrings(
     __in BOOL LoadFromCmd,
@@ -624,6 +636,7 @@ YoriShGetSystemAliasStrings(
 
  @return TRUE to indicate a match was found, FALSE to indicate it was not.
  */
+__success(return)
 BOOL
 YoriShFindAliasWithinStrings(
     __in PYORI_STRING AliasStrings,
@@ -683,6 +696,7 @@ YoriShFindAliasWithinStrings(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShMergeChangedAliasStrings(
     __in BOOL MergeFromCmd,
@@ -794,6 +808,7 @@ YoriShMergeChangedAliasStrings(
 
  @return TRUE to indicate success or FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShLoadSystemAliases(
     __in BOOL ImportFromCmd

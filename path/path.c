@@ -311,8 +311,8 @@ ENTRYPOINT(
         //  Count backwards to find the file name and extension
         //
 
-        for (CharIndex = PathComponents.EntirePath.LengthInChars - 1; CharIndex >= 0; CharIndex--) {
-
+        CharIndex = PathComponents.EntirePath.LengthInChars - 1;
+        while(TRUE) {
             if (PathComponents.EntirePath.StartOfString[CharIndex] == '.' && !FileComponentFound && !ExtensionFound) {
                 ExtensionFound = TRUE;
                 PathComponents.Extension.StartOfString = &PathComponents.EntirePath.StartOfString[CharIndex + 1];
@@ -339,6 +339,8 @@ ENTRYPOINT(
             if (CharIndex == 0) {
                 break;
             }
+
+            CharIndex--;
         }
 
         //

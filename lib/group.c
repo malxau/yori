@@ -39,6 +39,7 @@
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibIsCurrentUserInGroup(
     __in PYORI_STRING GroupName,

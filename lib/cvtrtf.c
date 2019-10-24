@@ -86,6 +86,7 @@ CONST TCHAR YoriLibRtfFooter[] = _T("\\pard\n}\n");
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfGenerateInitialString(
     __inout PYORI_STRING TextString,
@@ -209,6 +210,7 @@ YoriLibRtfGenerateInitialString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfGenerateEndString(
     __inout PYORI_STRING TextString
@@ -240,6 +242,7 @@ YoriLibRtfGenerateEndString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfGenerateTextString(
     __inout PYORI_STRING TextString,
@@ -374,6 +377,7 @@ YoriLibRtfGenerateTextString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
@@ -519,6 +523,10 @@ YoriLibRtfGenerateEscapeString(
     }
 
     if (DestOffset < TextString->LengthAllocated) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6011) // Dereferencing NULL pointer; if LengthAllocated
+                                // is nonzero, there should be a buffer
+#endif
         TextString->StartOfString[DestOffset] = '\0';
         TextString->LengthInChars = DestOffset;
     }
@@ -558,6 +566,7 @@ typedef struct _YORI_LIB_RTF_CONVERT_CONTEXT {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfCvtAppendWithReallocate(
     __inout PYORI_STRING StringToAppendTo,
@@ -583,6 +592,7 @@ YoriLibRtfCvtAppendWithReallocate(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfCnvInitializeStream(
     __in HANDLE hOutput
@@ -613,6 +623,7 @@ YoriLibRtfCnvInitializeStream(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfCnvEndStream(
     __in HANDLE hOutput
@@ -649,6 +660,7 @@ YoriLibRtfCnvEndStream(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfCnvProcessAndOutputText(
     __in HANDLE hOutput,
@@ -700,6 +712,7 @@ YoriLibRtfCnvProcessAndOutputText(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
@@ -751,6 +764,7 @@ YoriLibRtfCnvProcessAndOutputEscape(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibRtfConvertToRtfFromVt(
     __in PYORI_STRING VtText,

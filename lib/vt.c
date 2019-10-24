@@ -972,6 +972,7 @@ YoriLibOutputToDevice(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibVtStringForTextAttribute(
     __inout PYORI_STRING String,
@@ -1049,6 +1050,7 @@ YoriLibVtSetConsoleTextAttributeOnDevice(
     YoriLibInitEmptyString(&OutputString);
     OutputString.StartOfString = OutputStringBuffer;
     OutputString.LengthAllocated = sizeof(OutputStringBuffer)/sizeof(OutputStringBuffer[0]);
+    OutputString.StartOfString[0] = '\0';
 
     //
     //  Because the buffer is on the stack, this call shouldn't

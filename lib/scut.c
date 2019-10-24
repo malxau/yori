@@ -87,6 +87,7 @@ const GUID IID_IShellLinkDataList = { 0x45e2b4ae, 0xb1c3, 0x11d0, { 0xb9, 0x2f, 
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCreateShortcut(
     __in PYORI_STRING ShortcutFileName,
@@ -210,6 +211,7 @@ Exit:
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName

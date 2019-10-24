@@ -104,6 +104,7 @@ SdirDisplayCollection();
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 SdirCaptureFoundItemIntoDirent (
     __out PYORI_FILE_INFO CurrentEntry,
@@ -113,6 +114,9 @@ SdirCaptureFoundItemIntoDirent (
     ) 
 {
     DWORD i;
+
+    memset(CurrentEntry, 0, sizeof(*CurrentEntry));
+
 
     //
     //  Copy over the data from Win32's FindFirstFile into our own structure.
@@ -162,8 +166,6 @@ SdirRenderAttributesFromPath (
     HANDLE hFind;
     WIN32_FIND_DATA FindData;
     YORI_FILE_INFO CurrentEntry;
-
-    memset(&CurrentEntry, 0, sizeof(CurrentEntry));
 
     hFind = FindFirstFile(FullPath->StartOfString, &FindData);
     if (hFind != INVALID_HANDLE_VALUE) {
@@ -496,8 +498,8 @@ SdirMoveSortedEntries(
     __in PYORI_FILE_INFO OldCollection,
     __in PYORI_FILE_INFO NewCollection,
     __in DWORD NumberEntriesToCopy,
-    __in PYORI_FILE_INFO* OldSorted,
-    __out PYORI_FILE_INFO* NewSorted,
+    __in_ecount(NumberSortedEntries) PYORI_FILE_INFO* OldSorted,
+    __out_ecount(NumberEntriesToCopy) PYORI_FILE_INFO* NewSorted,
     __in DWORD NumberSortedEntries
     )
 {
@@ -505,13 +507,15 @@ SdirMoveSortedEntries(
     DWORD DestIndex;
     PYORI_FILE_INFO ThisEntry;
 
-    UNREFERENCED_PARAMETER(NumberSortedEntries);
-
     DestIndex = 0;
     for (SrcIndex = 0; SrcIndex < NumberSortedEntries; SrcIndex++) {
         ThisEntry = (PYORI_FILE_INFO)OldSorted[SrcIndex];
         ASSERT(ThisEntry >= OldCollection);
         if (ThisEntry < &OldCollection[NumberEntriesToCopy]) {
+            ASSERT(DestIndex < NumberEntriesToCopy);
+            if (DestIndex >= NumberEntriesToCopy) {
+                break;
+            }
             NewSorted[DestIndex] = (PYORI_FILE_INFO)((PUCHAR)ThisEntry -
                                                      (PUCHAR)OldCollection +
                                                      (PUCHAR)NewCollection);
@@ -675,7 +679,7 @@ SdirEnumeratePathWithDepth (
             //  previous collection and now need to be based on the new one.
             //
     
-            if (DirEntsToPreserve > 0) {
+            if (DirEntsToPreserve > 0 && SdirDirCollection != NULL) {
                 memcpy(NewSdirDirCollection, SdirDirCollection, sizeof(YORI_FILE_INFO)*DirEntsToPreserve);
                 SdirMoveSortedEntries(SdirDirCollection, NewSdirDirCollection, DirEntsToPreserve, SdirDirSorted, NewSdirDirSorted, PreviousAllocatedDirents);
             }

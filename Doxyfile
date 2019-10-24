@@ -17,3 +17,9 @@ CHM_FILE               = Yoricode.chm
 HHC_LOCATION           = "C:\Program Files (x86)\Html Help Workshop\hhc.exe"
 SEARCHENGINE           = NO
 GENERATE_LATEX         = NO
+
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = \
+                         __success(x)= \

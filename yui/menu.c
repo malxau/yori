@@ -47,6 +47,7 @@
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YuiFindDepthComponent(
     __in PYORI_STRING DirName,
@@ -745,6 +746,7 @@ YuiFileFoundCallback(
     
             if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".lnk")) == 0 &&
                 YuiFindDepthComponent(FilePath, &FriendlyName, 0, TRUE)) {
+
                 NewFile = YuiCreateMenuFile(FilePath, &FriendlyName);
                 if (NewFile != NULL) {
                     NewFile->Depth = Depth + 1;
@@ -764,6 +766,7 @@ YuiFileFoundCallback(
 
         if (Parent != NULL &&
             YuiFindDepthComponent(FilePath, &FriendlyName, 0, FALSE)) {
+
             if (!YuiDirectoryNodeExists(Parent, &FriendlyName)) {
                 NewDir = YuiCreateMenuDirectory(&FriendlyName);
                 if (NewDir != NULL) {

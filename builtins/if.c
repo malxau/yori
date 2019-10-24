@@ -158,6 +158,7 @@ IfExpandRedirectOperators(
 
  @return TRUE to indicate a component was found, FALSE if it was not.
  */
+__success(return)
 BOOL
 IfFindOffsetOfNextComponent(
     __in PYORI_STRING String,

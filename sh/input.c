@@ -49,6 +49,7 @@
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShDetermineCellLocationIfMovedCacheResult(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
@@ -149,6 +150,7 @@ YoriShDetermineCellLocationIfMovedCacheResult(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShDetermineCellLocationIfMoved(
     __in PYORI_SH_INPUT_BUFFER Buffer,
@@ -180,6 +182,7 @@ YoriShDetermineCellLocationIfMoved(
  @return TRUE to indicate the specified coordinates are within the string
          range, FALSE to indicate the coordinates are not within the string.
  */
+__success(return)
 BOOL
 YoriShStringOffsetFromCoordinates(
     __in PYORI_SH_INPUT_BUFFER Buffer,
@@ -231,6 +234,7 @@ YoriShStringOffsetFromCoordinates(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShMoveCursor(
     __in PYORI_SH_INPUT_BUFFER Buffer,
@@ -263,6 +267,7 @@ YoriShMoveCursor(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShMoveCursorCacheResult(
     __in PYORI_SH_INPUT_BUFFER Buffer,
@@ -323,6 +328,7 @@ YoriShPostKeyPress(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShDisplayAfterKeyPress(
     __in PYORI_SH_INPUT_BUFFER Buffer
@@ -504,6 +510,7 @@ YoriShDisplayAfterKeyPress(
  @return TRUE to indicate the current buffer is large enough or it was
          successfully reallocated, FALSE to indicate allocation failure.
  */
+__success(return)
 BOOL
 YoriShEnsureStringHasEnoughCharacters(
     __inout PYORI_STRING String,
@@ -525,6 +532,7 @@ YoriShEnsureStringHasEnoughCharacters(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShConfigureMouseForPrompt(
     __in HANDLE ConsoleInputHandle
@@ -555,6 +563,7 @@ YoriShConfigureMouseForPrompt(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShConfigureMouseForPrograms(
     __in HANDLE ConsoleInputHandle
@@ -1054,6 +1063,10 @@ YoriShMoveCursorToPriorArgument(
 
         if (CmdContext.CurrentArg < CmdContext.ArgC) {
             NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+            if (NewString == NULL) {
+                YoriShFreeCmdContext(&CmdContext);
+                return;
+            }
             if (Buffer->CurrentOffset <= BeginCurrentArg) {
                 YoriLibDereference(NewString);
                 NewString = NULL;
@@ -1415,6 +1428,7 @@ YoriShConfigureInputSettings(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShConfigureConsoleForTabComplete(
     __in PYORI_SH_INPUT_BUFFER Buffer
@@ -1436,6 +1450,7 @@ YoriShConfigureConsoleForTabComplete(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShConfigureConsoleForInput(
     __in PYORI_SH_INPUT_BUFFER Buffer
@@ -1496,6 +1511,7 @@ YoriShClearScreen(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShSelectLeftChar(
     __inout PYORI_SH_INPUT_BUFFER Buffer
@@ -1544,6 +1560,7 @@ YoriShSelectLeftChar(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShSelectRightChar(
     __inout PYORI_SH_INPUT_BUFFER Buffer
@@ -1606,7 +1623,7 @@ BOOL
 YoriShProcessEnhancedKeyDown(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     PYORI_LIST_ENTRY NewEntry = NULL;
@@ -1963,7 +1980,7 @@ BOOL
 YoriShProcessKeyUp(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     BOOL KeyPressGenerated = FALSE;
@@ -2022,6 +2039,7 @@ YoriShProcessKeyUp(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShFindAutoBreakSelectionRange(
     __in HANDLE ConsoleHandle,
@@ -2125,7 +2143,7 @@ YoriShProcessMouseButtonDown(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     BOOL BufferChanged = FALSE;
@@ -2171,6 +2189,10 @@ YoriShProcessMouseButtonDown(
 
         BufferChanged = YoriShClearMouseoverSelection(Buffer);
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 28159) // Deprecated GetTickCount; overflows are
+                                 // deterministic
+#endif
         Buffer->SelectionStartedTick = GetTickCount();
         BufferChanged |= YoriLibCreateSelectionFromPoint(&Buffer->Selection,
                                                          InputRecord->Event.MouseEvent.dwMousePosition.X,
@@ -2220,7 +2242,7 @@ YoriShProcessMouseButtonUp(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsReleased,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     UNREFERENCED_PARAMETER(InputRecord);
@@ -2258,7 +2280,7 @@ YoriShProcessMouseDoubleClick(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     BOOL BufferChanged = FALSE;
@@ -2282,6 +2304,10 @@ YoriShProcessMouseDoubleClick(
             return FALSE;
         }
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 28159) // Deprecated GetTickCount; overflows are
+                                 // deterministic
+#endif
         Buffer->SelectionStartedTick = GetTickCount();
         YoriLibCreateSelectionFromRange(&Buffer->Selection, BeginRange.X, BeginRange.Y, EndRange.X, EndRange.Y);
 
@@ -2308,7 +2334,7 @@ BOOL
 YoriShProcessMouseMove(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     DWORD CurrentTickCount;
@@ -2327,6 +2353,10 @@ YoriShProcessMouseMove(
             //  be treated as a selection.
             //
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 28159) // Deprecated GetTickCount; overflows are
+                                 // deterministic
+#endif
             CurrentTickCount = GetTickCount();
             if (Buffer->WindowActivatedTick + 200 < CurrentTickCount &&
                 Buffer->SelectionStartedTick + 125 < CurrentTickCount) {
@@ -2390,7 +2420,7 @@ YoriShProcessMouseScroll(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PINPUT_RECORD InputRecord,
     __in DWORD ButtonsPressed,
-    __out PBOOL TerminateInput
+    __inout PBOOL TerminateInput
     )
 {
     HANDLE ConsoleHandle;
@@ -2438,8 +2468,6 @@ YoriShProcessMouseScroll(
 }
 
 
-
-
 /**
  Get a new expression from the user through the console.
 
@@ -2452,11 +2480,12 @@ YoriShProcessMouseScroll(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetExpressionFromConsole(
     __in HANDLE InputHandle,
     __in HANDLE OutputHandle,
-    __inout PYORI_STRING Expression
+    __out PYORI_STRING Expression
     )
 {
     YORI_SH_INPUT_BUFFER Buffer;
@@ -2535,6 +2564,10 @@ YoriShGetExpressionFromConsole(
                 ReDisplayRequired |= YoriShClearInputSelections(&Buffer);
             } else if (InputRecord->EventType == FOCUS_EVENT) {
                 if (InputRecord->Event.FocusEvent.bSetFocus) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 28159) // Deprecated GetTickCount; overflows are
+                                 // deterministic
+#endif
                     Buffer.WindowActivatedTick = GetTickCount();
                     YoriShSetWindowState(YORI_SH_TASK_COMPLETE);
                 }
@@ -2658,9 +2691,10 @@ PVOID YoriShGetExpressionLineContext = NULL;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetExpression(
-    __inout PYORI_STRING Expression
+    __out PYORI_STRING Expression
     )
 {
     HANDLE InputHandle;

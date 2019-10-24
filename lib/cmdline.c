@@ -59,6 +59,7 @@ YoriLibIsCommandLineOptionChar(
  @return TRUE if the character indicates a command line option, FALSE if
          if it does not.
  */
+__success(return)
 BOOL
 YoriLibIsCommandLineOption(
     __in PYORI_STRING String,
@@ -125,6 +126,7 @@ YoriLibCheckIfArgNeedsQuotes(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibBuildCmdlineFromArgcArgv(
     __in DWORD ArgC,
@@ -209,13 +211,14 @@ YoriLibBuildCmdlineFromArgcArgv(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibExpandCommandVariables(
     __in PYORI_STRING String,
     __in TCHAR MatchChar,
     __in BOOLEAN PreserveEscapes,
     __in PYORILIB_VARIABLE_EXPAND_FN Function,
-    __in PVOID Context,
+    __in_opt PVOID Context,
     __inout PYORI_STRING ExpandedString
     )
 {

@@ -57,11 +57,11 @@
 int
 PRINTF_FN(
 #ifndef PRINTF_SIZEONLY
-        LPTSTR szDest,
-        DWORD len,
+        __out_ecount(len) LPTSTR szDest,
+        __in DWORD len,
 #endif
-        LPCTSTR szFmt,
-        va_list marker)
+        __in LPCTSTR szFmt,
+        __in va_list marker)
 {
     DWORD dest_offset = 0;
     DWORD src_offset = 0;
@@ -114,6 +114,9 @@ PRINTF_FN(
                 element_len = (DWORD) -1;
             }
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6240) // Conditional is constant
+#endif
             if (szFmt[src_offset] == 'p' && sizeof(PVOID) == sizeof(DWORDLONG)) {
                 longlong_prefix = TRUE;
             }
@@ -187,6 +190,9 @@ PRINTF_FN(
                         if (short_prefix) {
                             while (*short_str != '\0' && element_len) {
                                 if (PRINTF_DESTLENGTH()) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6269)
+#endif
 #ifdef UNICODE
                                     PRINTF_PUSHCHAR(PRINTF_ANSI_TO_UNICODE(*short_str));
 #else
@@ -201,6 +207,9 @@ PRINTF_FN(
                         } else if (long_prefix) {
                             while (*long_str != '\0' && element_len) {
                                 if (PRINTF_DESTLENGTH()) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6269)
+#endif
 #ifdef UNICODE
                                     PRINTF_PUSHCHAR(*long_str);
 #else

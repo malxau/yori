@@ -37,6 +37,7 @@
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetEnvironmentStrings(
     __out PYORI_STRING EnvStrings
@@ -100,6 +101,7 @@ YoriLibGetEnvironmentStrings(
  @return TRUE to indicate the environment strings are valid, FALSE if they are
          not.
  */
+__success(return)
 BOOL
 YoriLibAreEnvironmentStringsValid(
     __inout PYORI_STRING EnvStrings
@@ -140,6 +142,7 @@ YoriLibAreEnvironmentStringsValid(
  @return TRUE to indicate the environment strings are valid and could be
          converted to Unicode, FALSE if invalid or not convertible.
  */
+__success(return)
 BOOL
 YoriLibAreAnsiEnvironmentStringsValid(
     __in PUCHAR AnsiEnvStringBuffer,
@@ -185,6 +188,7 @@ YoriLibAreAnsiEnvironmentStringsValid(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
@@ -227,6 +231,7 @@ YoriLibAllocateAndGetEnvironmentVariable(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetEnvironmentVariableAsNumber(
     __in LPCTSTR Name,
@@ -290,6 +295,7 @@ YoriLibGetEnvironmentVariableAsNumber(
 
  @return TRUE if the buffer was modified, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriLibAddEnvironmentComponentToString(
     __inout PYORI_STRING ExistingString,
@@ -393,6 +399,7 @@ YoriLibAddEnvironmentComponentToString(
 
  @return TRUE to indicate success, FALSE on failure.
  */
+__success(return)
 BOOL
 YoriLibAddEnvironmentComponentReturnString(
     __in PYORI_STRING EnvironmentVariable,
@@ -436,6 +443,7 @@ YoriLibAddEnvironmentComponentReturnString(
 
  @return TRUE to indicate success, FALSE on failure.
  */
+__success(return)
 BOOL
 YoriLibAddEnvironmentComponent(
     __in LPTSTR EnvironmentVariable,
@@ -474,6 +482,7 @@ YoriLibAddEnvironmentComponent(
 
  @return TRUE to indicate success, FALSE on failure.
  */
+__success(return)
 BOOL
 YoriLibRemoveEnvironmentComponentReturnString(
     __in PYORI_STRING EnvironmentVariable,
@@ -551,6 +560,7 @@ YoriLibRemoveEnvironmentComponentReturnString(
 
  @return TRUE to indicate success, FALSE on failure.
  */
+__success(return)
 BOOL
 YoriLibRemoveEnvironmentComponent(
     __in LPTSTR EnvironmentVariable,

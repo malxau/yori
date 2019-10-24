@@ -55,6 +55,7 @@
          behavior following the operator.  FALSE if this point in the string
          is not an argument seperator.
  */
+__success(return)
 BOOL
 YoriShIsArgumentSeperator(
     __in PYORI_STRING String,
@@ -170,6 +171,7 @@ YoriShTrimSpacesFromBeginning(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
@@ -689,6 +691,7 @@ YoriShParseCmdlineToCmdContext(
  @return Pointer to the resulting string, or NULL to indicate allocation
          failure.  This should be freed with @ref YoriLibDereference.
  */
+__success(return != NULL)
 LPTSTR
 YoriShBuildCmdlineFromCmdContext(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
@@ -714,6 +717,14 @@ YoriShBuildCmdlineFromCmdContext(
     CmdLine = YoriLibReferencedMalloc(BufferLength * sizeof(TCHAR));
     if (CmdLine == NULL) {
         return NULL;
+    }
+
+    if (BeginCurrentArg != NULL) {
+        *BeginCurrentArg = 0;
+    }
+
+    if (EndCurrentArg != NULL) {
+        *EndCurrentArg = 0;
     }
 
     YoriLibSPrintfS(CmdLine, BufferLength, _T(""));
@@ -777,6 +788,7 @@ YoriShBuildCmdlineFromCmdContext(
  @return TRUE to indicate all escapes were removed, FALSE if not all could
          be successfully processed.
  */
+__success(return)
 BOOL
 YoriShRemoveEscapesFromCmdContext(
     __in PYORI_SH_CMD_CONTEXT EscapedCmdContext,
@@ -887,6 +899,7 @@ YoriShCopyArg(
 
  @return TRUE to indicate success, or FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShCopyCmdContext(
     __out PYORI_SH_CMD_CONTEXT DestCmdContext,
@@ -1094,6 +1107,7 @@ YoriShIsArgumentProgramSeperator(
 
  @return TRUE to indicate success, FALSE to indicate allocation failure.
  */
+__success(return)
 BOOL
 YoriShCheckForDeviceNameAndDuplicate(
     __inout PYORI_STRING UserString,
@@ -1164,6 +1178,7 @@ YoriShCheckForDeviceNameAndDuplicate(
  @return The number of arguments consumed while creating information about
          how to execute a single program.
  */
+__success(return > 0)
 DWORD
 YoriShParseCmdContextToExecContext(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
@@ -1181,6 +1196,18 @@ YoriShParseCmdContextToExecContext(
     DWORD CharOffset;
     PYORI_STRING ThisArg;
     PYORI_STRING ExecContextRedirectString;
+
+    if (CurrentArgIsForProgram != NULL) {
+        *CurrentArgIsForProgram = FALSE;
+    }
+
+    if (CurrentArgIndex != NULL) {
+        *CurrentArgIndex = 0;
+    }
+
+    if (CurrentArgOffset != NULL) {
+        *CurrentArgOffset = 0;
+    }
 
     ZeroMemory(ExecContext, sizeof(YORI_SH_SINGLE_EXEC_CONTEXT));
     ExecContext->ReferenceCount = 1;
@@ -1521,6 +1548,7 @@ YoriShFreeExecPlan(
 
  @return TRUE to indicate parsing success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShParseCmdContextToExecPlan(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
@@ -1540,6 +1568,26 @@ YoriShParseCmdContextToExecPlan(
     BOOL FoundProgramMatch;
     DWORD LocalCurrentArgIndex;
     DWORD LocalCurrentArgOffset;
+
+    if (CmdContext->ArgC == 0) {
+        return FALSE;
+    }
+
+    if (CurrentExecContext != NULL) {
+        *CurrentExecContext = NULL;
+    }
+
+    if (CurrentArgIsForProgram != NULL) {
+        *CurrentArgIsForProgram = FALSE;
+    }
+
+    if (CurrentArgIndex != NULL) {
+        *CurrentArgIndex = 0;
+    }
+
+    if (CurrentArgOffset != NULL) {
+        *CurrentArgOffset = 0;
+    }
 
     ZeroMemory(ExecPlan, sizeof(YORI_SH_EXEC_PLAN));
     FoundProgramMatch = FALSE;
@@ -1563,10 +1611,6 @@ YoriShParseCmdContextToExecPlan(
             YoriShFreeExecPlan(ExecPlan);
             return FALSE;
         }
-
-        LocalCurrentArgIsForProgram = FALSE;
-        LocalCurrentArgIndex = 0;
-        LocalCurrentArgOffset = 0;
 
         ArgsConsumed = YoriShParseCmdContextToExecContext(CmdContext, CurrentArg, ThisProgram, &LocalCurrentArgIsForProgram, &LocalCurrentArgIndex, &LocalCurrentArgOffset);
         if (ArgsConsumed == 0) {
@@ -1773,6 +1817,7 @@ YoriShDoesExpressionSpecifyPath(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShResolveCommandToExecutable(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
@@ -2074,6 +2119,7 @@ YoriShTerminateMatchingBackquoteEntry(
  @return TRUE if the master string has been successfully resolved to a series
          of substrings; FALSE if an error occurred.
  */
+__success(return)
 BOOL
 YoriShParseBackquoteSubstrings(
     __in PYORI_STRING String,
@@ -2152,6 +2198,7 @@ YoriShParseBackquoteSubstrings(
 
  @return TRUE if there is a substring to execute, FALSE if there is not.
  */
+__success(return)
 BOOL
 YoriShFindNextBackquoteSubstring(
     __in PYORI_STRING String,
@@ -2205,6 +2252,7 @@ YoriShFindNextBackquoteSubstring(
 
  @return TRUE if a substring was found, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriShFindBestBackquoteSubstringAtOffset(
     __in PYORI_STRING String,

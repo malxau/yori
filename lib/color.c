@@ -218,6 +218,7 @@ YoriLibAttributeFromLiteralString(
 
  @return TRUE to indicate success or FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibSetColorToWin32(
     __out PYORILIB_COLOR_ATTRIBUTES Attributes,
@@ -396,6 +397,7 @@ YoriLibGetDefaultFileColorString()
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibLoadCombinedFileColorString(
     __in_opt PYORI_STRING Custom,
@@ -516,6 +518,7 @@ CHAR YoriLibDefaultMetadataColorString[] =
          found either in the user's environment or the default string.  FALSE
          to indicate no color could be determined.
  */
+__success(return)
 BOOL
 YoriLibGetMetadataColor(
     __in PYORI_STRING RequestedAttributeCodeString,

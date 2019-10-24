@@ -36,6 +36,7 @@
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriPkgGetApplicationDirectory(
     __out PYORI_STRING AppDirectory
@@ -79,6 +80,7 @@ YoriPkgGetApplicationDirectory(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriPkgGetPackageIniFile(
     __in_opt PYORI_STRING InstallDirectory,
@@ -148,6 +150,7 @@ YoriPkgGetPackageIniFile(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriPkgGetPackageInfo(
     __in PYORI_STRING IniPath,
@@ -244,6 +247,7 @@ YoriPkgGetPackageInfo(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriPkgGetInstalledPackageInfo(
     __in PYORI_STRING IniPath,
@@ -742,6 +746,7 @@ YoriPkgDeleteMirror(
  @return TRUE to indicate a substitution was performed, FALSE on error or
          if no substitution exists.
  */
+__success(return)
 BOOL
 YoriPkgConvertUserPackagePathToMirroredPath(
     __in PYORI_STRING PackagePath,
@@ -876,6 +881,7 @@ Exit:
  @return ERROR_SUCCESS to indicate success, or other Win32 error to indicate
          the type of failure.
  */
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,

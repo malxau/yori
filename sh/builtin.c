@@ -432,6 +432,7 @@ YoriShExecuteInProc(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShExecuteNamedModuleInProc(
     __in LPTSTR ModuleFileName,
@@ -545,6 +546,7 @@ YoriShBuiltIn (
 
  @return TRUE if the callback was successfully added, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriShSetUnloadRoutine(
     __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
@@ -601,6 +603,7 @@ YoriShSetUnloadRoutine(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShBuiltinRegister(
     __in PYORI_STRING BuiltinCmd,
@@ -659,6 +662,7 @@ YoriShBuiltinRegister(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShBuiltinUnregister(
     __in PYORI_STRING BuiltinCmd,
@@ -748,6 +752,7 @@ YoriShBuiltinUnregisterAll(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShExecuteBuiltinString(
     __in PYORI_STRING Expression

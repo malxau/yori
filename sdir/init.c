@@ -59,6 +59,9 @@ SdirAppInitialize()
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD CurrentMode;
+    DWORD MajorVersion;
+    DWORD MinorVersion;
+    DWORD BuildNumber;
 
     Opts = YoriLibMalloc(sizeof(SDIR_OPTS));
     if (Opts == NULL) {
@@ -175,7 +178,8 @@ SdirAppInitialize()
     //  need a newer one
     //
 
-    Opts->OsVersion = GetVersion();
+    YoriLibGetOsVersion(&MajorVersion, &MinorVersion, &BuildNumber);
+    Opts->OsVersion = ((BuildNumber & 0xFFFF) << 16) | ((MinorVersion & 0xFF) << 8) | (MajorVersion & 0xFF);
 
     //
     //  Look for Ctrl+C to indicate execution should terminate.

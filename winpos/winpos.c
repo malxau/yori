@@ -98,6 +98,7 @@ typedef enum _WINPOS_OPERATION {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 WinPosStringToCoordinates(
     __in PYORI_STRING WindowCoordinates,

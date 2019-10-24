@@ -57,6 +57,15 @@
 #pragma warning(disable: 4001) // Single line comment, again
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+//
+//  This is a serious warning.  Note this is under a warning push and there's
+//  a pop after including winioctl.h.  It's just here to handle a buggy
+//  windows header.
+//
+#pragma warning(disable: 6001) // Using uninitialized memory
+#endif
+
 #include <winioctl.h>
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
@@ -76,16 +85,6 @@
  */
 #define _T(x) x
 #endif
-
-/**
- The exit code of a process that indicates success.
- */
-#define EXIT_SUCCESS 0
-
-/**
- The exit code of a process that indicates failure.
- */
-#define EXIT_FAILURE 1
 
 /**
  The maximum stream name length in characters.  This is from
@@ -140,6 +139,12 @@
 #define __in_ecount(x)
 
 /**
+ SAL annotation describing an optional input buffer with a specified number of
+ elements.
+ */
+#define __in_ecount_opt(x)
+
+/**
  SAL annotation describing an output buffer with a specified number of
  elements.
  */
@@ -149,7 +154,33 @@
  SAL annotation describing an optional output pointer whose value is changed.
  */
 #define __deref_opt_out
+
+/**
+ SAL annotation describing a required output pointer whose value may be
+ changed.
+ */
+#define __deref_out_opt
+
+/**
+ SAL annotation describing an optional output pointer whose value may be
+ changed.
+ */
+#define __deref_opt_out_opt
+
+/**
+ SAL annotation for a return type.
+ */
+#define __success(x)
+
 #endif
+
+#ifndef _Return_type_success_
+/**
+ SAL annotation for a return type.
+ */
+#define _Return_type_success_(x)
+#endif
+
 
 #include <yoricmpt.h>
 

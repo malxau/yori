@@ -47,7 +47,7 @@
  */
 int
 YoriLibSPrintfSA(
-    __out LPSTR szDest,
+    __out_ecount(len) LPSTR szDest,
     __in  DWORD len,
     __in  LPCSTR szFmt,
     ...
@@ -84,6 +84,9 @@ YoriLibSPrintfA(
     int out_len;
 
     va_start( marker, szFmt );
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6386) // Obviously this is the buffer unsafe version
+#endif
     out_len = YoriLibVSPrintfA(szDest, (DWORD)-1, szFmt, marker);
     va_end( marker );
     return out_len;

@@ -237,8 +237,9 @@ YoriShCmdBufferPump(
 {
     PYORI_SH_PROCESS_BUFFER ThisBuffer = (PYORI_SH_PROCESS_BUFFER)Param;
     DWORD BytesRead;
+    HANDLE hTemp;
 
-    while (TRUE) {
+    while (ThisBuffer->hSource != NULL) {
 
         if (ReadFile(ThisBuffer->hSource,
                      YoriLibAddToPointer(ThisBuffer->Buffer, ThisBuffer->BytesPopulated),
@@ -279,9 +280,14 @@ YoriShCmdBufferPump(
 
             AcquireMutex(ThisBuffer->Mutex);
 
+            //
+            //  Close the source but let the mirror drain if present.
+            //
+
             if (LastError == ERROR_BROKEN_PIPE) {
-                CloseHandle(ThisBuffer->hSource);
+                hTemp = ThisBuffer->hSource;
                 ThisBuffer->hSource = NULL;
+                CloseHandle(hTemp);
             } else {
                 break;
             }
@@ -304,8 +310,9 @@ YoriShCmdBufferPump(
         
                     ThisBuffer->BytesSent += BytesWritten;
                 } else {
-                    CloseHandle(ThisBuffer->hMirror);
+                    hTemp = ThisBuffer->hMirror;
                     ThisBuffer->hMirror = NULL;
+                    CloseHandle(hTemp);
                     ThisBuffer->BytesSent = 0;
                     break;
                 }
@@ -318,13 +325,15 @@ YoriShCmdBufferPump(
     }
 
     if (ThisBuffer->hSource != NULL) {
-        CloseHandle(ThisBuffer->hSource);
+        hTemp = ThisBuffer->hSource;
         ThisBuffer->hSource = NULL;
+        CloseHandle(hTemp);
     }
 
     if (ThisBuffer->hMirror != NULL) {
-        CloseHandle(ThisBuffer->hMirror);
+        hTemp = ThisBuffer->hMirror;
         ThisBuffer->hMirror = NULL;
+        CloseHandle(hTemp);
     }
 
     ReleaseMutex(ThisBuffer->Mutex);
@@ -339,6 +348,7 @@ YoriShCmdBufferPump(
 
  @return TRUE if the buffer is successfully initialized, FALSE if it is not.
  */
+__success(return)
 BOOL
 YoriShAllocateSingleProcessBuffer(
     __out PYORI_SH_PROCESS_BUFFER Buffer
@@ -366,6 +376,7 @@ YoriShAllocateSingleProcessBuffer(
  @return TRUE to indicate a buffer was successfully allocated, FALSE if it
          was not.
  */
+__success(return)
 BOOL
 YoriShCreateNewProcessBuffer(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
@@ -452,6 +463,7 @@ YoriShCreateNewProcessBuffer(
  @return TRUE to indicate a buffer was successfully initialized, FALSE if it
          was not.
  */
+__success(return)
 BOOL
 YoriShAppendToExistingProcessBuffer(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
@@ -504,6 +516,7 @@ YoriShAppendToExistingProcessBuffer(
  @return TRUE to indicate a pump was successfully initialized, FALSE if it
          was not.
  */
+__success(return)
 BOOL
 YoriShForwardProcessBufferToNextProcess(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
@@ -596,6 +609,7 @@ YoriShReferenceProcessBuffer(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetProcessBuffer(
     __in PYORI_SH_PROCESS_BUFFER ThisBuffer,
@@ -642,6 +656,7 @@ YoriShGetProcessBuffer(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetProcessOutputBuffer(
     __in PVOID ThisBuffer,
@@ -666,6 +681,7 @@ YoriShGetProcessOutputBuffer(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetProcessErrorBuffer(
     __in PVOID ThisBuffer,
@@ -697,6 +713,21 @@ YoriShTeardownSingleProcessBuffer(
 {
     BOOL Torndown = FALSE;
     if (TeardownAll) {
+
+        //
+        //  TerminateThread is inherently evil, and its use stems from the way
+        //  pipes can't be waited on to indicate input, and are created
+        //  synchronously, so the pump thread can be blocked in a read call
+        //  with no cooperative way to communicate with it.  This call only
+        //  works because it's invoked on process teardown by the main thread,
+        //  so any waiters will die soon enough, and the pump thread NULLs
+        //  objects before closing them so we err on the side of failing to
+        //  close things rather than double close because the process is about
+        //  to die anyway.  But it's still evil.
+        //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6258)
+#endif
         TerminateThread(ThisBuffer->hPumpThread, 0);
         if (WaitForSingleObject(ThisBuffer->hPumpThread, INFINITE) == WAIT_OBJECT_0) {
             CloseHandle(ThisBuffer->hPumpThread);
@@ -723,6 +754,7 @@ YoriShTeardownSingleProcessBuffer(
 
  @return Always TRUE currently.
  */
+__success(return)
 BOOL
 YoriShScanProcessBuffersForTeardown(
     __in BOOL TeardownAll
@@ -781,6 +813,7 @@ YoriShScanProcessBuffersForTeardown(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShWaitForProcessBufferToFinalize(
     __in PVOID ThisBuffer
@@ -814,11 +847,12 @@ YoriShWaitForProcessBufferToFinalize(
 
  @return TRUE to indicate success, FALSE to indicate error.
  */
+__success(return)
 BOOL
 YoriShPipeProcessBuffers(
     __in PVOID ThisBuffer,
-    __in HANDLE hPipeOutput,
-    __in HANDLE hPipeErrors
+    __in_opt HANDLE hPipeOutput,
+    __in_opt HANDLE hPipeErrors
     )
 {
     BOOL HaveOutput;

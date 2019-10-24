@@ -109,7 +109,7 @@ typedef struct _DATE_CONTEXT {
  */
 DWORD
 DateExpandVariables(
-    __out PYORI_STRING OutputBuffer,
+    __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )
@@ -336,6 +336,14 @@ ENTRYPOINT(
         DateContext.Tick.QuadPart = DllKernel32.pGetTickCount64();
     } else {
         DateContext.Tick.HighPart = 0;
+        //
+        //  Warning about using a deprecated function and how we should use
+        //  GetTickCount64 instead.  The analyzer isn't smart enough to notice
+        //  that when it's available, that's what we do.
+        //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 28159)
+#endif
         DateContext.Tick.LowPart = GetTickCount();
     }
 

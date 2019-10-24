@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+    //
+    //  On newer SDKs, ReadConsole is annotated with TCHAR% which the
+    //  current version of the compiler does not understand.  Previously
+    //  the annotation differed between *A and *W functions, which was
+    //  perfectly fine.
+    //
+#pragma warning(disable: 28286)
+#endif
+
 #include <yoripch.h>
 #include <yorilib.h>
 

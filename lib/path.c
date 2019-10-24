@@ -140,7 +140,7 @@ YoriLibSearchEnv(
 
             if (hFind != INVALID_HANDLE_VALUE) {
                 FindClose(hFind);
-                if (!YoriLibGetFullPathNameReturnAllocation(ScratchArea, FullPath, Out, &fn)) {
+                if (!YoriLibGetFullPathNameReturnAllocation(ScratchArea, FullPath, Out, &fn) || fn == NULL) {
                     Out->LengthInChars = 0;
                     Out->StartOfString[0] = '\0';
                     return;
@@ -205,6 +205,7 @@ typedef struct _YORI_PATHEXT_COMPONENT {
          lookup successfully found nothing, FoundPath will contain an empty
          string.
  */
+__success(return)
 BOOL
 YoriLibLocateBuildFullName(
     __in PYORI_STRING SearchPath,
@@ -280,6 +281,7 @@ LPCTSTR YoriLibDefaultPathExt = _T(".com;.exe;.bat;.cmd");
          The caller is expected to free this with
          @ref YoriLibPathFreePathExtComponents .
  */
+__success(return != NULL)
 PYORI_PATHEXT_COMPONENT
 YoriLibPathBuildPathExtComponentList(
     __out PDWORD ComponentCount
@@ -427,6 +429,7 @@ YoriLibPathFreePathExtComponents(
          lookup successfully found nothing, FoundPath will contain an empty
          string.
  */
+__success(return)
 BOOL
 YoriLibLocateFileExtensionsInOnePath(
     __in PYORI_STRING FileName,
@@ -436,7 +439,7 @@ YoriLibLocateFileExtensionsInOnePath(
     __in DWORD PathExtCount,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
     __in_opt PVOID MatchAllContext,
-    __out PYORI_STRING Out,
+    __inout PYORI_STRING Out,
     __in BOOL FullPath
     )
 {
@@ -686,6 +689,7 @@ YoriLibLocateFileExtensionsInOnePath(
          lookup successfully found nothing, FoundPath will contain an empty
          string.
  */
+__success(return)
 BOOL
 YoriLibPathLocateUnknownExtensionUnknownLocation(
     __in PYORI_STRING SearchFor,
@@ -801,6 +805,7 @@ YoriLibPathLocateUnknownExtensionUnknownLocation(
          lookup successfully found nothing, FoundPath will contain an empty
          string.
  */
+__success(return)
 BOOL
 YoriLibPathLocateUnknownExtensionKnownLocation(
     __in PYORI_STRING SearchFor,
@@ -909,6 +914,7 @@ YoriLibPathLocateUnknownExtensionKnownLocation(
          lookup successfully found nothing, FoundPath will contain an empty
          string.
  */
+__success(return)
 BOOL
 YoriLibPathLocateKnownExtensionUnknownLocation(
     __in PYORI_STRING SearchFor,
@@ -953,6 +959,7 @@ YoriLibPathLocateKnownExtensionUnknownLocation(
 
  @return TRUE to indicate a match was found, FALSE if it was not.
  */
+__success(return)
 BOOL
 YoriLibLocateExecutableInPath(
     __in PYORI_STRING SearchFor,

@@ -428,6 +428,7 @@ YORI_LIB_CAB_EXPAND_FILE_CALLBACK(
  */
 typedef YORI_LIB_CAB_EXPAND_FILE_CALLBACK *PYORI_LIB_CAB_EXPAND_FILE_CALLBACK;
 
+__success(return)
 BOOL
 YoriLibExtractCab(
     __in PYORI_STRING CabFileName,
@@ -440,15 +441,17 @@ YoriLibExtractCab(
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
-    __out_opt PYORI_STRING ErrorString
+    __inout_opt PYORI_STRING ErrorString
     );
 
+__success(return)
 BOOL
 YoriLibCreateCab(
     __in PYORI_STRING CabFileName,
     __out PVOID * Handle
     );
 
+__success(return)
 BOOL
 YoriLibAddFileToCab(
     __in PVOID Handle,
@@ -483,22 +486,26 @@ YoriLibCancelGetEvent();
 
 // *** CLIP.C ***
 
+__success(return)
 BOOL
 YoriLibBuildHtmlClipboardBuffer(
     __in PYORI_STRING TextToCopy,
     __out PHANDLE HandleForClipboard
     );
 
+__success(return)
 BOOL
 YoriLibPasteText(
     __inout PYORI_STRING Buffer
     );
 
+__success(return)
 BOOL
 YoriLibCopyText(
     __in PYORI_STRING Buffer
     );
 
+__success(return)
 BOOL
 YoriLibCopyTextRtfAndHtml(
     __in PYORI_STRING TextVersion,
@@ -513,6 +520,7 @@ YoriLibIsCommandLineOptionChar(
     __in TCHAR Char
     );
 
+__success(return)
 BOOL
 YoriLibIsCommandLineOption(
     __in PYORI_STRING String,
@@ -524,6 +532,7 @@ YoriLibCheckIfArgNeedsQuotes(
     __in PYORI_STRING Arg
     );
 
+__success(return)
 BOOL
 YoriLibBuildCmdlineFromArgcArgv(
     __in DWORD ArgC,
@@ -548,13 +557,14 @@ typedef DWORD YORILIB_VARIABLE_EXPAND_FN(PYORI_STRING OutputBuffer, PYORI_STRING
  */
 typedef YORILIB_VARIABLE_EXPAND_FN *PYORILIB_VARIABLE_EXPAND_FN;
 
+__success(return)
 BOOL
 YoriLibExpandCommandVariables(
     __in PYORI_STRING String,
     __in TCHAR MatchChar,
     __in BOOLEAN PreserveEscapes,
     __in PYORILIB_VARIABLE_EXPAND_FN Function,
-    __in PVOID Context,
+    __in_opt PVOID Context,
     __inout PYORI_STRING ExpandedString
     );
 
@@ -630,6 +640,7 @@ YoriLibAttributeFromLiteralString(
     __in LPCTSTR String
     );
 
+__success(return)
 BOOL
 YoriLibSetColorToWin32(
     __out PYORILIB_COLOR_ATTRIBUTES Attributes,
@@ -658,12 +669,14 @@ YoriLibAreColorsIdentical(
 LPCSTR
 YoriLibGetDefaultFileColorString();
 
+__success(return)
 BOOL
 YoriLibLoadCombinedFileColorString(
     __in_opt PYORI_STRING Custom,
     __out PYORI_STRING Combined
     );
 
+__success(return)
 BOOL
 YoriLibGetMetadataColor(
     __in PYORI_STRING RequestedAttributeCodeString,
@@ -691,27 +704,32 @@ YoriLibGenerateVtStringFromConsoleBuffers(
 
 extern DWORD YoriLibDefaultColorTable[];
 
+__success(return)
 BOOL
 YoriLibCaptureConsoleFont(
     __out PYORI_CONSOLE_FONT_INFOEX FontInfo
     );
 
+__success(return)
 BOOL
 YoriLibCaptureConsoleColorTable(
     __out PDWORD * ColorTable,
     __out_opt PWORD CurrentAttributes
     );
 
+__success(return)
 BOOL
 YoriLibHtmlGenerateInitialString(
     __inout PYORI_STRING TextString
     );
 
+__success(return)
 BOOL
 YoriLibHtmlGenerateEndString(
     __inout PYORI_STRING TextString
     );
 
+__success(return)
 BOOL
 YoriLibHtmlGenerateTextString(
     __inout PYORI_STRING TextString,
@@ -720,6 +738,7 @@ YoriLibHtmlGenerateTextString(
     __in DWORD BufferLength
     );
 
+__success(return)
 BOOL
 YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
@@ -728,11 +747,13 @@ YoriLibHtmlGenerateEscapeString(
     __in DWORD BufferLength
     );
 
+__success(return)
 BOOL
 YoriLibHtmlSetVersion(
     __in DWORD HtmlVersion
     );
 
+__success(return)
 BOOL
 YoriLibHtmlConvertToHtmlFromVt(
     __in PYORI_STRING VtText,
@@ -743,17 +764,20 @@ YoriLibHtmlConvertToHtmlFromVt(
 
 // *** CVTRTF.C ***
 
+__success(return)
 BOOL
 YoriLibRtfGenerateInitialString(
     __inout PYORI_STRING TextString,
     __in_opt PDWORD ColorTable
     );
 
+__success(return)
 BOOL
 YoriLibRtfGenerateEndString(
     __inout PYORI_STRING TextString
     );
 
+__success(return)
 BOOL
 YoriLibRtfGenerateTextString(
     __inout PYORI_STRING TextString,
@@ -762,6 +786,7 @@ YoriLibRtfGenerateTextString(
     __in DWORD BufferLength
     );
 
+__success(return)
 BOOL
 YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
@@ -770,6 +795,7 @@ YoriLibRtfGenerateEscapeString(
     __in DWORD BufferLength
     );
 
+__success(return)
 BOOL
 YoriLibRtfConvertToRtfFromVt(
     __in PYORI_STRING VtText,
@@ -1045,6 +1071,7 @@ typedef YORILIB_FILE_ENUM_FN *PYORILIB_FILE_ENUM_FN;
  */
 #define YORILIB_FILEENUM_DIRECTORY_CONTENTS      0x00000100
 
+__success(return)
 BOOL
 YoriLibForEachFile(
     __in PYORI_STRING FileSpec,
@@ -1052,9 +1079,10 @@ YoriLibForEachFile(
     __in DWORD Depth,
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
-    __in PVOID Context
+    __in_opt PVOID Context
     );
 
+__success(return)
 BOOL
 YoriLibDoesFileMatchExpression (
     __in PYORI_STRING FileName,
@@ -1155,6 +1183,7 @@ typedef struct _YORI_LIB_FILE_FILT_COLOR_CRITERIA {
 BOOL
 YoriLibFileFiltHelp();
 
+__success(return)
 BOOL
 YoriLibFileFiltParseFilterString(
     __out PYORI_LIB_FILE_FILTER Filter,
@@ -1162,6 +1191,7 @@ YoriLibFileFiltParseFilterString(
     __out PYORI_STRING ErrorSubstring
     );
 
+__success(return)
 BOOL
 YoriLibFileFiltParseColorString(
     __out PYORI_LIB_FILE_FILTER Filter,
@@ -1169,6 +1199,7 @@ YoriLibFileFiltParseColorString(
     __out PYORI_STRING ErrorSubstring
     );
 
+__success(return)
 BOOL
 YoriLibFileFiltCheckFilterMatch(
     __in PYORI_LIB_FILE_FILTER Filter,
@@ -1176,6 +1207,7 @@ YoriLibFileFiltCheckFilterMatch(
     __in PWIN32_FIND_DATA FileInfo
     );
 
+__success(return)
 BOOL
 YoriLibFileFiltCheckColorMatch(
     __in PYORI_LIB_FILE_FILTER Filter,
@@ -1189,6 +1221,7 @@ YoriLibFileFiltFreeFilter(
     __in PYORI_LIB_FILE_FILTER Filter
     );
 
+__success(return)
 BOOL
 YoriLibUpdateFindDataFromFileInformation (
     __out PWIN32_FIND_DATA FindData,
@@ -1866,12 +1899,14 @@ YoriLibGenerateWriteTime(
  */
 #define YoriLibIsSep(x) ((x) == '\\' || (x) == '/')
 
+__success(return)
 BOOL
 YoriLibGetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
-    __inout PYORI_STRING DriveCurrentDirectory
+    __out PYORI_STRING DriveCurrentDirectory
     );
 
+__success(return)
 BOOL
 YoriLibSetCurrentDirectoryOnDrive(
     __in TCHAR Drive,
@@ -1903,33 +1938,37 @@ YoriLibIsFullPathUnc(
     __in PYORI_STRING Path
     );
 
+__success(return)
 BOOL
 YoriLibFindEffectiveRoot(
     __in PYORI_STRING Path,
     __out PYORI_STRING EffectiveRoot
     );
 
+__success(return)
 BOOL
 YoriLibGetFullPathNameReturnAllocation(
     __in PYORI_STRING FileName,
     __in BOOL bReturnEscapedPath,
     __inout PYORI_STRING Buffer,
-    __deref_opt_out LPTSTR* lpFilePart
+    __deref_opt_out_opt LPTSTR* lpFilePart
     );
 
+__success(return)
 BOOL
 YoriLibGetFullPathNameRelativeTo(
     __in PYORI_STRING PrimaryDirectory,
     __in PYORI_STRING FileName,
     __in BOOL ReturnEscapedPath,
     __inout PYORI_STRING Buffer,
-    __deref_opt_out LPTSTR* lpFilePart
+    __deref_opt_out_opt LPTSTR* lpFilePart
     );
 
+__success(return)
 BOOL
 YoriLibExpandHomeDirectories(
     __in PYORI_STRING FileString,
-    __inout PYORI_STRING ExpandedString
+    __out PYORI_STRING ExpandedString
     );
 
 BOOL
@@ -1937,50 +1976,58 @@ YoriLibIsFileNameDeviceName(
     __in PYORI_STRING File
     );
 
+__success(return)
 BOOL
 YoriLibUserStringToSingleFilePath(
     __in PYORI_STRING UserString,
     __in BOOL bReturnEscapedPath,
-    __inout PYORI_STRING FullPath
+    __out PYORI_STRING FullPath
     );
 
+__success(return)
 BOOL
 YoriLibUserStringToSingleFilePathOrDevice(
     __in PYORI_STRING UserString,
     __in BOOL bReturnEscapedPath,
-    __inout PYORI_STRING FullPath
+    __out PYORI_STRING FullPath
     );
 
+__success(return)
 BOOL
 YoriLibUnescapePath(
     __in PYORI_STRING Path,
     __inout PYORI_STRING UnescapedPath
     );
 
+__success(return)
 BOOL
 YoriLibGetVolumePathName(
     __in PYORI_STRING FileName,
     __inout PYORI_STRING VolumeName
     );
 
+__success(return != INVALID_HANDLE_VALUE)
 HANDLE
 YoriLibFindFirstVolume(
     __out LPWSTR VolumeName,
     __in DWORD BufferLength
     );
 
+__success(return)
 BOOL
 YoriLibFindNextVolume(
     __in HANDLE FindHandle,
-    __out LPWSTR VolumeName,
+    __out_ecount(BufferLength) LPWSTR VolumeName,
     __in DWORD BufferLength
     );
 
+__success(return)
 BOOL
 YoriLibFindVolumeClose(
     __in HANDLE FindHandle
     );
 
+__success(return)
 BOOL
 YoriLibGetDiskFreeSpace(
     __in LPCTSTR DirectoryName,
@@ -1991,6 +2038,7 @@ YoriLibGetDiskFreeSpace(
 
 // *** GROUP.C ***
 
+__success(return)
 BOOL
 YoriLibIsCurrentUserInGroup(
     __in PYORI_STRING GroupName,
@@ -2119,9 +2167,9 @@ YoriLibGetMultibyteOutputSizeNeeded(
 
 VOID
 YoriLibMultibyteOutput(
-    __in LPCTSTR InputStringBuffer,
+    __in_ecount(InputBufferLength) LPCTSTR InputStringBuffer,
     __in DWORD InputBufferLength,
-    __out LPSTR OutputStringBuffer,
+    __out_ecount(OutputBufferLength) LPSTR OutputStringBuffer,
     __in DWORD OutputBufferLength
     );
 
@@ -2133,9 +2181,9 @@ YoriLibGetMultibyteInputSizeNeeded(
 
 VOID
 YoriLibMultibyteInput(
-    __in LPCSTR InputStringBuffer,
+    __in_ecount(InputBufferLength) LPCSTR InputStringBuffer,
     __in DWORD InputBufferLength,
-    __out LPTSTR OutputStringBuffer,
+    __out_ecount(OutputBufferLength) LPTSTR OutputStringBuffer,
     __in DWORD OutputBufferLength
     );
 
@@ -2192,7 +2240,7 @@ YoriLibReadLineToStringEx(
 
 VOID
 YoriLibLineReadClose(
-    __in PVOID Context
+    __in_opt PVOID Context
     );
 
 // *** LIST.C ***
@@ -2311,11 +2359,13 @@ YoriLibGetOsVersion(
     __out PDWORD BuildNumber
     );
 
+__success(return)
 BOOL
 YoriLibIsProcess32Bit(
     __in HANDLE ProcessHandle
     );
 
+__success(return)
 BOOL
 YoriLibDoesProcessHave32BitPeb(
     __in HANDLE ProcessHandle
@@ -2509,6 +2559,7 @@ YoriLibVtSetConsoleTextAttributeOnDevice(
     __in WORD Attribute
     );
 
+__success(return)
 BOOL
 YoriLibVtStringForTextAttribute(
     __inout PYORI_STRING String,
@@ -2570,6 +2621,7 @@ typedef BOOL YORI_LIB_PATH_MATCH_FN(PYORI_STRING Match, PVOID Context);
  */
 typedef YORI_LIB_PATH_MATCH_FN *PYORI_LIB_PATH_MATCH_FN;
 
+__success(return)
 BOOL
 YoriLibPathLocateKnownExtensionUnknownLocation(
     __in PYORI_STRING SearchFor,
@@ -2579,6 +2631,7 @@ YoriLibPathLocateKnownExtensionUnknownLocation(
     __inout PYORI_STRING FoundPath
     );
 
+__success(return)
 BOOL
 YoriLibPathLocateUnknownExtensionKnownLocation(
     __in PYORI_STRING SearchFor,
@@ -2587,6 +2640,7 @@ YoriLibPathLocateUnknownExtensionKnownLocation(
     __inout PYORI_STRING FoundPath
     );
 
+__success(return)
 BOOL
 YoriLibPathLocateUnknownExtensionUnknownLocation(
     __in PYORI_STRING SearchFor,
@@ -2596,6 +2650,7 @@ YoriLibPathLocateUnknownExtensionUnknownLocation(
     __inout PYORI_STRING FoundPath
     );
 
+__success(return)
 BOOL
 YoriLibLocateExecutableInPath(
     __in PYORI_STRING SearchFor,
@@ -2616,7 +2671,7 @@ YoriLibSPrintf(
 
 int
 YoriLibSPrintfS(
-    __out LPTSTR szDest,
+    __out_ecount(len) LPTSTR szDest,
     __in DWORD len,
     __in LPCTSTR szFmt,
     ...
@@ -2671,12 +2726,13 @@ YoriLibVSPrintfSize(
  */
 int
 YoriLibVSPrintf(
-    __out LPTSTR szDest,
+    __out_ecount(len) LPTSTR szDest,
     __in DWORD len,
     __in LPCTSTR szFmt,
     __in va_list marker
     );
 
+__success(return >= 0)
 int
 YoriLibYPrintf(
     __inout PYORI_STRING Dest,
@@ -2686,16 +2742,19 @@ YoriLibYPrintf(
 
 // *** ENV.C ***
 
+__success(return)
 BOOL
 YoriLibGetEnvironmentStrings(
     __out PYORI_STRING EnvStrings
     );
 
+__success(return)
 BOOL
 YoriLibAreEnvironmentStringsValid(
     __inout PYORI_STRING EnvStrings
     );
 
+__success(return)
 BOOL
 YoriLibAreAnsiEnvironmentStringsValid(
     __in PUCHAR AnsiEnvStringBuffer,
@@ -2703,18 +2762,21 @@ YoriLibAreAnsiEnvironmentStringsValid(
     __out PYORI_STRING UnicodeStrings
     );
 
+__success(return)
 BOOL
 YoriLibAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
     __inout PYORI_STRING Value
     );
 
+__success(return)
 BOOL
 YoriLibGetEnvironmentVariableAsNumber(
     __in LPCTSTR Name,
     __out PLONGLONG Value
     );
 
+__success(return)
 BOOL
 YoriLibAddEnvironmentComponentToString(
     __inout PYORI_STRING ExistingString,
@@ -2722,6 +2784,7 @@ YoriLibAddEnvironmentComponentToString(
     __in BOOL InsertAtFront
     );
 
+__success(return)
 BOOL
 YoriLibAddEnvironmentComponentReturnString(
     __in PYORI_STRING EnvironmentVariable,
@@ -2730,6 +2793,7 @@ YoriLibAddEnvironmentComponentReturnString(
     __out PYORI_STRING Result
     );
 
+__success(return)
 BOOL
 YoriLibAddEnvironmentComponent(
     __in LPTSTR EnvironmentVariable,
@@ -2737,6 +2801,7 @@ YoriLibAddEnvironmentComponent(
     __in BOOL InsertAtFront
     );
 
+__success(return)
 BOOL
 YoriLibRemoveEnvironmentComponentReturnString(
     __in PYORI_STRING EnvironmentVariable,
@@ -2744,6 +2809,7 @@ YoriLibRemoveEnvironmentComponentReturnString(
     __out PYORI_STRING Result
     );
 
+__success(return)
 BOOL
 YoriLibRemoveEnvironmentComponent(
     __in LPTSTR EnvironmentVariable,
@@ -2752,6 +2818,7 @@ YoriLibRemoveEnvironmentComponent(
 
 // *** SCUT.C ***
 
+__success(return)
 BOOL
 YoriLibCreateShortcut(
     __in PYORI_STRING ShortcutFileName,
@@ -2767,6 +2834,7 @@ YoriLibCreateShortcut(
     __in BOOL CreateNewIfNeeded
     );
 
+__success(return)
 BOOL
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName
@@ -3028,6 +3096,7 @@ YoriLibDecimalStringToInt(
     __in PYORI_STRING String
     );
 
+__success(return)
 BOOL
 YoriLibStringToNumberSpecifyBase(
     __in PYORI_STRING String,
@@ -3037,6 +3106,7 @@ YoriLibStringToNumberSpecifyBase(
     __out PDWORD CharsConsumed
     );
 
+__success(return)
 BOOL
 YoriLibStringToNumber(
     __in PYORI_STRING String,
@@ -3045,6 +3115,7 @@ YoriLibStringToNumber(
     __out PDWORD CharsConsumed
     );
 
+__success(return)
 BOOL
 YoriLibNumberToString(
     __inout PYORI_STRING String,
@@ -3161,13 +3232,15 @@ YoriLibFindRightMostCharacter(
     __in TCHAR CharToFind
     );
 
+__success(return)
 BOOL
 YoriLibStringToHexBuffer(
     __in PYORI_STRING String,
-    __out PUCHAR Buffer,
+    __out_ecount(BufferSize) PUCHAR Buffer,
     __in DWORD BufferSize
     );
 
+__success(return)
 BOOL
 YoriLibHexBufferToString(
     __in PUCHAR Buffer,
@@ -3180,12 +3253,14 @@ YoriLibStringToFileSize(
     __in PYORI_STRING String
     );
 
+__success(return)
 BOOL
 YoriLibFileSizeToString(
-    __out PYORI_STRING String,
+    __inout PYORI_STRING String,
     __in PLARGE_INTEGER FileSize
     );
 
+__success(return)
 BOOL
 YoriLibStringToDate(
     __in PYORI_STRING String,
@@ -3193,12 +3268,14 @@ YoriLibStringToDate(
     __out_opt PDWORD CharsConsumed
     );
 
+__success(return)
 BOOL
 YoriLibStringToTime(
     __in PYORI_STRING String,
     __out LPSYSTEMTIME Date
     );
 
+__success(return)
 BOOL
 YoriLibStringToDateTime(
     __in PYORI_STRING String,
@@ -3265,6 +3342,7 @@ YoriLibIsEscapeChar(
     __in TCHAR Char
     );
 
+__success(return)
 BOOL
 YoriLibMakeInheritableHandle(
     __in HANDLE OriginalHandle,
@@ -3286,11 +3364,13 @@ YoriLibFreeWinErrorText(
     __in LPTSTR ErrText
     );
 
+__success(return)
 BOOL
 YoriLibCreateDirectoryAndParents(
     __inout PYORI_STRING DirName
     );
 
+__success(return)
 BOOL
 YoriLibRenameFileToBackupName(
     __in PYORI_STRING FullPath,

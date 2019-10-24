@@ -876,4 +876,15 @@ int        MCRT_FN mini_wcslen(const wchar_t * str);
  */
 #define UINT_MAX (0xffffffff)
 
+/**
+ The exit code of a process that indicates success.
+ */
+#define EXIT_SUCCESS 0
+
+/**
+ The exit code of a process that indicates failure.
+ */
+#define EXIT_FAILURE 1
+
+
 // vim:sw=4:ts=4:et:

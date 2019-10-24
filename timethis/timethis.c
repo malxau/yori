@@ -210,7 +210,7 @@ typedef struct _TIMETHIS_CONTEXT {
  */
 DWORD
 TimeThisExpandVariables(
-    __out PYORI_STRING OutputBuffer,
+    __inout PYORI_STRING OutputBuffer,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )

@@ -110,7 +110,7 @@ typedef struct _VER_VERSION_RESULT {
  */
 DWORD
 VerExpandVariables(
-    __out PYORI_STRING OutputString,
+    __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
     __in PVOID Context
     )

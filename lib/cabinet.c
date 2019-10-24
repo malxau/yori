@@ -288,6 +288,7 @@ YoriLibCabFdiFileOpen(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCabBuildFileNames(
     __in PYORI_STRING ParentDirectory,
@@ -386,10 +387,11 @@ YoriLibCabShouldIncludeFile(
 
  @return Handle to the opened file, or INVALID_HANDLE_VALUE on failure.
  */
+__success(return != INVALID_HANDLE_VALUE)
 DWORD_PTR
 YoriLibCabFileOpenForExtract(
     __in PYORI_STRING FullPath,
-    __out_opt PYORI_STRING ErrorString
+    __inout_opt PYORI_STRING ErrorString
     )
 {
     HANDLE hFile = INVALID_HANDLE_VALUE;
@@ -459,11 +461,13 @@ YoriLibCabFileOpenForExtract(
         }
     }
 
-    if (hFile == INVALID_HANDLE_VALUE && ErrorString != NULL) {
-        LPTSTR ErrText;
-        ErrText = YoriLibGetWinErrorText(Err);
-        YoriLibYPrintf(ErrorString, _T("Error opening %y: %s"), FullPath, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
+    if (ErrorString != NULL) {
+        if (hFile == INVALID_HANDLE_VALUE) {
+            LPTSTR ErrText;
+            ErrText = YoriLibGetWinErrorText(Err);
+            YoriLibYPrintf(ErrorString, _T("Error opening %y: %s"), FullPath, ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+        }
     }
 
     return (DWORD_PTR)hFile;
@@ -845,6 +849,7 @@ YoriLibCabFciStatus(
 
  @return A file handle.
  */
+__success(return != INVALID_HANDLE_VALUE)
 DWORD_PTR DIAMONDAPI
 YoriLibCabFciGetOpenInfo(
     __in LPSTR FileName,
@@ -1011,6 +1016,7 @@ YoriLibCabNotify(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibExtractCab(
     __in PYORI_STRING CabFileName,
@@ -1023,7 +1029,7 @@ YoriLibExtractCab(
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
-    __out_opt PYORI_STRING ErrorString
+    __inout_opt PYORI_STRING ErrorString
     )
 {
     YORI_STRING FullCabFileName;
@@ -1217,6 +1223,7 @@ typedef struct _YORI_CAB_HANDLE {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCreateCab(
     __in PYORI_STRING CabFileName,
@@ -1285,6 +1292,7 @@ YoriLibCreateCab(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibAddFileToCab(
     __in PVOID Handle,

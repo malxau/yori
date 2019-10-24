@@ -610,7 +610,7 @@ YoriLibReadLineToString(
  */
 VOID
 YoriLibLineReadClose(
-    __in PVOID Context
+    __in_opt PVOID Context
     )
 {
     PYORI_LIB_LINE_READ_CONTEXT ReadContext = (PYORI_LIB_LINE_READ_CONTEXT)Context;

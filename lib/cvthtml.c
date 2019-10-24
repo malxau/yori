@@ -62,6 +62,7 @@ BOOLEAN YoriLibHtmlBoldOn = FALSE;
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCaptureConsoleFont(
     __out PYORI_CONSOLE_FONT_INFOEX FontInfo
@@ -117,6 +118,7 @@ DWORD YoriLibDefaultColorTable[] = {0x000000, 0x800000, 0x008000, 0x808000, 0x00
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibCaptureConsoleColorTable(
     __out PDWORD * ColorTable,
@@ -207,6 +209,7 @@ CONST TCHAR YoriLibHtmlFooter[] = _T("</DIV></BODY></HTML>");
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlGenerateInitialString(
     __inout PYORI_STRING TextString
@@ -271,6 +274,7 @@ YoriLibHtmlGenerateInitialString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlGenerateEndString(
     __inout PYORI_STRING TextString
@@ -307,6 +311,7 @@ YoriLibHtmlGenerateEndString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlGenerateTextString(
     __inout PYORI_STRING TextString,
@@ -421,6 +426,7 @@ YoriLibHtmlGenerateTextString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlGenerateEscapeStringInternal(
     __inout PYORI_STRING TextString,
@@ -592,6 +598,10 @@ YoriLibHtmlGenerateEscapeStringInternal(
     }
 
     if (DestOffset < TextString->LengthAllocated) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6011) // Dereferencing NULL pointer; if LengthAllocated
+                                // is nonzero, there should be a buffer
+#endif
         TextString->StartOfString[DestOffset] = '\0';
         TextString->LengthInChars = DestOffset;
     }
@@ -619,6 +629,7 @@ YoriLibHtmlGenerateEscapeStringInternal(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
@@ -637,6 +648,7 @@ YoriLibHtmlGenerateEscapeString(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlSetVersion(
     __in DWORD HtmlVersion
@@ -679,6 +691,7 @@ typedef struct _YORI_LIB_HTML_CONVERT_CONTEXT {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlCvtAppendWithReallocate(
     __inout PYORI_STRING StringToAppendTo,
@@ -704,6 +717,7 @@ YoriLibHtmlCvtAppendWithReallocate(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlCnvInitializeStream(
     __in HANDLE hOutput
@@ -734,6 +748,7 @@ YoriLibHtmlCnvInitializeStream(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlCnvEndStream(
     __in HANDLE hOutput
@@ -770,6 +785,7 @@ YoriLibHtmlCnvEndStream(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlCnvProcessAndOutputText(
     __in HANDLE hOutput,
@@ -822,6 +838,7 @@ YoriLibHtmlCnvProcessAndOutputText(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
@@ -876,6 +893,7 @@ YoriLibHtmlCnvProcessAndOutputEscape(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibHtmlConvertToHtmlFromVt(
     __in PYORI_STRING VtText,

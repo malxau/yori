@@ -26,6 +26,7 @@
 
 // *** ALIAS.C ***
 
+__success(return)
 BOOL
 YoriShAddAlias(
     __in PYORI_STRING Alias,
@@ -33,6 +34,7 @@ YoriShAddAlias(
     __in BOOL Internal
     );
 
+__success(return)
 BOOL
 YoriShAddAliasLiteral(
     __in LPTSTR Alias,
@@ -40,16 +42,19 @@ YoriShAddAliasLiteral(
     __in BOOL Internal
     );
 
+__success(return)
 BOOL
 YoriShDeleteAlias(
     __in PYORI_STRING Alias
     );
 
+__success(return)
 BOOL
 YoriShExpandAlias(
     __inout PYORI_SH_CMD_CONTEXT CmdContext
     );
 
+__success(return)
 BOOL
 YoriShExpandAliasFromString(
     __in PYORI_STRING CommandString,
@@ -69,17 +74,20 @@ YoriShClearAllAliases();
  */
 #define YORI_SH_GET_ALIAS_STRINGS_INCLUDE_INTERNAL (0x00000002)
 
+__success(return)
 BOOL
 YoriShGetAliasStrings(
     __in DWORD IncludeFlags,
     __inout PYORI_STRING AliasStrings
     );
 
+__success(return)
 BOOL
 YoriShLoadSystemAliases(
     __in BOOL ImportFromCmd
     );
 
+__success(return)
 BOOL
 YoriShMergeChangedAliasStrings(
     __in BOOL MergeFromCmd,
@@ -87,6 +95,7 @@ YoriShMergeChangedAliasStrings(
     __in PYORI_STRING NewStrings
     );
 
+__success(return)
 BOOL
 YoriShGetSystemAliasStrings(
     __in BOOL LoadFromCmd,
@@ -104,6 +113,7 @@ YoriShBuckPass (
     ...
     );
 
+__success(return)
 BOOL
 YoriShExecuteNamedModuleInProc(
     __in LPTSTR ModuleFileName,
@@ -116,22 +126,26 @@ YoriShBuiltIn (
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
+__success(return)
 BOOL
 YoriShExecuteBuiltinString(
     __in PYORI_STRING Expression
     );
 
+__success(return)
 BOOL
 YoriShSetUnloadRoutine(
     __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
     );
 
+__success(return)
 BOOL
 YoriShBuiltinRegister(
     __in PYORI_STRING BuiltinCmd,
     __in PYORI_CMD_BUILTIN CallbackFn
     );
 
+__success(return)
 BOOL
 YoriShBuiltinUnregister(
     __in PYORI_STRING BuiltinCmd,
@@ -144,16 +158,19 @@ YoriShBuiltinUnregisterAll(
 
 // *** CMDBUF.C ***
 
+__success(return)
 BOOL
 YoriShCreateNewProcessBuffer(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
+__success(return)
 BOOL
 YoriShAppendToExistingProcessBuffer(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
+__success(return)
 BOOL
 YoriShForwardProcessBufferToNextProcess(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
@@ -169,33 +186,38 @@ YoriShReferenceProcessBuffer(
     __in PVOID ThisBuffer
     );
 
+__success(return)
 BOOL
 YoriShGetProcessOutputBuffer(
     __in PVOID ThisBuffer,
     __out PYORI_STRING String
     );
 
+__success(return)
 BOOL
 YoriShGetProcessErrorBuffer(
     __in PVOID ThisBuffer,
     __out PYORI_STRING String
     );
 
+__success(return)
 BOOL
 YoriShScanProcessBuffersForTeardown(
     __in BOOL TeardownAll
     );
 
+__success(return)
 BOOL
 YoriShWaitForProcessBufferToFinalize(
     __in PVOID ThisBuffer
     );
 
+__success(return)
 BOOL
 YoriShPipeProcessBuffers(
     __in PVOID ThisBuffer,
-    __in HANDLE hPipeOutput,
-    __in HANDLE hPipeErrors
+    __in_opt HANDLE hPipeOutput,
+    __in_opt HANDLE hPipeErrors
     );
 
 // *** COMPLETE.C ***
@@ -262,15 +284,17 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
     __out_opt PDWORD Generation
     );
 
+__success(return)
 BOOL
 YoriShGetEnvironmentVariable(
     __in LPCTSTR Name,
-    __out_opt LPTSTR Variable,
+    __out_ecount(Size) LPTSTR Variable,
     __in DWORD Size,
     __out PDWORD ReturnedSize,
     __out_opt PDWORD Generation
     );
 
+__success(return)
 BOOL
 YoriShAllocateAndGetEnvironmentVariable(
     __in LPCTSTR Name,
@@ -278,12 +302,14 @@ YoriShAllocateAndGetEnvironmentVariable(
     __out_opt PDWORD Generation
     );
 
+__success(return)
 BOOL
 YoriShGetEnvironmentVariableYS(
     __in PYORI_STRING VariableName,
     __out PYORI_STRING Value
     );
 
+__success(return)
 BOOL
 YoriShExpandEnvironmentVariables(
     __in PYORI_STRING Expression,
@@ -291,12 +317,14 @@ YoriShExpandEnvironmentVariables(
     __inout_opt PDWORD CurrentOffset
     );
 
+__success(return)
 BOOL
 YoriShSetEnvironmentVariable(
     __in PYORI_STRING VariableName,
     __in_opt PYORI_STRING Value
     );
 
+__success(return)
 BOOL
 YoriShSetEnvironmentStrings(
     __in PYORI_STRING NewEnv
@@ -321,18 +349,21 @@ YoriShExecuteSingleProgram(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
+__success(return)
 BOOL
 YoriShExecuteExpressionAndCaptureOutput(
     __in PYORI_STRING Expression,
     __out PYORI_STRING ProcessOutput
     );
 
+__success(return)
 BOOL
 YoriShExpandBackquotes(
     __in PYORI_STRING Expression,
     __out PYORI_STRING ResultingExpression
     );
 
+__success(return)
 BOOL
 YoriShExecuteExpression(
     __in PYORI_STRING Expression
@@ -340,11 +371,13 @@ YoriShExecuteExpression(
 
 // *** HISTORY.C ***
 
+__success(return)
 BOOL
 YoriShAddToHistory(
     __in PYORI_STRING NewCmd
     );
 
+__success(return)
 BOOL
 YoriShAddToHistoryAndReallocate(
     __in PYORI_STRING NewCmd
@@ -358,15 +391,19 @@ YoriShRemoveOneHistoryEntry(
 VOID
 YoriShClearAllHistory();
 
+__success(return)
 BOOL
 YoriShInitHistory();
 
+__success(return)
 BOOL
 YoriShLoadHistoryFromFile();
 
+__success(return)
 BOOL
 YoriShSaveHistoryToFile();
 
+__success(return)
 BOOL
 YoriShGetHistoryStrings(
     __in DWORD MaximumNumber,
@@ -375,15 +412,17 @@ YoriShGetHistoryStrings(
 
 // *** INPUT.C ***
 
+__success(return)
 BOOL
 YoriShEnsureStringHasEnoughCharacters(
     __inout PYORI_STRING String,
     __in DWORD CharactersNeeded
     );
 
+__success(return)
 BOOL
 YoriShGetExpression(
-    __inout PYORI_STRING Expression
+    __out PYORI_STRING Expression
     );
 
 VOID
@@ -391,6 +430,7 @@ YoriShCleanupInputContext();
 
 // *** JOB.C ***
 
+__success(return)
 BOOL
 YoriShCreateNewJob(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
@@ -398,6 +438,7 @@ YoriShCreateNewJob(
     __in DWORD dwProcessId
     );
 
+__success(return)
 BOOL
 YoriShScanJobsReportCompletion(
     __in BOOL TeardownAll
@@ -408,12 +449,14 @@ YoriShGetNextJobId(
     __in DWORD PreviousJobId
     );
 
+__success(return)
 BOOL
 YoriShJobSetPriority(
     __in DWORD JobId,
     __in DWORD PriorityClass
     );
 
+__success(return)
 BOOL
 YoriShTerminateJob(
     __in DWORD JobId
@@ -424,6 +467,7 @@ YoriShJobWait(
     __in DWORD JobId
     );
 
+__success(return)
 BOOL
 YoriShGetJobOutput(
     __in DWORD JobId,
@@ -431,6 +475,7 @@ YoriShGetJobOutput(
     __inout PYORI_STRING Errors
     );
 
+__success(return)
 BOOL
 YoriShPipeJobOutput(
     __in DWORD JobId,
@@ -438,6 +483,7 @@ YoriShPipeJobOutput(
     __in_opt HANDLE hPipeErrors
     );
 
+__success(return)
 BOOL
 YoriShGetJobInformation(
     __in DWORD JobId,
@@ -454,6 +500,7 @@ YoriShPreCommand();
 
 // *** PARSE.C ***
 
+__success(return)
 BOOL
 YoriShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
@@ -461,6 +508,7 @@ YoriShParseCmdlineToCmdContext(
     __out PYORI_SH_CMD_CONTEXT CmdContext
     );
 
+__success(return != NULL)
 LPTSTR
 YoriShBuildCmdlineFromCmdContext(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
@@ -469,6 +517,7 @@ YoriShBuildCmdlineFromCmdContext(
     __out_opt PDWORD EndCurrentArg
     );
 
+__success(return)
 BOOL
 YoriShRemoveEscapesFromCmdContext(
     __in PYORI_SH_CMD_CONTEXT EscapedCmdContext,
@@ -483,6 +532,7 @@ YoriShCopyArg(
     __in DWORD DestArgument
     );
 
+__success(return)
 BOOL
 YoriShCopyCmdContext(
     __out PYORI_SH_CMD_CONTEXT DestCmdContext,
@@ -516,6 +566,7 @@ YoriShDereferenceExecContext(
     __in BOOLEAN Deallocate
     );
 
+__success(return)
 BOOL
 YoriShParseCmdContextToExecPlan(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
@@ -531,12 +582,14 @@ YoriShDoesExpressionSpecifyPath(
     __in PYORI_STRING SearchFor
     );
 
+__success(return)
 BOOL
 YoriShResolveCommandToExecutable(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
     __out PBOOL ExecutableFound
     );
 
+__success(return)
 BOOL
 YoriShFindNextBackquoteSubstring(
     __in PYORI_STRING String,
@@ -544,6 +597,7 @@ YoriShFindNextBackquoteSubstring(
     __out PDWORD CharsInPrefix
     );
 
+__success(return)
 BOOL
 YoriShFindBestBackquoteSubstringAtOffset(
     __in PYORI_STRING String,

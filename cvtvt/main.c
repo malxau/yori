@@ -404,13 +404,22 @@ ENTRYPOINT(
     if (hSource != INVALID_HANDLE_VALUE && UserFileName != NULL) {
         CloseHandle(hSource);
     }
-    if (hControl != INVALID_HANDLE_VALUE) {
-        CloseHandle(hControl);
-    }
 
     if (InputPumpThread != NULL) {
+        //
+        //  TerminateThread is evil because the thread can't do any cleanup.
+        //  Here we "know" the thread is very simple, holds no locks, does
+        //  no cleanup of its own, etc.
+        //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6258)
+#endif
         TerminateThread(InputPumpThread, 0);
         CloseHandle(InputPumpThread);
+    }
+
+    if (hControl != INVALID_HANDLE_VALUE) {
+        CloseHandle(hControl);
     }
 
     YoriLibFreeStringContents(&FileName);

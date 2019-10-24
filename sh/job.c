@@ -108,6 +108,7 @@ YORI_LIST_ENTRY JobList;
  @return TRUE to indicate a job was successfully allocated, FALSE if it was
          not.
  */
+__success(return)
 BOOL
 YoriShCreateNewJob(
     __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
@@ -188,6 +189,7 @@ YoriShFreeJob(
 
  @return Always TRUE currently.
  */
+__success(return)
 BOOL
 YoriShScanJobsReportCompletion(
     __in BOOL TeardownAll
@@ -241,6 +243,7 @@ YoriShScanJobsReportCompletion(
  @return TRUE to indicate that the job was requested to terminate, FALSE if it
          was not.
  */
+__success(return)
 BOOL
 YoriShTerminateJob(
     __in DWORD JobId
@@ -334,6 +337,7 @@ YoriShJobWait(
  @return TRUE to indicate that the priority class was changed, FALSE if it
          was not.
  */
+__success(return)
 BOOL
 YoriShJobSetPriority(
     __in DWORD JobId,
@@ -373,6 +377,7 @@ YoriShJobSetPriority(
 
  @return TRUE to indicate success, FALSE to indicate error.
  */
+__success(return)
 BOOL
 YoriShGetJobOutput(
     __in DWORD JobId,
@@ -421,6 +426,7 @@ YoriShGetJobOutput(
 
  @return TRUE to indicate success, FALSE to indicate error.
  */
+__success(return)
 BOOL
 YoriShPipeJobOutput(
     __in DWORD JobId,
@@ -471,6 +477,7 @@ YoriShPipeJobOutput(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriShGetJobInformation(
     __in DWORD JobId,
@@ -500,11 +507,14 @@ YoriShGetJobInformation(
                 *HasCompleted = TRUE;
                 if (ThisJob->ProcessBuffers != NULL) {
                     *HasOutput = TRUE;
+                } else {
+                    *HasOutput = FALSE;
                 }
                 *ExitCode = ThisJob->ExitCode;
             } else {
                 *HasCompleted = FALSE;
                 *HasOutput = FALSE;
+                *ExitCode = 0;
             }
 
             //

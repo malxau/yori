@@ -251,6 +251,7 @@ YoriPkgRollbackPackage(
  @return ERROR_SUCCESS to indicate the package has been successfully backed
          up, or a Win32 error code indicating the reason for any failure.
  */
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgBackupPackage(
     __in PYORI_STRING IniPath,
@@ -751,6 +752,7 @@ YoriPkgDeletePendingPackages(
 
  @return A Win32 error code, including ERROR_SUCCESS to indicate success.
  */
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PkgIniFile,
@@ -776,6 +778,9 @@ YoriPkgPreparePackageForInstall(
     DWORD Result = ERROR_SUCCESS;
 
     YoriLibConstantString(&PkgInfoFile, _T("pkginfo.ini"));
+    if (RedirectToPackageUrl != NULL) {
+        YoriLibInitEmptyString(RedirectToPackageUrl);
+    }
 
     PendingPackage = YoriLibMalloc(sizeof(YORIPKG_PACKAGE_PENDING_INSTALL));
     if (PendingPackage == NULL) {

@@ -125,6 +125,9 @@ mini_tcmdlinetoargs(LPTSTR szCmdLine, int * argc)
     *argc = arg_count;
 
     ret = HeapAlloc( GetProcessHeap(), 0, (arg_count * sizeof(LPTSTR)) + (char_count + arg_count) * sizeof(TCHAR));
+    if (ret == NULL) {
+        return ret;
+    }
 
     ret_str = (LPTSTR)(ret + arg_count);
 
@@ -224,7 +227,11 @@ VOID __cdecl CONSOLE_CRT_ENTRYPOINT()
     int ret;
 
     argv = mini_tcmdlinetoargs(GetCommandLine(), &argc);
-    ret = CONSOLE_USER_ENTRYPOINT(argc, argv);
+    if (argv == NULL) {
+        ret = EXIT_FAILURE;
+    } else {
+        ret = CONSOLE_USER_ENTRYPOINT(argc, argv);
+    }
 
     ExitProcess(ret);
 }

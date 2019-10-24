@@ -133,7 +133,10 @@ ENTRYPOINT(
     }
 
     llTemp = 0;
-    YoriLibStringToNumber(&ArgV[StartArg], TRUE, &llTemp, &CharsConsumed);
+    if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &llTemp, &CharsConsumed)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sleep: parse error\n"));
+        return EXIT_FAILURE;
+    }
     if (CharsConsumed < ArgV[StartArg].LengthInChars) {
         YoriLibInitEmptyString(&Suffix);
         Suffix.StartOfString = &ArgV[StartArg].StartOfString[CharsConsumed];

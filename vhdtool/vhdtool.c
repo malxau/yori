@@ -263,7 +263,7 @@ VhdToolCreateNewVhd(
     }
 
     CreateParams.Version = 1;
-    if (SourceFile == NULL) {
+    if (SizeAsString != NULL) {
         FileSize = YoriLibStringToFileSize(SizeAsString);
         CreateParams.Version1.MaximumSize = FileSize.QuadPart;
     }
@@ -368,7 +368,7 @@ VhdToolCreateNewVhdx(
     }
 
     CreateParams.Version = 2;
-    if (SourceFile == NULL) {
+    if (SizeAsString != NULL) {
         FileSize = YoriLibStringToFileSize(SizeAsString);
         CreateParams.Version2.MaximumSize = FileSize.QuadPart;
     }
