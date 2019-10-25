@@ -179,9 +179,14 @@ YoriLibCompressSingleFile(
     BOOL Result = FALSE;
     BOOL CompressFile = TRUE;
 
-    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE;
+    //
+    //  In order to compress system files, we can't open for write access.
+    //  WOF doesn't require write access, although NTFS does.
+    //
+
+    AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
     if (CompressionAlgorithm.NtfsAlgorithm != 0) {
-        AccessRequired |= FILE_WRITE_DATA;
+        AccessRequired |= FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES;
     }
 
 
@@ -302,6 +307,11 @@ YoriLibDecompressSingleFile(
     USHORT Algorithm = 0;
     HANDLE DestFileHandle;
 
+    //
+    //  Normally WOF will decompress if a file is opened for FILE_WRITE_DATA
+    //  and NTFS requires it to attempt decompression
+    //
+
     AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | SYNCHRONIZE | FILE_WRITE_DATA;
 
     DestFileHandle = CreateFile(PendingAction->FileName.StartOfString,
@@ -313,21 +323,66 @@ YoriLibDecompressSingleFile(
                                 NULL);
 
     if (DestFileHandle == INVALID_HANDLE_VALUE) {
+
+        // 
+        //  If we can't get a handle with FILE_WRITE_DATA, try without write
+        //  access.  This is to allow decompression of system files, which
+        //  can be performed with FSCTL_DELETE_EXTERNAL_BACKING .
+        //
+
+        if (GetLastError() == ERROR_ACCESS_DENIED) {
+            AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
+
+            DestFileHandle = CreateFile(PendingAction->FileName.StartOfString,
+                                        AccessRequired,
+                                        FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                                        NULL,
+                                        OPEN_EXISTING,
+                                        FILE_FLAG_BACKUP_SEMANTICS,
+                                        NULL);
+        }
+    }
+
+    if (DestFileHandle == INVALID_HANDLE_VALUE) {
         YoriLibFree(PendingAction);
         return FALSE;
     }
 
-    LocalResult = DeviceIoControl(DestFileHandle,
-                                  FSCTL_SET_COMPRESSION,
-                                  &Algorithm,
-                                  sizeof(Algorithm),
-                                  NULL,
-                                  0,
-                                  &BytesReturned,
-                                  NULL);
+    if ((AccessRequired & FILE_WRITE_DATA) != 0) {
+        LocalResult = DeviceIoControl(DestFileHandle,
+                                      FSCTL_SET_COMPRESSION,
+                                      &Algorithm,
+                                      sizeof(Algorithm),
+                                      NULL,
+                                      0,
+                                      &BytesReturned,
+                                      NULL);
 
-    if (!LocalResult) {
-        GlobalResult = FALSE;
+        if (!LocalResult) {
+            GlobalResult = FALSE;
+        }
+    } else {
+
+        //
+        //  If we can't decompress NTFS due to no access, check whether the
+        //  file required decompression.  If it didn't, this can be
+        //  treated as success.
+        //
+
+        LocalResult = DeviceIoControl(DestFileHandle,
+                                      FSCTL_GET_COMPRESSION,
+                                      &Algorithm,
+                                      sizeof(Algorithm),
+                                      NULL,
+                                      0,
+                                      &BytesReturned,
+                                      NULL);
+
+        if (!LocalResult) {
+            GlobalResult = FALSE;
+        } else if (Algorithm != 0) {
+            GlobalResult = FALSE;
+        }
     }
 
     LocalResult = DeviceIoControl(DestFileHandle,
