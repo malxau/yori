@@ -38,6 +38,7 @@ CHAR strMoreHelpText[] =
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -dd            Use the debug display\n"
+        "   -l             Display until Ctrl+Q, Scroll Lock, or pause\n"
         "   -s             Process files from all subdirectories\n";
 
 /**
@@ -85,10 +86,11 @@ ENTRYPOINT(
     DWORD i;
     DWORD StartArg = 0;
     DWORD CurrentMode;
-    BOOL Recursive = FALSE;
-    BOOL BasicEnumeration = FALSE;
+    BOOLEAN Recursive = FALSE;
+    BOOLEAN BasicEnumeration = FALSE;
     BOOL InitComplete;
-    BOOL DebugDisplay = FALSE;
+    BOOLEAN DebugDisplay = FALSE;
+    BOOLEAN SuspendPagination = FALSE;
     MORE_CONTEXT MoreContext;
     YORI_STRING Arg;
 
@@ -111,6 +113,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("dd")) == 0) {
                 DebugDisplay = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                SuspendPagination = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
@@ -144,9 +149,9 @@ ENTRYPOINT(
     YoriLibEnableBackupPrivilege();
 
     if (StartArg == 0 || StartArg == ArgC) {
-        InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay);
+        InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay, SuspendPagination);
     } else {
-        InitComplete = MoreInitContext(&MoreContext, ArgC-StartArg, &ArgV[StartArg], Recursive, BasicEnumeration, DebugDisplay);
+        InitComplete = MoreInitContext(&MoreContext, ArgC-StartArg, &ArgV[StartArg], Recursive, BasicEnumeration, DebugDisplay, SuspendPagination);
     }
 
     if (!InitComplete) {

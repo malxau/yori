@@ -103,11 +103,11 @@ typedef struct _MORE_LOGICAL_LINE {
     WORD InitialUserColor;
 
     /**
-     If TRUE, a newline should be displayed after this string.  If FALSE, the
-     string covers the entire viewport width and will implicitly move to the
-     new line.
+     If TRUE, there are more logical lines to follow this one that are derived
+     from the same physical line.  If FALSE, this logical line is the end of
+     the physical line.
      */
-    BOOL ExplicitNewlineRequired;
+    BOOLEAN MoreLogicalLines;
 
     /**
      The string representation of the logical line.
@@ -175,17 +175,17 @@ typedef struct _MORE_CONTEXT {
     PMORE_LOGICAL_LINE StagingViewportLines;
 
     /**
+     Specifies the total number of ingested lines when the status line was
+     last calculated.
+     */
+    DWORDLONG TotalLinesInViewportStatus;
+
+    /**
      Specifies the number of lines within DisplayViewportLines that are
      currently populated with data.  Since population is a process, this
      starts at zero and counts up to ViewportHeight.
      */
     DWORD LinesInViewport;
-
-    /**
-     Specifies the total number of ingested lines when the status line was
-     last calculated.
-     */
-    DWORDLONG TotalLinesInViewportStatus;
 
     /**
      The number of lines that have been displayed as part of a single page.
@@ -247,13 +247,13 @@ typedef struct _MORE_CONTEXT {
      TRUE if the set of files should be enumerated recursively.  FALSE if they
      should be interpreted as files and not recursed.
      */
-    BOOL Recursive;
+    BOOLEAN Recursive;
 
     /**
      TRUE if enumeration should not expand {}, [], or similar operators.
      FALSE if these should be expanded.
      */
-    BOOL BasicEnumeration;
+    BOOLEAN BasicEnumeration;
 
     /**
      TRUE if the display should be the debug version which clears the screen
@@ -261,14 +261,19 @@ typedef struct _MORE_CONTEXT {
      clarify the state of the system, but is much slower than just telling
      the console about changes and moving things in the console buffer.
      */
-    BOOL DebugDisplay;
+    BOOLEAN DebugDisplay;
 
     /**
      TRUE if out of memory occurred and viewport can't intelligently keep
      displaying results.  This can happen because there's no memory to
      ingest more data, or because the data we have cannot be rendered.
      */
-    BOOL OutOfMemory;
+    BOOLEAN OutOfMemory;
+
+    /**
+     TRUE if the user has pressed Ctrl+Q in order to suspend pagination.
+     */
+    BOOLEAN SuspendPagination;
 
     /**
      Records the total number of files processed.
@@ -303,9 +308,10 @@ MoreInitContext(
     __inout PMORE_CONTEXT MoreContext,
     __in DWORD ArgCount,
     __in_opt PYORI_STRING ArgStrings,
-    __in BOOL Recursive,
-    __in BOOL BasicEnumeration,
-    __in BOOL DebugDisplay
+    __in BOOLEAN Recursive,
+    __in BOOLEAN BasicEnumeration,
+    __in BOOLEAN DebugDisplay,
+    __in BOOLEAN SuspendPagination
     );
 
 VOID

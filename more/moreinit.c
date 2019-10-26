@@ -119,6 +119,10 @@ MoreAllocateViewportStructures(
         is much slower than just telling the console about changes but helps
         to debug the state of the program.
 
+ @param SuspendPagination TRUE if pagination should not be enabled by default,
+        so the program should just display whatever it has ingested in real
+        time until input indicates to pause.
+
  @return TRUE to indicate successful completion, meaning a background thread
          is executing and this should be drained with @ref MoreGracefulExit.
          FALSE to indicate initialization was unsuccessful, and the
@@ -129,9 +133,10 @@ MoreInitContext(
     __inout PMORE_CONTEXT MoreContext,
     __in DWORD ArgCount,
     __in_opt PYORI_STRING ArgStrings,
-    __in BOOL Recursive,
-    __in BOOL BasicEnumeration,
-    __in BOOL DebugDisplay
+    __in BOOLEAN Recursive,
+    __in BOOLEAN BasicEnumeration,
+    __in BOOLEAN DebugDisplay,
+    __in BOOLEAN SuspendPagination
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
@@ -142,6 +147,7 @@ MoreInitContext(
     MoreContext->Recursive = Recursive;
     MoreContext->BasicEnumeration = BasicEnumeration;
     MoreContext->DebugDisplay = DebugDisplay;
+    MoreContext->SuspendPagination = SuspendPagination;
     MoreContext->TabWidth = 4;
 
     YoriLibInitializeListHead(&MoreContext->PhysicalLineList);

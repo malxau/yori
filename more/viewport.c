@@ -587,6 +587,11 @@ MoreGenerateLogicalLinesFromPhysicalLine(
             ThisLine->CharactersRemainingInMatch = CharactersRemainingInMatch;
             ThisLine->LogicalLineIndex = Count;
             ThisLine->PhysicalLineCharacterOffset = CharIndex;
+            if (LogicalLineLength >= Subset.LengthInChars) {
+                ThisLine->MoreLogicalLines = FALSE;
+            } else {
+                ThisLine->MoreLogicalLines = TRUE;
+            }
 
             ASSERT(ThisLine->CharactersRemainingInMatch == 0 || ThisLine->InitialUserColor != ThisLine->InitialDisplayColor);
 
@@ -970,7 +975,8 @@ MoreDrawStatusLine(
     //  If the screen isn't full, there's no point displaying status
     //
 
-    if (MoreContext->LinesInViewport < MoreContext->ViewportHeight) {
+    if (MoreContext->LinesInViewport < MoreContext->ViewportHeight ||
+        MoreContext->SuspendPagination) {
         return;
     }
 
@@ -1299,11 +1305,16 @@ MoreDisplayNewLinesInViewport(
     DWORD LinesToPreserve;
     DWORD LineIndexToPreserve;
 
+    //
+    //  The math to calculate lines to preserve will get confused if we
+    //  try to output more than a viewport
+    //
+
     ASSERT(NewLineCount <= MoreContext->ViewportHeight);
 
     if (MoreContext->LinesInViewport + NewLineCount > MoreContext->ViewportHeight) {
 
-        LinesToPreserve = MoreContext->LinesInViewport - NewLineCount;
+        LinesToPreserve = MoreContext->ViewportHeight - NewLineCount;
         LineIndexToPreserve = MoreContext->LinesInViewport + NewLineCount - MoreContext->ViewportHeight;
 
         for (Index = 0; Index < LinesToPreserve; Index++) {
@@ -1473,6 +1484,7 @@ MoreAddNewLinesToViewport(
     DWORD LinesDesired;
     DWORD LinesReturned;
     BOOL Success;
+
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
     //
@@ -1486,7 +1498,11 @@ MoreAddNewLinesToViewport(
         CurrentLine = &MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1];
     }
 
-    LinesDesired = MoreContext->ViewportHeight - MoreContext->LinesInPage;
+    if (MoreContext->SuspendPagination) {
+        LinesDesired = MoreContext->ViewportHeight;
+    } else {
+        LinesDesired = MoreContext->ViewportHeight - MoreContext->LinesInPage;
+    }
 
     Success = MoreGetNextLogicalLines(MoreContext, CurrentLine, TRUE, LinesDesired, MoreContext->StagingViewportLines, &LinesReturned);
 
@@ -1497,6 +1513,7 @@ MoreAddNewLinesToViewport(
     }
 
     MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
+
 }
 
 /**
@@ -2040,6 +2057,68 @@ Exit:
 }
 
 /**
+ Return TRUE if there are lines which have already been populated into the
+ physical line list that have not yet been displayed on the viewport.
+
+ @param MoreContext Pointer to the context describing the physical lines
+        available and the lines displayed in the viewport.
+
+ @return TRUE if there are more lines available to display.
+ */
+BOOL
+MoreAreMoreLinesAvailable(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    DWORDLONG LastViewportLineNumber;
+    DWORDLONG LastPhysicalLineNumber;
+    PYORI_LIST_ENTRY ListEntry;
+    PMORE_PHYSICAL_LINE LastPhysicalLine;
+    PMORE_LOGICAL_LINE LastViewportLine;
+
+    //
+    //  If nothing is currently on the display, the assumption is that there
+    //  was previously nothing available and the code should wait for more
+    //  physical lines.
+    //
+
+    if (MoreContext->LinesInViewport == 0) {
+        return FALSE;
+    }
+
+    LastViewportLine = &MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1];
+
+    //
+    //  If the last logical line in the viewport indicates there are more
+    //  logical lines from the same physical line, then there must be more
+    //  contents and the physical line number doesn't matter.
+    //
+
+    if (LastViewportLine->MoreLogicalLines) {
+        return TRUE;
+    }
+
+    // 
+    //  If the end of the physical line has been reached, check for the
+    //  existence of more physical lines.
+    //
+
+    LastViewportLineNumber = LastViewportLine->PhysicalLine->LineNumber;
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+    ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, NULL);
+    LastPhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
+    LastPhysicalLineNumber = LastPhysicalLine->LineNumber;
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    if (LastPhysicalLineNumber > LastViewportLineNumber) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Perform the requested action when the user presses a key.
 
  @param MoreContext Pointer to the context describing the data to display.
@@ -2129,6 +2208,16 @@ MoreProcessKeyDown(
                 MoreContext->SearchMode = TRUE;
                 MoreContext->SearchDirty = TRUE;
                 *RedrawStatus = TRUE;
+            } else if (KeyCode == VK_SCROLL) {
+                if (InputRecord->Event.KeyEvent.dwControlKeyState & SCROLLLOCK_ON) {
+                    MoreContext->SuspendPagination = TRUE;
+                } else {
+                    MoreContext->SuspendPagination = FALSE;
+                    *RedrawStatus = TRUE;
+                }
+            } else if (KeyCode == VK_PAUSE) {
+                MoreContext->SuspendPagination = FALSE;
+                *RedrawStatus = TRUE;
             }
         }
     } else if (CtrlMask == ENHANCED_KEY) {
@@ -2146,6 +2235,14 @@ MoreProcessKeyDown(
             MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
         } else if (KeyCode == VK_PRIOR) {
             MoreMoveViewportUp(MoreContext, MoreContext->ViewportHeight);
+        }
+    } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
+               CtrlMask == LEFT_CTRL_PRESSED) {
+        if (KeyCode == 'Q') {
+            MoreContext->SuspendPagination = TRUE;
+        } else if (KeyCode == 'S') {
+            MoreContext->SuspendPagination = FALSE;
+            *RedrawStatus = TRUE;
         }
     }
 
@@ -2812,7 +2909,8 @@ MoreViewportDisplay(
         //  ingested.
         //
 
-        if (MoreContext->LinesInPage == MoreContext->ViewportHeight) {
+        if (MoreContext->LinesInPage == MoreContext->ViewportHeight &&
+            !MoreContext->SuspendPagination) {
             WaitForNewLines = FALSE;
         } else {
             WaitForNewLines = TRUE;
@@ -2833,6 +2931,23 @@ MoreViewportDisplay(
             Timeout = 250;
         }
 
+        //
+        //  If pagination is suspended, and lines are available to display,
+        //  perform the wait with a zero timeout.  This means if input
+        //  events are available they will be processed, but if not, more
+        //  lines will be displayed.  If the ingest thread has terminated
+        //  and pagination is suspended and there are no more contents,
+        //  the process is complete.
+        //
+
+        if (MoreContext->SuspendPagination) {
+            if (MoreAreMoreLinesAvailable(MoreContext)) {
+                Timeout = 0;
+            } else if (!WaitForIngestThread) {
+                break;
+            }
+        }
+
         WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, Timeout);
 
         //
@@ -2850,9 +2965,14 @@ MoreViewportDisplay(
         if (WaitObject == WAIT_TIMEOUT) {
             if (YoriLibIsPeriodicScrollActive(&MoreContext->Selection)) {
                 MorePeriodicScrollForSelection(MoreContext);
+                MoreCheckForWindowSizeChange(MoreContext);
+                MoreCheckForStatusLineChange(MoreContext);
+            } else if (MoreContext->SuspendPagination && MoreAreMoreLinesAvailable(MoreContext)) {
+                MoreAddNewLinesToViewport(MoreContext);
+            } else {
+                MoreCheckForWindowSizeChange(MoreContext);
+                MoreCheckForStatusLineChange(MoreContext);
             }
-            MoreCheckForWindowSizeChange(MoreContext);
-            MoreCheckForStatusLineChange(MoreContext);
         } else {
             if (WaitObject < WAIT_OBJECT_0 || WaitObject >= WAIT_OBJECT_0 + HandleCountToWait) {
                 break;
@@ -2892,6 +3012,7 @@ MoreViewportDisplay(
                 BOOL RedrawStatus = FALSE;
 
                 if (!ReadConsoleInput(InHandle, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failed to read input, terminating\n"));
                     break;
                 }
 
@@ -2935,11 +3056,9 @@ MoreViewportDisplay(
                             ReDisplayRequired |= MoreProcessMouseDoubleClick(MoreContext, InputRecord, ButtonsPressed, &Terminate);
                         }
 
-                        /*
                         if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_WHEELED) {
                             ReDisplayRequired |= MoreProcessMouseScroll(MoreContext, InputRecord, ButtonsPressed, &Terminate);
                         }
-                        */
 
                         if (ReDisplayRequired) {
                             if (RedrawStatus) {
