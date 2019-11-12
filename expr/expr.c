@@ -35,7 +35,7 @@ CHAR strExprHelpText[] =
         "\n"
         "Evaluate simple arithmetic expressions.\n"
         "\n"
-        "EXPR [-license] [-h] [-int8|-int16|-int32|-uint8|-uint16|-uint32]\n"
+        "EXPR [-license] [-h] [-s] [-int8|-int16|-int32|-uint8|-uint16|-uint32]\n"
         "     <Number>[+|-|*|/|%|<|>|^]<Number>...\n"
         "\n"
         "   -h             Output result as hex rather than decimal\n"
@@ -44,7 +44,8 @@ CHAR strExprHelpText[] =
         "   -int32         Output result as a signed 32 bit value\n"
         "   -uint8         Output result as an unsigned 8 bit value\n"
         "   -uint16        Output result as an unsigned 16 bit value\n"
-        "   -uint32        Output result as an unsigned 32 bit value\n";
+        "   -uint32        Output result as an unsigned 32 bit value\n"
+        "   -s             Display digit group seperators\n";
 
 /**
  Display usage text to the user.
