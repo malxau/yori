@@ -152,6 +152,30 @@ YoriShTrimSpacesFromBeginning(
     }
 }
 
+/**
+ Remove spaces or @ characters from the beginning of a Yori string.
+ Note this implies advancing the StartOfString pointer, so a caller cannot
+ assume this pointer is unchanged across the call.
+
+ @param String Pointer to the Yori string to remove leading chars from.
+ */
+VOID
+YoriShTrimSpacesAndAtsFromBeginning(
+    __in PYORI_STRING String
+    )
+{
+    while (String->LengthInChars > 0) {
+        if (String->StartOfString[0] == ' ' ||
+            String->StartOfString[0] == '@') {
+
+            String->StartOfString++;
+            String->LengthInChars--;
+        } else {
+            break;
+        }
+    }
+}
+
 
 /**
  Parse a single command string into a series of arguments.  This routine takes
@@ -202,7 +226,7 @@ YoriShParseCmdlineToCmdContext(
     //  Consume all spaces.
     //
 
-    YoriShTrimSpacesFromBeginning(&Char);
+    YoriShTrimSpacesAndAtsFromBeginning(&Char);
 
     if (Char.LengthInChars > 0 && Char.StartOfString[0] == '"') {
         LookingForFirstQuote = TRUE;
@@ -468,7 +492,7 @@ YoriShParseCmdlineToCmdContext(
     Char.StartOfString = CmdLine->StartOfString;
     Char.LengthInChars = CmdLine->LengthInChars;
 
-    YoriShTrimSpacesFromBeginning(&Char);
+    YoriShTrimSpacesAndAtsFromBeginning(&Char);
 
     if (Char.LengthInChars > 0 && Char.StartOfString[0] == '"') {
         LookingForFirstQuote = TRUE;
