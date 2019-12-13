@@ -618,6 +618,12 @@ typedef struct _YORI_SH_INPUT_BUFFER {
     CONSOLE_CURSOR_INFO CursorInfo;
 
     /**
+     The size of the console buffer.  Used to detect and avoid processing
+     bogus buffer resize notifications.
+     */
+    COORD ConsoleBufferDimensions;
+
+    /**
      Pointer to the currently selected history entry when navigating through
      history.
      */

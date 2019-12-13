@@ -2489,6 +2489,8 @@ YoriShGetExpressionFromConsole(
     )
 {
     YORI_SH_INPUT_BUFFER Buffer;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
     DWORD ActuallyRead = 0;
     DWORD CurrentRecordIndex = 0;
     DWORD err;
@@ -2506,6 +2508,13 @@ YoriShGetExpressionFromConsole(
 
     Buffer.ConsoleInputHandle = InputHandle;
     Buffer.ConsoleOutputHandle = OutputHandle;
+
+    if (!GetConsoleScreenBufferInfo(Buffer.ConsoleOutputHandle, &ScreenInfo)) {
+        return FALSE;
+    }
+
+    Buffer.ConsoleBufferDimensions.X = ScreenInfo.dwSize.X;
+    Buffer.ConsoleBufferDimensions.Y = ScreenInfo.dwSize.Y;
 
     if (!YoriLibAllocateString(&Buffer.String, 256)) {
         return FALSE;
@@ -2561,7 +2570,14 @@ YoriShGetExpressionFromConsole(
                 }
 
             } else if (InputRecord->EventType == WINDOW_BUFFER_SIZE_EVENT) {
-                ReDisplayRequired |= YoriShClearInputSelections(&Buffer);
+                if (InputRecord->Event.WindowBufferSizeEvent.dwSize.X != Buffer.ConsoleBufferDimensions.X ||
+                    InputRecord->Event.WindowBufferSizeEvent.dwSize.Y != Buffer.ConsoleBufferDimensions.Y) {
+
+                    ReDisplayRequired |= YoriShClearInputSelections(&Buffer);
+
+                    Buffer.ConsoleBufferDimensions.X = InputRecord->Event.WindowBufferSizeEvent.dwSize.X;
+                    Buffer.ConsoleBufferDimensions.Y = InputRecord->Event.WindowBufferSizeEvent.dwSize.Y;
+                }
             } else if (InputRecord->EventType == FOCUS_EVENT) {
                 if (InputRecord->Event.FocusEvent.bSetFocus) {
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
