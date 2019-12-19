@@ -470,6 +470,91 @@ YoriLibAddEnvironmentComponent(
 }
 
 /**
+ Remove a component from a semicolon delimited string buffer if it's already
+ there and return the combined string.
+
+ @param String The string buffer that contains semicolon delimited elements.
+
+ @param ComponentToRemove The component to remove.
+
+ @param Result On successful completion, updated to contain the adjusted
+        string.
+
+ @return TRUE to indicate success, FALSE on failure.
+ */
+__success(return)
+BOOL
+YoriLibRemoveEnvironmentComponentFromString(
+    __in PYORI_STRING String,
+    __in PYORI_STRING ComponentToRemove,
+    __out PYORI_STRING Result
+    )
+{
+    LPTSTR NewPathData;
+    LPTSTR ThisPath;
+    TCHAR * TokCtx;
+    DWORD NewOffset;
+    DWORD CharsPopulated;
+
+    ASSERT(YoriLibIsStringNullTerminated(String));
+
+    NewPathData = YoriLibReferencedMalloc((String->LengthInChars + 1) * sizeof(TCHAR));
+    if (NewPathData == NULL) {
+        return FALSE;
+    }
+
+    NewOffset = 0;
+
+    ThisPath = _tcstok_s(String->StartOfString, _T(";"), &TokCtx);
+    while (ThisPath != NULL) {
+        if (ThisPath[0] != '\0') {
+            if (YoriLibCompareStringWithLiteralInsensitive(ComponentToRemove, ThisPath) != 0) {
+                if (NewOffset != 0) {
+                    CharsPopulated = YoriLibSPrintf(&NewPathData[NewOffset], _T(";%s"), ThisPath);
+                } else {
+                    CharsPopulated = YoriLibSPrintf(&NewPathData[NewOffset], _T("%s"), ThisPath);
+                }
+
+                if (CharsPopulated < 0) {
+                    YoriLibDereference(NewPathData);
+                    return FALSE;
+                }
+                NewOffset += CharsPopulated;
+            }
+        }
+        if (TokCtx != NULL) {
+            TokCtx--;
+            ASSERT(*TokCtx == '\0');
+            *TokCtx = ';';
+            TokCtx++;
+        }
+        ThisPath = _tcstok_s(NULL, _T(";"), &TokCtx);
+    }
+
+    //
+    //  Normally this would be NULL terminated by Printf, but if that wasn't
+    //  invoked at least once nothing terminated the destination buffer, so
+    //  do it explicitly here.
+    //
+
+    if (NewOffset == 0) {
+        NewPathData[NewOffset] = '\0';
+    }
+
+    YoriLibInitEmptyString(Result);
+    Result->MemoryToFree = NewPathData;
+    Result->StartOfString = NewPathData;
+    Result->LengthInChars = NewOffset;
+    if (NewOffset > 0) {
+        Result->LengthAllocated = NewOffset + 1;
+    } else {
+        Result->LengthAllocated = 0;
+    }
+
+    return TRUE;
+}
+
+/**
  Remove a component from a semicolon delimited environment variable if it's
  already there and return the combined string.
 
@@ -490,13 +575,9 @@ YoriLibRemoveEnvironmentComponentReturnString(
     __out PYORI_STRING Result
     )
 {
-    LPTSTR PathData;
-    LPTSTR NewPathData;
-    LPTSTR ThisPath;
-    TCHAR * TokCtx;
+    YORI_STRING PathData;
     DWORD PathLength;
-    DWORD NewOffset;
-    DWORD CharsPopulated;
+    BOOL Success;
 
     ASSERT(YoriLibIsStringNullTerminated(EnvironmentVariable));
 
@@ -506,48 +587,18 @@ YoriLibRemoveEnvironmentComponentReturnString(
     //
 
     PathLength = GetEnvironmentVariable(EnvironmentVariable->StartOfString, NULL, 0);
-    PathData = YoriLibReferencedMalloc(PathLength * 2 * sizeof(TCHAR));
-    if (PathData == NULL) {
+    if (!YoriLibAllocateString(&PathData, PathLength + 1)) {
         return FALSE;
     }
 
-    PathData[0] = '\0';
-    GetEnvironmentVariable(EnvironmentVariable->StartOfString, PathData, PathLength);
+    PathData.StartOfString[0] = '\0';
+    PathData.LengthInChars = GetEnvironmentVariable(EnvironmentVariable->StartOfString, PathData.StartOfString, PathData.LengthAllocated);
 
-    NewPathData = (LPTSTR)YoriLibAddToPointer(PathData, PathLength * sizeof(TCHAR));
-    NewOffset = 0;
+    Success = YoriLibRemoveEnvironmentComponentFromString(&PathData, ComponentToRemove, Result);
 
-    ThisPath = _tcstok_s(PathData, _T(";"), &TokCtx);
-    while (ThisPath != NULL) {
-        if (ThisPath[0] != '\0') {
-            if (YoriLibCompareStringWithLiteralInsensitive(ComponentToRemove, ThisPath) != 0) {
-                if (NewOffset != 0) {
-                    CharsPopulated = YoriLibSPrintf(&NewPathData[NewOffset], _T(";%s"), ThisPath);
-                } else {
-                    CharsPopulated = YoriLibSPrintf(&NewPathData[NewOffset], _T("%s"), ThisPath);
-                }
+    YoriLibFreeStringContents(&PathData);
 
-                if (CharsPopulated < 0) {
-                    YoriLibDereference(PathData);
-                    return FALSE;
-                }
-                NewOffset += CharsPopulated;
-            }
-        }
-        ThisPath = _tcstok_s(NULL, _T(";"), &TokCtx);
-    }
-
-    YoriLibInitEmptyString(Result);
-    Result->MemoryToFree = PathData;
-    Result->StartOfString = NewPathData;
-    Result->LengthInChars = NewOffset;
-    if (NewOffset > 0) {
-        Result->LengthAllocated = NewOffset + 1;
-    } else {
-        Result->LengthAllocated = 0;
-    }
-
-    return TRUE;
+    return Success;
 }
 
 /**

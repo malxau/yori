@@ -5589,6 +5589,78 @@ OPEN_THREAD_TOKEN(HANDLE, DWORD, BOOL, PHANDLE);
 typedef OPEN_THREAD_TOKEN *POPEN_THREAD_TOKEN;
 
 /**
+ A prototype for the RegCloseKey function.
+ */
+typedef
+LONG WINAPI
+REG_CLOSE_KEY(HANDLE);
+
+/**
+ A prototype for a pointer to the RegCloseKey function.
+ */
+typedef REG_CLOSE_KEY *PREG_CLOSE_KEY;
+
+/**
+ A prototype for the RegCreateKeyExW function.
+ */
+typedef
+LONG WINAPI
+REG_CREATE_KEY_EXW(HANDLE, LPCWSTR, DWORD, LPWSTR, DWORD, DWORD, PVOID, PHANDLE, LPDWORD);
+
+/**
+ A prototype for a pointer to the RegCreateKeyExW function.
+ */
+typedef REG_CREATE_KEY_EXW *PREG_CREATE_KEY_EXW;
+
+/**
+ A prototype for the RegDeleteKeyW function.
+ */
+typedef
+LONG WINAPI
+REG_DELETE_KEYW(HANDLE, LPCWSTR);
+
+/**
+ A prototype for a pointer to the RegDeleteKeyW function.
+ */
+typedef REG_DELETE_KEYW *PREG_DELETE_KEYW;
+
+/**
+ A prototype for the RegDeleteValueW function.
+ */
+typedef
+LONG WINAPI
+REG_DELETE_VALUEW(HANDLE, LPCWSTR);
+
+/**
+ A prototype for a pointer to the RegDeleteValueW function.
+ */
+typedef REG_DELETE_VALUEW *PREG_DELETE_VALUEW;
+
+/**
+ A prototype for the RegQueryValueExW function.
+ */
+typedef
+LONG WINAPI
+REG_QUERY_VALUE_EXW(HANDLE, LPCWSTR, LPDWORD, LPDWORD, LPBYTE, LPDWORD);
+
+/**
+ A prototype for a pointer to the RegQueryValueExW function.
+ */
+typedef REG_QUERY_VALUE_EXW *PREG_QUERY_VALUE_EXW;
+
+/**
+ A prototype for the RegSetValueExW function.
+ */
+typedef
+LONG WINAPI
+REG_SET_VALUE_EXW(HANDLE, LPCWSTR, DWORD, DWORD, LPBYTE, DWORD);
+
+/**
+ A prototype for a pointer to the RegSetValueExW function.
+ */
+typedef REG_SET_VALUE_EXW *PREG_SET_VALUE_EXW;
+
+/**
  A prototype for the RevertToSelf function.
  */
 typedef
@@ -5681,6 +5753,36 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to OpenThreadToken.
      */
     POPEN_THREAD_TOKEN pOpenThreadToken;
+
+    /**
+     If it's available on the current system, a pointer to RegCloseKey.
+     */
+    PREG_CLOSE_KEY pRegCloseKey;
+
+    /**
+     If it's available on the current system, a pointer to RegCreateKeyExW.
+     */
+    PREG_CREATE_KEY_EXW pRegCreateKeyExW;
+
+    /**
+     If it's available on the current system, a pointer to RegDeleteKeyW.
+     */
+    PREG_DELETE_KEYW pRegDeleteKeyW;
+
+    /**
+     If it's available on the current system, a pointer to RegDeleteValueW.
+     */
+    PREG_DELETE_VALUEW pRegDeleteValueW;
+
+    /**
+     If it's available on the current system, a pointer to RegQueryValueExW.
+     */
+    PREG_QUERY_VALUE_EXW pRegQueryValueExW;
+
+    /**
+     If it's available on the current system, a pointer to RegSetValueExW.
+     */
+    PREG_SET_VALUE_EXW pRegSetValueExW;
 
     /**
      If it's available on the current system, a pointer to RevertToSelf.
@@ -6454,6 +6556,18 @@ REGISTER_SHELL_HOOK_WINDOW(HWND);
 typedef REGISTER_SHELL_HOOK_WINDOW *PREGISTER_SHELL_HOOK_WINDOW;
 
 /**
+ A prototype for the SendMessageTimeout function.
+ */
+typedef
+LRESULT WINAPI
+SEND_MESSAGE_TIMEOUT(HWND, UINT, WPARAM, LPARAM, UINT, UINT, PDWORD_PTR);
+
+/**
+ A prototype for a pointer to the SendMessageTimeout function.
+ */
+typedef SEND_MESSAGE_TIMEOUT *PSEND_MESSAGE_TIMEOUT;
+
+/**
  A prototype for the SetClipboardData function.
  */
 typedef
@@ -6592,6 +6706,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to RegisterShellHookWindow.
      */
     PREGISTER_SHELL_HOOK_WINDOW pRegisterShellHookWindow;
+
+    /**
+     If it's available on the current system, a pointer to SendMessageTimeout.
+     */
+    PSEND_MESSAGE_TIMEOUT pSendMessageTimeout;
 
     /**
      If it's available on the current system, a pointer to SetClipboardData.

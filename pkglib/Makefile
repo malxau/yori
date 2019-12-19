@@ -10,6 +10,7 @@ OBJS=\
 	 backup.obj      \
 	 create.obj      \
 	 install.obj     \
+	 reg.obj         \
 	 remote.obj      \
 	 util.obj        \
 

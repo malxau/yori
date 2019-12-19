@@ -60,6 +60,7 @@ CHAR strYpmHelpText[] =
         "YPM -rsl\n"
         "YPM -src [<pkg>]\n"
         "YPM -sym [<pkg>]\n"
+        "YPM -uninstall\n"
         "YPM [-a <arch>] -u [<pkg>]\n"
         "\n"
         "   -a             Specify a CPU architecture to upgrade to\n"
@@ -80,7 +81,8 @@ CHAR strYpmHelpText[] =
         "   -rsl           List remote servers\n"
         "   -src           Install source for specified package or all packages\n"
         "   -sym           Install debug symbols for specified package or all packages\n"
-        "   -u             Upgrade a package or all currently installed packages\n";
+        "   -u             Upgrade a package or all currently installed packages\n"
+        "   -uninstall     Remove all installed packages from the system\n";
 
 /**
  Display usage text to the user.
@@ -122,6 +124,7 @@ typedef enum _YPM_OPERATION {
     YpmOpDownload = 19,
     YpmOpDownloadStable = 20,
     YpmOpDownloadDaily = 21,
+    YpmOpUninstall = 22,
 } YPM_OPERATION;
 
 #ifdef YORI_BUILTIN
@@ -359,6 +362,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
                 Op = YpmOpUpgradeInstalled;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uninstall")) == 0) {
+                Op = YpmOpUninstall;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradepath")) == 0) {
                 if (i + 1 < ArgC) {
                     UpgradePath = &ArgV[i + 1];
@@ -501,6 +507,8 @@ ENTRYPOINT(
         YORI_STRING LocalSourcePath;
         YoriLibConstantString(&LocalSourcePath, _T("http://www.malsmith.net/download/?obj=yori/latest-daily/"));
         YoriPkgDownloadRemotePackages(&LocalSourcePath, FilePath);
+    } else if (Op == YpmOpUninstall) {
+        YoriPkgUninstallAll();
     }
 
     return EXIT_SUCCESS;

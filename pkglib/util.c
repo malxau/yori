@@ -29,6 +29,37 @@
 #include "yoripkgp.h"
 
 /**
+ Return a fully qualified path to the currently running program.
+
+ @param ExecutableFile On successful completion, populated with the program
+        file that is currently running.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgGetExecutableFile(
+    __out PYORI_STRING ExecutableFile
+    )
+{
+    YORI_STRING ModuleName;
+
+    if (!YoriLibAllocateString(&ModuleName, 32768)) {
+        return FALSE;
+    }
+
+    ModuleName.LengthInChars = GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
+    if (ModuleName.LengthInChars == 0) {
+        YoriLibFreeStringContents(&ModuleName);
+        return FALSE;
+    }
+
+    memcpy(ExecutableFile, &ModuleName, sizeof(YORI_STRING));
+    return TRUE;
+}
+
+
+/**
  Return a fully qualified path to the directory containing the program.
 
  @param AppDirectory On successful completion, populated with the directory
@@ -45,13 +76,7 @@ YoriPkgGetApplicationDirectory(
     YORI_STRING ModuleName;
     LPTSTR Ptr;
 
-    if (!YoriLibAllocateString(&ModuleName, 32768)) {
-        return FALSE;
-    }
-
-    ModuleName.LengthInChars = GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
-    if (ModuleName.LengthInChars == 0) {
-        YoriLibFreeStringContents(&ModuleName);
+    if (!YoriPkgGetExecutableFile(&ModuleName)) {
         return FALSE;
     }
 

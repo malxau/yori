@@ -63,6 +63,18 @@ YoriPkgDeleteInstalledPackageFile(
         Sleep(20);
     }
 
+    //
+    //  MSFIX: If the file can't be deleted, one option is to defer until
+    //  reboot, but this presumably requires privilege to modify the
+    //  registry, and we risk creating problems if a future installation
+    //  occurs while a previous uninstallation is pending on the next
+    //  reboot.  Working with delete-delayed-until-reboot therefore implies
+    //  being able to detect and/or fix it on installation.
+    //
+    //  But since this requires privilege anyway, another option is to see
+    //  what other options exist for deleting an in use binary.
+    //
+
     if (!FileDeleted) {
         return FALSE;
     }
@@ -92,68 +104,66 @@ YoriPkgDeleteInstalledPackageFile(
 /**
  Delete a specified package from the system.
 
+ @param PkgIniFile Pointer to the full path to the packages.ini file.
+
  @param TargetDirectory Pointer to a string specifying the directory
         containing the package.  If NULL, the directory containing the
         application is used.
 
  @param PackageName Specifies the package name to delete.
 
- @param WarnIfNotInstalled If TRUE, display to the console indication if the
-        package is not installed.  If FALSE, silently fail the operation.
+ @param IgnoreFailureOfCurrentExecutable If TRUE, and the currently
+        executing program forms part of the current package, continue to
+        delete the package on a best effort basis.  If FALSE, and the
+        currently executing program is the first program in the package to
+        delete, abort the delete with an error.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgDeletePackage(
+YoriPkgDeletePackageInternal(
+    __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,
     __in PYORI_STRING PackageName,
-    __in BOOL WarnIfNotInstalled
+    __in BOOLEAN IgnoreFailureOfCurrentExecutable
     )
 {
-    YORI_STRING PkgIniFile;
     YORI_STRING AppPath;
     YORI_STRING IniValue;
     YORI_STRING FileToDelete;
+    PYORI_STRING FileBeingDeleted;
     DWORD FileCount;
     DWORD FileIndex;
     TCHAR FileIndexString[16];
-
-    if (!YoriPkgGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
-        return FALSE;
-    }
+    BOOL DeleteResult;
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
-        YoriLibFreeStringContents(&PkgIniFile);
         return FALSE;
     }
 
-    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
-    if (IniValue.LengthInChars == 0) {
-        if (WarnIfNotInstalled) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not an installed package\n"), PackageName);
+    if (TargetDirectory == NULL) {
+        if (!YoriPkgGetApplicationDirectory(&AppPath)) {
+            YoriLibFreeStringContents(&IniValue);
+            return FALSE;
         }
-        YoriLibFreeStringContents(&PkgIniFile);
-        YoriLibFreeStringContents(&IniValue);
-        return FALSE;
+    } else {
+        if (!YoriLibAllocateString(&AppPath, TargetDirectory->LengthInChars + MAX_PATH)) {
+            return FALSE;
+        }
+        memcpy(AppPath.StartOfString, TargetDirectory->StartOfString, TargetDirectory->LengthInChars * sizeof(TCHAR));
+        AppPath.StartOfString[TargetDirectory->LengthInChars] = '\0';
+        AppPath.LengthInChars = TargetDirectory->LengthInChars;
     }
 
-    FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile.StartOfString);
+    FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
     if (FileCount == 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y contains nothing to remove\n"), PackageName);
-        YoriLibFreeStringContents(&PkgIniFile);
-        YoriLibFreeStringContents(&IniValue);
-        return FALSE;
-    }
-
-    if (!YoriPkgGetApplicationDirectory(&AppPath)) {
-        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&AppPath);
         YoriLibFreeStringContents(&IniValue);
         return FALSE;
     }
 
     YoriLibInitEmptyString(&FileToDelete);
     if (!YoriLibAllocateString(&FileToDelete, AppPath.LengthInChars + YORIPKG_MAX_FIELD_LENGTH)) {
-        YoriLibFreeStringContents(&PkgIniFile);
         YoriLibFreeStringContents(&AppPath);
         YoriLibFreeStringContents(&IniValue);
         return FALSE;
@@ -162,33 +172,69 @@ YoriPkgDeletePackage(
     for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
-        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
         if (IniValue.LengthInChars > 0) {
-            YoriLibYPrintf(&FileToDelete, _T("%y\\%y"), &AppPath, &IniValue);
-            YoriPkgDeleteInstalledPackageFile(&FileToDelete);
+            if (!YoriLibIsPathPrefixed(&IniValue)) {
+                YoriLibYPrintf(&FileToDelete, _T("%y\\%y"), &AppPath, &IniValue);
+                FileBeingDeleted = &FileToDelete;
+            } else {
+                FileBeingDeleted = &IniValue;
+            }
+            DeleteResult = YoriPkgDeleteInstalledPackageFile(FileBeingDeleted);
+
+            if (!DeleteResult && IgnoreFailureOfCurrentExecutable) {
+                YORI_STRING ModuleName;
+
+                if (!YoriPkgGetExecutableFile(&ModuleName)) {
+                    return FALSE;
+                }
+
+                //
+                //  Note this is the same way that the app directory is determined,
+                //  so the only chance for a false miscompare is if the application
+                //  is executing from a different name (eg. short file name.)
+                //
+
+                if (YoriLibCompareStringInsensitive(&ModuleName, FileBeingDeleted) == 0) {
+                    DeleteResult = TRUE;
+                }
+                YoriLibFreeStringContents(&ModuleName);
+            }
+
+            //
+            //  If delete fails on the first file, don't continue deleting the
+            //  package.  If it fails on a later file, the package is already
+            //  inconsistent.
+            //
+
+            if (!DeleteResult && FileIndex == 1) {
+                YoriLibFreeStringContents(&IniValue);
+                YoriLibFreeStringContents(&AppPath);
+                YoriLibFreeStringContents(&FileToDelete);
+                return FALSE;
+            }
         }
 
-        WritePrivateProfileString(PackageName->StartOfString, FileIndexString, NULL, PkgIniFile.StartOfString);
+        WritePrivateProfileString(PackageName->StartOfString, FileIndexString, NULL, PkgIniFile->StartOfString);
     }
 
-    WritePrivateProfileString(PackageName->StartOfString, _T("FileCount"), NULL, PkgIniFile.StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("Architecture"), NULL, PkgIniFile.StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), NULL, PkgIniFile.StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("SourcePath"), NULL, PkgIniFile.StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), NULL, PkgIniFile.StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("Version"), NULL, PkgIniFile.StartOfString);
-    WritePrivateProfileString(_T("Installed"), PackageName->StartOfString, NULL, PkgIniFile.StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("FileCount"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("Architecture"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("SourcePath"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("Version"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(_T("Installed"), PackageName->StartOfString, NULL, PkgIniFile->StartOfString);
 
-    WritePrivateProfileString(PackageName->StartOfString, NULL, NULL, PkgIniFile.StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, NULL, NULL, PkgIniFile->StartOfString);
 
-
-    YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&IniValue);
     YoriLibFreeStringContents(&AppPath);
     YoriLibFreeStringContents(&FileToDelete);
 
     return TRUE;
 }
+
 
 
 /**
@@ -257,14 +303,18 @@ YoriPkgInstallPackageFileCallback(
     PYORIPKG_INSTALL_PKG_CONTEXT InstallContext = (PYORIPKG_INSTALL_PKG_CONTEXT)Context;
     TCHAR FileIndexString[16];
 
-    UNREFERENCED_PARAMETER(FullPath);
-
     if (InstallContext->ConflictingFileFound) {
         return FALSE;
     }
 
+    if (YoriPkgIsFileToBeDeletedOnReboot(FullPath)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File %y is scheduled to be deleted on next reboot\n"), FullPath);
+        InstallContext->ConflictingFileFound = TRUE;
+        return FALSE;
+    }
+
     if (YoriPkgCheckIfFileAlreadyExists(InstallContext->PendingPackages, RelativePath)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Install of package %y conflicts with installed file %y\n"), InstallContext->PackageName, RelativePath);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Install of package %y conflicts with installed file %y\n"), InstallContext->PackageName, RelativePath);
         InstallContext->ConflictingFileFound = TRUE;
         return FALSE;
     }

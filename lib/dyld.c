@@ -233,6 +233,12 @@ YoriLibLoadAdvApi32Functions()
     DllAdvApi32.pLookupPrivilegeValueW = (PLOOKUP_PRIVILEGE_VALUEW)GetProcAddress(DllAdvApi32.hDll, "LookupPrivilegeValueW");
     DllAdvApi32.pOpenProcessToken = (POPEN_PROCESS_TOKEN)GetProcAddress(DllAdvApi32.hDll, "OpenProcessToken");
     DllAdvApi32.pOpenThreadToken = (POPEN_THREAD_TOKEN)GetProcAddress(DllAdvApi32.hDll, "OpenThreadToken");
+    DllAdvApi32.pRegCloseKey = (PREG_CLOSE_KEY)GetProcAddress(DllAdvApi32.hDll, "RegCloseKey");
+    DllAdvApi32.pRegCreateKeyExW = (PREG_CREATE_KEY_EXW)GetProcAddress(DllAdvApi32.hDll, "RegCreateKeyExW");
+    DllAdvApi32.pRegDeleteKeyW = (PREG_DELETE_KEYW)GetProcAddress(DllAdvApi32.hDll, "RegDeleteKeyW");
+    DllAdvApi32.pRegDeleteValueW = (PREG_DELETE_VALUEW)GetProcAddress(DllAdvApi32.hDll, "RegDeleteValueW");
+    DllAdvApi32.pRegQueryValueExW = (PREG_QUERY_VALUE_EXW)GetProcAddress(DllAdvApi32.hDll, "RegQueryValueExW");
+    DllAdvApi32.pRegSetValueExW = (PREG_SET_VALUE_EXW)GetProcAddress(DllAdvApi32.hDll, "RegSetValueExW");
     DllAdvApi32.pRevertToSelf = (PREVERT_TO_SELF)GetProcAddress(DllAdvApi32.hDll, "RevertToSelf");
     DllAdvApi32.pSetNamedSecurityInfoW = (PSET_NAMED_SECURITY_INFOW)GetProcAddress(DllAdvApi32.hDll, "SetNamedSecurityInfoW");
 
@@ -502,6 +508,7 @@ YoriLibLoadUser32Functions()
     DllUser32.pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(DllUser32.hDll, "OpenClipboard");
     DllUser32.pRegisterClipboardFormatW = (PREGISTER_CLIPBOARD_FORMATW)GetProcAddress(DllUser32.hDll, "RegisterClipboardFormatW");
     DllUser32.pRegisterShellHookWindow = (PREGISTER_SHELL_HOOK_WINDOW)GetProcAddress(DllUser32.hDll, "RegisterShellHookWindow");
+    DllUser32.pSendMessageTimeout = (PSEND_MESSAGE_TIMEOUT)GetProcAddress(DllUser32.hDll, "SendMessageTimeout");
     DllUser32.pSetClipboardData = (PSET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "SetClipboardData");
     DllUser32.pSetForegroundWindow = (PSET_FOREGROUND_WINDOW)GetProcAddress(DllUser32.hDll, "SetForegroundWindow");
     DllUser32.pSetWindowTextW = (PSET_WINDOW_TEXTW)GetProcAddress(DllUser32.hDll, "SetWindowTextW");

@@ -91,6 +91,16 @@ YoriPkgInstallSymbolForSinglePackage(
     );
 
 BOOL
+YoriPkgInstallPseudoPackage(
+    __in PYORI_STRING Name,
+    __in PYORI_STRING Version,
+    __in PYORI_STRING Architecture,
+    __in PYORI_STRING FileArray,
+    __in DWORD FileCount,
+    __in_opt PYORI_STRING TargetDirectory
+    );
+
+BOOL
 YoriPkgDisplayAvailableRemotePackages();
 
 BOOL
@@ -150,6 +160,23 @@ BOOL
 YoriPkgDownloadRemotePackages(
     __in PYORI_STRING Source,
     __in PYORI_STRING DownloadPath
+    );
+
+BOOL
+YoriPkgAppendInstallDirToPath(
+    __in PYORI_STRING TargetDirectory,
+    __in BOOL AppendToUserPath,
+    __in BOOL AppendToSystemPath
+    );
+
+BOOL
+YoriPkgAddUninstallEntry(
+    __in PYORI_STRING TargetDirectory,
+    __in PYORI_STRING InitialVersion
+    );
+
+BOOL
+YoriPkgUninstallAll(
     );
 
 // vim:sw=4:ts=4:et:

@@ -1899,6 +1899,11 @@ YoriLibGenerateWriteTime(
  */
 #define YoriLibIsSep(x) ((x) == '\\' || (x) == '/')
 
+BOOL
+YoriLibIsPathPrefixed(
+    __in PYORI_STRING Path
+    );
+
 __success(return)
 BOOL
 YoriLibGetCurrentDirectoryOnDrive(
@@ -2799,6 +2804,14 @@ YoriLibAddEnvironmentComponent(
     __in LPTSTR EnvironmentVariable,
     __in PYORI_STRING NewComponent,
     __in BOOL InsertAtFront
+    );
+
+__success(return)
+BOOL
+YoriLibRemoveEnvironmentComponentFromString(
+    __in PYORI_STRING String,
+    __in PYORI_STRING ComponentToRemove,
+    __out PYORI_STRING Result
     );
 
 __success(return)

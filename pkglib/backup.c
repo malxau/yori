@@ -323,6 +323,16 @@ YoriPkgBackupPackage(
     for (FileIndex = 1; FileIndex <= Context->FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
+        IniValue.LengthInChars = GetPrivateProfileString(Context->PackageName.StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, IniPath->StartOfString);
+
+        //
+        //  Don't backup files with absolute paths
+        //
+
+        if (YoriLibIsPathPrefixed(&IniValue)) {
+            continue;
+        }
+
         BackupFile = YoriLibReferencedMalloc(sizeof(YORIPKG_BACKUP_FILE));
         if (BackupFile == NULL) {
             YoriPkgRollbackRenamedFiles(IniPath, Context, FALSE);
@@ -333,8 +343,6 @@ YoriPkgBackupPackage(
         }
 
         ZeroMemory(BackupFile, sizeof(YORIPKG_BACKUP_FILE));
-
-        IniValue.LengthInChars = GetPrivateProfileString(Context->PackageName.StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, IniPath->StartOfString);
 
         YoriLibYPrintf(&BackupFile->OriginalName, _T("%y\\%y"), &FullTargetDirectory, &IniValue);
         if (BackupFile->OriginalName.LengthInChars == 0) {

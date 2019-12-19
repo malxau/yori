@@ -733,5 +733,266 @@ YoriPkgListInstalledPackages(
     return TRUE;
 }
 
+/**
+ Delete a specified package from the system.
+
+ @param TargetDirectory Pointer to a string specifying the directory
+        containing the package.  If NULL, the directory containing the
+        application is used.
+
+ @param PackageName Specifies the package name to delete.
+
+ @param WarnIfNotInstalled If TRUE, display to the console indication if the
+        package is not installed.  If FALSE, silently fail the operation.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDeletePackage(
+    __in_opt PYORI_STRING TargetDirectory,
+    __in PYORI_STRING PackageName,
+    __in BOOL WarnIfNotInstalled
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING IniValue;
+    DWORD FileCount;
+    BOOL Result;
+
+    if (!YoriPkgGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    IniValue.LengthInChars = GetPrivateProfileString(_T("Installed"), PackageName->StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    if (IniValue.LengthInChars == 0) {
+        if (WarnIfNotInstalled) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not an installed package\n"), PackageName);
+        }
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile.StartOfString);
+    if (FileCount == 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y contains nothing to remove\n"), PackageName);
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    Result = YoriPkgDeletePackageInternal(&PkgIniFile, TargetDirectory, PackageName, FALSE);
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&IniValue);
+    return Result;
+}
+
+/**
+ Delete all installed packages from the system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDeleteAllPackages(
+    )
+{
+    YORI_STRING PkgIniFile;
+    YORI_STRING InstalledSection;
+    LPTSTR ThisLine;
+    LPTSTR Equals;
+    YORI_STRING PkgNameOnly;
+
+    if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&InstalledSection, YORIPKG_MAX_SECTION_LENGTH)) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    while (*ThisLine != '\0') {
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+        } else {
+            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+        }
+
+        ThisLine += _tcslen(ThisLine);
+        ThisLine++;
+
+        PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
+        if (!YoriPkgDeletePackageInternal(&PkgIniFile, NULL, &PkgNameOnly, TRUE)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not remove package %y\n"), &PkgNameOnly);
+            break;
+        }
+    }
+
+    YoriLibFreeStringContents(&PkgIniFile);
+    YoriLibFreeStringContents(&InstalledSection);
+
+    return TRUE;
+}
+
+/**
+ Register a pseudo package.  This is a collection of files which is being
+ tracked but is otherwise installed outside of this application.  Note in
+ particular that paths may be fully specified as opposed to relative to the
+ installation root.  These are currently distinguished via the \\?\ prefix;
+ ie., a full path must be a prefixed path.
+
+ @param Name Pointer to the name of the package to register.
+
+ @param Version Pointer to the version of the package to register.
+
+ @param Architecture Pointer to the architecture of the package to register.
+
+ @param FileArray Pointer to an array of strings corresponding to the files
+        in the package.
+
+ @param FileCount The number of files in the FileArray.
+
+ @param TargetDirectory Optionally points to an installation location.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgInstallPseudoPackage(
+    __in PYORI_STRING Name,
+    __in PYORI_STRING Version,
+    __in PYORI_STRING Architecture,
+    __in PYORI_STRING FileArray,
+    __in DWORD FileCount,
+    __in_opt PYORI_STRING TargetDirectory
+    )
+{
+    YORI_STRING PkgIniFile;
+    DWORD FileIndex;
+    TCHAR FileIndexString[16];
+
+    if (!YoriPkgGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
+        return FALSE;
+    }
+
+    WritePrivateProfileString(_T("Installed"), Name->StartOfString, Version->StartOfString, PkgIniFile.StartOfString);
+    WritePrivateProfileString(Name->StartOfString, _T("Version"), Version->StartOfString, PkgIniFile.StartOfString);
+    WritePrivateProfileString(Name->StartOfString, _T("Architecture"), Architecture->StartOfString, PkgIniFile.StartOfString);
+
+    for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
+        YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
+
+        WritePrivateProfileString(Name->StartOfString, FileIndexString, FileArray[FileIndex - 1].StartOfString, PkgIniFile.StartOfString);
+    }
+    YoriLibSPrintf(FileIndexString, _T("%i"), FileCount);
+    WritePrivateProfileString(Name->StartOfString, _T("FileCount"), FileIndexString, PkgIniFile.StartOfString);
+
+
+    YoriLibFreeStringContents(&PkgIniFile);
+
+    return TRUE;
+}
+
+/**
+ Remove all installed packages, remove the application directory from the
+ path, and attempt to remove the package manager, packages INI file, and
+ directory on the next reboot.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgUninstallAll(
+    )
+{
+    YORI_STRING TargetDirectory;
+    YORI_STRING ExecutableFile;
+    YORI_STRING PkgIniFile;
+    BOOLEAN DelayDeleteFailed;
+
+    //
+    //  TODO: Add routine in reg.c to check for a pending delete on reboot
+    //  and not allow a reinstallation if it's present
+    //
+
+    if (!YoriPkgDeleteAllPackages()) {
+        return FALSE;
+    }
+    if (!YoriPkgGetApplicationDirectory(&TargetDirectory)) {
+        return FALSE;
+    }
+    if (!YoriPkgGetPackageIniFile(&TargetDirectory, &PkgIniFile)) {
+        YoriLibFreeStringContents(&TargetDirectory);
+        return FALSE;
+    }
+
+    //
+    //  Note this can fail if the current user doesn't have access to the
+    //  system wide path, which is probably benign.  If the packages have
+    //  been deleted above, that implies the user has sufficient access
+    //  to remove this installation.  Ideally this would check whether the
+    //  system path contains a component to remove, and only fail if it's
+    //  there.
+    //
+
+    if (!YoriPkgRemoveInstallDirFromPath(&TargetDirectory, TRUE, TRUE)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is present in the path and could not be removed.  This requires manual removal.\n"), &TargetDirectory);
+    }
+
+    if (!YoriPkgGetExecutableFile(&ExecutableFile)) {
+        YoriLibFreeStringContents(&TargetDirectory);
+        YoriLibFreeStringContents(&PkgIniFile);
+        return FALSE;
+    }
+
+    YoriPkgRemoveUninstallEntry();
+
+    if (!DeleteFile(PkgIniFile.StartOfString)) {
+        return FALSE;
+    }
+
+    //
+    //  Deleting on reboot requires admin, but an unprivileged user can
+    //  install yori and then be unable to delete it since it's in use.
+    //  Indicate to the user if there are files that can't be deleted
+    //  automatically.
+    //
+
+    DelayDeleteFailed = FALSE;
+    if (!MoveFileEx(ExecutableFile.StartOfString, NULL, MOVEFILE_DELAY_UNTIL_REBOOT)) {
+        DelayDeleteFailed = TRUE;
+    }
+
+    if (!MoveFileEx(TargetDirectory.StartOfString, NULL, MOVEFILE_DELAY_UNTIL_REBOOT)) {
+        DelayDeleteFailed = TRUE;
+    }
+
+    if (DelayDeleteFailed) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Some files are in use and cannot be deleted.  The following should be deleted manually:\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y\n%y\n"), &ExecutableFile, &TargetDirectory);
+        Sleep(5000);
+    }
+
+    YoriLibFreeStringContents(&TargetDirectory);
+    YoriLibFreeStringContents(&ExecutableFile);
+    YoriLibFreeStringContents(&PkgIniFile);
+
+    if (DelayDeleteFailed) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:

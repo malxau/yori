@@ -261,6 +261,12 @@ typedef struct _YORIPKG_PACKAGE_PENDING_INSTALL {
 
 __success(return)
 BOOL
+YoriPkgGetExecutableFile(
+    __out PYORI_STRING ExecutableFile
+    );
+
+__success(return)
+BOOL
 YoriPkgGetApplicationDirectory(
     __out PYORI_STRING AppDirectory
     );
@@ -432,6 +438,30 @@ YoriPkgInstallPendingPackages(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,
     __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
+    );
+
+BOOL
+YoriPkgDeletePackageInternal(
+    __in PYORI_STRING PkgIniFile,
+    __in_opt PYORI_STRING TargetDirectory,
+    __in PYORI_STRING PackageName,
+    __in BOOLEAN IgnoreFailureOfCurrentExecutable
+    );
+
+BOOL
+YoriPkgRemoveInstallDirFromPath(
+    __in PYORI_STRING TargetDirectory,
+    __in BOOL RemoveFromUserPath,
+    __in BOOL RemoveFromSystemPath
+    );
+
+BOOL
+YoriPkgIsFileToBeDeletedOnReboot(
+    __in PYORI_STRING FilePath
+    );
+
+BOOL
+YoriPkgRemoveUninstallEntry(
     );
 
 // vim:sw=4:ts=4:et:
