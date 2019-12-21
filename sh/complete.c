@@ -732,6 +732,10 @@ YoriShFileTabCompletionCallback(
         if (FileCompleteContext->Suffix.LengthInChars > 0) {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y\\%y"), &FileCompleteContext->Prefix, Filename, &FileCompleteContext->Suffix);
             Match->CursorOffset = Match->Value.LengthInChars - FileCompleteContext->Suffix.LengthInChars;
+        } else if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 &&
+                   YoriShGlobal.CompletionTrailingSlash) {
+            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y\\"), &FileCompleteContext->Prefix, Filename);
+            Match->CursorOffset = Match->Value.LengthInChars;
         } else {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y"), &FileCompleteContext->Prefix, Filename);
             Match->CursorOffset = Match->Value.LengthInChars;
@@ -798,6 +802,10 @@ YoriShFileTabCompletionCallback(
         if (FileCompleteContext->Suffix.LengthInChars > 0) {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y\\%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse, &FileCompleteContext->Suffix);
             Match->CursorOffset = Match->Value.LengthInChars - FileCompleteContext->Suffix.LengthInChars;
+        } else if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 &&
+                   YoriShGlobal.CompletionTrailingSlash) {
+            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y\\"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
+            Match->CursorOffset = Match->Value.LengthInChars;
         } else {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
             Match->CursorOffset = Match->Value.LengthInChars;

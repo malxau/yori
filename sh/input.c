@@ -1329,6 +1329,7 @@ YoriShConfigureInputSettings(
         YoriShGlobal.MinimumCharsInArgBeforeSuggesting = 2;
         YoriShGlobal.YoriQuickEdit = FALSE;
         YoriShGlobal.MouseoverEnabled = TRUE;
+        YoriShGlobal.CompletionTrailingSlash = FALSE;
 
         //
         //  Check the environment to see if the user wants to override the
@@ -1398,6 +1399,27 @@ YoriShConfigureInputSettings(
                 if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                     if (llTemp == 0) {
                         YoriShGlobal.MouseoverEnabled = FALSE;
+                    }
+                }
+            }
+        }
+
+        //
+        //  Check the environment to see if the user wants trailing
+        //  backslashes when completing directory names.
+        //
+
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORICOMPLETEWITHTRAILINGSLASH"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (EnvVarLength > EnvVar.LengthAllocated) {
+                YoriLibFreeStringContents(&EnvVar);
+                YoriLibAllocateString(&EnvVar, EnvVarLength);
+            }
+            if (EnvVarLength <= EnvVar.LengthAllocated) {
+                EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORICOMPLETEWITHTRAILINGSLASH"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
+                if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                    if (llTemp == 1) {
+                        YoriShGlobal.CompletionTrailingSlash = TRUE;
                     }
                 }
             }

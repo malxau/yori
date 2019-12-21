@@ -965,6 +965,12 @@ typedef struct _YORI_SH_GLOBALS {
     BOOLEAN YoriQuickEdit;
 
     /**
+     Set to TRUE to include a trailing backslash when completing a directory
+     as part of tab completion or suggestions.
+     */
+    BOOLEAN CompletionTrailingSlash;
+
+    /**
      TRUE if mouseover support is enabled, FALSE if it is disabled.  Note this
      is currently enabled by default.
      */
