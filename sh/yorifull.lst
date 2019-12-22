@@ -1,5 +1,6 @@
 ..\cab\builtins.lib
 ..\cal\builtins.lib
+..\charmap\builtins.lib
 ..\clip\builtins.lib
 ..\cls\builtins.lib
 ..\compact\builtins.lib

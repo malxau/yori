@@ -2457,6 +2457,11 @@ YoriLibOutputTextToMultibyteDevice(
 #define YORI_LIB_OUTPUT_STRIP_VT 2
 
 /**
+ Include VT100 escapes in the output stream with no processing.
+ */
+#define YORI_LIB_OUTPUT_PASSTHROUGH_VT 4
+
+/**
  Initialize the output stream with any header information.
 */
 typedef BOOL (* YORI_LIB_VT_INITIALIZE_STREAM_FN)(HANDLE);

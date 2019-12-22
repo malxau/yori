@@ -511,6 +511,26 @@ YoriLibConsoleNoEscapeSetFunctions(
     return TRUE;
 }
 
+/**
+ Initialize callback functions to a set which will output all text, and output
+ escapes without any processing.
+
+ @param CallbackFunctions The callback functions to initialize.
+
+ @return TRUE for success, FALSE for failure.
+ */
+BOOL
+YoriLibConsoleIncludeEscapeSetFunctions(
+    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
+    )
+{
+    CallbackFunctions->InitializeStream = YoriLibConsoleInitializeStream;
+    CallbackFunctions->EndStream = YoriLibConsoleEndStream;
+    CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcessAndOutputText;
+    CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcessAndOutputText;
+    return TRUE;
+}
+
 //
 //  Text functions
 //
@@ -729,7 +749,11 @@ YoriLibProcessVtEscapesOnOpenStream(
                 CurrentPoint = CurrentPoint + EndOfEscape + 3;
                 PreviouslyConsumed += EndOfEscape + 3;
             } else {
-                break;
+                if (!Callbacks->ProcessAndOutputText(hOutput, CurrentPoint, CurrentOffset)) {
+                    return FALSE;
+                }
+                CurrentPoint++;
+                PreviouslyConsumed++;
             }
         }
 
@@ -817,6 +841,8 @@ YoriLibOutputInternal(
     if (GetConsoleMode(hOut, &CurrentMode)) {
         if ((Flags & YORI_LIB_OUTPUT_STRIP_VT) != 0) {
             YoriLibConsoleNoEscapeSetFunctions(&Callbacks);
+        } else if ((Flags & YORI_LIB_OUTPUT_PASSTHROUGH_VT) != 0) {
+            YoriLibConsoleIncludeEscapeSetFunctions(&Callbacks);
         } else {
             YoriLibConsoleSetFunctions(&Callbacks);
         }
@@ -915,6 +941,8 @@ YoriLibOutputString(
     if (GetConsoleMode(hOut, &CurrentMode)) {
         if ((Flags & YORI_LIB_OUTPUT_STRIP_VT) != 0) {
             YoriLibConsoleNoEscapeSetFunctions(&Callbacks);
+        } else if ((Flags & YORI_LIB_OUTPUT_PASSTHROUGH_VT) != 0) {
+            YoriLibConsoleIncludeEscapeSetFunctions(&Callbacks);
         } else {
             YoriLibConsoleSetFunctions(&Callbacks);
         }

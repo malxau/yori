@@ -58,6 +58,7 @@ DIRS=crt       \
      builtins  \
      cab       \
      cal       \
+     charmap   \
      clip      \
      clmp      \
      cls       \

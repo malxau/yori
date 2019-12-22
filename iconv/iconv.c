@@ -35,7 +35,7 @@ CHAR strIconvHelpText[] =
         "\n"
         "Convert the character encoding of one or more files.\n"
         "\n"
-        "ICONV [-license] [-b] [-s] [-e <encoding] [-i encoding] [<file>...]\n"
+        "ICONV [-license] [-b] [-s] [-e <encoding>] [-i <encoding>] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -e <encoding>  Specifies the new encoding to use\n"

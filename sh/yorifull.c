@@ -49,6 +49,11 @@ YORI_CMD_BUILTIN YoriCmd_YCAL;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YCHARMAP;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_CHDIR;
 
 /**
@@ -544,6 +549,7 @@ YoriShBuiltins[] = {
                     {_T("WININFO"),   YoriCmd_WININFO},
                     {_T("WINPOS"),    YoriCmd_WINPOS},
                     {_T("YCAL"),      YoriCmd_YCAL},
+                    {_T("YCHARMAP"),  YoriCmd_YCHARMAP},
                     {_T("YCLIP"),     YoriCmd_YCLIP},
                     {_T("YCLS"),      YoriCmd_YCLS},
                     {_T("YCOMPACT"),  YoriCmd_YCOMPACT},
