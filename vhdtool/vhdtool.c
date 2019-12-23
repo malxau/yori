@@ -44,7 +44,25 @@ CHAR strVhdToolHelpText[] =
         "VHDTOOL [-sector:512|-sector:512e|-sector:4096] -createfixed <file> <size>\n"
         "VHDTOOL -expand <file> <size>\n"
         "VHDTOOL -merge <file>\n"
-        "VHDTOOL -shrink <file> <size>\n";
+        "VHDTOOL -shrink <file> <size>\n"
+        "\n"
+        "   -clonedynamic  Copy an existing disk or VHD into a dynamically expanding\n"
+        "                  .vhd or .vhdx file\n"
+        "   -clonefixed    Copy an existing disk or VHD into a fixed sized .iso, .vhd\n"
+        "                  or .vhdx file\n"
+        "   -compact       Remove unused regions from a dynamically expanding .vhd or\n"
+        "                  .vhdx file\n"
+        "   -creatediff    Create a differencing .vhd or .vhdx file from a read-only\n"
+        "                  parent .vhd or .vhdx file\n"
+        "   -createdynamic Create a new dynamically expanding .vhd or .vhdx file.  Size\n"
+        "                  can be specified with a 'k', 'm', 'g', or 't' suffix.\n"
+        "   -createfixed   Create a new fixed size .vhd or .vhdx file.  Size can be\n"
+        "                  specified with a 'k', 'm', 'g', or 't' suffix.\n"
+        "   -expand        Increase the size of a .vhd or .vhdx file.  Size can be\n"
+        "                  specified with a 'k', 'm', 'g', or 't' suffix.\n"
+        "   -merge         Merge a differencing .vhd or .vhdx file into its parent\n"
+        "   -shrink        Decrease the size of a .vhdx file.  Size can be specified\n"
+        "                  with a 'k', 'm', 'g', or 't' suffix.\n";
 
 /**
  Display usage text to the user.
@@ -109,7 +127,6 @@ VhdToolCloneIso(
     DISK_GEOMETRY DiskGeometry;
     LPTSTR ErrText;
     DWORD Err;
-
 
     YoriLibInitEmptyString(&FullPath);
     YoriLibInitEmptyString(&FullSourcePath);
