@@ -252,7 +252,7 @@ YoriShClearTabCompletionMatches(
  */
 #define YORI_SH_TAB_SUGGESTIONS             (0x00000008)
 
-VOID
+BOOLEAN
 YoriShTabCompletion(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in DWORD TabFlags

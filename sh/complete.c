@@ -3,7 +3,7 @@
  *
  * Yori shell tab completion
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,16 +32,16 @@
 
  @param TabContext Pointer to the tab context to add the match to.
 
- @param EntryToInsertBefore If non-NULL, the new match should be inserted
-        before this entry in the list.  If NULL, the new match is inserted
-        at the end of the list.
+ @param EntryToInsertAfter If non-NULL, the new match should be inserted
+        after this entry in the list.  If NULL, the new match is inserted
+        at the beginning of the list.
 
  @param Match Pointer to the match to insert.
  */
 VOID
 YoriShAddMatchToTabContext(
     __inout PYORI_SH_TAB_COMPLETE_CONTEXT TabContext,
-    __in_opt PYORI_LIST_ENTRY EntryToInsertBefore,
+    __in_opt PYORI_LIST_ENTRY EntryToInsertAfter,
     __inout PYORI_SH_TAB_COMPLETE_MATCH Match
     )
 {
@@ -49,10 +49,10 @@ YoriShAddMatchToTabContext(
     ASSERT(Match->Value.MemoryToFree != NULL);
     ASSERT(Match->CursorOffset <= Match->Value.LengthInChars);
     YoriLibHashInsertByKey(TabContext->MatchHashTable, &Match->Value, Match, &Match->HashEntry);
-    if (EntryToInsertBefore == NULL) {
-        YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
+    if (EntryToInsertAfter == NULL) {
+        YoriLibInsertList(&TabContext->MatchList, &Match->ListEntry);
     } else {
-        YoriLibAppendList(EntryToInsertBefore, &Match->ListEntry);
+        YoriLibInsertList(EntryToInsertAfter, &Match->ListEntry);
     }
 }
 
@@ -103,6 +103,7 @@ YoriShPerformHistoryTabCompletion(
     PYORI_LIST_ENTRY ListEntry;
     PYORI_SH_HISTORY_ENTRY HistoryEntry;
     PYORI_SH_TAB_COMPLETE_MATCH Match;
+    PYORI_HASH_ENTRY PriorEntry;
 
     UNREFERENCED_PARAMETER(ExpandFullPath);
 
@@ -150,11 +151,23 @@ YoriShPerformHistoryTabCompletion(
             Match->CursorOffset = Match->Value.LengthInChars;
 
             //
-            //  Append to the list.
-            //
+            //  If the user is requesting all matches to be enumerates for
+            //  tab completion, don't add an entry if there's a duplicate.
+            //  If the user is requesting to be able to cycle to the next
+            //  entry, keep duplicates, because they're an in-order record
+            //  of the commands the user entered.
 
-            YoriShAddMatchToTabContext(TabContext, NULL, Match);
+            PriorEntry = NULL;
+            if (YoriShGlobal.CompletionListAll) {
+                PriorEntry = YoriLibHashLookupByKey(TabContext->MatchHashTable, &Match->Value);
+            }
 
+            if (PriorEntry == NULL) {
+                YoriShAddMatchToTabContext(TabContext, NULL, Match);
+            } else {
+                YoriLibFreeStringContents(&Match->Value);
+                YoriLibDereference(Match);
+            }
         }
         ListEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, ListEntry);
     }
@@ -831,7 +844,7 @@ YoriShFileTabCompletionCallback(
             Match = NULL;
         }
     } else {
-        ListEntry = YoriLibGetNextListEntry(&FileCompleteContext->TabContext->MatchList, NULL);
+        ListEntry = YoriLibGetPreviousListEntry(&FileCompleteContext->TabContext->MatchList, NULL);
         do {
             if (ListEntry == NULL) {
                 YoriShAddMatchToTabContext(FileCompleteContext->TabContext, NULL, Match);
@@ -839,7 +852,7 @@ YoriShFileTabCompletionCallback(
             }
             Existing = CONTAINING_RECORD(ListEntry, YORI_SH_TAB_COMPLETE_MATCH, ListEntry);
             CompareResult = YoriLibCompareStringInsensitive(&Match->Value, &Existing->Value);
-            if (CompareResult < 0) {
+            if (CompareResult > 0) {
                 YoriShAddMatchToTabContext(FileCompleteContext->TabContext, ListEntry, Match);
                 break;
             } else if (CompareResult == 0) {
@@ -848,7 +861,7 @@ YoriShFileTabCompletionCallback(
                 Match = NULL;
                 break;
             }
-            ListEntry = YoriLibGetNextListEntry(&FileCompleteContext->TabContext->MatchList, ListEntry);
+            ListEntry = YoriLibGetPreviousListEntry(&FileCompleteContext->TabContext->MatchList, ListEntry);
         } while(TRUE);
     }
 
@@ -1535,7 +1548,7 @@ YoriShResolveTabCompletionStringToAction(
  @param TabContext Pointer to the tab completion context.  This provides
         the search criteria and has its match list populated with results
         on success.
- 
+
  @param Executable Pointer to the executable or builtin command.  Note this
         is a fully qualified path on entry.
 
@@ -2036,6 +2049,191 @@ YoriShFindStringSubsetForCompletion(
     }
 }
 
+/**
+ Generate a new input string based on a specified tab completion match,
+ as well as the string before any backquote, string after any backquote,
+ and a parsed command that was used to generate tab completion matches.
+
+ @param Buffer Pointer to the input buffer.  Note the string in the input
+        buffer can be regenerated within this routine.
+
+ @param CmdContext Pointer to the command context which has parsed the
+        arguments and indicates which argument is active and is therefore
+        being completed.
+
+ @param PrefixBeforeBackquoteSubstring An opaque string which existed
+        before the part of the input string used to generate the CmdContext.
+
+ @param SuffixAfterBackquoteSubstring An opaque string which existed
+        after the part of the input string used to generate the CmdContext.
+
+ @param Match Pointer to the match to use to generate a new string from.
+
+ @param CharsFromMatchToUse Indicates the number of characters to consume
+        from the match.  This can be less than the entire match when the user
+        has requested matches to be listed rather than populating the string
+        with the first match.  In that case, the string is firstly populated
+        with any characters in common between all matches, and if the user
+        requests completion after that, a list is displayed.
+ */
+VOID
+YoriShCompleteGenerateNewBufferString(
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
+    __inout PYORI_SH_CMD_CONTEXT CmdContext,
+    __in PYORI_STRING PrefixBeforeBackquoteSubstring,
+    __in PYORI_STRING SuffixAfterBackquoteSubstring,
+    __in PYORI_SH_TAB_COMPLETE_MATCH Match,
+    __in DWORD CharsFromMatchToUse
+    )
+{
+    DWORD BeginCurrentArg;
+    DWORD EndCurrentArg;
+    YORI_STRING NewString;
+    BOOLEAN FreeNewString = FALSE;
+    DWORD CursorOffset;
+
+    YoriLibInitEmptyString(&NewString);
+
+    //
+    //  MSFIX This isn't updating the referenced memory.  This works because
+    //  we'll free the "correct" one and not the one we just put here, but
+    //  it seems dodgy.
+    //
+
+    if (Buffer->TabContext.SearchType != YoriTabCompleteSearchHistory) {
+        PYORI_STRING OldArgv = NULL;
+        PYORI_SH_ARG_CONTEXT OldArgContext = NULL;
+        DWORD OldArgCount = 0;
+
+        if (CmdContext->CurrentArg >= CmdContext->ArgC) {
+            DWORD Count;
+
+            OldArgCount = CmdContext->ArgC;
+            OldArgv = CmdContext->ArgV;
+            OldArgContext = CmdContext->ArgContexts;
+
+            CmdContext->ArgV = YoriLibMalloc((CmdContext->CurrentArg + 1) * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
+            if (CmdContext->ArgV == NULL) {
+                return;
+            }
+
+            CmdContext->ArgC = CmdContext->CurrentArg + 1;
+            ZeroMemory(CmdContext->ArgV, CmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
+            CmdContext->ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, CmdContext->ArgC * sizeof(YORI_STRING));
+
+            memcpy(CmdContext->ArgV, OldArgv, OldArgCount * sizeof(YORI_STRING));
+            for (Count = 0; Count < OldArgCount; Count++) {
+                CmdContext->ArgContexts[Count] = OldArgContext[Count];
+            }
+
+            YoriLibInitEmptyString(&CmdContext->ArgV[CmdContext->CurrentArg]);
+        }
+
+        YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
+        YoriLibCloneString(&CmdContext->ArgV[CmdContext->CurrentArg], &Match->Value);
+        CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars = CharsFromMatchToUse;
+        CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
+        YoriShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
+
+        //
+        //  If the new arg has quotes, and the cursor should be partway
+        //  with in it, add one char for the first quote.  If the cursor
+        //  should be at the end of the arg, add two chars, one for each
+        //  quote.
+        //
+
+        CursorOffset = Match->CursorOffset;
+        if (CharsFromMatchToUse < CursorOffset) {
+            CursorOffset = CharsFromMatchToUse;
+        }
+        ASSERT(CursorOffset <= CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars);
+        if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted) {
+            if (CursorOffset > 0) {
+                if (CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars) {
+                    CursorOffset += 2;
+                } else {
+                    CursorOffset += 1;
+                }
+            }
+        }
+
+        NewString.StartOfString = YoriShBuildCmdlineFromCmdContext(CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+
+        if (OldArgv != NULL) {
+            YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
+            YoriLibFree(CmdContext->ArgV);
+            CmdContext->ArgC = OldArgCount;
+            CmdContext->ArgV = OldArgv;
+            CmdContext->ArgContexts = OldArgContext;
+        }
+
+        if (NewString.StartOfString == NULL) {
+            return;
+        }
+
+        FreeNewString = TRUE;
+        Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring->LengthInChars + BeginCurrentArg + CursorOffset;
+        NewString.LengthInChars = _tcslen(NewString.StartOfString);
+
+    } else {
+        NewString.StartOfString = Match->Value.StartOfString;
+        NewString.LengthInChars = CharsFromMatchToUse;
+        Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring->LengthInChars + NewString.LengthInChars;
+    }
+
+    //
+    //  Assemble the prefix (before backquote start), new string, and
+    //  suffix into the input buffer.  Because the prefix and suffix
+    //  are described within the buffer being written, these need to
+    //  be reallocated and copied out first.
+    //
+
+    if (NewString.StartOfString != NULL) {
+        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, PrefixBeforeBackquoteSubstring->LengthInChars + NewString.LengthInChars + SuffixAfterBackquoteSubstring->LengthInChars)) {
+            if (FreeNewString) {
+                YoriLibFreeStringContents(&NewString);
+            }
+            return;
+        }
+
+        if (PrefixBeforeBackquoteSubstring->LengthInChars > 0 &&
+            !YoriLibReallocateString(PrefixBeforeBackquoteSubstring, PrefixBeforeBackquoteSubstring->LengthInChars + 1)) {
+
+            if (FreeNewString) {
+                YoriLibFreeStringContents(&NewString);
+            }
+            return;
+        }
+
+        if (SuffixAfterBackquoteSubstring->LengthInChars > 0 &&
+            !YoriLibReallocateString(SuffixAfterBackquoteSubstring, SuffixAfterBackquoteSubstring->LengthInChars + 1)) {
+
+            if (FreeNewString) {
+                YoriLibFreeStringContents(&NewString);
+            }
+            return;
+        }
+
+        YoriLibFreeStringContents(&Buffer->SuggestionString);
+        YoriLibYPrintf(&Buffer->String, _T("%y%y%y"), PrefixBeforeBackquoteSubstring, &NewString, SuffixAfterBackquoteSubstring);
+        if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
+            Buffer->CurrentOffset = Buffer->String.LengthInChars;
+        }
+
+        if (FreeNewString) {
+            YoriLibFreeStringContents(&NewString);
+        }
+
+        //
+        //  For successful tab completion, redraw everything.  It's rare
+        //  and plenty of changes are possible.
+        //
+
+        Buffer->DirtyBeginOffset = 0;
+        Buffer->DirtyLength = Buffer->String.LengthInChars;
+    }
+}
+
 
 
 /**
@@ -2054,8 +2252,12 @@ YoriShFindStringSubsetForCompletion(
         to include full path or relative path, whether to match command
         history or files and arguments, and the direction to navigate through
         any matches.
+
+ @return TRUE to indicate that a list of matches should be displayed.  This
+         can only occur when the user requests it, more than one match is
+         found, and they do not share a common prefix.
  */
-VOID
+BOOLEAN
 YoriShTabCompletion(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in DWORD TabFlags
@@ -2068,9 +2270,10 @@ YoriShTabCompletion(
     DWORD OffsetInSubstring;
     YORI_STRING PrefixBeforeBackquoteSubstring;
     YORI_STRING SuffixAfterBackquoteSubstring;
+    BOOLEAN ListAll;
 
     if (Buffer->String.LengthInChars == 0) {
-        return;
+        return FALSE;
     }
 
     //
@@ -2101,12 +2304,12 @@ YoriShTabCompletion(
     ASSERT(Buffer->CurrentOffset >= PrefixBeforeBackquoteSubstring.LengthInChars);
 
     if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
-        return;
+        return FALSE;
     }
 
     if (CmdContext.ArgC == 0) {
         YoriShFreeCmdContext(&CmdContext);
-        return;
+        return FALSE;
     }
 
     Buffer->TabContext.TabCount++;
@@ -2127,24 +2330,29 @@ YoriShTabCompletion(
     //  the buffer unchanged.
     //
 
-    if ((TabFlags & YORI_SH_TAB_COMPLETE_BACKWARDS) == 0) {
-        ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, &Buffer->TabContext.PreviousMatch->ListEntry);
-        if (ListEntry == NULL) {
-            if (Buffer->TabContext.TabCount != 1) {
-                ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+    ListEntry = NULL;
+    if (!YoriShGlobal.CompletionListAll || Buffer->TabContext.TabCount == 1) {
+        if ((TabFlags & YORI_SH_TAB_COMPLETE_BACKWARDS) == 0) {
+            ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, &Buffer->TabContext.PreviousMatch->ListEntry);
+            if (ListEntry == NULL) {
+                if (Buffer->TabContext.TabCount != 1) {
+                    ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+                }
+            }
+        } else {
+            ListEntry = YoriLibGetPreviousListEntry(&Buffer->TabContext.MatchList, &Buffer->TabContext.PreviousMatch->ListEntry);
+            if (ListEntry == NULL) {
+                if (Buffer->TabContext.TabCount != 1) {
+                    ListEntry = YoriLibGetPreviousListEntry(&Buffer->TabContext.MatchList, NULL);
+                }
             }
         }
-    } else {
-        ListEntry = YoriLibGetPreviousListEntry(&Buffer->TabContext.MatchList, &Buffer->TabContext.PreviousMatch->ListEntry);
-        if (ListEntry == NULL) {
-            if (Buffer->TabContext.TabCount != 1) {
-                ListEntry = YoriLibGetPreviousListEntry(&Buffer->TabContext.MatchList, NULL);
-            }
-        }
+    } else if (Buffer->TabContext.PreviousMatch != NULL) {
+        ListEntry = &Buffer->TabContext.PreviousMatch->ListEntry;
     }
     if (ListEntry == NULL) {
         YoriShFreeCmdContext(&CmdContext);
-        return;
+        return FALSE;
     }
 
     YoriLibFreeStringContents(&Buffer->SuggestionString);
@@ -2154,159 +2362,78 @@ YoriShTabCompletion(
     Match = CONTAINING_RECORD(ListEntry, YORI_SH_TAB_COMPLETE_MATCH, ListEntry);
     Buffer->TabContext.PreviousMatch = Match;
 
-    {
-        DWORD BeginCurrentArg;
-        DWORD EndCurrentArg;
-        LPTSTR NewString;
-        BOOLEAN FreeNewString = FALSE;
-        DWORD NewStringLen;
-        DWORD CursorOffset;
+    ListAll = FALSE;
 
-        //
-        //  MSFIX This isn't updating the referenced memory.  This works because
-        //  we'll free the "correct" one and not the one we just put here, but
-        //  it seems dodgy.
-        //
+    if (!YoriShGlobal.CompletionListAll) {
+        YoriShCompleteGenerateNewBufferString(Buffer,
+                                              &CmdContext,
+                                              &PrefixBeforeBackquoteSubstring,
+                                              &SuffixAfterBackquoteSubstring,
+                                              Match,
+                                              Match->Value.LengthInChars);
+    } else {
+        DWORD MatchCount;
+        DWORD ShortestMatchLength;
+        DWORD ThisMatchLength;
+        DWORD SearchLength;
+        PYORI_SH_TAB_COMPLETE_MATCH ThisMatch;
 
-        if (Buffer->TabContext.SearchType != YoriTabCompleteSearchHistory) {
-            PYORI_STRING OldArgv = NULL;
-            PYORI_SH_ARG_CONTEXT OldArgContext = NULL;
-            DWORD OldArgCount = 0;
-
-            if (CmdContext.CurrentArg >= CmdContext.ArgC) {
-                DWORD Count;
-
-                OldArgCount = CmdContext.ArgC;
-                OldArgv = CmdContext.ArgV;
-                OldArgContext = CmdContext.ArgContexts;
-
-                CmdContext.ArgV = YoriLibMalloc((CmdContext.CurrentArg + 1) * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
-                if (CmdContext.ArgV == NULL) {
-                    YoriShFreeCmdContext(&CmdContext);
-                    return;
-                }
-
-                CmdContext.ArgC = CmdContext.CurrentArg + 1;
-                ZeroMemory(CmdContext.ArgV, CmdContext.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
-                CmdContext.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext.ArgV, CmdContext.ArgC * sizeof(YORI_STRING));
-
-                memcpy(CmdContext.ArgV, OldArgv, OldArgCount * sizeof(YORI_STRING));
-                for (Count = 0; Count < OldArgCount; Count++) {
-                    CmdContext.ArgContexts[Count] = OldArgContext[Count];
-                }
-
-                YoriLibInitEmptyString(&CmdContext.ArgV[CmdContext.CurrentArg]);
-            }
-
-            YoriLibFreeStringContents(&CmdContext.ArgV[CmdContext.CurrentArg]);
-            YoriLibCloneString(&CmdContext.ArgV[CmdContext.CurrentArg], &Match->Value);
-            CmdContext.ArgContexts[CmdContext.CurrentArg].Quoted = FALSE;
-            YoriShCheckIfArgNeedsQuotes(&CmdContext, CmdContext.CurrentArg);
-
+        MatchCount = 0;
+        ShortestMatchLength = 0;
+        SearchLength = 0;
+        if (Buffer->TabContext.SearchType == YoriTabCompleteSearchHistory) {
+            SearchLength = Buffer->String.LengthInChars;
+        } else if (CmdContext.CurrentArg < CmdContext.ArgC) {
+            SearchLength = CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars;
+        }
+        while (ListEntry != NULL) {
+            ThisMatch = CONTAINING_RECORD(ListEntry, YORI_SH_TAB_COMPLETE_MATCH, ListEntry);
             //
-            //  If the new arg has quotes, and the cursor should be partway
-            //  with in it, add one char for the first quote.  If the cursor
-            //  should be at the end of the arg, add two chars, one for each
-            //  quote.
+            //  This is counting the number of matching characters between
+            //  the first match and each later match.  This is used to find
+            //  the minimum number of matching characters between all of the
+            //  matches, which is not the same thing as the user argument,
+            //  which is equal to or shorter than the matching entries.
             //
 
-            CursorOffset = Match->CursorOffset;
-            ASSERT(CursorOffset <= CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars);
-            if (CmdContext.ArgContexts[CmdContext.CurrentArg].Quoted) {
-                if (CursorOffset > 0) {
-                    if (CursorOffset == CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars) {
-                        CursorOffset += 2;
-                    } else {
-                        CursorOffset += 1;
-                    }
-                }
+            ThisMatchLength = YoriLibCountStringMatchingCharsInsensitive(&Match->Value, &ThisMatch->Value);
+            if (MatchCount == 0 || ThisMatchLength < ShortestMatchLength) {
+                ShortestMatchLength = ThisMatchLength;
             }
 
-            NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+            MatchCount++;
 
-            if (OldArgv != NULL) {
-                YoriLibFreeStringContents(&CmdContext.ArgV[CmdContext.CurrentArg]);
-                YoriLibFree(CmdContext.ArgV);
-                CmdContext.ArgC = OldArgCount;
-                CmdContext.ArgV = OldArgv;
-                CmdContext.ArgContexts = OldArgContext;
+            if ((TabFlags & YORI_SH_TAB_COMPLETE_BACKWARDS) == 0) {
+                ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, ListEntry);
+            } else {
+                ListEntry = YoriLibGetPreviousListEntry(&Buffer->TabContext.MatchList, ListEntry);
             }
-
-            if (NewString == NULL) {
-                YoriShFreeCmdContext(&CmdContext);
-                return;
-            }
-
-            FreeNewString = TRUE;
-            Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring.LengthInChars + BeginCurrentArg + CursorOffset;
-            NewStringLen = _tcslen(NewString);
-
-        } else {
-            NewString = Match->Value.StartOfString;
-            NewStringLen = Match->Value.LengthInChars;
-            Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring.LengthInChars + NewStringLen;
         }
 
-        //
-        //  Assemble the prefix (before backquote start), new string, and
-        //  suffix into the input buffer.  Because the prefix and suffix
-        //  are described within the buffer being written, these need to
-        //  be reallocated and copied out first.
-        //
-
-        if (NewString != NULL) {
-            if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, PrefixBeforeBackquoteSubstring.LengthInChars + NewStringLen + SuffixAfterBackquoteSubstring.LengthInChars)) {
-                YoriShFreeCmdContext(&CmdContext);
-                if (FreeNewString) {
-                    YoriLibDereference(NewString);
-                }
-                return;
-            }
-
-            if (PrefixBeforeBackquoteSubstring.LengthInChars > 0 &&
-                !YoriLibReallocateString(&PrefixBeforeBackquoteSubstring, PrefixBeforeBackquoteSubstring.LengthInChars + 1)) {
-
-                YoriShFreeCmdContext(&CmdContext);
-                if (FreeNewString) {
-                    YoriLibDereference(NewString);
-                }
-                return;
-            }
-
-            if (SuffixAfterBackquoteSubstring.LengthInChars > 0 &&
-                !YoriLibReallocateString(&SuffixAfterBackquoteSubstring, SuffixAfterBackquoteSubstring.LengthInChars + 1)) {
-
-                YoriLibFreeStringContents(&PrefixBeforeBackquoteSubstring);
-                YoriShFreeCmdContext(&CmdContext);
-                if (FreeNewString) {
-                    YoriLibDereference(NewString);
-                }
-                return;
-            }
-
-            YoriLibFreeStringContents(&Buffer->SuggestionString);
-            YoriLibYPrintf(&Buffer->String, _T("%y%s%y"), &PrefixBeforeBackquoteSubstring, NewString, &SuffixAfterBackquoteSubstring);
-            if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
-                Buffer->CurrentOffset = Buffer->String.LengthInChars;
-            }
-
-            if (FreeNewString) {
-                YoriLibDereference(NewString);
-            }
-            YoriLibFreeStringContents(&PrefixBeforeBackquoteSubstring);
-            YoriLibFreeStringContents(&SuffixAfterBackquoteSubstring);
-
-            //
-            //  For successful tab completion, redraw everything.  It's rare
-            //  and plenty of changes are possible.
-            //
-
-            Buffer->DirtyBeginOffset = 0;
-            Buffer->DirtyLength = Buffer->String.LengthInChars;
+        if (ShortestMatchLength > SearchLength) {
+            YoriShCompleteGenerateNewBufferString(Buffer,
+                                                  &CmdContext,
+                                                  &PrefixBeforeBackquoteSubstring,
+                                                  &SuffixAfterBackquoteSubstring,
+                                                  Match,
+                                                  ShortestMatchLength);
+        } else if (MatchCount > 1) {
+            ListAll = TRUE;
+        } else {
+            YoriShCompleteGenerateNewBufferString(Buffer,
+                                                  &CmdContext,
+                                                  &PrefixBeforeBackquoteSubstring,
+                                                  &SuffixAfterBackquoteSubstring,
+                                                  Match,
+                                                  Match->Value.LengthInChars);
         }
     }
 
+    YoriLibFreeStringContents(&PrefixBeforeBackquoteSubstring);
+    YoriLibFreeStringContents(&SuffixAfterBackquoteSubstring);
     YoriShFreeCmdContext(&CmdContext);
+
+    return ListAll;
 }
 
 /**

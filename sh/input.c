@@ -645,7 +645,9 @@ YoriShTerminateInput(
     YoriShClearTabCompletionMatches(Buffer);
     YoriLibCleanupSelection(&Buffer->Selection);
     YoriLibCleanupSelection(&Buffer->Mouseover);
-    Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
+    if (Buffer->String.StartOfString != NULL) {
+        Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
+    }
     YoriShMoveCursor(Buffer, Buffer->String.LengthInChars - Buffer->CurrentOffset);
     YoriShConfigureMouseForPrograms(Buffer->ConsoleInputHandle);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
@@ -735,6 +737,115 @@ YoriShUpdateSelectionWithSearchResult(
     } else {
         Buffer->CurrentOffset = Buffer->PreSearchOffset;
     }
+}
+
+
+/**
+ Display all of the tab completion matches.  Note this routine needs to
+ redisplay the input buffer and advance to the next line.  This routine will
+ save off the currently entered user input to be reused by the next call to
+ input a line, and expects the current input operation to be terminated,
+ causing a new prompt to be displayed and the current user text to be
+ reentered on the next prompt.
+
+ @param Buffer Pointer to the input buffer containing all tab completion
+        matches and currently entered string.
+ */
+VOID
+YoriShCompletionListAllMatches(
+    __in PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_SH_TAB_COMPLETE_MATCH Match;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    DWORD LongestMatch;
+    DWORD ColumnWidth;
+    DWORD ColumnCount;
+    DWORD EntryIndex;
+    TCHAR FormatString[16];
+
+    //
+    //  Perform a minimal termination of the current input line.  This is
+    //  patterned after YoriShTerminateInput but needs to preserve any tab
+    //  completion matches and leave the input string unaltered (for now.)
+    //
+
+    if (Buffer->SuggestionString.LengthInChars > 0) {
+        Buffer->SuggestionDirty = TRUE;
+    }
+    YoriLibFreeStringContents(&Buffer->SuggestionString);
+    YoriShDisplayAfterKeyPress(Buffer);
+    Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
+    YoriShMoveCursor(Buffer, Buffer->String.LengthInChars - Buffer->CurrentOffset);
+    YoriShConfigureMouseForPrograms(Buffer->ConsoleInputHandle);
+
+    //
+    //  Find the longest suggestion and query the width of the console to
+    //  calculate the number of columns to display and the width of each
+    //  column.
+    //
+
+    LongestMatch = 0;
+    ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+    while (ListEntry != NULL) {
+        Match = CONTAINING_RECORD(ListEntry, YORI_SH_TAB_COMPLETE_MATCH, ListEntry);
+        if (Match->Value.LengthInChars > LongestMatch) {
+            LongestMatch = Match->Value.LengthInChars;
+        }
+
+        ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, ListEntry);
+    }
+
+    LongestMatch++;
+
+    ColumnWidth = 80;
+    ColumnCount = 1;
+    if (GetConsoleScreenBufferInfo(Buffer->ConsoleOutputHandle, &ScreenInfo)) {
+
+        DWORD ScreenWidth = ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1;
+        if (ScreenWidth > LongestMatch) {
+            ColumnCount = ScreenWidth / LongestMatch;
+            ColumnWidth = ScreenWidth / ColumnCount;
+        }
+    }
+
+    YoriLibSPrintf(FormatString, _T("%%-%iy"), ColumnWidth);
+
+    //
+    //  Note that when the input line is terminated, a newline will be
+    //  displayed.  For that reason, this function displays a newline first,
+    //  which firstly terminates the user input and leaves the last line to
+    //  be terminated when the input processing is complete.
+    //
+
+    ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
+    EntryIndex = 0;
+    while (ListEntry != NULL) {
+        if (EntryIndex % ColumnCount == 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
+        Match = CONTAINING_RECORD(ListEntry, YORI_SH_TAB_COMPLETE_MATCH, ListEntry);
+        if (EntryIndex % ColumnCount != ColumnCount - 1) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, FormatString, &Match->Value);
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Match->Value);
+        }
+
+        ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, ListEntry);
+        EntryIndex++;
+    }
+
+    //
+    //  Save off the currently entered string to be used for the next input
+    //  operation, and reset the currently entered string.
+    //
+
+    YoriLibFreeStringContents(&YoriShGlobal.NextCommand);
+    memcpy(&YoriShGlobal.NextCommand, &Buffer->String, sizeof(YORI_STRING));
+    YoriLibInitEmptyString(&Buffer->String);
+    Buffer->CurrentOffset = 0;
+    Buffer->PreviousCurrentOffset = 0;
 }
 
 
@@ -1425,6 +1536,28 @@ YoriShConfigureInputSettings(
             }
         }
 
+        //
+        //  Check the environment to see if the user to list out all tab
+        //  completion options when multiple are available instead of
+        //  selecting the first.
+        //
+
+        EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORICOMPLETELISTALL"), NULL, 0, NULL);
+        if (EnvVarLength > 0) {
+            if (EnvVarLength > EnvVar.LengthAllocated) {
+                YoriLibFreeStringContents(&EnvVar);
+                YoriLibAllocateString(&EnvVar, EnvVarLength);
+            }
+            if (EnvVarLength <= EnvVar.LengthAllocated) {
+                EnvVar.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORICOMPLETELISTALL"), EnvVar.StartOfString, EnvVar.LengthAllocated, NULL);
+                if (YoriLibStringToNumber(&EnvVar, TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                    if (llTemp == 1) {
+                        YoriShGlobal.CompletionListAll = TRUE;
+                    }
+                }
+            }
+        }
+
         YoriLibFreeStringContents(&EnvVar);
 
         YoriLibConstantString(&MouseoverColorString, _T("mo"));
@@ -1754,6 +1887,7 @@ YoriShProcessKeyDown(
     WORD KeyCode;
     WORD ScanCode;
     BOOL ClearSelection;
+    BOOLEAN ListAll;
 
     *TerminateInput = FALSE;
     YoriShPrepareForNextKey(Buffer);
@@ -1809,11 +1943,15 @@ YoriShProcessKeyDown(
         } else if (Char == '\t') {
             YoriShConfigureConsoleForTabComplete(Buffer);
             if ((CtrlMask & SHIFT_PRESSED) == 0) {
-                YoriShTabCompletion(Buffer, 0);
+                ListAll = YoriShTabCompletion(Buffer, 0);
             } else {
-                YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_BACKWARDS);
+                ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_BACKWARDS);
             }
             YoriShConfigureConsoleForInput(Buffer);
+            if (ListAll) {
+                YoriShCompletionListAllMatches(Buffer);
+                *TerminateInput = TRUE;
+            }
         } else if (Char == '\b') {
             if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
                 YoriShBackspace(Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
@@ -1859,8 +1997,12 @@ YoriShProcessKeyDown(
             Buffer->PreSearchOffset = Buffer->CurrentOffset;
         } else if (KeyCode == VK_TAB) {
             YoriShConfigureConsoleForTabComplete(Buffer);
-            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
+            ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH);
             YoriShConfigureConsoleForInput(Buffer);
+            if (ListAll) {
+                YoriShCompletionListAllMatches(Buffer);
+                *TerminateInput = TRUE;
+            }
         } else if (KeyCode == '\b') {
             if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
                 YoriShDeleteArgument(Buffer);
@@ -1871,8 +2013,12 @@ YoriShProcessKeyDown(
                CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED)) {
         if (KeyCode == VK_TAB) {
             YoriShConfigureConsoleForTabComplete(Buffer);
-            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
+            ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_FULL_PATH | YORI_SH_TAB_COMPLETE_BACKWARDS);
             YoriShConfigureConsoleForInput(Buffer);
+            if (ListAll) {
+                YoriShCompletionListAllMatches(Buffer);
+                *TerminateInput = TRUE;
+            }
         }
     } else if (CtrlMask == ENHANCED_KEY) {
         if (YoriShProcessEnhancedKeyDown(Buffer, InputRecord, TerminateInput)) {
@@ -1888,12 +2034,20 @@ YoriShProcessKeyDown(
             YoriShMoveCursorToNextArgument(Buffer);
         } else if (KeyCode == VK_UP) {
             YoriShConfigureConsoleForTabComplete(Buffer);
-            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
+            ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
             YoriShConfigureConsoleForInput(Buffer);
+            if (ListAll) {
+                YoriShCompletionListAllMatches(Buffer);
+                *TerminateInput = TRUE;
+            }
         } else if (KeyCode == VK_DOWN) {
             YoriShConfigureConsoleForTabComplete(Buffer);
-            YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
+            ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
             YoriShConfigureConsoleForInput(Buffer);
+            if (ListAll) {
+                YoriShCompletionListAllMatches(Buffer);
+                *TerminateInput = TRUE;
+            }
         } else if (KeyCode == VK_DELETE) {
             if (Buffer->HistoryEntryToUse != NULL) {
                 PYORI_LIST_ENTRY NewEntry = NULL;
@@ -2543,6 +2697,12 @@ YoriShGetExpressionFromConsole(
     }
 
     YoriShConfigureConsoleForInput(&Buffer);
+
+    if (YoriShGlobal.NextCommand.LengthInChars > 0) {
+        YoriShAddYoriStringToInput(&Buffer, &YoriShGlobal.NextCommand);
+        YoriLibFreeStringContents(&YoriShGlobal.NextCommand);
+        YoriShDisplayAfterKeyPress(&Buffer);
+    }
 
     while (TRUE) {
 

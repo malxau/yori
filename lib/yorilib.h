@@ -3211,6 +3211,18 @@ YoriLibCompareStringCount(
     );
 
 DWORD
+YoriLibCountStringMatchingChars(
+    __in PYORI_STRING Str1,
+    __in PYORI_STRING Str2
+    );
+
+DWORD
+YoriLibCountStringMatchingCharsInsensitive(
+    __in PYORI_STRING Str1,
+    __in PYORI_STRING Str2
+    );
+
+DWORD
 YoriLibCountStringContainingChars(
     __in PYORI_STRING String,
     __in LPCTSTR chars

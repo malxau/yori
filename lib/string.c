@@ -911,6 +911,65 @@ YoriLibCompareStringInsensitive(
 }
 
 /**
+ Count the number of identical characters between two strings.
+
+ @param Str1 The first string to compare.
+
+ @param Str2 The second string to compare.
+
+ @return The number of identical characters.
+ */
+DWORD
+YoriLibCountStringMatchingChars(
+    __in PYORI_STRING Str1,
+    __in PYORI_STRING Str2
+    )
+{
+    DWORD Index;
+
+    Index = 0;
+
+    while (Index < Str1->LengthInChars &&
+           Index < Str2->LengthInChars &&
+           Str1->StartOfString[Index] == Str2->StartOfString[Index]) {
+
+        Index++;
+    }
+
+    return Index;
+}
+
+/**
+ Count the number of identical characters between two strings without regard
+ to case.
+
+ @param Str1 The first string to compare.
+
+ @param Str2 The second string to compare.
+
+ @return The number of identical characters.
+ */
+DWORD
+YoriLibCountStringMatchingCharsInsensitive(
+    __in PYORI_STRING Str1,
+    __in PYORI_STRING Str2
+    )
+{
+    DWORD Index;
+
+    Index = 0;
+
+    while (Index < Str1->LengthInChars &&
+           Index < Str2->LengthInChars &&
+           YoriLibUpcaseChar(Str1->StartOfString[Index]) == YoriLibUpcaseChar(Str2->StartOfString[Index])) {
+
+        Index++;
+    }
+
+    return Index;
+}
+
+/**
  Return the count of consecutive characters in String that listed in the
  characters of the NULL terminated chars array.
 

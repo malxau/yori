@@ -929,6 +929,11 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD TitleGeneration;
 
     /**
+     The text to use as a prepopulated string for the next user command.
+     */
+    YORI_STRING NextCommand;
+
+    /**
      When set to TRUE, the process should end rather than seek another
      command.
      */
@@ -969,6 +974,12 @@ typedef struct _YORI_SH_GLOBALS {
      as part of tab completion or suggestions.
      */
     BOOLEAN CompletionTrailingSlash;
+
+    /**
+     Set to TRUE to tell tab completion to list out all options when multiple
+     are available instead of selecting the first.
+     */
+    BOOLEAN CompletionListAll;
 
     /**
      TRUE if mouseover support is enabled, FALSE if it is disabled.  Note this

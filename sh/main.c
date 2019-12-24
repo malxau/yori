@@ -696,6 +696,7 @@ ymain (
     YoriLibFreeStringContents(&YoriShGlobal.PostCmdVariable);
     YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);
     YoriLibFreeStringContents(&YoriShGlobal.TitleVariable);
+    YoriLibFreeStringContents(&YoriShGlobal.NextCommand);
 
     return YoriShGlobal.ExitProcessExitCode;
 }

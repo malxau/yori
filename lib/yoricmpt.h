@@ -71,6 +71,12 @@
 typedef DWORD DWORD_PTR;
 
 /**
+ Definition for a pointer to a pointer size integer for compilers that
+ don't contain it.
+ */
+typedef DWORD_PTR *PDWORD_PTR;
+
+/**
  Definition for pointer size integer for compilers that don't contain it.
  */
 typedef ULONG ULONG_PTR;
