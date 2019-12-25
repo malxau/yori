@@ -1981,6 +1981,16 @@ YoriShProcessKeyDown(
             }
             YoriShClearInputSelections(Buffer);
             return TRUE;
+        } else if (KeyCode == 'D') {
+            if (!Buffer->SearchMode &&
+                Buffer->String.LengthInChars == 0 &&
+                !YoriLibIsSelectionActive(&Buffer->Selection)) {
+
+                YoriShAddCStringToInput(Buffer, _T("EXIT"));
+                *TerminateInput = TRUE;
+                YoriShClearInputSelections(Buffer);
+                return TRUE;
+            }
         } else if (KeyCode == 'E') {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         } else if (KeyCode == 'L') {
