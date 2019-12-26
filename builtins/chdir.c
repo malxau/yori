@@ -284,6 +284,7 @@ YoriCmd_CHDIR(
             if (Sep == NULL) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("chdir: could not locate path: %y"), NewDir);
                 YoriLibFreeStringContents(&OldCurrentDirectory);
+                YoriLibFreeStringContents(&NewCurrentDirectory);
                 YoriLibFreeStringContents(&CdPath);
                 return EXIT_FAILURE;
             }
