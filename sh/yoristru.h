@@ -929,6 +929,11 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD TitleGeneration;
 
     /**
+     The offset within NextCommand to initialize the cursor to.
+     */
+    DWORD NextCommandOffset;
+
+    /**
      The text to use as a prepopulated string for the next user command.
      */
     YORI_STRING NextCommand;

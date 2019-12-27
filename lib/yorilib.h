@@ -527,7 +527,7 @@ YoriLibIsCommandLineOption(
     __out PYORI_STRING Arg
     );
 
-BOOL
+BOOLEAN
 YoriLibCheckIfArgNeedsQuotes(
     __in PYORI_STRING Arg
     );

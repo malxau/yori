@@ -844,6 +844,7 @@ YoriShCompletionListAllMatches(
     YoriLibFreeStringContents(&YoriShGlobal.NextCommand);
     memcpy(&YoriShGlobal.NextCommand, &Buffer->String, sizeof(YORI_STRING));
     YoriLibInitEmptyString(&Buffer->String);
+    YoriShGlobal.NextCommandOffset = Buffer->CurrentOffset;
     Buffer->CurrentOffset = 0;
     Buffer->PreviousCurrentOffset = 0;
 }
@@ -2710,6 +2711,7 @@ YoriShGetExpressionFromConsole(
 
     if (YoriShGlobal.NextCommand.LengthInChars > 0) {
         YoriShAddYoriStringToInput(&Buffer, &YoriShGlobal.NextCommand);
+        Buffer.CurrentOffset = YoriShGlobal.NextCommandOffset;
         YoriLibFreeStringContents(&YoriShGlobal.NextCommand);
         YoriShDisplayAfterKeyPress(&Buffer);
     }

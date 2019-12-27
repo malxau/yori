@@ -86,12 +86,12 @@ YoriLibIsCommandLineOption(
 
  @return TRUE if quoting is required, FALSE if not.
  */
-BOOL
+BOOLEAN
 YoriLibCheckIfArgNeedsQuotes(
     __in PYORI_STRING Arg
     )
 {
-    BOOL HasWhiteSpace;
+    BOOLEAN HasWhiteSpace;
     DWORD i;
 
     HasWhiteSpace = FALSE;

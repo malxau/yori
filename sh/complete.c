@@ -2075,6 +2075,12 @@ YoriShFindStringSubsetForCompletion(
         with the first match.  In that case, the string is firstly populated
         with any characters in common between all matches, and if the user
         requests completion after that, a list is displayed.
+
+ @param ForceQuotes If TRUE, indicates that the parameter should have quotes
+        even if the string doesn't have characters requiring them.  This is
+        done when another match that the user might select after listing
+        matches would require quotes to be present, because that match
+        contains spaces.
  */
 VOID
 YoriShCompleteGenerateNewBufferString(
@@ -2083,7 +2089,8 @@ YoriShCompleteGenerateNewBufferString(
     __in PYORI_STRING PrefixBeforeBackquoteSubstring,
     __in PYORI_STRING SuffixAfterBackquoteSubstring,
     __in PYORI_SH_TAB_COMPLETE_MATCH Match,
-    __in DWORD CharsFromMatchToUse
+    __in DWORD CharsFromMatchToUse,
+    __in BOOLEAN ForceQuotes
     )
 {
     DWORD BeginCurrentArg;
@@ -2132,14 +2139,20 @@ YoriShCompleteGenerateNewBufferString(
         YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
         YoriLibCloneString(&CmdContext->ArgV[CmdContext->CurrentArg], &Match->Value);
         CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars = CharsFromMatchToUse;
-        CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
-        YoriShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
+        if (ForceQuotes) {
+            CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = TRUE;
+        } else {
+            CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
+            YoriShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
+        }
 
         //
         //  If the new arg has quotes, and the cursor should be partway
         //  with in it, add one char for the first quote.  If the cursor
         //  should be at the end of the arg, add two chars, one for each
-        //  quote.
+        //  quote.  When forcing quotes to be added, only add one char to
+        //  ensure the cursor is before the quote and can add the next char
+        //  to the correct argument.
         //
 
         CursorOffset = Match->CursorOffset;
@@ -2149,7 +2162,8 @@ YoriShCompleteGenerateNewBufferString(
         ASSERT(CursorOffset <= CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars);
         if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted) {
             if (CursorOffset > 0) {
-                if (CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars) {
+                if (!ForceQuotes &&
+                    CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars) {
                     CursorOffset += 2;
                 } else {
                     CursorOffset += 1;
@@ -2370,17 +2384,21 @@ YoriShTabCompletion(
                                               &PrefixBeforeBackquoteSubstring,
                                               &SuffixAfterBackquoteSubstring,
                                               Match,
-                                              Match->Value.LengthInChars);
+                                              Match->Value.LengthInChars,
+                                              FALSE);
     } else {
         DWORD MatchCount;
         DWORD ShortestMatchLength;
         DWORD ThisMatchLength;
         DWORD SearchLength;
         PYORI_SH_TAB_COMPLETE_MATCH ThisMatch;
+        BOOLEAN MatchNeedsQuotes;
 
         MatchCount = 0;
         ShortestMatchLength = 0;
         SearchLength = 0;
+        MatchNeedsQuotes = FALSE;
+
         if (Buffer->TabContext.SearchType == YoriTabCompleteSearchHistory) {
             SearchLength = Buffer->String.LengthInChars;
         } else if (CmdContext.CurrentArg < CmdContext.ArgC) {
@@ -2401,6 +2419,10 @@ YoriShTabCompletion(
                 ShortestMatchLength = ThisMatchLength;
             }
 
+            if (!MatchNeedsQuotes) {
+                MatchNeedsQuotes = YoriLibCheckIfArgNeedsQuotes(&ThisMatch->Value);
+            }
+
             MatchCount++;
 
             if ((TabFlags & YORI_SH_TAB_COMPLETE_BACKWARDS) == 0) {
@@ -2416,8 +2438,22 @@ YoriShTabCompletion(
                                                   &PrefixBeforeBackquoteSubstring,
                                                   &SuffixAfterBackquoteSubstring,
                                                   Match,
-                                                  ShortestMatchLength);
+                                                  ShortestMatchLength,
+                                                  MatchNeedsQuotes);
         } else if (MatchCount > 1) {
+
+            if (MatchNeedsQuotes &&
+                CmdContext.CurrentArg < CmdContext.ArgC &&
+                !CmdContext.ArgContexts[CmdContext.CurrentArg].Quoted) {
+
+                YoriShCompleteGenerateNewBufferString(Buffer,
+                                                      &CmdContext,
+                                                      &PrefixBeforeBackquoteSubstring,
+                                                      &SuffixAfterBackquoteSubstring,
+                                                      Match,
+                                                      ShortestMatchLength,
+                                                      TRUE);
+            }
             ListAll = TRUE;
         } else {
             YoriShCompleteGenerateNewBufferString(Buffer,
@@ -2425,7 +2461,8 @@ YoriShTabCompletion(
                                                   &PrefixBeforeBackquoteSubstring,
                                                   &SuffixAfterBackquoteSubstring,
                                                   Match,
-                                                  Match->Value.LengthInChars);
+                                                  Match->Value.LengthInChars,
+                                                  FALSE);
         }
     }
 
