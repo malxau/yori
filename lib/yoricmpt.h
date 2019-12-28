@@ -5150,6 +5150,18 @@ REGISTER_APPLICATION_RESTART(LPCWSTR, DWORD);
 typedef REGISTER_APPLICATION_RESTART *PREGISTER_APPLICATION_RESTART;
 
 /**
+ A prototype for the RtlCaptureStackBackTrace function.
+ */
+typedef
+WORD WINAPI
+RTL_CAPTURE_STACK_BACK_TRACE(DWORD, DWORD, PVOID *, PDWORD);
+
+/**
+ A prototype for a pointer to the RtlCaptureStackBackTrace function.
+ */
+typedef RTL_CAPTURE_STACK_BACK_TRACE *PRTL_CAPTURE_STACK_BACK_TRACE;
+
+/**
  A prototype for the SetConsoleScreenBufferEx function.
  */
 typedef
@@ -5416,6 +5428,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to RegisterApplicationRestart.
      */
     PREGISTER_APPLICATION_RESTART pRegisterApplicationRestart;
+
+    /**
+     If it's available on the current system, a pointer to RtlCaptureStackBackTrace.
+     */
+    PRTL_CAPTURE_STACK_BACK_TRACE pRtlCaptureStackBackTrace;
 
     /**
      If it's available on the current system, a pointer to SetConsoleScreenBufferInfoEx.

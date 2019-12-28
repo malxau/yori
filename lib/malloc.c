@@ -30,6 +30,11 @@
 #if YORI_SPECIAL_HEAP
 
 /**
+ The number of stack frames to capture when the OS supports it.
+ */
+#define YORI_SPECIAL_HEAP_STACK_FRAMES (10)
+
+/**
  A structure embedded at the top of special heap allocations.
  */
 typedef struct _YORI_SPECIAL_HEAP_HEADER {
@@ -65,12 +70,17 @@ typedef struct _YORI_SPECIAL_HEAP_HEADER {
      */
     DWORD Line;
 
-#ifdef CaptureStackBackTrace
     /**
-     The stack that allocated this allocation.
+     An extra 32 bits that does nothing to ensure 64 bit alignment of this
+     structure so that 64 bit builds will capture pointer values on 64 bit
+     boundaries.
      */
-    PVOID AllocateStack[10];
-#endif
+    DWORD ReservedForAlignment;
+
+    /**
+     This structure may be followed by the stack that allocated this
+     allocation.
+     */
 
 } YORI_SPECIAL_HEAP_HEADER, *PYORI_SPECIAL_HEAP_HEADER;
 
@@ -169,15 +179,23 @@ YoriLibMallocSpecialHeap(
     __in DWORD Line
     )
 {
-    DWORD TotalPagesNeeded = (Bytes + sizeof(YORI_SPECIAL_HEAP_HEADER) + 2 * PAGE_SIZE - 1) / PAGE_SIZE;
+    DWORD TotalPagesNeeded;
     PYORI_SPECIAL_HEAP_HEADER Header;
     PYORI_SPECIAL_HEAP_HEADER Commit;
+    DWORD StackSize;
     DWORD OldAccess;
 #if _M_MRX000
     DWORD Alignment = sizeof(DWORD);
 #else
     DWORD Alignment = sizeof(UCHAR);
 #endif
+
+    StackSize = 0;
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        StackSize = sizeof(PVOID) * YORI_SPECIAL_HEAP_STACK_FRAMES;
+    }
+
+    TotalPagesNeeded = (Bytes + sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize + 2 * PAGE_SIZE - 1) / PAGE_SIZE;
 
     if (YoriLibSpecialHeap.Mutex == NULL) {
         YoriLibSpecialHeap.Mutex = CreateMutex(NULL, FALSE, NULL);
@@ -215,10 +233,10 @@ YoriLibMallocSpecialHeap(
     Header->Function = Function;
     Header->File = File;
     Header->Line = Line;
-    ASSERT(Header->OffsetToData < (PAGE_SIZE + sizeof(YORI_SPECIAL_HEAP_HEADER)));
-#ifdef CaptureStackBackTrace
-    CaptureStackBackTrace(1, sizeof(Header->AllocateStack)/sizeof(Header->AllocateStack[0]), Header->AllocateStack, NULL);
-#endif
+    ASSERT(Header->OffsetToData < (PAGE_SIZE + sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize));
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_SPECIAL_HEAP_STACK_FRAMES, YoriLibAddToPointer(Header, sizeof(YORI_SPECIAL_HEAP_HEADER)), NULL);
+    }
 
     WaitForSingleObject(YoriLibSpecialHeap.Mutex, INFINITE);
     YoriLibSpecialHeap.NumberAllocated++;
@@ -248,6 +266,7 @@ YoriLibFree(
     DWORD MyEntry;
     DWORD OldAccess;
     DWORD BytesToFree;
+    DWORD StackSize;
 
     Header = ((PYORI_SPECIAL_HEAP_HEADER)Ptr) - 1;
     Header = (PYORI_SPECIAL_HEAP_HEADER)((DWORD_PTR)Header & ~(PAGE_SIZE - 1));
@@ -255,7 +274,12 @@ YoriLibFree(
     TestChar = (PUCHAR)Header;
     ASSERT(TestChar + Header->OffsetToData == Ptr);
 
-    TestChar = (PUCHAR)(Header + 1);
+    StackSize = 0;
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        StackSize = sizeof(PVOID) * YORI_SPECIAL_HEAP_STACK_FRAMES;
+    }
+
+    TestChar = (PUCHAR)YoriLibAddToPointer(Header, sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize);
     while (TestChar < (PUCHAR)Ptr) {
         ASSERT(*TestChar == '@');
         TestChar++;
@@ -323,6 +347,8 @@ YoriLibDisplayMemoryUsage()
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs (%hs:%i) allocated %i bytes\n"), Header->Function, Header->File, Header->Line, BytesAllocated);
             Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, Entry);
         }
+
+        DebugBreak();
     }
 #endif
 }
