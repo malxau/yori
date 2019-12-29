@@ -35,9 +35,10 @@ CHAR strMemHelpText[] =
         "\n"
         "Display memory usage.\n"
         "\n"
-        "MEM [-license] [<fmt>]\n"
+        "MEM [-license] [-c [-g]] [<fmt>]\n"
         "\n"
         "   -c             Display memory usage of processes the user has access to\n"
+        "   -g             Count all processes with the same name together\n"
         "\n"
         "Format specifiers are:\n"
         "   $AVAILABLECOMMIT$      The amount of memory that the system has available\n"
@@ -219,6 +220,74 @@ MemExpandVariables(
     return CharsNeeded;
 }
 
+/**
+ If the user has requested it, go through the set of found processes, and
+ merge later entries with the same image name into the first entry.  On
+ successful completion, update the count of processes to be reduced by the
+ number of merges performed.
+
+ @param ProcessInfo Pointer to a linked list of processes.
+
+ @param NumberOfProcesses Pointer to a count of the number of processes.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+MemGroupProcessNames(
+    __inout PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo,
+    __inout PDWORD NumberOfProcesses
+    )
+{
+    PYORI_SYSTEM_PROCESS_INFORMATION FirstEntryWithName;
+    PYORI_SYSTEM_PROCESS_INFORMATION CurrentEntry;
+    PYORI_SYSTEM_PROCESS_INFORMATION PreviousEntry;
+    DWORD ProcessCount;
+    YORI_STRING PrimaryName;
+    YORI_STRING FoundName;
+
+    YoriLibInitEmptyString(&PrimaryName);
+    YoriLibInitEmptyString(&FoundName);
+    FirstEntryWithName = ProcessInfo;
+    ProcessCount = *NumberOfProcesses;
+
+    do {
+
+        PrimaryName.StartOfString = FirstEntryWithName->ImageName;
+        PrimaryName.LengthInChars = FirstEntryWithName->ImageNameLengthInBytes / sizeof(WCHAR);
+
+        FirstEntryWithName->ProcessId = 1;
+        CurrentEntry = FirstEntryWithName;
+        PreviousEntry = CurrentEntry;
+
+        while (CurrentEntry->NextEntryOffset != 0) {
+
+            CurrentEntry = YoriLibAddToPointer(CurrentEntry, CurrentEntry->NextEntryOffset);
+            FoundName.StartOfString = CurrentEntry->ImageName;
+            FoundName.LengthInChars = CurrentEntry->ImageNameLengthInBytes / sizeof(WCHAR);
+
+            if (YoriLibCompareStringInsensitive(&PrimaryName, &FoundName) == 0) {
+                FirstEntryWithName->WorkingSetSize += CurrentEntry->WorkingSetSize;
+                FirstEntryWithName->CommitSize += CurrentEntry->CommitSize;
+                FirstEntryWithName->ProcessId++;
+                PreviousEntry->NextEntryOffset += CurrentEntry->NextEntryOffset;
+                ProcessCount--;
+            } else {
+                PreviousEntry = CurrentEntry;
+            }
+        }
+
+        if (FirstEntryWithName->NextEntryOffset == 0) {
+            break;
+        }
+
+        FirstEntryWithName = YoriLibAddToPointer(FirstEntryWithName, FirstEntryWithName->NextEntryOffset);
+    } while (TRUE);
+
+    *NumberOfProcesses = ProcessCount;
+
+    return TRUE;
+}
+
 
 /**
  Display the memory used by all processes that the current user has access
@@ -227,7 +296,9 @@ MemExpandVariables(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-MemDisplayProcessMemoryUsage()
+MemDisplayProcessMemoryUsage(
+    __in BOOLEAN GroupProcesses
+    )
 {
     PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo = NULL;
     PYORI_SYSTEM_PROCESS_INFORMATION CurrentEntry;
@@ -310,6 +381,15 @@ MemDisplayProcessMemoryUsage()
     } while(TRUE);
 
     //
+    //  If the user asked to combine all processes with the same name, do the
+    //  combining now.
+    //
+
+    if (GroupProcesses) {
+        MemGroupProcessNames(ProcessInfo, &NumberOfProcesses);
+    }
+
+    //
     //  Allocate the sort array.
     //
 
@@ -355,7 +435,11 @@ MemDisplayProcessMemoryUsage()
     //  Now display the result in sorted order
     //
 
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Pid  | Process         | WorkingSet | Commit\n"));
+    if (GroupProcesses) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T(" Count | Process         | WorkingSet | Commit\n"));
+    } else {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Pid  | Process         | WorkingSet | Commit\n"));
+    }
     for (CurrentProcessIndex = 0; CurrentProcessIndex < NumberOfProcesses; CurrentProcessIndex++) {
         CurrentEntry = SortedProcesses[CurrentProcessIndex];
 
@@ -413,7 +497,8 @@ ENTRYPOINT(
     BOOL ArgumentUnderstood;
     DWORD i;
     DWORD StartArg = 0;
-    BOOL DisplayProcesses = FALSE;
+    BOOLEAN DisplayProcesses = FALSE;
+    BOOLEAN GroupProcesses = FALSE;
     YORI_STRING Arg;
     MEM_CONTEXT MemContext;
     YORI_STRING DisplayString;
@@ -439,6 +524,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 DisplayProcesses = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g")) == 0) {
+                GroupProcesses = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -460,7 +548,7 @@ ENTRYPOINT(
     }
 
     if (DisplayProcesses) {
-        MemDisplayProcessMemoryUsage();
+        MemDisplayProcessMemoryUsage(GroupProcesses);
     }
 
     if (DllKernel32.pGlobalMemoryStatusEx) {
