@@ -268,16 +268,16 @@ YoriLibFree(
     DWORD BytesToFree;
     DWORD StackSize;
 
-    Header = ((PYORI_SPECIAL_HEAP_HEADER)Ptr) - 1;
-    Header = (PYORI_SPECIAL_HEAP_HEADER)((DWORD_PTR)Header & ~(PAGE_SIZE - 1));
-
-    TestChar = (PUCHAR)Header;
-    ASSERT(TestChar + Header->OffsetToData == Ptr);
-
     StackSize = 0;
     if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
         StackSize = sizeof(PVOID) * YORI_SPECIAL_HEAP_STACK_FRAMES;
     }
+
+    Header = YoriLibSubtractFromPointer(Ptr, sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize);
+    Header = (PYORI_SPECIAL_HEAP_HEADER)((DWORD_PTR)Header & ~(PAGE_SIZE - 1));
+
+    TestChar = (PUCHAR)Header;
+    ASSERT(TestChar + Header->OffsetToData == Ptr);
 
     TestChar = (PUCHAR)YoriLibAddToPointer(Header, sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize);
     while (TestChar < (PUCHAR)Ptr) {

@@ -350,6 +350,12 @@ typedef struct _YORI_FILE_INFO {
 #define YoriLibAddToPointer(PTR, OFFSET) \
     (PVOID)(((PUCHAR)(PTR)) + (OFFSET))
 
+/**
+ Subtracts a specified number of bytes from a pointer value and returns the
+ resulting value.
+ */
+#define YoriLibSubtractFromPointer(PTR, OFFSET) \
+    (PVOID)(((PUCHAR)(PTR)) - (OFFSET))
 
 #ifdef _M_IX86
 
