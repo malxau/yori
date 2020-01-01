@@ -269,7 +269,11 @@ MemGroupProcessNames(
                 FirstEntryWithName->WorkingSetSize += CurrentEntry->WorkingSetSize;
                 FirstEntryWithName->CommitSize += CurrentEntry->CommitSize;
                 FirstEntryWithName->ProcessId++;
-                PreviousEntry->NextEntryOffset += CurrentEntry->NextEntryOffset;
+                if (CurrentEntry->NextEntryOffset == 0) {
+                    PreviousEntry->NextEntryOffset = 0;
+                } else {
+                    PreviousEntry->NextEntryOffset += CurrentEntry->NextEntryOffset;
+                }
                 ProcessCount--;
             } else {
                 PreviousEntry = CurrentEntry;
