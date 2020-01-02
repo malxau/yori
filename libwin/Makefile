@@ -1,0 +1,22 @@
+
+compile: yoriwin.lib
+
+!INCLUDE "..\config\common.mk"
+
+OBJS=\
+	 border.obj   \
+	 button.obj   \
+	 combo.obj    \
+	 ctrl.obj     \
+	 edit.obj     \
+	 itemaray.obj \
+	 label.obj    \
+	 list.obj     \
+	 scrolbar.obj \
+	 window.obj   \
+	 winmgr.obj   \
+
+yoriwin.lib: $(OBJS)
+	@echo $@
+	@$(LIB32) $(LIBFLAGS) $(OBJS) /out:yoriwin.lib
+

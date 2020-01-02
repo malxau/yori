@@ -24,7 +24,7 @@ LIB32=link.exe -lib -nologo
 LINK=link.exe -nologo -incremental:no
 MAKE=nmake.exe -nologo
 
-CFLAGS_NOUNICODE=-nologo -W4 -WX -Gs9999 -I. -I..\lib -I..\crt -DYORI_VER_MAJOR=$(YORI_VER_MAJOR) -DYORI_VER_MINOR=$(YORI_VER_MINOR) -DYORI_BUILD_ID=$(YORI_BUILD_ID)
+CFLAGS_NOUNICODE=-nologo -W4 -WX -Gs9999 -I. -I..\lib -I..\crt -I..\libwin -DYORI_VER_MAJOR=$(YORI_VER_MAJOR) -DYORI_VER_MINOR=$(YORI_VER_MINOR) -DYORI_BUILD_ID=$(YORI_BUILD_ID)
 LDFLAGS=-OPT:REF
 LIBFLAGS=
 LIBS=kernel32.lib
