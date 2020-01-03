@@ -56,6 +56,7 @@ SHDIRS=sh      \
 DIRS=crt       \
      lib       \
      libwin    \
+     libdlg    \
      builtins  \
      cab       \
      cal       \
