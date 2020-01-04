@@ -3,8 +3,6 @@ compile: yorilib.lib
 
 !INCLUDE "..\config\common.mk"
 
-DEBUG=0
-
 OBJS=\
 	 builtin.obj  \
 	 cabinet.obj  \

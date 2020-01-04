@@ -1223,6 +1223,47 @@ YoriCallSetJobPriority(
     return pYoriApiSetJobPriority(JobId, PriorityClass);
 }
 
+
+/**
+ Prototype for the @ref YoriApiSetNextCommand function.
+ */
+typedef BOOL YORI_API_SET_NEXT_COMMAND(PYORI_STRING);
+
+/**
+ Prototype for a pointer to the @ref YoriApiSetNextCommand function.
+ */
+typedef YORI_API_SET_NEXT_COMMAND *PYORI_API_SET_NEXT_COMMAND;
+
+/**
+ Pointer to the @ref YoriApiSetNextCommand function.
+ */
+PYORI_API_SET_NEXT_COMMAND pYoriApiSetNextCommand;
+
+/**
+ Sets the command to be visible on next user prompt.
+
+ @param NextCommand Pointer to the string to populate on the command line on
+        he next prompt.
+
+ @return TRUE to indicate that the command was populated, FALSE if it was not.
+ */
+BOOL
+YoriCallSetNextCommand(
+    __in PYORI_STRING NextCommand
+    )
+{
+    if (pYoriApiSetNextCommand == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiSetNextCommand = (PYORI_API_SET_NEXT_COMMAND)GetProcAddress(hYori, "YoriApiSetNextCommand");
+        if (pYoriApiSetNextCommand == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiSetNextCommand(NextCommand);
+}
+
 /**
  Prototype for the @ref YoriApiSetUnloadRoutine function.
  */

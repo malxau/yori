@@ -3,7 +3,7 @@
  *
  * Yori shell history output
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2019 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,6 +27,7 @@
 #include <yoripch.h>
 #include <yorilib.h>
 #include <yoricall.h>
+#include <yoriwin.h>
 
 /**
  Help text to display to the user.
@@ -40,7 +41,8 @@ CHAR strHistoryHelpText[] =
         "\n"
         "   -c             Clear current history\n"
         "   -l             Load history from a file\n"
-        "   -n             The number of lines of history to output\n";
+        "   -n             The number of lines of history to output\n"
+        "   -u             Display a menu for the user to select a command\n";
 
 /**
  Display usage text to the user.
@@ -55,6 +57,156 @@ HistoryHelp()
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHistoryHelpText);
     return TRUE;
 }
+
+/**
+ A callback invoked when the ok button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HistoryOkButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    Parent = YoriWinGetControlParent(Ctrl);
+    YoriWinCloseWindow(Parent, TRUE);
+}
+
+/**
+ A callback invoked when the cancel button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HistoryCancelButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    Parent = YoriWinGetControlParent(Ctrl);
+    YoriWinCloseWindow(Parent, FALSE);
+}
+
+/**
+ Display a popup window containing a list of items.
+
+ @param MenuOptions Pointer to an array of list items.
+
+ @param NumberOptions The number of elements within the array.
+
+ @param ActiveOption On successful completion, updated to contain the option
+        that the user selected.
+
+ @return TRUE to indicate that the user successfully selected an option, FALSE
+         to indicate the menu could not be displayed or the user cancelled the
+         operation.
+ */
+BOOL
+HistoryCreateSynchronousMenu(
+    __in PYORI_STRING MenuOptions,
+    __in DWORD NumberOptions,
+    __out PDWORD ActiveOption
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+    PYORI_WIN_CTRL_HANDLE List;
+    PYORI_WIN_WINDOW_HANDLE Parent;
+    SMALL_RECT ListRect;
+    COORD WindowSize;
+    YORI_STRING Title;
+    SMALL_RECT ButtonArea;
+    YORI_STRING Caption;
+    WORD ButtonWidth;
+    PYORI_WIN_CTRL_HANDLE Ctrl;
+    DWORD_PTR Result;
+
+    if (NumberOptions == 0) {
+        return FALSE;
+    }
+
+    if (!YoriWinOpenWindowManager(&WinMgr)) {
+        return FALSE;
+    }
+
+    YoriLibConstantString(&Title, _T("History"));
+
+    if (!YoriWinCreateWindow(WinMgr, 30, 12, 60, 18, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW, &Title, &Parent)) {
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
+
+    YoriWinGetClientSize(Parent, &WindowSize);
+
+    ListRect.Left = 1;
+    ListRect.Top = 1;
+    ListRect.Right = (SHORT)(WindowSize.X - 2);
+    ListRect.Bottom = (SHORT)(WindowSize.Y - 3 - 1);
+
+    List = YoriWinCreateList(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR);
+    if (List == NULL) {
+        YoriWinDestroyWindow(Parent);
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
+
+    if (!YoriWinListAddItems(List, MenuOptions, NumberOptions)) {
+        YoriWinDestroyWindow(Parent);
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
+
+    YoriWinListSetActiveOption(List, NumberOptions - 1);
+
+    ButtonWidth = (WORD)(sizeof("Cancel") - 1 + 2);
+
+    ButtonArea.Top = (SHORT)(WindowSize.Y - 3);
+    ButtonArea.Bottom = (SHORT)(ButtonArea.Top + 2);
+
+    YoriLibConstantString(&Caption, _T("&Ok"));
+
+    //
+    //  WindowSize corresponds to dimensions, so rightmost cell is one
+    //  less.  The button starts two buttons over, and each button
+    //  has its client plus border chars, and there's an extra char
+    //  between the buttons.
+    //
+
+    ButtonArea.Left = (SHORT)(WindowSize.X - 1 - 2 * (ButtonWidth + 2) - 1);
+    ButtonArea.Right = (WORD)(ButtonArea.Left + ButtonWidth + 1);
+
+    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, HistoryOkButtonClicked);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Parent);
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
+
+    YoriLibConstantString(&Caption, _T("&Cancel"));
+
+    ButtonArea.Left = (SHORT)(WindowSize.X - 1 - (ButtonWidth + 2));
+    ButtonArea.Right = (WORD)(ButtonArea.Left + ButtonWidth + 1);
+
+    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, HistoryCancelButtonClicked);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Parent);
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
+
+    Result = FALSE;
+    YoriWinProcessInputForWindow(Parent, &Result);
+    if (Result) {
+        if (!YoriWinListGetActiveOption(List, ActiveOption)) {
+            Result = FALSE;
+        }
+    }
+
+    YoriWinDestroyWindow(Parent);
+    YoriWinCloseWindowManager(WinMgr);
+    return (BOOL)Result;
+}
+
 
 /**
  Load history from a file.
@@ -118,7 +270,8 @@ HistoryLoadHistoryFromFile(
 typedef enum _HISTORY_OP {
     HistoryDisplayHistory = 1,
     HistoryLoadHistory = 2,
-    HistoryClearHistory =3
+    HistoryClearHistory = 3,
+    HistoryDisplayUi = 4
 } HISTORY_OP;
 
 /**
@@ -184,6 +337,10 @@ YoriCmd_HISTORY(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+
+                Op = HistoryDisplayUi;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -223,6 +380,57 @@ YoriCmd_HISTORY(
                 ThisVar += VarLen;
                 ThisVar++;
             }
+            YoriCallFreeYoriString(&HistoryStrings);
+        }
+    } else if (Op == HistoryDisplayUi) {
+        if (YoriCallGetHistoryStrings(LineCount, &HistoryStrings)) {
+            PYORI_STRING StringArray;
+            DWORD StringCount;
+            DWORD Index;
+            StringCount = 0;
+            ThisVar = HistoryStrings.StartOfString;
+            while (*ThisVar != '\0') {
+                VarLen = _tcslen(ThisVar);
+                StringCount++;
+                ThisVar += VarLen;
+                ThisVar++;
+            }
+
+            StringArray = YoriLibMalloc(sizeof(YORI_STRING)*StringCount);
+            if (StringArray == NULL) {
+                YoriCallFreeYoriString(&HistoryStrings);
+                return EXIT_FAILURE;
+            }
+
+            Index = 0;
+            ThisVar = HistoryStrings.StartOfString;
+            while (*ThisVar != '\0') {
+                VarLen = _tcslen(ThisVar);
+                YoriLibInitEmptyString(&StringArray[Index]);
+                StringArray[Index].StartOfString = ThisVar;
+                StringArray[Index].LengthInChars = VarLen;
+                StringArray[Index].LengthAllocated = VarLen + 1;
+                Index++;
+                ThisVar += VarLen;
+                ThisVar++;
+            }
+
+            if (!HistoryCreateSynchronousMenu(StringArray, StringCount, &Index)) {
+                YoriLibFree(StringArray);
+                YoriCallFreeYoriString(&HistoryStrings);
+                return EXIT_FAILURE;
+            }
+
+            //
+            //  If the shell supports it, populate the next command with the
+            //  string for the user to edit.  If not, just execute it
+            //  verbatim.
+            //
+
+            if (!YoriCallSetNextCommand(&StringArray[Index])) {
+                YoriCallExecuteExpression(&StringArray[Index]);
+            }
+            YoriLibFree(StringArray);
             YoriCallFreeYoriString(&HistoryStrings);
         }
     }

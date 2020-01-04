@@ -171,6 +171,7 @@ YoriShBuiltins[] = {
  */
 CONST YORI_SH_DEFAULT_ALIAS_ENTRY
 YoriShDefaultAliasEntries[] = {
+    {_T("F7"),       _T("history -u")},
     {_T("cd"),       _T("chdir $*$")},
     {_T("cls"),      _T("ycls $*$")},
     {_T("copy"),     _T("ycopy $*$")},

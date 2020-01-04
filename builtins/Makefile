@@ -59,5 +59,5 @@ builtins.lib: $(BUILTINS)
 
 .obj.com:
 	@echo $@
-	@$(LINK) $(LDFLAGS) $< -dll -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -def:$(<B).def -out:$@
+	@$(LINK) $(LDFLAGS) $< -dll -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib ..\libwin\yoriwin.lib -def:$(<B).def -out:$@
 

@@ -534,6 +534,31 @@ YoriApiSetJobPriority(
 }
 
 /**
+ Set the command to prepopulate on the prompt for the user to edit next time
+ a command needs to be entered.
+
+ @param NextCommand Pointer to the command to prepopulate at the next prompt.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiSetNextCommand(
+    __in PYORI_STRING NextCommand
+    )
+{
+    YoriLibFreeStringContents(&YoriShGlobal.NextCommand);
+    if (!YoriLibAllocateString(&YoriShGlobal.NextCommand, NextCommand->LengthInChars + 1)) {
+        return FALSE;
+    }
+
+    memcpy(YoriShGlobal.NextCommand.StartOfString, NextCommand->StartOfString, NextCommand->LengthInChars * sizeof(TCHAR));
+    YoriShGlobal.NextCommand.LengthInChars = NextCommand->LengthInChars;
+    YoriShGlobal.NextCommand.StartOfString[YoriShGlobal.NextCommand.LengthInChars] = '\0';
+    YoriShGlobal.NextCommandOffset = YoriShGlobal.NextCommand.LengthInChars;
+    return TRUE;
+}
+
+/**
  Add a new function to invoke on shell exit or module unload.
 
  @param UnloadNotify Pointer to the function to invoke.

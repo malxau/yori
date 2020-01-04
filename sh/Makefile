@@ -38,6 +38,7 @@ BUILTINTABLE_OBJS=\
 
 STD_BUILTINLIBS=\
 	..\builtins\builtins.lib \
+	..\libwin\yoriwin.lib    \
 	..\for\builtins.lib      \
 	..\nice\builtins.lib     \
 

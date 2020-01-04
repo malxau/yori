@@ -180,6 +180,11 @@ YoriCallSetJobPriority(
     );
 
 BOOL
+YoriCallSetNextCommand(
+    __in PYORI_STRING NextCommand
+    );
+
+BOOL
 YoriCallSetUnloadRoutine(
     __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
     );
