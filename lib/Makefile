@@ -32,6 +32,7 @@ OBJS=\
 	 lineread.obj \
 	 list.obj     \
 	 malloc.obj   \
+	 movefile.obj \
 	 osver.obj    \
 	 path.obj     \
 	 printf.obj   \

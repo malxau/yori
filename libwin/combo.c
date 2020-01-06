@@ -305,8 +305,12 @@ YoriWinComboEventHandler(
         case YoriWinEventMouseUpOutsideWindow:
             break;
         case YoriWinEventLoseFocus:
-            break;
         case YoriWinEventGetFocus:
+            if (Combo->Edit != NULL &&
+                Combo->Edit->NotifyEventFn != NULL) {
+
+                Combo->Edit->NotifyEventFn(Combo->Edit, Event);
+            }
             break;
     }
 

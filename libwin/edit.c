@@ -609,6 +609,7 @@ YoriWinEditSetText(
     memcpy(Edit->Text.StartOfString, Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
     Edit->Text.LengthInChars = Text->LengthInChars;
     Edit->Text.StartOfString[Edit->Text.LengthInChars] = '\0';
+    Edit->CursorOffset = Edit->Text.LengthInChars;
     YoriWinEditEnsureCursorVisible(Edit);
     YoriWinPaintEdit(Edit);
     return TRUE;

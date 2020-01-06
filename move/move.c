@@ -105,9 +105,6 @@ MoveFileFoundCallback(
 {
     PMOVE_CONTEXT MoveContext = (PMOVE_CONTEXT)Context;
     YORI_STRING FullDest;
-    DWORD OsMajor;
-    DWORD OsMinor;
-    DWORD OsBuild;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -135,45 +132,14 @@ MoveFileFoundCallback(
             return FALSE;
         }
     }
-    if (!MoveFileEx(FilePath->StartOfString, FullDest.StartOfString, MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING)) {
+
+    if (!YoriLibMoveFile(FilePath, &FullDest)) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("MoveFile failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);
     }
 
-    YoriLibGetOsVersion(&OsMajor, &OsMinor, &OsBuild);
-
-    //
-    //  Windows 2000 and above claim to support inherited ACLs, except they
-    //  really depend on applications to perform the inheritance.  On these
-    //  systems, attempt to reset the ACL on the target, which really resets
-    //  security and picks up state from the parent.  Don't do this on older
-    //  systems, because that will result in a file with no ACL.  Note this
-    //  can fail due to not having access on the file, or a file system
-    //  that doesn't support security, or because the file is no longer there,
-    //  so errors here are just ignored.
-    //
-
-    if (OsMajor >= 5) {
-        ACL EmptyAcl;
-
-        //
-        //  This function should exist on NT4+
-        //
-
-        ASSERT(DllAdvApi32.pSetNamedSecurityInfoW != NULL &&
-               DllAdvApi32.pInitializeAcl != NULL);
-
-        if (DllAdvApi32.pInitializeAcl != NULL &&
-            DllAdvApi32.pSetNamedSecurityInfoW != NULL) {
-
-            memset(&EmptyAcl, 0, sizeof(EmptyAcl));
-
-            DllAdvApi32.pInitializeAcl(&EmptyAcl, sizeof(EmptyAcl), ACL_REVISION);
-            DllAdvApi32.pSetNamedSecurityInfoW(FullDest.StartOfString, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, &EmptyAcl, NULL);
-        }
-    }
     MoveContext->FilesMoved++;
     YoriLibDereference(FullDest.StartOfString);
     return TRUE;

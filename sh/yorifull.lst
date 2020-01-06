@@ -3,6 +3,7 @@
 ..\charmap\builtins.lib
 ..\clip\builtins.lib
 ..\cls\builtins.lib
+..\co\builtins.lib
 ..\compact\builtins.lib
 ..\copy\builtins.lib
 ..\cpuinfo\builtins.lib

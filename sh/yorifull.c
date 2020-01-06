@@ -74,6 +74,11 @@ YORI_CMD_BUILTIN YoriCmd_COLOR;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YCO;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YCOMPACT;
 
 /**
@@ -552,6 +557,7 @@ YoriShBuiltins[] = {
                     {_T("YCHARMAP"),  YoriCmd_YCHARMAP},
                     {_T("YCLIP"),     YoriCmd_YCLIP},
                     {_T("YCLS"),      YoriCmd_YCLS},
+                    {_T("YCO"),       YoriCmd_YCO},
                     {_T("YCOMPACT"),  YoriCmd_YCOMPACT},
                     {_T("YCOPY"),     YoriCmd_YCOPY},
                     {_T("YCPUINFO"),  YoriCmd_YCPUINFO},
@@ -603,6 +609,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("cd"),       _T("chdir $*$")},
     {_T("clip"),     _T("yclip $*$")},
     {_T("cls"),      _T("ycls $*$")},
+    {_T("co"),       _T("yco $*$")},
     {_T("compact"),  _T("ycompact $*$")},
     {_T("copy"),     _T("ycopy $*$")},
     {_T("cpuinfo"),  _T("ycpuinfo $*$")},

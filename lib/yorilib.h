@@ -2361,6 +2361,14 @@ YoriLibDereference(
     __in PVOID Allocation
     );
 
+// *** MOVEFILE.C ***
+
+BOOLEAN
+YoriLibMoveFile(
+    __in PYORI_STRING Source,
+    __in PYORI_STRING FullDest
+    );
+
 // *** OSVER.C ***
 
 VOID

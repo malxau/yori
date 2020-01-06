@@ -64,6 +64,7 @@ DIRS=crt       \
      clip      \
      clmp      \
      cls       \
+     co        \
      compact   \
      copy      \
      cpuinfo   \
