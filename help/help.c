@@ -113,6 +113,7 @@ CHAR strHelpHelpText2[] =
         "INITOOL   Query or set values in INI files\n"
         "INTCMP    Compare two integer values\n"
         "JOB       Displays or updates background job status\n"
+        "KILL      Terminate one or more processes\n"
         "LINES     Count the number of lines in one or more files\n"
         ;
 

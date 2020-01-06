@@ -92,6 +92,7 @@ DIRS=crt       \
      iconv     \
      initool   \
      intcmp    \
+     kill      \
      lines     \
      lsof      \
      mem       \

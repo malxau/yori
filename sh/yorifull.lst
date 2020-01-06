@@ -30,6 +30,7 @@
 ..\iconv\builtins.lib
 ..\initool\builtins.lib
 ..\intcmp\builtins.lib
+..\kill\builtins.lib
 ..\libdlg\yoridlg.lib
 ..\lines\builtins.lib
 ..\lsof\builtins.lib
