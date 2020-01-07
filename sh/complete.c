@@ -2185,6 +2185,7 @@ YoriShCompleteGenerateNewBufferString(
             return;
         }
 
+        NewString.MemoryToFree = NewString.StartOfString;
         FreeNewString = TRUE;
         Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring->LengthInChars + BeginCurrentArg + CursorOffset;
         NewString.LengthInChars = _tcslen(NewString.StartOfString);
