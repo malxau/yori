@@ -83,7 +83,8 @@ SdirAppInitialize()
     //  failure can occur.
     //
 
-    Opts->PreviousAttributes = SdirDefaultColor;
+    Opts->PreviousAttributes.Ctrl = SdirDefaultColor.Ctrl;
+    Opts->PreviousAttributes.Win32Attr = SdirDefaultColor.Win32Attr;
 
     //
     //  Check if we're talking to a console or some other kind of object
@@ -150,7 +151,7 @@ SdirAppInitialize()
         YoriLibSetColorToWin32(&Opts->PreviousAttributes, (UCHAR)(ScreenInfo.wAttributes & YORILIB_ATTRIBUTE_FULLCOLOR_MASK));
     }
 
-    SdirDefaultColor = YoriLibResolveWindowColorComponents(SdirDefaultColor, Opts->PreviousAttributes, TRUE);
+    YoriLibResolveWindowColorComponents(SdirDefaultColor, Opts->PreviousAttributes, TRUE, &SdirDefaultColor);
 
     if (Opts->ConsoleWidth > SDIR_MAX_WIDTH) {
         Opts->ConsoleWidth = SDIR_MAX_WIDTH;
@@ -476,7 +477,7 @@ SdirParseArgs (
 
         Feature = SdirFeatureByOptionNumber(i);
         Feature->Flags = SdirOptions[i].Default.Flags;
-        Feature->HighlightColor = YoriLibResolveWindowColorComponents(SdirOptions[i].Default.HighlightColor, Opts->PreviousAttributes, TRUE);
+        YoriLibResolveWindowColorComponents(SdirOptions[i].Default.HighlightColor, Opts->PreviousAttributes, TRUE, &Feature->HighlightColor);
     }
 
     if (GetEnvironmentVariable(_T("SDIR_OPTS"), EnvOpts, sizeof(EnvOpts)/sizeof(EnvOpts[0]))) {

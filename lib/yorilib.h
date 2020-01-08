@@ -636,14 +636,16 @@ extern YORILIB_ATTRIBUTE_COLOR_STRING YoriLibColorStringTable[];
  */
 #define YORILIB_ATTRIBUTE_ONECOLOR_MASK    0x0F
 
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibAttributeFromString(
-    __in PYORI_STRING String
+    __in PYORI_STRING String,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     );
 
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibAttributeFromLiteralString(
-    __in LPCTSTR String
+    __in LPCTSTR String,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     );
 
 __success(return)
@@ -653,17 +655,19 @@ YoriLibSetColorToWin32(
     __in UCHAR Win32Attribute
     );
 
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibCombineColors(
     __in YORILIB_COLOR_ATTRIBUTES Color1,
-    __in YORILIB_COLOR_ATTRIBUTES Color2
+    __in YORILIB_COLOR_ATTRIBUTES Color2,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     );
 
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibResolveWindowColorComponents(
     __in YORILIB_COLOR_ATTRIBUTES Color,
     __in YORILIB_COLOR_ATTRIBUTES WindowColor,
-    __in BOOL RetainWindowCtrlFlags
+    __in BOOL RetainWindowCtrlFlags,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     );
 
 BOOL

@@ -239,7 +239,8 @@ YoriWinGetWindowSize(
     __out PCOORD WindowSize
     )
 {
-    *WindowSize = Window->WindowSize;
+    WindowSize->X = Window->WindowSize.X;
+    WindowSize->Y = Window->WindowSize.Y;
 }
 
 /**

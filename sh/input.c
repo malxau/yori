@@ -127,7 +127,8 @@ YoriShDetermineCellLocationIfMovedCacheResult(
     }
 
     if (NewLocation != NULL) {
-        *NewLocation = NewPosition;
+        NewLocation->X = NewPosition.X;
+        NewLocation->Y = NewPosition.Y;
     }
 
     return TRUE;

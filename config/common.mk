@@ -24,7 +24,7 @@ LIB32=link.exe -lib -nologo
 LINK=link.exe -nologo -incremental:no
 MAKE=nmake.exe -nologo
 
-CFLAGS_NOUNICODE=-nologo -W4 -WX -Gs9999 -I. -I..\lib -I..\crt -I..\libwin -I..\libdlg -DYORI_VER_MAJOR=$(YORI_VER_MAJOR) -DYORI_VER_MINOR=$(YORI_VER_MINOR) -DYORI_BUILD_ID=$(YORI_BUILD_ID)
+CFLAGS_NOUNICODE=-nologo -W4 -WX -I. -I..\lib -I..\crt -I..\libwin -I..\libdlg -DYORI_VER_MAJOR=$(YORI_VER_MAJOR) -DYORI_VER_MINOR=$(YORI_VER_MINOR) -DYORI_BUILD_ID=$(YORI_BUILD_ID)
 LDFLAGS=-OPT:REF
 LIBFLAGS=
 LIBS=kernel32.lib
@@ -93,6 +93,14 @@ CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gf
 
 !IF [$(CC) -? 2>&1 | find "Gz __stdcall" >NUL]==0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gz
+!ENDIF
+
+#
+# Probe for -Gs support.  This exists on x86 and x64 but not mips.
+#
+
+!IF [$(CC) -Gs9999 2>&1 |find "unknown" >NUL]>0
+CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gs9999
 !ENDIF
 
 !ENDIF # PROBECOMPILER

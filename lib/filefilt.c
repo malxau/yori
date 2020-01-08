@@ -540,7 +540,7 @@ YoriLibFileFiltParseColorElement(
     Value.StartOfString += CharsToCompare + 1;
     Value.LengthInChars = CharsRemaining - CharsToCompare - 1;
 
-    ColorCriteria->Color = YoriLibAttributeFromString(&Value);
+    YoriLibAttributeFromString(&Value, &ColorCriteria->Color);
     return TRUE;
 }
 
@@ -818,13 +818,16 @@ YoriLibFileFiltCheckColorMatch(
     )
 {
     DWORD Index;
-    YORILIB_COLOR_ATTRIBUTES ThisAttribute = {YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG, 0};
+    YORILIB_COLOR_ATTRIBUTES ThisAttribute;
     YORILIB_COLOR_ATTRIBUTES PreviousAttributes;
     PYORI_LIB_FILE_FILT_COLOR_CRITERIA ThisApply;
     PYORI_LIB_FILE_FILT_COLOR_CRITERIA ColorsToApply;
     YORI_FILE_INFO CompareEntry;
 
     ZeroMemory(&CompareEntry, sizeof(CompareEntry));
+
+    ThisAttribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
+    ThisAttribute.Win32Attr = 0;
 
     PreviousAttributes.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
     PreviousAttributes.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
@@ -849,17 +852,18 @@ YoriLibFileFiltCheckColorMatch(
         }
 
         if (ThisApply->Match.TruthStates[ThisApply->Match.CompareFn(&CompareEntry, &ThisApply->Match.CompareEntry)]) {
-            ThisAttribute = YoriLibCombineColors(ThisAttribute, ThisApply->Color);
+            YoriLibCombineColors(ThisAttribute, ThisApply->Color, &ThisAttribute);
             if ((ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
 
-                ThisAttribute = YoriLibResolveWindowColorComponents(ThisAttribute, PreviousAttributes, TRUE);
+                YoriLibResolveWindowColorComponents(ThisAttribute, PreviousAttributes, TRUE, &ThisAttribute);
 
                 if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_INVERT) {
                     ThisAttribute.Win32Attr = (UCHAR)(((ThisAttribute.Win32Attr & 0x0F) << 4) + ((ThisAttribute.Win32Attr & 0xF0) >> 4));
                     ThisAttribute.Ctrl = (UCHAR)(ThisAttribute.Ctrl & ~(YORILIB_ATTRCTRL_INVERT));
                 }
 
-                *Attribute = ThisAttribute;
+                Attribute->Ctrl = ThisAttribute.Ctrl;
+                Attribute->Win32Attr = ThisAttribute.Win32Attr;
                 return TRUE;
             }
 
@@ -875,11 +879,13 @@ YoriLibFileFiltCheckColorMatch(
 
     if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_TERMINATE_MASK || ThisAttribute.Win32Attr != 0) {
 
-        *Attribute = ThisAttribute;
+        Attribute->Ctrl = ThisAttribute.Ctrl;
+        Attribute->Win32Attr = ThisAttribute.Win32Attr;
         return TRUE;
     }
 
-    *Attribute = PreviousAttributes;
+    Attribute->Ctrl = PreviousAttributes.Ctrl;
+    Attribute->Win32Attr = PreviousAttributes.Win32Attr;
     return TRUE;
 }
 

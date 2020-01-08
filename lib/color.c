@@ -80,11 +80,12 @@ YORILIB_ATTRIBUTE_COLOR_STRING YoriLibColorStringTable[] = {
 
  @param String The string to resolve.
 
- @return The corresponding color.
+ @param OutAttributes On completion, populated with the corresponding color.
  */
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibAttributeFromString(
-    __in PYORI_STRING String
+    __in PYORI_STRING String,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     )
 {
     YORILIB_COLOR_ATTRIBUTES Attribute;
@@ -187,7 +188,8 @@ YoriLibAttributeFromString(
         Attribute.Ctrl |= YORILIB_ATTRCTRL_WINDOW_FG;
     }
 
-    return Attribute;
+    OutAttributes->Ctrl = Attribute.Ctrl;
+    OutAttributes->Win32Attr = Attribute.Win32Attr;
 }
 
 /**
@@ -197,16 +199,17 @@ YoriLibAttributeFromString(
 
  @param String The string to resolve.
 
- @return The corresponding color.
+ @param OutAttributes On completion, populated with the corresponding color.
  */
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibAttributeFromLiteralString(
-    __in LPCTSTR String
+    __in LPCTSTR String,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     )
 {
     YORI_STRING Ys;
     YoriLibConstantString(&Ys, String);
-    return YoriLibAttributeFromString(&Ys);
+    YoriLibAttributeFromString(&Ys, OutAttributes);
 }
 
 /**
@@ -240,12 +243,14 @@ YoriLibSetColorToWin32(
 
  @param Color2 The second color to combine.
 
- @return The resulting combined color.
+ @param OutAttributes On completion, populated with the resulting combined
+        color.
  */
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibCombineColors(
     __in YORILIB_COLOR_ATTRIBUTES Color1,
-    __in YORILIB_COLOR_ATTRIBUTES Color2
+    __in YORILIB_COLOR_ATTRIBUTES Color2,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     )
 {
     YORILIB_COLOR_ATTRIBUTES Result;
@@ -276,7 +281,8 @@ YoriLibCombineColors(
         Result.Win32Attr |= (Color1.Win32Attr ^ Color2.Win32Attr) & 0x0F;
     }
 
-    return Result;
+    OutAttributes->Ctrl = Result.Ctrl;
+    OutAttributes->Win32Attr = Result.Win32Attr;
 }
 
 /**
@@ -292,16 +298,20 @@ YoriLibCombineColors(
         FALSE if the result should be an explicit color without any indication
         of default components.
 
- @return The resolved color information.
+ @param OutAttributes On successful completion, populated with the resolved
+        color information.
  */
-YORILIB_COLOR_ATTRIBUTES
+VOID
 YoriLibResolveWindowColorComponents(
     __in YORILIB_COLOR_ATTRIBUTES Color,
     __in YORILIB_COLOR_ATTRIBUTES WindowColor,
-    __in BOOL RetainWindowCtrlFlags
+    __in BOOL RetainWindowCtrlFlags,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     )
 {
-    YORILIB_COLOR_ATTRIBUTES NewColor = Color;
+    YORILIB_COLOR_ATTRIBUTES NewColor;
+    NewColor.Ctrl = Color.Ctrl;
+    NewColor.Win32Attr = Color.Win32Attr;
 
     if (NewColor.Ctrl & YORILIB_ATTRCTRL_WINDOW_BG) {
         NewColor.Win32Attr = (UCHAR)((WindowColor.Win32Attr & 0xF0) + (NewColor.Win32Attr & 0xF));
@@ -315,7 +325,8 @@ YoriLibResolveWindowColorComponents(
         NewColor.Ctrl &= ~(YORILIB_ATTRCTRL_WINDOW_BG|YORILIB_ATTRCTRL_WINDOW_FG);
     }
 
-    return NewColor;
+    OutAttributes->Ctrl = NewColor.Ctrl;
+    OutAttributes->Win32Attr = NewColor.Win32Attr;
 }
 
 /**
@@ -588,12 +599,13 @@ YoriLibGetMetadataColor(
 
 
                 if (YoriLibCompareStringInsensitive(RequestedAttributeCodeString, &FoundAttributeCodeString) == 0) {
-                    FoundColor = YoriLibAttributeFromString(&FoundColorString);
+                    YoriLibAttributeFromString(&FoundColorString, &FoundColor);
                     WindowColor.Ctrl = 0;
                     WindowColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
-                    FoundColor = YoriLibResolveWindowColorComponents(FoundColor, WindowColor, TRUE);
+                    YoriLibResolveWindowColorComponents(FoundColor, WindowColor, TRUE, &FoundColor);
                     YoriLibFreeStringContents(&CriteriaString);
-                    *Color = FoundColor;
+                    Color->Ctrl = FoundColor.Ctrl;
+                    Color->Win32Attr = FoundColor.Win32Attr;
                     return TRUE;
                 }
             }

@@ -156,11 +156,13 @@ SdirCaptureFoundItemIntoDirent (
  @param FullPath A fully specified path to an object (which is currently a
         directory.)
 
- @return The color attributes to use to display the object.
+ @param OutAttributes On completion, populated with the color attributes to
+        use to display the object.
  */
-YORILIB_COLOR_ATTRIBUTES
+VOID
 SdirRenderAttributesFromPath (
-    __in PYORI_STRING FullPath
+    __in PYORI_STRING FullPath,
+    __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     )
 {
     HANDLE hFind;
@@ -171,12 +173,16 @@ SdirRenderAttributesFromPath (
     if (hFind != INVALID_HANDLE_VALUE) {
         SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, FullPath, TRUE);
         FindClose(hFind);
-        return CurrentEntry.RenderAttributes;
+        OutAttributes->Ctrl = CurrentEntry.RenderAttributes.Ctrl;
+        OutAttributes->Win32Attr = CurrentEntry.RenderAttributes.Win32Attr;
+        return;
     } else {
         YORI_STRING DummyString;
 
         if (!YoriLibAllocateString(&DummyString, FullPath->LengthInChars + 2)) {
-            return SdirDefaultColor;
+            OutAttributes->Ctrl = SdirDefaultColor.Ctrl;
+            OutAttributes->Win32Attr = SdirDefaultColor.Win32Attr;
+            return;
         };
 
         memset(&FindData, 0, sizeof(FindData));
@@ -184,7 +190,9 @@ SdirRenderAttributesFromPath (
         YoriLibUpdateFindDataFromFileInformation(&FindData, DummyString.StartOfString, FALSE);
         SdirCaptureFoundItemIntoDirent(&CurrentEntry, &FindData, &DummyString, TRUE);
         YoriLibFreeStringContents(&DummyString);
-        return CurrentEntry.RenderAttributes;
+        OutAttributes->Ctrl = CurrentEntry.RenderAttributes.Ctrl;
+        OutAttributes->Win32Attr = CurrentEntry.RenderAttributes.Win32Attr;
+        return;
     }
 }
 
@@ -857,8 +865,21 @@ SdirNewlineThroughDisplay()
  feature or from the file's color if the feature color was supposed to be
  derived from that.
  */
-#define SdirFeatureColor(Feat, FileColor) \
-    (((Feat)->Flags & SDIR_FEATURE_USE_FILE_COLOR)?FileColor:(Feat)->HighlightColor)
+VOID
+SdirFeatureColor(
+    __in PSDIR_FEATURE Feature,
+    __in YORILIB_COLOR_ATTRIBUTES FileColor,
+    __out PYORILIB_COLOR_ATTRIBUTES OutColor
+    )
+{
+    if (Feature->Flags & SDIR_FEATURE_USE_FILE_COLOR) {
+        OutColor->Ctrl = FileColor.Ctrl;
+        OutColor->Win32Attr = FileColor.Win32Attr;
+    } else {
+        OutColor->Ctrl = Feature->HighlightColor.Ctrl;
+        OutColor->Win32Attr = Feature->HighlightColor.Win32Attr;
+    }
+}
 
 
 /**
@@ -956,11 +977,11 @@ SdirDisplayCollection()
     for (Index = 0; Index < ColumnWidth * Columns; Index++) {
         if (Index % ColumnWidth == ColumnWidth - 1 && Index < (ColumnWidth*Columns-1)) {
             Line[Index].Char = LineElements[SDIR_LINE_ELEMENT_TOP_T];
-            Line[Index].Attr = Opts->FtGrid.HighlightColor;
         } else {
             Line[Index].Char = LineElements[SDIR_LINE_ELEMENT_HORIZ];
-            Line[Index].Attr = Opts->FtGrid.HighlightColor;
         }
+        Line[Index].Attr.Ctrl = Opts->FtGrid.HighlightColor.Ctrl;
+        Line[Index].Attr.Win32Attr = Opts->FtGrid.HighlightColor.Win32Attr;
     }
 
     SdirWrite(Line, Index);
@@ -1001,14 +1022,15 @@ SdirDisplayCollection()
             CurrentChar += ColumnWidth - 1;
         } else {
 
-            Attributes = CurrentEntry->RenderAttributes;
+            Attributes.Ctrl = CurrentEntry->RenderAttributes.Ctrl;
+            Attributes.Win32Attr = CurrentEntry->RenderAttributes.Win32Attr;
     
             //
             //  Paste file name into buffer
             //
     
             if (Opts->FtFileName.Flags & SDIR_FEATURE_DISPLAY) {
-                FeatureColor = SdirFeatureColor(&Opts->FtFileName, Attributes);
+                SdirFeatureColor(&Opts->FtFileName, Attributes, &FeatureColor);
                 if (CurrentEntry->FileNameLengthInChars > LongestDisplayedFileName) {
                     ULONG ExtractedLength = (LongestDisplayedFileName - 3) / 2;
 
@@ -1036,7 +1058,7 @@ SdirDisplayCollection()
             }
 
             if (Opts->FtShortName.Flags & SDIR_FEATURE_DISPLAY) {
-                FeatureColor = SdirFeatureColor(&Opts->FtShortName, Attributes);
+                SdirFeatureColor(&Opts->FtShortName, Attributes, &FeatureColor);
                 CurrentChar += SdirDisplayShortName(&Line[CurrentChar], FeatureColor, CurrentEntry);
 
                 if (!(Opts->FtFileName.Flags & SDIR_FEATURE_DISPLAY)) {
@@ -1073,7 +1095,7 @@ SdirDisplayCollection()
             for (Ext = 0; Ext < SdirGetNumSdirExec(); Ext++) {
                 Feature = (PSDIR_FEATURE)((PUCHAR)Opts + SdirExec[Ext].FtOffset);
                 if (Feature->Flags & SDIR_FEATURE_DISPLAY) {
-                    FeatureColor = SdirFeatureColor(Feature, Attributes);
+                    SdirFeatureColor(Feature, Attributes, &FeatureColor);
                     CurrentChar += SdirExec[Ext].Function(&Line[CurrentChar], FeatureColor, CurrentEntry);
                 }
             }
@@ -1089,7 +1111,8 @@ SdirDisplayCollection()
         if (ActiveColumn % Columns == 0) {
 
             Line[CurrentChar].Char = '\n';
-            Line[CurrentChar].Attr = SdirDefaultColor;
+            Line[CurrentChar].Attr.Ctrl = SdirDefaultColor.Ctrl;
+            Line[CurrentChar].Attr.Win32Attr = SdirDefaultColor.Win32Attr;
             CurrentChar++;
             SdirWrite(Line, CurrentChar);
 
@@ -1100,7 +1123,8 @@ SdirDisplayCollection()
             }
         } else {
             Line[CurrentChar].Char = LineElements[SDIR_LINE_ELEMENT_VERT];
-            Line[CurrentChar].Attr = Opts->FtGrid.HighlightColor;
+            Line[CurrentChar].Attr.Ctrl = Opts->FtGrid.HighlightColor.Ctrl;
+            Line[CurrentChar].Attr.Win32Attr = Opts->FtGrid.HighlightColor.Win32Attr;
             CurrentChar++;
         }
     }
@@ -1112,11 +1136,11 @@ SdirDisplayCollection()
     for (Index = 0; Index < ColumnWidth * Columns; Index++) {
         if (Index % ColumnWidth == ColumnWidth - 1 && Index < (ColumnWidth*Columns-1)) {
             Line[Index].Char = LineElements[SDIR_LINE_ELEMENT_BOTTOM_T];
-            Line[Index].Attr = Opts->FtGrid.HighlightColor;
         } else {
             Line[Index].Char = LineElements[SDIR_LINE_ELEMENT_HORIZ];
-            Line[Index].Attr = Opts->FtGrid.HighlightColor;
         }
+        Line[Index].Attr.Ctrl = Opts->FtGrid.HighlightColor.Ctrl;
+        Line[Index].Attr.Win32Attr = Opts->FtGrid.HighlightColor.Win32Attr;
     }
 
     SdirWrite(Line, Index);
@@ -1396,7 +1420,7 @@ SdirEnumerateAndDisplaySubtree (
     if (SdirDirCollectionCurrent > 0) {
 
         YORILIB_COLOR_ATTRIBUTES RenderAttributes;
-        RenderAttributes = SdirRenderAttributesFromPath(&ParentDirectory);
+        SdirRenderAttributesFromPath(&ParentDirectory, &RenderAttributes);
 
         if (YoriLibIsFullPathUnc(&ParentDirectory)) {
             SdirWriteStringWithAttribute(_T("\\\\"), RenderAttributes);

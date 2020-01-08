@@ -828,9 +828,6 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     BOOL HaveOriginalAliases;
     BOOL ApplyEnvironment = TRUE;
     BOOL FailedInRedirection = FALSE;
-#if _M_MRX000
-    BOOL ProcessStarted = FALSE;
-#endif
 
     YoriLibInitEmptyString(&OriginalAliases);
     HaveOriginalAliases = YoriShGetSystemAliasStrings(TRUE, &OriginalAliases);

@@ -348,14 +348,14 @@ SdirParseMetadataAttributeString()
                 //  color in the flags field and retain color in the attribute.
                 //
 
-                HighlightColor = YoriLibAttributeFromLiteralString(Attribute);
+                YoriLibAttributeFromLiteralString(Attribute, &HighlightColor);
                 if (HighlightColor.Ctrl & SDIR_ATTRCTRL_INVALID_METADATA) {
                     SdirWriteString(_T("Invalid color specified in: "));
                     goto error_return;
                     break;
                 }
 
-                Feature->HighlightColor = YoriLibResolveWindowColorComponents(HighlightColor, Opts->PreviousAttributes, FALSE);
+                YoriLibResolveWindowColorComponents(HighlightColor, Opts->PreviousAttributes, FALSE, &Feature->HighlightColor);
 
                 if (HighlightColor.Ctrl & YORILIB_ATTRCTRL_FILE) {
                     Feature->Flags |= SDIR_FEATURE_USE_FILE_COLOR;
@@ -410,8 +410,10 @@ SdirApplyAttribute(
     )
 {
     DWORD Index;
-    YORILIB_COLOR_ATTRIBUTES ThisAttribute = {YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG, 0};
+    YORILIB_COLOR_ATTRIBUTES ThisAttribute;
 
+    ThisAttribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
+    ThisAttribute.Win32Attr = 0;
 
     //
     //  First check for files to hide.
@@ -436,7 +438,8 @@ SdirApplyAttribute(
             ThisMatch = &Matches[Index];
             if (ThisMatch->TruthStates[ThisMatch->CompareFn(DirEnt, &ThisMatch->CompareEntry)]) {
                 ThisAttribute.Ctrl |= YORILIB_ATTRCTRL_HIDE;
-                *Attribute = ThisAttribute;
+                Attribute->Ctrl = ThisAttribute.Ctrl;
+                Attribute->Win32Attr = ThisAttribute.Win32Attr;
                 return TRUE;
             }
         }
@@ -462,17 +465,18 @@ SdirApplyAttribute(
         for (Index = 0; Index < SdirGlobal.FileColorCriteria.NumberCriteria; Index++) {
             ThisApply = &ColorsToApply[Index];
             if (ThisApply->Match.TruthStates[ThisApply->Match.CompareFn(DirEnt, &ThisApply->Match.CompareEntry)]) {
-                ThisAttribute = YoriLibCombineColors(ThisAttribute, ThisApply->Color);
+                YoriLibCombineColors(ThisAttribute, ThisApply->Color, &ThisAttribute);
                 if ((!ForceDisplay || (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_HIDE) == 0) &&
                     (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
     
-                    ThisAttribute = YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, FALSE);
+                    YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, FALSE, &ThisAttribute);
     
                     if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_INVERT) {
                         ThisAttribute.Win32Attr = (UCHAR)(((ThisAttribute.Win32Attr & 0x0F) << 4) + ((ThisAttribute.Win32Attr & 0xF0) >> 4));
                     }
     
-                    *Attribute = ThisAttribute;
+                    Attribute->Ctrl = ThisAttribute.Ctrl;
+                    Attribute->Win32Attr = ThisAttribute.Win32Attr;
                     return TRUE;
                 }
     
@@ -489,11 +493,13 @@ SdirApplyAttribute(
 
     if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_TERMINATE_MASK || ThisAttribute.Win32Attr != 0) {
 
-        *Attribute = ThisAttribute;
+        Attribute->Ctrl = ThisAttribute.Ctrl;
+        Attribute->Win32Attr = ThisAttribute.Win32Attr;
         return TRUE;
     }
 
-    *Attribute = SdirDefaultColor;
+    Attribute->Ctrl = SdirDefaultColor.Ctrl;
+    Attribute->Win32Attr = SdirDefaultColor.Win32Attr;
     
     return FALSE;
 }

@@ -87,7 +87,8 @@ SdirSetConsoleTextAttribute(
         return TRUE;
     }
 
-    SdirCurrentAttribute = Attribute;
+    SdirCurrentAttribute.Ctrl = Attribute.Ctrl;
+    SdirCurrentAttribute.Win32Attr = Attribute.Win32Attr;
 
     return YoriLibVtSetConsoleTextAttributeOnDevice(hConsole, 0, 0, Attribute.Win32Attr);
 }
@@ -111,8 +112,11 @@ SdirWrite (
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     DWORD i, j;
 
-    YORILIB_COLOR_ATTRIBUTES CacheAttr = SdirDefaultColor;
+    YORILIB_COLOR_ATTRIBUTES CacheAttr;
     TCHAR CharCache[64];
+
+    CacheAttr.Ctrl = SdirDefaultColor.Ctrl;
+    CacheAttr.Win32Attr = SdirDefaultColor.Win32Attr;
 
     //
     //  We firstly load as much as we can into a stack buffer, then write it
@@ -125,7 +129,8 @@ SdirWrite (
     j = 0;
     for (i = 0; i < count; i++) { 
 
-        CacheAttr = str[i].Attr;
+        CacheAttr.Ctrl = str[i].Attr.Ctrl;
+        CacheAttr.Win32Attr = str[i].Attr.Win32Attr;
         CharCache[j] = str[i].Char;
         j++;
 
@@ -297,12 +302,14 @@ SdirPasteStrAndPad (
 
     for (i = 0; i < count && i < padsize; i++) {
         str[i].Char = src[i];
-        str[i].Attr = attr;
+        str[i].Attr.Ctrl = attr.Ctrl;
+        str[i].Attr.Win32Attr = attr.Win32Attr;
     }
 
     for (; i < padsize; i++) {
         str[i].Char = ' ';
-        str[i].Attr = attr;
+        str[i].Attr.Ctrl = attr.Ctrl;
+        str[i].Attr.Win32Attr = attr.Win32Attr;
     }
 
     return TRUE;

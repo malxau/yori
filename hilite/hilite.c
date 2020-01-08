@@ -164,7 +164,8 @@ HiliteProcessStream(
             break;
         }
 
-        ColorToUse = HiliteContext->DefaultColor;
+        ColorToUse.Ctrl = HiliteContext->DefaultColor.Ctrl;
+        ColorToUse.Win32Attr = HiliteContext->DefaultColor.Win32Attr;
 
         //
         //  Enumerate through the matches and see if there is anything to
@@ -179,14 +180,16 @@ HiliteProcessStream(
                     if (YoriLibCompareStringInsensitiveCount(&LineString,
                                                              &MatchCriteria->MatchString,
                                                              MatchCriteria->MatchString.LengthInChars) == 0) {
-                        ColorToUse = MatchCriteria->Color;
+                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
+                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
                         break;
                     }
                 } else {
                     if (YoriLibCompareStringCount(&LineString,
                                                   &MatchCriteria->MatchString,
                                                   MatchCriteria->MatchString.LengthInChars) == 0) {
-                        ColorToUse = MatchCriteria->Color;
+                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
+                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
                         break;
                     }
                 }
@@ -200,12 +203,14 @@ HiliteProcessStream(
     
                     if (HiliteContext->Insensitive) {
                         if (YoriLibCompareStringInsensitive(&TailOfLine, &MatchCriteria->MatchString) == 0) {
-                            ColorToUse = MatchCriteria->Color;
+                            ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
+                            ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
                             break;
                         }
                     } else {
                         if (YoriLibCompareString(&TailOfLine, &MatchCriteria->MatchString) == 0) {
-                            ColorToUse = MatchCriteria->Color;
+                            ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
+                            ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
                             break;
                         }
                     }
@@ -213,12 +218,14 @@ HiliteProcessStream(
             } else if (MatchCriteria->MatchType == HiliteMatchTypeContains) {
                 if (HiliteContext->Insensitive) {
                     if (YoriLibFindFirstMatchingSubstringInsensitive(&LineString, 1, &MatchCriteria->MatchString, NULL)) {
-                        ColorToUse = MatchCriteria->Color;
+                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
+                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
                         break;
                     }
                 } else {
                     if (YoriLibFindFirstMatchingSubstring(&LineString, 1, &MatchCriteria->MatchString, NULL)) {
-                        ColorToUse = MatchCriteria->Color;
+                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
+                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
                         break;
                     }
                 }
@@ -462,8 +469,8 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&NewCriteria->MatchString);
                     NewCriteria->MatchString.StartOfString = ArgV[i + 1].StartOfString;
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
-                    NewCriteria->Color = YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString);
-                    NewCriteria->Color = YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE);
+                    YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString, &NewCriteria->Color);
+                    YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE, &NewCriteria->Color);
                     YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
                     i += 2;
@@ -479,8 +486,8 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&NewCriteria->MatchString);
                     NewCriteria->MatchString.StartOfString = ArgV[i + 1].StartOfString;
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
-                    NewCriteria->Color = YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString);
-                    NewCriteria->Color = YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE);
+                    YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString, &NewCriteria->Color);
+                    YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE, &NewCriteria->Color);
                     YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
                     i += 2;
@@ -502,8 +509,8 @@ ENTRYPOINT(
                     YoriLibInitEmptyString(&NewCriteria->MatchString);
                     NewCriteria->MatchString.StartOfString = ArgV[i + 1].StartOfString;
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
-                    NewCriteria->Color = YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString);
-                    NewCriteria->Color = YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE);
+                    YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString, &NewCriteria->Color);
+                    YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE, &NewCriteria->Color);
                     YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
                     i += 2;
