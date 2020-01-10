@@ -764,7 +764,7 @@ YoriWinCreateWindowEx(
             BorderFlags |= YORI_WIN_BORDER_TYPE_DOUBLE;
         }
 
-        YoriWinDrawBorderOnWindow(Window, &Border, Window->Ctrl.DefaultAttributes, BorderFlags);
+        YoriWinDrawBorderOnControl(&Window->Ctrl, &Border, Window->Ctrl.DefaultAttributes, BorderFlags);
 
         Window->Ctrl.ClientRect.Left = (SHORT)(Border.Left + 1);
         Window->Ctrl.ClientRect.Top = (SHORT)(Border.Top + 1);
@@ -1517,7 +1517,9 @@ YoriWinNotifyEvent(
                 YoriWinSetFocusToPreviousCtrl(Window);
             }
         } else if (Event->EventType == YoriWinEventKeyDown &&
-                   Event->KeyDown.CtrlMask == LEFT_ALT_PRESSED) {
+                   (Event->KeyDown.CtrlMask == LEFT_ALT_PRESSED ||
+                    Event->KeyDown.CtrlMask == (RIGHT_ALT_PRESSED | ENHANCED_KEY) ||
+                    Event->KeyDown.CtrlMask == RIGHT_ALT_PRESSED)) {
 
             if (Event->KeyDown.VirtualKeyCode == VK_MENU) {
                 if (!Window->AcceleratorsDisplayed) {
@@ -1678,7 +1680,7 @@ YoriWinNotifyEvent(
     if (Window->CustomNotifications != NULL &&
         Event->EventType < YoriWinEventBeyondMax &&
         Window->CustomNotifications[Event->EventType].Handler != NULL) {
-        
+
         Terminate = Window->CustomNotifications[Event->EventType].Handler(&Window->Ctrl, Event);
         if (Terminate) {
             return TRUE;

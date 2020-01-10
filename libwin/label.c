@@ -97,8 +97,30 @@ typedef struct _YORI_WIN_CTRL_LABEL {
 } YORI_WIN_CTRL_LABEL, *PYORI_WIN_CTRL_LABEL;
 
 /**
- Return TRUE to indicate that the character is a break character indicating
- that subsequent output can continue on the next line.
+ Return TRUE to indicate that the character should always break a line
+ regardless of the length of the line.
+
+ @param Char The character to test.
+
+ @return TRUE to indicate that this character will force a break for a new
+         line.
+ */
+BOOL
+YoriWinLabelIsCharHardBreakChar(
+    __in TCHAR Char
+    )
+{
+    if (Char == '\r' ||
+        Char == '\n') {
+
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ Return TRUE to indicate that the character can be used to break a line if the
+ line is too long, and output can continue on the next line.
 
  @param Char The character to test.
 
@@ -106,7 +128,7 @@ typedef struct _YORI_WIN_CTRL_LABEL {
          new line.
  */
 BOOL
-YoriWinLabelIsCharBreakChar(
+YoriWinLabelIsCharSoftBreakChar(
     __in TCHAR Char
     )
 {
@@ -130,7 +152,10 @@ YoriWinLabelShouldSwallowBreakChar(
     __in TCHAR Char
     )
 {
-    if (Char == ' ') {
+    if (Char == ' ' ||
+        Char == '\r' ||
+        Char == '\n') {
+
         return TRUE;
     }
     return FALSE;
@@ -171,58 +196,78 @@ YoriWinLabelGetNextDisplayLine(
     )
 {
     DWORD PotentialBreakOffset;
+    DWORD MaxLengthOfLine;
     DWORD CharsToDisplayThisLine;
     DWORD CharsToConsumeThisLine;
     BOOLEAN BreakCharFound;
+    BOOLEAN SoftTruncationRequired;
 
     //
-    //  Count backwards from the width of the control for the first break
+    //  Check if the text is longer than can fit on one line
+    //
+
+    MaxLengthOfLine = Remaining->LengthInChars;
+    CharsToDisplayThisLine = MaxLengthOfLine;
+    SoftTruncationRequired = FALSE;
+    if (MaxLengthOfLine > (DWORD)ClientSize->X) {
+        MaxLengthOfLine = (DWORD)(ClientSize->X);
+        SoftTruncationRequired = TRUE;
+    }
+
+    //
+    //  Look along the line for any explicit newline to break on
+    //
+
+    BreakCharFound = FALSE;
+
+    for (PotentialBreakOffset = 0; PotentialBreakOffset < MaxLengthOfLine; PotentialBreakOffset++) {
+        if (YoriWinLabelIsCharHardBreakChar(Remaining->StartOfString[PotentialBreakOffset])) {
+            BreakCharFound = TRUE;
+            break;
+        }
+    }
+
+    //
+    //  If the text is longer than a line and no explicit newline was found,
+    //  count backwards from the width of the control for the first soft break
     //  character.  If none are found display the number of chars as will fit.
     //  If one is found, treat that as the break point.
     //
-    //  MSFIX Before doing this the code should look forward for any chars
-    //  that indicate an explicit break point, such as a newline.  These
-    //  need to be searched left to right.
-    //
 
-    PotentialBreakOffset = Remaining->LengthInChars - 1;
-    if (PotentialBreakOffset >= (DWORD)ClientSize->X) {
-        PotentialBreakOffset = (DWORD)(ClientSize->X);
-
-        CharsToDisplayThisLine = PotentialBreakOffset;
+    if (SoftTruncationRequired && !BreakCharFound) {
+        PotentialBreakOffset = MaxLengthOfLine - 1;
         BreakCharFound = TRUE;
-        while (!YoriWinLabelIsCharBreakChar(Remaining->StartOfString[PotentialBreakOffset])) {
+        while (!YoriWinLabelIsCharSoftBreakChar(Remaining->StartOfString[PotentialBreakOffset])) {
             if (PotentialBreakOffset == 0) {
                 BreakCharFound = FALSE;
                 break;
             }
             PotentialBreakOffset--;
         }
+    }
 
-        // 
-        //  Display the string after removing the break char
-        //
+    // 
+    //  Display the string after removing the break char
+    //
 
-        if (BreakCharFound) {
-            CharsToDisplayThisLine = PotentialBreakOffset;
-        }
+    if (BreakCharFound) {
+        CharsToDisplayThisLine = PotentialBreakOffset;
+    }
 
-        //
-        //  Consume all following break chars (these aren't displayed
-        //  anywhere)
-        //
+    //
+    //  Consume all following break chars (these aren't displayed
+    //  anywhere)
+    //
 
-        CharsToConsumeThisLine = CharsToDisplayThisLine;
+    CharsToConsumeThisLine = CharsToDisplayThisLine;
 
+    if (CharsToConsumeThisLine < Remaining->LengthInChars) {
         while (YoriWinLabelShouldSwallowBreakChar(Remaining->StartOfString[CharsToConsumeThisLine])) {
             CharsToConsumeThisLine++;
             if (CharsToConsumeThisLine >= Remaining->LengthInChars) {
                 break;
             }
         }
-    } else {
-        CharsToDisplayThisLine = Remaining->LengthInChars;
-        CharsToConsumeThisLine = Remaining->LengthInChars;
     }
 
     Display->StartOfString = Remaining->StartOfString;

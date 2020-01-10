@@ -153,56 +153,6 @@ YoriWinTranslateAttributesAndBorderStyle(
 }
 
 /**
- Draw a rectangle on the window with the specified coordinates.
- MSFIX Now that windows are controls, can this routine die?
-
- @param Window Pointer to the window to draw the rectangle on.
-
- @param Dimensions The dimensions of the rectangle to draw.
-
- @param Attributes The color to use for the border.
-
- @param BorderType Specifies if the border should be single or double line,
-        raised, lowered, or flat
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriWinDrawBorderOnWindow(
-    __inout PYORI_WIN_WINDOW Window,
-    __in PSMALL_RECT Dimensions,
-    __in WORD Attributes,
-    __in WORD BorderType
-    )
-{
-    WORD RowIndex;
-    WORD CellIndex;
-    WORD TopAttributes;
-    WORD BottomAttributes;
-    CONST TCHAR* BorderChars;
-
-    YoriWinTranslateAttributesAndBorderStyle(Attributes, BorderType, &TopAttributes, &BottomAttributes, &BorderChars);
-
-    YoriWinSetWindowCell(Window, Dimensions->Left, Dimensions->Top, BorderChars[0], TopAttributes);
-    for (CellIndex = (WORD)(Dimensions->Left + 1); CellIndex < Dimensions->Right; CellIndex++) {
-        YoriWinSetWindowCell(Window, CellIndex, Dimensions->Top, BorderChars[1], TopAttributes);
-    }
-    YoriWinSetWindowCell(Window, Dimensions->Right, Dimensions->Top, BorderChars[2], BottomAttributes);
-
-    for (RowIndex = (WORD)(Dimensions->Top + 1); RowIndex <= Dimensions->Bottom - 1; RowIndex++) {
-        YoriWinSetWindowCell(Window, Dimensions->Left, RowIndex, BorderChars[3], TopAttributes);
-        YoriWinSetWindowCell(Window, Dimensions->Right, RowIndex, BorderChars[4], BottomAttributes);
-    }
-    YoriWinSetWindowCell(Window, Dimensions->Left, Dimensions->Bottom, BorderChars[5], TopAttributes);
-    for (CellIndex = (WORD)(Dimensions->Left + 1); CellIndex < Dimensions->Right; CellIndex++) {
-        YoriWinSetWindowCell(Window, CellIndex, Dimensions->Bottom, BorderChars[6], BottomAttributes);
-    }
-    YoriWinSetWindowCell(Window, Dimensions->Right, Dimensions->Bottom, BorderChars[7], BottomAttributes);
-
-    return TRUE;
-}
-
-/**
  Draw a rectangle on the control with the specified coordinates.
 
  @param Ctrl Pointer to the control to draw the rectangle on.

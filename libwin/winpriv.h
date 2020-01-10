@@ -331,15 +331,6 @@ YoriWinItemArrayAddItemArray(
  */
 #define YORI_WIN_BORDER_STYLE_MASK      0x0070
 
-
-BOOL
-YoriWinDrawBorderOnWindow(
-    __inout PYORI_WIN_WINDOW Window,
-    __in PSMALL_RECT Dimensions,
-    __in WORD Attributes,
-    __in WORD BorderType
-    );
-
 BOOL
 YoriWinDrawBorderOnControl(
     __inout PYORI_WIN_CTRL Ctrl,

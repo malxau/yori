@@ -504,13 +504,20 @@ YoriWinEditEventHandler(
             break;
         case YoriWinEventKeyDown:
 
-            // MSFIX: Handle all of the AltGr cases.  Have to be careful to
-            // not catch pure Alt cases that should be accelerators
+            //
+            // This code is trying to handle the AltGr cases while not
+            // handling pure right Alt which would normally be an accelerator.
             //
             // TODO: Selection
             // TODO: Copy/paste
+            //
+
             if (Event->KeyDown.CtrlMask == 0 ||
-                Event->KeyDown.CtrlMask == SHIFT_PRESSED) {
+                Event->KeyDown.CtrlMask == SHIFT_PRESSED ||
+                Event->KeyDown.CtrlMask == (LEFT_CTRL_PRESSED | LEFT_ALT_PRESSED) ||
+                Event->KeyDown.CtrlMask == (LEFT_CTRL_PRESSED | LEFT_ALT_PRESSED | SHIFT_PRESSED) ||
+                Event->KeyDown.CtrlMask == (LEFT_CTRL_PRESSED | RIGHT_ALT_PRESSED) ||
+                Event->KeyDown.CtrlMask == (LEFT_CTRL_PRESSED | RIGHT_ALT_PRESSED | SHIFT_PRESSED)) {
 
                 ASSERT(Edit->CursorOffset <= Edit->Text.LengthInChars);
 
