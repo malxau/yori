@@ -50,7 +50,7 @@ YoriShAddMatchToTabContext(
     ASSERT(Match->CursorOffset <= Match->Value.LengthInChars);
     YoriLibHashInsertByKey(TabContext->MatchHashTable, &Match->Value, Match, &Match->HashEntry);
     if (EntryToInsertAfter == NULL) {
-        YoriLibInsertList(&TabContext->MatchList, &Match->ListEntry);
+        YoriLibAppendList(&TabContext->MatchList, &Match->ListEntry);
     } else {
         YoriLibInsertList(EntryToInsertAfter, &Match->ListEntry);
     }
