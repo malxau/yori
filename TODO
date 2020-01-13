@@ -12,6 +12,8 @@ v1.3:
  - Libwin multiline edit
  - Libdlg file selection
  - Libdlg directory selection
+ - Locale aware timestamps in dir
+ - Clear screen with VT clear buffer [3J
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
