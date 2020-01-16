@@ -35,10 +35,11 @@ CHAR strDirHelpText[] =
         "\n"
         "Enumerate the contents of directories.\n"
         "\n"
-        "DIR [-license] [-b] [-color] [-m] [-r] [-s] [-x] [<spec>...]\n"
+        "DIR [-license] [-b] [-color] [-g] [-h] [-m] [-r] [-s] [-x] [<spec>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -color         Use file color highlighting\n"
+        "   -g             Use global time and date format, ignoring locale\n"
         "   -h             Hide hidden and system files\n"
         "   -m             Minimal display, file names only\n"
         "   -r             Display named streams\n"
@@ -65,6 +66,22 @@ DirHelp()
  The maximum size of the stream name in WIN32_FIND_STREAM_DATA.
  */
 #define DIR_MAX_STREAM_NAME          (MAX_PATH + 36)
+
+/**
+ The date order code for Month-Day-Year.  Zero because Windows came from the
+ US.
+ */
+#define DIR_DATE_ORDER_MDY (0)
+
+/**
+ The date order code for Day-Month-Year.
+ */
+#define DIR_DATE_ORDER_DMY (1)
+
+/**
+ The date order code for Year-Month-Day.
+ */
+#define DIR_DATE_ORDER_YMD (2)
 
 /**
  A private definition of WIN32_FIND_STREAM_DATA in case the compilation
@@ -115,6 +132,12 @@ typedef struct _DIR_CONTEXT {
      be displayed.
      */
     BOOLEAN HideHidden;
+
+    /**
+     TRUE if locale should not be used to configure date and time display.
+     FALSE if locale information should be used when available.
+     */
+    BOOLEAN IgnoreLocale;
 
     /**
      Records the total number of files processed.
@@ -175,6 +198,33 @@ typedef struct _DIR_CONTEXT {
      */
     DWORD ReparseDataBufferLength;
 
+    /**
+     The character to use to seperate date components.
+     */
+    TCHAR DateSeperator;
+
+    /**
+     The order of date components.
+     */
+    TCHAR DateOrder;
+
+    /**
+     Nonzero if the year should have four characters.  Zero if it should
+     have two characters.
+     */
+    TCHAR FourCharYear;
+
+    /**
+     The character to use to seperate time components.
+     */
+    TCHAR TimeSeperator;
+
+    /**
+     Nonzero if the time should be in 24 hour format.  Zero if it should
+     have an AM/PM suffix.
+     */
+    TCHAR Time24Hour;
+
 } DIR_CONTEXT, *PDIR_CONTEXT;
 
 /**
@@ -211,6 +261,18 @@ DirRightAlignString(
     }
     String->LengthInChars = Align;
 }
+
+/**
+ The number of characters to use to display the date of objects in the
+ directory.
+ */
+#define DIR_DATE_FIELD_SIZE  11
+
+/**
+ The number of characters to use to display the time of objects in the
+ directory.
+ */
+#define DIR_TIME_FIELD_SIZE  9
 
 /**
  The number of characters to use to display the size of objects in the
@@ -477,6 +539,9 @@ DirFileFoundCallback(
     FILETIME LocalFileTime;
     YORI_STRING SizeString;
     TCHAR SizeStringBuffer[DIR_SIZE_FIELD_SIZE];
+    TCHAR DateStringBuffer[DIR_DATE_FIELD_SIZE];
+    TCHAR TimeStringBuffer[DIR_TIME_FIELD_SIZE];
+    TCHAR YearStringBuffer[5];
     LARGE_INTEGER FileSize;
     LPTSTR FilePart;
     PDIR_CONTEXT DirContext = (PDIR_CONTEXT)Context;
@@ -704,17 +769,54 @@ DirFileFoundCallback(
             YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Ctrl, Attribute.Win32Attr);
         }
 
+        if (DirContext->FourCharYear) {
+            YoriLibSPrintf(YearStringBuffer, _T("%04i"), FileWriteTime.wYear);
+        } else {
+            YoriLibSPrintf(YearStringBuffer, _T("%02i"), FileWriteTime.wYear % 100);
+        }
+
+        ASSERT(DirContext->DateOrder == DIR_DATE_ORDER_MDY ||
+               DirContext->DateOrder == DIR_DATE_ORDER_DMY ||
+               DirContext->DateOrder == DIR_DATE_ORDER_YMD);
+
+        if (DirContext->DateOrder == DIR_DATE_ORDER_MDY) {
+            YoriLibSPrintf(DateStringBuffer, _T("%02i%c%02i%c%s"), FileWriteTime.wMonth, DirContext->DateSeperator, FileWriteTime.wDay, DirContext->DateSeperator, YearStringBuffer);
+        } else if (DirContext->DateOrder == DIR_DATE_ORDER_DMY) {
+            YoriLibSPrintf(DateStringBuffer, _T("%02i%c%02i%c%s"), FileWriteTime.wDay, DirContext->DateSeperator, FileWriteTime.wMonth, DirContext->DateSeperator, YearStringBuffer);
+        } else {
+            YoriLibSPrintf(DateStringBuffer, _T("%s%c%02i%c%02i"), YearStringBuffer, DirContext->DateSeperator, FileWriteTime.wMonth, DirContext->DateSeperator, FileWriteTime.wDay);
+        }
+
+        if (DirContext->Time24Hour) {
+            YoriLibSPrintf(TimeStringBuffer, _T("%02i%c%02i"), FileWriteTime.wHour, DirContext->TimeSeperator, FileWriteTime.wMinute);
+        } else {
+            WORD HourToDisplay;
+            BOOLEAN IsPm;
+
+            HourToDisplay = (WORD)(FileWriteTime.wHour % 12);
+            if (HourToDisplay == 0) {
+                HourToDisplay = 12;
+            }
+
+            IsPm = FALSE;
+            if (FileWriteTime.wHour >= 12) {
+                IsPm = TRUE;
+            }
+
+            YoriLibSPrintf(TimeStringBuffer, _T("%02i%c%02i %s"), HourToDisplay, DirContext->TimeSeperator, FileWriteTime.wMinute, IsPm?_T("PM"):_T("AM"));
+        }
+
         if (VtAttribute.LengthInChars > 0) {
             if (DirContext->DisplayShortNames) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %y%12s %s%c[0m\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, &VtAttribute, FileInfo->cAlternateFileName, FilePart, 27);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s  %s %y %y%12s %s%c[0m\n"), DateStringBuffer, TimeStringBuffer, &SizeString, &VtAttribute, FileInfo->cAlternateFileName, FilePart, 27);
             } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %y%s%c[0m\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, &VtAttribute, FilePart, 27);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s  %s %y %y%s%c[0m\n"), DateStringBuffer, TimeStringBuffer, &SizeString, &VtAttribute, FilePart, 27);
             }
         } else {
             if (DirContext->DisplayShortNames) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %12s %s\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, FileInfo->cAlternateFileName, FilePart);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s  %s %y %12s %s\n"), DateStringBuffer, TimeStringBuffer, &SizeString, FileInfo->cAlternateFileName, FilePart);
             } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i/%02i/%02i  %02i:%02i %y %s\n"), FileWriteTime.wYear, FileWriteTime.wMonth, FileWriteTime.wDay, FileWriteTime.wHour, FileWriteTime.wMinute, &SizeString, FilePart);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s  %s %y %s\n"), DateStringBuffer, TimeStringBuffer, &SizeString, FilePart);
             }
         }
 
@@ -869,6 +971,58 @@ DirFileEnumerateErrorCallback(
     return Result;
 }
 
+/**
+ Determine the seperators, order of display and general formatting for times
+ and dates based on the current user's locale.  Fallback to sensible defaults
+ if the information is not available.
+
+ @param DirContext On successful completion, fields within the DirContext
+        indicating time and date formatting are updated with the current
+        user's locale settings.
+ */
+VOID
+DirLoadLocaleSettings(
+    __inout PDIR_CONTEXT DirContext
+    )
+{
+    WCHAR Buffer[4];
+    DWORD CharsReturned;
+
+    DirContext->DateSeperator = '/';
+    DirContext->DateOrder = DIR_DATE_ORDER_YMD;
+    DirContext->FourCharYear = TRUE;
+    DirContext->TimeSeperator = ':';
+    DirContext->Time24Hour = TRUE;
+
+    if (!DirContext->IgnoreLocale) {
+
+        CharsReturned = GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_SDATE, Buffer, sizeof(Buffer)/sizeof(Buffer[0]));
+        if (CharsReturned > 0 && CharsReturned <= sizeof(Buffer)/sizeof(Buffer[0])) {
+            DirContext->DateSeperator = Buffer[0];
+        }
+
+        CharsReturned = GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_IDATE, Buffer, sizeof(Buffer)/sizeof(Buffer[0]));
+        if (CharsReturned > 0 && CharsReturned <= sizeof(Buffer)/sizeof(Buffer[0]) && Buffer[0] >= '0' && Buffer[0] <= '2') {
+            DirContext->DateOrder = (TCHAR)(Buffer[0] - '0');
+        }
+
+        CharsReturned = GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_ICENTURY, Buffer, sizeof(Buffer)/sizeof(Buffer[0]));
+        if (CharsReturned > 0 && CharsReturned <= sizeof(Buffer)/sizeof(Buffer[0]) && Buffer[0] == '0') {
+            DirContext->FourCharYear = FALSE;
+        }
+
+        CharsReturned = GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_STIME, Buffer, sizeof(Buffer)/sizeof(Buffer[0]));
+        if (CharsReturned > 0 && CharsReturned <= sizeof(Buffer)/sizeof(Buffer[0])) {
+            DirContext->TimeSeperator = Buffer[0];
+        }
+
+        CharsReturned = GetLocaleInfoW(LOCALE_USER_DEFAULT, LOCALE_ITIME, Buffer, sizeof(Buffer)/sizeof(Buffer[0]));
+        if (CharsReturned > 0 && CharsReturned <= sizeof(Buffer)/sizeof(Buffer[0]) && Buffer[0] == '0') {
+            DirContext->Time24Hour = FALSE;
+        }
+    }
+}
+
 
 #ifdef YORI_BUILTIN
 /**
@@ -928,6 +1082,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("color")) == 0) {
                 DisplayColor = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g")) == 0) {
+                DirContext.IgnoreLocale = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 DirContext.HideHidden = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -979,6 +1136,8 @@ ENTRYPOINT(
 #if YORI_BUILTIN
     YoriLibCancelEnable();
 #endif
+
+    DirLoadLocaleSettings(&DirContext);
 
     //
     //  Attempt to enable backup privilege so an administrator can access more
