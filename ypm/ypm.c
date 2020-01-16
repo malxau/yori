@@ -32,7 +32,7 @@
  Help text to display to the user.
  */
 const
-CHAR strYpmHelpText[] =
+CHAR strYpmHelpText1[] =
         "\n"
         "Installs or upgrades packages.\n"
         "\n"
@@ -61,12 +61,22 @@ CHAR strYpmHelpText[] =
         "YPM -src [<pkg>]\n"
         "YPM -sym [<pkg>]\n"
         "YPM -uninstall\n"
-        "YPM [-a <arch>] -u [<pkg>]\n"
-        "\n"
+        "YPM [-a <arch>] -u [<pkg>]\n";
+
+/**
+ More help text to display to the user.
+ */
+const
+CHAR strYpmHelpText2[] =
         "   -a             Specify a CPU architecture to upgrade to\n"
         "   -c             Create a binary package\n"
         "   -cs            Create a source package\n"
         "   -d             Delete an installed package\n"
+        "   -download      Download a directory of packages on a server to a local copy\n"
+        "   -download-daily\n"
+        "                  Download the current testing packages of yori to a local copy\n"
+        "   -download-stable\n"
+        "                  Download the current stable packages of yori to a local copy\n"
         "   -i             Install a package from a specified file or URL\n"
         "   -l             List all currently installed packages\n"
         "   -lv            List all currently installed packages verbosely\n"
@@ -94,7 +104,7 @@ YpmHelp()
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strYpmHelpText);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n%hs"), strYpmHelpText1, strYpmHelpText2);
     return TRUE;
 }
 
