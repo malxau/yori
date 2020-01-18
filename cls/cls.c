@@ -84,6 +84,7 @@ ENTRYPOINT(
     BOOL ArgumentUnderstood;
     DWORD i;
     YORI_STRING Arg;
+    HANDLE hConOut;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -110,19 +111,37 @@ ENTRYPOINT(
         }
     }
 
-    if (!GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &BufferInfo)) {
+    hConOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    //
+    //  We can't clear the screen of non-console devices
+    //
+
+    if (!GetConsoleScreenBufferInfo(hConOut, &BufferInfo)) {
         return EXIT_FAILURE;
     }
+
+    //
+    //  If the device supports VT sequences, try to clear the scrollback
+    //  buffer
+    //
+
+    if (SetConsoleMode(hConOut, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT | YORI_LIB_OUTPUT_PASSTHROUGH_VT, _T("\x1b[2J\x1b[3J"));
+    }
+
+    //
+    //  Now clear all addressable cells
+    //
 
     BufferInfo.dwCursorPosition.X = 0;
     BufferInfo.dwCursorPosition.Y = 0;
 
+    FillConsoleOutputCharacter(hConOut, ' ', (DWORD)BufferInfo.dwSize.X * BufferInfo.dwSize.Y, BufferInfo.dwCursorPosition, &CharsWritten);
 
-    FillConsoleOutputCharacter(GetStdHandle(STD_OUTPUT_HANDLE), ' ', (DWORD)BufferInfo.dwSize.X * BufferInfo.dwSize.Y, BufferInfo.dwCursorPosition, &CharsWritten);
+    FillConsoleOutputAttribute(hConOut, BufferInfo.wAttributes, (DWORD)BufferInfo.dwSize.X * BufferInfo.dwSize.Y, BufferInfo.dwCursorPosition, &CharsWritten);
 
-    FillConsoleOutputAttribute(GetStdHandle(STD_OUTPUT_HANDLE), BufferInfo.wAttributes, (DWORD)BufferInfo.dwSize.X * BufferInfo.dwSize.Y, BufferInfo.dwCursorPosition, &CharsWritten);
-
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), BufferInfo.dwCursorPosition);
+    SetConsoleCursorPosition(hConOut, BufferInfo.dwCursorPosition);
 
 
     return EXIT_SUCCESS;
