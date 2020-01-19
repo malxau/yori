@@ -29,6 +29,200 @@
 #include "yoripkgp.h"
 
 /**
+ Return TRUE if a file can be deleted, or FALSE if it cannot.  This deletion
+ check involves opening the file for delete and requesting it to be deleted.
+ Note in particular this should fail if an executable is running.  This is
+ implemented through APIs that were only documented in Vista+, so on earlier
+ releases this function assumes all files are deleteable.
+
+ @param FilePath Pointer to a file to check for deleteability.  This function
+        requires the path to be NULL terminated.
+
+ @return TRUE to indicate the file can be deleted, or at least, is not
+         currently executing.  FALSE to indicate the file is in use or cannot
+         be deleted for some other reason.
+ */
+BOOL
+YoriPkgCheckIfFileDeleteable(
+    __in PYORI_STRING FilePath
+    )
+{
+    HANDLE FileHandle;
+    FILE_DISPOSITION_INFO DispositionInfo;
+    BOOL Result;
+
+    ASSERT(YoriLibIsStringNullTerminated(FilePath));
+
+    //
+    //  If the OS doesn't have support for this, claim that the file is
+    //  deleteable.  This means pre-Vista won't have helpful error messages
+    //  when trying to uninstall from within a running shell.
+    //
+
+    if (DllKernel32.pSetFileInformationByHandle == NULL) {
+        return TRUE;
+    }
+
+    //
+    //  Open the file.  If we can't open it for delete, it's not deleteable.
+    //
+
+    FileHandle = CreateFile(FilePath->StartOfString,
+                            DELETE | SYNCHRONIZE,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_FLAG_BACKUP_SEMANTICS,
+                            NULL);
+
+    if (FileHandle == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    Result = FALSE;
+    DispositionInfo.DeleteFile = TRUE;
+    if (DllKernel32.pSetFileInformationByHandle(FileHandle,
+                                                FileDispositionInfo,
+                                                &DispositionInfo,
+                                                sizeof(DispositionInfo))) {
+
+        Result = TRUE;
+
+        DispositionInfo.DeleteFile = FALSE;
+        DllKernel32.pSetFileInformationByHandle(FileHandle,
+                                                FileDispositionInfo,
+                                                &DispositionInfo,
+                                                sizeof(DispositionInfo));
+    }
+
+
+    CloseHandle(FileHandle);
+    return Result;
+}
+
+/**
+ Check if all of the files in a specified package can be deleted.
+
+ @param PkgIniFile Pointer to the full path to the packages.ini file.
+
+ @param TargetDirectory Pointer to a string specifying the directory
+        containing the package.  If NULL, the directory containing the
+        application is used.
+
+ @param PackageName Specifies the package name to check for delete.
+
+ @param IgnoreFailureOfCurrentExecutable If TRUE, and the currently
+        executing program forms part of the current package, ignore any
+        inability to delete caused by the currently executing program being
+        in use.  If FALSE, and the currently executing program is the first
+        program in the package to delete, abort the delete with an error.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgCheckIfPackageDeleteable(
+    __in PYORI_STRING PkgIniFile,
+    __in_opt PYORI_STRING TargetDirectory,
+    __in PYORI_STRING PackageName,
+    __in BOOLEAN IgnoreFailureOfCurrentExecutable
+    )
+{
+    YORI_STRING AppPath;
+    YORI_STRING IniValue;
+    YORI_STRING FileToDelete;
+    PYORI_STRING FileBeingDeleted;
+    DWORD FileCount;
+    DWORD FileIndex;
+    TCHAR FileIndexString[16];
+    BOOL DeleteResult;
+
+    if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
+        return FALSE;
+    }
+
+    if (TargetDirectory == NULL) {
+        if (!YoriPkgGetApplicationDirectory(&AppPath)) {
+            YoriLibFreeStringContents(&IniValue);
+            return FALSE;
+        }
+    } else {
+        if (!YoriLibAllocateString(&AppPath, TargetDirectory->LengthInChars + MAX_PATH)) {
+            return FALSE;
+        }
+        memcpy(AppPath.StartOfString, TargetDirectory->StartOfString, TargetDirectory->LengthInChars * sizeof(TCHAR));
+        AppPath.StartOfString[TargetDirectory->LengthInChars] = '\0';
+        AppPath.LengthInChars = TargetDirectory->LengthInChars;
+    }
+
+    FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
+    if (FileCount == 0) {
+        YoriLibFreeStringContents(&AppPath);
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&FileToDelete);
+    if (!YoriLibAllocateString(&FileToDelete, AppPath.LengthInChars + YORIPKG_MAX_FIELD_LENGTH)) {
+        YoriLibFreeStringContents(&AppPath);
+        YoriLibFreeStringContents(&IniValue);
+        return FALSE;
+    }
+
+    for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
+        YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
+
+        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
+        if (IniValue.LengthInChars > 0) {
+            if (!YoriLibIsPathPrefixed(&IniValue)) {
+                YoriLibYPrintf(&FileToDelete, _T("%y\\%y"), &AppPath, &IniValue);
+                FileBeingDeleted = &FileToDelete;
+            } else {
+                FileBeingDeleted = &IniValue;
+            }
+            DeleteResult = YoriPkgCheckIfFileDeleteable(FileBeingDeleted);
+
+            if (!DeleteResult && IgnoreFailureOfCurrentExecutable) {
+                YORI_STRING ModuleName;
+
+                if (!YoriPkgGetExecutableFile(&ModuleName)) {
+                    return FALSE;
+                }
+
+                //
+                //  Note this is the same way that the app directory is determined,
+                //  so the only chance for a false miscompare is if the application
+                //  is executing from a different name (eg. short file name.)
+                //
+
+                if (YoriLibCompareStringInsensitive(&ModuleName, FileBeingDeleted) == 0) {
+                    DeleteResult = TRUE;
+                }
+                YoriLibFreeStringContents(&ModuleName);
+            }
+
+            //
+            //  If any file can't be deleted, the package can't be deleted.
+            //
+
+            if (!DeleteResult) {
+                YoriLibFreeStringContents(&IniValue);
+                YoriLibFreeStringContents(&AppPath);
+                YoriLibFreeStringContents(&FileToDelete);
+                return FALSE;
+            }
+        }
+    }
+
+    YoriLibFreeStringContents(&IniValue);
+    YoriLibFreeStringContents(&AppPath);
+    YoriLibFreeStringContents(&FileToDelete);
+
+    return TRUE;
+}
+
+
+
+/**
  Delete a file that was installed by a package.  If it works, try to delete
  the parent directory.  The file system will fail this if the directory
  still has files in it.  If it succeeds, keep moving through the parents to

@@ -441,6 +441,14 @@ YoriPkgInstallPendingPackages(
     );
 
 BOOL
+YoriPkgCheckIfPackageDeleteable(
+    __in PYORI_STRING PkgIniFile,
+    __in_opt PYORI_STRING TargetDirectory,
+    __in PYORI_STRING PackageName,
+    __in BOOLEAN IgnoreFailureOfCurrentExecutable
+    );
+
+BOOL
 YoriPkgDeletePackageInternal(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,

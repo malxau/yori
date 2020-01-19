@@ -806,6 +806,7 @@ YoriPkgDeleteAllPackages(
     LPTSTR ThisLine;
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
+    BOOL Result;
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
@@ -821,6 +822,46 @@ YoriPkgDeleteAllPackages(
     YoriLibInitEmptyString(&PkgNameOnly);
     ThisLine = InstalledSection.StartOfString;
 
+    //
+    //  First, check whether all packages can be deleted.  If any cannot
+    //  be deleted, don't start deleting things and leave the system
+    //  inconsistent.
+    //
+
+    Result = TRUE;
+    while (*ThisLine != '\0') {
+        PkgNameOnly.StartOfString = ThisLine;
+        Equals = _tcschr(ThisLine, '=');
+        if (Equals != NULL) {
+            PkgNameOnly.LengthInChars = (DWORD)(Equals - ThisLine);
+        } else {
+            PkgNameOnly.LengthInChars = _tcslen(ThisLine);
+        }
+
+        ThisLine += _tcslen(ThisLine);
+        ThisLine++;
+
+        PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
+        if (!YoriPkgCheckIfPackageDeleteable(&PkgIniFile, NULL, &PkgNameOnly, TRUE)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not remove package %y\n"), &PkgNameOnly);
+            Result = FALSE;
+            break;
+        }
+    }
+
+    if (!Result) {
+        YoriLibFreeStringContents(&PkgIniFile);
+        YoriLibFreeStringContents(&InstalledSection);
+
+        return Result;
+    }
+
+    InstalledSection.LengthInChars = GetPrivateProfileSection(_T("Installed"), InstalledSection.StartOfString, InstalledSection.LengthAllocated, PkgIniFile.StartOfString);
+
+    YoriLibInitEmptyString(&PkgNameOnly);
+    ThisLine = InstalledSection.StartOfString;
+
+    Result = TRUE;
     while (*ThisLine != '\0') {
         PkgNameOnly.StartOfString = ThisLine;
         Equals = _tcschr(ThisLine, '=');
@@ -836,6 +877,7 @@ YoriPkgDeleteAllPackages(
         PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
         if (!YoriPkgDeletePackageInternal(&PkgIniFile, NULL, &PkgNameOnly, TRUE)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not remove package %y\n"), &PkgNameOnly);
+            Result = FALSE;
             break;
         }
     }
@@ -843,7 +885,7 @@ YoriPkgDeleteAllPackages(
     YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&InstalledSection);
 
-    return TRUE;
+    return Result;
 }
 
 /**
@@ -926,6 +968,11 @@ YoriPkgUninstallAll(
     //
 
     if (!YoriPkgDeleteAllPackages()) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("One or more packages could not be removed.  Aborting uninstall.\n")
+                      _T("Note that uninstall should not be performed from within Yori.\n")
+                      _T("Depending on how it was installed, uninstallation may require elevation.\n")
+                      );
         return FALSE;
     }
     if (!YoriPkgGetApplicationDirectory(&TargetDirectory)) {
