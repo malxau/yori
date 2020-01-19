@@ -2289,6 +2289,26 @@ typedef struct _FILE_STANDARD_INFO {
  The identifier of the request type that returns the above structure.
  */
 #define FileStandardInfo    (0x000000001)
+
+/**
+ A structure to set or clear the delete disposition on a stream or link.
+ */
+typedef struct _FILE_DISPOSITION_INFO {
+
+    /**
+     TRUE to mark the link or stream for deletion on last handle close.
+     FALSE to clear this intention.
+     */
+    BOOL DeleteFile;
+
+} FILE_DISPOSITION_INFO, *PFILE_DISPOSITION_INFO;
+
+/**
+ The identifier of the request type that issues requests with the above
+ structure.
+ */
+#define FileDispositionInfo (0x000000004)
+
 #endif
 
 #ifndef STORAGE_INFO_FLAGS_ALIGNED_DEVICE
@@ -5186,6 +5206,18 @@ SET_CURRENT_CONSOLE_FONT_EX(HANDLE, BOOL, PYORI_CONSOLE_FONT_INFOEX);
 typedef SET_CURRENT_CONSOLE_FONT_EX *PSET_CURRENT_CONSOLE_FONT_EX;
 
 /**
+ A prototype for the SetFileInformationByHandle function.
+ */
+typedef
+BOOL WINAPI
+SET_FILE_INFORMATION_BY_HANDLE(HANDLE, DWORD, PVOID, DWORD);
+
+/**
+ A prototype for a pointer to the SetFileInformationByHandle function.
+ */
+typedef SET_FILE_INFORMATION_BY_HANDLE *PSET_FILE_INFORMATION_BY_HANDLE;
+
+/**
  A prototype for the SetInformationJobObject function.
  */
 typedef
@@ -5443,6 +5475,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to SetCurrentConsoleFontEx.
      */
     PSET_CURRENT_CONSOLE_FONT_EX pSetCurrentConsoleFontEx;
+
+    /**
+     If it's available on the current system, a pointer to SetFileInformationByHandle.
+     */
+    PSET_FILE_INFORMATION_BY_HANDLE pSetFileInformationByHandle;
 
     /**
      If it's available on the current system, a pointer to SetInformationJobObject.
