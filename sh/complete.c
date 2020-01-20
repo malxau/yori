@@ -2475,6 +2475,78 @@ YoriShTabCompletion(
 }
 
 /**
+ If there's a currently active argument, prepend ..\ to the beginning of it.
+ Note that because this string doesn't include spaces, this routine doesn't
+ check if the argument should have quotes added.
+
+ @param Buffer On input, specifies the input buffer.  On output, this may be
+        reconstructed to reflect the newly prepended string.
+ */
+VOID
+YoriShPrependParentDirectory(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    )
+{
+    YORI_SH_CMD_CONTEXT CmdContext;
+    PYORI_SH_TAB_COMPLETE_MATCH Match;
+    YORI_STRING BackquoteSubset;
+    DWORD OffsetInSubstring;
+    YORI_STRING PrefixBeforeBackquoteSubstring;
+    YORI_STRING SuffixAfterBackquoteSubstring;
+
+    YoriShFindStringSubsetForCompletion(&Buffer->String,
+                                        Buffer->CurrentOffset,
+                                        Buffer->TabContext.SearchType,
+                                        &BackquoteSubset,
+                                        &OffsetInSubstring,
+                                        &PrefixBeforeBackquoteSubstring,
+                                        &SuffixAfterBackquoteSubstring);
+
+    ASSERT(Buffer->CurrentOffset >= PrefixBeforeBackquoteSubstring.LengthInChars);
+
+    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
+        return;
+    }
+
+    if (CmdContext.ArgC == 0 || CmdContext.CurrentArg >= CmdContext.ArgC) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars + sizeof("..\\")) * sizeof(TCHAR));
+    if (Match == NULL) {
+        YoriShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    //
+    //  Populate the file into the entry.
+    //
+
+    YoriLibInitEmptyString(&Match->Value);
+    Match->Value.StartOfString = (LPTSTR)(Match + 1);
+    YoriLibReference(Match);
+    Match->Value.MemoryToFree = Match;
+    YoriLibSPrintf(Match->Value.StartOfString, _T("..\\%y"), &CmdContext.ArgV[CmdContext.CurrentArg]);
+    Match->Value.LengthInChars = CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars + sizeof("..\\") - 1;
+    Match->CursorOffset = Match->Value.LengthInChars + sizeof("..\\") - 1;
+
+    YoriShCompleteGenerateNewBufferString(Buffer,
+                                          &CmdContext,
+                                          &PrefixBeforeBackquoteSubstring,
+                                          &SuffixAfterBackquoteSubstring,
+                                          Match,
+                                          Match->Value.LengthInChars,
+                                          FALSE);
+
+    YoriLibFreeStringContents(&Match->Value);
+    YoriLibDereference(Match);
+    YoriLibFreeStringContents(&PrefixBeforeBackquoteSubstring);
+    YoriLibFreeStringContents(&SuffixAfterBackquoteSubstring);
+    YoriShFreeCmdContext(&CmdContext);
+}
+
+/**
  Take a previously populated suggestion list and remove any entries that are
  no longer consistent with a newly added string.  This may mean the currently
  active suggestion needs to be updated.
