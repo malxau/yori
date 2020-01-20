@@ -2019,6 +2019,8 @@ YoriShProcessKeyDown(
             if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
                 YoriShDeleteArgument(Buffer);
             }
+        } else if (KeyCode == VK_OEM_PERIOD) {
+            YoriShPrependParentDirectory(Buffer);
         }
     } else if (CtrlMask == (RIGHT_CTRL_PRESSED | SHIFT_PRESSED) ||
                CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||

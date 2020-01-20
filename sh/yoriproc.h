@@ -259,6 +259,11 @@ YoriShTabCompletion(
     );
 
 VOID
+YoriShPrependParentDirectory(
+    __inout PYORI_SH_INPUT_BUFFER Buffer
+    );
+
+VOID
 YoriShTrimSuggestionList(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
     __in PYORI_STRING NewString
