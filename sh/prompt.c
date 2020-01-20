@@ -455,7 +455,7 @@ YoriShExecPreCommandString()
 
         YoriShGlobal.SuppressTaskUi = TRUE;
         YoriShExecuteExpression(&YoriShGlobal.PreCmdVariable);
-        YoriShPreCommand();
+        YoriShPreCommand(TRUE);
         YoriShGlobal.SuppressTaskUi = FALSE;
         return TRUE;
     }

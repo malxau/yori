@@ -622,14 +622,39 @@ YoriShPostCommand()
 
 /**
  Prepare the console for entry of the next command.
+
+ @param EnableVt If TRUE, VT processing should be enabled if the console
+        supports it.  In general Yori leaves this enabled for the benefit of
+        child processes, but it is disabled when displaying the prompt.  The
+        prompt is written by the shell process, and depends on moving the
+        cursor to the next line after the final cell in a line is written,
+        which is not the behavior that Windows VT support provides.  Note
+        this behavior isn't a problem for programs that continue to output -
+        it's a problem for programs that output and then wait for input.
  */
 VOID
-YoriShPreCommand()
+YoriShPreCommand(
+    __in BOOLEAN EnableVt
+    )
 {
+    HANDLE ConsoleHandle;
+
     YoriShCleanupRestartSaveThreadIfCompleted();
     YoriLibCancelEnable();
     YoriLibCancelIgnore();
     YoriLibCancelReset();
+
+    //
+    //  Old versions will fail and ignore any call that contains a flag
+    //  they don't understand, so attempt a lowest common denominator
+    //  setting and try to upgrade it, which might fail.
+    //
+
+    ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
+    if (EnableVt) {
+        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
 }
 
 /**
@@ -666,15 +691,26 @@ ymain (
             if (YoriShGlobal.ExitProcess) {
                 break;
             }
-            YoriShPreCommand();
+
+            //
+            //  Don't enable VT processing while displaying the prompt.  This
+            //  behavior is subtly different in that when it displays in the
+            //  final cell of a line it doesn't move the cursor to the next
+            //  line.  For prompts this is broken because it leaves user
+            //  input overwriting the final character of the prompt.
+            //
+
+            YoriShPreCommand(FALSE);
             YoriShDisplayPrompt();
-            YoriShPreCommand();
+            YoriShPreCommand(FALSE);
+
             if (!YoriShGetExpression(&CurrentExpression)) {
                 break;
             }
             if (YoriShGlobal.ExitProcess) {
                 break;
             }
+            YoriShPreCommand(TRUE);
             YoriShExecPreCommandString();
             if (CurrentExpression.LengthInChars > 0) {
                 YoriShExecuteExpression(&CurrentExpression);

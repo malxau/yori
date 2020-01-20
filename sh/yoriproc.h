@@ -496,7 +496,9 @@ YoriShGetJobInformation(
 // *** MAIN.C ***
 
 VOID
-YoriShPreCommand();
+YoriShPreCommand(
+    __in BOOLEAN EnableVt
+    );
 
 // *** PARSE.C ***
 

@@ -1651,9 +1651,9 @@ YoriShClearScreen(
 
     SetConsoleCursorPosition(ConsoleHandle, ScreenInfo.dwCursorPosition);
 
-    YoriShPreCommand();
+    YoriShPreCommand(FALSE);
     YoriShDisplayPrompt();
-    YoriShPreCommand();
+    YoriShPreCommand(TRUE);
 
     Buffer->PreviousCurrentOffset = 0;
     Buffer->DirtyBeginOffset = 0;
