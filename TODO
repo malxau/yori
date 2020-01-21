@@ -4,16 +4,11 @@ v1.3:
  - General MSFIX review
  - Explicit Ctrl+C by detecting console process before launch, if not console
    process on same console don't use GenerateConsoleCtrlEvent
- - Workaround conhostv2 bug where cursor doesn't move to the next line when a
-   line is full of output and VT is enabled
- - Ctrl+. to prepend ..\ to a path...?
  - Libwin checkbox
  - Libwin menubar
  - Libwin multiline edit
  - Libdlg file selection
  - Libdlg directory selection
- - Locale aware timestamps in dir
- - Clear screen with VT clear buffer [3J
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
