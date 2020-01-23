@@ -4777,7 +4777,7 @@ typedef CREATE_JOB_OBJECTW *PCREATE_JOB_OBJECTW;
  A prototype for the CreateSymbolicLinkW function.
  */
 typedef
-BOOL WINAPI
+BOOLEAN WINAPI
 CREATE_SYMBOLIC_LINKW(LPTSTR, LPTSTR, DWORD);
 
 /**
