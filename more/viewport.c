@@ -2119,6 +2119,44 @@ MoreAreMoreLinesAvailable(
 }
 
 /**
+ Process a key that is typically an enhanced key, including arrows, insert,
+ delete, home, end, etc.  The "normal" placement of these keys is as enhanced,
+ but the original XT keys are the ones on the number pad when num lock is off,
+ which have the same key codes but don't have the enhanced bit set.  This
+ function is invoked to handle either case.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @param InputRecord Pointer to the structure describing the key that was
+        pressed.
+ */
+VOID
+MoreProcessEnhancedKeyDown(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord
+    )
+{
+    WORD KeyCode;
+    KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
+
+    if (KeyCode == VK_DOWN) {
+        MoreMoveViewportDown(MoreContext, 1);
+    } else if (KeyCode == VK_UP) {
+        MoreMoveViewportUp(MoreContext, 1);
+    } else if (KeyCode == VK_LEFT) {
+        MoreMoveViewportLeft(MoreContext, 1);
+    } else if (KeyCode == VK_RIGHT) {
+        MoreMoveViewportRight(MoreContext, 1);
+    } else if (KeyCode == VK_NEXT) {
+        MoreContext->LinesInPage = 0;
+        MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
+    } else if (KeyCode == VK_PRIOR) {
+        MoreMoveViewportUp(MoreContext, MoreContext->ViewportHeight);
+    }
+}
+
+
+/**
  Perform the requested action when the user presses a key.
 
  @param MoreContext Pointer to the context describing the data to display.
@@ -2218,24 +2256,13 @@ MoreProcessKeyDown(
             } else if (KeyCode == VK_PAUSE) {
                 MoreContext->SuspendPagination = FALSE;
                 *RedrawStatus = TRUE;
+            } else if (Char == '\0') {
+                MoreProcessEnhancedKeyDown(MoreContext, InputRecord);
             }
         }
     } else if (CtrlMask == ENHANCED_KEY) {
         ClearSelection = TRUE;
-        if (KeyCode == VK_DOWN) {
-            MoreMoveViewportDown(MoreContext, 1);
-        } else if (KeyCode == VK_UP) {
-            MoreMoveViewportUp(MoreContext, 1);
-        } else if (KeyCode == VK_LEFT) {
-            MoreMoveViewportLeft(MoreContext, 1);
-        } else if (KeyCode == VK_RIGHT) {
-            MoreMoveViewportRight(MoreContext, 1);
-        } else if (KeyCode == VK_NEXT) {
-            MoreContext->LinesInPage = 0;
-            MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
-        } else if (KeyCode == VK_PRIOR) {
-            MoreMoveViewportUp(MoreContext, MoreContext->ViewportHeight);
-        }
+        MoreProcessEnhancedKeyDown(MoreContext, InputRecord);
     } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
                CtrlMask == LEFT_CTRL_PRESSED) {
         if (KeyCode == 'Q') {

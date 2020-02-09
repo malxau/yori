@@ -347,7 +347,9 @@ YoriWinListEventHandler(
 
     switch(Event->EventType) {
         case YoriWinEventKeyDown:
-            if (Event->KeyDown.CtrlMask == ENHANCED_KEY) {
+            if (Event->KeyDown.CtrlMask == ENHANCED_KEY ||
+                Event->KeyDown.CtrlMask == 0) {
+
                 if (Event->KeyDown.VirtualKeyCode == VK_UP) {
                     if (List->ItemActive) {
                         if (List->ActiveOption > 0) {
