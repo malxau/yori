@@ -1864,6 +1864,78 @@ YoriShProcessEnhancedKeyDown(
 }
 
 /**
+ Process a key that is typically an enhanced key, including arrows, insert,
+ delete, home, end, etc, when Ctrl is also held.  The "normal" placement of
+ these keys is as enhanced, but the original XT keys are the ones on the
+ number pad when num lock is off, which have the same key codes but don't
+ have the enhanced bit set.  This function is invoked to handle either case.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param TerminateInput On successful completion, set to TRUE to indicate that
+        the input sequence is complete and should be returned to the caller.
+
+ @return TRUE to indicate that input processing should stop; FALSE to indicate
+         regular buffer display should occur.
+ */
+BOOL
+YoriShProcessCtrlEnhancedKeyDown(
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __inout PBOOL TerminateInput
+    )
+{
+    WORD KeyCode;
+    BOOLEAN ListAll;
+
+    KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
+
+    if (KeyCode == VK_LEFT) {
+        YoriShMoveCursorToPriorArgument(Buffer);
+    } else if (KeyCode == VK_RIGHT) {
+        YoriShMoveCursorToNextArgument(Buffer);
+    } else if (KeyCode == VK_UP) {
+        YoriShConfigureConsoleForTabComplete(Buffer);
+        ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
+        YoriShConfigureConsoleForInput(Buffer);
+        if (ListAll) {
+            YoriShCompletionListAllMatches(Buffer);
+            *TerminateInput = TRUE;
+        }
+    } else if (KeyCode == VK_DOWN) {
+        YoriShConfigureConsoleForTabComplete(Buffer);
+        ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
+        YoriShConfigureConsoleForInput(Buffer);
+        if (ListAll) {
+            YoriShCompletionListAllMatches(Buffer);
+            *TerminateInput = TRUE;
+        }
+    } else if (KeyCode == VK_DELETE) {
+        if (Buffer->HistoryEntryToUse != NULL) {
+            PYORI_LIST_ENTRY NewEntry = NULL;
+            PYORI_SH_HISTORY_ENTRY HistoryEntry;
+
+            NewEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, Buffer->HistoryEntryToUse);
+            HistoryEntry = CONTAINING_RECORD(Buffer->HistoryEntryToUse, YORI_SH_HISTORY_ENTRY, ListEntry);
+            YoriShRemoveOneHistoryEntry(HistoryEntry);
+
+            if (NewEntry != NULL) {
+                Buffer->HistoryEntryToUse = NewEntry;
+                HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
+                YoriShClearInput(Buffer);
+                YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
+            } else {
+                YoriShClearInput(Buffer);
+            }
+        }
+    }
+
+    return FALSE;
+}
+
+/**
  Perform processing related to when a key is pressed.
 
  @param Buffer Pointer to the input buffer to update.
@@ -2021,6 +2093,10 @@ YoriShProcessKeyDown(
             }
         } else if (KeyCode == 0xBE) { // Aka VK_OEM_PERIOD, '.' for any country
             YoriShPrependParentDirectory(Buffer);
+        } else if (Char == '\0') {
+            if (YoriShProcessCtrlEnhancedKeyDown(Buffer, InputRecord, TerminateInput)) {
+                return TRUE;
+            }
         }
     } else if (CtrlMask == (RIGHT_CTRL_PRESSED | SHIFT_PRESSED) ||
                CtrlMask == (LEFT_CTRL_PRESSED | SHIFT_PRESSED) ||
@@ -2042,45 +2118,10 @@ YoriShProcessKeyDown(
                CtrlMask == (LEFT_CTRL_PRESSED | ENHANCED_KEY) ||
                CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | ENHANCED_KEY)) {
 
-        if (KeyCode == VK_LEFT) {
-            YoriShMoveCursorToPriorArgument(Buffer);
-        } else if (KeyCode == VK_RIGHT) {
-            YoriShMoveCursorToNextArgument(Buffer);
-        } else if (KeyCode == VK_UP) {
-            YoriShConfigureConsoleForTabComplete(Buffer);
-            ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY);
-            YoriShConfigureConsoleForInput(Buffer);
-            if (ListAll) {
-                YoriShCompletionListAllMatches(Buffer);
-                *TerminateInput = TRUE;
-            }
-        } else if (KeyCode == VK_DOWN) {
-            YoriShConfigureConsoleForTabComplete(Buffer);
-            ListAll = YoriShTabCompletion(Buffer, YORI_SH_TAB_COMPLETE_HISTORY | YORI_SH_TAB_COMPLETE_BACKWARDS);
-            YoriShConfigureConsoleForInput(Buffer);
-            if (ListAll) {
-                YoriShCompletionListAllMatches(Buffer);
-                *TerminateInput = TRUE;
-            }
-        } else if (KeyCode == VK_DELETE) {
-            if (Buffer->HistoryEntryToUse != NULL) {
-                PYORI_LIST_ENTRY NewEntry = NULL;
-                PYORI_SH_HISTORY_ENTRY HistoryEntry;
-
-                NewEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, Buffer->HistoryEntryToUse);
-                HistoryEntry = CONTAINING_RECORD(Buffer->HistoryEntryToUse, YORI_SH_HISTORY_ENTRY, ListEntry);
-                YoriShRemoveOneHistoryEntry(HistoryEntry);
-
-                if (NewEntry != NULL) {
-                    Buffer->HistoryEntryToUse = NewEntry;
-                    HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
-                    YoriShClearInput(Buffer);
-                    YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
-                } else {
-                    YoriShClearInput(Buffer);
-                }
-            }
+        if (YoriShProcessCtrlEnhancedKeyDown(Buffer, InputRecord, TerminateInput)) {
+            return TRUE;
         }
+
     } else if (CtrlMask == LEFT_ALT_PRESSED ||
                CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY)) {
         if (KeyCode >= '0' && KeyCode <= '9') {
