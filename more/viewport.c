@@ -2265,7 +2265,9 @@ MoreProcessKeyDown(
         MoreProcessEnhancedKeyDown(MoreContext, InputRecord);
     } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
                CtrlMask == LEFT_CTRL_PRESSED) {
-        if (KeyCode == 'Q') {
+        if (KeyCode == 'C') {
+            *Terminate = TRUE;
+        } else if (KeyCode == 'Q') {
             MoreContext->SuspendPagination = TRUE;
         } else if (KeyCode == 'S') {
             MoreContext->SuspendPagination = FALSE;
