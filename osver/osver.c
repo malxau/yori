@@ -38,6 +38,7 @@ CHAR strOsVerHelpText[] =
         "OSVER [-license] [<fmt>]\n"
         "\n"
         "Format specifiers are:\n"
+        "   $arch$         The processor architecture\n"
         "   $BUILD$        The build number with leading zero\n"
         "   $build$        The build number without leading zero\n"
         "   $desc$         The human friendly build description\n"
