@@ -1419,7 +1419,7 @@ YoriShExecuteSingleProgram(
                 if (ExecContext->WaitForCompletion) {
                     ExecContext->CaptureEnvironmentOnExit = TRUE;
                 }
-                ExitCode = YoriShBuckPass(ExecContext, 2, _T("cmd.exe"), _T("/c"));
+                ExitCode = YoriShBuckPassToCmd(ExecContext, 2, _T("cmd.exe"), _T("/c"));
             } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
                 LaunchViaShellExecute = TRUE;
                 ExecContext->SuppressTaskCompletion = TRUE;
