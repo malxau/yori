@@ -144,4 +144,9 @@
  */
 #define IDC_SYMBOLS 405
 
+/**
+ The checkbox for registering an uninstall handler.
+ */
+#define IDC_UNINSTALL 406
+
 

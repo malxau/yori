@@ -39,12 +39,13 @@ FONT 8, "MS Sans Serif"
     LTEXT "Complete includes Typical plus a CMD version of for and clmp multiprocessor compiler wrapper", IDC_LABEL_COMPLETEDESC, 32, 153, 180, 20
 
     GROUPBOX "Install Options", IDC_LABEL_INSTALLOPTIONS, 230, 34, 160, 147
-    CONTROL "Install Desktop shortcut", IDC_DESKTOP_SHORTCUT,"Button",BS_CHECKBOX|WS_GROUP|WS_TABSTOP,240, 53, 120, 10
-    CONTROL "Install Start Menu shortcut", IDC_START_SHORTCUT,"Button",BS_CHECKBOX,240, 73, 120, 10
-    CONTROL "Add Yori to system path", IDC_SYSTEM_PATH,"Button",BS_CHECKBOX,240, 93, 120, 10
-    CONTROL "Add Yori to user path", IDC_USER_PATH,"Button",BS_CHECKBOX,240, 113, 120, 10
-    CONTROL "Install source code", IDC_SOURCE,"Button",BS_CHECKBOX,240, 133, 120, 10
-    CONTROL "Install debugging symbols", IDC_SYMBOLS,"Button",BS_CHECKBOX,240, 153, 120, 10
+    CONTROL "Install Desktop shortcut", IDC_DESKTOP_SHORTCUT,"Button",BS_CHECKBOX|WS_GROUP|WS_TABSTOP,240, 50, 120, 10
+    CONTROL "Install Start Menu shortcut", IDC_START_SHORTCUT,"Button",BS_CHECKBOX,240, 68, 120, 10
+    CONTROL "Add Yori to system path", IDC_SYSTEM_PATH,"Button",BS_CHECKBOX,240, 86, 120, 10
+    CONTROL "Add Yori to user path", IDC_USER_PATH,"Button",BS_CHECKBOX,240, 104, 120, 10
+    CONTROL "Install source code", IDC_SOURCE,"Button",BS_CHECKBOX,240, 122, 120, 10
+    CONTROL "Install debugging symbols", IDC_SYMBOLS,"Button",BS_CHECKBOX,240, 140, 120, 10
+    CONTROL "Register uninstall handler", IDC_UNINSTALL,"Button",BS_CHECKBOX,240, 158, 120, 10
 
     LTEXT "Please select installation options", IDC_STATUS, 12, 187, 380, 19
 

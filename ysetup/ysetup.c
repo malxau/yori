@@ -470,7 +470,9 @@ SetupInstallSelectedFromDialog(
     //
     //  Try to add an uninstall entry
     //
-    {
+
+    if (IsDlgButtonChecked(hDlg, IDC_UNINSTALL)) {
+
         YORI_STRING VerString;
         TCHAR VerBuffer[32];
 
