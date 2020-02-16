@@ -113,6 +113,13 @@ YoriShBuckPass (
     ...
     );
 
+DWORD
+YoriShBuckPassToCmd (
+    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in DWORD ExtraArgCount,
+    ...
+    );
+
 __success(return)
 BOOL
 YoriShExecuteNamedModuleInProc(
