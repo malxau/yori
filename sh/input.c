@@ -2148,6 +2148,13 @@ YoriShProcessKeyDown(
             } else {
                 Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10;
             }
+        } else if (KeyCode == VK_F4) {
+            if (YoriShCloseWindow()) {
+                YoriShAddCStringToInput(Buffer, _T("EXIT"));
+                *TerminateInput = TRUE;
+                YoriShClearInputSelections(Buffer);
+                return TRUE;
+            }
         }
     } else if (CtrlMask == (SHIFT_PRESSED | ENHANCED_KEY)) {
         if (KeyCode == VK_INSERT) {

@@ -177,4 +177,97 @@ YoriShSetWindowState(
     return TRUE;
 }
 
+/**
+ Kill a single process specified by process identifier.
+
+ @return TRUE to indicate that the process was terminated, FALSE to indicate
+         that it could not be terminated.
+ */
+BOOLEAN
+YoriShKillProcessById(
+    __in DWORD ProcessId
+    )
+{
+    HANDLE ProcessHandle;
+
+    ProcessHandle = OpenProcess(PROCESS_TERMINATE, FALSE, ProcessId);
+    if (ProcessHandle == NULL) {
+        return FALSE;
+    }
+
+    if (!TerminateProcess(ProcessHandle, EXIT_FAILURE)) {
+        CloseHandle(ProcessHandle);
+        return FALSE;
+    }
+
+    CloseHandle(ProcessHandle);
+    return TRUE;
+}
+
+/**
+ Kill all processes associated with the current console except for the
+ currently executing process.  This process will also exit momentarily.
+
+ @return TRUE to indicate all other processes associated with the console
+         have been killed, and FALSE to indicate that one or more of them
+         could not be terminated.
+ */
+BOOLEAN
+YoriShCloseWindow()
+{
+    LPDWORD PidList = NULL;
+    DWORD PidListSize = 0;
+    DWORD PidCountReturned;
+    DWORD Index;
+    DWORD CurrentPid;
+
+
+    if (DllKernel32.pGetConsoleProcessList == NULL) {
+        return FALSE;
+    }
+
+    CurrentPid = GetCurrentProcessId();
+
+    do {
+        PidCountReturned = DllKernel32.pGetConsoleProcessList(PidList, PidListSize);
+        if (PidCountReturned == 0 && PidList != NULL) {
+            if (PidList) {
+                YoriLibFree(PidList);
+            }
+            return FALSE;
+        }
+
+        if (PidCountReturned > 0 && PidCountReturned <= PidListSize) {
+            break;
+        }
+
+        if (PidCountReturned == 0) {
+            PidCountReturned = 4;
+        }
+
+        if (PidList) {
+            YoriLibFree(PidList);
+        }
+
+        PidListSize = PidCountReturned + 4;
+        PidList = YoriLibMalloc(PidListSize * sizeof(DWORD));
+        if (PidList == NULL) {
+            return FALSE;
+        }
+
+    } while(TRUE);
+
+    for (Index = 0; Index < PidCountReturned; Index++) {
+        if (PidList[Index] != CurrentPid) {
+            if (!YoriShKillProcessById(PidList[Index])) {
+                YoriLibFree(PidList);
+                return FALSE;
+            }
+        }
+    }
+
+    YoriLibFree(PidList);
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:
