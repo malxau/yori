@@ -671,6 +671,9 @@ YoriShSetWindowState(
     __in DWORD State
     );
 
+BOOLEAN
+YoriShCloseWindow();
+
 // *** YORIFULL.C / YORISTD.C / YORINONE.C ***
 
 BOOL
