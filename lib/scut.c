@@ -3,7 +3,7 @@
  *
  * Helper routines for manipulating shortcuts
  *
- * Copyright (c) 2004-2018 Malcolm Smith
+ * Copyright (c) 2004-2020 Malcolm Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -390,19 +390,39 @@ YoriLibExecuteShortcut(
             STARTUPINFO si;
             PROCESS_INFORMATION pi;
             YORI_STRING CmdLine;
+            YORI_STRING UnescapedPath;
+            DWORD CharsNeeded;
+            BOOLEAN HasWhiteSpace;
+
+            YoriLibInitEmptyString(&UnescapedPath);
+            if (!YoriLibUnescapePath(ShortcutFileName, &UnescapedPath)) {
+                UnescapedPath.StartOfString = ShortcutFileName->StartOfString;
+            }
+
             ZeroMemory(&si, sizeof(si));
             si.cb = sizeof(si);
 
             si.dwFlags = STARTF_TITLEISLINKNAME;
-            si.lpTitle = ShortcutFileName->StartOfString;
+            si.lpTitle = UnescapedPath.StartOfString;
 
-            if (!YoriLibAllocateString(&CmdLine, ExpandedFileTarget.LengthInChars + 1 + ExpandedArguments.LengthInChars + 1)) {
+            HasWhiteSpace = YoriLibCheckIfArgNeedsQuotes(&ExpandedFileTarget);
+            CharsNeeded = ExpandedFileTarget.LengthInChars + 1 + ExpandedArguments.LengthInChars + 1;
+            if (HasWhiteSpace) {
+                CharsNeeded += 2;
+            }
+
+            if (!YoriLibAllocateString(&CmdLine, CharsNeeded)) {
+                YoriLibFreeStringContents(&UnescapedPath);
                 goto Exit;
             }
 
-            CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("%y %y"), &ExpandedFileTarget, &ExpandedArguments);
+            if (HasWhiteSpace) {
+                CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("\"%y\" %y"), &ExpandedFileTarget, &ExpandedArguments);
+            } else {
+                CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("%y %y"), &ExpandedFileTarget, &ExpandedArguments);
+            }
 
-            Result = CreateProcess(ExpandedFileTarget.StartOfString,
+            Result = CreateProcess(NULL,
                                    CmdLine.StartOfString,
                                    NULL,
                                    NULL,
@@ -419,6 +439,7 @@ YoriLibExecuteShortcut(
             }
 
             YoriLibFreeStringContents(&CmdLine);
+            YoriLibFreeStringContents(&UnescapedPath);
         }
     }
 
