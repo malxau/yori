@@ -3,7 +3,7 @@
  *
  * Yori shell rmdir
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,6 +38,7 @@ CHAR strRmdirHelpText[] =
         "RMDIR [-license] [-b] [-r] [-s] <dir> [<dir>...]\n"
         "\n"
         "   -b             Use basic search criteria for directories only\n"
+        "   -f             Delete files as well as directories\n"
         "   -l             Delete links without contents\n"
         "   -r             Send directories to the recycle bin\n"
         "   -s             Remove all contents of each directory\n";
@@ -65,8 +66,22 @@ typedef struct _RMDIR_CONTEXT {
      If TRUE, objects should be sent to the recycle bin rather than directly
      deleted.
      */
-    BOOL RecycleBin;
+    BOOLEAN RecycleBin;
+
+    /**
+     If TRUE, delete files as well as directories.
+     */
+    BOOLEAN DeleteFiles;
+
 } RMDIR_CONTEXT, *PRMDIR_CONTEXT;
+
+BOOL
+RmdirFileEnumerateErrorCallback(
+    __in PYORI_STRING FilePath,
+    __in DWORD ErrorCode,
+    __in DWORD Depth,
+    __in PVOID Context
+    );
 
 /**
  A callback that is invoked when a file is found that matches a search criteria
@@ -97,7 +112,19 @@ RmdirFileFoundCallback(
     BOOL FileDeleted;
     PRMDIR_CONTEXT RmdirContext = (PRMDIR_CONTEXT)Context;
 
-    UNREFERENCED_PARAMETER(Depth);
+    //
+    //  Don't delete any files that are specified on the command line
+    //  directly.  These can be deleted if they're enumerated underneath
+    //  a parent object.
+    //
+
+    if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0 &&
+        Depth == 0 &&
+        !RmdirContext->DeleteFiles) {
+
+        RmdirFileEnumerateErrorCallback(FilePath, ERROR_DIRECTORY, Depth, Context);
+        return TRUE;
+    }
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
@@ -219,7 +246,7 @@ RmdirFileEnumerateErrorCallback(
         YoriLibInitEmptyString(&DirName);
         DirName.StartOfString = UnescapedFilePath.StartOfString;
         FilePart = YoriLibFindRightMostCharacter(&UnescapedFilePath, '\\');
-        if (FilePart != NULL) {
+        if (FilePart != NULL && ErrorCode != ERROR_DIRECTORY) {
             DirName.LengthInChars = (DWORD)(FilePart - DirName.StartOfString);
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
@@ -286,11 +313,14 @@ ENTRYPOINT(
                 RmdirHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+                ArgumentUnderstood = TRUE;
+                RmdirContext.DeleteFiles = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 DeleteLinks = TRUE;
                 ArgumentUnderstood = TRUE;
