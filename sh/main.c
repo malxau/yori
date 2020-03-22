@@ -3,7 +3,7 @@
  *
  * Yori shell entrypoint
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,8 @@ CHAR strHelpText[] =
         "\n"
         "   -license       Display license text\n"
         "   -c <cmd>       Execute command and terminate the shell\n"
-        "   -k <cmd>       Execute command and continue as an interactive shell\n";
+        "   -k <cmd>       Execute command and continue as an interactive shell\n"
+        "   -nouser        Do not execute per-user AutoInit scripts\n";
 
 /**
  Display usage text to the user.
@@ -294,10 +295,16 @@ YoriShInit()
 /**
  Execute any system or user init scripts.
 
+ @param IgnoreUserScripts If TRUE, system scripts are executed but user
+        scripts are not.  This is useful to ensure that a script executes
+        consistently in any user context.
+
  @return TRUE to indicate success.
  */
 BOOL
-YoriShExecuteInitScripts()
+YoriShExecuteInitScripts(
+    __in BOOLEAN IgnoreUserScripts
+    )
 {
     YORI_STRING RelativeYoriInitName;
 
@@ -314,10 +321,12 @@ YoriShExecuteInitScripts()
     //  Execute all user YoriInit scripts.
     //
 
-    YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit.d\\*"));
-    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
-    YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit*"));
-    YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+    if (!IgnoreUserScripts) {
+        YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit.d\\*"));
+        YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+        YoriLibConstantString(&RelativeYoriInitName, _T("~\\YoriInit*"));
+        YoriLibForEachFile(&RelativeYoriInitName, YORILIB_FILEENUM_RETURN_FILES, 0, YoriShExecuteYoriInit, NULL, NULL);
+    }
 
     //
     //  Reload any state next time it's requested.
@@ -355,7 +364,8 @@ YoriShParseArgs(
     DWORD StartArgToExec = 0;
     DWORD i;
     YORI_STRING Arg;
-    BOOL ExecuteStartupScripts = TRUE;
+    BOOLEAN ExecuteStartupScripts = TRUE;
+    BOOLEAN IgnoreUserScripts = FALSE;
 
     *TerminateApp = FALSE;
     *ExitCode = 0;
@@ -371,7 +381,7 @@ YoriShParseArgs(
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
@@ -388,6 +398,10 @@ YoriShParseArgs(
                     ArgumentUnderstood = TRUE;
                     break;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nouser")) == 0) {
+                IgnoreUserScripts = TRUE;
+                ArgumentUnderstood = TRUE;
+                break;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("restart")) == 0) {
                 if (ArgC > i + 1) {
                     YoriShLoadSavedRestartState(&ArgV[i + 1]);
@@ -416,7 +430,7 @@ YoriShParseArgs(
     }
 
     if (ExecuteStartupScripts) {
-        YoriShExecuteInitScripts();
+        YoriShExecuteInitScripts(IgnoreUserScripts);
     }
 
     if (StartArgToExec > 0) {
