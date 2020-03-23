@@ -1476,6 +1476,7 @@ YoriPkgIsNewerVersionAvailable(
     PYORIPKG_REMOTE_SOURCE RemoteSource;
     BOOLEAN NewerVersionAvailable;
 
+    NewerVersionAvailable = FALSE;
     UrlToCheck = UpgradePath;
     YoriLibInitEmptyString(&RedirectedUrl);
     YoriLibInitEmptyString(&PreviousRedirectedUrl);
