@@ -4,7 +4,7 @@
 ; Implementation for for signed and unsigned division of a 64 bit integer
 ; by a 32 bit integer, returning the result and remainder.
 ;
-; Copyright (c) 2017 Malcolm J. Smith
+; Copyright (c) 2017-2020 Malcolm J. Smith
 ;
 ; Permission is hereby granted, free of charge, to any person obtaining a copy
 ; of this software and associated documentation files (the "Software"), to deal
@@ -62,18 +62,19 @@ call _aullrem
 
 ; Save the remainder into registers that will be preserved
 
+push esi
 mov ebx, edx
 mov esi, eax
 
 ; Push the arguments for the next function
 
-mov edx, [esp + 16]
-mov eax, [esp + 12]
+mov edx, [esp + 20]
+mov eax, [esp + 16]
 push edx
 push eax
 
-mov edx, [esp + 16]
-mov eax, [esp + 12]
+mov edx, [esp + 20]
+mov eax, [esp + 16]
 push edx
 push eax
 
@@ -82,6 +83,7 @@ push eax
 call _aulldiv
 
 mov ecx, esi
+pop esi
 
 ret 16
 
@@ -115,18 +117,19 @@ call _allrem
 
 ; Save the remainder into registers that will be preserved
 
+push esi
 mov ebx, edx
 mov esi, eax
 
 ; Push the arguments for the next function
 
-mov edx, [esp + 16]
-mov eax, [esp + 12]
+mov edx, [esp + 20]
+mov eax, [esp + 16]
 push edx
 push eax
 
-mov edx, [esp + 16]
-mov eax, [esp + 12]
+mov edx, [esp + 20]
+mov eax, [esp + 16]
 push edx
 push eax
 
@@ -135,6 +138,7 @@ push eax
 call _alldiv
 
 mov ecx, esi
+pop esi
 
 ret 16
 
