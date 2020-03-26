@@ -3,7 +3,7 @@
  *
  * Yori shell bootstrap installer
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -647,6 +647,7 @@ SetupUiDialogProc(
                 case IDC_USER_PATH:
                 case IDC_SOURCE:
                 case IDC_SYMBOLS:
+                case IDC_UNINSTALL:
                     CtrlId = LOWORD(wParam);
                     if (IsDlgButtonChecked(hDlg, CtrlId)) {
                         CheckDlgButton(hDlg, CtrlId, FALSE);
@@ -757,6 +758,7 @@ SetupUiDialogProc(
                     IDC_USER_PATH,
                     IDC_SOURCE,
                     IDC_SYMBOLS,
+                    IDC_UNINSTALL,
                 };
 
                 hDC = GetWindowDC(hDlg);
@@ -864,7 +866,7 @@ ymain(
                 YsetupHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2020"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
