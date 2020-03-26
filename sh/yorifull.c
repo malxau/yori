@@ -34,6 +34,11 @@ YORI_CMD_BUILTIN YoriCmd_ALIAS;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YASSOC;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_BUILTIN;
 
 /**
@@ -558,6 +563,7 @@ YoriShBuiltins[] = {
                     {_T("WHICH"),     YoriCmd_WHICH},
                     {_T("WININFO"),   YoriCmd_WININFO},
                     {_T("WINPOS"),    YoriCmd_WINPOS},
+                    {_T("YASSOC"),    YoriCmd_YASSOC},
                     {_T("YCAL"),      YoriCmd_YCAL},
                     {_T("YCHARMAP"),  YoriCmd_YCHARMAP},
                     {_T("YCLIP"),     YoriCmd_YCLIP},
@@ -611,6 +617,7 @@ YoriShBuiltins[] = {
 CONST YORI_SH_DEFAULT_ALIAS_ENTRY
 YoriShDefaultAliasEntries[] = {
     {_T("F7"),       _T("history -u")},
+    {_T("assoc"),    _T("yassoc $*$")},
     {_T("cal"),      _T("ycal $*$")},
     {_T("cd"),       _T("chdir $*$")},
     {_T("clip"),     _T("yclip $*$")},
@@ -630,6 +637,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("erase"),    _T("yerase $*$")},
     {_T("err"),      _T("yerr $*$")},
     {_T("expr"),     _T("yexpr $*$")},
+    {_T("ftype"),    _T("yassoc -t $*$")},
     {_T("hash"),     _T("yhash $*$")},
     {_T("head"),     _T("ytype -h $*$")},
     {_T("help"),     _T("yhelp $*$")},

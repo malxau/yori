@@ -5697,6 +5697,30 @@ REG_DELETE_VALUEW(HANDLE, LPCWSTR);
 typedef REG_DELETE_VALUEW *PREG_DELETE_VALUEW;
 
 /**
+ A prototype for the RegEnumKeyExW function.
+ */
+typedef
+LONG WINAPI
+REG_ENUM_KEY_EXW(HANDLE, DWORD, LPWSTR, LPDWORD, LPDWORD, LPWSTR, LPDWORD, PFILETIME);
+
+/**
+ A prototype for a pointer to the RegEnumKeyExW function.
+ */
+typedef REG_ENUM_KEY_EXW *PREG_ENUM_KEY_EXW;
+
+/**
+ A prototype for the RegOpenKeyExW function.
+ */
+typedef
+LONG WINAPI
+REG_OPEN_KEY_EXW(HANDLE, LPCWSTR, DWORD, DWORD, PHANDLE);
+
+/**
+ A prototype for a pointer to the RegOpenKeyExW function.
+ */
+typedef REG_OPEN_KEY_EXW *PREG_OPEN_KEY_EXW;
+
+/**
  A prototype for the RegQueryValueExW function.
  */
 typedef
@@ -5833,6 +5857,16 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to RegDeleteValueW.
      */
     PREG_DELETE_VALUEW pRegDeleteValueW;
+
+    /**
+     If it's available on the current system, a pointer to RegEnumKeyExW.
+     */
+    PREG_ENUM_KEY_EXW pRegEnumKeyExW;
+
+    /**
+     If it's available on the current system, a pointer to RegOpenKeyExW.
+     */
+    PREG_OPEN_KEY_EXW pRegOpenKeyExW;
 
     /**
      If it's available on the current system, a pointer to RegQueryValueExW.

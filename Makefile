@@ -58,6 +58,7 @@ DIRS=crt       \
      libwin    \
      libdlg    \
      builtins  \
+     assoc     \
      cab       \
      cal       \
      charmap   \

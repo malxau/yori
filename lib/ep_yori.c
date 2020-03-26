@@ -57,7 +57,7 @@ VOID __cdecl CONSOLE_CRT_ENTRYPOINT()
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
 
-    ArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), &ArgC);
+    ArgV = YoriLibCmdlineToArgcArgv(GetCommandLine(), (DWORD)-1, &ArgC);
     if (ArgV == NULL) {
         ExitProcess(EXIT_FAILURE);
     }

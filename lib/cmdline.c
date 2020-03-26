@@ -307,7 +307,10 @@ YoriLibExpandCommandVariables(
  Parses a NULL terminated command line string into an argument count and array
  of YORI_STRINGs corresponding to arguments.
 
- @param szCmdLine The NULL terminated command line.
+ @param CmdLine The NULL terminated command line.
+
+ @param MaxArgs The maximum number of arguments to return.  All trailing
+        arguments are joined with the final argument.
 
  @param argc On successful completion, populated with the count of arguments.
 
@@ -316,7 +319,8 @@ YoriLibExpandCommandVariables(
  */
 PYORI_STRING
 YoriLibCmdlineToArgcArgv(
-    __in LPTSTR szCmdLine,
+    __in LPTSTR CmdLine,
+    __in DWORD MaxArgs,
     __out PDWORD argc
     )
 {
@@ -333,7 +337,7 @@ YoriLibCmdlineToArgcArgv(
     //  might start with a quote
     //
 
-    c = szCmdLine;
+    c = CmdLine;
     while (*c == ' ') c++;
     if (*c == '"') {
         BreakChar = '"';
@@ -341,7 +345,7 @@ YoriLibCmdlineToArgcArgv(
     }
 
     while (*c != '\0') {
-        if (*c == BreakChar) {
+        if (ArgCount + 1 < MaxArgs && *c == BreakChar) {
             BreakChar = ' ';
             c++;
             while (*c == BreakChar) c++;
@@ -362,7 +366,7 @@ YoriLibCmdlineToArgcArgv(
 
             c++;
 
-            if (*c == '\0') {
+            if (ArgCount < MaxArgs && *c == '\0') {
                 ArgCount++;
             }
         }
@@ -393,7 +397,7 @@ YoriLibCmdlineToArgcArgv(
     //  might start with a quote
     //
 
-    c = szCmdLine;
+    c = CmdLine;
     while (*c == ' ') c++;
     BreakChar = ' ';
     if (*c == '"') {
@@ -402,7 +406,7 @@ YoriLibCmdlineToArgcArgv(
     }
 
     while (*c != '\0') {
-        if (*c == BreakChar) {
+        if (ArgCount + 1 < MaxArgs && *c == BreakChar) {
             *ReturnStrings = '\0';
             ReturnStrings++;
             ArgvArray[ArgCount].LengthAllocated = ArgvArray[ArgCount].LengthInChars + 1;

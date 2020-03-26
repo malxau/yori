@@ -223,13 +223,6 @@ KillGetSystemProcessList(
     return TRUE;
 }
 
-/**
- Display information about all processes that the current user has access
- to.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the kill builtin command.

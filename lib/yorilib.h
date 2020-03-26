@@ -550,6 +550,7 @@ YoriLibBuildCmdlineFromArgcArgv(
 PYORI_STRING
 YoriLibCmdlineToArgcArgv(
     __in LPTSTR szCmdLine,
+    __in DWORD MaxArgs,
     __out PDWORD argc
     );
 

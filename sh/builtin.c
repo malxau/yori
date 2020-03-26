@@ -432,7 +432,7 @@ YoriShExecuteInProc(
                 return ERROR_OUTOFMEMORY;
             }
 
-            ArgV = YoriLibCmdlineToArgcArgv(CmdLine, &ArgC);
+            ArgV = YoriLibCmdlineToArgcArgv(CmdLine, (DWORD)-1, &ArgC);
             YoriLibDereference(CmdLine);
 
             if (ArgV == NULL) {
