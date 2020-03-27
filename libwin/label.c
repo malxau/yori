@@ -411,6 +411,15 @@ YoriWinLabelParseAccelerator(
 
     WriteIndex = 0;
     AcceleratorFound = FALSE;
+
+    if (HighlightOffset) {
+        *HighlightOffset = 0;
+    }
+
+    if (AcceleratorChar) {
+        *AcceleratorChar = '\0';
+    }
+
     for (ReadIndex = 0; ReadIndex < RawString->LengthInChars; ReadIndex++) {
         if (RawString->StartOfString[ReadIndex] == '&' &&
             ReadIndex + 1 < RawString->LengthInChars) {

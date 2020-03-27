@@ -82,6 +82,7 @@ typedef enum _ASSOC_SCOPE {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocUpdateSingleAssociation(
     __in HKEY RootKey,
@@ -136,6 +137,7 @@ AssocUpdateSingleAssociation(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocUpdateSingleFileType(
     __in HKEY RootKey,
@@ -196,6 +198,7 @@ AssocUpdateSingleFileType(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocDisplaySingleAssociation(
     __in HKEY RootKey,
@@ -270,6 +273,7 @@ AssocDisplaySingleAssociation(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocDisplaySingleFileType(
     __in HKEY RootKey,
@@ -352,6 +356,7 @@ AssocDisplaySingleFileType(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocEnumerateAssociations(
     __in HKEY RootKey
@@ -411,6 +416,7 @@ AssocEnumerateAssociations(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocEnumerateFileTypes(
     __in HKEY RootKey
@@ -481,6 +487,7 @@ AssocEnumerateFileTypes(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocOpenRegRootForScope(
     __in ASSOC_SCOPE Scope,
@@ -523,6 +530,7 @@ AssocOpenRegRootForScope(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocEnumerateAssociationsForScope(
     __in ASSOC_SCOPE Scope
@@ -557,6 +565,7 @@ AssocEnumerateAssociationsForScope(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocEnumerateFileTypesForScope(
     __in ASSOC_SCOPE Scope
@@ -593,6 +602,7 @@ AssocEnumerateFileTypesForScope(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocDisplayOneExtensionForScope(
     __in ASSOC_SCOPE Scope,
@@ -635,6 +645,7 @@ AssocDisplayOneExtensionForScope(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocDisplayOneFileTypeForScope(
     __in ASSOC_SCOPE Scope,
@@ -679,6 +690,7 @@ AssocDisplayOneFileTypeForScope(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocUpdateAssociation(
     __in ASSOC_SCOPE Scope,
@@ -729,6 +741,7 @@ AssocUpdateAssociation(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 AssocUpdateFileType(
     __in ASSOC_SCOPE Scope,

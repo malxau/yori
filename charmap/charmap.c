@@ -153,7 +153,7 @@ CharMapDisplay(
             NarrowCharArray[i] = (UCHAR)(StartChar + i);
         }
 
-        MultiByteToWideChar(Encoding, 0, NarrowCharArray, CharCount, WideChars.StartOfString, WideChars.LengthAllocated * sizeof(TCHAR));
+        MultiByteToWideChar(Encoding, 0, NarrowCharArray, CharCount, WideChars.StartOfString, WideChars.LengthAllocated);
     }
 
     //

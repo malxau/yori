@@ -256,6 +256,7 @@ CoFileFoundCallback(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 CoPopulateList(
     __in PCO_CONTEXT CoContext
@@ -365,6 +366,7 @@ CoPopulateList(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 CoRepopulateList(
     __in PCO_CONTEXT CoContext
@@ -441,6 +443,7 @@ CoTrimTrailingNewlines(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 CoGetTargetDirectory(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,

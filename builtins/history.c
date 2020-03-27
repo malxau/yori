@@ -102,6 +102,7 @@ HistoryCancelButtonClicked(
          to indicate the menu could not be displayed or the user cancelled the
          operation.
  */
+__success(return)
 BOOL
 HistoryCreateSynchronousMenu(
     __in PYORI_STRING MenuOptions,

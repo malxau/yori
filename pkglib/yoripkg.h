@@ -95,7 +95,7 @@ YoriPkgInstallPseudoPackage(
     __in PYORI_STRING Name,
     __in PYORI_STRING Version,
     __in PYORI_STRING Architecture,
-    __in PYORI_STRING FileArray,
+    __in_ecount(FileCount) PYORI_STRING FileArray,
     __in DWORD FileCount,
     __in_opt PYORI_STRING TargetDirectory
     );
