@@ -4,22 +4,22 @@ PDB=0
 YORI_BUILD_ID=0
 ARCH=win32
 
-!IF [$(CC) -? 2>&1 | findstr /C:"for x64" >NUL 2>&1]==0
+!IF [$(CC) -? 2>&1 | findstr /C:"x64" >NUL 2>&1]==0
 ARCH=amd64
 !ELSE
-!IF [$(CC) -? 2>&1 | findstr /C:"for AMD64" >NUL 2>&1]==0
+!IF [$(CC) -? 2>&1 | findstr /C:"AMD64" >NUL 2>&1]==0
 ARCH=amd64
 !ELSE
-!IF [$(CC) -? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1]==0
+!IF [$(CC) -? 2>&1 | findstr /C:"ARM64" >NUL 2>&1]==0
 ARCH=arm64
 !ELSE
-!IF [$(CC) -? 2>&1 | findstr /C:"for ARM" >NUL 2>&1]==0
+!IF [$(CC) -? 2>&1 | findstr /C:"ARM" >NUL 2>&1]==0
 ARCH=arm
 !ELSE
-!IF [$(CC) -? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1]==0
+!IF [$(CC) -? 2>&1 | findstr /C:"Itanium" >NUL 2>&1]==0
 ARCH=ia64
 !ELSE
-!IF [$(CC) -? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1]==0
+!IF [$(CC) -? 2>&1 | findstr /C:"MIPS" >NUL 2>&1]==0
 ARCH=mips
 !ENDIF # MIPS
 !ENDIF # Itanium

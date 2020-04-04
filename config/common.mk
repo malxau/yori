@@ -72,14 +72,14 @@ CRTLIB=..\crt\yoricrt.lib
 # skip the probe on old ones.
 #
 
-!IF [$(CC) -GS- 2>&1 | find "unknown" >NUL]>0
+!IF [$(CC) -GS- 2>&1 | find "D4002" >NUL]>0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -GS-
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -GF
 !IF [$(CC) -? 2>&1 | find "/MP" >NUL]==0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -MP
 !ENDIF
 !ELSE
-!IF [$(CC) -GF 2>&1 | find "unknown" >NUL]>0
+!IF [$(CC) -GF 2>&1 | find "D4002" >NUL]>0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -GF
 !ELSE
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gf
@@ -91,7 +91,7 @@ CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gf
 # compilers, but not x64 compilers.
 #
 
-!IF [$(CC) -? 2>&1 | find "Gz __stdcall" >NUL]==0
+!IF [$(CC) -? 2>&1 | find "/Gz" >NUL]==0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gz
 !ENDIF
 
@@ -99,7 +99,7 @@ CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gz
 # Probe for -Gs support.  This exists on x86 and x64 but not mips.
 #
 
-!IF [$(CC) -Gs9999 2>&1 |find "unknown" >NUL]>0
+!IF [$(CC) -Gs9999 2>&1 |find "D4002" >NUL]>0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gs9999
 !ENDIF
 
@@ -135,30 +135,30 @@ LDFLAGS=$(LDFLAGS) -OPT:ICF
 # to help the subsystem version detection, below.  If we don't guess it's
 # not fatal, the linker will figure it out in the end.
 #
-!IF [$(CC) 2>&1 | find "for 80x86" >NUL]==0
+!IF [$(CC) 2>&1 | find "80x86" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:IX86
 !ELSE
-!IF [$(CC) 2>&1 | find "for x86" >NUL]==0
+!IF [$(CC) 2>&1 | find "x86" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:X86
 !ELSE
-!IF [$(CC) 2>&1 | find "for x64" >NUL]==0
+!IF [$(CC) 2>&1 | find "x64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:X64
 !ELSE
-!IF [$(CC) 2>&1 | find "for AMD64" >NUL]==0
+!IF [$(CC) 2>&1 | find "AMD64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:AMD64
 !ELSE
-!IF [$(CC) 2>&1 | find "for ARM64" >NUL]==0
+!IF [$(CC) 2>&1 | find "ARM64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM64
 !ELSE
-!IF [$(CC) 2>&1 | find "for Itanium" >NUL]==0
+!IF [$(CC) 2>&1 | find "Itanium" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:IA64
 !ELSE
-!IF [$(CC) 2>&1 | find "for ARM" >NUL]==0
+!IF [$(CC) 2>&1 | find "ARM" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM
 # Add back msvcrt to provide 64 bit math assembly
 CRTLIB=$(CRTLIB) msvcrt.lib libvcruntime.lib
 !ELSE
-!IF [$(CC) 2>&1 | find "for MIPS" >NUL]==0
+!IF [$(CC) 2>&1 | find "MIPS" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:MIPS
 # Add back msvcrt to provide 64 bit math assembly
 CRTLIB=$(CRTLIB) msvcrt.lib
@@ -189,9 +189,9 @@ CRTLIB=$(CRTLIB) msvcrt.lib
 #        3.10      4.0         5.1    5.2   6.0   default
 #
 
-!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.0 2>&1 | find "default subsystem" >NUL]>0
-!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,4.0 2>&1 | find "default subsystem" >NUL]>0
-!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,3.10 2>&1 | find "default subsystem" >NUL]>0
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.0 2>&1 | find "LNK4010" >NUL]>0
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,4.0 2>&1 | find "LNK4010" >NUL]>0
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,3.10 2>&1 | find "LNK4010" >NUL]>0
 LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,3.10
 !ELSE  # !3.10
 LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,4.0
@@ -200,14 +200,14 @@ LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,4.0
 LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,5.0
 !ENDIF # 4.0
 !ELSE  # !5.0
-!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.2 2>&1 | find "default subsystem" >NUL]>0
-!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.1 2>&1 | find "default subsystem" >NUL]>0
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.2 2>&1 | find "LNK4010" >NUL]>0
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.1 2>&1 | find "LNK4010" >NUL]>0
 LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,5.1
 !ELSE  # !5.1
 LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,5.2
 !ENDIF # 5.1
 !ELSE  # !5.2
-!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,6.0 2>&1 | find "default subsystem" >NUL]>0
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,6.0 2>&1 | find "LNK4010" >NUL]>0
 LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,6.0
 !ELSE
 LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE
