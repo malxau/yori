@@ -1315,19 +1315,26 @@ YoriShExecViaShellExecute(
     YoriLibLoadShell32Functions();
 
     //
-    //  This really shouldn't fail.  We're only here because a process
-    //  launch requires elevation, and if UAC is there, ShellExecuteEx had
-    //  better be there too.
+    //  This function is called for two reasons.  It might be because a
+    //  process launch requires elevation, in which case ShellExecuteEx
+    //  should exist because any OS with UAC will have it.  Currently it can
+    //  also be called to launch a document, meaning that this scenario
+    //  currently only works on NT 4 and newer.  On 3.51 the function is
+    //  there but doesn't execute successfully.
     //
 
-    ASSERT(DllShell32.pShellExecuteExW != NULL);
     if (DllShell32.pShellExecuteExW == NULL) {
         return FALSE;
     }
 
     ZeroMemory(&sei, sizeof(sei));
     sei.cbSize = sizeof(sei);
-    sei.fMask = SEE_MASK_NOCLOSEPROCESS|SEE_MASK_FLAG_NO_UI|SEE_MASK_NOZONECHECKS|SEE_MASK_UNICODE;
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS |
+                SEE_MASK_FLAG_NO_UI |
+                SEE_MASK_NOZONECHECKS |
+                SEE_MASK_UNICODE |
+                SEE_MASK_NO_CONSOLE;
+
     sei.lpFile = ExecContext->CmdToExec.ArgV[0].StartOfString;
     if (ExecContext->CmdToExec.ArgC > 1) {
         memcpy(&ArgContext, &ExecContext->CmdToExec, sizeof(YORI_SH_CMD_CONTEXT));

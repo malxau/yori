@@ -3682,6 +3682,13 @@ typedef struct _YORI_SHELLEXECUTEINFO {
 #define SEE_MASK_UNICODE        (0x00004000)
 #endif
 
+#ifndef SEE_MASK_NO_CONSOLE
+/**
+ The process should be launched on the existing console if possible.
+ */
+#define SEE_MASK_NO_CONSOLE     (0x00008000)
+#endif
+
 #ifndef SEE_MASK_NOZONECHECKS
 /**
  No, just no.  Yes, it came from the Internet, just like everything else.
