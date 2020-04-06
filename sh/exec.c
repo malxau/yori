@@ -1283,11 +1283,8 @@ YoriShWaitForProcessToTerminate(
 
 /**
  Try to launch a single program via ShellExecuteEx rather than CreateProcess.
- This is used when CreateProcess said elevation is needed, and that requires
- UI, so we need to call a function that can support UI...except since Win7
- we're unlikely to actually have any UI because the system components are
- capable of auto-elevating.  But, at least command prompts get to instantiate
- COM, because that's sure going to end well.
+ This is used to open URLs, documents and scripts, as well as when
+ CreateProcess said elevation is needed.
 
  @param ExecContext Pointer to the program to execute.
 
@@ -1317,13 +1314,12 @@ YoriShExecViaShellExecute(
     //
     //  This function is called for two reasons.  It might be because a
     //  process launch requires elevation, in which case ShellExecuteEx
-    //  should exist because any OS with UAC will have it.  Currently it can
-    //  also be called to launch a document, meaning that this scenario
-    //  currently only works on NT 4 and newer.  On 3.51 the function is
-    //  there but doesn't execute successfully.
+    //  should exist because any OS with UAC will have it.  For NT 3.51,
+    //  ShellExecuteEx exists but fails, and before that, it's not even
+    //  there.  This code has to handle each case.
     //
 
-    if (DllShell32.pShellExecuteExW == NULL) {
+    if (DllShell32.pShellExecuteExW == NULL && DllShell32.pShellExecuteW == NULL) {
         return FALSE;
     }
 
@@ -1357,21 +1353,49 @@ YoriShExecViaShellExecute(
         return FALSE;
     }
 
-    if (!DllShell32.pShellExecuteExW(&sei)) {
-        LPTSTR ErrText;
-        LastError = GetLastError();
-        ErrText = YoriLibGetWinErrorText(LastError);
-        YoriShRevertRedirection(&PreviousRedirectContext);
-        if (Args != NULL) {
-            YoriLibDereference(Args);
+    LastError = ERROR_SUCCESS;
+    if (DllShell32.pShellExecuteExW != NULL) {
+        if (!DllShell32.pShellExecuteExW(&sei)) {
+            LastError = GetLastError();
         }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecuteEx failed (%i): %s"), LastError, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
-        return FALSE;
     }
+
+    if (DllShell32.pShellExecuteExW == NULL ||
+        LastError == ERROR_CALL_NOT_IMPLEMENTED) {
+
+        HINSTANCE hInst;
+        hInst = DllShell32.pShellExecuteW(NULL, NULL, sei.lpFile, sei.lpParameters, _T("."), sei.nShow);
+
+        LastError = ERROR_SUCCESS;
+        if (hInst < (HINSTANCE)(DWORD_PTR)32) {
+            switch((DWORD_PTR)hInst) {
+                case ERROR_FILE_NOT_FOUND:
+                case ERROR_PATH_NOT_FOUND:
+                case ERROR_ACCESS_DENIED:
+                case ERROR_BAD_FORMAT:
+                    LastError = (DWORD)(DWORD_PTR)hInst;
+                    break;
+                case SE_ERR_SHARE:
+                    LastError = ERROR_SHARING_VIOLATION;
+                    break;
+                default:
+                    LastError = ERROR_TOO_MANY_OPEN_FILES;
+                    break;
+            }
+        }
+    }
+
     YoriShRevertRedirection(&PreviousRedirectContext);
     if (Args != NULL) {
         YoriLibDereference(Args);
+    }
+
+    if (LastError != ERROR_SUCCESS) {
+        LPTSTR ErrText;
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ShellExecuteEx failed (%i): %s"), LastError, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
     }
 
     ProcessInfo->hProcess = sei.hProcess;
