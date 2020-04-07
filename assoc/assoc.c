@@ -211,6 +211,7 @@ AssocDisplaySingleAssociation(
     HANDLE ThisKey;
     DWORD KeyType;
 
+    KeyValueSize = 0;
     if (!YoriLibAllocateString(&KeyValue, 1024)) {
         return FALSE;
     }
@@ -287,6 +288,7 @@ AssocDisplaySingleFileType(
     HANDLE ThisKey;
     DWORD KeyType;
 
+    KeyValueSize = 0;
     YoriLibInitEmptyString(&SubKeyName);
     YoriLibYPrintf(&SubKeyName, _T("%y\\shell\\open\\command"), FileType);
     if (SubKeyName.StartOfString == NULL) {
