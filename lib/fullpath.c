@@ -589,7 +589,7 @@ YoriLibGetFullPathDeterminePathType(
     }
 
     //
-    //  On NT 3.x, use \\.\ instead of \\?\ since the latter does not
+    //  On NT 3.1, use \\.\ instead of \\?\ since the latter does not
     //  appear to be supported there
     //
 
@@ -599,7 +599,7 @@ YoriLibGetFullPathDeterminePathType(
         YoriLibPathPrefixChar = '?';
 
         if (LOBYTE(LOWORD(OsVer)) < 4) {
-            if (LOBYTE(LOWORD(OsVer)) == 3 && HIBYTE(LOWORD(OsVer)) < 51) {
+            if (LOBYTE(LOWORD(OsVer)) == 3 && HIBYTE(LOWORD(OsVer)) < 50) {
                 YoriLibPathPrefixChar = '.';
             }
         }
