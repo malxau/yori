@@ -332,41 +332,41 @@ VolExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("clustersize")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->ClusterSize);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->ClusterSize);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("filerecordsize")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->NtfsData.BytesPerFileRecordSegment);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->NtfsData.BytesPerFileRecordSegment);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("free")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->FreeSpace.QuadPart);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->FreeSpace.QuadPart);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("fsname")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->FsName);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->FsName);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("fullserial")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%016llx"), VolContext->FullSerialNumber);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%016llx"), VolContext->FullSerialNumber);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("label")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->VolumeLabel);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->VolumeLabel);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("mftsize")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->NtfsData.MftValidDataLength);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->NtfsData.MftValidDataLength);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("physicalsectorsize")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->PhysicalSectorSize);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->PhysicalSectorSize);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("reserved")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->ReservedSize);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->ReservedSize);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("sectorsize")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->SectorSize);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->SectorSize);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("serial")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%08x"), VolContext->ShortSerialNumber);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%08x"), VolContext->ShortSerialNumber);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("size")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->VolumeSize.QuadPart);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->VolumeSize.QuadPart);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("usnjournalid")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%llx"), VolContext->UsnJournalId);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%llx"), VolContext->UsnJournalId);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("usnfirst")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnFirst);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnFirst);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("usnnext")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnNext);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnNext);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("usnlowestvalid")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnLowestValid);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnLowestValid);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("usnmax")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnMax);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnMax);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("usnmaxallocated")) == 0) {
-        YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnMaxAllocated);
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->UsnMaxAllocated);
     }
 
     OutputString->LengthInChars = CharsNeeded;
