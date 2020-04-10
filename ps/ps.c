@@ -125,7 +125,7 @@ PsDisplayHeader(
     __in PPS_CONTEXT PsContext
     )
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Pid  | Process         "));
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Pid  | ExecTime | Process         "));
     if (PsContext->DisplayMemory) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("| WorkingSet | Commit     "));
     }
@@ -276,10 +276,24 @@ PsDisplayProcessByStructure(
     )
 {
     YORI_STRING BaseName;
+    LARGE_INTEGER ExecuteTime;
+    DWORD ExecTimeSeconds;
+    DWORD ExecTimeMinutes;
+    DWORD ExecTimeHours;
 
     YoriLibInitEmptyString(&BaseName);
     BaseName.StartOfString = ProcessInfo->ImageName;
     BaseName.LengthInChars = ProcessInfo->ImageNameLengthInBytes / sizeof(WCHAR);
+
+    if (BaseName.LengthInChars == 0 && ProcessInfo->ProcessId == 0) {
+        YoriLibConstantString(&BaseName, _T("Idle"));
+    }
+
+    ExecuteTime.QuadPart = ProcessInfo->KernelTime.QuadPart + ProcessInfo->UserTime.QuadPart;
+    ExecuteTime.QuadPart = ExecuteTime.QuadPart / (10 * 1000 * 1000);
+    ExecTimeSeconds = (DWORD)(ExecuteTime.QuadPart % 60);
+    ExecTimeMinutes = (DWORD)((ExecuteTime.QuadPart / 60) % 60);
+    ExecTimeHours = (DWORD)(ExecuteTime.QuadPart / 3600);
 
     if (PsContext->DisplayMemory) {
         LARGE_INTEGER liCommit;
@@ -307,9 +321,9 @@ PsDisplayProcessByStructure(
         YoriLibFileSizeToString(&CommitString, &liCommit);
         YoriLibFileSizeToString(&WorkingSetString, &liWorkingSet);
     
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-15y | %-10y | %-10y"), ProcessInfo->ProcessId, &BaseName, &WorkingSetString, &CommitString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %02i:%02i:%02i | %-15y | %-10y | %-10y"), ProcessInfo->ProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName, &WorkingSetString, &CommitString);
     } else {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-15y"), ProcessInfo->ProcessId, &BaseName);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %02i:%02i:%02i | %-15y"), ProcessInfo->ProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName);
     }
 
     if (PsContext->DisplayCommandLine) {

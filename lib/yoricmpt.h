@@ -694,7 +694,22 @@ typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
     /**
      Ignored in this application.
      */
-    BYTE Reserved1[52];
+    BYTE Reserved1[28];
+
+    /**
+     The system time when the process was launched.
+     */
+    LARGE_INTEGER CreateTime;
+
+    /**
+     The amount of time the process has spent executing in user mode.
+     */
+    LARGE_INTEGER UserTime;
+
+    /**
+     The amount of time the process has spent executing in kernel mode.
+     */
+    LARGE_INTEGER KernelTime;
 
     /**
      The number of bytes in the image name.
