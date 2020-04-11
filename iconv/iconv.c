@@ -3,7 +3,7 @@
  *
  * Yori character encoding conversions
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,7 +40,10 @@ CHAR strIconvHelpText[] =
         "   -b             Use basic search criteria for files only\n"
         "   -e <encoding>  Specifies the new encoding to use\n"
         "   -i <encoding>  Specifies the input (current) encoding\n"
-        "   -s             Process files from all subdirectories\n";
+        "   -m             Use traditional Mac line endings (CR)\n"
+        "   -s             Process files from all subdirectories\n"
+        "   -u             Use Unix line endings (LF)\n"
+        "   -w             Use Windows line endings (CRLF)\n";
 
 /**
  Display usage text to the user.
@@ -78,6 +81,11 @@ typedef struct _ICONV_CONTEXT {
     DWORD TargetEncoding;
 
     /**
+     The line ending to use when outputting data.
+     */
+    LPTSTR LineEnding;
+
+    /**
      Records the total number of files processed.
      */
     LONGLONG FilesFound;
@@ -106,14 +114,17 @@ IconvProcessStream(
     YORI_STRING LineString;
     DWORD OriginalInputEncoding;
     DWORD OriginalOutputEncoding;
+    LPTSTR OriginalLineEnding;
 
     IconvContext->FilesFound++;
 
     OriginalInputEncoding = YoriLibGetMultibyteInputEncoding();
     OriginalOutputEncoding = YoriLibGetMultibyteOutputEncoding();
+    OriginalLineEnding = YoriLibVtGetLineEnding();
 
     YoriLibSetMultibyteInputEncoding(IconvContext->SourceEncoding);
     YoriLibSetMultibyteOutputEncoding(IconvContext->TargetEncoding);
+    YoriLibVtSetLineEnding(IconvContext->LineEnding);
 
     YoriLibInitEmptyString(&LineString);
 
@@ -131,6 +142,7 @@ IconvProcessStream(
 
     YoriLibSetMultibyteInputEncoding(OriginalInputEncoding);
     YoriLibSetMultibyteOutputEncoding(OriginalOutputEncoding);
+    YoriLibVtSetLineEnding(OriginalLineEnding);
 
     YoriLibLineReadClose(LineContext);
     YoriLibFreeStringContents(&LineString);
@@ -317,6 +329,7 @@ ENTRYPOINT(
     ZeroMemory(&IconvContext, sizeof(IconvContext));
     IconvContext.SourceEncoding = CP_UTF8;
     IconvContext.TargetEncoding = CP_UTF8;
+    IconvContext.LineEnding = _T("\r\n");
 
     for (i = 1; i < ArgC; i++) {
 
@@ -329,7 +342,7 @@ ENTRYPOINT(
                 IconvHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -354,8 +367,17 @@ ENTRYPOINT(
                         i++;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+                IconvContext.LineEnding = _T("\r");
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
+                IconvContext.LineEnding = _T("\n");
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 IconvContext.Recursive = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+                IconvContext.LineEnding = _T("\r\n");
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;

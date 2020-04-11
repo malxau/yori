@@ -4,7 +4,7 @@
  * Convert VT100/ANSI escape sequences into other formats, including the 
  * console.
  *
- * Copyright (c) 2015-17 Malcolm J. Smith
+ * Copyright (c) 2015-20 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,15 @@ WORD YoriLibVtResetColor;
  if the value has not yet been determined, and will be queried before changing
  the console color.
  */
-BOOL YoriLibVtResetColorSet;
+BOOLEAN YoriLibVtResetColorSet;
+
+/**
+ The line ending to apply when writing to a file.  Note that this is not
+ a dynamic allocation and will never be freed.  It is a pointer that can
+ point to constant data within any process, which seems sufficient for the
+ very small number of expected values.
+ */
+LPTSTR YoriLibVtLineEnding = _T("\r\n");
 
 /**
  Set the default color for the process.  The default color is the one that
@@ -81,6 +89,36 @@ YoriLibVtGetDefaultColor()
         }
     }
     return DEFAULT_COLOR;
+}
+
+/**
+ Set the line ending to apply when writing to a file.  Note that this is not
+ a dynamic allocation and will never be freed.  It is a pointer that can
+ point to constant data within any process, which seems sufficient for the
+ very small number of expected values.
+
+ @param LineEnding Pointer to the new line ending string.
+ */
+VOID
+YoriLibVtSetLineEnding(
+    __in LPTSTR LineEnding
+    )
+{
+    YoriLibVtLineEnding = LineEnding;
+}
+
+/**
+ Get the line ending to apply when writing to a file.  Note that this is not
+ a dynamic allocation and will never be freed.  It is a pointer that can
+ point to constant data within any process, which seems sufficient for the
+ very small number of expected values.
+
+ @return The current line ending string.
+ */
+LPTSTR
+YoriLibVtGetLineEnding()
+{
+    return YoriLibVtLineEnding;
 }
 
 /**
@@ -143,7 +181,7 @@ YoriLibOutputTextToMultibyteDevice(
 }
 
 /**
- Convert any incoming string to contain Windows line endings, and pass the
+ Convert any incoming string to contain specified line endings, and pass the
  result for conversion into the active output encoding.
 
  @param hOutput Handle to the device to receive any output.
@@ -156,7 +194,7 @@ YoriLibOutputTextToMultibyteDevice(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibOutputTextToMultibyteCRLF(
+YoriLibOutputTextToMultibyteNormalizeLineEnding(
     __in HANDLE hOutput,
     __in LPCTSTR StringBuffer,
     __in DWORD BufferLength
@@ -199,7 +237,7 @@ YoriLibOutputTextToMultibyteCRLF(
         }
 
         if (GenerateLineEnd) {
-            if (!YoriLibOutputTextToMultibyteDevice(hOutput, _T("\r\n"), 2)) {
+            if (!YoriLibOutputTextToMultibyteDevice(hOutput, YoriLibVtLineEnding, _tcslen(YoriLibVtLineEnding))) {
                 return FALSE;
             }
         }
@@ -587,7 +625,7 @@ YoriLibUtf8TextProcessAndOutputText(
     __in DWORD BufferLength
     )
 {
-    return YoriLibOutputTextToMultibyteCRLF(hOutput, StringBuffer, BufferLength);
+    return YoriLibOutputTextToMultibyteNormalizeLineEnding(hOutput, StringBuffer, BufferLength);
 }
 
 /**

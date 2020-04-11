@@ -2603,6 +2603,14 @@ YoriLibVtSetConsoleTextAttribute(
     );
 
 VOID
+YoriLibVtSetLineEnding(
+    __in LPTSTR LineEnding
+    );
+
+LPTSTR
+YoriLibVtGetLineEnding();
+
+VOID
 YoriLibVtSetDefaultColor(
     __in WORD NewDefaultColor
     );

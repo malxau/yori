@@ -3,7 +3,7 @@
  *
  * Yori shell display help text
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -79,6 +79,7 @@ CHAR strHelpHelpText1[] =
         "DF        Display disk free space\n"
         "DIR       Enumerate the contents of directories in a traditional way\n"
         "DIRENV    Apply environment changes from per-directory scripts\n"
+        "DOS2UNIX  Convert line endings to UNIX (LF) form\n"
         "DU        Display disk space used within a directory tree\n"
         "ECHO      Outputs text\n"
         "ENV       Set environment variables and launch a program\n"
@@ -171,6 +172,7 @@ CHAR strHelpHelpText4[] =
         "TOUCH     Create a file or update its timestamps\n"
         "TRUE      Returns true\n"
         "TYPE      Output the contents of one or more files\n"
+        "UNIX2DOS  Convert line endings to Windows (CRLF) form\n"
         "VER       Outputs the Yori version in a specified format\n"
         "VOL       Outputs volume information in a specified format\n"
         "WAIT      Wait for one background job or all jobs to finish executing\n"

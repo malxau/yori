@@ -3,7 +3,7 @@
  *
  * Yori table of supported builtins for the monolithic build of Yori
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -631,6 +631,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("del"),      _T("yerase $*$")},
     {_T("df"),       _T("ydf $*$")},
     {_T("dir"),      _T("ydir $*$")},
+    {_T("dos2unix"), _T("iconv -u $*$")},
     {_T("du"),       _T("ydu $*$")},
     {_T("echo"),     _T("yecho $*$")},
     {_T("env"),      _T("yenv $*$")},
@@ -673,6 +674,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("title"),    _T("ytitle $*$")},
     {_T("type"),     _T("ytype $*$")},
     {_T("umount"),   _T("ymount -u $*$")},
+    {_T("unix2dos"), _T("iconv -w $*$")},
     {_T("vol"),      _T("yvol $*$")},
     {_T("?"),        _T("yexpr $*$")}
 };
