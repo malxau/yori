@@ -866,6 +866,9 @@ BOOL
 YoriLibLoadCabinetFunctions();
 
 BOOL
+YoriLibLoadCtl3d32Functions();
+
+BOOL
 YoriLibLoadDbgHelpFunctions();
 
 BOOL

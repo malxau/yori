@@ -534,10 +534,14 @@ SetupGetDefaultInstallDir(
     HKEY hKey;
     DWORD SizeNeeded;
     DWORD RegType;
+    DWORD OsVerMajor;
+    DWORD OsVerMinor;
+    DWORD OsBuildNumber;
+
+    hKey = NULL;
 
     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion"), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
-        YoriLibConstantString(InstallDir, _T("C:\\Program Files"));
-        return TRUE;
+        goto ReturnDefault;
     }
 
     if (RegQueryValueEx(hKey, _T("ProgramW6432Dir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
@@ -592,10 +596,32 @@ SetupGetDefaultInstallDir(
         return TRUE;
     }
 
-
 ReturnDefault:
-    YoriLibConstantString(InstallDir, _T("C:\\Program Files") TSETUP_APP_DIR);
-    RegCloseKey(hKey);
+    YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
+    {
+        TCHAR WindowsDirectory[MAX_PATH];
+        DWORD CharsCopied;
+
+        CharsCopied = GetWindowsDirectory(WindowsDirectory, sizeof(WindowsDirectory)/sizeof(WindowsDirectory[0]));
+        if (CharsCopied < 2) {
+            YoriLibSPrintf(WindowsDirectory, _T("C:"));
+        } else {
+            WindowsDirectory[2] = '\0';
+        }
+
+        if (OsVerMajor < 4) {
+            YoriLibYPrintf(InstallDir, _T("%s\\WIN32APP") TSETUP_APP_DIR, WindowsDirectory);
+        } else {
+            YoriLibYPrintf(InstallDir, _T("%s\\Program Files") TSETUP_APP_DIR, WindowsDirectory);
+        }
+
+        if (InstallDir->StartOfString == NULL) {
+            YoriLibConstantString(InstallDir, _T("C:\\Program Files") TSETUP_APP_DIR);
+        }
+    }
+    if (hKey != NULL) {
+        RegCloseKey(hKey);
+    }
     return TRUE;
 }
 
@@ -608,7 +634,7 @@ ReturnDefault:
 
  @param wParam Specifies the first parameter to the window message.
 
- @param lParam Specifeis the second parameter to the window message.
+ @param lParam Specifies the second parameter to the window message.
 
  @return TRUE to indicate the message was successfully processed.
  */
@@ -721,7 +747,7 @@ SetupUiDialogProc(
             CheckDlgButton(hDlg, IDC_TYPICAL, TRUE);
 
             //
-            //  On NT 3.51 try to set the font to something not bold that has
+            //  On NT 3.5x try to set the font to something not bold that has
             //  similar geometry to NT 4.0.  This helps ensure the text fits
             //  within the controls, and it just looks nicer.  Unfortunately
             //  the dialog has already been created by this point, so the size
@@ -784,13 +810,14 @@ SetupUiDialogProc(
                 SendMessage(hDlg, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(TRUE, 0));
 
                 //
-                //  Since we already have an NT 3.51 branch, disable controls
+                //  Since we already have an NT 3.5x branch, disable controls
                 //  that depend on explorer
                 //
 
                 EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_START_SHORTCUT), FALSE);
+                EnableWindow(GetDlgItem(hDlg, IDC_UNINSTALL), FALSE);
             }
 
             return TRUE;
@@ -809,6 +836,9 @@ BOOL
 SetupDisplayUi()
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    DWORD OsVerMajor;
+    DWORD OsVerMinor;
+    DWORD OsBuildNumber;
 
     //
     //  Initialize COM for the benefit of the shell's browse for folder
@@ -824,6 +854,31 @@ SetupDisplayUi()
         if (ScreenInfo.dwCursorPosition.X == 0 && ScreenInfo.dwCursorPosition.Y == 0) {
             FreeConsole();
         }
+    }
+
+    //
+    //  When running on NT 3.5x, attempt to provide a 3D appearence from
+    //  Ctl3D32.dll.  Since this is cosmetic, just continue on failure.
+    //
+
+    YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
+    if (OsVerMajor < 4) {
+        YoriLibLoadCtl3d32Functions();
+        if (DllCtl3d.pCtl3dRegister != NULL && DllCtl3d.pCtl3dAutoSubclass != NULL) {
+            DllCtl3d.pCtl3dRegister(NULL);
+            DllCtl3d.pCtl3dAutoSubclass(NULL);
+        }
+    }
+
+    YoriLibLoadCabinetFunctions();
+    YoriLibLoadWinInetFunctions();
+
+    if (DllCabinet.hDll == NULL || DllWinInet.hDll == NULL) {
+        MessageBox(NULL,
+                   _T("Ysetup requires Cabinet.dll and WinInet.dll.  These are included with Internet Explorer 5 or later.  At a minimum, WinInet.dll from Internet Explorer 3 and Cabinet.dll from Internet Explorer 5 can be copied to the System32 directory to proceed."),
+                   _T("YSetup"),
+                   MB_ICONEXCLAMATION);
+        return TRUE;
     }
 
     DialogBox(NULL, MAKEINTRESOURCE(SETUPDIALOG), NULL, (DLGPROC)SetupUiDialogProc);

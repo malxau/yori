@@ -4,7 +4,7 @@
  * Yori shell header file to define OS things that the compilation environment
  * doesn't support.
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -6197,6 +6197,54 @@ typedef struct _YORI_CABINET_FUNCTIONS {
 
 extern YORI_CABINET_FUNCTIONS DllCabinet;
 
+/**
+ A prototype for the Ctl3dRegister function.
+ */
+typedef
+BOOL WINAPI
+CTL3D_REGISTER(HANDLE);
+
+/**
+ A prototype for a pointer to the Ctl3dRegister function.
+ */
+typedef CTL3D_REGISTER *PCTL3D_REGISTER;
+
+/**
+ A prototype for the Ctl3dAutoSubclass function.
+ */
+typedef
+BOOL WINAPI
+CTL3D_AUTOSUBCLASS(HANDLE);
+
+/**
+ A prototype for a pointer to the Ctl3dAutoSubclass function.
+ */
+typedef CTL3D_AUTOSUBCLASS *PCTL3D_AUTOSUBCLASS;
+
+/**
+ A structure containing optional function pointers to ctl3d.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_CTL3D_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to Ctl3dAutoSubclass.
+     */
+    PCTL3D_AUTOSUBCLASS pCtl3dAutoSubclass;
+
+    /**
+     If it's available on the current system, a pointer to Ctl3dRegister.
+     */
+    PCTL3D_REGISTER pCtl3dRegister;
+
+} YORI_CTL3D_FUNCTIONS, *PYORI_CTL3D_FUNCTIONS;
+
+extern YORI_CTL3D_FUNCTIONS DllCtl3d;
 
 /**
  A prototype for the MiniDumpWriteDump function.
@@ -7272,5 +7320,7 @@ typedef struct _YORI_WTSAPI32_FUNCTIONS {
 } YORI_WTSAPI32_FUNCTIONS, *PYORI_WTSAPI32_FUNCTIONS;
 
 extern YORI_WTSAPI32_FUNCTIONS DllWtsApi32;
+
+
 
 // vim:sw=4:ts=4:et:

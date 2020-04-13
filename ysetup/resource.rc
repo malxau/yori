@@ -19,7 +19,14 @@
 
 CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST "ysetup.manifest"
 
-SETUPDIALOG DIALOGEX 0, 0, 400, 230
+//
+//  NT 3.5 doesn't support DIALOGEX, and DIALOG appears to work correctly
+//  including specifying a different font.  If DIALOGEX is needed for some
+//  reason, we might need a seperate resource to support NT 3.5x.  That
+//  would also remove the need to change fonts at runtime.
+//
+
+SETUPDIALOG DIALOG 0, 0, 400, 230
 STYLE WS_POPUP | WS_CAPTION | DS_MODALFRAME
 CAPTION "Yori setup"
 FONT 8, "MS Sans Serif"

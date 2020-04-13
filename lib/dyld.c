@@ -319,6 +319,36 @@ YoriLibLoadCabinetFunctions()
 }
 
 /**
+ A structure containing pointers to ctl3d32.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_CTL3D_FUNCTIONS DllCtl3d;
+
+/**
+ Load pointers to all optional Ctl3d32.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadCtl3d32Functions()
+{
+
+    if (DllCtl3d.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllCtl3d.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("CTL3D32.DLL"));
+    if (DllCtl3d.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllCtl3d.pCtl3dAutoSubclass = (PCTL3D_AUTOSUBCLASS)GetProcAddress(DllCtl3d.hDll, "Ctl3dAutoSubclass");
+    DllCtl3d.pCtl3dRegister = (PCTL3D_REGISTER)GetProcAddress(DllCtl3d.hDll, "Ctl3dRegister");
+
+    return TRUE;
+}
+
+/**
  A structure containing pointers to dbghelp.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
