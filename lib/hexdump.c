@@ -107,12 +107,11 @@ YoriLibHexByteLine(
             OutputIndex += Subset.LengthInChars;
         } else {
             for (ByteIndex = 0;
-                 OutputIndex < Output->LengthAllocated && ByteIndex < sizeof(WordToDisplay) + 1;
+                 OutputIndex < Output->LengthAllocated && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
                  ByteIndex++) {
 
                 Output->StartOfString[OutputIndex] = ' ';
                 OutputIndex++;
-                ByteIndex++;
             }
         }
 
@@ -203,12 +202,11 @@ YoriLibHexWordLine(
             OutputIndex += Subset.LengthInChars;
         } else {
             for (ByteIndex = 0;
-                 OutputIndex < Output->LengthAllocated && ByteIndex < sizeof(WordToDisplay) + 1;
+                 OutputIndex < Output->LengthAllocated && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
                  ByteIndex++) {
 
                 Output->StartOfString[OutputIndex] = ' ';
                 OutputIndex++;
-                ByteIndex++;
             }
         }
 
@@ -300,12 +298,11 @@ YoriLibHexDwordLine(
             OutputIndex += Subset.LengthInChars;
         } else {
             for (ByteIndex = 0;
-                 OutputIndex < Output->LengthAllocated && ByteIndex < sizeof(WordToDisplay) + 1;
+                 OutputIndex < Output->LengthAllocated && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
                  ByteIndex++) {
 
                 Output->StartOfString[OutputIndex] = ' ';
                 OutputIndex++;
-                ByteIndex++;
             }
         }
 
@@ -400,12 +397,11 @@ YoriLibHexDwordLongLine(
             OutputIndex += Subset.LengthInChars;
         } else {
             for (ByteIndex = 0;
-                 OutputIndex < Output->LengthAllocated && ByteIndex < sizeof(WordToDisplay) + 1;
+                 OutputIndex < Output->LengthAllocated && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
                  ByteIndex++) {
 
                 Output->StartOfString[OutputIndex] = ' ';
                 OutputIndex++;
-                ByteIndex++;
             }
         }
         CurrentBit = CurrentBit >> sizeof(WordToDisplay);
