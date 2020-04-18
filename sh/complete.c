@@ -484,7 +484,11 @@ YoriShPerformExecutableTabCompletion(
         PYORI_LIST_ENTRY ListEntry;
         PYORI_SH_BUILTIN_CALLBACK Callback;
 
-        ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.BuiltinCallbacks, NULL);
+        //
+        //  Scan backwards, ie., oldest to newest.
+        //
+
+        ListEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.BuiltinCallbacks, NULL);
         while (ListEntry != NULL) {
             Callback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_CALLBACK, ListEntry);
             if (YoriLibCompareStringInsensitiveCount(&SearchString, &Callback->BuiltinName, CompareLength) == 0) {
@@ -516,7 +520,7 @@ YoriShPerformExecutableTabCompletion(
 
                 YoriShAddMatchToTabContextAtEnd(TabContext, Match);
             }
-            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.BuiltinCallbacks, ListEntry);
+            ListEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.BuiltinCallbacks, ListEntry);
         }
     }
 }
