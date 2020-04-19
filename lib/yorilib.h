@@ -2123,6 +2123,12 @@ YoriLibHashRemoveByKey(
  */
 #define YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET (0x00000004)
 
+/**
+ If set, output as comma-delimited C include style.  Incompatible with
+ YORI_LIB_HEX_FLAG_DISPLAY_CHARS .
+ */
+#define YORI_LIB_HEX_FLAG_C_STYLE              (0x00000008)
+
 BOOL
 YoriLibHexDump(
     __in LPCSTR Buffer,

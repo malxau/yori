@@ -3,7 +3,7 @@
  *
  * Yori display a large hex buffer
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,81 @@
 
 #include "yoripch.h"
 #include "yorilib.h"
+
+/**
+ Generate a line of up to YORI_LIB_HEXDUMP_BYTES_PER_LINE in of bytes to
+ include into a C file.
+
+ @param Output Pointer to a string to populate with the result.
+
+ @param Buffer Pointer to the start of the buffer.
+
+ @param BytesToDisplay Number of bytes to display, can be equal to or less
+        than YORI_LIB_HEXDUMP_BYTES_PER_LINE.
+
+ @param MoreFollowing If TRUE, the line should be terminated with a comma
+        because more data remains.  If FALSE, this is the final line and
+        it should be terminated with a newline.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibHexByteCStyle(
+    __inout PYORI_STRING Output,
+    __in_ecount(BytesToDisplay) UCHAR CONST * Buffer,
+    __in DWORD BytesToDisplay,
+    __in BOOLEAN MoreFollowing
+    )
+{
+    UCHAR WordToDisplay = 0;
+    DWORD WordIndex;
+    BOOL DisplayWord;
+    DWORD OutputIndex = 0;
+    YORI_STRING Subset;
+
+    if (BytesToDisplay > YORI_LIB_HEXDUMP_BYTES_PER_LINE) {
+        return FALSE;
+    }
+
+    Subset.StartOfString = &Output->StartOfString[OutputIndex];
+    Subset.LengthAllocated = Output->LengthAllocated - OutputIndex;
+    Subset.LengthInChars = YoriLibSPrintfS(Subset.StartOfString,
+                                           Subset.LengthAllocated,
+                                           _T("        "));
+    OutputIndex += Subset.LengthInChars;
+
+    for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE / sizeof(WordToDisplay); WordIndex++) {
+
+        WordToDisplay = 0;
+        DisplayWord = FALSE;
+
+        if (WordIndex * sizeof(WordToDisplay) < BytesToDisplay) {
+            DisplayWord = TRUE;
+            WordToDisplay = (UCHAR)Buffer[WordIndex];
+        }
+
+        if (DisplayWord) {
+            Subset.StartOfString = &Output->StartOfString[OutputIndex];
+            Subset.LengthAllocated = Output->LengthAllocated - OutputIndex;
+
+            if (WordIndex + 1 == BytesToDisplay && !MoreFollowing) {
+                Subset.LengthInChars = YoriLibSPrintfS(Subset.StartOfString,
+                                                       Subset.LengthAllocated,
+                                                       _T("%02x"),
+                                                       WordToDisplay);
+            } else {
+                Subset.LengthInChars = YoriLibSPrintfS(Subset.StartOfString,
+                                                       Subset.LengthAllocated,
+                                                       _T("%02x, "),
+                                                       WordToDisplay);
+            }
+            OutputIndex += Subset.LengthInChars;
+        }
+    }
+    Output->LengthInChars = OutputIndex;
+
+    return TRUE;
+}
 
 /**
  Generate a line of up to YORI_LIB_HEXDUMP_BYTES_PER_LINE in units of one
@@ -451,6 +526,12 @@ YoriLibHexDump(
         return FALSE;
     }
 
+    //
+    //  16 chars per byte: 6 chars to initiate a highlight; 4 to end it; and 4
+    //  is the worst case for the data itself, being two hex digits, a space,
+    //  and a character.
+    //
+
     if (!YoriLibAllocateString(&LineBuffer, 16 * YORI_LIB_HEXDUMP_BYTES_PER_LINE + 32)) {
         return FALSE;
     }
@@ -498,7 +579,13 @@ YoriLibHexDump(
         //  Depending on the requested display format, generate the data.
         //
 
-        if (BytesPerWord == 1) {
+        if (DumpFlags & YORI_LIB_HEX_FLAG_C_STYLE) {
+            if (LineIndex + 1 == LineCount) {
+                YoriLibHexByteCStyle(&Subset, (CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, FALSE);
+            } else {
+                YoriLibHexByteCStyle(&Subset, (CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, TRUE);
+            }
+        } else if (BytesPerWord == 1) {
             YoriLibHexByteLine(&Subset, (CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);
         } else if (BytesPerWord == 2) {
             YoriLibHexWordLine(&Subset, (CONST UCHAR *)&Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE], BytesToDisplay, 0, FALSE);

@@ -1,9 +1,9 @@
 /**
  * @file hexdump/hexdump.c
  *
- * Yori shell display the final lines in a file
+ * Yori shell display a file or files in hexadecimal form
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,7 +37,7 @@ CHAR strHexDumpHelpText[] =
         "\n"
         "Output the contents of one or more files in hex.\n"
         "\n"
-        "HEXDUMP [-license] [-b] [-d] [-g1|-g2|-g4|-g8] [-hc] [-ho]\n"
+        "HEXDUMP [-license] [-b] [-d] [-g1|-g2|-g4|-g8|-i] [-hc] [-ho]\n"
         "        [-l length] [-o offset] [-r] [-s] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
@@ -45,6 +45,7 @@ CHAR strHexDumpHelpText[] =
         "   -g             Number of bytes per display group\n"
         "   -hc            Hide character display\n"
         "   -ho            Hide offset within buffer\n"
+        "   -i             C-style include output\n"
         "   -l             Length of the section to display\n"
         "   -o             Offset within the stream to display\n"
         "   -r             Reverse process hex back into binary\n"
@@ -112,6 +113,11 @@ typedef struct _HEXDUMP_CONTEXT {
      If TRUE, hide the character display within the buffer.
      */
     BOOLEAN HideCharacters;
+
+    /**
+     If TRUE, output with C-style include output.
+     */
+    BOOLEAN CStyleInclude;
 
     /**
      TRUE if file enumeration is being performed recursively; FALSE if it is
@@ -680,6 +686,9 @@ HexDumpProcessStream(
     if (!HexDumpContext->HideCharacters) {
         DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_CHARS;
     }
+    if (HexDumpContext->CStyleInclude) {
+        DisplayFlags |= YORI_LIB_HEX_FLAG_C_STYLE;
+    }
 
     //
     //  If it's a file, start at the offset requested by the user.  If it's
@@ -1239,31 +1248,42 @@ ENTRYPOINT(
                 HexDumpHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 DiffMode = TRUE;
+                HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g1")) == 0) {
                 HexDumpContext.BytesPerGroup = 1;
+                HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g2")) == 0) {
                 HexDumpContext.BytesPerGroup = 2;
+                HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g4")) == 0) {
                 HexDumpContext.BytesPerGroup = 4;
+                HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g8")) == 0) {
                 HexDumpContext.BytesPerGroup = 8;
+                HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("hc")) == 0) {
                 HexDumpContext.HideCharacters = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ho")) == 0) {
                 HexDumpContext.HideOffset = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+                DiffMode = FALSE;
+                HexDumpContext.CStyleInclude = TRUE;
+                HexDumpContext.HideOffset = TRUE;
+                HexDumpContext.HideCharacters = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
@@ -1279,6 +1299,7 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 Reverse = TRUE;
+                HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 HexDumpContext.Recursive = TRUE;
