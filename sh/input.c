@@ -1802,10 +1802,10 @@ YoriShProcessEnhancedKeyDown(
         if (Buffer->HistoryEntryToUse != NULL) {
             NewEntry = YoriLibGetNextListEntry(&YoriShGlobal.CommandHistory, Buffer->HistoryEntryToUse);
         }
+        Buffer->HistoryEntryToUse = NewEntry;
+        YoriShClearInput(Buffer);
         if (NewEntry != NULL) {
-            Buffer->HistoryEntryToUse = NewEntry;
             HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
-            YoriShClearInput(Buffer);
             YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
         }
     } else if (KeyCode == VK_LEFT) {
@@ -2013,6 +2013,7 @@ YoriShProcessKeyDown(
                 YoriLibFreeStringContents(&Buffer->SearchString);
             } else {
                 YoriShClearInput(Buffer);
+                Buffer->HistoryEntryToUse = NULL;
             }
         } else if (Char == '\t') {
             YoriShConfigureConsoleForTabComplete(Buffer);
