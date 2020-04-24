@@ -540,17 +540,26 @@ SetupGetDefaultInstallDir(
 
     hKey = NULL;
 
-    if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion"), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+    YoriLibLoadAdvApi32Functions();
+    if (DllAdvApi32.pRegOpenKeyExW == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL ||
+        DllAdvApi32.pRegCloseKey == NULL) {
+
         goto ReturnDefault;
     }
 
-    if (RegQueryValueEx(hKey, _T("ProgramW6432Dir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
+
+    if (DllAdvApi32.pRegOpenKeyExW(HKEY_LOCAL_MACHINE, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion"), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+        goto ReturnDefault;
+    }
+
+    if (DllAdvApi32.pRegQueryValueExW(hKey, _T("ProgramW6432Dir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
         if (!YoriLibAllocateString(InstallDir, SizeNeeded/sizeof(TCHAR) + sizeof(SETUP_APP_DIR))) {
             goto ReturnDefault;
         }
 
         SizeNeeded = InstallDir->LengthAllocated * sizeof(TCHAR);
-        if (RegQueryValueEx(hKey, _T("ProgramW6432Dir"), NULL, &RegType, (LPBYTE)InstallDir->StartOfString, &SizeNeeded) == ERROR_SUCCESS) {
+        if (DllAdvApi32.pRegQueryValueExW(hKey, _T("ProgramW6432Dir"), NULL, &RegType, (LPBYTE)InstallDir->StartOfString, &SizeNeeded) == ERROR_SUCCESS) {
             if (RegType != REG_SZ && RegType != REG_EXPAND_SZ) {
                 goto ReturnDefault;
             }
@@ -566,17 +575,17 @@ SetupGetDefaultInstallDir(
                 InstallDir->StartOfString[InstallDir->LengthInChars] = '\0';
             }
         }
-        RegCloseKey(hKey);
+        DllAdvApi32.pRegCloseKey(hKey);
         return TRUE;
     }
 
-    if (RegQueryValueEx(hKey, _T("ProgramFilesDir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
+    if (DllAdvApi32.pRegQueryValueExW(hKey, _T("ProgramFilesDir"), NULL, NULL, NULL, &SizeNeeded) == ERROR_SUCCESS) {
         if (!YoriLibAllocateString(InstallDir, SizeNeeded/sizeof(TCHAR) + sizeof("\\Yori"))) {
             goto ReturnDefault;
         }
 
         SizeNeeded = InstallDir->LengthAllocated * sizeof(TCHAR);
-        if (RegQueryValueEx(hKey, _T("ProgramFilesDir"), NULL, &RegType, (LPBYTE)InstallDir->StartOfString, &SizeNeeded) == ERROR_SUCCESS) {
+        if (DllAdvApi32.pRegQueryValueExW(hKey, _T("ProgramFilesDir"), NULL, &RegType, (LPBYTE)InstallDir->StartOfString, &SizeNeeded) == ERROR_SUCCESS) {
             if (RegType != REG_SZ && RegType != REG_EXPAND_SZ) {
                 goto ReturnDefault;
             }
@@ -592,7 +601,7 @@ SetupGetDefaultInstallDir(
                 InstallDir->StartOfString[InstallDir->LengthInChars] = '\0';
             }
         }
-        RegCloseKey(hKey);
+        DllAdvApi32.pRegCloseKey(hKey);
         return TRUE;
     }
 
@@ -620,7 +629,7 @@ ReturnDefault:
         }
     }
     if (hKey != NULL) {
-        RegCloseKey(hKey);
+        DllAdvApi32.pRegCloseKey(hKey);
     }
     return TRUE;
 }

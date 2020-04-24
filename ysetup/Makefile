@@ -9,11 +9,11 @@ CFLAGS=$(CFLAGS) -DYSETUP_VER_MAJOR=$(YSETUP_VER_MAJOR) -DYSETUP_VER_MINOR=$(YSE
 LINKPDB=/Pdb:ysetup.pdb
 !ENDIF
 
-# This currently supports NT 3.51 and up.  For 3.51 it depends on a manually
-# installed WinInet.dll and Cabinet.dll.  But it's okay for this program to
-# import functions on 3.51+ because it has no real chance to run on anything
-# older.
-LIBS=$(LIBS) user32.lib gdi32.lib advapi32.lib
+# This currently supports NT 3.5 and up.  For 3.5x it depends on a manually
+# installed WinInet.dll and Cabinet.dll.  Note that 3.5x will launch anything
+# stamped as version 4.0, and stamping it as 4.0 gives a nicer UI on newer
+# systems.
+LIBS=$(LIBS) gdi32.lib user32.lib
 LDFLAGS_NT4UP=$(LDFLAGS:3.10=4.0)
 
 OBJS=\
