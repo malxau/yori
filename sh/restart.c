@@ -680,7 +680,7 @@ YoriShLoadSavedRestartState(
                         memcpy(ThisEntry.StartOfString, ThisValue, (ValueLength + 1) * sizeof(TCHAR));
                         ThisEntry.LengthInChars = ValueLength;
 
-                        YoriShAddToHistory(&ThisEntry);
+                        YoriShAddToHistory(&ThisEntry, FALSE);
                     }
                 }
             }

@@ -2839,7 +2839,7 @@ YoriShGetExpressionFromConsole(
                 YoriShTerminateInput(&Buffer);
                 ReadConsoleInput(InputHandle, InputRecords, CurrentRecordIndex + 1, &ActuallyRead);
                 if (Buffer.String.LengthInChars > 0) {
-                    YoriShAddToHistory(&Buffer.String);
+                    YoriShAddToHistory(&Buffer.String, TRUE);
                 }
                 memcpy(Expression, &Buffer.String, sizeof(YORI_STRING));
                 return TRUE;

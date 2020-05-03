@@ -53,6 +53,10 @@ BOOL YoriShHistoryInitialized;
 
  @param NewCmd Pointer to a Yori string corresponding to the new
         entry to add to history.
+
+ @param IgnoreIfRepeat If TRUE, don't add a new line if the immediate
+        previous line is identical.  Note it must be exactly identical,
+        including case.  If FALSE, add the new entry regardless.
  
  @return TRUE to indicate an entry was successfully added, FALSE if it was
          not.
@@ -60,7 +64,8 @@ BOOL YoriShHistoryInitialized;
 __success(return)
 BOOL
 YoriShAddToHistory(
-    __in PYORI_STRING NewCmd
+    __in PYORI_STRING NewCmd,
+    __in BOOLEAN IgnoreIfRepeat
     )
 {
     DWORD LengthToAllocate;
@@ -74,6 +79,22 @@ YoriShAddToHistory(
 
     if (WaitForSingleObject(YoriShHistoryLock, 0) == WAIT_OBJECT_0) {
 
+        if (YoriShGlobal.CommandHistory.Next == NULL) {
+            YoriLibInitializeListHead(&YoriShGlobal.CommandHistory);
+        }
+
+        if (IgnoreIfRepeat) {
+            PYORI_LIST_ENTRY ExistingEntry;
+            ExistingEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.CommandHistory, NULL);
+            if (ExistingEntry != NULL) {
+                NewHistoryEntry = CONTAINING_RECORD(ExistingEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
+                if (YoriLibCompareString(&NewHistoryEntry->CmdLine, NewCmd) == 0) {
+                    ReleaseMutex(YoriShHistoryLock);
+                    return FALSE;
+                }
+            }
+        }
+
         NewHistoryEntry = YoriLibMalloc(LengthToAllocate);
         if (NewHistoryEntry == NULL) {
             ReleaseMutex(YoriShHistoryLock);
@@ -81,10 +102,6 @@ YoriShAddToHistory(
         }
 
         YoriLibCloneString(&NewHistoryEntry->CmdLine, NewCmd);
-
-        if (YoriShGlobal.CommandHistory.Next == NULL) {
-            YoriLibInitializeListHead(&YoriShGlobal.CommandHistory);
-        }
 
         YoriLibAppendList(&YoriShGlobal.CommandHistory, &NewHistoryEntry->ListEntry);
         YoriShCommandHistoryCount++;
@@ -297,7 +314,7 @@ YoriShLoadHistoryFromFile()
         //  between lines.  The free below is really just a dereference.
         //
 
-        if (!YoriShAddToHistory(&LineString)) {
+        if (!YoriShAddToHistory(&LineString, FALSE)) {
             break;
         }
 
@@ -499,7 +516,7 @@ YoriShAddToHistoryAndReallocate(
     //  function can unconditionally dereference the string
     //
 
-    if (!YoriShAddToHistory(&NewString)) {
+    if (!YoriShAddToHistory(&NewString, FALSE)) {
         YoriLibFreeStringContents(&NewString);
         return FALSE;
     }

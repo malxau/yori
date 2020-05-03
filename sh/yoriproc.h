@@ -386,7 +386,8 @@ YoriShExecuteExpression(
 __success(return)
 BOOL
 YoriShAddToHistory(
-    __in PYORI_STRING NewCmd
+    __in PYORI_STRING NewCmd,
+    __in BOOLEAN IgnoreIfRepeat
     );
 
 __success(return)
