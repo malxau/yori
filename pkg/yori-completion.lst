@@ -1,5 +1,6 @@
 completion\chdir.ys1
 completion\chdir.com.ys1
+completion\git.exe.ys1
 completion\nice.exe.ys1
 completion\nice.ys1
 completion\pushd.ys1

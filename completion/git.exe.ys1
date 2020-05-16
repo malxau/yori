@@ -1,0 +1,50 @@
+
+SETLOCAL
+
+REM Check if it's an option switch.  Currently this script doesn't know
+REM what to do with those.
+set ARGTOCOMPLETE=%2%
+if strcmp -- %ARGTOCOMPLETE:~0,1%==/; goto complete_option
+if strcmp -- %ARGTOCOMPLETE:~0,1%==-; goto complete_option
+
+REM Check if it's the first argument, and if so complete from known commands
+if intcmp -- %1%==1; goto complete_gitcmd
+
+REM Scan through arguments looking for a command
+:next_arg
+shift
+set GITCMD=%2%
+if strcmp -- %GITCMD%.==.; goto complete_files
+if strcmp -- %GITCMD:~0,1%==/; goto next_arg
+if strcmp -- %GITCMD:~0,1%==-; goto next_arg
+
+REM If the command wants to complete git branches, do that
+if strcmp -i -- %GITCMD%==checkout; goto complete_branch
+if strcmp -i -- %GITCMD%==merge; goto complete_branch
+if strcmp -i -- %GITCMD%==rebase; goto complete_branch
+
+REM By default, assume the command wants to complete files
+goto complete_files
+
+REM List all branches matching the search pattern, and remove the currently
+REM active branch indicator
+:complete_branch
+echo -- /insensitivelist `git branch --color=never --list %ARGTOCOMPLETE%* | repl "* "`
+goto done
+
+:complete_files
+echo -- /files
+goto done
+
+REM Indicate the known subcommands.  This is from 2.17, although arguably not
+REM every supported command should be included
+:complete_gitcmd
+echo -- /insensitivelist add add--interactive am annotate apply archimport archive askpass bisect bisect--helper blame branch bundle cat-file check-attr check-ignore check-mailmap check-ref-format checkout checkout-index cherry cherry-pick citool clean clone column commit commit-tree config count-objects credential credential-manager credential-store credential-wincred cvsexportcommit cvsimport daemon describe diff diff-files diff-index diff-tree difftool difftool--helper fast-export fast-import fetch fetch-pack filter-branch fmt-merge-msg for-each-ref format-patch fsck fsck-objects gc get-tar-commit-id grep gui gui--askpass gui--askyesno gui.tcl hash-object help http-backend http-fetch http-push imap-send index-pack init init-db instaweb interpret-trailers log ls-files ls-remote ls-tree mailinfo mailsplit merge merge-base merge-file merge-index merge-octopus merge-one-file merge-ours merge-recursive merge-resolve merge-subtree merge-tree mergetool mktag mktree mv name-rev notes p4 pack-objects pack-redundant pack-refs patch-id prune prune-packed pull push quiltimport read-tree rebase rebase--helper receive-pack reflog remote remote-ext remote-fd remote-ftp remote-ftps remote-http remote-https repack replace request-pull rerere reset rev-list rev-parse revert rm send-email send-pack sh-i18n--envsubst shortlog show show-branch show-index show-ref stage stash status stripspace submodule submodule--helper subtree svn symbolic-ref tag unpack-file unpack-objects update update-git-for-windows update-index update-ref update-server-info upload-archive upload-pack var verify-commit verify-pack verify-tag web--browse whatchanged worktree write-tree
+goto done
+
+:complete_option
+echo -- /files
+goto done
+
+:done
+ENDLOCAL

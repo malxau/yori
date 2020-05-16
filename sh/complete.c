@@ -1572,8 +1572,9 @@ YoriShResolveTabCompletionStringToAction(
         the search criteria and has its match list populated with results
         on success.
 
- @param Executable Pointer to the executable or builtin command.  Note this
-        is a fully qualified path on entry.
+ @param CmdContext Pointer to the cmd context whose first arg is the
+        executable or builtin command.  Note this is a fully qualified path
+        on entry.  Later args are used to pass to the completion script.
 
  @param CurrentArg Specifies the index of the argument being completed for this
         command.
@@ -1584,7 +1585,7 @@ YoriShResolveTabCompletionStringToAction(
 BOOL
 YoriShResolveTabCompletionActionForExecutable(
     __inout PYORI_SH_TAB_COMPLETE_CONTEXT TabContext,
-    __in PYORI_STRING Executable,
+    __in PYORI_SH_CMD_CONTEXT CmdContext,
     __in DWORD CurrentArg,
     __out PYORI_SH_ARG_TAB_COMPLETION_ACTION Action
     )
@@ -1595,9 +1596,9 @@ YoriShResolveTabCompletionActionForExecutable(
     YORI_STRING FoundCompletionScript;
     YORI_STRING CompletionExpression;
     YORI_STRING ArgToComplete;
+    YORI_STRING FullArgs;
+    PYORI_STRING Executable;
     DWORD FinalSeperator;
-
-    UNREFERENCED_PARAMETER(CurrentArg);
 
     YoriLibInitializeListHead(&Action->List);
 
@@ -1605,6 +1606,7 @@ YoriShResolveTabCompletionActionForExecutable(
     //  Find just the executable name, without any prepending path.
     //
 
+    Executable = &CmdContext->ArgV[0];
     FinalSeperator = YoriShFindFinalSlashIfSpecified(Executable);
 
     YoriLibInitEmptyString(&FilePartOnly);
@@ -1660,6 +1662,20 @@ YoriShResolveTabCompletionActionForExecutable(
     //  If there is one, create an expression and invoke the script.
     //
 
+    YoriLibInitEmptyString(&FullArgs);
+    if (CmdContext->ArgC > 1) {
+        YORI_SH_CMD_CONTEXT NewCmdContext;
+        ZeroMemory(&NewCmdContext, sizeof(NewCmdContext));
+        NewCmdContext.ArgC = CmdContext->ArgC - 1;
+        NewCmdContext.ArgV = &CmdContext->ArgV[1];
+        NewCmdContext.ArgContexts = &CmdContext->ArgContexts[1];
+        FullArgs.StartOfString = YoriShBuildCmdlineFromCmdContext(&NewCmdContext, FALSE, NULL, NULL);
+        if (FullArgs.StartOfString != NULL) {
+            FullArgs.MemoryToFree = FullArgs.StartOfString;
+            FullArgs.LengthInChars = _tcslen(FullArgs.StartOfString);
+        }
+    }
+
     YoriLibInitEmptyString(&ArgToComplete);
     ArgToComplete.StartOfString = TabContext->SearchString.StartOfString;
     ArgToComplete.LengthInChars = TabContext->SearchString.LengthInChars;
@@ -1669,15 +1685,17 @@ YoriShResolveTabCompletionActionForExecutable(
 
         ArgToComplete.LengthInChars--;
     }
-    if (!YoriLibAllocateString(&CompletionExpression, FoundCompletionScript.LengthInChars + 20 + ArgToComplete.LengthInChars)) {
+    if (!YoriLibAllocateString(&CompletionExpression, FoundCompletionScript.LengthInChars + 20 + ArgToComplete.LengthInChars + FullArgs.LengthInChars)) {
 
         YoriLibFreeStringContents(&FoundCompletionScript);
+        YoriLibFreeStringContents(&FullArgs);
         return FALSE;
     }
 
-    CompletionExpression.LengthInChars = YoriLibSPrintf(CompletionExpression.StartOfString, _T("\"%y\" %i %y"), &FoundCompletionScript, CurrentArg, &ArgToComplete);
+    CompletionExpression.LengthInChars = YoriLibSPrintf(CompletionExpression.StartOfString, _T("\"%y\" %i %y %y"), &FoundCompletionScript, CurrentArg, &ArgToComplete, &FullArgs);
 
     YoriLibFreeStringContents(&FoundCompletionScript);
+    YoriLibFreeStringContents(&FullArgs);
 
     if (!YoriShExecuteExpressionAndCaptureOutput(&CompletionExpression, &ActionString)) {
 
@@ -1838,7 +1856,7 @@ YoriShPerformArgumentTabCompletion(
         //  Determine the action to perform for this particular executable.
         //
 
-        if (!YoriShResolveTabCompletionActionForExecutable(TabContext, &CurrentExecContext->CmdToExec.ArgV[0], CurrentExecContextArg, &CompletionAction)) {
+        if (!YoriShResolveTabCompletionActionForExecutable(TabContext, &CurrentExecContext->CmdToExec, CurrentExecContextArg, &CompletionAction)) {
             YoriShFreeExecPlan(&ExecPlan);
             return;
         }
