@@ -289,7 +289,6 @@ YoriShBuckPassToCmd (
     )
 {
     YORI_SH_CMD_CONTEXT OldCmdContext;
-    LPTSTR CmdLine;
     DWORD ExitCode = EXIT_SUCCESS;
     DWORD count;
     va_list marker;
@@ -341,12 +340,10 @@ YoriShBuckPassToCmd (
     }
     va_end(marker);
 
-    CmdLine = YoriShBuildCmdlineFromCmdContext(&OldCmdContext, FALSE, NULL, NULL);
-    if (CmdLine == NULL) {
+    YoriLibInitEmptyString(&ExecContext->CmdToExec.ArgV[ExtraArgCount]);
+    if (!YoriShBuildCmdlineFromCmdContext(&OldCmdContext, &ExecContext->CmdToExec.ArgV[ExtraArgCount], FALSE, NULL, NULL)) {
         ExitCode = EXIT_FAILURE;
     } else {
-        YoriLibConstantString(&ExecContext->CmdToExec.ArgV[ExtraArgCount], CmdLine);
-        ExecContext->CmdToExec.ArgV[ExtraArgCount].MemoryToFree = CmdLine;
         ExecContext->CmdToExec.ArgContexts[ExtraArgCount].Quoted = TRUE;
     }
 
@@ -384,7 +381,7 @@ YoriShExecuteInProc(
     PYORI_SH_CMD_CONTEXT OriginalCmdContext = &ExecContext->CmdToExec;
     PYORI_SH_CMD_CONTEXT SavedEscapedCmdContext;
     YORI_SH_CMD_CONTEXT NoEscapesCmdContext;
-    LPTSTR CmdLine;
+    YORI_STRING CmdLine;
     PYORI_STRING ArgV;
     DWORD ArgC;
     DWORD Count;
@@ -426,14 +423,15 @@ YoriShExecuteInProc(
             YoriLibCheckIfArgNeedsQuotes(&NoEscapesCmdContext.ArgV[Count]) &&
             ArgV == NoEscapesCmdContext.ArgV) {
 
-            CmdLine = YoriShBuildCmdlineFromCmdContext(&NoEscapesCmdContext, TRUE, NULL, NULL);
-            if (CmdLine == NULL) {
+            YoriLibInitEmptyString(&CmdLine);
+            if (!YoriShBuildCmdlineFromCmdContext(&NoEscapesCmdContext, &CmdLine, TRUE, NULL, NULL)) {
                 YoriShFreeCmdContext(&NoEscapesCmdContext);
                 return ERROR_OUTOFMEMORY;
             }
 
-            ArgV = YoriLibCmdlineToArgcArgv(CmdLine, (DWORD)-1, &ArgC);
-            YoriLibDereference(CmdLine);
+            ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+            ArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, &ArgC);
+            YoriLibFreeStringContents(&CmdLine);
 
             if (ArgV == NULL) {
                 YoriShFreeCmdContext(&NoEscapesCmdContext);

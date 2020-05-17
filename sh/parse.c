@@ -701,6 +701,10 @@ YoriShParseCmdlineToCmdContext(
 
  @param CmdContext Pointer to the command context to use to create the string.
 
+ @param CmdLine On input, points to an initialized Yori string.  On output,
+        updated to contain the constructed command line.  Note this string
+        may be reallocated in this routine.
+
  @param RemoveEscapes If TRUE, escape characters should be removed from the
         command line.  This is done immediately before passing the string to
         an external program.  If FALSE, escapes are retained.  This is done
@@ -712,13 +716,13 @@ YoriShParseCmdlineToCmdContext(
  @param EndCurrentArg If non-NULL, will be populated with the offset in
         the string corresponding to the end of the current argument.
 
- @return Pointer to the resulting string, or NULL to indicate allocation
-         failure.  This should be freed with @ref YoriLibDereference.
+ @return TRUE to indicate success, FALSE to indicate allocation failure.
  */
-__success(return != NULL)
-LPTSTR
+__success(return)
+BOOLEAN
 YoriShBuildCmdlineFromCmdContext(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
+    __inout PYORI_STRING CmdLine,
     __in BOOL RemoveEscapes,
     __out_opt PDWORD BeginCurrentArg,
     __out_opt PDWORD EndCurrentArg
@@ -727,7 +731,7 @@ YoriShBuildCmdlineFromCmdContext(
     DWORD count;
     DWORD BufferLength = 0;
     DWORD CmdLineOffset = 0;
-    LPTSTR CmdLine;
+    LPTSTR String;
     PYORI_STRING ThisArg;
     DWORD SrcOffset;
     DWORD DestOffset;
@@ -738,9 +742,10 @@ YoriShBuildCmdlineFromCmdContext(
 
     BufferLength += 2;
 
-    CmdLine = YoriLibReferencedMalloc(BufferLength * sizeof(TCHAR));
-    if (CmdLine == NULL) {
-        return NULL;
+    if (CmdLine->LengthAllocated < BufferLength) {
+        if (!YoriLibReallocateStringWithoutPreservingContents(CmdLine, BufferLength)) {
+            return FALSE;
+        }
     }
 
     if (BeginCurrentArg != NULL) {
@@ -751,13 +756,14 @@ YoriShBuildCmdlineFromCmdContext(
         *EndCurrentArg = 0;
     }
 
-    YoriLibSPrintfS(CmdLine, BufferLength, _T(""));
+    String = CmdLine->StartOfString;
+    String[0] = '\0';
 
     for (count = 0; count < CmdContext->ArgC; count++) {
         ThisArg = &CmdContext->ArgV[count];
 
         if (count != 0) {
-            CmdLine[CmdLineOffset++] = ' ';
+            String[CmdLineOffset++] = ' ';
         }
 
         if (count == CmdContext->CurrentArg && BeginCurrentArg != NULL) {
@@ -765,25 +771,25 @@ YoriShBuildCmdlineFromCmdContext(
         }
 
         if (CmdContext->ArgContexts[count].Quoted) {
-            CmdLine[CmdLineOffset++] = '"';
+            String[CmdLineOffset++] = '"';
         }
 
         for (SrcOffset = DestOffset = 0; SrcOffset < ThisArg->LengthInChars; SrcOffset++, DestOffset++) {
             if (RemoveEscapes && YoriLibIsEscapeChar(ThisArg->StartOfString[SrcOffset])) {
                 SrcOffset++;
                 if (SrcOffset < ThisArg->LengthInChars) {
-                    CmdLine[CmdLineOffset + DestOffset] = ThisArg->StartOfString[SrcOffset];
+                    String[CmdLineOffset + DestOffset] = ThisArg->StartOfString[SrcOffset];
                 } else {
                     break;
                 }
             } else {
-                CmdLine[CmdLineOffset + DestOffset] = ThisArg->StartOfString[SrcOffset];
+                String[CmdLineOffset + DestOffset] = ThisArg->StartOfString[SrcOffset];
             }
         }
         CmdLineOffset += DestOffset;
 
         if (CmdContext->ArgContexts[count].Quoted) {
-            CmdLine[CmdLineOffset++] = '"';
+            String[CmdLineOffset++] = '"';
         }
 
         if (count == CmdContext->CurrentArg && EndCurrentArg != NULL) {
@@ -791,9 +797,10 @@ YoriShBuildCmdlineFromCmdContext(
         }
     }
 
-    CmdLine[CmdLineOffset++] = '\0';
+    String[CmdLineOffset] = '\0';
 
-    return CmdLine;
+    CmdLine->LengthInChars = CmdLineOffset;
+    return TRUE;
 }
 
 /**

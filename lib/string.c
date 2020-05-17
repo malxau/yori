@@ -130,6 +130,44 @@ YoriLibReallocateString(
 }
 
 /**
+ Reallocates memory in a Yori string to hold a specified number of characters,
+ without preserving contents, and deallocate the previous buffer on success.
+
+ @param String Pointer to the string to reallocate.
+
+ @param CharsToAllocate The number of characters to allocate in the string.
+
+ @return TRUE to indicate the allocate was successful, FALSE if it was not.
+ */
+BOOL
+YoriLibReallocateStringWithoutPreservingContents(
+    __inout PYORI_STRING String,
+    __in DWORD CharsToAllocate
+    )
+{
+    LPTSTR NewMemoryToFree;
+
+    if (CharsToAllocate <= String->LengthInChars) {
+        return FALSE;
+    }
+
+    NewMemoryToFree = YoriLibReferencedMalloc(CharsToAllocate * sizeof(TCHAR));
+    if (NewMemoryToFree == NULL) {
+        return FALSE;
+    }
+
+    if (String->MemoryToFree) {
+        YoriLibDereference(String->MemoryToFree);
+    }
+
+    String->MemoryToFree = NewMemoryToFree;
+    String->LengthAllocated = CharsToAllocate;
+    String->StartOfString = String->MemoryToFree;
+    String->LengthInChars = 0;
+    return TRUE;
+}
+
+/**
  Allocate a new buffer to hold a NULL terminated form of the contents of a
  Yori string.  The caller should free this buffer when it is no longer needed
  by calling @ref YoriLibDereference .

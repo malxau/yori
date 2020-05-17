@@ -1669,11 +1669,7 @@ YoriShResolveTabCompletionActionForExecutable(
         NewCmdContext.ArgC = CmdContext->ArgC - 1;
         NewCmdContext.ArgV = &CmdContext->ArgV[1];
         NewCmdContext.ArgContexts = &CmdContext->ArgContexts[1];
-        FullArgs.StartOfString = YoriShBuildCmdlineFromCmdContext(&NewCmdContext, FALSE, NULL, NULL);
-        if (FullArgs.StartOfString != NULL) {
-            FullArgs.MemoryToFree = FullArgs.StartOfString;
-            FullArgs.LengthInChars = _tcslen(FullArgs.StartOfString);
-        }
+        YoriShBuildCmdlineFromCmdContext(&NewCmdContext, &FullArgs, FALSE, NULL, NULL);
     }
 
     YoriLibInitEmptyString(&ArgToComplete);
@@ -2137,7 +2133,6 @@ YoriShCompleteGenerateNewBufferString(
     DWORD BeginCurrentArg;
     DWORD EndCurrentArg;
     YORI_STRING NewString;
-    BOOLEAN FreeNewString = FALSE;
     DWORD CursorOffset;
 
     YoriLibInitEmptyString(&NewString);
@@ -2212,7 +2207,7 @@ YoriShCompleteGenerateNewBufferString(
             }
         }
 
-        NewString.StartOfString = YoriShBuildCmdlineFromCmdContext(CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+        YoriShBuildCmdlineFromCmdContext(CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg);
 
         if (OldArgv != NULL) {
             YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
@@ -2226,10 +2221,7 @@ YoriShCompleteGenerateNewBufferString(
             return;
         }
 
-        NewString.MemoryToFree = NewString.StartOfString;
-        FreeNewString = TRUE;
         Buffer->CurrentOffset = PrefixBeforeBackquoteSubstring->LengthInChars + BeginCurrentArg + CursorOffset;
-        NewString.LengthInChars = _tcslen(NewString.StartOfString);
 
     } else {
         NewString.StartOfString = Match->Value.StartOfString;
@@ -2246,27 +2238,21 @@ YoriShCompleteGenerateNewBufferString(
 
     if (NewString.StartOfString != NULL) {
         if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, PrefixBeforeBackquoteSubstring->LengthInChars + NewString.LengthInChars + SuffixAfterBackquoteSubstring->LengthInChars)) {
-            if (FreeNewString) {
-                YoriLibFreeStringContents(&NewString);
-            }
+            YoriLibFreeStringContents(&NewString);
             return;
         }
 
         if (PrefixBeforeBackquoteSubstring->LengthInChars > 0 &&
             !YoriLibReallocateString(PrefixBeforeBackquoteSubstring, PrefixBeforeBackquoteSubstring->LengthInChars + 1)) {
 
-            if (FreeNewString) {
-                YoriLibFreeStringContents(&NewString);
-            }
+            YoriLibFreeStringContents(&NewString);
             return;
         }
 
         if (SuffixAfterBackquoteSubstring->LengthInChars > 0 &&
             !YoriLibReallocateString(SuffixAfterBackquoteSubstring, SuffixAfterBackquoteSubstring->LengthInChars + 1)) {
 
-            if (FreeNewString) {
-                YoriLibFreeStringContents(&NewString);
-            }
+            YoriLibFreeStringContents(&NewString);
             return;
         }
 
@@ -2276,9 +2262,7 @@ YoriShCompleteGenerateNewBufferString(
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         }
 
-        if (FreeNewString) {
-            YoriLibFreeStringContents(&NewString);
-        }
+        YoriLibFreeStringContents(&NewString);
 
         //
         //  For successful tab completion, redraw everything.  It's rare

@@ -223,10 +223,10 @@ YoriShExpandAliasHelper(
     )
 {
     DWORD CmdIndex;
-    DWORD ArgLength;
 
     if (VariableName->LengthInChars == 1 && VariableName->StartOfString[0] == '*') {
-        LPTSTR CmdLine;
+        YORI_STRING CmdLine;
+        DWORD CmdLineLength;
         YORI_SH_CMD_CONTEXT ArgContext;
 
         ZeroMemory(&ArgContext, sizeof(ArgContext));
@@ -237,14 +237,14 @@ YoriShExpandAliasHelper(
         ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
 
-        CmdLine = YoriShBuildCmdlineFromCmdContext(&ArgContext, FALSE, NULL, NULL);
-        if (CmdLine != NULL) {
-            ArgLength = _tcslen(CmdLine);
-            if (ArgLength < OutputString->LengthAllocated) {
-                YoriLibYPrintf(OutputString, _T("%s"), CmdLine);
+        YoriLibInitEmptyString(&CmdLine);
+        if(YoriShBuildCmdlineFromCmdContext(&ArgContext, &CmdLine, FALSE, NULL, NULL)) {
+            if (CmdLine.LengthInChars < OutputString->LengthAllocated) {
+                YoriLibYPrintf(OutputString, _T("%y"), &CmdLine);
             }
-            YoriLibDereference(CmdLine);
-            return ArgLength;
+            CmdLineLength = CmdLine.LengthInChars;
+            YoriLibFreeStringContents(&CmdLine);
+            return CmdLineLength;
         }
     } else {
         CmdIndex = YoriLibDecimalStringToInt(VariableName);
@@ -326,7 +326,6 @@ YoriShExpandAliasFromString(
     )
 {
     YORI_SH_CMD_CONTEXT CmdContext;
-    LPTSTR NewString;
 
     if (!YoriShParseCmdlineToCmdContext(CommandString, 0, &CmdContext)) {
         return FALSE;
@@ -337,15 +336,13 @@ YoriShExpandAliasFromString(
         return FALSE;
     }
 
-    NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, NULL, NULL);
-    if (NewString == NULL) {
+    YoriLibInitEmptyString(ExpandedString);
+    if (!YoriShBuildCmdlineFromCmdContext(&CmdContext, ExpandedString, FALSE, NULL, NULL)) {
         YoriShFreeCmdContext(&CmdContext);
         return FALSE;
     }
     YoriShFreeCmdContext(&CmdContext);
 
-    YoriLibConstantString(ExpandedString, NewString);
-    ExpandedString->MemoryToFree = NewString;
     return TRUE;
 }
 

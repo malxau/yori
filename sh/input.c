@@ -1148,10 +1148,9 @@ YoriShMoveCursorToPriorArgument(
     )
 {
     YORI_SH_CMD_CONTEXT CmdContext;
-    LPTSTR NewString = NULL;
+    YORI_STRING NewString;
     DWORD BeginCurrentArg = 0;
     DWORD EndCurrentArg = 0;
-    DWORD NewStringLen;
 
     if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
         return;
@@ -1162,6 +1161,7 @@ YoriShMoveCursorToPriorArgument(
         return;
     }
 
+    YoriLibInitEmptyString(&NewString);
     if (CmdContext.CurrentArg > 0) {
 
         //
@@ -1175,14 +1175,12 @@ YoriShMoveCursorToPriorArgument(
         //
 
         if (CmdContext.CurrentArg < CmdContext.ArgC) {
-            NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
-            if (NewString == NULL) {
+            if (!YoriShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
                 YoriShFreeCmdContext(&CmdContext);
                 return;
             }
             if (Buffer->CurrentOffset <= BeginCurrentArg) {
-                YoriLibDereference(NewString);
-                NewString = NULL;
+                YoriLibFreeStringContents(&NewString);
                 CmdContext.CurrentArg--;
             }
         } else {
@@ -1190,21 +1188,22 @@ YoriShMoveCursorToPriorArgument(
         }
     }
 
-    if (NewString == NULL) {
-        NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
+    if (NewString.StartOfString == NULL) {
+        YoriShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg);
     }
 
-    if (NewString != NULL) {
-        NewStringLen = _tcslen(NewString);
-        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewStringLen)) {
+    if (NewString.StartOfString != NULL) {
+        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewString.LengthInChars)) {
+            YoriLibFreeStringContents(&NewString);
+            YoriShFreeCmdContext(&CmdContext);
             return;
         }
-        YoriLibYPrintf(&Buffer->String, _T("%s"), NewString);
+        YoriLibYPrintf(&Buffer->String, _T("%y"), &NewString);
         Buffer->CurrentOffset = BeginCurrentArg;
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         }
-        YoriLibDereference(NewString);
+        YoriLibFreeStringContents(&NewString);
     }
 
     YoriShFreeCmdContext(&CmdContext);
@@ -1224,7 +1223,7 @@ YoriShMoveCursorToNextArgument(
     )
 {
     YORI_SH_CMD_CONTEXT CmdContext;
-    LPTSTR NewString;
+    YORI_STRING NewString;
     DWORD BeginCurrentArg;
     DWORD EndCurrentArg;
     BOOL MoveToEnd = FALSE;
@@ -1244,15 +1243,13 @@ YoriShMoveCursorToNextArgument(
         MoveToEnd = TRUE;
     }
 
-    NewString = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
-
-    if (NewString != NULL) {
-        DWORD NewStringLen;
-        NewStringLen = _tcslen(NewString);
-        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewStringLen)) {
+    YoriLibInitEmptyString(&NewString);
+    if (YoriShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
+        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewString.LengthInChars)) {
+            YoriLibFreeStringContents(&NewString);
             return;
         }
-        YoriLibYPrintf(&Buffer->String, _T("%s"), NewString);
+        YoriLibYPrintf(&Buffer->String, _T("%y"), &NewString);
         if (MoveToEnd) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         } else {
@@ -1261,7 +1258,7 @@ YoriShMoveCursorToNextArgument(
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         }
-        YoriLibDereference(NewString);
+        YoriLibFreeStringContents(&NewString);
     }
 
     YoriShFreeCmdContext(&CmdContext);
@@ -1281,8 +1278,7 @@ YoriShDeleteArgument(
     YORI_SH_CMD_CONTEXT NewCmdContext;
     DWORD SrcArg;
     DWORD DestArg;
-    LPTSTR NewString = NULL;
-    DWORD NewStringLen;
+    YORI_STRING NewString;
     DWORD BeginCurrentArg;
     DWORD EndCurrentArg;
 
@@ -1319,18 +1315,18 @@ YoriShDeleteArgument(
         NewCmdContext.CurrentArg--;
     }
 
-    NewString = YoriShBuildCmdlineFromCmdContext(&NewCmdContext, FALSE, &BeginCurrentArg, &EndCurrentArg);
-    if (NewString != NULL) {
-        NewStringLen = _tcslen(NewString);
-        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewStringLen)) {
+    YoriLibInitEmptyString(&NewString);
+    if (YoriShBuildCmdlineFromCmdContext(&NewCmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
+        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewString.LengthInChars)) {
+            YoriLibFreeStringContents(&NewString);
             return;
         }
-        YoriLibYPrintf(&Buffer->String, _T("%s"), NewString);
+        YoriLibYPrintf(&Buffer->String, _T("%y"), &NewString);
         Buffer->CurrentOffset = EndCurrentArg + 1;
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         }
-        YoriLibDereference(NewString);
+        YoriLibFreeStringContents(&NewString);
 
         Buffer->SuggestionDirty = TRUE;
         YoriLibFreeStringContents(&Buffer->SuggestionString);
@@ -1372,7 +1368,7 @@ YoriShHotkey(
     TCHAR NewStringBuffer[32];
     YORI_STRING NewString;
     YORI_SH_CMD_CONTEXT CmdContext;
-    LPTSTR CmdLine;
+    YORI_STRING CmdLine;
 
     if (CtrlMask & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) {
         return FALSE;
@@ -1404,15 +1400,16 @@ YoriShHotkey(
         return FALSE;
     }
 
-    CmdLine = YoriShBuildCmdlineFromCmdContext(&CmdContext, FALSE, NULL, NULL);
+    YoriLibInitEmptyString(&CmdLine);
+    YoriShBuildCmdlineFromCmdContext(&CmdContext, &CmdLine, FALSE, NULL, NULL);
     YoriShFreeCmdContext(&CmdContext);
-    if (CmdLine == NULL) {
+    if (CmdLine.StartOfString == NULL) {
         return FALSE;
     }
 
     YoriShClearInput(Buffer);
-    YoriShAddCStringToInput(Buffer, CmdLine);
-    YoriLibDereference(CmdLine);
+    YoriShAddYoriStringToInput(Buffer, &CmdLine);
+    YoriLibFreeStringContents(&CmdLine);
     return TRUE;
 }
 

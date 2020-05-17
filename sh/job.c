@@ -82,7 +82,7 @@ typedef struct _YORI_JOB {
     /**
      The full command line that was used to execute the child process.
      */
-    LPTSTR szCmd;
+    YORI_STRING CmdLine;
 
     /**
      Pointer to the process buffers, if buffers exist for this job.
@@ -129,8 +129,7 @@ YoriShCreateNewJob(
 
     ZeroMemory(ThisJob, sizeof(YORI_JOB));
 
-    ThisJob->szCmd = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, TRUE, NULL, NULL);
-    if (ThisJob->szCmd == NULL) {
+    if (!YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &ThisJob->CmdLine, TRUE, NULL, NULL)) {
         YoriLibFree(ThisJob);
         return FALSE;
     }
@@ -153,7 +152,7 @@ YoriShCreateNewJob(
 
     ThisJob->JobState = JobStateExecuting;
 
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i: %s\n"), ThisJob->JobId, ThisJob->szCmd);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i: %y\n"), ThisJob->JobId, &ThisJob->CmdLine);
     YoriLibAppendList(&JobList, &ThisJob->ListEntry);
 
     return TRUE;
@@ -175,7 +174,7 @@ YoriShFreeJob(
         YoriShDereferenceProcessBuffer(ThisJob->ProcessBuffers);
     }
 
-    YoriLibDereference(ThisJob->szCmd);
+    YoriLibFreeStringContents(&ThisJob->CmdLine);
     YoriLibFree(ThisJob);
 }
 
@@ -211,7 +210,7 @@ YoriShScanJobsReportCompletion(
                 GetExitCodeProcess(ThisJob->hProcess, &ThisJob->ExitCode);
                 ThisJob->JobState = JobStateCompletedAwaitingDelete;
                 if (!TeardownAll) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i completed, result %i: %s\n"), ThisJob->JobId, ThisJob->ExitCode, ThisJob->szCmd);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i completed, result %i: %y\n"), ThisJob->JobId, ThisJob->ExitCode, &ThisJob->CmdLine);
                 }
             }
         }
@@ -224,7 +223,7 @@ YoriShScanJobsReportCompletion(
             ThisJob->ScanEncounteredAfterCompleteCount++;
             if (ThisJob->ScanEncounteredAfterCompleteCount >= 16 || TeardownAll) {
                 if (!TeardownAll) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i deleted, result %i: %s\n"), ThisJob->JobId, ThisJob->ExitCode, ThisJob->szCmd);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i deleted, result %i: %y\n"), ThisJob->JobId, ThisJob->ExitCode, &ThisJob->CmdLine);
                 }
                 YoriShFreeJob(ThisJob);
             }
@@ -522,7 +521,7 @@ YoriShGetJobInformation(
             //  NULL just to be polite.
             //
 
-            CmdLength = _tcslen(ThisJob->szCmd) + 1;
+            CmdLength = ThisJob->CmdLine.LengthInChars + 1;
             if (Command->LengthAllocated < CmdLength) {
                 YoriLibFreeStringContents(Command);
                 if (!YoriLibAllocateString(Command, CmdLength)) {
@@ -530,7 +529,7 @@ YoriShGetJobInformation(
                 }
             }
 
-            memcpy(Command->StartOfString, ThisJob->szCmd, CmdLength * sizeof(TCHAR));
+            memcpy(Command->StartOfString, ThisJob->CmdLine.StartOfString, CmdLength * sizeof(TCHAR));
             Command->LengthInChars = CmdLength - 1;
 
             return TRUE;

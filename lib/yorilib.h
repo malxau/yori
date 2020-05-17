@@ -3123,6 +3123,12 @@ YoriLibReallocateString(
     __in DWORD CharsToAllocate
     );
 
+BOOL
+YoriLibReallocateStringWithoutPreservingContents(
+    __inout PYORI_STRING String,
+    __in DWORD CharsToAllocate
+    );
+
 VOID
 YoriLibConstantString(
     __out PYORI_STRING String,

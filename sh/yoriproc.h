@@ -523,10 +523,11 @@ YoriShParseCmdlineToCmdContext(
     __out PYORI_SH_CMD_CONTEXT CmdContext
     );
 
-__success(return != NULL)
-LPTSTR
+__success(return)
+BOOLEAN
 YoriShBuildCmdlineFromCmdContext(
     __in PYORI_SH_CMD_CONTEXT CmdContext,
+    __inout PYORI_STRING CmdLine,
     __in BOOL RemoveEscapes,
     __out_opt PDWORD BeginCurrentArg,
     __out_opt PDWORD EndCurrentArg

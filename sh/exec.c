@@ -631,7 +631,7 @@ YoriShCreateProcess(
     __out_opt PBOOL FailedInRedirection
     )
 {
-    LPTSTR CmdLine;
+    YORI_STRING CmdLine;
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
     YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
@@ -643,10 +643,11 @@ YoriShCreateProcess(
         *FailedInRedirection = FALSE;
     }
 
-    CmdLine = YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
-    if (CmdLine == NULL) {
+    YoriLibInitEmptyString(&CmdLine);
+    if (!YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &CmdLine, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL)) {
         return ERROR_OUTOFMEMORY;
     }
+    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
 
     memset(&StartupInfo, 0, sizeof(StartupInfo));
     StartupInfo.cb = sizeof(StartupInfo);
@@ -663,17 +664,17 @@ YoriShCreateProcess(
 
     LastError = YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
     if (LastError != ERROR_SUCCESS) {
-        YoriLibDereference(CmdLine);
+        YoriLibFreeStringContents(&CmdLine);
         if (FailedInRedirection != NULL) {
             *FailedInRedirection = TRUE;
         }
         return LastError;
     }
 
-    if (!CreateProcess(NULL, CmdLine, NULL, NULL, TRUE, CreationFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CreationFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
         LastError = GetLastError();
         YoriShRevertRedirection(&PreviousRedirectContext);
-        YoriLibDereference(CmdLine);
+        YoriLibFreeStringContents(&CmdLine);
         return LastError;
     } else {
         YoriShRevertRedirection(&PreviousRedirectContext);
@@ -684,7 +685,7 @@ YoriShCreateProcess(
     ExecContext->hPrimaryThread = ProcessInfo.hThread;
     ExecContext->dwProcessId = ProcessInfo.dwProcessId;
 
-    YoriLibDereference(CmdLine);
+    YoriLibFreeStringContents(&CmdLine);
 
     return ERROR_SUCCESS;
 }
@@ -1303,7 +1304,7 @@ YoriShExecViaShellExecute(
     __out PPROCESS_INFORMATION ProcessInfo
     )
 {
-    LPTSTR Args = NULL;
+    YORI_STRING Args;
     YORI_SH_CMD_CONTEXT ArgContext;
     YORI_SHELLEXECUTEINFO sei;
     YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
@@ -1332,24 +1333,23 @@ YoriShExecViaShellExecute(
                 SEE_MASK_NO_CONSOLE;
 
     sei.lpFile = ExecContext->CmdToExec.ArgV[0].StartOfString;
+    YoriLibInitEmptyString(&Args);
     if (ExecContext->CmdToExec.ArgC > 1) {
         memcpy(&ArgContext, &ExecContext->CmdToExec, sizeof(YORI_SH_CMD_CONTEXT));
         ArgContext.ArgC--;
         ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
-        Args = YoriShBuildCmdlineFromCmdContext(&ArgContext, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
+        YoriShBuildCmdlineFromCmdContext(&ArgContext, &Args, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
     }
 
-    sei.lpParameters = Args;
+    sei.lpParameters = Args.StartOfString;
     sei.nShow = SW_SHOWNORMAL;
 
     ZeroMemory(ProcessInfo, sizeof(PROCESS_INFORMATION));
 
     LastError = YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
     if (LastError != ERROR_SUCCESS) {
-        if (Args != NULL) {
-            YoriLibDereference(Args);
-        }
+        YoriLibFreeStringContents(&Args);
         return FALSE;
     }
 
@@ -1386,9 +1386,7 @@ YoriShExecViaShellExecute(
     }
 
     YoriShRevertRedirection(&PreviousRedirectContext);
-    if (Args != NULL) {
-        YoriLibDereference(Args);
-    }
+    YoriLibFreeStringContents(&Args);
 
     if (LastError != ERROR_SUCCESS) {
         LPTSTR ErrText;
