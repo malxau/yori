@@ -19,12 +19,23 @@ if strcmp -- %GITCMD:~0,1%==/; goto next_arg
 if strcmp -- %GITCMD:~0,1%==-; goto next_arg
 
 REM If the command wants to complete git branches, do that
-if strcmp -i -- %GITCMD%==checkout; goto complete_branch
+if strcmp -i -- %GITCMD%==checkout; goto complete_gitcmd_checkout
 if strcmp -i -- %GITCMD%==merge; goto complete_branch
 if strcmp -i -- %GITCMD%==rebase; goto complete_branch
 
 REM By default, assume the command wants to complete files
 goto complete_files
+
+REM For checkout, look for a --.  If one is found, complete files.
+REM If any other non-option argument is found, complete branches.
+:complete_gitcmd_checkout
+shift
+set GITCMD=%2%
+if strcmp -- %GITCMD%.==.; goto complete_branch
+if strcmp -- %GITCMD%==--; goto complete_files
+if strcmp -- %GITCMD:~0,1%==/; goto complete_gitcmd_checkout
+if strcmp -- %GITCMD:~0,1%==-; goto complete_gitcmd_checkout
+goto complete_branch
 
 REM List all branches matching the search pattern, and remove the currently
 REM active branch indicator
