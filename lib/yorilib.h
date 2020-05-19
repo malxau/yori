@@ -2988,6 +2988,19 @@ typedef struct _YORILIB_SELECTION {
      */
     YORILIB_PREVIOUS_SELECTION_BUFFER PreviousBuffer[2];
 
+    /**
+     The number of elements in the TempCharInfoBuffer allocation.
+     */
+    DWORD TempCharInfoBufferSize;
+
+    /**
+     Pointer to a temporary allocation that can be used by
+     YoriLibReadConsoleOutputAttributeForSelection when reading from the
+     console before returning only the attribute components.  This is saved
+     here to avoid repeated reallocations.
+     */
+    PCHAR_INFO TempCharInfoBuffer;
+
 } YORILIB_SELECTION, *PYORILIB_SELECTION;
 
 BOOL

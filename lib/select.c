@@ -218,6 +218,102 @@ YoriLibClearPreviousSelectionDisplay(
 }
 
 /**
+ Windows 10 consoles have a nasty bug where ReadConsoleOutputAttribute
+ doesn't return correct colors when the console has previously displayed
+ colors that are not describable in 16 color form.  ReadConsoleOutput does
+ return the correct value though, so this routine uses that instead and
+ reformats the result to provide the same interface as
+ ReadConsoleOutputAttribute.  This needs a larger allocation though, so any
+ allocation is kept on the Selection in the hope it can be used here for
+ a subsequent operation.
+
+ @param Selection Pointer to the selection which may contain a previous
+        allocation for this routine to use, and may be populated with a new
+        allocation for a later call to this routine.
+
+ @param hConsole Handle to the console output.
+
+ @param lpAttribute Pointer to an array of WORDs that is populated with
+        attributes inside this routine.
+
+ @param nLength The number of console cells and attributes to populate.
+
+ @param dwReadCoord The console buffer coordinates to start reading
+        attributes from.
+
+ @param lpNumberOfAttrsRead On successful completion, updated to contain the
+        number of attributes successfully read.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibReadConsoleOutputAttributeForSelection(
+    __in PYORILIB_SELECTION Selection,
+    __in HANDLE hConsole,
+    __out LPWORD lpAttribute,
+    __in DWORD nLength,
+    __in COORD dwReadCoord,
+    __out LPDWORD lpNumberOfAttrsRead
+    )
+{
+
+    PCHAR_INFO CharInfo;
+    SMALL_RECT ReadRegion;
+    COORD dwBufferSize;
+    COORD dwBufferCoord;
+    DWORD dwIndex;
+    DWORD dwAllocSize;
+
+    if (nLength > Selection->TempCharInfoBufferSize) {
+        dwAllocSize = nLength * 2;
+        if (dwAllocSize < 0x100) {
+            dwAllocSize = 0x100;
+        }
+
+        CharInfo = YoriLibMalloc(dwAllocSize * sizeof(CHAR_INFO));
+        if (CharInfo == NULL) {
+            return FALSE;
+        }
+
+        if (Selection->TempCharInfoBuffer != NULL) {
+            YoriLibFree(Selection->TempCharInfoBuffer);
+        }
+
+        Selection->TempCharInfoBuffer = CharInfo;
+        Selection->TempCharInfoBufferSize = dwAllocSize;
+    }
+
+    CharInfo = Selection->TempCharInfoBuffer;
+
+    dwBufferSize.X = (SHORT)nLength;
+    dwBufferSize.Y = 1;
+    dwBufferCoord.X = 0;
+    dwBufferCoord.Y = 0;
+    ReadRegion.Left = dwReadCoord.X;
+    ReadRegion.Top = dwReadCoord.Y;
+    ReadRegion.Right = (SHORT)(dwReadCoord.X + nLength - 1);
+    ReadRegion.Bottom = dwReadCoord.Y;
+
+    if (!ReadConsoleOutput(hConsole, CharInfo, dwBufferSize, dwBufferCoord, &ReadRegion)) {
+        return FALSE;
+    }
+
+    for (dwIndex = 0; dwIndex < nLength; dwIndex++) {
+        lpAttribute[dwIndex] = CharInfo[dwIndex].Attributes;
+    }
+
+    if (lpNumberOfAttrsRead != NULL) {
+        *lpNumberOfAttrsRead = ReadRegion.Right - ReadRegion.Left + 1;
+    }
+
+    return TRUE;
+
+    //return ReadConsoleOutputAttribute(hConsole, lpAttribute, nLength, dwReadCoord, lpNumberOfAttrsRead);
+}
+
+
+
+/**
  Return the selection color to use.  On Vista and newer systems this is the
  console popup color, which is what quickedit would do.  On older systems it
  is currently hardcoded to Yellow on Blue.
@@ -327,7 +423,7 @@ YoriLibDrawCurrentSelectionDisplay(
         StartPoint.Y = LineIndex;
 
         if (AttributeWritePoint != NULL) {
-            ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
+            YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
             AttributeWritePoint += LineLength;
         }
 
@@ -350,6 +446,9 @@ YoriLibDrawCurrentSelectionDisplay(
  when copying cells from an off screen region, we need to calculate the
  attributes without updating the display.
 
+ @param Selection Pointer to the selection, which is used purely as an
+        allocation cache if temporary scratch space is needed.
+
  @param OldAttributes Pointer to a buffer describing the state of a previously
         selected range of cells.
 
@@ -370,6 +469,7 @@ YoriLibDrawCurrentSelectionDisplay(
  */
 VOID
 YoriLibCreateNewAttributeBufferFromPreviousBuffer(
+    __inout PYORILIB_SELECTION Selection,
     __in PYORILIB_PREVIOUS_SELECTION_BUFFER OldAttributes,
     __in PSMALL_RECT OldRegion,
     __inout PYORILIB_PREVIOUS_SELECTION_BUFFER NewAttributes,
@@ -418,7 +518,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
             StartPoint.Y = LineIndex;
 
             if (AttributeWritePoint != NULL) {
-                ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
+                YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, LineLength, StartPoint, &CharsWritten);
                 AttributeWritePoint += LineLength;
             }
 
@@ -444,7 +544,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
                 }
 
                 if (AttributeWritePoint != NULL) {
-                    ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                    YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
                     AttributeWritePoint += RunLength;
                 }
 
@@ -503,7 +603,7 @@ YoriLibCreateNewAttributeBufferFromPreviousBuffer(
                 StartPoint.Y = LineIndex;
 
                 if (AttributeWritePoint != NULL) {
-                    ReadConsoleOutputAttribute(ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
+                    YoriLibReadConsoleOutputAttributeForSelection(Selection, ConsoleHandle, AttributeWritePoint, RunLength, StartPoint, &CharsWritten);
                     AttributeWritePoint += RunLength;
                 }
 
@@ -639,7 +739,7 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
         Selection->SelectionColorSet = TRUE;
     }
 
-    YoriLibCreateNewAttributeBufferFromPreviousBuffer(OldAttributes, &Selection->PreviouslyDisplayed, NewAttributes, &Selection->CurrentlyDisplayed, TRUE, Selection->SelectionColor);
+    YoriLibCreateNewAttributeBufferFromPreviousBuffer(Selection, OldAttributes, &Selection->PreviouslyDisplayed, NewAttributes, &Selection->CurrentlyDisplayed, TRUE, Selection->SelectionColor);
 
     ASSERT(Selection->CurrentPreviousIndex != NewAttributeIndex);
     Selection->CurrentPreviousIndex = NewAttributeIndex;
@@ -689,6 +789,12 @@ YoriLibCleanupSelection(
             Selection->PreviousBuffer[Index].AttributeArray = NULL;
             Selection->PreviousBuffer[Index].BufferSize = 0;
         }
+    }
+
+    if (Selection->TempCharInfoBuffer != NULL) {
+        YoriLibFree(Selection->TempCharInfoBuffer);
+        Selection->TempCharInfoBuffer = NULL;
+        Selection->TempCharInfoBufferSize = 0;
     }
 }
 
@@ -1246,7 +1352,8 @@ YoriLibCopySelectionIfPresent(
     YoriLibInitEmptyString(&VtText);
     ZeroMemory(&Attributes, sizeof(Attributes));
 
-    YoriLibCreateNewAttributeBufferFromPreviousBuffer(&Selection->PreviousBuffer[Selection->CurrentPreviousIndex],
+    YoriLibCreateNewAttributeBufferFromPreviousBuffer(Selection,
+                                                      &Selection->PreviousBuffer[Selection->CurrentPreviousIndex],
                                                       &Selection->CurrentlyDisplayed,
                                                       &Attributes,
                                                       &Selection->CurrentlySelected,
