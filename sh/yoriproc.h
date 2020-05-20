@@ -433,6 +433,13 @@ YoriShEnsureStringHasEnoughCharacters(
     );
 
 __success(return)
+BOOLEAN
+YoriShReplaceInputBufferTrackDirtyRange(
+    __in PYORI_SH_INPUT_BUFFER Buffer,
+    __in PYORI_STRING NewString
+    );
+
+__success(return)
 BOOL
 YoriShGetExpression(
     __out PYORI_STRING Expression

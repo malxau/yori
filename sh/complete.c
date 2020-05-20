@@ -2231,9 +2231,7 @@ YoriShCompleteGenerateNewBufferString(
 
     //
     //  Assemble the prefix (before backquote start), new string, and
-    //  suffix into the input buffer.  Because the prefix and suffix
-    //  are described within the buffer being written, these need to
-    //  be reallocated and copied out first.
+    //  suffix into the input buffer.
     //
 
     if (NewString.StartOfString != NULL) {
@@ -2242,35 +2240,33 @@ YoriShCompleteGenerateNewBufferString(
             return;
         }
 
-        if (PrefixBeforeBackquoteSubstring->LengthInChars > 0 &&
-            !YoriLibReallocateString(PrefixBeforeBackquoteSubstring, PrefixBeforeBackquoteSubstring->LengthInChars + 1)) {
-
-            YoriLibFreeStringContents(&NewString);
-            return;
-        }
-
-        if (SuffixAfterBackquoteSubstring->LengthInChars > 0 &&
-            !YoriLibReallocateString(SuffixAfterBackquoteSubstring, SuffixAfterBackquoteSubstring->LengthInChars + 1)) {
-
-            YoriLibFreeStringContents(&NewString);
-            return;
-        }
-
         YoriLibFreeStringContents(&Buffer->SuggestionString);
-        YoriLibYPrintf(&Buffer->String, _T("%y%y%y"), PrefixBeforeBackquoteSubstring, &NewString, SuffixAfterBackquoteSubstring);
+
+        // 
+        //  Update the buffer and keep track of what to redraw.  Optimize the
+        //  common case of no backquote strings; if these are present, text
+        //  must be preserved before and after the completed string, which
+        //  requires a seperate allocation since the buffer being written to
+        //  contains the source strings.
+        //
+
+        if (PrefixBeforeBackquoteSubstring->LengthInChars == 0 && SuffixAfterBackquoteSubstring->LengthInChars == 0) {
+            YoriShReplaceInputBufferTrackDirtyRange(Buffer, &NewString);
+        } else {
+            YORI_STRING CombinedNewString;
+            YoriLibInitEmptyString(&CombinedNewString);
+            if (YoriLibAllocateString(&CombinedNewString, PrefixBeforeBackquoteSubstring->LengthInChars + NewString.LengthInChars + SuffixAfterBackquoteSubstring->LengthInChars + 1)) {
+                YoriLibYPrintf(&CombinedNewString, _T("%y%y%y"), PrefixBeforeBackquoteSubstring, &NewString, SuffixAfterBackquoteSubstring);
+                YoriShReplaceInputBufferTrackDirtyRange(Buffer, &CombinedNewString);
+                YoriLibFreeStringContents(&CombinedNewString);
+            }
+        }
+
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         }
 
         YoriLibFreeStringContents(&NewString);
-
-        //
-        //  For successful tab completion, redraw everything.  It's rare
-        //  and plenty of changes are possible.
-        //
-
-        Buffer->DirtyBeginOffset = 0;
-        Buffer->DirtyLength = Buffer->String.LengthInChars;
     }
 }
 

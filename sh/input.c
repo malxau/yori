@@ -1133,6 +1133,74 @@ YoriShAddCStringToInput(
     YoriShAddYoriStringToInput(Buffer, &YoriString);
 }
 
+/**
+ Replace the current input string with a new input string, keeping track of
+ the range of characters that have actually changed.  Any changed characters
+ need to be redrawn, and redrawing identical characters results in a visual
+ flash to the user, which should be avoided to the extent it's possible.
+
+ @param Buffer Pointer to the input buffer containing the current input
+        string.  This may be reallocated within this routine.
+
+ @param NewString Pointer to the new string to replace the current input
+        string with.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriShReplaceInputBufferTrackDirtyRange(
+    __in PYORI_SH_INPUT_BUFFER Buffer,
+    __in PYORI_STRING NewString
+    )
+{
+    DWORD FirstChangedCharOffset;
+    DWORD LastChangedCharOffset;
+    DWORD Index;
+
+    //
+    //  Make sure the destination buffer is large enough.
+    //
+
+    if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewString->LengthInChars)) {
+        return FALSE;
+    }
+
+    //
+    //  Perform a string copy that tracks the highest and lowest offsets
+    //  of any change.
+    //
+
+    FirstChangedCharOffset = (DWORD)-1;
+    LastChangedCharOffset = 0;
+
+    for (Index = 0; Index < NewString->LengthInChars; Index++) {
+        if (Index > Buffer->String.LengthInChars || Buffer->String.StartOfString[Index] != NewString->StartOfString[Index]) {
+            if (Index < FirstChangedCharOffset) {
+                FirstChangedCharOffset = Index;
+            }
+
+            if (Index > LastChangedCharOffset) {
+                LastChangedCharOffset = Index;
+            }
+        }
+        Buffer->String.StartOfString[Index] = NewString->StartOfString[Index];
+    }
+    Buffer->String.LengthInChars = NewString->LengthInChars;
+
+    //
+    //  If any change was found, convert the highest and lowest offsets
+    //  into offset and length.
+    //
+
+    if (FirstChangedCharOffset != (DWORD)-1) {
+        Buffer->DirtyBeginOffset = FirstChangedCharOffset;
+        Buffer->DirtyLength = LastChangedCharOffset - FirstChangedCharOffset + 1;
+    }
+
+    return TRUE;
+}
+
 
 /**
  Move the current cursor offset within the buffer to the argument before the
@@ -1193,12 +1261,11 @@ YoriShMoveCursorToPriorArgument(
     }
 
     if (NewString.StartOfString != NULL) {
-        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewString.LengthInChars)) {
+        if (!YoriShReplaceInputBufferTrackDirtyRange(Buffer, &NewString)) {
             YoriLibFreeStringContents(&NewString);
             YoriShFreeCmdContext(&CmdContext);
             return;
         }
-        YoriLibYPrintf(&Buffer->String, _T("%y"), &NewString);
         Buffer->CurrentOffset = BeginCurrentArg;
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
@@ -1245,11 +1312,11 @@ YoriShMoveCursorToNextArgument(
 
     YoriLibInitEmptyString(&NewString);
     if (YoriShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
-        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewString.LengthInChars)) {
+        if (!YoriShReplaceInputBufferTrackDirtyRange(Buffer, &NewString)) {
+            YoriShFreeCmdContext(&CmdContext);
             YoriLibFreeStringContents(&NewString);
             return;
         }
-        YoriLibYPrintf(&Buffer->String, _T("%y"), &NewString);
         if (MoveToEnd) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
         } else {
@@ -1317,11 +1384,12 @@ YoriShDeleteArgument(
 
     YoriLibInitEmptyString(&NewString);
     if (YoriShBuildCmdlineFromCmdContext(&NewCmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
-        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, NewString.LengthInChars)) {
+        if (!YoriShReplaceInputBufferTrackDirtyRange(Buffer, &NewString)) {
+            YoriShFreeCmdContext(&CmdContext);
+            YoriShFreeCmdContext(&NewCmdContext);
             YoriLibFreeStringContents(&NewString);
             return;
         }
-        YoriLibYPrintf(&Buffer->String, _T("%y"), &NewString);
         Buffer->CurrentOffset = EndCurrentArg + 1;
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
@@ -1331,9 +1399,6 @@ YoriShDeleteArgument(
         Buffer->SuggestionDirty = TRUE;
         YoriLibFreeStringContents(&Buffer->SuggestionString);
         YoriShClearTabCompletionMatches(Buffer);
-
-        Buffer->DirtyBeginOffset = 0;
-        Buffer->DirtyLength = Buffer->String.LengthInChars;
     }
 
     YoriShFreeCmdContext(&CmdContext);
