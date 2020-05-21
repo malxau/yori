@@ -35,8 +35,10 @@ const
 CHAR strPushdHelpText[] =
         "\n"
         "Push the current directory onto a stack and change to a new directory.\n"
+        "If the new directory is unspecified, exchange the current directory\n"
+        "and the top of the stack.\n"
         "\n"
-        "PUSHD [-license] -c|-l|<directory>\n"
+        "PUSHD [-license] -c|-l|[<directory>]\n"
         "\n"
         "   -c             Display the number of directories on the pushd stack\n"
         "   -l             List outstanding directories on the pushd stack\n";
@@ -306,6 +308,8 @@ YoriCmd_PUSHD(
     YORI_STRING Arg;
     BOOL ListStack = FALSE;
     BOOL CountStack = FALSE;
+    PPUSHD_STACK StackLocation;
+    PYORI_LIST_ENTRY ListEntry;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
@@ -355,8 +359,8 @@ YoriCmd_PUSHD(
         return EXIT_FAILURE;
     }
 
-    if (StartArg == 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("pushd: missing argument\n"));
+    if (StartArg == 0 && YoriLibIsListEmpty(&PushdStack)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("pushd: no other directory\n"));
         return EXIT_FAILURE;
     }
 
@@ -371,36 +375,56 @@ YoriCmd_PUSHD(
     NewStackEntry->PreviousDirectory.StartOfString = (LPTSTR)(NewStackEntry + 1);
     NewStackEntry->PreviousDirectory.LengthInChars = GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
 
-    //
-    //  Invoke chdir to actually change directory.  This provides consistent
-    //  path parsing and will handle things like drive switching consistently.
-    //
+    if (StartArg == 0) {
 
-    if (!YoriLibAllocateString(&ChdirCmd, 8 + ArgV[StartArg].LengthInChars + 1)) {
-        YoriLibFree(NewStackEntry);
-        return EXIT_FAILURE;
-    }
+        //
+        //  Exchange the current directory and the current top of the stack.
+        //
 
-    ChdirCmd.LengthInChars = YoriLibSPrintf(ChdirCmd.StartOfString, _T("CHDIR \"%y\""), &ArgV[StartArg]);
-    YoriCallExecuteExpression(&ChdirCmd);
-    YoriLibFreeStringContents(&ChdirCmd);
-
-    if (PushdStack.Next == NULL) {
-        YoriLibInitializeListHead(&PushdStack);
-    }
-    if (PushdStack.Next == &PushdStack) {
-        YORI_STRING PopdCmd;
-        YoriLibConstantString(&PopdCmd, _T("POPD"));
-        if (!YoriCallBuiltinRegister(&PopdCmd, YoriCmd_POPD)) {
+        ListEntry = YoriLibGetPreviousListEntry(&PushdStack, NULL);
+        StackLocation = CONTAINING_RECORD(ListEntry, PUSHD_STACK, StackLinks);
+        if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
             YoriLibFree(NewStackEntry);
             return EXIT_FAILURE;
         }
 
-        YoriCallSetUnloadRoutine(PushdNotifyUnload);
-    }
+        YoriLibRemoveListItem(&StackLocation->StackLinks);
+        YoriLibFree(StackLocation);
+        YoriLibAppendList(&PushdStack, &NewStackEntry->StackLinks);
 
-    YoriLibAppendList(&PushdStack, &NewStackEntry->StackLinks);
-    YoriCallIncrementPromptRecursionDepth();
+    } else {
+
+        //
+        //  Invoke chdir to actually change directory.  This provides consistent
+        //  path parsing and will handle things like drive switching consistently.
+        //
+
+        if (!YoriLibAllocateString(&ChdirCmd, 8 + ArgV[StartArg].LengthInChars + 1)) {
+            YoriLibFree(NewStackEntry);
+            return EXIT_FAILURE;
+        }
+
+        ChdirCmd.LengthInChars = YoriLibSPrintf(ChdirCmd.StartOfString, _T("CHDIR \"%y\""), &ArgV[StartArg]);
+        YoriCallExecuteExpression(&ChdirCmd);
+        YoriLibFreeStringContents(&ChdirCmd);
+
+        if (PushdStack.Next == NULL) {
+            YoriLibInitializeListHead(&PushdStack);
+        }
+        if (PushdStack.Next == &PushdStack) {
+            YORI_STRING PopdCmd;
+            YoriLibConstantString(&PopdCmd, _T("POPD"));
+            if (!YoriCallBuiltinRegister(&PopdCmd, YoriCmd_POPD)) {
+                YoriLibFree(NewStackEntry);
+                return EXIT_FAILURE;
+            }
+
+            YoriCallSetUnloadRoutine(PushdNotifyUnload);
+        }
+
+        YoriLibAppendList(&PushdStack, &NewStackEntry->StackLinks);
+        YoriCallIncrementPromptRecursionDepth();
+    }
 
     return EXIT_SUCCESS;
 }
