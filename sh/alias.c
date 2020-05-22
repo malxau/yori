@@ -295,7 +295,7 @@ YoriShExpandAlias(
     YoriLibInitEmptyString(&NewCmdString);
     YoriLibExpandCommandVariables(&ExistingAlias->Value, '$', TRUE, YoriShExpandAliasHelper, CmdContext, &NewCmdString);
     if (NewCmdString.LengthInChars > 0) {
-        if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, &NewCmdContext) && NewCmdContext.ArgC > 0) {
+        if (YoriShParseCmdlineToCmdContext(&NewCmdString, 0, TRUE, &NewCmdContext) && NewCmdContext.ArgC > 0) {
             YoriShFreeCmdContext(CmdContext);
             memcpy(CmdContext, &NewCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
             YoriLibFreeStringContents(&NewCmdString);
@@ -327,7 +327,7 @@ YoriShExpandAliasFromString(
 {
     YORI_SH_CMD_CONTEXT CmdContext;
 
-    if (!YoriShParseCmdlineToCmdContext(CommandString, 0, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(CommandString, 0, TRUE, &CmdContext)) {
         return FALSE;
     }
 

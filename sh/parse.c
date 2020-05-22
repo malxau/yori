@@ -190,16 +190,24 @@ YoriShTrimSpacesAndAtsFromBeginning(
         to zero if not needed.  The argument that corresponds to this offset
         will be marked in the CmdContext as being the active argument.
 
+ @param ExpandEnvironmentVariables If TRUE, any environment variables within
+        the expression are expanded.  This occurs after parsing and could
+        be a seperate function.  The effect of this is that a single argument
+        may end up expanding into a string with spaces and have quotes
+        inserted where the user didn't enter any.  If FALSE, environment
+        variables are retained as unexpanded symbols.
+
  @param CmdContext A caller allocated CmdContext to populate with arguments.
         This routine will allocate space for the argument array and contents.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
     __in DWORD CurrentOffset,
+    __in BOOLEAN ExpandEnvironmentVariables,
     __out PYORI_SH_CMD_CONTEXT CmdContext
     )
 {
@@ -671,23 +679,25 @@ YoriShParseCmdlineToCmdContext(
     //  Expand any environment variables in any of the arguments.
     //
 
-    for (ArgCount = 0; ArgCount < CmdContext->ArgC; ArgCount++) {
-        YORI_STRING EnvExpandedString;
-        ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
-
-        ArgOffset = 0;
-        if (ArgCount == CmdContext->CurrentArg) {
-            ArgOffset = CmdContext->CurrentArgOffset;
-        }
-        if (YoriShExpandEnvironmentVariables(&CmdContext->ArgV[ArgCount], &EnvExpandedString, &ArgOffset)) {
-            if (EnvExpandedString.StartOfString != CmdContext->ArgV[ArgCount].StartOfString) {
-                if (ArgCount == CmdContext->CurrentArg) {
-                    CmdContext->CurrentArgOffset = ArgOffset;
+    if (ExpandEnvironmentVariables) {
+        for (ArgCount = 0; ArgCount < CmdContext->ArgC; ArgCount++) {
+            YORI_STRING EnvExpandedString;
+            ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
+    
+            ArgOffset = 0;
+            if (ArgCount == CmdContext->CurrentArg) {
+                ArgOffset = CmdContext->CurrentArgOffset;
+            }
+            if (YoriShExpandEnvironmentVariables(&CmdContext->ArgV[ArgCount], &EnvExpandedString, &ArgOffset)) {
+                if (EnvExpandedString.StartOfString != CmdContext->ArgV[ArgCount].StartOfString) {
+                    if (ArgCount == CmdContext->CurrentArg) {
+                        CmdContext->CurrentArgOffset = ArgOffset;
+                    }
+    
+                    YoriLibFreeStringContents(&CmdContext->ArgV[ArgCount]);
+                    memcpy(&CmdContext->ArgV[ArgCount], &EnvExpandedString, sizeof(YORI_STRING));
+                    ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
                 }
-
-                YoriLibFreeStringContents(&CmdContext->ArgV[ArgCount]);
-                memcpy(&CmdContext->ArgV[ArgCount], &EnvExpandedString, sizeof(YORI_STRING));
-                ASSERT(YoriLibIsStringNullTerminated(&CmdContext->ArgV[ArgCount]));
             }
         }
     }

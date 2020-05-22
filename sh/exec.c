@@ -1803,7 +1803,7 @@ YoriShExecuteExpressionAndCaptureOutput(
     //  Parse the expression we're trying to execute.
     //
 
-    if (!YoriShParseCmdlineToCmdContext(Expression, 0, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(Expression, 0, TRUE, &CmdContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         return FALSE;
     }
@@ -2003,7 +2003,7 @@ YoriShExecuteExpression(
     //  Parse the expression we're trying to execute.
     //
 
-    if (!YoriShParseCmdlineToCmdContext(&CurrentFullExpression, 0, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&CurrentFullExpression, 0, TRUE, &CmdContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         YoriLibFreeStringContents(&CurrentFullExpression);
         return FALSE;

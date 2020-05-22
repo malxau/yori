@@ -1220,7 +1220,7 @@ YoriShMoveCursorToPriorArgument(
     DWORD BeginCurrentArg = 0;
     DWORD EndCurrentArg = 0;
 
-    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, FALSE, &CmdContext)) {
         return;
     }
 
@@ -1295,7 +1295,7 @@ YoriShMoveCursorToNextArgument(
     DWORD EndCurrentArg;
     BOOL MoveToEnd = FALSE;
 
-    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, FALSE, &CmdContext)) {
         return;
     }
 
@@ -1349,7 +1349,7 @@ YoriShDeleteArgument(
     DWORD BeginCurrentArg;
     DWORD EndCurrentArg;
 
-    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, FALSE, &CmdContext)) {
         return;
     }
 
@@ -1451,7 +1451,7 @@ YoriShHotkey(
 
     NewString.LengthInChars = YoriLibSPrintf(NewString.StartOfString, _T("%sF%i"), CtrlPressed?_T("Ctrl"):_T(""), FunctionIndex);
 
-    if (!YoriShParseCmdlineToCmdContext(&NewString, 0, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&NewString, 0, TRUE, &CmdContext)) {
         return FALSE;
     }
 

@@ -1490,7 +1490,7 @@ YoriShResolveTabCompletionStringToAction(
 {
     YORI_SH_CMD_CONTEXT CmdContext;
 
-    if (!YoriShParseCmdlineToCmdContext(TabCompletionString, 0, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(TabCompletionString, 0, TRUE, &CmdContext)) {
         return FALSE;
     }
 
@@ -2339,7 +2339,7 @@ YoriShTabCompletion(
 
     ASSERT(Buffer->CurrentOffset >= PrefixBeforeBackquoteSubstring.LengthInChars);
 
-    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, TRUE, &CmdContext)) {
         return FALSE;
     }
 
@@ -2525,7 +2525,7 @@ YoriShPrependParentDirectory(
 
     ASSERT(Buffer->CurrentOffset >= PrefixBeforeBackquoteSubstring.LengthInChars);
 
-    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, TRUE, &CmdContext)) {
         return;
     }
 
@@ -2738,7 +2738,7 @@ YoriShCompleteSuggestion(
         return;
     }
 
-    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
+    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, TRUE, &CmdContext)) {
         return;
     }
 

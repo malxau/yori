@@ -523,10 +523,11 @@ YoriShPreCommand(
 // *** PARSE.C ***
 
 __success(return)
-BOOL
+BOOLEAN
 YoriShParseCmdlineToCmdContext(
     __in PYORI_STRING CmdLine,
     __in DWORD CurrentOffset,
+    __in BOOLEAN ExpandEnvironmentVariables,
     __out PYORI_SH_CMD_CONTEXT CmdContext
     );
 
