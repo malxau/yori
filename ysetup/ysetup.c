@@ -537,6 +537,8 @@ SetupGetDefaultInstallDir(
     DWORD OsVerMajor;
     DWORD OsVerMinor;
     DWORD OsBuildNumber;
+    BOOL IsAdmin;
+    YORI_STRING Administrators;
 
     hKey = NULL;
 
@@ -548,6 +550,30 @@ SetupGetDefaultInstallDir(
         goto ReturnDefault;
     }
 
+    //
+    //  If the OS provides support for querying group membership (Windows
+    //  2000 and above) and the user is not an administrator, default to
+    //  a per user installation location.  Otherwise default to a system
+    //  location.  Note that local app data didn't exist prior to Windows
+    //  2000.
+    //
+
+    YoriLibConstantString(&Administrators, _T("Administrators"));
+    if (YoriLibIsCurrentUserInGroup(&Administrators, &IsAdmin) && !IsAdmin) {
+        YORI_STRING PerUserDir;
+        YoriLibConstantString(&PerUserDir, _T("~LOCALAPPDATA\\Yori"));
+        if (YoriLibUserStringToSingleFilePath(&PerUserDir, FALSE, InstallDir)) {
+            return TRUE;
+        }
+    }
+
+    //
+    //  Query the registry for the location of Program Files.  Because this
+    //  installer will download a 64 bit version for a 64 bit system, it wants
+    //  to find the "native" program files as opposed to the emulated x86 one.
+    //  This registry entry won't exist on 32 bit systems, so it falls back to
+    //  the normal program files after that.
+    //
 
     if (DllAdvApi32.pRegOpenKeyExW(HKEY_LOCAL_MACHINE, _T("SOFTWARE\\Microsoft\\Windows\\CurrentVersion"), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
         goto ReturnDefault;
