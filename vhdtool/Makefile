@@ -17,7 +17,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-vhdtool.exe: $(BIN_OBJS) 
+vhdtool.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(VHDTOOL_VER_MAJOR).$(VHDTOOL_VER_MINOR) $(LINKPDB) -out:$@
 

@@ -21,7 +21,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-cvtvt.exe: $(BIN_OBJS) 
+cvtvt.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CVTVT_VER_MAJOR).$(CVTVT_VER_MINOR) $(LINKPDB) -out:$@
 

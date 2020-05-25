@@ -20,7 +20,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yfor.exe: $(BIN_OBJS) 
+yfor.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(FOR_VER_MAJOR).$(FOR_VER_MINOR) $(LINKPDB) -out:$@
 

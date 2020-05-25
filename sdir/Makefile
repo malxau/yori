@@ -30,7 +30,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-sdir.exe: $(BIN_OBJS)
+sdir.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SDIR_VER_MAJOR).$(SDIR_VER_MINOR) $(LINKPDB) -out:$@
 

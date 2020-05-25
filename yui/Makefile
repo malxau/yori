@@ -23,7 +23,7 @@ YUISHOOK_OBJS=\
 
 compile: $(BIN_OBJS) $(YUISHOOK_OBJS)
 
-yui.exe: $(BIN_OBJS) 
+yui.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
 	@echo $@
 	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(YUI_VER_MAJOR).$(YUI_VER_MINOR) $(LINKPDB) -out:$@
 
