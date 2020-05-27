@@ -1175,7 +1175,7 @@ YoriShReplaceInputBufferTrackDirtyRange(
     LastChangedCharOffset = 0;
 
     for (Index = 0; Index < NewString->LengthInChars; Index++) {
-        if (Index > Buffer->String.LengthInChars || Buffer->String.StartOfString[Index] != NewString->StartOfString[Index]) {
+        if (Index >= Buffer->String.LengthInChars || Buffer->String.StartOfString[Index] != NewString->StartOfString[Index]) {
             if (Index < FirstChangedCharOffset) {
                 FirstChangedCharOffset = Index;
             }
