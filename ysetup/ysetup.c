@@ -413,7 +413,7 @@ SetupInstallSelectedFromDialog(
                 goto Exit;
             }
             ShortcutCount++;
-            if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, NULL, 0, 1, (WORD)-1, TRUE, TRUE)) {
+            if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, &YoriExeFullPath, 0, 1, (WORD)-1, TRUE, TRUE)) {
                 YoriLibFreeStringContents(&YoriExeFullPath);
                 MessageBox(hDlg, _T("Failed to create desktop shortcut."), _T("Installation failed."), MB_ICONSTOP);
                 goto Exit;
@@ -431,7 +431,7 @@ SetupInstallSelectedFromDialog(
                 goto Exit;
             }
             ShortcutCount++;
-            if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, NULL, 0, 1, (WORD)-1, TRUE, TRUE)) {
+            if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, &YoriExeFullPath, 0, 1, (WORD)-1, TRUE, TRUE)) {
                 YoriLibFreeStringContents(&YoriExeFullPath);
                 MessageBox(hDlg, _T("Failed to create start menu shortcut."), _T("Installation failed."), MB_ICONSTOP);
                 goto Exit;
