@@ -59,7 +59,7 @@ typedef struct _YORI_WIN_CTRL_SCROLLBAR {
      A function to invoke when the scroll bar value is changed via any
      mechanism.
      */
-     PYORI_WIN_NOTIFY_BUTTON_CLICK ChangeCallback;
+     PYORI_WIN_NOTIFY ChangeCallback;
 
 } YORI_WIN_CTRL_SCROLLBAR, *PYORI_WIN_CTRL_SCROLLBAR;
 
@@ -110,8 +110,8 @@ YoriWinScrollBarValueCountPerCell(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
-YoriWinPaintScrollBar(
+BOOLEAN
+YoriWinScrollBarPaint(
     __in PYORI_WIN_CTRL_SCROLLBAR ScrollBar
     )
 {
@@ -204,7 +204,7 @@ YoriWinScrollBarEventHandler(
                     if (ScrollBar->ChangeCallback != NULL) {
                         ScrollBar->ChangeCallback(Ctrl);
                     }
-                    YoriWinPaintScrollBar(ScrollBar);
+                    YoriWinScrollBarPaint(ScrollBar);
                 }
             } else if (Event->MouseDown.Location.Y == Ctrl->ClientRect.Bottom) {
                 if (ScrollBar->CurrentValue < ScrollBar->MaximumValue) {
@@ -212,7 +212,7 @@ YoriWinScrollBarEventHandler(
                     if (ScrollBar->ChangeCallback != NULL) {
                         ScrollBar->ChangeCallback(Ctrl);
                     }
-                    YoriWinPaintScrollBar(ScrollBar);
+                    YoriWinScrollBarPaint(ScrollBar);
                 }
             } else {
                 WORD ClientHeight;
@@ -233,7 +233,7 @@ YoriWinScrollBarEventHandler(
                 if (ScrollBar->ChangeCallback != NULL) {
                     ScrollBar->ChangeCallback(Ctrl);
                 }
-                YoriWinPaintScrollBar(ScrollBar);
+                YoriWinScrollBarPaint(ScrollBar);
             }
             break;
         case YoriWinEventMouseUpInClient:
@@ -252,7 +252,7 @@ YoriWinScrollBarEventHandler(
                     if (ScrollBar->ChangeCallback != NULL) {
                         ScrollBar->ChangeCallback(Ctrl);
                     }
-                    YoriWinPaintScrollBar(ScrollBar);
+                    YoriWinScrollBarPaint(ScrollBar);
                 }
             } else if (Event->MouseDown.Location.Y == Ctrl->ClientRect.Bottom) {
                 if (ScrollBar->CurrentValue < ScrollBar->MaximumValue) {
@@ -263,7 +263,7 @@ YoriWinScrollBarEventHandler(
                     if (ScrollBar->ChangeCallback != NULL) {
                         ScrollBar->ChangeCallback(Ctrl);
                     }
-                    YoriWinPaintScrollBar(ScrollBar);
+                    YoriWinScrollBarPaint(ScrollBar);
                 }
             }
             break;
@@ -280,7 +280,7 @@ YoriWinScrollBarEventHandler(
  @return The currently selected value.
  */
 DWORDLONG
-YoriWinGetScrollBarPosition(
+YoriWinScrollBarGetPosition(
     __in PYORI_WIN_CTRL Ctrl
     )
 {
@@ -302,7 +302,7 @@ YoriWinGetScrollBarPosition(
         a fully advanced scroll bar.
  */
 VOID
-YoriWinSetScrollBarPosition(
+YoriWinScrollBarSetPosition(
     __in PYORI_WIN_CTRL Ctrl,
     __in DWORDLONG CurrentValue,
     __in DWORDLONG NumberVisible,
@@ -315,7 +315,36 @@ YoriWinSetScrollBarPosition(
     ScrollBar->CurrentValue = CurrentValue;
     ScrollBar->MaximumValue = MaximumValue;
     ScrollBar->NumberVisible = NumberVisible;
-    YoriWinPaintScrollBar(ScrollBar);
+    YoriWinScrollBarPaint(ScrollBar);
+}
+
+/**
+ Set the size and location of a scroll bar control, and redraw the contents.
+
+ @param CtrlHandle Pointer to the scroll bar to resize or reposition.
+
+ @param CtrlRect Specifies the new size and position of the scroll bar.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinScrollBarReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_SCROLLBAR ScrollBar;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    ScrollBar = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_SCROLLBAR, Ctrl);
+
+    if (!YoriWinControlReposition(Ctrl, CtrlRect)) {
+        return FALSE;
+    }
+
+    YoriWinScrollBarPaint(ScrollBar);
+    return TRUE;
 }
 
 /**
@@ -334,11 +363,11 @@ YoriWinSetScrollBarPosition(
  @return Pointer to the newly created control or NULL on failure.
  */
 PYORI_WIN_CTRL
-YoriWinCreateScrollBar(
+YoriWinScrollBarCreate(
     __in PYORI_WIN_CTRL Parent,
     __in PSMALL_RECT Size,
     __in DWORD Style,
-    __in_opt PYORI_WIN_NOTIFY_BUTTON_CLICK ChangeCallback
+    __in_opt PYORI_WIN_NOTIFY ChangeCallback
     )
 {
     PYORI_WIN_CTRL_SCROLLBAR ScrollBar;
@@ -373,7 +402,7 @@ YoriWinCreateScrollBar(
 
     ScrollBar->MaximumValue = 1;
     ScrollBar->NumberVisible = 1;
-    YoriWinPaintScrollBar(ScrollBar);
+    YoriWinScrollBarPaint(ScrollBar);
 
     return &ScrollBar->Ctrl;
 }

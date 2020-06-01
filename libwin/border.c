@@ -110,7 +110,7 @@ YoriWinBorderGetLightAttributes(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 YoriWinTranslateAttributesAndBorderStyle(
     __in WORD Attributes,
     __in WORD BorderType,
@@ -166,7 +166,7 @@ YoriWinTranslateAttributesAndBorderStyle(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 YoriWinDrawBorderOnControl(
     __inout PYORI_WIN_CTRL Ctrl,
     __in PSMALL_RECT Dimensions,

@@ -45,7 +45,7 @@ CHAR strCoHelpText[] =
 BOOL
 CoHelp()
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Co %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Co %i.%02i\n"), CO_VER_MAJOR, CO_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -174,7 +174,6 @@ CoFreeContext(
     }
 
     CoContext->FilesFoundCount = 0;
-    CoContext->WinMgr = NULL;
 }
 
 /**
@@ -589,8 +588,12 @@ CoChdirButtonClicked(
                 }
                 return;
             }
-            // TODO: Should probably maintain this explicitly rather than
-            // using OS current directory
+
+            //
+            //  MSFIX: Should probably maintain this explicitly rather than
+            //  using OS current directory
+            //
+
             if (!SetCurrentDirectory(FullDir.StartOfString)) {
                 LastError = GetLastError();
                 ErrText = YoriLibGetWinErrorText(LastError);
@@ -798,8 +801,10 @@ CoCopyButtonClicked(
                 break;
             }
 
-            // TODO: Check if dest is current directory.  If so, refresh list
+            //
+            // MSFIX: Check if dest is current directory.  If so, refresh list
             // ListChanged = TRUE;
+            //
         }
     }
 
@@ -858,13 +863,13 @@ CoCreateSynchronousMenu(
     DWORD_PTR Result;
     YORI_STRING SortStrings[CoSortBeyondMaximum];
 
-    if (!YoriWinOpenWindowManager(&WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
         return FALSE;
     }
 
     YoriLibConstantString(&Title, _T("Co"));
 
-    if (!YoriWinCreateWindow(WinMgr, 80, 25, 80, 25, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW, &Title, &Parent)) {
+    if (!YoriWinCreateWindow(WinMgr, 80, 25, 80, 25, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Title, &Parent)) {
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
@@ -876,7 +881,7 @@ CoCreateSynchronousMenu(
     ListRect.Right = (SHORT)(WindowSize.X - 3 - CO_BUTTON_WIDTH - 1 - 1);
     ListRect.Bottom = (SHORT)(WindowSize.Y - 1);
 
-    List = YoriWinCreateList(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_MULTISELECT);
+    List = YoriWinListCreate(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_MULTISELECT);
     if (List == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -893,7 +898,7 @@ CoCreateSynchronousMenu(
     ButtonArea.Left = (SHORT)(WindowSize.X - 2 - CO_BUTTON_WIDTH - 1);
     ButtonArea.Right = (WORD)(ButtonArea.Left + 1 + CO_BUTTON_WIDTH);
 
-    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, CoExitButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, CoExitButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -904,7 +909,7 @@ CoCreateSynchronousMenu(
     ButtonArea.Bottom += 4;
 
     YoriLibConstantString(&Caption, _T("C&hange Dir"));
-    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, CoChdirButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, CoChdirButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -915,7 +920,7 @@ CoCreateSynchronousMenu(
     ButtonArea.Bottom += 3;
 
     YoriLibConstantString(&Caption, _T("&Delete"));
-    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, 0, CoDeleteButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, 0, CoDeleteButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -926,7 +931,7 @@ CoCreateSynchronousMenu(
     ButtonArea.Bottom += 3;
 
     YoriLibConstantString(&Caption, _T("&Move"));
-    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, 0, CoMoveButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, 0, CoMoveButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -937,7 +942,7 @@ CoCreateSynchronousMenu(
     ButtonArea.Bottom += 3;
 
     YoriLibConstantString(&Caption, _T("&Copy"));
-    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, 0, CoCopyButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, 0, CoCopyButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -948,7 +953,7 @@ CoCreateSynchronousMenu(
     ButtonArea.Bottom = ButtonArea.Top;
 
     YoriLibConstantString(&Caption, _T(""));
-    Ctrl = YoriWinCreateCombo(Parent, &ButtonArea, CoSortBeyondMaximum, &Caption, 0, CoSortSelected);
+    Ctrl = YoriWinComboCreate(Parent, &ButtonArea, CoSortBeyondMaximum, &Caption, 0, CoSortSelected);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -972,6 +977,7 @@ CoCreateSynchronousMenu(
         CoFreeContext(&CoContext);
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
+        CoContext.WinMgr = NULL;
         return FALSE;
 
     }
@@ -982,6 +988,7 @@ CoCreateSynchronousMenu(
 
     YoriWinDestroyWindow(Parent);
     YoriWinCloseWindowManager(WinMgr);
+    CoContext.WinMgr = NULL;
     return (BOOL)Result;
 }
 
@@ -999,7 +1006,7 @@ CoCreateSynchronousMenu(
 
 
 /**
- Display yori shell command history.
+ Display yori shell simple file manager.
 
  @param ArgC The number of arguments.
 
@@ -1017,9 +1024,6 @@ ENTRYPOINT(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
-
-    YoriLibLoadNtDllFunctions();
-    YoriLibLoadKernel32Functions();
 
     for (i = 1; i < ArgC; i++) {
 

@@ -3,7 +3,7 @@
  *
  * Yori window combo control
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -53,7 +53,7 @@ typedef struct _YORI_WIN_CTRL_COMBO {
     /**
      A function to invoke when the item is changed via any mechanism.
      */
-    PYORI_WIN_NOTIFY_BUTTON_CLICK ClickCallback;
+    PYORI_WIN_NOTIFY ClickCallback;
 
     /**
      The index within ItemArray of the array element that is currently
@@ -85,7 +85,7 @@ typedef struct _YORI_WIN_CTRL_COMBO {
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriWinComboGetActiveOption(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PDWORD CurrentlyActiveIndex
@@ -112,7 +112,7 @@ YoriWinComboGetActiveOption(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriWinComboSetActiveOption(
     __inout PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in DWORD ActiveOption
@@ -166,7 +166,8 @@ YoriWinComboChildEvent(
         case YoriWinEventKeyDown:
             if (Event->KeyDown.VirtualKeyCode == VK_ESCAPE) {
                 YoriWinCloseWindow(Window, 0);
-            } else if (Event->KeyDown.VirtualKeyCode == VK_RETURN) {
+            } else if (Event->KeyDown.VirtualKeyCode == VK_RETURN ||
+                       Event->KeyDown.VirtualKeyCode == VK_TAB) {
                 if (YoriWinListGetActiveOption(ListCtrl, &ActiveIndex)) {
                     YoriWinCloseWindow(Window, ActiveIndex + 1);
                 }
@@ -229,7 +230,7 @@ YoriWinComboDisplayPullDown(
     ListRect.Top = 0;
     ListRect.Right = (SHORT)(ChildRect.Right - ChildRect.Left);
     ListRect.Bottom = (SHORT)(ChildRect.Bottom - ChildRect.Top);
-    List = YoriWinCreateList(ComboChildWindow, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR);
+    List = YoriWinListCreate(ComboChildWindow, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR);
     if (List == NULL) {
         YoriWinDestroyWindow(ComboChildWindow);
         return FALSE;
@@ -330,7 +331,7 @@ YoriWinComboEventHandler(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriWinComboAddItems(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PYORI_STRING ListOptions,
@@ -347,6 +348,36 @@ YoriWinComboAddItems(
         return FALSE;
     }
 
+    return TRUE;
+}
+
+/**
+ Set the size and location of a combo control, and redraw the contents.
+
+ @param CtrlHandle Pointer to the combo to resize or reposition.
+
+ @param CtrlRect Specifies the new size and position of the combo.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinComboReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_COMBO Combo;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Combo = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_COMBO, Ctrl);
+
+    if (!YoriWinControlReposition(Ctrl, CtrlRect)) {
+        return FALSE;
+    }
+
+    YoriWinSetControlNonClientCell(&Combo->Ctrl, (SHORT)(Combo->Ctrl.ClientRect.Right + 1), 0, 0x2193, Combo->Ctrl.DefaultAttributes);
+    YoriWinEditReposition(Combo->Edit, &Combo->Ctrl.ClientRect);
     return TRUE;
 }
 
@@ -374,13 +405,13 @@ YoriWinComboAddItems(
  @return Pointer to the newly created control or NULL on failure.
  */
 PYORI_WIN_CTRL_HANDLE
-YoriWinCreateCombo(
+YoriWinComboCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
     __in PSMALL_RECT Size,
     __in WORD LinesInList,
     __in PYORI_STRING Caption,
     __in DWORD Style,
-    __in_opt PYORI_WIN_NOTIFY_BUTTON_CLICK ClickCallback
+    __in_opt PYORI_WIN_NOTIFY ClickCallback
     )
 {
     PYORI_WIN_CTRL_COMBO Combo;
@@ -409,7 +440,7 @@ YoriWinCreateCombo(
 
     Combo->Ctrl.ClientRect.Right--;
 
-    Combo->Edit = YoriWinCreateEdit(&Combo->Ctrl, &Combo->Ctrl.ClientRect, Caption, YORI_WIN_EDIT_STYLE_READ_ONLY);
+    Combo->Edit = YoriWinEditCreate(&Combo->Ctrl, &Combo->Ctrl.ClientRect, Caption, YORI_WIN_EDIT_STYLE_READ_ONLY);
     if (Combo->Edit == NULL) {
         YoriWinDestroyControl(&Combo->Ctrl);
         YoriLibDereference(Combo);

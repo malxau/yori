@@ -77,6 +77,7 @@ DIRS=crt       \
      dir       \
      du        \
      echo      \
+     edit      \
      env       \
      erase     \
      err       \

@@ -140,7 +140,7 @@ ENTRYPOINT(
     BOOLEAN ArgParsed = FALSE;
     BOOLEAN StripEscapes = FALSE;
 
-    BOOL LineTerminated;
+    YORI_LIB_LINE_ENDING LineEnding;
     BOOL TimeoutReached;
 
     CvtvtHtml4SetFunctions(&Callbacks);
@@ -359,7 +359,7 @@ ENTRYPOINT(
 
     Result = TRUE;
     
-    while (YoriLibReadLineToStringEx(&LineString, &LineReadContext, TRUE, 100, hSource, &LineTerminated, &TimeoutReached) || TimeoutReached) {
+    while (YoriLibReadLineToStringEx(&LineString, &LineReadContext, TRUE, 100, hSource, &LineEnding, &TimeoutReached) || TimeoutReached) {
 
         //
         //  Start producing HTML
@@ -383,7 +383,7 @@ ENTRYPOINT(
 
         }
 
-        if (LineTerminated) {
+        if (LineEnding != YoriLibLineEndingNone) {
             if (!YoriLibProcessVtEscapesOnOpenStream(_T("\n"),
                                                      1,
                                                      hOutput,

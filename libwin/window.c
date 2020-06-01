@@ -3,7 +3,7 @@
  *
  * Yori display an overlapping window
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -69,6 +69,24 @@ typedef struct _YORI_WIN_WINDOW {
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     /**
+     The entry for this window in the stack of windows processing events in
+     the window manager.
+     */
+    YORI_LIST_ENTRY TopLevelWindowListEntry;
+
+    /**
+     When SavedCursorInfoPresent is TRUE, this contains the state of the
+     cursor when the window was launched.
+     */
+    CONSOLE_CURSOR_INFO SavedCursorInfo;
+
+    /**
+     When SavedCursorInfoPresent is TRUE, this contains the position of the
+     cursor when the window was launched.
+     */
+    COORD SavedCursorPosition;
+
+    /**
      An array of cells describing the contents of the buffer before the popup
      was drawn, which will be restored when it terminates
      */
@@ -100,6 +118,12 @@ typedef struct _YORI_WIN_WINDOW {
     struct _YORI_WIN_CTRL *GeneralCancelCtrl;
 
     /**
+     Optionally points to a callback function to invoke if the window
+     manager is resized.
+     */
+    PYORI_WIN_NOTIFY_WINDOW_MANAGER_RESIZE WindowManagerResizeNotifyCallback;
+
+    /**
      An array of callbacks that can be invoked when particular events occur
      in the window, which were not processed by any control on the window.
      */
@@ -111,11 +135,26 @@ typedef struct _YORI_WIN_WINDOW {
     COORD WindowSize;
 
     /**
+     The location of the cursor relative to the window's nonclient area.
+     */
+    COORD CursorPosition;
+
+    /**
      The dimensions within the window buffer that have changed and need to
      be redrawn on the next call to redraw.  Note these are relative to the
      window's rectangle, not its client area.
      */
     SMALL_RECT DirtyRect;
+
+    /**
+     The title to display on the window.
+     */
+    YORI_STRING Title;
+
+    /**
+     Style flags for the window.
+     */
+    DWORD Style;
 
     /**
      Set to TRUE to indicate that YoriWinCloseWindow has been called so that
@@ -159,6 +198,26 @@ typedef struct _YORI_WIN_WINDOW {
     BOOLEAN AcceleratorsDisplayed;
 
     /**
+     If TRUE, accelerators should be invoked whether the Alt key is pressed
+     or not.  This is used on simple dialogs where text entry is not needed.
+     */
+    BOOLEAN EnableNonAltAccelerators;
+
+    /**
+     If TRUE, the window is not visible on the screen and display updates
+     should be buffered without being displayed.  If FALSE, the window is
+     visible and the display will be updated on request.
+     */
+    BOOLEAN Hidden;
+
+    /**
+     If TRUE, SavedCursorInfo contains state about the cursor when the window
+     was launched.  This can be restored when the window is destroyed.
+     If FALSE, cursor info could not be populated and should not be restored.
+     */
+    BOOLEAN SavedCursorInfoPresent;
+
+    /**
      Application specific context that is passed from YoriWinCloseWindow to
      the code which executes once the window has been closed.
      */
@@ -168,7 +227,7 @@ typedef struct _YORI_WIN_WINDOW {
 
 BOOLEAN
 YoriWinNotifyEvent(
-    __in PYORI_WIN_WINDOW Window,
+    __in PYORI_WIN_CTRL WindowCtrl,
     __in PYORI_WIN_EVENT Event
     );
 
@@ -195,15 +254,17 @@ YoriWinGetWindowManagerHandle(
  pointer into a window pointer.  Note this is really doing nothing - the two
  values are the same.
 
- @param Ctrl Pointer to the control.
+ @param CtrlHandle Pointer to the control.
 
  @return Pointer to the window.
  */
-PYORI_WIN_WINDOW
+PYORI_WIN_WINDOW_HANDLE
 YoriWinGetWindowFromWindowCtrl(
-    __in PYORI_WIN_CTRL Ctrl
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     )
 {
+    PYORI_WIN_CTRL Ctrl;
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     ASSERT(Ctrl->Parent == NULL);
     return CONTAINING_RECORD(Ctrl, YORI_WIN_WINDOW, Ctrl);
 }
@@ -211,19 +272,19 @@ YoriWinGetWindowFromWindowCtrl(
 /**
  Return the control corresponding to a top level window.
 
- @param Window Pointer to the window.
+ @param WindowHandle Pointer to the window.
 
  @return Pointer to the control.
  */
-PYORI_WIN_CTRL
+PYORI_WIN_CTRL_HANDLE
 YoriWinGetCtrlFromWindow(
-    __in PYORI_WIN_WINDOW Window
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
     )
 {
+    PYORI_WIN_WINDOW Window;
+    Window = (PYORI_WIN_WINDOW)WindowHandle;
     return &Window->Ctrl;
 }
-
-
 
 /**
  Return the total size (client and non client area) of the popup window.
@@ -276,7 +337,7 @@ YoriWinGetClientSize(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 YoriWinSetCursorState(
     __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
     __in BOOL Visible,
@@ -292,7 +353,11 @@ YoriWinSetCursorState(
     CursorInfo.dwSize = SizePercentage;
 
     hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
-    return SetConsoleCursorInfo(hConOut, &CursorInfo);
+    if (!SetConsoleCursorInfo(hConOut, &CursorInfo)) {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 /**
@@ -316,6 +381,9 @@ YoriWinSetCursorPosition(
     COORD NewPos;
     HANDLE hConOut;
 
+    Window->CursorPosition.X = NewX;
+    Window->CursorPosition.Y = NewY;
+
     NewPos.X = (WORD)(NewX + Window->Ctrl.FullRect.Left);
     NewPos.Y = (WORD)(NewY + Window->Ctrl.FullRect.Top);
 
@@ -323,6 +391,25 @@ YoriWinSetCursorPosition(
     SetConsoleCursorPosition(hConOut, NewPos);
 }
 
+/**
+ Determine if the window should require the Alt key to invoke accelerators.
+ If EnableNonAltAccelerators is TRUE, accelerators should be invoked whether
+ the Alt key is pressed or not.  This is used on simple dialogs where text
+ entry is not needed.  By default, EnableNonAltAccelerators is FALSE.
+
+ @param WindowHandle Pointer to the window to configure behavior for.
+
+ @param EnableNonAltAccelerators The new accelerator behavior to use.
+ */
+VOID
+YoriWinEnableNonAltAccelerators(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
+    __in BOOLEAN EnableNonAltAccelerators
+    )
+{
+    PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
+    Window->EnableNonAltAccelerators = EnableNonAltAccelerators;
+}
 
 /**
  Update a specified cell within a window.
@@ -347,7 +434,13 @@ YoriWinSetWindowCell(
     )
 {
     PCHAR_INFO Cell;
+    if (Y >= Window->WindowSize.Y || X >= Window->WindowSize.X) {
+        return;
+    }
     Cell = &Window->Contents[Y * Window->WindowSize.X + X];
+    if (Cell->Char.UnicodeChar == Char && Cell->Attributes == Attr) {
+        return;
+    }
     Cell->Char.UnicodeChar = Char;
     Cell->Attributes = Attr;
 
@@ -407,23 +500,27 @@ YoriWinSetWindowClientCell(
                          Attr);
 }
 
+
 /**
  Display the window buffer into the console.
 
- @param Window Pointer to the window to display.
+ @param WindowHandle Pointer to the window to display.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 YoriWinDisplayWindowContents(
-    __in PYORI_WIN_WINDOW Window
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
     )
 {
+    PYORI_WIN_WINDOW Window;
     COORD BufferPosition;
     SMALL_RECT RedrawWindow;
     HANDLE hConOut;
 
-    if (!Window->Dirty) {
+    Window = (PYORI_WIN_WINDOW)WindowHandle;
+
+    if (!Window->Dirty || Window->Hidden) {
         return TRUE;
     }
 
@@ -467,7 +564,9 @@ YoriWinInvokeAccelerator(
     PYORI_LIST_ENTRY ListEntry;
     PYORI_WIN_CTRL Ctrl;
     YORI_WIN_EVENT CtrlEvent;
+    TCHAR UpcaseChar;
 
+    UpcaseChar = YoriLibUpcaseChar(Char);
 
     ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, NULL);
     while (ListEntry != NULL) {
@@ -481,27 +580,125 @@ YoriWinInvokeAccelerator(
         Ctrl = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL, ParentControlList);
         ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, ListEntry);
 
-        if (Ctrl->NotifyEventFn != NULL &&
-            Ctrl->AcceleratorChar &&
-            YoriLibUpcaseChar(Ctrl->AcceleratorChar) == YoriLibUpcaseChar(Char)) {
+        if (Ctrl->NotifyEventFn != NULL) {
+            if (Ctrl->AcceleratorChar &&
+                YoriLibUpcaseChar(Ctrl->AcceleratorChar) == UpcaseChar) {
 
-            while (!Ctrl->CanReceiveFocus) {
-                if (ListEntry == NULL) {
-                    return FALSE;
+                // 
+                //  Labels are special in that they support accelerators but
+                //  the intention is to activate the next control
+                //
+
+                while (!Ctrl->CanReceiveFocus) {
+                    if (ListEntry == NULL) {
+                        return FALSE;
+                    }
+
+                    Ctrl = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL, ParentControlList);
+                    ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, ListEntry);
                 }
 
-                Ctrl = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL, ParentControlList);
-                ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, ListEntry);
+                ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
+                CtrlEvent.EventType = YoriWinEventExecute;
+
+                return Ctrl->NotifyEventFn(Ctrl, &CtrlEvent);
             }
+        }
+    }
+
+    //
+    //  If the correct control hasn't been found, go through them all
+    //  again with a different notification to see if any control wants to
+    //  handle it
+    //
+
+    ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, NULL);
+    while (ListEntry != NULL) {
+
+        //
+        //  Take the current control in the list and find the next list
+        //  element in case the current control attempts to kill itself
+        //  during notification
+        //
+
+        Ctrl = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL, ParentControlList);
+        ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, ListEntry);
+
+        if (Ctrl->NotifyEventFn != NULL) {
 
             ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
-            CtrlEvent.EventType = YoriWinEventExecute;
+            CtrlEvent.EventType = YoriWinEventAccelerator;
+            CtrlEvent.Accelerator.Char = UpcaseChar;
 
-            return Ctrl->NotifyEventFn(Ctrl, &CtrlEvent);
+            if (Ctrl->NotifyEventFn(Ctrl, &CtrlEvent)) {
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
+/**
+ Save the current state of the cursor.  This is done when the window is
+ created so it can be restored when the window is destroyed.
+
+ @param WindowHandle Pointer to the window.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinSaveCursorState(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    )
+{
+    PYORI_WIN_WINDOW Window;
+    HANDLE hConOut;
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+
+    Window = (PYORI_WIN_WINDOW)WindowHandle;
+    hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
+
+    if (GetConsoleCursorInfo(hConOut, &Window->SavedCursorInfo)) {
+        if (GetConsoleScreenBufferInfo(hConOut, &ScreenInfo)) {
+            Window->SavedCursorPosition = ScreenInfo.dwCursorPosition;
+            Window->SavedCursorInfoPresent = TRUE;
+            return TRUE;
         }
     }
 
     return FALSE;
+}
+
+
+/**
+ Redisplay the saved buffer of cells underneath the window, effectively
+ making the window invisible.
+
+ @param Window Pointer to the window to display the saved buffer for.
+ */
+VOID
+YoriWinRestoreSavedWindowContents(
+    __in PYORI_WIN_WINDOW Window
+    )
+{
+    COORD BufferPosition;
+    HANDLE hConOut;
+    SMALL_RECT WriteRect;
+
+    //
+    //  Restore saved contents
+    //
+
+    BufferPosition.X = 0;
+    BufferPosition.Y = 0;
+
+    WriteRect.Left = Window->Ctrl.FullRect.Left;
+    WriteRect.Top = Window->Ctrl.FullRect.Top;
+    WriteRect.Right = Window->Ctrl.FullRect.Right;
+    WriteRect.Bottom = Window->Ctrl.FullRect.Bottom;
+
+    hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
+    WriteConsoleOutput(hConOut, Window->SavedContents, Window->WindowSize, BufferPosition, &WriteRect);
 }
 
 
@@ -516,33 +713,30 @@ YoriWinDestroyWindow(
     )
 {
     PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
-    HANDLE hConOut;
 
     Window->Destroying = TRUE;
     YoriWinDestroyControl(&Window->Ctrl);
 
     if (Window->SavedContents != NULL) {
-
-        COORD BufferPosition;
-
-        //
-        //  Restore saved contents
-        //
-
-        BufferPosition.X = 0;
-        BufferPosition.Y = 0;
-
-        hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
-        WriteConsoleOutput(hConOut, Window->SavedContents, Window->WindowSize, BufferPosition, &Window->Ctrl.FullRect);
-
+        YoriWinRestoreSavedWindowContents(Window);
         YoriLibFree(Window->SavedContents);
         Window->SavedContents = NULL;
+    }
+
+    if (Window->SavedCursorInfoPresent) {
+        HANDLE hConOut;
+
+        hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
+        SetConsoleCursorPosition(hConOut, Window->SavedCursorPosition);
+        SetConsoleCursorInfo(hConOut, &Window->SavedCursorInfo);
+        Window->SavedCursorInfoPresent = FALSE;
     }
 
     if (Window->CustomNotifications) {
         YoriLibFree(Window->CustomNotifications);
     }
 
+    YoriLibFreeStringContents(&Window->Title);
     YoriLibDereference(Window);
 }
 
@@ -569,6 +763,324 @@ YoriWinCloseWindow(
 }
 
 /**
+ Returns TRUE to indicate that a window intends to close itself.  Closing
+ a window requires terminating message processing on the window and
+ returning the result.
+
+ @param WindowHandle Pointer to the window.
+
+ @return TRUE if the window is intending to close, FALSE if it intends to
+         remain operational.
+ */
+BOOLEAN
+YoriWinIsWindowClosing(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    )
+{
+    PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
+    return Window->Closing;
+}
+
+/**
+ Derive what the transparent shadow color should be for a specified color.
+ This means only the low four bits are meaningful; there is no background
+ color specified here.
+
+ @param Color Specifies the color that is present without a shadow.
+
+ @return The corresponding color that should be used if this color is to
+         become a transparent shadow.
+ */
+WORD
+YoriWinTransparentColorFromColor(
+    __in WORD Color
+    )
+{
+    if (Color & FOREGROUND_INTENSITY) {
+        return (WORD)(Color & (FOREGROUND_INTENSITY - 1));
+    } else if (Color == (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)) {
+        return FOREGROUND_INTENSITY;
+    }
+    return 0;
+}
+
+/**
+ Derive what the transparent shadow attributes should be for a specified
+ set of attributes.  The attributes here refer to both foreground and
+ background.
+
+ @param Attributes Specifies the foreground and background attributes that
+        are present without a shadow.
+
+ @return The corresponding attributes that should be used if this color is
+         to become a transparent shadow.
+ */
+WORD
+YoriWinTransparentAttributesFromAttributes(
+    __in WORD Attributes
+    )
+{
+    return (WORD)(YoriWinTransparentColorFromColor((WORD)(Attributes & 0xF)) |
+                  (YoriWinTransparentColorFromColor((WORD)((Attributes >> 4) & 0xF)) << 4));
+}
+
+/**
+ Clear the background of the window.  This needs to be used before redrawing
+ controls, because this module does not track the regions to invalidate
+ when a control is moved.
+
+ @param Window Pointer to the window whose background should be erased.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEraseWindowBackground(
+    __in PYORI_WIN_WINDOW Window
+    )
+{
+    COORD BufferPosition;
+    WORD BorderWidth;
+    WORD BorderHeight;
+    WORD ShadowWidth;
+    WORD ShadowHeight;
+
+    if (Window->Style & (YORI_WIN_WINDOW_STYLE_SHADOW_SOLID | YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT)) {
+        ShadowWidth = 2;
+        ShadowHeight = 1;
+    } else {
+        ShadowWidth = 0;
+        ShadowHeight = 0;
+    }
+
+    if (Window->Style & (YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_BORDER_DOUBLE)) {
+        BorderWidth = 1;
+        BorderHeight = 1;
+    } else {
+        BorderWidth = 0;
+        BorderHeight = 0;
+    }
+
+    for (BufferPosition.Y = BorderHeight; BufferPosition.Y < (SHORT)(Window->WindowSize.Y - ShadowHeight - BorderHeight); BufferPosition.Y++) {
+        for (BufferPosition.X = BorderWidth; BufferPosition.X < (SHORT)(Window->WindowSize.X - ShadowWidth - BorderWidth); BufferPosition.X++) {
+            Window->Contents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+            Window->Contents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar = ' ';
+        }
+    }
+
+    return TRUE;
+}
+
+
+/**
+ Render the non client area of the window.  This is the border, shadow, and
+ title bar.
+
+ @param Window Pointer to the window whose nonclient area should be rendered.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinPaintWindowNonClientArea(
+    __in PYORI_WIN_WINDOW Window
+    )
+{
+    WORD BorderWidth;
+    WORD BorderHeight;
+    WORD ShadowColor;
+    TCHAR ShadowChar;
+    WORD ShadowWidth;
+    WORD ShadowHeight;
+    COORD BufferPosition;
+
+    if (Window->Style & (YORI_WIN_WINDOW_STYLE_SHADOW_SOLID | YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT)) {
+        ShadowWidth = 2;
+        ShadowHeight = 1;
+    } else {
+        ShadowWidth = 0;
+        ShadowHeight = 0;
+    }
+
+    if (Window->Style & (YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_BORDER_DOUBLE)) {
+        BorderWidth = 1;
+        BorderHeight = 1;
+    } else {
+        BorderWidth = 0;
+        BorderHeight = 0;
+    }
+
+    Window->Dirty = TRUE;
+    Window->DirtyRect.Left = 0;
+    Window->DirtyRect.Top = 0;
+    Window->DirtyRect.Right = (SHORT)(Window->WindowSize.X - 1);
+    Window->DirtyRect.Bottom = (SHORT)(Window->WindowSize.Y - 1);
+
+    //
+    //  Initialize the shadow for the window
+    //
+
+    if (ShadowWidth > 0 || ShadowHeight > 0) {
+        ShadowColor = (WORD)(YoriLibVtGetDefaultColor() & 0xF0 | FOREGROUND_INTENSITY);
+        ShadowChar = 0x2591;
+        for (BufferPosition.Y = 0; BufferPosition.Y < (SHORT)Window->WindowSize.Y; BufferPosition.Y++) {
+            if (BufferPosition.Y < ShadowHeight) {
+
+                //
+                //  For lines less than the shadow height, preserve the previous
+                //  buffer contents into the "shadow" cells"
+                //
+
+                for (BufferPosition.X = (SHORT)(Window->WindowSize.X - ShadowWidth); BufferPosition.X < (SHORT)(Window->WindowSize.X); BufferPosition.X++) {
+                    YoriWinSetWindowCell(Window,
+                                         BufferPosition.X,
+                                         BufferPosition.Y,
+                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar,
+                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes);
+                }
+
+            } else if (BufferPosition.Y >= (SHORT)(Window->WindowSize.Y - ShadowHeight)) {
+
+                //
+                //  For lines that are beneath the window and constitute its
+                //  shadow, fill in the first chars to be the "previous" cells
+                //  and the remainder to be a shadow
+                //
+
+                for (BufferPosition.X = 0; BufferPosition.X < ShadowWidth; BufferPosition.X++) {
+                    YoriWinSetWindowCell(Window,
+                                         BufferPosition.X,
+                                         BufferPosition.Y,
+                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar,
+                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes);
+                }
+
+                for (BufferPosition.X = ShadowWidth; BufferPosition.X < (SHORT)(Window->WindowSize.X); BufferPosition.X++) {
+                    if (Window->Style & YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT) {
+                        ShadowChar = Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar;
+                        ShadowColor = YoriWinTransparentAttributesFromAttributes(Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes);
+                    }
+                    YoriWinSetWindowCell(Window,
+                                         BufferPosition.X,
+                                         BufferPosition.Y,
+                                         ShadowChar,
+                                         ShadowColor);
+                }
+            } else {
+
+                //
+                //  For regular lines, fill in the shadow area on the right of
+                //  the line
+                //
+
+                for (BufferPosition.X = (SHORT)(Window->WindowSize.X - ShadowWidth); BufferPosition.X < (SHORT)(Window->WindowSize.X); BufferPosition.X++) {
+                    if (Window->Style & YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT) {
+                        ShadowChar = Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar;
+                        ShadowColor = YoriWinTransparentAttributesFromAttributes(Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes);
+                    }
+                    YoriWinSetWindowCell(Window,
+                                         BufferPosition.X,
+                                         BufferPosition.Y,
+                                         ShadowChar,
+                                         ShadowColor);
+                }
+            }
+        }
+    }
+
+
+    if (Window->Style & (YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_BORDER_DOUBLE)) {
+
+        SMALL_RECT Border;
+        WORD BorderFlags;
+        Border.Left = 0;
+        Border.Top = 0;
+        Border.Right = (SHORT)(Window->WindowSize.X - 1 - ShadowWidth);
+        Border.Bottom = (SHORT)(Window->WindowSize.Y - 1 - ShadowHeight);
+
+        BorderFlags = YORI_WIN_BORDER_TYPE_RAISED;
+        if (Window->Style & YORI_WIN_WINDOW_STYLE_BORDER_SINGLE) {
+            BorderFlags |= YORI_WIN_BORDER_TYPE_SINGLE;
+        } else if (Window->Style & YORI_WIN_WINDOW_STYLE_BORDER_DOUBLE) {
+            BorderFlags |= YORI_WIN_BORDER_TYPE_DOUBLE;
+        }
+
+        YoriWinDrawBorderOnControl(&Window->Ctrl, &Border, Window->Ctrl.DefaultAttributes, BorderFlags);
+
+        Window->Ctrl.ClientRect.Left = (SHORT)(Border.Left + 1);
+        Window->Ctrl.ClientRect.Top = (SHORT)(Border.Top + 1);
+        Window->Ctrl.ClientRect.Right = (SHORT)(Border.Right - 1);
+        Window->Ctrl.ClientRect.Bottom = (SHORT)(Border.Bottom - 1);
+    } else if (Window->Style & (YORI_WIN_WINDOW_STYLE_SHADOW_SOLID | YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT)) {
+        Window->Ctrl.ClientRect.Right = (SHORT)(Window->Ctrl.ClientRect.Right - ShadowWidth);
+        Window->Ctrl.ClientRect.Bottom = (SHORT)(Window->Ctrl.ClientRect.Bottom - ShadowHeight);
+    }
+
+    if (Window->Title.LengthInChars > 0) {
+        DWORD Index;
+        DWORD Offset;
+        DWORD Length;
+        WORD TitleBarColor;
+
+        Length = Window->Title.LengthInChars;
+        if (Length > (DWORD)(Window->WindowSize.X - ShadowWidth - 2)) {
+            Length = (DWORD)(Window->WindowSize.X - ShadowWidth - 2);
+        }
+
+        Offset = ((Window->WindowSize.X - ShadowWidth) - Length) / 2;
+        TitleBarColor = BACKGROUND_BLUE | BACKGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+
+        for (Index = 1; Index < Offset; Index++) {
+            Window->Contents[Index].Attributes = TitleBarColor;
+            Window->Contents[Index].Char.UnicodeChar = ' ';
+        }
+
+        for (Index = 0; Index < Length; Index++) {
+            Window->Contents[Offset + Index].Char.UnicodeChar = Window->Title.StartOfString[Index];
+            Window->Contents[Offset + Index].Attributes = TitleBarColor;
+        }
+
+        for (Index = Offset + Length; Index < (DWORD)(Window->WindowSize.X - ShadowWidth - 1); Index++) {
+            Window->Contents[Index].Attributes = TitleBarColor;
+            Window->Contents[Index].Char.UnicodeChar = ' ';
+        }
+    }
+
+    return TRUE;
+}
+
+/**
+ Record the contents of the console that are in the range that the window
+ will display over.
+
+ @param Window Pointer to the window.  This should already contain an
+        allocation to store the saved window contents into.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinSaveWindowContents(
+    __in PYORI_WIN_WINDOW Window
+    )
+{
+    COORD BufferPosition;
+    HANDLE hConOut;
+    SMALL_RECT ReadRect;
+
+    BufferPosition.X = 0;
+    BufferPosition.Y = 0;
+    hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
+    ReadRect.Left = Window->Ctrl.FullRect.Left;
+    ReadRect.Top = Window->Ctrl.FullRect.Top;
+    ReadRect.Right = Window->Ctrl.FullRect.Right;
+    ReadRect.Bottom = Window->Ctrl.FullRect.Bottom;
+
+    if (!ReadConsoleOutput(hConOut, Window->SavedContents, Window->WindowSize, BufferPosition, &ReadRect)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
  Display a popup window at a specified location.
 
  @param WinMgrHandle Pointer to the window manager.
@@ -588,7 +1100,7 @@ YoriWinCloseWindow(
          indicate a failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriWinCreateWindowEx(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PSMALL_RECT WindowRect,
@@ -598,17 +1110,132 @@ YoriWinCreateWindowEx(
     )
 {
     PYORI_WIN_WINDOW Window;
-    HANDLE hConOut;
+    DWORD CellCount;
 
+    Window = YoriLibReferencedMalloc(sizeof(YORI_WIN_WINDOW));
+    if (Window == NULL) {
+        return FALSE;
+    }
+
+    ZeroMemory(Window, sizeof(YORI_WIN_WINDOW));
+    Window->WinMgrHandle = WinMgrHandle;
+    Window->Style = Style;
+
+    Window->WindowSize.X = (SHORT)(WindowRect->Right - WindowRect->Left + 1);
+    Window->WindowSize.Y = (SHORT)(WindowRect->Bottom - WindowRect->Top + 1);
+
+    if (!YoriWinCreateControl(NULL, WindowRect, TRUE, &Window->Ctrl)) {
+        YoriWinDestroyWindow(Window);
+        return FALSE;
+    }
+    Window->Ctrl.NotifyEventFn = YoriWinNotifyEvent;
+
+    //
+    //  If there's a title, save it.
+    //
+
+    if (Title != NULL) {
+        if (!YoriLibAllocateString(&Window->Title, Title->LengthInChars + 1)) {
+            YoriWinDestroyWindow(Window);
+            return FALSE;
+        }
+
+        Window->Title.LengthInChars = YoriLibSPrintf(Window->Title.StartOfString, _T("%y"), Title);
+    }
+
+    //
+    //  Save contents at the location of the window
+    //
+
+    CellCount = Window->WindowSize.X;
+    CellCount *= Window->WindowSize.Y;
+
+    Window->SavedContents = YoriLibMalloc(CellCount * sizeof(CHAR_INFO) * 2);
+    if (Window->SavedContents == NULL) {
+        YoriWinDestroyWindow(Window);
+        return FALSE;
+    }
+
+    Window->Contents = Window->SavedContents + CellCount;
+
+    if (!YoriWinSaveWindowContents(Window)) {
+        YoriLibFree(Window->SavedContents);
+        Window->SavedContents = NULL;
+        YoriWinDestroyWindow(Window);
+        return FALSE;
+    }
+
+    //
+    //  Initialize the new contents in the window
+    //
+
+    YoriWinEraseWindowBackground(Window);
+    YoriWinPaintWindowNonClientArea(Window);
+
+    *OutWindow = Window;
+    return TRUE;
+}
+
+/**
+ Find the location to display a window within the window manager.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param MinimumWidth The minimum width of the window.
+
+ @param MinimumHeight The minimum height of the window.
+
+ @param DesiredWidth The maximum width of the window, if space is available.
+
+ @param DesiredHeight The maximum height of the window, if space is available.
+
+ @param DesiredLeft The desired left offset of the window relative to the
+        window manager.  If -1, the window should be horizontally centered.
+
+ @param DesiredTop The desired top offset of the window relative to the
+        window manager.  If -1, the window should be vertically centered.
+
+ @param Style Specifies style flags for the window including the border type
+        to use and whether to display a shadow.
+
+ @param WindowRect On successful completion, populated with the location of
+        the window in screen buffer coordinates.
+
+ @return TRUE to indicate the location was successfully populated, FALSE to
+         indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinDetermineWindowRect(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in WORD MinimumWidth,
+    __in WORD MinimumHeight,
+    __in WORD DesiredWidth,
+    __in WORD DesiredHeight,
+    __in WORD DesiredLeft,
+    __in WORD DesiredTop,
+    __in DWORD Style,
+    __out PSMALL_RECT WindowRect
+    )
+{
+    WORD DisplayWidth;
+    WORD DisplayHeight;
     WORD BorderWidth;
     WORD BorderHeight;
-    WORD ShadowColor;
     WORD ShadowWidth;
     WORD ShadowHeight;
-    DWORD CellCount;
-    COORD BufferPosition;
+    COORD WindowSize;
+    SMALL_RECT WinMgrRect;
 
-    if (Style & YORI_WIN_WINDOW_STYLE_SHADOW) {
+    if (MinimumWidth > MAXSHORT ||
+        MinimumHeight > MAXSHORT ||
+        DesiredWidth > MAXSHORT ||
+        DesiredHeight > MAXSHORT) {
+
+        return FALSE;
+    }
+
+    if (Style & (YORI_WIN_WINDOW_STYLE_SHADOW_SOLID | YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT)) {
         ShadowWidth = 2;
         ShadowHeight = 1;
     } else {
@@ -624,186 +1251,59 @@ YoriWinCreateWindowEx(
         BorderHeight = 0;
     }
 
-    Window = YoriLibReferencedMalloc(sizeof(YORI_WIN_WINDOW));
-    if (Window == NULL) {
-        return FALSE;
-    }
-
-    ZeroMemory(Window, sizeof(YORI_WIN_WINDOW));
-    Window->WinMgrHandle = WinMgrHandle;
-
-    Window->WindowSize.X = (SHORT)(WindowRect->Right - WindowRect->Left + 1);
-    Window->WindowSize.Y = (SHORT)(WindowRect->Bottom - WindowRect->Top + 1);
-
-    if (!YoriWinCreateControl(NULL, WindowRect, TRUE, &Window->Ctrl)) {
-        YoriWinDestroyWindow(Window);
-        return FALSE;
-    }
-    Window->Ctrl.NotifyEventFn = YoriWinNotifyEvent;
-
     //
-    //  Save contents at the location of the window
+    //  Currently a window needs a nonzero client area, so check that the
+    //  dimensions aren't less than or equal to decoration
     //
 
-    BufferPosition.X = 0;
-    BufferPosition.Y = 0;
-
-    CellCount = Window->WindowSize.X;
-    CellCount *= Window->WindowSize.Y;
-
-    Window->SavedContents = YoriLibMalloc(CellCount * sizeof(CHAR_INFO) * 2);
-    if (Window->SavedContents == NULL) {
-        YoriWinDestroyWindow(Window);
+    if (MinimumWidth <= ShadowWidth + 2 * BorderWidth || MinimumHeight <= ShadowHeight + 2 * BorderHeight) {
         return FALSE;
     }
 
-    hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
-    Window->Contents = Window->SavedContents + CellCount;
-
-    if (!ReadConsoleOutput(hConOut, Window->SavedContents, Window->WindowSize, BufferPosition, &Window->Ctrl.FullRect)) {
-        YoriLibFree(Window->SavedContents);
-        Window->SavedContents = NULL;
-        YoriWinDestroyWindow(Window);
+    if (!YoriWinGetWinMgrLocation(WinMgrHandle, &WinMgrRect)) {
         return FALSE;
     }
 
     //
-    //  Initialize the new contents in the window
+    //  Calculate Window location
     //
 
-    for (BufferPosition.Y = 0; BufferPosition.Y < (SHORT)(Window->WindowSize.Y - ShadowHeight); BufferPosition.Y++) {
-        for (BufferPosition.X = 0; BufferPosition.X < (SHORT)(Window->WindowSize.X - ShadowWidth); BufferPosition.X++) {
-            Window->Contents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
-            Window->Contents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar = ' ';
-        }
+    DisplayWidth = (WORD)(WinMgrRect.Right - WinMgrRect.Left + 1);
+    DisplayHeight = (WORD)(WinMgrRect.Bottom - WinMgrRect.Top + 1);
+
+    if (DisplayWidth < MinimumWidth || DisplayHeight < MinimumHeight) {
+        return FALSE;
     }
 
-    Window->Dirty = TRUE;
-    Window->DirtyRect.Left = 0;
-    Window->DirtyRect.Top = 0;
-    Window->DirtyRect.Right = (SHORT)(Window->WindowSize.X - 1);
-    Window->DirtyRect.Bottom = (SHORT)(Window->WindowSize.Y - 1);
+    WindowSize.X = (SHORT)DesiredWidth;
+    WindowSize.Y = (SHORT)DesiredHeight;
 
-    //
-    //  Initialize the shadow for the window
-    //
-
-    if (ShadowWidth > 0 || ShadowHeight > 0) {
-        ShadowColor = (WORD)(YoriLibVtGetDefaultColor() & 0xF0 | FOREGROUND_INTENSITY);
-        for (BufferPosition.Y = 0; BufferPosition.Y < (SHORT)Window->WindowSize.Y; BufferPosition.Y++) {
-            if (BufferPosition.Y < ShadowHeight) {
-
-                //
-                //  For lines less than the shadow height, preserve the previous
-                //  buffer contents into the "shadow" cells"
-                //
-
-                for (BufferPosition.X = (SHORT)(Window->WindowSize.X - ShadowWidth); BufferPosition.X < (SHORT)(Window->WindowSize.X); BufferPosition.X++) {
-                    YoriWinSetWindowCell(Window,
-                                         BufferPosition.X,
-                                         BufferPosition.Y,
-                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar,
-                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes );
-                }
-
-            } else if (BufferPosition.Y >= (SHORT)(Window->WindowSize.Y - ShadowHeight)) {
-
-                //
-                //  For lines that are beneath the window and constitute its
-                //  shadow, fill in the first chars to be the "previous" cells
-                //  and the remainder to be a shadow
-                //
-
-                for (BufferPosition.X = 0; BufferPosition.X < ShadowWidth; BufferPosition.X++) {
-                    YoriWinSetWindowCell(Window,
-                                         BufferPosition.X,
-                                         BufferPosition.Y,
-                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar,
-                                         Window->SavedContents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes );
-                }
-
-                for (BufferPosition.X = ShadowWidth; BufferPosition.X < (SHORT)(Window->WindowSize.X); BufferPosition.X++) {
-                    YoriWinSetWindowCell(Window,
-                                         BufferPosition.X,
-                                         BufferPosition.Y,
-                                         0x2591,
-                                         ShadowColor);
-                }
-            } else {
-
-                //
-                //  For regular lines, fill in the shadow area on the right of
-                //  the line
-                //
-
-                for (BufferPosition.X = (SHORT)(Window->WindowSize.X - ShadowWidth); BufferPosition.X < (SHORT)(Window->WindowSize.X); BufferPosition.X++) {
-                    YoriWinSetWindowCell(Window,
-                                         BufferPosition.X,
-                                         BufferPosition.Y,
-                                         0x2591,
-                                         ShadowColor);
-                }
-            }
-        }
+    if (WindowSize.X > DisplayWidth) {
+        WindowSize.X = DisplayWidth;
     }
 
-
-    if (Style & (YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_BORDER_DOUBLE)) {
-
-        SMALL_RECT Border;
-        WORD BorderFlags;
-        Border.Left = 0;
-        Border.Top = 0;
-        Border.Right = (SHORT)(Window->WindowSize.X - 1 - ShadowWidth);
-        Border.Bottom = (SHORT)(Window->WindowSize.Y - 1 - ShadowHeight);
-
-        BorderFlags = YORI_WIN_BORDER_TYPE_RAISED;
-        if (Style & YORI_WIN_WINDOW_STYLE_BORDER_SINGLE) {
-            BorderFlags |= YORI_WIN_BORDER_TYPE_SINGLE;
-        } else if (Style & YORI_WIN_WINDOW_STYLE_BORDER_DOUBLE) {
-            BorderFlags |= YORI_WIN_BORDER_TYPE_DOUBLE;
-        }
-
-        YoriWinDrawBorderOnControl(&Window->Ctrl, &Border, Window->Ctrl.DefaultAttributes, BorderFlags);
-
-        Window->Ctrl.ClientRect.Left = (SHORT)(Border.Left + 1);
-        Window->Ctrl.ClientRect.Top = (SHORT)(Border.Top + 1);
-        Window->Ctrl.ClientRect.Right = (SHORT)(Border.Right - 1);
-        Window->Ctrl.ClientRect.Bottom = (SHORT)(Border.Bottom - 1);
+    if (WindowSize.Y > DisplayHeight) {
+        WindowSize.Y = DisplayHeight;
     }
 
-    if (Title != NULL && Title->LengthInChars > 0) {
-        DWORD Index;
-        DWORD Offset;
-        DWORD Length;
-        WORD TitleBarColor;
-
-
-        Length = Title->LengthInChars;
-        if (Length > (DWORD)(Window->WindowSize.X - ShadowWidth - 2)) {
-            Length = (DWORD)(Window->WindowSize.X - ShadowWidth - 2);
-        }
-
-        Offset = ((Window->WindowSize.X - ShadowWidth) - Length) / 2;
-        TitleBarColor = BACKGROUND_BLUE | BACKGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
-
-        for (Index = 1; Index < Offset; Index++) {
-            Window->Contents[Index].Attributes = TitleBarColor;
-            Window->Contents[Index].Char.UnicodeChar = ' ';
-        }
-
-        for (Index = 0; Index < Length; Index++) {
-            Window->Contents[Offset + Index].Char.UnicodeChar = Title->StartOfString[Index];
-            Window->Contents[Offset + Index].Attributes = TitleBarColor;
-        }
-
-        for (Index = Offset + Length; Index < (DWORD)(Window->WindowSize.X - ShadowWidth - 1); Index++) {
-            Window->Contents[Index].Attributes = TitleBarColor;
-            Window->Contents[Index].Char.UnicodeChar = ' ';
-        }
+    if (DesiredLeft == (WORD)-1) {
+        WindowRect->Left = (WORD)((DisplayWidth - WindowSize.X) / 2 + WinMgrRect.Left);
+    } else if (WinMgrRect.Left + DesiredLeft + WindowSize.X > WinMgrRect.Right) {
+        WindowRect->Left = (WORD)(WinMgrRect.Right - WindowSize.X);
+    } else {
+        WindowRect->Left = (WORD)(WinMgrRect.Left + DesiredLeft);
     }
+    WindowRect->Right = (WORD)(WindowRect->Left + WindowSize.X - 1);
 
-    *OutWindow = Window;
+    if (DesiredTop == (WORD)-1) {
+        WindowRect->Top = (WORD)((DisplayHeight - WindowSize.Y) / 2 + WinMgrRect.Top);
+    } else if (WinMgrRect.Top + DesiredTop + WindowSize.Y > WinMgrRect.Bottom) {
+        WindowRect->Top = (WORD)(WinMgrRect.Bottom - WindowSize.Y);
+    } else {
+        WindowRect->Top = (WORD)(WinMgrRect.Top + DesiredTop);
+    }
+    WindowRect->Bottom = (WORD)(WindowRect->Top + WindowSize.Y - 1);
+
     return TRUE;
 }
 
@@ -832,7 +1332,7 @@ YoriWinCreateWindowEx(
          indicate a failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriWinCreateWindow(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in WORD MinimumWidth,
@@ -844,86 +1344,66 @@ YoriWinCreateWindow(
     __out PYORI_WIN_WINDOW_HANDLE *OutWindow
     )
 {
-    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
-    HANDLE hConOut;
-
-    WORD DisplayWidth;
-    WORD DisplayHeight;
-    WORD BorderWidth;
-    WORD BorderHeight;
-    WORD ShadowWidth;
-    WORD ShadowHeight;
-    COORD WindowSize;
     SMALL_RECT WindowRect;
 
-    if (MinimumWidth > MAXSHORT ||
-        MinimumHeight > MAXSHORT ||
-        DesiredWidth > MAXSHORT ||
-        DesiredHeight > MAXSHORT) {
-
+    if (!YoriWinDetermineWindowRect(WinMgrHandle, MinimumWidth, MinimumHeight, DesiredWidth, DesiredHeight, (WORD)-1, (WORD)-1, Style, &WindowRect)) {
         return FALSE;
     }
-
-    if (Style & YORI_WIN_WINDOW_STYLE_SHADOW) {
-        ShadowWidth = 2;
-        ShadowHeight = 1;
-    } else {
-        ShadowWidth = 0;
-        ShadowHeight = 0;
-    }
-
-    if (Style & (YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_BORDER_DOUBLE)) {
-        BorderWidth = 1;
-        BorderHeight = 1;
-    } else {
-        BorderWidth = 0;
-        BorderHeight = 0;
-    }
-
-    //
-    //  Currently a window needs a nonzero client area, so check that the
-    //  dimensions aren't less than or equal to decoration
-    //
-
-    if (MinimumWidth <= ShadowWidth + 2 * BorderWidth || MinimumHeight <= ShadowHeight + 2 * BorderHeight) {
-        return FALSE;
-    }
-
-    hConOut = YoriWinGetConsoleOutputHandle(WinMgrHandle);
-    if (!GetConsoleScreenBufferInfo(hConOut, &ScreenInfo)) {
-        return FALSE;
-    }
-
-    //
-    //  Calculate Window location
-    //
-
-    DisplayWidth = (WORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1);
-    DisplayHeight = (WORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1);
-
-    if (DisplayWidth < MinimumWidth || DisplayHeight < MinimumHeight) {
-        return FALSE;
-    }
-
-    WindowSize.X = (SHORT)DesiredWidth;
-    WindowSize.Y = (SHORT)DesiredHeight;
-
-    if (WindowSize.X > DisplayWidth) {
-        WindowSize.X = DisplayWidth;
-    }
-
-    if (WindowSize.Y > DisplayHeight) {
-        WindowSize.Y = DisplayHeight;
-    }
-
-    WindowRect.Left = (USHORT)((DisplayWidth - WindowSize.X) / 2 + ScreenInfo.srWindow.Left);
-    WindowRect.Top = (USHORT)((DisplayHeight - WindowSize.Y) / 2 + ScreenInfo.srWindow.Top);
-    WindowRect.Right = (USHORT)(WindowRect.Left + WindowSize.X - 1);
-    WindowRect.Bottom = (USHORT)(WindowRect.Top + WindowSize.Y - 1);
 
     return YoriWinCreateWindowEx(WinMgrHandle, &WindowRect, Style, Title, OutWindow);
-
 }
+
+/**
+ Set the size and position of the window.
+
+ @param WindowHandle Pointer to the window.
+
+ @param WindowRect Specifies the new size and location of the window.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinWindowReposition(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
+    __in PSMALL_RECT WindowRect
+    )
+{
+    PCHAR_INFO NewSavedContents;
+    COORD NewWindowSize;
+    DWORD CellCount;
+    PYORI_WIN_WINDOW Window;
+
+    Window = (PYORI_WIN_WINDOW)WindowHandle;
+
+    NewWindowSize.X = (SHORT)(WindowRect->Right - WindowRect->Left + 1);
+    NewWindowSize.Y = (SHORT)(WindowRect->Bottom - WindowRect->Top + 1);
+
+    CellCount = NewWindowSize.X;
+    CellCount *= NewWindowSize.Y;
+
+    NewSavedContents = YoriLibMalloc(CellCount * sizeof(CHAR_INFO) * 2);
+    if (NewSavedContents == NULL) {
+        return FALSE;
+    }
+
+    if (!YoriWinControlReposition(&Window->Ctrl, WindowRect)) {
+        YoriLibFree(NewSavedContents);
+        return FALSE;
+    }
+
+    YoriLibFree(Window->SavedContents);
+    Window->SavedContents = NewSavedContents;
+    Window->Contents = Window->SavedContents + CellCount;
+    Window->WindowSize.X = NewWindowSize.X;
+    Window->WindowSize.Y = NewWindowSize.Y;
+
+    YoriWinSaveWindowContents(Window);
+    YoriWinEraseWindowBackground(Window);
+    YoriWinPaintWindowNonClientArea(Window);
+
+    return TRUE;
+}
+
 
 /**
  Register a control with its parent window.  This links the control in to
@@ -978,6 +1458,22 @@ YoriWinRemoveControlFromWindow(
     }
 }
 
+/**
+ Return the current control with focus, if any.
+
+ @param WindowHandle Pointer to the top level window.
+
+ @return Pointer to the control that currently has focus, or NULL if no
+         control has focus.
+ */
+PYORI_WIN_CTRL
+YoriWinGetFocus(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    )
+{
+    PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
+    return Window->KeyboardFocusCtrl;
+}
 
 /**
  Sets a specific control to be the control that currently receives keyboard
@@ -990,14 +1486,14 @@ YoriWinRemoveControlFromWindow(
 VOID
 YoriWinSetFocus(
     __in PYORI_WIN_WINDOW Window,
-    __in PYORI_WIN_CTRL Ctrl
+    __in_opt PYORI_WIN_CTRL Ctrl
     )
 {
     YORI_WIN_EVENT Event;
     BOOLEAN Terminate = FALSE;
     PYORI_WIN_CTRL OldCtrl;
 
-    ASSERT(Ctrl->CanReceiveFocus);
+    ASSERT(Ctrl == NULL || Ctrl->CanReceiveFocus);
 
     OldCtrl = Window->KeyboardFocusCtrl;
     Window->KeyboardFocusCtrl = NULL;
@@ -1032,6 +1528,40 @@ YoriWinSetFocus(
         }
     }
 }
+
+/**
+ Notifies the control which should have focus when the window is created that
+ it does have focus.  Note this means no event is generated to indicate a
+ prior control is losing focus.
+
+ @param WindowHandle Pointer to the window whose control in focus should be
+        initialized.
+ */
+VOID
+YoriWinSetInitialFocus(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    )
+{
+    YORI_WIN_EVENT Event;
+    BOOLEAN Terminate = FALSE;
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
+
+    Ctrl = Window->KeyboardFocusCtrl;
+
+    if (Ctrl != NULL &&
+        Ctrl->NotifyEventFn != NULL) {
+
+        ZeroMemory(&Event, sizeof(Event));
+        Event.EventType = YoriWinEventGetFocus;
+
+        Terminate = Ctrl->NotifyEventFn(Ctrl, &Event);
+        if (Terminate) {
+            return;
+        }
+    }
+}
+
 
 /**
  Advance keyboard focus to the next control capable of processing keyboard
@@ -1409,6 +1939,36 @@ YoriWinRestoreCancelControl(
 }
 
 /**
+ Set a callback to invoke if the window manager is resized, typically meaning
+ the user resized the window.
+
+ @param WindowHandle Pointer to the window to invoke a callback from when the
+        window manager changes size.
+
+ @param NotifyCallback A function to invoke when the window manager changes
+        size.
+
+ @return TRUE to indicate success, FALSE to indicate failure.  Note though
+         that this program cannot prevent the resize operation.
+ */
+BOOLEAN
+YoriWinSetWindowManagerResizeNotifyCallback(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
+    __in PYORI_WIN_NOTIFY_WINDOW_MANAGER_RESIZE NotifyCallback
+    )
+{
+    PYORI_WIN_WINDOW Window;
+    Window = (PYORI_WIN_WINDOW)WindowHandle;
+
+    if (Window->WindowManagerResizeNotifyCallback != NULL) {
+        return FALSE;
+    }
+
+    Window->WindowManagerResizeNotifyCallback = NotifyCallback;
+    return TRUE;
+}
+
+/**
  Set a callback to be invoked when an event occurs on the window that is not
  explicitly handled by a control.  As of this writing, only one callback can
  be added per type of event, so this is only useful when a popup window is
@@ -1453,7 +2013,7 @@ YoriWinSetCustomNotification(
  function will identify the control to handle the input event, and send it
  there.
 
- @param Window Pointer to the window.
+ @param WindowCtrl Pointer to control structure within the window.
 
  @param Event Pointer to the event.
 
@@ -1464,15 +2024,20 @@ YoriWinSetCustomNotification(
  */
 BOOLEAN
 YoriWinNotifyEvent(
-    __in PYORI_WIN_WINDOW Window,
+    __in PYORI_WIN_CTRL WindowCtrl,
     __in PYORI_WIN_EVENT Event
     )
 {
     BOOLEAN Terminate;
+    PYORI_WIN_WINDOW Window;
     YORI_WIN_EVENT CtrlEvent;
+
+    Window = CONTAINING_RECORD(WindowCtrl, YORI_WIN_WINDOW, Ctrl);
 
     if (Event->EventType == YoriWinEventKeyDown ||
         Event->EventType == YoriWinEventKeyUp) {
+
+        DWORD EffectiveCtrlMask;
 
         if (Window->KeyboardFocusCtrl != NULL &&
             Window->KeyboardFocusCtrl->NotifyEventFn != NULL) {
@@ -1483,10 +2048,16 @@ YoriWinNotifyEvent(
             }
         }
 
-        if (Event->EventType == YoriWinEventKeyDown &&
-            Event->KeyDown.CtrlMask == 0) {
+        EffectiveCtrlMask = 0;
+        Terminate = FALSE;
+        if (Event->EventType == YoriWinEventKeyDown) {
+            EffectiveCtrlMask = (Event->KeyDown.CtrlMask & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED | RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED));
+        } else {
+            EffectiveCtrlMask = (Event->KeyUp.CtrlMask & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED | RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED));
+        }
 
-            Terminate = FALSE;
+        if (Event->EventType == YoriWinEventKeyDown &&
+            EffectiveCtrlMask == 0) {
 
             if ((Event->KeyDown.VirtualKeyCode == VK_RETURN) &&
                 Window->GeneralDefaultCtrl != NULL &&
@@ -1505,21 +2076,22 @@ YoriWinNotifyEvent(
                 Terminate = Window->GeneralCancelCtrl->NotifyEventFn(Window->GeneralCancelCtrl, &CtrlEvent);
             } else if (Event->KeyDown.VirtualKeyCode == VK_TAB) {
                 YoriWinSetFocusToNextCtrl(Window);
+            } else if (Window->EnableNonAltAccelerators) {
+                Terminate = YoriWinInvokeAccelerator(Window, Event->KeyDown.Char);
             }
 
             if (Terminate) {
                 return Terminate;
             }
         } else if (Event->EventType == YoriWinEventKeyDown &&
-                   Event->KeyDown.CtrlMask == SHIFT_PRESSED) {
+                   EffectiveCtrlMask == SHIFT_PRESSED) {
 
             if (Event->KeyDown.VirtualKeyCode == VK_TAB) {
                 YoriWinSetFocusToPreviousCtrl(Window);
             }
         } else if (Event->EventType == YoriWinEventKeyDown &&
-                   (Event->KeyDown.CtrlMask == LEFT_ALT_PRESSED ||
-                    Event->KeyDown.CtrlMask == (RIGHT_ALT_PRESSED | ENHANCED_KEY) ||
-                    Event->KeyDown.CtrlMask == RIGHT_ALT_PRESSED)) {
+                   (EffectiveCtrlMask == LEFT_ALT_PRESSED ||
+                    EffectiveCtrlMask == RIGHT_ALT_PRESSED)) {
 
             if (Event->KeyDown.VirtualKeyCode == VK_MENU) {
                 if (!Window->AcceleratorsDisplayed) {
@@ -1554,6 +2126,25 @@ YoriWinNotifyEvent(
             }
         }
 
+        //
+        //  If it's a Ctrl or Alt keyboard combination or it's a function
+        //  key, look through all controls for a hotkey
+        //
+
+        if (Event->EventType == YoriWinEventKeyDown &&
+            ((EffectiveCtrlMask & ~(SHIFT_PRESSED)) != 0 ||
+             (Event->KeyDown.VirtualKeyCode >= VK_F1 &&
+              Event->KeyDown.VirtualKeyCode <= VK_F12))) {
+
+            ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
+            CtrlEvent.EventType = YoriWinEventHotKeyDown;
+            CtrlEvent.KeyDown.CtrlMask = EffectiveCtrlMask;
+            CtrlEvent.KeyDown.VirtualKeyCode = Event->KeyDown.VirtualKeyCode;
+            CtrlEvent.KeyDown.VirtualScanCode = Event->KeyDown.VirtualScanCode;
+            CtrlEvent.KeyDown.Char = Event->KeyDown.Char;
+            YoriWinNotifyAllControls(&Window->Ctrl, &CtrlEvent);
+        }
+
     } else if (Event->EventType == YoriWinEventMouseDownInClient ||
                Event->EventType == YoriWinEventMouseDoubleClickInClient) {
 
@@ -1563,6 +2154,23 @@ YoriWinNotifyEvent(
         Ctrl = YoriWinFindControlAtCoordinates(&Window->Ctrl,
                                                Event->MouseDown.Location,
                                                TRUE,
+                                               &ChildLocation,
+                                               &InChildClientArea);
+
+        if (Ctrl != NULL &&
+            YoriWinTranslateMouseEventForChild(Event, Ctrl, ChildLocation, InChildClientArea)) {
+
+            return TRUE;
+        }
+
+    } else if (Event->EventType == YoriWinEventMouseDownInNonClient) {
+
+        PYORI_WIN_CTRL Ctrl;
+        COORD ChildLocation;
+        BOOLEAN InChildClientArea;
+        Ctrl = YoriWinFindControlAtCoordinates(&Window->Ctrl,
+                                               Event->MouseDown.Location,
+                                               FALSE,
                                                &ChildLocation,
                                                &InChildClientArea);
 
@@ -1675,6 +2283,39 @@ YoriWinNotifyEvent(
                 return TRUE;
             }
         }
+    } else if (Event->EventType == YoriWinEventHideWindow) {
+        ASSERT(!Window->Hidden);
+        Window->Hidden = TRUE;
+        YoriWinRestoreSavedWindowContents(Window);
+    } else if (Event->EventType == YoriWinEventShowWindow) {
+
+        //
+        //  MSFIX This also wants to re-capture the saved window contents,
+        //  since the reason for this dance is to allow underlying windows
+        //  to change while higher windows are redisplayed on top
+        //
+
+        ASSERT(Window->Hidden);
+        Window->Hidden = FALSE;
+        Window->Dirty = TRUE;
+        Window->DirtyRect.Left = 0;
+        Window->DirtyRect.Top = 0;
+        Window->DirtyRect.Right = Window->WindowSize.X;
+        Window->DirtyRect.Bottom = Window->WindowSize.Y;
+        {
+            COORD NewPos;
+            HANDLE hConOut;
+
+            NewPos.X = (WORD)(Window->CursorPosition.X + Window->Ctrl.FullRect.Left);
+            NewPos.Y = (WORD)(Window->CursorPosition.Y + Window->Ctrl.FullRect.Top);
+
+            hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
+            SetConsoleCursorPosition(hConOut, NewPos);
+        }
+    } else if (Event->EventType == YoriWinEventWindowManagerResize) {
+        if (Window->WindowManagerResizeNotifyCallback != NULL) {
+            Window->WindowManagerResizeNotifyCallback(Window, &Event->WindowManagerResize.OldWinMgrDimensions, &Event->WindowManagerResize.NewWinMgrDimensions);
+        }
     }
 
     if (Window->CustomNotifications != NULL &&
@@ -1688,6 +2329,23 @@ YoriWinNotifyEvent(
     }
 
     return FALSE;
+}
+
+/**
+ Return a window handle to a window that owns the list element recording
+ a window within the list of top level windows that process events.
+
+ @param ListEntry Pointer to the TopLevelWindowListEntry field within a
+        window structure.
+
+ @return Pointer to the window.
+ */
+PYORI_WIN_WINDOW_HANDLE
+YoriWinWindowFromTopLevelListEntry(
+    __in PYORI_LIST_ENTRY ListEntry
+    )
+{
+    return CONTAINING_RECORD(ListEntry, YORI_WIN_WINDOW, TopLevelWindowListEntry);
 }
 
 
@@ -1704,272 +2362,25 @@ YoriWinNotifyEvent(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriWinProcessInputForWindow(
     __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
     __out_opt PDWORD_PTR Result
     )
 {
-    HANDLE hConIn;
-    HANDLE hConOut;
-    INPUT_RECORD InputRecords[10];
-    CONSOLE_CURSOR_INFO NewCursorInfo;
-    PINPUT_RECORD InputRecord;
-    DWORD ActuallyRead;
-    DWORD Index;
-    DWORD RepeatIndex;
-    YORI_WIN_EVENT Event;
     PYORI_WIN_WINDOW Window;
 
     Window = (PYORI_WIN_WINDOW)WindowHandle;
 
-    hConIn = YoriWinGetConsoleInputHandle(Window->WinMgrHandle);
-    hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
-
-    //
-    //  Make the cursor invisible while the window display is active.
-    //
-
-    NewCursorInfo.dwSize = 20;
-    NewCursorInfo.bVisible = FALSE;
-    SetConsoleCursorInfo(hConOut, &NewCursorInfo);
-
-    //
-    //  If the window is supposed to have a control in focus, set it now
-    //  to generate the focus event.  Clear the focus control so we don't
-    //  also generate a lose focus event.
-    //
-
-    if (Window->KeyboardFocusCtrl != NULL) {
-        PYORI_WIN_CTRL FocusCtrl = Window->KeyboardFocusCtrl;
-        Window->KeyboardFocusCtrl = NULL;
-        YoriWinSetFocus(Window, FocusCtrl);
+    YoriWinMgrPushWindow(Window->WinMgrHandle, &Window->TopLevelWindowListEntry);
+    if (YoriWinMgrProcessEvents(Window->WinMgrHandle, Window)) {
+        YoriWinMgrPopWindow(Window->WinMgrHandle, &Window->TopLevelWindowListEntry);
+        if (Result != NULL) {
+            *Result = Window->Result;
+        }
+        return TRUE;
     }
-
-    while(TRUE) {
-
-        //
-        //  Display window contents if they have changed.
-        //
-
-        if (!YoriWinDisplayWindowContents(Window)) {
-            break;
-        }
-
-        if (!ReadConsoleInput(hConIn, InputRecords, sizeof(InputRecords)/sizeof(InputRecords[0]), &ActuallyRead)) {
-            break;
-        }
-
-        for (Index = 0; Index < ActuallyRead; Index++) {
-            InputRecord = &InputRecords[Index];
-            if (InputRecord->EventType == KEY_EVENT) {
-                for (RepeatIndex = 0; RepeatIndex < InputRecord->Event.KeyEvent.wRepeatCount; RepeatIndex++) {
-                    if (InputRecord->Event.KeyEvent.bKeyDown) {
-                        Event.EventType = YoriWinEventKeyDown;
-
-                        Event.KeyDown.CtrlMask = InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED | RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED | ENHANCED_KEY);
-                        Event.KeyDown.VirtualKeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
-                        Event.KeyDown.VirtualScanCode = InputRecord->Event.KeyEvent.wVirtualScanCode;
-                        Event.KeyDown.Char = InputRecord->Event.KeyEvent.uChar.UnicodeChar;
-                    } else {
-                        Event.EventType = YoriWinEventKeyUp;
-                        Event.KeyUp.CtrlMask = InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED | RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED | ENHANCED_KEY);
-                        Event.KeyUp.VirtualKeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
-                        Event.KeyUp.VirtualScanCode = InputRecord->Event.KeyEvent.wVirtualScanCode;
-                        Event.KeyUp.Char = InputRecord->Event.KeyEvent.uChar.UnicodeChar;
-                    }
-
-                    YoriWinNotifyEvent(Window, &Event);
-                }
-            } else if (InputRecord->EventType == MOUSE_EVENT) {
-                DWORD ButtonsPressed;
-                DWORD ButtonsReleased;
-                DWORD PreviousMouseButtonState;
-                BOOLEAN InWindowRange;
-                BOOLEAN InWindowClientRange;
-                PreviousMouseButtonState = YoriWinGetPreviousMouseButtonState(Window->WinMgrHandle);
-
-                ButtonsPressed = InputRecord->Event.MouseEvent.dwButtonState - (PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
-                ButtonsReleased = PreviousMouseButtonState - (PreviousMouseButtonState & InputRecord->Event.MouseEvent.dwButtonState);
-                YoriWinSetPreviousMouseButtonState(Window->WinMgrHandle, InputRecord->Event.MouseEvent.dwButtonState);
-
-                InWindowRange = FALSE;
-                InWindowClientRange = FALSE;
-
-                if (YoriWinCoordInSmallRect(&InputRecord->Event.MouseEvent.dwMousePosition, &Window->Ctrl.FullRect)) {
-                    SMALL_RECT ClientArea;
-                    ClientArea.Left = (SHORT)(Window->Ctrl.FullRect.Left + Window->Ctrl.ClientRect.Left);
-                    ClientArea.Top = (SHORT)(Window->Ctrl.FullRect.Top + Window->Ctrl.ClientRect.Top);
-                    ClientArea.Right = (SHORT)(Window->Ctrl.FullRect.Left + Window->Ctrl.ClientRect.Right);
-                    ClientArea.Bottom = (SHORT)(Window->Ctrl.FullRect.Top + Window->Ctrl.ClientRect.Bottom);
-                    InWindowRange = TRUE;
-                    if (YoriWinCoordInSmallRect(&InputRecord->Event.MouseEvent.dwMousePosition, &ClientArea)) {
-                        InWindowClientRange = TRUE;
-                    }
-                }
-
-                if (InputRecord->Event.MouseEvent.dwEventFlags == 0) {
-
-                    if (InWindowClientRange) {
-                        if (ButtonsReleased > 0) {
-                            Event.EventType = YoriWinEventMouseUpInClient;
-                            Event.MouseUp.ButtonsReleased = ButtonsReleased;
-                            Event.MouseUp.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                            Event.MouseUp.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left - Window->Ctrl.ClientRect.Left);
-                            Event.MouseUp.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top - Window->Ctrl.ClientRect.Top);
-                            YoriWinNotifyEvent(Window, &Event);
-                        }
-                        if (ButtonsPressed > 0) {
-                            Event.EventType = YoriWinEventMouseDownInClient;
-                            Event.MouseDown.ButtonsPressed = ButtonsPressed;
-                            Event.MouseDown.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                            Event.MouseDown.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left - Window->Ctrl.ClientRect.Left);
-                            Event.MouseDown.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top - Window->Ctrl.ClientRect.Top);
-                            YoriWinNotifyEvent(Window, &Event);
-                        }
-                    } else if (InWindowRange) {
-                        if (ButtonsReleased > 0) {
-                            Event.EventType = YoriWinEventMouseUpInNonClient;
-                            Event.MouseUp.ButtonsReleased = ButtonsReleased;
-                            Event.MouseUp.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                            Event.MouseUp.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left);
-                            Event.MouseUp.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top);
-                            YoriWinNotifyEvent(Window, &Event);
-                        }
-                        if (ButtonsPressed > 0) {
-                            Event.EventType = YoriWinEventMouseDownInNonClient;
-                            Event.MouseDown.ButtonsPressed = ButtonsPressed;
-                            Event.MouseDown.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                            Event.MouseDown.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left);
-                            Event.MouseDown.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top);
-                            YoriWinNotifyEvent(Window, &Event);
-                        }
-                    } else {
-                        if (ButtonsReleased > 0) {
-                            Event.EventType = YoriWinEventMouseUpOutsideWindow;
-                            Event.MouseUp.ButtonsReleased = ButtonsReleased;
-                            Event.MouseUp.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                            Event.MouseUp.Location.X = 0;
-                            Event.MouseUp.Location.Y = 0;
-                            YoriWinNotifyEvent(Window, &Event);
-                        }
-                        if (ButtonsPressed > 0) {
-                            Event.EventType = YoriWinEventMouseDownOutsideWindow;
-                            Event.MouseUp.ButtonsReleased = ButtonsPressed;
-                            Event.MouseUp.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                            Event.MouseUp.Location.X = 0;
-                            Event.MouseUp.Location.Y = 0;
-                            YoriWinNotifyEvent(Window, &Event);
-                        }
-                    }
-                }
-
-                if (InputRecord->Event.MouseEvent.dwEventFlags & DOUBLE_CLICK) {
-                    if (InWindowClientRange) {
-                        Event.EventType = YoriWinEventMouseDoubleClickInClient;
-                        Event.MouseDown.ButtonsPressed = InputRecord->Event.MouseEvent.dwButtonState;
-                        Event.MouseDown.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                        Event.MouseDown.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left - Window->Ctrl.ClientRect.Left);
-                        Event.MouseDown.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top - Window->Ctrl.ClientRect.Top);
-                        YoriWinNotifyEvent(Window, &Event);
-                    } else if (InWindowRange) {
-                        Event.EventType = YoriWinEventMouseDoubleClickInNonClient;
-                        Event.MouseDown.ButtonsPressed = InputRecord->Event.MouseEvent.dwButtonState;
-                        Event.MouseDown.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                        Event.MouseDown.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left);
-                        Event.MouseDown.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top);
-                        YoriWinNotifyEvent(Window, &Event);
-                    }
-                }
-
-                if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_MOVED) {
-                    if (InWindowClientRange) {
-                        Event.EventType = YoriWinEventMouseMoveInClient;
-                        Event.MouseMove.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                        Event.MouseMove.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left - Window->Ctrl.ClientRect.Left);
-                        Event.MouseMove.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top - Window->Ctrl.ClientRect.Top);
-                        YoriWinNotifyEvent(Window, &Event);
-                    } else if (InWindowRange) {
-                        Event.EventType = YoriWinEventMouseMoveInNonClient;
-                        Event.MouseMove.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                        Event.MouseMove.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - Window->Ctrl.FullRect.Left);
-                        Event.MouseMove.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - Window->Ctrl.FullRect.Top);
-                        YoriWinNotifyEvent(Window, &Event);
-                    }
-                }
-
-                //
-                //  Conhost v1 sends these events with the mouse location
-                //  based on screen coordinates, then caps the returned values
-                //  to console buffer size.  This capping means that
-                //  information has been lost which prevents this code from
-                //  re-translating the supplied coordinates back to screen
-                //  coordinates and calculating the buffer location correctly.
-                //  In addition, there appears to no way to get the "current"
-                //  mouse position, which is obviously generally a bad idea.
-                //  For these reasons, currently mouse wheel support is
-                //  limited to Conhostv2.
-                //
-                if (InputRecord->Event.MouseEvent.dwEventFlags & MOUSE_WHEELED &&
-                    YoriWinIsConhostv2(Window->WinMgrHandle)) {
-
-                    BOOLEAN MoveUp;
-                    SHORT MoveAmount;
-                    COORD Location;
-
-                    Location.X = InputRecord->Event.MouseEvent.dwMousePosition.X;
-                    Location.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
-
-                    MoveAmount = HIWORD(InputRecord->Event.MouseEvent.dwButtonState);
-                    MoveUp = TRUE;
-                    if (MoveAmount < 0) {
-                        MoveUp = FALSE;
-                        MoveAmount = (WORD)(-1 * MoveAmount);
-                    }
-
-                    MoveAmount = (WORD)(MoveAmount / 60);
-                    if (MoveAmount == 0) {
-                        MoveAmount = 1;
-                    }
-
-                    if (InWindowClientRange) {
-                        if (MoveUp) {
-                            Event.EventType = YoriWinEventMouseWheelUpInClient;
-                        } else {
-                            Event.EventType = YoriWinEventMouseWheelDownInClient;
-                        }
-                        Event.MouseWheel.LinesToMove = MoveAmount;
-                        Event.MouseWheel.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                        Event.MouseWheel.Location.X = (SHORT)(Location.X - Window->Ctrl.FullRect.Left - Window->Ctrl.ClientRect.Left);
-                        Event.MouseWheel.Location.Y = (SHORT)(Location.Y - Window->Ctrl.FullRect.Top - Window->Ctrl.ClientRect.Top);
-                        YoriWinNotifyEvent(Window, &Event);
-                    } else if (InWindowRange) {
-                        if (MoveUp) {
-                            Event.EventType = YoriWinEventMouseWheelUpInNonClient;
-                        } else {
-                            Event.EventType = YoriWinEventMouseWheelDownInNonClient;
-                        }
-                        Event.MouseWheel.LinesToMove = MoveAmount;
-                        Event.MouseWheel.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
-                        Event.MouseWheel.Location.X = (SHORT)(Location.X - Window->Ctrl.FullRect.Left);
-                        Event.MouseWheel.Location.Y = (SHORT)(Location.Y - Window->Ctrl.FullRect.Top);
-                        YoriWinNotifyEvent(Window, &Event);
-                    }
-                }
-            }
-        }
-
-        if (Window->Closing) {
-            YoriWinDisplayWindowContents(Window);
-
-            // MSFIX Should this restore the display rather than destroy?
-
-            if (Result != NULL) {
-                *Result = Window->Result;
-            }
-            return TRUE;
-        }
-    }
+    YoriWinMgrPopWindow(Window->WinMgrHandle, &Window->TopLevelWindowListEntry);
 
     return FALSE;
 }

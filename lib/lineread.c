@@ -3,7 +3,7 @@
  *
  * Implementations for reading lines from files.
  *
- * Copyright (c) 2014-2018 Malcolm J. Smith
+ * Copyright (c) 2014-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -198,9 +198,9 @@ YoriLibBytesInBom(
 
  @param FileHandle Specifies the handle to the file to read the line from.
 
- @param LineTerminated On successful completion, set to TRUE to indicate
-        a complete line with line end was found.  Set to FALSE to indicate
-        no line end was found.  This can happen if
+ @param LineEnding On successful completion, set to indicate the string of
+        characters used to terminate the line.  Can be YoriLibLineEndingNone
+        to indicate no line end was found, which can happen if
         ReturnFinalNonTerminatedLine is TRUE or MaximumDelay is less than
         infinite and a partial line was found.
 
@@ -217,7 +217,7 @@ YoriLibReadLineToStringEx(
     __in BOOL ReturnFinalNonTerminatedLine,
     __in DWORD MaximumDelay,
     __in HANDLE FileHandle,
-    __out PBOOL LineTerminated,
+    __out PYORI_LIB_LINE_ENDING LineEnding,
     __out PBOOL TimeoutReached
     )
 {
@@ -235,6 +235,7 @@ YoriLibReadLineToStringEx(
     DWORD DelayTime;
     DWORD CharsRemaining;
     DWORD CumulativeDelay;
+    YORI_LIB_LINE_ENDING LocalLineEnding;
 
     *TimeoutReached = FALSE;
     FileType = GetFileType(FileHandle);
@@ -247,7 +248,7 @@ YoriLibReadLineToStringEx(
         ReadContext = YoriLibMalloc(sizeof(YORI_LIB_LINE_READ_CONTEXT));
         if (ReadContext == NULL) {
             UserString->LengthInChars = 0;
-            *LineTerminated = FALSE;
+            *LineEnding = YoriLibLineEndingNone;
             return NULL;
         }
         *Context = ReadContext;
@@ -281,7 +282,7 @@ YoriLibReadLineToStringEx(
         ReadContext->PreviousBuffer = YoriLibMalloc(ReadContext->LengthOfBuffer);
         if (ReadContext->PreviousBuffer == NULL) {
             UserString->LengthInChars = 0;
-            *LineTerminated = FALSE;
+            *LineEnding = YoriLibLineEndingNone;
             ReadContext->Terminated = TRUE;
             return NULL;
         }
@@ -309,14 +310,18 @@ YoriLibReadLineToStringEx(
                     ProcessThisLine = TRUE;
 
                     CharsToCopy = Count;
+                    LocalLineEnding = YoriLibLineEndingCR;
                     if (WideBuffer[Count] == 0xD) {
                         if ((Count + 1) * sizeof(WCHAR) < (ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset)) {
                             if (WideBuffer[Count + 1] == 0xA) {
                                 Count++;
+                                LocalLineEnding = YoriLibLineEndingCRLF;
                             }
                         } else if (ReadContext->CurrentBufferOffset > 0) {
                             ProcessThisLine = FALSE;
                         }
+                    } else {
+                        LocalLineEnding = YoriLibLineEndingLF;
                     }
 
                     Count++;
@@ -335,11 +340,11 @@ YoriLibReadLineToStringEx(
                         if (YoriLibCopyLineToUserBufferW(UserString, (LPSTR)&WideBuffer[CharsToSkip], CharsToCopy)) {
                             ReadContext->CurrentBufferOffset += Count * sizeof(WCHAR);
                             ReadContext->LinesRead++;
-                            *LineTerminated = TRUE;
+                            *LineEnding = LocalLineEnding;
                             return UserString->StartOfString;
                         } else {
                             UserString->LengthInChars = 0;
-                            *LineTerminated = FALSE;
+                            *LineEnding = YoriLibLineEndingNone;
                             ReadContext->Terminated = TRUE;
                             return NULL;
                         }
@@ -357,14 +362,18 @@ YoriLibReadLineToStringEx(
                     ProcessThisLine = TRUE;
 
                     CharsToCopy = Count;
+                    LocalLineEnding = YoriLibLineEndingCR;
                     if (Buffer[Count] == 0xD) {
                         if (Count + 1 < (ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset)) {
                             if (Buffer[Count + 1] == 0xA) {
                                 Count++;
+                                LocalLineEnding = YoriLibLineEndingCRLF;
                             }
                         } else if (ReadContext->CurrentBufferOffset > 0) {
                             ProcessThisLine = FALSE;
                         }
+                    } else {
+                        LocalLineEnding = YoriLibLineEndingLF;
                     }
 
                     Count++;
@@ -382,11 +391,11 @@ YoriLibReadLineToStringEx(
                         if (YoriLibCopyLineToUserBufferW(UserString, (LPSTR)&Buffer[CharsToSkip], CharsToCopy)) {
                             ReadContext->CurrentBufferOffset += Count;
                             ReadContext->LinesRead++;
-                            *LineTerminated = TRUE;
+                            *LineEnding = LocalLineEnding;
                             return UserString->StartOfString;
                         } else {
                             UserString->LengthInChars = 0;
-                            *LineTerminated = FALSE;
+                            *LineEnding = YoriLibLineEndingNone;
                             ReadContext->Terminated = TRUE;
                             return NULL;
                         }
@@ -415,7 +424,7 @@ YoriLibReadLineToStringEx(
 
         if (ReadContext->LengthOfBuffer == ReadContext->BytesInBuffer) {
             UserString->LengthInChars = 0;
-            *LineTerminated = FALSE;
+            *LineEnding = YoriLibLineEndingNone;
             ReadContext->Terminated = TRUE;
             return NULL;
         }
@@ -559,13 +568,13 @@ YoriLibReadLineToStringEx(
                     }
                     if (YoriLibCopyLineToUserBufferW(UserString, &ReadContext->PreviousBuffer[CharsToSkip], CharsToCopy)) {
                         ReadContext->BytesInBuffer = 0;
-                        *LineTerminated = FALSE;
+                        *LineEnding = YoriLibLineEndingNone;
                         return UserString->StartOfString;
                     }
                 }
             }
             UserString->LengthInChars = 0;
-            *LineTerminated = FALSE;
+            *LineEnding = YoriLibLineEndingNone;
             return NULL;
         }
 
@@ -597,10 +606,10 @@ YoriLibReadLineToString(
     __in HANDLE FileHandle
     )
 {
-    BOOL LineTerminated;
+    YORI_LIB_LINE_ENDING LineEnding;
     BOOL TimeoutReached;
 
-    return YoriLibReadLineToStringEx(UserString, Context, TRUE, INFINITE, FileHandle, &LineTerminated, &TimeoutReached);
+    return YoriLibReadLineToStringEx(UserString, Context, TRUE, INFINITE, FileHandle, &LineEnding, &TimeoutReached);
 }
 
 /**

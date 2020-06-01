@@ -3,7 +3,7 @@
  *
  * Yori window edit control
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,38 @@ typedef enum _YORI_WIN_TEXT_ALIGNMENT {
 } YORI_WIN_TEXT_ALIGNMENT;
 
 /**
+ Information about the selection region within a edit control.
+ */
+typedef struct _YORI_WIN_EDIT_SELECT {
+
+    /**
+     Indicates if a selection is currently active, and if so, what caused the
+     activation.
+     */
+    enum {
+        YoriWinEditSelectNotActive = 0,
+        YoriWinEditSelectKeyboardFromTopDown = 1,
+        YoriWinEditSelectKeyboardFromBottomUp = 2,
+        YoriWinEditSelectMouseFromTopDown = 3,
+        YoriWinEditSelectMouseFromBottomUp = 4,
+        YoriWinEditSelectMouseComplete = 5
+    } Active;
+
+    /**
+     Specifies the character offset containing the beginning of the selection.
+     */
+    DWORD FirstCharOffset;
+
+    /**
+     Specifies the index after the final character selected on the final line.
+     This value can therefore be zero through to the length of string
+     inclusive.
+     */
+    DWORD LastCharOffset;
+
+} YORI_WIN_EDIT_SELECT, *PYORI_WIN_EDIT_SELECT;
+
+/**
  A structure describing the contents of a edit control.
  */
 typedef struct _YORI_WIN_CTRL_EDIT {
@@ -54,6 +86,12 @@ typedef struct _YORI_WIN_CTRL_EDIT {
      The text contents of the edit control
      */
     YORI_STRING Text;
+
+    /**
+     Specifies the selection state of text within the edit control.
+     This is encapsulated into a structure purely for readability.
+     */
+    YORI_WIN_EDIT_SELECT Selection;
 
     /**
      Specifies if the text should be rendered to the left, center, or right of
@@ -94,7 +132,39 @@ typedef struct _YORI_WIN_CTRL_EDIT {
      */
     BOOLEAN HasFocus;
 
+    /**
+     TRUE if events indicate that the left mouse button is currently held
+     down.  FALSE if the mouse button is released.
+     */
+    BOOLEAN MouseButtonDown;
+
 } YORI_WIN_CTRL_EDIT, *PYORI_WIN_CTRL_EDIT;
+
+/**
+ Return TRUE if a selection region is active, or FALSE if no selection is
+ currently active.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @return TRUE if a selection region is active, or FALSE if no selection is
+         currently active.
+ */
+BOOLEAN
+YoriWinEditSelectionActive(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (Edit->Selection.Active == YoriWinEditSelectNotActive) {
+        return FALSE;
+    }
+    return TRUE;
+}
 
 /**
  Adjust the first character to display in the control to ensure the current
@@ -109,6 +179,27 @@ YoriWinEditEnsureCursorVisible(
 {
     COORD ClientSize;
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
+
+    //
+    //  We can't guarantee that the entire selection is on the screen,
+    //  but if it's a single line selection that would fit, try to
+    //  take that into account.  Do this first so if the cursor would
+    //  move the viewport, that takes precedence.
+    //
+
+    if (YoriWinEditSelectionActive(Edit)) {
+        DWORD StartSelection;
+        DWORD EndSelection;
+
+        StartSelection = Edit->Selection.FirstCharOffset;
+        EndSelection = Edit->Selection.LastCharOffset;
+
+        if (StartSelection < Edit->DisplayOffset) {
+            Edit->DisplayOffset = StartSelection;
+        } else if (EndSelection >= Edit->DisplayOffset + ClientSize.X) {
+            Edit->DisplayOffset = EndSelection - ClientSize.X + 1;
+        }
+    }
     if (Edit->CursorOffset < Edit->DisplayOffset) {
         Edit->DisplayOffset = Edit->CursorOffset;
     } else if (Edit->CursorOffset >= Edit->DisplayOffset + ClientSize.X) {
@@ -117,14 +208,47 @@ YoriWinEditEnsureCursorVisible(
 }
 
 /**
+ Draw the border around the edit control.
+
+ @param Edit Pointer to the edit to draw.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditPaintNonClient(
+    __in PYORI_WIN_CTRL_EDIT Edit
+    )
+{
+    SMALL_RECT NonClientRect;
+    WORD Height;
+
+    NonClientRect.Left = 0;
+    NonClientRect.Top = 0;
+    NonClientRect.Right = (SHORT)(Edit->Ctrl.FullRect.Right - Edit->Ctrl.FullRect.Left);
+    NonClientRect.Bottom = (SHORT)(Edit->Ctrl.FullRect.Bottom - Edit->Ctrl.FullRect.Top);
+
+    Height = (WORD)(NonClientRect.Bottom + 1);
+
+    if (Height == 1) {
+        YoriWinSetControlNonClientCell(&Edit->Ctrl, 0, 0, '[', Edit->TextAttributes);
+        YoriWinSetControlNonClientCell(&Edit->Ctrl, NonClientRect.Right, 0, ']', Edit->TextAttributes);
+    } else {
+        YoriWinDrawBorderOnControl(&Edit->Ctrl, &NonClientRect, Edit->TextAttributes, YORI_WIN_BORDER_TYPE_SUNKEN);
+    }
+
+    return TRUE;
+}
+
+
+/**
  Draw the edit with its current state applied.
 
  @param Edit Pointer to the edit to draw.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
-YoriWinPaintEdit(
+BOOLEAN
+YoriWinEditPaint(
     __in PYORI_WIN_CTRL_EDIT Edit
     )
 {
@@ -136,6 +260,7 @@ YoriWinPaintEdit(
     WORD DisplayCursorOffset;
     COORD ClientSize;
     YORI_STRING DisplayLine;
+    BOOLEAN SelectionActive;
 
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
     WinAttributes = Edit->Ctrl.DefaultAttributes;
@@ -179,11 +304,19 @@ YoriWinPaintEdit(
     }
 
     //
-    //  Render the text and highlight the accelerator if it's in
-    //  scope and highlighting is enabled
+    //  Render the text
     //
 
+    SelectionActive = YoriWinEditSelectionActive(&Edit->Ctrl);
     for (CharIndex = 0; CharIndex < DisplayLine.LengthInChars; CharIndex++) {
+        if (SelectionActive) {
+            TextAttributes = Edit->TextAttributes;
+            if (CharIndex + Edit->DisplayOffset >= Edit->Selection.FirstCharOffset &&
+                CharIndex + Edit->DisplayOffset < Edit->Selection.LastCharOffset) {
+
+                TextAttributes = (WORD)(((TextAttributes & 0xF) << 4) | ((TextAttributes & 0xF0) >> 4));
+            }
+        }
         YoriWinSetControlClientCell(&Edit->Ctrl, (WORD)(StartColumn + CharIndex), 0, DisplayLine.StartOfString[CharIndex], TextAttributes);
     }
 
@@ -200,6 +333,312 @@ YoriWinPaintEdit(
     }
 
     return TRUE;
+}
+
+/**
+ Perform debug only checks to see that the selection state follows whatever
+ rules are currently defined for it.
+
+ @param Edit Pointer to the edit control specifying the selection state.
+ */
+VOID
+YoriWinEditCheckSelectionState(
+    __in PYORI_WIN_CTRL_EDIT Edit
+    )
+{
+    PYORI_WIN_EDIT_SELECT Selection;
+    Selection = &Edit->Selection;
+
+    if (Selection->Active  == YoriWinEditSelectNotActive) {
+        return;
+    }
+    if (Selection->Active == YoriWinEditSelectMouseFromTopDown ||
+        Selection->Active == YoriWinEditSelectMouseFromBottomUp) {
+        ASSERT(Selection->FirstCharOffset <= Selection->LastCharOffset);
+    } else {
+        ASSERT(Selection->FirstCharOffset < Selection->LastCharOffset);
+    }
+    ASSERT(Selection->FirstCharOffset <= Edit->Text.LengthInChars);
+    ASSERT(Selection->LastCharOffset <= Edit->Text.LengthInChars);
+}
+
+/**
+ If a selection is currently active, delete all text in the selection.
+
+ @param CtrlHandle Pointer to the edit control containing the selection and
+        contents of the buffer.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditDeleteSelection(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_EDIT_SELECT Selection;
+    DWORD CharsToCopy;
+    DWORD CharsToDelete;
+    PYORI_STRING Line;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (!YoriWinEditSelectionActive(&Edit->Ctrl)) {
+        return TRUE;
+    }
+
+    Selection = &Edit->Selection;
+    Line = &Edit->Text;
+
+    if (Selection->FirstCharOffset >= Selection->LastCharOffset) {
+        return TRUE;
+    }
+
+    CharsToDelete = Selection->LastCharOffset - Selection->FirstCharOffset;
+    CharsToCopy = Line->LengthInChars - Selection->LastCharOffset;
+
+    if (CharsToCopy > 0) {
+        memmove(&Line->StartOfString[Selection->FirstCharOffset],
+                &Line->StartOfString[Selection->LastCharOffset],
+                CharsToCopy * sizeof(TCHAR));
+    }
+
+    Line->LengthInChars -= CharsToDelete;
+
+    Edit->CursorOffset = Selection->FirstCharOffset;
+    Selection->Active = YoriWinEditSelectNotActive;
+    return TRUE;
+}
+
+
+/**
+ Build a single continuous string covering the selected range in an edit
+ control.
+
+ @param CtrlHandle Pointer to the edit control containing the selection and
+        contents of the buffer.
+
+ @param SelectedText On successful completion, populated with a newly
+        allocated buffer containing the selected text.  The caller is
+        expected to free this buffer with @ref YoriLibFreeStringContents .
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditGetSelectedText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PYORI_STRING SelectedText
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_EDIT_SELECT Selection;
+    DWORD CharsInRange;
+    PYORI_STRING Line;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (!YoriWinEditSelectionActive(CtrlHandle)) {
+        YoriLibInitEmptyString(SelectedText);
+        return TRUE;
+    }
+
+    Selection = &Edit->Selection;
+    Line = &Edit->Text;
+
+    if (Selection->FirstCharOffset >= Selection->LastCharOffset) {
+        YoriLibInitEmptyString(SelectedText);
+        return TRUE;
+    }
+
+    CharsInRange = Selection->LastCharOffset - Selection->FirstCharOffset;
+
+    if (!YoriLibAllocateString(SelectedText, CharsInRange + 1)) {
+        return FALSE;
+    }
+
+    memcpy(SelectedText->StartOfString, &Line->StartOfString[Selection->FirstCharOffset], CharsInRange * sizeof(TCHAR));
+    SelectedText->LengthInChars = CharsInRange;
+    SelectedText->StartOfString[CharsInRange] = '\0';
+    return TRUE;
+}
+
+/**
+ Start a new selection from the current cursor location if no selection is
+ currently active.  If one is active, this call is ignored.
+
+ @param Edit Pointer to the edit control that describes the selection and
+        cursor location.
+
+ @param Mouse If TRUE, the selection is being initiated by mouse operations.
+        If FALSE, the selection is being initiated by keyboard operations.
+ */
+VOID
+YoriWinEditStartSelectionAtCursor(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in BOOLEAN Mouse
+    )
+{
+    PYORI_WIN_EDIT_SELECT Selection;
+
+    Selection = &Edit->Selection;
+
+    //
+    //  If a mouse selection is active and keyboard selection is requested
+    //  or vice versa, clear the existing selection.
+    //
+
+    if (Mouse) {
+        if (Selection->Active == YoriWinEditSelectKeyboardFromTopDown ||
+            Selection->Active == YoriWinEditSelectKeyboardFromBottomUp ||
+            Selection->Active == YoriWinEditSelectMouseComplete) {
+
+            Selection->Active = YoriWinEditSelectNotActive;
+        }
+    } else {
+        if (Selection->Active == YoriWinEditSelectMouseFromTopDown ||
+            Selection->Active == YoriWinEditSelectMouseFromBottomUp ||
+            Selection->Active == YoriWinEditSelectMouseComplete) {
+
+            Selection->Active = YoriWinEditSelectNotActive;
+        }
+    }
+
+    //
+    //  If no selection is active, activate it.
+    //
+
+    if (Selection->Active == YoriWinEditSelectNotActive) {
+        DWORD EffectiveCursorOffset;
+        EffectiveCursorOffset = Edit->CursorOffset;
+        if (EffectiveCursorOffset > Edit->Text.LengthInChars) {
+            EffectiveCursorOffset = Edit->Text.LengthInChars;
+        }
+
+        if (Mouse) {
+            Selection->Active = YoriWinEditSelectMouseFromTopDown;
+        } else {
+            Selection->Active = YoriWinEditSelectKeyboardFromTopDown;
+        }
+
+        Selection->FirstCharOffset = EffectiveCursorOffset;
+        Selection->LastCharOffset = EffectiveCursorOffset;
+    }
+}
+
+/**
+ Extend the current selection to the location of the cursor.
+
+ @param Edit Pointer to the edit control that describes the current selection
+        and cursor location.
+ */
+VOID
+YoriWinEditExtendSelectionToCursor(
+    __in PYORI_WIN_CTRL_EDIT Edit
+    )
+{
+    DWORD AnchorOffset;
+    DWORD EffectiveCursorOffset;
+    BOOLEAN MouseSelection = FALSE;
+
+    PYORI_WIN_EDIT_SELECT Selection;
+
+    AnchorOffset = 0;
+
+    Selection = &Edit->Selection;
+
+    //
+    //  Find the place where the selection started from the user's point of
+    //  view.  This might be the beginning or end of the selection in terms
+    //  of its location in the buffer.
+    //
+
+    ASSERT(YoriWinEditSelectionActive(&Edit->Ctrl));
+    if (Selection->Active == YoriWinEditSelectKeyboardFromTopDown ||
+        Selection->Active == YoriWinEditSelectMouseFromTopDown) {
+
+        AnchorOffset = Selection->FirstCharOffset;
+
+    } else if (Selection->Active == YoriWinEditSelectKeyboardFromBottomUp ||
+               Selection->Active == YoriWinEditSelectMouseFromBottomUp) {
+
+        AnchorOffset = Selection->LastCharOffset;
+
+    } else {
+        return;
+    }
+
+    if (Selection->Active == YoriWinEditSelectMouseFromTopDown ||
+        Selection->Active == YoriWinEditSelectMouseFromBottomUp) {
+
+        MouseSelection = TRUE;
+    }
+
+    EffectiveCursorOffset = Edit->CursorOffset;
+
+    if (EffectiveCursorOffset > Edit->Text.LengthInChars) {
+        EffectiveCursorOffset = Edit->Text.LengthInChars;
+    }
+
+    if (EffectiveCursorOffset < AnchorOffset) {
+        if (MouseSelection) {
+            Selection->Active = YoriWinEditSelectMouseFromBottomUp;
+        } else {
+            Selection->Active = YoriWinEditSelectKeyboardFromBottomUp;
+        }
+        Selection->LastCharOffset = AnchorOffset;
+        Selection->FirstCharOffset = EffectiveCursorOffset;
+    } else if (EffectiveCursorOffset > AnchorOffset) {
+        if (MouseSelection) {
+            Selection->Active = YoriWinEditSelectMouseFromTopDown;
+        } else {
+            Selection->Active = YoriWinEditSelectKeyboardFromTopDown;
+        }
+        Selection->FirstCharOffset = AnchorOffset;
+        Selection->LastCharOffset = EffectiveCursorOffset;
+    } else if (!MouseSelection) {
+        Selection->Active = YoriWinEditSelectNotActive;
+    } else {
+        Selection->LastCharOffset = AnchorOffset;
+        Selection->FirstCharOffset = AnchorOffset;
+    }
+
+    YoriWinEditCheckSelectionState(Edit);
+}
+
+/**
+ Set the selection range within an edit control to an explicitly provided
+ range.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @param StartOffset Specifies the character offset within the line to the
+        beginning of the selection.
+
+ @param EndOffset Specifies the character offset within the line to the
+        end of the selection.
+ */
+VOID
+YoriWinEditSetSelectionRange(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORD StartOffset,
+    __in DWORD EndOffset
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+
+    Edit = (PYORI_WIN_CTRL_EDIT)CtrlHandle;
+
+    Edit->Selection.Active = YoriWinEditSelectNotActive;
+    Edit->CursorOffset = StartOffset;
+    YoriWinEditStartSelectionAtCursor(Edit, FALSE);
+    Edit->CursorOffset = EndOffset;
+    YoriWinEditExtendSelectionToCursor(Edit);
+    YoriWinEditEnsureCursorVisible(Edit);
+    YoriWinEditPaint(Edit);
 }
 
 /**
@@ -222,7 +661,7 @@ YoriWinEditSetTextAttributes(
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
     Edit->TextAttributes = TextAttributes;
-    YoriWinPaintEdit(Edit);
+    YoriWinEditPaint(Edit);
 }
 
 /**
@@ -279,27 +718,35 @@ YoriWinEditToggleInsert(
 
 
 /**
- Add a new character and honor the current insert or overwrite state.
+ Add new text and honor the current insert or overwrite state.
 
  @param Edit Pointer to the edit control, indicating the current cursor
         location and insert state.
 
- @param Char The character to include.
+ @param Text The string to include.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
-YoriWinEditAddChar(
+YoriWinEditInsertTextAtCursor(
     __in PYORI_WIN_CTRL_EDIT Edit,
-    __in TCHAR Char
+    __in PYORI_STRING Text
     )
 {
     DWORD LengthNeeded;
 
+    if (YoriWinEditSelectionActive(Edit)) {
+        YoriWinEditDeleteSelection(Edit);
+    }
+
+    if (Text->LengthInChars == 0) {
+        return TRUE;
+    }
+
     if (Edit->InsertMode) {
-        LengthNeeded = Edit->Text.LengthInChars + 1;
+        LengthNeeded = Edit->Text.LengthInChars + Text->LengthInChars;
     } else {
-        LengthNeeded = Edit->CursorOffset;
+        LengthNeeded = Edit->CursorOffset + Text->LengthInChars - 1;
     }
 
     if (LengthNeeded + 1 >= Edit->Text.LengthAllocated) {
@@ -314,26 +761,155 @@ YoriWinEditAddChar(
     }
 
     if (Edit->InsertMode &&
-        Edit->CursorOffset + 1 < Edit->Text.LengthInChars) {
+        Edit->CursorOffset < Edit->Text.LengthInChars) {
 
         DWORD CharsToCopy;
         CharsToCopy = Edit->Text.LengthInChars - Edit->CursorOffset;
-        if (Edit->CursorOffset < Edit->Text.LengthInChars) {
-            memmove(&Edit->Text.StartOfString[Edit->CursorOffset + 1],
-                    &Edit->Text.StartOfString[Edit->CursorOffset],
-                    CharsToCopy * sizeof(TCHAR));
-            Edit->Text.LengthInChars++;
-        }
+        memmove(&Edit->Text.StartOfString[Edit->CursorOffset + Text->LengthInChars],
+                &Edit->Text.StartOfString[Edit->CursorOffset],
+                CharsToCopy * sizeof(TCHAR));
+        Edit->Text.LengthInChars = Edit->Text.LengthInChars + Text->LengthInChars;
     }
 
-    Edit->Text.StartOfString[Edit->CursorOffset] = Char;
-    Edit->CursorOffset++;
+    memcpy(&Edit->Text.StartOfString[Edit->CursorOffset], Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
+    Edit->CursorOffset = Edit->CursorOffset + Text->LengthInChars;
     if (Edit->CursorOffset > Edit->Text.LengthInChars) {
         Edit->Text.LengthInChars = Edit->CursorOffset;
     }
 
     return TRUE;
 }
+
+/**
+ Add a single character and honor the current insert or overwrite state.
+
+ @param Edit Pointer to the edit control, indicating the current cursor
+        location and insert state.
+
+ @param Char The character to include.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditAddChar(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in TCHAR Char
+    )
+{
+    YORI_STRING String;
+
+    YoriLibInitEmptyString(&String);
+    String.StartOfString = &Char;
+    String.LengthInChars = 1;
+
+    return YoriWinEditInsertTextAtCursor(Edit, &String);
+}
+
+/**
+ Add the currently selected text to the clipboard and delete it from the
+ buffer.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditCutSelectedText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+    YORI_STRING Text;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+    YoriLibInitEmptyString(&Text);
+
+    if (!YoriWinEditGetSelectedText(CtrlHandle, &Text)) {
+        return FALSE;
+    }
+
+    if (!YoriLibCopyText(&Text)) {
+        YoriLibFreeStringContents(&Text);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&Text);
+    YoriWinEditDeleteSelection(CtrlHandle);
+    return TRUE;
+}
+
+/**
+ Add the currently selected text to the clipboard and clear the selection.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditCopySelectedText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+    YORI_STRING Text;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+    YoriLibInitEmptyString(&Text);
+
+    if (!YoriWinEditGetSelectedText(CtrlHandle, &Text)) {
+        return FALSE;
+    }
+
+    if (!YoriLibCopyText(&Text)) {
+        YoriLibFreeStringContents(&Text);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&Text);
+    return TRUE;
+}
+
+/**
+ Paste the text that is currently in the clipboard at the current cursor
+ location.  Note this can update the cursor location.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditPasteText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    YORI_STRING Text;
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+    YoriLibInitEmptyString(&Text);
+
+    if (YoriWinEditSelectionActive(CtrlHandle)) {
+        YoriWinEditDeleteSelection(CtrlHandle);
+    }
+
+    if (!YoriLibPasteText(&Text)) {
+        return FALSE;
+    }
+    if (!YoriWinEditInsertTextAtCursor(CtrlHandle, &Text)) {
+        YoriLibFreeStringContents(&Text);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&Text);
+    return TRUE;
+}
+
 
 /**
  Delete the character before the cursor and move later characters into
@@ -350,6 +926,11 @@ YoriWinEditBackspace(
     )
 {
     DWORD CharsToCopy;
+
+    if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
+        return YoriWinEditDeleteSelection(&Edit->Ctrl);
+    }
+
     if (Edit->CursorOffset == 0) {
         return FALSE;
     }
@@ -377,6 +958,11 @@ YoriWinEditDelete(
     )
 {
     DWORD CharsToCopy;
+
+    if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
+        return YoriWinEditDeleteSelection(&Edit->Ctrl);
+    }
+
     if (Edit->CursorOffset == Edit->Text.LengthInChars) {
         return FALSE;
     }
@@ -414,32 +1000,64 @@ YoriWinEditProcessPossiblyEnhancedKey(
     Recognized = FALSE;
 
     if (Event->KeyDown.VirtualKeyCode == VK_LEFT) {
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinEditStartSelectionAtCursor(Edit, FALSE);
+        } else if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
+            Edit->Selection.Active = YoriWinEditSelectNotActive;
+        }
         if (Edit->CursorOffset > 0) {
             Edit->CursorOffset--;
+            if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+                YoriWinEditExtendSelectionToCursor(Edit);
+            }
             YoriWinEditEnsureCursorVisible(Edit);
-            YoriWinPaintEdit(Edit);
         }
+        YoriWinEditPaint(Edit);
         Recognized = TRUE;
     } else if (Event->KeyDown.VirtualKeyCode == VK_RIGHT) {
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinEditStartSelectionAtCursor(Edit, FALSE);
+        } else if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
+            Edit->Selection.Active = YoriWinEditSelectNotActive;
+        }
         if (Edit->CursorOffset < Edit->Text.LengthInChars) {
             Edit->CursorOffset++;
+            if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+                YoriWinEditExtendSelectionToCursor(Edit);
+            }
             YoriWinEditEnsureCursorVisible(Edit);
-            YoriWinPaintEdit(Edit);
         }
+        YoriWinEditPaint(Edit);
         Recognized = TRUE;
     } else if (Event->KeyDown.VirtualKeyCode == VK_HOME) {
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinEditStartSelectionAtCursor(Edit, FALSE);
+        } else if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
+            Edit->Selection.Active = YoriWinEditSelectNotActive;
+        }
         if (Edit->CursorOffset != 0) {
             Edit->CursorOffset = 0;
+            if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+                YoriWinEditExtendSelectionToCursor(Edit);
+            }
             YoriWinEditEnsureCursorVisible(Edit);
-            YoriWinPaintEdit(Edit);
         }
+        YoriWinEditPaint(Edit);
         Recognized = TRUE;
     } else if (Event->KeyDown.VirtualKeyCode == VK_END) {
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinEditStartSelectionAtCursor(Edit, FALSE);
+        } else if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
+            Edit->Selection.Active = YoriWinEditSelectNotActive;
+        }
         if (Edit->CursorOffset != Edit->Text.LengthInChars) {
             Edit->CursorOffset = Edit->Text.LengthInChars;
+            if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+                YoriWinEditExtendSelectionToCursor(Edit);
+            }
             YoriWinEditEnsureCursorVisible(Edit);
-            YoriWinPaintEdit(Edit);
         }
+        YoriWinEditPaint(Edit);
         Recognized = TRUE;
     } else if (Event->KeyDown.VirtualKeyCode == VK_INSERT) {
         if (!Edit->ReadOnly) {
@@ -450,7 +1068,7 @@ YoriWinEditProcessPossiblyEnhancedKey(
 
         if (!Edit->ReadOnly && YoriWinEditBackspace(Edit)) {
             YoriWinEditEnsureCursorVisible(Edit);
-            YoriWinPaintEdit(Edit);
+            YoriWinEditPaint(Edit);
         }
         Recognized = TRUE;
 
@@ -458,7 +1076,7 @@ YoriWinEditProcessPossiblyEnhancedKey(
 
         if (!Edit->ReadOnly && YoriWinEditDelete(Edit)) {
             YoriWinEditEnsureCursorVisible(Edit);
-            YoriWinPaintEdit(Edit);
+            YoriWinEditPaint(Edit);
         }
         Recognized = TRUE;
     }
@@ -490,11 +1108,11 @@ YoriWinEditEventHandler(
     switch(Event->EventType) {
         case YoriWinEventGetFocus:
             YoriWinEditSetCursorVisible(Edit, TRUE);
-            YoriWinPaintEdit(Edit);
+            YoriWinEditPaint(Edit);
             break;
         case YoriWinEventLoseFocus:
             YoriWinEditSetCursorVisible(Edit, FALSE);
-            YoriWinPaintEdit(Edit);
+            YoriWinEditPaint(Edit);
             break;
         case YoriWinEventParentDestroyed:
             YoriWinEditSetCursorVisible(Edit, FALSE);
@@ -508,8 +1126,7 @@ YoriWinEditEventHandler(
             // This code is trying to handle the AltGr cases while not
             // handling pure right Alt which would normally be an accelerator.
             //
-            // TODO: Selection
-            // TODO: Copy/paste
+            // MSFIX: Copy/paste
             //
 
             if (Event->KeyDown.CtrlMask == 0 ||
@@ -530,12 +1147,86 @@ YoriWinEditEventHandler(
                         if (!Edit->ReadOnly) {
                             YoriWinEditAddChar(Edit, Event->KeyDown.Char);
                             YoriWinEditEnsureCursorVisible(Edit);
-                            YoriWinPaintEdit(Edit);
+                            YoriWinEditPaint(Edit);
                         }
                     }
                 }
-            } else if (Event->KeyDown.CtrlMask == ENHANCED_KEY) {
+            } else if (Event->KeyDown.CtrlMask == LEFT_CTRL_PRESSED ||
+                       Event->KeyDown.CtrlMask == RIGHT_CTRL_PRESSED) {
+
+                if (Event->KeyDown.VirtualKeyCode == 'C') {
+                    if (YoriWinEditCopySelectedText(Ctrl)) {
+                        Edit->Selection.Active = YoriWinEditSelectNotActive;
+                        YoriWinEditEnsureCursorVisible(Edit);
+                        YoriWinEditPaint(Edit);
+                    }
+                    return TRUE;
+                } else if (Event->KeyDown.VirtualKeyCode == 'V') {
+                    if (YoriWinEditPasteText(Ctrl)) {
+                        YoriWinEditEnsureCursorVisible(Edit);
+                        YoriWinEditPaint(Edit);
+                    }
+                    return TRUE;
+                } else if (Event->KeyDown.VirtualKeyCode == 'X') {
+                    if (YoriWinEditCutSelectedText(Ctrl)) {
+                        YoriWinEditEnsureCursorVisible(Edit);
+                        YoriWinEditPaint(Edit);
+                    }
+                    return TRUE;
+                }
+            } else if (Event->KeyDown.CtrlMask == ENHANCED_KEY ||
+                       Event->KeyDown.CtrlMask == (ENHANCED_KEY | SHIFT_PRESSED)) {
                 YoriWinEditProcessPossiblyEnhancedKey(Edit, Event);
+            }
+            break;
+        case YoriWinEventMouseDownInClient:
+            {
+                DWORD ClickOffset;
+                ClickOffset = Edit->DisplayOffset + Event->MouseDown.Location.X;
+                if (ClickOffset > Edit->Text.LengthInChars) {
+                    ClickOffset = Edit->Text.LengthInChars;
+                }
+
+                Edit->CursorOffset = ClickOffset;
+                Edit->Selection.Active = YoriWinEditSelectNotActive;
+                YoriWinEditStartSelectionAtCursor(Edit, TRUE);
+                Edit->MouseButtonDown = TRUE;
+
+                YoriWinEditEnsureCursorVisible(Edit);
+                YoriWinEditPaint(Edit);
+            }
+            break;
+
+        case YoriWinEventMouseMoveInClient:
+            if (Edit->MouseButtonDown) {
+                DWORD ClickOffset;
+                ClickOffset = Edit->DisplayOffset + Event->MouseMove.Location.X;
+                if (ClickOffset > Edit->Text.LengthInChars) {
+                    ClickOffset = Edit->Text.LengthInChars;
+                }
+                Edit->CursorOffset = ClickOffset;
+                if (Edit->Selection.Active == YoriWinEditSelectMouseFromTopDown ||
+                    Edit->Selection.Active == YoriWinEditSelectMouseFromBottomUp) {
+
+                    YoriWinEditExtendSelectionToCursor(Edit);
+                } else {
+                    YoriWinEditStartSelectionAtCursor(Edit, TRUE);
+                }
+
+                YoriWinEditEnsureCursorVisible(Edit);
+                YoriWinEditPaint(Edit);
+            }
+            break;
+
+        case YoriWinEventMouseUpInClient:
+        case YoriWinEventMouseUpInNonClient:
+        case YoriWinEventMouseUpOutsideWindow:
+
+            if (Edit->Selection.Active == YoriWinEditSelectMouseFromTopDown ||
+                Edit->Selection.Active == YoriWinEditSelectMouseFromBottomUp) {
+
+                Edit->Selection.Active = YoriWinEditSelectMouseComplete;
+                Edit->MouseButtonDown = FALSE;
             }
             break;
     }
@@ -618,7 +1309,43 @@ YoriWinEditSetText(
     Edit->Text.StartOfString[Edit->Text.LengthInChars] = '\0';
     Edit->CursorOffset = Edit->Text.LengthInChars;
     YoriWinEditEnsureCursorVisible(Edit);
-    YoriWinPaintEdit(Edit);
+    YoriWinEditPaint(Edit);
+    return TRUE;
+}
+
+/**
+ Set the size and location of an edit control, and redraw the contents.
+
+ @param CtrlHandle Pointer to the edit to resize or reposition.
+
+ @param CtrlRect Specifies the new size and position of the edit.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_EDIT Edit;
+    WORD Height;
+
+    Height = (WORD)(CtrlRect->Bottom - CtrlRect->Top + 1);
+    if (Height != 3 && Height != 1) {
+        return FALSE;
+    }
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (!YoriWinControlReposition(Ctrl, CtrlRect)) {
+        return FALSE;
+    }
+
+    YoriWinEditPaintNonClient(Edit);
+    YoriWinEditPaint(Edit);
     return TRUE;
 }
 
@@ -638,7 +1365,7 @@ YoriWinEditSetText(
  @return Pointer to the newly created control or NULL on failure.
  */
 PYORI_WIN_CTRL_HANDLE
-YoriWinCreateEdit(
+YoriWinEditCreate(
     __in PYORI_WIN_CTRL_HANDLE ParentHandle,
     __in PSMALL_RECT Size,
     __in PYORI_STRING InitialText,
@@ -696,20 +1423,18 @@ YoriWinCreateEdit(
         Edit->Ctrl.RelativeToParentClient = FALSE;
     }
 
-    if (Height == 1) { 
-        YoriWinSetControlNonClientCell(&Edit->Ctrl, 0, 0, '[', Edit->TextAttributes);
-        YoriWinSetControlNonClientCell(&Edit->Ctrl, Edit->Ctrl.ClientRect.Right, 0, ']', Edit->TextAttributes);
+    if (Height == 1) {
         Edit->Ctrl.ClientRect.Left++;
         Edit->Ctrl.ClientRect.Right--;
     } else {
-        YoriWinDrawBorderOnControl(&Edit->Ctrl, &Edit->Ctrl.ClientRect, Edit->TextAttributes, YORI_WIN_BORDER_TYPE_SUNKEN);
         Edit->Ctrl.ClientRect.Top++;
         Edit->Ctrl.ClientRect.Left++;
         Edit->Ctrl.ClientRect.Bottom--;
         Edit->Ctrl.ClientRect.Right--;
     }
 
-    YoriWinPaintEdit(Edit);
+    YoriWinEditPaintNonClient(Edit);
+    YoriWinEditPaint(Edit);
 
     return &Edit->Ctrl;
 }

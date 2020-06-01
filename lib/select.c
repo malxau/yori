@@ -246,11 +246,12 @@ YoriLibClearPreviousSelectionDisplay(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibReadConsoleOutputAttributeForSelection(
     __in PYORILIB_SELECTION Selection,
     __in HANDLE hConsole,
-    __out LPWORD lpAttribute,
+    __out_ecount(nLength) LPWORD lpAttribute,
     __in DWORD nLength,
     __in COORD dwReadCoord,
     __out LPDWORD lpNumberOfAttrsRead
@@ -307,8 +308,6 @@ YoriLibReadConsoleOutputAttributeForSelection(
     }
 
     return TRUE;
-
-    //return ReadConsoleOutputAttribute(hConsole, lpAttribute, nLength, dwReadCoord, lpNumberOfAttrsRead);
 }
 
 

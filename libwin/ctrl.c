@@ -3,7 +3,7 @@
  *
  * Yori window control generic routines
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,7 @@
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL
+BOOLEAN
 YoriWinCreateControl(
     __in_opt PYORI_WIN_CTRL Parent,
     __in PSMALL_RECT Rect,
@@ -77,6 +77,7 @@ YoriWinCreateControl(
 
     YoriLibInitializeListHead(&Ctrl->ParentControlList);
     YoriLibInitializeListHead(&Ctrl->ChildControlList);
+    YoriLibInitializeListHead(&Ctrl->PostEventList);
 
     //
     //  Currently there's no notification mechanism to a non-window parent
@@ -129,6 +130,68 @@ YoriWinDestroyControl(
         }
         YoriLibRemoveListItem(&Ctrl->ParentControlList);
     }
+}
+
+/**
+ Reposition a control to a new location.  This function will fix up the
+ client area of the control to conform to its new size.  It will fail if
+ the resulting control would have no addressable client area.
+
+ @param Ctrl Pointer to the control to resize or reposition.
+
+ @param NewRect Specifies the new location and size of the control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinControlReposition(
+    __in PYORI_WIN_CTRL Ctrl,
+    __in PSMALL_RECT NewRect
+    )
+{
+    SMALL_RECT ClientGap;
+    COORD MaxCell;
+
+    MaxCell.X = (SHORT)(Ctrl->FullRect.Right - Ctrl->FullRect.Left);
+    MaxCell.Y = (SHORT)(Ctrl->FullRect.Bottom - Ctrl->FullRect.Top);
+
+    ClientGap.Left = Ctrl->ClientRect.Left;
+    ClientGap.Top = Ctrl->ClientRect.Top;
+    ClientGap.Right = (SHORT)(MaxCell.X - Ctrl->ClientRect.Right);
+    ClientGap.Bottom = (SHORT)(MaxCell.Y - Ctrl->ClientRect.Bottom);
+
+    ASSERT(ClientGap.Right >= 0);
+    ASSERT(ClientGap.Bottom >= 0);
+
+    //
+    //  If the resulting client area doesn't contain at least one cell, then
+    //  the new size is invalid.
+    //
+
+    if (ClientGap.Left + ClientGap.Right >= NewRect->Right - NewRect->Left + 1) {
+        return FALSE;
+    }
+
+    if (ClientGap.Top + ClientGap.Bottom >= NewRect->Bottom - NewRect->Top + 1) {
+        return FALSE;
+    }
+
+    Ctrl->FullRect.Left = NewRect->Left;
+    Ctrl->FullRect.Top = NewRect->Top;
+    Ctrl->FullRect.Right = NewRect->Right;
+    Ctrl->FullRect.Bottom = NewRect->Bottom;
+
+    MaxCell.X = (SHORT)(Ctrl->FullRect.Right - Ctrl->FullRect.Left);
+    MaxCell.Y = (SHORT)(Ctrl->FullRect.Bottom - Ctrl->FullRect.Top);
+
+    Ctrl->ClientRect.Right = (SHORT)(MaxCell.X - ClientGap.Right);
+    Ctrl->ClientRect.Bottom = (SHORT)(MaxCell.Y - ClientGap.Bottom);
+    
+    ASSERT(Ctrl->ClientRect.Right <= MaxCell.X);
+    ASSERT(Ctrl->ClientRect.Top <= MaxCell.Y);
+
+    return TRUE;
 }
 
 /**
@@ -195,17 +258,21 @@ YoriWinNotifyAllControls(
 /**
  Returns the size of the control's client area.
 
- @param Ctrl Pointer to the control.
+ @param CtrlHandle Pointer to the control.
 
  @param Size On successful completion, updated to contain the size of the
         control's client area.
  */
 VOID
 YoriWinGetControlClientSize(
-    __in PYORI_WIN_CTRL Ctrl,
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __out PCOORD Size
     )
 {
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+
     Size->X = (SHORT)(Ctrl->ClientRect.Right - Ctrl->ClientRect.Left + 1);
     Size->Y = (SHORT)(Ctrl->ClientRect.Bottom - Ctrl->ClientRect.Top + 1);
 }
@@ -222,7 +289,7 @@ YoriWinGetControlClientSize(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
+BOOLEAN
 YoriWinSetControlCursorState(
     __in PYORI_WIN_CTRL Ctrl,
     __in BOOL Visible,
@@ -247,7 +314,7 @@ YoriWinSetControlCursorState(
  @return TRUE if the location falls within the bounding rectange, FALSE if it
          does not.
  */
-BOOL
+BOOLEAN
 YoriWinCoordInSmallRect(
     __in PCOORD Location,
     __in PSMALL_RECT Area
@@ -628,6 +695,63 @@ YoriWinTranslateCtrlCoordinatesToScreenCoordinates(
     ScreenCoord->Y = (WORD)(WinCoord.Y + WindowCtrl->FullRect.Top);
 }
 
+/**
+ Given a control which is a toplevel window, return the screen buffer
+ coordinates relative to that window.  This function can indicate that the
+ returned coordinates are relative to the window's client area, if the
+ coordinates are in the client area; or relative to the nonclient area,
+ if the coordinates are in the nonclient area; or can return no coordinates
+ and indicate that the coordinates are not within the window.
+
+ @param Ctrl Pointer to a control which is a toplevel window.
+
+ @param ScreenCoord Specifies screen buffer coordinates.
+
+ @param InWindowRange On sucessful completion, set to TRUE to indicate that
+        ScreenCoord is within the window area.
+
+ @param InWindowClientRange On successful completion, set to TRUE to indicate
+        that ScreenCoord is within the window's client area.
+
+ @param CtrlCoord On successful completion, returns coordinates relative to
+        the control's client area if InWindowClientRange is TRUE, or relative
+        to the nonclient area if InWindowRange is TRUE, or zeroed if the
+        coordinates are outside the window range.
+ */
+VOID
+YoriWinTranslateScreenCoordinatesToWindow(
+    __in PYORI_WIN_CTRL Ctrl,
+    __in COORD ScreenCoord,
+    __out PBOOLEAN InWindowRange,
+    __out PBOOLEAN InWindowClientRange,
+    __out PCOORD CtrlCoord
+    )
+{
+    *InWindowRange = FALSE;
+    *InWindowClientRange = FALSE;
+
+    if (YoriWinCoordInSmallRect(&ScreenCoord, &Ctrl->FullRect)) {
+        SMALL_RECT ClientArea;
+        ClientArea.Left = (SHORT)(Ctrl->FullRect.Left + Ctrl->ClientRect.Left);
+        ClientArea.Top = (SHORT)(Ctrl->FullRect.Top + Ctrl->ClientRect.Top);
+        ClientArea.Right = (SHORT)(Ctrl->FullRect.Left + Ctrl->ClientRect.Right);
+        ClientArea.Bottom = (SHORT)(Ctrl->FullRect.Top + Ctrl->ClientRect.Bottom);
+        *InWindowRange = TRUE;
+        if (YoriWinCoordInSmallRect(&ScreenCoord, &ClientArea)) {
+            *InWindowClientRange = TRUE;
+            CtrlCoord->X = (SHORT)(ScreenCoord.X - ClientArea.Left);
+            CtrlCoord->Y = (SHORT)(ScreenCoord.Y - ClientArea.Top);
+        } else {
+            CtrlCoord->X = (SHORT)(ScreenCoord.X - Ctrl->FullRect.Left);
+            CtrlCoord->Y = (SHORT)(ScreenCoord.Y - Ctrl->FullRect.Top);
+        }
+    } else {
+        CtrlCoord->X = 0;
+        CtrlCoord->Y = 0;
+    }
+}
+
+
 
 /**
  Updates the specified cell within the control's client area.
@@ -857,6 +981,113 @@ YoriWinFindControlById(
     }
 
     return NULL;
+}
+
+/**
+ Get an opaque pointer on a control that was previously set with
+ @ref YoriWinSetControlContext .
+
+ @param CtrlHandle Pointer to the control.
+ */
+PVOID
+YoriWinGetControlContext(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    return Ctrl->UserContext;
+}
+
+/**
+ Set an opaque pointer on a control that can be used for any user defined
+ purpose.  Note this is opaque, so it will not be freed when the control is
+ destroyed.
+
+ @param CtrlHandle Pointer to the control.
+
+ @param Context A pointer-sized blob of data to associate with the control.
+ */
+VOID
+YoriWinSetControlContext(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PVOID Context
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Ctrl->UserContext = Context;
+}
+
+/**
+ Add an event to a control's queue of events to process next time the
+ control is processing events.  Note this routine will allocate space for
+ the event from heap, so the caller is free to reclaim the memory pointed
+ to in Event after this call.
+
+ @param Ctrl Pointer to the control.
+
+ @param Event Pointer to the event to process in a deferred fashion.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinPostEvent(
+    __in PYORI_WIN_CTRL Ctrl,
+    __in PYORI_WIN_EVENT Event
+    )
+{
+    PYORI_WIN_EVENT EventCopy;
+
+    EventCopy = YoriLibReferencedMalloc(sizeof(YORI_WIN_EVENT));
+    if (EventCopy == NULL) {
+        return FALSE;
+    }
+
+    memcpy(EventCopy, Event, sizeof(YORI_WIN_EVENT));
+    YoriLibAppendList(&Ctrl->PostEventList, &EventCopy->PostEventListEntry);
+    return TRUE;
+}
+
+/**
+ Return the next event that has been posted to a control's queue, or NULL if
+ there are no more posted events outstanding.  Any event returned from this
+ function is removed from the control's queue.  The caller is expected to free
+ it with a call to @ref YoriWinFreePostedEvent .
+
+ @param Ctrl Pointer to the control.
+
+ @return Pointer to the first event outstanding, or NULL if no more events
+         are outstanding.
+ */
+PYORI_WIN_EVENT
+YoriWinGetNextPostedEvent(
+    __in PYORI_WIN_CTRL Ctrl
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_WIN_EVENT Event;
+
+    ListEntry = YoriLibGetNextListEntry(&Ctrl->PostEventList, NULL);
+    if (ListEntry == NULL) {
+        return NULL;
+    }
+
+    YoriLibRemoveListItem(ListEntry);
+    Event = CONTAINING_RECORD(ListEntry, YORI_WIN_EVENT, PostEventListEntry);
+    return Event;
+}
+
+/**
+ Free an event that was posted to a control's queue.  These require heap
+ allocations.
+
+ @param Event Pointer to the event to deallocate.
+ */
+VOID
+YoriWinFreePostedEvent(
+    __in PYORI_WIN_EVENT Event
+    )
+{
+    YoriLibDereference(Event);
 }
 
 // vim:sw=4:ts=4:et:

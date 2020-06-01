@@ -3,7 +3,7 @@
  *
  * Yori window label control
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -83,14 +83,18 @@ typedef struct _YORI_WIN_CTRL_LABEL {
     YORI_WIN_TEXT_VERTICAL_ALIGNMENT TextVerticalAlign;
 
     /**
+     Style flags.
+     */
+    DWORD Style;
+
+    /**
      The attributes to display text in.
      */
     WORD TextAttributes;
 
     /**
-     TRUE if the button button should display the accelerator character,
-     FALSE if it should not.  This becomes TRUE when the user presses the
-     Alt key.
+     TRUE if the label should display the accelerator character, FALSE if it
+     should not.  This becomes TRUE when the user presses the Alt key.
      */
     BOOLEAN DisplayAccelerator;
 
@@ -105,7 +109,7 @@ typedef struct _YORI_WIN_CTRL_LABEL {
  @return TRUE to indicate that this character will force a break for a new
          line.
  */
-BOOL
+BOOLEAN
 YoriWinLabelIsCharHardBreakChar(
     __in TCHAR Char
     )
@@ -127,7 +131,7 @@ YoriWinLabelIsCharHardBreakChar(
  @return TRUE to indicate that this character is a good point to break for a
          new line.
  */
-BOOL
+BOOLEAN
 YoriWinLabelIsCharSoftBreakChar(
     __in TCHAR Char
     )
@@ -147,7 +151,7 @@ YoriWinLabelIsCharSoftBreakChar(
  @return TRUE to indicate that this character does not require display if a
          line break occurred.
  */
-BOOL
+BOOLEAN
 YoriWinLabelShouldSwallowBreakChar(
     __in TCHAR Char
     )
@@ -170,7 +174,7 @@ YoriWinLabelShouldSwallowBreakChar(
 
  @param Remaining Pointer to a string which requires display.
 
- @param ClientSize Specifies the size of the control.
+ @param ClientWidth Specifies the width of the control.
 
  @param Display On output, updated to contain the subset of the remaining
         string to render on the next line.
@@ -188,7 +192,7 @@ YoriWinLabelShouldSwallowBreakChar(
 VOID
 YoriWinLabelGetNextDisplayLine(
     __inout PYORI_STRING Remaining,
-    __in PCOORD ClientSize,
+    __in DWORD ClientWidth,
     __out PYORI_STRING Display,
     __inout PBOOLEAN AcceleratorFound,
     __out PDWORD OffsetToAcceleratorInDisplay,
@@ -200,6 +204,7 @@ YoriWinLabelGetNextDisplayLine(
     DWORD CharsToDisplayThisLine;
     DWORD CharsToConsumeThisLine;
     BOOLEAN BreakCharFound;
+    TCHAR TestChar;
     BOOLEAN SoftTruncationRequired;
 
     //
@@ -209,21 +214,36 @@ YoriWinLabelGetNextDisplayLine(
     MaxLengthOfLine = Remaining->LengthInChars;
     CharsToDisplayThisLine = MaxLengthOfLine;
     SoftTruncationRequired = FALSE;
-    if (MaxLengthOfLine > (DWORD)ClientSize->X) {
-        MaxLengthOfLine = (DWORD)(ClientSize->X);
-        SoftTruncationRequired = TRUE;
-    }
 
     //
-    //  Look along the line for any explicit newline to break on
+    //  Look along the line for any explicit newline to break on.  Note this
+    //  can look beyond the maximum length, because any character beyond the
+    //  maximum that is removed doesn't count against the maximum.
     //
 
     BreakCharFound = FALSE;
 
-    for (PotentialBreakOffset = 0; PotentialBreakOffset < MaxLengthOfLine; PotentialBreakOffset++) {
-        if (YoriWinLabelIsCharHardBreakChar(Remaining->StartOfString[PotentialBreakOffset])) {
+    for (PotentialBreakOffset = 0; PotentialBreakOffset < Remaining->LengthInChars; PotentialBreakOffset++) {
+        TestChar = Remaining->StartOfString[PotentialBreakOffset];
+        if (YoriWinLabelIsCharHardBreakChar(TestChar)) {
             BreakCharFound = TRUE;
             break;
+        }
+
+        //
+        //  If the text is wider than the control, and the char is not a 
+        //  soft break character, go to the previous char and do soft break
+        //  processing from there.
+        //
+
+        if (PotentialBreakOffset > ClientWidth) {
+            if (!YoriWinLabelIsCharSoftBreakChar(TestChar) ||
+                !YoriWinLabelShouldSwallowBreakChar(TestChar)) {
+
+                MaxLengthOfLine = PotentialBreakOffset - 1;
+                SoftTruncationRequired = TRUE;
+                break;
+            }
         }
     }
 
@@ -325,6 +345,69 @@ YoriWinLabelTrimSwallowChars(
 
 
 /**
+ Count the number of lines which will need to have text rendered on them at
+ a specified control width.
+
+ @param Text Pointer to the text to display.
+
+ @param CtrlWidth Specifies the width of the control.
+
+ @param MaximumWidth Optionally refers to a location to update with the
+        longest line length observed within the text string.
+
+ @return The number of lines of text within the control.
+ */
+DWORD
+YoriWinLabelCountLinesRequiredForText(
+    __in PYORI_STRING Text,
+    __in DWORD CtrlWidth,
+    __out_opt PDWORD MaximumWidth
+    )
+{
+    YORI_STRING Remaining;
+    YORI_STRING DisplayLine;
+    DWORD OffsetToAcceleratorInDisplay;
+    DWORD RemainingOffsetToAccelerator;
+    DWORD LinesNeeded;
+    DWORD LargestWidthFound;
+    BOOLEAN AcceleratorFound;
+
+    LinesNeeded = 0;
+    LargestWidthFound = 0;
+    AcceleratorFound = FALSE;
+    Remaining.StartOfString = Text->StartOfString;
+    Remaining.LengthInChars = Text->LengthInChars;
+    RemainingOffsetToAccelerator = 0;
+
+    //
+    //  Swallow any leading characters that would not be displayed
+    //
+
+    YoriWinLabelTrimSwallowChars(&Remaining, &AcceleratorFound, &RemainingOffsetToAccelerator);
+
+    while (Remaining.LengthInChars > 0) {
+        YoriWinLabelGetNextDisplayLine(&Remaining,
+                                       CtrlWidth,
+                                       &DisplayLine,
+                                       &AcceleratorFound,
+                                       &OffsetToAcceleratorInDisplay,
+                                       &RemainingOffsetToAccelerator);
+
+        if (DisplayLine.LengthInChars > LargestWidthFound) {
+            LargestWidthFound = DisplayLine.LengthInChars;
+        }
+
+        LinesNeeded++;
+    }
+
+    if (MaximumWidth != NULL) {
+        *MaximumWidth = LargestWidthFound;
+    }
+
+    return LinesNeeded;
+}
+
+/**
  Count the number of lines which will need to have text rendered on them.
 
  @param Label Pointer to the label control which implicitly provides
@@ -338,39 +421,8 @@ YoriWinLabelCountLinesRequired(
     )
 {
     COORD ClientSize;
-    YORI_STRING Remaining;
-    YORI_STRING DisplayLine;
-    DWORD OffsetToAcceleratorInDisplay;
-    DWORD RemainingOffsetToAccelerator;
-    DWORD LinesNeeded;
-    BOOLEAN AcceleratorFound;
-
     YoriWinGetControlClientSize(&Label->Ctrl, &ClientSize);
-
-    LinesNeeded = 0;
-    AcceleratorFound = FALSE;
-    Remaining.StartOfString = Label->Caption.StartOfString;
-    Remaining.LengthInChars = Label->Caption.LengthInChars;
-    RemainingOffsetToAccelerator = Label->AcceleratorOffset;
-
-    //
-    //  Swallow any leading characters that would not be displayed
-    //
-
-    YoriWinLabelTrimSwallowChars(&Remaining, &AcceleratorFound, &RemainingOffsetToAccelerator);
-
-    while (Remaining.LengthInChars > 0) {
-        YoriWinLabelGetNextDisplayLine(&Remaining,
-                                       &ClientSize,
-                                       &DisplayLine,
-                                       &AcceleratorFound,
-                                       &OffsetToAcceleratorInDisplay,
-                                       &RemainingOffsetToAccelerator);
-
-        LinesNeeded++;
-    }
-
-    return LinesNeeded;
+    return YoriWinLabelCountLinesRequiredForText(&Label->Caption, ClientSize.X, NULL);
 }
 
 /**
@@ -489,8 +541,8 @@ YoriWinLabelClearClientLine(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
-YoriWinPaintLabel(
+BOOLEAN
+YoriWinLabelPaint(
     __in PYORI_WIN_CTRL_LABEL Label
     )
 {
@@ -552,7 +604,7 @@ YoriWinPaintLabel(
             YoriWinLabelClearClientLine(Label, &ClientSize, WinAttributes, LineIndex);
         } else {
             YoriWinLabelGetNextDisplayLine(&Remaining,
-                                           &ClientSize,
+                                           ClientSize.X,
                                            &DisplayLine,
                                            &AcceleratorFound,
                                            &OffsetToAcceleratorInDisplay,
@@ -634,8 +686,91 @@ YoriWinLabelSetTextAttributes(
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Label = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_LABEL, Ctrl);
     Label->TextAttributes = TextAttributes;
-    YoriWinPaintLabel(Label);
+    YoriWinLabelPaint(Label);
 }
+
+/**
+ Change the text within a label control.
+
+ @param CtrlHandle Pointer to the label control.
+
+ @param Caption Pointer to the new string to display in the label.  This can
+        be empty but must not be NULL.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinLabelSetCaption(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_STRING Caption
+    )
+{
+    PYORI_WIN_CTRL_LABEL Label;
+    PYORI_WIN_CTRL Ctrl;
+    YORI_STRING CaptionCopy;
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Label = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_LABEL, Ctrl);
+
+    if (!YoriLibAllocateString(&CaptionCopy, Caption->LengthInChars + 1)) {
+        return FALSE;
+    }
+
+    if (Label->Style & YORI_WIN_LABEL_NO_ACCELERATOR) {
+        memcpy(CaptionCopy.StartOfString, Caption->StartOfString, Caption->LengthInChars * sizeof(TCHAR));
+        CaptionCopy.StartOfString[Caption->LengthInChars] = '\0';
+        CaptionCopy.LengthInChars = Caption->LengthInChars;
+    } else {
+        YoriWinLabelParseAccelerator(Caption,
+                                     &CaptionCopy,
+                                     &Label->Ctrl.AcceleratorChar,
+                                     &Label->AcceleratorOffset,
+                                     NULL);
+    }
+
+    YoriLibFreeStringContents(&Label->Caption);
+    memcpy(&Label->Caption, &CaptionCopy, sizeof(YORI_STRING));
+
+    //
+    //  If the control is initialized, repaint it.  Note this function can
+    //  be called as part of control creation, in which case there's no
+    //  parent to paint on yet.
+    //
+
+    if (Label->Ctrl.Parent != NULL) {
+        YoriWinLabelPaint(Label);
+    }
+    return TRUE;
+}
+
+/**
+ Set the size and location of a label control, and redraw the contents.
+
+ @param CtrlHandle Pointer to the label to resize or reposition.
+
+ @param CtrlRect Specifies the new size and position of the label.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinLabelReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_LABEL Label;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Label = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_LABEL, Ctrl);
+
+    if (!YoriWinControlReposition(Ctrl, CtrlRect)) {
+        return FALSE;
+    }
+
+    YoriWinLabelPaint(Label);
+    return TRUE;
+}
+
 
 /**
  Process input events for a label control.
@@ -665,11 +800,11 @@ YoriWinLabelEventHandler(
             break;
         case YoriWinEventDisplayAccelerators:
             Label->DisplayAccelerator = TRUE;
-            YoriWinPaintLabel(Label);
+            YoriWinLabelPaint(Label);
             break;
         case YoriWinEventHideAccelerators:
             Label->DisplayAccelerator = FALSE;
-            YoriWinPaintLabel(Label);
+            YoriWinLabelPaint(Label);
             break;
     }
 
@@ -691,7 +826,7 @@ YoriWinLabelEventHandler(
  @return Pointer to the newly created control or NULL on failure.
  */
 PYORI_WIN_CTRL_HANDLE
-YoriWinCreateLabel(
+YoriWinLabelCreate(
     __in PYORI_WIN_CTRL_HANDLE ParentHandle,
     __in PSMALL_RECT Size,
     __in PYORI_STRING Caption,
@@ -722,21 +857,11 @@ YoriWinCreateLabel(
         Label->TextVerticalAlign = YoriWinTextVerticalAlignCenter;
     }
 
-    if (!YoriLibAllocateString(&Label->Caption, Caption->LengthInChars + 1)) {
+    Label->Style = Style;
+
+    if (!YoriWinLabelSetCaption(&Label->Ctrl, Caption)) {
         YoriLibDereference(Label);
         return NULL;
-    }
-
-    if (Style & YORI_WIN_LABEL_NO_ACCELERATOR) {
-        memcpy(Label->Caption.StartOfString, Caption->StartOfString, Caption->LengthInChars * sizeof(TCHAR));
-        Label->Caption.StartOfString[Caption->LengthInChars] = '\0';
-        Label->Caption.LengthInChars = Caption->LengthInChars;
-    } else {
-        YoriWinLabelParseAccelerator(Caption,
-                                     &Label->Caption,
-                                     &Label->Ctrl.AcceleratorChar,
-                                     &Label->AcceleratorOffset,
-                                     NULL);
     }
 
     Label->Ctrl.NotifyEventFn = YoriWinLabelEventHandler;
@@ -752,7 +877,7 @@ YoriWinCreateLabel(
         Label->Ctrl.RelativeToParentClient = FALSE;
     }
 
-    YoriWinPaintLabel(Label);
+    YoriWinLabelPaint(Label);
 
     return &Label->Ctrl;
 }

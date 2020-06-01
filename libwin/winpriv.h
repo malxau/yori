@@ -4,7 +4,7 @@
  * Header for library routines that may be of value from the shell as well
  * as external tools.
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,11 @@ typedef PVOID PYORI_WIN_WINDOW;
 typedef struct _YORI_WIN_EVENT {
 
     /**
+     Linkage to allow events to be added to a list prior to being dispatched.
+     */
+    YORI_LIST_ENTRY PostEventListEntry;
+
+    /**
      The type of the event.
      */
     enum {
@@ -68,7 +73,13 @@ typedef struct _YORI_WIN_EVENT {
         YoriWinEventMouseWheelUpInNonClient     = 25,
         YoriWinEventMouseWheelDownInClient      = 26,
         YoriWinEventMouseWheelDownInNonClient   = 27,
-        YoriWinEventBeyondMax                   = 28
+        YoriWinEventAccelerator                 = 28,
+        YoriWinEventHotKeyDown                  = 29,
+        YoriWinEventHideWindow                  = 30,
+        YoriWinEventShowWindow                  = 31,
+        YoriWinEventWindowManagerResize         = 32,
+        YoriWinEventParentResize                = 33,
+        YoriWinEventBeyondMax                   = 34
     } EventType;
 
     /**
@@ -111,14 +122,28 @@ typedef struct _YORI_WIN_EVENT {
             COORD Location;
             DWORD ControlKeyState;
         } MouseWheel;
+
+        struct {
+            TCHAR Char;
+        } Accelerator;
+
+        struct {
+            SMALL_RECT OldWinMgrDimensions;
+            SMALL_RECT NewWinMgrDimensions;
+        } WindowManagerResize;
     };
 } YORI_WIN_EVENT, *PYORI_WIN_EVENT;
+
+/**
+ A pointer to a common header which is embedded within each control.
+ */
+typedef struct _YORI_WIN_CTRL *PYORI_WIN_CTRL;
 
 /**
  A function prototype that can be invoked to deliver notification events
  for a specific control.
  */
-typedef BOOLEAN YORI_WIN_NOTIFY_EVENT(PVOID, PYORI_WIN_EVENT);
+typedef BOOLEAN YORI_WIN_NOTIFY_EVENT(PYORI_WIN_CTRL, PYORI_WIN_EVENT);
 
 /**
  A pointer to a function that can be invoked to deliver notification events
@@ -151,6 +176,11 @@ typedef struct _YORI_WIN_CTRL {
     YORI_LIST_ENTRY ChildControlList;
 
     /**
+     A list of events that have not yet been processed.
+     */
+    YORI_LIST_ENTRY PostEventList;
+
+    /**
      The dimensions occupied by the control within the parent window,
      relative to the parent window's client area.
      */
@@ -167,6 +197,12 @@ typedef struct _YORI_WIN_CTRL {
      events that should be processed by this control.
      */
     PYORI_WIN_NOTIFY_EVENT NotifyEventFn;
+
+    /**
+     Pointer to memory that is associated with the control but not owned by
+     this module.
+     */
+    PVOID UserContext;
 
     /**
      An identifer for the control.  This is used purely for a window to
@@ -215,7 +251,7 @@ typedef struct _YORI_WIN_CTRL {
     // TODO: Probably should have a control type if only for validation and
     // debugging
 
-} YORI_WIN_CTRL, *PYORI_WIN_CTRL;
+} YORI_WIN_CTRL;
 
 // ITEMARAY.C
 
@@ -247,9 +283,29 @@ typedef struct _YORI_WIN_ITEM_ENTRY {
 typedef struct _YORI_WIN_ITEM_ARRAY {
 
     /**
-     Count of items in the array.
+     Count of items with meaningful data in the array.
      */
     DWORD Count;
+
+    /**
+     Number of elements allocated in the Items array.
+     */
+    DWORD CountAllocated;
+
+    /**
+     The base of the string allocation (to reference when consuming.)
+     */
+    LPTSTR StringAllocationBase;
+
+    /**
+     The current end of the string allocation (to write to when consuming.)
+     */
+    LPTSTR StringAllocationCurrent;
+
+    /**
+     The number of characters remaining in the string allocation.
+     */
+    DWORD StringAllocationRemaining;
 
     /**
      An array of items in memory.  This allocation is referenced because it
@@ -270,7 +326,7 @@ YoriWinItemArrayCleanup(
     );
 
 __success(return)
-BOOL
+BOOLEAN
 YoriWinItemArrayAddItems(
     __inout PYORI_WIN_ITEM_ARRAY ItemArray,
     __in PYORI_STRING NewItems,
@@ -278,7 +334,7 @@ YoriWinItemArrayAddItems(
     );
 
 __success(return)
-BOOL
+BOOLEAN
 YoriWinItemArrayAddItemArray(
     __inout PYORI_WIN_ITEM_ARRAY ItemArray,
     __in PYORI_WIN_ITEM_ARRAY NewItems
@@ -331,7 +387,7 @@ YoriWinItemArrayAddItemArray(
  */
 #define YORI_WIN_BORDER_STYLE_MASK      0x0070
 
-BOOL
+BOOLEAN
 YoriWinDrawBorderOnControl(
     __inout PYORI_WIN_CTRL Ctrl,
     __in PSMALL_RECT Dimensions,
@@ -343,7 +399,7 @@ YoriWinDrawBorderOnControl(
 // CTRL.C
 
 __success(return)
-BOOL
+BOOLEAN
 YoriWinCreateControl(
     __in_opt PYORI_WIN_CTRL Parent,
     __in PSMALL_RECT Rect,
@@ -361,13 +417,7 @@ YoriWinGetTopLevelWindow(
     __in PYORI_WIN_CTRL Ctrl
     );
 
-VOID
-YoriWinGetControlClientSize(
-    __in PYORI_WIN_CTRL Ctrl,
-    __out PCOORD Size
-    );
-
-BOOL
+BOOLEAN
 YoriWinSetControlCursorState(
     __in PYORI_WIN_CTRL Ctrl,
     __in BOOL Visible,
@@ -381,7 +431,7 @@ YoriWinSetControlClientCursorLocation(
     __in WORD Y
     );
 
-BOOL
+BOOLEAN
 YoriWinCoordInSmallRect(
     __in PCOORD Location,
     __in PSMALL_RECT Area
@@ -447,10 +497,42 @@ YoriWinTranslateCtrlCoordinatesToScreenCoordinates(
     __out PCOORD ScreenCoord
     );
 
+VOID
+YoriWinTranslateScreenCoordinatesToWindow(
+    __in PYORI_WIN_CTRL Ctrl,
+    __in COORD ScreenCoord,
+    __out PBOOLEAN InWindowRange,
+    __out PBOOLEAN InWindowClientRange,
+    __out PCOORD CtrlCoord
+    );
+
+__success(return)
+BOOLEAN
+YoriWinControlReposition(
+    __in PYORI_WIN_CTRL Ctrl,
+    __in PSMALL_RECT NewRect
+    );
+
+BOOLEAN
+YoriWinPostEvent(
+    __in PYORI_WIN_CTRL Ctrl,
+    __in PYORI_WIN_EVENT Event
+    );
+
+PYORI_WIN_EVENT
+YoriWinGetNextPostedEvent(
+    __in PYORI_WIN_CTRL Ctrl
+    );
+
+VOID
+YoriWinFreePostedEvent(
+    __in PYORI_WIN_EVENT Event
+    );
+
 // LIST.C
 
 __success(return)
-BOOL
+BOOLEAN
 YoriWinListAddItemArray(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PYORI_WIN_ITEM_ARRAY NewItems
@@ -459,41 +541,42 @@ YoriWinListAddItemArray(
 // SCROLBAR.C
 
 PYORI_WIN_CTRL
-YoriWinCreateScrollBar(
+YoriWinScrollBarCreate(
     __in PYORI_WIN_CTRL Parent,
     __in PSMALL_RECT Size,
     __in DWORD Style,
-    __in_opt PYORI_WIN_NOTIFY_BUTTON_CLICK ChangeCallback
+    __in_opt PYORI_WIN_NOTIFY ChangeCallback
     );
 
 DWORDLONG
-YoriWinGetScrollBarPosition(
+YoriWinScrollBarGetPosition(
     __in PYORI_WIN_CTRL Ctrl
     );
 
 VOID
-YoriWinSetScrollBarPosition(
+YoriWinScrollBarSetPosition(
     __in PYORI_WIN_CTRL Ctrl,
     __in DWORDLONG CurrentValue,
     __in DWORDLONG NumberVisible,
     __in DWORDLONG MaximumValue
     );
 
+BOOLEAN
+YoriWinScrollBarReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    );
+
 // WINDOW.C
+
+PYORI_WIN_CTRL
+YoriWinGetFocus(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    );
 
 PYORI_WIN_WINDOW_MANAGER_HANDLE
 YoriWinGetWindowManagerHandle(
     __in PYORI_WIN_WINDOW_HANDLE WindowHandle
-    );
-
-PYORI_WIN_WINDOW
-YoriWinGetWindowFromWindowCtrl(
-    __in PYORI_WIN_CTRL Ctrl
-    );
-
-PYORI_WIN_CTRL
-YoriWinGetCtrlFromWindow(
-    __in PYORI_WIN_WINDOW Window
     );
 
 VOID
@@ -514,18 +597,18 @@ YoriWinSetWindowClientCell(
     __in WORD Attr
     );
 
-BOOL
-YoriWinDisplayWindowContents(
-    __in PYORI_WIN_WINDOW Window
-    );
-
 VOID
 YoriWinGetWindowSize(
     __in PYORI_WIN_WINDOW Window,
     __out PCOORD WindowSize
     );
 
-BOOL
+BOOLEAN
+YoriWinSaveCursorState(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    );
+
+BOOLEAN
 YoriWinSetCursorState(
     __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
     __in BOOL Visible,
@@ -542,7 +625,12 @@ YoriWinSetCursorPosition(
 VOID
 YoriWinSetFocus(
     __in PYORI_WIN_WINDOW Window,
-    __in PYORI_WIN_CTRL Ctrl
+    __in_opt PYORI_WIN_CTRL Ctrl
+    );
+
+VOID
+YoriWinSetInitialFocus(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
     );
 
 VOID
@@ -601,6 +689,16 @@ YoriWinSetCustomNotification(
     __in PYORI_WIN_NOTIFY_EVENT Handler
     );
 
+BOOLEAN
+YoriWinIsWindowClosing(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    );
+
+PYORI_WIN_WINDOW_HANDLE
+YoriWinWindowFromTopLevelListEntry(
+    __in PYORI_LIST_ENTRY ListEntry
+    );
+
 // WINMGR.C
 
 HANDLE
@@ -627,6 +725,25 @@ VOID
 YoriWinSetPreviousMouseButtonState(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in DWORD PreviousMouseButtonState
+    );
+
+VOID
+YoriWinMgrPushWindow(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_LIST_ENTRY TopLevelWindowListEntry
+    );
+
+VOID
+YoriWinMgrPopWindow(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_LIST_ENTRY TopLevelWindowListEntry
+    );
+
+__success(return)
+BOOLEAN
+YoriWinMgrProcessEvents(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
     );
 
 // vim:sw=4:ts=4:et:

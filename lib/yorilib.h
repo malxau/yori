@@ -2245,6 +2245,21 @@ YoriLibDisplayMitLicense(
 
 // *** LINEREAD.C ***
 
+/**
+ The set of line endings that can be recognized by the line parser.
+ */
+typedef enum _YORI_LIB_LINE_ENDING {
+    YoriLibLineEndingNone = 0,
+    YoriLibLineEndingCRLF = 1,
+    YoriLibLineEndingLF = 2,
+    YoriLibLineEndingCR = 3
+} YORI_LIB_LINE_ENDING;
+
+/**
+ Pointer to a line ending that is recognized by the line parser.
+ */
+typedef YORI_LIB_LINE_ENDING *PYORI_LIB_LINE_ENDING;
+
 PVOID
 YoriLibReadLineToString(
     __in PYORI_STRING UserString,
@@ -2259,7 +2274,7 @@ YoriLibReadLineToStringEx(
     __in BOOL ReturnFinalNonTerminatedLine,
     __in DWORD MaximumDelay,
     __in HANDLE FileHandle,
-    __out PBOOL LineTerminated,
+    __out PYORI_LIB_LINE_ENDING LineEnding,
     __out PBOOL TimeoutReached
     );
 
@@ -2426,6 +2441,17 @@ YoriLibForEachStream(
     __in PYORILIB_FILE_ENUM_FN Callback,
     __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
     __in PVOID Context
+    );
+
+// *** TEMP.C ***
+
+__success(return)
+BOOLEAN
+YoriLibGetTempFileName(
+    __in PYORI_STRING PathName,
+    __in PYORI_STRING PrefixString,
+    __out_opt PHANDLE TempHandle,
+    __out_opt PYORI_STRING TempFileName
     );
 
 // *** VT.C ***

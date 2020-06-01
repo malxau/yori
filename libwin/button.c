@@ -3,7 +3,7 @@
  *
  * Yori window button control
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -48,7 +48,7 @@ typedef struct _YORI_WIN_CTRL_BUTTON {
     /**
      A function to invoke when the button is clicked via any mechanism.
      */
-    PYORI_WIN_NOTIFY_BUTTON_CLICK ClickCallback;
+    PYORI_WIN_NOTIFY ClickCallback;
 
     /**
      TRUE if the button is "pressed" as in the mouse is pressed on the
@@ -83,8 +83,8 @@ typedef struct _YORI_WIN_CTRL_BUTTON {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
-BOOL
-YoriWinPaintButton(
+BOOLEAN
+YoriWinButtonPaint(
     __in PYORI_WIN_CTRL_BUTTON Button
     )
 {
@@ -173,27 +173,27 @@ YoriWinButtonEventHandler(
         case YoriWinEventMouseDownInClient:
         case YoriWinEventMouseDownInNonClient:
             Button->PressedAppearance = TRUE;
-            YoriWinPaintButton(Button);
+            YoriWinButtonPaint(Button);
             break;
         case YoriWinEventMouseUpInClient:
         case YoriWinEventMouseUpInNonClient:
             Button->PressedAppearance = FALSE;
-            YoriWinPaintButton(Button);
+            YoriWinButtonPaint(Button);
             if (Button->ClickCallback != NULL) {
                 Button->ClickCallback(&Button->Ctrl);
             }
             break;
         case YoriWinEventMouseUpOutsideWindow:
             Button->PressedAppearance = FALSE;
-            YoriWinPaintButton(Button);
+            YoriWinButtonPaint(Button);
             break;
         case YoriWinEventGetEffectiveDefault:
             Button->EffectiveDefault = TRUE;
-            YoriWinPaintButton(Button);
+            YoriWinButtonPaint(Button);
             break;
         case YoriWinEventLoseEffectiveDefault:
             Button->EffectiveDefault = FALSE;
-            YoriWinPaintButton(Button);
+            YoriWinButtonPaint(Button);
             break;
         case YoriWinEventGetEffectiveCancel:
             Button->EffectiveCancel = TRUE;
@@ -205,13 +205,13 @@ YoriWinButtonEventHandler(
             ASSERT(Button->HasFocus);
             Button->HasFocus = FALSE;
             YoriWinRestoreDefaultControl(Button->Ctrl.Parent);
-            YoriWinPaintButton(Button);
+            YoriWinButtonPaint(Button);
             break;
         case YoriWinEventGetFocus:
             ASSERT(!Button->HasFocus);
             Button->HasFocus = TRUE;
             YoriWinSuppressDefaultControl(Button->Ctrl.Parent);
-            YoriWinPaintButton(Button);
+            YoriWinButtonPaint(Button);
             break;
         case YoriWinEventDisplayAccelerators:
             if (Button->Label->NotifyEventFn != NULL) {
@@ -226,6 +226,37 @@ YoriWinButtonEventHandler(
     }
 
     return FALSE;
+}
+
+/**
+ Set the size and location of a button control, and redraw the contents.
+
+ @param CtrlHandle Pointer to the button to resize or reposition.
+
+ @param CtrlRect Specifies the new size and position of the button.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinButtonReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_BUTTON Button;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Button = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_BUTTON, Ctrl);
+
+    if (!YoriWinControlReposition(Ctrl, CtrlRect)) {
+        return FALSE;
+    }
+
+    YoriWinLabelReposition(Button->Label, &Ctrl->ClientRect);
+
+    YoriWinButtonPaint(Button);
+    return TRUE;
 }
 
 /**
@@ -246,12 +277,12 @@ YoriWinButtonEventHandler(
  @return Pointer to the newly created control or NULL on failure.
  */
 PYORI_WIN_CTRL_HANDLE
-YoriWinCreateButton(
+YoriWinButtonCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
     __in PSMALL_RECT Size,
     __in PYORI_STRING Caption,
     __in DWORD Style,
-    __in_opt PYORI_WIN_NOTIFY_BUTTON_CLICK ClickCallback
+    __in_opt PYORI_WIN_NOTIFY ClickCallback
     )
 {
     PYORI_WIN_CTRL_BUTTON Button;
@@ -279,7 +310,7 @@ YoriWinCreateButton(
 
     Button->ClickCallback = ClickCallback;
 
-    Button->Label = YoriWinCreateLabel(&Button->Ctrl, &Button->Ctrl.ClientRect, Caption, YORI_WIN_LABEL_STYLE_VERTICAL_CENTER | YORI_WIN_LABEL_STYLE_CENTER);
+    Button->Label = YoriWinLabelCreate(&Button->Ctrl, &Button->Ctrl.ClientRect, Caption, YORI_WIN_LABEL_STYLE_VERTICAL_CENTER | YORI_WIN_LABEL_STYLE_CENTER);
     if (Button->Label == NULL) {
         YoriWinDestroyControl(&Button->Ctrl);
         YoriLibDereference(Button);
@@ -293,7 +324,7 @@ YoriWinCreateButton(
 
     Button->Ctrl.AcceleratorChar = Button->Label->AcceleratorChar;
 
-    YoriWinPaintButton(Button);
+    YoriWinButtonPaint(Button);
 
     if (Style & YORI_WIN_BUTTON_STYLE_DEFAULT) {
         YoriWinSetDefaultCtrl(Parent, &Button->Ctrl);

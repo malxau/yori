@@ -644,6 +644,7 @@ ReturnDefault:
             WindowsDirectory[2] = '\0';
         }
 
+        YoriLibInitEmptyString(InstallDir);
         if (OsVerMajor < 4) {
             YoriLibYPrintf(InstallDir, _T("%s\\WIN32APP") TSETUP_APP_DIR, WindowsDirectory);
         } else {
@@ -775,7 +776,6 @@ SetupUiDialogProc(
                 SetDlgItemText(hDlg, IDC_VERSION, Version);
             }
 
-            YoriLibInitEmptyString(&InstallDir);
             SetupGetDefaultInstallDir(&InstallDir);
             SetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
             YoriLibFreeStringContents(&InstallDir);

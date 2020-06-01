@@ -43,6 +43,7 @@ OBJS=\
 	 select.obj   \
 	 string.obj   \
 	 strmenum.obj \
+	 temp.obj     \
 	 update.obj   \
 	 util.obj     \
 	 vt.obj       \

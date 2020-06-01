@@ -16,6 +16,7 @@
 ..\dir\builtins.lib
 ..\du\builtins.lib
 ..\echo\builtins.lib
+..\edit\builtins.lib
 ..\env\builtins.lib
 ..\erase\builtins.lib
 ..\err\builtins.lib

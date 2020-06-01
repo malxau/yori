@@ -82,6 +82,7 @@ CHAR strHelpHelpText1[] =
         "DOS2UNIX  Convert line endings to UNIX (LF) form\n"
         "DU        Display disk space used within a directory tree\n"
         "ECHO      Outputs text\n"
+        "EDIT      Open a file for editing\n"
         "ENV       Set environment variables and launch a program\n"
         ;
 

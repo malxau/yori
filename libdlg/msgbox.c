@@ -3,7 +3,7 @@
  *
  * Yori shell message dialog
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -70,6 +70,7 @@ YoriDlgMsgButtonClicked(
          the ButtonTexts array that was clicked, where the first button has
          a value of one.
  */
+__success(return)
 DWORD
 YoriDlgMessageBox(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
@@ -88,16 +89,41 @@ YoriDlgMessageBox(
     DWORD Index;
     DWORD DisplayLength;
     DWORD TotalButtonWidth;
+    DWORD LabelLinesRequired;
+    DWORD LabelWidthRequired;
     DWORD Style;
+    WORD WindowWidth;
+    WORD WindowHeight;
     PYORI_WIN_CTRL_HANDLE Ctrl;
     DWORD_PTR Result;
 
+    YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize);
+
     //
-    //  TODO: Need to enhance the label control to be able to calculate
-    //  the size needed to display the text
+    //  The window decoration will take six characters (two border, two
+    //  shadow, two padding between label text and window.)  We take a
+    //  few extra characters off just for visual reasons.
     //
 
-    if (!YoriWinCreateWindow(WinMgrHandle, 50, 11, 70, 11, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW, Title, &Parent)) {
+    DisplayLength = WindowSize.X - 10;
+    LabelLinesRequired = YoriWinLabelCountLinesRequiredForText(Text, DisplayLength, &LabelWidthRequired);
+
+    //
+    //  Vertically, the window has 8 lines of overhead (title bar, padding
+    //  above text, padding below text, three lines of buttons, border, and
+    //  shadow.)
+    //
+
+    if (LabelLinesRequired + 8 > (WORD)WindowSize.Y &&
+        WindowSize.Y > 8) {
+
+        LabelLinesRequired = LabelLinesRequired - WindowSize.Y;
+    }
+
+    WindowWidth = (WORD)(LabelWidthRequired + 6);
+    WindowHeight = (WORD)(LabelLinesRequired + 8);
+
+    if (!YoriWinCreateWindow(WinMgrHandle, WindowWidth, WindowHeight, WindowWidth, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
         return FALSE;
     }
 
@@ -106,9 +132,9 @@ YoriDlgMessageBox(
     TextArea.Left = 1;
     TextArea.Top = 1;
     TextArea.Right = (WORD)(WindowSize.X - 2);
-    TextArea.Bottom = 3;
+    TextArea.Bottom = (SHORT)(TextArea.Top + LabelLinesRequired - 1);
 
-    Ctrl = YoriWinCreateLabel(Parent, &TextArea, Text, YORI_WIN_LABEL_STYLE_CENTER | YORI_WIN_LABEL_NO_ACCELERATOR);
+    Ctrl = YoriWinLabelCreate(Parent, &TextArea, Text, YORI_WIN_LABEL_STYLE_CENTER | YORI_WIN_LABEL_NO_ACCELERATOR);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         return FALSE;
@@ -137,8 +163,8 @@ YoriDlgMessageBox(
 
     TotalButtonWidth += 5 * NumButtons - 1;
 
-    ButtonArea.Top = (SHORT)(5);
-    ButtonArea.Bottom = (SHORT)(7);
+    ButtonArea.Top = (SHORT)(TextArea.Bottom + 2);
+    ButtonArea.Bottom = (SHORT)(ButtonArea.Top + 2);
     ButtonArea.Left = (SHORT)((WindowSize.X - TotalButtonWidth) / 2);
 
     for (Index = 0; Index < NumButtons; Index++) {
@@ -161,7 +187,7 @@ YoriDlgMessageBox(
             Style |= YORI_WIN_BUTTON_STYLE_CANCEL;
         }
 
-        Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &ButtonTexts[Index], Style, YoriDlgMsgButtonClicked);
+        Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &ButtonTexts[Index], Style, YoriDlgMsgButtonClicked);
         if (Ctrl == NULL) {
             YoriWinDestroyWindow(Parent);
             return FALSE;
@@ -172,6 +198,7 @@ YoriDlgMessageBox(
     }
 
     Result = 0;
+    YoriWinEnableNonAltAccelerators(Parent, TRUE);
     YoriWinProcessInputForWindow(Parent, &Result);
     YoriWinDestroyWindow(Parent);
     return (DWORD)Result;

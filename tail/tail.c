@@ -140,7 +140,7 @@ TailProcessStream(
     DWORDLONG StartLine = 0;
     DWORDLONG CurrentLine;
     PYORI_STRING LineString;
-    BOOL LineTerminated;
+    YORI_LIB_LINE_ENDING LineEnding;
     BOOL TimeoutReached;
     DWORD SeekToEndOffset = 0;
 
@@ -171,7 +171,7 @@ TailProcessStream(
 
         while (TRUE) {
 
-            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, INFINITE, hSource, &LineTerminated, &TimeoutReached)) {
+            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, INFINITE, hSource, &LineEnding, &TimeoutReached)) {
                 break;
             }
 
@@ -217,7 +217,7 @@ TailProcessStream(
     if (TailContext->WaitForMore) {
         while (TRUE) {
 
-            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[0], &LineContext, FALSE, INFINITE, hSource, &LineTerminated, &TimeoutReached)) {
+            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[0], &LineContext, FALSE, INFINITE, hSource, &LineEnding, &TimeoutReached)) {
                 if (YoriLibIsOperationCancelled()) {
                     break;
                 }

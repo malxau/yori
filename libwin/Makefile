@@ -6,12 +6,15 @@ compile: yoriwin.lib
 OBJS=\
 	 border.obj   \
 	 button.obj   \
+	 checkbox.obj \
 	 combo.obj    \
 	 ctrl.obj     \
 	 edit.obj     \
 	 itemaray.obj \
 	 label.obj    \
 	 list.obj     \
+	 menubar.obj  \
+	 mledit.obj   \
 	 scrolbar.obj \
 	 window.obj   \
 	 winmgr.obj   \

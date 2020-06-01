@@ -126,13 +126,13 @@ HistoryCreateSynchronousMenu(
         return FALSE;
     }
 
-    if (!YoriWinOpenWindowManager(&WinMgr)) {
+    if (!YoriWinOpenWindowManager(FALSE, &WinMgr)) {
         return FALSE;
     }
 
     YoriLibConstantString(&Title, _T("History"));
 
-    if (!YoriWinCreateWindow(WinMgr, 30, 12, 60, 18, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW, &Title, &Parent)) {
+    if (!YoriWinCreateWindow(WinMgr, 30, 12, 60, 18, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Title, &Parent)) {
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
@@ -144,7 +144,7 @@ HistoryCreateSynchronousMenu(
     ListRect.Right = (SHORT)(WindowSize.X - 2);
     ListRect.Bottom = (SHORT)(WindowSize.Y - 3 - 1);
 
-    List = YoriWinCreateList(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR);
+    List = YoriWinListCreate(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR);
     if (List == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -176,7 +176,7 @@ HistoryCreateSynchronousMenu(
     ButtonArea.Left = (SHORT)(WindowSize.X - 1 - 2 * (ButtonWidth + 2) - 1);
     ButtonArea.Right = (WORD)(ButtonArea.Left + ButtonWidth + 1);
 
-    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, HistoryOkButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, HistoryOkButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -188,7 +188,7 @@ HistoryCreateSynchronousMenu(
     ButtonArea.Left = (SHORT)(WindowSize.X - 1 - (ButtonWidth + 2));
     ButtonArea.Right = (WORD)(ButtonArea.Left + ButtonWidth + 1);
 
-    Ctrl = YoriWinCreateButton(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, HistoryCancelButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, HistoryCancelButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
