@@ -494,6 +494,7 @@ YoriWinMgrTopMostNonClosingWindow(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
+BOOL
 YoriWinReadConsoleInputDetectWindowChange(
     __in PYORI_WIN_WINDOW_MANAGER WinMgr,
     __out_ecount(BufferLength) PINPUT_RECORD Buffer,
@@ -866,7 +867,7 @@ YoriWinMgrProcessEvents(
                     CurrentWinHandle = YoriWinWindowFromTopLevelListEntry(ListEntry);
                     CurrentWinCtrl = YoriWinGetCtrlFromWindow(CurrentWinHandle);
                     Event.EventType = YoriWinEventWindowManagerResize;
-                    
+
                     //
                     //  Tell the window about the resize that is occurring
                     //
@@ -882,7 +883,7 @@ YoriWinMgrProcessEvents(
                     Event.WindowManagerResize.NewWinMgrDimensions.Bottom = NewScreenBufferInfo.srWindow.Bottom;
 
                     CurrentWinCtrl->NotifyEventFn(CurrentWinCtrl, &Event);
-                    
+
                     //
                     //  Then display the result.  Force the result to the
                     //  console so that windows on top of it can read the
