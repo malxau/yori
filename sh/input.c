@@ -2120,6 +2120,10 @@ YoriShProcessKeyDown(
                CtrlMask == (RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED)) {
         if (KeyCode == 'A') {
             Buffer->CurrentOffset = 0;
+        } else if (KeyCode == 'B') {
+            if (Buffer->CurrentOffset > 0) {
+                Buffer->CurrentOffset--;
+            }
         } else if (KeyCode == 'C') {
             if (!YoriLibCopySelectionIfPresent(&Buffer->Selection)) {
                 YoriShClearInputSelections(Buffer);
@@ -2140,6 +2144,10 @@ YoriShProcessKeyDown(
             }
         } else if (KeyCode == 'E') {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
+        } else if (KeyCode == 'F') {
+            if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
+                Buffer->CurrentOffset++;
+            }
         } else if (KeyCode == 'K') {
 
             //
