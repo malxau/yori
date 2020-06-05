@@ -518,8 +518,22 @@ YoriShEnsureStringHasEnoughCharacters(
     __in DWORD CharactersNeeded
     )
 {
-    while (CharactersNeeded + 1 >= String->LengthAllocated) {
-        if (!YoriLibReallocateString(String, String->LengthAllocated * 4)) {
+    DWORD NewLength;
+
+    if (CharactersNeeded > String->LengthAllocated) {
+
+        //
+        // Ensure the buffer is large enough for the requested length, but at
+        // least double the size of the buffer in order to avoid a quadratic
+        // algorithm in string construction code.
+        //
+
+        NewLength = String->LengthAllocated * 2;
+        if (NewLength < CharactersNeeded) {
+            NewLength = CharactersNeeded;
+        }
+
+        if (!YoriLibReallocateString(String, NewLength)) {
             return FALSE;
         }
     }
@@ -1035,11 +1049,7 @@ YoriShAddYoriStringToInput(
     //
 
     if (Buffer->SearchMode) {
-        if (Buffer->SearchString.MemoryToFree == NULL) {
-            if (!YoriLibAllocateString(&Buffer->SearchString, String->LengthInChars * 4)) {
-                return;
-            }
-        } else if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->SearchString, Buffer->SearchString.LengthInChars + String->LengthInChars)) {
+        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->SearchString, Buffer->SearchString.LengthInChars + String->LengthInChars)) {
             return;
         }
 
@@ -2130,6 +2140,25 @@ YoriShProcessKeyDown(
             }
         } else if (KeyCode == 'E') {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
+        } else if (KeyCode == 'K') {
+
+            //
+            // Remove to the end of the line and store the result in the yank buffer.
+            //
+
+            if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
+                DWORD TailLength = Buffer->String.LengthInChars - Buffer->CurrentOffset;
+                if (!YoriShEnsureStringHasEnoughCharacters(&YoriShGlobal.YankBuffer, TailLength)) {
+                    return FALSE;
+                }
+
+                memcpy(YoriShGlobal.YankBuffer.StartOfString, Buffer->String.StartOfString + Buffer->CurrentOffset, TailLength * sizeof(TCHAR));
+                YoriShGlobal.YankBuffer.LengthInChars = TailLength;
+                Buffer->String.LengthInChars = Buffer->CurrentOffset;
+                Buffer->SuggestionDirty = TRUE;
+            }
+
+            ClearSelection = TRUE;
         } else if (KeyCode == 'L') {
             YoriShClearScreen(Buffer);
         } else if (KeyCode == 'V') {
@@ -2139,6 +2168,8 @@ YoriShProcessKeyDown(
                 YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 YoriLibFreeStringContents(&ClipboardData);
             }
+        } else if (KeyCode == 'Y') {
+            YoriShAddYoriStringToInput(Buffer, &YoriShGlobal.YankBuffer);
         } else if (KeyCode == 0xBF) { // Aka VK_OEM_2, / or ? on US keyboards
             Buffer->SearchMode = TRUE;
             Buffer->PreSearchOffset = Buffer->CurrentOffset;

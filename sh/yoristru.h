@@ -997,6 +997,12 @@ typedef struct _YORI_SH_GLOBALS {
      */
     WORD MouseoverColor;
 
+    /**
+     The current yanked string, similar to the system clipboard but used only
+     for the kill and yank commands (Ctrl+K and Ctrl+Y).
+     */
+    YORI_STRING YankBuffer;
+
 } YORI_SH_GLOBALS, *PYORI_SH_GLOBALS;
 
 extern YORI_SH_GLOBALS YoriShGlobal;
