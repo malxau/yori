@@ -934,6 +934,28 @@ YoriShBackspace(
 }
 
 /**
+ Perform the necessary buffer transformations to implement DEL.
+
+ @param Buffer Pointer to the buffer to apply delete to.
+
+ @param Count The number of delete operations to apply.
+ */
+VOID
+YoriShDelete(
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
+    __in DWORD Count
+    )
+{
+    if (Count + Buffer->CurrentOffset > Buffer->String.LengthInChars) {
+        Count = Buffer->String.LengthInChars - Buffer->CurrentOffset;
+    }
+
+    Buffer->CurrentOffset += Count;
+    YoriShBackspace(Buffer, Count);
+}
+
+
+/**
  If a selection region is active and covers the input string, delete the
  selected range of the input string and leave the cursor at the point where
  the selection was to allow for a subsequent insert.
@@ -1903,17 +1925,9 @@ YoriShProcessEnhancedKeyDown(
     } else if (KeyCode == VK_END) {
         Buffer->CurrentOffset = Buffer->String.LengthInChars;
     } else if (KeyCode == VK_DELETE) {
-
         if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
-            Count = InputRecord->Event.KeyEvent.wRepeatCount;
-            if (Count + Buffer->CurrentOffset > Buffer->String.LengthInChars) {
-                Count = Buffer->String.LengthInChars - Buffer->CurrentOffset;
-            }
-
-            Buffer->CurrentOffset += Count;
-            YoriShBackspace(Buffer, Count);
+            YoriShDelete(Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
         }
-
     } else if (KeyCode == VK_RETURN) {
         if (Buffer->SearchMode) {
             Buffer->SearchMode = FALSE;
@@ -2141,6 +2155,10 @@ YoriShProcessKeyDown(
                 *TerminateInput = TRUE;
                 YoriShClearInputSelections(Buffer);
                 return TRUE;
+            } else {
+                if (!YoriShOverwriteSelectionIfInInput(Buffer)) {
+                    YoriShDelete(Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
+                }
             }
         } else if (KeyCode == 'E') {
             Buffer->CurrentOffset = Buffer->String.LengthInChars;
