@@ -520,7 +520,8 @@ YoriShEnsureStringHasEnoughCharacters(
 {
     DWORD NewLength;
 
-    if (CharactersNeeded > String->LengthAllocated) {
+    if (CharactersNeeded + 1 > String->LengthAllocated) {
+
 
         //
         // Ensure the buffer is large enough for the requested length, but at
@@ -529,8 +530,8 @@ YoriShEnsureStringHasEnoughCharacters(
         //
 
         NewLength = String->LengthAllocated * 2;
-        if (NewLength < CharactersNeeded) {
-            NewLength = CharactersNeeded;
+        if (NewLength < CharactersNeeded + 1) {
+            NewLength = CharactersNeeded + 1;
         }
 
         if (!YoriLibReallocateString(String, NewLength)) {
@@ -2181,6 +2182,7 @@ YoriShProcessKeyDown(
                 memcpy(YoriShGlobal.YankBuffer.StartOfString, Buffer->String.StartOfString + Buffer->CurrentOffset, TailLength * sizeof(TCHAR));
                 YoriShGlobal.YankBuffer.LengthInChars = TailLength;
                 Buffer->String.LengthInChars = Buffer->CurrentOffset;
+                YoriLibFreeStringContents(&Buffer->SuggestionString);
                 Buffer->SuggestionDirty = TRUE;
             }
 
