@@ -268,6 +268,7 @@ EditPopulateFromStream(
                 YoriLibDereference(LineArray);
             }
             LineArray = NewLineArray;
+            LinesAllocated = NewLineCount;
         }
 
         //
