@@ -158,6 +158,13 @@ SdirAppInitialize()
     }
 
     //
+    //  Attempt to enable backup privilege.  This allows us to enumerate and recurse
+    //  through objects which normally ACLs would prevent.
+    //
+
+    YoriLibEnableBackupPrivilege();
+
+    //
     //  When running on WOW64, we don't want file system redirection,
     //  because we want people to be able to enumerate those paths
     //
@@ -166,13 +173,6 @@ SdirAppInitialize()
         PVOID DontCare;
         DllKernel32.pWow64DisableWow64FsRedirection(&DontCare);
     }
-
-    //
-    //  Attempt to enable backup privilege.  This allows us to enumerate and recurse
-    //  through objects which normally ACLs would prevent.
-    //
-
-    YoriLibEnableBackupPrivilege();
 
     //
     //  Grab the version of the running OS so we can highlight binaries that
