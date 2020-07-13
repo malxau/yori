@@ -246,6 +246,13 @@ YoriWinComboDisplayPullDown(
     YoriWinSetCustomNotification(ComboChildWindow, YoriWinEventMouseDownOutsideWindow, YoriWinComboChildEvent);
     YoriWinProcessInputForWindow(ComboChildWindow, &ChildResult);
 
+    YoriWinDestroyWindow(ComboChildWindow);
+
+    //
+    //  Don't change the text until the edit control has focus again, so it
+    //  knows where to put the cursor.
+    //
+
     if (ChildResult > 0) {
         if (YoriWinComboSetActiveOption(&Combo->Ctrl, (DWORD)(ChildResult - 1))) {
             if (Combo->ClickCallback != NULL) {
@@ -253,8 +260,6 @@ YoriWinComboDisplayPullDown(
             }
         }
     }
-
-    YoriWinDestroyWindow(ComboChildWindow);
 
     return TRUE;
 }
