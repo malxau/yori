@@ -515,7 +515,7 @@ DirLoadReparseData(
 /**
  Generates a VT string to set the color for writing a file path to the screen.
 
- @param Context Pointer to the dir context structure.
+ @param DirContext Pointer to the dir context structure.
 
  @param FilePath Pointer to a fully qualified file path.
 
