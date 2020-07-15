@@ -2168,6 +2168,9 @@ YoriLibHexDiff(
 #define CP_UTF8 65001
 #endif
 
+BOOLEAN
+YoriLibIsUtf8Supported();
+
 DWORD
 YoriLibGetMultibyteOutputEncoding();
 

@@ -594,6 +594,78 @@ EditNewButtonClicked(
 }
 
 /**
+ Populate the combo box values for encodings for the open and save as
+ dialogs.  UTF-8 is the default wherever possible but is not available
+ on NT 3.x.
+
+ @param EncodingValues Pointer to an array of values to populate.  The array
+        must have space for at least four elements.
+
+ @return The number of elements populated into the array.
+ */
+DWORD
+EditPopulateEncodingArray(
+    __out PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues
+    )
+{
+    DWORD EncodingIndex;
+
+    EncodingIndex = 0;
+    if (YoriLibIsUtf8Supported()) {
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8"));
+    }
+    YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ANSI"));
+    YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ASCII"));
+    YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16"));
+
+    return EncodingIndex;
+}
+
+/**
+ Determine the encoding to use given the array index of the selected combo
+ box item in an open or save as dialog.
+
+ @param EncodingIndex The zero based array index of the encoding that the
+        user selected.
+
+ @return the CP_ encoding value to use.  Can return -1 on failure, but this
+         implies the supplied index is not valid.
+ */
+DWORD
+EditEncodingFromArrayIndex(
+    __in DWORD EncodingIndex
+    )
+{
+    DWORD Index;
+    DWORD Encoding;
+
+    Index = EncodingIndex;
+    if (YoriLibIsUtf8Supported()) {
+        if (Index == 0) {
+            return CP_UTF8;
+        }
+
+        Index--;
+    }
+
+    Encoding = (DWORD)-1;
+
+    switch(Index) {
+        case 0:
+            Encoding = CP_ACP;
+            break;
+        case 1:
+            Encoding = CP_OEMCP;
+            break;
+        case 2:
+            Encoding = CP_UTF16;
+            break;
+    }
+
+    return Encoding;
+}
+
+/**
  A callback invoked when the open menu item is invoked.
 
  @param Ctrl Pointer to the menu bar control.
@@ -609,18 +681,17 @@ EditOpenButtonClicked(
     PEDIT_CONTEXT EditContext;
     YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[4];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[1];
+    DWORD Encoding;
+    DWORD EncodingCount;
 
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    YoriLibConstantString(&EncodingValues[0].ValueText, _T("UTF-8"));
-    YoriLibConstantString(&EncodingValues[1].ValueText, _T("ANSI"));
-    YoriLibConstantString(&EncodingValues[2].ValueText, _T("ASCII"));
-    YoriLibConstantString(&EncodingValues[3].ValueText, _T("UTF-16"));
+    EncodingCount = EditPopulateEncodingArray(EncodingValues);
 
     YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Encoding:"));
-    CustomOptionArray[0].ValueCount = sizeof(EncodingValues)/sizeof(EncodingValues[0]);
+    CustomOptionArray[0].ValueCount = EncodingCount;
     CustomOptionArray[0].Values = EncodingValues;
     CustomOptionArray[0].SelectedValue = 0;
 
@@ -644,19 +715,9 @@ EditOpenButtonClicked(
         return;
     }
 
-    switch(CustomOptionArray[0].SelectedValue) {
-        case 0:
-            EditContext->Encoding = CP_UTF8;
-            break;
-        case 1:
-            EditContext->Encoding = CP_ACP;
-            break;
-        case 2:
-            EditContext->Encoding = CP_OEMCP;
-            break;
-        case 3:
-            EditContext->Encoding = CP_UTF16;
-            break;
+    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue);
+    if (Encoding != -1) {
+        EditContext->Encoding = Encoding;
     }
 
     YoriLibFreeStringContents(&Text);
@@ -750,22 +811,21 @@ EditSaveAsButtonClicked(
     YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[4];
     YORI_DLG_FILE_CUSTOM_VALUE LineEndingValues[3];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[2];
+    DWORD Encoding;
+    DWORD EncodingCount;
 
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    YoriLibConstantString(&EncodingValues[0].ValueText, _T("UTF-8"));
-    YoriLibConstantString(&EncodingValues[1].ValueText, _T("ANSI"));
-    YoriLibConstantString(&EncodingValues[2].ValueText, _T("ASCII"));
-    YoriLibConstantString(&EncodingValues[3].ValueText, _T("UTF-16"));
+    EncodingCount = EditPopulateEncodingArray(EncodingValues);
 
     YoriLibConstantString(&LineEndingValues[0].ValueText, _T("Windows (CRLF)"));
     YoriLibConstantString(&LineEndingValues[1].ValueText, _T("UNIX (LF)"));
     YoriLibConstantString(&LineEndingValues[2].ValueText, _T("Classic Mac (CR)"));
 
     YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Encoding:"));
-    CustomOptionArray[0].ValueCount = sizeof(EncodingValues)/sizeof(EncodingValues[0]);
+    CustomOptionArray[0].ValueCount = EncodingCount;
     CustomOptionArray[0].Values = EncodingValues;
     CustomOptionArray[0].SelectedValue = 0;
 
@@ -801,19 +861,9 @@ EditSaveAsButtonClicked(
         return;
     }
 
-    switch(CustomOptionArray[0].SelectedValue) {
-        case 0:
-            EditContext->Encoding = CP_UTF8;
-            break;
-        case 1:
-            EditContext->Encoding = CP_ACP;
-            break;
-        case 2:
-            EditContext->Encoding = CP_OEMCP;
-            break;
-        case 3:
-            EditContext->Encoding = CP_UTF16;
-            break;
+    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue);
+    if (Encoding != -1) {
+        EditContext->Encoding = Encoding;
     }
 
     switch(CustomOptionArray[1].SelectedValue) {
@@ -1819,7 +1869,8 @@ EditEncodingFromString(
     __in PYORI_STRING String
     )
 {
-    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("utf8")) == 0) {
+    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("utf8")) == 0 &&
+        YoriLibIsUtf8Supported()) {
         return CP_UTF8;
     } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ascii")) == 0) {
         return CP_OEMCP;
@@ -1865,7 +1916,11 @@ ENTRYPOINT(
     YORI_STRING Arg;
 
     ZeroMemory(&GlobalEditContext, sizeof(GlobalEditContext));
-    GlobalEditContext.Encoding = CP_UTF8;
+    if (YoriLibIsUtf8Supported()) {
+        GlobalEditContext.Encoding = CP_UTF8;
+    } else {
+        GlobalEditContext.Encoding = CP_ACP;
+    }
 
     for (i = 1; i < ArgC; i++) {
 

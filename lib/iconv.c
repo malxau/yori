@@ -42,12 +42,32 @@ DWORD YoriLibActiveInputEncoding;
 /**
  Set to TRUE once the default output encoding has been established.
  */
-BOOL YoriLibActiveOutputEncodingInitialized;
+BOOLEAN YoriLibActiveOutputEncodingInitialized;
 
 /**
  Set to TRUE once the default input encoding has been established.
  */
-BOOL YoriLibActiveInputEncodingInitialized;
+BOOLEAN YoriLibActiveInputEncodingInitialized;
+
+/**
+ Return TRUE if the system supports UTF-8.  This is supported on NT 4 and
+ newer.
+ */
+BOOLEAN
+YoriLibIsUtf8Supported()
+{
+    DWORD WinMajorVer;
+    DWORD WinMinorVer;
+    DWORD BuildNumber;
+
+    YoriLibGetOsVersion(&WinMajorVer, &WinMinorVer, &BuildNumber);
+
+    if (WinMajorVer < 4) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
 
 /**
  Returns the active output encoding, establishing the default encoding if it
@@ -58,16 +78,10 @@ DWORD
 YoriLibGetMultibyteOutputEncoding()
 {
     if (!YoriLibActiveOutputEncodingInitialized) {
-        DWORD WinMajorVer;
-        DWORD WinMinorVer;
-        DWORD BuildNumber;
-    
-        YoriLibGetOsVersion(&WinMajorVer, &WinMinorVer, &BuildNumber);
-    
-        if (WinMajorVer < 4) {
-            YoriLibActiveOutputEncoding = CP_OEMCP;
-        } else {
+        if (YoriLibIsUtf8Supported()) {
             YoriLibActiveOutputEncoding = CP_UTF8;
+        } else {
+            YoriLibActiveOutputEncoding = CP_OEMCP;
         }
         YoriLibActiveOutputEncodingInitialized = TRUE;
     }
@@ -83,16 +97,10 @@ DWORD
 YoriLibGetMultibyteInputEncoding()
 {
     if (!YoriLibActiveInputEncodingInitialized) {
-        DWORD WinMajorVer;
-        DWORD WinMinorVer;
-        DWORD BuildNumber;
-    
-        YoriLibGetOsVersion(&WinMajorVer, &WinMinorVer, &BuildNumber);
-    
-        if (WinMajorVer < 4) {
-            YoriLibActiveInputEncoding = CP_OEMCP;
-        } else {
+        if (YoriLibIsUtf8Supported()) {
             YoriLibActiveInputEncoding = CP_UTF8;
+        } else {
+            YoriLibActiveInputEncoding = CP_OEMCP;
         }
         YoriLibActiveInputEncodingInitialized = TRUE;
     }
