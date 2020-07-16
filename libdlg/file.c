@@ -601,7 +601,20 @@ YoriDlgFile(
             WinMgrSize.X = 50;
         }
 
-        WinMgrSize.Y = (SHORT)(WinMgrSize.Y * 2 / 3);
+        //
+        //  If the window height is less than 30 rows, use 80%.  Otherwise,
+        //  use 66%.  To prevent the discontinuity, if 80% of 30 rows is
+        //  larger than 66% of actual rows, use that.
+        //
+
+        if (WinMgrSize.Y < 30) {
+            WinMgrSize.Y = (SHORT)(WinMgrSize.Y * 4 / 5);
+        } else {
+            WinMgrSize.Y = (SHORT)(WinMgrSize.Y * 2 / 3);
+            if ((SHORT)(30 * 3 / 4) > WinMgrSize.Y) {
+                WinMgrSize.Y = (SHORT)(30 * 4 / 5);
+            }
+        }
     }
 
     if ((WORD)WinMgrSize.Y < 14 + OptionCount) {
