@@ -390,7 +390,7 @@ YoriShDisplayAfterKeyPress(
     //  or if the location of the cursor in the input string has changed
     //
 
-    if (Buffer->DirtyBeginOffset != 0 || Buffer->DirtyLength != 0 ||
+    if (Buffer->DirtyLength != 0 ||
         Buffer->SuggestionDirty ||
         Buffer->PreviousCurrentOffset != Buffer->CurrentOffset) {
 
@@ -401,11 +401,14 @@ YoriShDisplayAfterKeyPress(
 
         //
         //  Calculate the number of characters truncated from the currently
-        //  displayed buffer.
+        //  displayed buffer.  If the text is being updated, it needs to be
+        //  redrawn from the fill position or less, otherwise we'd leave a
+        //  hole.
         //
 
         if (Buffer->PreviousCharsDisplayed > Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars) {
             NumberToFill = Buffer->PreviousCharsDisplayed - Buffer->String.LengthInChars - Buffer->SuggestionString.LengthInChars;
+            ASSERT(Buffer->DirtyLength == 0 || Buffer->DirtyBeginOffset <= Buffer->PreviousCharsDisplayed - NumberToFill);
         }
 
         //
@@ -454,7 +457,7 @@ YoriShDisplayAfterKeyPress(
         }
 
         if (NumberToWrite > 0 ||
-            Buffer->SuggestionString.LengthInChars > 0 ||
+            Buffer->SuggestionDirty ||
             Buffer->CurrentOffset != Buffer->PreviousCurrentOffset) {
 
             //
@@ -471,7 +474,7 @@ YoriShDisplayAfterKeyPress(
                 FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
             }
 
-            if (Buffer->SuggestionString.LengthInChars > 0) {
+            if (Buffer->SuggestionDirty) {
                 WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
                 FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
             }
@@ -495,6 +498,41 @@ YoriShDisplayAfterKeyPress(
     }
 
     return TRUE;
+}
+
+/**
+ Update the dirty range (the range needing to be redrawn) to include the
+ specified range.  If no range is dirty it is set to this range, otherwise
+ the existing range is extended as needed on either side.
+
+ @param Buffer Pointer to the input buffer.
+
+ @param FirstChar The index of the first character that needs to be redrawn.
+
+ @param Length The number of characters that needs to be redrawn.
+ */
+VOID
+YoriShExtendDirtyRangeToCover(
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
+    __in DWORD FirstChar,
+    __in DWORD Length
+    )
+{
+    ASSERT(Length != 0);
+
+    if (Buffer->DirtyLength == 0) {
+        Buffer->DirtyBeginOffset = FirstChar;
+        Buffer->DirtyLength = Length;
+    } else {
+        if (FirstChar < Buffer->DirtyBeginOffset) {
+            Buffer->DirtyLength += Buffer->DirtyBeginOffset - FirstChar;
+            Buffer->DirtyBeginOffset = FirstChar;
+        }
+        if (Buffer->DirtyBeginOffset + Buffer->DirtyLength < FirstChar + Length) {
+            Buffer->DirtyLength = (FirstChar + Length) - Buffer->DirtyBeginOffset;
+        }
+        ASSERT(Buffer->DirtyLength != 0);
+    }
 }
 
 /**
@@ -723,6 +761,9 @@ YoriShClearInput(
     YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriLibFreeStringContents(&Buffer->SearchString);
     YoriShClearTabCompletionMatches(Buffer);
+    if (Buffer->String.LengthInChars > 0) {
+        YoriShExtendDirtyRangeToCover(Buffer, 0, Buffer->String.LengthInChars);
+    }
     Buffer->String.LengthInChars = 0;
     Buffer->CurrentOffset = 0;
     Buffer->SearchMode = FALSE;
@@ -880,6 +921,7 @@ YoriShBackspace(
     )
 {
     DWORD CountToUse;
+    DWORD StartPosition;
 
     CountToUse = Count;
 
@@ -900,32 +942,29 @@ YoriShBackspace(
     }
 
     //
-    //  On the regular buffer, we may have to shuffle characters around.
+    //  In the middle of the regular buffer, we have to shuffle characters
+    //  around.  At the end of the regular buffer, there's nothing to shuffle
+    //  but the string length and display region needs updating. If the
+    //  backspace is at the beginning of the string, we may have to do nothing
+    //  at all.
     //
 
     if (Buffer->CurrentOffset < CountToUse) {
 
         CountToUse = Buffer->CurrentOffset;
+        if (CountToUse == 0) {
+            return;
+        }
     }
 
+    StartPosition = Buffer->CurrentOffset - CountToUse;
     if (Buffer->CurrentOffset != Buffer->String.LengthInChars) {
-        memmove(&Buffer->String.StartOfString[Buffer->CurrentOffset - CountToUse],
+        memmove(&Buffer->String.StartOfString[StartPosition],
                 &Buffer->String.StartOfString[Buffer->CurrentOffset],
                 (Buffer->String.LengthInChars - Buffer->CurrentOffset) * sizeof(TCHAR));
     }
 
-    if (Buffer->DirtyLength == 0) {
-        Buffer->DirtyBeginOffset = Buffer->CurrentOffset - CountToUse;
-        Buffer->DirtyLength = Buffer->String.LengthInChars - Buffer->DirtyBeginOffset;
-    } else {
-        if (Buffer->CurrentOffset - CountToUse < Buffer->DirtyBeginOffset) {
-            Buffer->DirtyLength += Buffer->DirtyBeginOffset - (Buffer->CurrentOffset - CountToUse);
-            Buffer->DirtyBeginOffset = Buffer->CurrentOffset - CountToUse;
-        }
-        if (Buffer->DirtyBeginOffset + Buffer->DirtyLength < Buffer->String.LengthInChars) {
-            Buffer->DirtyLength = Buffer->String.LengthInChars - Buffer->DirtyBeginOffset;
-        }
-    }
+    YoriShExtendDirtyRangeToCover(Buffer, StartPosition, Buffer->String.LengthInChars - StartPosition);
 
     Buffer->CurrentOffset -= CountToUse;
     Buffer->String.LengthInChars -= CountToUse;
@@ -1105,19 +1144,7 @@ YoriShAddYoriStringToInput(
         }
         Buffer->String.LengthInChars += String->LengthInChars;
         memcpy(&Buffer->String.StartOfString[Buffer->CurrentOffset], String->StartOfString, String->LengthInChars * sizeof(TCHAR));
-
-        if (Buffer->DirtyLength == 0) {
-            Buffer->DirtyBeginOffset = Buffer->CurrentOffset;
-            Buffer->DirtyLength = Buffer->String.LengthInChars - Buffer->CurrentOffset;
-        } else {
-            if (Buffer->CurrentOffset < Buffer->DirtyBeginOffset) {
-                Buffer->DirtyLength += Buffer->DirtyBeginOffset - Buffer->CurrentOffset;
-                Buffer->DirtyBeginOffset = Buffer->CurrentOffset;
-            }
-            if (Buffer->DirtyBeginOffset + Buffer->DirtyLength < Buffer->String.LengthInChars) {
-                Buffer->DirtyLength = Buffer->String.LengthInChars - Buffer->DirtyBeginOffset;
-            }
-        }
+        YoriShExtendDirtyRangeToCover(Buffer, Buffer->CurrentOffset, Buffer->String.LengthInChars - Buffer->CurrentOffset);
         Buffer->CurrentOffset += String->LengthInChars;
     } else {
         if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, Buffer->CurrentOffset + String->LengthInChars)) {
@@ -1128,18 +1155,7 @@ YoriShAddYoriStringToInput(
         if (Buffer->CurrentOffset > Buffer->String.LengthInChars) {
             Buffer->String.LengthInChars = Buffer->CurrentOffset;
         }
-        if (Buffer->DirtyLength == 0) {
-            Buffer->DirtyBeginOffset = Buffer->CurrentOffset - String->LengthInChars;
-            Buffer->DirtyLength = String->LengthInChars;
-        } else {
-            if (Buffer->CurrentOffset - String->LengthInChars < Buffer->DirtyBeginOffset) {
-                Buffer->DirtyLength += Buffer->DirtyBeginOffset - (Buffer->CurrentOffset - String->LengthInChars);
-                Buffer->DirtyBeginOffset = Buffer->CurrentOffset - String->LengthInChars;
-            }
-            if (Buffer->DirtyBeginOffset + Buffer->DirtyLength < Buffer->CurrentOffset) {
-                Buffer->DirtyLength = Buffer->CurrentOffset - Buffer->DirtyBeginOffset;
-            }
-        }
+        YoriShExtendDirtyRangeToCover(Buffer, Buffer->CurrentOffset - String->LengthInChars, String->LengthInChars);
     }
 
     ASSERT(Buffer->String.LengthAllocated > Buffer->String.LengthInChars);
@@ -1227,8 +1243,7 @@ YoriShReplaceInputBufferTrackDirtyRange(
     //
 
     if (FirstChangedCharOffset != (DWORD)-1) {
-        Buffer->DirtyBeginOffset = FirstChangedCharOffset;
-        Buffer->DirtyLength = LastChangedCharOffset - FirstChangedCharOffset + 1;
+        YoriShExtendDirtyRangeToCover(Buffer, FirstChangedCharOffset, LastChangedCharOffset - FirstChangedCharOffset + 1);
     }
 
     return TRUE;
@@ -1751,8 +1766,7 @@ YoriShClearScreen(
     YoriShPreCommand(TRUE);
 
     Buffer->PreviousCurrentOffset = 0;
-    Buffer->DirtyBeginOffset = 0;
-    Buffer->DirtyLength = Buffer->String.LengthInChars;
+    YoriShExtendDirtyRangeToCover(Buffer, 0, Buffer->String.LengthInChars);
 }
 
 /**
