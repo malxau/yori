@@ -677,7 +677,14 @@ typedef struct _YORI_SH_INPUT_BUFFER {
      Set to TRUE if the suggestion string has changed and requires
      redisplay.
      */
-    BOOL SuggestionDirty;
+    BOOLEAN SuggestionDirty;
+
+    /**
+     Set to TRUE if the suggestion candidates have been calculated and do not
+     need to be recalculated.  Set to FALSE if a subsequent change to the
+     buffer invalidates the previously calculated set.
+     */
+    BOOLEAN SuggestionPopulated;
 
     /**
      The currently active suggestion string.

@@ -691,6 +691,7 @@ YoriShTerminateInput(
     if (Buffer->SuggestionString.LengthInChars > 0) {
         Buffer->SuggestionDirty = TRUE;
     }
+    Buffer->SuggestionPopulated = FALSE;
     YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriLibFreeStringContents(&Buffer->SearchString);
     SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, FALSE);
@@ -758,6 +759,7 @@ YoriShClearInput(
     __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
+    Buffer->SuggestionPopulated = FALSE;
     YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriLibFreeStringContents(&Buffer->SearchString);
     YoriShClearTabCompletionMatches(Buffer);
@@ -831,6 +833,7 @@ YoriShCompletionListAllMatches(
     if (Buffer->SuggestionString.LengthInChars > 0) {
         Buffer->SuggestionDirty = TRUE;
     }
+    Buffer->SuggestionPopulated = FALSE;
     YoriLibFreeStringContents(&Buffer->SuggestionString);
     YoriShDisplayAfterKeyPress(Buffer);
     Buffer->String.StartOfString[Buffer->String.LengthInChars] = '\0';
@@ -969,6 +972,7 @@ YoriShBackspace(
     Buffer->CurrentOffset -= CountToUse;
     Buffer->String.LengthInChars -= CountToUse;
 
+    Buffer->SuggestionPopulated = FALSE;
     Buffer->SuggestionDirty = TRUE;
     YoriLibFreeStringContents(&Buffer->SuggestionString);
 }
@@ -1103,6 +1107,18 @@ YoriShAddYoriStringToInput(
     } else {
         YoriShTrimSuggestionList(Buffer, String);
     }
+
+    //
+    //  If we're keeping suggestions and still have a match, don't
+    //  recalculate them.  If we don't have a match it might be because
+    //  the user has moved to a different argument and previous results
+    //  are invalid.
+    //
+
+    if (Buffer->SuggestionString.LengthInChars == 0) {
+        Buffer->SuggestionPopulated = FALSE;
+    }
+
     Buffer->SuggestionDirty = TRUE;
 
     //
@@ -1445,6 +1461,7 @@ YoriShDeleteArgument(
         YoriLibFreeStringContents(&NewString);
 
         Buffer->SuggestionDirty = TRUE;
+        Buffer->SuggestionPopulated = FALSE;
         YoriLibFreeStringContents(&Buffer->SuggestionString);
         YoriShClearTabCompletionMatches(Buffer);
     }
@@ -2198,6 +2215,7 @@ YoriShProcessKeyDown(
                 Buffer->String.LengthInChars = Buffer->CurrentOffset;
                 YoriLibFreeStringContents(&Buffer->SuggestionString);
                 Buffer->SuggestionDirty = TRUE;
+                Buffer->SuggestionPopulated = FALSE;
             }
 
             ClearSelection = TRUE;
@@ -2873,7 +2891,6 @@ YoriShGetExpressionFromConsole(
     BOOL ReDisplayRequired;
     BOOL TerminateInput;
     BOOL RestartStateSaved = FALSE;
-    BOOL SuggestionPopulated = FALSE;
 
     ZeroMemory(&Buffer, sizeof(Buffer));
     Buffer.InsertMode = TRUE;
@@ -3003,13 +3020,12 @@ YoriShGetExpressionFromConsole(
         //  understand that they actually are.
         //
 
-        SuggestionPopulated = FALSE;
-        if (Buffer.SuggestionString.LengthInChars > 0 ||
-            YoriShGlobal.DelayBeforeSuggesting == 0 ||
+        if (YoriShGlobal.DelayBeforeSuggesting == 0 ||
             Buffer.TabContext.TabCount != 0) {
 
-            SuggestionPopulated = TRUE;
+            Buffer.SuggestionPopulated = TRUE;
         }
+
         err = WAIT_OBJECT_0;
         while (TRUE) {
             if (YoriLibIsPeriodicScrollActive(&Buffer.Selection)) {
@@ -3021,17 +3037,17 @@ YoriShGetExpressionFromConsole(
                 if (err == WAIT_TIMEOUT) {
                     YoriLibPeriodicScrollForSelection(&Buffer.Selection);
                 }
-            } else if (!SuggestionPopulated) {
+            } else if (!Buffer.SuggestionPopulated) {
                 err = WaitForSingleObject(InputHandle, YoriShGlobal.DelayBeforeSuggesting);
                 if (err == WAIT_OBJECT_0) {
                     break;
                 }
                 if (err == WAIT_TIMEOUT) {
-                    ASSERT(!SuggestionPopulated);
+                    ASSERT(!Buffer.SuggestionPopulated);
                     YoriShConfigureConsoleForTabComplete(&Buffer);
                     YoriShCompleteSuggestion(&Buffer);
                     YoriShConfigureConsoleForInput(&Buffer);
-                    SuggestionPopulated = TRUE;
+                    Buffer.SuggestionPopulated = TRUE;
                     Buffer.SuggestionDirty = TRUE;
                     if (Buffer.SuggestionString.LengthInChars > 0) {
                         YoriShDisplayAfterKeyPress(&Buffer);
