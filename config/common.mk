@@ -4,7 +4,9 @@
 # subprojects.
 #
 
+!IFNDEF YORI_BASE_VER_MAJOR
 !INCLUDE "VER.INC"
+!ENDIF
 YORI_BUILD_ID=0
 
 UNICODE=1
@@ -16,6 +18,7 @@ PDB=0
 !ENDIF
 
 !IF "$(READCONFIGCACHEFILE)"==""
+!IFNDEF YORI_VARIABLES_DEFINED
 
 PROBECOMPILER=1
 PROBELINKER=1
@@ -262,6 +265,15 @@ writeconfigcache:
 
 !ENDIF
 
+# NMAKE-based builds perform links top level before installs.
+# YMAKE-based builds need dependency information to link before install.
+
+!IFDEF _YMAKE_VER
+INSTALL_DEPENDENCIES=link $(BINDIR) $(SYMDIR) $(MODDIR)
+!ENDIF
+
+YORI_VARIABLES_DEFINED=1
+!ENDIF # YORI_VARIABLES_DEFINED
 !ELSE # READCONFIGCACHEFILE
 !INCLUDE "$(READCONFIGCACHEFILE)"
 !ENDIF
@@ -295,7 +307,7 @@ clean:
 	@if exist *~ erase *~
 	@if exist *.exe.manifest erase *.exe.manifest
 
-install:
+install: $(INSTALL_DEPENDENCIES)
 	@if not "$(BINARIES)."=="." for %%i in ($(BINARIES)) do @copy %%i $(BINDIR) >NUL
 	@if not "$(BINARIES)."=="." for %%i in ($(BINARIES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
 	@if not "$(MODULES)."=="." for %%i in ($(MODULES)) do @copy %%i $(MODDIR) >NUL

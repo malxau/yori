@@ -28,14 +28,20 @@ ARCH=mips
 !ENDIF # AMD64
 !ENDIF # x64
 
-BINDIR=bin\$(ARCH)
-SYMDIR=sym\$(ARCH)
-MODDIR=bin\$(ARCH)\modules
+BINDIR_ROOT=bin\$(ARCH)
+SYMDIR_ROOT=sym\$(ARCH)
+MODDIR_ROOT=bin\$(ARCH)\modules
 
-BUILD=$(MAKE) -nologo DEBUG=$(DEBUG) PDB=$(PDB) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=..\$(BINDIR) SYMDIR=..\$(SYMDIR) MODDIR=..\$(MODDIR)
+BINDIR=..\$(BINDIR_ROOT)
+SYMDIR=..\$(SYMDIR_ROOT)
+MODDIR=..\$(MODDIR_ROOT)
+
+BUILD=$(MAKE) -nologo DEBUG=$(DEBUG) PDB=$(PDB) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=$(BINDIR) SYMDIR=$(SYMDIR) MODDIR=$(MODDIR)
 
 CURRENTTIME=REM
+!IFNDEF _YMAKE_VER
 WRITECONFIGCACHEFILE=cache.mk
+!ENDIF
 
 all: all.real
 
@@ -97,6 +103,7 @@ DIRS=crt       \
      kill      \
      lines     \
      lsof      \
+     make      \
      mem       \
      mkdir     \
      mklink    \
@@ -140,25 +147,46 @@ DIRS=crt       \
      ysetup    \
      yui       \
 
+!IFDEF _YMAKE_VER
+$(BINDIR_ROOT):
+	@-$(MKDIR) $(BINDIR_ROOT) 
+
+$(SYMDIR_ROOT):
+	@-$(MKDIR) $(SYMDIR_ROOT) 
+
+$(MODDIR_ROOT):
+	@-$(MKDIR) $(MODDIR_ROOT) 
+
+all.real[dirs target=install]: $(DIRS) $(SHDIRS)
+
+compile:
+
+link[dirs target=link]: $(DIRS) $(SHDIRS)
+!ELSE
 all.real: writeconfigcache
 	@$(CURRENTTIME)
-	@$(FOR) %%i in ($(BINDIR) $(SYMDIR) $(MODDIR) $(BINDIR)\YoriInit.d) do $(STARTCMD)@if not exist %%i $(MKDIR) %%i$(STARTCMD)
+	@$(FOR) %%i in ($(BINDIR_ROOT) $(SYMDIR_ROOT) $(MODDIR_ROOT) $(BINDIR_ROOT)\YoriInit.d) do $(STARTCMD)@if not exist %%i $(MKDIR) %%i$(STARTCMD)
 	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Compiling %%i & cd %%i & $(BUILD) compile READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(DIRS)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) link READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(SHDIRS)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) link READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Installing %%i & cd %%i & $(BUILD) install READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@$(CURRENTTIME)
+!ENDIF
 
 beta: all.real
 	@if not exist beta $(MKDIR) beta
-	@move $(BINDIR) beta\$(ARCH)
-	@move $(SYMDIR) beta\$(ARCH)\sym
+	@move $(BINDIR_ROOT) beta\$(ARCH)
+	@move $(SYMDIR_ROOT) beta\$(ARCH)\sym
 
+!IFDEF _YMAKE_VER
+clean[dirs target=clean]: $(DIRS) $(SHDIRS)
+!ELSE
 clean: writeconfigcache
 	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) clean READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@if exist *~ erase *~
-	@$(FOR_ST) /D %%i in ($(MODDIR) $(BINDIR) $(SYMDIR)) do @if exist %%i $(RMDIR) /s/q %%i
+	@$(FOR_ST) /D %%i in ($(MODDIR_ROOT) $(BINDIR_ROOT) $(SYMDIR_ROOT)) do @if exist %%i $(RMDIR) /s/q %%i
 	@if exist $(WRITECONFIGCACHEFILE) erase $(WRITECONFIGCACHEFILE)
+!ENDIF
 
 distclean: clean
 	@$(FOR_ST) /D %%i in (pkg\*) do @if exist %%i $(RMDIR) /s/q %%i

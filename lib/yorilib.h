@@ -71,6 +71,11 @@ typedef struct _YORI_STRING {
 } YORI_STRING, *PYORI_STRING;
 
 /**
+ A pointer to a constant yori string.
+ */
+typedef YORI_STRING CONST *PCYORI_STRING;
+
+/**
  A structure describing an entry that is an element of a hash table.
  */
 typedef struct _YORI_HASH_ENTRY {
@@ -2087,7 +2092,7 @@ YoriLibHashInsertByKey(
 PYORI_HASH_ENTRY
 YoriLibHashLookupByKey(
     __in PYORI_HASH_TABLE HashTable,
-    __in PYORI_STRING KeyString
+    __in PCYORI_STRING KeyString
     );
 
 VOID
@@ -3143,6 +3148,12 @@ YoriLibIsYoriQuickEditEnabled();
 
 // *** STRING.C ***
 
+/**
+ A macro to enable static initialization of a yori string.
+ */
+#define YORILIB_CONSTANT_STRING(x) \
+{ NULL, x, sizeof(x) / sizeof(TCHAR) - 1, 0 }
+
 VOID
 YoriLibInitEmptyString(
     __out PYORI_STRING String
@@ -3244,53 +3255,53 @@ YoriLibUpcaseChar(
 
 int
 YoriLibCompareStringWithLiteral(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2
     );
 
 int
 YoriLibCompareStringWithLiteralCount(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
     __in DWORD count
     );
 
 int
 YoriLibCompareStringWithLiteralInsensitive(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2
     );
 
 int
 YoriLibCompareStringWithLiteralInsensitiveCount(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
     __in DWORD count
     );
 
 int
 YoriLibCompareString(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2
     );
 
 int
 YoriLibCompareStringInsensitive(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2
     );
 
 int
 YoriLibCompareStringInsensitiveCount(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2,
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2,
     __in DWORD count
     );
 
 int
 YoriLibCompareStringCount(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2,
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2,
     __in DWORD count
     );
 
@@ -3308,13 +3319,13 @@ YoriLibCountStringMatchingCharsInsensitive(
 
 DWORD
 YoriLibCountStringContainingChars(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in LPCTSTR chars
     );
 
 DWORD
 YoriLibCountStringNotContainingChars(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in LPCTSTR match
     );
 
@@ -3336,13 +3347,13 @@ YoriLibFindFirstMatchingSubstringInsensitive(
 
 LPTSTR
 YoriLibFindLeftMostCharacter(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in TCHAR CharToFind
     );
 
 LPTSTR
 YoriLibFindRightMostCharacter(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in TCHAR CharToFind
     );
 

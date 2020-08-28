@@ -637,7 +637,7 @@ YoriLibTrimNullTerminators(
  */
 int
 YoriLibCompareStringWithLiteralCount(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
     __in DWORD count
     )
@@ -690,7 +690,7 @@ YoriLibCompareStringWithLiteralCount(
  */
 int
 YoriLibCompareStringWithLiteral(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2
     )
 {
@@ -733,7 +733,7 @@ YoriLibUpcaseChar(
  */
 int
 YoriLibCompareStringWithLiteralInsensitiveCount(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2,
     __in DWORD count
     )
@@ -786,7 +786,7 @@ YoriLibCompareStringWithLiteralInsensitiveCount(
  */
 int
 YoriLibCompareStringWithLiteralInsensitive(
-    __in PYORI_STRING Str1,
+    __in PCYORI_STRING Str1,
     __in LPCTSTR str2
     )
 {
@@ -810,8 +810,8 @@ YoriLibCompareStringWithLiteralInsensitive(
  */
 int
 YoriLibCompareStringCount(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2,
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2,
     __in DWORD count
     )
 {
@@ -863,8 +863,8 @@ YoriLibCompareStringCount(
  */
 int
 YoriLibCompareString(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2
     )
 {
     return YoriLibCompareStringCount(Str1, Str2, (DWORD)-1);
@@ -888,8 +888,8 @@ YoriLibCompareString(
  */
 int
 YoriLibCompareStringInsensitiveCount(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2,
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2,
     __in DWORD count
     )
 {
@@ -941,8 +941,8 @@ YoriLibCompareStringInsensitiveCount(
  */
 int
 YoriLibCompareStringInsensitive(
-    __in PYORI_STRING Str1,
-    __in PYORI_STRING Str2
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2
     )
 {
     return YoriLibCompareStringInsensitiveCount(Str1, Str2, (DWORD)-1);
@@ -1019,7 +1019,7 @@ YoriLibCountStringMatchingCharsInsensitive(
  */
 DWORD
 YoriLibCountStringContainingChars(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in LPCTSTR chars
     )
 {
@@ -1052,7 +1052,7 @@ YoriLibCountStringContainingChars(
  */
 DWORD
 YoriLibCountStringNotContainingChars(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in LPCTSTR match
     )
 {
@@ -1191,7 +1191,7 @@ YoriLibFindFirstMatchingSubstringInsensitive(
  */
 LPTSTR
 YoriLibFindLeftMostCharacter(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in TCHAR CharToFind
     )
 {
@@ -1218,7 +1218,7 @@ YoriLibFindLeftMostCharacter(
  */
 LPTSTR
 YoriLibFindRightMostCharacter(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in TCHAR CharToFind
     )
 {

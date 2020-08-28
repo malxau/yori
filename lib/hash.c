@@ -91,7 +91,7 @@ YoriLibFreeEmptyHashTable(
  */
 WORD
 YoriLibHashString(
-    __in PYORI_STRING String
+    __in PCYORI_STRING String
     )
 {
     DWORD Hash;
@@ -158,7 +158,7 @@ YoriLibHashInsertByKey(
 PYORI_HASH_ENTRY
 YoriLibHashLookupByKey(
     __in PYORI_HASH_TABLE HashTable,
-    __in PYORI_STRING KeyString
+    __in PCYORI_STRING KeyString
     )
 {
     DWORD BucketIndex = YoriLibHashString(KeyString) % HashTable->NumberBuckets;
