@@ -151,6 +151,9 @@ DIRS=crt       \
 $(BINDIR_ROOT):
 	@-$(MKDIR) $(BINDIR_ROOT) 
 
+$(BINDIR_ROOT)\YoriInit.d:
+	@-$(MKDIR) $(BINDIR_ROOT)\YoriInit.d
+
 $(SYMDIR_ROOT):
 	@-$(MKDIR) $(SYMDIR_ROOT) 
 

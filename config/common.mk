@@ -78,8 +78,10 @@ CRTLIB=..\crt\yoricrt.lib
 !IF [$(CC) -GS- 2>&1 | find "D4002" >NUL]>0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -GS-
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -GF
+!IFNDEF _YMAKE_VER
 !IF [$(CC) -? 2>&1 | find "/MP" >NUL]==0
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -MP
+!ENDIF
 !ENDIF
 !ELSE
 !IF [$(CC) -GF 2>&1 | find "D4002" >NUL]>0
@@ -121,16 +123,15 @@ CFLAGS=$(CFLAGS_NOUNICODE)
 !IF $(PROBELINKER)==1
 
 #
-# Visual C 2003 really wants this and isn't satisfied
+# Visual C 2003 really wants NOWIN98 and isn't satisfied
 # with a pragma, so yet another probe
 #
 
+!IF [$(LINK) -OPT:ICF 2>&1 | find "ICF" >NUL]>0
+LDFLAGS=$(LDFLAGS) -OPT:ICF
 !IF [$(LINK) -OPT:NOWIN98 2>&1 | find "NOWIN98" >NUL]>0
 LDFLAGS=$(LDFLAGS) -OPT:NOWIN98
 !ENDIF
-
-!IF [$(LINK) -OPT:ICF 2>&1 | find "ICF" >NUL]>0
-LDFLAGS=$(LDFLAGS) -OPT:ICF
 !ENDIF
 
 #
@@ -138,28 +139,35 @@ LDFLAGS=$(LDFLAGS) -OPT:ICF
 # to help the subsystem version detection, below.  If we don't guess it's
 # not fatal, the linker will figure it out in the end.
 #
+MINOS=310
+!IF [$(CC) 2>&1 | find "x86" >NUL]==0
 !IF [$(CC) 2>&1 | find "80x86" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:IX86
 !ELSE
-!IF [$(CC) 2>&1 | find "x86" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:X86
+!ENDIF # 80x86
 !ELSE
 !IF [$(CC) 2>&1 | find "x64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:X64
+MINOS=520
 !ELSE
 !IF [$(CC) 2>&1 | find "AMD64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:AMD64
+MINOS=520
 !ELSE
 !IF [$(CC) 2>&1 | find "ARM64" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM64
+MINOS=1000
 !ELSE
 !IF [$(CC) 2>&1 | find "Itanium" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:IA64
+MINOS=520
 !ELSE
 !IF [$(CC) 2>&1 | find "ARM" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM
 # Add back msvcrt to provide 64 bit math assembly
 CRTLIB=$(CRTLIB) msvcrt.lib libvcruntime.lib
+MINOS=800
 !ELSE
 !IF [$(CC) 2>&1 | find "MIPS" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:MIPS
@@ -172,7 +180,6 @@ CRTLIB=$(CRTLIB) msvcrt.lib
 !ENDIF # AMD64
 !ENDIF # x64
 !ENDIF # x86
-!ENDIF # 80x86
 
 #
 # Look for the oldest subsystem version the linker is willing to generate
@@ -192,6 +199,9 @@ CRTLIB=$(CRTLIB) msvcrt.lib
 #        3.10      4.0         5.1    5.2   6.0   default
 #
 
+# 32 bit builds need to probe 5.0 and lower.  64 bit builds can jump
+# straight to 5.2 which is the oldest 64 bit OS.
+!IF $(MINOS)<520
 !IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.0 2>&1 | find "LNK4010" >NUL]>0
 !IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,4.0 2>&1 | find "LNK4010" >NUL]>0
 !IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,3.10 2>&1 | find "LNK4010" >NUL]>0
@@ -217,6 +227,17 @@ LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE
 !ENDIF # 6.0
 !ENDIF # 5.2
 !ENDIF # 5.0
+!ELSE  # MINOS<520 aka 64 bit build
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,5.2 2>&1 | find "LNK4010" >NUL]>0
+LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,5.2
+!ELSE  # !5.2
+!IF [$(LINK) $(LDFLAGS) -SUBSYSTEM:CONSOLE,6.0 2>&1 | find "LNK4010" >NUL]>0
+LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE,6.0
+!ELSE
+LDFLAGS=$(LDFLAGS) -SUBSYSTEM:CONSOLE
+!ENDIF # 6.0
+!ENDIF # 5.2
+!ENDIF # MINOS<520
 
 !ENDIF # PROBELINKER
 
@@ -225,6 +246,7 @@ FOR_ST=for
 MKDIR=mkdir
 RMDIR=rmdir
 
+!IFNDEF _YMAKE_VER
 !IF [yfor.exe -? >NUL 2>&1]==0
 FOR=yfor -c -p %NUMBER_OF_PROCESSORS%
 FOR_ST=yfor -c
@@ -240,6 +262,7 @@ MKDIR=ymkdir
 !ENDIF
 !IF [yrmdir.exe -? >NUL 2>&1]==0
 RMDIR=yrmdir
+!ENDIF
 !ENDIF
 
 
@@ -269,7 +292,7 @@ writeconfigcache:
 # YMAKE-based builds need dependency information to link before install.
 
 !IFDEF _YMAKE_VER
-INSTALL_DEPENDENCIES=link $(BINDIR) $(SYMDIR) $(MODDIR)
+INSTALL_DEPENDENCIES=link $(BINDIR) $(SYMDIR) $(MODDIR) $(BINDIR)\YoriInit.d
 !ENDIF
 
 YORI_VARIABLES_DEFINED=1

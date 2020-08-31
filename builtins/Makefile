@@ -50,9 +50,6 @@ all: compile link
 
 compile: builtins.lib
 
-!IF $(PDB)==1
-!ENDIF
-
 builtins.lib: $(BUILTINS) 
 	@echo $@
 	@$(LIB32) $(LIBFLAGS) $(BUILTINS) -out:$@

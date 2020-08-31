@@ -40,12 +40,12 @@ set SOURCEPATH=http://www.malsmith.net/download/?obj=yori/%BUILDSTRING%
 set OUTDIR=%CD%\pkg\out
 
 echo *** Cleaning tree
-nmake /nologo clean >NUL
+ymake clean >NUL
 
 mkdir %OUTDIR% >NUL 2>&1
 
 echo *** Building debug
-nmake /nologo PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+ymake PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
 
 echo *** Generating debug installer
 
@@ -63,10 +63,10 @@ for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-pdb-
 popd
 
 echo *** Cleaning tree
-nmake /nologo clean >NUL
+ymake clean >NUL
 
 echo *** Building retail
-nmake /nologo PDB=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+ymake PDB=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
 
 wait
 
@@ -104,7 +104,7 @@ popd
 
 echo *** Cleaning tree
 
-nmake /nologo clean >NUL
+ymake clean >NUL
 
 wait
 popd
