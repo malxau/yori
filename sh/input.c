@@ -3044,12 +3044,13 @@ YoriShGetExpressionFromConsole(
                 }
                 if (err == WAIT_TIMEOUT) {
                     ASSERT(!Buffer.SuggestionPopulated);
+                    ASSERT(Buffer.SuggestionString.LengthInChars == 0);
                     YoriShConfigureConsoleForTabComplete(&Buffer);
                     YoriShCompleteSuggestion(&Buffer);
                     YoriShConfigureConsoleForInput(&Buffer);
                     Buffer.SuggestionPopulated = TRUE;
-                    Buffer.SuggestionDirty = TRUE;
                     if (Buffer.SuggestionString.LengthInChars > 0) {
+                        Buffer.SuggestionDirty = TRUE;
                         YoriShDisplayAfterKeyPress(&Buffer);
                     }
                 }
