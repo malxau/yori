@@ -1247,6 +1247,53 @@ MakeMarkTargetForRebuild(
 }
 
 /**
+ When an inference rule is being used to build a target, apply all of the
+ parent dependencies of the inference rule to be parent dependencies of the
+ target.  This includes the implied dependency of the source of the inference
+ rule.
+
+ @param MakeContext Pointer to the context.
+
+ @param Target Pointer to the target to apply the inference rule to.  This
+        target already knows which inference rule it would use to build if no
+        explicit recipe is found.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+MakeApplyInferenceRuleDependencyToTarget(
+    __in PMAKE_CONTEXT MakeContext,
+    __in PMAKE_TARGET Target
+    )
+{
+    PMAKE_TARGET InferenceRuleTarget;
+    PYORI_LIST_ENTRY ListEntry;
+    PMAKE_TARGET Parent;
+    PMAKE_TARGET_DEPENDENCY Dependency;
+
+    if (!MakeCreateParentChildDependency(MakeContext, Target->InferenceRuleParentTarget, Target)) {
+        return FALSE;
+    }
+
+    InferenceRuleTarget = Target->InferenceRule->Target;
+
+    ListEntry = YoriLibGetNextListEntry(&InferenceRuleTarget->ParentDependents, NULL);
+    while (ListEntry != NULL) {
+        Dependency = CONTAINING_RECORD(ListEntry, MAKE_TARGET_DEPENDENCY, ChildDependents);
+        ASSERT(Dependency->Child == InferenceRuleTarget);
+        Parent = Dependency->Parent;
+
+        if (!MakeCreateParentChildDependency(MakeContext, Parent, Target)) {
+            return FALSE;
+        }
+
+        ListEntry = YoriLibGetNextListEntry(&InferenceRuleTarget->ParentDependents, ListEntry);
+    }
+
+    return TRUE;
+}
+
+/**
  For a specified target, check whether anything it depends up requires
  rebuilding, and if so, indicate that this target requires rebuilding also.
 
@@ -1289,12 +1336,15 @@ MakeDetermineDependenciesForTarget(
         //  If it uses an inference rule and has no parent dependencies,
         //  populate one from the inference rule
         //
+        //  MSFIX NMAKE allows a parent to have parent dependents and still
+        //  apply inference rules to build it
+        //
 
         if (YoriLibIsListEmpty(&Parent->ParentDependents) &&
             !Parent->ExplicitRecipeFound &&
             Parent->InferenceRuleParentTarget != NULL) {
 
-            if (!MakeCreateParentChildDependency(MakeContext, Parent->InferenceRuleParentTarget, Parent)) {
+            if (!MakeApplyInferenceRuleDependencyToTarget(MakeContext, Parent)) {
                 return FALSE;
             }
         }

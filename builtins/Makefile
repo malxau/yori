@@ -54,7 +54,13 @@ builtins.lib: $(BUILTINS)
 	@echo $@
 	@$(LIB32) $(LIBFLAGS) $(BUILTINS) -out:$@
 
+COM_LIBS = $(CRTLIB) ..\lib\yorilib.lib ..\libwin\yoriwin.lib
+
+!IFDEF _YMAKE_VER
+.obj.com: $(COM_LIBS)
+!ELSE
 .obj.com:
+!ENDIF
 	@echo $@
-	@$(LINK) $(LDFLAGS) $< -dll -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib ..\libwin\yoriwin.lib -def:$(<B).def -out:$@
+	@$(LINK) $(LDFLAGS) $< -dll -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LIBS) $(COM_LIBS) -def:$(<B).def -out:$@
 

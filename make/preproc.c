@@ -1653,6 +1653,12 @@ MakeAddRule(
     //  for discarding them completely is so they're not used as the
     //  first target/default target in a makefile.
     //
+    //  MSFIX I think the real reason .SUFFIXES exist is to specify the
+    //  order in which file extensions are probed.  For a build system
+    //  it's good for this to be deterministic, and it's not always
+    //  clear from reading a series of nested makefiles what the real
+    //  order is.
+    //
 
     if (YoriLibCompareStringWithLiteralInsensitive(&Substring, _T(".SUFFIXES")) == 0) {
         ScopeContext->RecipeActive = FALSE;
