@@ -605,7 +605,7 @@ EditNewButtonClicked(
  */
 DWORD
 EditPopulateEncodingArray(
-    __out PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues
+    __out_ecount(4) PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues
     )
 {
     DWORD EncodingIndex;

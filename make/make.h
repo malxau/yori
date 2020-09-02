@@ -729,6 +729,7 @@ MakeTrimWhitespace(
     __in PYORI_STRING String
     );
 
+__success(return)
 BOOLEAN
 MakeFindMakefileInDirectory(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
@@ -764,6 +765,7 @@ MakeDereferenceScope(
     __in PMAKE_SCOPE_CONTEXT ScopeContext
     );
 
+__success(return)
 BOOLEAN
 MakeActivateScope(
     __in PMAKE_CONTEXT MakeContext,
@@ -830,6 +832,7 @@ MakeDetermineDependencies(
     __in PMAKE_CONTEXT MakeContext
     );
 
+__success(return)
 BOOLEAN
 MakeExpandTargetVariable(
     __in PMAKE_CONTEXT MakeContext,

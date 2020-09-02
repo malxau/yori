@@ -297,6 +297,7 @@ MakeLaunchNextCmd(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 MakeLaunchNextTarget(
     __in PMAKE_CONTEXT MakeContext,
@@ -571,13 +572,19 @@ Drain:
 
     while (NumberActiveProcesses > 0) {
         for (Index = 0; Index < NumberActiveProcesses; Index++) {
+            if (ChildProcessArray[Index].ProcessInfo.hProcess == NULL) {
+                break;
+            }
             ProcessHandleArray[Index] = ChildProcessArray[Index].ProcessInfo.hProcess;
         }
 
-        Index = WaitForMultipleObjects(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE);
-        Index = Index - WAIT_OBJECT_0;
+        if (Index == NumberActiveProcesses) {
+            Index = WaitForMultipleObjects(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE);
+            Index = Index - WAIT_OBJECT_0;
 
-        CloseHandle(ChildProcessArray[Index].ProcessInfo.hProcess);
+            CloseHandle(ChildProcessArray[Index].ProcessInfo.hProcess);
+            ChildProcessArray[Index].ProcessInfo.hProcess = NULL;
+        }
 
         if (NumberActiveProcesses > Index + 1) {
             memmove(&ChildProcessArray[Index],

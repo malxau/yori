@@ -901,7 +901,7 @@ MakePreprocessorEvaluateCondition(
                 return FALSE;
             }
         }
-    
+
         if (SecondPart.LengthInChars == 0) {
             SecondNumber = 0;
         } else if (SecondPart.LengthInChars > 2 &&
@@ -919,7 +919,7 @@ MakePreprocessorEvaluateCondition(
                 return FALSE;
             }
         }
-    
+
         if (MatchingOperator == &OperatorMatches[MAKE_IF_OPERATOR_EXACT_MATCH]) {
 
             if (FirstNumber == SecondNumber) {
@@ -943,7 +943,7 @@ MakePreprocessorEvaluateCondition(
             } else {
                 return FALSE;
             }
-    
+
         } else if (MatchingOperator == &OperatorMatches[MAKE_IF_OPERATOR_LESS_OR_EQUAL]) {
 
             if (FirstNumber <= SecondNumber) {
@@ -951,7 +951,7 @@ MakePreprocessorEvaluateCondition(
             } else {
                 return FALSE;
             }
-    
+
         } else if (MatchingOperator == &OperatorMatches[MAKE_IF_OPERATOR_GREATER]) {
 
             if (FirstNumber > SecondNumber) {
@@ -959,9 +959,9 @@ MakePreprocessorEvaluateCondition(
             } else {
                 return FALSE;
             }
-    
+
         } else if (MatchingOperator == &OperatorMatches[MAKE_IF_OPERATOR_LESS]) {
-    
+
             if (FirstNumber < SecondNumber) {
                 return TRUE;
             } else {
@@ -1206,6 +1206,7 @@ MakePreprocessor(
  @return TRUE to indicate that this line is an inference rule, FALSE if it
          is a regular file rule.
  */
+__success(return)
 BOOLEAN
 MakeIsTargetInferenceRule(
     __in PYORI_STRING Line,
@@ -1285,6 +1286,7 @@ CONST YORI_STRING MakefileNameCandidates[] = {
  @return TRUE to indicate that a makefile was found, FALSE to indicate it was
          not found or an error occurred.
  */
+__success(return)
 BOOLEAN
 MakeFindMakefileInDirectory(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
@@ -1335,11 +1337,12 @@ MakeFindMakefileInDirectory(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 MakeDetermineTargetOptions(
     __inout PYORI_STRING TargetName,
     __out PBOOLEAN DependenciesAreDirectories,
-    __out PYORI_STRING ChildTargetName
+    __inout PYORI_STRING ChildTargetName
     )
 {
     LPTSTR FirstBrace;
@@ -1817,7 +1820,7 @@ MakeAddRecipeCommand(
 
  @param MakeContext Pointer to context information specifying which lines to
         display.
- 
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
@@ -1956,6 +1959,7 @@ MakeProcessStream(
 
         ASSERT(LineType != MakeLineTypeRecipe || ActiveRecipeTarget != NULL);
         if (LineType != MakeLineTypeRecipe ||
+            ActiveRecipeTarget == NULL ||
             !ActiveRecipeTarget->InferenceRulePseudoTarget) {
 
             MakeExpandVariables(ScopeContext, NULL, &ExpandedLine, &LineToProcess);
@@ -1970,6 +1974,7 @@ MakeProcessStream(
         } else if (LineType == MakeLineTypeRule) {
             ActiveRecipeTarget = MakeAddRule(ScopeContext, &ExpandedLine);
         } else if (LineType == MakeLineTypeRecipe &&
+                   ActiveRecipeTarget != NULL &&
                    !ActiveRecipeTarget->InferenceRulePseudoTarget) {
             MakeAddRecipeCommand(MakeContext, ActiveRecipeTarget, &ExpandedLine);
         }

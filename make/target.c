@@ -843,6 +843,7 @@ MakeCreateParentChildDependency(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 MakeExpandTargetVariable(
     __in PMAKE_CONTEXT MakeContext,

@@ -86,6 +86,7 @@ MakeDeleteAllVariables(
  @return A pointer to the variable structure if it is found, or NULL if it
          is not found.
  */
+__success(return != NULL)
 PMAKE_VARIABLE
 MakeLookupVariable(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
@@ -169,12 +170,13 @@ MakeIsVariableTargetSpecific(
 
  @return TRUE if the variable was successfully expanded, FALSE if it was not.
  */
+__success(return)
 BOOLEAN
 MakeSubstituteNamedVariable(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in_opt PMAKE_TARGET Target,
     __in PCYORI_STRING VariableName,
-    __out PYORI_STRING VariableData
+    __inout PYORI_STRING VariableData
     )
 {
     PMAKE_VARIABLE FoundVariable;
