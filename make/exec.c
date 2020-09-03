@@ -99,6 +99,7 @@ MakeBuiltinCmds[] = {
 CONST LPTSTR
 MakePuntToCmd[] = {
     _T("COPY"),
+    _T("ERASE"),
     _T("FOR"),
     _T("IF"),
     _T("MOVE"),
@@ -130,6 +131,99 @@ MakeDoesTargetHaveMoreCommands(
 }
 
 /**
+ Inspect an if statement and indicate whether it can be handled in process or
+ needs to be handled by CMD.  Currently in process support only exists for
+ "if exist" or "if not exist".  If support exists in process, the command to
+ execute is returned in CmdToExec.  Note that the command to execute may be
+ an empty string, indicating the condition is not satisfied, and no command
+ needs to be executed.
+
+ @param ChildProcess Pointer to information about the child process to
+        execute, including the working directory.
+
+ @param ArgC Specifies the number of arguments.
+
+ @param ArgV Specifies an array of arguments.
+
+ @param CmdToExec On input, specifies the full command string of the if
+        expression.  On output, if the command can be handled in proc, this
+        is updated to contain the command to execute in CMD, which may be
+        empty.
+
+ @return TRUE to indicate this if expression was handled in proc, and the
+         CmdToExec string is updated to indicate the external command to
+         invoke.  FALSE to indicate the expression should be resolved by CMD.
+ */
+__success(return)
+BOOLEAN
+MakeProcessIf(
+    __in PMAKE_CHILD_PROCESS ChildProcess,
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[],
+    __inout PYORI_STRING CmdToExec
+    )
+{
+    DWORD Index;
+    BOOLEAN Not;
+    YORI_STRING FullPath;
+    HANDLE FindHandle;
+    WIN32_FIND_DATA FindData;
+    BOOLEAN Found;
+    BOOLEAN ConditionTrue;
+
+    Not = FALSE;
+
+    for (Index = 1; Index < ArgC; Index++) {
+        if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("NOT")) == 0) {
+            if (Not) {
+                Not = FALSE;
+            } else {
+                Not = TRUE;
+            }
+        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("EXIST")) == 0 &&
+                   Index + 1 < ArgC) {
+            break;
+        } else {
+            return FALSE;
+        }
+    }
+
+    if (Index + 1 > ArgC) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&FullPath);
+    if (!YoriLibGetFullPathNameRelativeTo(&ChildProcess->Target->ScopeContext->HashEntry.Key, &ArgV[Index + 1], TRUE, &FullPath, NULL)) {
+        return FALSE;
+    }
+
+    Found = FALSE;
+    FindHandle = FindFirstFile(FullPath.StartOfString, &FindData);
+    if (FindHandle != INVALID_HANDLE_VALUE) {
+        Found = TRUE;
+        FindClose(FindHandle);
+    }
+
+    YoriLibFreeStringContents(&FullPath);
+
+    ConditionTrue = FALSE;
+    if ((Found && !Not) || (!Found && Not)) {
+
+        ConditionTrue = TRUE;
+    }
+
+    if (ArgC > Index + 2 && ConditionTrue) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - Index - 2, &ArgV[Index + 2], TRUE, &FullPath)) {
+            return FALSE;
+        }
+    }
+
+    YoriLibFreeStringContents(CmdToExec);
+    memcpy(CmdToExec, &FullPath, sizeof(YORI_STRING));
+    return TRUE;
+}
+
+/**
  Start executing the next command within a target.
 
  @param ChildProcess Pointer to the child process structure specifying the
@@ -155,8 +249,10 @@ MakeLaunchNextCmd(
     DWORD ArgC;
     BOOL Success;
     YORI_STRING ExecString;
+    YORI_STRING CmdToParse;
     BOOLEAN ExecutedBuiltin;
     BOOLEAN PuntToCmd;
+    BOOLEAN Reparse;
 
     Target = ChildProcess->Target;
 
@@ -183,47 +279,79 @@ MakeLaunchNextCmd(
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &CmdToExec->Cmd);
     }
 
+    YoriLibInitEmptyString(&CmdToParse);
+    CmdToParse.StartOfString = CmdToExec->Cmd.StartOfString;
+    CmdToParse.LengthInChars = CmdToExec->Cmd.LengthInChars;
+
     //
     //  Check if this command is a builtin, and if so, execute it inline
     //
 
-    ExecutedBuiltin = FALSE;
-    PuntToCmd = FALSE;
-    ArgV = YoriLibCmdlineToArgcArgv(CmdToExec->Cmd.StartOfString, (DWORD)-1, &ArgC);
-    if (ArgV != NULL) {
-        DWORD Result = EXIT_SUCCESS;
-        for (Index = 0; Index < sizeof(MakeBuiltinCmds)/sizeof(MakeBuiltinCmds[0]); Index++) {
-            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], MakeBuiltinCmds[Index].CommandName) == 0) {
+    while(TRUE) {
+        ExecutedBuiltin = FALSE;
+        PuntToCmd = FALSE;
+        Reparse = FALSE;
 
-                Result = MakeBuiltinCmds[Index].BuiltinFn(ArgC, ArgV);
+        ArgV = YoriLibCmdlineToArgcArgv(CmdToParse.StartOfString, (DWORD)-1, &ArgC);
+        if (ArgV != NULL) {
+            DWORD Result = EXIT_SUCCESS;
+            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], _T("IF")) == 0) {
+                if (MakeProcessIf(ChildProcess, ArgC, ArgV, &CmdToParse)) {
+                    Reparse = TRUE;
+                }
+            } else {
+                for (Index = 0; Index < sizeof(MakeBuiltinCmds)/sizeof(MakeBuiltinCmds[0]); Index++) {
+                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], MakeBuiltinCmds[Index].CommandName) == 0) {
 
-                ExecutedBuiltin = TRUE;
-                ChildProcess->ProcessInfo.hProcess = NULL;
-                ChildProcess->ProcessInfo.hThread = NULL;
-                break;
-            }
-        }
+                        // 
+                        //  MSFIX This needs to SetCurrentDirectory or ensure
+                        //  that nothing depends on current directory
+                        //
 
-        if (!ExecutedBuiltin) {
-            for (Index = 0; Index < sizeof(MakePuntToCmd)/sizeof(MakePuntToCmd[0]); Index++) {
-                if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], MakePuntToCmd[Index]) == 0) {
-                    PuntToCmd = TRUE;
-                    break;
+                        Result = MakeBuiltinCmds[Index].BuiltinFn(ArgC, ArgV);
+
+                        ExecutedBuiltin = TRUE;
+                        ChildProcess->ProcessInfo.hProcess = NULL;
+                        ChildProcess->ProcessInfo.hThread = NULL;
+                        break;
+                    }
                 }
             }
-        }
-        for (Index = 0; Index < ArgC; Index++) {
-            YoriLibFreeStringContents(&ArgV[Index]);
-        }
-        YoriLibDereference(ArgV);
-        if (Result != EXIT_SUCCESS && !CmdToExec->IgnoreErrors) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &CmdToExec->Cmd);
-            return FALSE;
-        }
-    }
 
-    if (ExecutedBuiltin) {
-        return TRUE;
+            if (!ExecutedBuiltin && !Reparse) {
+                for (Index = 0; Index < sizeof(MakePuntToCmd)/sizeof(MakePuntToCmd[0]); Index++) {
+                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], MakePuntToCmd[Index]) == 0) {
+                        PuntToCmd = TRUE;
+                        break;
+                    }
+                }
+            }
+
+            for (Index = 0; Index < ArgC; Index++) {
+                YoriLibFreeStringContents(&ArgV[Index]);
+            }
+            YoriLibDereference(ArgV);
+            if (Result != EXIT_SUCCESS && !CmdToExec->IgnoreErrors) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &CmdToExec->Cmd);
+                return FALSE;
+            }
+        }
+
+        if (ExecutedBuiltin) {
+            YoriLibFreeStringContents(&CmdToParse);
+            return TRUE;
+        }
+
+        if (!Reparse) {
+            break;
+        }
+
+        if (CmdToParse.LengthInChars == 0) {
+            YoriLibFreeStringContents(&CmdToParse);
+            ChildProcess->ProcessInfo.hProcess = NULL;
+            ChildProcess->ProcessInfo.hThread = NULL;
+            return TRUE;
+        }
     }
 
     //
@@ -231,9 +359,9 @@ MakeLaunchNextCmd(
     //  present use CMD to invoke the command.
     //
 
-    for (Index = 0; Index < CmdToExec->Cmd.LengthInChars; Index++) {
-        if (CmdToExec->Cmd.StartOfString[Index] == '>' ||
-            CmdToExec->Cmd.StartOfString[Index] == '<') {
+    for (Index = 0; Index < CmdToParse.LengthInChars; Index++) {
+        if (CmdToParse.StartOfString[Index] == '>' ||
+            CmdToParse.StartOfString[Index] == '<') {
 
             PuntToCmd = TRUE;
             break;
@@ -246,16 +374,17 @@ MakeLaunchNextCmd(
 
     YoriLibInitEmptyString(&ExecString);
     if (PuntToCmd) {
-        if (!YoriLibAllocateString(&ExecString, sizeof("cmd /c ") + CmdToExec->Cmd.LengthInChars + 1)) {
+        if (!YoriLibAllocateString(&ExecString, sizeof("cmd /c ") + CmdToParse.LengthInChars + 1)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Out of memory\n"));
+            YoriLibFreeStringContents(&CmdToParse);
             return FALSE;
         }
 
-        ExecString.LengthInChars = YoriLibSPrintf(ExecString.StartOfString, _T("cmd /c %y"), &CmdToExec->Cmd);
+        ExecString.LengthInChars = YoriLibSPrintf(ExecString.StartOfString, _T("cmd /c %y"), &CmdToParse);
 
     } else {
-        ExecString.StartOfString = CmdToExec->Cmd.StartOfString;
-        ExecString.LengthInChars = CmdToExec->Cmd.LengthInChars;
+        ExecString.StartOfString = CmdToParse.StartOfString;
+        ExecString.LengthInChars = CmdToParse.LengthInChars;
     }
 
     Success = CreateProcess(NULL,
@@ -272,6 +401,7 @@ MakeLaunchNextCmd(
     if (!Success) {
         if (!CmdToExec->IgnoreErrors) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &ExecString);
+            YoriLibFreeStringContents(&CmdToParse);
             YoriLibFreeStringContents(&ExecString);
             return FALSE;
         }
@@ -282,6 +412,7 @@ MakeLaunchNextCmd(
         ChildProcess->ProcessInfo.hThread = NULL;
     }
     YoriLibFreeStringContents(&ExecString);
+    YoriLibFreeStringContents(&CmdToParse);
 
     return TRUE;
 
@@ -388,7 +519,7 @@ MakeProcessCompletion(
     }
 
     if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Terminating due to error executing %y\n"), ChildProcess->Cmd->Cmd);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Terminating due to error executing %y\n"), &ChildProcess->Cmd->Cmd);
         return FALSE;
     }
 

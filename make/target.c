@@ -1058,6 +1058,13 @@ MakeExpandTargetVariable(
                YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("F")) == 0) {
         BOOLEAN FinalSeperatorFound = FALSE;
 
+        //
+        //  MSFIX: This branch is taken by default.  To NMAKE, file names are
+        //  opaque strings so it doesn't need to consider the default.
+        //  File name only behavior works for files in the same directory,
+        //  but is wrong if the file name refers to a different directory.
+        //
+
         for (Index = VariableData->LengthInChars; Index > 0; Index--) {
             if (YoriLibIsSep(VariableData->StartOfString[Index - 1])) {
                 FinalSeperatorFound = TRUE;
