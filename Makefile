@@ -1,6 +1,6 @@
 
 DEBUG=0
-PDB=0
+PDB=1
 YORI_BUILD_ID=0
 ARCH=win32
 
