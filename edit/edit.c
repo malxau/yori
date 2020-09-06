@@ -1091,6 +1091,9 @@ EditFindNextMatchingString(
     }
 
     LineCount = YoriWinMultilineEditGetLineCount(EditContext->MultilineEdit);
+    if (LineCount == 0) {
+        return FALSE;
+    }
 
     //
     //  For the line that the cursor is on, extract the substring of text
