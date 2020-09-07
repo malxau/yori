@@ -75,6 +75,15 @@ typedef struct _MAKE_DEFAULT_MACRO {
 } MAKE_DEFAULT_MACRO;
 
 /**
+ An array of options which have a parameter following them.  This is used
+ to skip that extra parameter when parsing variables or targets.
+ */
+CONST YORI_STRING MakeArgsWithParameter[] = {
+    YORILIB_CONSTANT_STRING(_T("f")),
+    YORILIB_CONSTANT_STRING(_T("j"))
+};
+
+/**
  An array of default macros to initialize on program entry.
  */
 CONST MAKE_DEFAULT_MACRO MakeDefaultMacros[] = {
@@ -113,7 +122,7 @@ ENTRYPOINT(
     )
 {
     BOOL ArgumentUnderstood;
-    DWORD i;
+    DWORD i, j;
     DWORD StartArg = 0;
     MAKE_CONTEXT MakeContext;
     PYORI_STRING FileName;
@@ -198,14 +207,12 @@ ENTRYPOINT(
                 if (i + 1 < ArgC) {
                     FileName = &ArgV[i + 1];
                     ArgumentUnderstood = TRUE;
-                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("j")) == 0) {
                 if (i + 1 < ArgC) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], FALSE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
                         MakeContext.NumberProcesses = (DWORD)llTemp;
                         ArgumentUnderstood = TRUE;
-                        i++;
                     }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("perf")) == 0) {
@@ -216,10 +223,21 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
                 break;
             }
+
+            //
+            //  If the arg had a parameter, skip it.  Unlike other Yori tools,
+            //  this logic is done seperately here so it can be replicated
+            //  when scanning for non-argument parameters below.
+            //
+
+            for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
+                if (YoriLibCompareStringInsensitive(&Arg, &MakeArgsWithParameter[j]) == 0) {
+                    i++;
+                    break;
+                }
+            }
         } else {
             ArgumentUnderstood = TRUE;
-            StartArg = i;
-            break;
         }
 
         if (!ArgumentUnderstood) {
@@ -263,55 +281,65 @@ ENTRYPOINT(
     //  targets, and apply those now.
     //
 
-    for (i = StartArg; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
         PYORI_STRING ThisArg;
         LPTSTR Equals;
 
-        ThisArg = &ArgV[i];
-
-        Equals = YoriLibFindLeftMostCharacter(ThisArg, '=');
-        if (Equals != NULL) {
-            YORI_STRING VariableName;
-            YORI_STRING Value;
-
-            YoriLibInitEmptyString(&VariableName);
-            YoriLibInitEmptyString(&Value);
-            VariableName.StartOfString = ThisArg->StartOfString;
-            VariableName.LengthInChars = (DWORD)(Equals - VariableName.StartOfString);
-            Value.StartOfString = Equals + 1;
-            Value.LengthInChars = ThisArg->LengthInChars - VariableName.LengthInChars - 1;
-
-            MakeSetVariable(MakeContext.RootScope, &VariableName, &Value, TRUE, MakeVariablePrecedenceCommandLine);
+        if (i < StartArg && YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
+            for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
+                if (YoriLibCompareStringInsensitive(&Arg, &MakeArgsWithParameter[j]) == 0) {
+                    i++;
+                    break;
+                }
+            }
         } else {
-            YORI_STRING EmptyString;
-            YoriLibInitEmptyString(&EmptyString);
 
-            //
-            //  If the user specified any explicit targets, create a dummy
-            //  root target.  This has no name to ensure that it cannot be
-            //  specified within the make file, and is created first so
-            //  it will be the first thing for execution to find.
-            //
-            //  MSFIX There's currently no way to indicate that everything
-            //  from the first parent dependency is done before the second
-            //  parent dependency starts, so there's no way to express
-            //  "clean then all."
-            //
+            ThisArg = &ArgV[i];
 
-            if (RootTarget == NULL) {
-                RootTarget = MakeLookupOrCreateTarget(MakeContext.RootScope, &EmptyString);
+            Equals = YoriLibFindLeftMostCharacter(ThisArg, '=');
+            if (Equals != NULL) {
+                YORI_STRING VariableName;
+                YORI_STRING Value;
+
+                YoriLibInitEmptyString(&VariableName);
+                YoriLibInitEmptyString(&Value);
+                VariableName.StartOfString = ThisArg->StartOfString;
+                VariableName.LengthInChars = (DWORD)(Equals - VariableName.StartOfString);
+                Value.StartOfString = Equals + 1;
+                Value.LengthInChars = ThisArg->LengthInChars - VariableName.LengthInChars - 1;
+
+                MakeSetVariable(MakeContext.RootScope, &VariableName, &Value, TRUE, MakeVariablePrecedenceCommandLine);
+            } else {
+                YORI_STRING EmptyString;
+                YoriLibInitEmptyString(&EmptyString);
+
+                //
+                //  If the user specified any explicit targets, create a dummy
+                //  root target.  This has no name to ensure that it cannot be
+                //  specified within the make file, and is created first so
+                //  it will be the first thing for execution to find.
+                //
+                //  MSFIX There's currently no way to indicate that everything
+                //  from the first parent dependency is done before the second
+                //  parent dependency starts, so there's no way to express
+                //  "clean then all."
+                //
+
                 if (RootTarget == NULL) {
+                    RootTarget = MakeLookupOrCreateTarget(MakeContext.RootScope, &EmptyString);
+                    if (RootTarget == NULL) {
+                        Result = EXIT_FAILURE;
+                        goto Cleanup;
+                    }
+                    RootTarget->ExplicitRecipeFound = TRUE;
+                    MakeReferenceScope(MakeContext.RootScope);
+                    RootTarget->ScopeContext = MakeContext.RootScope;
+                }
+
+                if (!MakeCreateRuleDependency(&MakeContext, RootTarget, ThisArg)) {
                     Result = EXIT_FAILURE;
                     goto Cleanup;
                 }
-                RootTarget->ExplicitRecipeFound = TRUE;
-                MakeReferenceScope(MakeContext.RootScope);
-                RootTarget->ScopeContext = MakeContext.RootScope;
-            }
-
-            if (!MakeCreateRuleDependency(&MakeContext, RootTarget, ThisArg)) {
-                Result = EXIT_FAILURE;
-                goto Cleanup;
             }
         }
     }
