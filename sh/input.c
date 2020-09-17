@@ -992,6 +992,9 @@ YoriShDelete(
 {
     if (Count + Buffer->CurrentOffset > Buffer->String.LengthInChars) {
         Count = Buffer->String.LengthInChars - Buffer->CurrentOffset;
+        if (Count == 0) {
+            return;
+        }
     }
 
     Buffer->CurrentOffset += Count;
