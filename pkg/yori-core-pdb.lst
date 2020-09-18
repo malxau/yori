@@ -5,11 +5,9 @@ ycopy.pdb
 ycut.pdb
 ydate.pdb
 ydir.pdb
-yecho.pdb
 yerase.pdb
 yexpr.pdb
 fscmp.pdb
-intcmp.pdb
 ymkdir.pdb
 ymklink.pdb
 ymove.pdb
@@ -19,7 +17,6 @@ yrmdir.pdb
 sleep.pdb
 ysplit.pdb
 ystart.pdb
-strcmp.pdb
 ytitle.pdb
 ytype.pdb
 yvol.pdb

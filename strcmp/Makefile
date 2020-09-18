@@ -1,10 +1,10 @@
 
-BINARIES=strcmp.exe
+BINARIES=ystrcmp.exe
 
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-LINKPDB=/Pdb:strcmp.pdb
+LINKPDB=/Pdb:ystrcmp.pdb
 !ENDIF
 
 CFLAGS=$(CFLAGS) -DSTRCMP_VER_MAJOR=$(STRCMP_VER_MAJOR) -DSTRCMP_VER_MINOR=$(STRCMP_VER_MINOR)
@@ -17,7 +17,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-strcmp.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+ystrcmp.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(STRCMP_VER_MAJOR).$(STRCMP_VER_MINOR) $(LINKPDB) -out:$@
 

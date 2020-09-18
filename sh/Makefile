@@ -39,8 +39,11 @@ BUILTINTABLE_OBJS=\
 STD_BUILTINLIBS=\
 	..\builtins\builtins.lib \
 	..\libwin\yoriwin.lib    \
+	..\echo\builtins.lib     \
 	..\for\builtins.lib      \
+	..\intcmp\builtins.lib   \
 	..\nice\builtins.lib     \
+	..\strcmp\builtins.lib   \
 
 FULL_BUILTINLIBS=\
 	$(STD_BUILTINLIBS)       \

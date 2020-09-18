@@ -1,10 +1,10 @@
 
-BINARIES=intcmp.exe
+BINARIES=yintcmp.exe
 
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-LINKPDB=/Pdb:intcmp.pdb
+LINKPDB=/Pdb:yintcmp.pdb
 !ENDIF
 
 CFLAGS=$(CFLAGS) -DINTCMP_VER_MAJOR=$(INTCMP_VER_MAJOR) -DINTCMP_VER_MINOR=$(INTCMP_VER_MINOR)
@@ -17,7 +17,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-intcmp.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+yintcmp.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(INTCMP_VER_MAJOR).$(INTCMP_VER_MINOR) $(LINKPDB) -out:$@
 

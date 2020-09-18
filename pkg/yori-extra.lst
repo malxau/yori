@@ -1,7 +1,10 @@
 clmp.exe
+yecho.exe
 yfor.exe
+yintcmp.exe
 ymake.exe
 yshutdn.exe
+ystrcmp.exe
 ystride.exe
 yui.exe
 YoriInit.d\Extra.ys1

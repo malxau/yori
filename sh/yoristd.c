@@ -54,6 +54,11 @@ YORI_CMD_BUILTIN YoriCmd_DIRENV;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YECHO;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_EXIT;
 
 /**
@@ -84,6 +89,11 @@ YORI_CMD_BUILTIN YoriCmd_IF;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_INTCMP;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_JOB;
 
 /**
@@ -110,6 +120,16 @@ YORI_CMD_BUILTIN YoriCmd_SET;
  Declaration for the builtin command.
  */
 YORI_CMD_BUILTIN YoriCmd_SETLOCAL;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_SETLOCAL;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_STRCMP;
 
 /**
  Declaration for the builtin command.
@@ -146,18 +166,21 @@ YoriShBuiltins[] = {
                     {_T("CHDIR"),     YoriCmd_CHDIR},
                     {_T("COLOR"),     YoriCmd_COLOR},
                     {_T("DIRENV"),    YoriCmd_DIRENV},
+                    {_T("ECHO"),      YoriCmd_YECHO},
                     {_T("EXIT"),      YoriCmd_EXIT},
                     {_T("FALSE"),     YoriCmd_FALSE},
                     {_T("FG"),        YoriCmd_FG},
                     {_T("FOR"),       YoriCmd_FOR},
                     {_T("HISTORY"),   YoriCmd_HISTORY},
                     {_T("IF"),        YoriCmd_IF},
+                    {_T("INTCMP"),    YoriCmd_INTCMP},
                     {_T("JOB"),       YoriCmd_JOB},
                     {_T("NICE"),      YoriCmd_NICE},
                     {_T("PUSHD"),     YoriCmd_PUSHD},
                     {_T("REM"),       YoriCmd_REM},
                     {_T("SET"),       YoriCmd_SET},
                     {_T("SETLOCAL"),  YoriCmd_SETLOCAL},
+                    {_T("STRCMP"),    YoriCmd_STRCMP},
                     {_T("TRUE"),      YoriCmd_TRUE},
                     {_T("VER"),       YoriCmd_VER},
                     {_T("WAIT"),      YoriCmd_WAIT},
@@ -180,7 +203,6 @@ YoriShDefaultAliasEntries[] = {
     {_T("date"),     _T("ydate $*$")},
     {_T("del"),      _T("yerase $*$")},
     {_T("dir"),      _T("ydir $*$")},
-    {_T("echo"),     _T("yecho $*$")},
     {_T("erase"),    _T("yerase $*$")},
     {_T("expr"),     _T("yexpr $*$")},
     {_T("ftype"),    _T("yassoc -t $*$")},
