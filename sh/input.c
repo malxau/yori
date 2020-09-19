@@ -2281,30 +2281,41 @@ YoriShProcessKeyDown(
 
     } else if (CtrlMask == LEFT_ALT_PRESSED ||
                CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY)) {
-        if (KeyCode >= '0' && KeyCode <= '9') {
-            if (KeyCode == '0' && Buffer->NumericKeyValue == 0 && !Buffer->NumericKeyAnsiMode) {
-                Buffer->NumericKeyAnsiMode = TRUE;
+        DWORD Base;
+        Base = 10;
+        if (Buffer->NumericKeyType == NumericKeyUnicode) {
+            Base = 16;
+        }
+        if (KeyCode == 'U' || KeyCode == 'u' && Buffer->NumericKeyType == NumericKeyAscii) {
+            Buffer->NumericKeyType = NumericKeyUnicode;
+        } else if (KeyCode >= '0' && KeyCode <= '9') {
+            if (KeyCode == '0' && Buffer->NumericKeyValue == 0 && Buffer->NumericKeyType == NumericKeyAscii) {
+                Buffer->NumericKeyType = NumericKeyAnsi;
             } else {
-                Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + KeyCode - '0';
+                Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - '0';
             }
         } else if (KeyCode >= VK_NUMPAD0 && KeyCode <= VK_NUMPAD9) {
-            if (KeyCode == VK_NUMPAD0 && Buffer->NumericKeyValue == 0 && !Buffer->NumericKeyAnsiMode) {
-                Buffer->NumericKeyAnsiMode = TRUE;
+            if (KeyCode == VK_NUMPAD0 && Buffer->NumericKeyValue == 0 && Buffer->NumericKeyType == NumericKeyAscii) {
+                Buffer->NumericKeyType = NumericKeyAnsi;
             } else {
-                Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + KeyCode - VK_NUMPAD0;
+                Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - VK_NUMPAD0;
             }
         } else if (ScanCode >= 0x47 && ScanCode <= 0x49) {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + ScanCode - 0x47 + 7;
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + ScanCode - 0x47 + 7;
         } else if (ScanCode >= 0x4b && ScanCode <= 0x4d) {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + ScanCode - 0x4b + 4;
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + ScanCode - 0x4b + 4;
         } else if (ScanCode >= 0x4f && ScanCode <= 0x51) {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10 + ScanCode - 0x4f + 1;
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + ScanCode - 0x4f + 1;
         } else if (ScanCode == 0x52) {
-            if (Buffer->NumericKeyValue == 0 && !Buffer->NumericKeyAnsiMode) {
-                Buffer->NumericKeyAnsiMode = TRUE;
+            if (Buffer->NumericKeyValue == 0 && Buffer->NumericKeyType == NumericKeyAscii) {
+                Buffer->NumericKeyType = NumericKeyAnsi;
             } else {
-                Buffer->NumericKeyValue = Buffer->NumericKeyValue * 10;
+                Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base;
             }
+        } else if (Buffer->NumericKeyType == NumericKeyUnicode && KeyCode >= 'A' && KeyCode <= 'F') {
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - 'A' + 10;
+        } else if (Buffer->NumericKeyType == NumericKeyUnicode && KeyCode >= 'a' && KeyCode <= 'f') {
+            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - 'a' + 10;
         } else if (KeyCode == VK_F4) {
             if (YoriShCloseWindow()) {
                 YoriShAddCStringToInput(Buffer, _T("EXIT"));
@@ -2390,10 +2401,12 @@ YoriShProcessKeyUp(
 
         HostKeyValue[0] = HostKeyValue[1] = 0;
 
-        if (!Buffer->NumericKeyAnsiMode && SmallKeyValue < 32) {
+        if (Buffer->NumericKeyType == NumericKeyAscii && SmallKeyValue < 32) {
             HostKeyValue[0] = YoriShLowAsciiToUnicodeTable[SmallKeyValue];
+        } else if (Buffer->NumericKeyType == NumericKeyUnicode) {
+            HostKeyValue[0] = (TCHAR)Buffer->NumericKeyValue;
         } else {
-            MultiByteToWideChar(Buffer->NumericKeyAnsiMode?CP_ACP:CP_OEMCP,
+            MultiByteToWideChar((Buffer->NumericKeyType == NumericKeyAnsi)?CP_ACP:CP_OEMCP,
                                 0,
                                 &SmallKeyValue,
                                 1,
@@ -2410,7 +2423,7 @@ YoriShProcessKeyUp(
         }
 
         Buffer->NumericKeyValue = 0;
-        Buffer->NumericKeyAnsiMode = FALSE;
+        Buffer->NumericKeyType = NumericKeyAscii;
     }
 
     return KeyPressGenerated;
