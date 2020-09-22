@@ -2393,18 +2393,35 @@ YoriShProcessKeyUp(
 
     UNREFERENCED_PARAMETER(TerminateInput);
 
-    if ((InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
-        Buffer->NumericKeyValue != 0) {
+    //
+    //  Windows can encode an extended character by simulating an Alt down
+    //  followed by Alt up with UnicodeChar set to the value.  So here we
+    //  check for a manually assembled key value, and if that's not there,
+    //  check for the character from the input record.
+    //
 
-        UCHAR SmallKeyValue = (UCHAR)Buffer->NumericKeyValue;
+    if ((InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
+        (Buffer->NumericKeyValue != 0 ||
+         InputRecord->Event.KeyEvent.wVirtualKeyCode == VK_MENU && InputRecord->Event.KeyEvent.uChar.UnicodeChar != 0)) {
+
+        UCHAR SmallKeyValue;
         TCHAR HostKeyValue[2];
+        DWORD NumericKeyValue;
+
+        NumericKeyValue = Buffer->NumericKeyValue;
+        if (NumericKeyValue == 0) {
+            Buffer->NumericKeyType = NumericKeyUnicode;
+            NumericKeyValue = InputRecord->Event.KeyEvent.uChar.UnicodeChar;
+        }
+
+        SmallKeyValue = (UCHAR)NumericKeyValue;
 
         HostKeyValue[0] = HostKeyValue[1] = 0;
 
         if (Buffer->NumericKeyType == NumericKeyAscii && SmallKeyValue < 32) {
             HostKeyValue[0] = YoriShLowAsciiToUnicodeTable[SmallKeyValue];
         } else if (Buffer->NumericKeyType == NumericKeyUnicode) {
-            HostKeyValue[0] = (TCHAR)Buffer->NumericKeyValue;
+            HostKeyValue[0] = (TCHAR)NumericKeyValue;
         } else {
             MultiByteToWideChar((Buffer->NumericKeyType == NumericKeyAnsi)?CP_ACP:CP_OEMCP,
                                 0,
