@@ -297,11 +297,11 @@ YoriLibDecimalStringToInt(
 
 /**
  This routine attempts to convert a string to a number using a specified
- number base (ie., decimal or hexadecimal.)  
+ number base (ie., decimal or hexadecimal or octal or binary.)
 
  @param String Pointer to the string to convert into integer form.
 
- @param Base The number base.  Must be 10 or 16.
+ @param Base The number base.  Must be 10 or 16 or 8 or 2.
 
  @param IgnoreSeperators If TRUE, continue to generate a number across comma
         delimiters.  If FALSE, terminate on a comma.
@@ -365,6 +365,18 @@ YoriLibStringToNumberSpecifyBase(
                 } else {
                     break;
                 }
+            } else if (Base == 8) {
+                if (String->StartOfString[Index] < '0' || String->StartOfString[Index] > '8') {
+                    break;
+                }
+                Result *= Base;
+                Result += String->StartOfString[Index] - '0';
+            } else if (Base == 2) {
+                if (String->StartOfString[Index] != '0' && String->StartOfString[Index] != '1') {
+                    break;
+                }
+                Result *= Base;
+                Result += String->StartOfString[Index] - '0';
             }
         }
     }
@@ -380,8 +392,8 @@ YoriLibStringToNumberSpecifyBase(
 
 /**
  This routine attempts to convert a string to a number using all available
- parsing.  As of this writing, it understands 0x and 0n prefixes as well
- as negative numbers.
+ parsing.  As of this writing, it understands 0x and 0n and 0o and 0x prefixes
+ as well as negative numbers.
 
  @param String Pointer to the string to convert into integer form.
 
@@ -425,6 +437,16 @@ YoriLibStringToNumber(
                    String->StartOfString[Index + 1] == 'n') {
             Base = 10;
             Index += 2;
+        } else if (String->StartOfString[Index] == '0' &&
+                   String->LengthInChars > Index + 1 &&
+                   String->StartOfString[Index + 1] == 'o') {
+            Base = 8;
+            Index += 2;
+        } else if (String->StartOfString[Index] == '0' &&
+                   String->LengthInChars > Index + 1 &&
+                   String->StartOfString[Index + 1] == 'b') {
+            Base = 2;
+            Index += 2;
         } else if (String->StartOfString[Index] == '-') {
             if (Negative) {
                 Negative = FALSE;
@@ -457,6 +479,18 @@ YoriLibStringToNumber(
                 } else {
                     break;
                 }
+            } else if (Base == 8) {
+                if (String->StartOfString[Index] < '0' || String->StartOfString[Index] > '8') {
+                    break;
+                }
+                Result *= Base;
+                Result += String->StartOfString[Index] - '0';
+            } else if (Base == 2) {
+                if (String->StartOfString[Index] != '0' && String->StartOfString[Index] != '1') {
+                    break;
+                }
+                Result *= Base;
+                Result += String->StartOfString[Index] - '0';
             }
         }
     }

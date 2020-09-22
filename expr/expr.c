@@ -39,6 +39,8 @@ CHAR strExprHelpText[] =
         "     <Number>[+|-|*|/|%|<|>|^]<Number>...\n"
         "\n"
         "   -h             Output result as hex rather than decimal\n"
+        "   -o             Output result as oct rather than decimal\n"
+        "   -b             Output result as bin rather than decimal\n"
         "   -int8          Output result as a signed 8 bit value\n"
         "   -int16         Output result as a signed 16 bit value\n"
         "   -int32         Output result as a signed 32 bit value\n"
@@ -75,8 +77,8 @@ typedef struct _EXPR_NUMBER {
 
 /**
  This routine attempts to convert a string to a number using all available
- parsing.  As of this writing, it understands 0x and 0n prefixes as well
- as negative numbers.
+ parsing.  As of this writing, it understands 0x and 0n and 0o and 0b prefixes
+ as well as negative numbers.
 
  @param String Pointer to the string to convert into integer form.
 
@@ -161,7 +163,7 @@ ENTRYPOINT(
     )
 {
     BOOL ArgumentUnderstood;
-    BOOL OutputHex = FALSE;
+    DWORD OutputBase = 10;
     BOOL OutputSeperator = FALSE;
     DWORD i;
     DWORD StartArg = 0;
@@ -188,7 +190,13 @@ ENTRYPOINT(
                 YoriLibDisplayMitLicense(_T("2017-2019"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
-                OutputHex = TRUE;
+                OutputBase = 16;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("o")) == 0) {
+                OutputBase = 8;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+                OutputBase = 2;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("int8")) == 0) {
                 BitsInOutput = 7;
@@ -378,13 +386,7 @@ ENTRYPOINT(
 
     YoriLibFreeStringContents(&RemainingString);
 
-    if (OutputHex) {
-        ExprOutputNumber(Result, FALSE, 16);
-    } else if (OutputSeperator) {
-        ExprOutputNumber(Result, TRUE, 10);
-    } else {
-        ExprOutputNumber(Result, FALSE, 10);
-    }
+    ExprOutputNumber(Result, OutputSeperator, OutputBase);
 
     return EXIT_SUCCESS;
 }
