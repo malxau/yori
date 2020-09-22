@@ -285,7 +285,7 @@ ENTRYPOINT(
     YORI_STRING CmdLine;
     DWORD ExitCode;
     BOOL ArgumentUnderstood;
-    DWORD StartArg = 1;
+    DWORD StartArg = 0;
     DWORD i;
     YORI_STRING Arg;
     YORI_STRING DisplayString;
