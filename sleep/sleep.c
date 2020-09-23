@@ -39,7 +39,7 @@ CHAR strSleepHelpText[] =
         "\n"
         "   -c             Display a countdown to zero from the specified time\n"
         "\n"
-        "Suffix can be \"s\" for seconds, \"m\" for minutes, \"ms\" for milliseconds.\n" ;
+        "Suffix can be \"s\" for seconds, \"m\" for minutes, \"h\" for hours, \"ms\" for milliseconds.\n" ;
 
 /**
  Display usage text to the user.
@@ -147,6 +147,8 @@ ENTRYPOINT(
             TimeToSleep = (DWORD)llTemp * 1000;
         } else if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("m")) == 0) {
             TimeToSleep = (DWORD)llTemp * 1000 * 60;
+        } else if (YoriLibCompareStringWithLiteralInsensitive(&Suffix, _T("h")) == 0) {
+            TimeToSleep = (DWORD)llTemp * 1000 * 60 * 60;
         } else {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("sleep: unknown suffix\n"));
             return EXIT_FAILURE;
@@ -205,9 +207,9 @@ ENTRYPOINT(
 
             if (ConsoleMode) {
                 SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), ScreenInfo.dwCursorPosition);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli  "), LongTimeToSleep / (1000 * 60), LongTimeToSleep / 1000);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli:%02lli"), LongTimeToSleep / (1000 * 60 * 60), LongTimeToSleep / 1000 % 3600 / 60, LongTimeToSleep / 1000 % 3600 % 60);
             } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli\n"), LongTimeToSleep / (1000 * 60), LongTimeToSleep / 1000);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli:%02lli\n"), LongTimeToSleep / (1000 * 60 * 60), LongTimeToSleep / 1000 % 3600 / 60, LongTimeToSleep / 1000 % 3600 % 60);
             }
 
             if (LongTimeToSleep > 970) {
