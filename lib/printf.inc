@@ -340,6 +340,8 @@ PRINTF_FN(
                         //
                         //  If the field specifier is larger, pad it with
                         //  either a zero or space depending on the format
+                        //  If the field specifier is too small, output more
+                        //  characters than the field specifier specifies.
                         //
 
                         if (element_len != (DWORD)-1 && digits < element_len) {
@@ -410,29 +412,23 @@ PRINTF_FN(
                         //
                         //  If the field specifier is larger, pad it with
                         //  either a zero or space depending on the format
+                        //  If the field specifier is too small, output more
+                        //  characters than the field specifier specifies.
                         //
 
-                        if (element_len != (DWORD)-1) {
-                            if (digits > element_len) {
-                                tempnum = digits - element_len;
-                                while (tempnum > 0) {
-                                    num = num / radix;
-                                    digits--;
+                        if (element_len != (DWORD)-1 && digits < element_len) {
+                            tempnum = element_len - digits;
+                            while (tempnum > 0) {
+                                if (!PRINTF_DESTLENGTH()) {
+                                    truncated_due_to_space = TRUE;
+                                    break;
                                 }
-                            } else if (digits < element_len) {
-                                tempnum = element_len - digits;
-                                while (tempnum > 0) {
-                                    if (!PRINTF_DESTLENGTH()) {
-                                        truncated_due_to_space = TRUE;
-                                        break;
-                                    }
-                                    if (leadingzero) {
-                                        PRINTF_PUSHCHAR('0');
-                                    } else {
-                                        PRINTF_PUSHCHAR(' ');
-                                    }
-                                    tempnum--;
+                                if (leadingzero) {
+                                    PRINTF_PUSHCHAR('0');
+                                } else {
+                                    PRINTF_PUSHCHAR(' ');
                                 }
+                                tempnum--;
                             }
                         }
 
