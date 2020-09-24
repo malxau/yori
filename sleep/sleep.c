@@ -207,9 +207,9 @@ ENTRYPOINT(
 
             if (ConsoleMode) {
                 SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), ScreenInfo.dwCursorPosition);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli:%02lli"), LongTimeToSleep / (1000 * 60 * 60), LongTimeToSleep / 1000 % 3600 / 60, LongTimeToSleep / 1000 % 3600 % 60);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli:%02lli  "), LongTimeToSleep / (1000 * 60 * 60), (LongTimeToSleep / (1000 * 60)) % 60, (LongTimeToSleep / 1000) % 60);
             } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli:%02lli\n"), LongTimeToSleep / (1000 * 60 * 60), LongTimeToSleep / 1000 % 3600 / 60, LongTimeToSleep / 1000 % 3600 % 60);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%02lli:%02lli:%02lli\n"), LongTimeToSleep / (1000 * 60 * 60), (LongTimeToSleep / (1000 * 60)) % 60, (LongTimeToSleep / 1000) % 60);
             }
 
             if (LongTimeToSleep > 970) {
