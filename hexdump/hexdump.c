@@ -665,11 +665,14 @@ HexDumpProcessStream(
 {
     PUCHAR Buffer;
     DWORD BufferSize;
-    DWORD BufferOffset;
+    DWORD BufferReadOffset;
+    DWORD BufferDisplayOffset;
     DWORD BytesReturned;
     DWORD LengthToDisplay;
     DWORD DisplayFlags;
+    DWORD FileType;
     LARGE_INTEGER StreamOffset;
+    BOOLEAN LimitDisplayToEvenLine;
 
     HexDumpContext->FilesFound++;
     HexDumpContext->FilesFoundThisArg++;
@@ -696,49 +699,137 @@ HexDumpProcessStream(
     //  reading.
     //
 
-    StreamOffset.QuadPart = HexDumpContext->OffsetToDisplay;
+    FileType = GetFileType(hSource);
 
-    if (!SetFilePointer(hSource, StreamOffset.LowPart, &StreamOffset.HighPart, FILE_BEGIN)) {
-        StreamOffset.QuadPart = 0;
+    StreamOffset.QuadPart = 0;
+    if (FileType != FILE_TYPE_PIPE) {
+        StreamOffset.QuadPart = HexDumpContext->OffsetToDisplay;
+
+        if (!SetFilePointer(hSource, StreamOffset.LowPart, &StreamOffset.HighPart, FILE_BEGIN)) {
+            StreamOffset.QuadPart = 0;
+        }
     }
 
+    BufferReadOffset = 0;
+
     while (TRUE) {
+
+        //
+        //  Read a block of data.  On a pipe, this will block.
+        //
+
         BytesReturned = 0;
-        if (!ReadFile(hSource, Buffer, BufferSize, &BytesReturned, NULL)) {
-            break;
+        ASSERT(BufferReadOffset < BufferSize);
+        if (!ReadFile(hSource, Buffer + BufferReadOffset, BufferSize - BufferReadOffset, &BytesReturned, NULL)) {
+            BytesReturned = 0;
         }
 
+        //
+        //  Add back whatever data was carried over from previous reads to
+        //  the amount from this read.  If we don't have data from either
+        //  source despite blocking, the operation is complete.
+        //
+
+        BytesReturned = BytesReturned + BufferReadOffset;
         if (BytesReturned == 0) {
             break;
         }
 
+        //
+        //  If we haven't reached the starting point to display, loop back
+        //  and read more.
+        //
+
         if (StreamOffset.QuadPart + BytesReturned <= HexDumpContext->OffsetToDisplay) {
             StreamOffset.QuadPart += BytesReturned;
+            BufferReadOffset = 0;
             continue;
         }
 
         LengthToDisplay = BytesReturned;
 
-        BufferOffset = 0;
+        //
+        //  If the starting point to display is partway through the buffer,
+        //  find the offset within the buffer to start displaying and cap
+        //  the number of characters to display.
+        //
+
+        BufferDisplayOffset = 0;
         if (StreamOffset.QuadPart < HexDumpContext->OffsetToDisplay) {
-            BufferOffset = (DWORD)(HexDumpContext->OffsetToDisplay - StreamOffset.QuadPart);
-            LengthToDisplay -= BufferOffset;
+            BufferDisplayOffset = (DWORD)(HexDumpContext->OffsetToDisplay - StreamOffset.QuadPart);
+            LengthToDisplay -= BufferDisplayOffset;
         }
 
-        ASSERT(BufferOffset + LengthToDisplay == BytesReturned);
+        ASSERT(BufferDisplayOffset + LengthToDisplay == BytesReturned);
 
+        //
+        //  If the number of bytes that the user requested to display is
+        //  longer than the amount we have, cap the amount to display to
+        //  what the user requested.
+        //
+
+        LimitDisplayToEvenLine = TRUE;
         if (HexDumpContext->LengthToDisplay != 0) {
-            if (StreamOffset.QuadPart + BufferOffset + LengthToDisplay > HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay) {
-                LengthToDisplay = (DWORD)(HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay - StreamOffset.QuadPart - BufferOffset);
+            if (StreamOffset.QuadPart + BufferDisplayOffset + LengthToDisplay >= HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay) {
+                LengthToDisplay = (DWORD)(HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay - StreamOffset.QuadPart - BufferDisplayOffset);
+                LimitDisplayToEvenLine = FALSE;
             }
         }
 
-        if (!YoriLibHexDump((LPCSTR)&Buffer[BufferOffset], StreamOffset.QuadPart + BufferOffset, LengthToDisplay, HexDumpContext->BytesPerGroup, DisplayFlags)) {
+        //
+        //  If ReadFile didn't return any new data, but we still have data
+        //  leftover, then display what we have.
+        //
+
+        if (BytesReturned == BufferReadOffset) {
+            LimitDisplayToEvenLine = FALSE;
+        }
+
+        //
+        //  Try to display a multiple of HEXDUMP_BYTES_PER_LINE.  If there's
+        //  more data, count how many bytes are leftover.  This number will
+        //  be copied to the beginning of the buffer after display.
+        //
+
+        if (LimitDisplayToEvenLine) {
+            BufferReadOffset = LengthToDisplay % YORI_LIB_HEXDUMP_BYTES_PER_LINE;
+            LengthToDisplay = LengthToDisplay - BufferReadOffset;
+        }
+
+        //
+        //  Display the buffer at the display offset for the length to
+        //  display.
+        //
+
+        if (LengthToDisplay > 0) {
+            if (!YoriLibHexDump((LPCSTR)&Buffer[BufferDisplayOffset], StreamOffset.QuadPart + BufferDisplayOffset, LengthToDisplay, HexDumpContext->BytesPerGroup, DisplayFlags)) {
+                break;
+            }
+        }
+
+        //
+        //  If there is leftover data, copy it to the beginning of the buffer.
+        //
+
+        if (BufferReadOffset > 0 && BufferDisplayOffset + LengthToDisplay != 0) {
+            memmove(Buffer, &Buffer[BufferDisplayOffset + LengthToDisplay], BufferReadOffset);
+        }
+
+        //
+        //  Move the stream forward to the end of the buffer that was
+        //  displayed.  There may be more data in the buffer, which will
+        //  be handled on the next loop iteration.
+        //
+
+        StreamOffset.QuadPart += BufferDisplayOffset + LengthToDisplay;
+
+        if (!LimitDisplayToEvenLine) {
             break;
         }
 
-        StreamOffset.QuadPart += BytesReturned;
-        if (HexDumpContext->LengthToDisplay != 0 && StreamOffset.QuadPart >= HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay) {
+        if (HexDumpContext->LengthToDisplay != 0 &&
+            StreamOffset.QuadPart >= HexDumpContext->OffsetToDisplay + HexDumpContext->LengthToDisplay) {
+
             break;
         }
     }
