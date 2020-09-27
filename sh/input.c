@@ -2286,7 +2286,9 @@ YoriShProcessKeyDown(
         if (Buffer->NumericKeyType == NumericKeyUnicode) {
             Base = 16;
         }
-        if (KeyCode == 'U' || KeyCode == 'u' && Buffer->NumericKeyType == NumericKeyAscii) {
+        if ((KeyCode == 'U' || KeyCode == 'u' || KeyCode == '+')
+             && Buffer->NumericKeyType == NumericKeyAscii) {
+
             Buffer->NumericKeyType = NumericKeyUnicode;
         } else if (KeyCode >= '0' && KeyCode <= '9') {
             if (KeyCode == '0' && Buffer->NumericKeyValue == 0 && Buffer->NumericKeyType == NumericKeyAscii) {
@@ -2407,6 +2409,7 @@ YoriShProcessKeyUp(
         UCHAR SmallKeyValue;
         TCHAR HostKeyValue[2];
         DWORD NumericKeyValue;
+        DWORD CodePage;
 
         NumericKeyValue = Buffer->NumericKeyValue;
         if (NumericKeyValue == 0) {
@@ -2423,7 +2426,33 @@ YoriShProcessKeyUp(
         } else if (Buffer->NumericKeyType == NumericKeyUnicode) {
             HostKeyValue[0] = (TCHAR)NumericKeyValue;
         } else {
-            MultiByteToWideChar((Buffer->NumericKeyType == NumericKeyAnsi)?CP_ACP:CP_OEMCP,
+            if (Buffer->NumericKeyType == NumericKeyAscii) {
+                CodePage = CP_OEMCP;
+            } else {
+                YoriLibLoadUser32Functions();
+                CodePage = CP_ACP;
+
+                //
+                //  GetKeyboardLayout requires NT4+.  By happy coincidence,
+                //  that release also added support for LOCALE_RETURN_NUMBER
+                //  which is a much cleaner interface.  Older releases get
+                //  the active code page, which is generally correct unless
+                //  the code page is configured for something different to
+                //  the input language (eg. the code page is UTF8.)
+                //
+
+                if (DllUser32.pGetKeyboardLayout != NULL) {
+                    HKL KeyboardLayout;
+
+                    KeyboardLayout = DllUser32.pGetKeyboardLayout(0);
+
+                    GetLocaleInfo(MAKELCID(LOWORD((DWORD_PTR)KeyboardLayout), SORT_DEFAULT),
+                                  LOCALE_IDEFAULTANSICODEPAGE | LOCALE_RETURN_NUMBER,
+                                  (LPTSTR)&CodePage,
+                                  sizeof(CodePage));
+                }
+            }
+            MultiByteToWideChar(CodePage,
                                 0,
                                 &SmallKeyValue,
                                 1,

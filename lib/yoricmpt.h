@@ -2874,6 +2874,14 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
     HANDLE Port;
 } YORI_JOB_ASSOCIATE_COMPLETION_PORT, *PYORI_JOB_ASSOCIATE_COMPLETION_PORT;
 
+#ifndef LOCALE_RETURN_NUMBER
+/**
+ A definition for LOCALE_RETURN_NUMBER if it is not defined by the current
+ compilation environment.
+ */
+#define LOCALE_RETURN_NUMBER (0x20000000)
+#endif
+
 #ifndef HSHELL_RUDEAPPACTIVATED
 /**
  A definition for HSHELL_RUDEAPPACTIVATED if it is not defined by the current
@@ -6648,6 +6656,18 @@ GET_DESKTOP_WINDOW();
 typedef GET_DESKTOP_WINDOW *PGET_DESKTOP_WINDOW;
 
 /**
+ A prototype for the GetKeyboardLayout function.
+ */
+typedef
+HKL WINAPI
+GET_KEYBOARD_LAYOUT(DWORD);
+
+/**
+ A prototype for a pointer to the GetKeyboardLayout function.
+ */
+typedef GET_KEYBOARD_LAYOUT *PGET_KEYBOARD_LAYOUT;
+
+/**
  A prototype for the GetWindowRect function.
  */
 typedef
@@ -6840,6 +6860,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to GetDesktopWindow.
      */
     PGET_DESKTOP_WINDOW pGetDesktopWindow;
+
+    /**
+     If it's available on the current system, a pointer to GetKeyboardLayout.
+     */
+    PGET_KEYBOARD_LAYOUT pGetKeyboardLayout;
 
     /**
      If it's available on the current system, a pointer to GetWindowRect.
