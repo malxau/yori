@@ -2432,6 +2432,9 @@ YoriLibDoesProcessHave32BitPeb(
 BOOL
 YoriLibEnableBackupPrivilege();
 
+BOOL
+YoriLibEnableDebugPrivilege();
+
 // *** RECYCLE.C ***
 
 BOOL

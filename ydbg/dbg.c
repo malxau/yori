@@ -3,7 +3,7 @@
  *
  * Yori shell debug processes
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,9 +35,10 @@ CHAR strYDbgHelpText[] =
         "\n"
         "Debugs processes.\n"
         "\n"
-        "YDBG [-license] [-d <pid> <file>]\n"
+        "YDBG [-license] [-d <pid> <file>] [-k <file>]\n"
         "\n"
-        "   -d             Dump memory from a process to a file\n";
+        "   -d             Dump memory from a process to a file\n"
+        "   -k             Dump memory from kernel to a file\n";
 
 /**
  Display usage text to the user.
@@ -97,7 +98,7 @@ YDbgDumpProcess(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: getfullpathname of %y failed: %s"), FileName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         CloseHandle(ProcessHandle);
-        return EXIT_FAILURE;
+        return FALSE;
     }
 
     FileHandle = CreateFile(FullPath.StartOfString, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -129,11 +130,79 @@ YDbgDumpProcess(
 }
 
 /**
+ Write the memory from the kernel to a dump file.
+
+ @param FileName Specifies the file name to write the memory to.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YDbgDumpKernel(
+    __in PYORI_STRING FileName
+    )
+{
+    YORI_SYSDBG_LIVEDUMP_CONTROL Ctrl;
+    HANDLE FileHandle;
+    DWORD LastError;
+    DWORD BytesWritten;
+    LONG NtStatus;
+    LPTSTR ErrText;
+    YORI_STRING FullPath;
+
+    ZeroMemory(&Ctrl, sizeof(Ctrl));
+    if (DllNtDll.pNtSystemDebugControl == NULL) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: OS support not present\n"));
+        return FALSE;
+    }
+    
+    if (!YoriLibEnableDebugPrivilege()) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: could not enable debug privilege (access denied)\n"));
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&FullPath);
+
+    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullPath)) {
+        LastError = GetLastError();
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: getfullpathname of %y failed: %s"), FileName, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
+
+    FileHandle = CreateFile(FullPath.StartOfString, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (FileHandle == INVALID_HANDLE_VALUE) {
+        LastError = GetLastError();
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: CreateFile of %y failed: %s"), FullPath.StartOfString, ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        YoriLibFreeStringContents(&FullPath);
+        return FALSE;
+    }
+
+    Ctrl.Version = 1;
+    Ctrl.File = FileHandle;
+
+    NtStatus = DllNtDll.pNtSystemDebugControl(37, &Ctrl, sizeof(Ctrl), NULL, 0, &BytesWritten);
+    if (NtStatus != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: NtSystemDebugControl failed: %08x"), NtStatus);
+        YoriLibFreeStringContents(&FullPath);
+        CloseHandle(FileHandle);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&FullPath);
+    CloseHandle(FileHandle);
+    return TRUE;
+}
+
+/**
  The set of operations supported by this program.
  */
 typedef enum _YDBG_OP {
     YDbgOperationNone = 0,
-    YDbgOperationDump = 1
+    YDbgOperationProcessDump = 1,
+    YDbgOperationKernelDump = 2,
 } YDBG_OP;
 
 #ifdef YORI_BUILTIN
@@ -173,6 +242,7 @@ ENTRYPOINT(
     PYORI_STRING FileName = NULL;
     LONGLONG llTemp;
     DWORD CharsConsumed;
+    DWORD ExitResult;
 
     Op = YDbgOperationNone;
 
@@ -187,11 +257,11 @@ ENTRYPOINT(
                 YDbgHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2020"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 if (ArgC > i + 2) {
-                    Op = YDbgOperationDump;
+                    Op = YDbgOperationProcessDump;
                     if (!YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed)) {
                         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y is not a valid pid.\n"), &ArgV[i + 1]);
                         return EXIT_FAILURE;
@@ -200,6 +270,13 @@ ENTRYPOINT(
                     FileName = &ArgV[i + 2];
                     ArgumentUnderstood = TRUE;
                     i += 2;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
+                if (ArgC > i + 1) {
+                    Op = YDbgOperationKernelDump;
+                    FileName = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                    i += 1;
                 }
             }
         } else {
@@ -220,11 +297,18 @@ ENTRYPOINT(
 
     i = StartArg;
 
-    if (Op == YDbgOperationDump) {
-        YDbgDumpProcess(ProcessPid, FileName);
+    ExitResult = EXIT_SUCCESS;
+    if (Op == YDbgOperationProcessDump) {
+        if (!YDbgDumpProcess(ProcessPid, FileName)) {
+            ExitResult = EXIT_FAILURE;
+        }
+    } else if (Op == YDbgOperationKernelDump) {
+        if (!YDbgDumpKernel(FileName)) {
+            ExitResult = EXIT_FAILURE;
+        }
     }
 
-    return EXIT_SUCCESS;
+    return ExitResult;
 }
 
 // vim:sw=4:ts=4:et:

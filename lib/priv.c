@@ -28,16 +28,14 @@
 #include "yorilib.h"
 
 /**
- Attempt to enable backup privilege to allow Administrators to enumerate and
- open more objects successfully.  If this fails the application may encounter
- more objects it cannot accurately account for, but it is not fatal, or
- unexpected.
+ Attempt to enable a specified privilege.
 
- @return TRUE to indicate that the privilege enablement was attempted
-         successfully.
+ @return TRUE to indicate that the privilege enablement was successful.
  */
 BOOL
-YoriLibEnableBackupPrivilege()
+YoriLibEnableNamedPrivilege(
+    LPTSTR PrivilegeName
+    )
 {
     HANDLE ProcessToken;
     YoriLibLoadAdvApi32Functions();
@@ -56,16 +54,51 @@ YoriLibEnableBackupPrivilege()
             LUID_AND_ATTRIBUTES BackupPrivilege;
         } PrivilegesToChange;
 
-        DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_BACKUP_NAME, &PrivilegesToChange.TokenPrivileges.Privileges[0].Luid);
+        if (!DllAdvApi32.pLookupPrivilegeValueW(NULL, PrivilegeName, &PrivilegesToChange.TokenPrivileges.Privileges[0].Luid)) {
+            CloseHandle(ProcessToken);
+            return FALSE;
+        }
 
         PrivilegesToChange.TokenPrivileges.PrivilegeCount = 1;
         PrivilegesToChange.TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
 
-        DllAdvApi32.pAdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL);
+        if (!DllAdvApi32.pAdjustTokenPrivileges(ProcessToken, FALSE, (PTOKEN_PRIVILEGES)&PrivilegesToChange, sizeof(PrivilegesToChange), NULL, NULL)) {
+            CloseHandle(ProcessToken);
+            return FALSE;
+        }
         CloseHandle(ProcessToken);
+        return TRUE;
     }
 
+    return FALSE;
+}
+
+/**
+ Attempt to enable backup privilege to allow Administrators to enumerate and
+ open more objects successfully.  If this fails the application may encounter
+ more objects it cannot accurately account for, but it is not fatal, or
+ unexpected.
+
+ @return TRUE to indicate that the privilege enablement was attempted
+         successfully.
+ */
+BOOL
+YoriLibEnableBackupPrivilege()
+{
+    YoriLibEnableNamedPrivilege(SE_BACKUP_NAME);
     return TRUE;
+}
+
+/**
+ Attempt to enable debug privilege to allow Administrators to take kernel
+ dumps.
+
+ @return TRUE to indicate that the privilege enablement was successful.
+ */
+BOOL
+YoriLibEnableDebugPrivilege()
+{
+    return YoriLibEnableNamedPrivilege(SE_DEBUG_NAME);
 }
 
 // vim:sw=4:ts=4:et:

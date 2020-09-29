@@ -763,6 +763,48 @@ typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
 
 } YORI_SYSTEM_PROCESS_INFORMATION, *PYORI_SYSTEM_PROCESS_INFORMATION;
 
+/**
+ A structure describing how to take a live dump.
+ */
+typedef struct _YORI_SYSDBG_LIVEDUMP_CONTROL {
+
+    /**
+     The version of this structure.
+     */
+    DWORD Version;
+
+    /**
+     The bugcheck code to include in the dump.
+     */
+    DWORD BugcheckCode;
+
+    /**
+     The bugcheck parameters to include in the dump.
+     */
+    DWORD_PTR BugcheckParameters[4];
+
+    /**
+     A file handle opened for write to store the dump.
+     */
+    HANDLE File;
+
+    /**
+     Optionally an event handle to indicate that dump capture should be
+     cancelled.
+     */
+    HANDLE CancelEvent;
+
+    /**
+     Flags indicating how to write the dump and what to include.
+     */
+    DWORD Flags;
+
+    /**
+     Flags indicating what to include in the dump.
+     */
+    DWORD AddPagesFlags;
+
+} YORI_SYSDBG_LIVEDUMP_CONTROL, *PYORI_SYSDBG_LIVEDUMP_CONTROL;
 
 /**
  If not defined by the compilation environment, the product identifier for
@@ -4710,6 +4752,18 @@ RTL_GET_LAST_NT_STATUS();
 typedef RTL_GET_LAST_NT_STATUS *PRTL_GET_LAST_NT_STATUS;
 
 /**
+ A prototype for the NtSystemDebugControl function.
+ */
+typedef
+LONG WINAPI
+NT_SYSTEM_DEBUG_CONTROL(DWORD, PVOID, DWORD, PVOID, DWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the NtSystemDebugControl function.
+ */
+typedef NT_SYSTEM_DEBUG_CONTROL *PNT_SYSTEM_DEBUG_CONTROL;
+
+/**
  A structure containing optional function pointers to ntdll.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -4743,6 +4797,12 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      NtQuerySystemInformation.
      */
     PNT_QUERY_SYSTEM_INFORMATION pNtQuerySystemInformation;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtSystemDebugControl.
+     */
+    PNT_SYSTEM_DEBUG_CONTROL pNtSystemDebugControl;
 
     /**
      If it's available on the current system, a pointer to
