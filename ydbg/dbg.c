@@ -35,8 +35,9 @@ CHAR strYDbgHelpText[] =
         "\n"
         "Debugs processes.\n"
         "\n"
-        "YDBG [-license] [-d <pid> <file>] [-k <file>]\n"
+        "YDBG [-license] [-c <file>] [-d <pid> <file>] [-k <file>]\n"
         "\n"
+        "   -c             Dump memory from kernel and user processes to a file\n"
         "   -d             Dump memory from a process to a file\n"
         "   -k             Dump memory from kernel to a file\n";
 
@@ -134,11 +135,15 @@ YDbgDumpProcess(
 
  @param FileName Specifies the file name to write the memory to.
 
+ @param IncludeAll If TRUE, capture user and hypervisor pages in addition
+        to kernel pages.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YDbgDumpKernel(
-    __in PYORI_STRING FileName
+    __in PYORI_STRING FileName,
+    __in BOOLEAN IncludeAll
     )
 {
     YORI_SYSDBG_LIVEDUMP_CONTROL Ctrl;
@@ -183,6 +188,11 @@ YDbgDumpKernel(
     Ctrl.Version = 1;
     Ctrl.File = FileHandle;
 
+    if (IncludeAll) {
+        Ctrl.Flags = SYSDBG_LIVEDUMP_FLAG_USER_PAGES;
+        Ctrl.AddPagesFlags = SYSDBG_LIVEDUMP_ADD_PAGES_FLAG_HYPERVISOR;
+    }
+
     NtStatus = DllNtDll.pNtSystemDebugControl(37, &Ctrl, sizeof(Ctrl), NULL, 0, &BytesWritten);
     if (NtStatus != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: NtSystemDebugControl failed: %08x"), NtStatus);
@@ -203,6 +213,7 @@ typedef enum _YDBG_OP {
     YDbgOperationNone = 0,
     YDbgOperationProcessDump = 1,
     YDbgOperationKernelDump = 2,
+    YDbgOperationCompleteDump = 3,
 } YDBG_OP;
 
 #ifdef YORI_BUILTIN
@@ -259,6 +270,13 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2020"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                if (ArgC > i + 1) {
+                    Op = YDbgOperationCompleteDump;
+                    FileName = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                    i += 1;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 if (ArgC > i + 2) {
                     Op = YDbgOperationProcessDump;
@@ -303,7 +321,11 @@ ENTRYPOINT(
             ExitResult = EXIT_FAILURE;
         }
     } else if (Op == YDbgOperationKernelDump) {
-        if (!YDbgDumpKernel(FileName)) {
+        if (!YDbgDumpKernel(FileName, FALSE)) {
+            ExitResult = EXIT_FAILURE;
+        }
+    } else if (Op == YDbgOperationCompleteDump) {
+        if (!YDbgDumpKernel(FileName, TRUE)) {
             ExitResult = EXIT_FAILURE;
         }
     }

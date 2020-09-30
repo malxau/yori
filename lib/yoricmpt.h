@@ -807,6 +807,16 @@ typedef struct _YORI_SYSDBG_LIVEDUMP_CONTROL {
 } YORI_SYSDBG_LIVEDUMP_CONTROL, *PYORI_SYSDBG_LIVEDUMP_CONTROL;
 
 /**
+ Include usermode pages in addition to kernel pages.
+ */
+#define SYSDBG_LIVEDUMP_FLAG_USER_PAGES             0x00000004
+
+/**
+ Include hypervisor pages in addition to kernel pages.
+ */
+#define SYSDBG_LIVEDUMP_ADD_PAGES_FLAG_HYPERVISOR   0x00000001
+
+/**
  If not defined by the compilation environment, the product identifier for
  an unknown product.
  */
