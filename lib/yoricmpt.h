@@ -692,9 +692,14 @@ typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
     ULONG NextEntryOffset;
 
     /**
+     The number of threads in the process.
+     */
+    ULONG NumberOfThreads;
+
+    /**
      Ignored in this application.
      */
-    BYTE Reserved1[28];
+    BYTE Reserved1[24];
 
     /**
      The system time when the process was launched.
@@ -737,9 +742,14 @@ typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
     DWORD_PTR ProcessId;
 
     /**
+     The parent process identifier.
+     */
+    DWORD_PTR ParentProcessId;
+
+    /**
      Ignored in this application.
      */
-    PVOID Reserved3[5];
+    PVOID Reserved3[4];
 
     /**
      Ignored in this application.
@@ -761,7 +771,54 @@ typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
      */
     SIZE_T CommitSize;
 
+    /**
+     Ignored in this application.
+     */
+    PVOID Reserved6[2];
+
+    /**
+     Ignored in this application.
+     */
+    LARGE_INTEGER Reserved7[6];
+
 } YORI_SYSTEM_PROCESS_INFORMATION, *PYORI_SYSTEM_PROCESS_INFORMATION;
+
+/**
+ Information returned about every thread in the process.
+ */
+typedef struct _YORI_SYSTEM_THREAD_INFORMATION {
+
+    /**
+     Ignored in this application.
+     */
+    LARGE_INTEGER Reserved[3];
+
+    /**
+     Ignored in this application.
+     */
+    ULONG Reserved2;
+
+    /**
+     Ignored in this application.
+     */
+    PVOID Reserved3;
+
+    /**
+     The process identifier.  This should match the process that contains this
+     thread entry.
+     */
+    HANDLE ProcessId;
+
+    /**
+     The thread identifier.
+     */
+    HANDLE ThreadId;
+
+    /**
+     Ignored in this application.
+     */
+    ULONG Reserved4[5];
+} YORI_SYSTEM_THREAD_INFORMATION, *PYORI_SYSTEM_THREAD_INFORMATION;
 
 /**
  A structure describing how to take a live dump.
@@ -815,6 +872,44 @@ typedef struct _YORI_SYSDBG_LIVEDUMP_CONTROL {
  Include hypervisor pages in addition to kernel pages.
  */
 #define SYSDBG_LIVEDUMP_ADD_PAGES_FLAG_HYPERVISOR   0x00000001
+
+
+/**
+ A structure describing how to take a triage dump.
+ */
+typedef struct _YORI_SYSDBG_TRIAGE_DUMP_CONTROL {
+
+    /**
+     Flags.
+     */
+    DWORD Flags;
+
+    /**
+     The bugcheck code to include in the dump.
+     */
+    DWORD BugcheckCode;
+
+    /**
+     The bugcheck parameters to include in the dump.
+     */
+    DWORD_PTR BugcheckParameters[4];
+
+    /**
+     The number of process handles.  Must be zero.
+     */
+    DWORD ProcessHandleCount;
+
+    /**
+     The number of thread handles.
+     */
+    DWORD ThreadHandleCount;
+
+    /**
+     Pointer to an array of handles.
+     */
+    PHANDLE HandleArray;
+
+} YORI_SYSDBG_TRIAGE_DUMP_CONTROL, *PYORI_SYSDBG_TRIAGE_DUMP_CONTROL;
 
 /**
  If not defined by the compilation environment, the product identifier for
@@ -5234,6 +5329,18 @@ IS_WOW64_PROCESS(HANDLE, PBOOL);
 typedef IS_WOW64_PROCESS *PIS_WOW64_PROCESS;
 
 /**
+ A prototype for the OpenThread function.
+ */
+typedef
+HANDLE WINAPI
+OPEN_THREAD(DWORD, BOOL, DWORD);
+
+/**
+ A prototype for a pointer to the OpenThread function.
+ */
+typedef OPEN_THREAD *POPEN_THREAD;
+
+/**
  A prototype for the QueryFullProcessImageNameW function.
  */
 typedef
@@ -5545,6 +5652,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to IsWow64Process.
      */
     PIS_WOW64_PROCESS pIsWow64Process;
+
+    /**
+     If it's available on the current system, a pointer to OpenThread.
+     */
+    POPEN_THREAD pOpenThread;
 
     /**
      If it's available on the current system, a pointer to QueryFullProcessImageNameW.

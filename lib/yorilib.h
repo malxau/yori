@@ -2435,6 +2435,14 @@ YoriLibEnableBackupPrivilege();
 BOOL
 YoriLibEnableDebugPrivilege();
 
+// *** PROCESS.C ***
+
+__success(return)
+BOOL
+YoriLibGetSystemProcessList(
+    __out PYORI_SYSTEM_PROCESS_INFORMATION *ProcessInfo
+    );
+
 // *** RECYCLE.C ***
 
 BOOL

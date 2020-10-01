@@ -125,7 +125,7 @@ PsDisplayHeader(
     __in PPS_CONTEXT PsContext
     )
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Pid  | ExecTime | Process         "));
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Pid  | Parent | ExecTime | Process         "));
     if (PsContext->DisplayMemory) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("| WorkingSet | Commit     "));
     }
@@ -321,9 +321,9 @@ PsDisplayProcessByStructure(
         YoriLibFileSizeToString(&CommitString, &liCommit);
         YoriLibFileSizeToString(&WorkingSetString, &liWorkingSet);
     
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %02i:%02i:%02i | %-15y | %-10y | %-10y"), ProcessInfo->ProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName, &WorkingSetString, &CommitString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-6i | %02i:%02i:%02i | %-15y | %-10y | %-10y"), ProcessInfo->ProcessId, ProcessInfo->ParentProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName, &WorkingSetString, &CommitString);
     } else {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %02i:%02i:%02i | %-15y"), ProcessInfo->ProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-6i | %02i:%02i:%02i | %-15y"), ProcessInfo->ProcessId, ProcessInfo->ParentProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName);
     }
 
     if (PsContext->DisplayCommandLine) {
@@ -376,70 +376,6 @@ PsDisplayProcessByPid(
 }
 
 /**
- Load information about all processes currently executing in the system.
-
- @param ProcessInfo On successful completion, updated to point to a list of
-        processes executing within the system.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOL
-PsGetSystemProcessList(
-    __out PYORI_SYSTEM_PROCESS_INFORMATION *ProcessInfo
-    )
-{
-    PYORI_SYSTEM_PROCESS_INFORMATION LocalProcessInfo = NULL;
-    DWORD BytesReturned;
-    DWORD BytesAllocated;
-    LONG Status;
-
-    if (DllNtDll.pNtQuerySystemInformation == NULL) {
-
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("OS support not present\n"));
-        return FALSE;
-    }
-
-    BytesAllocated = 0;
-
-    do {
-
-        if (LocalProcessInfo != NULL) {
-            YoriLibFree(LocalProcessInfo);
-        }
-
-        if (BytesAllocated == 0) {
-            BytesAllocated = 64 * 1024;
-        } else if (BytesAllocated <= 1024 * 1024) {
-            BytesAllocated = BytesAllocated * 4;
-        } else {
-            return FALSE;
-        }
-
-        LocalProcessInfo = YoriLibMalloc(BytesAllocated);
-        if (LocalProcessInfo == NULL) {
-            return FALSE;
-        }
-
-        Status = DllNtDll.pNtQuerySystemInformation(SystemProcessInformation, LocalProcessInfo, BytesAllocated, &BytesReturned);
-    } while (Status == (LONG)0xc0000004);
-
-
-    if (Status != 0) {
-        YoriLibFree(LocalProcessInfo);
-        return FALSE;
-    }
-
-    if (BytesReturned == 0) {
-        YoriLibFree(LocalProcessInfo);
-        return FALSE;
-    }
-
-    *ProcessInfo = LocalProcessInfo;
-    return TRUE;
-}
-
-/**
  Display information about all processes that the current user has access
  to.
 
@@ -454,7 +390,7 @@ PsDisplayAllProcesses(
     PYORI_SYSTEM_PROCESS_INFORMATION ProcessInfo = NULL;
 
     PYORI_SYSTEM_PROCESS_INFORMATION CurrentEntry;
-    if (!PsGetSystemProcessList(&ProcessInfo)) {
+    if (!YoriLibGetSystemProcessList(&ProcessInfo)) {
         return FALSE;
     }
 
@@ -494,7 +430,7 @@ PsDisplayConsoleProcesses(
         return FALSE;
     }
 
-    if (!PsGetSystemProcessList(&ProcessInfo)) {
+    if (!YoriLibGetSystemProcessList(&ProcessInfo)) {
         return FALSE;
     }
 

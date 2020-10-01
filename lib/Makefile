@@ -38,6 +38,7 @@ OBJS=\
 	 printf.obj   \
 	 printfa.obj  \
 	 priv.obj     \
+	 process.obj  \
 	 recycle.obj  \
 	 scut.obj     \
 	 select.obj   \
