@@ -151,6 +151,7 @@ YDbgDumpKernel(
     DWORD LastError;
     DWORD BytesWritten;
     LONG NtStatus;
+    BOOL Result;
     LPTSTR ErrText;
     YORI_STRING FullPath;
 
@@ -185,25 +186,42 @@ YDbgDumpKernel(
         return FALSE;
     }
 
+    YoriLibCancelEnable();
+
     Ctrl.Version = 1;
     Ctrl.File = FileHandle;
+    Ctrl.CancelEvent = YoriLibCancelGetEvent();
 
     if (IncludeAll) {
         Ctrl.Flags = SYSDBG_LIVEDUMP_FLAG_USER_PAGES;
         Ctrl.AddPagesFlags = SYSDBG_LIVEDUMP_ADD_PAGES_FLAG_HYPERVISOR;
     }
 
+    Result = TRUE;
     NtStatus = DllNtDll.pNtSystemDebugControl(37, &Ctrl, sizeof(Ctrl), NULL, 0, &BytesWritten);
-    if (NtStatus != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: NtSystemDebugControl failed: %08x"), NtStatus);
-        YoriLibFreeStringContents(&FullPath);
-        CloseHandle(FileHandle);
-        return FALSE;
+    if (NtStatus == 0xc0000120) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: operation cancelled\n"));
+        Result = FALSE;
+    } else if (NtStatus == 0xc0000354) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: this operation requires debugging enabled with 'bcdedit /debug on' followed by a reboot\n"));
+        Result = FALSE;
+    } else if (NtStatus == 0xc0000003) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: OS support not present\n"));
+        Result = FALSE;
+    } else if (NtStatus == 0xc0000002) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: 64 bit kernel dumps can only be generated from a 64 bit process\n"));
+        Result = FALSE;
+    } else if (NtStatus != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: NtSystemDebugControl failed: %08x\n"), NtStatus);
+        Result = FALSE;
     }
 
-    YoriLibFreeStringContents(&FullPath);
     CloseHandle(FileHandle);
-    return TRUE;
+    if (Result == FALSE) {
+        DeleteFile(FullPath.StartOfString);
+    }
+    YoriLibFreeStringContents(&FullPath);
+    return Result;
 }
 
 /**
