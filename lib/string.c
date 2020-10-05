@@ -536,16 +536,18 @@ YoriLibNumberToString(
     )
 {
     DWORD Index;
-    LONGLONG Num;
-    LONGLONG IndexValue;
+    DWORDLONG Num;
+    DWORDLONG IndexValue;
     DWORD Digits;
     DWORD DigitIndex;
 
     Index = 0;
-    Num = Number;
-    if (Num < 0) {
+    if (Number < 0) {
         Index++;
-        Num = 0 - Num;
+        Num = 0;
+        Num = Num - Number;
+    } else {
+        Num = Number;
     }
 
     //
