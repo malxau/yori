@@ -2233,6 +2233,15 @@ YoriShProcessKeyDown(
             }
         } else if (KeyCode == 'Y') {
             YoriShAddYoriStringToInput(Buffer, &YoriShGlobal.YankBuffer);
+        } else if (KeyCode == 0xDB) { // Aka VK_OEM_4, { or [ on US keyboards
+            if (Buffer->SearchMode) {
+                Buffer->SearchMode = FALSE;
+                Buffer->CurrentOffset = Buffer->PreSearchOffset;
+                YoriLibFreeStringContents(&Buffer->SearchString);
+            } else {
+                YoriShClearInput(Buffer);
+                Buffer->HistoryEntryToUse = NULL;
+            }
         } else if (KeyCode == 0xBF) { // Aka VK_OEM_2, / or ? on US keyboards
             Buffer->SearchMode = TRUE;
             Buffer->PreSearchOffset = Buffer->CurrentOffset;
