@@ -400,10 +400,10 @@ EditSaveFile(
     if (FileName->StartOfString == NULL) {
         return FALSE;
     }
+
     if (EditContext->Newline.StartOfString == NULL) {
-        YoriLibConstantString(&EditContext->Newline.StartOfString, _T("\r\n"));
+        YoriLibConstantString(&EditContext->Newline, _T("\r\n"));
     }
-    
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
 
