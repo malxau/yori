@@ -173,7 +173,8 @@ EditOpts(
 
         if (YoriLibStringToNumber(&Caption, FALSE, &llTemp, &CharsConsumed) &&
             CharsConsumed > 0 &&
-            llTemp <= 64) {
+            llTemp <= 64 &&
+            llTemp >= 0) {
 
             DWORD dwTemp;
             dwTemp = (DWORD)llTemp;
