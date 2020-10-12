@@ -2151,6 +2151,38 @@ YoriWinMultilineEditExtendSelectionToCursor(
 }
 
 /**
+ End selection extension.  This is invoked when the mouse button is released.
+ At this point, the user may have selected text (click, hold, drag) or have
+ just moved the cursor (click and release.)  We don't know which case happened
+ until the mouse button is released (ie., now.)
+
+ @param MultilineEdit Pointer to the multiline edit control.
+ */
+VOID
+YoriWinMultilineEditFinishMouseSelection(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    PYORI_WIN_MULTILINE_EDIT_SELECT Selection;
+
+    MultilineEdit->MouseButtonDown = FALSE;
+
+    Selection = &MultilineEdit->Selection;
+    Selection->Active = YoriWinMultilineEditSelectMouseComplete;
+
+    //
+    //  If no characters were selected, disable the selection
+    //
+
+    if (Selection->FirstLine == Selection->LastLine) {
+        if (Selection->FirstCharOffset >= Selection->LastCharOffset) {
+            Selection->Active = YoriWinMultilineEditSelectNotActive;
+        }
+    }
+}
+
+
+/**
  Set the selection range within a multiline edit control to an explicitly
  provided range.
 
@@ -2978,8 +3010,8 @@ YoriWinMultilineEditEventHandler(
         case YoriWinEventMouseUpInNonClient:
             if (MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromTopDown ||
                 MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromBottomUp) {
-                MultilineEdit->Selection.Active = YoriWinMultilineEditSelectMouseComplete;
-                MultilineEdit->MouseButtonDown = FALSE;
+
+                YoriWinMultilineEditFinishMouseSelection(MultilineEdit);
             }
             // Intentional fallthrough
         case YoriWinEventMouseDownInNonClient:
@@ -3042,8 +3074,8 @@ YoriWinMultilineEditEventHandler(
         case YoriWinEventMouseUpOutsideWindow:
             if (MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromTopDown ||
                 MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromBottomUp) {
-                MultilineEdit->Selection.Active = YoriWinMultilineEditSelectMouseComplete;
-                MultilineEdit->MouseButtonDown = FALSE;
+
+                YoriWinMultilineEditFinishMouseSelection(MultilineEdit);
             }
             break;
     }
