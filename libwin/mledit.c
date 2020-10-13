@@ -1879,6 +1879,9 @@ YoriWinMultilineEditDelete(
 {
     DWORD CharsToCopy;
     PYORI_STRING Line;
+    DWORD LineLengthNeeded;
+    DWORD Index;
+
     if (MultilineEdit->CursorLine >= MultilineEdit->LinesPopulated) {
         return FALSE;
     }
@@ -1890,7 +1893,34 @@ YoriWinMultilineEditDelete(
     Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
 
     if (MultilineEdit->CursorOffset >= Line->LengthInChars) {
-        return FALSE;
+        LineLengthNeeded = MultilineEdit->CursorOffset;
+
+        if (LineLengthNeeded > Line->LengthAllocated) {
+            DWORD LengthToAllocate;
+            LengthToAllocate = Line->LengthAllocated * 2 + 80;
+            if (LineLengthNeeded >= LengthToAllocate) {
+                LengthToAllocate = LineLengthNeeded + 80;
+            }
+
+            if (!YoriLibReallocateString(Line, LengthToAllocate)) {
+                return FALSE;
+            }
+        }
+
+        if (LineLengthNeeded > Line->LengthInChars) {
+            for (Index = Line->LengthInChars; Index < LineLengthNeeded; Index++) {
+                Line->StartOfString[Index] = ' ';
+            }
+
+            Line->LengthInChars = LineLengthNeeded;
+        }
+
+        if (!YoriWinMultilineEditMergeLines(MultilineEdit, MultilineEdit->CursorLine)) {
+            return FALSE;
+        }
+
+        MultilineEdit->UserModified = TRUE;
+        return TRUE;
     }
 
     MultilineEdit->UserModified = TRUE;
