@@ -3022,7 +3022,12 @@ YoriWinMultilineEditEventHandler(
                        Event->KeyDown.CtrlMask == (ENHANCED_KEY | SHIFT_PRESSED)) {
                 YoriWinMultilineEditProcessPossiblyEnhancedKey(MultilineEdit, Event);
             } else if (Event->KeyDown.CtrlMask == (ENHANCED_KEY | LEFT_CTRL_PRESSED) ||
-                       Event->KeyDown.CtrlMask == (ENHANCED_KEY | RIGHT_CTRL_PRESSED)) {
+                       Event->KeyDown.CtrlMask == (ENHANCED_KEY | RIGHT_CTRL_PRESSED) ||
+                       Event->KeyDown.CtrlMask == (SHIFT_PRESSED | LEFT_CTRL_PRESSED) ||
+                       Event->KeyDown.CtrlMask == (SHIFT_PRESSED | RIGHT_CTRL_PRESSED) ||
+                       Event->KeyDown.CtrlMask == (ENHANCED_KEY | SHIFT_PRESSED | LEFT_CTRL_PRESSED) ||
+                       Event->KeyDown.CtrlMask == (ENHANCED_KEY | SHIFT_PRESSED | RIGHT_CTRL_PRESSED)
+                       ) {
                 YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(MultilineEdit, Event);
             }
             break;
