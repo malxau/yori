@@ -2997,7 +2997,12 @@ YoriWinMultilineEditEventHandler(
                        Event->KeyDown.CtrlMask == RIGHT_CTRL_PRESSED) {
 
                 if (!YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(MultilineEdit, Event)) {
-                    if (Event->KeyDown.VirtualKeyCode == 'C') {
+                    if (Event->KeyDown.VirtualKeyCode == 'A') {
+                        if (MultilineEdit->LinesPopulated > 0) {
+                            YoriWinMultilineEditSetSelectionRange(Ctrl, 0, 0, MultilineEdit->LinesPopulated - 1, MultilineEdit->LineArray[MultilineEdit->LinesPopulated - 1].LengthInChars);
+                        }
+                        return TRUE;
+                    } else if (Event->KeyDown.VirtualKeyCode == 'C') {
                         if (YoriWinMultilineEditCopySelectedText(Ctrl)) {
                             YoriWinMultilineEditClearSelection(MultilineEdit);
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
