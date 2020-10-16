@@ -1937,6 +1937,35 @@ YoriWinMultilineEditDelete(
 }
 
 /**
+ Delete the line at the cursor and move later lines into position.
+
+ @param MultilineEdit Pointer to the multiline edit control, indicating the
+        current cursor location.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditDeleteLine(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    if (MultilineEdit->LinesPopulated > 0) {
+        YoriLibFreeStringContents(&MultilineEdit->LineArray[MultilineEdit->CursorLine]);
+        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated - 1) {
+            memmove(&MultilineEdit->LineArray[MultilineEdit->CursorLine],
+                    &MultilineEdit->LineArray[MultilineEdit->CursorLine + 1],
+                    (MultilineEdit->LinesPopulated - MultilineEdit->CursorLine) * sizeof(YORI_STRING));
+        }
+
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->LinesPopulated);
+        MultilineEdit->LinesPopulated--;
+        MultilineEdit->UserModified = TRUE;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
  Start a new selection from the current cursor location if no selection is
  currently active.  If one is active, this call is ignored.
 
@@ -3017,6 +3046,12 @@ YoriWinMultilineEditEventHandler(
                         return TRUE;
                     } else if (Event->KeyDown.VirtualKeyCode == 'X') {
                         if (YoriWinMultilineEditCutSelectedText(Ctrl)) {
+                            YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+                            YoriWinMultilineEditPaint(MultilineEdit);
+                        }
+                        return TRUE;
+                    } else if (Event->KeyDown.VirtualKeyCode == 'Y') {
+                        if (YoriWinMultilineEditDeleteLine(MultilineEdit)) {
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
