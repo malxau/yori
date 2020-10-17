@@ -2801,6 +2801,68 @@ YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(
             }
         }
         Recognized = TRUE;
+    } else if (Event->KeyDown.VirtualKeyCode == VK_LEFT) {
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, FALSE);
+        } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
+            YoriWinMultilineEditClearSelection(MultilineEdit);
+        }
+        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
+            DWORD Index;
+            YORI_STRING WhitespaceChars = YORILIB_CONSTANT_STRING(_T(" -\t"));
+            PYORI_STRING Line;
+
+            Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
+            Index = MultilineEdit->CursorOffset;
+            if (Index > Line->LengthInChars) {
+                Index = Line->LengthInChars;
+            }
+            while(Index > 0 && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index - 1])) {
+                Index--;
+            }
+            while(Index > 0 && (YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index - 1]) == NULL)) {
+                Index--;
+            }
+            MultilineEdit->CursorOffset = Index;
+        } else {
+            MultilineEdit->CursorOffset = 0;
+        }
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
+        }
+        YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+        YoriWinMultilineEditPaint(MultilineEdit);
+    } else if (Event->KeyDown.VirtualKeyCode == VK_RIGHT) {
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, FALSE);
+        } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
+            YoriWinMultilineEditClearSelection(MultilineEdit);
+        }
+        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
+            DWORD Index;
+            YORI_STRING WhitespaceChars = YORILIB_CONSTANT_STRING(_T(" -\t"));
+            PYORI_STRING Line;
+
+            Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
+            Index = MultilineEdit->CursorOffset;
+            if (Index > Line->LengthInChars) {
+                Index = Line->LengthInChars;
+            }
+            while(Index < Line->LengthInChars && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index]) == NULL) {
+                Index++;
+            }
+            while(Index < Line->LengthInChars && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index])) {
+                Index++;
+            }
+            MultilineEdit->CursorOffset = Index;
+        } else {
+            MultilineEdit->CursorOffset = 0;
+        }
+        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+            YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
+        }
+        YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+        YoriWinMultilineEditPaint(MultilineEdit);
     }
 
     return Recognized;
