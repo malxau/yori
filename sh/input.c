@@ -2228,7 +2228,9 @@ YoriShProcessKeyDown(
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
             if (YoriLibPasteText(&ClipboardData)) {
-                YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                if (ClipboardData->LengthInChars > 0) {
+                    YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                }
                 YoriLibFreeStringContents(&ClipboardData);
             }
         } else if (KeyCode == 'Y') {
@@ -2340,7 +2342,9 @@ YoriShProcessKeyDown(
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
             if (YoriLibPasteText(&ClipboardData)) {
-                YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                if (ClipboardData->LengthInChars > 0) {
+                    YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                }
                 YoriLibFreeStringContents(&ClipboardData);
             }
         } else if (KeyCode == VK_LEFT) {
@@ -2675,9 +2679,11 @@ YoriShProcessMouseButtonDown(
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
             if (YoriLibPasteText(&ClipboardData)) {
-                YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                if (ClipboardData->LengthInChars > 0) {
+                    YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+                    BufferChanged = TRUE;
+                }
                 YoriLibFreeStringContents(&ClipboardData);
-                BufferChanged = TRUE;
             }
         }
     }
