@@ -1107,6 +1107,7 @@ EditFindNextMatchingString(
     //
 
     Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, StartLine);
+
     YoriLibInitEmptyString(&Substring);
     Substring.StartOfString = Line->StartOfString + StartOffset;
     Substring.LengthInChars = Line->LengthInChars - StartOffset;
@@ -1135,6 +1136,101 @@ EditFindNextMatchingString(
         }
         if (Match != NULL) {
             *NextMatchLine = LineIndex;
+            *NextMatchOffset = Offset;
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
+ Search from a specified point in the multiline edit control to find the
+ previous matching string.
+
+ @param EditContext Pointer to the edit context specifying the multiline
+        edit control, the string to search for, and whether to search case
+        sensitively or insensitively.
+
+ @param StartLine The zero based first line to search.
+
+ @param StartOffset The zero based first character in the line to search.
+
+ @param NextMatchLine On successful completion, populated with the zero 
+        based line index of the next match.
+
+ @param NextMatchOffset On successful completion, populated with the zero
+        based character index of the next match.
+
+ @return TRUE to indicate a match was found, FALSE to indicate it was not.
+ */
+__success(return)
+BOOLEAN
+EditFindPreviousMatchingString(
+    __in PEDIT_CONTEXT EditContext,
+    __in DWORD StartLine,
+    __in DWORD StartOffset,
+    __out PDWORD NextMatchLine,
+    __out PDWORD NextMatchOffset
+    )
+{
+    DWORD LineCount;
+    DWORD LineIndex;
+    DWORD Offset;
+    YORI_STRING Substring;
+    PYORI_STRING Line;
+    PYORI_STRING Match;
+
+    if (EditContext->SearchString.LengthInChars == 0) {
+        return FALSE;
+    }
+
+    LineCount = YoriWinMultilineEditGetLineCount(EditContext->MultilineEdit);
+    if (LineCount == 0) {
+        return FALSE;
+    }
+
+    //
+    //  For the line that the cursor is on, extract the substring of text
+    //  that is before the cursor, plus the length of the search string.
+    //  This allows for a match at the specified location or anything before
+    //  it.
+    //
+
+    Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, StartLine);
+    YoriLibInitEmptyString(&Substring);
+    Substring.StartOfString = Line->StartOfString;
+    Substring.LengthInChars = Line->LengthInChars;
+    if (StartOffset < Substring.LengthInChars) {
+        if (StartOffset + EditContext->SearchString.LengthInChars < Substring.LengthInChars) {
+            Substring.LengthInChars = StartOffset + EditContext->SearchString.LengthInChars;
+        }
+    }
+    if (EditContext->SearchMatchCase) {
+        Match = YoriLibFindLastMatchingSubstring(&Substring, 1, &EditContext->SearchString, &Offset);
+    } else {
+        Match = YoriLibFindLastMatchingSubstringInsensitive(&Substring, 1, &EditContext->SearchString, &Offset);
+    }
+
+    if (Match != NULL) {
+        *NextMatchLine = StartLine;
+        *NextMatchOffset = Offset;
+        return TRUE;
+    }
+
+    //
+    //  Do the rest of the lines the easy way
+    //
+
+    for (LineIndex = StartLine; LineIndex > 0; LineIndex--) {
+        Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, LineIndex - 1);
+        if (EditContext->SearchMatchCase) {
+            Match = YoriLibFindLastMatchingSubstring(Line, 1, &EditContext->SearchString, &Offset);
+        } else {
+            Match = YoriLibFindLastMatchingSubstringInsensitive(Line, 1, &EditContext->SearchString, &Offset);
+        }
+        if (Match != NULL) {
+            *NextMatchLine = LineIndex - 1;
             *NextMatchOffset = Offset;
             return TRUE;
         }
@@ -1219,6 +1315,9 @@ EditFindNextButtonClicked(
     PYORI_WIN_CTRL_HANDLE Parent;
     PEDIT_CONTEXT EditContext;
 
+    DWORD SelectionEndLine;
+    DWORD SelectionEndOffset;
+
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
@@ -1226,13 +1325,80 @@ EditFindNextButtonClicked(
         return;
     }
 
-    YoriWinMultilineEditGetCursorLocation(EditContext->MultilineEdit, &CursorOffset, &CursorLine);
+    //
+    //  If a selection is active, start from the second character in the
+    //  selection.  If not, start from the cursor.
+    //
+
+    if (!YoriWinMultilineEditGetSelectionRange(EditContext->MultilineEdit, &CursorLine, &CursorOffset, &SelectionEndLine, &SelectionEndOffset)) {
+        YoriWinMultilineEditGetCursorLocation(EditContext->MultilineEdit, &CursorOffset, &CursorLine);
+    } else {
+
+        //
+        //  Move forward for the next match.
+        //
+
+        CursorOffset++;
+    }
 
     if (EditFindNextMatchingString(EditContext, CursorLine, CursorOffset, &NextMatchLine, &NextMatchOffset)) {
 
         YoriWinMultilineEditSetSelectionRange(EditContext->MultilineEdit, NextMatchLine, NextMatchOffset, NextMatchLine, NextMatchOffset + EditContext->SearchString.LengthInChars);
     }
+}
 
+/**
+ A callback invoked when the repeat last find menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+EditFindPreviousButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    DWORD CursorOffset;
+    DWORD CursorLine;
+    DWORD NextMatchLine;
+    DWORD NextMatchOffset;
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PEDIT_CONTEXT EditContext;
+
+    DWORD SelectionEndLine;
+    DWORD SelectionEndOffset;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+
+    if (EditContext->SearchString.LengthInChars == 0) {
+        return;
+    }
+
+    //
+    //  If a selection is active, start from one character before the
+    //  beginning of the selection.  If not, start from the cursor.
+    //
+
+    if (!YoriWinMultilineEditGetSelectionRange(EditContext->MultilineEdit, &CursorLine, &CursorOffset, &SelectionEndLine, &SelectionEndOffset)) {
+        YoriWinMultilineEditGetCursorLocation(EditContext->MultilineEdit, &CursorOffset, &CursorLine);
+    } else {
+
+        //
+        //  Move back for the next match.
+        //
+
+        if (CursorOffset > 0) {
+            CursorOffset--;
+        } else if (CursorLine > 0) {
+            CursorLine--;
+            CursorOffset = (DWORD)-1;
+        }
+    }
+
+    if (EditFindPreviousMatchingString(EditContext, CursorLine, CursorOffset, &NextMatchLine, &NextMatchOffset)) {
+
+        YoriWinMultilineEditSetSelectionRange(EditContext->MultilineEdit, NextMatchLine, NextMatchOffset, NextMatchLine, NextMatchOffset + EditContext->SearchString.LengthInChars);
+    }
 }
 
 /**
@@ -1591,7 +1757,7 @@ EditPopulateMenuBar(
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
     YORI_WIN_MENU_ENTRY EditMenuEntries[4];
-    YORI_WIN_MENU_ENTRY SearchMenuEntries[5];
+    YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
     YORI_WIN_MENU_ENTRY OptionsMenuEntries[1];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
@@ -1636,12 +1802,15 @@ EditPopulateMenuBar(
     YoriLibConstantString(&SearchMenuEntries[1].Caption, _T("&Repeat Last Find"));
     YoriLibConstantString(&SearchMenuEntries[1].Hotkey, _T("F3"));
     SearchMenuEntries[1].NotifyCallback = EditFindNextButtonClicked;
-    YoriLibConstantString(&SearchMenuEntries[2].Caption, _T("&Change..."));
-    SearchMenuEntries[2].NotifyCallback = EditChangeButtonClicked;
-    SearchMenuEntries[3].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
-    YoriLibConstantString(&SearchMenuEntries[4].Caption, _T("&Go to line..."));
-    YoriLibConstantString(&SearchMenuEntries[4].Hotkey, _T("Ctrl+G"));
-    SearchMenuEntries[4].NotifyCallback = EditGoToLineButtonClicked;
+    YoriLibConstantString(&SearchMenuEntries[2].Caption, _T("Find &Previous"));
+    YoriLibConstantString(&SearchMenuEntries[2].Hotkey, _T("Shift+F3"));
+    SearchMenuEntries[2].NotifyCallback = EditFindPreviousButtonClicked;
+    YoriLibConstantString(&SearchMenuEntries[3].Caption, _T("&Change..."));
+    SearchMenuEntries[3].NotifyCallback = EditChangeButtonClicked;
+    SearchMenuEntries[4].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+    YoriLibConstantString(&SearchMenuEntries[5].Caption, _T("&Go to line..."));
+    YoriLibConstantString(&SearchMenuEntries[5].Hotkey, _T("Ctrl+G"));
+    SearchMenuEntries[5].NotifyCallback = EditGoToLineButtonClicked;
 
     ZeroMemory(&OptionsMenuEntries, sizeof(OptionsMenuEntries));
     YoriLibConstantString(&OptionsMenuEntries[0].Caption, _T("&Display..."));

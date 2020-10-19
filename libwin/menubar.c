@@ -152,6 +152,7 @@ YoriWinMenuGenerateHotkey(
     )
 {
     BOOLEAN RequiresCtrl = FALSE;
+    BOOLEAN RequiresShift = FALSE;
     YORI_STRING Remainder;
 
     YoriLibInitEmptyString(&Remainder);
@@ -166,8 +167,16 @@ YoriWinMenuGenerateHotkey(
         Remainder.StartOfString += sizeof("Ctrl+") - 1;
     }
 
+    if (Remainder.LengthInChars > sizeof("Shift+") - 1 &&
+        YoriLibCompareStringWithLiteralCount(&Remainder, _T("Shift+"), sizeof("Shift+") - 1) == 0) {
+
+        RequiresShift = TRUE;
+        Remainder.LengthInChars -= sizeof("Shift+") - 1;
+        Remainder.StartOfString += sizeof("Shift+") - 1;
+    }
+
     //
-    //  MSFIX: Support F10-F12, add support for Shift
+    //  MSFIX: Support F10-F12
     //
 
     if (Remainder.LengthInChars >= 2 &&
@@ -179,14 +188,22 @@ YoriWinMenuGenerateHotkey(
         if (RequiresCtrl) {
             HotkeyInfo->CtrlKeyMaskToEqual |= LEFT_CTRL_PRESSED;
         }
-        HotkeyInfo->VirtualKeyCode = VK_F1 + (HotkeyString->StartOfString[1] - '1');
+        if (RequiresShift) {
+            HotkeyInfo->CtrlKeyMaskToEqual |= SHIFT_PRESSED;
+        }
+        HotkeyInfo->VirtualKeyCode = VK_F1 + (Remainder.StartOfString[1] - '1');
         HotkeyInfo->EntryToInvoke = NULL;
         return TRUE;
 
     } else if (Remainder.LengthInChars == 1) {
-        if (RequiresCtrl) {
+        if (RequiresCtrl || RequiresShift) {
             HotkeyInfo->CtrlKeyMaskToCheck = LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED;
-            HotkeyInfo->CtrlKeyMaskToEqual = LEFT_CTRL_PRESSED;
+            if (RequiresCtrl) {
+                HotkeyInfo->CtrlKeyMaskToEqual |= LEFT_CTRL_PRESSED;
+            }
+            if (RequiresShift) {
+                HotkeyInfo->CtrlKeyMaskToEqual |= SHIFT_PRESSED;
+            }
             HotkeyInfo->VirtualKeyCode = YoriLibUpcaseChar(Remainder.StartOfString[0]);
             HotkeyInfo->EntryToInvoke = NULL;
             return TRUE;
@@ -196,6 +213,9 @@ YoriWinMenuGenerateHotkey(
         HotkeyInfo->CtrlKeyMaskToEqual = 0;
         if (RequiresCtrl) {
             HotkeyInfo->CtrlKeyMaskToEqual |= LEFT_CTRL_PRESSED;
+        }
+        if (RequiresShift) {
+            HotkeyInfo->CtrlKeyMaskToEqual |= SHIFT_PRESSED;
         }
         HotkeyInfo->VirtualKeyCode = VK_DELETE;
         return TRUE;

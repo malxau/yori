@@ -1215,6 +1215,118 @@ YoriLibFindFirstMatchingSubstringInsensitive(
 }
 
 /**
+ Search through a string looking to see if any substrings can be located.
+ Returns the last match in offet from the end of the string order.
+ This routine looks for matches case sensitively.
+
+ @param String The string to search through.
+
+ @param NumberMatches The number of substrings to look for.
+
+ @param MatchArray An array of strings corresponding to the matches to
+        look for.
+
+ @param StringOffsetOfMatch On successful completion, returns the offset
+        within the string of the match.
+
+ @return If a match is found, returns a pointer to the entry in MatchArray
+         corresponding to the substring that was matched.  If no match is
+         found, returns NULL.
+ */
+PYORI_STRING
+YoriLibFindLastMatchingSubstring(
+    __in PYORI_STRING String,
+    __in DWORD NumberMatches,
+    __in PYORI_STRING MatchArray,
+    __out_opt PDWORD StringOffsetOfMatch
+    )
+{
+    YORI_STRING RemainingString;
+    DWORD CheckCount;
+
+    YoriLibInitEmptyString(&RemainingString);
+
+    while (TRUE) {
+
+        RemainingString.LengthInChars++;
+        if (RemainingString.LengthInChars > String->LengthInChars) {
+            break;
+        }
+        RemainingString.StartOfString = &String->StartOfString[String->LengthInChars - RemainingString.LengthInChars];
+
+        for (CheckCount = 0; CheckCount < NumberMatches; CheckCount++) {
+            if (YoriLibCompareStringCount(&RemainingString, &MatchArray[CheckCount], MatchArray[CheckCount].LengthInChars) == 0) {
+                if (StringOffsetOfMatch != NULL) {
+                    *StringOffsetOfMatch = String->LengthInChars - RemainingString.LengthInChars;
+                }
+                return &MatchArray[CheckCount];
+            }
+        }
+    }
+
+    if (StringOffsetOfMatch != NULL) {
+        *StringOffsetOfMatch = 0;
+    }
+    return NULL;
+}
+
+/**
+ Search through a string looking to see if any substrings can be located.
+ Returns the last match in offet from the end of the string order.
+ This routine looks for matches case insensitively.
+
+ @param String The string to search through.
+
+ @param NumberMatches The number of substrings to look for.
+
+ @param MatchArray An array of strings corresponding to the matches to
+        look for.
+
+ @param StringOffsetOfMatch On successful completion, returns the offset
+        within the string of the match.
+
+ @return If a match is found, returns a pointer to the entry in MatchArray
+         corresponding to the substring that was matched.  If no match is
+         found, returns NULL.
+ */
+PYORI_STRING
+YoriLibFindLastMatchingSubstringInsensitive(
+    __in PYORI_STRING String,
+    __in DWORD NumberMatches,
+    __in PYORI_STRING MatchArray,
+    __out_opt PDWORD StringOffsetOfMatch
+    )
+{
+    YORI_STRING RemainingString;
+    DWORD CheckCount;
+
+    YoriLibInitEmptyString(&RemainingString);
+
+    while (TRUE) {
+
+        RemainingString.LengthInChars++;
+        if (RemainingString.LengthInChars > String->LengthInChars) {
+            break;
+        }
+        RemainingString.StartOfString = &String->StartOfString[String->LengthInChars - RemainingString.LengthInChars];
+
+        for (CheckCount = 0; CheckCount < NumberMatches; CheckCount++) {
+            if (YoriLibCompareStringInsensitiveCount(&RemainingString, &MatchArray[CheckCount], MatchArray[CheckCount].LengthInChars) == 0) {
+                if (StringOffsetOfMatch != NULL) {
+                    *StringOffsetOfMatch = String->LengthInChars - RemainingString.LengthInChars;
+                }
+                return &MatchArray[CheckCount];
+            }
+        }
+    }
+
+    if (StringOffsetOfMatch != NULL) {
+        *StringOffsetOfMatch = 0;
+    }
+    return NULL;
+}
+
+/**
  Search through a string finding the leftmost instance of a character.  If
  no match is found, return NULL.
 

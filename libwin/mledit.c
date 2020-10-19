@@ -2242,6 +2242,49 @@ YoriWinMultilineEditFinishMouseSelection(
 
 
 /**
+ Get the selection range within a multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param StartLine Specifies the line index of the beginning of the selection.
+
+ @param StartOffset Specifies the character offset within the line to the
+        beginning of the selection.
+
+ @param EndLine Specifies the line index of the end of the selection.
+
+ @param EndOffset Specifies the character offset within the line to the
+        end of the selection.
+
+ @return TRUE to indicate that the selection is active and a range has been
+         returned.  FALSE to indicate no selection is active.
+ */
+BOOLEAN
+YoriWinMultilineEditGetSelectionRange(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PDWORD StartLine,
+    __out PDWORD StartOffset,
+    __out PDWORD EndLine,
+    __out PDWORD EndOffset
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    if (!YoriWinMultilineEditSelectionActive(CtrlHandle)) {
+        return FALSE;
+    }
+
+    MultilineEdit = (PYORI_WIN_CTRL_MULTILINE_EDIT)CtrlHandle;
+
+    *StartLine = MultilineEdit->Selection.FirstLine;
+    *StartOffset = MultilineEdit->Selection.FirstCharOffset;
+    *EndLine = MultilineEdit->Selection.LastLine;
+    *EndOffset = MultilineEdit->Selection.LastCharOffset;
+
+    return TRUE;
+}
+
+/**
  Set the selection range within a multiline edit control to an explicitly
  provided range.
 

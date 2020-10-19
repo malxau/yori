@@ -3356,6 +3356,22 @@ YoriLibFindFirstMatchingSubstringInsensitive(
     __out_opt PDWORD StringOffsetOfMatch
     );
 
+PYORI_STRING
+YoriLibFindLastMatchingSubstring(
+    __in PYORI_STRING String,
+    __in DWORD NumberMatches,
+    __in PYORI_STRING MatchArray,
+    __out_opt PDWORD StringOffsetOfMatch
+    );
+
+PYORI_STRING
+YoriLibFindLastMatchingSubstringInsensitive(
+    __in PYORI_STRING String,
+    __in DWORD NumberMatches,
+    __in PYORI_STRING MatchArray,
+    __out_opt PDWORD StringOffsetOfMatch
+    );
+
 LPTSTR
 YoriLibFindLeftMostCharacter(
     __in PCYORI_STRING String,

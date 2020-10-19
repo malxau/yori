@@ -586,6 +586,15 @@ YoriWinMultilineEditSetSelectionRange(
     __in DWORD EndOffset
     );
 
+BOOLEAN
+YoriWinMultilineEditGetSelectionRange(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PDWORD StartLine,
+    __out PDWORD StartOffset,
+    __out PDWORD EndLine,
+    __out PDWORD EndOffset
+    );
+
 VOID
 YoriWinMultilineEditSetColor(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
