@@ -2228,7 +2228,7 @@ YoriShProcessKeyDown(
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
             if (YoriLibPasteText(&ClipboardData)) {
-                if (ClipboardData->LengthInChars > 0) {
+                if (ClipboardData.LengthInChars > 0) {
                     YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 }
                 YoriLibFreeStringContents(&ClipboardData);
@@ -2342,7 +2342,7 @@ YoriShProcessKeyDown(
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
             if (YoriLibPasteText(&ClipboardData)) {
-                if (ClipboardData->LengthInChars > 0) {
+                if (ClipboardData.LengthInChars > 0) {
                     YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 }
                 YoriLibFreeStringContents(&ClipboardData);
@@ -2679,7 +2679,7 @@ YoriShProcessMouseButtonDown(
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
             if (YoriLibPasteText(&ClipboardData)) {
-                if (ClipboardData->LengthInChars > 0) {
+                if (ClipboardData.LengthInChars > 0) {
                     YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                     BufferChanged = TRUE;
                 }
