@@ -679,9 +679,13 @@ YoriWinMenuPopupPaint(
             }
             YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), (WORD)(Index + 1), 0x2524, ItemAttributes);
         } else {
-            for (CharIndex = 0; CharIndex < 3; CharIndex++) {
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 1), (WORD)(Index + 1), ' ', ItemAttributes);
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 1, (WORD)(Index + 1), ' ', ItemAttributes);
+            if (Item->Flags & YORI_WIN_MENU_ENTRY_CHECKED) {
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, (WORD)(Index + 1), 0x221a, ItemAttributes);
+            } else {
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, (WORD)(Index + 1), ' ', ItemAttributes);
             }
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 3, (WORD)(Index + 1), ' ', ItemAttributes);
             for (CharIndex = 0; CharIndex < Item->DisplayCaption.LengthInChars; CharIndex++) {
                 CharAttributes = ItemAttributes;
                 if ((Item->Flags & YORI_WIN_MENU_ENTRY_DISABLED) == 0 &&
@@ -1651,6 +1655,36 @@ YoriWinMenuBarEnableMenuItem(
     PYORI_WIN_CTRL_MENU_ENTRY Item;
     Item = (PYORI_WIN_CTRL_MENU_ENTRY)ItemHandle;
     Item->Flags = (Item->Flags & ~(YORI_WIN_MENU_ENTRY_DISABLED));
+}
+
+/**
+ Mark a specified menu item as checked.
+
+ @param ItemHandle Pointer to the menu item.
+ */
+VOID
+YoriWinMenuBarCheckMenuItem(
+    __in PYORI_WIN_CTRL_HANDLE ItemHandle
+    )
+{
+    PYORI_WIN_CTRL_MENU_ENTRY Item;
+    Item = (PYORI_WIN_CTRL_MENU_ENTRY)ItemHandle;
+    Item->Flags = (Item->Flags | YORI_WIN_MENU_ENTRY_CHECKED);
+}
+
+/**
+ Mark a specified menu item as enabled.
+
+ @param ItemHandle Pointer to the menu item.
+ */
+VOID
+YoriWinMenuBarUncheckMenuItem(
+    __in PYORI_WIN_CTRL_HANDLE ItemHandle
+    )
+{
+    PYORI_WIN_CTRL_MENU_ENTRY Item;
+    Item = (PYORI_WIN_CTRL_MENU_ENTRY)ItemHandle;
+    Item->Flags = (Item->Flags & ~(YORI_WIN_MENU_ENTRY_CHECKED));
 }
 
 /**

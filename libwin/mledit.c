@@ -148,6 +148,16 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
     DWORD DisplayCursorOffset;
 
     /**
+     The desired horizontal offset from the beginning of the display.  This
+     can be greater than the actual DisplayCursorOffset above if the user is
+     navigating up or down, and the current line is shorter than the offset
+     of the cursor when the user started navigating.  A special value of -1
+     is used to indicate that this value is not populated, because navigation
+     is not currently occurring.
+     */
+    DWORD DesiredDisplayCursorOffset;
+
+    /**
      The current number of spaces to display for each tab.
      */
     DWORD TabWidth;
@@ -216,6 +226,15 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
      down.  FALSE if the mouse button is released.
      */
     BOOLEAN MouseButtonDown;
+
+    /**
+     TRUE if the multiline edit control is following traditional MS-DOS edit
+     navigation rules, FALSE if following more modern multiline edit
+     navigation rules.  In the traditional model, the cursor can move
+     infinitely right of the text in any line, so the cursor's line does not
+     change in response to left and right keys.
+     */
+    BOOLEAN TraditionalEditNavigation;
 
 } YORI_WIN_CTRL_MULTILINE_EDIT, *PYORI_WIN_CTRL_MULTILINE_EDIT;
 
@@ -319,6 +338,7 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
 {
     DWORD CharIndex;
     DWORD CurrentDisplayIndex;
+    DWORD DesiredCursorChar;
     PYORI_STRING Line;
 
     if (LineIndex >= MultilineEdit->LinesPopulated) {
@@ -342,7 +362,19 @@ YoriWinMultilineEditFindCursorCharFromDisplayChar(
         }
     }
 
-    *CursorChar = DisplayChar - (CurrentDisplayIndex - CharIndex);
+    //
+    //  In a modern control, the cursor can't be beyond the end of the text,
+    //  so cap it here.
+    //
+
+    DesiredCursorChar = DisplayChar - (CurrentDisplayIndex - CharIndex);
+    if (!MultilineEdit->TraditionalEditNavigation) {
+        if (DesiredCursorChar > Line->LengthInChars) {
+            DesiredCursorChar = Line->LengthInChars;
+        }
+    }
+
+    *CursorChar = DesiredCursorChar;
 }
 
 /**
@@ -443,7 +475,37 @@ YoriWinMultilineEditTranslateViewportCoordinatesToCursorCoordinates(
     return Result;
 }
 
+/**
+ If one is not already defined, define the desired display offset, which is
+ the display column that would ideally be returned to as the cursor moves up
+ or down lines.  This may already be defined, if the user is navigating up or
+ down multiple times.
 
+ @param MultilineEdit Pointer to the multiline edit control.
+ */
+VOID
+YoriWinMultilineEditPopulateDesiredDisplayOffset(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    if (MultilineEdit->DesiredDisplayCursorOffset == (DWORD)-1) {
+        MultilineEdit->DesiredDisplayCursorOffset = MultilineEdit->DisplayCursorOffset;
+    }
+}
+
+/**
+ Indicate that the user has performed an operation that is not navigating up
+ or down, meaning that any desired offset should be cleared.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+ */
+VOID
+YoriWinMultilineEditClearDesiredDisplayOffset(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    MultilineEdit->DesiredDisplayCursorOffset = (DWORD)-1;
+}
 
 /**
  Return TRUE if a selection region is active, or FALSE if no selection is
@@ -1814,6 +1876,8 @@ YoriWinMultilineEditBackspace(
         return FALSE;
     }
 
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+
     if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
         return YoriWinMultilineEditDeleteSelection(&MultilineEdit->Ctrl);
     }
@@ -2509,7 +2573,8 @@ YoriWinMultilineEditPageUp(
 
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->ViewportTop, (DWORD)-1);
 
-        YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DisplayCursorOffset, &NewCursorOffset);
+        YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
+        YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DesiredDisplayCursorOffset, &NewCursorOffset);
         YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
         YoriWinMultilineEditRepaintScrollBar(MultilineEdit);
         return TRUE;
@@ -2551,7 +2616,9 @@ YoriWinMultilineEditPageDown(
         } else if (MultilineEdit->CursorLine + 1 < MultilineEdit->LinesPopulated) {
             NewCursorLine = MultilineEdit->LinesPopulated - 1;
         }
-        YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DisplayCursorOffset, &NewCursorOffset);
+
+        YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
+        YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DesiredDisplayCursorOffset, &NewCursorOffset);
         YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
         YoriWinMultilineEditRepaintScrollBar(MultilineEdit);
         return TRUE;
@@ -2631,34 +2698,56 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
     Recognized = FALSE;
 
     if (Event->KeyDown.VirtualKeyCode == VK_LEFT) {
-        if (MultilineEdit->CursorOffset > 0) {
+        if (MultilineEdit->CursorOffset > 0 ||
+            (!MultilineEdit->TraditionalEditNavigation && MultilineEdit->CursorLine > 0)) {
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, FALSE);
             } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
                 YoriWinMultilineEditClearSelection(MultilineEdit);
             }
-            NewCursorOffset = MultilineEdit->CursorOffset - 1;
-            YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, MultilineEdit->CursorLine);
+            NewCursorLine = MultilineEdit->CursorLine;
+            if (MultilineEdit->CursorOffset == 0) {
+                ASSERT(!MultilineEdit->TraditionalEditNavigation);
+                NewCursorLine = NewCursorLine - 1;
+                NewCursorOffset = MultilineEdit->LineArray[NewCursorLine].LengthInChars;
+            } else {
+                NewCursorOffset = MultilineEdit->CursorOffset -1;
+            }
+            YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
             }
+            YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
             YoriWinMultilineEditPaint(MultilineEdit);
         }
         Recognized = TRUE;
     } else if (Event->KeyDown.VirtualKeyCode == VK_RIGHT) {
-        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
-            YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, FALSE);
-        } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
-            YoriWinMultilineEditClearSelection(MultilineEdit);
+        if (MultilineEdit->TraditionalEditNavigation ||
+            (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated && MultilineEdit->CursorOffset < MultilineEdit->LineArray[MultilineEdit->CursorLine].LengthInChars) ||
+            MultilineEdit->CursorLine + 1 < MultilineEdit->LinesPopulated) {
+
+            if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+                YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, FALSE);
+            } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
+                YoriWinMultilineEditClearSelection(MultilineEdit);
+            }
+            NewCursorLine = MultilineEdit->CursorLine;
+            NewCursorOffset = MultilineEdit->CursorOffset + 1;
+            if (!MultilineEdit->TraditionalEditNavigation) {
+                if ((NewCursorLine < MultilineEdit->LinesPopulated && NewCursorOffset > MultilineEdit->LineArray[NewCursorLine].LengthInChars)) {
+                    NewCursorLine = NewCursorLine + 1;
+                    NewCursorOffset = 0;
+                }
+            }
+            YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
+            if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
+                YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
+            }
+            YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+            YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+            YoriWinMultilineEditPaint(MultilineEdit);
         }
-        NewCursorOffset = MultilineEdit->CursorOffset + 1;
-        YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, MultilineEdit->CursorLine);
-        if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
-            YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
-        }
-        YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
-        YoriWinMultilineEditPaint(MultilineEdit);
         Recognized = TRUE;
     } else if (Event->KeyDown.VirtualKeyCode == VK_HOME) {
         if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
@@ -2672,6 +2761,7 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
             }
+            YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
             YoriWinMultilineEditPaint(MultilineEdit);
         }
@@ -2691,6 +2781,7 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
             }
+            YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
             YoriWinMultilineEditPaint(MultilineEdit);
         }
@@ -2709,7 +2800,8 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
                 YoriWinMultilineEditClearSelection(MultilineEdit);
             }
             NewCursorLine = MultilineEdit->CursorLine - 1;
-            YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DisplayCursorOffset, &NewCursorOffset);
+            YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
+            YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DesiredDisplayCursorOffset, &NewCursorOffset);
             YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
@@ -2726,7 +2818,8 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
                 YoriWinMultilineEditClearSelection(MultilineEdit);
             }
             NewCursorLine = MultilineEdit->CursorLine + 1;
-            YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DisplayCursorOffset, &NewCursorOffset);
+            YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
+            YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, MultilineEdit->DesiredDisplayCursorOffset, &NewCursorOffset);
             YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
                 YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
@@ -2954,6 +3047,8 @@ YoriWinMultilineEditAddChar(
         }
     }
 
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+
     //
     //  If the user wants to split a line, split it.
     //
@@ -2962,6 +3057,7 @@ YoriWinMultilineEditAddChar(
         BOOLEAN Result;
         Result = YoriWinMultilineEditSplitLines(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset);
         if (Result) {
+            MultilineEdit->UserModified = TRUE;
             YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, 0, MultilineEdit->CursorLine + 1);
             MultilineEdit->DisplayCursorOffset = 0;
         }
@@ -3477,6 +3573,41 @@ YoriWinMultilineEditSetTabWidth(
 }
 
 /**
+ Enable or disable traditional MS-DOS edit navigation rules.  In the
+ traditional model, the cursor can move infinitely right of the text in any
+ line, so the cursor's line does not change in response to left and right keys.
+ In the more modern model, navigating left beyond the beginning of the line
+ moves to the previous line, and navigating right beyond the end of the line
+ moves to the next line.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param TraditionalNavigationEnabled TRUE to use traditional MS-DOS edit
+        navigation, FALSE to use Windows style multiline edit navigation.
+ */
+VOID
+YoriWinMultilineEditSetTraditionalNavigation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN TraditionalNavigationEnabled
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    MultilineEdit->TraditionalEditNavigation = TraditionalNavigationEnabled;
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+    if (!MultilineEdit->TraditionalEditNavigation) {
+        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
+            if (MultilineEdit->CursorOffset > MultilineEdit->LineArray[MultilineEdit->CursorLine].LengthInChars) {
+                YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, MultilineEdit->LineArray[MultilineEdit->CursorLine].LengthInChars, MultilineEdit->CursorLine);
+            }
+        }
+    }
+}
+
+/**
  Returns TRUE if the multiline edit control has been modified by the user
  since the last time @ref YoriWinMultilineEditSetModifyState indicated that
  no user modification has occurred.
@@ -3709,6 +3840,7 @@ YoriWinMultilineEditCreate(
     MultilineEdit->TextAttributes = MultilineEdit->Ctrl.DefaultAttributes;
 
     MultilineEdit->TabWidth = 4;
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
 
     YoriWinMultilineEditExpandDirtyRange(MultilineEdit, 0, (DWORD)-1);
     YoriWinMultilineEditPaintNonClient(MultilineEdit);

@@ -108,6 +108,14 @@ typedef struct _EDIT_CONTEXT {
      */
     BOOLEAN SearchMatchCase;
 
+    /**
+     TRUE to enable traditional MS-DOS edit navigation, where the cursor can
+     move infinitely right on any line.  FALSE to use more modern Windows
+     style multiline semantics, where left at the start of the line moves to
+     the previous line, or right at the end of a line moves to the next line.
+     */
+    BOOLEAN TraditionalNavigation;
+
 } EDIT_CONTEXT, *PEDIT_CONTEXT;
 
 /**
@@ -1650,6 +1658,38 @@ EditDisplayOptionsButtonClicked(
     YoriWinMultilineEditSetTabWidth(EditContext->MultilineEdit, NewTabWidth);
 }
 
+/**
+ A callback invoked when the traditional navigation options menu item is
+ invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+EditTraditionalNavigationOptionsButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE OptionsMenu;
+    PYORI_WIN_CTRL_HANDLE TraditionalNavigationMenuItem;
+
+    PEDIT_CONTEXT EditContext;
+    OptionsMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, 3);
+    TraditionalNavigationMenuItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, OptionsMenu, 1);
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+
+    if (EditContext->TraditionalNavigation) {
+        EditContext->TraditionalNavigation = FALSE;
+        YoriWinMenuBarUncheckMenuItem(TraditionalNavigationMenuItem);
+    } else {
+        EditContext->TraditionalNavigation = TRUE;
+        YoriWinMenuBarCheckMenuItem(TraditionalNavigationMenuItem);
+    }
+    YoriWinMultilineEditSetTraditionalNavigation(EditContext->MultilineEdit, EditContext->TraditionalNavigation);
+}
+
 
 /**
  A callback invoked when the about menu item is invoked.
@@ -1745,6 +1785,8 @@ EditNotifyCursorMove(
 /**
  Create the menu bar and add initial items to it.
 
+ @param EditContext Pointer to the edit context.
+
  @param Parent Handle to the main window.
 
  @return Pointer to the menu bar control if it was successfully created
@@ -1752,13 +1794,14 @@ EditNotifyCursorMove(
  */
 PYORI_WIN_CTRL_HANDLE
 EditPopulateMenuBar(
+    __in PEDIT_CONTEXT EditContext,
     __in PYORI_WIN_WINDOW_HANDLE Parent
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
     YORI_WIN_MENU_ENTRY EditMenuEntries[4];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
-    YORI_WIN_MENU_ENTRY OptionsMenuEntries[1];
+    YORI_WIN_MENU_ENTRY OptionsMenuEntries[2];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
@@ -1815,6 +1858,11 @@ EditPopulateMenuBar(
     ZeroMemory(&OptionsMenuEntries, sizeof(OptionsMenuEntries));
     YoriLibConstantString(&OptionsMenuEntries[0].Caption, _T("&Display..."));
     OptionsMenuEntries[0].NotifyCallback = EditDisplayOptionsButtonClicked;
+    if (EditContext->TraditionalNavigation) {
+        OptionsMenuEntries[1].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
+    }
+    YoriLibConstantString(&OptionsMenuEntries[1].Caption, _T("&Traditional navigation"));
+    OptionsMenuEntries[1].NotifyCallback = EditTraditionalNavigationOptionsButtonClicked;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
     YoriLibConstantString(&HelpMenuEntries[0].Caption, _T("&About..."));
@@ -1972,7 +2020,7 @@ EditCreateMainWindow(
         return FALSE;
     }
 
-    MenuBar = EditPopulateMenuBar(Parent);
+    MenuBar = EditPopulateMenuBar(EditContext, Parent);
     if (MenuBar == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -1992,6 +2040,8 @@ EditCreateMainWindow(
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+
+    YoriWinMultilineEditSetTraditionalNavigation(MultilineEdit, EditContext->TraditionalNavigation);
 
     Rect.Top = (SHORT)(Rect.Bottom + 1);
     Rect.Bottom = Rect.Top;
@@ -2097,6 +2147,8 @@ ENTRYPOINT(
     } else {
         GlobalEditContext.Encoding = CP_ACP;
     }
+
+    GlobalEditContext.TraditionalNavigation = TRUE;
 
     for (i = 1; i < ArgC; i++) {
 

@@ -441,6 +441,11 @@ typedef struct _YORI_WIN_MENU {
 #define YORI_WIN_MENU_ENTRY_DISABLED (0x00000002)
 
 /**
+ Indicates that the menu entry should be checked.
+ */
+#define YORI_WIN_MENU_ENTRY_CHECKED (0x00000004)
+
+/**
  Specifies an API representation for a menu item within a menu bar control.
  */
 typedef struct _YORI_WIN_MENU_ENTRY {
@@ -492,6 +497,16 @@ YoriWinMenuBarDisableMenuItem(
 
 VOID
 YoriWinMenuBarEnableMenuItem(
+    __in PYORI_WIN_CTRL_HANDLE ItemHandle
+    );
+
+VOID
+YoriWinMenuBarCheckMenuItem(
+    __in PYORI_WIN_CTRL_HANDLE ItemHandle
+    );
+
+VOID
+YoriWinMenuBarUncheckMenuItem(
     __in PYORI_WIN_CTRL_HANDLE ItemHandle
     );
 
@@ -664,6 +679,12 @@ BOOLEAN
 YoriWinMultilineEditSetTabWidth(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in DWORD TabWidth
+    );
+
+VOID
+YoriWinMultilineEditSetTraditionalNavigation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN TraditionalNavigationEnabled
     );
 
 BOOLEAN
