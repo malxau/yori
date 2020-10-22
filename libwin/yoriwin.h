@@ -358,6 +358,11 @@ YoriWinListCreate(
     __in DWORD Style
     );
 
+DWORD
+YoriWinListGetItemCount(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
 __success(return)
 BOOLEAN
 YoriWinListGetActiveOption(

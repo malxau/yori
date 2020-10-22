@@ -590,6 +590,23 @@ YoriWinListEventHandler(
 }
 
 /**
+ Returns the number of items populated into the list control.
+
+ @param CtrlHandle Pointer to the list control.
+ */
+DWORD
+YoriWinListGetItemCount(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_LIST List;
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    List = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_LIST, Ctrl);
+    return List->ItemArray.Count;
+}
+
+/**
  Returns the currently active option within the list control.
 
  @param CtrlHandle Pointer to the list control.

@@ -63,7 +63,97 @@ typedef struct _YORI_DLG_FILE_STATE {
      path when populated.
      */
     YORI_STRING FileToReturn;
+
+    /**
+     Specifies the number of directories in the directory box.  Entries beyond
+     this are interpreted as drives.
+     */
+    DWORD NumberDirectories;
+
 } YORI_DLG_FILE_STATE, *PYORI_DLG_FILE_STATE;
+
+
+/**
+ The generic YoriLibGetFullPathNameRelativeTo fails if it is given a different
+ drive but fails to specify an absolute path, because resolving it would
+ require a current directory which was not specified to the function.  This
+ wrapper resolves this case by checking if the drive specifies no path, and
+ forcing it to be the root; and if it specifies a relative path, use the root
+ of the drive as the current directory.
+
+ @param PrimaryDirectory The directory to use as a "current" directory.
+
+ @param FileName A file name, which may be fully specified or may be relative
+        to PrimaryDirectory.
+
+ @param ReturnEscapedPath If TRUE, the returned path is in \\?\ form.
+        If FALSE, it is in regular Win32 form.
+
+ @param Buffer On successful completion, updated to point to a newly
+        allocated buffer containing the full path form of the file name.
+        Note this is returned as a NULL terminated YORI_STRING, suitable
+        for use in YORI_STRING or NULL terminated functions.
+
+ @return TRUE to indicate success or FALSE to indicate failure.
+ */
+BOOL
+YoriDlgFileGetFullPathNameRelativeTo(
+    __in PYORI_STRING PrimaryDirectory,
+    __in PYORI_STRING FileName,
+    __in BOOL ReturnEscapedPath,
+    __inout PYORI_STRING Buffer
+    )
+{
+    if (FileName->LengthInChars >= 2 &&
+        FileName->StartOfString[1] == ':' &&
+        (FileName->LengthInChars == 2 || !YoriLibIsSep(FileName->StartOfString[2]))) {
+
+        YORI_STRING DriveRoot;
+        TCHAR DriveRootBuffer[4];
+
+        YoriLibInitEmptyString(&DriveRoot);
+        DriveRootBuffer[0] = FileName->StartOfString[0];
+        DriveRootBuffer[1] = ':';
+        DriveRootBuffer[2] = '\\';
+        DriveRootBuffer[3] = '\0';
+        DriveRoot.StartOfString = DriveRootBuffer;
+        DriveRoot.LengthInChars = 3;
+
+        if (FileName->LengthInChars == 2) {
+
+            if (!YoriLibGetFullPathNameReturnAllocation(&DriveRoot,
+                                                        ReturnEscapedPath,
+                                                        Buffer,
+                                                        NULL)) {
+
+                return FALSE;
+            }
+        } else {
+            YORI_STRING RelativeFileName;
+            YoriLibInitEmptyString(&RelativeFileName);
+            RelativeFileName.StartOfString = &FileName->StartOfString[2];
+            RelativeFileName.LengthInChars = FileName->LengthInChars - 2;
+            if (!YoriLibGetFullPathNameRelativeTo(&DriveRoot,
+                                                  &RelativeFileName,
+                                                  ReturnEscapedPath,
+                                                  Buffer,
+                                                  NULL)) {
+                return FALSE;
+            }
+        }
+    } else {
+
+        if (!YoriLibGetFullPathNameRelativeTo(PrimaryDirectory,
+                                              FileName,
+                                              ReturnEscapedPath,
+                                              Buffer,
+                                              NULL)) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
 
 VOID
 YoriDlgFileRefreshView(
@@ -106,7 +196,6 @@ YoriDlgFileOkButtonClicked(
     //    If parent exists and child doesn't, that indicates a name to use
     //
 
-
     Parent = YoriWinGetControlParent(Ctrl);
     EditCtrl = YoriWinFindControlById(Parent, YoriDlgFileControlFileText);
     ASSERT(EditCtrl != NULL);
@@ -132,13 +221,27 @@ YoriDlgFileOkButtonClicked(
             FileComponent.LengthInChars = Text.LengthInChars - Index;
             break;
         }
+
+        //
+        //  Check if it's X: (no backslash.)  It may be X:*.txt .
+        //
+
+        if (Index - 1 == 1 && Text.StartOfString[Index - 1] == ':') {
+            PathComponent.StartOfString = Text.StartOfString;
+            PathComponent.LengthInChars = Index;
+            if (Index < Text.LengthInChars) {
+                FileComponent.StartOfString = &Text.StartOfString[Index];
+                FileComponent.LengthInChars = Text.LengthInChars - Index;
+            }
+            break;
+        }
     }
 
     //
     //  If there's no seperator, treat all text as "afterwards."
     //
 
-    if (FileComponent.StartOfString == NULL) {
+    if (PathComponent.StartOfString == NULL) {
         FileComponent.StartOfString = Text.StartOfString;
         FileComponent.LengthInChars = Text.LengthInChars;
     }
@@ -171,11 +274,10 @@ YoriDlgFileOkButtonClicked(
 
     if (PathComponent.StartOfString != NULL) {
 
-        if (!YoriLibGetFullPathNameRelativeTo(&State->CurrentDirectory,
-                                              &PathComponent,
-                                              TRUE,
-                                              &FullDirPath,
-                                              NULL)) {
+        if (!YoriDlgFileGetFullPathNameRelativeTo(&State->CurrentDirectory,
+                                                  &PathComponent,
+                                                  TRUE,
+                                                  &FullDirPath)) {
             YoriLibFreeStringContents(&Text);
             return;
         }
@@ -218,11 +320,10 @@ YoriDlgFileOkButtonClicked(
     //
 
     if (!WildFound) {
-        if (!YoriLibGetFullPathNameRelativeTo(&State->CurrentDirectory,
-                                              &Text,
-                                              TRUE,
-                                              &FullFilePath,
-                                              NULL)) {
+        if (!YoriDlgFileGetFullPathNameRelativeTo(&State->CurrentDirectory,
+                                                  &Text,
+                                                  TRUE,
+                                                  &FullFilePath)) {
             YoriLibFreeStringContents(&Text);
             YoriLibFreeStringContents(&FullDirPath);
             return;
@@ -341,15 +442,30 @@ YoriDlgFileDirectorySelectionChanged(
     YORI_STRING String;
     PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE EditCtrl;
+    PYORI_DLG_FILE_STATE State;
 
     if (!YoriWinListGetActiveOption(Ctrl, &ActiveOption)) {
         return;
     }
 
     Parent = YoriWinGetControlParent(Ctrl);
+    State = YoriWinGetControlContext(Parent);
     YoriLibInitEmptyString(&String);
     if (!YoriWinListGetItemText(Ctrl, ActiveOption, &String)) {
         return;
+    }
+
+    //
+    //  If the user has selected an item beyond the set of directories, this
+    //  is a drive.  The drive string follows a well known format of [-X-],
+    //  which needs to be transposed to X: .
+    //
+
+    if (ActiveOption >= State->NumberDirectories) {
+        String.StartOfString[0] = String.StartOfString[2];
+        String.StartOfString[1] = ':';
+        String.StartOfString[2] = '\0';
+        String.LengthInChars = 2;
     }
 
     EditCtrl = YoriWinFindControlById(Parent, YoriDlgFileControlFileText);
@@ -475,6 +591,10 @@ YoriDlgFileRefreshView(
     PYORI_WIN_CTRL_HANDLE DirList;
     PYORI_WIN_CTRL_HANDLE FileList;
     PYORI_DLG_FILE_STATE State;
+    YORI_STRING DriveDisplay;
+    TCHAR DriveProbeString[sizeof("A:\\")];
+    TCHAR DriveDisplayString[sizeof("[-A-]")];
+    UINT DriveProbeResult;
 
     if (!YoriLibUserStringToSingleFilePath(Directory, FALSE, &FullDir)) {
         return;
@@ -545,6 +665,31 @@ YoriDlgFileRefreshView(
 
     YoriWinListClearAllItems(DirList);
     YoriLibForEachFile(&SearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES | YORILIB_FILEENUM_BASIC_EXPANSION, 0, YoriDlgFileDirFoundCallback, NULL, DirList);
+    State->NumberDirectories = YoriWinListGetItemCount(DirList);
+
+    //
+    //  Add drives to the directory list.
+    //
+
+    YoriLibInitEmptyString(&DriveDisplay);
+    DriveDisplayString[0] = '[';
+    DriveDisplayString[1] = '-';
+    DriveDisplayString[3] = '-';
+    DriveDisplayString[4] = ']';
+    DriveDisplay.StartOfString = DriveDisplayString;
+    DriveDisplay.LengthInChars = sizeof("[-A-]") - 1;
+
+    DriveProbeString[1] = ':';
+    DriveProbeString[2] = '\\';
+    DriveProbeString[3] = '\0';
+
+    for (DriveProbeString[0] = 'A'; DriveProbeString[0] <= 'Z'; DriveProbeString[0]++) {
+        DriveProbeResult = GetDriveType(DriveProbeString);
+        if (DriveProbeResult != 0 && DriveProbeResult != 1) {
+            DriveDisplayString[2] = DriveProbeString[0];
+            YoriWinListAddItems(DirList, &DriveDisplay, 1);
+        }
+    }
 
     YoriLibFreeStringContents(&SearchString);
 }
