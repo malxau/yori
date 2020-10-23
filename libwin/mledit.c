@@ -238,6 +238,12 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
 
 } YORI_WIN_CTRL_MULTILINE_EDIT, *PYORI_WIN_CTRL_MULTILINE_EDIT;
 
+//
+//  =========================================
+//  DISPLAY FUNCTIONS
+//  =========================================
+//
+
 /**
  Calculate the line of text to display.  This is typically the exact same
  string as the line from the file's contents, but can diverge due to 
@@ -962,33 +968,6 @@ YoriWinMultilineEditEnsureCursorVisible(
     }
 }
 
-
-/**
- Set the color attributes of the multiline edit control.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @param Attributes Specifies the foreground and background color for the
-        multiline edit control to use.
- */
-VOID
-YoriWinMultilineEditSetColor(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in WORD Attributes
-    )
-{
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    PYORI_WIN_CTRL Ctrl;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    MultilineEdit->TextAttributes = Attributes;
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, 0, (DWORD)-1);
-    YoriWinMultilineEditPaintNonClient(MultilineEdit);
-    YoriWinMultilineEditPaint(MultilineEdit);
-}
-
 /**
  Toggle the insert state of the control.  If new keystrokes would previously
  insert new characters, future characters overwrite existing characters, and
@@ -1010,6 +989,12 @@ YoriWinMultilineEditToggleInsert(
     }
     return TRUE;
 }
+
+//
+//  =========================================
+//  BUFFER MANIPULATION FUNCTIONS
+//  =========================================
+//
 
 /**
  Merge two lines into one.  This occurs when the user deletes a line break.
@@ -1065,36 +1050,6 @@ YoriWinMultilineEditMergeLines(
     YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLineIndex, MultilineEdit->LinesPopulated);
 
     return TRUE;
-}
-
-/**
- Perform debug only checks to see that the selection state follows whatever
- rules are currently defined for it.
-
- @param MultilineEdit Pointer to the multiline edit control specifying the
-        selection state.
- */
-VOID
-YoriWinMultilineEditCheckSelectionState(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
-    )
-{
-    PYORI_WIN_MULTILINE_EDIT_SELECT Selection;
-    Selection = &MultilineEdit->Selection;
-
-    if (Selection->Active  == YoriWinMultilineEditSelectNotActive) {
-        return;
-    }
-    ASSERT(Selection->LastLine < MultilineEdit->LinesPopulated);
-    ASSERT(Selection->FirstLine <= Selection->LastLine);
-    if (Selection->Active == YoriWinMultilineEditSelectMouseFromTopDown ||
-        Selection->Active == YoriWinMultilineEditSelectMouseFromBottomUp) {
-        ASSERT(Selection->LastLine != Selection->FirstLine || Selection->FirstCharOffset <= Selection->LastCharOffset);
-    } else {
-        ASSERT(Selection->LastLine != Selection->FirstLine || Selection->FirstCharOffset < Selection->LastCharOffset);
-    }
-    ASSERT(Selection->FirstCharOffset <= MultilineEdit->LineArray[Selection->FirstLine].LengthInChars);
-    ASSERT(Selection->LastCharOffset <= MultilineEdit->LineArray[Selection->LastLine].LengthInChars);
 }
 
 /**
@@ -1179,23 +1134,36 @@ YoriWinMultilineEditSplitLines(
 }
 
 /**
- If a selection is currently active, delete all text in the selection.
- This implies deleting multiple lines, and/or merging the end of one line
- with the beginning of another.
+ Delete a range of characters, which may span lines.  This is used when
+ deleting a selection.  When deleting ranges that are not entire lines,
+ this implies merging the end of one line with the beginning of another.
 
- @param CtrlHandle Pointer to the multiline edit control containing the
-        selection and contents of the buffer.
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        contents of the buffer.
+
+ @param FirstLine Specifies the line that contains the first character to
+        remove.
+
+ @param FirstCharOffset Specifies the offset within FirstLine of the first
+        character to remove.
+
+ @param LastLine Specifies the line that contains the last character to
+        remove.
+
+ @param LastCharOffset Specifies the offset beyond the last character to
+        remove.
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
-YoriWinMultilineEditDeleteSelection(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+YoriWinMultilineEditDeleteTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset
     )
 {
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_MULTILINE_EDIT_SELECT Selection;
     DWORD CharsToCopy;
     DWORD CharsToDelete;
     DWORD LinesToDelete;
@@ -1205,49 +1173,46 @@ YoriWinMultilineEditDeleteSelection(
     PYORI_STRING Line;
     PYORI_STRING FinalLine;
 
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    if (!YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
-        return TRUE;
-    }
-
-    Selection = &MultilineEdit->Selection;
-    Line = &MultilineEdit->LineArray[Selection->FirstLine];
+    Line = &MultilineEdit->LineArray[FirstLine];
 
     //
     //  If the selection is one line, this is a simple case, because no
     //  line combining is required.
     //
 
-    if (Selection->FirstLine == Selection->LastLine) {
+    if (FirstLine == LastLine) {
 
-        if (Selection->FirstCharOffset >= Selection->LastCharOffset) {
+        if (FirstCharOffset >= LastCharOffset || FirstCharOffset > Line->LengthInChars) {
             return TRUE;
         }
 
-        CharsToDelete = Selection->LastCharOffset - Selection->FirstCharOffset;
-        CharsToCopy = Line->LengthInChars - Selection->LastCharOffset;
+        if (LastCharOffset > Line->LengthInChars) {
+            CharsToDelete = Line->LengthInChars - FirstCharOffset;
+            CharsToCopy = 0;
+        } else {
+            CharsToDelete = LastCharOffset - FirstCharOffset;
+            CharsToCopy = Line->LengthInChars - LastCharOffset;
+        }
 
         if (CharsToCopy > 0) {
-            memmove(&Line->StartOfString[Selection->FirstCharOffset],
-                    &Line->StartOfString[Selection->LastCharOffset],
+            memmove(&Line->StartOfString[FirstCharOffset],
+                    &Line->StartOfString[LastCharOffset],
                     CharsToCopy * sizeof(TCHAR));
         }
 
         Line->LengthInChars -= CharsToDelete;
-
-        YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, Selection->FirstCharOffset, Selection->FirstLine);
-
-        YoriWinMultilineEditClearSelection(MultilineEdit);
-        MultilineEdit->UserModified = TRUE;
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
         return TRUE;
     }
 
     LinesToDelete = 0;
-    ASSERT(Selection->LastLine < MultilineEdit->LinesPopulated);
-    FinalLine = &MultilineEdit->LineArray[Selection->LastLine];
-    CharsToCopy = FinalLine->LengthInChars - Selection->LastCharOffset;
+    ASSERT(LastLine < MultilineEdit->LinesPopulated);
+    FinalLine = &MultilineEdit->LineArray[LastLine];
+    if (LastCharOffset < FinalLine->LengthInChars) {
+        CharsToCopy = FinalLine->LengthInChars - LastCharOffset;
+    } else {
+        CharsToCopy = 0;
+    }
 
     //
     //  If the first part of the first line and the last part of the last
@@ -1255,14 +1220,26 @@ YoriWinMultilineEditDeleteSelection(
     //  allocation, reallocate it.
     //
 
-    if (Selection->FirstCharOffset + CharsToCopy > FinalLine->LengthAllocated) {
+    if (FirstCharOffset + CharsToCopy > FinalLine->LengthAllocated) {
         YORI_STRING NewLine;
-        if (!YoriLibAllocateString(&NewLine, Selection->FirstCharOffset + CharsToCopy + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
+        DWORD CharsFromFirstLine;
+        if (!YoriLibAllocateString(&NewLine, FirstCharOffset + CharsToCopy + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
             return FALSE;
         }
 
-        memcpy(NewLine.StartOfString, Line->StartOfString, Selection->FirstCharOffset * sizeof(TCHAR));
-        NewLine.LengthInChars = Selection->FirstCharOffset;
+        if (FirstCharOffset < Line->LengthInChars) {
+            CharsFromFirstLine = FirstCharOffset;
+        } else {
+            CharsFromFirstLine = Line->LengthInChars;
+        }
+
+        memcpy(NewLine.StartOfString, Line->StartOfString, CharsFromFirstLine * sizeof(TCHAR));
+        while (CharsFromFirstLine < FirstCharOffset) {
+            NewLine.StartOfString[CharsFromFirstLine] = ' ';
+            CharsFromFirstLine++;
+        }
+
+        NewLine.LengthInChars = FirstCharOffset;
         YoriLibFreeStringContents(Line);
         memcpy(Line, &NewLine, sizeof(YORI_STRING));
     }
@@ -1271,46 +1248,56 @@ YoriWinMultilineEditDeleteSelection(
     //  Move the combined regions into one line.
     //
 
-    memcpy(&Line->StartOfString[Selection->FirstCharOffset],
-           &FinalLine->StartOfString[Selection->LastCharOffset],
-           CharsToCopy * sizeof(TCHAR));
+    if (CharsToCopy > 0) {
+        memcpy(&Line->StartOfString[FirstCharOffset],
+               &FinalLine->StartOfString[LastCharOffset],
+               CharsToCopy * sizeof(TCHAR));
+    }
 
     //
     //  Delete any completely selected lines.
     //
 
-    Line->LengthInChars = Selection->FirstCharOffset + CharsToCopy;
-    LinesToDelete = Selection->LastLine - Selection->FirstLine;
+    Line->LengthInChars = FirstCharOffset + CharsToCopy;
+    LinesToDelete = LastLine - FirstLine;
 
     for (LineIndexToDelete = 0; LineIndexToDelete < LinesToDelete; LineIndexToDelete++) {
-        YoriLibFreeStringContents(&MultilineEdit->LineArray[Selection->FirstLine + 1 + LineIndexToDelete]);
+        YoriLibFreeStringContents(&MultilineEdit->LineArray[FirstLine + 1 + LineIndexToDelete]);
     }
 
-    FirstLineIndexToKeep = Selection->FirstLine + 1 + LinesToDelete;
+    FirstLineIndexToKeep = FirstLine + 1 + LinesToDelete;
     LinesToCopy = MultilineEdit->LinesPopulated - FirstLineIndexToKeep;
-    memmove(&MultilineEdit->LineArray[Selection->FirstLine + 1],
-            &MultilineEdit->LineArray[Selection->FirstLine + 1 + LinesToDelete],
+    memmove(&MultilineEdit->LineArray[FirstLine + 1],
+            &MultilineEdit->LineArray[FirstLine + 1 + LinesToDelete],
             LinesToCopy * sizeof(YORI_STRING));
 
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, Selection->FirstLine, MultilineEdit->LinesPopulated);
+    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, MultilineEdit->LinesPopulated);
+    MultilineEdit->UserModified = TRUE;
 
     MultilineEdit->LinesPopulated = MultilineEdit->LinesPopulated - LinesToDelete;
-
-    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, Selection->FirstCharOffset, Selection->FirstLine);
-
-    YoriWinMultilineEditClearSelection(MultilineEdit);
-    MultilineEdit->UserModified = TRUE;
 
     return TRUE;
 }
 
 
 /**
- Build a single continuous string covering the selected range in a multiline
+ Build a single continuous string covering the specified range in a multiline
  edit control.
 
- @param CtrlHandle Pointer to the multiline edit control containing the
-        selection and contents of the buffer.
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        contents of the buffer.
+
+ @param FirstLine Specifies the line that contains the first character to
+        return.
+
+ @param FirstCharOffset Specifies the offset within FirstLine of the first
+        character to return.
+
+ @param LastLine Specifies the line that contains the last character to
+        return.
+
+ @param LastCharOffset Specifies the offset beyond the last character to
+        return.
 
  @param NewlineString Specifies the string to use to delimit lines.  This
         allows this routine to return text with any arbitrary line ending.
@@ -1322,61 +1309,53 @@ YoriWinMultilineEditDeleteSelection(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
-YoriWinMultilineEditGetSelectedText(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+YoriWinMultilineEditGetTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset,
     __in PYORI_STRING NewlineString,
     __out PYORI_STRING SelectedText
     )
 {
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_MULTILINE_EDIT_SELECT Selection;
     DWORD CharsInRange;
     DWORD LinesInRange;
     DWORD LineIndex;
     PYORI_STRING Line;
     LPTSTR Ptr;
 
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    Line = &MultilineEdit->LineArray[FirstLine];
 
-    if (!YoriWinMultilineEditSelectionActive(CtrlHandle)) {
-        YoriLibInitEmptyString(SelectedText);
-        return TRUE;
-    }
+    if (FirstLine == LastLine) {
 
-    Selection = &MultilineEdit->Selection;
-    Line = &MultilineEdit->LineArray[Selection->FirstLine];
-
-    if (Selection->FirstLine == Selection->LastLine) {
-
-        CharsInRange = Selection->LastCharOffset - Selection->FirstCharOffset;
+        CharsInRange = LastCharOffset - FirstCharOffset;
 
         if (!YoriLibAllocateString(SelectedText, CharsInRange + 1)) {
             return FALSE;
         }
 
-        memcpy(SelectedText->StartOfString, &Line->StartOfString[Selection->FirstCharOffset], CharsInRange * sizeof(TCHAR));
+        memcpy(SelectedText->StartOfString, &Line->StartOfString[FirstCharOffset], CharsInRange * sizeof(TCHAR));
         SelectedText->LengthInChars = CharsInRange;
         SelectedText->StartOfString[CharsInRange] = '\0';
         return TRUE;
     }
 
-    LinesInRange = Selection->LastLine - Selection->FirstLine;
-    CharsInRange = Line->LengthInChars - Selection->FirstCharOffset;
-    for (LineIndex = Selection->FirstLine + 1; LineIndex < Selection->LastLine; LineIndex++) {
+    LinesInRange = LastLine - FirstLine;
+    CharsInRange = Line->LengthInChars - FirstCharOffset;
+    for (LineIndex = FirstLine + 1; LineIndex < LastLine; LineIndex++) {
         CharsInRange += MultilineEdit->LineArray[LineIndex].LengthInChars;
     }
-    CharsInRange += Selection->LastCharOffset;
+    CharsInRange += LastCharOffset;
 
     if (!YoriLibAllocateString(SelectedText, CharsInRange + LinesInRange * NewlineString->LengthInChars + 1)) {
         return FALSE;
     }
 
     Ptr = SelectedText->StartOfString;
-    memcpy(Ptr, &Line->StartOfString[Selection->FirstCharOffset], (Line->LengthInChars - Selection->FirstCharOffset) * sizeof(TCHAR));
-    Ptr += (Line->LengthInChars - Selection->FirstCharOffset);
-    for (LineIndex = Selection->FirstLine + 1; LineIndex < Selection->LastLine; LineIndex++) {
+    memcpy(Ptr, &Line->StartOfString[FirstCharOffset], (Line->LengthInChars - FirstCharOffset) * sizeof(TCHAR));
+    Ptr += (Line->LengthInChars - FirstCharOffset);
+    for (LineIndex = FirstLine + 1; LineIndex < LastLine; LineIndex++) {
         memcpy(Ptr, NewlineString->StartOfString, NewlineString->LengthInChars * sizeof(TCHAR));
         Ptr += NewlineString->LengthInChars;
         memcpy(Ptr,
@@ -1386,8 +1365,8 @@ YoriWinMultilineEditGetSelectedText(
     }
     memcpy(Ptr, NewlineString->StartOfString, NewlineString->LengthInChars * sizeof(TCHAR));
     Ptr += NewlineString->LengthInChars;
-    memcpy(Ptr, MultilineEdit->LineArray[Selection->LastLine].StartOfString, Selection->LastCharOffset * sizeof(TCHAR));
-    Ptr += Selection->LastCharOffset;
+    memcpy(Ptr, MultilineEdit->LineArray[LastLine].StartOfString, LastCharOffset * sizeof(TCHAR));
+    Ptr += LastCharOffset;
 
     SelectedText->LengthInChars = (DWORD)(Ptr - SelectedText->StartOfString);
 
@@ -1431,23 +1410,105 @@ YoriWinMultilineEditReallocateLineArray(
 }
 
 /**
- Insert a block of text, which may contain newlines, into the control at the
- current cursor position.
+ Create new empty lines after an insertion point, and move all existing lines
+ further down.
 
- @param CtrlHandle Pointer to the multiline edit control.
+ @param MultilineEdit Pointer to the multiline edit control.
 
- @param Text Pointer to the text to insert.
+ @param FirstLine The line that insertion should happen after.
+
+ @param LineCount The number of lines to insert.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
-YoriWinMultilineEditInsertTextAtCursor(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_STRING Text
+YoriWinMultilineEditInsertLines(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD LineCount
     )
 {
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    PYORI_WIN_CTRL Ctrl;
+    DWORD SourceLine;
+    DWORD TargetLine;
+    DWORD LinesNeeded;
+    DWORD Index;
+
+    LinesNeeded = MultilineEdit->LinesPopulated + LineCount;
+    if (MultilineEdit->LinesPopulated == 0) {
+        LinesNeeded++;
+    }
+    if (LinesNeeded > MultilineEdit->LinesAllocated) {
+        DWORD NewLineCount;
+        NewLineCount = MultilineEdit->LinesAllocated * 2;
+
+        if (NewLineCount < LinesNeeded) {
+            NewLineCount = LinesNeeded;
+            NewLineCount += 0x1000;
+            NewLineCount = NewLineCount & ~(0xfff);
+        } else if (NewLineCount < 0x1000) {
+            NewLineCount = 0x1000;
+        }
+
+        if (!YoriWinMultilineEditReallocateLineArray(MultilineEdit, NewLineCount)) {
+            return FALSE;
+        }
+    }
+
+    if (MultilineEdit->LinesPopulated > 0) {
+        SourceLine = FirstLine + 1;
+        TargetLine = SourceLine + LineCount;
+    } else {
+        SourceLine = FirstLine;
+        TargetLine = SourceLine + LineCount + 1;
+    }
+    if (SourceLine < MultilineEdit->LinesPopulated) {
+        DWORD LinesToMove;
+        LinesToMove = MultilineEdit->LinesPopulated - SourceLine;
+        memmove(&MultilineEdit->LineArray[TargetLine],
+                &MultilineEdit->LineArray[SourceLine],
+                LinesToMove * sizeof(YORI_STRING));
+    }
+
+    for (Index = SourceLine; Index < TargetLine; Index++) {
+        YoriLibInitEmptyString(&MultilineEdit->LineArray[Index]);
+    }
+
+    MultilineEdit->LinesPopulated = LinesNeeded;
+    return TRUE;
+}
+
+/**
+ Insert a block of text, which may contain newlines, into the control at the
+ specified position.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param FirstLine Specifies the line in the buffer where text should be
+        inserted.
+
+ @param FirstCharOffset Specifies the offset in the line where text should be
+        inserted.
+
+ @param Text Pointer to the text to insert.
+
+ @param LastLine On successful completion, populated with the line containing
+        the end of the newly inserted text.
+
+ @param LastCharOffset On successful completion, populated with the offset
+        beyond the newly inserted text.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditInsertTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text,
+    __out PDWORD LastLine,
+    __out PDWORD LastCharOffset
+    )
+{
     DWORD LineCount;
     DWORD LineIndex;
     DWORD Index;
@@ -1455,12 +1516,9 @@ YoriWinMultilineEditInsertTextAtCursor(
     DWORD CharsFirstLine;
     DWORD CharsLastLine;
     DWORD CharsNeeded;
-    YORI_STRING TrailingPortionOfCursorLine;
+    YORI_STRING TrailingPortionOfFirstLine;
     PYORI_STRING Line;
     BOOLEAN TerminateLine;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
 
     //
     //  Count the number of lines in the input text.  This may be zero.
@@ -1487,51 +1545,9 @@ YoriWinMultilineEditInsertTextAtCursor(
     //
 
     if (LineCount > 0 || MultilineEdit->LinesPopulated == 0) {
-        DWORD SourceLine;
-        DWORD TargetLine;
-        DWORD LinesNeeded;
-
-        LinesNeeded = MultilineEdit->LinesPopulated + LineCount;
-        if (MultilineEdit->LinesPopulated == 0) {
-            LinesNeeded++;
+        if (!YoriWinMultilineEditInsertLines(MultilineEdit, FirstLine, LineCount)) {
+            return FALSE;
         }
-        if (LinesNeeded > MultilineEdit->LinesAllocated) {
-            DWORD NewLineCount;
-            NewLineCount = MultilineEdit->LinesAllocated * 2;
-
-            if (NewLineCount < LinesNeeded) {
-                NewLineCount = LinesNeeded;
-                NewLineCount += 0x1000;
-                NewLineCount = NewLineCount & ~(0xfff);
-            } else if (NewLineCount < 0x1000) {
-                NewLineCount = 0x1000;
-            }
-
-            if (!YoriWinMultilineEditReallocateLineArray(MultilineEdit, NewLineCount)) {
-                return FALSE;
-            }
-        }
-
-        if (MultilineEdit->LinesPopulated > 0) {
-            SourceLine = MultilineEdit->CursorLine + 1;
-            TargetLine = SourceLine + LineCount;
-        } else {
-            SourceLine = MultilineEdit->CursorLine;
-            TargetLine = SourceLine + LineCount + 1;
-        }
-        if (SourceLine < MultilineEdit->LinesPopulated) {
-            DWORD LinesToMove;
-            LinesToMove = MultilineEdit->LinesPopulated - SourceLine;
-            memmove(&MultilineEdit->LineArray[TargetLine],
-                    &MultilineEdit->LineArray[SourceLine],
-                    LinesToMove * sizeof(YORI_STRING));
-        }
-
-        for (Index = SourceLine; Index < TargetLine; Index++) {
-            YoriLibInitEmptyString(&MultilineEdit->LineArray[Index]);
-        }
-
-        MultilineEdit->LinesPopulated = LinesNeeded;
     }
 
     //
@@ -1542,12 +1558,12 @@ YoriWinMultilineEditInsertTextAtCursor(
     //  last, after the last line has been constructed.
     //
 
-    YoriLibInitEmptyString(&TrailingPortionOfCursorLine);
-    if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
-        Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
-        if (MultilineEdit->CursorOffset < Line->LengthInChars) {
-            TrailingPortionOfCursorLine.StartOfString = &Line->StartOfString[MultilineEdit->CursorOffset];
-            TrailingPortionOfCursorLine.LengthInChars = Line->LengthInChars - MultilineEdit->CursorOffset;
+    YoriLibInitEmptyString(&TrailingPortionOfFirstLine);
+    if (FirstLine < MultilineEdit->LinesPopulated) {
+        Line = &MultilineEdit->LineArray[FirstLine];
+        if (FirstCharOffset < Line->LengthInChars) {
+            TrailingPortionOfFirstLine.StartOfString = &Line->StartOfString[FirstCharOffset];
+            TrailingPortionOfFirstLine.LengthInChars = Line->LengthInChars - FirstCharOffset;
         }
     }
 
@@ -1591,11 +1607,11 @@ YoriWinMultilineEditInsertTextAtCursor(
                     CharsLastLine = CharsThisLine;
                 }
             } else {
-                Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine + LineIndex];
+                Line = &MultilineEdit->LineArray[FirstLine + LineIndex];
                 ASSERT(Line->LengthInChars == 0);
                 CharsNeeded = CharsThisLine;
                 if (LineIndex == LineCount) {
-                    CharsNeeded += TrailingPortionOfCursorLine.LengthInChars;
+                    CharsNeeded += TrailingPortionOfFirstLine.LengthInChars;
                 }
                 if (Line->LengthAllocated < CharsNeeded) {
                     YoriLibFreeStringContents(Line);
@@ -1620,11 +1636,11 @@ YoriWinMultilineEditInsertTextAtCursor(
 
                 if (LineIndex == LineCount) {
                     CharsLastLine = CharsThisLine;
-                    if (TrailingPortionOfCursorLine.LengthInChars > 0) {
+                    if (TrailingPortionOfFirstLine.LengthInChars > 0) {
                         memcpy(&Line->StartOfString[CharsThisLine],
-                               TrailingPortionOfCursorLine.StartOfString,
-                               TrailingPortionOfCursorLine.LengthInChars * sizeof(TCHAR));
-                        Line->LengthInChars += TrailingPortionOfCursorLine.LengthInChars;
+                               TrailingPortionOfFirstLine.StartOfString,
+                               TrailingPortionOfFirstLine.LengthInChars * sizeof(TCHAR));
+                        Line->LengthInChars += TrailingPortionOfFirstLine.LengthInChars;
                     }
                 }
             }
@@ -1658,29 +1674,29 @@ YoriWinMultilineEditInsertTextAtCursor(
     //
 
     if (LineCount != 0) {
-        YoriLibInitEmptyString(&TrailingPortionOfCursorLine);
+        YoriLibInitEmptyString(&TrailingPortionOfFirstLine);
     }
 
-    Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
-    if (MultilineEdit->CursorOffset + CharsFirstLine + TrailingPortionOfCursorLine.LengthInChars > Line->LengthAllocated) {
-        if (!YoriLibReallocateString(Line, MultilineEdit->CursorOffset + CharsFirstLine + TrailingPortionOfCursorLine.LengthInChars + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
+    Line = &MultilineEdit->LineArray[FirstLine];
+    if (FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars > Line->LengthAllocated) {
+        if (!YoriLibReallocateString(Line, FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
             return FALSE;
         }
     }
 
-    if (TrailingPortionOfCursorLine.LengthInChars > 0) {
-        memmove(&Line->StartOfString[MultilineEdit->CursorOffset + CharsFirstLine],
-                TrailingPortionOfCursorLine.StartOfString,
-                TrailingPortionOfCursorLine.LengthInChars * sizeof(TCHAR));
+    if (TrailingPortionOfFirstLine.LengthInChars > 0) {
+        memmove(&Line->StartOfString[FirstCharOffset + CharsFirstLine],
+                TrailingPortionOfFirstLine.StartOfString,
+                TrailingPortionOfFirstLine.LengthInChars * sizeof(TCHAR));
     }
 
-    while (MultilineEdit->CursorOffset > Line->LengthInChars) {
+    while (FirstCharOffset > Line->LengthInChars) {
         Line->StartOfString[Line->LengthInChars++] = ' ';
     }
 
     if (CharsFirstLine > 0) {
-        memcpy(&Line->StartOfString[MultilineEdit->CursorOffset], Text->StartOfString, CharsFirstLine * sizeof(TCHAR));
-        Line->LengthInChars = MultilineEdit->CursorOffset + CharsFirstLine + TrailingPortionOfCursorLine.LengthInChars;
+        memcpy(&Line->StartOfString[FirstCharOffset], Text->StartOfString, CharsFirstLine * sizeof(TCHAR));
+        Line->LengthInChars = FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars;
     }
 
     //
@@ -1688,12 +1704,222 @@ YoriWinMultilineEditInsertTextAtCursor(
     //
 
     if (LineCount > 0) {
-        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->CursorLine, (DWORD)-1);
-        YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, CharsLastLine, MultilineEdit->CursorLine + LineCount);
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, (DWORD)-1);
+        *LastLine = FirstLine + LineCount;
+        *LastCharOffset = CharsLastLine;
     } else {
-        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorLine);
-        YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, MultilineEdit->CursorOffset + CharsFirstLine, MultilineEdit->CursorLine);
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
+        *LastLine = FirstLine;
+        *LastCharOffset = FirstCharOffset + CharsFirstLine;
     }
+    MultilineEdit->UserModified = TRUE;
+
+    return TRUE;
+}
+
+/**
+ Overwrite a block of text, which may contain newlines, into the control at the
+ specified position.  Note that "overwrite" in this context refers to adding
+ text with insert mode off.  This is not a true/strict overwrite, because the
+ semantics of typing with insert off is that new lines are inserted, but text
+ on an existing line are overwritten.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param FirstLine Specifies the line in the buffer where text should be
+        added.
+
+ @param FirstCharOffset Specifies the offset in the line where text should be
+        added.
+
+ @param Text Pointer to the text to add.
+
+ @param LastLine On successful completion, populated with the line containing
+        the end of the newly added text.
+
+ @param LastCharOffset On successful completion, populated with the offset
+        beyond the newly added text.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditOverwriteTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text,
+    __out PDWORD LastLine,
+    __out PDWORD LastCharOffset
+    )
+{
+    DWORD LineCount;
+    DWORD LineIndex;
+    DWORD Index;
+    DWORD CharsThisLine;
+    DWORD CharsLastLine;
+    DWORD CharsNeeded;
+    DWORD StartOffsetThisLine;
+    PYORI_STRING Line;
+    BOOLEAN TerminateLine;
+    BOOLEAN MoveTrailingTextToNextLine;
+
+    //
+    //  Count the number of lines in the input text.  This may be zero.
+    //
+
+    LineCount = 0;
+    for (Index = 0; Index < Text->LengthInChars; Index++) {
+        if (Text->StartOfString[Index] == '\r') {
+            LineCount++;
+            if (Index + 1 < Text->LengthInChars &&
+                Text->StartOfString[Index + 1] == '\n') {
+                Index++;
+            }
+        } else if (Text->StartOfString[Index] == '\n') {
+            LineCount++;
+        }
+    }
+
+    //
+    //  If new lines are being added, check if the line array is large
+    //  enough and reallocate as needed.  Even if lines are already
+    //  allocated, the current lines need to be moved downwards to make room
+    //  for the lines that are about to be inserted.
+    //
+
+    if (LineCount > 0 || MultilineEdit->LinesPopulated == 0) {
+        if (!YoriWinMultilineEditInsertLines(MultilineEdit, FirstLine, LineCount)) {
+            return FALSE;
+        }
+    }
+
+    //
+    //  Go through each line.  Construct the new line.  For all lines except
+    //  the first, these lines should be empty lines due to the line
+    //  rearrangement above.
+    //
+
+    LineIndex = 0;
+    CharsThisLine = 0;
+    CharsLastLine = 0;
+    TerminateLine = FALSE;
+    MoveTrailingTextToNextLine = FALSE;
+    for (Index = 0; Index <= Text->LengthInChars; Index++) {
+
+        //
+        //  Look for end of line, and treat end of string as end of line
+        //
+
+        if (Index == Text->LengthInChars) {
+            TerminateLine = TRUE;
+            MoveTrailingTextToNextLine = FALSE;
+        } else if (Text->StartOfString[Index] == '\r' ||
+                   Text->StartOfString[Index] == '\n') {
+
+            TerminateLine = TRUE;
+            MoveTrailingTextToNextLine = TRUE;
+        }
+
+        if (TerminateLine) {
+
+            //
+            //  On the end of the first line, make a note of where the string
+            //  is.
+            //
+
+            StartOffsetThisLine = 0;
+            if (LineIndex == 0) {
+                StartOffsetThisLine = FirstCharOffset;
+            }
+
+            Line = &MultilineEdit->LineArray[FirstLine + LineIndex];
+            CharsNeeded = StartOffsetThisLine + CharsThisLine;
+            if (Line->LengthAllocated < CharsNeeded) {
+                YoriLibFreeStringContents(Line);
+                if (!YoriLibAllocateString(Line, CharsNeeded + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
+                    return FALSE;
+                }
+            }
+
+            while (StartOffsetThisLine > Line->LengthInChars) {
+                Line->StartOfString[Line->LengthInChars++] = ' ';
+            }
+
+            if (CharsThisLine > 0) {
+                memcpy(&Line->StartOfString[StartOffsetThisLine],
+                       &Text->StartOfString[Index - CharsThisLine],
+                       CharsThisLine * sizeof(TCHAR));
+            }
+
+            //
+            //  If the line is extending, extend it.  If enter was pressed,
+            //  move any contents after this point to the next line.
+            //
+
+            if (StartOffsetThisLine + CharsThisLine > Line->LengthInChars) {
+                Line->LengthInChars = StartOffsetThisLine + CharsThisLine;
+            } else if (MoveTrailingTextToNextLine && Line->LengthInChars > StartOffsetThisLine + CharsThisLine) {
+                PYORI_STRING NextLine;
+                NextLine = &MultilineEdit->LineArray[FirstLine + LineIndex + 1];
+                ASSERT(NextLine->LengthInChars == 0);
+                CharsNeeded = Line->LengthInChars - (StartOffsetThisLine + CharsThisLine);
+                if (NextLine->LengthAllocated < CharsNeeded) {
+                    YoriLibFreeStringContents(NextLine);
+                    if (!YoriLibAllocateString(NextLine, CharsNeeded + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
+                        return FALSE;
+                    }
+                }
+
+                memcpy(NextLine->StartOfString,
+                       &Line->StartOfString[StartOffsetThisLine + CharsThisLine],
+                       CharsNeeded * sizeof(TCHAR));
+                NextLine->LengthInChars = CharsNeeded;
+            }
+
+            //
+            //  Save away the number of characters on this line so that
+            //  the cursor can be positioned at that point.
+            //
+
+            if (LineIndex == LineCount) {
+                CharsLastLine = CharsThisLine;
+            }
+
+            LineIndex++;
+            CharsThisLine = 0;
+            TerminateLine = FALSE;
+
+            //
+            //  Skip one extra char if this is a \r\n line
+            //
+
+            if (Text->StartOfString[Index] == '\r' && 
+                Index + 1 < Text->LengthInChars &&
+                Text->StartOfString[Index + 1] == '\n') {
+
+                Index++;
+            }
+            continue;
+        }
+
+        CharsThisLine++;
+    }
+
+
+    //
+    //  Set the cursor to be after the newly inserted range.
+    //
+
+    if (LineCount > 0) {
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, (DWORD)-1);
+        *LastLine = FirstLine + LineCount;
+        *LastCharOffset = CharsLastLine;
+    } else {
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
+        *LastLine = FirstLine;
+        *LastCharOffset = FirstCharOffset + CharsLastLine;
+    }
+    MultilineEdit->UserModified = TRUE;
 
     return TRUE;
 }
@@ -1747,286 +1973,127 @@ YoriWinMultilineEditAppendLinesNoDataCopy(
     return TRUE;
 }
 
+//
+//  =========================================
+//  SELECTION FUNCTIONS
+//  =========================================
+//
+
 /**
- Add the currently selected text to the clipboard and delete it from the
- buffer.
+ If a selection is currently active, delete all text in the selection.
+ This implies deleting multiple lines, and/or merging the end of one line
+ with the beginning of another.
 
- @param CtrlHandle Pointer to the multiline edit control.
-
+ @param CtrlHandle Pointer to the multiline edit control containing the
+        selection and contents of the buffer.
+ 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
-YoriWinMultilineEditCutSelectedText(
+YoriWinMultilineEditDeleteSelection(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     )
 {
     PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
     PYORI_WIN_CTRL Ctrl;
-    YORI_STRING Newline;
-    YORI_STRING Text;
+    PYORI_WIN_MULTILINE_EDIT_SELECT Selection;
+    DWORD FirstLine;
+    DWORD FirstCharOffset;
+    DWORD LastLine;
+    DWORD LastCharOffset;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-    YoriLibConstantString(&Newline, _T("\r\n"));
-    YoriLibInitEmptyString(&Text);
 
-    if (!YoriWinMultilineEditGetSelectedText(CtrlHandle, &Newline, &Text)) {
+    if (!YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
+        return TRUE;
+    }
+
+    Selection = &MultilineEdit->Selection;
+
+    FirstLine = Selection->FirstLine;
+    FirstCharOffset = Selection->FirstCharOffset;
+    LastLine = Selection->LastLine;
+    LastCharOffset = Selection->LastCharOffset;
+
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
         return FALSE;
     }
 
-    if (!YoriLibCopyText(&Text)) {
-        YoriLibFreeStringContents(&Text);
-        return FALSE;
-    }
+    YoriWinMultilineEditClearSelection(MultilineEdit);
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, FirstCharOffset, FirstLine);
 
-    YoriLibFreeStringContents(&Text);
-    YoriWinMultilineEditDeleteSelection(CtrlHandle);
     return TRUE;
 }
 
 /**
- Add the currently selected text to the clipboard and clear the selection.
+ Build a single continuous string covering the selected range in a multiline
+ edit control.
 
- @param CtrlHandle Pointer to the multiline edit control.
+ @param CtrlHandle Pointer to the multiline edit control containing the
+        selection and contents of the buffer.
 
+ @param NewlineString Specifies the string to use to delimit lines.  This
+        allows this routine to return text with any arbitrary line ending.
+
+ @param SelectedText On successful completion, populated with a newly
+        allocated buffer containing the selected text.  The caller is
+        expected to free this buffer with @ref YoriLibFreeStringContents .
+ 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
-YoriWinMultilineEditCopySelectedText(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+YoriWinMultilineEditGetSelectedText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_STRING NewlineString,
+    __out PYORI_STRING SelectedText
     )
 {
     PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
     PYORI_WIN_CTRL Ctrl;
-    YORI_STRING Newline;
-    YORI_STRING Text;
+    PYORI_WIN_MULTILINE_EDIT_SELECT Selection;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-    YoriLibConstantString(&Newline, _T("\r\n"));
-    YoriLibInitEmptyString(&Text);
 
-    if (!YoriWinMultilineEditGetSelectedText(CtrlHandle, &Newline, &Text)) {
-        return FALSE;
-    }
-
-    if (!YoriLibCopyText(&Text)) {
-        YoriLibFreeStringContents(&Text);
-        return FALSE;
-    }
-
-    YoriLibFreeStringContents(&Text);
-    return TRUE;
-}
-
-/**
- Paste the text that is currently in the clipboard at the current cursor
- location.  Note this can update the cursor location.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditPasteText(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
-    )
-{
-    YORI_STRING Text;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    PYORI_WIN_CTRL Ctrl;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-    YoriLibInitEmptyString(&Text);
-
-    if (YoriWinMultilineEditSelectionActive(CtrlHandle)) {
-        YoriWinMultilineEditDeleteSelection(CtrlHandle);
-    }
-
-    if (!YoriLibPasteText(&Text)) {
-        return FALSE;
-    }
-    if (!YoriWinMultilineEditInsertTextAtCursor(CtrlHandle, &Text)) {
-        YoriLibFreeStringContents(&Text);
-        return FALSE;
-    }
-
-    YoriLibFreeStringContents(&Text);
-    return TRUE;
-}
-
-/**
- Delete the character before the cursor and move later characters into
- position.
-
- @param MultilineEdit Pointer to the multiline edit control, indicating the
-        current cursor location.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditBackspace(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
-    )
-{
-    DWORD CharsToCopy;
-    PYORI_STRING Line;
-    if (MultilineEdit->CursorLine >= MultilineEdit->LinesPopulated) {
-        return FALSE;
-    }
-
-    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
-
-    if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
-        return YoriWinMultilineEditDeleteSelection(&MultilineEdit->Ctrl);
-    }
-
-    Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
-
-    //
-    //  If we're at the beginning of the line, we may need to merge lines.
-    //  If it's the first line, we're finished.
-    //
-
-    if (MultilineEdit->CursorOffset == 0) {
-
-        DWORD CursorOffset;
-
-        if (MultilineEdit->CursorLine == 0) {
-            return FALSE;
-        }
-
-        MultilineEdit->UserModified = TRUE;
-
-        CursorOffset = MultilineEdit->LineArray[MultilineEdit->CursorLine - 1].LengthInChars;
-
-        if (!YoriWinMultilineEditMergeLines(MultilineEdit, MultilineEdit->CursorLine - 1)) {
-            return FALSE;
-        }
-
-        YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, CursorOffset, MultilineEdit->CursorLine - 1);
+    if (!YoriWinMultilineEditSelectionActive(CtrlHandle)) {
+        YoriLibInitEmptyString(SelectedText);
         return TRUE;
     }
 
-    MultilineEdit->UserModified = TRUE;
+    Selection = &MultilineEdit->Selection;
 
-    if (MultilineEdit->CursorOffset < Line->LengthInChars) {
-        CharsToCopy = Line->LengthInChars - MultilineEdit->CursorOffset;
-        memmove(&Line->StartOfString[MultilineEdit->CursorOffset - 1],
-                &Line->StartOfString[MultilineEdit->CursorOffset],
-                CharsToCopy * sizeof(TCHAR));
-    }
-
-    if (MultilineEdit->CursorOffset <= Line->LengthInChars) {
-        Line->LengthInChars--;
-    }
-
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorLine);
-    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, MultilineEdit->CursorOffset - 1, MultilineEdit->CursorLine);
-    return TRUE;
-}
-
-
-/**
- Delete the character at the cursor and move later characters into position.
-
- @param MultilineEdit Pointer to the multiline edit control, indicating the
-        current cursor location.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditDelete(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
-    )
-{
-    DWORD CharsToCopy;
-    PYORI_STRING Line;
-    DWORD LineLengthNeeded;
-    DWORD Index;
-
-    if (MultilineEdit->CursorLine >= MultilineEdit->LinesPopulated) {
-        return FALSE;
-    }
-
-    if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
-        return YoriWinMultilineEditDeleteSelection(&MultilineEdit->Ctrl);
-    }
-
-    Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
-
-    if (MultilineEdit->CursorOffset >= Line->LengthInChars) {
-        LineLengthNeeded = MultilineEdit->CursorOffset;
-
-        if (LineLengthNeeded > Line->LengthAllocated) {
-            DWORD LengthToAllocate;
-            LengthToAllocate = Line->LengthAllocated * 2 + 80;
-            if (LineLengthNeeded >= LengthToAllocate) {
-                LengthToAllocate = LineLengthNeeded + 80;
-            }
-
-            if (!YoriLibReallocateString(Line, LengthToAllocate)) {
-                return FALSE;
-            }
-        }
-
-        if (LineLengthNeeded > Line->LengthInChars) {
-            for (Index = Line->LengthInChars; Index < LineLengthNeeded; Index++) {
-                Line->StartOfString[Index] = ' ';
-            }
-
-            Line->LengthInChars = LineLengthNeeded;
-        }
-
-        if (!YoriWinMultilineEditMergeLines(MultilineEdit, MultilineEdit->CursorLine)) {
-            return FALSE;
-        }
-
-        MultilineEdit->UserModified = TRUE;
-        return TRUE;
-    }
-
-    MultilineEdit->UserModified = TRUE;
-
-    CharsToCopy = Line->LengthInChars - MultilineEdit->CursorOffset - 1;
-    if (CharsToCopy > 0) {
-        memmove(&Line->StartOfString[MultilineEdit->CursorOffset],
-                &Line->StartOfString[MultilineEdit->CursorOffset + 1],
-                CharsToCopy * sizeof(TCHAR));
-    }
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorLine);
-    Line->LengthInChars--;
-    return TRUE;
+    return YoriWinMultilineEditGetTextRange(MultilineEdit, Selection->FirstLine, Selection->FirstCharOffset, Selection->LastLine, Selection->LastCharOffset, NewlineString, SelectedText);
 }
 
 /**
- Delete the line at the cursor and move later lines into position.
+ Perform debug only checks to see that the selection state follows whatever
+ rules are currently defined for it.
 
- @param MultilineEdit Pointer to the multiline edit control, indicating the
-        current cursor location.
-
- @return TRUE to indicate success, FALSE to indicate failure.
+ @param MultilineEdit Pointer to the multiline edit control specifying the
+        selection state.
  */
-BOOLEAN
-YoriWinMultilineEditDeleteLine(
+VOID
+YoriWinMultilineEditCheckSelectionState(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
     )
 {
-    if (MultilineEdit->LinesPopulated > 0) {
-        YoriLibFreeStringContents(&MultilineEdit->LineArray[MultilineEdit->CursorLine]);
-        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated - 1) {
-            memmove(&MultilineEdit->LineArray[MultilineEdit->CursorLine],
-                    &MultilineEdit->LineArray[MultilineEdit->CursorLine + 1],
-                    (MultilineEdit->LinesPopulated - MultilineEdit->CursorLine) * sizeof(YORI_STRING));
-        }
+    PYORI_WIN_MULTILINE_EDIT_SELECT Selection;
+    Selection = &MultilineEdit->Selection;
 
-        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->LinesPopulated);
-        MultilineEdit->LinesPopulated--;
-        MultilineEdit->UserModified = TRUE;
-        return TRUE;
+    if (Selection->Active  == YoriWinMultilineEditSelectNotActive) {
+        return;
     }
-    return FALSE;
+    ASSERT(Selection->LastLine < MultilineEdit->LinesPopulated);
+    ASSERT(Selection->FirstLine <= Selection->LastLine);
+    if (Selection->Active == YoriWinMultilineEditSelectMouseFromTopDown ||
+        Selection->Active == YoriWinMultilineEditSelectMouseFromBottomUp) {
+        ASSERT(Selection->LastLine != Selection->FirstLine || Selection->FirstCharOffset <= Selection->LastCharOffset);
+    } else {
+        ASSERT(Selection->LastLine != Selection->FirstLine || Selection->FirstCharOffset < Selection->LastCharOffset);
+    }
+    ASSERT(Selection->FirstCharOffset <= MultilineEdit->LineArray[Selection->FirstLine].LengthInChars);
+    ASSERT(Selection->LastCharOffset <= MultilineEdit->LineArray[Selection->LastLine].LengthInChars);
 }
 
 /**
@@ -2387,6 +2454,185 @@ YoriWinMultilineEditSetSelectionRange(
     YoriWinMultilineEditPaint(MultilineEdit);
 }
 
+//
+//  =========================================
+//  CLIPBOARD FUNCTIONS
+//  =========================================
+//
+
+/**
+ Add the currently selected text to the clipboard and delete it from the
+ buffer.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditCutSelectedText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+    YORI_STRING Newline;
+    YORI_STRING Text;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    YoriLibConstantString(&Newline, _T("\r\n"));
+    YoriLibInitEmptyString(&Text);
+
+    if (!YoriWinMultilineEditGetSelectedText(CtrlHandle, &Newline, &Text)) {
+        return FALSE;
+    }
+
+    if (!YoriLibCopyText(&Text)) {
+        YoriLibFreeStringContents(&Text);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&Text);
+    YoriWinMultilineEditDeleteSelection(CtrlHandle);
+    return TRUE;
+}
+
+/**
+ Add the currently selected text to the clipboard and clear the selection.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditCopySelectedText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+    YORI_STRING Newline;
+    YORI_STRING Text;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    YoriLibConstantString(&Newline, _T("\r\n"));
+    YoriLibInitEmptyString(&Text);
+
+    if (!YoriWinMultilineEditGetSelectedText(CtrlHandle, &Newline, &Text)) {
+        return FALSE;
+    }
+
+    if (!YoriLibCopyText(&Text)) {
+        YoriLibFreeStringContents(&Text);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&Text);
+    return TRUE;
+}
+
+/**
+ Paste the text that is currently in the clipboard at the current cursor
+ location.  Note this can update the cursor location.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditPasteText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    YORI_STRING Text;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    YoriLibInitEmptyString(&Text);
+
+    if (YoriWinMultilineEditSelectionActive(CtrlHandle)) {
+        YoriWinMultilineEditDeleteSelection(CtrlHandle);
+    }
+
+    if (!YoriLibPasteText(&Text)) {
+        return FALSE;
+    }
+    if (!YoriWinMultilineEditInsertTextAtCursor(CtrlHandle, &Text)) {
+        YoriLibFreeStringContents(&Text);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&Text);
+    return TRUE;
+}
+
+//
+//  =========================================
+//  GENERAL EXPORTED API FUNCTIONS
+//  =========================================
+//
+
+/**
+ Insert a block of text, which may contain newlines, into the control at the
+ current cursor position.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param Text Pointer to the text to insert.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditInsertTextAtCursor(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_STRING Text
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+    DWORD LastLine;
+    DWORD LastCharOffset;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, Text, &LastLine, &LastCharOffset)) {
+        return FALSE;
+    }
+
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, LastCharOffset, LastLine);
+    return TRUE;
+}
+
+/**
+ Set the color attributes of the multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param Attributes Specifies the foreground and background color for the
+        multiline edit control to use.
+ */
+VOID
+YoriWinMultilineEditSetColor(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in WORD Attributes
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    MultilineEdit->TextAttributes = Attributes;
+    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, 0, (DWORD)-1);
+    YoriWinMultilineEditPaintNonClient(MultilineEdit);
+    YoriWinMultilineEditPaint(MultilineEdit);
+}
+
 /**
  Return the current cursor location within a multiline edit control.
 
@@ -2532,6 +2778,449 @@ YoriWinMultilineEditSetViewportLocation(
         MultilineEdit->ViewportLeft = NewViewportLeft;
     }
     YoriWinMultilineEditPaint(MultilineEdit);
+}
+
+/**
+ Clear all of the contents of a multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditClear(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    DWORD Index;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    for (Index = 0; Index < MultilineEdit->LinesPopulated; Index++) {
+        YoriLibFreeStringContents(&MultilineEdit->LineArray[Index]);
+    }
+
+    MultilineEdit->LinesPopulated = 0;
+    MultilineEdit->ViewportTop = 0;
+    MultilineEdit->ViewportLeft = 0;
+
+    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->ViewportTop, (DWORD)-1);
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, 0, 0);
+
+    YoriWinMultilineEditPaint(MultilineEdit);
+    return TRUE;
+}
+
+/**
+ Return the number of lines with data in a multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return The number of lines with data.
+ */
+DWORD
+YoriWinMultilineEditGetLineCount(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    return MultilineEdit->LinesPopulated;
+}
+
+/**
+ Return the string that describes a single line within a multiline edit
+ control.  As of this writing, this is a pointer to the string used by the
+ control itself, and as such is only meaningful if the text cannot be
+ altered by any mechanism.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param Index The line number to return.
+
+ @return Pointer to the line string, or NULL if the line index is out of
+         bounds.
+ */
+PYORI_STRING
+YoriWinMultilineEditGetLineByIndex(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORD Index
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (Index >= MultilineEdit->LinesPopulated) {
+        return NULL;
+    }
+
+    return &MultilineEdit->LineArray[Index];
+}
+
+/**
+ Set the title to display on the top of a multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param Caption Pointer to the caption to display on the top of the multiline
+        edit control.  This can point to an empty string to indicate no
+        caption should be displayed.
+
+ @return TRUE to indicate the caption was successfully updated, or FALSE on
+         failure.
+ */
+BOOLEAN
+YoriWinMultilineEditSetCaption(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_STRING Caption
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    YORI_STRING NewCaption;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (MultilineEdit->Caption.LengthAllocated < Caption->LengthInChars) {
+        if (!YoriLibAllocateString(&NewCaption, Caption->LengthInChars)) {
+            return FALSE;
+        }
+
+        YoriLibFreeStringContents(&MultilineEdit->Caption);
+        memcpy(&MultilineEdit->Caption, &NewCaption, sizeof(YORI_STRING));
+    }
+
+    if (Caption->LengthInChars > 0) {
+        memcpy(MultilineEdit->Caption.StartOfString, Caption->StartOfString, Caption->LengthInChars * sizeof(TCHAR));
+    }
+    MultilineEdit->Caption.LengthInChars = Caption->LengthInChars;
+    YoriWinMultilineEditPaintNonClient(MultilineEdit);
+    return TRUE;
+}
+
+/**
+ Indicates whether the multiline edit control has been modified by the user.
+ This is typically used after some external event indicates that the buffer
+ should be considered unchanged, eg., a file is successfully saved.
+
+ @param CtrlHandle Pointer to the multiline edit contorl.
+
+ @param ModifyState TRUE if the control should consider itself modified by
+        the user, FALSE if it should not.
+
+ @return TRUE if the control was previously modified by the user, FALSE if it
+         was not.
+ */
+BOOLEAN
+YoriWinMultilineEditSetModifyState(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN ModifyState
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    BOOLEAN PreviousValue;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    PreviousValue = MultilineEdit->UserModified;
+    MultilineEdit->UserModified = ModifyState;
+    return PreviousValue;
+}
+
+/**
+ Query the number of spaces to display for each tab character in the buffer.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param TabWidth On successful completion, set to the current tab width.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinMultilineEditGetTabWidth(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PDWORD TabWidth
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    *TabWidth = MultilineEdit->TabWidth;
+    return TRUE;
+}
+
+/**
+ Set the number of spaces to display for each tab character in the buffer.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param TabWidth Specifies the new tab width.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinMultilineEditSetTabWidth(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORD TabWidth
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    MultilineEdit->TabWidth = TabWidth;
+    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, 0, MultilineEdit->LinesPopulated);
+    return TRUE;
+}
+
+/**
+ Enable or disable traditional MS-DOS edit navigation rules.  In the
+ traditional model, the cursor can move infinitely right of the text in any
+ line, so the cursor's line does not change in response to left and right keys.
+ In the more modern model, navigating left beyond the beginning of the line
+ moves to the previous line, and navigating right beyond the end of the line
+ moves to the next line.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param TraditionalNavigationEnabled TRUE to use traditional MS-DOS edit
+        navigation, FALSE to use Windows style multiline edit navigation.
+ */
+VOID
+YoriWinMultilineEditSetTraditionalNavigation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN TraditionalNavigationEnabled
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    MultilineEdit->TraditionalEditNavigation = TraditionalNavigationEnabled;
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+    if (!MultilineEdit->TraditionalEditNavigation) {
+        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
+            if (MultilineEdit->CursorOffset > MultilineEdit->LineArray[MultilineEdit->CursorLine].LengthInChars) {
+                YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, MultilineEdit->LineArray[MultilineEdit->CursorLine].LengthInChars, MultilineEdit->CursorLine);
+            }
+        }
+    }
+}
+
+/**
+ Returns TRUE if the multiline edit control has been modified by the user
+ since the last time @ref YoriWinMultilineEditSetModifyState indicated that
+ no user modification has occurred.
+
+ @param CtrlHandle Pointer to the multiline edit contorl.
+
+ @return TRUE if the control has been modified by the user, FALSE if it has
+         not.
+ */
+BOOLEAN
+YoriWinMultilineEditGetModifyState(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    return MultilineEdit->UserModified;
+}
+
+/**
+ Set a function to call when the cursor location changes.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param NotifyCallback Pointer to a function to invoke when the cursor
+        moves.
+
+ @return TRUE to indicate the callback function was successfully updated,
+         FALSE to indicate another callback function was already present.
+ */
+BOOLEAN
+YoriWinMultilineEditSetCursorMoveNotifyCallback(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_WIN_NOTIFY_CURSOR_MOVE NotifyCallback
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (MultilineEdit->CursorMoveCallback != NULL) {
+        return FALSE;
+    }
+
+    MultilineEdit->CursorMoveCallback = NotifyCallback;
+
+    return TRUE;
+}
+
+//
+//  =========================================
+//  INPUT HANDLING FUNCTIONS
+//  =========================================
+//
+
+/**
+ Delete the character before the cursor and move later characters into
+ position.
+
+ @param MultilineEdit Pointer to the multiline edit control, indicating the
+        current cursor location.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditBackspace(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    PYORI_STRING Line;
+    DWORD FirstLine;
+    DWORD FirstCharOffset;
+    DWORD LastLine;
+    DWORD LastCharOffset;
+
+    if (MultilineEdit->CursorLine >= MultilineEdit->LinesPopulated) {
+        return FALSE;
+    }
+
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+
+    if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
+        return YoriWinMultilineEditDeleteSelection(&MultilineEdit->Ctrl);
+    }
+
+    Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
+
+    LastLine = MultilineEdit->CursorLine;
+    LastCharOffset = MultilineEdit->CursorOffset;
+
+    //
+    //  If we're at the beginning of the line, we may need to merge lines.
+    //  If it's the first line, we're finished.
+    //
+
+    if (LastCharOffset == 0) {
+        if (MultilineEdit->CursorLine == 0) {
+            return FALSE;
+        }
+
+        FirstLine = MultilineEdit->CursorLine - 1;
+        FirstCharOffset = MultilineEdit->LineArray[FirstLine].LengthInChars;
+    } else {
+        FirstLine = LastLine;
+        FirstCharOffset = LastCharOffset - 1;
+    }
+
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+        return FALSE;
+    }
+
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, FirstCharOffset, FirstLine);
+    return TRUE;
+}
+
+/**
+ Delete the character at the cursor and move later characters into position.
+
+ @param MultilineEdit Pointer to the multiline edit control, indicating the
+        current cursor location.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditDelete(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    PYORI_STRING Line;
+    DWORD FirstLine;
+    DWORD FirstCharOffset;
+    DWORD LastLine;
+    DWORD LastCharOffset;
+
+    if (MultilineEdit->CursorLine >= MultilineEdit->LinesPopulated) {
+        return FALSE;
+    }
+
+    if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
+        return YoriWinMultilineEditDeleteSelection(&MultilineEdit->Ctrl);
+    }
+
+    Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
+
+    FirstLine = MultilineEdit->CursorLine;
+    FirstCharOffset = MultilineEdit->CursorOffset;
+
+    if (FirstCharOffset >= Line->LengthInChars) {
+        LastLine = FirstLine + 1;
+        LastCharOffset = 0;
+    } else {
+        LastLine = FirstLine;
+        LastCharOffset = FirstCharOffset + 1;
+    }
+
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+        return FALSE;
+    }
+
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, FirstCharOffset, FirstLine);
+
+    return TRUE;
+}
+
+/**
+ Delete the line at the cursor and move later lines into position.
+
+ @param MultilineEdit Pointer to the multiline edit control, indicating the
+        current cursor location.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditDeleteLine(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    if (MultilineEdit->LinesPopulated == 0) {
+        return FALSE;
+    }
+
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, MultilineEdit->CursorLine, 0, MultilineEdit->CursorLine + 1, 0)) {
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 /**
@@ -3021,132 +3710,31 @@ YoriWinMultilineEditAddChar(
     __in TCHAR Char
     )
 {
-    DWORD LineLengthNeeded;
+    DWORD NewCursorLine;
     DWORD NewCursorOffset;
-    PYORI_STRING Line;
+    YORI_STRING String;
 
     if (YoriWinMultilineEditSelectionActive(MultilineEdit)) {
         YoriWinMultilineEditDeleteSelection(MultilineEdit);
     }
 
-    //
-    //  If the line array doesn't have enough lines, allocate more.
-    //
-
-    if (MultilineEdit->CursorLine >= MultilineEdit->LinesAllocated ||
-        (Char == '\r' && MultilineEdit->LinesPopulated == MultilineEdit->LinesAllocated)) {
-        DWORD NewLineCount;
-
-        NewLineCount = MultilineEdit->LinesAllocated * 2;
-        if (NewLineCount < 0x1000) {
-            NewLineCount = 0x1000;
-        }
-
-        if (!YoriWinMultilineEditReallocateLineArray(MultilineEdit, NewLineCount)) {
-            return FALSE;
-        }
-    }
-
     YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
 
-    //
-    //  If the user wants to split a line, split it.
-    //
+    YoriLibInitEmptyString(&String);
+    String.StartOfString = &Char;
+    String.LengthInChars = 1;
 
-    if (Char == '\r') {
-        BOOLEAN Result;
-        Result = YoriWinMultilineEditSplitLines(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset);
-        if (Result) {
-            MultilineEdit->UserModified = TRUE;
-            YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, 0, MultilineEdit->CursorLine + 1);
-            MultilineEdit->DisplayCursorOffset = 0;
+    if (!MultilineEdit->InsertMode) {
+        if (!YoriWinMultilineEditOverwriteTextRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
+            return FALSE;
         }
-        return Result;
-    }
-
-    //
-    //  If the line array isn't populated to the current point, populate it.
-    //
-
-    for (;
-         MultilineEdit->LinesPopulated <= MultilineEdit->CursorLine;
-         MultilineEdit->LinesPopulated++) {
-
-        YoriLibInitEmptyString(&MultilineEdit->LineArray[MultilineEdit->LinesPopulated]);
-    }
-
-    MultilineEdit->UserModified = TRUE;
-
-    //
-    //  Calculate how much space is needed in the line.  If there's not
-    //  enough, reallocate it.
-    //
-
-    Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
-
-    LineLengthNeeded = 0;
-    if (MultilineEdit->InsertMode) {
-        LineLengthNeeded = Line->LengthInChars + 1;
-    }
-
-    if (MultilineEdit->CursorOffset >= LineLengthNeeded) {
-        LineLengthNeeded = MultilineEdit->CursorOffset + 1;
-    }
-
-    if (LineLengthNeeded > Line->LengthAllocated) {
-        DWORD LengthToAllocate;
-        LengthToAllocate = Line->LengthAllocated * 2 + 80;
-        if (LineLengthNeeded >= LengthToAllocate) {
-            LengthToAllocate = LineLengthNeeded + 80;
-        }
-
-        if (!YoriLibReallocateString(Line, LengthToAllocate)) {
+    } else {
+        if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
             return FALSE;
         }
     }
 
-    //
-    //  If inserting, move following characters forward.
-    //
-
-    if (MultilineEdit->InsertMode &&
-        MultilineEdit->CursorOffset + 1 < Line->LengthInChars) {
-
-        DWORD CharsToCopy;
-        CharsToCopy = Line->LengthInChars - MultilineEdit->CursorOffset;
-        if (MultilineEdit->CursorOffset < Line->LengthInChars) {
-            memmove(&Line->StartOfString[MultilineEdit->CursorOffset + 1],
-                    &Line->StartOfString[MultilineEdit->CursorOffset],
-                    CharsToCopy * sizeof(TCHAR));
-
-            Line->LengthInChars++;
-        }
-    }
-
-    //
-    //  If the new character is beyond the current end of the line, pad the
-    //  gap with spaces.
-    //
-
-    for (;
-         Line->LengthInChars < MultilineEdit->CursorOffset;
-         Line->LengthInChars++) {
-
-        Line->StartOfString[Line->LengthInChars] = ' ';
-    }
-
-    //
-    //  Now actually add the specified character.
-    //
-
-    Line->StartOfString[MultilineEdit->CursorOffset] = Char;
-    NewCursorOffset = MultilineEdit->CursorOffset + 1;
-    if (NewCursorOffset > Line->LengthInChars) {
-        Line->LengthInChars = NewCursorOffset;
-    }
-
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorLine);
-    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, MultilineEdit->CursorLine);
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
 
     return TRUE;
 
@@ -3357,310 +3945,6 @@ YoriWinMultilineEditEventHandler(
     }
 
     return FALSE;
-}
-
-/**
- Clear all of the contents of a multiline edit control.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditClear(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    DWORD Index;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    for (Index = 0; Index < MultilineEdit->LinesPopulated; Index++) {
-        YoriLibFreeStringContents(&MultilineEdit->LineArray[Index]);
-    }
-
-    MultilineEdit->LinesPopulated = 0;
-    MultilineEdit->ViewportTop = 0;
-    MultilineEdit->ViewportLeft = 0;
-
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->ViewportTop, (DWORD)-1);
-    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, 0, 0);
-
-    YoriWinMultilineEditPaint(MultilineEdit);
-    return TRUE;
-}
-
-/**
- Return the number of lines with data in a multiline edit control.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @return The number of lines with data.
- */
-DWORD
-YoriWinMultilineEditGetLineCount(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    return MultilineEdit->LinesPopulated;
-}
-
-/**
- Return the string that describes a single line within a multiline edit
- control.  As of this writing, this is a pointer to the string used by the
- control itself, and as such is only meaningful if the text cannot be
- altered by any mechanism.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @param Index The line number to return.
-
- @return Pointer to the line string, or NULL if the line index is out of
-         bounds.
- */
-PYORI_STRING
-YoriWinMultilineEditGetLineByIndex(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD Index
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    if (Index >= MultilineEdit->LinesPopulated) {
-        return NULL;
-    }
-
-    return &MultilineEdit->LineArray[Index];
-}
-
-/**
- Set the title to display on the top of a multiline edit control.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @param Caption Pointer to the caption to display on the top of the multiline
-        edit control.  This can point to an empty string to indicate no
-        caption should be displayed.
-
- @return TRUE to indicate the caption was successfully updated, or FALSE on
-         failure.
- */
-BOOLEAN
-YoriWinMultilineEditSetCaption(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_STRING Caption
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    YORI_STRING NewCaption;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    if (MultilineEdit->Caption.LengthAllocated < Caption->LengthInChars) {
-        if (!YoriLibAllocateString(&NewCaption, Caption->LengthInChars)) {
-            return FALSE;
-        }
-
-        YoriLibFreeStringContents(&MultilineEdit->Caption);
-        memcpy(&MultilineEdit->Caption, &NewCaption, sizeof(YORI_STRING));
-    }
-
-    if (Caption->LengthInChars > 0) {
-        memcpy(MultilineEdit->Caption.StartOfString, Caption->StartOfString, Caption->LengthInChars * sizeof(TCHAR));
-    }
-    MultilineEdit->Caption.LengthInChars = Caption->LengthInChars;
-    YoriWinMultilineEditPaintNonClient(MultilineEdit);
-    return TRUE;
-}
-
-/**
- Indicates whether the multiline edit control has been modified by the user.
- This is typically used after some external event indicates that the buffer
- should be considered unchanged, eg., a file is successfully saved.
-
- @param CtrlHandle Pointer to the multiline edit contorl.
-
- @param ModifyState TRUE if the control should consider itself modified by
-        the user, FALSE if it should not.
-
- @return TRUE if the control was previously modified by the user, FALSE if it
-         was not.
- */
-BOOLEAN
-YoriWinMultilineEditSetModifyState(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in BOOLEAN ModifyState
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    BOOLEAN PreviousValue;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    PreviousValue = MultilineEdit->UserModified;
-    MultilineEdit->UserModified = ModifyState;
-    return PreviousValue;
-}
-
-/**
- Query the number of spaces to display for each tab character in the buffer.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @param TabWidth On successful completion, set to the current tab width.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOLEAN
-YoriWinMultilineEditGetTabWidth(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD TabWidth
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    *TabWidth = MultilineEdit->TabWidth;
-    return TRUE;
-}
-
-/**
- Set the number of spaces to display for each tab character in the buffer.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @param TabWidth Specifies the new tab width.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOLEAN
-YoriWinMultilineEditSetTabWidth(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in DWORD TabWidth
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    MultilineEdit->TabWidth = TabWidth;
-    YoriWinMultilineEditExpandDirtyRange(MultilineEdit, 0, MultilineEdit->LinesPopulated);
-    return TRUE;
-}
-
-/**
- Enable or disable traditional MS-DOS edit navigation rules.  In the
- traditional model, the cursor can move infinitely right of the text in any
- line, so the cursor's line does not change in response to left and right keys.
- In the more modern model, navigating left beyond the beginning of the line
- moves to the previous line, and navigating right beyond the end of the line
- moves to the next line.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @param TraditionalNavigationEnabled TRUE to use traditional MS-DOS edit
-        navigation, FALSE to use Windows style multiline edit navigation.
- */
-VOID
-YoriWinMultilineEditSetTraditionalNavigation(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in BOOLEAN TraditionalNavigationEnabled
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-    MultilineEdit->TraditionalEditNavigation = TraditionalNavigationEnabled;
-    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
-    if (!MultilineEdit->TraditionalEditNavigation) {
-        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
-            if (MultilineEdit->CursorOffset > MultilineEdit->LineArray[MultilineEdit->CursorLine].LengthInChars) {
-                YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, MultilineEdit->LineArray[MultilineEdit->CursorLine].LengthInChars, MultilineEdit->CursorLine);
-            }
-        }
-    }
-}
-
-/**
- Returns TRUE if the multiline edit control has been modified by the user
- since the last time @ref YoriWinMultilineEditSetModifyState indicated that
- no user modification has occurred.
-
- @param CtrlHandle Pointer to the multiline edit contorl.
-
- @return TRUE if the control has been modified by the user, FALSE if it has
-         not.
- */
-BOOLEAN
-YoriWinMultilineEditGetModifyState(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    return MultilineEdit->UserModified;
-}
-
-/**
- Set a function to call when the cursor location changes.
-
- @param CtrlHandle Pointer to the multiline edit control.
-
- @param NotifyCallback Pointer to a function to invoke when the cursor
-        moves.
-
- @return TRUE to indicate the callback function was successfully updated,
-         FALSE to indicate another callback function was already present.
- */
-BOOLEAN
-YoriWinMultilineEditSetCursorMoveNotifyCallback(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_WIN_NOTIFY_CURSOR_MOVE NotifyCallback
-    )
-{
-    PYORI_WIN_CTRL Ctrl;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    if (MultilineEdit->CursorMoveCallback != NULL) {
-        return FALSE;
-    }
-
-    MultilineEdit->CursorMoveCallback = NotifyCallback;
-
-    return TRUE;
 }
 
 /**
