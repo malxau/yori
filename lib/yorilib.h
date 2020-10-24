@@ -3195,7 +3195,7 @@ YoriLibReallocateStringWithoutPreservingContents(
 
 VOID
 YoriLibConstantString(
-    __out PYORI_STRING String,
+    __out _Post_satisfies_(String->StartOfString != NULL) PYORI_STRING String,
     __in LPCTSTR Value
     );
 

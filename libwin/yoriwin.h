@@ -606,6 +606,7 @@ YoriWinMultilineEditSetSelectionRange(
     __in DWORD EndOffset
     );
 
+__success(return)
 BOOLEAN
 YoriWinMultilineEditGetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,

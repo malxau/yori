@@ -1694,6 +1694,9 @@ YoriShExecExecPlan(
                 YoriShGlobal.ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
             } else if (ExecPlan->NumberCommands == 1 && !ExecPlan->WaitForCompletion) {
                 YoriShExecViaSubshell(ExecContext);
+                if (OutputBuffer != NULL) {
+                    *OutputBuffer = NULL;
+                }
                 return;
             } else {
                 YoriShGlobal.ErrorLevel = YoriShBuiltIn(ExecContext);

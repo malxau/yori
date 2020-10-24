@@ -1275,6 +1275,10 @@ Exit:
 
     for (Count = 0; Count < sizeof(Objects)/sizeof(Objects[0]); Count++) {
         if (Objects[Count].FileHandle != NULL && Objects[Count].FileHandle != INVALID_HANDLE_VALUE) {
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6001) // Analyze doesn't trust ZeroMemory, or
+                                // doesn't understand the array math
+#endif
             CloseHandle(Objects[Count].FileHandle);
         }
         if (Objects[Count].Buffer != NULL) {

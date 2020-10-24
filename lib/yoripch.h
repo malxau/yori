@@ -74,6 +74,10 @@
 #pragma warning(disable: 4001) // Single line comment, again
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(disable: 26451) // Arithmetic overflow
+#endif
+
 #ifdef _UNICODE
 /**
  When Unicode is defined, indicate the literal string is Unicode.
@@ -179,6 +183,20 @@
  SAL annotation for a return type.
  */
 #define _Return_type_success_(x)
+#endif
+
+#ifndef _Post_satisfies_
+/**
+ SAL annotation for a postcondition.
+ */
+#define _Post_satisfies_(x)
+#endif
+
+#ifndef _Acquires_lock_
+/**
+ SAL annotation to indicate a function acquires a lock.
+ */
+#define _Acquires_lock_(x)
 #endif
 
 

@@ -119,11 +119,24 @@ YORI_LIST_ENTRY BufferedProcessList;
 
  @param Mutex The mutex to acquire.
  */
+_Acquires_lock_(Mutex)
 VOID
 AcquireMutex(
     __in HANDLE Mutex
     )
 {
+
+    //
+    //  Whether the mutex is acquired is determined by the return value and
+    //  the acceptable return values are defined by the parameters.  Analyze
+    //  might think we're doing something like closing the handle while using
+    //  it as a synchronization primitive, but if that happened, we have
+    //  bigger problems.
+    //
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 26166) 
+#endif
     WaitForSingleObject(Mutex, INFINITE);
 }
 

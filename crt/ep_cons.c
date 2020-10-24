@@ -38,6 +38,10 @@
 #pragma warning(disable: 4214) // bit field type other than int
 #pragma warning(disable: 4514) // unreferenced inline function
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(disable: 26451) // Arithmetic overflow
+#endif
+
 #include <windows.h>
 
 /**

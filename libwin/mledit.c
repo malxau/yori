@@ -1437,6 +1437,7 @@ YoriWinMultilineEditGetUndoRecordForOperation(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriWinMultilineEditEnsureSpaceBeforeOrAfterString(
     __in PYORI_STRING CombinedString,
@@ -1530,6 +1531,7 @@ YoriWinMultilineEditIsUndoAvailable(
     return FALSE;
 }
 
+__success(return)
 BOOLEAN
 YoriWinMultilineEditDeleteTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
@@ -1540,6 +1542,7 @@ YoriWinMultilineEditDeleteTextRange(
     __in DWORD LastCharOffset
     );
 
+__success(return)
 BOOLEAN
 YoriWinMultilineEditInsertTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
@@ -1963,6 +1966,7 @@ YoriWinMultilineEditGetTextRange(
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriWinMultilineEditDeleteTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
@@ -2245,6 +2249,7 @@ YoriWinMultilineEditInsertLines(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriWinMultilineEditInsertTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
@@ -2507,6 +2512,7 @@ YoriWinMultilineEditInsertTextRange(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriWinMultilineEditOverwriteTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
@@ -3215,6 +3221,7 @@ YoriWinMultilineEditFinishMouseSelection(
  @return TRUE to indicate that the selection is active and a range has been
          returned.  FALSE to indicate no selection is active.
  */
+__success(return)
 BOOLEAN
 YoriWinMultilineEditGetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,

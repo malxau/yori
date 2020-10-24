@@ -119,6 +119,12 @@ YoriShAddToHistory(
         ReleaseMutex(YoriShHistoryLock);
     }
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 26165) // Analyze thinks a lock might be leaked
+                                 // if WaitForSingleObject acquired it but
+                                 // returned a different result.  That can't
+                                 // happen.
+#endif
     return TRUE;
 }
 
@@ -404,6 +410,12 @@ YoriShSaveHistoryToFile()
     }
 
     CloseHandle(FileHandle);
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 26165) // Analyze thinks a lock might be leaked
+                                 // if WaitForSingleObject acquired it but
+                                 // returned a different result.  That can't
+                                 // happen.
+#endif
     return TRUE;
 }
 

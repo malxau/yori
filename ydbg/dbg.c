@@ -300,6 +300,12 @@ YDbgDumpProcessKernelStacks(
         CloseHandle(Ctrl.HandleArray[Index]);
     }
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6001) // Analyze doesn't understand this was set by
+                                // an annotated out above.  For some reason it
+                                // doesn't complain about the array access
+                                // above, which seems far more convoluted.
+#endif
     YoriLibFree(Ctrl.HandleArray);
     Ctrl.HandleArray = NULL;
 
