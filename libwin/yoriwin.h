@@ -704,6 +704,16 @@ YoriWinMultilineEditSetCursorMoveNotifyCallback(
     );
 
 BOOLEAN
+YoriWinMultilineEditIsUndoAvailable(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinMultilineEditUndo(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
 YoriWinMultilineEditReposition(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PSMALL_RECT CtrlRect

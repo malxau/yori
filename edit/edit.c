@@ -103,6 +103,47 @@ typedef struct _EDIT_CONTEXT {
     DWORD Encoding;
 
     /**
+     The index of the edit menu.  This is used to enable and disable menu
+     items based on the state of the control and clipboard.
+     */
+    DWORD EditMenuIndex;
+
+    /**
+     The index of the undo menu item.
+     */
+    DWORD EditUndoMenuIndex;
+
+    /**
+     The index of the cut menu item.
+     */
+    DWORD EditCutMenuIndex;
+
+    /**
+     The index of the copy menu item.
+     */
+    DWORD EditCopyMenuIndex;
+
+    /**
+     The index of the paste menu item.
+     */
+    DWORD EditPasteMenuIndex;
+
+    /**
+     The index of the clear menu item.
+     */
+    DWORD EditClearMenuIndex;
+
+    /**
+     The index of the options menu.
+     */
+    DWORD OptionsMenuIndex;
+
+    /**
+     The index of the traditional item in the options menu.
+     */
+    DWORD OptionsTraditionalMenuIndex;
+
+    /**
      TRUE if the search should be case sensitive.  FALSE if it should be case
      insensitive.
      */
@@ -948,6 +989,7 @@ EditEditButtonClicked(
     )
 {
     PYORI_WIN_CTRL_HANDLE EditMenu;
+    PYORI_WIN_CTRL_HANDLE UndoItem;
     PYORI_WIN_CTRL_HANDLE CutItem;
     PYORI_WIN_CTRL_HANDLE CopyItem;
     PYORI_WIN_CTRL_HANDLE PasteItem;
@@ -964,11 +1006,18 @@ EditEditButtonClicked(
     YoriLibPasteText(&ClipboardText);
 
     TextSelected = YoriWinMultilineEditSelectionActive(EditContext->MultilineEdit);
-    EditMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, 1);
-    CutItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, 0);
-    CopyItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, 1);
-    PasteItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, 2);
-    ClearItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, 3);
+    EditMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->EditMenuIndex);
+    UndoItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditUndoMenuIndex);
+    CutItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditCutMenuIndex);
+    CopyItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditCopyMenuIndex);
+    PasteItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditPasteMenuIndex);
+    ClearItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditClearMenuIndex);
+
+    if (YoriWinMultilineEditIsUndoAvailable(EditContext->MultilineEdit)) {
+        YoriWinMenuBarEnableMenuItem(UndoItem);
+    } else {
+        YoriWinMenuBarDisableMenuItem(UndoItem);
+    }
 
     if (TextSelected) {
         YoriWinMenuBarEnableMenuItem(CutItem);
@@ -988,6 +1037,25 @@ EditEditButtonClicked(
 
     YoriLibFreeStringContents(&ClipboardText);
 }
+
+/**
+ A callback invoked when the undo button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+EditUndoButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PEDIT_CONTEXT EditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+    YoriWinMultilineEditUndo(EditContext->MultilineEdit);
+}
+
 
 /**
  A callback invoked when the cut button is clicked.
@@ -1674,11 +1742,12 @@ EditTraditionalNavigationOptionsButtonClicked(
     PYORI_WIN_CTRL_HANDLE TraditionalNavigationMenuItem;
 
     PEDIT_CONTEXT EditContext;
-    OptionsMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, 3);
-    TraditionalNavigationMenuItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, OptionsMenu, 1);
-
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
+
+    OptionsMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->OptionsMenuIndex);
+    TraditionalNavigationMenuItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, OptionsMenu, EditContext->OptionsTraditionalMenuIndex);
+
 
     if (EditContext->TraditionalNavigation) {
         EditContext->TraditionalNavigation = FALSE;
@@ -1799,94 +1868,155 @@ EditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
-    YORI_WIN_MENU_ENTRY EditMenuEntries[4];
+    YORI_WIN_MENU_ENTRY EditMenuEntries[6];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
     YORI_WIN_MENU_ENTRY OptionsMenuEntries[2];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
     PYORI_WIN_CTRL_HANDLE Ctrl;
+    DWORD MenuIndex;
 
     ZeroMemory(&FileMenuEntries, sizeof(FileMenuEntries));
-    YoriLibConstantString(&FileMenuEntries[0].Caption, _T("&New"));
-    YoriLibConstantString(&FileMenuEntries[0].Hotkey, _T("Ctrl+N"));
-    FileMenuEntries[0].NotifyCallback = EditNewButtonClicked;
-    YoriLibConstantString(&FileMenuEntries[1].Caption, _T("&Open..."));
-    YoriLibConstantString(&FileMenuEntries[1].Hotkey, _T("Ctrl+O"));
-    FileMenuEntries[1].NotifyCallback = EditOpenButtonClicked;
-    YoriLibConstantString(&FileMenuEntries[2].Caption, _T("&Save"));
-    FileMenuEntries[2].NotifyCallback = EditSaveButtonClicked;
-    YoriLibConstantString(&FileMenuEntries[2].Hotkey, _T("Ctrl+S"));
-    YoriLibConstantString(&FileMenuEntries[3].Caption, _T("Save &As..."));
-    FileMenuEntries[3].NotifyCallback = EditSaveAsButtonClicked;
-    FileMenuEntries[4].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
-    YoriLibConstantString(&FileMenuEntries[5].Caption, _T("E&xit"));
-    YoriLibConstantString(&FileMenuEntries[5].Hotkey, _T("Ctrl+Q"));
-    FileMenuEntries[5].NotifyCallback = EditExitButtonClicked;
+    MenuIndex = 0;
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&New"));
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+N"));
+    FileMenuEntries[MenuIndex].NotifyCallback = EditNewButtonClicked;
 
+    MenuIndex++;
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&Open..."));
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+O"));
+    FileMenuEntries[MenuIndex].NotifyCallback = EditOpenButtonClicked;
+
+    MenuIndex++;
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&Save"));
+    FileMenuEntries[MenuIndex].NotifyCallback = EditSaveButtonClicked;
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+S"));
+
+    MenuIndex++;
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("Save &As..."));
+    FileMenuEntries[MenuIndex].NotifyCallback = EditSaveAsButtonClicked;
+
+    MenuIndex++;
+    FileMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+
+    MenuIndex++;
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("E&xit"));
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+Q"));
+    FileMenuEntries[MenuIndex].NotifyCallback = EditExitButtonClicked;
+
+    MenuIndex = 0;
     ZeroMemory(&EditMenuEntries, sizeof(EditMenuEntries));
-    YoriLibConstantString(&EditMenuEntries[0].Caption, _T("Cu&t"));
-    YoriLibConstantString(&EditMenuEntries[0].Hotkey, _T("Ctrl+X"));
-    EditMenuEntries[0].NotifyCallback = EditCutButtonClicked;
-    YoriLibConstantString(&EditMenuEntries[1].Caption, _T("&Copy"));
-    YoriLibConstantString(&EditMenuEntries[1].Hotkey, _T("Ctrl+C"));
-    EditMenuEntries[1].NotifyCallback = EditCopyButtonClicked;
-    YoriLibConstantString(&EditMenuEntries[2].Caption, _T("&Paste"));
-    YoriLibConstantString(&EditMenuEntries[2].Hotkey, _T("Ctrl+V"));
-    EditMenuEntries[2].NotifyCallback = EditPasteButtonClicked;
-    YoriLibConstantString(&EditMenuEntries[3].Caption, _T("Cl&ear"));
-    YoriLibConstantString(&EditMenuEntries[3].Hotkey, _T("Del"));
-    EditMenuEntries[3].NotifyCallback = EditClearButtonClicked;
+
+    EditContext->EditUndoMenuIndex = MenuIndex;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Undo"));
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+Z"));
+    EditMenuEntries[MenuIndex].NotifyCallback = EditUndoButtonClicked;
+
+    MenuIndex++;
+    EditMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+
+    MenuIndex++;
+    EditContext->EditCutMenuIndex = MenuIndex;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("Cu&t"));
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+X"));
+    EditMenuEntries[MenuIndex].NotifyCallback = EditCutButtonClicked;
+
+    MenuIndex++;
+    EditContext->EditCopyMenuIndex = MenuIndex;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Copy"));
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+C"));
+    EditMenuEntries[MenuIndex].NotifyCallback = EditCopyButtonClicked;
+
+    MenuIndex++;
+    EditContext->EditPasteMenuIndex = MenuIndex;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Paste"));
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+V"));
+    EditMenuEntries[MenuIndex].NotifyCallback = EditPasteButtonClicked;
+
+    MenuIndex++;
+    EditContext->EditClearMenuIndex = MenuIndex;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("Cl&ear"));
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Del"));
+    EditMenuEntries[MenuIndex].NotifyCallback = EditClearButtonClicked;
 
     ZeroMemory(&SearchMenuEntries, sizeof(SearchMenuEntries));
-    YoriLibConstantString(&SearchMenuEntries[0].Caption, _T("&Find..."));
-    YoriLibConstantString(&SearchMenuEntries[0].Hotkey, _T("Ctrl+F"));
-    SearchMenuEntries[0].NotifyCallback = EditFindButtonClicked;
-    YoriLibConstantString(&SearchMenuEntries[1].Caption, _T("&Repeat Last Find"));
-    YoriLibConstantString(&SearchMenuEntries[1].Hotkey, _T("F3"));
-    SearchMenuEntries[1].NotifyCallback = EditFindNextButtonClicked;
-    YoriLibConstantString(&SearchMenuEntries[2].Caption, _T("Find &Previous"));
-    YoriLibConstantString(&SearchMenuEntries[2].Hotkey, _T("Shift+F3"));
-    SearchMenuEntries[2].NotifyCallback = EditFindPreviousButtonClicked;
-    YoriLibConstantString(&SearchMenuEntries[3].Caption, _T("&Change..."));
-    SearchMenuEntries[3].NotifyCallback = EditChangeButtonClicked;
-    SearchMenuEntries[4].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
-    YoriLibConstantString(&SearchMenuEntries[5].Caption, _T("&Go to line..."));
-    YoriLibConstantString(&SearchMenuEntries[5].Hotkey, _T("Ctrl+G"));
-    SearchMenuEntries[5].NotifyCallback = EditGoToLineButtonClicked;
+    MenuIndex = 0;
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Find..."));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+F"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = EditFindButtonClicked;
+
+    MenuIndex++;
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Repeat Last Find"));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("F3"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = EditFindNextButtonClicked;
+
+    MenuIndex++;
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("Find &Previous"));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Shift+F3"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = EditFindPreviousButtonClicked;
+
+    MenuIndex++;
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Change..."));
+    SearchMenuEntries[MenuIndex].NotifyCallback = EditChangeButtonClicked;
+
+    MenuIndex++;
+    SearchMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+
+    MenuIndex++;
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Go to line..."));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+G"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = EditGoToLineButtonClicked;
 
     ZeroMemory(&OptionsMenuEntries, sizeof(OptionsMenuEntries));
-    YoriLibConstantString(&OptionsMenuEntries[0].Caption, _T("&Display..."));
-    OptionsMenuEntries[0].NotifyCallback = EditDisplayOptionsButtonClicked;
+    MenuIndex = 0;
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Display..."));
+    OptionsMenuEntries[MenuIndex].NotifyCallback = EditDisplayOptionsButtonClicked;
+
+    MenuIndex++;
     if (EditContext->TraditionalNavigation) {
-        OptionsMenuEntries[1].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
+        OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
     }
-    YoriLibConstantString(&OptionsMenuEntries[1].Caption, _T("&Traditional navigation"));
-    OptionsMenuEntries[1].NotifyCallback = EditTraditionalNavigationOptionsButtonClicked;
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Traditional navigation"));
+    OptionsMenuEntries[MenuIndex].NotifyCallback = EditTraditionalNavigationOptionsButtonClicked;
+    EditContext->OptionsTraditionalMenuIndex = MenuIndex;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
-    YoriLibConstantString(&HelpMenuEntries[0].Caption, _T("&About..."));
-    HelpMenuEntries[0].NotifyCallback = EditAboutButtonClicked;
+    MenuIndex = 0;
+    YoriLibConstantString(&HelpMenuEntries[MenuIndex].Caption, _T("&About..."));
+    HelpMenuEntries[MenuIndex].NotifyCallback = EditAboutButtonClicked;
 
     MenuBarItems.ItemCount = 5;
     MenuBarItems.Items = MenuEntries;
+
+    MenuIndex = 0;
     ZeroMemory(MenuEntries, sizeof(MenuEntries));
-    YoriLibConstantString(&MenuEntries[0].Caption, _T("&File"));
-    MenuEntries[0].ChildMenu.ItemCount = sizeof(FileMenuEntries)/sizeof(FileMenuEntries[0]);
-    MenuEntries[0].ChildMenu.Items = FileMenuEntries;
-    YoriLibConstantString(&MenuEntries[1].Caption, _T("&Edit"));
-    MenuEntries[1].NotifyCallback = EditEditButtonClicked;
-    MenuEntries[1].ChildMenu.ItemCount = sizeof(EditMenuEntries)/sizeof(EditMenuEntries[0]);
-    MenuEntries[1].ChildMenu.Items = EditMenuEntries;
-    YoriLibConstantString(&MenuEntries[2].Caption, _T("&Search"));
-    MenuEntries[2].ChildMenu.ItemCount = sizeof(SearchMenuEntries)/sizeof(SearchMenuEntries[0]);
-    MenuEntries[2].ChildMenu.Items = SearchMenuEntries;
-    YoriLibConstantString(&MenuEntries[3].Caption, _T("&Options"));
-    MenuEntries[3].ChildMenu.ItemCount = sizeof(OptionsMenuEntries)/sizeof(OptionsMenuEntries[0]);
-    MenuEntries[3].ChildMenu.Items = OptionsMenuEntries;
-    YoriLibConstantString(&MenuEntries[4].Caption, _T("&Help"));
-    MenuEntries[4].ChildMenu.ItemCount = sizeof(HelpMenuEntries)/sizeof(HelpMenuEntries[0]);
-    MenuEntries[4].ChildMenu.Items = HelpMenuEntries;
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&File"));
+    MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(FileMenuEntries)/sizeof(FileMenuEntries[0]);
+    MenuEntries[MenuIndex].ChildMenu.Items = FileMenuEntries;
+
+    MenuIndex++;
+    EditContext->EditMenuIndex = MenuIndex;
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Edit"));
+    MenuEntries[MenuIndex].NotifyCallback = EditEditButtonClicked;
+    MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(EditMenuEntries)/sizeof(EditMenuEntries[0]);
+    MenuEntries[MenuIndex].ChildMenu.Items = EditMenuEntries;
+
+    MenuIndex++;
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Search"));
+    MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(SearchMenuEntries)/sizeof(SearchMenuEntries[0]);
+    MenuEntries[MenuIndex].ChildMenu.Items = SearchMenuEntries;
+
+    MenuIndex++;
+    EditContext->OptionsMenuIndex = MenuIndex;
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Options"));
+    MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(OptionsMenuEntries)/sizeof(OptionsMenuEntries[0]);
+    MenuEntries[MenuIndex].ChildMenu.Items = OptionsMenuEntries;
+
+    MenuIndex++;
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Help"));
+    MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(HelpMenuEntries)/sizeof(HelpMenuEntries[0]);
+    MenuEntries[MenuIndex].ChildMenu.Items = HelpMenuEntries;
 
     Ctrl = YoriWinMenuBarCreate(Parent, 0);
     if (Ctrl == NULL) {

@@ -80,6 +80,146 @@ typedef struct _YORI_WIN_MULTILINE_EDIT_SELECT {
 } YORI_WIN_MULTILINE_EDIT_SELECT, *PYORI_WIN_MULTILINE_EDIT_SELECT;
 
 /**
+ A set of modification operations that can be performed on the buffer that
+ can be undone.
+ */
+typedef enum _YORI_WIN_CTRL_MULTILINE_EDIT_UNDO_OPERATION {
+    YoriWinMultilineEditUndoInsertText = 0,
+    YoriWinMultilineEditUndoOverwriteText = 1,
+    YoriWinMultilineEditUndoDeleteText = 2
+} YORI_WIN_CTRL_MULTILINE_EDIT_UNDO_OPERATION;
+
+/**
+ Information about a single operation to undo.
+ */
+typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT_UNDO {
+
+    /**
+     The list of operations that can be undone on the multiline edit control.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The type of this operation.
+     */
+    YORI_WIN_CTRL_MULTILINE_EDIT_UNDO_OPERATION Op;
+
+    /**
+     Information specific to each type of operation.
+     */
+    union {
+        struct {
+
+            /**
+             The first line of the range that was inserted and should be
+             deleted on undo.
+             */
+            DWORD FirstLineToDelete;
+
+            /**
+             The first offset of the range that was inserted and should be
+             deleted on undo.
+             */
+            DWORD FirstCharOffsetToDelete;
+
+            /**
+             The last line of the range that was inserted and should be
+             deleted on undo.
+             */
+            DWORD LastLineToDelete;
+
+            /**
+             The last offset of the range that was inserted and should be
+             deleted on undo.
+             */
+            DWORD LastCharOffsetToDelete;
+        } InsertText;
+
+        struct {
+
+            /**
+             The first line of the range that was deleted and needs to be
+             reinserted.
+             */
+            DWORD FirstLine;
+
+            /**
+             The first character of the range that was deleted and needs to be
+             reinserted.
+             */
+            DWORD FirstCharOffset;
+
+            /**
+             The text to reinsert on undo.
+             */
+            YORI_STRING Text;
+        } DeleteText;
+
+        struct {
+            /**
+             The first line of the range that was overwritten and should be
+             deleted on undo.
+             */
+            DWORD FirstLineToDelete;
+
+            /**
+             The first offset of the range that was overwritten and should be
+             deleted on undo.
+             */
+            DWORD FirstCharOffsetToDelete;
+
+            /**
+             The last line of the range that was overwritten and should be
+             deleted on undo.
+             */
+            DWORD LastLineToDelete;
+
+            /**
+             The last offset of the range that was overwritten and should be
+             deleted on undo.
+             */
+            DWORD LastCharOffsetToDelete;
+
+            /**
+             The first line of the range that should be inserted to replace
+             the overwritten text.
+             */
+            DWORD FirstLine;
+
+            /**
+             The first character of the range that should be inserted to replace
+             the overwritten text.
+             */
+            DWORD FirstCharOffset;
+
+            /**
+             The offset of the first character that the user changed.  This
+             must be on the same line as FirstLine but may be after
+             FirstCharOffset because the saved range may be larger than the
+             range that the user modified.  This value is used to determine
+             the cursor location on undo.
+             */
+            DWORD FirstCharOffsetModified;
+
+            /**
+             The offset of the last character that the user changed.  This
+             must be on the same line as LastLineToDelete but may be before
+             LastCharOffsetToDelete because the saved range may be larger than
+             the range that the user modified.  This value is used to
+             determine if a later modification should be part of an earlier
+             undo record.
+             */
+            DWORD LastCharOffsetModified;
+
+            /**
+             The text to reinsert on undo.
+             */
+            YORI_STRING Text;
+        } OverwriteText;
+    } u;
+} YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, *PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO;
+
+/**
  A structure describing the contents of a multiline edit control.
  */
 typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
@@ -118,6 +258,16 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
      The number of lines populated with text within LineArray.
      */
     DWORD LinesPopulated;
+
+    /**
+     A stack of changes which can be undone.
+     */
+    YORI_LIST_ENTRY Undo;
+
+    /**
+     A stack of changes which can be redone.
+     */
+    YORI_LIST_ENTRY Redo;
 
     /**
      The index within LineArray that is displayed at the top of the control.
@@ -992,6 +1142,485 @@ YoriWinMultilineEditToggleInsert(
 
 //
 //  =========================================
+//  UNDO FUNCTIONS
+//  =========================================
+//
+
+
+/**
+ Free a single undo entry.  This entry is expected to be unlinked from the
+ chain.
+
+ @param Undo Pointer to the undo entry to free.
+ */
+VOID
+YoriWinMultilineEditFreeSingleUndo(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo
+    )
+{
+    switch(Undo->Op) {
+        case YoriWinMultilineEditUndoOverwriteText:
+            YoriLibFreeStringContents(&Undo->u.OverwriteText.Text);
+            break;
+        case YoriWinMultilineEditUndoDeleteText:
+            YoriLibFreeStringContents(&Undo->u.DeleteText.Text);
+            break;
+    }
+
+    YoriLibFree(Undo);
+}
+
+/**
+ Free all undo entries that are linked into the multiline edit control.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+ */
+VOID
+YoriWinMultilineEditClearUndo(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    PYORI_LIST_ENTRY ListHead;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo;
+
+    ListHead = &MultilineEdit->Undo;
+    while (ListHead != NULL) {
+
+        ListEntry = YoriLibGetNextListEntry(ListHead, NULL);
+        while (ListEntry != NULL) {
+            YoriLibRemoveListItem(ListEntry);
+            Undo = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, ListEntry);
+            YoriWinMultilineEditFreeSingleUndo(Undo);
+            ListEntry = YoriLibGetNextListEntry(ListHead, NULL);
+        }
+
+        if (ListHead == &MultilineEdit->Undo) {
+            ListHead = &MultilineEdit->Redo;
+        } else {
+            ListHead = NULL;
+        }
+    }
+}
+
+/**
+ Check if a new modification should be included in a previous undo entry
+ because the new modification is immediately before the range in the previous
+ entry.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param ExistingFirstLine Specifies the beginning line of the range currently
+        covered by an undo record.
+
+ @param ExistingFirstCharOffset Specifies the beginning offset of the range
+        currently covered by an undo record.
+
+ @param ProposedLastLine Specifies the ending line of a newly modified range.
+
+ @param ProposedLastCharOffset Specifies the ending offset of a newly modified
+        range.
+
+ @return TRUE to indicate that the new change is immediately before the
+         previous undo record.  FALSE to indicate it requires a new entry.
+ */
+BOOLEAN
+YoriWinMultilineEditRangeImmediatelyPreceeds(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD ExistingFirstLine,
+    __in DWORD ExistingFirstCharOffset,
+    __in DWORD ProposedLastLine,
+    __in DWORD ProposedLastCharOffset
+    )
+{
+    UNREFERENCED_PARAMETER(MultilineEdit);
+
+    if (ExistingFirstLine == ProposedLastLine &&
+        ExistingFirstCharOffset == ProposedLastCharOffset) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Check if a new modification should be included in a previous undo entry
+ because the new modification is immediately after the range in the previous
+ entry.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param ExistingLastLine Specifies the ending line of the range currently
+        covered by an undo record.
+
+ @param ExistingLastCharOffset Specifies the ending offset of the range
+        currently covered by an undo record.
+
+ @param ProposedFirstLine Specifies the beginning line of a newly modified
+        range.
+
+ @param ProposedFirstCharOffset Specifies the beginning offset of a newly
+        modified range.
+
+ @return TRUE to indicate that the new change is immediately after the
+         previous undo record.  FALSE to indicate it requires a new entry.
+ */
+BOOLEAN
+YoriWinMultilineEditRangeImmediatelyFollows(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD ExistingLastLine,
+    __in DWORD ExistingLastCharOffset,
+    __in DWORD ProposedFirstLine,
+    __in DWORD ProposedFirstCharOffset
+    )
+{
+    UNREFERENCED_PARAMETER(MultilineEdit);
+
+    if (ExistingLastLine == ProposedFirstLine &&
+        ExistingLastCharOffset == ProposedFirstCharOffset) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Return an undo record for the incoming operation.  This may be a newly
+ allocated undo record, or if the operation is adjacent to the previous
+ operation it may return an existing record.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param Op Specifies the type of the operation.  Only the same type of
+        operations can reuse previous records.
+
+ @param FirstLine Specifies the beginning line of the range that is being
+        modified.
+
+ @param FirstCharOffset Specifies the beginning offset of the range that is
+        being modified.
+
+ @param LastLine Specifies the last line of the range that is being modified.
+        This may not always be known until after the operation is performed,
+        but in that case the operation cannot be prepended to a previous
+        operation of the same type, so it is not required.
+
+ @param LastCharOffset Specifies the last offset of the range that is being
+        modified.  This may not always be known until after the operation is
+        performed, but in that case the operation cannot be prepended to a
+        previous operation of the same type, so it is not required.
+
+ @param NewRangeBeforeExistingRange On successful completion, set to TRUE
+        to indicate the new change is being applied to an existing record
+        before the existing record's current range.  FALSE implies the
+        change is either after the end of an existing record or is going to
+        a new record.
+
+ @return Pointer to the undo record, or NULL to indicate failure.
+ */
+PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO
+YoriWinMultilineEditGetUndoRecordForOperation(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in YORI_WIN_CTRL_MULTILINE_EDIT_UNDO_OPERATION Op,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset,
+    __out PBOOLEAN NewRangeBeforeExistingRange
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
+
+    *NewRangeBeforeExistingRange = FALSE;
+
+    ListEntry = YoriLibGetNextListEntry(&MultilineEdit->Undo, NULL);
+    if (ListEntry != NULL) {
+        Undo = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, ListEntry);
+        if (Undo->Op != Op) {
+            Undo = NULL;
+        } else {
+            switch (Op) {
+                case YoriWinMultilineEditUndoInsertText:
+                    if (!YoriWinMultilineEditRangeImmediatelyFollows(MultilineEdit, Undo->u.InsertText.LastLineToDelete, Undo->u.InsertText.LastCharOffsetToDelete, FirstLine, FirstCharOffset)) {
+                        Undo = NULL;
+                    }
+                    break;
+                case YoriWinMultilineEditUndoDeleteText:
+                    if (YoriWinMultilineEditRangeImmediatelyPreceeds(MultilineEdit, Undo->u.DeleteText.FirstLine, Undo->u.DeleteText.FirstCharOffset, LastLine, LastCharOffset)) {
+                        *NewRangeBeforeExistingRange = TRUE;
+                    } else if (!YoriWinMultilineEditRangeImmediatelyFollows(MultilineEdit, Undo->u.DeleteText.FirstLine, Undo->u.DeleteText.FirstCharOffset, FirstLine, FirstCharOffset)) {
+                        Undo = NULL;
+                    }
+                    break;
+                case YoriWinMultilineEditUndoOverwriteText:
+                    if (!YoriWinMultilineEditRangeImmediatelyFollows(MultilineEdit, Undo->u.OverwriteText.LastLineToDelete, Undo->u.OverwriteText.LastCharOffsetModified, FirstLine, FirstCharOffset)) {
+                        Undo = NULL;
+                    }
+                    break;
+                default:
+                    Undo = NULL;
+                    break;
+            }
+        }
+    }
+
+
+    if (Undo == NULL) {
+        Undo = YoriLibMalloc(sizeof(YORI_WIN_CTRL_MULTILINE_EDIT_UNDO));
+        if (Undo == NULL) {
+            YoriWinMultilineEditClearUndo(MultilineEdit);
+            return NULL;
+        }
+
+        ZeroMemory(Undo, sizeof(YORI_WIN_CTRL_MULTILINE_EDIT_UNDO));
+        YoriLibInsertList(&MultilineEdit->Undo, &Undo->ListEntry);
+
+        Undo->Op = Op;
+
+        switch(Op) {
+            case YoriWinMultilineEditUndoInsertText:
+                Undo->u.InsertText.FirstLineToDelete = FirstLine;
+                Undo->u.InsertText.FirstCharOffsetToDelete = FirstCharOffset;
+                Undo->u.InsertText.LastLineToDelete = LastLine;
+                Undo->u.InsertText.LastCharOffsetToDelete = LastCharOffset;
+                break;
+            case YoriWinMultilineEditUndoDeleteText:
+                Undo->u.DeleteText.FirstLine = FirstLine;
+                Undo->u.DeleteText.FirstCharOffset = FirstCharOffset;
+                YoriLibInitEmptyString(&Undo->u.DeleteText.Text);
+                break;
+            case YoriWinMultilineEditUndoOverwriteText:
+                Undo->u.OverwriteText.FirstLineToDelete = FirstLine;
+                Undo->u.OverwriteText.FirstCharOffsetToDelete = FirstCharOffset;
+                Undo->u.OverwriteText.LastLineToDelete = LastLine;
+                Undo->u.OverwriteText.LastCharOffsetToDelete = LastCharOffset;
+                Undo->u.OverwriteText.FirstLine = FirstLine;
+                Undo->u.OverwriteText.FirstCharOffset = FirstCharOffset;
+                Undo->u.OverwriteText.FirstCharOffsetModified = FirstCharOffset;
+                Undo->u.OverwriteText.LastCharOffsetModified = LastCharOffset;
+                YoriLibInitEmptyString(&Undo->u.OverwriteText.Text);
+                break;
+        }
+    }
+    return Undo;
+}
+
+/**
+ If a change needs to be saved so that it can be undone, the change may be
+ before or after a previous change that should be undone in the same
+ operation (consider when the user hits backspace or del.)  In order to do
+ this, new text may need to be saved before or after previously saved text.
+ Here a string is allocated where the range used is in the middle of the
+ allocation, allowing characters to be inserted before or after it by
+ adjusting the start pointer and length of the string.  Clearly if it is
+ continually modified, it may also need to be reallocated periodically, but
+ not for each key press.
+
+ @param CombinedString Pointer to a string which contains the current saved
+        text.  The StartOfString and LengthInChars members specify the current
+        saved text, and the gap before can be found from the difference
+        between MemoryToFree and StartOfString, and the gap afterwards from
+        LengthAllocated and LengthInChars.
+
+ @param CharsNeeded Specifies the number of new characters that should be
+        added.
+
+ @param CharsBefore TRUE if the new characters should be added before existing
+        text, FALSE if the new characters should be added after the existing
+        text.
+
+ @param Substring On successful completion, populated with a string for the
+        caller to write their new changes in the correct place.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditEnsureSpaceBeforeOrAfterString(
+    __in PYORI_STRING CombinedString,
+    __in DWORD CharsNeeded,
+    __in BOOLEAN CharsBefore,
+    __out PYORI_STRING Substring
+    )
+{
+    DWORD CurrentCharsBefore;
+    DWORD CurrentCharsAfter;
+    DWORD LengthNeeded;
+    YORI_STRING Temp;
+
+    CurrentCharsBefore = (DWORD)(CombinedString->StartOfString - (LPTSTR)CombinedString->MemoryToFree);
+    CurrentCharsAfter = CombinedString->LengthAllocated - CurrentCharsBefore - CombinedString->LengthInChars;
+
+    while(TRUE) {
+
+        if (CharsBefore) {
+            if (CharsNeeded <= CurrentCharsBefore) {
+                CombinedString->StartOfString = CombinedString->StartOfString - CharsNeeded;
+                CombinedString->LengthInChars = CombinedString->LengthInChars + CharsNeeded;
+                YoriLibInitEmptyString(Substring);
+                Substring->StartOfString = CombinedString->StartOfString;
+                Substring->LengthInChars = CharsNeeded;
+                return TRUE;
+            }
+        } else {
+            if (CharsNeeded <= CurrentCharsAfter) {
+                YoriLibInitEmptyString(Substring);
+                Substring->StartOfString = CombinedString->StartOfString + CombinedString->LengthInChars;
+                Substring->LengthInChars = CharsNeeded;
+                CombinedString->LengthInChars = CombinedString->LengthInChars + CharsNeeded;
+                return TRUE;
+            }
+        }
+
+        //
+        //  Allocate an extra 1Kb before and after in the hope that repeated
+        //  keystrokes won't cause new allocations and copies.
+        //
+
+        CurrentCharsBefore = CurrentCharsAfter = 0x400;
+        if (CharsBefore) {
+            CurrentCharsBefore = CurrentCharsBefore + CharsNeeded;
+        } else {
+            CurrentCharsAfter = CurrentCharsAfter + CharsNeeded;
+        }
+
+        LengthNeeded = CurrentCharsBefore + CombinedString->LengthInChars + CurrentCharsAfter;
+        if (!YoriLibAllocateString(&Temp, LengthNeeded)) {
+            return FALSE;
+        }
+
+        Temp.StartOfString = Temp.StartOfString + CurrentCharsBefore;
+
+        memcpy(Temp.StartOfString,
+               CombinedString->StartOfString,
+               CombinedString->LengthInChars * sizeof(TCHAR));
+
+        Temp.LengthInChars = CombinedString->LengthInChars;
+        YoriLibFreeStringContents(CombinedString);
+        memcpy(CombinedString, &Temp, sizeof(YORI_STRING));
+    }
+}
+
+/**
+ Return TRUE to indicate that there are records specifying how to undo
+ previous operations.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE if there are operations available to undo, FALSE if there
+         are not.
+ */
+BOOLEAN
+YoriWinMultilineEditIsUndoAvailable(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (!YoriLibIsListEmpty(&MultilineEdit->Undo)) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+BOOLEAN
+YoriWinMultilineEditDeleteTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in BOOLEAN ProcessingUndo,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset
+    );
+
+BOOLEAN
+YoriWinMultilineEditInsertTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in BOOLEAN ProcessingUndo,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text,
+    __out PDWORD LastLine,
+    __out PDWORD LastCharOffset
+    );
+
+/**
+ Undo the most recent change to a multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditUndo(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+    DWORD NewLastLine;
+    DWORD NewLastCharOffset;
+    BOOLEAN Success;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (YoriLibIsListEmpty(&MultilineEdit->Undo)) {
+        return FALSE;
+    }
+
+    Undo = CONTAINING_RECORD(MultilineEdit->Undo.Next, YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, ListEntry);
+
+    Success = FALSE;
+    switch(Undo->Op) {
+        case YoriWinMultilineEditUndoInsertText:
+            Success = YoriWinMultilineEditDeleteTextRange(MultilineEdit, TRUE, Undo->u.InsertText.FirstLineToDelete, Undo->u.InsertText.FirstCharOffsetToDelete, Undo->u.InsertText.LastLineToDelete, Undo->u.InsertText.LastCharOffsetToDelete);
+            if (Success) {
+                YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, Undo->u.InsertText.FirstCharOffsetToDelete, Undo->u.InsertText.FirstLineToDelete);
+            }
+            break;
+        case YoriWinMultilineEditUndoDeleteText:
+            Success = YoriWinMultilineEditInsertTextRange(MultilineEdit, TRUE, Undo->u.DeleteText.FirstLine, Undo->u.DeleteText.FirstCharOffset, &Undo->u.DeleteText.Text, &NewLastLine, &NewLastCharOffset);
+            if (Success) {
+                YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewLastCharOffset, NewLastLine);
+            }
+            break;
+        case YoriWinMultilineEditUndoOverwriteText:
+            NewLastLine = 0;
+            NewLastCharOffset = 0;
+            Success = YoriWinMultilineEditDeleteTextRange(MultilineEdit, TRUE, Undo->u.OverwriteText.FirstLineToDelete, Undo->u.OverwriteText.FirstCharOffsetToDelete, Undo->u.OverwriteText.LastLineToDelete, Undo->u.OverwriteText.LastCharOffsetToDelete);
+            if (Success) {
+                Success = YoriWinMultilineEditInsertTextRange(MultilineEdit, TRUE, Undo->u.OverwriteText.FirstLine, Undo->u.OverwriteText.FirstCharOffset, &Undo->u.OverwriteText.Text, &NewLastLine, &NewLastCharOffset);
+            }
+            if (Success) {
+                YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, Undo->u.OverwriteText.FirstCharOffsetModified, Undo->u.OverwriteText.FirstLine);
+            }
+            break;
+    }
+
+    //
+    //  MSFIX Need to transpose the undo into a redo.  This may require work
+    //  before applying the changes from the undo.
+    //
+
+    if (Success) {
+        YoriLibRemoveListItem(&Undo->ListEntry);
+        YoriWinMultilineEditFreeSingleUndo(Undo);
+    }
+
+    return Success;
+}
+
+//
+//  =========================================
 //  BUFFER MANIPULATION FUNCTIONS
 //  =========================================
 //
@@ -1134,12 +1763,191 @@ YoriWinMultilineEditSplitLines(
 }
 
 /**
+ Find the length in characters needed to store a single continuous string
+ covering the specified range in a multiline edit control.
+
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        contents of the buffer.
+
+ @param FirstLine Specifies the line that contains the first character to
+        return.
+
+ @param FirstCharOffset Specifies the offset within FirstLine of the first
+        character to return.
+
+ @param LastLine Specifies the line that contains the last character to
+        return.
+
+ @param LastCharOffset Specifies the offset beyond the last character to
+        return.
+
+ @param NewlineLength Specifies the number of characters in each newline.
+
+ @return The number of characters needed to contain the requested range.
+ */
+DWORD
+YoriWinMultilineEditGetTextRangeLength(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset,
+    __in DWORD NewlineLength
+    )
+{
+    DWORD CharsInRange;
+    DWORD LinesInRange;
+    DWORD LineIndex;
+
+    if (FirstLine == LastLine) {
+        CharsInRange = LastCharOffset - FirstCharOffset;
+    } else {
+        LinesInRange = LastLine - FirstLine;
+        CharsInRange = MultilineEdit->LineArray[FirstLine].LengthInChars - FirstCharOffset;
+        for (LineIndex = FirstLine + 1; LineIndex < LastLine; LineIndex++) {
+            CharsInRange += MultilineEdit->LineArray[LineIndex].LengthInChars;
+        }
+        CharsInRange += LastCharOffset;
+        CharsInRange += LinesInRange * NewlineLength;
+    }
+
+    return CharsInRange;
+}
+
+/**
+ Build a single continuous string covering the specified range in a multiline
+ edit control and store it in a preallocated allocation.
+
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        contents of the buffer.
+
+ @param FirstLine Specifies the line that contains the first character to
+        return.
+
+ @param FirstCharOffset Specifies the offset within FirstLine of the first
+        character to return.
+
+ @param LastLine Specifies the line that contains the last character to
+        return.
+
+ @param LastCharOffset Specifies the offset beyond the last character to
+        return.
+
+ @param NewlineString Specifies the string to use to delimit lines.  This
+        allows this routine to return text with any arbitrary line ending.
+
+ @param SelectedText On input, contains an allocated string that's large
+        enough to contain the requested text.  On successful completion,
+        populated with the selected text.  The caller is expected to free
+        this buffer with @ref YoriLibFreeStringContents .
+ */
+VOID
+YoriWinMultilineEditPopulateTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset,
+    __in PYORI_STRING NewlineString,
+    __inout PYORI_STRING SelectedText
+    )
+{
+    DWORD CharsInRange;
+    DWORD LineIndex;
+    PYORI_STRING Line;
+    LPTSTR Ptr;
+
+    Line = &MultilineEdit->LineArray[FirstLine];
+
+    if (FirstLine == LastLine) {
+        CharsInRange = LastCharOffset - FirstCharOffset;
+        memcpy(SelectedText->StartOfString, &Line->StartOfString[FirstCharOffset], CharsInRange * sizeof(TCHAR));
+        SelectedText->LengthInChars = CharsInRange;
+    } else {
+        Ptr = SelectedText->StartOfString;
+        memcpy(Ptr, &Line->StartOfString[FirstCharOffset], (Line->LengthInChars - FirstCharOffset) * sizeof(TCHAR));
+        Ptr += (Line->LengthInChars - FirstCharOffset);
+        for (LineIndex = FirstLine + 1; LineIndex < LastLine; LineIndex++) {
+            memcpy(Ptr, NewlineString->StartOfString, NewlineString->LengthInChars * sizeof(TCHAR));
+            Ptr += NewlineString->LengthInChars;
+            memcpy(Ptr,
+                   MultilineEdit->LineArray[LineIndex].StartOfString,
+                   MultilineEdit->LineArray[LineIndex].LengthInChars * sizeof(TCHAR));
+            Ptr += MultilineEdit->LineArray[LineIndex].LengthInChars;
+        }
+        memcpy(Ptr, NewlineString->StartOfString, NewlineString->LengthInChars * sizeof(TCHAR));
+        Ptr += NewlineString->LengthInChars;
+        memcpy(Ptr, MultilineEdit->LineArray[LastLine].StartOfString, LastCharOffset * sizeof(TCHAR));
+        Ptr += LastCharOffset;
+
+        SelectedText->LengthInChars = (DWORD)(Ptr - SelectedText->StartOfString);
+    }
+}
+
+/**
+ Build a single continuous string covering the specified range in a multiline
+ edit control and return it in a new allocation.
+
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        contents of the buffer.
+
+ @param FirstLine Specifies the line that contains the first character to
+        return.
+
+ @param FirstCharOffset Specifies the offset within FirstLine of the first
+        character to return.
+
+ @param LastLine Specifies the line that contains the last character to
+        return.
+
+ @param LastCharOffset Specifies the offset beyond the last character to
+        return.
+
+ @param NewlineString Specifies the string to use to delimit lines.  This
+        allows this routine to return text with any arbitrary line ending.
+
+ @param SelectedText On successful completion, populated with a newly
+        allocated buffer containing the selected text.  The caller is
+        expected to free this buffer with @ref YoriLibFreeStringContents .
+ 
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditGetTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset,
+    __in PYORI_STRING NewlineString,
+    __out PYORI_STRING SelectedText
+    )
+{
+    DWORD CharsInRange;
+
+    CharsInRange = YoriWinMultilineEditGetTextRangeLength(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset, NewlineString->LengthInChars);
+
+    if (!YoriLibAllocateString(SelectedText, CharsInRange + 1)) {
+        return FALSE;
+    }
+
+    YoriWinMultilineEditPopulateTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset, NewlineString, SelectedText);
+    SelectedText->StartOfString[CharsInRange] = '\0';
+
+    return TRUE;
+}
+
+
+/**
  Delete a range of characters, which may span lines.  This is used when
  deleting a selection.  When deleting ranges that are not entire lines,
  this implies merging the end of one line with the beginning of another.
 
  @param MultilineEdit Pointer to the multiline edit control containing the
         contents of the buffer.
+
+ @param ProcessingUndo If TRUE, this delete is being invoked by undo and
+        should not try to create or maintain an undo entry.
 
  @param FirstLine Specifies the line that contains the first character to
         remove.
@@ -1158,12 +1966,14 @@ YoriWinMultilineEditSplitLines(
 BOOLEAN
 YoriWinMultilineEditDeleteTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in BOOLEAN ProcessingUndo,
     __in DWORD FirstLine,
     __in DWORD FirstCharOffset,
     __in DWORD LastLine,
     __in DWORD LastCharOffset
     )
 {
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
     DWORD CharsToCopy;
     DWORD CharsToDelete;
     DWORD LinesToDelete;
@@ -1172,6 +1982,32 @@ YoriWinMultilineEditDeleteTextRange(
     DWORD LineIndexToDelete;
     PYORI_STRING Line;
     PYORI_STRING FinalLine;
+
+    if (!ProcessingUndo) {
+        BOOLEAN RangeBeforeExistingRange;
+        Undo = YoriWinMultilineEditGetUndoRecordForOperation(MultilineEdit, YoriWinMultilineEditUndoDeleteText, FirstLine, FirstCharOffset, LastLine, LastCharOffset, &RangeBeforeExistingRange);
+        if (Undo != NULL) {
+            YORI_STRING Newline;
+            YORI_STRING Text;
+            DWORD CharsNeeded;
+            YoriLibConstantString(&Newline, _T("\n"));
+
+            CharsNeeded = YoriWinMultilineEditGetTextRangeLength(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset, Newline.LengthInChars);
+
+            if (!YoriWinMultilineEditEnsureSpaceBeforeOrAfterString(&Undo->u.DeleteText.Text,
+                                                                    CharsNeeded,
+                                                                    RangeBeforeExistingRange,
+                                                                    &Text)) {
+                return FALSE;
+            }
+
+            YoriWinMultilineEditPopulateTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset, &Newline, &Text);
+            if (RangeBeforeExistingRange) {
+                Undo->u.DeleteText.FirstLine = FirstLine;
+                Undo->u.DeleteText.FirstCharOffset = FirstCharOffset;
+            }
+        }
+    }
 
     Line = &MultilineEdit->LineArray[FirstLine];
 
@@ -1279,99 +2115,6 @@ YoriWinMultilineEditDeleteTextRange(
     return TRUE;
 }
 
-
-/**
- Build a single continuous string covering the specified range in a multiline
- edit control.
-
- @param MultilineEdit Pointer to the multiline edit control containing the
-        contents of the buffer.
-
- @param FirstLine Specifies the line that contains the first character to
-        return.
-
- @param FirstCharOffset Specifies the offset within FirstLine of the first
-        character to return.
-
- @param LastLine Specifies the line that contains the last character to
-        return.
-
- @param LastCharOffset Specifies the offset beyond the last character to
-        return.
-
- @param NewlineString Specifies the string to use to delimit lines.  This
-        allows this routine to return text with any arbitrary line ending.
-
- @param SelectedText On successful completion, populated with a newly
-        allocated buffer containing the selected text.  The caller is
-        expected to free this buffer with @ref YoriLibFreeStringContents .
- 
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditGetTextRange(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
-    __in DWORD FirstLine,
-    __in DWORD FirstCharOffset,
-    __in DWORD LastLine,
-    __in DWORD LastCharOffset,
-    __in PYORI_STRING NewlineString,
-    __out PYORI_STRING SelectedText
-    )
-{
-    DWORD CharsInRange;
-    DWORD LinesInRange;
-    DWORD LineIndex;
-    PYORI_STRING Line;
-    LPTSTR Ptr;
-
-    Line = &MultilineEdit->LineArray[FirstLine];
-
-    if (FirstLine == LastLine) {
-
-        CharsInRange = LastCharOffset - FirstCharOffset;
-
-        if (!YoriLibAllocateString(SelectedText, CharsInRange + 1)) {
-            return FALSE;
-        }
-
-        memcpy(SelectedText->StartOfString, &Line->StartOfString[FirstCharOffset], CharsInRange * sizeof(TCHAR));
-        SelectedText->LengthInChars = CharsInRange;
-        SelectedText->StartOfString[CharsInRange] = '\0';
-        return TRUE;
-    }
-
-    LinesInRange = LastLine - FirstLine;
-    CharsInRange = Line->LengthInChars - FirstCharOffset;
-    for (LineIndex = FirstLine + 1; LineIndex < LastLine; LineIndex++) {
-        CharsInRange += MultilineEdit->LineArray[LineIndex].LengthInChars;
-    }
-    CharsInRange += LastCharOffset;
-
-    if (!YoriLibAllocateString(SelectedText, CharsInRange + LinesInRange * NewlineString->LengthInChars + 1)) {
-        return FALSE;
-    }
-
-    Ptr = SelectedText->StartOfString;
-    memcpy(Ptr, &Line->StartOfString[FirstCharOffset], (Line->LengthInChars - FirstCharOffset) * sizeof(TCHAR));
-    Ptr += (Line->LengthInChars - FirstCharOffset);
-    for (LineIndex = FirstLine + 1; LineIndex < LastLine; LineIndex++) {
-        memcpy(Ptr, NewlineString->StartOfString, NewlineString->LengthInChars * sizeof(TCHAR));
-        Ptr += NewlineString->LengthInChars;
-        memcpy(Ptr,
-               MultilineEdit->LineArray[LineIndex].StartOfString,
-               MultilineEdit->LineArray[LineIndex].LengthInChars * sizeof(TCHAR));
-        Ptr += MultilineEdit->LineArray[LineIndex].LengthInChars;
-    }
-    memcpy(Ptr, NewlineString->StartOfString, NewlineString->LengthInChars * sizeof(TCHAR));
-    Ptr += NewlineString->LengthInChars;
-    memcpy(Ptr, MultilineEdit->LineArray[LastLine].StartOfString, LastCharOffset * sizeof(TCHAR));
-    Ptr += LastCharOffset;
-
-    SelectedText->LengthInChars = (DWORD)(Ptr - SelectedText->StartOfString);
-
-    return TRUE;
-}
 
 /**
  Allocate new lines for the line array.  This is used when the number of lines
@@ -1483,6 +2226,9 @@ YoriWinMultilineEditInsertLines(
 
  @param MultilineEdit Pointer to the multiline edit control.
 
+ @param ProcessingUndo If TRUE, this insert is being invoked by undo and
+        should not try to create or maintain an undo entry.
+
  @param FirstLine Specifies the line in the buffer where text should be
         inserted.
 
@@ -1502,6 +2248,7 @@ YoriWinMultilineEditInsertLines(
 BOOLEAN
 YoriWinMultilineEditInsertTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in BOOLEAN ProcessingUndo,
     __in DWORD FirstLine,
     __in DWORD FirstCharOffset,
     __in PYORI_STRING Text,
@@ -1509,6 +2256,7 @@ YoriWinMultilineEditInsertTextRange(
     __out PDWORD LastCharOffset
     )
 {
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
     DWORD LineCount;
     DWORD LineIndex;
     DWORD Index;
@@ -1516,6 +2264,8 @@ YoriWinMultilineEditInsertTextRange(
     DWORD CharsFirstLine;
     DWORD CharsLastLine;
     DWORD CharsNeeded;
+    DWORD LocalLastLine;
+    DWORD LocalLastCharOffset;
     YORI_STRING TrailingPortionOfFirstLine;
     PYORI_STRING Line;
     BOOLEAN TerminateLine;
@@ -1652,8 +2402,8 @@ YoriWinMultilineEditInsertTextRange(
             //  Skip one extra char if this is a \r\n line
             //
 
-            if (Text->StartOfString[Index] == '\r' && 
-                Index + 1 < Text->LengthInChars &&
+            if (Index + 1 < Text->LengthInChars &&
+                Text->StartOfString[Index] == '\r' && 
                 Text->StartOfString[Index + 1] == '\n') {
 
                 Index++;
@@ -1699,19 +2449,31 @@ YoriWinMultilineEditInsertTextRange(
         Line->LengthInChars = FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars;
     }
 
+    if (LineCount > 0) {
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, (DWORD)-1);
+        LocalLastLine = FirstLine + LineCount;
+        LocalLastCharOffset = CharsLastLine;
+    } else {
+        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
+        LocalLastLine = FirstLine;
+        LocalLastCharOffset = FirstCharOffset + CharsFirstLine;
+    }
+
+    if (!ProcessingUndo) {
+        BOOLEAN RangeBeforeExistingRange;
+        Undo = YoriWinMultilineEditGetUndoRecordForOperation(MultilineEdit, YoriWinMultilineEditUndoInsertText, FirstLine, FirstCharOffset, LocalLastLine, LocalLastCharOffset, &RangeBeforeExistingRange);
+        if (Undo != NULL) {
+            Undo->u.InsertText.LastLineToDelete = LocalLastLine;
+            Undo->u.InsertText.LastCharOffsetToDelete = LocalLastCharOffset;
+        }
+    }
+
     //
     //  Set the cursor to be after the newly inserted range.
     //
 
-    if (LineCount > 0) {
-        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, (DWORD)-1);
-        *LastLine = FirstLine + LineCount;
-        *LastCharOffset = CharsLastLine;
-    } else {
-        YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
-        *LastLine = FirstLine;
-        *LastCharOffset = FirstCharOffset + CharsFirstLine;
-    }
+    *LastLine = LocalLastLine;
+    *LastCharOffset = LocalLastCharOffset;
     MultilineEdit->UserModified = TRUE;
 
     return TRUE;
@@ -1725,6 +2487,9 @@ YoriWinMultilineEditInsertTextRange(
  on an existing line are overwritten.
 
  @param MultilineEdit Pointer to the multiline edit control.
+
+ @param ProcessingUndo If TRUE, this overwrite is being invoked by undo and
+        should not try to create or maintain an undo entry.
 
  @param FirstLine Specifies the line in the buffer where text should be
         added.
@@ -1745,6 +2510,7 @@ YoriWinMultilineEditInsertTextRange(
 BOOLEAN
 YoriWinMultilineEditOverwriteTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in BOOLEAN ProcessingUndo,
     __in DWORD FirstLine,
     __in DWORD FirstCharOffset,
     __in PYORI_STRING Text,
@@ -1752,6 +2518,7 @@ YoriWinMultilineEditOverwriteTextRange(
     __out PDWORD LastCharOffset
     )
 {
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
     DWORD LineCount;
     DWORD LineIndex;
     DWORD Index;
@@ -1762,6 +2529,45 @@ YoriWinMultilineEditOverwriteTextRange(
     PYORI_STRING Line;
     BOOLEAN TerminateLine;
     BOOLEAN MoveTrailingTextToNextLine;
+
+    if (!ProcessingUndo) {
+        BOOLEAN RangeBeforeExistingRange;
+
+        //
+        //  At this point we don't know the ending range for this text but it
+        //  doesn't matter.  An overwrite will only extend a previous one, not
+        //  occur before it, so the end range specified here can be bogus.
+        //
+
+        Undo = YoriWinMultilineEditGetUndoRecordForOperation(MultilineEdit, YoriWinMultilineEditUndoOverwriteText, FirstLine, FirstCharOffset, FirstLine, FirstCharOffset, &RangeBeforeExistingRange);
+        if (Undo != NULL) {
+
+            //
+            //  If this is a new record, save off the entire line to be
+            //  deleted and restored.  This is done to ensure it doesn't
+            //  need to be manipulated on each keypress.  It also means if
+            //  the user starts a new line, the delete range can be expanded
+            //  while leaving the restore range alone.
+            //
+
+            if (Undo->u.OverwriteText.Text.StartOfString == NULL) {
+                Line = &MultilineEdit->LineArray[FirstLine];
+                if (!YoriLibAllocateString(&Undo->u.OverwriteText.Text, Line->LengthInChars)) {
+                    return FALSE;
+                }
+
+                memcpy(Undo->u.OverwriteText.Text.StartOfString, Line->StartOfString, Line->LengthInChars * sizeof(TCHAR));
+                Undo->u.OverwriteText.Text.LengthInChars = Line->LengthInChars;
+
+                Undo->u.OverwriteText.FirstLineToDelete = FirstLine;
+                Undo->u.OverwriteText.FirstCharOffsetToDelete = 0;
+                Undo->u.OverwriteText.LastLineToDelete = FirstLine;
+                Undo->u.OverwriteText.LastCharOffsetToDelete = Line->LengthInChars;
+                Undo->u.OverwriteText.FirstLine = FirstLine;
+                Undo->u.OverwriteText.FirstCharOffset = 0;
+            }
+        }
+    }
 
     //
     //  Count the number of lines in the input text.  This may be zero.
@@ -1791,7 +2597,12 @@ YoriWinMultilineEditOverwriteTextRange(
         if (!YoriWinMultilineEditInsertLines(MultilineEdit, FirstLine, LineCount)) {
             return FALSE;
         }
+        if (Undo != NULL) {
+            Undo->u.OverwriteText.LastLineToDelete = FirstLine + LineCount;
+            Undo->u.OverwriteText.LastCharOffsetToDelete = 0;
+        }
     }
+
 
     //
     //  Go through each line.  Construct the new line.  For all lines except
@@ -1874,15 +2685,27 @@ YoriWinMultilineEditOverwriteTextRange(
                        &Line->StartOfString[StartOffsetThisLine + CharsThisLine],
                        CharsNeeded * sizeof(TCHAR));
                 NextLine->LengthInChars = CharsNeeded;
+                Line->LengthInChars = StartOffsetThisLine + CharsThisLine;
             }
 
             //
             //  Save away the number of characters on this line so that
-            //  the cursor can be positioned at that point.
+            //  the cursor can be positioned at that point.  Update the undo
+            //  record so that any modification after this point is attributed
+            //  to the same undo record, and any changes made up to this point
+            //  need to be deleted.
             //
 
             if (LineIndex == LineCount) {
                 CharsLastLine = CharsThisLine;
+                if (Undo != NULL) {
+                    ASSERT(Undo->u.OverwriteText.LastLineToDelete == FirstLine + LineIndex);
+                    Undo->u.OverwriteText.LastCharOffsetModified = StartOffsetThisLine + CharsLastLine;
+
+                    if (Line->LengthInChars > Undo->u.OverwriteText.LastCharOffsetToDelete) {
+                        Undo->u.OverwriteText.LastCharOffsetToDelete = Line->LengthInChars;
+                    }
+                }
             }
 
             LineIndex++;
@@ -1893,8 +2716,8 @@ YoriWinMultilineEditOverwriteTextRange(
             //  Skip one extra char if this is a \r\n line
             //
 
-            if (Text->StartOfString[Index] == '\r' && 
-                Index + 1 < Text->LengthInChars &&
+            if (Index + 1 < Text->LengthInChars &&
+                Text->StartOfString[Index] == '\r' && 
                 Text->StartOfString[Index + 1] == '\n') {
 
                 Index++;
@@ -1947,6 +2770,8 @@ YoriWinMultilineEditAppendLinesNoDataCopy(
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    YoriWinMultilineEditClearUndo(MultilineEdit);
 
     if (NewLineCount + MultilineEdit->LinesPopulated > MultilineEdit->LinesAllocated) {
         DWORD NewLinesToAllocate;
@@ -2016,7 +2841,7 @@ YoriWinMultilineEditDeleteSelection(
     LastLine = Selection->LastLine;
     LastCharOffset = Selection->LastCharOffset;
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
         return FALSE;
     }
 
@@ -2599,7 +3424,7 @@ YoriWinMultilineEditInsertTextAtCursor(
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
 
-    if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, Text, &LastLine, &LastCharOffset)) {
+    if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, Text, &LastLine, &LastCharOffset)) {
         return FALSE;
     }
 
@@ -2802,6 +3627,7 @@ YoriWinMultilineEditClear(
     for (Index = 0; Index < MultilineEdit->LinesPopulated; Index++) {
         YoriLibFreeStringContents(&MultilineEdit->LineArray[Index]);
     }
+    YoriWinMultilineEditClearUndo(MultilineEdit);
 
     MultilineEdit->LinesPopulated = 0;
     MultilineEdit->ViewportTop = 0;
@@ -3142,7 +3968,7 @@ YoriWinMultilineEditBackspace(
         FirstCharOffset = LastCharOffset - 1;
     }
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
         return FALSE;
     }
 
@@ -3190,7 +4016,7 @@ YoriWinMultilineEditDelete(
         LastCharOffset = FirstCharOffset + 1;
     }
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
         return FALSE;
     }
 
@@ -3216,7 +4042,7 @@ YoriWinMultilineEditDeleteLine(
         return FALSE;
     }
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, MultilineEdit->CursorLine, 0, MultilineEdit->CursorLine + 1, 0)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, 0, MultilineEdit->CursorLine + 1, 0)) {
         return FALSE;
     }
 
@@ -3725,11 +4551,11 @@ YoriWinMultilineEditAddChar(
     String.LengthInChars = 1;
 
     if (!MultilineEdit->InsertMode) {
-        if (!YoriWinMultilineEditOverwriteTextRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
+        if (!YoriWinMultilineEditOverwriteTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
             return FALSE;
         }
     } else {
-        if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
+        if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
             return FALSE;
         }
     }
@@ -3763,6 +4589,7 @@ YoriWinMultilineEditEventHandler(
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
     switch(Event->EventType) {
         case YoriWinEventParentDestroyed:
+            YoriWinMultilineEditClearUndo(MultilineEdit);
             for (Index = 0; Index < MultilineEdit->LinesPopulated; Index++) {
                 YoriLibFreeStringContents(&MultilineEdit->LineArray[Index]);
             }
@@ -3845,6 +4672,11 @@ YoriWinMultilineEditEventHandler(
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
                         return TRUE;
+                    } else if (Event->KeyDown.VirtualKeyCode == 'Z') {
+                        if (YoriWinMultilineEditUndo(MultilineEdit)) {
+                            YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+                            YoriWinMultilineEditPaint(MultilineEdit);
+                        }
                     }
                 }
             } else if (Event->KeyDown.CtrlMask == ENHANCED_KEY ||
@@ -4084,6 +4916,9 @@ YoriWinMultilineEditCreate(
     }
 
     ZeroMemory(MultilineEdit, sizeof(YORI_WIN_CTRL_MULTILINE_EDIT));
+
+    YoriLibInitializeListHead(&MultilineEdit->Undo);
+    YoriLibInitializeListHead(&MultilineEdit->Redo);
 
     MultilineEdit->Ctrl.NotifyEventFn = YoriWinMultilineEditEventHandler;
     if (!YoriWinCreateControl(Parent, Size, TRUE, &MultilineEdit->Ctrl)) {
