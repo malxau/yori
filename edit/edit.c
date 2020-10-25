@@ -114,6 +114,11 @@ typedef struct _EDIT_CONTEXT {
     DWORD EditUndoMenuIndex;
 
     /**
+     The index of the redo menu item.
+     */
+    DWORD EditRedoMenuIndex;
+
+    /**
      The index of the cut menu item.
      */
     DWORD EditCutMenuIndex;
@@ -990,6 +995,7 @@ EditEditButtonClicked(
 {
     PYORI_WIN_CTRL_HANDLE EditMenu;
     PYORI_WIN_CTRL_HANDLE UndoItem;
+    PYORI_WIN_CTRL_HANDLE RedoItem;
     PYORI_WIN_CTRL_HANDLE CutItem;
     PYORI_WIN_CTRL_HANDLE CopyItem;
     PYORI_WIN_CTRL_HANDLE PasteItem;
@@ -1008,6 +1014,7 @@ EditEditButtonClicked(
     TextSelected = YoriWinMultilineEditSelectionActive(EditContext->MultilineEdit);
     EditMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->EditMenuIndex);
     UndoItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditUndoMenuIndex);
+    RedoItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditRedoMenuIndex);
     CutItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditCutMenuIndex);
     CopyItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditCopyMenuIndex);
     PasteItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, EditContext->EditPasteMenuIndex);
@@ -1017,6 +1024,12 @@ EditEditButtonClicked(
         YoriWinMenuBarEnableMenuItem(UndoItem);
     } else {
         YoriWinMenuBarDisableMenuItem(UndoItem);
+    }
+
+    if (YoriWinMultilineEditIsRedoAvailable(EditContext->MultilineEdit)) {
+        YoriWinMenuBarEnableMenuItem(RedoItem);
+    } else {
+        YoriWinMenuBarDisableMenuItem(RedoItem);
     }
 
     if (TextSelected) {
@@ -1054,6 +1067,24 @@ EditUndoButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
     YoriWinMultilineEditUndo(EditContext->MultilineEdit);
+}
+
+/**
+ A callback invoked when the redo button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+EditRedoButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PEDIT_CONTEXT EditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+    YoriWinMultilineEditRedo(EditContext->MultilineEdit);
 }
 
 
@@ -1868,7 +1899,7 @@ EditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
-    YORI_WIN_MENU_ENTRY EditMenuEntries[6];
+    YORI_WIN_MENU_ENTRY EditMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
     YORI_WIN_MENU_ENTRY OptionsMenuEntries[2];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
@@ -1912,6 +1943,12 @@ EditPopulateMenuBar(
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Undo"));
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+Z"));
     EditMenuEntries[MenuIndex].NotifyCallback = EditUndoButtonClicked;
+
+    MenuIndex++;
+    EditContext->EditRedoMenuIndex = MenuIndex;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Redo"));
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+R"));
+    EditMenuEntries[MenuIndex].NotifyCallback = EditRedoButtonClicked;
 
     MenuIndex++;
     EditMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;

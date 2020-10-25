@@ -1146,7 +1146,6 @@ YoriWinMultilineEditToggleInsert(
 //  =========================================
 //
 
-
 /**
  Free a single undo entry.  This entry is expected to be unlinked from the
  chain.
@@ -1200,6 +1199,28 @@ YoriWinMultilineEditClearUndo(
         } else {
             ListHead = NULL;
         }
+    }
+}
+
+/**
+ Free all redo entries that are linked into the multiline edit control.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+ */
+VOID
+YoriWinMultilineEditClearRedo(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo;
+
+    ListEntry = YoriLibGetNextListEntry(&MultilineEdit->Redo, NULL);
+    while (ListEntry != NULL) {
+        YoriLibRemoveListItem(ListEntry);
+        Undo = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, ListEntry);
+        YoriWinMultilineEditFreeSingleUndo(Undo);
+        ListEntry = YoriLibGetNextListEntry(&MultilineEdit->Redo, NULL);
     }
 }
 
@@ -1334,6 +1355,8 @@ YoriWinMultilineEditGetUndoRecordForOperation(
     PYORI_LIST_ENTRY ListEntry;
     PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
 
+    YoriWinMultilineEditClearRedo(MultilineEdit);
+
     *NewRangeBeforeExistingRange = FALSE;
 
     ListEntry = YoriLibGetNextListEntry(&MultilineEdit->Undo, NULL);
@@ -1366,7 +1389,6 @@ YoriWinMultilineEditGetUndoRecordForOperation(
             }
         }
     }
-
 
     if (Undo == NULL) {
         Undo = YoriLibMalloc(sizeof(YORI_WIN_CTRL_MULTILINE_EDIT_UNDO));
@@ -1531,6 +1553,45 @@ YoriWinMultilineEditIsUndoAvailable(
     return FALSE;
 }
 
+/**
+ Return TRUE to indicate that there are records specifying how to redo
+ previous operations.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE if there are operations available to redo, FALSE if there
+         are not.
+ */
+BOOLEAN
+YoriWinMultilineEditIsRedoAvailable(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (!YoriLibIsListEmpty(&MultilineEdit->Redo)) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+__success(return)
+BOOLEAN
+YoriWinMultilineEditGetTextRange(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastLine,
+    __in DWORD LastCharOffset,
+    __in PYORI_STRING NewlineString,
+    __out PYORI_STRING SelectedText
+    );
+
 __success(return)
 BOOLEAN
 YoriWinMultilineEditDeleteTextRange(
@@ -1554,33 +1615,138 @@ YoriWinMultilineEditInsertTextRange(
     __out PDWORD LastCharOffset
     );
 
-/**
- Undo the most recent change to a multiline edit control.
+VOID
+YoriWinMultilineEditCalculateEndingPointOfText(
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text,
+    __out PDWORD LastLine,
+    __out PDWORD LastCharOffset
+    );
 
- @param CtrlHandle Pointer to the multiline edit control.
+/**
+ Given an undo record, generate a record that would undo the undo.
+
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        state of the buffer before the undo record has been applied.
+
+ @param Undo Pointer to an undo record indicating changes to perform.
+
+ @param AddToUndoList If FALSE, the resulting undo of the undo should be added
+        to the Redo list.  If TRUE, the undo here is already a redo, so the
+        undo of the undo (of the undo) goes onto the undo list.
+
+ @return Pointer to a newly allocated undo of the undo record.
+ */
+PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO
+YoriWinMultilineEditGenerateRedoRecordForUndo(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo,
+    __in BOOLEAN AddToUndoList
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Redo;
+    YORI_STRING Newline;
+
+    //
+    //  MSFIX Note that clearing all undo may remove the undo record that
+    //  is causing this redo.  Need to make sure the logic is correct.
+    //
+
+    Redo = YoriLibMalloc(sizeof(YORI_WIN_CTRL_MULTILINE_EDIT_UNDO));
+    if (Redo == NULL) {
+        YoriWinMultilineEditClearUndo(MultilineEdit);
+        return NULL;
+    }
+
+    ZeroMemory(Redo, sizeof(YORI_WIN_CTRL_MULTILINE_EDIT_UNDO));
+    if (AddToUndoList) {
+        YoriLibInsertList(&MultilineEdit->Undo, &Redo->ListEntry);
+    } else {
+        YoriLibInsertList(&MultilineEdit->Redo, &Redo->ListEntry);
+    }
+
+    switch(Undo->Op) {
+        case YoriWinMultilineEditUndoInsertText:
+            Redo->Op = YoriWinMultilineEditUndoDeleteText;
+            Redo->u.DeleteText.FirstLine = Undo->u.InsertText.FirstLineToDelete;
+            Redo->u.DeleteText.FirstCharOffset = Undo->u.InsertText.FirstCharOffsetToDelete;
+            YoriLibConstantString(&Newline, _T("\n"));
+            if (!YoriWinMultilineEditGetTextRange(MultilineEdit,
+                                                  Undo->u.InsertText.FirstLineToDelete,
+                                                  Undo->u.InsertText.FirstCharOffsetToDelete,
+                                                  Undo->u.InsertText.LastLineToDelete,
+                                                  Undo->u.InsertText.LastCharOffsetToDelete,
+                                                  &Newline,
+                                                  &Redo->u.DeleteText.Text)) {
+                YoriWinMultilineEditClearUndo(MultilineEdit);
+                return NULL;
+            }
+
+            break;
+        case YoriWinMultilineEditUndoDeleteText:
+            Redo->Op = YoriWinMultilineEditUndoInsertText;
+            Redo->u.InsertText.FirstLineToDelete = Undo->u.DeleteText.FirstLine;
+            Redo->u.InsertText.FirstCharOffsetToDelete = Undo->u.DeleteText.FirstCharOffset;
+            YoriWinMultilineEditCalculateEndingPointOfText(Undo->u.DeleteText.FirstLine,
+                                                           Undo->u.DeleteText.FirstCharOffset,
+                                                           &Undo->u.DeleteText.Text,
+                                                           &Redo->u.InsertText.LastLineToDelete,
+                                                           &Redo->u.InsertText.LastCharOffsetToDelete);
+            break;
+        case YoriWinMultilineEditUndoOverwriteText:
+
+            Redo->Op = Undo->Op;
+            Redo->u.OverwriteText.FirstLineToDelete = Undo->u.OverwriteText.FirstLine;
+            Redo->u.OverwriteText.FirstCharOffsetToDelete = Undo->u.OverwriteText.FirstCharOffset;
+            YoriWinMultilineEditCalculateEndingPointOfText(Undo->u.OverwriteText.FirstLine,
+                                                           Undo->u.OverwriteText.FirstCharOffset,
+                                                           &Undo->u.OverwriteText.Text,
+                                                           &Redo->u.OverwriteText.LastLineToDelete,
+                                                           &Redo->u.OverwriteText.LastCharOffsetToDelete);
+            Redo->u.OverwriteText.FirstLine = Undo->u.OverwriteText.FirstLineToDelete;
+            Redo->u.OverwriteText.FirstCharOffset = Undo->u.OverwriteText.FirstCharOffsetToDelete;
+
+            YoriLibConstantString(&Newline, _T("\n"));
+            if (!YoriWinMultilineEditGetTextRange(MultilineEdit,
+                                                  Undo->u.OverwriteText.FirstLineToDelete,
+                                                  Undo->u.OverwriteText.FirstCharOffsetToDelete,
+                                                  Undo->u.OverwriteText.LastLineToDelete,
+                                                  Undo->u.OverwriteText.LastCharOffsetToDelete,
+                                                  &Newline,
+                                                  &Redo->u.OverwriteText.Text)) {
+                YoriWinMultilineEditClearUndo(MultilineEdit);
+                return NULL;
+            }
+
+            Redo->u.OverwriteText.FirstCharOffsetModified = Undo->u.OverwriteText.FirstCharOffsetModified;
+            Redo->u.OverwriteText.LastCharOffsetModified = Undo->u.OverwriteText.FirstCharOffsetModified;
+
+            break;
+    }
+
+    return Redo;
+}
+
+/**
+ Modify the buffer of the control per the direction of an undo record.
+
+ @param MultilineEdit Pointer to the multiline edit control indicating the
+        buffer and cursor position.
+
+ @param Undo Pointer to the undo record indicating the changes to perform.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
-YoriWinMultilineEditUndo(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+YoriWinMultilineEditApplyUndoRecord(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo
     )
 {
-    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
-    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
-    PYORI_WIN_CTRL Ctrl;
+    BOOLEAN Success;
     DWORD NewLastLine;
     DWORD NewLastCharOffset;
-    BOOLEAN Success;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
-
-    if (YoriLibIsListEmpty(&MultilineEdit->Undo)) {
-        return FALSE;
-    }
-
-    Undo = CONTAINING_RECORD(MultilineEdit->Undo.Next, YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, ListEntry);
 
     Success = FALSE;
     switch(Undo->Op) {
@@ -1609,17 +1775,95 @@ YoriWinMultilineEditUndo(
             break;
     }
 
-    //
-    //  MSFIX Need to transpose the undo into a redo.  This may require work
-    //  before applying the changes from the undo.
-    //
+    return Success;
+}
+
+/**
+ Undo the most recent change to a multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditUndo(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Redo;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+    BOOLEAN Success;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (YoriLibIsListEmpty(&MultilineEdit->Undo)) {
+        return FALSE;
+    }
+
+    Undo = CONTAINING_RECORD(MultilineEdit->Undo.Next, YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, ListEntry);
+
+    Redo = YoriWinMultilineEditGenerateRedoRecordForUndo(MultilineEdit, Undo, FALSE);
+    if (Redo == NULL) {
+        return FALSE;
+    }
+
+    Success = YoriWinMultilineEditApplyUndoRecord(MultilineEdit, Undo);
 
     if (Success) {
         YoriLibRemoveListItem(&Undo->ListEntry);
         YoriWinMultilineEditFreeSingleUndo(Undo);
+    } else {
+        YoriLibRemoveListItem(&Redo->ListEntry);
+        YoriWinMultilineEditFreeSingleUndo(Redo);
     }
 
     return Success;
+}
+
+/**
+ Redo the most recently undone change to a multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditRedo(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Undo = NULL;
+    PYORI_WIN_CTRL_MULTILINE_EDIT_UNDO Redo;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    if (YoriLibIsListEmpty(&MultilineEdit->Redo)) {
+        return FALSE;
+    }
+
+    Undo = CONTAINING_RECORD(MultilineEdit->Redo.Next, YORI_WIN_CTRL_MULTILINE_EDIT_UNDO, ListEntry);
+
+    Redo = YoriWinMultilineEditGenerateRedoRecordForUndo(MultilineEdit, Undo, TRUE);
+    if (Redo == NULL) {
+        return FALSE;
+    }
+
+    if (!YoriWinMultilineEditApplyUndoRecord(MultilineEdit, Undo)) {
+        YoriLibRemoveListItem(&Redo->ListEntry);
+        YoriWinMultilineEditFreeSingleUndo(Redo);
+        return FALSE;
+    }
+
+    YoriLibRemoveListItem(&Undo->ListEntry);
+    YoriWinMultilineEditFreeSingleUndo(Undo);
+
+    return TRUE;
 }
 
 //
@@ -1915,6 +2159,7 @@ YoriWinMultilineEditPopulateTextRange(
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriWinMultilineEditGetTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
@@ -2119,6 +2364,62 @@ YoriWinMultilineEditDeleteTextRange(
     return TRUE;
 }
 
+/**
+ Given a starting location and a pile of text, determine the ending point of
+ the pile of text.
+
+ @param FirstLine Specifies the first line of the text.
+
+ @param FirstCharOffset Specifies the offset within the line to start
+        inserting text.
+
+ @param Text Pointer to the text to insert.
+
+ @param LastLine On completion, updated to indicate the final line containing
+        the text.
+
+ @param LastCharOffset On completion, updated to indicate the character
+        following the final character in the text.
+ */
+VOID
+YoriWinMultilineEditCalculateEndingPointOfText(
+    __in DWORD FirstLine,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text,
+    __out PDWORD LastLine,
+    __out PDWORD LastCharOffset
+    )
+{
+    DWORD LineCount;
+    DWORD Index;
+    DWORD LineCharCount;
+
+    //
+    //  Count the number of lines in the input text.  This may be zero.
+    //
+
+    LineCount = 0;
+    LineCharCount = FirstCharOffset;
+    for (Index = 0; Index < Text->LengthInChars; Index++) {
+        if (Text->StartOfString[Index] == '\r') {
+            LineCount++;
+            if (Index + 1 < Text->LengthInChars &&
+                Text->StartOfString[Index + 1] == '\n') {
+                Index++;
+            }
+            LineCharCount = 0;
+        } else if (Text->StartOfString[Index] == '\n') {
+            LineCount++;
+            LineCharCount = 0;
+        } else {
+            LineCharCount++;
+        }
+    }
+
+    *LastLine = FirstLine + LineCount;
+    *LastCharOffset = LineCharCount;
+}
+
 
 /**
  Allocate new lines for the line array.  This is used when the number of lines
@@ -2279,18 +2580,8 @@ YoriWinMultilineEditInsertTextRange(
     //  Count the number of lines in the input text.  This may be zero.
     //
 
-    LineCount = 0;
-    for (Index = 0; Index < Text->LengthInChars; Index++) {
-        if (Text->StartOfString[Index] == '\r') {
-            LineCount++;
-            if (Index + 1 < Text->LengthInChars &&
-                Text->StartOfString[Index + 1] == '\n') {
-                Index++;
-            }
-        } else if (Text->StartOfString[Index] == '\n') {
-            LineCount++;
-        }
-    }
+    YoriWinMultilineEditCalculateEndingPointOfText(FirstLine, FirstCharOffset, Text, &LocalLastLine, &LocalLastCharOffset);
+    LineCount = LocalLastLine - FirstLine;
 
     //
     //  If new lines are being added, check if the line array is large
@@ -2456,12 +2747,10 @@ YoriWinMultilineEditInsertTextRange(
 
     if (LineCount > 0) {
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, (DWORD)-1);
-        LocalLastLine = FirstLine + LineCount;
-        LocalLastCharOffset = CharsLastLine;
+        ASSERT(LocalLastCharOffset == CharsLastLine);
     } else {
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
-        LocalLastLine = FirstLine;
-        LocalLastCharOffset = FirstCharOffset + CharsFirstLine;
+        ASSERT(LocalLastCharOffset == FirstCharOffset + CharsFirstLine);
     }
 
     if (!ProcessingUndo) {
@@ -2532,6 +2821,8 @@ YoriWinMultilineEditOverwriteTextRange(
     DWORD CharsLastLine;
     DWORD CharsNeeded;
     DWORD StartOffsetThisLine;
+    DWORD LocalLastLine;
+    DWORD LocalLastCharOffset;
     PYORI_STRING Line;
     BOOLEAN TerminateLine;
     BOOLEAN MoveTrailingTextToNextLine;
@@ -2579,18 +2870,8 @@ YoriWinMultilineEditOverwriteTextRange(
     //  Count the number of lines in the input text.  This may be zero.
     //
 
-    LineCount = 0;
-    for (Index = 0; Index < Text->LengthInChars; Index++) {
-        if (Text->StartOfString[Index] == '\r') {
-            LineCount++;
-            if (Index + 1 < Text->LengthInChars &&
-                Text->StartOfString[Index + 1] == '\n') {
-                Index++;
-            }
-        } else if (Text->StartOfString[Index] == '\n') {
-            LineCount++;
-        }
-    }
+    YoriWinMultilineEditCalculateEndingPointOfText(FirstLine, FirstCharOffset, Text, &LocalLastLine, &LocalLastCharOffset);
+    LineCount = LocalLastLine - FirstLine;
 
     //
     //  If new lines are being added, check if the line array is large
@@ -2608,7 +2889,6 @@ YoriWinMultilineEditOverwriteTextRange(
             Undo->u.OverwriteText.LastCharOffsetToDelete = 0;
         }
     }
-
 
     //
     //  Go through each line.  Construct the new line.  For all lines except
@@ -2743,10 +3023,14 @@ YoriWinMultilineEditOverwriteTextRange(
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, (DWORD)-1);
         *LastLine = FirstLine + LineCount;
         *LastCharOffset = CharsLastLine;
+        ASSERT(LocalLastLine == FirstLine + LineCount);
+        ASSERT(LocalLastCharOffset == CharsLastLine);
     } else {
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
         *LastLine = FirstLine;
         *LastCharOffset = FirstCharOffset + CharsLastLine;
+        ASSERT(LocalLastLine == FirstLine + LineCount);
+        ASSERT(LocalLastCharOffset == FirstCharOffset + CharsLastLine);
     }
     MultilineEdit->UserModified = TRUE;
 
@@ -4661,6 +4945,12 @@ YoriWinMultilineEditEventHandler(
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
                         return TRUE;
+                    } else if (Event->KeyDown.VirtualKeyCode == 'R') {
+                        if (YoriWinMultilineEditRedo(MultilineEdit)) {
+                            YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+                            YoriWinMultilineEditPaint(MultilineEdit);
+                        }
+                        return TRUE;
                     } else if (Event->KeyDown.VirtualKeyCode == 'V') {
                         if (YoriWinMultilineEditPasteText(Ctrl)) {
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
@@ -4684,6 +4974,7 @@ YoriWinMultilineEditEventHandler(
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
+                        return TRUE;
                     }
                 }
             } else if (Event->KeyDown.CtrlMask == ENHANCED_KEY ||

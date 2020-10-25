@@ -710,7 +710,17 @@ YoriWinMultilineEditIsUndoAvailable(
     );
 
 BOOLEAN
+YoriWinMultilineEditIsRedoAvailable(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
 YoriWinMultilineEditUndo(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinMultilineEditRedo(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     );
 
