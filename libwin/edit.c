@@ -73,6 +73,110 @@ typedef struct _YORI_WIN_EDIT_SELECT {
 } YORI_WIN_EDIT_SELECT, *PYORI_WIN_EDIT_SELECT;
 
 /**
+ A set of modification operations that can be performed on the buffer that
+ can be undone.
+ */
+typedef enum _YORI_WIN_CTRL_EDIT_UNDO_OPERATION {
+    YoriWinEditUndoInsertText = 0,
+    YoriWinEditUndoOverwriteText = 1,
+    YoriWinEditUndoDeleteText = 2
+} YORI_WIN_CTRL_EDIT_UNDO_OPERATION;
+
+/**
+ Information about a single operation to undo.
+ */
+typedef struct _YORI_WIN_CTRL_EDIT_UNDO {
+
+    /**
+     The list of operations that can be undone on the edit control.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The type of this operation.
+     */
+    YORI_WIN_CTRL_EDIT_UNDO_OPERATION Op;
+
+    /**
+     Information specific to each type of operation.
+     */
+    union {
+        struct {
+
+            /**
+             The first offset of the range that was inserted and should be
+             deleted on undo.
+             */
+            DWORD FirstCharOffsetToDelete;
+
+            /**
+             The last offset of the range that was inserted and should be
+             deleted on undo.
+             */
+            DWORD LastCharOffsetToDelete;
+        } InsertText;
+
+        struct {
+
+            /**
+             The first character of the range that was deleted and needs to be
+             reinserted.
+             */
+            DWORD FirstCharOffset;
+
+            /**
+             The text to reinsert on undo.
+             */
+            YORI_STRING Text;
+        } DeleteText;
+
+        struct {
+
+            /**
+             The first offset of the range that was overwritten and should be
+             deleted on undo.
+             */
+            DWORD FirstCharOffsetToDelete;
+
+            /**
+             The last offset of the range that was overwritten and should be
+             deleted on undo.
+             */
+            DWORD LastCharOffsetToDelete;
+
+            /**
+             The first character of the range that should be inserted to replace
+             the overwritten text.
+             */
+            DWORD FirstCharOffset;
+
+            /**
+             The offset of the first character that the user changed.  This
+             may be after FirstCharOffset because the saved range may be
+             larger than the range that the user modified.  This value is
+             used to determine the cursor location on undo.
+             */
+            DWORD FirstCharOffsetModified;
+
+            /**
+             The offset of the last character that the user changed.  This
+             may be before LastCharOffsetToDelete because the saved range may
+             be larger than the range that the user modified.  This value is
+             used to determine if a later modification should be part of an
+             earlier undo record.
+             */
+            DWORD LastCharOffsetModified;
+
+            /**
+             The text to reinsert on undo.
+             */
+            YORI_STRING Text;
+        } OverwriteText;
+    } u;
+} YORI_WIN_CTRL_EDIT_UNDO, *PYORI_WIN_CTRL_EDIT_UNDO;
+
+
+/**
  A structure describing the contents of a edit control.
  */
 typedef struct _YORI_WIN_CTRL_EDIT {
@@ -110,6 +214,16 @@ typedef struct _YORI_WIN_CTRL_EDIT {
     DWORD CursorOffset;
 
     /**
+     A stack of changes which can be undone.
+     */
+    YORI_LIST_ENTRY Undo;
+
+    /**
+     A stack of changes which can be redone.
+     */
+    YORI_LIST_ENTRY Redo;
+
+    /**
      The attributes to display text in.
      */
     WORD TextAttributes;
@@ -139,6 +253,12 @@ typedef struct _YORI_WIN_CTRL_EDIT {
     BOOLEAN MouseButtonDown;
 
 } YORI_WIN_CTRL_EDIT, *PYORI_WIN_CTRL_EDIT;
+
+//
+//  =========================================
+//  DISPLAY FUNCTIONS
+//  =========================================
+//
 
 /**
  Return TRUE if a selection region is active, or FALSE if no selection is
@@ -362,6 +482,989 @@ YoriWinEditCheckSelectionState(
     ASSERT(Selection->LastCharOffset <= Edit->Text.LengthInChars);
 }
 
+//
+//  =========================================
+//  UNDO FUNCTIONS
+//  =========================================
+//
+
+/**
+ Free a single undo entry.  This entry is expected to be unlinked from the
+ chain.
+
+ @param Undo Pointer to the undo entry to free.
+ */
+VOID
+YoriWinEditFreeSingleUndo(
+    __in PYORI_WIN_CTRL_EDIT_UNDO Undo
+    )
+{
+    switch(Undo->Op) {
+        case YoriWinEditUndoOverwriteText:
+            YoriLibFreeStringContents(&Undo->u.OverwriteText.Text);
+            break;
+        case YoriWinEditUndoDeleteText:
+            YoriLibFreeStringContents(&Undo->u.DeleteText.Text);
+            break;
+    }
+
+    YoriLibFree(Undo);
+}
+
+/**
+ Free all undo entries that are linked into the edit control.
+
+ @param Edit Pointer to the edit control.
+ */
+VOID
+YoriWinEditClearUndo(
+    __in PYORI_WIN_CTRL_EDIT Edit
+    )
+{
+    PYORI_LIST_ENTRY ListHead;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_WIN_CTRL_EDIT_UNDO Undo;
+
+    ListHead = &Edit->Undo;
+    while (ListHead != NULL) {
+
+        ListEntry = YoriLibGetNextListEntry(ListHead, NULL);
+        while (ListEntry != NULL) {
+            YoriLibRemoveListItem(ListEntry);
+            Undo = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL_EDIT_UNDO, ListEntry);
+            YoriWinEditFreeSingleUndo(Undo);
+            ListEntry = YoriLibGetNextListEntry(ListHead, NULL);
+        }
+
+        if (ListHead == &Edit->Undo) {
+            ListHead = &Edit->Redo;
+        } else {
+            ListHead = NULL;
+        }
+    }
+}
+
+/**
+ Free all redo entries that are linked into the edit control.
+
+ @param Edit Pointer to the edit control.
+ */
+VOID
+YoriWinEditClearRedo(
+    __in PYORI_WIN_CTRL_EDIT Edit
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_WIN_CTRL_EDIT_UNDO Undo;
+
+    ListEntry = YoriLibGetNextListEntry(&Edit->Redo, NULL);
+    while (ListEntry != NULL) {
+        YoriLibRemoveListItem(ListEntry);
+        Undo = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL_EDIT_UNDO, ListEntry);
+        YoriWinEditFreeSingleUndo(Undo);
+        ListEntry = YoriLibGetNextListEntry(&Edit->Redo, NULL);
+    }
+}
+
+/**
+ Check if a new modification should be included in a previous undo entry
+ because the new modification is immediately before the range in the previous
+ entry.
+
+ @param Edit Pointer to the edit control.
+
+ @param ExistingFirstCharOffset Specifies the beginning offset of the range
+        currently covered by an undo record.
+
+ @param ProposedLastCharOffset Specifies the ending offset of a newly modified
+        range.
+
+ @return TRUE to indicate that the new change is immediately before the
+         previous undo record.  FALSE to indicate it requires a new entry.
+ */
+BOOLEAN
+YoriWinEditRangeImmediatelyPreceeds(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in DWORD ExistingFirstCharOffset,
+    __in DWORD ProposedLastCharOffset
+    )
+{
+    UNREFERENCED_PARAMETER(Edit);
+
+    if (ExistingFirstCharOffset == ProposedLastCharOffset) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Check if a new modification should be included in a previous undo entry
+ because the new modification is immediately after the range in the previous
+ entry.
+
+ @param Edit Pointer to the edit control.
+
+ @param ExistingLastCharOffset Specifies the ending offset of the range
+        currently covered by an undo record.
+
+ @param ProposedFirstCharOffset Specifies the beginning offset of a newly
+        modified range.
+
+ @return TRUE to indicate that the new change is immediately after the
+         previous undo record.  FALSE to indicate it requires a new entry.
+ */
+BOOLEAN
+YoriWinEditRangeImmediatelyFollows(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in DWORD ExistingLastCharOffset,
+    __in DWORD ProposedFirstCharOffset
+    )
+{
+    UNREFERENCED_PARAMETER(Edit);
+
+    if (ExistingLastCharOffset == ProposedFirstCharOffset) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Return an undo record for the incoming operation.  This may be a newly
+ allocated undo record, or if the operation is adjacent to the previous
+ operation it may return an existing record.
+
+ @param Edit Pointer to the edit control.
+
+ @param Op Specifies the type of the operation.  Only the same type of
+        operations can reuse previous records.
+
+ @param FirstCharOffset Specifies the beginning offset of the range that is
+        being modified.
+
+ @param LastCharOffset Specifies the last offset of the range that is being
+        modified.  This may not always be known until after the operation is
+        performed, but in that case the operation cannot be prepended to a
+        previous operation of the same type, so it is not required.
+
+ @param NewRangeBeforeExistingRange On successful completion, set to TRUE
+        to indicate the new change is being applied to an existing record
+        before the existing record's current range.  FALSE implies the
+        change is either after the end of an existing record or is going to
+        a new record.
+
+ @return Pointer to the undo record, or NULL to indicate failure.
+ */
+PYORI_WIN_CTRL_EDIT_UNDO
+YoriWinEditGetUndoRecordForOperation(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in YORI_WIN_CTRL_EDIT_UNDO_OPERATION Op,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastCharOffset,
+    __out PBOOLEAN NewRangeBeforeExistingRange
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_WIN_CTRL_EDIT_UNDO Undo = NULL;
+
+    YoriWinEditClearRedo(Edit);
+
+    *NewRangeBeforeExistingRange = FALSE;
+
+    ListEntry = YoriLibGetNextListEntry(&Edit->Undo, NULL);
+    if (ListEntry != NULL) {
+        Undo = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL_EDIT_UNDO, ListEntry);
+        if (Undo->Op != Op) {
+            Undo = NULL;
+        } else {
+            switch (Op) {
+                case YoriWinEditUndoInsertText:
+                    if (!YoriWinEditRangeImmediatelyFollows(Edit, Undo->u.InsertText.LastCharOffsetToDelete, FirstCharOffset)) {
+                        Undo = NULL;
+                    }
+                    break;
+                case YoriWinEditUndoDeleteText:
+                    if (YoriWinEditRangeImmediatelyPreceeds(Edit, Undo->u.DeleteText.FirstCharOffset, LastCharOffset)) {
+                        *NewRangeBeforeExistingRange = TRUE;
+                    } else if (!YoriWinEditRangeImmediatelyFollows(Edit, Undo->u.DeleteText.FirstCharOffset, FirstCharOffset)) {
+                        Undo = NULL;
+                    }
+                    break;
+                case YoriWinEditUndoOverwriteText:
+                    if (!YoriWinEditRangeImmediatelyFollows(Edit, Undo->u.OverwriteText.LastCharOffsetModified, FirstCharOffset)) {
+                        Undo = NULL;
+                    }
+                    break;
+                default:
+                    Undo = NULL;
+                    break;
+            }
+        }
+    }
+
+    if (Undo == NULL) {
+        Undo = YoriLibMalloc(sizeof(YORI_WIN_CTRL_EDIT_UNDO));
+        if (Undo == NULL) {
+            YoriWinEditClearUndo(Edit);
+            return NULL;
+        }
+
+        ZeroMemory(Undo, sizeof(YORI_WIN_CTRL_EDIT_UNDO));
+        YoriLibInsertList(&Edit->Undo, &Undo->ListEntry);
+
+        Undo->Op = Op;
+
+        switch(Op) {
+            case YoriWinEditUndoInsertText:
+                Undo->u.InsertText.FirstCharOffsetToDelete = FirstCharOffset;
+                Undo->u.InsertText.LastCharOffsetToDelete = LastCharOffset;
+                break;
+            case YoriWinEditUndoDeleteText:
+                Undo->u.DeleteText.FirstCharOffset = FirstCharOffset;
+                YoriLibInitEmptyString(&Undo->u.DeleteText.Text);
+                break;
+            case YoriWinEditUndoOverwriteText:
+                Undo->u.OverwriteText.FirstCharOffsetToDelete = FirstCharOffset;
+                Undo->u.OverwriteText.LastCharOffsetToDelete = LastCharOffset;
+                Undo->u.OverwriteText.FirstCharOffset = FirstCharOffset;
+                Undo->u.OverwriteText.FirstCharOffsetModified = FirstCharOffset;
+                Undo->u.OverwriteText.LastCharOffsetModified = LastCharOffset;
+                YoriLibInitEmptyString(&Undo->u.OverwriteText.Text);
+                break;
+        }
+    }
+    return Undo;
+}
+
+/**
+ If a change needs to be saved so that it can be undone, the change may be
+ before or after a previous change that should be undone in the same
+ operation (consider when the user hits backspace or del.)  In order to do
+ this, new text may need to be saved before or after previously saved text.
+ Here a string is allocated where the range used is in the middle of the
+ allocation, allowing characters to be inserted before or after it by
+ adjusting the start pointer and length of the string.  Clearly if it is
+ continually modified, it may also need to be reallocated periodically, but
+ not for each key press.
+
+ @param CombinedString Pointer to a string which contains the current saved
+        text.  The StartOfString and LengthInChars members specify the current
+        saved text, and the gap before can be found from the difference
+        between MemoryToFree and StartOfString, and the gap afterwards from
+        LengthAllocated and LengthInChars.
+
+ @param CharsNeeded Specifies the number of new characters that should be
+        added.
+
+ @param CharsBefore TRUE if the new characters should be added before existing
+        text, FALSE if the new characters should be added after the existing
+        text.
+
+ @param Substring On successful completion, populated with a string for the
+        caller to write their new changes in the correct place.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinEditEnsureSpaceBeforeOrAfterString(
+    __in PYORI_STRING CombinedString,
+    __in DWORD CharsNeeded,
+    __in BOOLEAN CharsBefore,
+    __out PYORI_STRING Substring
+    )
+{
+    DWORD CurrentCharsBefore;
+    DWORD CurrentCharsAfter;
+    DWORD LengthNeeded;
+    YORI_STRING Temp;
+
+    CurrentCharsBefore = (DWORD)(CombinedString->StartOfString - (LPTSTR)CombinedString->MemoryToFree);
+    CurrentCharsAfter = CombinedString->LengthAllocated - CurrentCharsBefore - CombinedString->LengthInChars;
+
+    while(TRUE) {
+
+        if (CharsBefore) {
+            if (CharsNeeded <= CurrentCharsBefore) {
+                CombinedString->StartOfString = CombinedString->StartOfString - CharsNeeded;
+                CombinedString->LengthInChars = CombinedString->LengthInChars + CharsNeeded;
+                YoriLibInitEmptyString(Substring);
+                Substring->StartOfString = CombinedString->StartOfString;
+                Substring->LengthInChars = CharsNeeded;
+                return TRUE;
+            }
+        } else {
+            if (CharsNeeded <= CurrentCharsAfter) {
+                YoriLibInitEmptyString(Substring);
+                Substring->StartOfString = CombinedString->StartOfString + CombinedString->LengthInChars;
+                Substring->LengthInChars = CharsNeeded;
+                CombinedString->LengthInChars = CombinedString->LengthInChars + CharsNeeded;
+                return TRUE;
+            }
+        }
+
+        //
+        //  Allocate an extra 1Kb before and after in the hope that repeated
+        //  keystrokes won't cause new allocations and copies.
+        //
+
+        CurrentCharsBefore = CurrentCharsAfter = 0x400;
+        if (CharsBefore) {
+            CurrentCharsBefore = CurrentCharsBefore + CharsNeeded;
+        } else {
+            CurrentCharsAfter = CurrentCharsAfter + CharsNeeded;
+        }
+
+        LengthNeeded = CurrentCharsBefore + CombinedString->LengthInChars + CurrentCharsAfter;
+        if (!YoriLibAllocateString(&Temp, LengthNeeded)) {
+            return FALSE;
+        }
+
+        Temp.StartOfString = Temp.StartOfString + CurrentCharsBefore;
+
+        memcpy(Temp.StartOfString,
+               CombinedString->StartOfString,
+               CombinedString->LengthInChars * sizeof(TCHAR));
+
+        Temp.LengthInChars = CombinedString->LengthInChars;
+        YoriLibFreeStringContents(CombinedString);
+        memcpy(CombinedString, &Temp, sizeof(YORI_STRING));
+    }
+}
+
+/**
+ Return TRUE to indicate that there are records specifying how to undo
+ previous operations.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE if there are operations available to undo, FALSE if there
+         are not.
+ */
+BOOLEAN
+YoriWinEditIsUndoAvailable(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (!YoriLibIsListEmpty(&Edit->Undo)) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Return TRUE to indicate that there are records specifying how to redo
+ previous operations.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @return TRUE if there are operations available to redo, FALSE if there
+         are not.
+ */
+BOOLEAN
+YoriWinEditIsRedoAvailable(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (!YoriLibIsListEmpty(&Edit->Redo)) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+BOOLEAN
+YoriWinEditDeleteTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in BOOLEAN ProcessingUndo,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastCharOffset
+    );
+
+BOOLEAN
+YoriWinEditInsertTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in BOOLEAN ProcessingUndo,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text
+    );
+
+BOOLEAN
+YoriWinEditGetTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastCharOffset,
+    __out PYORI_STRING SelectedText
+    );
+
+/**
+ Given an undo record, generate a record that would undo the undo.
+
+ @param Edit Pointer to the edit control containing the
+        state of the buffer before the undo record has been applied.
+
+ @param Undo Pointer to an undo record indicating changes to perform.
+
+ @param AddToUndoList If FALSE, the resulting undo of the undo should be added
+        to the Redo list.  If TRUE, the undo here is already a redo, so the
+        undo of the undo (of the undo) goes onto the undo list.
+
+ @return Pointer to a newly allocated undo of the undo record.
+ */
+PYORI_WIN_CTRL_EDIT_UNDO
+YoriWinEditGenerateRedoRecordForUndo(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in PYORI_WIN_CTRL_EDIT_UNDO Undo,
+    __in BOOLEAN AddToUndoList
+    )
+{
+    PYORI_WIN_CTRL_EDIT_UNDO Redo;
+
+    //
+    //  MSFIX Note that clearing all undo may remove the undo record that
+    //  is causing this redo.  Need to make sure the logic is correct.
+    //
+
+    Redo = YoriLibMalloc(sizeof(YORI_WIN_CTRL_EDIT_UNDO));
+    if (Redo == NULL) {
+        YoriWinEditClearUndo(Edit);
+        return NULL;
+    }
+
+    ZeroMemory(Redo, sizeof(YORI_WIN_CTRL_EDIT_UNDO));
+    if (AddToUndoList) {
+        YoriLibInsertList(&Edit->Undo, &Redo->ListEntry);
+    } else {
+        YoriLibInsertList(&Edit->Redo, &Redo->ListEntry);
+    }
+
+    switch(Undo->Op) {
+        case YoriWinEditUndoInsertText:
+            Redo->Op = YoriWinEditUndoDeleteText;
+            Redo->u.DeleteText.FirstCharOffset = Undo->u.InsertText.FirstCharOffsetToDelete;
+            if (!YoriWinEditGetTextRange(Edit,
+                                         Undo->u.InsertText.FirstCharOffsetToDelete,
+                                         Undo->u.InsertText.LastCharOffsetToDelete,
+                                         &Redo->u.DeleteText.Text)) {
+                YoriWinEditClearUndo(Edit);
+                return NULL;
+            }
+
+            break;
+        case YoriWinEditUndoDeleteText:
+            Redo->Op = YoriWinEditUndoInsertText;
+            Redo->u.InsertText.FirstCharOffsetToDelete = Undo->u.DeleteText.FirstCharOffset;
+            Redo->u.InsertText.LastCharOffsetToDelete = Undo->u.DeleteText.FirstCharOffset + Undo->u.DeleteText.Text.LengthInChars;
+            break;
+        case YoriWinEditUndoOverwriteText:
+
+            Redo->Op = Undo->Op;
+            Redo->u.OverwriteText.FirstCharOffsetToDelete = Undo->u.OverwriteText.FirstCharOffset;
+            Redo->u.OverwriteText.LastCharOffsetToDelete = Undo->u.OverwriteText.FirstCharOffset + Undo->u.OverwriteText.Text.LengthInChars;
+            Redo->u.OverwriteText.FirstCharOffset = Undo->u.OverwriteText.FirstCharOffsetToDelete;
+
+            if (!YoriWinEditGetTextRange(Edit,
+                                         Undo->u.OverwriteText.FirstCharOffsetToDelete,
+                                         Undo->u.OverwriteText.LastCharOffsetToDelete,
+                                         &Redo->u.OverwriteText.Text)) {
+                YoriWinEditClearUndo(Edit);
+                return NULL;
+            }
+
+            Redo->u.OverwriteText.FirstCharOffsetModified = Undo->u.OverwriteText.FirstCharOffsetModified;
+            Redo->u.OverwriteText.LastCharOffsetModified = Undo->u.OverwriteText.FirstCharOffsetModified;
+
+            break;
+    }
+
+    return Redo;
+}
+
+/**
+ Modify the buffer of the control per the direction of an undo record.
+
+ @param Edit Pointer to the edit control indicating the buffer and cursor
+        position.
+
+ @param Undo Pointer to the undo record indicating the changes to perform.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditApplyUndoRecord(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in PYORI_WIN_CTRL_EDIT_UNDO Undo
+    )
+{
+    BOOLEAN Success;
+    DWORD NewLastLine;
+    DWORD NewLastCharOffset;
+
+    Success = FALSE;
+    switch(Undo->Op) {
+        case YoriWinEditUndoInsertText:
+            Success = YoriWinEditDeleteTextRange(Edit, TRUE, Undo->u.InsertText.FirstCharOffsetToDelete, Undo->u.InsertText.LastCharOffsetToDelete);
+            if (Success) {
+                Edit->CursorOffset = Undo->u.InsertText.FirstCharOffsetToDelete;
+            }
+            break;
+        case YoriWinEditUndoDeleteText:
+            Success = YoriWinEditInsertTextRange(Edit, TRUE, Undo->u.DeleteText.FirstCharOffset, &Undo->u.DeleteText.Text);
+            if (Success) {
+                Edit->CursorOffset = Undo->u.DeleteText.FirstCharOffset + Undo->u.DeleteText.Text.LengthInChars;
+            }
+            break;
+        case YoriWinEditUndoOverwriteText:
+            NewLastLine = 0;
+            NewLastCharOffset = 0;
+            Success = YoriWinEditDeleteTextRange(Edit, TRUE, Undo->u.OverwriteText.FirstCharOffsetToDelete, Undo->u.OverwriteText.LastCharOffsetToDelete);
+            if (Success) {
+                Success = YoriWinEditInsertTextRange(Edit, TRUE, Undo->u.OverwriteText.FirstCharOffset, &Undo->u.OverwriteText.Text);
+                if (Success) {
+                    Edit->CursorOffset = Undo->u.OverwriteText.FirstCharOffsetModified;
+                }
+            }
+            break;
+    }
+
+    return Success;
+}
+
+/**
+ Undo the most recent change to a edit control.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditUndo(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT_UNDO Undo = NULL;
+    PYORI_WIN_CTRL_EDIT_UNDO Redo;
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+    BOOLEAN Success;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (YoriLibIsListEmpty(&Edit->Undo)) {
+        return FALSE;
+    }
+
+    Undo = CONTAINING_RECORD(Edit->Undo.Next, YORI_WIN_CTRL_EDIT_UNDO, ListEntry);
+
+    Redo = YoriWinEditGenerateRedoRecordForUndo(Edit, Undo, FALSE);
+    if (Redo == NULL) {
+        return FALSE;
+    }
+
+    Success = YoriWinEditApplyUndoRecord(Edit, Undo);
+
+    if (Success) {
+        YoriLibRemoveListItem(&Undo->ListEntry);
+        YoriWinEditFreeSingleUndo(Undo);
+    } else {
+        YoriLibRemoveListItem(&Redo->ListEntry);
+        YoriWinEditFreeSingleUndo(Redo);
+    }
+
+    return Success;
+}
+
+/**
+ Redo the most recently undone change to a edit control.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditRedo(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_EDIT_UNDO Undo = NULL;
+    PYORI_WIN_CTRL_EDIT_UNDO Redo;
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    if (YoriLibIsListEmpty(&Edit->Redo)) {
+        return FALSE;
+    }
+
+    Undo = CONTAINING_RECORD(Edit->Redo.Next, YORI_WIN_CTRL_EDIT_UNDO, ListEntry);
+
+    Redo = YoriWinEditGenerateRedoRecordForUndo(Edit, Undo, TRUE);
+    if (Redo == NULL) {
+        return FALSE;
+    }
+
+    if (!YoriWinEditApplyUndoRecord(Edit, Undo)) {
+        YoriLibRemoveListItem(&Redo->ListEntry);
+        YoriWinEditFreeSingleUndo(Redo);
+        return FALSE;
+    }
+
+    YoriLibRemoveListItem(&Undo->ListEntry);
+    YoriWinEditFreeSingleUndo(Undo);
+
+    return TRUE;
+}
+
+//
+//  =========================================
+//  BUFFER MANIPULATION FUNCTIONS
+//  =========================================
+//
+
+/**
+ Populate a caller allocated string with a range of text from the edit control.
+ This routine performs no length checking.
+
+ @param Edit Pointer to the edit control.
+
+ @param FirstCharOffset Indicates the beginning offset of the text to
+        obtain.
+
+ @param LastCharOffset Indicates the ending offset of the text to
+        obtain.
+
+ @param SelectedText Pointer to a string to populate with text.
+ */
+VOID
+YoriWinEditPopulateTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastCharOffset,
+    __inout PYORI_STRING SelectedText
+    )
+{
+    DWORD CharsInRange;
+    PYORI_STRING Line;
+
+    Line = &Edit->Text;
+
+    ASSERT(FirstCharOffset < LastCharOffset);
+    if (FirstCharOffset >= LastCharOffset) {
+        return;
+    }
+
+    CharsInRange = LastCharOffset - FirstCharOffset;
+
+
+    memcpy(SelectedText->StartOfString, &Line->StartOfString[FirstCharOffset], CharsInRange * sizeof(TCHAR));
+    SelectedText->LengthInChars = CharsInRange;
+}
+
+/**
+ Allocate a string and return a range of text from the edit control.
+
+ @param Edit Pointer to the edit control.
+
+ @param FirstCharOffset Indicates the beginning offset of the text to
+        obtain.
+
+ @param LastCharOffset Indicates the ending offset of the text to
+        obtain.
+
+ @param SelectedText Pointer to a string to populate with text.  This string
+        will be allocated in this routine.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditGetTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastCharOffset,
+    __out PYORI_STRING SelectedText
+    )
+{
+    DWORD CharsInRange;
+    PYORI_STRING Line;
+
+    Line = &Edit->Text;
+
+    if (FirstCharOffset >= LastCharOffset) {
+        YoriLibInitEmptyString(SelectedText);
+        return TRUE;
+    }
+
+    CharsInRange = LastCharOffset - FirstCharOffset;
+
+    if (!YoriLibAllocateString(SelectedText, CharsInRange + 1)) {
+        return FALSE;
+    }
+
+    YoriWinEditPopulateTextRange(Edit, FirstCharOffset, LastCharOffset, SelectedText);
+    SelectedText->StartOfString[CharsInRange] = '\0';
+    return TRUE;
+}
+
+/**
+ Delete a range of text from an edit control.
+
+ @param Edit Pointer to the edit control.
+
+ @param ProcessingUndo TRUE if this delete is caused by processing an undo,
+        indicating that this routine should not generate an undo record.
+        FALSE if this routine should generate a delete undo record.
+
+ @param FirstCharOffset Indicates the beginning offset of the text to
+        delete.
+
+ @param LastCharOffset Indicates the end offset of the text to delete.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditDeleteTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in BOOLEAN ProcessingUndo,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastCharOffset
+    )
+{
+    PYORI_WIN_CTRL_EDIT_UNDO Undo = NULL;
+    DWORD CharsToCopy;
+    DWORD CharsToDelete;
+    PYORI_STRING Line;
+
+    if (FirstCharOffset >= LastCharOffset) {
+        return TRUE;
+    }
+
+    if (!ProcessingUndo) {
+        BOOLEAN RangeBeforeExistingRange;
+        Undo = YoriWinEditGetUndoRecordForOperation(Edit, YoriWinEditUndoDeleteText, FirstCharOffset, LastCharOffset, &RangeBeforeExistingRange);
+        if (Undo != NULL) {
+            YORI_STRING Text;
+            DWORD CharsNeeded;
+
+            CharsNeeded = LastCharOffset - FirstCharOffset;
+
+            if (!YoriWinEditEnsureSpaceBeforeOrAfterString(&Undo->u.DeleteText.Text,
+                                                           CharsNeeded,
+                                                           RangeBeforeExistingRange,
+                                                           &Text)) {
+                return FALSE;
+            }
+
+            YoriWinEditPopulateTextRange(Edit, FirstCharOffset,  LastCharOffset, &Text);
+            if (RangeBeforeExistingRange) {
+                Undo->u.DeleteText.FirstCharOffset = FirstCharOffset;
+            }
+        }
+    }
+
+    Line = &Edit->Text;
+
+    CharsToDelete = LastCharOffset - FirstCharOffset;
+    CharsToCopy = Line->LengthInChars - LastCharOffset;
+
+    if (CharsToCopy > 0) {
+        memmove(&Line->StartOfString[FirstCharOffset],
+                &Line->StartOfString[LastCharOffset],
+                CharsToCopy * sizeof(TCHAR));
+    }
+
+    Line->LengthInChars -= CharsToDelete;
+    return TRUE;
+}
+
+/**
+ Insert new text into an edit control.
+
+ @param Edit Pointer to the edit control.
+
+ @param ProcessingUndo TRUE if this insert is caused by processing an undo,
+        indicating that this routine should not generate an undo record.
+        FALSE if this routine should generate an insert undo record.
+
+ @param FirstCharOffset Indicates the beginning offset of the text to
+        insert.
+
+ @param Text Pointer to the new text to store in the control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditInsertTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in BOOLEAN ProcessingUndo,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text
+    )
+{
+    PYORI_WIN_CTRL_EDIT_UNDO Undo;
+    DWORD LengthNeeded;
+
+    if (Text->LengthInChars == 0) {
+        return TRUE;
+    }
+
+    ASSERT(FirstCharOffset <= Edit->Text.LengthInChars);
+
+    LengthNeeded = Edit->Text.LengthInChars + Text->LengthInChars;
+
+    if (LengthNeeded + 1 >= Edit->Text.LengthAllocated) {
+        DWORD LengthToAllocate;
+        LengthToAllocate = Edit->Text.LengthAllocated * 2 + 80;
+        if (LengthNeeded >= LengthToAllocate) {
+            LengthToAllocate = LengthNeeded + 1;
+        }
+        if (!YoriLibReallocateString(&Edit->Text, LengthToAllocate)) {
+            return FALSE;
+        }
+    }
+
+    if (FirstCharOffset < Edit->Text.LengthInChars) {
+
+        DWORD CharsToCopy;
+        CharsToCopy = Edit->Text.LengthInChars - FirstCharOffset;
+        memmove(&Edit->Text.StartOfString[FirstCharOffset + Text->LengthInChars],
+                &Edit->Text.StartOfString[FirstCharOffset],
+                CharsToCopy * sizeof(TCHAR));
+    }
+
+    memcpy(&Edit->Text.StartOfString[FirstCharOffset], Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
+    Edit->Text.LengthInChars = Edit->Text.LengthInChars + Text->LengthInChars;
+
+    if (!ProcessingUndo) {
+        BOOLEAN RangeBeforeExistingRange;
+        Undo = YoriWinEditGetUndoRecordForOperation(Edit, YoriWinEditUndoInsertText, FirstCharOffset, FirstCharOffset + Text->LengthInChars, &RangeBeforeExistingRange);
+        if (Undo != NULL) {
+            Undo->u.InsertText.LastCharOffsetToDelete = FirstCharOffset + Text->LengthInChars;
+            ASSERT(Undo->u.InsertText.LastCharOffsetToDelete <= Edit->Text.LengthInChars);
+        }
+    }
+
+    return TRUE;
+}
+
+/**
+ Overwrite a range of text in an edit control.
+
+ @param Edit Pointer to the edit control.
+
+ @param ProcessingUndo TRUE if this overwrite is caused by processing an undo,
+        indicating that this routine should not generate an undo record.
+        FALSE if this routine should generate an overwrite undo record.
+
+ @param FirstCharOffset Indicates the beginning offset of the text to
+        overwrite.
+
+ @param Text Pointer to the new text to store in the control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditOverwriteTextRange(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in BOOLEAN ProcessingUndo,
+    __in DWORD FirstCharOffset,
+    __in PYORI_STRING Text
+    )
+{
+    DWORD LengthNeeded;
+    PYORI_WIN_CTRL_EDIT_UNDO Undo = NULL;
+
+    if (Text->LengthInChars == 0) {
+        return TRUE;
+    }
+
+    if (!ProcessingUndo) {
+        BOOLEAN RangeBeforeExistingRange;
+
+        //
+        //  At this point we don't know the ending range for this text but it
+        //  doesn't matter.  An overwrite will only extend a previous one, not
+        //  occur before it, so the end range specified here can be bogus.
+        //
+
+        Undo = YoriWinEditGetUndoRecordForOperation(Edit, YoriWinEditUndoOverwriteText, FirstCharOffset, FirstCharOffset, &RangeBeforeExistingRange);
+        if (Undo != NULL) {
+
+            //
+            //  If this is a new record, save off the entire line to be
+            //  deleted and restored.  This is done to ensure it doesn't
+            //  need to be manipulated on each keypress.
+            //
+
+            if (Undo->u.OverwriteText.Text.StartOfString == NULL) {
+                PYORI_STRING Line;
+                Line = &Edit->Text;
+                if (!YoriLibAllocateString(&Undo->u.OverwriteText.Text, Line->LengthInChars)) {
+                    return FALSE;
+                }
+
+                memcpy(Undo->u.OverwriteText.Text.StartOfString, Line->StartOfString, Line->LengthInChars * sizeof(TCHAR));
+                Undo->u.OverwriteText.Text.LengthInChars = Line->LengthInChars;
+
+                Undo->u.OverwriteText.FirstCharOffsetToDelete = 0;
+                Undo->u.OverwriteText.LastCharOffsetToDelete = Line->LengthInChars;
+                Undo->u.OverwriteText.FirstCharOffset = 0;
+            }
+        }
+    }
+
+    LengthNeeded = FirstCharOffset + Text->LengthInChars - 1;
+
+    if (LengthNeeded + 1 >= Edit->Text.LengthAllocated) {
+        DWORD LengthToAllocate;
+        LengthToAllocate = Edit->Text.LengthAllocated * 2 + 80;
+        if (LengthNeeded >= LengthToAllocate) {
+            LengthToAllocate = LengthNeeded + 1;
+        }
+        if (!YoriLibReallocateString(&Edit->Text, LengthToAllocate)) {
+            return FALSE;
+        }
+    }
+
+    memcpy(&Edit->Text.StartOfString[FirstCharOffset], Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
+    if (FirstCharOffset + Text->LengthInChars > Edit->Text.LengthInChars) {
+        Edit->Text.LengthInChars = FirstCharOffset + Text->LengthInChars;
+    }
+
+    if (Undo != NULL) {
+        Undo->u.OverwriteText.LastCharOffsetModified = FirstCharOffset + Text->LengthInChars;
+        if (Edit->Text.LengthInChars > Undo->u.OverwriteText.LastCharOffsetToDelete) {
+            Undo->u.OverwriteText.LastCharOffsetToDelete = Edit->Text.LengthInChars;
+        }
+    }
+
+    return TRUE;
+}
+
+//
+//  =========================================
+//  SELECTION FUNCTIONS
+//  =========================================
+//
+
 /**
  If a selection is currently active, delete all text in the selection.
 
@@ -378,9 +1481,6 @@ YoriWinEditDeleteSelection(
     PYORI_WIN_CTRL_EDIT Edit;
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_EDIT_SELECT Selection;
-    DWORD CharsToCopy;
-    DWORD CharsToDelete;
-    PYORI_STRING Line;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
@@ -390,26 +1490,13 @@ YoriWinEditDeleteSelection(
     }
 
     Selection = &Edit->Selection;
-    Line = &Edit->Text;
-
-    if (Selection->FirstCharOffset >= Selection->LastCharOffset) {
+    if (YoriWinEditDeleteTextRange(Edit, FALSE, Selection->FirstCharOffset, Selection->LastCharOffset)) {
+        Edit->CursorOffset = Selection->FirstCharOffset;
+        Selection->Active = YoriWinEditSelectNotActive;
         return TRUE;
     }
 
-    CharsToDelete = Selection->LastCharOffset - Selection->FirstCharOffset;
-    CharsToCopy = Line->LengthInChars - Selection->LastCharOffset;
-
-    if (CharsToCopy > 0) {
-        memmove(&Line->StartOfString[Selection->FirstCharOffset],
-                &Line->StartOfString[Selection->LastCharOffset],
-                CharsToCopy * sizeof(TCHAR));
-    }
-
-    Line->LengthInChars -= CharsToDelete;
-
-    Edit->CursorOffset = Selection->FirstCharOffset;
-    Selection->Active = YoriWinEditSelectNotActive;
-    return TRUE;
+    return FALSE;
 }
 
 
@@ -435,8 +1522,6 @@ YoriWinEditGetSelectedText(
     PYORI_WIN_CTRL_EDIT Edit;
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_EDIT_SELECT Selection;
-    DWORD CharsInRange;
-    PYORI_STRING Line;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
@@ -447,23 +1532,8 @@ YoriWinEditGetSelectedText(
     }
 
     Selection = &Edit->Selection;
-    Line = &Edit->Text;
 
-    if (Selection->FirstCharOffset >= Selection->LastCharOffset) {
-        YoriLibInitEmptyString(SelectedText);
-        return TRUE;
-    }
-
-    CharsInRange = Selection->LastCharOffset - Selection->FirstCharOffset;
-
-    if (!YoriLibAllocateString(SelectedText, CharsInRange + 1)) {
-        return FALSE;
-    }
-
-    memcpy(SelectedText->StartOfString, &Line->StartOfString[Selection->FirstCharOffset], CharsInRange * sizeof(TCHAR));
-    SelectedText->LengthInChars = CharsInRange;
-    SelectedText->StartOfString[CharsInRange] = '\0';
-    return TRUE;
+    return YoriWinEditGetTextRange(Edit, Selection->FirstCharOffset, Selection->LastCharOffset, SelectedText);
 }
 
 /**
@@ -642,170 +1712,6 @@ YoriWinEditSetSelectionRange(
 }
 
 /**
- Set the text attributes within the edit to a value and repaint the control.
- Note this refers to the attributes of the text within the edit, not the
- entire edit area.
-
- @param CtrlHandle Pointer to a edit control.
-
- @param TextAttributes The new attributes to use.
- */
-VOID
-YoriWinEditSetTextAttributes(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in WORD TextAttributes
-    )
-{
-    PYORI_WIN_CTRL_EDIT Edit;
-    PYORI_WIN_CTRL Ctrl;
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
-    Edit->TextAttributes = TextAttributes;
-    YoriWinEditPaint(Edit);
-}
-
-/**
- Make the cursor visible or hidden as necessary and display it with the
- size implied by the current insert mode.
-
- @param Edit Pointer to the edit control.
-
- @param Visible TRUE to display the cursor, FALSE to hide it.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinEditSetCursorVisible(
-    __in PYORI_WIN_CTRL_EDIT Edit,
-    __in BOOLEAN Visible
-    )
-{
-    WORD Percent;
-    if (Edit->InsertMode) {
-        Percent = 20;
-    } else {
-        Percent = 50;
-    }
-
-    Edit->HasFocus = Visible;
-    YoriWinSetControlCursorState(&Edit->Ctrl, Visible, Percent);
-    return TRUE;
-}
-
-/**
- Toggle the insert state of the control.  If new keystrokes would previously
- insert new characters, future characters overwrite existing characters, and
- vice versa.  The cursor shape will be updated to reflect the new state.
-
- @param Edit Pointer to the edit control.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinEditToggleInsert(
-    __in PYORI_WIN_CTRL_EDIT Edit
-    )
-{
-    if (Edit->InsertMode) {
-        Edit->InsertMode = FALSE;
-    } else {
-        Edit->InsertMode = TRUE;
-    }
-    YoriWinEditSetCursorVisible(Edit, TRUE);
-
-    return TRUE;
-}
-
-
-/**
- Add new text and honor the current insert or overwrite state.
-
- @param Edit Pointer to the edit control, indicating the current cursor
-        location and insert state.
-
- @param Text The string to include.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinEditInsertTextAtCursor(
-    __in PYORI_WIN_CTRL_EDIT Edit,
-    __in PYORI_STRING Text
-    )
-{
-    DWORD LengthNeeded;
-
-    if (YoriWinEditSelectionActive(Edit)) {
-        YoriWinEditDeleteSelection(Edit);
-    }
-
-    if (Text->LengthInChars == 0) {
-        return TRUE;
-    }
-
-    if (Edit->InsertMode) {
-        LengthNeeded = Edit->Text.LengthInChars + Text->LengthInChars;
-    } else {
-        LengthNeeded = Edit->CursorOffset + Text->LengthInChars - 1;
-    }
-
-    if (LengthNeeded + 1 >= Edit->Text.LengthAllocated) {
-        DWORD LengthToAllocate;
-        LengthToAllocate = Edit->Text.LengthAllocated * 2 + 80;
-        if (LengthNeeded >= LengthToAllocate) {
-            LengthToAllocate = LengthNeeded + 1;
-        }
-        if (!YoriLibReallocateString(&Edit->Text, LengthToAllocate)) {
-            return FALSE;
-        }
-    }
-
-    if (Edit->InsertMode &&
-        Edit->CursorOffset < Edit->Text.LengthInChars) {
-
-        DWORD CharsToCopy;
-        CharsToCopy = Edit->Text.LengthInChars - Edit->CursorOffset;
-        memmove(&Edit->Text.StartOfString[Edit->CursorOffset + Text->LengthInChars],
-                &Edit->Text.StartOfString[Edit->CursorOffset],
-                CharsToCopy * sizeof(TCHAR));
-        Edit->Text.LengthInChars = Edit->Text.LengthInChars + Text->LengthInChars;
-    }
-
-    memcpy(&Edit->Text.StartOfString[Edit->CursorOffset], Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
-    Edit->CursorOffset = Edit->CursorOffset + Text->LengthInChars;
-    if (Edit->CursorOffset > Edit->Text.LengthInChars) {
-        Edit->Text.LengthInChars = Edit->CursorOffset;
-    }
-
-    return TRUE;
-}
-
-/**
- Add a single character and honor the current insert or overwrite state.
-
- @param Edit Pointer to the edit control, indicating the current cursor
-        location and insert state.
-
- @param Char The character to include.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinEditAddChar(
-    __in PYORI_WIN_CTRL_EDIT Edit,
-    __in TCHAR Char
-    )
-{
-    YORI_STRING String;
-
-    YoriLibInitEmptyString(&String);
-    String.StartOfString = &Char;
-    String.LengthInChars = 1;
-
-    return YoriWinEditInsertTextAtCursor(Edit, &String);
-}
-
-/**
  Add the currently selected text to the clipboard and delete it from the
  buffer.
 
@@ -901,13 +1807,253 @@ YoriWinEditPasteText(
     if (!YoriLibPasteText(&Text)) {
         return FALSE;
     }
-    if (!YoriWinEditInsertTextAtCursor(CtrlHandle, &Text)) {
+
+    if (!YoriWinEditInsertTextRange(Edit, FALSE, Edit->CursorOffset, &Text)) {
         YoriLibFreeStringContents(&Text);
         return FALSE;
     }
 
+    Edit->CursorOffset = Edit->CursorOffset + Text.LengthInChars;
+    ASSERT(Edit->CursorOffset <= Edit->Text.LengthInChars);
+
     YoriLibFreeStringContents(&Text);
     return TRUE;
+}
+
+//
+//  =========================================
+//  API FUNCTIONS
+//  =========================================
+//
+
+/**
+ Set the text attributes within the edit to a value and repaint the control.
+ Note this refers to the attributes of the text within the edit, not the
+ entire edit area.
+
+ @param CtrlHandle Pointer to a edit control.
+
+ @param TextAttributes The new attributes to use.
+ */
+VOID
+YoriWinEditSetTextAttributes(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in WORD TextAttributes
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+    Edit->TextAttributes = TextAttributes;
+    YoriWinEditPaint(Edit);
+}
+
+/**
+ Make the cursor visible or hidden as necessary and display it with the
+ size implied by the current insert mode.
+
+ @param Edit Pointer to the edit control.
+
+ @param Visible TRUE to display the cursor, FALSE to hide it.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditSetCursorVisible(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in BOOLEAN Visible
+    )
+{
+    WORD Percent;
+    if (Edit->InsertMode) {
+        Percent = 20;
+    } else {
+        Percent = 50;
+    }
+
+    Edit->HasFocus = Visible;
+    YoriWinSetControlCursorState(&Edit->Ctrl, Visible, Percent);
+    return TRUE;
+}
+
+/**
+ Toggle the insert state of the control.  If new keystrokes would previously
+ insert new characters, future characters overwrite existing characters, and
+ vice versa.  The cursor shape will be updated to reflect the new state.
+
+ @param Edit Pointer to the edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditToggleInsert(
+    __in PYORI_WIN_CTRL_EDIT Edit
+    )
+{
+    if (Edit->InsertMode) {
+        Edit->InsertMode = FALSE;
+    } else {
+        Edit->InsertMode = TRUE;
+    }
+    YoriWinEditSetCursorVisible(Edit, TRUE);
+
+    return TRUE;
+}
+
+/**
+ Return the text that has been entered into an edit control.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @param Text On input, an initialized Yori string.  On output, populated with
+        the string contents of the edit control.  Note this string can be
+        reallocated within this routine.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditGetText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __inout PYORI_STRING Text
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+    if (Text->LengthAllocated < Edit->Text.LengthInChars + 1) {
+        YORI_STRING NewString;
+        if (!YoriLibAllocateString(&NewString, Edit->Text.LengthInChars + 1)) {
+            return FALSE;
+        }
+
+        YoriLibFreeStringContents(Text);
+        memcpy(Text, &NewString, sizeof(YORI_STRING));
+    }
+
+    YoriWinEditPopulateTextRange(Edit, 0, Edit->Text.LengthInChars, Text);
+    Text->StartOfString[Text->LengthInChars] = '\0';
+    return TRUE;
+}
+
+/**
+ Set the text that should be entered within an edit control.
+
+ @param CtrlHandle Pointer to the edit control.
+
+ @param Text Points to the text to populate the edit control with.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditSetText(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_STRING Text
+    )
+{
+    PYORI_WIN_CTRL_EDIT Edit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+
+    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
+
+    YoriWinEditClearUndo(Edit);
+
+    if (Text->LengthInChars + 1 > Edit->Text.LengthAllocated) {
+        YORI_STRING NewString;
+        if (!YoriLibAllocateString(&NewString, Text->LengthInChars + 1)) {
+            return FALSE;
+        }
+
+        YoriLibFreeStringContents(&Edit->Text);
+        memcpy(&Edit->Text, &NewString, sizeof(YORI_STRING));
+    }
+
+    memcpy(Edit->Text.StartOfString, Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
+    Edit->Text.LengthInChars = Text->LengthInChars;
+    Edit->Text.StartOfString[Edit->Text.LengthInChars] = '\0';
+    Edit->CursorOffset = Edit->Text.LengthInChars;
+    YoriWinEditEnsureCursorVisible(Edit);
+    YoriWinEditPaint(Edit);
+    return TRUE;
+}
+
+//
+//  =========================================
+//  INPUT FUNCTIONS
+//  =========================================
+//
+
+
+/**
+ Add new text and honor the current insert or overwrite state.
+
+ @param Edit Pointer to the edit control, indicating the current cursor
+        location and insert state.
+
+ @param Text The string to include.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditInsertTextAtCursor(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in PYORI_STRING Text
+    )
+{
+    BOOLEAN Success;
+
+    if (YoriWinEditSelectionActive(Edit)) {
+        YoriWinEditDeleteSelection(Edit);
+    }
+
+    if (Text->LengthInChars == 0) {
+        return TRUE;
+    }
+
+    if (Edit->InsertMode) {
+        Success = YoriWinEditInsertTextRange(Edit, FALSE, Edit->CursorOffset, Text);
+    } else {
+        Success = YoriWinEditOverwriteTextRange(Edit, FALSE, Edit->CursorOffset, Text);
+    }
+
+    if (!Success) {
+        return FALSE;
+    }
+
+    Edit->CursorOffset = Edit->CursorOffset + Text->LengthInChars;
+    ASSERT(Edit->CursorOffset <= Edit->Text.LengthInChars);
+
+    return TRUE;
+}
+
+/**
+ Add a single character and honor the current insert or overwrite state.
+
+ @param Edit Pointer to the edit control, indicating the current cursor
+        location and insert state.
+
+ @param Char The character to include.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinEditAddChar(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in TCHAR Char
+    )
+{
+    YORI_STRING String;
+
+    YoriLibInitEmptyString(&String);
+    String.StartOfString = &Char;
+    String.LengthInChars = 1;
+
+    return YoriWinEditInsertTextAtCursor(Edit, &String);
 }
 
 
@@ -925,8 +2071,6 @@ YoriWinEditBackspace(
     __in PYORI_WIN_CTRL_EDIT Edit
     )
 {
-    DWORD CharsToCopy;
-
     if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
         return YoriWinEditDeleteSelection(&Edit->Ctrl);
     }
@@ -935,13 +2079,11 @@ YoriWinEditBackspace(
         return FALSE;
     }
 
-    CharsToCopy = Edit->Text.LengthInChars - Edit->CursorOffset;
-    memmove(&Edit->Text.StartOfString[Edit->CursorOffset - 1],
-            &Edit->Text.StartOfString[Edit->CursorOffset],
-            CharsToCopy * sizeof(TCHAR));
-    Edit->Text.LengthInChars--;
-    Edit->CursorOffset--;
-    return TRUE;
+    if (YoriWinEditDeleteTextRange(Edit, FALSE, Edit->CursorOffset - 1, Edit->CursorOffset)) {
+        Edit->CursorOffset--;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /**
@@ -957,8 +2099,6 @@ YoriWinEditDelete(
     __in PYORI_WIN_CTRL_EDIT Edit
     )
 {
-    DWORD CharsToCopy;
-
     if (YoriWinEditSelectionActive(&Edit->Ctrl)) {
         return YoriWinEditDeleteSelection(&Edit->Ctrl);
     }
@@ -967,14 +2107,10 @@ YoriWinEditDelete(
         return FALSE;
     }
 
-    CharsToCopy = Edit->Text.LengthInChars - Edit->CursorOffset - 1;
-    if (CharsToCopy > 0) {
-        memmove(&Edit->Text.StartOfString[Edit->CursorOffset],
-                &Edit->Text.StartOfString[Edit->CursorOffset + 1],
-                CharsToCopy * sizeof(TCHAR));
+    if (YoriWinEditDeleteTextRange(Edit, FALSE, Edit->CursorOffset, Edit->CursorOffset + 1)) {
+        return TRUE;
     }
-    Edit->Text.LengthInChars--;
-    return TRUE;
+    return FALSE;
 }
 
 /**
@@ -1115,6 +2251,7 @@ YoriWinEditEventHandler(
             YoriWinEditPaint(Edit);
             break;
         case YoriWinEventParentDestroyed:
+            YoriWinEditClearUndo(Edit);
             YoriWinEditSetCursorVisible(Edit, FALSE);
             YoriLibFreeStringContents(&Edit->Text);
             YoriWinDestroyControl(Ctrl);
@@ -1161,6 +2298,12 @@ YoriWinEditEventHandler(
                         YoriWinEditPaint(Edit);
                     }
                     return TRUE;
+                } else if (Event->KeyDown.VirtualKeyCode == 'R') {
+                    if (YoriWinEditRedo(Edit)) {
+                        YoriWinEditEnsureCursorVisible(Edit);
+                        YoriWinEditPaint(Edit);
+                    }
+                    return TRUE;
                 } else if (Event->KeyDown.VirtualKeyCode == 'V') {
                     if (YoriWinEditPasteText(Ctrl)) {
                         YoriWinEditEnsureCursorVisible(Edit);
@@ -1169,6 +2312,12 @@ YoriWinEditEventHandler(
                     return TRUE;
                 } else if (Event->KeyDown.VirtualKeyCode == 'X') {
                     if (YoriWinEditCutSelectedText(Ctrl)) {
+                        YoriWinEditEnsureCursorVisible(Edit);
+                        YoriWinEditPaint(Edit);
+                    }
+                    return TRUE;
+                } else if (Event->KeyDown.VirtualKeyCode == 'Z') {
+                    if (YoriWinEditUndo(Edit)) {
                         YoriWinEditEnsureCursorVisible(Edit);
                         YoriWinEditPaint(Edit);
                     }
@@ -1234,84 +2383,6 @@ YoriWinEditEventHandler(
     return FALSE;
 }
 
-/**
- Return the text that has been entered into an edit control.
-
- @param CtrlHandle Pointer to the edit control.
-
- @param Text On input, an initialized Yori string.  On output, populated with
-        the string contents of the edit control.  Note this string can be
-        reallocated within this routine.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinEditGetText(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __inout PYORI_STRING Text
-    )
-{
-    PYORI_WIN_CTRL_EDIT Edit;
-    PYORI_WIN_CTRL Ctrl;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-
-    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
-    if (Text->LengthAllocated < Edit->Text.LengthInChars + 1) {
-        YORI_STRING NewString;
-        if (!YoriLibAllocateString(&NewString, Edit->Text.LengthInChars + 1)) {
-            return FALSE;
-        }
-
-        YoriLibFreeStringContents(Text);
-        memcpy(Text, &NewString, sizeof(YORI_STRING));
-    }
-
-    memcpy(Text->StartOfString, Edit->Text.StartOfString, Edit->Text.LengthInChars * sizeof(TCHAR));
-    Text->LengthInChars = Edit->Text.LengthInChars;
-    Text->StartOfString[Text->LengthInChars] = '\0';
-    return TRUE;
-}
-
-/**
- Set the text that should be entered within an edit control.
-
- @param CtrlHandle Pointer to the edit control.
-
- @param Text Points to the text to populate the edit control with.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinEditSetText(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_STRING Text
-    )
-{
-    PYORI_WIN_CTRL_EDIT Edit;
-    PYORI_WIN_CTRL Ctrl;
-
-    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
-
-    Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
-    if (Text->LengthInChars + 1 > Edit->Text.LengthAllocated) {
-        YORI_STRING NewString;
-        if (!YoriLibAllocateString(&NewString, Text->LengthInChars + 1)) {
-            return FALSE;
-        }
-
-        YoriLibFreeStringContents(&Edit->Text);
-        memcpy(&Edit->Text, &NewString, sizeof(YORI_STRING));
-    }
-
-    memcpy(Edit->Text.StartOfString, Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
-    Edit->Text.LengthInChars = Text->LengthInChars;
-    Edit->Text.StartOfString[Edit->Text.LengthInChars] = '\0';
-    Edit->CursorOffset = Edit->Text.LengthInChars;
-    YoriWinEditEnsureCursorVisible(Edit);
-    YoriWinEditPaint(Edit);
-    return TRUE;
-}
 
 /**
  Set the size and location of an edit control, and redraw the contents.
@@ -1389,6 +2460,9 @@ YoriWinEditCreate(
     }
 
     ZeroMemory(Edit, sizeof(YORI_WIN_CTRL_EDIT));
+
+    YoriLibInitializeListHead(&Edit->Undo);
+    YoriLibInitializeListHead(&Edit->Redo);
 
     if (Style & YORI_WIN_EDIT_STYLE_RIGHT_ALIGN) {
         Edit->TextAlign = YoriWinTextAlignRight;
