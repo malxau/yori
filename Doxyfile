@@ -23,3 +23,4 @@ MACRO_EXPANSION        = YES
 EXPAND_ONLY_PREDEF     = YES
 PREDEFINED             = \
                          __success(x)= \
+                         _Acquires_lock_(x)= \
