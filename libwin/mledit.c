@@ -335,6 +335,19 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
     YORI_WIN_MULTILINE_EDIT_SELECT Selection;
 
     /**
+     When inputting a character by value, the current value that has been
+     accumulated (since this requires multiple key events.)
+     */
+    DWORD NumericKeyValue;
+
+    /**
+     Indicates how to interpret the NumericKeyValue.  Ascii uses CP_OEMCP,
+     Ansi uses CP_ACP, Unicode is direct.  Also note that Unicode takes
+     input in hexadecimal to match the normal U+xxxx specification.
+     */
+    YORI_LIB_NUMERIC_KEY_TYPE NumericKeyType;
+
+    /**
      The attributes to display text in.
      */
     WORD TextAttributes;
@@ -4977,6 +4990,10 @@ YoriWinMultilineEditEventHandler(
                         return TRUE;
                     }
                 }
+            } else if (Event->KeyDown.CtrlMask == LEFT_ALT_PRESSED ||
+                       Event->KeyDown.CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY)) {
+                YoriLibBuildNumericKey(&MultilineEdit->NumericKeyValue, &MultilineEdit->NumericKeyType, Event->KeyDown.VirtualKeyCode, Event->KeyDown.VirtualScanCode);
+
             } else if (Event->KeyDown.CtrlMask == ENHANCED_KEY ||
                        Event->KeyDown.CtrlMask == (ENHANCED_KEY | SHIFT_PRESSED)) {
                 YoriWinMultilineEditProcessPossiblyEnhancedKey(MultilineEdit, Event);
@@ -4989,6 +5006,32 @@ YoriWinMultilineEditEventHandler(
                        ) {
                 YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(MultilineEdit, Event);
             }
+            break;
+
+        case YoriWinEventKeyUp:
+            if ((Event->KeyUp.CtrlMask & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
+                !MultilineEdit->ReadOnly &&
+                (MultilineEdit->NumericKeyValue != 0 ||
+                 (Event->KeyUp.VirtualKeyCode == VK_MENU && Event->KeyUp.Char != 0))) {
+
+                DWORD NumericKeyValue;
+                TCHAR Char;
+
+                NumericKeyValue = MultilineEdit->NumericKeyValue;
+                if (NumericKeyValue == 0) {
+                    MultilineEdit->NumericKeyType = YoriLibNumericKeyUnicode;
+                    NumericKeyValue = Event->KeyUp.Char;
+                }
+
+                YoriLibTranslateNumericKeyToChar(NumericKeyValue, MultilineEdit->NumericKeyType, &Char);
+                MultilineEdit->NumericKeyValue = 0;
+                MultilineEdit->NumericKeyType = YoriLibNumericKeyAscii;
+
+                YoriWinMultilineEditAddChar(MultilineEdit, Event->KeyDown.Char);
+                YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+                YoriWinMultilineEditPaint(MultilineEdit);
+            }
+
             break;
 
         case YoriWinEventMouseWheelDownInClient:

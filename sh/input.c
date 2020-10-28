@@ -2292,49 +2292,15 @@ YoriShProcessKeyDown(
 
     } else if (CtrlMask == LEFT_ALT_PRESSED ||
                CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY)) {
-        DWORD Base;
-        Base = 10;
-        if (Buffer->NumericKeyType == NumericKeyUnicode) {
-            Base = 16;
-        }
-        if ((KeyCode == 'U' || KeyCode == 'u' || KeyCode == '+')
-             && Buffer->NumericKeyType == NumericKeyAscii) {
 
-            Buffer->NumericKeyType = NumericKeyUnicode;
-        } else if (KeyCode >= '0' && KeyCode <= '9') {
-            if (KeyCode == '0' && Buffer->NumericKeyValue == 0 && Buffer->NumericKeyType == NumericKeyAscii) {
-                Buffer->NumericKeyType = NumericKeyAnsi;
-            } else {
-                Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - '0';
-            }
-        } else if (KeyCode >= VK_NUMPAD0 && KeyCode <= VK_NUMPAD9) {
-            if (KeyCode == VK_NUMPAD0 && Buffer->NumericKeyValue == 0 && Buffer->NumericKeyType == NumericKeyAscii) {
-                Buffer->NumericKeyType = NumericKeyAnsi;
-            } else {
-                Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - VK_NUMPAD0;
-            }
-        } else if (ScanCode >= 0x47 && ScanCode <= 0x49) {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + ScanCode - 0x47 + 7;
-        } else if (ScanCode >= 0x4b && ScanCode <= 0x4d) {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + ScanCode - 0x4b + 4;
-        } else if (ScanCode >= 0x4f && ScanCode <= 0x51) {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + ScanCode - 0x4f + 1;
-        } else if (ScanCode == 0x52) {
-            if (Buffer->NumericKeyValue == 0 && Buffer->NumericKeyType == NumericKeyAscii) {
-                Buffer->NumericKeyType = NumericKeyAnsi;
-            } else {
-                Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base;
-            }
-        } else if (Buffer->NumericKeyType == NumericKeyUnicode && KeyCode >= 'A' && KeyCode <= 'F') {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - 'A' + 10;
-        } else if (Buffer->NumericKeyType == NumericKeyUnicode && KeyCode >= 'a' && KeyCode <= 'f') {
-            Buffer->NumericKeyValue = Buffer->NumericKeyValue * Base + KeyCode - 'a' + 10;
-        } else if (KeyCode == VK_F4) {
-            if (YoriShCloseWindow()) {
-                YoriShAddCStringToInput(Buffer, _T("EXIT"));
-                *TerminateInput = TRUE;
-                YoriShClearInputSelections(Buffer);
-                return TRUE;
+        if (!YoriLibBuildNumericKey(&Buffer->NumericKeyValue, &Buffer->NumericKeyType, KeyCode, ScanCode)) {
+            if (KeyCode == VK_F4) {
+                if (YoriShCloseWindow()) {
+                    YoriShAddCStringToInput(Buffer, _T("EXIT"));
+                    *TerminateInput = TRUE;
+                    YoriShClearInputSelections(Buffer);
+                    return TRUE;
+                }
             }
         }
     } else if (CtrlMask == (SHIFT_PRESSED | ENHANCED_KEY)) {
@@ -2370,18 +2336,6 @@ YoriShProcessKeyDown(
     return FALSE;
 }
 
-/**
- MultiByteToWideChar seems to be able to convert the upper 128 characters
- from the OEM CP into Unicode correctly, but that leaves the low 32 characters
- which don't map to their Unicode equivalents.  This is a simple translation
- table for those characters.
- */
-CONST TCHAR YoriShLowAsciiToUnicodeTable[] = {
-    0,      0x263a, 0x263b, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022,
-    0x25d8, 0x25cb, 0x25d9, 0x2642, 0x2640, 0x266a, 0x266b, 0x263c,
-    0x25ba, 0x25c4, 0x2195, 0x203c, 0x00b6, 0x00a7, 0x25ac, 0x21a8,
-    0x2191, 0x2193, 0x2192, 0x2190, 0x221f, 0x2194, 0x25b2, 0x25bc
-};
 
 /**
  Perform processing related to when a key is released.  This is only used for
@@ -2419,61 +2373,19 @@ YoriShProcessKeyUp(
         (Buffer->NumericKeyValue != 0 ||
          InputRecord->Event.KeyEvent.wVirtualKeyCode == VK_MENU && InputRecord->Event.KeyEvent.uChar.UnicodeChar != 0)) {
 
-        UCHAR SmallKeyValue;
         TCHAR HostKeyValue[2];
         DWORD NumericKeyValue;
-        DWORD CodePage;
 
         NumericKeyValue = Buffer->NumericKeyValue;
         if (NumericKeyValue == 0) {
-            Buffer->NumericKeyType = NumericKeyUnicode;
+            Buffer->NumericKeyType = YoriLibNumericKeyUnicode;
             NumericKeyValue = InputRecord->Event.KeyEvent.uChar.UnicodeChar;
         }
 
-        SmallKeyValue = (UCHAR)NumericKeyValue;
+        YoriLibTranslateNumericKeyToChar(NumericKeyValue, Buffer->NumericKeyType, &HostKeyValue[0]);
 
-        HostKeyValue[0] = HostKeyValue[1] = 0;
-
-        if (Buffer->NumericKeyType == NumericKeyAscii && SmallKeyValue < 32) {
-            HostKeyValue[0] = YoriShLowAsciiToUnicodeTable[SmallKeyValue];
-        } else if (Buffer->NumericKeyType == NumericKeyUnicode) {
-            HostKeyValue[0] = (TCHAR)NumericKeyValue;
-        } else {
-            if (Buffer->NumericKeyType == NumericKeyAscii) {
-                CodePage = CP_OEMCP;
-            } else {
-                YoriLibLoadUser32Functions();
-                CodePage = CP_ACP;
-
-                //
-                //  GetKeyboardLayout requires NT4+.  By happy coincidence,
-                //  that release also added support for LOCALE_RETURN_NUMBER
-                //  which is a much cleaner interface.  Older releases get
-                //  the active code page, which is generally correct unless
-                //  the code page is configured for something different to
-                //  the input language (eg. the code page is UTF8.)
-                //
-
-                if (DllUser32.pGetKeyboardLayout != NULL) {
-                    HKL KeyboardLayout;
-
-                    KeyboardLayout = DllUser32.pGetKeyboardLayout(0);
-
-                    GetLocaleInfo(MAKELCID(LOWORD((DWORD_PTR)KeyboardLayout), SORT_DEFAULT),
-                                  LOCALE_IDEFAULTANSICODEPAGE | LOCALE_RETURN_NUMBER,
-                                  (LPTSTR)&CodePage,
-                                  sizeof(CodePage));
-                }
-            }
-            MultiByteToWideChar(CodePage,
-                                0,
-                                &SmallKeyValue,
-                                1,
-                                HostKeyValue,
-                                1);
-        }
-
-        if (HostKeyValue != 0) {
+        HostKeyValue[1] = '\0';
+        if (HostKeyValue[0] != 0) {
             YoriShPrepareForNextKey(Buffer);
             YoriShAddCStringToInput(Buffer, HostKeyValue);
             YoriShPostKeyPress(Buffer);
@@ -2482,7 +2394,7 @@ YoriShProcessKeyUp(
         }
 
         Buffer->NumericKeyValue = 0;
-        Buffer->NumericKeyType = NumericKeyAscii;
+        Buffer->NumericKeyType = YoriLibNumericKeyAscii;
     }
 
     return KeyPressGenerated;

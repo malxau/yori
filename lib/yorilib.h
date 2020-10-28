@@ -2406,6 +2406,39 @@ YoriLibMoveFile(
     __in PYORI_STRING FullDest
     );
 
+// *** NUMKEY.C ***
+
+/**
+ Indicates how to interpret the NumericKeyValue.  Ascii uses CP_OEMCP,
+ Ansi uses CP_ACP, Unicode is direct.  Also note that Unicode takes
+ input in hexadecimal to match the normal U+xxxx specification.
+ */
+typedef enum {
+    YoriLibNumericKeyAscii = 0,
+    YoriLibNumericKeyAnsi = 1,
+    YoriLibNumericKeyUnicode = 2
+} YORI_LIB_NUMERIC_KEY_TYPE;
+
+/**
+ Pointer to a numeric key type.
+ */
+typedef YORI_LIB_NUMERIC_KEY_TYPE *PYORI_LIB_NUMERIC_KEY_TYPE;
+
+BOOLEAN
+YoriLibBuildNumericKey(
+    __inout PDWORD NumericKeyValue,
+    __inout PYORI_LIB_NUMERIC_KEY_TYPE NumericKeyType,
+    __in DWORD KeyCode,
+    __in DWORD ScanCode
+    );
+
+BOOLEAN
+YoriLibTranslateNumericKeyToChar(
+    __in DWORD NumericKeyValue,
+    __in YORI_LIB_NUMERIC_KEY_TYPE NumericKeyType,
+    __out PTCHAR Char
+    );
+
 // *** OSVER.C ***
 
 VOID

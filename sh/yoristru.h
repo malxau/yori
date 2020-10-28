@@ -640,11 +640,7 @@ typedef struct _YORI_SH_INPUT_BUFFER {
      Ansi uses CP_ACP, Unicode is direct.  Also note that Unicode takes
      input in hexadecimal to match the normal U+xxxx specification.
      */
-    enum {
-        NumericKeyAscii = 0,
-        NumericKeyAnsi = 1,
-        NumericKeyUnicode = 2
-    } NumericKeyType;
+    YORI_LIB_NUMERIC_KEY_TYPE NumericKeyType;
 
     /**
      The last known bitmask of mouse button state.
