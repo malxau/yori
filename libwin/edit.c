@@ -224,6 +224,19 @@ typedef struct _YORI_WIN_CTRL_EDIT {
     YORI_LIST_ENTRY Redo;
 
     /**
+     When inputting a character by value, the current value that has been
+     accumulated (since this requires multiple key events.)
+     */
+    DWORD NumericKeyValue;
+
+    /**
+     Indicates how to interpret the NumericKeyValue.  Ascii uses CP_OEMCP,
+     Ansi uses CP_ACP, Unicode is direct.  Also note that Unicode takes
+     input in hexadecimal to match the normal U+xxxx specification.
+     */
+    YORI_LIB_NUMERIC_KEY_TYPE NumericKeyType;
+
+    /**
      The attributes to display text in.
      */
     WORD TextAttributes;
@@ -839,7 +852,7 @@ YoriWinEditEnsureSpaceBeforeOrAfterString(
  Return TRUE to indicate that there are records specifying how to undo
  previous operations.
 
- @param CtrlHandle Pointer to the multiline edit control.
+ @param CtrlHandle Pointer to the edit control.
 
  @return TRUE if there are operations available to undo, FALSE if there
          are not.
@@ -866,7 +879,7 @@ YoriWinEditIsUndoAvailable(
  Return TRUE to indicate that there are records specifying how to redo
  previous operations.
 
- @param CtrlHandle Pointer to the multiline edit control.
+ @param CtrlHandle Pointer to the edit control.
 
  @return TRUE if there are operations available to redo, FALSE if there
          are not.
@@ -1783,7 +1796,7 @@ YoriWinEditCopySelectedText(
  Paste the text that is currently in the clipboard at the current cursor
  location.  Note this can update the cursor location.
 
- @param CtrlHandle Pointer to the multiline edit control.
+ @param CtrlHandle Pointer to the edit control.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -2323,11 +2336,42 @@ YoriWinEditEventHandler(
                     }
                     return TRUE;
                 }
+            } else if (Event->KeyDown.CtrlMask == LEFT_ALT_PRESSED ||
+                       Event->KeyDown.CtrlMask == (LEFT_ALT_PRESSED | ENHANCED_KEY)) {
+                YoriLibBuildNumericKey(&Edit->NumericKeyValue, &Edit->NumericKeyType, Event->KeyDown.VirtualKeyCode, Event->KeyDown.VirtualScanCode);
+
             } else if (Event->KeyDown.CtrlMask == ENHANCED_KEY ||
                        Event->KeyDown.CtrlMask == (ENHANCED_KEY | SHIFT_PRESSED)) {
                 YoriWinEditProcessPossiblyEnhancedKey(Edit, Event);
             }
             break;
+
+        case YoriWinEventKeyUp:
+            if ((Event->KeyUp.CtrlMask & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
+                !Edit->ReadOnly &&
+                (Edit->NumericKeyValue != 0 ||
+                 (Event->KeyUp.VirtualKeyCode == VK_MENU && Event->KeyUp.Char != 0))) {
+
+                DWORD NumericKeyValue;
+                TCHAR Char;
+
+                NumericKeyValue = Edit->NumericKeyValue;
+                if (NumericKeyValue == 0) {
+                    Edit->NumericKeyType = YoriLibNumericKeyUnicode;
+                    NumericKeyValue = Event->KeyUp.Char;
+                }
+
+                YoriLibTranslateNumericKeyToChar(NumericKeyValue, Edit->NumericKeyType, &Char);
+                Edit->NumericKeyValue = 0;
+                Edit->NumericKeyType = YoriLibNumericKeyAscii;
+
+                YoriWinEditAddChar(Edit, Event->KeyDown.Char);
+                YoriWinEditEnsureCursorVisible(Edit);
+                YoriWinEditPaint(Edit);
+            }
+
+            break;
+
         case YoriWinEventMouseDownInClient:
             {
                 DWORD ClickOffset;
