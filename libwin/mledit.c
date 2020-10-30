@@ -2304,9 +2304,15 @@ YoriWinMultilineEditDeleteTextRange(
     }
 
     LinesToDelete = 0;
-    ASSERT(LastLine < MultilineEdit->LinesPopulated);
-    FinalLine = &MultilineEdit->LineArray[LastLine];
-    if (LastCharOffset < FinalLine->LengthInChars) {
+    ASSERT(LastLine < MultilineEdit->LinesPopulated ||
+           (LastLine == MultilineEdit->LinesPopulated && LastCharOffset == 0));
+    if (LastLine < MultilineEdit->LinesPopulated) {
+        FinalLine = &MultilineEdit->LineArray[LastLine];
+    } else {
+        FinalLine = NULL;
+    }
+
+    if (FinalLine != NULL && LastCharOffset < FinalLine->LengthInChars) {
         CharsToCopy = FinalLine->LengthInChars - LastCharOffset;
     } else {
         CharsToCopy = 0;
@@ -2318,7 +2324,9 @@ YoriWinMultilineEditDeleteTextRange(
     //  allocation, reallocate it.
     //
 
-    if (FirstCharOffset + CharsToCopy > FinalLine->LengthAllocated) {
+    if (FinalLine != NULL &&
+        FirstCharOffset + CharsToCopy > FinalLine->LengthAllocated) {
+
         YORI_STRING NewLine;
         DWORD CharsFromFirstLine;
         if (!YoriLibAllocateString(&NewLine, FirstCharOffset + CharsToCopy + YORI_WIN_MULTILINE_EDIT_LINE_PADDING)) {
@@ -2357,17 +2365,32 @@ YoriWinMultilineEditDeleteTextRange(
     //
 
     Line->LengthInChars = FirstCharOffset + CharsToCopy;
-    LinesToDelete = LastLine - FirstLine;
+    if (LastLine < MultilineEdit->LinesPopulated) {
+        LinesToDelete = LastLine - FirstLine;
+    } else {
+        if (FirstLine + 1 < MultilineEdit->LinesPopulated) {
+            LinesToDelete = MultilineEdit->LinesPopulated - 1 - FirstLine;
+        } else {
+            LinesToDelete = 0;
+        }
+    }
 
     for (LineIndexToDelete = 0; LineIndexToDelete < LinesToDelete; LineIndexToDelete++) {
         YoriLibFreeStringContents(&MultilineEdit->LineArray[FirstLine + 1 + LineIndexToDelete]);
     }
 
     FirstLineIndexToKeep = FirstLine + 1 + LinesToDelete;
-    LinesToCopy = MultilineEdit->LinesPopulated - FirstLineIndexToKeep;
-    memmove(&MultilineEdit->LineArray[FirstLine + 1],
-            &MultilineEdit->LineArray[FirstLine + 1 + LinesToDelete],
-            LinesToCopy * sizeof(YORI_STRING));
+    if (FirstLineIndexToKeep < MultilineEdit->LinesPopulated) {
+        LinesToCopy = MultilineEdit->LinesPopulated - FirstLineIndexToKeep;
+    } else {
+        LinesToCopy = 0;
+    }
+
+    if (LinesToCopy > 0) {
+        memmove(&MultilineEdit->LineArray[FirstLine + 1],
+                &MultilineEdit->LineArray[FirstLine + 1 + LinesToDelete],
+                LinesToCopy * sizeof(YORI_STRING));
+    }
 
     YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, MultilineEdit->LinesPopulated);
     MultilineEdit->UserModified = TRUE;
