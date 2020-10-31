@@ -2778,8 +2778,8 @@ YoriWinMultilineEditInsertTextRange(
 
     if (CharsFirstLine > 0) {
         memcpy(&Line->StartOfString[FirstCharOffset], Text->StartOfString, CharsFirstLine * sizeof(TCHAR));
-        Line->LengthInChars = FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars;
     }
+    Line->LengthInChars = FirstCharOffset + CharsFirstLine + TrailingPortionOfFirstLine.LengthInChars;
 
     if (LineCount > 0) {
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, (DWORD)-1);
