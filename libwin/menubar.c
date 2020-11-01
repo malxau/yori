@@ -198,6 +198,7 @@ YoriWinMenuGenerateHotkey(
     } else if (Remainder.LengthInChars == 1) {
         if (RequiresCtrl || RequiresShift) {
             HotkeyInfo->CtrlKeyMaskToCheck = LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED;
+            HotkeyInfo->CtrlKeyMaskToEqual = 0;
             if (RequiresCtrl) {
                 HotkeyInfo->CtrlKeyMaskToEqual |= LEFT_CTRL_PRESSED;
             }
