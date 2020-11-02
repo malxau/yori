@@ -38,9 +38,10 @@ CHAR strEditHelpText[] =
         "\n"
         "Displays editor.\n"
         "\n"
-        "EDIT [-license] [-e encoding]\n"
+        "EDIT [-license] [-e encoding] [-m]\n"
         "\n"
-        "   -e <encoding>  Specifies the character encoding to use\n";
+        "   -e <encoding>  Specifies the character encoding to use\n"
+        "   -m             Use modern keyboard navigation instead of Edit compatible\n";
 
 /**
  Display usage text to the user.
@@ -2340,6 +2341,9 @@ ENTRYPOINT(
                         i++;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+                GlobalEditContext.TraditionalNavigation = FALSE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
