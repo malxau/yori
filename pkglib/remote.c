@@ -845,7 +845,7 @@ YoriPkgDownloadRemotePackages(
                 }
                 if (Err == ERROR_SUCCESS) {
                     if (DeleteWhenFinished) {
-                        if (!MoveFileEx(TempLocalPath.StartOfString, FullFinalName.StartOfString, MOVEFILE_REPLACE_EXISTING)) {
+                        if (!MoveFileEx(TempLocalPath.StartOfString, FullFinalName.StartOfString, MOVEFILE_REPLACE_EXISTING | MOVEFILE_COPY_ALLOWED)) {
                             Err = GetLastError();
                             DeleteFile(TempLocalPath.StartOfString);
                         }
