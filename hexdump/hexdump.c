@@ -1214,17 +1214,17 @@ HexDumpDisplayDiff(
 
         BufferOffset = 0;
 
-        while(LengthToDisplay > 0) {
+        while(BufferOffset < LengthToDisplay) {
 
             //
             //  Check each line to see if it's different
             //
 
             LineDifference = FALSE;
-            if (LengthToDisplay >= 16) {
+            if (LengthToDisplay - BufferOffset >= 16) {
                 LengthThisLine = 16;
             } else {
-                LengthThisLine = LengthToDisplay;
+                LengthThisLine = LengthToDisplay - BufferOffset;
             }
             for (Count = 0; Count < sizeof(Objects)/sizeof(Objects[0]); Count++) {
                 Objects[Count].DisplayLength = LengthThisLine;
@@ -1262,9 +1262,10 @@ HexDumpDisplayDiff(
             //  Move to the next line
             //
 
-            LengthToDisplay -= LengthThisLine;
             BufferOffset += LengthThisLine;
         }
+
+        StreamOffset.QuadPart += LengthToDisplay;
     }
 
 Exit:
