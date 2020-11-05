@@ -1804,7 +1804,9 @@ EditAboutButtonClicked(
 {
     YORI_STRING Title;
     YORI_STRING Text;
-    YORI_STRING ButtonText;
+    YORI_STRING LeftText;
+    YORI_STRING CenteredText;
+    DWORD Index;
 
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
@@ -1829,15 +1831,39 @@ EditAboutButtonClicked(
         return;
     }
 
-    YoriLibConstantString(&ButtonText, _T("Ok"));
+    //
+    //  Search through the combined string to find the split point where
+    //  earlier text should be centered and later text should be left
+    //  aligned.  This is done to allow documentation for switches to be
+    //  legible.  The split point is therefore defined as the first place
+    //  a newline is followed by a space, indicating documentation for a
+    //  switch.
+    //
+    //  Note the label control will swallow all leading spaces in a line.
+    //
 
-    YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
-                      &Title,
-                      &Text,
-                      1,
-                      &ButtonText,
-                      0,
-                      0);
+    YoriLibInitEmptyString(&CenteredText);
+    YoriLibInitEmptyString(&LeftText);
+
+    for (Index = 0; Index < Text.LengthInChars; Index++) {
+        if (Text.StartOfString[Index] == '\n' &&
+            Index + 1 < Text.LengthInChars &&
+            Text.StartOfString[Index + 1] == ' ') {
+
+            CenteredText.StartOfString = Text.StartOfString;
+            CenteredText.LengthInChars = Index;
+
+            LeftText.StartOfString = &Text.StartOfString[Index + 1];
+            LeftText.LengthInChars = Text.LengthInChars - Index - 1;
+
+            break;
+        }
+    }
+
+    EditAboutDialog(YoriWinGetWindowManagerHandle(Parent),
+                    &Title,
+                    &CenteredText,
+                    &LeftText);
 
     YoriLibFreeStringContents(&Text);
 }

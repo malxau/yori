@@ -11,10 +11,12 @@ CFLAGS=$(CFLAGS) -DCO_VER_MAJOR=$(CO_VER_MAJOR) -DCO_VER_MINOR=$(CO_VER_MINOR)
 
 BIN_OBJS=\
 	 edit.obj         \
+	 about.obj        \
 	 options.obj      \
 
 MOD_OBJS=\
 	 mod_edit.obj     \
+	 about.obj        \
 	 options.obj      \
 
 compile: $(BIN_OBJS) builtins.lib
