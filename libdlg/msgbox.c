@@ -117,7 +117,7 @@ YoriDlgMessageBox(
     if (LabelLinesRequired + 8 > (WORD)WindowSize.Y &&
         WindowSize.Y > 8) {
 
-        LabelLinesRequired = LabelLinesRequired - WindowSize.Y;
+        LabelLinesRequired = WindowSize.Y - 8;
     }
 
     WindowWidth = (WORD)(LabelWidthRequired + 6);

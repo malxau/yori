@@ -44,6 +44,12 @@ CHAR strEditHelpText[] =
         "   -m             Use modern keyboard navigation instead of Edit compatible\n";
 
 /**
+ The copyright year string to display with license text.
+ */
+const
+TCHAR strCopyrightYear[] = _T("2020");
+
+/**
  Display usage text to the user.
  */
 BOOL
@@ -1806,7 +1812,9 @@ EditAboutButtonClicked(
     YORI_STRING Text;
     YORI_STRING LeftText;
     YORI_STRING CenteredText;
+    YORI_STRING ButtonTexts[2];
     DWORD Index;
+    DWORD ButtonClicked;
 
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
@@ -1860,12 +1868,52 @@ EditAboutButtonClicked(
         }
     }
 
-    EditAboutDialog(YoriWinGetWindowManagerHandle(Parent),
-                    &Title,
-                    &CenteredText,
-                    &LeftText);
+    YoriLibConstantString(&ButtonTexts[0], _T("&Ok"));
+    YoriLibConstantString(&ButtonTexts[1], _T("&View License..."));
+
+    ButtonClicked = EditAboutDialog(YoriWinGetWindowManagerHandle(Parent),
+                                    &Title,
+                                    &CenteredText,
+                                    &LeftText,
+                                    2,
+                                    ButtonTexts,
+                                    0,
+                                    0);
 
     YoriLibFreeStringContents(&Text);
+
+    if (ButtonClicked == 2) {
+        if (YoriLibMitLicenseText(strCopyrightYear, &Text)) {
+
+            YoriLibInitEmptyString(&CenteredText);
+            YoriLibConstantString(&Title, _T("License"));
+
+            //
+            //  Replace all single line breaks with spaces but leave one line
+            //  break in the case of double line (paragraph) breaks.  The
+            //  label control can decide how to format lines.
+            //
+
+            for (Index = 0; Index < Text.LengthInChars; Index++) {
+                if (Text.StartOfString[Index] == '\n' &&
+                    Index + 1 < Text.LengthInChars &&
+                    Text.StartOfString[Index + 1] != '\n') {
+
+                    Text.StartOfString[Index] = ' ';
+                }
+            }
+
+            EditAboutDialog(YoriWinGetWindowManagerHandle(Parent),
+                            &Title,
+                            &CenteredText,
+                            &Text,
+                            1,
+                            ButtonTexts,
+                            0,
+                            0);
+            YoriLibFreeStringContents(&Text);
+        }
+    }
 }
 
 /**
@@ -2355,7 +2403,7 @@ ENTRYPOINT(
                 EditHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2020"));
+                YoriLibDisplayMitLicense(strCopyrightYear);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 if (ArgC > i + 1) {

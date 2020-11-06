@@ -34,13 +34,15 @@
  @param Ctrl Pointer to the button that was clicked.
  */
 VOID
-EditAboutDlgMsgButtonClicked(
+EditAboutDlgButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
     PYORI_WIN_CTRL_HANDLE Parent;
+    DWORD_PTR CtrlId;
     Parent = YoriWinGetControlParent(Ctrl);
-    YoriWinCloseWindow(Parent, 0);
+    CtrlId = YoriWinGetControlId(Ctrl);
+    YoriWinCloseWindow(Parent, CtrlId);
 }
 
 /**
@@ -54,7 +56,20 @@ EditAboutDlgMsgButtonClicked(
 
  @param LeftText The string to display after the centered text in the dialog.
 
- @return Meaningless for this dialog.
+ @param NumButtons The number of buttons to display.
+
+ @param ButtonTexts An array of NumButtons length of Yori strings to display
+        in the buttons.
+
+ @param DefaultIndex The zero-based index of the button which should be
+        invoked when the user presses enter.
+
+ @param CancelIndex The zero-based index of the button which should be
+        invoked when the user presses escape.
+
+ @return Zero to indicate failure.  A nonzero value indicates the element of
+         the ButtonTexts array that was clicked, where the first button has
+         a value of one.
  */
 __success(return)
 DWORD
@@ -62,14 +77,17 @@ EditAboutDialog(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
     __in PYORI_STRING CenteredText,
-    __in PYORI_STRING LeftText
+    __in PYORI_STRING LeftText,
+    __in DWORD NumButtons,
+    __in PYORI_STRING ButtonTexts,
+    __in DWORD DefaultIndex,
+    __in DWORD CancelIndex
     )
 {
     PYORI_WIN_WINDOW_HANDLE Parent;
     COORD WindowSize;
     SMALL_RECT TextArea;
     SMALL_RECT ButtonArea;
-    YORI_STRING ButtonText;
     DWORD DisplayLength;
     DWORD TotalButtonWidth;
     DWORD CenteredLabelLinesRequired;
@@ -77,8 +95,10 @@ EditAboutDialog(
     DWORD LeftLabelLinesRequired;
     DWORD LeftLabelWidthRequired;
     DWORD Style;
+    DWORD Index;
     WORD WindowWidth;
     WORD WindowHeight;
+    DWORD_PTR Result;
     PYORI_WIN_CTRL_HANDLE Ctrl;
 
     UNREFERENCED_PARAMETER(LeftText);
@@ -92,8 +112,18 @@ EditAboutDialog(
     //
 
     DisplayLength = WindowSize.X - 10;
-    CenteredLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(CenteredText, DisplayLength, &CenteredLabelWidthRequired);
-    LeftLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(LeftText, DisplayLength, &LeftLabelWidthRequired);
+    if (CenteredText->LengthInChars > 0) {
+        CenteredLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(CenteredText, DisplayLength, &CenteredLabelWidthRequired);
+    } else {
+        CenteredLabelLinesRequired = 0;
+        CenteredLabelWidthRequired = 0;
+    }
+    if (LeftText->LengthInChars > 0) {
+        LeftLabelLinesRequired = YoriWinLabelCountLinesRequiredForText(LeftText, DisplayLength, &LeftLabelWidthRequired);
+    } else {
+        LeftLabelLinesRequired = 0;
+        LeftLabelWidthRequired = 0;
+    }
 
     //
     //  Vertically, the window has 9 lines of overhead (title bar, padding
@@ -104,8 +134,12 @@ EditAboutDialog(
     if (CenteredLabelLinesRequired + LeftLabelLinesRequired + 9 > (WORD)WindowSize.Y &&
         WindowSize.Y > 9) {
 
-        LeftLabelLinesRequired = 0;
-        LeftLabelWidthRequired = 0;
+        if (CenteredLabelLinesRequired > 0) {
+            LeftLabelLinesRequired = 0;
+            LeftLabelWidthRequired = 0;
+        } else {
+            LeftLabelLinesRequired = WindowSize.Y - 8;
+        }
     }
 
     if (LeftLabelWidthRequired > CenteredLabelWidthRequired) {
@@ -114,10 +148,10 @@ EditAboutDialog(
         WindowWidth = (WORD)(CenteredLabelWidthRequired + 6);
     }
 
-    if (LeftLabelLinesRequired == 0) {
-        WindowHeight = (WORD)(CenteredLabelLinesRequired + 8);
-    } else {
+    if (LeftLabelLinesRequired > 0 && CenteredLabelLinesRequired > 0) {
         WindowHeight = (WORD)(CenteredLabelLinesRequired + LeftLabelLinesRequired + 9);
+    } else {
+        WindowHeight = (WORD)(CenteredLabelLinesRequired + LeftLabelLinesRequired + 8);
     }
 
     if (!YoriWinCreateWindow(WinMgrHandle, WindowWidth, WindowHeight, WindowWidth, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
@@ -129,16 +163,22 @@ EditAboutDialog(
     TextArea.Left = 1;
     TextArea.Top = 1;
     TextArea.Right = (WORD)(WindowSize.X - 2);
-    TextArea.Bottom = (SHORT)(TextArea.Top + CenteredLabelLinesRequired - 1);
+    TextArea.Bottom = TextArea.Top;
 
-    Ctrl = YoriWinLabelCreate(Parent, &TextArea, CenteredText, YORI_WIN_LABEL_STYLE_CENTER | YORI_WIN_LABEL_NO_ACCELERATOR);
-    if (Ctrl == NULL) {
-        YoriWinDestroyWindow(Parent);
-        return FALSE;
+    if (CenteredLabelLinesRequired > 0) {
+        TextArea.Bottom = (SHORT)(TextArea.Top + CenteredLabelLinesRequired - 1);
+
+        Ctrl = YoriWinLabelCreate(Parent, &TextArea, CenteredText, YORI_WIN_LABEL_STYLE_CENTER | YORI_WIN_LABEL_NO_ACCELERATOR);
+        if (Ctrl == NULL) {
+            YoriWinDestroyWindow(Parent);
+            return FALSE;
+        }
     }
 
     if (LeftLabelLinesRequired > 0) {
-        TextArea.Top = (WORD)(TextArea.Bottom + 2);
+        if (CenteredLabelLinesRequired > 0) {
+            TextArea.Top = (WORD)(TextArea.Bottom + 2);
+        }
         TextArea.Bottom = (SHORT)(TextArea.Top + LeftLabelLinesRequired - 1);
 
         Ctrl = YoriWinLabelCreate(Parent, &TextArea, LeftText, YORI_WIN_LABEL_NO_ACCELERATOR);
@@ -149,38 +189,67 @@ EditAboutDialog(
     }
 
     //
-    //  Each button also has a space before and after the text, a border
-    //  left and right.
+    //  Count the number of characters in the buttons.
     //
 
-    TotalButtonWidth = 4 + sizeof("Ok") - 1;
+    TotalButtonWidth = 0;
+    for (Index = 0; Index < NumButtons; Index++) {
 
-    YoriLibConstantString(&ButtonText, _T("&Ok"));
+        YoriWinLabelParseAccelerator(&ButtonTexts[Index],
+                                     NULL,
+                                     NULL,
+                                     NULL,
+                                     &DisplayLength);
+
+        TotalButtonWidth += DisplayLength;
+    }
+
+    //
+    //  Each button also has a space before and after the text, a border
+    //  left and right, and one char between the buttons.
+    //
+
+    TotalButtonWidth += 5 * NumButtons - 1;
 
     ButtonArea.Top = (SHORT)(TextArea.Bottom + 2);
     ButtonArea.Bottom = (SHORT)(ButtonArea.Top + 2);
     ButtonArea.Left = (SHORT)((WindowSize.X - TotalButtonWidth) / 2);
 
-    YoriWinLabelParseAccelerator(&ButtonText,
-                                 NULL,
-                                 NULL,
-                                 NULL,
-                                 &DisplayLength);
+    for (Index = 0; Index < NumButtons; Index++) {
 
-    ButtonArea.Right = (SHORT)(ButtonArea.Left + 3 + DisplayLength);
+        YoriWinLabelParseAccelerator(&ButtonTexts[Index],
+                                     NULL,
+                                     NULL,
+                                     NULL,
+                                     &DisplayLength);
 
-    Style = YORI_WIN_BUTTON_STYLE_DEFAULT | YORI_WIN_BUTTON_STYLE_CANCEL;
+        ButtonArea.Right = (SHORT)(ButtonArea.Left + 3 + DisplayLength);
 
-    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &ButtonText, Style, EditAboutDlgMsgButtonClicked);
-    if (Ctrl == NULL) {
-        YoriWinDestroyWindow(Parent);
-        return FALSE;
+        Style = 0;
+
+        if (Index == DefaultIndex) {
+            Style |= YORI_WIN_BUTTON_STYLE_DEFAULT;
+        }
+
+        if (Index == CancelIndex) {
+            Style |= YORI_WIN_BUTTON_STYLE_CANCEL;
+        }
+
+        Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &ButtonTexts[Index], Style, EditAboutDlgButtonClicked);
+        if (Ctrl == NULL) {
+            YoriWinDestroyWindow(Parent);
+            return FALSE;
+        }
+
+        YoriWinSetControlId(Ctrl, Index + 1);
+        ButtonArea.Left = (SHORT)(ButtonArea.Right + 2);
     }
 
+    Result = 0;
     YoriWinEnableNonAltAccelerators(Parent, TRUE);
-    YoriWinProcessInputForWindow(Parent, NULL);
+    YoriWinProcessInputForWindow(Parent, &Result);
     YoriWinDestroyWindow(Parent);
-    return 0;
+    return (DWORD)Result;
 }
 
 // vim:sw=4:ts=4:et:

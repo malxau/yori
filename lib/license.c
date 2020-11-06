@@ -74,7 +74,7 @@ CHAR strMitLicenseTextPart2[] =
  */
 BOOL
 YoriLibMitLicenseText(
-    __in LPTSTR CopyrightYear,
+    __in LPCTSTR CopyrightYear,
     __out PYORI_STRING String
     )
 {
@@ -95,7 +95,7 @@ YoriLibMitLicenseText(
  */
 BOOL
 YoriLibDisplayMitLicense(
-    __in LPTSTR CopyrightYear
+    __in LPCTSTR CopyrightYear
     )
 {
     YORI_STRING License;
