@@ -1,6 +1,4 @@
-v1.3:
- - Wide char support in sdir
-   - Console needs a cache of gdi metrics per font for this, looks insane
+v1.5:
  - General MSFIX review
  - Explicit Ctrl+C by detecting console process before launch, if not console
    process on same console don't use GenerateConsoleCtrlEvent
@@ -12,7 +10,6 @@ To consider:
  - Colorize help and error text
  - Ctrl+R
  - Edit horizontal scroll bar
- - Edit undo
  - More select should use logical line coordinates rather than conhost
    buffer coordinates to allow selection beyond screen size
 
@@ -25,3 +22,4 @@ v2.0:
  - Man or something like it
  - Edit line wrap
  - Edit hex editing
+ - Round braces in command parser, including if
