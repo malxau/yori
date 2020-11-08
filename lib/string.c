@@ -366,7 +366,7 @@ YoriLibStringToNumberSpecifyBase(
                     break;
                 }
             } else if (Base == 8) {
-                if (String->StartOfString[Index] < '0' || String->StartOfString[Index] > '8') {
+                if (String->StartOfString[Index] < '0' || String->StartOfString[Index] >= '8') {
                     break;
                 }
                 Result *= Base;
@@ -480,7 +480,7 @@ YoriLibStringToNumber(
                     break;
                 }
             } else if (Base == 8) {
-                if (String->StartOfString[Index] < '0' || String->StartOfString[Index] > '8') {
+                if (String->StartOfString[Index] < '0' || String->StartOfString[Index] >= '8') {
                     break;
                 }
                 Result *= Base;
