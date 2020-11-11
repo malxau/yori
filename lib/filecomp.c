@@ -324,13 +324,18 @@ YoriLibDecompressSingleFile(
 
     if (DestFileHandle == INVALID_HANDLE_VALUE) {
 
+        DWORD Error;
+
+        Error = GetLastError();
+
         // 
         //  If we can't get a handle with FILE_WRITE_DATA, try without write
         //  access.  This is to allow decompression of system files, which
         //  can be performed with FSCTL_DELETE_EXTERNAL_BACKING .
         //
 
-        if (GetLastError() == ERROR_ACCESS_DENIED) {
+        if (Error == ERROR_ACCESS_DENIED || Error == ERROR_SHARING_VIOLATION) {
+
             AccessRequired = FILE_READ_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE;
 
             DestFileHandle = CreateFile(PendingAction->FileName.StartOfString,
