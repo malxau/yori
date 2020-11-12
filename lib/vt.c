@@ -787,7 +787,13 @@ YoriLibProcessVtEscapesOnOpenStream(
                 CurrentPoint = CurrentPoint + EndOfEscape + 3;
                 PreviouslyConsumed += EndOfEscape + 3;
             } else {
-                if (!Callbacks->ProcessAndOutputText(hOutput, CurrentPoint, CurrentOffset)) {
+
+                //
+                //  Output just the escape character and move to the next
+                //  match
+                //
+
+                if (!Callbacks->ProcessAndOutputText(hOutput, CurrentPoint, 1)) {
                     return FALSE;
                 }
                 CurrentPoint++;
