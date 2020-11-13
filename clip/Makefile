@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yclip.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+yclip.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CLIP_VER_MAJOR).$(CLIP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(CLIP_VER_MAJOR).$(CLIP_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_clip.obj: clip.c
 	@echo $@

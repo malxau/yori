@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ypm.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib ..\pkglib\yoripkg.lib
+ypm.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIPKG)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib ..\pkglib\yoripkg.lib -version:$(YPM_VER_MAJOR).$(YPM_VER_MINOR) $(LINKPDB_YPM) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) -version:$(YPM_VER_MAJOR).$(YPM_VER_MINOR) $(LINKPDB_YPM) -out:$@
 
 mod_ypm.obj: ypm.c
 	@echo $@

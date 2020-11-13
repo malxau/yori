@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-which.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+which.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(WHICH_VER_MAJOR).$(WHICH_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(WHICH_VER_MAJOR).$(WHICH_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_which.obj: which.c
 	@echo $@

@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-readline.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+readline.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(READLINE_VER_MAJOR).$(READLINE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(READLINE_VER_MAJOR).$(READLINE_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_readline.obj: readline.c
 	@echo $@

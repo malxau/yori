@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ycls.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+ycls.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CLS_VER_MAJOR).$(CLS_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(CLS_VER_MAJOR).$(CLS_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_cls.obj: cls.c
 	@echo $@

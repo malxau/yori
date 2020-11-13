@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ystride.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+ystride.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(STRIDE_VER_MAJOR).$(STRIDE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(STRIDE_VER_MAJOR).$(STRIDE_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_stride.obj: stride.c
 	@echo $@

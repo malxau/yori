@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ycompact.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+ycompact.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(COMPACT_VER_MAJOR).$(COMPACT_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(COMPACT_VER_MAJOR).$(COMPACT_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_compact.obj: compact.c
 	@echo $@

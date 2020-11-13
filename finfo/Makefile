@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-finfo.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+finfo.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(FINFO_VER_MAJOR).$(FINFO_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(FINFO_VER_MAJOR).$(FINFO_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_finfo.obj: finfo.c
 	@echo $@

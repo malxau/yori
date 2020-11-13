@@ -21,9 +21,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yedit.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib ..\libwin\yoriwin.lib ..\libdlg\yoridlg.lib
+yedit.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIWIN) $(YORIDLG)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib ..\libwin\yoriwin.lib ..\libdlg\yoridlg.lib -version:$(CO_VER_MAJOR).$(CO_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIWIN) $(YORIDLG) -version:$(CO_VER_MAJOR).$(CO_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_edit.obj: edit.c
 	@echo $@

@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yshutdn.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+yshutdn.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SHUTDN_VER_MAJOR).$(SHUTDN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(SHUTDN_VER_MAJOR).$(SHUTDN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_shut.obj: shutdn.c
 	@echo $@

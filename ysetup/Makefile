@@ -22,7 +22,7 @@ OBJS=\
 
 compile: $(OBJS)
 
-ysetup.exe: $(OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib ..\pkglib\yoripkg.lib
+ysetup.exe: $(OBJS) $(YORILIB) $(YORICRT) $(YORIPKG)
 	@echo $@
-	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib ..\pkglib\yoripkg.lib -version:$(YSETUP_VER_MAJOR).$(YSETUP_VER_MINOR) $(LINKPDB_YSETUP) -out:$@
+	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) -version:$(YSETUP_VER_MAJOR).$(YSETUP_VER_MINOR) $(LINKPDB_YSETUP) -out:$@
 

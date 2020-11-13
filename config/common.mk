@@ -61,7 +61,12 @@ LDFLAGS=$(LDFLAGS) -DEBUG
 
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -DMINICRT
 LDFLAGS=$(LDFLAGS) -nodefaultlib
-CRTLIB=..\crt\yoricrt.lib
+YORICRT=..\crt\yoricrt.lib
+YORILIB=..\lib\yorilib.lib
+YORIPKG=..\pkglib\yoripkg.lib
+YORIWIN=..\libwin\yoriwin.lib
+YORIDLG=..\libdlg\yoridlg.lib
+CRTLIB=$(YORICRT)
 
 !IF $(PROBECOMPILER)==1
 
@@ -164,13 +169,13 @@ MINOS=520
 !IF [$(CC) 2>&1 | find "ARM" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:ARM
 # Add back msvcrt to provide 64 bit math assembly
-CRTLIB=$(CRTLIB) msvcrt.lib libvcruntime.lib
+CRTLIB=$(YORICRT) msvcrt.lib libvcruntime.lib
 MINOS=800
 !ELSE
 !IF [$(CC) 2>&1 | find "MIPS" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:MIPS
 # Add back msvcrt to provide 64 bit math assembly
-CRTLIB=$(CRTLIB) msvcrt.lib
+CRTLIB=$(YORICRT) msvcrt.lib
 !ENDIF # MIPS
 !ENDIF # ARM (32)
 !ENDIF # Itanium
@@ -283,6 +288,11 @@ writeconfigcache:
 	@echo MAKE=$(MAKE) >>$(WRITECONFIGCACHEFILE)
 	@echo MKDIR=$(MKDIR) >>$(WRITECONFIGCACHEFILE)
 	@echo RMDIR=$(RMDIR) >>$(WRITECONFIGCACHEFILE)
+	@echo YORICRT=$(YORICRT) >>$(WRITECONFIGCACHEFILE)
+	@echo YORIDLG=$(YORIDLG) >>$(WRITECONFIGCACHEFILE)
+	@echo YORILIB=$(YORILIB) >>$(WRITECONFIGCACHEFILE)
+	@echo YORIPKG=$(YORIPKG) >>$(WRITECONFIGCACHEFILE)
+	@echo YORIWIN=$(YORIWIN) >>$(WRITECONFIGCACHEFILE)
 
 !ENDIF
 

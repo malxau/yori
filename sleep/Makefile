@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-sleep.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+sleep.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SLEEP_VER_MAJOR).$(SLEEP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(SLEEP_VER_MAJOR).$(SLEEP_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_sleep.obj: sleep.c
 	@echo $@

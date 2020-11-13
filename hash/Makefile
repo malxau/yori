@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yhash.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+yhash.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(HASH_VER_MAJOR).$(HASH_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(HASH_VER_MAJOR).$(HASH_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_hash.obj: hash.c
 	@echo $@

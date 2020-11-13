@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-cshot.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+cshot.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CSHOT_VER_MAJOR).$(CSHOT_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(CSHOT_VER_MAJOR).$(CSHOT_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_cshot.obj: cshot.c
 	@echo $@

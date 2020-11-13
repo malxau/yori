@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-setver.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+setver.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(SETVER_VER_MAJOR).$(SETVER_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(SETVER_VER_MAJOR).$(SETVER_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_setver.obj: setver.c
 	@echo $@

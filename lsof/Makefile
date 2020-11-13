@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-lsof.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+lsof.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(LSOF_VER_MAJOR).$(LSOF_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(LSOF_VER_MAJOR).$(LSOF_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_lsof.obj: lsof.c
 	@echo $@

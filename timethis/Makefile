@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-timethis.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+timethis.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TIMETHIS_VER_MAJOR).$(TIMETHIS_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(TIMETHIS_VER_MAJOR).$(TIMETHIS_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_time.obj: timethis.c
 	@echo $@

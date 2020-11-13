@@ -20,9 +20,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yfor.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+yfor.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(FOR_VER_MAJOR).$(FOR_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(FOR_VER_MAJOR).$(FOR_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_for.obj: for.c
 	@echo $@
@@ -34,4 +34,4 @@ builtins.lib: $(MOD_OBJS)
 
 for.com: $(MOD_OBJS)
 	@echo $@
-	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -def:for.def -out:$@
+	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LIBS) $(CRTLIB) $(YORILIB) -def:for.def -out:$@

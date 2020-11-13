@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-procinfo.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+procinfo.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(PROCINFO_VER_MAJOR).$(PROCINFO_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(PROCINFO_VER_MAJOR).$(PROCINFO_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_proc.obj: procinfo.c
 	@echo $@

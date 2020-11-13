@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-winpos.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+winpos.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(WINPOS_VER_MAJOR).$(WINPOS_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(WINPOS_VER_MAJOR).$(WINPOS_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_winpos.obj: winpos.c
 	@echo $@

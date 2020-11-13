@@ -23,11 +23,11 @@ YUISHOOK_OBJS=\
 
 compile: $(BIN_OBJS) $(YUISHOOK_OBJS)
 
-yui.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+yui.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(YUI_VER_MAJOR).$(YUI_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(YUI_VER_MAJOR).$(YUI_VER_MINOR) $(LINKPDB) -out:$@
 
 yuishook.dll: $(YUISHOOK_OBJS) 
 	@echo $@
-	@$(LINK) $(LDFLAGS) -dll -def:yuishook.def $(YUISHOOK_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(YUI_VER_MAJOR).$(YUI_VER_MINOR) $(LINKPDB_YUISHOOK) -out:$@
+	@$(LINK) $(LDFLAGS) -dll -def:yuishook.def $(YUISHOOK_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(YUI_VER_MAJOR).$(YUI_VER_MINOR) $(LINKPDB_YUISHOOK) -out:$@
 

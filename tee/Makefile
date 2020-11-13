@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-tee.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+tee.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(TEE_VER_MAJOR).$(TEE_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(TEE_VER_MAJOR).$(TEE_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_tee.obj: tee.c
 	@echo $@

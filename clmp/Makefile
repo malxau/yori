@@ -14,7 +14,7 @@ OBJS=\
 
 compile: $(OBJS)
 
-clmp.exe: $(OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+clmp.exe: $(OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(CLMP_VER_MAJOR).$(CLMP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(CLMP_VER_MAJOR).$(CLMP_VER_MINOR) $(LINKPDB) -out:$@
 

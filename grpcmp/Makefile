@@ -17,9 +17,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-grpcmp.exe: $(BIN_OBJS) ..\lib\yorilib.lib ..\crt\yoricrt.lib
+grpcmp.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) ..\lib\yorilib.lib -version:$(GRPCMP_VER_MAJOR).$(GRPCMP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(GRPCMP_VER_MAJOR).$(GRPCMP_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_grpcmp.obj: grpcmp.c
 	@echo $@
