@@ -1,9 +1,9 @@
 /**
  * @file hilite/hilite.c
  *
- * Yori shell highlight lines in an input stream
+ * Yori shell highlight lines or text in an input stream
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,15 +34,16 @@ const
 CHAR strHiliteHelpText[] =
         "\n"
         "Output the contents of one or more files with highlight on lines\n"
-        "matching specified criteria.\n"
+        "or text matching specified criteria.\n"
         "\n"
         "HILITE [-license] [-b] [-c <string> <color>] [-h <string> <color>]\n"
-        "       [-i] [-s] [-t <string> <color>] [<file>...]\n"
+        "       [-i] [-m] [-s] [-t <string> <color>] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Highlight lines containing <string> with <color>\n"
         "   -h             Highlight lines starting with <string> with <color>\n"
         "   -i             Match insensitively\n"
+        "   -m             Highlight matching text (as opposed to matching lines)\n"
         "   -s             Process files from all subdirectories\n"
         "   -t             Highlight lines ending with <string> with <color>\n";
 
@@ -113,6 +114,12 @@ typedef struct _HILITE_CONTEXT {
     BOOLEAN Insensitive;
 
     /**
+     TRUE if any text matching the criteria should be highlighted.  FALSE if
+     the entire line should be highlighted.
+     */
+    BOOLEAN HighlightMatchText;
+
+    /**
      TRUE if file enumeration is being performed recursively; FALSE if it is
      in one directory only.
      */
@@ -124,11 +131,87 @@ typedef struct _HILITE_CONTEXT {
     YORILIB_COLOR_ATTRIBUTES DefaultColor;
 
     /**
-     A list of matches to apply against the stream.
+     A list of matches to apply against the beginning of lines.
      */
-    YORI_LIST_ENTRY Matches;
+    YORI_LIST_ENTRY StartMatches;
+
+    /**
+     A list of matches to apply against the middle of lines.
+     */
+    YORI_LIST_ENTRY MiddleMatches;
+
+    /**
+     A list of matches to apply against the end of lines.
+     */
+    YORI_LIST_ENTRY EndMatches;
 
 } HILITE_CONTEXT, *PHILITE_CONTEXT;
+
+/**
+ Return the next match, in order.  All matches that must be at the start
+ of the line are returned first, then all matches in the middle of the line,
+ then all matches at the end of the line.
+
+ @param HiliteContext Pointer to the context.
+
+ @param ListContext Pointer to a variable that on input contains the list to
+        start navigating from, and on completion contains the list to navigate
+        next.
+
+ @param PreviousMatch Pointer to the previously returned match, or NULL to
+        start matching from the start.
+
+ @return Pointer to the next match.
+ */
+PHILITE_MATCH_CRITERIA
+HiliteGetNextMatch(
+    __in PHILITE_CONTEXT HiliteContext,
+    __in PYORI_LIST_ENTRY *ListContext,
+    __in_opt PHILITE_MATCH_CRITERIA PreviousMatch
+    )
+{
+    PYORI_LIST_ENTRY ListHead;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_LIST_ENTRY PreviousEntry;
+    PHILITE_MATCH_CRITERIA Match;
+
+    ListHead = *ListContext;
+    if (ListHead == NULL) {
+        ListHead = &HiliteContext->StartMatches;
+    }
+
+    if (PreviousMatch != NULL) {
+        PreviousEntry = &PreviousMatch->ListEntry;
+    } else {
+        PreviousEntry = NULL;
+    }
+
+    while(TRUE) {
+        ListEntry = YoriLibGetNextListEntry(ListHead, PreviousEntry);
+        if (ListEntry != NULL) {
+            break;
+        }
+
+        if (ListHead == &HiliteContext->StartMatches) {
+            ListHead = &HiliteContext->MiddleMatches;
+        } else if (ListHead == &HiliteContext->MiddleMatches) {
+            ListHead = &HiliteContext->EndMatches;
+        } else {
+            ListEntry = NULL;
+            break;
+        }
+
+        PreviousEntry = NULL;
+        *ListContext = ListHead;
+    }
+
+    if (ListEntry != NULL) {
+        Match = CONTAINING_RECORD(ListEntry, HILITE_MATCH_CRITERIA, ListEntry);
+        return Match;
+    }
+
+    return NULL;
+}
 
 /**
  Process a stream and apply the hilite criteria before outputting to standard
@@ -150,11 +233,19 @@ HiliteProcessStream(
     PVOID LineContext = NULL;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     YORI_STRING LineString;
+    YORI_STRING Substring;
+    YORI_STRING DisplayString;
     PHILITE_MATCH_CRITERIA MatchCriteria;
     YORILIB_COLOR_ATTRIBUTES ColorToUse;
-    PYORI_LIST_ENTRY ListEntry;
+    PYORI_LIST_ENTRY ListHead;
+    BOOLEAN MatchFound;
+    BOOLEAN AnyMatchFound;
+    DWORD MatchOffset;
 
     YoriLibInitEmptyString(&LineString);
+    YoriLibInitEmptyString(&Substring);
+    YoriLibInitEmptyString(&DisplayString);
+    MatchOffset = 0;
 
     HiliteContext->FilesFound++;
 
@@ -164,83 +255,137 @@ HiliteProcessStream(
             break;
         }
 
+        Substring.StartOfString = LineString.StartOfString;
+        Substring.LengthInChars = LineString.LengthInChars;
         ColorToUse.Ctrl = HiliteContext->DefaultColor.Ctrl;
         ColorToUse.Win32Attr = HiliteContext->DefaultColor.Win32Attr;
 
-        //
-        //  Enumerate through the matches and see if there is anything to
-        //  apply.
-        //
+        while (Substring.LengthInChars > 0) {
 
-        ListEntry = YoriLibGetNextListEntry(&HiliteContext->Matches, NULL);
-        while (ListEntry != NULL) {
-            MatchCriteria = CONTAINING_RECORD(ListEntry, HILITE_MATCH_CRITERIA, ListEntry);
-            if (MatchCriteria->MatchType == HiliteMatchTypeBeginsWith) {
-                if (HiliteContext->Insensitive) {
-                    if (YoriLibCompareStringInsensitiveCount(&LineString,
-                                                             &MatchCriteria->MatchString,
-                                                             MatchCriteria->MatchString.LengthInChars) == 0) {
-                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
-                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
-                        break;
-                    }
-                } else {
-                    if (YoriLibCompareStringCount(&LineString,
-                                                  &MatchCriteria->MatchString,
-                                                  MatchCriteria->MatchString.LengthInChars) == 0) {
-                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
-                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
-                        break;
-                    }
-                }
-            } else if (MatchCriteria->MatchType == HiliteMatchTypeEndsWith) {
-                YORI_STRING TailOfLine;
-    
-                if (LineString.LengthInChars >= MatchCriteria->MatchString.LengthInChars) {
-                    YoriLibInitEmptyString(&TailOfLine);
-                    TailOfLine.LengthInChars = MatchCriteria->MatchString.LengthInChars;
-                    TailOfLine.StartOfString = &LineString.StartOfString[LineString.LengthInChars - MatchCriteria->MatchString.LengthInChars];
-    
+            //
+            //  Enumerate through the matches and see if there is anything to
+            //  apply.  At the start of the line, enumerate the matches to
+            //  the beginning of lines; after that enumerate the matches that
+            //  could be in the middle of a line.
+            //
+
+            AnyMatchFound = FALSE;
+            if (Substring.StartOfString == LineString.StartOfString) {
+                ListHead = &HiliteContext->StartMatches;
+            } else {
+                ListHead = &HiliteContext->MiddleMatches;
+            }
+            MatchCriteria = NULL;
+            MatchCriteria = HiliteGetNextMatch(HiliteContext, &ListHead, MatchCriteria);
+            while (MatchCriteria != NULL) {
+                MatchFound = FALSE;
+                if (MatchCriteria->MatchType == HiliteMatchTypeBeginsWith) {
                     if (HiliteContext->Insensitive) {
-                        if (YoriLibCompareStringInsensitive(&TailOfLine, &MatchCriteria->MatchString) == 0) {
-                            ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
-                            ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
-                            break;
+                        if (YoriLibCompareStringInsensitiveCount(&Substring,
+                                                                 &MatchCriteria->MatchString,
+                                                                 MatchCriteria->MatchString.LengthInChars) == 0) {
+                            MatchFound = TRUE;
+                            MatchOffset = 0;
                         }
                     } else {
-                        if (YoriLibCompareString(&TailOfLine, &MatchCriteria->MatchString) == 0) {
-                            ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
-                            ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
-                            break;
+                        if (YoriLibCompareStringCount(&Substring,
+                                                      &MatchCriteria->MatchString,
+                                                      MatchCriteria->MatchString.LengthInChars) == 0) {
+                            MatchFound = TRUE;
+                            MatchOffset = 0;
+                        }
+                    }
+                } else if (MatchCriteria->MatchType == HiliteMatchTypeEndsWith) {
+                    YORI_STRING TailOfLine;
+
+                    if (Substring.LengthInChars >= MatchCriteria->MatchString.LengthInChars) {
+                        YoriLibInitEmptyString(&TailOfLine);
+                        TailOfLine.LengthInChars = MatchCriteria->MatchString.LengthInChars;
+                        TailOfLine.StartOfString = &Substring.StartOfString[Substring.LengthInChars - MatchCriteria->MatchString.LengthInChars];
+
+                        if (HiliteContext->Insensitive) {
+                            if (YoriLibCompareStringInsensitive(&TailOfLine, &MatchCriteria->MatchString) == 0) {
+                                MatchFound = TRUE;
+                                MatchOffset = Substring.LengthInChars - MatchCriteria->MatchString.LengthInChars;
+                            }
+                        } else {
+                            if (YoriLibCompareString(&TailOfLine, &MatchCriteria->MatchString) == 0) {
+                                MatchFound = TRUE;
+                                MatchOffset = Substring.LengthInChars - MatchCriteria->MatchString.LengthInChars;
+                            }
+                        }
+                    }
+                } else if (MatchCriteria->MatchType == HiliteMatchTypeContains) {
+                    if (HiliteContext->Insensitive) {
+                        if (YoriLibFindFirstMatchingSubstringInsensitive(&Substring, 1, &MatchCriteria->MatchString, &MatchOffset)) {
+                            MatchFound = TRUE;
+                        }
+                    } else {
+                        if (YoriLibFindFirstMatchingSubstring(&Substring, 1, &MatchCriteria->MatchString, &MatchOffset)) {
+                            MatchFound = TRUE;
                         }
                     }
                 }
-            } else if (MatchCriteria->MatchType == HiliteMatchTypeContains) {
-                if (HiliteContext->Insensitive) {
-                    if (YoriLibFindFirstMatchingSubstringInsensitive(&LineString, 1, &MatchCriteria->MatchString, NULL)) {
+
+                //
+                //  If this is highlighting a search term only, display any
+                //  text before the match in regular color, then display the
+                //  match in the requested color.  If highlighting the whole
+                //  line, display all the text.  Then start searching again,
+                //  from all entries that can be in the middle of lines.
+                //
+
+                DisplayString.StartOfString = Substring.StartOfString;
+                DisplayString.LengthInChars = Substring.LengthInChars;
+                if (MatchFound) {
+                    AnyMatchFound = TRUE;
+                    if (HiliteContext->HighlightMatchText) {
+                        if (MatchOffset > 0) {
+                            DisplayString.LengthInChars = MatchOffset;
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                            DisplayString.StartOfString = &Substring.StartOfString[MatchOffset];
+                            Substring.LengthInChars = Substring.LengthInChars - MatchOffset;
+                            Substring.StartOfString = &Substring.StartOfString[MatchOffset];
+                        }
+                        DisplayString.LengthInChars = MatchCriteria->MatchString.LengthInChars;
                         ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
                         ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
-                        break;
-                    }
-                } else {
-                    if (YoriLibFindFirstMatchingSubstring(&LineString, 1, &MatchCriteria->MatchString, NULL)) {
+                    } else {
                         ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
                         ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
-                        break;
                     }
+
+                    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, ColorToUse.Win32Attr);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, HiliteContext->DefaultColor.Win32Attr);
+                    Substring.StartOfString = &Substring.StartOfString[DisplayString.LengthInChars];
+                    Substring.LengthInChars = Substring.LengthInChars - DisplayString.LengthInChars;
+                    break;
                 }
+                MatchCriteria = HiliteGetNextMatch(HiliteContext, &ListHead, MatchCriteria);
             }
-            ListEntry = YoriLibGetNextListEntry(&HiliteContext->Matches, ListEntry);
+
+            //
+            //  If all matches have been navigated and the string hasn't
+            //  changed, no more matches were found, so move to the next line.
+            //
+
+            if (!AnyMatchFound) {
+                break;
+            }
         }
 
         //
-        //  Apply the color and output the line.
+        //  If no matches are found, display the line.
         //
 
-        YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, ColorToUse.Win32Attr);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &LineString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Substring);
+
+        //
+        //  Apply a newline if needed.
+        //
+
         if (LineString.LengthInChars == 0 || !GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo) || ScreenInfo.dwCursorPosition.X != 0) {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, HiliteContext->DefaultColor.Win32Attr);
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
     }
@@ -378,14 +523,17 @@ HiliteCleanupContext(
     )
 {
     PHILITE_MATCH_CRITERIA MatchCriteria;
-    PYORI_LIST_ENTRY ListEntry;
+    PHILITE_MATCH_CRITERIA NextMatchCriteria;
+    PYORI_LIST_ENTRY ListHead;
 
-    ListEntry = YoriLibGetNextListEntry(&HiliteContext->Matches, NULL);
-    while (ListEntry != NULL) {
-        MatchCriteria = CONTAINING_RECORD(ListEntry, HILITE_MATCH_CRITERIA, ListEntry);
+    ListHead = &HiliteContext->StartMatches;
+
+    MatchCriteria = HiliteGetNextMatch(HiliteContext, &ListHead, NULL);
+    while (MatchCriteria != NULL) {
+        NextMatchCriteria = HiliteGetNextMatch(HiliteContext, &ListHead, MatchCriteria);
         YoriLibRemoveListItem(&MatchCriteria->ListEntry);
         YoriLibFree(MatchCriteria);
-        ListEntry = YoriLibGetNextListEntry(&HiliteContext->Matches, NULL);
+        MatchCriteria = NextMatchCriteria;
     }
 }
 
@@ -438,7 +586,9 @@ ENTRYPOINT(
         HiliteContext.DefaultColor.Win32Attr = 0x7;
     }
 
-    YoriLibInitializeListHead(&HiliteContext.Matches);
+    YoriLibInitializeListHead(&HiliteContext.StartMatches);
+    YoriLibInitializeListHead(&HiliteContext.MiddleMatches);
+    YoriLibInitializeListHead(&HiliteContext.EndMatches);
 
     for (i = 1; i < ArgC; i++) {
 
@@ -452,7 +602,7 @@ ENTRYPOINT(
                 HiliteCleanupContext(&HiliteContext);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2019"));
+                YoriLibDisplayMitLicense(_T("2018-2020"));
                 HiliteCleanupContext(&HiliteContext);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
@@ -471,7 +621,7 @@ ENTRYPOINT(
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
                     YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString, &NewCriteria->Color);
                     YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE, &NewCriteria->Color);
-                    YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
+                    YoriLibAppendList(&HiliteContext.MiddleMatches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
@@ -488,12 +638,15 @@ ENTRYPOINT(
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
                     YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString, &NewCriteria->Color);
                     YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE, &NewCriteria->Color);
-                    YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
+                    YoriLibAppendList(&HiliteContext.StartMatches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 HiliteContext.Insensitive = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+                HiliteContext.HighlightMatchText = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 HiliteContext.Recursive = TRUE;
@@ -511,7 +664,7 @@ ENTRYPOINT(
                     NewCriteria->MatchString.LengthInChars = ArgV[i + 1].LengthInChars;
                     YoriLibAttributeFromLiteralString(ArgV[i + 2].StartOfString, &NewCriteria->Color);
                     YoriLibResolveWindowColorComponents(NewCriteria->Color, HiliteContext.DefaultColor, FALSE, &NewCriteria->Color);
-                    YoriLibAppendList(&HiliteContext.Matches, &NewCriteria->ListEntry);
+                    YoriLibAppendList(&HiliteContext.EndMatches, &NewCriteria->ListEntry);
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
@@ -559,9 +712,9 @@ ENTRYPOINT(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
-    
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,
