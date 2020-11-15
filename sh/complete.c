@@ -2408,6 +2408,7 @@ YoriShTabCompletion(
                                               Match,
                                               Match->Value.LengthInChars,
                                               FALSE);
+
     } else {
         DWORD MatchCount;
         DWORD ShortestMatchLength;
@@ -2440,6 +2441,16 @@ YoriShTabCompletion(
             if (MatchCount == 0 || ThisMatchLength < ShortestMatchLength) {
                 ShortestMatchLength = ThisMatchLength;
             }
+
+            //
+            //  If any match needs quotes, add quotes to the arg.  This is to
+            //  allow the user to add subsequent characters to choose a match
+            //  without needing to navigate through the command line to add a
+            //  starting quote.  POSIX shells can do this with an escape char,
+            //  but in Windows where arg parsing is done by child processes,
+            //  the escape needs to be something meaningful to the child, not
+            //  something processed by the shell.
+            //
 
             if (!MatchNeedsQuotes) {
                 MatchNeedsQuotes = YoriLibCheckIfArgNeedsQuotes(&ThisMatch->Value);
@@ -2491,6 +2502,20 @@ YoriShTabCompletion(
     YoriLibFreeStringContents(&PrefixBeforeBackquoteSubstring);
     YoriLibFreeStringContents(&SuffixAfterBackquoteSubstring);
     YoriShFreeCmdContext(&CmdContext);
+
+    //
+    //  If there's only one match, treat the tab completion as final so
+    //  the next tab will look for new matches.  This is useful when
+    //  trailing slashes are in use, so the next tab is really scanning
+    //  a subdirectory.
+    //
+
+    if (!ListAll &&
+        Buffer->TabContext.MatchList.Next == Buffer->TabContext.MatchList.Prev) {
+
+        YoriShClearTabCompletionMatches(Buffer);
+        Buffer->PriorTabCount = 0;
+    }
 
     return ListAll;
 }
