@@ -1573,6 +1573,7 @@ YoriShConfigureInputSettings(
         YoriShGlobal.YoriQuickEdit = FALSE;
         YoriShGlobal.MouseoverEnabled = TRUE;
         YoriShGlobal.CompletionTrailingSlash = FALSE;
+        YoriShGlobal.CompletionListAll = FALSE;
 
         //
         //  Check the environment to see if the user wants to override the
