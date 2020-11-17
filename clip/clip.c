@@ -4,7 +4,7 @@
  * Copy HTML text onto the clipboard in HTML formatting for use in applications
  * that support rich text.
  *
- * Copyright (c) 2015-2019 Malcolm J. Smith
+ * Copyright (c) 2015-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -36,10 +36,11 @@ CHAR strClipHelpText[] =
         "\n"
         "Manipulate clipboard state including copy and paste.\n"
         "\n"
-        "CLIP [-license] [-e|-h|-p|-r|-t] [filename]\n"
+        "CLIP [-license] [-e|-h|-l|-p|-r|-t] [filename]\n"
         "\n"
         "   -e             Empty clipboard\n"
         "   -h             Copy to the clipboard in HTML format\n"
+        "   -l             List formats available on the clipboard\n"
         "   -p             Paste the clipboard\n"
         "   -r             Copy to the clipboard in RTF format\n"
         "   -t             Retain only plain text in the clipboard\n";
@@ -715,6 +716,110 @@ ClipEmptyClipboard(
     return TRUE;
 }
 
+/**
+ List all of the available clipboard formats.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+ClipListFormats(
+    )
+{
+    DWORD  Err;
+    LPTSTR ErrText;
+    DWORD  Format;
+    TCHAR  FormatName[100];
+    INT    CharsCopied;
+
+    //
+    //  Open and empty the clipboard.
+    //
+
+    if (!DllUser32.pOpenClipboard(NULL)) {
+        Err = GetLastError();
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
+        return FALSE;
+    }
+
+    Format = 0;
+    while (TRUE) {
+        Format = DllUser32.pEnumClipboardFormats(Format);
+        if (Format == 0) {
+            break;
+        }
+
+        FormatName[0] = '\0';
+        CharsCopied = DllUser32.pGetClipboardFormatNameW(Format, FormatName, sizeof(FormatName)/sizeof(FormatName[0]));
+        FormatName[sizeof(FormatName)/sizeof(FormatName[0]) - 1] = '\0';
+        if (CharsCopied == 0) {
+            switch(Format) {
+                case CF_TEXT:
+                    YoriLibSPrintf(FormatName, _T("Text"));
+                    break;
+                case CF_BITMAP:
+                    YoriLibSPrintf(FormatName, _T("Bitmap"));
+                    break;
+                case CF_METAFILEPICT:
+                    YoriLibSPrintf(FormatName, _T("Metafile"));
+                    break;
+                case CF_SYLK:
+                    YoriLibSPrintf(FormatName, _T("SYLK"));
+                    break;
+                case CF_DIF:
+                    YoriLibSPrintf(FormatName, _T("DIF"));
+                    break;
+                case CF_TIFF:
+                    YoriLibSPrintf(FormatName, _T("TIFF"));
+                    break;
+                case CF_OEMTEXT:
+                    YoriLibSPrintf(FormatName, _T("Ascii Text"));
+                    break;
+                case CF_DIB:
+                    YoriLibSPrintf(FormatName, _T("DIB"));
+                    break;
+                case CF_PALETTE:
+                    YoriLibSPrintf(FormatName, _T("Palette"));
+                    break;
+                case CF_PENDATA:
+                    YoriLibSPrintf(FormatName, _T("Pen data"));
+                    break;
+                case CF_RIFF:
+                    YoriLibSPrintf(FormatName, _T("RIFF"));
+                    break;
+                case CF_WAVE:
+                    YoriLibSPrintf(FormatName, _T("WAVE"));
+                    break;
+                case CF_UNICODETEXT:
+                    YoriLibSPrintf(FormatName, _T("Unicode Text"));
+                    break;
+                case CF_ENHMETAFILE:
+                    YoriLibSPrintf(FormatName, _T("Enhanced Metafile"));
+                    break;
+            }
+        }
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04x %s\n"), Format, FormatName);
+    }
+
+    DllUser32.pCloseClipboard();
+    return TRUE;
+}
+
+/**
+ The set of operations supported by this program.
+ */
+typedef enum _CLIP_OPERATION {
+    ClipOperationUnknown = 0,
+    ClipOperationEmpty = 1,
+    ClipOperationPreserveText = 2,
+    ClipOperationCopyText = 3,
+    ClipOperationCopyRtf = 4,
+    ClipOperationCopyHtml = 5,
+    ClipOperationPasteText = 6,
+    ClipOperationListFormats = 7
+} CLIP_OPERATION;
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the clip builtin command.
@@ -747,15 +852,12 @@ ENTRYPOINT(
     DWORD  Err;
     LPTSTR ErrText;
     DWORD  FileSize = 0;
-    BOOL   HtmlMode = FALSE;
-    BOOL   RtfMode = FALSE;
+    CLIP_OPERATION Op;
     BOOL   OpenedFile = FALSE;
-    BOOL   Empty = FALSE;
-    BOOL   Paste = FALSE;
-    BOOL   PreserveText = FALSE;
-    
     DWORD  CurrentArg;
     YORI_STRING Arg;
+
+    Op = ClipOperationUnknown;
 
     //
     //  If the user specified a file, go read it.  If not, read
@@ -775,32 +877,37 @@ ENTRYPOINT(
                     ClipHelp();
                     return EXIT_SUCCESS;
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                    YoriLibDisplayMitLicense(_T("2015-2019"));
+                    YoriLibDisplayMitLicense(_T("2015-2020"));
                     return EXIT_SUCCESS;
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
-                    if (!Paste && !HtmlMode && !PreserveText && !RtfMode) {
+                    if (Op == ClipOperationUnknown) {
                         ArgParsed = TRUE;
-                        Empty = TRUE;
+                        Op = ClipOperationEmpty;
                     }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
-                    if (!Paste && !Empty && !PreserveText && !RtfMode) {
+                    if (Op == ClipOperationUnknown) {
                         ArgParsed = TRUE;
-                        HtmlMode = TRUE;
+                        Op = ClipOperationCopyHtml;
+                    }
+                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                    if (Op == ClipOperationUnknown) {
+                        ArgParsed = TRUE;
+                        Op = ClipOperationListFormats;
                     }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
-                    if (!HtmlMode && !Empty && !PreserveText && !RtfMode) {
+                    if (Op == ClipOperationUnknown) {
                         ArgParsed = TRUE;
-                        Paste = TRUE;
+                        Op = ClipOperationPasteText;
                     }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
-                    if (!Paste && !Empty && !PreserveText && !HtmlMode) {
+                    if (Op == ClipOperationUnknown) {
                         ArgParsed = TRUE;
-                        RtfMode = TRUE;
+                        Op = ClipOperationCopyRtf;
                     }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
-                    if (!HtmlMode && !Empty && !Paste && !RtfMode) {
+                    if (Op == ClipOperationUnknown) {
                         ArgParsed = TRUE;
-                        PreserveText = TRUE;
+                        Op = ClipOperationPreserveText;
                     }
                 }
     
@@ -810,24 +917,31 @@ ENTRYPOINT(
                 }
             }
         }
+        if (Op == ClipOperationUnknown) {
+            Op = ClipOperationCopyText;
+        }
 
-        if (!Empty && !PreserveText) {
+        if (Op == ClipOperationCopyText ||
+            Op == ClipOperationCopyRtf ||
+            Op == ClipOperationCopyHtml ||
+            Op == ClipOperationPasteText) {
+
             for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
                 if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
-                    if (!Paste) {
-                        hFile = CreateFile(ArgV[CurrentArg].StartOfString,
-                                           GENERIC_READ,
-                                           FILE_SHARE_READ|FILE_SHARE_DELETE,
-                                           NULL,
-                                           OPEN_EXISTING,
-                                           FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
-                                           NULL);
-                    } else {
+                    if (Op == ClipOperationPasteText) {
                         hFile = CreateFile(ArgV[CurrentArg].StartOfString,
                                            GENERIC_WRITE,
                                            FILE_SHARE_READ|FILE_SHARE_DELETE,
                                            NULL,
                                            OPEN_ALWAYS,
+                                           FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
+                                           NULL);
+                    } else {
+                        hFile = CreateFile(ArgV[CurrentArg].StartOfString,
+                                           GENERIC_READ,
+                                           FILE_SHARE_READ|FILE_SHARE_DELETE,
+                                           NULL,
+                                           OPEN_EXISTING,
                                            FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
                                            NULL);
                     }
@@ -846,9 +960,13 @@ ENTRYPOINT(
         }
     }
 
-    if (!OpenedFile && !Empty && !PreserveText) {
+    if (!OpenedFile &&
+        (Op == ClipOperationCopyText ||
+         Op == ClipOperationCopyRtf ||
+         Op == ClipOperationCopyHtml ||
+         Op == ClipOperationPasteText)) {
 
-        if (Paste) {
+        if (Op == ClipOperationPasteText) {
             hFile = GetStdHandle(STD_OUTPUT_HANDLE);
         } else {
 
@@ -870,24 +988,28 @@ ENTRYPOINT(
 
     YoriLibLoadUser32Functions();
 
-    if (Empty) {
+    if (Op == ClipOperationEmpty) {
         if (!ClipEmptyClipboard()) {
             return EXIT_FAILURE;
         }
-    } else if (Paste) {
+    } else if (Op == ClipOperationPasteText) {
         if (!ClipPasteText(hFile)) {
             return EXIT_FAILURE;
         }
-    } else if (HtmlMode) {
+    } else if (Op == ClipOperationCopyHtml) {
         if (!ClipCopyAsHtml(hFile, FileSize)) {
             return EXIT_FAILURE;
         }
-    } else if (RtfMode) {
+    } else if (Op == ClipOperationCopyRtf) {
         if (!ClipCopyAsRtf(hFile, FileSize)) {
             return EXIT_FAILURE;
         }
-    } else if (PreserveText) {
+    } else if (Op == ClipOperationPreserveText) {
         if (!ClipPreserveText()) {
+            return EXIT_FAILURE;
+        }
+    } else if (Op == ClipOperationListFormats) {
+        if (!ClipListFormats()) {
             return EXIT_FAILURE;
         }
     } else {

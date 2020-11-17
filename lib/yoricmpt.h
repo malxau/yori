@@ -6778,6 +6778,18 @@ EMPTY_CLIPBOARD();
 typedef EMPTY_CLIPBOARD *PEMPTY_CLIPBOARD;
 
 /**
+ A prototype for the EnumClipboardFormats function.
+ */
+typedef
+DWORD WINAPI
+ENUM_CLIPBOARD_FORMATS(DWORD);
+
+/**
+ A prototype for a pointer to the EnumClipboardFormats function.
+ */
+typedef ENUM_CLIPBOARD_FORMATS *PENUM_CLIPBOARD_FORMATS;
+
+/**
  A prototype for the ExitWindowsEx function.
  */
 typedef
@@ -6824,6 +6836,18 @@ GET_CLIPBOARD_DATA(UINT);
  A prototype for a pointer to the GetClipboardData function.
  */
 typedef GET_CLIPBOARD_DATA *PGET_CLIPBOARD_DATA;
+
+/**
+ A prototype for the GetClipboardFormatNameW function.
+ */
+typedef
+INT WINAPI
+GET_CLIPBOARD_FORMAT_NAMEW(UINT, LPWSTR, DWORD);
+
+/**
+ A prototype for a pointer to the GetClipboardFormatNameW function.
+ */
+typedef GET_CLIPBOARD_FORMAT_NAMEW *PGET_CLIPBOARD_FORMAT_NAMEW;
 
 /**
  A prototype for the GetDesktopWindow function.
@@ -7019,6 +7043,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PEMPTY_CLIPBOARD pEmptyClipboard;
 
     /**
+     If it's available on the current system, a pointer to EnumClipboardFormats.
+     */
+    PENUM_CLIPBOARD_FORMATS pEnumClipboardFormats;
+
+    /**
      If it's available on the current system, a pointer to ExitWindowsEx.
      */
     PEXIT_WINDOWS_EX pExitWindowsEx;
@@ -7037,6 +7066,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to GetClipboardData.
      */
     PGET_CLIPBOARD_DATA pGetClipboardData;
+
+    /**
+     If it's available on the current system, a pointer to GetClipboardFormatNameW.
+     */
+    PGET_CLIPBOARD_FORMAT_NAMEW pGetClipboardFormatNameW;
 
     /**
      If it's available on the current system, a pointer to GetDesktopWindow.
