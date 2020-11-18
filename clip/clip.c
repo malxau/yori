@@ -41,7 +41,8 @@ CHAR strClipHelpText[] =
         "   -e             Empty clipboard\n"
         "   -h             Copy to the clipboard in HTML format\n"
         "   -l             List formats available on the clipboard\n"
-        "   -p             Paste the clipboard\n"
+        "   -p             Paste text from the clipboard\n"
+        "   -pr            Paste rich text from the clipboard\n"
         "   -r             Copy to the clipboard in RTF format\n"
         "   -t             Retain only plain text in the clipboard\n";
 
@@ -567,15 +568,59 @@ ClipCopyAsText(
 }
 
 /**
- Paste the text contents from the clipboard to an output pipe or file.
+ Enumerate clipboard formats and find a registered format that matches a
+ specified name.  If no matching registered format is found, return zero.
+ Note this function assumes the clipboard is already open.
+
+ @param SearchFormatName Pointer to a string specifying the format name.
+
+ @return The format number matching the name, or zero if no matching format
+         is found.
+ */
+DWORD
+ClipFindFormatByName(
+    __in PCYORI_STRING SearchFormatName
+    )
+{
+    DWORD  Format;
+    TCHAR  FoundFormatName[100];
+    INT    CharsCopied;
+
+    Format = 0;
+    while (TRUE) {
+        Format = DllUser32.pEnumClipboardFormats(Format);
+        if (Format == 0) {
+            break;
+        }
+
+        FoundFormatName[0] = '\0';
+        CharsCopied = DllUser32.pGetClipboardFormatNameW(Format, FoundFormatName, sizeof(FoundFormatName)/sizeof(FoundFormatName[0]));
+        FoundFormatName[sizeof(FoundFormatName)/sizeof(FoundFormatName[0]) - 1] = '\0';
+
+        if (FoundFormatName[0] != '\0' &&
+            YoriLibCompareStringWithLiteralInsensitive(SearchFormatName, FoundFormatName) == 0) {
+
+            return Format;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ Paste the contents from the clipboard to an output pipe or file.
 
  @param hFile The device to output clipboard contents to.
+
+ @param FormatString If not NULL, contains a string specifying the requested
+        format.  If NULL, unicode text is assumed as the format.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-ClipPasteText(
-    __in HANDLE hFile
+ClipPasteSpecifiedFormat(
+    __in HANDLE hFile,
+    __in_opt PCYORI_STRING FormatString
     )
 {
     HANDLE hMem;
@@ -584,6 +629,7 @@ ClipPasteText(
     DWORD  BufferSize;
     DWORD  Err;
     LPTSTR ErrText;
+    DWORD  Format;
 
     //
     //  Open the clipboard and fetch its contents.
@@ -596,11 +642,25 @@ ClipPasteText(
         return FALSE;
     }
 
-    hMem = DllUser32.pGetClipboardData(CF_UNICODETEXT);
+    if (FormatString != NULL) {
+        Format = ClipFindFormatByName(FormatString);
+        if (Format == 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: data not available in the specified format\n"));
+            DllUser32.pCloseClipboard();
+            return FALSE;
+        }
+    } else {
+        Format = CF_UNICODETEXT;
+    }
+
+    SetLastError(0);
+    hMem = DllUser32.pGetClipboardData(Format);
     if (hMem == NULL) {
         Err = GetLastError();
-        ErrText = YoriLibGetWinErrorText(Err);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not get clipboard data: %s\n"), ErrText);
+        if (Err != ERROR_SUCCESS) {
+            ErrText = YoriLibGetWinErrorText(Err);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not get clipboard data: %s\n"), ErrText);
+        }
         DllUser32.pCloseClipboard();
         return FALSE;
     }
@@ -608,7 +668,11 @@ ClipPasteText(
     CurrentOffset = 0;
     BufferSize = (DWORD)GlobalSize(hMem);
     pMem = GlobalLock(hMem);
-    YoriLibOutputToDevice(hFile, 0, _T("%s"), pMem);
+    if (Format == CF_UNICODETEXT) {
+        YoriLibOutputToDevice(hFile, 0, _T("%s"), pMem);
+    } else {
+        YoriLibOutputToDevice(hFile, 0, _T("%hs"), pMem);
+    }
     GlobalUnlock(hMem);
 
     DllUser32.pCloseClipboard();
@@ -716,6 +780,7 @@ ClipEmptyClipboard(
     return TRUE;
 }
 
+
 /**
  List all of the available clipboard formats.
 
@@ -817,7 +882,8 @@ typedef enum _CLIP_OPERATION {
     ClipOperationCopyRtf = 4,
     ClipOperationCopyHtml = 5,
     ClipOperationPasteText = 6,
-    ClipOperationListFormats = 7
+    ClipOperationListFormats = 7,
+    ClipOperationPasteRichText = 8,
 } CLIP_OPERATION;
 
 #ifdef YORI_BUILTIN
@@ -899,6 +965,11 @@ ENTRYPOINT(
                         ArgParsed = TRUE;
                         Op = ClipOperationPasteText;
                     }
+                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("pr")) == 0) {
+                    if (Op == ClipOperationUnknown) {
+                        ArgParsed = TRUE;
+                        Op = ClipOperationPasteRichText;
+                    }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                     if (Op == ClipOperationUnknown) {
                         ArgParsed = TRUE;
@@ -924,11 +995,13 @@ ENTRYPOINT(
         if (Op == ClipOperationCopyText ||
             Op == ClipOperationCopyRtf ||
             Op == ClipOperationCopyHtml ||
-            Op == ClipOperationPasteText) {
+            Op == ClipOperationPasteText ||
+            Op == ClipOperationPasteRichText) {
 
             for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
                 if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
-                    if (Op == ClipOperationPasteText) {
+                    if (Op == ClipOperationPasteText ||
+                        Op == ClipOperationPasteRichText) {
                         hFile = CreateFile(ArgV[CurrentArg].StartOfString,
                                            GENERIC_WRITE,
                                            FILE_SHARE_READ|FILE_SHARE_DELETE,
@@ -964,9 +1037,11 @@ ENTRYPOINT(
         (Op == ClipOperationCopyText ||
          Op == ClipOperationCopyRtf ||
          Op == ClipOperationCopyHtml ||
-         Op == ClipOperationPasteText)) {
+         Op == ClipOperationPasteText ||
+         Op == ClipOperationPasteRichText)) {
 
-        if (Op == ClipOperationPasteText) {
+        if (Op == ClipOperationPasteText ||
+            Op == ClipOperationPasteRichText) {
             hFile = GetStdHandle(STD_OUTPUT_HANDLE);
         } else {
 
@@ -993,7 +1068,12 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
     } else if (Op == ClipOperationPasteText) {
-        if (!ClipPasteText(hFile)) {
+        if (!ClipPasteSpecifiedFormat(hFile, NULL)) {
+            return EXIT_FAILURE;
+        }
+    } else if (Op == ClipOperationPasteRichText) {
+        YORI_STRING RichTextFormat = YORILIB_CONSTANT_STRING(_T("Rich Text Format"));
+        if (!ClipPasteSpecifiedFormat(hFile, &RichTextFormat)) {
             return EXIT_FAILURE;
         }
     } else if (Op == ClipOperationCopyHtml) {
