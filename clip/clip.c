@@ -42,6 +42,7 @@ CHAR strClipHelpText[] =
         "   -h             Copy to the clipboard in HTML format\n"
         "   -l             List formats available on the clipboard\n"
         "   -p             Paste text from the clipboard\n"
+        "   -ph            Paste HTML from the clipboard\n"
         "   -pr            Paste rich text from the clipboard\n"
         "   -r             Copy to the clipboard in RTF format\n"
         "   -t             Retain only plain text in the clipboard\n";
@@ -608,6 +609,91 @@ ClipFindFormatByName(
 }
 
 /**
+ Given a clipboard buffer in HTML format, parse the headers to find the
+ region of the buffer that contains the HTML contents, and return a pointer
+ to the contents.  Note this function can modify the buffer to insert a NULL
+ terminator at the end of the HTML range.
+
+ @param Buffer Pointer to the buffer in HTML clipboard format.
+
+ @param BufferLength Specifies the length of the buffer in bytes.
+
+ @return Pointer to the start of the HTML range in the buffer, or NULL if the
+         headers cannot be parsed correctly.
+ */
+PUCHAR
+ClipExtractHtmlRange(
+    __in PUCHAR Buffer,
+    __in DWORD BufferLength
+    )
+{
+    DWORD StartOffset;
+    DWORD EndOffset;
+    DWORD Index;
+
+    PUCHAR HeaderNameStart;
+    DWORD HeaderNameLength;
+    PUCHAR HeaderValueStart;
+    DWORD HeaderValueLength;
+
+    StartOffset = 0;
+    EndOffset = 0;
+
+    HeaderNameStart = Buffer;
+    HeaderNameLength = 0;
+    HeaderValueStart = NULL;
+    HeaderValueLength = 0;
+
+    for (Index = 0; Index < BufferLength; Index++) {
+        if (Buffer[Index] == '\n') {
+            if (HeaderValueStart != NULL) {
+                if (strnicmp(HeaderNameStart, "StartHTML", HeaderNameLength) == 0) {
+                    StartOffset = atoi(HeaderValueStart);
+                    if (StartOffset >= BufferLength) {
+                        StartOffset = 0;
+                    }
+                }
+                if (strnicmp(HeaderNameStart, "EndHTML", HeaderNameLength) == 0) {
+                    EndOffset = atoi(HeaderValueStart);
+                    if (EndOffset > BufferLength) {
+                        EndOffset = 0;
+                    }
+                }
+            }
+
+            if (StartOffset != 0 && EndOffset != 0) {
+                break;
+            }
+            HeaderValueStart = NULL;
+            HeaderNameStart = &Buffer[Index + 1];
+            HeaderNameLength = 0;
+            continue;
+        }
+
+        if (Buffer[Index] == ':') {
+            HeaderValueStart = &Buffer[Index + 1];
+            HeaderValueLength = 0;
+            continue;
+        }
+
+        if (HeaderValueStart != NULL) {
+            HeaderValueLength++;
+        } else {
+            HeaderNameLength++;
+        }
+    }
+
+    if (StartOffset != 0 && EndOffset != 0) {
+        if (EndOffset < BufferLength) {
+            Buffer[EndOffset] = '\0';
+        }
+        return &Buffer[StartOffset];
+    }
+
+    return NULL;
+}
+
+/**
  Paste the contents from the clipboard to an output pipe or file.
 
  @param hFile The device to output clipboard contents to.
@@ -668,7 +754,13 @@ ClipPasteSpecifiedFormat(
     CurrentOffset = 0;
     BufferSize = (DWORD)GlobalSize(hMem);
     pMem = GlobalLock(hMem);
-    if (Format == CF_UNICODETEXT) {
+    if (FormatString != NULL &&
+        YoriLibCompareStringWithLiteralInsensitive(FormatString, _T("HTML Format")) == 0) {
+        pMem = ClipExtractHtmlRange(pMem, BufferSize);
+        if (pMem != NULL) {
+            YoriLibOutputToDevice(hFile, 0, _T("%hs"), pMem);
+        }
+    } else if (Format == CF_UNICODETEXT) {
         YoriLibOutputToDevice(hFile, 0, _T("%s"), pMem);
     } else {
         YoriLibOutputToDevice(hFile, 0, _T("%hs"), pMem);
@@ -884,6 +976,7 @@ typedef enum _CLIP_OPERATION {
     ClipOperationPasteText = 6,
     ClipOperationListFormats = 7,
     ClipOperationPasteRichText = 8,
+    ClipOperationPasteHTML = 9,
 } CLIP_OPERATION;
 
 #ifdef YORI_BUILTIN
@@ -965,6 +1058,11 @@ ENTRYPOINT(
                         ArgParsed = TRUE;
                         Op = ClipOperationPasteText;
                     }
+                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ph")) == 0) {
+                    if (Op == ClipOperationUnknown) {
+                        ArgParsed = TRUE;
+                        Op = ClipOperationPasteHTML;
+                    }
                 } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("pr")) == 0) {
                     if (Op == ClipOperationUnknown) {
                         ArgParsed = TRUE;
@@ -996,12 +1094,14 @@ ENTRYPOINT(
             Op == ClipOperationCopyRtf ||
             Op == ClipOperationCopyHtml ||
             Op == ClipOperationPasteText ||
-            Op == ClipOperationPasteRichText) {
+            Op == ClipOperationPasteRichText ||
+            Op == ClipOperationPasteHTML) {
 
             for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
                 if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
                     if (Op == ClipOperationPasteText ||
-                        Op == ClipOperationPasteRichText) {
+                        Op == ClipOperationPasteRichText ||
+                        Op == ClipOperationPasteHTML) {
                         hFile = CreateFile(ArgV[CurrentArg].StartOfString,
                                            GENERIC_WRITE,
                                            FILE_SHARE_READ|FILE_SHARE_DELETE,
@@ -1038,10 +1138,12 @@ ENTRYPOINT(
          Op == ClipOperationCopyRtf ||
          Op == ClipOperationCopyHtml ||
          Op == ClipOperationPasteText ||
-         Op == ClipOperationPasteRichText)) {
+         Op == ClipOperationPasteRichText ||
+         Op == ClipOperationPasteHTML)) {
 
         if (Op == ClipOperationPasteText ||
-            Op == ClipOperationPasteRichText) {
+            Op == ClipOperationPasteRichText ||
+            Op == ClipOperationPasteHTML) {
             hFile = GetStdHandle(STD_OUTPUT_HANDLE);
         } else {
 
@@ -1074,6 +1176,11 @@ ENTRYPOINT(
     } else if (Op == ClipOperationPasteRichText) {
         YORI_STRING RichTextFormat = YORILIB_CONSTANT_STRING(_T("Rich Text Format"));
         if (!ClipPasteSpecifiedFormat(hFile, &RichTextFormat)) {
+            return EXIT_FAILURE;
+        }
+    } else if (Op == ClipOperationPasteHTML) {
+        YORI_STRING HTMLFormat = YORILIB_CONSTANT_STRING(_T("HTML Format"));
+        if (!ClipPasteSpecifiedFormat(hFile, &HTMLFormat)) {
             return EXIT_FAILURE;
         }
     } else if (Op == ClipOperationCopyHtml) {
