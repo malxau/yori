@@ -355,10 +355,10 @@ YoriPkgAppendInstallDirToPath(
         }
     }
 
-    if (DllUser32.pSendMessageTimeout != NULL &&
+    if (DllUser32.pSendMessageTimeoutW != NULL &&
         (AppendToUserPath || AppendToSystemPath)) {
         DWORD_PTR NotifyResult;
-        DllUser32.pSendMessageTimeout(HWND_BROADCAST, WM_WININICHANGE, 0, (LPARAM)_T("Environment"), SMTO_NORMAL, 200, &NotifyResult);
+        DllUser32.pSendMessageTimeoutW(HWND_BROADCAST, WM_WININICHANGE, 0, (LPARAM)_T("Environment"), SMTO_NORMAL, 200, &NotifyResult);
     }
 
     return Result;
@@ -403,11 +403,11 @@ YoriPkgRemoveInstallDirFromPath(
         }
     }
 
-    if (DllUser32.pSendMessageTimeout != NULL &&
+    if (DllUser32.pSendMessageTimeoutW != NULL &&
         (RemoveFromUserPath || RemoveFromSystemPath)) {
 
         DWORD_PTR NotifyResult;
-        DllUser32.pSendMessageTimeout(HWND_BROADCAST, WM_WININICHANGE, 0, (LPARAM)_T("Environment"), SMTO_NORMAL, 200, &NotifyResult);
+        DllUser32.pSendMessageTimeoutW(HWND_BROADCAST, WM_WININICHANGE, 0, (LPARAM)_T("Environment"), SMTO_NORMAL, 200, &NotifyResult);
     }
 
     return Result;

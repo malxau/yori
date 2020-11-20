@@ -6946,16 +6946,16 @@ REGISTER_SHELL_HOOK_WINDOW(HWND);
 typedef REGISTER_SHELL_HOOK_WINDOW *PREGISTER_SHELL_HOOK_WINDOW;
 
 /**
- A prototype for the SendMessageTimeout function.
+ A prototype for the SendMessageTimeoutW function.
  */
 typedef
 LRESULT WINAPI
-SEND_MESSAGE_TIMEOUT(HWND, UINT, WPARAM, LPARAM, UINT, UINT, PDWORD_PTR);
+SEND_MESSAGE_TIMEOUTW(HWND, UINT, WPARAM, LPARAM, UINT, UINT, PDWORD_PTR);
 
 /**
- A prototype for a pointer to the SendMessageTimeout function.
+ A prototype for a pointer to the SendMessageTimeoutW function.
  */
-typedef SEND_MESSAGE_TIMEOUT *PSEND_MESSAGE_TIMEOUT;
+typedef SEND_MESSAGE_TIMEOUTW *PSEND_MESSAGE_TIMEOUTW;
 
 /**
  A prototype for the SetClipboardData function.
@@ -7113,9 +7113,9 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PREGISTER_SHELL_HOOK_WINDOW pRegisterShellHookWindow;
 
     /**
-     If it's available on the current system, a pointer to SendMessageTimeout.
+     If it's available on the current system, a pointer to SendMessageTimeoutW.
      */
-    PSEND_MESSAGE_TIMEOUT pSendMessageTimeout;
+    PSEND_MESSAGE_TIMEOUTW pSendMessageTimeoutW;
 
     /**
      If it's available on the current system, a pointer to SetClipboardData.

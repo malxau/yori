@@ -547,7 +547,7 @@ YoriLibLoadUser32Functions()
     DllUser32.pOpenClipboard = (POPEN_CLIPBOARD)GetProcAddress(DllUser32.hDll, "OpenClipboard");
     DllUser32.pRegisterClipboardFormatW = (PREGISTER_CLIPBOARD_FORMATW)GetProcAddress(DllUser32.hDll, "RegisterClipboardFormatW");
     DllUser32.pRegisterShellHookWindow = (PREGISTER_SHELL_HOOK_WINDOW)GetProcAddress(DllUser32.hDll, "RegisterShellHookWindow");
-    DllUser32.pSendMessageTimeout = (PSEND_MESSAGE_TIMEOUT)GetProcAddress(DllUser32.hDll, "SendMessageTimeout");
+    DllUser32.pSendMessageTimeoutW = (PSEND_MESSAGE_TIMEOUTW)GetProcAddress(DllUser32.hDll, "SendMessageTimeoutW");
     DllUser32.pSetClipboardData = (PSET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "SetClipboardData");
     DllUser32.pSetForegroundWindow = (PSET_FOREGROUND_WINDOW)GetProcAddress(DllUser32.hDll, "SetForegroundWindow");
     DllUser32.pSetWindowTextW = (PSET_WINDOW_TEXTW)GetProcAddress(DllUser32.hDll, "SetWindowTextW");
