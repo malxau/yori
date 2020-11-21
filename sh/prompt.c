@@ -191,7 +191,7 @@ YoriShDisplayPrompt()
     //  the prompt or title
     //
 
-    YoriShGlobal.SuppressTaskUi = TRUE;
+    YoriShGlobal.ImplicitSynchronousTaskActive = TRUE;
 
     //
     //  See if the environment has changed, and if so, reload the YORIPOSTCMD
@@ -399,7 +399,7 @@ YoriShDisplayPrompt()
         }
     }
 
-    YoriShGlobal.SuppressTaskUi = FALSE;
+    YoriShGlobal.ImplicitSynchronousTaskActive = FALSE;
 
     //
     //  Restore the error level since the prompt or title may execute
@@ -453,10 +453,10 @@ YoriShExecPreCommandString()
         //  the environment
         //
 
-        YoriShGlobal.SuppressTaskUi = TRUE;
+        YoriShGlobal.ImplicitSynchronousTaskActive = TRUE;
         YoriShExecuteExpression(&YoriShGlobal.PreCmdVariable);
         YoriShPreCommand(TRUE);
-        YoriShGlobal.SuppressTaskUi = FALSE;
+        YoriShGlobal.ImplicitSynchronousTaskActive = FALSE;
         return TRUE;
     }
 

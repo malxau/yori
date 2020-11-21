@@ -109,7 +109,7 @@ YoriShSetWindowState(
     //  progress and track completion.
     //
 
-    if (YoriShGlobal.SubShell || YoriShGlobal.SuppressTaskUi) {
+    if (YoriShGlobal.SubShell || YoriShGlobal.ImplicitSynchronousTaskActive) {
         return TRUE;
     }
 

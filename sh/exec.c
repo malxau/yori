@@ -1104,7 +1104,9 @@ YoriShWaitForProcessToTerminate(
     Delay = INFINITE;
 
     while (TRUE) {
-        if (Delay == INFINITE) {
+        if (YoriShGlobal.ImplicitSynchronousTaskActive) {
+            Result = WaitForMultipleObjects(2, WaitOn, FALSE, Delay);
+        } else if (Delay == INFINITE) {
             Result = WaitForMultipleObjects(3, WaitOn, FALSE, Delay);
         } else {
             Result = WaitForMultipleObjects(2, WaitOn, FALSE, Delay);
@@ -1150,7 +1152,9 @@ YoriShWaitForProcessToTerminate(
             }
         }
 
-        if (WaitForSingleObject(WaitOn[2], 0) == WAIT_TIMEOUT) {
+        if (YoriShGlobal.ImplicitSynchronousTaskActive ||
+            WaitForSingleObject(WaitOn[2], 0) == WAIT_TIMEOUT) {
+
             CtrlBCount = 0;
             LoseFocusCount = 0;
             Delay = INFINITE;

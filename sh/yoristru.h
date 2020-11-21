@@ -970,11 +970,12 @@ typedef struct _YORI_SH_GLOBALS {
     BOOLEAN TaskUiActive;
 
     /**
-     Set to TRUE to ignore any task UI state updates.  This is set when
-     executing programs as part of the prompt or title, since they're not
-     tasks the user is really waiting on.
+     Set to TRUE to indicate child processes launched without explicit user
+     request, including to generate prompts and titles.  This implies ignoring
+     any task UI state updates, and not processing input when waiting for
+     process completion.
      */
-    BOOLEAN SuppressTaskUi;
+    BOOLEAN ImplicitSynchronousTaskActive;
 
     /**
      Set to TRUE to disable the console's quickedit before inputting
