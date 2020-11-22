@@ -94,6 +94,12 @@ YoriLibCheckIfArgNeedsQuotes(
     BOOLEAN HasWhiteSpace;
     DWORD i;
 
+    if (Arg->LengthInChars > 0 &&
+        Arg->StartOfString[0] == '"') {
+
+        return FALSE;
+    }
+
     HasWhiteSpace = FALSE;
     for (i = 0; i < Arg->LengthInChars; i++) {
         if (Arg->StartOfString[i] == ' ') {
