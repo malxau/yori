@@ -190,7 +190,7 @@ YoriLibForEachFileEnum(
         DWORD FileAttributes;
         if ((MatchFlags & YORILIB_FILEENUM_DIRECTORY_CONTENTS) != 0) {
 
-            FileAttributes = GetFileAttributes(FileSpec->StartOfString);
+            FileAttributes = GetFileAttributes(ForEachContext->EffectiveFileSpec.StartOfString);
             if (FileAttributes != (DWORD)-1 &&
                 (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
     
