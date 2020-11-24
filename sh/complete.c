@@ -795,7 +795,17 @@ YoriShFileTabCompletionCallback(
             ASSERT(SearchAfterFinalSlash.LengthInChars > 0);
             if (YoriLibDoesFileMatchExpression(&LongFileName, &SearchAfterFinalSlash)) {
                 FileNameToUse = &LongFileName;
-            } else if (YoriLibDoesFileMatchExpression(&ShortFileName, &SearchAfterFinalSlash)) {
+
+                //
+                //  Don't match short file names when listing all matches.
+                //  This is an arbitrary policy choice to maximize the
+                //  chance of a completion matching more characters by
+                //  removing entries that are less likely to be what the
+                //  user is looking for.
+                //
+
+            } else if (!YoriShGlobal.CompletionListAll &&
+                       YoriLibDoesFileMatchExpression(&ShortFileName, &SearchAfterFinalSlash)) {
                 FileNameToUse = &ShortFileName;
             } else {
 
