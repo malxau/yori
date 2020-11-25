@@ -487,6 +487,7 @@ YoriShParseCmdlineToCmdContext(
     YoriLibInitEmptyString(&CmdContext->ArgV[ArgCount]);
     CmdContext->ArgV[ArgCount].StartOfString = OutputString;
     CmdContext->ArgContexts[ArgCount].Quoted = FALSE;
+    CmdContext->ArgContexts[ArgCount].QuoteTerminated = FALSE;
     YoriLibReference(CmdContext->MemoryToFree);
     CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
 
@@ -538,6 +539,8 @@ YoriShParseCmdlineToCmdContext(
         if (Char.StartOfString[0] == '"' && QuoteOpen && LookingForFirstQuote) {
             QuoteOpen = FALSE;
             LookingForFirstQuote = FALSE;
+            ASSERT(!CmdContext->ArgContexts[ArgCount].QuoteTerminated);
+            CmdContext->ArgContexts[ArgCount].QuoteTerminated = TRUE;
             Char.StartOfString++;
             Char.LengthInChars--;
             continue;
@@ -599,6 +602,7 @@ YoriShParseCmdlineToCmdContext(
                     CmdContext->ArgContexts[ArgCount].Quoted = FALSE;
                     LookingForFirstQuote = FALSE;
                 }
+                CmdContext->ArgContexts[ArgCount].QuoteTerminated = FALSE;
                 YoriLibReference(CmdContext->MemoryToFree);
                 CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
 
@@ -651,6 +655,7 @@ YoriShParseCmdlineToCmdContext(
                             CmdContext->ArgContexts[ArgCount].Quoted = FALSE;
                             LookingForFirstQuote = FALSE;
                         }
+                        CmdContext->ArgContexts[ArgCount].QuoteTerminated = FALSE;
                         YoriLibReference(CmdContext->MemoryToFree);
                         CmdContext->ArgV[ArgCount].MemoryToFree = CmdContext->MemoryToFree;
                     }
@@ -799,7 +804,11 @@ YoriShBuildCmdlineFromCmdContext(
         CmdLineOffset += DestOffset;
 
         if (CmdContext->ArgContexts[count].Quoted) {
-            String[CmdLineOffset++] = '"';
+            if (CmdContext->ArgContexts[count].QuoteTerminated) {
+                String[CmdLineOffset++] = '"';
+            } else {
+                ASSERT(count == CmdContext->ArgC - 1);
+            }
         }
 
         if (count == CmdContext->CurrentArg && EndCurrentArg != NULL) {
@@ -922,6 +931,7 @@ YoriShCopyArg(
     )
 {
     DestCmdContext->ArgContexts[DestArgument].Quoted = SrcCmdContext->ArgContexts[SrcArgument].Quoted;
+    DestCmdContext->ArgContexts[DestArgument].QuoteTerminated = SrcCmdContext->ArgContexts[SrcArgument].QuoteTerminated;
     if (SrcCmdContext->ArgV[SrcArgument].MemoryToFree != NULL) {
         YoriLibReference(SrcCmdContext->ArgV[SrcArgument].MemoryToFree);
     }
@@ -990,6 +1000,7 @@ YoriShCheckIfArgNeedsQuotes(
     HasWhiteSpace = YoriLibCheckIfArgNeedsQuotes(&CmdContext->ArgV[ArgIndex]);
     if (HasWhiteSpace) {
         CmdContext->ArgContexts[ArgIndex].Quoted = TRUE;
+        CmdContext->ArgContexts[ArgIndex].QuoteTerminated = TRUE;
     }
 }
 

@@ -345,6 +345,7 @@ YoriShBuckPassToCmd (
         ExitCode = EXIT_FAILURE;
     } else {
         ExecContext->CmdToExec.ArgContexts[ExtraArgCount].Quoted = TRUE;
+        ExecContext->CmdToExec.ArgContexts[ExtraArgCount].QuoteTerminated = TRUE;
     }
 
     YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);

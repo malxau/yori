@@ -32,7 +32,17 @@ typedef struct _YORI_SH_ARG_CONTEXT {
     /**
      TRUE if the argument is enclosed in quotes.
      */
-    BOOL Quoted;
+    BOOLEAN Quoted;
+
+    /**
+     TRUE if the closing quote is present on the argument.  In rare cases it
+     is possible to have a terminating quote of a non-quoted argument.
+     This happens in cases such as '>"foo bar"'.  This logic still treats
+     that argument as having a terminating quote to suppress suggestions
+     after the quote; in general this value should only be used in
+     conjunction with Quoted (indicating a leading quote) above.
+     */
+    BOOLEAN QuoteTerminated;
 
 } YORI_SH_ARG_CONTEXT, *PYORI_SH_ARG_CONTEXT;
 

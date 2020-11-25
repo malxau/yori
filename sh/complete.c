@@ -2187,8 +2187,10 @@ YoriShCompleteGenerateNewBufferString(
         CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars = CharsFromMatchToUse;
         if (ForceQuotes) {
             CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = TRUE;
+            CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = TRUE;
         } else {
             CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
+            CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = FALSE;
             YoriShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
         }
 
@@ -2789,11 +2791,18 @@ YoriShCompleteSuggestion(
         return;
     }
 
-    if (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars < YoriShGlobal.MinimumCharsInArgBeforeSuggesting) {
+    //
+    //  If the argument doesn't have enough characters, or it contains a
+    //  terminating quote, don't suggest.  Suggesting after a terminating
+    //  quote results in some very visually wrong output.
+    //
+
+    if (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars < YoriShGlobal.MinimumCharsInArgBeforeSuggesting ||
+        CmdContext.ArgContexts[CmdContext.CurrentArg].QuoteTerminated) {
+
         YoriShFreeCmdContext(&CmdContext);
         return;
     }
-
 
     //
     //  Check if the argument has a wildcard like '*' or '?' in it, and don't
