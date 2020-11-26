@@ -35,6 +35,7 @@ OBJS=\
 	 movefile.obj \
 	 numkey.obj   \
 	 osver.obj    \
+	 parse.obj    \
 	 path.obj     \
 	 printf.obj   \
 	 printfa.obj  \

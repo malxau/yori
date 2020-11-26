@@ -169,6 +169,187 @@ ForWaitForProcessToComplete(
 }
 
 /**
+ Search through arguments for a character that would normally implicitly
+ terminate an argument.  This includes shell operators like redirectors,
+ pipes, or backquotes.  When these are encountered, split the argument at
+ that point.  This means when quotes are added based on arguments with
+ spaces, they will only span the text with spaces, not any operators.
+
+ @param ArgC Pointer to the number of arguments.  On successful completion,
+        this routine may reallocate and increase this value.
+
+ @param ArgV Pointer to an array of arguments.  On successful completion,
+        this routine may reallocate this array.  Note that all strings
+        contained on entry will still be referred to on completion, but
+        there may be more entries in the array referring to these strings
+        in more components.
+
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
+ */
+BOOLEAN
+ForBreakArgumentsAsNeeded(
+    __in PDWORD ArgC,
+    __in PYORI_STRING * ArgV
+    )
+{
+    DWORD ArgCount;
+    DWORD ArgIndex;
+    DWORD CharsToConsume;
+    DWORD InitialArgOffset;
+    DWORD BraceNestingLevel;
+    PYORI_STRING Arg;
+    YORI_STRING Char;
+    BOOLEAN TerminateNextArg;
+    BOOL QuoteOpen = FALSE;
+    BOOLEAN LookingForFirstQuote = FALSE;
+
+    YoriLibInitEmptyString(&Char);
+    ArgCount = *ArgC;
+    Arg = *ArgV;
+    InitialArgOffset = 0;
+    BraceNestingLevel = 0;
+
+    for (ArgIndex = 0; ArgIndex < ArgCount; ArgIndex++) {
+
+        Char.StartOfString = Arg[ArgIndex].StartOfString;
+        Char.LengthInChars = Arg[ArgIndex].LengthInChars;
+
+        if (InitialArgOffset > 0) {
+            Char.StartOfString = Char.StartOfString + InitialArgOffset;
+            Char.LengthInChars = Char.LengthInChars - InitialArgOffset;
+        }
+
+        //
+        //  Remove leading spaces
+        //
+
+        while (Char.LengthInChars > 0) {
+            if (Char.StartOfString[0] == ' ') {
+                Char.StartOfString++;
+                Char.LengthInChars--;
+            } else {
+                break;
+            }
+        }
+
+        if (Char.LengthInChars > 0 && Char.StartOfString[0] == '"') {
+            LookingForFirstQuote = TRUE;
+        } else {
+            LookingForFirstQuote = FALSE;
+        }
+
+        //
+        //  Go through the arg looking for operators that would indicate
+        //  an argument break.  Note that unlike any normal case, spaces
+        //  do not constitute an argument break.
+        //
+
+        while (Char.LengthInChars > 0) {
+
+            if (YoriLibIsEscapeChar(Char.StartOfString[0])) {
+                Char.StartOfString++;
+                Char.LengthInChars--;
+                continue;
+            }
+
+            if (Char.StartOfString[0] == '"' && QuoteOpen && LookingForFirstQuote) {
+                QuoteOpen = FALSE;
+                LookingForFirstQuote = FALSE;
+                Char.StartOfString++;
+                Char.LengthInChars--;
+                continue;
+            }
+
+            if (Char.StartOfString[0] == '"') {
+                QuoteOpen = !QuoteOpen;
+                if (LookingForFirstQuote) {
+                    Char.StartOfString++;
+                    Char.LengthInChars--;
+                    continue;
+                }
+            }
+
+            if (!QuoteOpen) {
+                if (YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+
+                    PYORI_STRING NewArgV;
+                    DWORD NewArgCount;
+
+                    //
+                    //  If the next arg is terminated but is already
+                    //  terminating, don't do it twice.
+                    //
+
+                    if (TerminateNextArg && CharsToConsume == Char.LengthInChars) {
+                        TerminateNextArg = FALSE;
+                    }
+
+                    //
+                    //  At this point we need to reallocate the array to add
+                    //  either one or two new args.  The current arg ends at
+                    //  the current offset.  The next arg starts at the
+                    //  current offset.  If TerminateNextArg is TRUE, the
+                    //  next arg is CharsToConsume length and the next next
+                    //  arg starts after that.  We should advance the
+                    //  arg index to the final arg generated here, ensure
+                    //  Char.LengthInChars is zero, and continue.
+                    //
+
+                    if (TerminateNextArg) {
+                        NewArgCount = ArgCount + 2;
+                    } else {
+                        NewArgCount = ArgCount + 1;
+                    }
+
+                    NewArgV = YoriLibMalloc(NewArgCount * sizeof(YORI_STRING));
+                    if (NewArgV == NULL) {
+                        return FALSE;
+                    }
+
+                    memcpy(NewArgV, Arg, (ArgIndex + 1) * sizeof(YORI_STRING));
+                    NewArgV[ArgIndex].LengthInChars = (DWORD)(Char.StartOfString - Arg[ArgIndex].StartOfString);
+                    YoriLibInitEmptyString(&NewArgV[ArgIndex + 1]);
+                    NewArgV[ArgIndex + 1].StartOfString = Char.StartOfString;
+
+                    if (TerminateNextArg) {
+                        NewArgV[ArgIndex + 1].LengthInChars = CharsToConsume;
+                        YoriLibInitEmptyString(&NewArgV[ArgIndex + 2]);
+                        NewArgV[ArgIndex + 2].StartOfString = &Char.StartOfString[CharsToConsume];
+                        NewArgV[ArgIndex + 2].LengthInChars = Char.LengthInChars - CharsToConsume;
+                        if (ArgIndex + 1 < ArgCount) {
+                            memcpy(&NewArgV[ArgIndex + 3], &Arg[ArgIndex + 1], (ArgCount - ArgIndex - 1) * sizeof(YORI_STRING));
+                        }
+
+                        ArgIndex++;
+
+                    } else {
+                        NewArgV[ArgIndex + 1].LengthInChars = Char.LengthInChars;
+                        if (ArgIndex + 1 < ArgCount) {
+                            memcpy(&NewArgV[ArgIndex + 2], &Arg[ArgIndex + 1], (ArgCount - ArgIndex - 1) * sizeof(YORI_STRING));
+                        }
+                        InitialArgOffset = CharsToConsume;
+                    }
+
+                    *ArgC = NewArgCount;
+                    ArgCount = NewArgCount;
+
+                    YoriLibFree(Arg);
+                    *ArgV = NewArgV;
+                    Arg = NewArgV;
+
+                    break;
+                }
+            }
+
+            Char.StartOfString++;
+            Char.LengthInChars--;
+        }
+    }
+
+    return TRUE;
+}
+
+/**
  Execute a new command in response to a newly matched element.
 
  @param Match The match that was found from the set.
@@ -207,6 +388,7 @@ ForExecuteCommand(
 #else
     PrefixArgCount = 2;
 #endif
+
 
     ArgsNeeded += PrefixArgCount;
 
@@ -252,6 +434,13 @@ ForExecuteCommand(
         }
         YoriLibConstantString(&NewArgArray[1], _T("/c"));
     }
+
+    //
+    //  Go through all of the arguments, count the number of variable
+    //  substitutions to apply, allocate a string to contain the subtituted
+    //  value, and copy the string into the new allocation applying
+    //  substitutions.
+    //
 
     for (Count = 0; Count < ExecContext->ArgC; Count++) {
         YoriLibInitEmptyString(&OldArg);
@@ -302,6 +491,25 @@ ForExecuteCommand(
             }
         }
     }
+
+    //
+    //  Split arguments where meaning has changed. This is because when
+    //  converting the arguments into a combined string, quotes will be
+    //  inserted around arguments containing spaces.  However, the location
+    //  of the quotes matters:
+    //
+    //  My Text>foo
+    //  should be
+    //  "My Text">foo
+    //
+    //  `My Text`
+    //  should be
+    //  `"My Text"`
+    //
+    //  etc.
+    //
+
+    ForBreakArgumentsAsNeeded(&ArgsNeeded, &NewArgArray);
 
     if (!YoriLibBuildCmdlineFromArgcArgv(ArgsNeeded, NewArgArray, TRUE, &CmdLine)) {
         goto Cleanup;

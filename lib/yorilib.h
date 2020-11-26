@@ -2460,6 +2460,17 @@ YoriLibDoesProcessHave32BitPeb(
     __in HANDLE ProcessHandle
     );
 
+// *** PARSE.C ***
+
+__success(return)
+BOOLEAN
+YoriLibIsArgumentSeperator(
+    __in PYORI_STRING String,
+    __inout_opt PDWORD BraceNestingLevel,
+    __out_opt PDWORD CharsToConsumeOut,
+    __out_opt PBOOLEAN TerminateArgOut
+    );
+
 // *** PRIV.C ***
 
 BOOL

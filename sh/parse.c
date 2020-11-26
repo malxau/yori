@@ -1,9 +1,9 @@
 /**
- * @file parse.c
+ * @file sh/parse.c
  *
  * Parses an expression into component pieces
  *
- * Copyright (c) 2014-2019 Malcolm J. Smith
+ * Copyright (c) 2014-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,110 +25,6 @@
  */
 
 #include "yori.h"
-
-/**
- Determines if the immediately following characters constitute an argument
- seperator.  Things like "|" or ">" can be placed between arguments without
- spaces but constitute a break in the argument flow.  Some of these consist
- of multiple characters, such as "&&", "||", or ">>".  Depending on the
- argument, this may be self contained, indicating following characters are
- on a subsequent argument, or may not be terminated, indicating following
- characters belong on the same argument as the operator.  Internally, Yori
- keeps redirection paths in the same argument as the redirection operator,
- but subsequent commands belong in subsequent arguments.
-
- @param String Pointer to the remainder of the string to parse for
-        argument breaks.
-
- @param CharsToConsumeOut On successful completion, indicates the number of
-        characters that form part of this argument.
-
- @param TerminateArgOut On successful completion, indicates that the argument
-        should be considered complete and subsequent characters should go
-        into a subsequent argument.  If FALSE, indicates that subsequent
-        characters should continue as part of the same argument as this
-        operator.
-
- @return TRUE to indicate this point in the string is an argument seperator.
-         If TRUE is returned, CharsToConsumeOut and TerminateArgOut must
-         be consulted to determine the length of the operator and the
-         behavior following the operator.  FALSE if this point in the string
-         is not an argument seperator.
- */
-__success(return)
-BOOL
-YoriShIsArgumentSeperator(
-    __in PYORI_STRING String,
-    __out PDWORD CharsToConsumeOut,
-    __out PBOOL TerminateArgOut
-    )
-{
-    ULONG CharsToConsume = 0;
-    BOOL Terminate = FALSE;
-
-    if (String->LengthInChars >= 1) {
-        if (String->StartOfString[0] == '|') {
-            CharsToConsume++;
-            if (String->LengthInChars >= 2 && String->StartOfString[1] == '|') {
-                CharsToConsume++;
-            }
-            Terminate = TRUE;
-        } else if (String->StartOfString[0] == '&') {
-            CharsToConsume++;
-            if (String->LengthInChars >= 2 && String->StartOfString[1] == '&') {
-                CharsToConsume++;
-            } else if (String->LengthInChars >= 2 && String->StartOfString[1] == '!') {
-                CharsToConsume++;
-                if (String->LengthInChars >= 3 && String->StartOfString[2] == '!') {
-                    CharsToConsume++;
-                }
-            }
-            Terminate = TRUE;
-        } else if (String->StartOfString[0] == '\n') {
-            CharsToConsume++;
-            Terminate = TRUE;
-        } else if (String->StartOfString[0] == '>') {
-            CharsToConsume++;
-            if (String->LengthInChars >= 2 && String->StartOfString[1] == '>') {
-                CharsToConsume++;
-            } else if (String->LengthInChars >= 3 && String->StartOfString[1] == '&' && String->StartOfString[2] == '2') {
-                CharsToConsume += 2;
-                Terminate = TRUE;
-            }
-        } else if (String->StartOfString[0] == '<') {
-            CharsToConsume++;
-        } else if (String->StartOfString[0] == '1') {
-            if (String->LengthInChars >= 2 && String->StartOfString[1] == '>') {
-                CharsToConsume += 2;
-                if (String->LengthInChars >= 3 && String->StartOfString[2] == '>') {
-                    CharsToConsume++;
-                } else if (String->LengthInChars >= 4 && String->StartOfString[2] == '&' && String->StartOfString[3] == '2') {
-                    CharsToConsume += 2;
-                    Terminate = TRUE;
-                }
-            }
-        } else if (String->StartOfString[0] == '2') {
-            if (String->LengthInChars >= 2 && String->StartOfString[1] == '>') {
-                CharsToConsume += 2;
-                if (String->LengthInChars >= 3 && String->StartOfString[2] == '>') {
-                    CharsToConsume++;
-                } else if (String->LengthInChars >= 4 && String->StartOfString[2] == '&' && String->StartOfString[3] == '1') {
-                    CharsToConsume += 2;
-                    Terminate = TRUE;
-                }
-            }
-        }
-    }
-
-    *TerminateArgOut = Terminate;
-    *CharsToConsumeOut = CharsToConsume;
-
-    if (CharsToConsume > 0) {
-        return TRUE;
-    } 
-
-    return FALSE;
-}
 
 /**
  Remove spaces from the beginning of a Yori string.  Note this implies
@@ -215,8 +111,9 @@ YoriShParseCmdlineToCmdContext(
     DWORD ArgOffset = 0;
     DWORD RequiredCharCount = 0;
     DWORD CharsToConsume = 0;
-    BOOL TerminateArg;
-    BOOL TerminateNextArg = FALSE;
+    DWORD BraceNestingLevel = 0;
+    BOOLEAN TerminateArg;
+    BOOLEAN TerminateNextArg = FALSE;
     BOOL QuoteOpen = FALSE;
     YORI_STRING Char;
     LPTSTR OutputString;
@@ -330,7 +227,7 @@ YoriShParseCmdlineToCmdContext(
                 TerminateNextArg = FALSE;
                 CharsToConsume = 0;
             } else if ((ArgCount > 0 || RequiredCharCount > 0) &&
-                       YoriShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg)) {
+                       YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
                 TerminateArg = TRUE;
             }
         }
@@ -374,7 +271,7 @@ YoriShParseCmdlineToCmdContext(
             //
 
             if (CharsToConsume == 0) {
-                YoriShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg);
+                YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
             }
 
             RequiredCharCount += CharsToConsume;
@@ -482,6 +379,7 @@ YoriShParseCmdlineToCmdContext(
     OutputString = (LPTSTR)(CmdContext->ArgContexts + ArgCount);
 
     ArgCount = 0;
+    BraceNestingLevel = 0;
     QuoteOpen = FALSE;
     IsMultiCommandOperatorArgument = FALSE;
     YoriLibInitEmptyString(&CmdContext->ArgV[ArgCount]);
@@ -577,7 +475,7 @@ YoriShParseCmdlineToCmdContext(
                 TerminateNextArg = FALSE;
                 CharsToConsume = 0;
             } else if ((ArgCount > 0 || (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString) > 0) &&
-                       YoriShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg)) {
+                       YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
                 TerminateArg = TRUE;
             }
         }
@@ -613,7 +511,7 @@ YoriShParseCmdlineToCmdContext(
                 //
 
                 if (CharsToConsume == 0) {
-                    YoriShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg);
+                    YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
                 }
 
                 if (CharsToConsume > 0) {
