@@ -83,4 +83,58 @@ YoriLibIsCurrentUserInGroup(
     return TRUE;
 }
 
+/**
+ Query whether the current process is running as part of the specified group.
+
+ @param GroupId The well known group identifier to check whether the process
+        is running with the group in its token.
+
+ @param IsMember On successful completion, set to TRUE to indicate the process
+        is running in the context of the specified group, FALSE if not.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibIsCurrentUserInWellKnownGroup(
+    __in DWORD GroupId,
+    __out PBOOL IsMember
+    )
+{
+    PSID Sid;
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pAllocateAndInitializeSid == NULL ||
+        DllAdvApi32.pCheckTokenMembership == NULL ||
+        DllAdvApi32.pFreeSid == NULL) {
+
+        return FALSE;
+    }
+
+    if (!DllAdvApi32.pAllocateAndInitializeSid(&NtAuthority,
+                                               2,
+                                               SECURITY_BUILTIN_DOMAIN_RID,
+                                               GroupId,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               &Sid)) {
+
+        return FALSE;
+    }
+
+    if (!DllAdvApi32.pCheckTokenMembership(NULL, Sid, IsMember)) {
+        DllAdvApi32.pFreeSid(Sid);
+        return FALSE;
+    }
+
+    DllAdvApi32.pFreeSid(Sid);
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:

@@ -5741,6 +5741,18 @@ ADJUST_TOKEN_PRIVILEGES(HANDLE, BOOL, PTOKEN_PRIVILEGES, DWORD, PTOKEN_PRIVILEGE
 typedef ADJUST_TOKEN_PRIVILEGES *PADJUST_TOKEN_PRIVILEGES;
 
 /**
+ Prototype for the AllocateAndInitializeSid function.
+ */
+typedef
+BOOL WINAPI
+ALLOCATE_AND_INITIALIZE_SID(PSID_IDENTIFIER_AUTHORITY, BYTE, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, PSID*);
+
+/**
+ Prototype for a pointer to the AllocateAndInitializeSid function.
+ */
+typedef ALLOCATE_AND_INITIALIZE_SID *PALLOCATE_AND_INITIALIZE_SID;
+
+/**
  Prototype for the CheckTokenMembership function.
  */
 typedef
@@ -5751,6 +5763,18 @@ CHECK_TOKEN_MEMBERSHIP(HANDLE, PSID, PBOOL);
  Prototype for a pointer to the CheckTokenMembership function.
  */
 typedef CHECK_TOKEN_MEMBERSHIP *PCHECK_TOKEN_MEMBERSHIP;
+
+/**
+ Prototype for the FreeSid function.
+ */
+typedef
+PVOID WINAPI
+FREE_SID(PSID);
+
+/**
+ Prototype for a pointer to the FreeSid function.
+ */
+typedef FREE_SID *PFREE_SID;
 
 /**
  A prototype for the GetFileSecurityW function.
@@ -6001,9 +6025,19 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
     PADJUST_TOKEN_PRIVILEGES pAdjustTokenPrivileges;
 
     /**
+     If it's available on the current system, a pointer to AllocateAndInitializeSid.
+     */
+    PALLOCATE_AND_INITIALIZE_SID pAllocateAndInitializeSid;
+
+    /**
      If it's available on the current system, a pointer to CheckTokenMembership.
      */
     PCHECK_TOKEN_MEMBERSHIP pCheckTokenMembership;
+
+    /**
+     If it's available on the current system, a pointer to FreeSid.
+     */
+    PFREE_SID pFreeSid;
 
     /**
      If it's available on the current system, a pointer to GetFileSecurityW.

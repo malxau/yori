@@ -53,7 +53,7 @@ YoriShPromptIsAdmin()
 
     YoriLibConstantString(&AdminName, _T("Administrators"));
 
-    YoriLibIsCurrentUserInGroup(&AdminName, &YoriShPromptAdminPresent);
+    YoriLibIsCurrentUserInWellKnownGroup(DOMAIN_ALIAS_RID_ADMINS, &YoriShPromptAdminPresent);
     YoriShPromptAdminDetermined = TRUE;
 
     return YoriShPromptAdminPresent;

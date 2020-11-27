@@ -227,7 +227,9 @@ YoriLibLoadAdvApi32Functions()
 
     DllAdvApi32.pAccessCheck = (PACCESS_CHECK)GetProcAddress(DllAdvApi32.hDll, "AccessCheck");
     DllAdvApi32.pAdjustTokenPrivileges = (PADJUST_TOKEN_PRIVILEGES)GetProcAddress(DllAdvApi32.hDll, "AdjustTokenPrivileges");
+    DllAdvApi32.pAllocateAndInitializeSid = (PALLOCATE_AND_INITIALIZE_SID)GetProcAddress(DllAdvApi32.hDll, "AllocateAndInitializeSid");
     DllAdvApi32.pCheckTokenMembership = (PCHECK_TOKEN_MEMBERSHIP)GetProcAddress(DllAdvApi32.hDll, "CheckTokenMembership");
+    DllAdvApi32.pFreeSid = (PFREE_SID)GetProcAddress(DllAdvApi32.hDll, "FreeSid");
     DllAdvApi32.pGetFileSecurityW = (PGET_FILE_SECURITYW)GetProcAddress(DllAdvApi32.hDll, "GetFileSecurityW");
     DllAdvApi32.pGetSecurityDescriptorOwner = (PGET_SECURITY_DESCRIPTOR_OWNER)GetProcAddress(DllAdvApi32.hDll, "GetSecurityDescriptorOwner");
     DllAdvApi32.pImpersonateSelf = (PIMPERSONATE_SELF)GetProcAddress(DllAdvApi32.hDll, "ImpersonateSelf");

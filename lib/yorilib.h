@@ -2069,6 +2069,13 @@ YoriLibIsCurrentUserInGroup(
     __out PBOOL IsMember
     );
 
+__success(return)
+BOOL
+YoriLibIsCurrentUserInWellKnownGroup(
+    __in DWORD GroupId,
+    __out PBOOL IsMember
+    );
+
 // *** HASH.C ***
 
 PYORI_HASH_TABLE
