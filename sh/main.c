@@ -401,7 +401,6 @@ YoriShParseArgs(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nouser")) == 0) {
                 IgnoreUserScripts = TRUE;
                 ArgumentUnderstood = TRUE;
-                break;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("restart")) == 0) {
                 if (ArgC > i + 1) {
                     YoriShLoadSavedRestartState(&ArgV[i + 1]);
