@@ -1791,70 +1791,31 @@ YoriShClearScreen(
 }
 
 /**
- Create a new selection, and if one already exists, advance the selection
- to the left by one character.
+ Create a new selection, and if one already exists, extend it to the specified
+ buffer offset.
 
  @param Buffer Pointer to the input buffer whose selection should be updated.
+
+ @param NewEndSelectionOffset The offset in the buffer for the selection to
+        be extended to.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
-YoriShSelectLeftChar(
-    __inout PYORI_SH_INPUT_BUFFER Buffer
+YoriShSelectToBufferOffset(
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
+    __in DWORD NewEndSelectionOffset
     )
 {
     COORD StartCoord;
     COORD NewCoord;
-    if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
-        if (!YoriShDetermineCellLocationIfMoved(Buffer, 0, &StartCoord)) {
-            return FALSE;
-        }
-    } else {
-        StartCoord.X = Buffer->Selection.CurrentlyDisplayed.Left;
-        StartCoord.Y = Buffer->Selection.CurrentlyDisplayed.Top;
-    }
-    if (!YoriShDetermineCellLocationIfMoved(Buffer, -1, &NewCoord)) {
+    INT Delta;
+
+    if (NewEndSelectionOffset > Buffer->String.LengthInChars) {
         return FALSE;
     }
 
-    if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset > 0) {
-        YoriShClearMouseoverSelection(Buffer);
-        Buffer->CurrentOffset--;
-        if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
-            YoriLibCreateSelectionFromPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y);
-        }
-        if (!YoriLibUpdateSelectionToPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y)) {
-            YoriLibClearSelection(&Buffer->Selection);
-        }
-
-        //
-        //  Since this is horizontal selection, we don't want to periodically
-        //  scroll vertically.
-        //
-
-        Buffer->Selection.PeriodicScrollAmount.Y = 0;
-    }
-
-    return TRUE;
-}
-
-/**
- Create a new selection, and if one already exists, advance the selection
- to the right by one character.
-
- @param Buffer Pointer to the input buffer whose selection should be updated.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOL
-YoriShSelectRightChar(
-    __inout PYORI_SH_INPUT_BUFFER Buffer
-    )
-{
-    COORD StartCoord;
-    COORD NewCoord;
     if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
         if (!YoriShDetermineCellLocationIfMoved(Buffer, 0, &StartCoord)) {
             return FALSE;
@@ -1864,15 +1825,27 @@ YoriShSelectRightChar(
         StartCoord.Y = Buffer->Selection.CurrentlyDisplayed.Top;
     }
 
-    if (!YoriShDetermineCellLocationIfMoved(Buffer, 1, &NewCoord)) {
+    Delta = NewEndSelectionOffset - Buffer->CurrentOffset;
+
+    if (!YoriShDetermineCellLocationIfMoved(Buffer, Delta, &NewCoord)) {
         return FALSE;
     }
 
-    if (NewCoord.Y == StartCoord.Y && Buffer->CurrentOffset + 1 < Buffer->String.LengthInChars) {
+    if (NewCoord.Y == StartCoord.Y) {
         YoriShClearMouseoverSelection(Buffer);
-        Buffer->CurrentOffset++;
+        Buffer->CurrentOffset = NewEndSelectionOffset;
         if (!YoriLibIsSelectionActive(&Buffer->Selection)) {
-            YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X, StartCoord.Y);
+
+            //
+            //  When selecting left, don't include the cell that the cursor
+            //  was on originally; when selecting right, include it.
+            //
+
+            if (Delta < 0) {
+                YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X - 1, StartCoord.Y);
+            } else {
+                YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X, StartCoord.Y);
+            }
         }
         if (!YoriLibUpdateSelectionToPoint(&Buffer->Selection, NewCoord.X, NewCoord.Y)) {
             YoriLibClearSelection(&Buffer->Selection);
@@ -2315,10 +2288,28 @@ YoriShProcessKeyDown(
                 YoriLibFreeStringContents(&ClipboardData);
             }
         } else if (KeyCode == VK_LEFT) {
-            YoriShSelectLeftChar(Buffer);
+            if (Buffer->CurrentOffset > 0) {
+                YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset - 1);
+            }
             ClearSelection = FALSE;
         } else if (KeyCode == VK_RIGHT) {
-            YoriShSelectRightChar(Buffer);
+            if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
+                if (Buffer->CurrentOffset + 1< Buffer->String.LengthInChars) {
+                    YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset + 1);
+                } else {
+                    YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset);
+                }
+            }
+            ClearSelection = FALSE;
+        } else if (KeyCode == VK_HOME) {
+            if (Buffer->CurrentOffset > 0) {
+                YoriShSelectToBufferOffset(Buffer, 0);
+            }
+            ClearSelection = FALSE;
+        } else if (KeyCode == VK_END) {
+            if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
+                YoriShSelectToBufferOffset(Buffer, Buffer->String.LengthInChars - 1);
+            }
             ClearSelection = FALSE;
         }
     }
