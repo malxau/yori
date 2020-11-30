@@ -1842,7 +1842,7 @@ YoriShSelectToBufferOffset(
             //
 
             if (Delta < 0) {
-                YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X - 1, StartCoord.Y);
+                YoriLibCreateSelectionFromPoint(&Buffer->Selection, (WORD)(StartCoord.X - 1), StartCoord.Y);
             } else {
                 YoriLibCreateSelectionFromPoint(&Buffer->Selection, StartCoord.X, StartCoord.Y);
             }
