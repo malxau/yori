@@ -3,7 +3,7 @@
  *
  * Yori shell script interpreter
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -81,8 +81,9 @@ CHAR strIncludeHelpText[] =
 const
 CHAR strReturnHelpText[] =
         "\n"
-        "Return from a subroutine. All environment variables are reset\n"
-        "except for those listed following the return statement.\n"
+        "Return from a subroutine or end a script with a return code.  When returning\n"
+        "from a subroutine all environment variables are reset except for those listed\n"
+        "following the return statement.\n"
         "\n"
         "RETURN [-license] <exitcode> [<variables to preserve>]\n";
 
@@ -439,7 +440,7 @@ YsLoadLines(
 }
 
 /**
- Return from an isolated stack state.
+ Return from an isolated stack state or script.
 
  @param ArgC Count of arguments.
 
@@ -482,7 +483,7 @@ YoriCmd_RETURN(
                 ReturnHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
             }
         } else {
@@ -500,14 +501,18 @@ YoriCmd_RETURN(
         return EXIT_FAILURE;
     }
 
-    if (YsActiveScript->CallStackLinks.Next == NULL) {
-        return EXIT_FAILURE;
+    StackLocation = NULL;
+    ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->CallStackLinks, NULL);
+    if (ListEntry != NULL) {
+
+        //
+        //  Remove this stack entry.
+        //
+
+        StackLocation = CONTAINING_RECORD(ListEntry, YS_CALL_STACK, StackLinks);
+        YoriLibRemoveListItem(&StackLocation->StackLinks);
     }
 
-    ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->CallStackLinks, NULL);
-    if (ListEntry == NULL) {
-        return EXIT_FAILURE;
-    }
 
     ExitCode = 0;
     if (StartArg != 0) {
@@ -519,115 +524,128 @@ YoriCmd_RETURN(
     }
 
     //
-    //  Remove this stack entry.  If the stack is now empty, unregister the
-    //  endlocal command.
+    //  When returning from a subroutine, a stack location is defined to
+    //  indicate state to restore to the previous execution scope.  If leaving
+    //  a script completely, there is no isolation: scripts that make
+    //  modifications in global scope are typically intending to change the
+    //  user's session after they exit.
     //
 
-    StackLocation = CONTAINING_RECORD(ListEntry, YS_CALL_STACK, StackLinks);
-    YoriLibRemoveListItem(&StackLocation->StackLinks);
-
-    if (YsActiveScript->CallStackLinks.Next == &YsActiveScript->CallStackLinks) {
-        YORI_STRING ReturnCmd;
-        YoriLibConstantString(&ReturnCmd, _T("RETURN"));
-        YoriCallBuiltinUnregister(&ReturnCmd, YoriCmd_RETURN);
-    }
-
-    //
-    //  Restore the current directory.
-    //
-
-    if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
-        YsFreeCallStack(StackLocation);
-        return EXIT_FAILURE;
-    }
-
-    //
-    //  Query the current environment and delete everything in it.
-    //
-
-    if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
-        YsFreeCallStack(StackLocation);
-        return EXIT_FAILURE;
-    }
-
-    YoriLibInitEmptyString(&VariableName);
-    YoriLibInitEmptyString(&ValueName);
-
-    ThisVar = CurrentEnvironment.StartOfString;
-    while (*ThisVar != '\0') {
-        VarLen = _tcslen(ThisVar);
+    if (StackLocation != NULL) {
 
         //
-        //  We know there's at least one char.  Skip it if it's equals since
-        //  that's how drive current directories are recorded.
+        //  Restore the current directory.
         //
-
-        ThisValue = _tcschr(&ThisVar[1], '=');
-        if (ThisValue != NULL) {
-            ThisValue[0] = '\0';
-            VariableName.StartOfString = ThisVar;
-            VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
-            VariableName.LengthAllocated = VariableName.LengthInChars + 1;
-            for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
-                if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
-                    PreserveVariable = TRUE;
+    
+        if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
+            YsFreeCallStack(StackLocation);
+            return EXIT_FAILURE;
+        }
+    
+        //
+        //  Query the current environment and delete everything in it.
+        //
+    
+        if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
+            YsFreeCallStack(StackLocation);
+            return EXIT_FAILURE;
+        }
+    
+        YoriLibInitEmptyString(&VariableName);
+        YoriLibInitEmptyString(&ValueName);
+    
+        ThisVar = CurrentEnvironment.StartOfString;
+        while (*ThisVar != '\0') {
+            VarLen = _tcslen(ThisVar);
+    
+            //
+            //  We know there's at least one char.  Skip it if it's equals since
+            //  that's how drive current directories are recorded.
+            //
+    
+            ThisValue = _tcschr(&ThisVar[1], '=');
+            if (ThisValue != NULL) {
+                ThisValue[0] = '\0';
+                VariableName.StartOfString = ThisVar;
+                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                VariableName.LengthAllocated = VariableName.LengthInChars + 1;
+                for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
+                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
+                        PreserveVariable = TRUE;
+                    }
+                }
+                if (!PreserveVariable) {
+                    YoriCallSetEnvironmentVariable(&VariableName, NULL);
                 }
             }
-            if (!PreserveVariable) {
-                YoriCallSetEnvironmentVariable(&VariableName, NULL);
-            }
+    
+            ThisVar += VarLen;
+            ThisVar++;
         }
-
-        ThisVar += VarLen;
-        ThisVar++;
-    }
-    YoriLibFreeStringContents(&CurrentEnvironment);
-
-    //
-    //  Now restore the saved environment.
-    //
-
-    ThisVar = StackLocation->PreviousEnvironment.StartOfString;
-    while (*ThisVar != '\0') {
-        VarLen = _tcslen(ThisVar);
-
+        YoriLibFreeStringContents(&CurrentEnvironment);
+    
         //
-        //  We know there's at least one char.  Skip it if it's equals since
-        //  that's how drive current directories are recorded.
+        //  Now restore the saved environment.
         //
-
-        ThisValue = _tcschr(&ThisVar[1], '=');
-        if (ThisValue != NULL) {
-            ThisValue[0] = '\0';
-            VariableName.StartOfString = ThisVar;
-            VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
-            VariableName.LengthAllocated = VariableName.LengthInChars + 1;
-            ThisValue++;
-            ValueName.StartOfString = ThisValue;
-            ValueName.LengthInChars = VarLen - VariableName.LengthInChars - 1;
-            ValueName.LengthAllocated = ValueName.LengthInChars + 1;
-            for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
-                if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
-                    PreserveVariable = TRUE;
+    
+        ThisVar = StackLocation->PreviousEnvironment.StartOfString;
+        while (*ThisVar != '\0') {
+            VarLen = _tcslen(ThisVar);
+    
+            //
+            //  We know there's at least one char.  Skip it if it's equals since
+            //  that's how drive current directories are recorded.
+            //
+    
+            ThisValue = _tcschr(&ThisVar[1], '=');
+            if (ThisValue != NULL) {
+                ThisValue[0] = '\0';
+                VariableName.StartOfString = ThisVar;
+                VariableName.LengthInChars = (DWORD)(ThisValue - ThisVar);
+                VariableName.LengthAllocated = VariableName.LengthInChars + 1;
+                ThisValue++;
+                ValueName.StartOfString = ThisValue;
+                ValueName.LengthInChars = VarLen - VariableName.LengthInChars - 1;
+                ValueName.LengthAllocated = ValueName.LengthInChars + 1;
+                for (i = StartArg + 1, PreserveVariable = FALSE; i < ArgC; i++) {
+                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i], ThisVar) == 0) {
+                        PreserveVariable = TRUE;
+                    }
+                }
+                if (!PreserveVariable) {
+                    YoriCallSetEnvironmentVariable(&VariableName, &ValueName);
                 }
             }
-            if (!PreserveVariable) {
-                YoriCallSetEnvironmentVariable(&VariableName, &ValueName);
-            }
+    
+            ThisVar += VarLen;
+            ThisVar++;
+        }
+    
+        YsActiveScript->ActiveLine = StackLocation->CallingLine;
+        YsFreeCallStack(StackLocation);
+        ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->CallStackLinks, NULL);
+        if (ListEntry != NULL) {
+            StackLocation = CONTAINING_RECORD(ListEntry, YS_CALL_STACK, StackLinks);
+            YsActiveScript->ArgContext = &StackLocation->ArgContext;
+        } else {
+            YsActiveScript->ArgContext = &YsActiveScript->GlobalArgContext;
         }
 
-        ThisVar += VarLen;
-        ThisVar++;
-    }
-
-    YsActiveScript->ActiveLine = StackLocation->CallingLine;
-    YsFreeCallStack(StackLocation);
-    ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->CallStackLinks, NULL);
-    if (ListEntry != NULL) {
-        StackLocation = CONTAINING_RECORD(ListEntry, YS_CALL_STACK, StackLinks);
-        YsActiveScript->ArgContext = &StackLocation->ArgContext;
     } else {
-        YsActiveScript->ArgContext = &YsActiveScript->GlobalArgContext;
+
+        PYS_SCRIPT_LINE Line;
+
+        //
+        //  If there's no scope so we're running at the global scope, treat
+        //  this operation the same as "goto :eof"
+        //
+
+        ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->LineLinks, NULL);
+        ASSERT(ListEntry != NULL);
+        if (ListEntry != NULL) {
+            Line = CONTAINING_RECORD(ListEntry, YS_SCRIPT_LINE, LineLinks);
+            YsActiveScript->ActiveLine = Line;
+        }
     }
     return ExitCode;
 }
@@ -724,16 +742,6 @@ YoriCmd_CALL(
     if (!YsGotoLabel(ArgV[StartArg].StartOfString)) {
         YsFreeCallStack(NewStackEntry);
         return EXIT_FAILURE;
-    }
-
-    if (YsActiveScript->CallStackLinks.Next == &YsActiveScript->CallStackLinks) {
-        YORI_STRING ReturnCmd;
-        YoriLibConstantString(&ReturnCmd, _T("RETURN"));
-        if (!YoriCallBuiltinRegister(&ReturnCmd, YoriCmd_RETURN)) {
-            YsActiveScript->ActiveLine = NewStackEntry->CallingLine;
-            YsFreeCallStack(NewStackEntry);
-            return EXIT_FAILURE;
-        }
     }
 
     YsActiveScript->ArgContext = &NewStackEntry->ArgContext;
@@ -1054,6 +1062,7 @@ YS_SCRIPT_COMMANDS YsScriptCommands[] = {
     {_T("CALL"),        YoriCmd_CALL},
     {_T("GOTO"),        YoriCmd_GOTO},
     {_T("INCLUDE"),     YoriCmd_INCLUDE},
+    {_T("RETURN"),      YoriCmd_RETURN},
     {_T("SHIFT"),       YoriCmd_SHIFT}
 };
 
@@ -1177,12 +1186,6 @@ YsFreeScript(
 
         YsFreeCallStack(StackLocation);
         CallStackFound = TRUE;
-    }
-
-    if (CallStackFound) {
-        YORI_STRING ReturnCmd;
-        YoriLibConstantString(&ReturnCmd, _T("RETURN"));
-        YoriCallBuiltinUnregister(&ReturnCmd, YoriCmd_RETURN);
     }
 
     YoriLibFreeStringContents(&Script->FileName);
