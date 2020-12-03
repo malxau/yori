@@ -712,7 +712,7 @@ CoMoveButtonClicked(
 
             FullDest.LengthInChars = YoriLibSPrintfS(FullDest.StartOfString, FullDest.LengthAllocated, _T("%y\\%y"), &FullDir, &CoContext.FileArray[Index]->DisplayName);
 
-            if (!YoriLibMoveFile(&CoContext.FileArray[Index]->FullFilePath, &FullDest)) {
+            if (!YoriLibMoveFile(&CoContext.FileArray[Index]->FullFilePath, &FullDest, TRUE)) {
                 DWORD LastError;
                 LPTSTR ErrText;
                 LastError = GetLastError();

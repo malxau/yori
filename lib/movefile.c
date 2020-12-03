@@ -3,7 +3,7 @@
  *
  * Yori shell move or rename a file
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,23 +35,34 @@
 
  @param FullDest Pointer to the target of the rename.
 
+ @param ReplaceExisting If TRUE, any existing file is overwritten.  If FALSE,
+        existing files are retained and the call fails with last error set
+        appropriately.
+
  @return TRUE to indicate success, FALSE to indicate failure.  On failure,
          last error is populated with the error condition.
  */
 BOOLEAN
 YoriLibMoveFile(
     __in PYORI_STRING Source,
-    __in PYORI_STRING FullDest
+    __in PYORI_STRING FullDest,
+    __in BOOLEAN ReplaceExisting
     )
 {
     DWORD OsMajor;
     DWORD OsMinor;
     DWORD OsBuild;
+    DWORD Flags;
 
     ASSERT(YoriLibIsStringNullTerminated(Source));
     ASSERT(YoriLibIsStringNullTerminated(FullDest));
 
-    if (!MoveFileEx(Source->StartOfString, FullDest->StartOfString, MOVEFILE_COPY_ALLOWED|MOVEFILE_REPLACE_EXISTING)) {
+    Flags = MOVEFILE_COPY_ALLOWED;
+    if (ReplaceExisting) {
+        Flags = Flags | MOVEFILE_REPLACE_EXISTING;
+    }
+
+    if (!MoveFileEx(Source->StartOfString, FullDest->StartOfString, ReplaceExisting)) {
         return FALSE;
     }
 

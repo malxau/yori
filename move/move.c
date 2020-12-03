@@ -3,7 +3,7 @@
  *
  * Yori shell move or rename files
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,10 +35,11 @@ CHAR strMoveHelpText[] =
         "\n"
         "Moves or renames one or more files.\n"
         "\n"
-        "MOVE [-license] [-b] <src>\n"
-        "MOVE [-license] [-b] <src> [<src> ...] <dest>\n"
+        "MOVE [-license] [-b] [-k] <src>\n"
+        "MOVE [-license] [-b] [-k] <src> [<src> ...] <dest>\n"
         "\n"
-        "   -b             Use basic search criteria for files only\n";
+        "   -b             Use basic search criteria for files only\n"
+        "   -k             Keep existing files, do not overwrite\n";
 
 /**
  Display usage text to the user.
@@ -78,6 +79,12 @@ typedef struct _MOVE_CONTEXT {
      an earlier moved file.
      */
     DWORD FilesMoved;
+
+    /**
+     TRUE if existing files should be replaced, FALSE if they should be kept.
+     */
+    BOOLEAN ReplaceExisting;
+
 } MOVE_CONTEXT, *PMOVE_CONTEXT;
 
 /**
@@ -133,14 +140,15 @@ MoveFileFoundCallback(
         }
     }
 
-    if (!YoriLibMoveFile(FilePath, &FullDest)) {
+    if (!YoriLibMoveFile(FilePath, &FullDest, MoveContext->ReplaceExisting)) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("MoveFile failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);
+    } else {
+        MoveContext->FilesMoved++;
     }
 
-    MoveContext->FilesMoved++;
     YoriLibDereference(FullDest.StartOfString);
     return TRUE;
 }
@@ -242,6 +250,7 @@ ENTRYPOINT(
     FileCount = 0;
     AllocatedDest = FALSE;
     BasicEnumeration = FALSE;
+    MoveContext.ReplaceExisting = TRUE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -254,10 +263,13 @@ ENTRYPOINT(
                 MoveHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
+                MoveContext.ReplaceExisting = FALSE;
                 ArgumentUnderstood = TRUE;
             }
         } else {
@@ -319,6 +331,10 @@ ENTRYPOINT(
 
     if (AllocatedDest) {
         YoriLibFreeStringContents(&MoveContext.Dest);
+    }
+
+    if (MoveContext.FilesMoved == 0) {
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

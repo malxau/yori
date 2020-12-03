@@ -2410,7 +2410,8 @@ YoriLibDereference(
 BOOLEAN
 YoriLibMoveFile(
     __in PYORI_STRING Source,
-    __in PYORI_STRING FullDest
+    __in PYORI_STRING FullDest,
+    __in BOOLEAN ReplaceExisting
     );
 
 // *** NUMKEY.C ***
