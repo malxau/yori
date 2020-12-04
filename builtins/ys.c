@@ -308,6 +308,24 @@ typedef struct _YS_SCRIPT {
 PYS_SCRIPT YsActiveScript = NULL;
 
 /**
+ Advance execution to the end of the script.  This causes script processing
+ to end, but ensures that it ends organically and all cleanup is performed.
+ */
+VOID
+YsGotoScriptEnd()
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYS_SCRIPT_LINE Line;
+
+    ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->LineLinks, NULL);
+    ASSERT(ListEntry != NULL);
+    if (ListEntry != NULL) {
+        Line = CONTAINING_RECORD(ListEntry, YS_SCRIPT_LINE, LineLinks);
+        YsActiveScript->ActiveLine = Line;
+    }
+}
+
+/**
  Switch the actively executing line within the script to the specified label,
  if it can be found.
 
@@ -329,13 +347,7 @@ YsGotoLabel(
     //
 
     if (_tcsicmp(Label, _T(":eof")) == 0) {
-        ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->LineLinks, NULL);
-        ASSERT(ListEntry != NULL);
-        if (ListEntry != NULL) {
-            Line = CONTAINING_RECORD(ListEntry, YS_SCRIPT_LINE, LineLinks);
-            YsActiveScript->ActiveLine = Line;
-        }
-
+        YsGotoScriptEnd();
         return TRUE;
     }
 
@@ -633,19 +645,12 @@ YoriCmd_RETURN(
 
     } else {
 
-        PYS_SCRIPT_LINE Line;
-
         //
         //  If there's no scope so we're running at the global scope, treat
         //  this operation the same as "goto :eof"
         //
 
-        ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->LineLinks, NULL);
-        ASSERT(ListEntry != NULL);
-        if (ListEntry != NULL) {
-            Line = CONTAINING_RECORD(ListEntry, YS_SCRIPT_LINE, LineLinks);
-            YsActiveScript->ActiveLine = Line;
-        }
+        YsGotoScriptEnd();
     }
     return ExitCode;
 }
@@ -1135,6 +1140,10 @@ YsExecuteScript(
 
             YoriCallExecuteExpression(&LineWithArgumentsExpanded);
             ASSERT(YsActiveScript == Script);
+
+            if (YoriCallIsProcessExiting()) {
+                YsGotoScriptEnd();
+            }
         }
 
         NextEntry = YoriLibGetNextListEntry(&Script->LineLinks, &Script->ActiveLine->LineLinks);

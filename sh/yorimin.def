@@ -25,6 +25,7 @@ EXPORTS
     YoriApiGetSystemAliasStrings
     YoriApiGetYoriVersion
     YoriApiIncrementPromptRecursionDepth
+    YoriApiIsProcessExiting
     YoriApiPipeJobOutput
     YoriApiSetDefaultColor
     YoriApiSetEnvironmentVariable

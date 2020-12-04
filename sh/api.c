@@ -462,6 +462,18 @@ YoriApiIncrementPromptRecursionDepth(
 }
 
 /**
+ Return TRUE if the shell process has been requested to terminate.
+
+ @return TRUE if the process is being requested to terminate, FALSE if not.
+ */
+BOOL
+YoriApiIsProcessExiting(
+    )
+{
+    return YoriShGlobal.ExitProcess;
+}
+
+/**
  Take any existing output from a job and send it to a pipe handle, and continue
  sending further output into the pipe handle.
 

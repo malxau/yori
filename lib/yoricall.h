@@ -156,6 +156,10 @@ YoriCallIncrementPromptRecursionDepth(
     );
 
 BOOL
+YoriCallIsProcessExiting(
+    );
+
+BOOL
 YoriCallPipeJobOutput(
     __in DWORD JobId,
     __in_opt HANDLE hPipeOutput,

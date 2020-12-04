@@ -1044,6 +1044,42 @@ YoriCallIncrementPromptRecursionDepth(
 }
 
 /**
+ Prototype for the @ref YoriApiIsProcessExiting function.
+ */
+typedef BOOL YORI_API_IS_PROCESS_EXITING();
+
+/**
+ Prototype for a pointer to the @ref YoriApiIsProcessExiting function.
+ */
+typedef YORI_API_IS_PROCESS_EXITING *PYORI_API_IS_PROCESS_EXITING;
+
+/**
+ Pointer to the @ref YoriApiIsProcessExiting function.
+ */
+PYORI_API_IS_PROCESS_EXITING pYoriApiIsProcessExiting;
+
+/**
+ Return TRUE if the shell process has been requested to terminate.
+
+ @return TRUE if the process is being requested to terminate, FALSE if not.
+ */
+BOOL
+YoriCallIsProcessExiting(
+    )
+{
+    if (pYoriApiIsProcessExiting == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        pYoriApiIsProcessExiting = (PYORI_API_IS_PROCESS_EXITING)GetProcAddress(hYori, "YoriApiIsProcessExiting");
+        if (pYoriApiIsProcessExiting == NULL) {
+            return FALSE;
+        }
+    }
+    return pYoriApiIsProcessExiting();
+}
+
+/**
  Prototype for the @ref YoriApiPipeJobOutput function.
  */
 typedef BOOL YORI_API_PIPE_JOB_OUTPUT(DWORD, HANDLE, HANDLE);
