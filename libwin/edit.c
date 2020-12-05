@@ -950,8 +950,9 @@ YoriWinEditGenerateRedoRecordForUndo(
     PYORI_WIN_CTRL_EDIT_UNDO Redo;
 
     //
-    //  MSFIX Note that clearing all undo may remove the undo record that
-    //  is causing this redo.  Need to make sure the logic is correct.
+    //  Note that clearing all undo may remove the undo record that is
+    //  causing this redo.  This implies that when this call fails, the
+    //  caller cannot continue using the undo record.
     //
 
     Redo = YoriLibMalloc(sizeof(YORI_WIN_CTRL_EDIT_UNDO));

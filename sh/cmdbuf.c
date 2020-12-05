@@ -486,11 +486,11 @@ YoriShAppendToExistingProcessBuffer(
     DWORD ThreadId;
 
     //
-    //  MSFIX It's not possible today to have a second process append to
-    //  a previous process error stream.  In the long run this should
-    //  be a child shell process, so as far as the parent is concerned
-    //  there's only one process writing to buffers, and as far as the
-    //  child's concerned nothing special is happening.
+    //  It's not possible today to have a second process append to a previous
+    //  process error stream.  In the long run this should be a child shell
+    //  process, so as far as the parent is concerned there's only one process
+    //  writing to buffers, and as far as the child's concerned nothing
+    //  special is happening.
     //
 
     ASSERT(ExecContext->StdOutType == StdOutTypeBuffer);

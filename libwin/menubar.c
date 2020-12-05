@@ -175,13 +175,9 @@ YoriWinMenuGenerateHotkey(
         Remainder.StartOfString += sizeof("Shift+") - 1;
     }
 
-    //
-    //  MSFIX: Support F10-F12
-    //
-
     if (Remainder.LengthInChars >= 2 &&
         Remainder.StartOfString[0] == 'F' &&
-        (Remainder.StartOfString[1] >= '1' || Remainder.StartOfString[1] <= '9')) {
+        (Remainder.StartOfString[1] >= '1' && Remainder.StartOfString[1] <= '9')) {
 
         HotkeyInfo->CtrlKeyMaskToCheck = LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED | SHIFT_PRESSED;
         HotkeyInfo->CtrlKeyMaskToEqual = 0;
@@ -191,7 +187,14 @@ YoriWinMenuGenerateHotkey(
         if (RequiresShift) {
             HotkeyInfo->CtrlKeyMaskToEqual |= SHIFT_PRESSED;
         }
-        HotkeyInfo->VirtualKeyCode = VK_F1 + (Remainder.StartOfString[1] - '1');
+
+        if (Remainder.LengthInChars >= 3 &&
+            Remainder.StartOfString[1] == '1' &&
+            (Remainder.StartOfString[2] >= '0' && Remainder.StartOfString[2] <= '2')) {
+            HotkeyInfo->VirtualKeyCode = VK_F10 + (Remainder.StartOfString[2] - '0');
+        } else {
+            HotkeyInfo->VirtualKeyCode = VK_F1 + (Remainder.StartOfString[1] - '1');
+        }
         HotkeyInfo->EntryToInvoke = NULL;
         return TRUE;
 

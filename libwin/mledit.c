@@ -1662,8 +1662,9 @@ YoriWinMultilineEditGenerateRedoRecordForUndo(
     YORI_STRING Newline;
 
     //
-    //  MSFIX Note that clearing all undo may remove the undo record that
-    //  is causing this redo.  Need to make sure the logic is correct.
+    //  Note that clearing all undo may remove the undo record that is
+    //  causing this redo.  This implies that when this call fails, the
+    //  caller cannot continue using the undo record.
     //
 
     Redo = YoriLibMalloc(sizeof(YORI_WIN_CTRL_MULTILINE_EDIT_UNDO));
@@ -4982,31 +4983,31 @@ YoriWinMultilineEditEventHandler(
                         }
                         return TRUE;
                     } else if (Event->KeyDown.VirtualKeyCode == 'R') {
-                        if (YoriWinMultilineEditRedo(MultilineEdit)) {
+                        if (!MultilineEdit->ReadOnly && YoriWinMultilineEditRedo(MultilineEdit)) {
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
                         return TRUE;
                     } else if (Event->KeyDown.VirtualKeyCode == 'V') {
-                        if (YoriWinMultilineEditPasteText(Ctrl)) {
+                        if (!MultilineEdit->ReadOnly && YoriWinMultilineEditPasteText(Ctrl)) {
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
                         return TRUE;
                     } else if (Event->KeyDown.VirtualKeyCode == 'X') {
-                        if (YoriWinMultilineEditCutSelectedText(Ctrl)) {
+                        if (!MultilineEdit->ReadOnly && YoriWinMultilineEditCutSelectedText(Ctrl)) {
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
                         return TRUE;
                     } else if (Event->KeyDown.VirtualKeyCode == 'Y') {
-                        if (YoriWinMultilineEditDeleteLine(MultilineEdit)) {
+                        if (!MultilineEdit->ReadOnly && YoriWinMultilineEditDeleteLine(MultilineEdit)) {
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
                         return TRUE;
                     } else if (Event->KeyDown.VirtualKeyCode == 'Z') {
-                        if (YoriWinMultilineEditUndo(MultilineEdit)) {
+                        if (!MultilineEdit->ReadOnly && YoriWinMultilineEditUndo(MultilineEdit)) {
                             YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                             YoriWinMultilineEditPaint(MultilineEdit);
                         }
@@ -5310,7 +5311,10 @@ YoriWinMultilineEditCreate(
         MultilineEdit->VScrollCtrl = YoriWinScrollBarCreate(&MultilineEdit->Ctrl, &ScrollBarRect, 0, YoriWinMultilineEditNotifyScrollChange);
     }
 
-    // MSFIX: ReadOnly style
+    if (Style & YORI_WIN_MULTILINE_EDIT_STYLE_READ_ONLY) {
+        MultilineEdit->ReadOnly = TRUE;
+    }
+
     // MSFIX: Text alignment
     // MSFIX: Optional border styles
 

@@ -34,8 +34,6 @@
  */
 #pragma warning(disable: 4306)
 
-//  MSFIX: Reg and SendMessage need to be loaded dynamically
-
 /**
  Append a new path component to an existing registry path.
 

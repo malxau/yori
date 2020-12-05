@@ -547,6 +547,11 @@ typedef YORI_WIN_NOTIFY_CURSOR_MOVE *PYORI_WIN_NOTIFY_CURSOR_MOVE;
  */
 #define YORI_WIN_MULTILINE_EDIT_STYLE_VSCROLLBAR  (0x0001)
 
+/**
+ The multiline edit should be read only.
+ */
+#define YORI_WIN_MULTILINE_EDIT_STYLE_READ_ONLY   (0x0002)
+
 BOOLEAN
 YoriWinMultilineEditSelectionActive(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
