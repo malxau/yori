@@ -754,6 +754,15 @@ ClipPasteSpecifiedFormat(
     CurrentOffset = 0;
     BufferSize = (DWORD)GlobalSize(hMem);
     pMem = GlobalLock(hMem);
+    if (pMem == NULL) {
+        Err = GetLastError();
+        if (Err != ERROR_SUCCESS) {
+            ErrText = YoriLibGetWinErrorText(Err);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not get clipboard data: %s\n"), ErrText);
+        }
+        DllUser32.pCloseClipboard();
+        return FALSE;
+    }
     if (FormatString != NULL &&
         YoriLibCompareStringWithLiteralInsensitive(FormatString, _T("HTML Format")) == 0) {
         pMem = ClipExtractHtmlRange(pMem, BufferSize);
@@ -1015,6 +1024,7 @@ ENTRYPOINT(
     BOOL   OpenedFile = FALSE;
     DWORD  CurrentArg;
     YORI_STRING Arg;
+    DWORD  Result;
 
     Op = ClipOperationUnknown;
 
@@ -1164,51 +1174,54 @@ ENTRYPOINT(
     }
 
     YoriLibLoadUser32Functions();
+    Result = EXIT_SUCCESS;
 
     if (Op == ClipOperationEmpty) {
         if (!ClipEmptyClipboard()) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     } else if (Op == ClipOperationPasteText) {
         if (!ClipPasteSpecifiedFormat(hFile, NULL)) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     } else if (Op == ClipOperationPasteRichText) {
         YORI_STRING RichTextFormat = YORILIB_CONSTANT_STRING(_T("Rich Text Format"));
         if (!ClipPasteSpecifiedFormat(hFile, &RichTextFormat)) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     } else if (Op == ClipOperationPasteHTML) {
         YORI_STRING HTMLFormat = YORILIB_CONSTANT_STRING(_T("HTML Format"));
         if (!ClipPasteSpecifiedFormat(hFile, &HTMLFormat)) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     } else if (Op == ClipOperationCopyHtml) {
         if (!ClipCopyAsHtml(hFile, FileSize)) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     } else if (Op == ClipOperationCopyRtf) {
         if (!ClipCopyAsRtf(hFile, FileSize)) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     } else if (Op == ClipOperationPreserveText) {
         if (!ClipPreserveText()) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     } else if (Op == ClipOperationListFormats) {
         if (!ClipListFormats()) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
+        }
+    } else if (Op == ClipOperationCopyText) {
+        if (!ClipCopyAsText(hFile, FileSize)) {
+            Result = EXIT_FAILURE;
         }
     } else {
-        if (!ClipCopyAsText(hFile, FileSize)) {
-            return EXIT_FAILURE;
-        }
+        Result = EXIT_FAILURE;
     }
 
     if (OpenedFile) {
         CloseHandle(hFile);
     }
-    return EXIT_SUCCESS;
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:
