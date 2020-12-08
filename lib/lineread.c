@@ -134,6 +134,9 @@ YoriLibCopyLineToUserBufferW(
  many bytes are in it.
 
  @param StringToCheck Pointer to a string to check for the existence of a BOM.
+        Note: It is important this is unsigned, because comparisons here will
+        be upconverted to int, and if the char is sign extended the
+        comparisons will be incorrect.
 
  @param BytesInString Specifies the number of bytes in StringToCheck.
 
@@ -141,7 +144,7 @@ YoriLibCopyLineToUserBufferW(
  */
 DWORD
 YoriLibBytesInBom(
-    __in PCHAR StringToCheck,
+    __in PUCHAR StringToCheck,
     __in DWORD BytesInString
     )
 {
