@@ -453,6 +453,341 @@ YDbgDumpKernel(
 }
 
 /**
+ Information about a process where the mini-debugger has observed it be
+ launched and has not yet observed termination.
+ */
+typedef struct _YDBG_OUTSTANDING_PROCESS {
+
+    /**
+     The linkage of this process within the list of known processes.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     A handle to the process.  This has been duplicated within this program
+     and must be closed when freeing this structure.
+     */
+    HANDLE hProcess;
+
+    /**
+     A handle to the initial thread within the process.  This has been
+     duplicated within this program and must be closed when freeing this
+     structure.
+     */
+    HANDLE hInitialThread;
+
+    /**
+     The process identifier for this process.
+     */
+    DWORD dwProcessId;
+
+    /**
+     The identifier for the initial thread within the process.
+     */
+    DWORD dwInitialThreadId;
+
+} YDBG_OUTSTANDING_PROCESS, *PYDBG_OUTSTANDING_PROCESS;
+
+/**
+ Find a process in the list of known processes by its process ID.
+
+ @param ListHead Pointer to the list of known processes.
+
+ @param dwProcessId The process identifier of the process whose information is
+        requested.
+
+ @return Pointer to the information block about the child process.
+ */
+PYDBG_OUTSTANDING_PROCESS
+YDbgFindProcess(
+    __in PYORI_LIST_ENTRY ListHead,
+    __in DWORD dwProcessId
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYDBG_OUTSTANDING_PROCESS Process;
+
+    ListEntry = NULL;
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(ListHead, ListEntry);
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        Process = CONTAINING_RECORD(ListEntry, YDBG_OUTSTANDING_PROCESS, ListEntry);
+        if (Process->dwProcessId == dwProcessId) {
+            return Process;
+        }
+    }
+
+    return NULL;
+}
+
+/**
+ Deallocate information about a single known child process.
+
+ @param Process Pointer to information about a single child process.
+ */
+VOID
+YDbgFreeProcess(
+    __in PYDBG_OUTSTANDING_PROCESS Process
+    )
+{
+    YoriLibRemoveListItem(&Process->ListEntry);
+    CloseHandle(Process->hProcess);
+    CloseHandle(Process->hInitialThread);
+    YoriLibFree(Process);
+}
+
+/**
+ Deallocate information about all known child processes.
+
+ @param ListHead Pointer to the list of known child processes.
+ */
+VOID
+YDbgFreeAllProcesses(
+    __in PYORI_LIST_ENTRY ListHead
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYDBG_OUTSTANDING_PROCESS Process;
+
+    ListEntry = NULL;
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(ListHead, ListEntry);
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        Process = CONTAINING_RECORD(ListEntry, YDBG_OUTSTANDING_PROCESS, ListEntry);
+        YDbgFreeProcess(Process);
+        ListEntry = NULL;
+    }
+}
+
+
+/**
+ Pump debug events for child processes and complete when the initial process
+ has terminated.
+
+ @param ProcessId The process identifier of the master process to monitor.
+        When a process with this ID terminates, pumping events completes and
+        this function returns.
+
+ @return TRUE to indicate successful termination of the initial child process,
+         FALSE to indicate failure.
+ */
+BOOL
+YDbgPumpDebugEvents(
+    __in DWORD ProcessId
+    )
+{
+    YORI_LIST_ENTRY Processes;
+    PYDBG_OUTSTANDING_PROCESS Process;
+
+    YoriLibInitializeListHead(&Processes);
+
+    while(TRUE) {
+        DEBUG_EVENT DbgEvent;
+        DWORD dwContinueStatus;
+
+        ZeroMemory(&DbgEvent, sizeof(DbgEvent));
+        if (!WaitForDebugEvent(&DbgEvent, INFINITE)) {
+            break;
+        }
+
+#if YDBG_DEBUG
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("DbgEvent Pid %x Tid %x Event %x\n"), DbgEvent.dwProcessId, DbgEvent.dwThreadId, DbgEvent.dwDebugEventCode);
+#endif
+
+        dwContinueStatus = DBG_CONTINUE;
+
+        switch(DbgEvent.dwDebugEventCode) {
+            case CREATE_PROCESS_DEBUG_EVENT:
+                Process = YoriLibMalloc(sizeof(YDBG_OUTSTANDING_PROCESS));
+                if (Process == NULL) {
+                    break;
+                }
+                
+                ZeroMemory(Process, sizeof(YDBG_OUTSTANDING_PROCESS));
+                DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hProcess, GetCurrentProcess(), &Process->hProcess, 0, FALSE, DUPLICATE_SAME_ACCESS);
+                DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hThread, GetCurrentProcess(), &Process->hInitialThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
+                Process->dwProcessId = DbgEvent.dwProcessId;
+                Process->dwInitialThreadId = DbgEvent.dwThreadId;
+                YoriLibAppendList(&Processes, &Process->ListEntry);
+                CloseHandle(DbgEvent.u.CreateProcessInfo.hFile);
+                break;
+            case EXIT_PROCESS_DEBUG_EVENT:
+                Process = YDbgFindProcess(&Processes, DbgEvent.dwProcessId);
+                ASSERT(Process != NULL);
+                if (Process != NULL) {
+                    YDbgFreeProcess(Process);
+                }
+                break;
+            case LOAD_DLL_DEBUG_EVENT:
+                CloseHandle(DbgEvent.u.LoadDll.hFile);
+                break;
+            case EXCEPTION_DEBUG_EVENT:
+
+                //
+                //  Wow64 processes throw a breakpoint once 32 bit code starts
+                //  running, and the debugger is expected to handle it.  The
+                //  two codes are for breakpoint and x86 breakpoint
+                //
+
+                dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
+                if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT ||
+                    DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001F) {
+
+                    LPTSTR PrefixString;
+                    if (DbgEvent.u.Exception.dwFirstChance) {
+                        PrefixString = _T("first chance");
+                    } else {
+                        PrefixString = _T("second chance");
+                    }
+
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: %s exception %08x\n"), PrefixString, DbgEvent.u.Exception.ExceptionRecord.ExceptionCode);
+
+                    dwContinueStatus = DBG_CONTINUE;
+                }
+                break;
+            case OUTPUT_DEBUG_STRING_EVENT:
+                Process = YDbgFindProcess(&Processes, DbgEvent.dwProcessId);
+                if (Process != NULL) {
+                    PUCHAR Buffer;
+                    DWORD StringLengthInBytes;
+                    DWORD BufferLengthInBytes;
+                    SIZE_T BytesRead;
+                    YORI_STRING OutputString;
+
+                    StringLengthInBytes = DbgEvent.u.DebugString.nDebugStringLength;
+                    BufferLengthInBytes = StringLengthInBytes + 1;
+                    if (DbgEvent.u.DebugString.fUnicode) {
+                        StringLengthInBytes = StringLengthInBytes * sizeof(WCHAR);
+                        BufferLengthInBytes = BufferLengthInBytes * sizeof(WCHAR);
+                    }
+
+                    Buffer = YoriLibMalloc(BufferLengthInBytes);
+                    if (Buffer == NULL) {
+                        break;
+                    }
+
+                    if (ReadProcessMemory(Process->hProcess, DbgEvent.u.DebugString.lpDebugStringData, Buffer, StringLengthInBytes, &BytesRead) == 0) {
+                        YoriLibFree(Buffer);
+                        break;
+                    }
+
+                    YoriLibInitEmptyString(&OutputString);
+                    if (DbgEvent.u.DebugString.fUnicode) {
+                        OutputString.StartOfString = (LPTSTR)Buffer;
+                        OutputString.LengthInChars = BufferLengthInBytes / sizeof(WCHAR);
+                    } else {
+                        Buffer[StringLengthInBytes] = '\0';
+                        YoriLibYPrintf(&OutputString, _T("%hs"), Buffer);
+                        if (OutputString.StartOfString == NULL) {
+                            YoriLibFree(Buffer);
+                            break;
+                        }
+                    }
+
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: %y\n"), &OutputString);
+                    YoriLibFreeStringContents(&OutputString);
+                    YoriLibFree(Buffer);
+                }
+                break;
+        }
+
+        ContinueDebugEvent(DbgEvent.dwProcessId, DbgEvent.dwThreadId, dwContinueStatus);
+        if (DbgEvent.dwDebugEventCode == EXIT_PROCESS_DEBUG_EVENT &&
+            DbgEvent.dwProcessId == ProcessId) {
+            break;
+        }
+    }
+
+    YDbgFreeAllProcesses(&Processes);
+
+    return TRUE;
+}
+
+/**
+ Launch a child process and commence pumping debug messages for it.
+
+ @param ArgC The number of arguments.
+
+ @param ArgV An array of arguments.
+
+ @return Exit code of the child process on success, or failure if the child
+         could not be launched.
+ */
+DWORD 
+YDbgDebugChildProcess(
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
+    )
+{
+    DWORD ExitCode;
+    YORI_STRING CmdLine;
+    YORI_STRING Executable;
+    PYORI_STRING ChildArgs;
+    PROCESS_INFORMATION ProcessInfo;
+    STARTUPINFO StartupInfo;
+
+    YoriLibInitEmptyString(&Executable);
+    if (!YoriLibLocateExecutableInPath(&ArgV[0], NULL, NULL, &Executable) ||
+        Executable.LengthInChars == 0) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: unable to find executable\n"));
+        YoriLibFreeStringContents(&Executable);
+        return EXIT_FAILURE;
+    }
+
+    ChildArgs = YoriLibMalloc(ArgC * sizeof(YORI_STRING));
+    if (ChildArgs == NULL) {
+        YoriLibFreeStringContents(&Executable);
+        return EXIT_FAILURE;
+    }
+
+    memcpy(&ChildArgs[0], &Executable, sizeof(YORI_STRING));
+    if (ArgC > 1) {
+        memcpy(&ChildArgs[1], &ArgV[1], (ArgC - 1) * sizeof(YORI_STRING));
+    }
+
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC, ChildArgs, TRUE, &CmdLine)) {
+        YoriLibFreeStringContents(&Executable);
+        YoriLibFree(ChildArgs);
+        return EXIT_FAILURE;
+    }
+
+    YoriLibFreeStringContents(&Executable);
+    YoriLibFree(ChildArgs);
+
+    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+
+    memset(&StartupInfo, 0, sizeof(StartupInfo));
+    StartupInfo.cb = sizeof(StartupInfo);
+
+    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, DEBUG_PROCESS, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+        DWORD LastError = GetLastError();
+        LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: execution failed: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        YoriLibFreeStringContents(&CmdLine);
+        return EXIT_FAILURE;
+    }
+
+    YoriLibFreeStringContents(&CmdLine);
+
+    YDbgPumpDebugEvents(ProcessInfo.dwProcessId);
+
+    WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
+    GetExitCodeProcess(ProcessInfo.hProcess, &ExitCode);
+    CloseHandle(ProcessInfo.hProcess);
+    CloseHandle(ProcessInfo.hThread);
+
+    return ExitCode;
+}
+
+/**
  The set of operations supported by this program.
  */
 typedef enum _YDBG_OP {
@@ -461,6 +796,7 @@ typedef enum _YDBG_OP {
     YDbgOperationKernelDump = 2,
     YDbgOperationCompleteDump = 3,
     YDbgOperationProcessKernelStacks = 4,
+    YDbgOperationDebugChildProcess = 5,
 } YDBG_OP;
 
 #ifdef YORI_BUILTIN
@@ -536,6 +872,13 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+                if (ArgC > i + 1) {
+                    Op = YDbgOperationDebugChildProcess;
+                    StartArg = i + 1;
+                    ArgumentUnderstood = TRUE;
+                    break;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
                 if (ArgC > i + 1) {
                     Op = YDbgOperationKernelDump;
@@ -591,6 +934,8 @@ ENTRYPOINT(
         if (!YDbgDumpKernel(FileName, TRUE)) {
             ExitResult = EXIT_FAILURE;
         }
+    } else if (Op == YDbgOperationDebugChildProcess) {
+        ExitResult = YDbgDebugChildProcess(ArgC - StartArg, &ArgV[StartArg]);
     }
 
     return ExitResult;
