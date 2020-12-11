@@ -244,6 +244,7 @@ YoriLibLoadAdvApi32Functions()
     DllAdvApi32.pRegDeleteKeyW = (PREG_DELETE_KEYW)GetProcAddress(DllAdvApi32.hDll, "RegDeleteKeyW");
     DllAdvApi32.pRegDeleteValueW = (PREG_DELETE_VALUEW)GetProcAddress(DllAdvApi32.hDll, "RegDeleteValueW");
     DllAdvApi32.pRegEnumKeyExW = (PREG_ENUM_KEY_EXW)GetProcAddress(DllAdvApi32.hDll, "RegEnumKeyExW");
+    DllAdvApi32.pRegEnumValueW = (PREG_ENUM_VALUEW)GetProcAddress(DllAdvApi32.hDll, "RegEnumValueW");
     DllAdvApi32.pRegOpenKeyExW = (PREG_OPEN_KEY_EXW)GetProcAddress(DllAdvApi32.hDll, "RegOpenKeyExW");
     DllAdvApi32.pRegQueryValueExW = (PREG_QUERY_VALUE_EXW)GetProcAddress(DllAdvApi32.hDll, "RegQueryValueExW");
     DllAdvApi32.pRegSetValueExW = (PREG_SET_VALUE_EXW)GetProcAddress(DllAdvApi32.hDll, "RegSetValueExW");

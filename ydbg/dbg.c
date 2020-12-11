@@ -35,12 +35,19 @@ CHAR strYDbgHelpText[] =
         "\n"
         "Debugs processes and system components.\n"
         "\n"
-        "YDBG [-license] [-c <file>] [-d <pid> <file>] [-k <file>] [-ks <pid> <file>]\n"
+        "YDBG -c <file>\n"
+        "YDBG -d <pid> <file>\n"
+        "YDBG [-l] -e <executable> <args>\n"
+        "YDBG -license\n"
+        "YDBG -k <file>\n"
+        "YDBG -ks <pid> <file>\n"
         "\n"
         "   -c             Dump memory from kernel and user processes to a file\n"
         "   -d             Dump memory from a process to a file\n"
+        "   -e             Execute a child process and capture debug output\n"
         "   -k             Dump memory from kernel to a file\n"
-        "   -ks            Dump memory from kernel stacks associated with a process to a file\n";
+        "   -ks            Dump memory from kernel stacks associated with a process to a file\n"
+        "   -l             Enable loader snaps for a child process\n";
 
 /**
  Display usage text to the user.
@@ -677,6 +684,14 @@ YDbgPumpDebugEvents(
                         break;
                     }
 
+                    //
+                    //  If the string is already Unicode, point to it
+                    //  directly.  Otherwise, upconvert to Unicode. To the
+                    //  best of my knowledge, the Unicode path here is
+                    //  unreachable, because OutputDebugString internally is
+                    //  limited to ANSI.
+                    //
+
                     YoriLibInitEmptyString(&OutputString);
                     if (DbgEvent.u.DebugString.fUnicode) {
                         OutputString.StartOfString = (LPTSTR)Buffer;
@@ -688,6 +703,17 @@ YDbgPumpDebugEvents(
                             YoriLibFree(Buffer);
                             break;
                         }
+                    }
+
+                    //
+                    //  Trim any trailing newlines.  We'll insert a newline
+                    //  unconditionally below.
+                    //
+
+                    while (OutputString.LengthInChars > 0 &&
+                           (OutputString.StartOfString[OutputString.LengthInChars - 1] == '\n' ||
+                            OutputString.StartOfString[OutputString.LengthInChars - 1] == '\r')) {
+                        OutputString.LengthInChars--;
                     }
 
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: %y\n"), &OutputString);
@@ -710,7 +736,232 @@ YDbgPumpDebugEvents(
 }
 
 /**
+ The name of the registry value that controls loader snaps.
+ */
+#define REG_LOADER_SNAP_VALUE _T("GlobalFlag")
+
+/**
+ The flag within the registry value that controls loader snaps.
+ */
+#define REG_LOADER_SNAP_FLAG  (2)
+
+/**
+ Return the path in the registry for a specific executable's image loading
+ configuration.  The executable specified here can contain a full path.
+
+ @param Executable Pointer to the path of an executable file.
+
+ @param RegPath On successful completion, updated to contain the path to the
+        registry key controlling this executable.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YDbgBuildIFEOPathFromExecutable(
+    __in PYORI_STRING Executable,
+    __out PYORI_STRING RegPath
+    )
+{
+    DWORD Index;
+    YORI_STRING FileName;
+
+    YoriLibInitEmptyString(&FileName);
+
+    for (Index = Executable->LengthInChars; Index > 0; Index--) {
+        if (YoriLibIsSep(Executable->StartOfString[Index - 1])) {
+            FileName.StartOfString = &Executable->StartOfString[Index];
+            FileName.LengthInChars = Executable->LengthInChars - Index;
+            break;
+        }
+    }
+
+    if (FileName.StartOfString == NULL) {
+        FileName.StartOfString = Executable->StartOfString;
+        FileName.LengthInChars = Executable->LengthInChars;
+    }
+
+    YoriLibInitEmptyString(RegPath);
+    YoriLibYPrintf(RegPath, _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\%y"), &FileName);
+
+    if (RegPath->StartOfString == NULL) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Attempt to enable loader snaps for a specific executable.
+
+ @param Executable Pointer to the path to an executable.
+
+ @param DisableRequired On successful completion, set to TRUE to indicate that
+        this function enabled loader snaps.  Set to FALSE to indicate loader
+        snaps were already enabled and should not be modified.
+
+ @return Win32 error code, indicating ERROR_SUCCESS or reason for failure.
+ */
+DWORD
+YDbgEnableLoaderSnaps(
+    __in PYORI_STRING Executable,
+    __out PBOOLEAN DisableRequired
+    )
+{
+    LONG RegErr;
+    DWORD Disposition;
+    DWORD GlobalFlag;
+    DWORD ValueSize;
+    HKEY Key;
+    YORI_STRING RegPath;
+
+    *DisableRequired = FALSE;
+
+    YoriLibLoadAdvApi32Functions();
+    if (DllAdvApi32.pRegCreateKeyExW == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL ||
+        DllAdvApi32.pRegSetValueExW == NULL ||
+        DllAdvApi32.pRegCloseKey == NULL) {
+
+        return ERROR_NOT_SUPPORTED;
+    }
+
+    if (!YDbgBuildIFEOPathFromExecutable(Executable, &RegPath)) {
+        return ERROR_NOT_ENOUGH_MEMORY;
+    }
+
+    RegErr = DllAdvApi32.pRegCreateKeyExW(HKEY_LOCAL_MACHINE, RegPath.StartOfString, 0, NULL, 0, KEY_QUERY_VALUE | KEY_SET_VALUE, NULL, &Key, &Disposition);
+    YoriLibFreeStringContents(&RegPath);
+    if (RegErr != ERROR_SUCCESS) {
+        return RegErr;
+    }
+
+    ValueSize = sizeof(GlobalFlag);
+    GlobalFlag = 0;
+    RegErr = DllAdvApi32.pRegQueryValueExW(Key, REG_LOADER_SNAP_VALUE, NULL, NULL, (LPBYTE)&GlobalFlag, &ValueSize);
+    if (RegErr != ERROR_SUCCESS && RegErr != ERROR_FILE_NOT_FOUND) {
+        DllAdvApi32.pRegCloseKey(Key);
+        return RegErr;
+    }
+
+    if ((GlobalFlag & REG_LOADER_SNAP_FLAG) == 0) {
+        GlobalFlag = GlobalFlag | REG_LOADER_SNAP_FLAG;
+        *DisableRequired = TRUE;
+    }
+
+    RegErr = DllAdvApi32.pRegSetValueExW(Key, REG_LOADER_SNAP_VALUE, 0, REG_DWORD, (LPBYTE)&GlobalFlag, sizeof(GlobalFlag));
+    if (RegErr != ERROR_SUCCESS) {
+        DllAdvApi32.pRegCloseKey(Key);
+        return RegErr;
+    }
+
+    RegErr = DllAdvApi32.pRegCloseKey(Key);
+    return RegErr;
+}
+
+/**
+ Attempt to disable loader snaps for a specific executable.
+
+ @param Executable Pointer to the path to an executable.
+
+ @return Win32 error code, indicating ERROR_SUCCESS or reason for failure.
+ */
+DWORD
+YDbgDisableLoaderSnaps(
+    __in PYORI_STRING Executable
+    )
+{
+    LONG RegErr;
+    DWORD GlobalFlag;
+    DWORD ValueSize;
+    HKEY Key;
+    YORI_STRING RegPath;
+
+    YoriLibLoadAdvApi32Functions();
+    if (DllAdvApi32.pRegCreateKeyExW == NULL ||
+        DllAdvApi32.pRegDeleteKeyW == NULL ||
+        DllAdvApi32.pRegDeleteValueW == NULL ||
+        DllAdvApi32.pRegEnumKeyExW == NULL ||
+        DllAdvApi32.pRegEnumValueW == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL ||
+        DllAdvApi32.pRegSetValueExW == NULL ||
+        DllAdvApi32.pRegCloseKey == NULL) {
+
+        return ERROR_NOT_SUPPORTED;
+    }
+
+    if (!YDbgBuildIFEOPathFromExecutable(Executable, &RegPath)) {
+        return ERROR_NOT_ENOUGH_MEMORY;
+    }
+
+    RegErr = DllAdvApi32.pRegOpenKeyExW(HKEY_LOCAL_MACHINE, RegPath.StartOfString, 0, KEY_QUERY_VALUE | KEY_SET_VALUE, &Key);
+    if (RegErr != ERROR_SUCCESS) {
+        YoriLibFreeStringContents(&RegPath);
+        return RegErr;
+    }
+
+    ValueSize = sizeof(GlobalFlag);
+    GlobalFlag = 0;
+    RegErr = DllAdvApi32.pRegQueryValueExW(Key, REG_LOADER_SNAP_VALUE, NULL, NULL, (LPBYTE)&GlobalFlag, &ValueSize);
+    if (RegErr != ERROR_SUCCESS && RegErr != ERROR_FILE_NOT_FOUND) {
+        YoriLibFreeStringContents(&RegPath);
+        DllAdvApi32.pRegCloseKey(Key);
+        return RegErr;
+    }
+
+    if ((GlobalFlag & REG_LOADER_SNAP_FLAG) != 0) {
+        GlobalFlag = GlobalFlag & ~(REG_LOADER_SNAP_FLAG);
+    }
+
+    if (GlobalFlag != 0) {
+        YoriLibFreeStringContents(&RegPath);
+        RegErr = DllAdvApi32.pRegSetValueExW(Key, REG_LOADER_SNAP_VALUE, 0, REG_DWORD, (LPBYTE)&GlobalFlag, sizeof(GlobalFlag));
+        if (RegErr != ERROR_SUCCESS) {
+            DllAdvApi32.pRegCloseKey(Key);
+            return RegErr;
+        }
+    } else {
+        TCHAR ValueName[1];
+        DWORD ValueNameLength;
+
+        RegErr = DllAdvApi32.pRegDeleteValueW(Key, REG_LOADER_SNAP_VALUE);
+        if (RegErr != ERROR_SUCCESS) {
+            YoriLibFreeStringContents(&RegPath);
+            DllAdvApi32.pRegCloseKey(Key);
+            return RegErr;
+        }
+
+        //
+        //  Check if the last value was removed, and if so, delete the key.
+        //  The contents of the values are not relevant, only the existence,
+        //  so a single char buffer is acceptable to distinguish cases.
+        //
+
+        ValueNameLength = sizeof(ValueName);
+        RegErr = DllAdvApi32.pRegEnumValueW(Key, 0, ValueName, &ValueNameLength, NULL, NULL, NULL, NULL);
+ 
+        //
+        //  This delete will fail if subkeys are present, so we don't need to
+        //  check for them explicitly.
+        //
+
+        if (RegErr == ERROR_NO_MORE_ITEMS) {
+            RegErr = DllAdvApi32.pRegDeleteKeyW(HKEY_LOCAL_MACHINE, RegPath.StartOfString);
+        }
+
+
+        YoriLibFreeStringContents(&RegPath);
+    }
+
+    RegErr = DllAdvApi32.pRegCloseKey(Key);
+    return RegErr;
+}
+
+/**
  Launch a child process and commence pumping debug messages for it.
+
+ @param EnableLoaderSnaps TRUE to indicate that loader snaps should be enabled
+        when launching this process, or FALSE to retain existing system
+        configuration.
 
  @param ArgC The number of arguments.
 
@@ -721,6 +972,7 @@ YDbgPumpDebugEvents(
  */
 DWORD 
 YDbgDebugChildProcess(
+    __in BOOLEAN EnableLoaderSnaps,
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )
@@ -731,8 +983,12 @@ YDbgDebugChildProcess(
     PYORI_STRING ChildArgs;
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
+    BOOLEAN DisableLoaderSnaps;
+    
 
+    DisableLoaderSnaps = FALSE;
     YoriLibInitEmptyString(&Executable);
+
     if (!YoriLibLocateExecutableInPath(&ArgV[0], NULL, NULL, &Executable) ||
         Executable.LengthInChars == 0) {
 
@@ -758,10 +1014,27 @@ YDbgDebugChildProcess(
         return EXIT_FAILURE;
     }
 
-    YoriLibFreeStringContents(&Executable);
     YoriLibFree(ChildArgs);
 
     ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+
+    if (EnableLoaderSnaps) {
+        ExitCode = YDbgEnableLoaderSnaps(&Executable, &DisableLoaderSnaps);
+        if (ExitCode == ERROR_ACCESS_DENIED) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: access denied enabling loader snap.  Note this typically requires running as Administrator.\n"));
+        } else if (ExitCode != ERROR_SUCCESS) {
+            LPTSTR ErrText;
+            ErrText = YoriLibGetWinErrorText(ExitCode);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+        }
+
+        if (ExitCode != ERROR_SUCCESS) {
+            YoriLibFreeStringContents(&Executable);
+            YoriLibFreeStringContents(&CmdLine);
+            return ExitCode;
+        }
+    }
 
     memset(&StartupInfo, 0, sizeof(StartupInfo));
     StartupInfo.cb = sizeof(StartupInfo);
@@ -772,12 +1045,19 @@ YDbgDebugChildProcess(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: execution failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);
         YoriLibFreeStringContents(&CmdLine);
+        YoriLibFreeStringContents(&Executable);
         return EXIT_FAILURE;
     }
 
     YoriLibFreeStringContents(&CmdLine);
 
     YDbgPumpDebugEvents(ProcessInfo.dwProcessId);
+
+    if (DisableLoaderSnaps) {
+        YDbgDisableLoaderSnaps(&Executable);
+    }
+
+    YoriLibFreeStringContents(&Executable);
 
     WaitForSingleObject(ProcessInfo.hProcess, INFINITE);
     GetExitCodeProcess(ProcessInfo.hProcess, &ExitCode);
@@ -837,7 +1117,9 @@ ENTRYPOINT(
     LONGLONG llTemp;
     DWORD CharsConsumed;
     DWORD ExitResult;
+    BOOLEAN EnableLoaderSnaps;
 
+    EnableLoaderSnaps = FALSE;
     Op = YDbgOperationNone;
 
     for (i = 1; i < ArgC; i++) {
@@ -898,6 +1180,9 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i += 2;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                EnableLoaderSnaps = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -935,7 +1220,7 @@ ENTRYPOINT(
             ExitResult = EXIT_FAILURE;
         }
     } else if (Op == YDbgOperationDebugChildProcess) {
-        ExitResult = YDbgDebugChildProcess(ArgC - StartArg, &ArgV[StartArg]);
+        ExitResult = YDbgDebugChildProcess(EnableLoaderSnaps, ArgC - StartArg, &ArgV[StartArg]);
     }
 
     return ExitResult;

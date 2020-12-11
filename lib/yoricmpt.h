@@ -5945,6 +5945,18 @@ REG_ENUM_KEY_EXW(HANDLE, DWORD, LPWSTR, LPDWORD, LPDWORD, LPWSTR, LPDWORD, PFILE
 typedef REG_ENUM_KEY_EXW *PREG_ENUM_KEY_EXW;
 
 /**
+ A prototype for the RegEnumValueW function.
+ */
+typedef
+LONG WINAPI
+REG_ENUM_VALUEW(HANDLE, DWORD, LPWSTR, LPDWORD, LPDWORD, LPDWORD, LPBYTE, LPDWORD);
+
+/**
+ A prototype for a pointer to the RegEnumValueW function.
+ */
+typedef REG_ENUM_VALUEW *PREG_ENUM_VALUEW;
+
+/**
  A prototype for the RegOpenKeyExW function.
  */
 typedef
@@ -6108,6 +6120,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to RegEnumKeyExW.
      */
     PREG_ENUM_KEY_EXW pRegEnumKeyExW;
+
+    /**
+     If it's available on the current system, a pointer to RegEnumValueW.
+     */
+    PREG_ENUM_VALUEW pRegEnumValueW;
 
     /**
      If it's available on the current system, a pointer to RegOpenKeyExW.
