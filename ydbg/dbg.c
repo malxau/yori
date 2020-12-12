@@ -37,7 +37,7 @@ CHAR strYDbgHelpText[] =
         "\n"
         "YDBG -c <file>\n"
         "YDBG -d <pid> <file>\n"
-        "YDBG [-l] -e <executable> <args>\n"
+        "YDBG [-l] [-w] -e <executable> <args>\n"
         "YDBG -license\n"
         "YDBG -k <file>\n"
         "YDBG -ks <pid> <file>\n"
@@ -47,7 +47,8 @@ CHAR strYDbgHelpText[] =
         "   -e             Execute a child process and capture debug output\n"
         "   -k             Dump memory from kernel to a file\n"
         "   -ks            Dump memory from kernel stacks associated with a process to a file\n"
-        "   -l             Enable loader snaps for a child process\n";
+        "   -l             Enable loader snaps for a child process\n"
+        "   -w             Create child process in a new window\n";
 
 /**
  Display usage text to the user.
@@ -963,6 +964,10 @@ YDbgDisableLoaderSnaps(
         when launching this process, or FALSE to retain existing system
         configuration.
 
+ @param CreateNewWindow If TRUE, a new console window should be created for
+        the child process.  The debugger will remain running on the existing
+        console.  If FALSE, both processes share a console.
+
  @param ArgC The number of arguments.
 
  @param ArgV An array of arguments.
@@ -973,11 +978,13 @@ YDbgDisableLoaderSnaps(
 DWORD 
 YDbgDebugChildProcess(
     __in BOOLEAN EnableLoaderSnaps,
+    __in BOOLEAN CreateNewWindow,
     __in DWORD ArgC,
     __in YORI_STRING ArgV[]
     )
 {
     DWORD ExitCode;
+    DWORD ProcessFlags;
     YORI_STRING CmdLine;
     YORI_STRING Executable;
     PYORI_STRING ChildArgs;
@@ -1039,7 +1046,12 @@ YDbgDebugChildProcess(
     memset(&StartupInfo, 0, sizeof(StartupInfo));
     StartupInfo.cb = sizeof(StartupInfo);
 
-    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, DEBUG_PROCESS, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+    ProcessFlags = DEBUG_PROCESS;
+    if (CreateNewWindow) {
+        ProcessFlags = ProcessFlags | CREATE_NEW_CONSOLE;
+    }
+
+    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, ProcessFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: execution failed: %s"), ErrText);
@@ -1118,8 +1130,10 @@ ENTRYPOINT(
     DWORD CharsConsumed;
     DWORD ExitResult;
     BOOLEAN EnableLoaderSnaps;
+    BOOLEAN CreateNewWindow;
 
     EnableLoaderSnaps = FALSE;
+    CreateNewWindow = FALSE;
     Op = YDbgOperationNone;
 
     for (i = 1; i < ArgC; i++) {
@@ -1183,6 +1197,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 EnableLoaderSnaps = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+                CreateNewWindow = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -1220,7 +1237,7 @@ ENTRYPOINT(
             ExitResult = EXIT_FAILURE;
         }
     } else if (Op == YDbgOperationDebugChildProcess) {
-        ExitResult = YDbgDebugChildProcess(EnableLoaderSnaps, ArgC - StartArg, &ArgV[StartArg]);
+        ExitResult = YDbgDebugChildProcess(EnableLoaderSnaps, CreateNewWindow, ArgC - StartArg, &ArgV[StartArg]);
     }
 
     return ExitResult;
