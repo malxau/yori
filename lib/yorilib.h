@@ -2569,22 +2569,27 @@ YoriLibOutputTextToMultibyteDevice(
 /**
  Output the string to the standard output device.
  */
-#define YORI_LIB_OUTPUT_STDOUT 0
+#define YORI_LIB_OUTPUT_STDOUT 0x00
 
 /**
  Output the string to the standard error device.
  */
-#define YORI_LIB_OUTPUT_STDERR 1
+#define YORI_LIB_OUTPUT_STDERR 0x01
+
+/**
+ Output the string to the debugger device.
+ */
+#define YORI_LIB_OUTPUT_DEBUG  0x02
 
 /**
  Remove VT100 escapes if the target is not expecting to handle these.
  */
-#define YORI_LIB_OUTPUT_STRIP_VT 2
+#define YORI_LIB_OUTPUT_STRIP_VT 0x10
 
 /**
  Include VT100 escapes in the output stream with no processing.
  */
-#define YORI_LIB_OUTPUT_PASSTHROUGH_VT 4
+#define YORI_LIB_OUTPUT_PASSTHROUGH_VT 0x20
 
 /**
  Initialize the output stream with any header information.

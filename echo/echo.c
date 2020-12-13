@@ -3,7 +3,7 @@
  *
  * Yori shell display command line output
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,9 +35,10 @@ CHAR strEchoHelpText[] =
         "\n"
         "Outputs text.\n"
         "\n"
-        "ECHO [-license] [-e] [-n] [-r <n>] [--] String\n"
+        "ECHO [-license] [-d] [-e] [-n] [-r <n>] [--] String\n"
         "\n"
         "   --             Treat all further arguments as display parameters\n"
+        "   -d             Display to debugger\n"
         "   -e             Display to standard error stream\n"
         "   -n             Do not display a newline after text\n"
         "   -r <n>         Repeat the display <n> times\n";
@@ -84,16 +85,18 @@ ENTRYPOINT(
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    BOOL NewLine = TRUE;
-    BOOL StdErr = FALSE;
-    BOOL Result;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN NewLine = TRUE;
+    BOOLEAN StdErr = FALSE;
+    BOOLEAN Result;
+    BOOLEAN Debug = FALSE;
     DWORD OutputFlags;
     DWORD i;
     DWORD Count;
     DWORD StartArg = 1;
     DWORD RepeatCount = 1;
     YORI_STRING Arg;
+    YORI_STRING Text;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -106,8 +109,11 @@ ENTRYPOINT(
                 EchoHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                Debug = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 StdErr = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -141,34 +147,33 @@ ENTRYPOINT(
         }
     }
 
-    if (StdErr) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &Text)) {
+        return EXIT_FAILURE;
+    }
+
+    Result = TRUE;
+
+    if (Debug) {
+        OutputFlags = YORI_LIB_OUTPUT_DEBUG;
+    } else if (StdErr) {
         OutputFlags = YORI_LIB_OUTPUT_STDERR;
     } else {
         OutputFlags = YORI_LIB_OUTPUT_STDOUT;
     }
 
-    Result = TRUE;
-
     for (Count = 0; Count < RepeatCount; Count++) {
-        for (i = StartArg; i < ArgC; i++) {
-            if (i < ArgC) {
-                if (!YoriLibOutput(OutputFlags, _T("%y"), &ArgV[i])) {
-                    Result = FALSE;
-                }
-                if (i + 1 < ArgC) {
-                    if (!YoriLibOutput(OutputFlags, _T(" "))) {
-                        Result = FALSE;
-                    }
-                }
-            }
+        if (Count + 1 == RepeatCount && NewLine) {
+            if (!YoriLibOutput(OutputFlags, _T("%y\n"), &Text)) {
+                Result = FALSE;
+            } 
+        } else {
+            if (!YoriLibOutput(OutputFlags, _T("%y"), &Text)) {
+                Result = FALSE;
+            } 
         }
     }
 
-    if (NewLine) {
-        if (!YoriLibOutput(OutputFlags, _T("\n"))) {
-            Result = FALSE;
-        }
-    }
+    YoriLibFreeStringContents(&Text);
 
     if (Result) {
         return EXIT_SUCCESS;

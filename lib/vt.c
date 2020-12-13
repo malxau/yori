@@ -34,6 +34,15 @@
 #define DEFAULT_COLOR 7
 
 /**
+ Pseudohandle to refer to the debugger, since this cannot be opened as a
+ regular file.  Note the same value can be used for the current process or
+ thread, but the collision here does not matter since this handle will never
+ be sent to the kernel as a handle, and it would be invalid to write to a
+ process or thread.
+ */
+#define YORI_LIB_DEBUGGER_HANDLE (HANDLE)((DWORD_PTR)-1)
+
+/**
  The color to use when a VT100 reset command is issued.
  */
 WORD YoriLibVtResetColor;
@@ -612,7 +621,7 @@ YoriLibUtf8TextEndStream(
 
  @param hOutput Handle to the output device.
 
- @param StringBuffer Pointer to the string to ouput.
+ @param StringBuffer Pointer to the string to output.
 
  @param BufferLength Number of characters in the string.
 
@@ -690,6 +699,148 @@ YoriLibUtf8TextWithEscapesSetFunctions(
     CallbackFunctions->EndStream = YoriLibUtf8TextEndStream;
     CallbackFunctions->ProcessAndOutputText = YoriLibUtf8TextProcessAndOutputText;
     CallbackFunctions->ProcessAndOutputEscape = YoriLibUtf8TextProcessAndOutputText;
+    return TRUE;
+}
+
+//
+//  Debugger functions
+//
+
+/**
+ Initialize the output stream with any header information.  For debugger
+ output, this is pointless.
+
+ @param hOutput The output stream to initialize.
+
+ @return TRUE for success, FALSE on failure.
+ */
+BOOL
+YoriLibDebuggerInitializeStream(
+    __in HANDLE hOutput
+    )
+{
+    UNREFERENCED_PARAMETER(hOutput);
+
+    return TRUE;
+}
+
+/**
+ End processing for the specified stream.  For debugger output, this is
+ pointless.
+
+ @return TRUE for success, FALSE on failure.
+ */
+BOOL
+YoriLibDebuggerEndStream(
+    __in HANDLE hOutput
+    )
+{
+    UNREFERENCED_PARAMETER(hOutput);
+
+    return TRUE;
+}
+
+/**
+ Output text between escapes to the debugger.
+
+ @param hOutput Handle to the output device, ignored for debugger.
+
+ @param StringBuffer Pointer to the string to output.
+
+ @param BufferLength Number of characters in the string.
+
+ @return TRUE for success, FALSE on failure.
+ */
+BOOL
+YoriLibDebuggerProcessAndOutputText(
+    __in HANDLE hOutput,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    )
+{
+    TCHAR StackBuf[64 + 1];
+    LPTSTR Buffer;
+    DWORD ReadIndex;
+    DWORD WriteIndex;
+
+    UNREFERENCED_PARAMETER(hOutput);
+
+    if (BufferLength <= 64) {
+        Buffer = StackBuf;
+    } else {
+        Buffer = YoriLibMalloc((BufferLength + 1) * sizeof(TCHAR));
+        if (Buffer == NULL) {
+            return FALSE;
+        }
+    }
+
+    WriteIndex = 0;
+    for (ReadIndex = 0; ReadIndex < BufferLength; ReadIndex++) {
+        if (StringBuffer[ReadIndex] == '\r') {
+            if (ReadIndex + 1 < BufferLength &&
+                StringBuffer[ReadIndex] == '\n') {
+
+                ReadIndex++;
+            } else {
+                Buffer[WriteIndex++] = '\n';
+            }
+        } else {
+            Buffer[WriteIndex++] = StringBuffer[ReadIndex];
+        }
+    }
+
+    Buffer[WriteIndex] = '\0';
+
+    OutputDebugString(Buffer);
+    if (Buffer != StackBuf) {
+        YoriLibFree(Buffer);
+    }
+
+    return TRUE;
+}
+
+/**
+ A dummy callback function to receive an escape and not do anything with it.
+ 
+ @param hOutput Handle to the output device (ignored.)
+
+ @param StringBuffer Pointer to a buffer describing the escape (ignored.)
+
+ @param BufferLength The number of characters in the escape (ignored.)
+
+ @return TRUE for success, FALSE for failure.
+ */
+BOOL
+YoriLibDebuggerProcessAndOutputEscape(
+    __in HANDLE hOutput,
+    __in LPTSTR StringBuffer,
+    __in DWORD BufferLength
+    )
+{
+    UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(StringBuffer);
+    UNREFERENCED_PARAMETER(BufferLength);
+
+    return TRUE;
+}
+
+/**
+ Initialize callback functions to a set which will output text to the debugger
+ and remove any escape sequences.
+
+ @param CallbackFunctions The callback functions to initialize.
+
+ @return TRUE for success, FALSE for failure.
+ */
+BOOL
+YoriLibDebuggerSetFunctions(
+    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
+    )
+{
+    CallbackFunctions->InitializeStream = YoriLibDebuggerInitializeStream;
+    CallbackFunctions->EndStream = YoriLibDebuggerEndStream;
+    CallbackFunctions->ProcessAndOutputText = YoriLibDebuggerProcessAndOutputText;
+    CallbackFunctions->ProcessAndOutputEscape = YoriLibDebuggerProcessAndOutputEscape;
     return TRUE;
 }
 
@@ -882,7 +1033,9 @@ YoriLibOutputInternal(
     //  that doesn't
     //
 
-    if (GetConsoleMode(hOut, &CurrentMode)) {
+    if (hOut == YORI_LIB_DEBUGGER_HANDLE) {
+        YoriLibDebuggerSetFunctions(&Callbacks);
+    } else if (GetConsoleMode(hOut, &CurrentMode)) {
         if ((Flags & YORI_LIB_OUTPUT_STRIP_VT) != 0) {
             YoriLibConsoleNoEscapeSetFunctions(&Callbacks);
         } else if ((Flags & YORI_LIB_OUTPUT_PASSTHROUGH_VT) != 0) {
@@ -944,6 +1097,8 @@ YoriLibOutput(
 
     if ((Flags & YORI_LIB_OUTPUT_STDERR) != 0) {
         hOut = GetStdHandle(STD_ERROR_HANDLE);
+    } else if ((Flags & YORI_LIB_OUTPUT_DEBUG) != 0) {
+        hOut = (HANDLE)(YORI_LIB_DEBUGGER_HANDLE);
     } else {
         hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     }
