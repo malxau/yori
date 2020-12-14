@@ -330,6 +330,94 @@ YoriWinCoordInSmallRect(
     return FALSE;
 }
 
+/**
+ Given a position which may be within or outside of a region, calculate the
+ location in terms of a subregion, indicating wither the position is outside
+ of the subregion and/or coordinates within the subregion.  This can be used
+ to determine a screen coordinate relative to a window location,  or client
+ coordinates relative to a nonclient region.
+
+ @param Pos Pointer to a position which may contain coordinates or an
+        indication of being out of bounds.  The coordinates here could refer
+        to any space.
+
+ @param SubRegion Pointer to a rectangle within the coordinate space.
+
+ @param SubPos On completion, updated to indicate the coordinates relative to
+        the SubRegion, including indicating whether the initial position is
+        out of bounds of SubRegion.
+ */
+VOID
+YoriWinBoundCoordInSubRegion(
+    __in PYORI_WIN_BOUNDED_COORD Pos,
+    __in PSMALL_RECT SubRegion,
+    __out PYORI_WIN_BOUNDED_COORD SubPos
+    )
+{
+    if (Pos->Left ||
+        (!Pos->Right && Pos->Pos.X < SubRegion->Left)) {
+        SubPos->Left = TRUE;
+        SubPos->Right = FALSE;
+        SubPos->Pos.X = 0;
+    } else if (Pos->Right ||
+               Pos->Pos.X > SubRegion->Right) {
+        SubPos->Left = FALSE;
+        SubPos->Right = TRUE;
+        SubPos->Pos.X = 0;
+    } else {
+        SubPos->Left = FALSE;
+        SubPos->Right = FALSE;
+        SubPos->Pos.X = (SHORT)(Pos->Pos.X - SubRegion->Left);
+    }
+
+    if (Pos->Above ||
+        (!Pos->Below && Pos->Pos.Y < SubRegion->Top)) {
+        SubPos->Above = TRUE;
+        SubPos->Below = FALSE;
+        SubPos->Pos.Y = 0;
+    } else if (Pos->Below ||
+               Pos->Pos.Y > SubRegion->Bottom) {
+        SubPos->Above = FALSE;
+        SubPos->Below = TRUE;
+        SubPos->Pos.Y = 0;
+    } else {
+        SubPos->Above = FALSE;
+        SubPos->Below = FALSE;
+        SubPos->Pos.Y = (SHORT)(Pos->Pos.Y - SubRegion->Top);
+    }
+}
+
+/**
+ Obtain the nonclient region of a control in terms of its parent's
+ nonclient coordinates.
+
+ @param Ctrl Pointer to the control.
+
+ @param CtrlRect On completion, updated to indicate the location of the
+        control relative to the nonclient area of its parent.
+ */
+VOID
+YoriWinGetControlNonClientRegion(
+    __in PYORI_WIN_CTRL Ctrl,
+    __out PSMALL_RECT CtrlRect
+    )
+{
+    CtrlRect->Left = Ctrl->FullRect.Left;
+    CtrlRect->Right = Ctrl->FullRect.Right;
+    CtrlRect->Top = Ctrl->FullRect.Top;
+    CtrlRect->Bottom = Ctrl->FullRect.Bottom;
+
+    if (Ctrl->RelativeToParentClient) {
+        PYORI_WIN_CTRL Parent;
+        Parent = Ctrl->Parent;
+
+        CtrlRect->Left = (SHORT)(CtrlRect->Left + Parent->ClientRect.Left);
+        CtrlRect->Right = (SHORT)(CtrlRect->Right + Parent->ClientRect.Left);
+        CtrlRect->Top = (SHORT)(CtrlRect->Top + Parent->ClientRect.Top);
+        CtrlRect->Bottom = (SHORT)(CtrlRect->Bottom + Parent->ClientRect.Top);
+    }
+}
+
 
 /**
  Given coordinates relative to a parent window or control, locate a child

@@ -4515,6 +4515,120 @@ YoriWinMultilineEditNotifyMouseWheel(
     YoriWinMultilineEditSetViewportLocation(&MultilineEdit->Ctrl, MultilineEdit->ViewportLeft, NewViewportTop);
 }
 
+/**
+ Adjust the viewport and selection to reflect the mouse being dragged outside
+ the control's client area while the button is held down, thereby extending
+ the selection.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param MousePos Specifies the mouse position.  This should be outside the
+        client area in at least one dimension, otherwise no scrolling would
+        need to take place.
+ */
+VOID
+YoriWinMultilineEditScrollForMouseSelect(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in PYORI_WIN_BOUNDED_COORD MousePos
+    )
+{
+    COORD ClientSize;
+    DWORD LineCountToDisplay;
+    DWORD NewCursorLine;
+    DWORD NewCursorOffset;
+    DWORD NewViewportTop;
+    DWORD NewViewportLeft;
+    DWORD DisplayOffset;
+
+    YoriWinGetControlClientSize(&MultilineEdit->Ctrl, &ClientSize);
+    LineCountToDisplay = ClientSize.Y;
+
+    NewViewportTop = MultilineEdit->ViewportTop;
+    NewViewportLeft = MultilineEdit->ViewportLeft;
+    NewCursorLine = MultilineEdit->CursorLine;
+
+    //
+    //  MSFIX: Need to set a timer somewhere; if the mouse stops
+    //         moving, we still want to scroll periodically
+    //
+
+    //
+    //  First find the cursor line.  This can be above the viewport, below
+    //  the viewport, or any line within the viewport.
+    //
+
+    if (MousePos->Above) {
+        if (MultilineEdit->ViewportTop < 1) {
+            NewCursorLine = 0;
+        } else {
+            NewCursorLine = NewViewportTop - 1;
+        }
+    } else if (MousePos->Below) {
+        if (NewViewportTop + 1 + LineCountToDisplay > MultilineEdit->LinesPopulated) {
+            if (MultilineEdit->LinesPopulated > 0) {
+                NewCursorLine = MultilineEdit->LinesPopulated - 1;
+            } else {
+                NewCursorLine = 0;
+            }
+        } else {
+            NewCursorLine = NewViewportTop + LineCountToDisplay + 1;
+        }
+    } else {
+        if (NewViewportTop + MousePos->Pos.Y < MultilineEdit->LinesPopulated) {
+            NewCursorLine = NewViewportTop + MousePos->Pos.Y;
+        } else if (MultilineEdit->LinesPopulated > 0) {
+            NewCursorLine = MultilineEdit->LinesPopulated - 1;
+        } else {
+            NewCursorLine = 0;
+        }
+    }
+
+    //
+    //  Now find the cursor column.  This can be left of the viewport, right
+    //  of the viewport, or any column within the viewport.  When in the
+    //  viewport, this needs to be translated from a display location to
+    //  a buffer location.
+    //
+
+    if (MousePos->Left) {
+        if (NewViewportLeft > 0) {
+            DisplayOffset = NewViewportLeft - 1;
+        } else {
+            DisplayOffset = 0;
+        }
+    } else if (MousePos->Right) {
+        DisplayOffset = NewViewportLeft + ClientSize.X + 1;
+    } else {
+        DisplayOffset = NewViewportLeft + MousePos->Pos.X;
+    }
+    YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, DisplayOffset, &NewCursorOffset);
+
+    //
+    //  When using modern navigation, the cursor can't move to the right of
+    //  the text in the line.  With traditional MS-DOS navigation, it can.
+    //
+
+    if (!MultilineEdit->TraditionalEditNavigation) {
+        if (MultilineEdit->LinesPopulated > 0) {
+            ASSERT(NewCursorLine < MultilineEdit->LinesPopulated);
+            if (NewCursorOffset > MultilineEdit->LineArray[NewCursorLine].LengthInChars) {
+                NewCursorOffset = MultilineEdit->LineArray[NewCursorLine].LengthInChars;
+            }
+        }
+    }
+
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
+    if (MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromTopDown ||
+        MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromBottomUp) {
+        YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
+    } else {
+        YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, TRUE);
+    }
+    YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+    YoriWinMultilineEditPaint(MultilineEdit);
+}
+
 
 /**
  Process a key that may be an enhanced key.  Some of these keys can be either
@@ -4554,7 +4668,7 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
                 NewCursorLine = NewCursorLine - 1;
                 NewCursorOffset = MultilineEdit->LineArray[NewCursorLine].LengthInChars;
             } else {
-                NewCursorOffset = MultilineEdit->CursorOffset -1;
+                NewCursorOffset = MultilineEdit->CursorOffset - 1;
             }
             YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
             if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
@@ -5114,21 +5228,45 @@ YoriWinMultilineEditEventHandler(
             break;
         case YoriWinEventMouseMoveInClient:
             if (MultilineEdit->MouseButtonDown) {
-                DWORD NewCursorLine;
-                DWORD NewCursorChar;
+                YORI_WIN_BOUNDED_COORD ClientPos;
+                ClientPos.Left = FALSE;
+                ClientPos.Right = FALSE;
+                ClientPos.Above = FALSE;
+                ClientPos.Below = FALSE;
+                ClientPos.Pos.X = Event->MouseMove.Location.X;
+                ClientPos.Pos.Y = Event->MouseMove.Location.Y;
 
-                YoriWinMultilineEditTranslateViewportCoordinatesToCursorCoordinates(MultilineEdit, Event->MouseMove.Location.X, Event->MouseMove.Location.Y, &NewCursorLine, &NewCursorChar);
+                YoriWinMultilineEditScrollForMouseSelect(MultilineEdit, &ClientPos);
+            }
+            break;
+        case YoriWinEventMouseMoveInNonClient:
+            if (MultilineEdit->MouseButtonDown) {
+                YORI_WIN_BOUNDED_COORD Pos;
+                YORI_WIN_BOUNDED_COORD ClientPos;
+                Pos.Left = FALSE;
+                Pos.Right = FALSE;
+                Pos.Above = FALSE;
+                Pos.Below = FALSE;
+                Pos.Pos.X = Event->MouseMove.Location.X;
+                Pos.Pos.Y = Event->MouseMove.Location.Y;
 
-                YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorChar, NewCursorLine);
-                if (MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromTopDown ||
-                    MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromBottomUp) {
-                    YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
-                } else {
-                    YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, TRUE);
-                }
+                YoriWinBoundCoordInSubRegion(&Pos, &Ctrl->ClientRect, &ClientPos);
 
-                YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
-                YoriWinMultilineEditPaint(MultilineEdit);
+                YoriWinMultilineEditScrollForMouseSelect(MultilineEdit, &ClientPos);
+            }
+            break;
+        case YoriWinEventMouseMoveOutsideWindow:
+            if (MultilineEdit->MouseButtonDown) {
+
+                //
+                //  Translate any coordinates that are present into client
+                //  relative form.  Anything that's out of bounds will stay
+                //  that way.
+                //
+
+                YORI_WIN_BOUNDED_COORD ClientPos;
+                YoriWinBoundCoordInSubRegion(&Event->MouseMoveOutsideWindow.Location, &Ctrl->ClientRect, &ClientPos);
+                YoriWinMultilineEditScrollForMouseSelect(MultilineEdit, &ClientPos);
             }
             break;
         case YoriWinEventMouseUpInClient:

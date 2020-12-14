@@ -751,6 +751,28 @@ YoriWinMgrProcessEvents(
                         Event.MouseMove.Location.X = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.X - WinCtrl->FullRect.Left);
                         Event.MouseMove.Location.Y = (SHORT)(InputRecord->Event.MouseEvent.dwMousePosition.Y - WinCtrl->FullRect.Top);
                         WinCtrl->NotifyEventFn(WinCtrl, &Event);
+                    } else {
+                        YORI_WIN_BOUNDED_COORD MousePos;
+
+                        Event.EventType = YoriWinEventMouseMoveOutsideWindow;
+
+                        MousePos.Left = FALSE;
+                        MousePos.Right = FALSE;
+                        MousePos.Above = FALSE;
+                        MousePos.Below = FALSE;
+
+                        MousePos.Pos.X = InputRecord->Event.MouseEvent.dwMousePosition.X;
+                        MousePos.Pos.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
+
+                        YoriWinBoundCoordInSubRegion(&MousePos, &WinCtrl->FullRect, &Event.MouseMoveOutsideWindow.Location);
+
+                        ASSERT(Event.MouseMoveOutsideWindow.Location.Left ||
+                               Event.MouseMoveOutsideWindow.Location.Right ||
+                               Event.MouseMoveOutsideWindow.Location.Above ||
+                               Event.MouseMoveOutsideWindow.Location.Below);
+
+                        Event.MouseMoveOutsideWindow.ControlKeyState = InputRecord->Event.MouseEvent.dwControlKeyState;
+                        WinCtrl->NotifyEventFn(WinCtrl, &Event);
                     }
                 }
 

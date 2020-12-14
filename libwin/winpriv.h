@@ -33,6 +33,46 @@ typedef PVOID PYORI_WIN_WINDOW;
 #endif
 
 /**
+ Some events might want to refer to a position which is outside of a control.
+ Expressing this in control relative terms implies a position (if that
+ coordinate is within the control) which can be superseded by values
+ indicating the orientations where the position is outside of the control.
+ */
+typedef struct _YORI_WIN_BOUNDED_COORD {
+
+    /**
+     The position within the control.  The X component or Y component may be
+     valid independently based on the below values.
+     */
+    COORD Pos;
+
+    /**
+     If TRUE, the position is above the control.  Mutually exclusive with
+     Below, and implies that Pos.Y is not meaningful.
+     */
+    BOOLEAN Above;
+
+    /**
+     If TRUE, the position is below the control.  Mutually exclusive with
+     Above, and implies that Pos.Y is not meaningful.
+     */
+    BOOLEAN Below;
+
+    /**
+     If TRUE, the position is to the left of the control.  Mutually
+     exclusive with Right, and implies that Pos.X is not meaningful.
+     */
+    BOOLEAN Left;
+
+    /**
+     If TRUE, the position is to the left of the control.  Mutually
+     exclusive with Left, and implies that Pos.X is not meaningful.
+     */
+    BOOLEAN Right;
+
+} YORI_WIN_BOUNDED_COORD, *PYORI_WIN_BOUNDED_COORD;
+
+/**
  An event that may be of interest to a window or control.  This is typically
  keyboard or mouse input but may ultimately describe higher level concepts.
  */
@@ -79,7 +119,8 @@ typedef struct _YORI_WIN_EVENT {
         YoriWinEventShowWindow                  = 31,
         YoriWinEventWindowManagerResize         = 32,
         YoriWinEventParentResize                = 33,
-        YoriWinEventBeyondMax                   = 34
+        YoriWinEventMouseMoveOutsideWindow      = 34,
+        YoriWinEventBeyondMax                   = 35
     } EventType;
 
     /**
@@ -116,6 +157,11 @@ typedef struct _YORI_WIN_EVENT {
             COORD Location;
             DWORD ControlKeyState;
         } MouseMove;
+
+        struct {
+            YORI_WIN_BOUNDED_COORD Location;
+            DWORD ControlKeyState;
+        } MouseMoveOutsideWindow;
 
         struct {
             DWORD LinesToMove;
@@ -435,6 +481,19 @@ BOOLEAN
 YoriWinCoordInSmallRect(
     __in PCOORD Location,
     __in PSMALL_RECT Area
+    );
+
+VOID
+YoriWinBoundCoordInSubRegion(
+    __in PYORI_WIN_BOUNDED_COORD Pos,
+    __in PSMALL_RECT SubRegion,
+    __out PYORI_WIN_BOUNDED_COORD SubPos
+    );
+
+VOID
+YoriWinGetControlNonClientRegion(
+    __in PYORI_WIN_CTRL Ctrl,
+    __out PSMALL_RECT CtrlRect
     );
 
 __success(return != NULL)

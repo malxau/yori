@@ -2238,21 +2238,124 @@ YoriWinNotifyEvent(
             }
         }
 
-    } else if (Event->EventType == YoriWinEventMouseMoveInClient) {
+    } else if (Event->EventType == YoriWinEventMouseMoveInClient ||
+               Event->EventType == YoriWinEventMouseMoveInNonClient ||
+               Event->EventType == YoriWinEventMouseMoveOutsideWindow) {
 
-        PYORI_WIN_CTRL Ctrl;
-        COORD ChildLocation;
-        BOOLEAN InChildClientArea;
-        Ctrl = YoriWinFindControlAtCoordinates(&Window->Ctrl,
-                                               Event->MouseMove.Location,
-                                               TRUE,
-                                               &ChildLocation,
-                                               &InChildClientArea);
+        //
+        //  Supporting MouseMoveOutsideWindow to child controls requires
+        //  looping through all of the controls, looking for those that have
+        //  observed a button press.  Those controls are notified of the move.
+        //  Translating the input into the control relative form requires a
+        //  different scheme for each input event.  There are three cases:
+        //
+        //  1. This event is InClient.  The loop examining controls which have
+        //     observed mouse presses can calculate Above/Below/Left/Right by
+        //     comparing the client coordinates in the event to the control
+        //     position.
+        //  2. This event is NonClient.  The loop examining controls needs to
+        //     translate the control's location into nonclient coords to
+        //     compare and calculate ABLR.
+        //  3. This event is OutsideWindow.  The loop examining controls can
+        //     infer that if the event has any of ABLR set those apply to the
+        //     child.  If neither of AB is set, or neither of LR is set, it
+        //     needs to compare the location value against the nonclient
+        //     coords of the control.
+        //
+        //  To simplify these cases, the InClient event has its coordinates
+        //  converted to nonclient, so all three cases have the same input
+        //  coordinates.  Any control encountered has its coordinates
+        //  converted to nonclient, so we can handle controls inside and
+        //  outside the client area.
+        //
 
-        if (Ctrl != NULL &&
-            YoriWinTranslateMouseEventForChild(Event, Ctrl, ChildLocation, InChildClientArea)) {
+        PYORI_WIN_CTRL CtrlUnderMouse = NULL;
+        PYORI_LIST_ENTRY ListEntry;
+        PYORI_WIN_CTRL ChildCtrl;
+        YORI_WIN_BOUNDED_COORD WinPos;
+        DWORD CtrlKeyState;
 
-            return TRUE;
+        WinPos.Above = FALSE;
+        WinPos.Below = FALSE;
+        WinPos.Left = FALSE;
+        WinPos.Right = FALSE;
+
+        //
+        //  Check if the mouse is moving across a control.  If so, pass the
+        //  event to that control.
+        //
+
+        if (Event->EventType == YoriWinEventMouseMoveInClient ||
+            Event->EventType == YoriWinEventMouseMoveInNonClient) {
+
+            BOOLEAN InChildClientArea;
+            BOOLEAN LocationInParentClient;
+            COORD ChildLocation;
+
+            if (Event->EventType == YoriWinEventMouseMoveInClient) {
+                LocationInParentClient = TRUE;
+            } else {
+                LocationInParentClient = FALSE;
+            }
+
+            memcpy(&CtrlEvent, Event, sizeof(YORI_WIN_EVENT));
+            CtrlUnderMouse = YoriWinFindControlAtCoordinates(&Window->Ctrl,
+                                                             CtrlEvent.MouseMove.Location,
+                                                             LocationInParentClient,
+                                                             &ChildLocation,
+                                                             &InChildClientArea);
+
+            if (CtrlUnderMouse != NULL &&
+                YoriWinTranslateMouseEventForChild(&CtrlEvent, CtrlUnderMouse, ChildLocation, InChildClientArea)) {
+
+                return TRUE;
+            }
+            WinPos.Pos.X = Event->MouseMove.Location.X;
+            WinPos.Pos.Y = Event->MouseMove.Location.Y;
+            if (Event->EventType == YoriWinEventMouseMoveInClient) {
+                WinPos.Pos.X = (SHORT)(WinPos.Pos.X + Window->Ctrl.ClientRect.Left);
+                WinPos.Pos.Y = (SHORT)(WinPos.Pos.Y + Window->Ctrl.ClientRect.Top);
+            }
+            CtrlKeyState = Event->MouseMove.ControlKeyState;
+        } else {
+            WinPos.Left = Event->MouseMoveOutsideWindow.Location.Left;
+            WinPos.Right = Event->MouseMoveOutsideWindow.Location.Right;
+            WinPos.Above = Event->MouseMoveOutsideWindow.Location.Above;
+            WinPos.Below = Event->MouseMoveOutsideWindow.Location.Below;
+            WinPos.Pos.X = Event->MouseMoveOutsideWindow.Location.Pos.X;
+            WinPos.Pos.Y = Event->MouseMoveOutsideWindow.Location.Pos.Y;
+            CtrlKeyState = Event->MouseMoveOutsideWindow.ControlKeyState;
+        }
+
+        //
+        //  Scan through all controls seeing which ones have observed a mouse
+        //  button press.  Notify all such controls of the mouse movement.
+        //
+
+        ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, NULL);
+        while (ListEntry != NULL) {
+            ChildCtrl = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL, ParentControlList);
+            ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, ListEntry);
+
+            if (ChildCtrl != CtrlUnderMouse &&
+                ChildCtrl->MouseButtonsPressed &&
+                ChildCtrl->NotifyEventFn != NULL) {
+
+                SMALL_RECT CtrlRect;
+
+                YoriWinGetControlNonClientRegion(ChildCtrl, &CtrlRect);
+
+                ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
+                CtrlEvent.EventType = YoriWinEventMouseMoveOutsideWindow;
+
+                YoriWinBoundCoordInSubRegion(&WinPos, &CtrlRect, &CtrlEvent.MouseMoveOutsideWindow.Location);
+                CtrlEvent.MouseMoveOutsideWindow.ControlKeyState = CtrlKeyState;
+
+                Terminate = ChildCtrl->NotifyEventFn(ChildCtrl, &CtrlEvent);
+                if (Terminate) {
+                    return TRUE;
+                }
+            }
         }
 
     } else if (Event->EventType == YoriWinEventMouseWheelUpInClient ||
