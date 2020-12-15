@@ -2422,6 +2422,7 @@ YoriWinNotifyEvent(
     }
 
     if (Window->CustomNotifications != NULL &&
+        Event->EventType >= 0 &&
         Event->EventType < YoriWinEventBeyondMax &&
         Window->CustomNotifications[Event->EventType].Handler != NULL) {
 

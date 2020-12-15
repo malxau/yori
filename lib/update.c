@@ -589,7 +589,7 @@ YoriLibUpdateErrorString(
     __in YoriLibUpdError Error
     )
 {
-    if (Error < YoriLibUpdErrorMax) {
+    if (Error >= 0 && Error < YoriLibUpdErrorMax) {
         return YoriLibUpdErrorStrings[Error];
     }
     return _T("Not an update error");
