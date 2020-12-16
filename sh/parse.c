@@ -1,5 +1,5 @@
 /**
- * @file sh/parse.c
+ * @file /sh/parse.c
  *
  * Parses an expression into component pieces
  *
@@ -227,7 +227,7 @@ YoriShParseCmdlineToCmdContext(
                 TerminateNextArg = FALSE;
                 CharsToConsume = 0;
             } else if ((ArgCount > 0 || RequiredCharCount > 0) &&
-                       YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+                       YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
                 TerminateArg = TRUE;
             }
         }
@@ -271,7 +271,7 @@ YoriShParseCmdlineToCmdContext(
             //
 
             if (CharsToConsume == 0) {
-                YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
+                YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
             }
 
             RequiredCharCount += CharsToConsume;
@@ -475,7 +475,7 @@ YoriShParseCmdlineToCmdContext(
                 TerminateNextArg = FALSE;
                 CharsToConsume = 0;
             } else if ((ArgCount > 0 || (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString) > 0) &&
-                       YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+                       YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
                 TerminateArg = TRUE;
             }
         }
@@ -511,7 +511,7 @@ YoriShParseCmdlineToCmdContext(
                 //
 
                 if (CharsToConsume == 0) {
-                    YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
+                    YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
                 }
 
                 if (CharsToConsume > 0) {

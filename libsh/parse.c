@@ -1,5 +1,5 @@
 /**
- * @file lib/parse.c
+ * @file libsh/parse.c
  *
  * Parses an expression into component pieces
  *
@@ -66,7 +66,7 @@
  */
 __success(return)
 BOOLEAN
-YoriLibIsArgumentSeperator(
+YoriLibShIsArgumentSeperator(
     __in PYORI_STRING String,
     __inout_opt PDWORD BraceNestingLevel,
     __out_opt PDWORD CharsToConsumeOut,

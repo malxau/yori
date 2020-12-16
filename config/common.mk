@@ -26,7 +26,7 @@ LIB32=link.exe -lib -nologo
 LINK=link.exe -nologo -incremental:no
 MAKE=nmake.exe -nologo
 
-CFLAGS_NOUNICODE=-nologo -W4 -WX -I. -I..\lib -I..\crt -I..\libwin -I..\libdlg -DYORI_VER_MAJOR=$(YORI_VER_MAJOR) -DYORI_VER_MINOR=$(YORI_VER_MINOR) -DYORI_BUILD_ID=$(YORI_BUILD_ID)
+CFLAGS_NOUNICODE=-nologo -W4 -WX -I. -I..\lib -I..\crt -I..\libwin -I..\libdlg -I..\libsh -DYORI_VER_MAJOR=$(YORI_VER_MAJOR) -DYORI_VER_MINOR=$(YORI_VER_MINOR) -DYORI_BUILD_ID=$(YORI_BUILD_ID)
 LDFLAGS=-OPT:REF
 LIBFLAGS=
 LIBS=kernel32.lib
@@ -67,10 +67,11 @@ LDFLAGS=$(LDFLAGS) -DEBUG
 CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -DMINICRT
 LDFLAGS=$(LDFLAGS) -nodefaultlib
 YORICRT=..\crt\yoricrt.lib
+YORIDLG=..\libdlg\yoridlg.lib
 YORILIB=..\lib\yorilib.lib
 YORIPKG=..\pkglib\yoripkg.lib
+YORISH=..\libsh\yorish.lib
 YORIWIN=..\libwin\yoriwin.lib
-YORIDLG=..\libdlg\yoridlg.lib
 CRTLIB=$(YORICRT)
 
 !IF $(PROBECOMPILER)==1

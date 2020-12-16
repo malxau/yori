@@ -26,6 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#include <yorish.h>
 #ifdef YORI_BUILTIN
 #include <yoricall.h>
 #endif
@@ -270,7 +271,7 @@ ForBreakArgumentsAsNeeded(
             }
 
             if (!QuoteOpen) {
-                if (YoriLibIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+                if (YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
 
                     PYORI_STRING NewArgV;
                     DWORD NewArgCount;

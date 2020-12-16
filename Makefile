@@ -64,6 +64,7 @@ DIRS=crt       \
      lib       \
      libwin    \
      libdlg    \
+     libsh     \
      builtins  \
      assoc     \
      cab       \
