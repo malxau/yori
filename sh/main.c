@@ -700,7 +700,7 @@ ymain (
 
             YoriShPostCommand();
             YoriShScanJobsReportCompletion(FALSE);
-            YoriShScanProcessBuffersForTeardown(FALSE);
+            YoriLibShScanProcessBuffersForTeardown(FALSE);
             if (YoriShGlobal.ExitProcess) {
                 break;
             }
@@ -734,7 +734,7 @@ ymain (
         YoriShSaveHistoryToFile();
     }
 
-    YoriShScanProcessBuffersForTeardown(TRUE);
+    YoriLibShScanProcessBuffersForTeardown(TRUE);
     YoriShScanJobsReportCompletion(TRUE);
     YoriShClearAllHistory();
     YoriShClearAllAliases();

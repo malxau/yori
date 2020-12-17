@@ -17,7 +17,6 @@ OBJS=\
 	alias.obj        \
 	api.obj          \
 	builtin.obj      \
-	cmdbuf.obj       \
 	complete.obj     \
 	env.obj          \
 	exec.obj         \

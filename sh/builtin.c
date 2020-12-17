@@ -190,30 +190,30 @@ PYORI_SH_LOADED_MODULE YoriShActiveModule = NULL;
  */
 DWORD
 YoriShBuckPass (
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
     __in DWORD ExtraArgCount,
     ...
     )
 {
-    YORI_SH_CMD_CONTEXT OldCmdContext;
+    YORI_LIBSH_CMD_CONTEXT OldCmdContext;
     DWORD ExitCode = 1;
     DWORD count;
     BOOL ExecAsBuiltin = FALSE;
     va_list marker;
 
-    memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_SH_CMD_CONTEXT));
+    memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_LIBSH_CMD_CONTEXT));
 
     ExecContext->CmdToExec.ArgC += ExtraArgCount;
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
+    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
     if (ExecContext->CmdToExec.MemoryToFree == NULL) {
-        memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
+        memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_LIBSH_CMD_CONTEXT));
         return ExitCode;
     }
 
     ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
 
-    ExecContext->CmdToExec.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
-    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_SH_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
+    ExecContext->CmdToExec.ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
+    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_LIBSH_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
 
     va_start(marker, ExtraArgCount);
     for (count = 0; count < ExtraArgCount; count++) {
@@ -248,10 +248,10 @@ YoriShBuckPass (
     va_end(marker);
 
     for (count = 0; count < OldCmdContext.ArgC; count++) {
-        YoriShCopyArg(&OldCmdContext, count, &ExecContext->CmdToExec, count + ExtraArgCount);
+        YoriLibShCopyArg(&OldCmdContext, count, &ExecContext->CmdToExec, count + ExtraArgCount);
     }
 
-    YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
+    YoriLibShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
 
     if (ExecAsBuiltin) {
         ExitCode = YoriShBuiltIn(ExecContext);
@@ -260,8 +260,8 @@ YoriShBuckPass (
         ExitCode = YoriShExecuteSingleProgram(ExecContext);
     }
 
-    YoriShFreeCmdContext(&ExecContext->CmdToExec);
-    memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
+    YoriLibShFreeCmdContext(&ExecContext->CmdToExec);
+    memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_LIBSH_CMD_CONTEXT));
 
     return ExitCode;
 }
@@ -283,30 +283,30 @@ YoriShBuckPass (
  */
 DWORD
 YoriShBuckPassToCmd (
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
     __in DWORD ExtraArgCount,
     ...
     )
 {
-    YORI_SH_CMD_CONTEXT OldCmdContext;
+    YORI_LIBSH_CMD_CONTEXT OldCmdContext;
     DWORD ExitCode = EXIT_SUCCESS;
     DWORD count;
     va_list marker;
 
-    memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_SH_CMD_CONTEXT));
+    memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_LIBSH_CMD_CONTEXT));
 
     ExecContext->CmdToExec.ArgC = ExtraArgCount + 1;
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
+    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
     if (ExecContext->CmdToExec.MemoryToFree == NULL) {
-        memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
+        memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_LIBSH_CMD_CONTEXT));
         ExitCode = EXIT_FAILURE;
         return ExitCode;
     }
 
     ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
 
-    ExecContext->CmdToExec.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
-    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_SH_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
+    ExecContext->CmdToExec.ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
+    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_LIBSH_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
 
     va_start(marker, ExtraArgCount);
     for (count = 0; count < ExtraArgCount; count++) {
@@ -341,22 +341,22 @@ YoriShBuckPassToCmd (
     va_end(marker);
 
     YoriLibInitEmptyString(&ExecContext->CmdToExec.ArgV[ExtraArgCount]);
-    if (!YoriShBuildCmdlineFromCmdContext(&OldCmdContext, &ExecContext->CmdToExec.ArgV[ExtraArgCount], FALSE, NULL, NULL)) {
+    if (!YoriLibShBuildCmdlineFromCmdContext(&OldCmdContext, &ExecContext->CmdToExec.ArgV[ExtraArgCount], FALSE, NULL, NULL)) {
         ExitCode = EXIT_FAILURE;
     } else {
         ExecContext->CmdToExec.ArgContexts[ExtraArgCount].Quoted = TRUE;
         ExecContext->CmdToExec.ArgContexts[ExtraArgCount].QuoteTerminated = TRUE;
     }
 
-    YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
+    YoriLibShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
 
     if (ExitCode == EXIT_SUCCESS) {
         ExecContext->IncludeEscapesAsLiteral = TRUE;
         ExitCode = YoriShExecuteSingleProgram(ExecContext);
     }
 
-    YoriShFreeCmdContext(&ExecContext->CmdToExec);
-    memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_SH_CMD_CONTEXT));
+    YoriLibShFreeCmdContext(&ExecContext->CmdToExec);
+    memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_LIBSH_CMD_CONTEXT));
 
     return ExitCode;
 }
@@ -374,21 +374,21 @@ YoriShBuckPassToCmd (
 int
 YoriShExecuteInProc(
     __in PYORI_CMD_BUILTIN Fn,
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
-    YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     BOOLEAN WasPipe = FALSE;
-    PYORI_SH_CMD_CONTEXT OriginalCmdContext = &ExecContext->CmdToExec;
-    PYORI_SH_CMD_CONTEXT SavedEscapedCmdContext;
-    YORI_SH_CMD_CONTEXT NoEscapesCmdContext;
+    PYORI_LIBSH_CMD_CONTEXT OriginalCmdContext = &ExecContext->CmdToExec;
+    PYORI_LIBSH_CMD_CONTEXT SavedEscapedCmdContext;
+    YORI_LIBSH_CMD_CONTEXT NoEscapesCmdContext;
     YORI_STRING CmdLine;
     PYORI_STRING ArgV;
     DWORD ArgC;
     DWORD Count;
     DWORD ExitCode = 0;
 
-    if (!YoriShRemoveEscapesFromCmdContext(OriginalCmdContext, &NoEscapesCmdContext)) {
+    if (!YoriLibShRemoveEscapesFromCmdContext(OriginalCmdContext, &NoEscapesCmdContext)) {
         return ERROR_OUTOFMEMORY;
     }
 
@@ -425,8 +425,8 @@ YoriShExecuteInProc(
             ArgV == NoEscapesCmdContext.ArgV) {
 
             YoriLibInitEmptyString(&CmdLine);
-            if (!YoriShBuildCmdlineFromCmdContext(&NoEscapesCmdContext, &CmdLine, TRUE, NULL, NULL)) {
-                YoriShFreeCmdContext(&NoEscapesCmdContext);
+            if (!YoriLibShBuildCmdlineFromCmdContext(&NoEscapesCmdContext, &CmdLine, TRUE, NULL, NULL)) {
+                YoriLibShFreeCmdContext(&NoEscapesCmdContext);
                 return ERROR_OUTOFMEMORY;
             }
 
@@ -435,7 +435,7 @@ YoriShExecuteInProc(
             YoriLibFreeStringContents(&CmdLine);
 
             if (ArgV == NULL) {
-                YoriShFreeCmdContext(&NoEscapesCmdContext);
+                YoriLibShFreeCmdContext(&NoEscapesCmdContext);
                 return ERROR_OUTOFMEMORY;
             }
         }
@@ -449,7 +449,7 @@ YoriShExecuteInProc(
             }
             YoriLibDereference(ArgV);
         }
-        YoriShFreeCmdContext(&NoEscapesCmdContext);
+        YoriLibShFreeCmdContext(&NoEscapesCmdContext);
 
         return ExitCode;
     }
@@ -462,13 +462,13 @@ YoriShExecuteInProc(
 
     if (ExecContext->StdOutType == StdOutTypeBuffer) {
         if (ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
-            if (YoriShAppendToExistingProcessBuffer(ExecContext)) {
+            if (YoriLibShAppendToExistingProcessBuffer(ExecContext)) {
                 ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
             } else {
                 ExecContext->StdOut.Buffer.ProcessBuffers = NULL;
             }
         } else {
-            if (YoriShCreateNewProcessBuffer(ExecContext)) {
+            if (YoriLibShCreateNewProcessBuffer(ExecContext)) {
                 ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
             }
         }
@@ -483,7 +483,7 @@ YoriShExecuteInProc(
     YoriShRevertRedirection(&PreviousRedirectContext);
 
     if (WasPipe) {
-        YoriShForwardProcessBufferToNextProcess(ExecContext);
+        YoriLibShForwardProcessBufferToNextProcess(ExecContext);
     } else {
 
         //
@@ -494,13 +494,13 @@ YoriShExecuteInProc(
         if (ExecContext->StdOutType == StdOutTypeBuffer &&
             ExecContext->StdOut.Buffer.ProcessBuffers != NULL)  {
 
-            YoriShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
+            YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
         }
 
         if (ExecContext->StdErrType == StdErrTypeBuffer &&
             ExecContext->StdErr.Buffer.ProcessBuffers != NULL) {
 
-            YoriShWaitForProcessBufferToFinalize(ExecContext->StdErr.Buffer.ProcessBuffers);
+            YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdErr.Buffer.ProcessBuffers);
         }
     }
 
@@ -510,7 +510,7 @@ YoriShExecuteInProc(
         }
         YoriLibDereference(ArgV);
     }
-    YoriShFreeCmdContext(&NoEscapesCmdContext);
+    YoriLibShFreeCmdContext(&NoEscapesCmdContext);
 
     return ExitCode;
 }
@@ -532,7 +532,7 @@ __success(return)
 BOOL
 YoriShExecuteNamedModuleInProc(
     __in LPTSTR ModuleFileName,
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
     __out PDWORD ExitCode
     )
 {
@@ -575,11 +575,11 @@ YoriShExecuteNamedModuleInProc(
  */
 DWORD
 YoriShBuiltIn (
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     DWORD ExitCode = 1;
-    PYORI_SH_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
+    PYORI_LIBSH_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
     PYORI_CMD_BUILTIN BuiltInCmd = NULL;
     PYORI_SH_BUILTIN_CALLBACK CallbackEntry = NULL;
     PYORI_HASH_ENTRY HashEntry;
@@ -854,27 +854,32 @@ YoriShExecuteBuiltinString(
     __in PYORI_STRING Expression
     )
 {
-    YORI_SH_EXEC_PLAN ExecPlan;
-    YORI_SH_CMD_CONTEXT CmdContext;
-    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
+    YORI_LIBSH_EXEC_PLAN ExecPlan;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
 
     //
     //  Parse the expression we're trying to execute.
     //
 
-    if (!YoriShParseCmdlineToCmdContext(Expression, 0, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(Expression, 0, &CmdContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         return FALSE;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
-    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (!YoriLibShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
@@ -882,15 +887,15 @@ YoriShExecuteBuiltinString(
 
     if (ExecContext->NextProgram != NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Attempt to invoke multi component expression as a builtin\n"));
-        YoriShFreeExecPlan(&ExecPlan);
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeExecPlan(&ExecPlan);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     YoriShGlobal.ErrorLevel = YoriShBuiltIn(ExecContext);
 
-    YoriShFreeExecPlan(&ExecPlan);
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeExecPlan(&ExecPlan);
+    YoriLibShFreeCmdContext(&CmdContext);
 
     return TRUE;
 }

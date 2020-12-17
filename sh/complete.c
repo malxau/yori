@@ -1498,14 +1498,19 @@ YoriShResolveTabCompletionStringToAction(
     __out PYORI_SH_ARG_TAB_COMPLETION_ACTION TabCompletionAction
     )
 {
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
 
-    if (!YoriShParseCmdlineToCmdContext(TabCompletionString, 0, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(TabCompletionString, 0, &CmdContext)) {
         return FALSE;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
@@ -1524,7 +1529,7 @@ YoriShResolveTabCompletionStringToAction(
     } else if (YoriLibCompareStringWithLiteralInsensitive(&CmdContext.ArgV[0], _T("/sensitivelist")) == 0) {
         TabCompletionAction->CompletionAction = CompletionActionTypeSensitiveList;
     } else {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
@@ -1547,7 +1552,7 @@ YoriShResolveTabCompletionStringToAction(
 
             Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (CmdContext.ArgV[Count].LengthInChars + 1) * sizeof(TCHAR));
             if (Match == NULL) {
-                YoriShFreeCmdContext(&CmdContext);
+                YoriLibShFreeCmdContext(&CmdContext);
                 return TRUE;
             }
 
@@ -1571,7 +1576,7 @@ YoriShResolveTabCompletionStringToAction(
         }
     }
 
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeCmdContext(&CmdContext);
     return TRUE;
 }
 
@@ -1595,7 +1600,7 @@ YoriShResolveTabCompletionStringToAction(
 BOOL
 YoriShResolveTabCompletionActionForExecutable(
     __inout PYORI_SH_TAB_COMPLETE_CONTEXT TabContext,
-    __in PYORI_SH_CMD_CONTEXT CmdContext,
+    __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __in DWORD CurrentArg,
     __out PYORI_SH_ARG_TAB_COMPLETION_ACTION Action
     )
@@ -1674,12 +1679,12 @@ YoriShResolveTabCompletionActionForExecutable(
 
     YoriLibInitEmptyString(&FullArgs);
     if (CmdContext->ArgC > 1) {
-        YORI_SH_CMD_CONTEXT NewCmdContext;
+        YORI_LIBSH_CMD_CONTEXT NewCmdContext;
         ZeroMemory(&NewCmdContext, sizeof(NewCmdContext));
         NewCmdContext.ArgC = CmdContext->ArgC - 1;
         NewCmdContext.ArgV = &CmdContext->ArgV[1];
         NewCmdContext.ArgContexts = &CmdContext->ArgContexts[1];
-        YoriShBuildCmdlineFromCmdContext(&NewCmdContext, &FullArgs, FALSE, NULL, NULL);
+        YoriLibShBuildCmdlineFromCmdContext(&NewCmdContext, &FullArgs, FALSE, NULL, NULL);
     }
 
     YoriLibInitEmptyString(&ArgToComplete);
@@ -1744,12 +1749,12 @@ VOID
 YoriShPerformArgumentTabCompletion(
     __inout PYORI_SH_TAB_COMPLETE_CONTEXT TabContext,
     __in BOOL ExpandFullPath,
-    __in PYORI_SH_CMD_CONTEXT CmdContext
+    __in PYORI_LIBSH_CMD_CONTEXT CmdContext
     )
 {
     YORI_SH_ARG_TAB_COMPLETION_ACTION CompletionAction;
-    YORI_SH_EXEC_PLAN ExecPlan;
-    PYORI_SH_SINGLE_EXEC_CONTEXT CurrentExecContext;
+    YORI_LIBSH_EXEC_PLAN ExecPlan;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT CurrentExecContext;
     DWORD CurrentExecContextArg;
     DWORD CurrentExecContextArgOffset;
     BOOL ActiveExecContextArg;
@@ -1806,7 +1811,7 @@ YoriShPerformArgumentTabCompletion(
 
     KeepSorted = TRUE;
 
-    if (!YoriShParseCmdContextToExecPlan(CmdContext, &ExecPlan, &CurrentExecContext, &ActiveExecContextArg, &CurrentExecContextArg, &CurrentExecContextArgOffset)) {
+    if (!YoriLibShParseCmdContextToExecPlan(CmdContext, &ExecPlan, &CurrentExecContext, &ActiveExecContextArg, &CurrentExecContextArg, &CurrentExecContextArgOffset)) {
         return;
     }
 
@@ -1854,7 +1859,7 @@ YoriShPerformArgumentTabCompletion(
         //
 
         if (!YoriShResolveCommandToExecutable(&CurrentExecContext->CmdToExec, &ExecutableFound)) {
-            YoriShFreeExecPlan(&ExecPlan);
+            YoriLibShFreeExecPlan(&ExecPlan);
             return;
         }
 
@@ -1863,7 +1868,7 @@ YoriShPerformArgumentTabCompletion(
         //
 
         if (!YoriShResolveTabCompletionActionForExecutable(TabContext, &CurrentExecContext->CmdToExec, CurrentExecContextArg, &CompletionAction)) {
-            YoriShFreeExecPlan(&ExecPlan);
+            YoriLibShFreeExecPlan(&ExecPlan);
             return;
         }
     }
@@ -1911,7 +1916,7 @@ YoriShPerformArgumentTabCompletion(
         YoriLibDereference(Match);
     }
 
-    YoriShFreeExecPlan(&ExecPlan);
+    YoriLibShFreeExecPlan(&ExecPlan);
 }
 
 /**
@@ -1928,7 +1933,7 @@ YoriShPerformArgumentTabCompletion(
 VOID
 YoriShPopulateTabCompletionMatches(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
-    __inout PYORI_SH_CMD_CONTEXT CmdContext,
+    __inout PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __in DWORD TabFlags
     )
 {
@@ -2078,7 +2083,7 @@ YoriShFindStringSubsetForCompletion(
     YoriLibInitEmptyString(SuffixAfterBackquoteSubstring);
 
     if (SearchType != YoriTabCompleteSearchHistory &&
-        YoriShFindBestBackquoteSubstringAtOffset(String, CurrentOffset, BackquoteSubset)) {
+        YoriLibShFindBestBackquoteSubstringAtOffset(String, CurrentOffset, BackquoteSubset)) {
 
         PrefixBeforeBackquoteSubstring->StartOfString = String->StartOfString;
         PrefixBeforeBackquoteSubstring->LengthInChars = (DWORD)(BackquoteSubset->StartOfString - String->StartOfString);
@@ -2132,7 +2137,7 @@ YoriShFindStringSubsetForCompletion(
 VOID
 YoriShCompleteGenerateNewBufferString(
     __inout PYORI_SH_INPUT_BUFFER Buffer,
-    __inout PYORI_SH_CMD_CONTEXT CmdContext,
+    __inout PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __in PYORI_STRING PrefixBeforeBackquoteSubstring,
     __in PYORI_STRING SuffixAfterBackquoteSubstring,
     __in PYORI_SH_TAB_COMPLETE_MATCH Match,
@@ -2155,7 +2160,7 @@ YoriShCompleteGenerateNewBufferString(
 
     if (Buffer->TabContext.SearchType != YoriTabCompleteSearchHistory) {
         PYORI_STRING OldArgv = NULL;
-        PYORI_SH_ARG_CONTEXT OldArgContext = NULL;
+        PYORI_LIBSH_ARG_CONTEXT OldArgContext = NULL;
         DWORD OldArgCount = 0;
 
         if (CmdContext->CurrentArg >= CmdContext->ArgC) {
@@ -2165,14 +2170,14 @@ YoriShCompleteGenerateNewBufferString(
             OldArgv = CmdContext->ArgV;
             OldArgContext = CmdContext->ArgContexts;
 
-            CmdContext->ArgV = YoriLibMalloc((CmdContext->CurrentArg + 1) * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
+            CmdContext->ArgV = YoriLibMalloc((CmdContext->CurrentArg + 1) * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
             if (CmdContext->ArgV == NULL) {
                 return;
             }
 
             CmdContext->ArgC = CmdContext->CurrentArg + 1;
-            ZeroMemory(CmdContext->ArgV, CmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
-            CmdContext->ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, CmdContext->ArgC * sizeof(YORI_STRING));
+            ZeroMemory(CmdContext->ArgV, CmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
+            CmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, CmdContext->ArgC * sizeof(YORI_STRING));
 
             memcpy(CmdContext->ArgV, OldArgv, OldArgCount * sizeof(YORI_STRING));
             for (Count = 0; Count < OldArgCount; Count++) {
@@ -2191,7 +2196,7 @@ YoriShCompleteGenerateNewBufferString(
         } else {
             CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
             CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = FALSE;
-            YoriShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
+            YoriLibShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
         }
 
         //
@@ -2219,7 +2224,7 @@ YoriShCompleteGenerateNewBufferString(
             }
         }
 
-        YoriShBuildCmdlineFromCmdContext(CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg);
+        YoriLibShBuildCmdlineFromCmdContext(CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg);
 
         if (OldArgv != NULL) {
             YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
@@ -2311,7 +2316,7 @@ YoriShTabCompletion(
     __in DWORD TabFlags
     )
 {
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_SH_TAB_COMPLETE_MATCH Match;
     YORI_STRING BackquoteSubset;
@@ -2351,12 +2356,17 @@ YoriShTabCompletion(
 
     ASSERT(Buffer->CurrentOffset >= PrefixBeforeBackquoteSubstring.LengthInChars);
 
-    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
         return FALSE;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
@@ -2399,7 +2409,7 @@ YoriShTabCompletion(
         ListEntry = &Buffer->TabContext.PreviousMatch->ListEntry;
     }
     if (ListEntry == NULL) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
@@ -2513,7 +2523,7 @@ YoriShTabCompletion(
 
     YoriLibFreeStringContents(&PrefixBeforeBackquoteSubstring);
     YoriLibFreeStringContents(&SuffixAfterBackquoteSubstring);
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeCmdContext(&CmdContext);
 
     //
     //  If there's only one match, treat the tab completion as final so
@@ -2545,7 +2555,7 @@ YoriShPrependParentDirectory(
     __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     PYORI_SH_TAB_COMPLETE_MATCH Match;
     YORI_STRING BackquoteSubset;
     DWORD OffsetInSubstring;
@@ -2562,18 +2572,23 @@ YoriShPrependParentDirectory(
 
     ASSERT(Buffer->CurrentOffset >= PrefixBeforeBackquoteSubstring.LengthInChars);
 
-    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
         return;
     }
 
     if (CmdContext.ArgC == 0 || CmdContext.CurrentArg >= CmdContext.ArgC) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
     Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars + sizeof("..\\")) * sizeof(TCHAR));
     if (Match == NULL) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
@@ -2601,7 +2616,7 @@ YoriShPrependParentDirectory(
     YoriLibDereference(Match);
     YoriLibFreeStringContents(&PrefixBeforeBackquoteSubstring);
     YoriLibFreeStringContents(&SuffixAfterBackquoteSubstring);
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeCmdContext(&CmdContext);
 }
 
 /**
@@ -2746,7 +2761,7 @@ YoriShCompleteSuggestion(
     __inout PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_SH_TAB_COMPLETE_MATCH Match;
     PYORI_STRING Arg;
@@ -2775,19 +2790,24 @@ YoriShCompleteSuggestion(
         return;
     }
 
-    if (!YoriShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&BackquoteSubset, OffsetInSubstring, &CmdContext)) {
         return;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return;
+    }
+
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
     if (CmdContext.CurrentArg != CmdContext.ArgC - 1 ||
         CmdContext.TrailingChars) {
 
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
@@ -2800,7 +2820,7 @@ YoriShCompleteSuggestion(
     if (CmdContext.ArgV[CmdContext.CurrentArg].LengthInChars < YoriShGlobal.MinimumCharsInArgBeforeSuggesting ||
         CmdContext.ArgContexts[CmdContext.CurrentArg].QuoteTerminated) {
 
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
@@ -2816,7 +2836,7 @@ YoriShCompleteSuggestion(
     Arg = &CmdContext.ArgV[CmdContext.CurrentArg];
     for (Index = 0; Index < Arg->LengthInChars; Index++) {
         if (Arg->StartOfString[Index] == '*' || Arg->StartOfString[Index] == '?') {
-            YoriShFreeCmdContext(&CmdContext);
+            YoriLibShFreeCmdContext(&CmdContext);
             return;
         }
     }
@@ -2824,7 +2844,7 @@ YoriShCompleteSuggestion(
     Index = YoriShFindFinalSlashIfSpecified(Arg);
 
     if (Arg->LengthInChars - Index < YoriShGlobal.MinimumCharsInArgBeforeSuggesting) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
@@ -2842,7 +2862,7 @@ YoriShCompleteSuggestion(
 
     ListEntry = YoriLibGetNextListEntry(&Buffer->TabContext.MatchList, NULL);
     if (ListEntry == NULL) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
@@ -2863,7 +2883,7 @@ YoriShCompleteSuggestion(
         Buffer->SuggestionString.LengthInChars -= Buffer->TabContext.CurrentArgLength;
     }
 
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeCmdContext(&CmdContext);
 }
 
 // vim:sw=4:ts=4:et:

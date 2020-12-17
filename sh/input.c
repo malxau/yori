@@ -1282,17 +1282,17 @@ YoriShMoveCursorToPriorArgument(
     __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_STRING NewString;
     DWORD BeginCurrentArg = 0;
     DWORD EndCurrentArg = 0;
 
-    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, FALSE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
         return;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
@@ -1310,8 +1310,8 @@ YoriShMoveCursorToPriorArgument(
         //
 
         if (CmdContext.CurrentArg < CmdContext.ArgC) {
-            if (!YoriShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
-                YoriShFreeCmdContext(&CmdContext);
+            if (!YoriLibShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
+                YoriLibShFreeCmdContext(&CmdContext);
                 return;
             }
             if (Buffer->CurrentOffset <= BeginCurrentArg) {
@@ -1324,13 +1324,13 @@ YoriShMoveCursorToPriorArgument(
     }
 
     if (NewString.StartOfString == NULL) {
-        YoriShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg);
+        YoriLibShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg);
     }
 
     if (NewString.StartOfString != NULL) {
         if (!YoriShReplaceInputBufferTrackDirtyRange(Buffer, &NewString)) {
             YoriLibFreeStringContents(&NewString);
-            YoriShFreeCmdContext(&CmdContext);
+            YoriLibShFreeCmdContext(&CmdContext);
             return;
         }
         Buffer->CurrentOffset = BeginCurrentArg;
@@ -1340,7 +1340,7 @@ YoriShMoveCursorToPriorArgument(
         YoriLibFreeStringContents(&NewString);
     }
 
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeCmdContext(&CmdContext);
 }
 
 /**
@@ -1356,18 +1356,18 @@ YoriShMoveCursorToNextArgument(
     __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_STRING NewString;
     DWORD BeginCurrentArg;
     DWORD EndCurrentArg;
     BOOL MoveToEnd = FALSE;
 
-    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, FALSE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
         return;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
@@ -1378,9 +1378,9 @@ YoriShMoveCursorToNextArgument(
     }
 
     YoriLibInitEmptyString(&NewString);
-    if (YoriShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
+    if (YoriLibShBuildCmdlineFromCmdContext(&CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
         if (!YoriShReplaceInputBufferTrackDirtyRange(Buffer, &NewString)) {
-            YoriShFreeCmdContext(&CmdContext);
+            YoriLibShFreeCmdContext(&CmdContext);
             YoriLibFreeStringContents(&NewString);
             return;
         }
@@ -1395,7 +1395,7 @@ YoriShMoveCursorToNextArgument(
         YoriLibFreeStringContents(&NewString);
     }
 
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeCmdContext(&CmdContext);
 }
 
 /**
@@ -1408,39 +1408,39 @@ YoriShDeleteArgument(
     __in PYORI_SH_INPUT_BUFFER Buffer
     )
 {
-    YORI_SH_CMD_CONTEXT CmdContext;
-    YORI_SH_CMD_CONTEXT NewCmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT NewCmdContext;
     DWORD SrcArg;
     DWORD DestArg;
     YORI_STRING NewString;
     DWORD BeginCurrentArg;
     DWORD EndCurrentArg;
 
-    if (!YoriShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, FALSE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&Buffer->String, Buffer->CurrentOffset, &CmdContext)) {
         return;
     }
 
     if (CmdContext.ArgC == 0 || CmdContext.CurrentArg >= CmdContext.ArgC) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
     memcpy(&NewCmdContext, &CmdContext, sizeof(CmdContext));
-    NewCmdContext.MemoryToFree = YoriLibReferencedMalloc((CmdContext.ArgC - 1) * (sizeof(YORI_STRING) + sizeof(YORI_SH_ARG_CONTEXT)));
+    NewCmdContext.MemoryToFree = YoriLibReferencedMalloc((CmdContext.ArgC - 1) * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
     if (NewCmdContext.MemoryToFree == NULL) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return;
     }
 
     NewCmdContext.ArgC = CmdContext.ArgC - 1;
     NewCmdContext.ArgV = NewCmdContext.MemoryToFree;
-    NewCmdContext.ArgContexts = (PYORI_SH_ARG_CONTEXT)YoriLibAddToPointer(NewCmdContext.ArgV, NewCmdContext.ArgC * sizeof(YORI_STRING));
+    NewCmdContext.ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(NewCmdContext.ArgV, NewCmdContext.ArgC * sizeof(YORI_STRING));
 
 
     DestArg = 0;
     for (SrcArg = 0; SrcArg < CmdContext.ArgC; SrcArg++) {
         if (SrcArg != CmdContext.CurrentArg) {
-            YoriShCopyArg(&CmdContext, SrcArg, &NewCmdContext, DestArg);
+            YoriLibShCopyArg(&CmdContext, SrcArg, &NewCmdContext, DestArg);
             DestArg++;
         }
     }
@@ -1450,10 +1450,10 @@ YoriShDeleteArgument(
     }
 
     YoriLibInitEmptyString(&NewString);
-    if (YoriShBuildCmdlineFromCmdContext(&NewCmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
+    if (YoriLibShBuildCmdlineFromCmdContext(&NewCmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
         if (!YoriShReplaceInputBufferTrackDirtyRange(Buffer, &NewString)) {
-            YoriShFreeCmdContext(&CmdContext);
-            YoriShFreeCmdContext(&NewCmdContext);
+            YoriLibShFreeCmdContext(&CmdContext);
+            YoriLibShFreeCmdContext(&NewCmdContext);
             YoriLibFreeStringContents(&NewString);
             return;
         }
@@ -1469,8 +1469,8 @@ YoriShDeleteArgument(
         YoriShClearTabCompletionMatches(Buffer);
     }
 
-    YoriShFreeCmdContext(&CmdContext);
-    YoriShFreeCmdContext(&NewCmdContext);
+    YoriLibShFreeCmdContext(&CmdContext);
+    YoriLibShFreeCmdContext(&NewCmdContext);
 }
 
 /**
@@ -1500,7 +1500,7 @@ YoriShHotkey(
     DWORD FunctionIndex;
     TCHAR NewStringBuffer[32];
     YORI_STRING NewString;
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_STRING CmdLine;
 
     if (CtrlMask & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) {
@@ -1519,23 +1519,28 @@ YoriShHotkey(
 
     NewString.LengthInChars = YoriLibSPrintf(NewString.StartOfString, _T("%sF%i"), CtrlPressed?_T("Ctrl"):_T(""), FunctionIndex);
 
-    if (!YoriShParseCmdlineToCmdContext(&NewString, 0, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&NewString, 0, &CmdContext)) {
         return FALSE;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (!YoriShExpandAlias(&CmdContext)) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     YoriLibInitEmptyString(&CmdLine);
-    YoriShBuildCmdlineFromCmdContext(&CmdContext, &CmdLine, FALSE, NULL, NULL);
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShBuildCmdlineFromCmdContext(&CmdContext, &CmdLine, FALSE, NULL, NULL);
+    YoriLibShFreeCmdContext(&CmdContext);
     if (CmdLine.StartOfString == NULL) {
         return FALSE;
     }

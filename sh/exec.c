@@ -45,7 +45,7 @@
  */
 VOID
 YoriShCaptureRedirectContext(
-    __out PYORI_SH_PREVIOUS_REDIRECT_CONTEXT RedirectContext
+    __out PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT RedirectContext
     )
 {
     RedirectContext->ResetInput = FALSE;
@@ -73,10 +73,10 @@ YoriShCaptureRedirectContext(
  */
 VOID
 YoriShRevertRedirection(
-    __in PYORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    __in PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
     )
 {
-    YORI_SH_PREVIOUS_REDIRECT_CONTEXT CurrentRedirectContext;
+    YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT CurrentRedirectContext;
 
     SetConsoleCtrlHandler(NULL, TRUE);
 
@@ -127,9 +127,9 @@ YoriShRevertRedirection(
  */
 DWORD
 YoriShInitializeRedirection(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
     __in BOOL PrepareForBuiltIn,
-    __out PYORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    __out PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
     )
 {
     SECURITY_ATTRIBUTES InheritHandle;
@@ -627,14 +627,14 @@ YoriShSuckEnv(
  */
 DWORD
 YoriShCreateProcess(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
     __out_opt PBOOL FailedInRedirection
     )
 {
     YORI_STRING CmdLine;
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
-    YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     DWORD CreationFlags = 0;
     DWORD LastError;
 
@@ -644,7 +644,7 @@ YoriShCreateProcess(
     }
 
     YoriLibInitEmptyString(&CmdLine);
-    if (!YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &CmdLine, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL)) {
+    if (!YoriLibShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &CmdLine, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL)) {
         return ERROR_OUTOFMEMORY;
     }
     ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
@@ -697,7 +697,7 @@ YoriShCreateProcess(
  */
 VOID
 YoriShCleanupFailedProcessLaunch(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     if (ExecContext->StdOutType == StdOutTypePipe &&
@@ -717,7 +717,7 @@ YoriShCleanupFailedProcessLaunch(
  */
 VOID
 YoriShCommenceProcessBuffersIfNeeded(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     //
@@ -731,13 +731,13 @@ YoriShCommenceProcessBuffersIfNeeded(
 
         if (ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
             ASSERT(ExecContext->StdErrType != StdErrTypeBuffer);
-            if (YoriShAppendToExistingProcessBuffer(ExecContext)) {
+            if (YoriLibShAppendToExistingProcessBuffer(ExecContext)) {
                 ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
             } else {
                 ExecContext->StdOut.Buffer.ProcessBuffers = NULL;
             }
         } else {
-            if (YoriShCreateNewProcessBuffer(ExecContext)) {
+            if (YoriLibShCreateNewProcessBuffer(ExecContext)) {
                 if (ExecContext->StdOutType == StdOutTypeBuffer) {
                     ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
                 }
@@ -760,14 +760,14 @@ YoriShCommenceProcessBuffersIfNeeded(
 
  @return Pointer to the information block about the child process.
  */
-PYORI_SH_DEBUGGED_CHILD_PROCESS
+PYORI_LIBSH_DEBUGGED_CHILD_PROCESS
 YoriShFindDebuggedChildProcess(
     __in PYORI_LIST_ENTRY ListHead,
     __in DWORD dwProcessId
     )
 {
     PYORI_LIST_ENTRY ListEntry;
-    PYORI_SH_DEBUGGED_CHILD_PROCESS Process;
+    PYORI_LIBSH_DEBUGGED_CHILD_PROCESS Process;
 
     ListEntry = NULL;
     while (TRUE) {
@@ -776,7 +776,7 @@ YoriShFindDebuggedChildProcess(
             break;
         }
 
-        Process = CONTAINING_RECORD(ListEntry, YORI_SH_DEBUGGED_CHILD_PROCESS, ListEntry);
+        Process = CONTAINING_RECORD(ListEntry, YORI_LIBSH_DEBUGGED_CHILD_PROCESS, ListEntry);
         if (Process->dwProcessId == dwProcessId) {
             return Process;
         }
@@ -794,7 +794,7 @@ typedef struct _YORI_SH_DEBUG_THREAD_CONTEXT {
     /**
      A referenced ExecContext indicating the process to launch.
      */
-    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
 
     /**
      An event to signal once the process has been launched, indicating that
@@ -821,9 +821,9 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     )
 {
     PYORI_SH_DEBUG_THREAD_CONTEXT ThreadContext = (PYORI_SH_DEBUG_THREAD_CONTEXT)Context;
-    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext = ThreadContext->ExecContext;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext = ThreadContext->ExecContext;
     HANDLE InitializedEvent = ThreadContext->InitializedEvent;
-    PYORI_SH_DEBUGGED_CHILD_PROCESS DebuggedChild;
+    PYORI_LIBSH_DEBUGGED_CHILD_PROCESS DebuggedChild;
     YORI_STRING OriginalAliases;
     DWORD Err;
     BOOL HaveOriginalAliases;
@@ -844,7 +844,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
         YoriLibFreeWinErrorText(ErrText);
         YoriShCleanupFailedProcessLaunch(ExecContext);
         YoriLibFreeStringContents(&OriginalAliases);
-        YoriShDereferenceExecContext(ExecContext, TRUE);
+        YoriLibShDereferenceExecContext(ExecContext, TRUE);
         SetEvent(InitializedEvent);
         return 0;
     }
@@ -871,12 +871,12 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
             case CREATE_PROCESS_DEBUG_EVENT:
                 CloseHandle(DbgEvent.u.CreateProcessInfo.hFile);
 
-                DebuggedChild = YoriLibReferencedMalloc(sizeof(YORI_SH_DEBUGGED_CHILD_PROCESS));
+                DebuggedChild = YoriLibReferencedMalloc(sizeof(YORI_LIBSH_DEBUGGED_CHILD_PROCESS));
                 if (DebuggedChild == NULL) {
                     break;
                 }
 
-                ZeroMemory(DebuggedChild, sizeof(YORI_SH_DEBUGGED_CHILD_PROCESS));
+                ZeroMemory(DebuggedChild, sizeof(YORI_LIBSH_DEBUGGED_CHILD_PROCESS));
                 if (!DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hProcess, GetCurrentProcess(), &DebuggedChild->hProcess, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
                     YoriLibDereference(DebuggedChild);
                     break;
@@ -1020,7 +1020,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     }
 
     ExecContext->DebugPumpThreadFinished = TRUE;
-    YoriShDereferenceExecContext(ExecContext, TRUE);
+    YoriLibShDereferenceExecContext(ExecContext, TRUE);
     return 0;
 }
 
@@ -1035,7 +1035,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
  */
 VOID
 YoriShWaitForProcessToTerminate(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     HANDLE WaitOn[3];
@@ -1077,11 +1077,11 @@ YoriShWaitForProcessToTerminate(
             return;
         }
 
-        YoriShReferenceExecContext(ExecContext);
+        YoriLibShReferenceExecContext(ExecContext);
         ThreadContext.ExecContext = ExecContext;
         ExecContext->hDebuggerThread = CreateThread(NULL, 0, YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit, &ThreadContext, 0, &ThreadId);
         if (ExecContext->hDebuggerThread == NULL) {
-            YoriShDereferenceExecContext(ExecContext, TRUE);
+            YoriLibShDereferenceExecContext(ExecContext, TRUE);
             CloseHandle(ThreadContext.InitializedEvent);
             YoriLibCancelEnable();
             YoriLibCancelIgnore();
@@ -1121,13 +1121,13 @@ YoriShWaitForProcessToTerminate(
             if (ExecContext->StdOutType == StdOutTypeBuffer &&
                 ExecContext->StdOut.Buffer.ProcessBuffers != NULL)  {
 
-                YoriShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
+                YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
             }
 
             if (ExecContext->StdErrType == StdErrTypeBuffer &&
                 ExecContext->StdErr.Buffer.ProcessBuffers != NULL) {
 
-                YoriShWaitForProcessBufferToFinalize(ExecContext->StdErr.Buffer.ProcessBuffers);
+                YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdErr.Buffer.ProcessBuffers);
             }
             break;
         }
@@ -1304,14 +1304,14 @@ YoriShWaitForProcessToTerminate(
 __success(return)
 BOOL
 YoriShExecViaShellExecute(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
     __out PPROCESS_INFORMATION ProcessInfo
     )
 {
     YORI_STRING Args;
-    YORI_SH_CMD_CONTEXT ArgContext;
+    YORI_LIBSH_CMD_CONTEXT ArgContext;
     YORI_SHELLEXECUTEINFO sei;
-    YORI_SH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     DWORD LastError;
 
     YoriLibLoadShell32Functions();
@@ -1339,11 +1339,11 @@ YoriShExecViaShellExecute(
     sei.lpFile = ExecContext->CmdToExec.ArgV[0].StartOfString;
     YoriLibInitEmptyString(&Args);
     if (ExecContext->CmdToExec.ArgC > 1) {
-        memcpy(&ArgContext, &ExecContext->CmdToExec, sizeof(YORI_SH_CMD_CONTEXT));
+        memcpy(&ArgContext, &ExecContext->CmdToExec, sizeof(YORI_LIBSH_CMD_CONTEXT));
         ArgContext.ArgC--;
         ArgContext.ArgV = &ArgContext.ArgV[1];
         ArgContext.ArgContexts = &ArgContext.ArgContexts[1];
-        YoriShBuildCmdlineFromCmdContext(&ArgContext, &Args, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
+        YoriLibShBuildCmdlineFromCmdContext(&ArgContext, &Args, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL);
     }
 
     sei.lpParameters = Args.StartOfString;
@@ -1416,7 +1416,7 @@ YoriShExecViaShellExecute(
  */
 DWORD
 YoriShExecuteSingleProgram(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     DWORD ExitCode = 0;
@@ -1443,12 +1443,12 @@ YoriShExecuteSingleProgram(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
                 ExecProcess = FALSE;
-                YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
+                YoriLibShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
                 ExitCode = YoriShBuckPass(ExecContext, 1, _T("ys"));
             } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".cmd")) == 0 ||
                        YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".bat")) == 0) {
                 ExecProcess = FALSE;
-                YoriShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
+                YoriLibShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
                 if (ExecContext->WaitForCompletion) {
                     ExecContext->CaptureEnvironmentOnExit = TRUE;
                 }
@@ -1550,10 +1550,10 @@ YoriShExecuteSingleProgram(
  */
 VOID
 YoriShCancelExecPlan(
-    __in PYORI_SH_EXEC_PLAN ExecPlan
+    __in PYORI_LIBSH_EXEC_PLAN ExecPlan
     )
 {
-    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
 
     //
     //  Loop and ask the processes nicely to terminate.
@@ -1616,7 +1616,7 @@ YoriShCancelExecPlan(
  */
 VOID
 YoriShExecViaSubshell(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     YORI_STRING PathToYori;
@@ -1645,11 +1645,11 @@ YoriShExecViaSubshell(
  */
 VOID
 YoriShExecExecPlan(
-    __in PYORI_SH_EXEC_PLAN ExecPlan,
+    __in PYORI_LIBSH_EXEC_PLAN ExecPlan,
     __out_opt PVOID * OutputBuffer
     )
 {
-    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
     PVOID PreviouslyObservedOutputBuffer = NULL;
     BOOL ExecutableFound;
 
@@ -1800,9 +1800,9 @@ YoriShExecuteExpressionAndCaptureOutput(
     __out PYORI_STRING ProcessOutput
     )
 {
-    YORI_SH_EXEC_PLAN ExecPlan;
-    PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext;
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_EXEC_PLAN ExecPlan;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     PVOID OutputBuffer;
     DWORD Index;
 
@@ -1810,19 +1810,24 @@ YoriShExecuteExpressionAndCaptureOutput(
     //  Parse the expression we're trying to execute.
     //
 
-    if (!YoriShParseCmdlineToCmdContext(Expression, 0, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(Expression, 0, &CmdContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         return FALSE;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
-    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (!YoriLibShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
@@ -1852,7 +1857,7 @@ YoriShExecuteExpressionAndCaptureOutput(
     YoriLibInitEmptyString(ProcessOutput);
     if (OutputBuffer != NULL) {
 
-        YoriShGetProcessOutputBuffer(OutputBuffer, ProcessOutput);
+        YoriLibShGetProcessOutputBuffer(OutputBuffer, ProcessOutput);
 
         //
         //  Truncate any newlines from the output, which tools
@@ -1879,8 +1884,8 @@ YoriShExecuteExpressionAndCaptureOutput(
         }
     }
 
-    YoriShFreeExecPlan(&ExecPlan);
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeExecPlan(&ExecPlan);
+    YoriLibShFreeCmdContext(&CmdContext);
 
     return TRUE;
 }
@@ -1929,7 +1934,7 @@ YoriShExpandBackquotes(
         //  create commands that can nest further backticks?
         //
 
-        if (!YoriShFindNextBackquoteSubstring(&CurrentFullExpression, &CurrentExpressionSubset, &CharsInBackquotePrefix)) {
+        if (!YoriLibShFindNextBackquoteSubstring(&CurrentFullExpression, &CurrentExpressionSubset, &CharsInBackquotePrefix)) {
             break;
         }
 
@@ -1992,8 +1997,8 @@ YoriShExecuteExpression(
     __in PYORI_STRING Expression
     )
 {
-    YORI_SH_EXEC_PLAN ExecPlan;
-    YORI_SH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_EXEC_PLAN ExecPlan;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_STRING CurrentFullExpression;
 
     //
@@ -2010,29 +2015,35 @@ YoriShExecuteExpression(
     //  Parse the expression we're trying to execute.
     //
 
-    if (!YoriShParseCmdlineToCmdContext(&CurrentFullExpression, 0, TRUE, &CmdContext)) {
+    if (!YoriLibShParseCmdlineToCmdContext(&CurrentFullExpression, 0, &CmdContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         YoriLibFreeStringContents(&CurrentFullExpression);
         return FALSE;
     }
 
     if (CmdContext.ArgC == 0) {
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         YoriLibFreeStringContents(&CurrentFullExpression);
         return FALSE;
     }
 
-    if (!YoriShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
+    if (!YoriShExpandEnvironmentInCmdContext(&CmdContext)) {
+        YoriLibShFreeCmdContext(&CmdContext);
+        YoriLibFreeStringContents(&CurrentFullExpression);
+        return FALSE;
+    }
+
+    if (!YoriLibShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error\n"));
         YoriLibFreeStringContents(&CurrentFullExpression);
-        YoriShFreeCmdContext(&CmdContext);
+        YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     YoriShExecExecPlan(&ExecPlan, NULL);
 
-    YoriShFreeExecPlan(&ExecPlan);
-    YoriShFreeCmdContext(&CmdContext);
+    YoriLibShFreeExecPlan(&ExecPlan);
+    YoriLibShFreeCmdContext(&CmdContext);
 
     YoriLibFreeStringContents(&CurrentFullExpression);
 

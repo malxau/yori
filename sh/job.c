@@ -111,7 +111,7 @@ YORI_LIST_ENTRY JobList;
 __success(return)
 BOOL
 YoriShCreateNewJob(
-    __in PYORI_SH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
     __in HANDLE hProcess,
     __in DWORD dwProcessId
     )
@@ -129,7 +129,7 @@ YoriShCreateNewJob(
 
     ZeroMemory(ThisJob, sizeof(YORI_JOB));
 
-    if (!YoriShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &ThisJob->CmdLine, TRUE, NULL, NULL)) {
+    if (!YoriLibShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &ThisJob->CmdLine, TRUE, NULL, NULL)) {
         YoriLibFree(ThisJob);
         return FALSE;
     }
@@ -141,12 +141,12 @@ YoriShCreateNewJob(
     if (ExecContext->StdOutType == StdOutTypeBuffer &&
         ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
 
-        YoriShReferenceProcessBuffer(ExecContext->StdOut.Buffer.ProcessBuffers);
+        YoriLibShReferenceProcessBuffer(ExecContext->StdOut.Buffer.ProcessBuffers);
         ThisJob->ProcessBuffers = ExecContext->StdOut.Buffer.ProcessBuffers;
     } else if (ExecContext->StdErrType == StdErrTypeBuffer &&
                ExecContext->StdErr.Buffer.ProcessBuffers != NULL) {
 
-        YoriShReferenceProcessBuffer(ExecContext->StdErr.Buffer.ProcessBuffers);
+        YoriLibShReferenceProcessBuffer(ExecContext->StdErr.Buffer.ProcessBuffers);
         ThisJob->ProcessBuffers = ExecContext->StdErr.Buffer.ProcessBuffers;
     }
 
@@ -171,7 +171,7 @@ YoriShFreeJob(
     YoriLibRemoveListItem(&ThisJob->ListEntry);
 
     if (ThisJob->ProcessBuffers != NULL) {
-        YoriShDereferenceProcessBuffer(ThisJob->ProcessBuffers);
+        YoriLibShDereferenceProcessBuffer(ThisJob->ProcessBuffers);
     }
 
     YoriLibFreeStringContents(&ThisJob->CmdLine);
@@ -399,9 +399,9 @@ YoriShGetJobOutput(
         if (ThisJob->JobId == JobId &&
             ThisJob->ProcessBuffers != NULL) {
 
-            Result = YoriShGetProcessOutputBuffer(ThisJob->ProcessBuffers, Output);
+            Result = YoriLibShGetProcessOutputBuffer(ThisJob->ProcessBuffers, Output);
             if (Result) {
-                Result = YoriShGetProcessErrorBuffer(ThisJob->ProcessBuffers, Errors);
+                Result = YoriLibShGetProcessErrorBuffer(ThisJob->ProcessBuffers, Errors);
                 if (!Result) {
                     YoriLibFreeStringContents(Output);
                 }
@@ -448,7 +448,7 @@ YoriShPipeJobOutput(
         if (ThisJob->JobId == JobId &&
             ThisJob->ProcessBuffers != NULL) {
 
-            Result = YoriShPipeProcessBuffers(ThisJob->ProcessBuffers, hPipeOutput, hPipeErrors);
+            Result = YoriLibShPipeProcessBuffers(ThisJob->ProcessBuffers, hPipeOutput, hPipeErrors);
             return Result;
         }
     }
