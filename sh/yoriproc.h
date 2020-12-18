@@ -115,9 +115,7 @@ YoriShBuckPass (
 
 DWORD
 YoriShBuckPassToCmd (
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in DWORD ExtraArgCount,
-    ...
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 __success(return)
@@ -279,18 +277,6 @@ YoriShSetEnvironmentStrings(
     );
 
 // *** EXEC.C ***
-
-DWORD
-YoriShInitializeRedirection(
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in BOOL PrepareForBuiltIn,
-    __out PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
-    );
-
-VOID
-YoriShRevertRedirection(
-    __in PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
-    );
 
 DWORD
 YoriShExecuteSingleProgram(

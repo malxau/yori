@@ -1,5 +1,5 @@
 /**
- * @file sh/exec.c
+ * @file /sh/exec.c
  *
  * Yori shell execute external program
  *
@@ -37,349 +37,6 @@
  */
 #define YORI_SH_DEBUG_DEBUGGER 0
 #endif
-
-/**
- Capture the current handles used for stdin/stdout/stderr.
-
- @param RedirectContext Pointer to the block to capture current state into.
- */
-VOID
-YoriShCaptureRedirectContext(
-    __out PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT RedirectContext
-    )
-{
-    RedirectContext->ResetInput = FALSE;
-    RedirectContext->ResetOutput = FALSE;
-    RedirectContext->ResetError = FALSE;
-    RedirectContext->StdErrRedirectsToStdOut = FALSE;
-    RedirectContext->StdOutRedirectsToStdErr = FALSE;
-
-    //
-    //  Always duplicate as noninherited.  If we don't override one of the
-    //  existing stdin/stdout/stderr values then the original inheritance
-    //  is still in effect.  These are only used to restore our process.
-    //
-
-    RedirectContext->StdInput = GetStdHandle(STD_INPUT_HANDLE);
-    RedirectContext->StdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
-    RedirectContext->StdError = GetStdHandle(STD_ERROR_HANDLE);
-}
-
-/**
- Revert the redirection context previously put in place by a call to
- @ref YoriShInitializeRedirection.
-
- @param PreviousRedirectContext The context to revert to.
- */
-VOID
-YoriShRevertRedirection(
-    __in PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
-    )
-{
-    YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT CurrentRedirectContext;
-
-    SetConsoleCtrlHandler(NULL, TRUE);
-
-    YoriShCaptureRedirectContext(&CurrentRedirectContext);
-
-    if (PreviousRedirectContext->ResetInput) {
-        SetStdHandle(STD_INPUT_HANDLE, PreviousRedirectContext->StdInput);
-        CloseHandle(CurrentRedirectContext.StdInput);
-    }
-
-    if (PreviousRedirectContext->ResetOutput) {
-        SetStdHandle(STD_OUTPUT_HANDLE, PreviousRedirectContext->StdOutput);
-        if (!PreviousRedirectContext->StdOutRedirectsToStdErr) {
-            CloseHandle(CurrentRedirectContext.StdOutput);
-        }
-    }
-
-    if (PreviousRedirectContext->ResetError) {
-        SetStdHandle(STD_ERROR_HANDLE, PreviousRedirectContext->StdError);
-        if (!PreviousRedirectContext->StdErrRedirectsToStdOut) {
-            CloseHandle(CurrentRedirectContext.StdError);
-        }
-    }
-}
-
-/**
- Temporarily set this process to have the same stdin/stdout/stderr as a
- a program that it intends to launch.  Keep information about the current
- stdin/stdout/stderr in PreviousRedirectContext so that it can be restored
- with a later call to @ref YoriShRevertRedirection.  If any error occurs,
- the Win32 error code is returned and redirection is restored to its
- original state.
-
- @param ExecContext The context of the program whose stdin/stdout/stderr
-        should be initialized.
-
- @param PrepareForBuiltIn If TRUE, leave Ctrl+C handling suppressed.  The
-        builtin program is free to enable it if it has long running
-        processing to perform, and it can install its own handler.
-
- @param PreviousRedirectContext On successful completion, this is populated
-        with the current stdin/stdout/stderr information so that it can
-        be restored later.
-
- @return ERROR_SUCCESS to indicate that redirection has been completely
-         initialized, or a Win32 error code indicating if an error has
-         occurred.
- */
-DWORD
-YoriShInitializeRedirection(
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in BOOL PrepareForBuiltIn,
-    __out PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
-    )
-{
-    SECURITY_ATTRIBUTES InheritHandle;
-    HANDLE Handle;
-    DWORD Error;
-
-    ZeroMemory(&InheritHandle, sizeof(InheritHandle));
-    InheritHandle.nLength = sizeof(InheritHandle);
-    InheritHandle.bInheritHandle = TRUE;
-
-    YoriShCaptureRedirectContext(PreviousRedirectContext);
-
-    //
-    //  MSFIX: What this is doing is allowing child processes to see Ctrl+C,
-    //  which is wrong, because we only want the foreground process to see it
-    //  which implies handling it in the shell.  Unfortunately
-    //  GenerateConsoleCtrlEvent has a nasty bug where it can only safely be
-    //  called on console processes remaining in this console, which will
-    //  require more processing to determine.
-    //
-
-    if (!PrepareForBuiltIn) {
-        SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
-        SetConsoleCtrlHandler(NULL, FALSE);
-    }
-
-    Error = ERROR_SUCCESS;
-
-    if (ExecContext->StdInType == StdInTypeFile) {
-        Handle = CreateFile(ExecContext->StdIn.File.FileName.StartOfString,
-                            GENERIC_READ,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetInput = TRUE;
-            SetStdHandle(STD_INPUT_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-    } else if (ExecContext->StdInType == StdInTypeNull) {
-        Handle = CreateFile(_T("NUL"),
-                            GENERIC_READ,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetInput = TRUE;
-            SetStdHandle(STD_INPUT_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-    } else if (ExecContext->StdInType == StdInTypePipe) {
-        if (ExecContext->StdIn.Pipe.PipeFromPriorProcess != NULL) {
-
-            YoriLibMakeInheritableHandle(ExecContext->StdIn.Pipe.PipeFromPriorProcess,
-                                         &ExecContext->StdIn.Pipe.PipeFromPriorProcess);
-
-            PreviousRedirectContext->ResetInput = TRUE;
-            SetStdHandle(STD_INPUT_HANDLE, ExecContext->StdIn.Pipe.PipeFromPriorProcess);
-            ExecContext->StdIn.Pipe.PipeFromPriorProcess = NULL;
-        } else {
-            HANDLE ReadHandle;
-            HANDLE WriteHandle;
-
-            if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
-                YoriLibMakeInheritableHandle(ReadHandle, &ReadHandle);
-                PreviousRedirectContext->ResetInput = TRUE;
-                SetStdHandle(STD_INPUT_HANDLE, ReadHandle);
-                CloseHandle(WriteHandle);
-            } else {
-                Error = GetLastError();
-            }
-        }
-    }
-
-    if (Error != ERROR_SUCCESS) {
-        YoriShRevertRedirection(PreviousRedirectContext);
-        return Error;
-    }
-
-
-    if (ExecContext->StdOutType == StdOutTypeOverwrite) {
-        Handle = CreateFile(ExecContext->StdOut.Overwrite.FileName.StartOfString,
-                            GENERIC_WRITE,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetOutput = TRUE;
-            SetStdHandle(STD_OUTPUT_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-
-    } else if (ExecContext->StdOutType == StdOutTypeAppend) {
-        Handle = CreateFile(ExecContext->StdOut.Append.FileName.StartOfString,
-                            FILE_APPEND_DATA|SYNCHRONIZE,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            OPEN_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetOutput = TRUE;
-            SetStdHandle(STD_OUTPUT_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-    } else if (ExecContext->StdOutType == StdOutTypeNull) {
-        Handle = CreateFile(_T("NUL"),
-                            GENERIC_WRITE,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetOutput = TRUE;
-            SetStdHandle(STD_OUTPUT_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-    } else if (ExecContext->StdOutType == StdOutTypePipe) {
-        HANDLE ReadHandle;
-        HANDLE WriteHandle;
-        if (ExecContext->NextProgram != NULL &&
-            ExecContext->NextProgram->StdInType == StdInTypePipe) {
-
-            if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
-
-                YoriLibMakeInheritableHandle(WriteHandle, &WriteHandle);
-
-                PreviousRedirectContext->ResetOutput = TRUE;
-                SetStdHandle(STD_OUTPUT_HANDLE, WriteHandle);
-                ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess = ReadHandle;
-            } else {
-                Error = GetLastError();
-            }
-        }
-    } else if (ExecContext->StdOutType == StdOutTypeBuffer) {
-        HANDLE ReadHandle;
-        HANDLE WriteHandle;
-        if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
-
-            YoriLibMakeInheritableHandle(WriteHandle, &WriteHandle);
-
-            PreviousRedirectContext->ResetOutput = TRUE;
-            SetStdHandle(STD_OUTPUT_HANDLE, WriteHandle);
-            ExecContext->StdOut.Buffer.PipeFromProcess = ReadHandle;
-        } else {
-            Error = GetLastError();
-        }
-    }
-
-    if (Error != ERROR_SUCCESS) {
-        YoriShRevertRedirection(PreviousRedirectContext);
-        return Error;
-    }
-
-    if (ExecContext->StdErrType == StdErrTypeOverwrite) {
-        Handle = CreateFile(ExecContext->StdErr.Overwrite.FileName.StartOfString,
-                            GENERIC_WRITE,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetError = TRUE;
-            SetStdHandle(STD_ERROR_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-
-    } else if (ExecContext->StdErrType == StdErrTypeAppend) {
-        Handle = CreateFile(ExecContext->StdErr.Append.FileName.StartOfString,
-                            FILE_APPEND_DATA|SYNCHRONIZE,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            OPEN_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetError = TRUE;
-            SetStdHandle(STD_ERROR_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-    } else if (ExecContext->StdErrType == StdErrTypeNull) {
-        Handle = CreateFile(_T("NUL"),
-                            GENERIC_WRITE,
-                            FILE_SHARE_DELETE | FILE_SHARE_READ,
-                            &InheritHandle,
-                            CREATE_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
-
-        if (Handle != INVALID_HANDLE_VALUE) {
-            PreviousRedirectContext->ResetError = TRUE;
-            SetStdHandle(STD_ERROR_HANDLE, Handle);
-        } else {
-            Error = GetLastError();
-        }
-    } else if (ExecContext->StdErrType == StdErrTypeBuffer) {
-        HANDLE ReadHandle;
-        HANDLE WriteHandle;
-        if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
-
-            YoriLibMakeInheritableHandle(WriteHandle, &WriteHandle);
-
-            PreviousRedirectContext->ResetError = TRUE;
-            SetStdHandle(STD_ERROR_HANDLE, WriteHandle);
-            ExecContext->StdErr.Buffer.PipeFromProcess = ReadHandle;
-        } else {
-            Error = GetLastError();
-        }
-    }
-
-    if (Error != ERROR_SUCCESS) {
-        YoriShRevertRedirection(PreviousRedirectContext);
-        return Error;
-    }
-
-    if (ExecContext->StdErrType == StdErrTypeStdOut) {
-        ASSERT(ExecContext->StdOutType != StdOutTypeStdErr);
-        PreviousRedirectContext->ResetError = TRUE;
-        PreviousRedirectContext->StdErrRedirectsToStdOut = TRUE;
-        SetStdHandle(STD_ERROR_HANDLE, GetStdHandle(STD_OUTPUT_HANDLE));
-    } else if (ExecContext->StdOutType == StdOutTypeStdErr) {
-        PreviousRedirectContext->ResetOutput = TRUE;
-        PreviousRedirectContext->StdOutRedirectsToStdErr = TRUE;
-        SetStdHandle(STD_OUTPUT_HANDLE, GetStdHandle(STD_ERROR_HANDLE));
-    }
-
-    return ERROR_SUCCESS;
-}
 
 /**
  The smallest unit of memory that can have protection applied.  It's not
@@ -612,144 +269,6 @@ YoriShSuckEnv(
 }
 
 /**
- A wrapper around CreateProcess that sets up redirection and launches a
- process.  The point of this function is that it can be called from the
- main thread or from a debugging thread.
-
- @param ExecContext Pointer to the ExecContext to attempt to launch via
-        CreateProcess.
-
- @param FailedInRedirection Optionally points to a boolean value to be set to
-        TRUE if any error originated while setting up redirection, and FALSE
-        if it came from launching the process.
-
- @return Win32 error code, meaning zero indicates success.
- */
-DWORD
-YoriShCreateProcess(
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __out_opt PBOOL FailedInRedirection
-    )
-{
-    YORI_STRING CmdLine;
-    PROCESS_INFORMATION ProcessInfo;
-    STARTUPINFO StartupInfo;
-    YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
-    DWORD CreationFlags = 0;
-    DWORD LastError;
-
-    ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
-    if (FailedInRedirection != NULL) {
-        *FailedInRedirection = FALSE;
-    }
-
-    YoriLibInitEmptyString(&CmdLine);
-    if (!YoriLibShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &CmdLine, !ExecContext->IncludeEscapesAsLiteral, NULL, NULL)) {
-        return ERROR_OUTOFMEMORY;
-    }
-    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-
-    memset(&StartupInfo, 0, sizeof(StartupInfo));
-    StartupInfo.cb = sizeof(StartupInfo);
-
-    if (ExecContext->RunOnSecondConsole) {
-        CreationFlags |= CREATE_NEW_CONSOLE;
-    }
-
-    if (ExecContext->CaptureEnvironmentOnExit) {
-        CreationFlags |= DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS;
-    }
-
-    CreationFlags |= CREATE_NEW_PROCESS_GROUP;
-
-    LastError = YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
-    if (LastError != ERROR_SUCCESS) {
-        YoriLibFreeStringContents(&CmdLine);
-        if (FailedInRedirection != NULL) {
-            *FailedInRedirection = TRUE;
-        }
-        return LastError;
-    }
-
-    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CreationFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
-        LastError = GetLastError();
-        YoriShRevertRedirection(&PreviousRedirectContext);
-        YoriLibFreeStringContents(&CmdLine);
-        return LastError;
-    } else {
-        YoriShRevertRedirection(&PreviousRedirectContext);
-    }
-
-    ASSERT(ExecContext->hProcess == NULL);
-    ExecContext->hProcess = ProcessInfo.hProcess;
-    ExecContext->hPrimaryThread = ProcessInfo.hThread;
-    ExecContext->dwProcessId = ProcessInfo.dwProcessId;
-
-    YoriLibFreeStringContents(&CmdLine);
-
-    return ERROR_SUCCESS;
-}
-
-/**
- Cleanup the ExecContext if the process failed to launch.
-
- @param ExecContext Pointer to the ExecContext to clean up.
- */
-VOID
-YoriShCleanupFailedProcessLaunch(
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
-    )
-{
-    if (ExecContext->StdOutType == StdOutTypePipe &&
-        ExecContext->NextProgram != NULL &&
-        ExecContext->NextProgram->StdInType == StdInTypePipe) {
-
-        CloseHandle(ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess);
-        ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess = NULL;
-        ExecContext->NextProgramType = NextProgramExecNever;
-    }
-}
-
-/**
- Start buffering process output if the process is configured for it.
-
- @param ExecContext Pointer to the ExecContext to set up buffers for.
- */
-VOID
-YoriShCommenceProcessBuffersIfNeeded(
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
-    )
-{
-    //
-    //  If we're buffering output, start that process now.  If it succeeds,
-    //  the pipe is owned by the buffer pump and shouldn't be torn down
-    //  when the ExecContext is.
-    //
-
-    if (ExecContext->StdOutType == StdOutTypeBuffer ||
-        ExecContext->StdErrType == StdErrTypeBuffer) {
-
-        if (ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
-            ASSERT(ExecContext->StdErrType != StdErrTypeBuffer);
-            if (YoriLibShAppendToExistingProcessBuffer(ExecContext)) {
-                ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
-            } else {
-                ExecContext->StdOut.Buffer.ProcessBuffers = NULL;
-            }
-        } else {
-            if (YoriLibShCreateNewProcessBuffer(ExecContext)) {
-                if (ExecContext->StdOutType == StdOutTypeBuffer) {
-                    ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
-                }
-                if (ExecContext->StdErrType == StdErrTypeBuffer) {
-                    ExecContext->StdErr.Buffer.PipeFromProcess = NULL;
-                }
-            }
-        }
-    }
-}
-
-/**
  Find a process in the list of known debugged child processes by its process
  ID.
 
@@ -833,7 +352,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
     YoriLibInitEmptyString(&OriginalAliases);
     HaveOriginalAliases = YoriShGetSystemAliasStrings(TRUE, &OriginalAliases);
 
-    Err = YoriShCreateProcess(ExecContext, &FailedInRedirection);
+    Err = YoriLibShCreateProcess(ExecContext, NULL, &FailedInRedirection);
     if (Err != NO_ERROR) {
         LPTSTR ErrText = YoriLibGetWinErrorText(Err);
         if (FailedInRedirection) {
@@ -842,14 +361,14 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateProcess failed: %s"), ErrText);
         }
         YoriLibFreeWinErrorText(ErrText);
-        YoriShCleanupFailedProcessLaunch(ExecContext);
+        YoriLibShCleanupFailedProcessLaunch(ExecContext);
         YoriLibFreeStringContents(&OriginalAliases);
         YoriLibShDereferenceExecContext(ExecContext, TRUE);
         SetEvent(InitializedEvent);
         return 0;
     }
 
-    YoriShCommenceProcessBuffersIfNeeded(ExecContext);
+    YoriLibShCommenceProcessBuffersIfNeeded(ExecContext);
     SetEvent(InitializedEvent);
 
     while (TRUE) {
@@ -1351,7 +870,7 @@ YoriShExecViaShellExecute(
 
     ZeroMemory(ProcessInfo, sizeof(PROCESS_INFORMATION));
 
-    LastError = YoriShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
+    LastError = YoriLibShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
     if (LastError != ERROR_SUCCESS) {
         YoriLibFreeStringContents(&Args);
         return FALSE;
@@ -1389,7 +908,7 @@ YoriShExecViaShellExecute(
         }
     }
 
-    YoriShRevertRedirection(&PreviousRedirectContext);
+    YoriLibShRevertRedirection(&PreviousRedirectContext);
     YoriLibFreeStringContents(&Args);
 
     if (LastError != ERROR_SUCCESS) {
@@ -1452,7 +971,7 @@ YoriShExecuteSingleProgram(
                 if (ExecContext->WaitForCompletion) {
                     ExecContext->CaptureEnvironmentOnExit = TRUE;
                 }
-                ExitCode = YoriShBuckPassToCmd(ExecContext, 2, _T("cmd.exe"), _T("/c"));
+                ExitCode = YoriShBuckPassToCmd(ExecContext);
             } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) != 0) {
                 LaunchViaShellExecute = TRUE;
                 ExecContext->SuppressTaskCompletion = TRUE;
@@ -1465,7 +984,7 @@ YoriShExecuteSingleProgram(
         BOOL FailedInRedirection = FALSE;
 
         if (!LaunchViaShellExecute && !ExecContext->CaptureEnvironmentOnExit) {
-            DWORD Err = YoriShCreateProcess(ExecContext, &FailedInRedirection);
+            DWORD Err = YoriLibShCreateProcess(ExecContext, NULL, &FailedInRedirection);
 
             if (Err != NO_ERROR) {
                 if (Err == ERROR_ELEVATION_REQUIRED) {
@@ -1498,12 +1017,12 @@ YoriShExecuteSingleProgram(
         }
 
         if (LaunchFailed) {
-            YoriShCleanupFailedProcessLaunch(ExecContext);
+            YoriLibShCleanupFailedProcessLaunch(ExecContext);
             return 1;
         }
 
         if (!ExecContext->CaptureEnvironmentOnExit) {
-            YoriShCommenceProcessBuffersIfNeeded(ExecContext);
+            YoriLibShCommenceProcessBuffersIfNeeded(ExecContext);
         }
 
         //

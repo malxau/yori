@@ -273,87 +273,33 @@ YoriShBuckPass (
  C:\\Windows\\System32\\Cmd.exe /c ""C:\\Path To\\Foo.cmd" "Arg To Foo""
 
  @param ExecContext Pointer to the exec context for a command that is known
-        to be implemented by an external program.
-
- @param ExtraArgCount The number of extra arguments that should be inserted
-        into the beginning of the ExecContext, followed by a set of NULL
-        terminated strings to insert into the ExecContext.
+        to be implemented by CMD.
 
  @return ExitCode from CMD, or nonzero on failure.
  */
 DWORD
 YoriShBuckPassToCmd (
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in DWORD ExtraArgCount,
-    ...
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     YORI_LIBSH_CMD_CONTEXT OldCmdContext;
+    YORI_STRING CmdLine;
     DWORD ExitCode = EXIT_SUCCESS;
-    DWORD count;
-    va_list marker;
 
     memcpy(&OldCmdContext, &ExecContext->CmdToExec, sizeof(YORI_LIBSH_CMD_CONTEXT));
-
-    ExecContext->CmdToExec.ArgC = ExtraArgCount + 1;
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ExecContext->CmdToExec.ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
-    if (ExecContext->CmdToExec.MemoryToFree == NULL) {
-        memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_LIBSH_CMD_CONTEXT));
-        ExitCode = EXIT_FAILURE;
-        return ExitCode;
+    YoriLibInitEmptyString(&CmdLine);
+    if (!YoriLibShBuildCmdlineFromCmdContext(&OldCmdContext, &CmdLine, FALSE, NULL, NULL)) {
+        return EXIT_FAILURE;
     }
 
-    ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
-
-    ExecContext->CmdToExec.ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, sizeof(YORI_STRING) * ExecContext->CmdToExec.ArgC);
-    ZeroMemory(ExecContext->CmdToExec.ArgContexts, sizeof(YORI_LIBSH_ARG_CONTEXT) * ExecContext->CmdToExec.ArgC);
-
-    va_start(marker, ExtraArgCount);
-    for (count = 0; count < ExtraArgCount; count++) {
-        LPTSTR NewArg = (LPTSTR)va_arg(marker, LPTSTR);
-        YORI_STRING YsNewArg;
-        YORI_STRING FoundInPath;
-
-        YoriLibInitEmptyString(&ExecContext->CmdToExec.ArgV[count]);
-        YoriLibConstantString(&YsNewArg, NewArg);
-
-        //
-        //  Search for the first extra argument in the path.  If we find it,
-        //  execute as a program; if not, execute as a builtin.
-        //
-
-        if (count == 0) {
-            YoriLibInitEmptyString(&FoundInPath);
-            if (YoriLibLocateExecutableInPath(&YsNewArg, NULL, NULL, &FoundInPath) && FoundInPath.LengthInChars > 0) {
-                memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
-                ASSERT(YoriLibIsStringNullTerminated(&ExecContext->CmdToExec.ArgV[0]));
-                YoriLibInitEmptyString(&FoundInPath);
-            } else {
-                ExitCode = EXIT_FAILURE;
-                YoriLibConstantString(&ExecContext->CmdToExec.ArgV[count], NewArg);
-            }
-
-            YoriLibFreeStringContents(&FoundInPath);
-        } else {
-            YoriLibConstantString(&ExecContext->CmdToExec.ArgV[count], NewArg);
-        }
-    }
-    va_end(marker);
-
-    YoriLibInitEmptyString(&ExecContext->CmdToExec.ArgV[ExtraArgCount]);
-    if (!YoriLibShBuildCmdlineFromCmdContext(&OldCmdContext, &ExecContext->CmdToExec.ArgV[ExtraArgCount], FALSE, NULL, NULL)) {
-        ExitCode = EXIT_FAILURE;
-    } else {
-        ExecContext->CmdToExec.ArgContexts[ExtraArgCount].Quoted = TRUE;
-        ExecContext->CmdToExec.ArgContexts[ExtraArgCount].QuoteTerminated = TRUE;
+    if (!YoriLibShBuildCmdContextForCmdBuckPass(&ExecContext->CmdToExec, &CmdLine)) {
+        YoriLibFreeStringContents(&CmdLine);
+        return EXIT_FAILURE;
     }
 
-    YoriLibShCheckIfArgNeedsQuotes(&ExecContext->CmdToExec, 0);
-
-    if (ExitCode == EXIT_SUCCESS) {
-        ExecContext->IncludeEscapesAsLiteral = TRUE;
-        ExitCode = YoriShExecuteSingleProgram(ExecContext);
-    }
+    YoriLibFreeStringContents(&CmdLine);
+    ExecContext->IncludeEscapesAsLiteral = TRUE;
+    ExitCode = YoriShExecuteSingleProgram(ExecContext);
 
     YoriLibShFreeCmdContext(&ExecContext->CmdToExec);
     memcpy(&ExecContext->CmdToExec, &OldCmdContext, sizeof(YORI_LIBSH_CMD_CONTEXT));
@@ -441,7 +387,7 @@ YoriShExecuteInProc(
         }
     }
 
-    ExitCode = YoriShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
+    ExitCode = YoriLibShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
     if (ExitCode != ERROR_SUCCESS) {
         if (ArgV != NoEscapesCmdContext.ArgV) {
             for (Count = 0; Count < ArgC; Count++) {
@@ -480,7 +426,7 @@ YoriShExecuteInProc(
     ExitCode = Fn(ArgC, ArgV);
     YoriShGlobal.RecursionDepth--;
     YoriShGlobal.EscapedCmdContext = SavedEscapedCmdContext;
-    YoriShRevertRedirection(&PreviousRedirectContext);
+    YoriLibShRevertRedirection(&PreviousRedirectContext);
 
     if (WasPipe) {
         YoriLibShForwardProcessBufferToNextProcess(ExecContext);

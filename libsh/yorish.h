@@ -473,6 +473,11 @@ YoriLibShGetProcessErrorBuffer(
     __out PYORI_STRING String
     );
 
+VOID
+YoriLibShTeardownProcessBuffersIfCompleted(
+    __in PVOID ThisBuffer
+    );
+
 __success(return)
 BOOL
 YoriLibShScanProcessBuffersForTeardown(
@@ -493,6 +498,42 @@ YoriLibShPipeProcessBuffers(
     __in_opt HANDLE hPipeErrors
     );
 
+// *** EXEC.C ***
+
+VOID
+YoriLibShCleanupFailedProcessLaunch(
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
+    );
+
+VOID
+YoriLibShCommenceProcessBuffersIfNeeded(
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
+    );
+
+DWORD
+YoriLibShCreateProcess(
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in_opt LPTSTR CurrentDirectory,
+    __out_opt PBOOL FailedInRedirection
+    );
+
+DWORD
+YoriLibShInitializeRedirection(
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in BOOL PrepareForBuiltIn,
+    __out PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    );
+
+VOID
+YoriLibShRevertRedirection(
+    __in PYORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext
+    );
+
+BOOLEAN
+YoriLibShBuildCmdContextForCmdBuckPass (
+    __out PYORI_LIBSH_CMD_CONTEXT CmdContext,
+    __in PYORI_STRING CmdLine
+    );
 
 // *** PARSE.C ***
 

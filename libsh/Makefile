@@ -5,6 +5,7 @@ compile: yorish.lib
 
 OBJS=\
 	 cmdbuf.obj   \
+	 exec.obj     \
 	 parse.obj    \
 
 yorish.lib: $(OBJS)

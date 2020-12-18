@@ -759,6 +759,68 @@ YoriLibShTeardownSingleProcessBuffer(
 }
 
 /**
+ If the threads processing a set of process buffers have completed, remove
+ that buffer from the list and drop any reference attributed to it by virtue
+ of having outstanding threads.  If this has already occurred no additional
+ dereference will be performed.
+
+ @param ProcessBuffers Pointer to the process buffers.
+
+ @param TeardownAll If TRUE, terminate any threads that are still active.
+ */
+VOID
+YoriLibShTeardownProcessBuffersIfCompletedInternal(
+    __in PYORI_LIBSH_BUFFERED_PROCESS ProcessBuffers,
+    __in BOOL TeardownAll
+    )
+{
+    DWORD ThreadsFound;
+
+    ThreadsFound = 0;
+    if (ProcessBuffers->OutputBuffer.hPumpThread != NULL) {
+        ThreadsFound++;
+        YoriLibShTeardownSingleProcessBuffer(&ProcessBuffers->OutputBuffer, TeardownAll);
+    }
+    if (ProcessBuffers->ErrorBuffer.hPumpThread != NULL) {
+        ThreadsFound++;
+        YoriLibShTeardownSingleProcessBuffer(&ProcessBuffers->ErrorBuffer, TeardownAll);
+    }
+
+    //
+    //  If there are no longer any active threads but there was before
+    //  this function ran, the buffers are no longer referenced by active
+    //  threads
+    //
+
+    if (ProcessBuffers->OutputBuffer.hPumpThread == NULL &&
+        ProcessBuffers->ErrorBuffer.hPumpThread == NULL &&
+        ThreadsFound > 0) {
+
+        YoriLibShDereferenceProcessBuffer(ProcessBuffers);
+    }
+}
+
+/**
+ If the threads processing a set of process buffers have completed, remove
+ that buffer from the list and drop any reference attributed to it by virtue
+ of having outstanding threads.  If this has already occurred no additional
+ dereference will be performed.
+
+ @param ThisBuffer Pointer to the process buffers.
+ */
+VOID
+YoriLibShTeardownProcessBuffersIfCompleted(
+    __in PVOID ThisBuffer
+    )
+{
+    PYORI_LIBSH_BUFFERED_PROCESS ProcessBuffers;
+
+    ProcessBuffers = ThisBuffer;
+
+    YoriLibShTeardownProcessBuffersIfCompletedInternal(ProcessBuffers, FALSE);
+}
+
+/**
  Scan the set of outstanding process buffers and delete any that have
  completed.
 
@@ -776,7 +838,6 @@ YoriLibShScanProcessBuffersForTeardown(
 {
     PYORI_LIBSH_BUFFERED_PROCESS ThisBuffer;
     PYORI_LIST_ENTRY ListEntry;
-    DWORD ThreadsFound;
 
     if (BufferedProcessList.Next == NULL) {
         return TRUE;
@@ -789,28 +850,8 @@ YoriLibShScanProcessBuffersForTeardown(
         if (ThisBuffer->hCancelPumpEvent != NULL && TeardownAll) {
             SetEvent(ThisBuffer->hCancelPumpEvent);
         }
-        ThreadsFound = 0;
-        if (ThisBuffer->OutputBuffer.hPumpThread != NULL) {
-            ThreadsFound++;
-            YoriLibShTeardownSingleProcessBuffer(&ThisBuffer->OutputBuffer, TeardownAll);
-        }
-        if (ThisBuffer->ErrorBuffer.hPumpThread != NULL) {
-            ThreadsFound++;
-            YoriLibShTeardownSingleProcessBuffer(&ThisBuffer->ErrorBuffer, TeardownAll);
-        }
 
-        //
-        //  If there are no longer any active threads but there was before
-        //  this function ran, the buffers are no longer referenced by active
-        //  threads
-        //
-
-        if (ThisBuffer->OutputBuffer.hPumpThread == NULL &&
-            ThisBuffer->ErrorBuffer.hPumpThread == NULL &&
-            ThreadsFound > 0) {
-
-            YoriLibShDereferenceProcessBuffer(ThisBuffer);
-        }
+        YoriLibShTeardownProcessBuffersIfCompletedInternal(ThisBuffer, TeardownAll);
     }
 
     return TRUE;
