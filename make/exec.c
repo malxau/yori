@@ -26,12 +26,21 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#include <yorish.h>
 #include "make.h"
 
 /**
  Information about a currently executing child process.
  */
 typedef struct _MAKE_CHILD_PROCESS {
+
+    /**
+     Set to TRUE to indicate that the command for the child has been parsed
+     and on completion this parsed state needs to be torn down.  If FALSE,
+     a process has not launched successfully so this structure can be used
+     without tearing anything down.
+     */
+    BOOLEAN CmdContextPresent;
 
     /**
      The target that has requested this child process to be performed.
@@ -44,10 +53,21 @@ typedef struct _MAKE_CHILD_PROCESS {
     PMAKE_CMD_TO_EXEC Cmd;
 
     /**
-     The process information about the child.  This includes a handle to
-     the process, providing something to wait on.
+     A handle to a child process to wait for completion.  This is the same
+     value as embedded in the ExecPlan and is replicated here only to make
+     code referring to it shorter.
      */
-    PROCESS_INFORMATION ProcessInfo;
+    HANDLE ProcessHandle;
+
+    /**
+     A command context.  Should be deallocated if CmdContextPresent is TRUE.
+     */
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
+
+    /**
+     An execution plan.  Should be deallocated if CmdContextPresent is TRUE.
+     */
+    YORI_LIBSH_EXEC_PLAN ExecPlan;
 } MAKE_CHILD_PROCESS, *PMAKE_CHILD_PROCESS;
 
 /**
@@ -223,6 +243,25 @@ MakeProcessIf(
     return TRUE;
 }
 
+
+/**
+ If there is a CmdContext or ExecPlan attached to the child process structure,
+ free it now in preparation for reuse.
+
+ @param ChildProcess Pointer to the child process structure.
+ */
+VOID
+MakeFreeCmdContextIfNecessary(
+    __in PMAKE_CHILD_PROCESS ChildProcess
+    )
+{
+    if (ChildProcess->CmdContextPresent) {
+        YoriLibShFreeExecPlan(&ChildProcess->ExecPlan);
+        YoriLibShFreeCmdContext(&ChildProcess->CmdContext);
+        ChildProcess->CmdContextPresent = FALSE;
+    }
+}
+
 /**
  Start executing the next command within a target.
 
@@ -232,8 +271,8 @@ MakeProcessIf(
  @return TRUE to indicate that a child process was successfully created, or
          FALSE if it was not.  Note that if the command indicates that failure
          is tolerable, this function can return TRUE without creating a 
-         child process, which is indicated by the
-         ChildProcess->ProcessInfo.hProcess member being NULL.
+         child process, which is indicated by the ChildProcess->ProcessHandle
+         member being NULL.
  */
 BOOLEAN
 MakeLaunchNextCmd(
@@ -244,15 +283,16 @@ MakeLaunchNextCmd(
     PYORI_LIST_ENTRY ListEntry;
     PMAKE_TARGET Target;
     PMAKE_CMD_TO_EXEC CmdToExec;
-    PYORI_STRING ArgV;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
     DWORD Index;
-    DWORD ArgC;
-    BOOL Success;
-    YORI_STRING ExecString;
+    DWORD Error;
+    BOOL FailedInRedirection;
     YORI_STRING CmdToParse;
     BOOLEAN ExecutedBuiltin;
     BOOLEAN PuntToCmd;
     BOOLEAN Reparse;
+
+    ASSERT(!ChildProcess->CmdContextPresent);
 
     Target = ChildProcess->Target;
 
@@ -292,27 +332,41 @@ MakeLaunchNextCmd(
         PuntToCmd = FALSE;
         Reparse = FALSE;
 
-        ArgV = YoriLibCmdlineToArgcArgv(CmdToParse.StartOfString, (DWORD)-1, &ArgC);
-        if (ArgV != NULL) {
+        ASSERT(!ChildProcess->CmdContextPresent);
+
+        if (!YoriLibShParseCmdlineToCmdContext(&CmdToParse, 0, &ChildProcess->CmdContext)) {
+            YoriLibFreeStringContents(&CmdToParse);
+            return FALSE;
+        }
+
+        if (!YoriLibShParseCmdContextToExecPlan(&ChildProcess->CmdContext, &ChildProcess->ExecPlan, NULL, NULL, NULL, NULL)) {
+            YoriLibShFreeCmdContext(&ChildProcess->CmdContext);
+            YoriLibFreeStringContents(&CmdToParse);
+            return FALSE;
+        }
+
+        ChildProcess->CmdContextPresent = TRUE;
+        ExecContext = ChildProcess->ExecPlan.FirstCmd;
+
+        if (ExecContext->CmdToExec.ArgV != NULL) {
             DWORD Result = EXIT_SUCCESS;
-            if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], _T("IF")) == 0) {
-                if (MakeProcessIf(ChildProcess, ArgC, ArgV, &CmdToParse)) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("IF")) == 0) {
+                if (MakeProcessIf(ChildProcess, ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV, &CmdToParse)) {
                     Reparse = TRUE;
                 }
             } else {
                 for (Index = 0; Index < sizeof(MakeBuiltinCmds)/sizeof(MakeBuiltinCmds[0]); Index++) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], MakeBuiltinCmds[Index].CommandName) == 0) {
+                    if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], MakeBuiltinCmds[Index].CommandName) == 0) {
 
                         // 
                         //  MSFIX This needs to SetCurrentDirectory or ensure
                         //  that nothing depends on current directory
                         //
 
-                        Result = MakeBuiltinCmds[Index].BuiltinFn(ArgC, ArgV);
+                        Result = MakeBuiltinCmds[Index].BuiltinFn(ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
 
                         ExecutedBuiltin = TRUE;
-                        ChildProcess->ProcessInfo.hProcess = NULL;
-                        ChildProcess->ProcessInfo.hThread = NULL;
+                        ChildProcess->ProcessHandle = NULL;
                         break;
                     }
                 }
@@ -320,18 +374,15 @@ MakeLaunchNextCmd(
 
             if (!ExecutedBuiltin && !Reparse) {
                 for (Index = 0; Index < sizeof(MakePuntToCmd)/sizeof(MakePuntToCmd[0]); Index++) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[0], MakePuntToCmd[Index]) == 0) {
+                    if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], MakePuntToCmd[Index]) == 0) {
                         PuntToCmd = TRUE;
                         break;
                     }
                 }
             }
 
-            for (Index = 0; Index < ArgC; Index++) {
-                YoriLibFreeStringContents(&ArgV[Index]);
-            }
-            YoriLibDereference(ArgV);
             if (Result != EXIT_SUCCESS && !CmdToExec->IgnoreErrors) {
+                MakeFreeCmdContextIfNecessary(ChildProcess);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &CmdToExec->Cmd);
                 return FALSE;
             }
@@ -346,76 +397,95 @@ MakeLaunchNextCmd(
             break;
         }
 
+        MakeFreeCmdContextIfNecessary(ChildProcess);
+
         if (CmdToParse.LengthInChars == 0) {
             YoriLibFreeStringContents(&CmdToParse);
-            ChildProcess->ProcessInfo.hProcess = NULL;
-            ChildProcess->ProcessInfo.hThread = NULL;
+            ChildProcess->ProcessHandle = NULL;
             return TRUE;
         }
     }
 
     //
-    //  Check for operators which would only be meaningful to CMD and if
-    //  present use CMD to invoke the command.
+    //  Check for unsupported operators.  Currently redirection can be
+    //  handled within make, but it does not understand how to pipe commands
+    //  or otherwise execute multi-command plans (|, ||, &&, &.)
     //
 
-    for (Index = 0; Index < CmdToParse.LengthInChars; Index++) {
-        if (CmdToParse.StartOfString[Index] == '>' ||
-            CmdToParse.StartOfString[Index] == '<') {
-
+    if (!PuntToCmd) {
+        ASSERT(ChildProcess->CmdContextPresent);
+        if (ChildProcess->ExecPlan.NumberCommands > 1) {
             PuntToCmd = TRUE;
-            break;
         }
     }
 
     //
-    //  If it's not a known builtin, execute the command.
+    //  If it's not a known builtin, execute the command.  When punting to cmd
+    //  this involves creating a string for it (which performs path lookup
+    //  internally), but for anything else we perform path lookup below.
     //
 
-    YoriLibInitEmptyString(&ExecString);
     if (PuntToCmd) {
-        if (!YoriLibAllocateString(&ExecString, sizeof("cmd /c ") + CmdToParse.LengthInChars + 1)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Out of memory\n"));
+
+        MakeFreeCmdContextIfNecessary(ChildProcess);
+
+        if (!YoriLibShBuildCmdContextForCmdBuckPass(&ChildProcess->CmdContext, &CmdToParse)) {
             YoriLibFreeStringContents(&CmdToParse);
             return FALSE;
         }
 
-        ExecString.LengthInChars = YoriLibSPrintf(ExecString.StartOfString, _T("cmd /c %y"), &CmdToParse);
+        if (!YoriLibShParseCmdContextToExecPlan(&ChildProcess->CmdContext, &ChildProcess->ExecPlan, NULL, NULL, NULL, NULL)) {
+            YoriLibShFreeCmdContext(&ChildProcess->CmdContext);
+            return FALSE;
+        }
 
+        ChildProcess->CmdContextPresent = TRUE;
     } else {
-        ExecString.StartOfString = CmdToParse.StartOfString;
-        ExecString.LengthInChars = CmdToParse.LengthInChars;
+        YORI_STRING FoundInPath;
+
+        ExecContext = ChildProcess->ExecPlan.FirstCmd;
+
+        YoriLibInitEmptyString(&FoundInPath);
+        if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath) && FoundInPath.LengthInChars > 0) {
+            YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
+            memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
+        } else {
+            YoriLibFreeStringContents(&FoundInPath);
+        }
     }
 
-    Success = CreateProcess(NULL,
-                            ExecString.StartOfString,
-                            NULL,
-                            NULL,
-                            FALSE,
-                            0,
-                            NULL,
-                            ChildProcess->Target->ScopeContext->HashEntry.Key.StartOfString,
-                            &si,
-                            &ChildProcess->ProcessInfo);
+    ExecContext = ChildProcess->ExecPlan.FirstCmd;
 
-    if (!Success) {
+    ASSERT(ChildProcess->ExecPlan.NumberCommands == 1);
+    if (ExecContext->StdOutType == StdOutTypeDefault) {
+        ExecContext->StdOutType = StdOutTypeBuffer;
+        if (ExecContext->StdErrType == StdErrTypeDefault) {
+            ExecContext->StdErrType = StdErrTypeStdOut;
+        }
+    }
+
+    Error = YoriLibShCreateProcess(ExecContext,
+                                   ChildProcess->Target->ScopeContext->HashEntry.Key.StartOfString,
+                                   &FailedInRedirection);
+
+    if (Error != ERROR_SUCCESS) {
         if (!CmdToExec->IgnoreErrors) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &ExecString);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &CmdToParse);
             YoriLibFreeStringContents(&CmdToParse);
-            YoriLibFreeStringContents(&ExecString);
+            MakeFreeCmdContextIfNecessary(ChildProcess);
             return FALSE;
         }
 
-        ChildProcess->ProcessInfo.hProcess = NULL;
+        ChildProcess->ProcessHandle = NULL;
     } else {
-        CloseHandle(ChildProcess->ProcessInfo.hThread);
-        ChildProcess->ProcessInfo.hThread = NULL;
+        CloseHandle(ExecContext->hPrimaryThread);
+        ExecContext->hPrimaryThread = NULL;
+        ChildProcess->ProcessHandle = ExecContext->hProcess;
+        YoriLibShCommenceProcessBuffersIfNeeded(ExecContext);
     }
-    YoriLibFreeStringContents(&ExecString);
     YoriLibFreeStringContents(&CmdToParse);
 
     return TRUE;
-
 }
 
 /**
@@ -437,6 +507,8 @@ MakeLaunchNextTarget(
 {
     PMAKE_TARGET Target;
     PYORI_LIST_ENTRY ListEntry;
+
+    ASSERT(!ChildProcess->CmdContextPresent);
 
     ListEntry = YoriLibGetNextListEntry(&MakeContext->TargetsReady, NULL);
 
@@ -510,20 +582,71 @@ MakeProcessCompletion(
     )
 {
     DWORD ExitCode;
+    PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
+    BOOLEAN Result;
 
     ExitCode = EXIT_SUCCESS;
-    if (ChildProcess->ProcessInfo.hProcess != NULL) {
+
+    Result = TRUE;
+
+    //
+    //  MSFIX: Because we need an event to wait on anyway, it makes more
+    //  sense to wait for the process buffer thread than process termination.
+    //  Here we just risk injecting delay by stalling the pipeline waiting
+    //  for one specific thread.
+    //
+
+    if (ChildProcess->ProcessHandle != NULL) {
+        YORI_STRING ProcessOutput;
+
         ExitCode = 255;
-        GetExitCodeProcess(ChildProcess->ProcessInfo.hProcess, &ExitCode);
-        CloseHandle(ChildProcess->ProcessInfo.hProcess);
+        GetExitCodeProcess(ChildProcess->ProcessHandle, &ExitCode);
+        ASSERT(ChildProcess->CmdContextPresent);
+
+        if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FOREGROUND_RED | FOREGROUND_INTENSITY);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error in target: %y\nExitCode: %i\n"), &ChildProcess->Target->HashEntry.Key, ExitCode);
+            Result = FALSE;
+        }
+
+        //
+        //  If the output was being sent to a buffer owned by make, display
+        //  the result now, in a different color if the process failed.
+        //  Note at this point execution is serialized - this might prevent
+        //  child processes from being launched, but output will be ordered.
+        //
+
+        ExecContext = ChildProcess->ExecPlan.FirstCmd;
+
+        if (ExecContext->StdOutType == StdOutTypeBuffer) {
+            YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
+            YoriLibShGetProcessOutputBuffer(ExecContext->StdOut.Buffer.ProcessBuffers, &ProcessOutput);
+            if (ProcessOutput.LengthInChars > 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &ProcessOutput);
+                YoriLibFreeStringContents(&ProcessOutput);
+            }
+
+            YoriLibShTeardownProcessBuffersIfCompleted(ExecContext->StdOut.Buffer.ProcessBuffers);
+        } else {
+            ASSERT(ExecContext->StdErrType != StdErrTypeBuffer);
+        }
+
+        if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Command: %y\n"), &ChildProcess->Cmd->Cmd);
+            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
+        }
+
+        //
+        //  This is closed implicitly as part of FreeExecPlan below
+        //
+
+        ASSERT(ChildProcess->CmdContextPresent);
+        ChildProcess->ProcessHandle = NULL;
     }
 
-    if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Terminating due to error executing %y\n"), &ChildProcess->Cmd->Cmd);
-        return FALSE;
-    }
+    MakeFreeCmdContextIfNecessary(ChildProcess);
 
-    return TRUE;
+    return Result;
 }
 
 
@@ -633,7 +756,7 @@ MakeExecuteRequiredTargets(
             //
 
             for (Index = 0; Index < NumberActiveProcesses; Index++) {
-                ProcessHandleArray[Index] = ChildProcessArray[Index].ProcessInfo.hProcess;
+                ProcessHandleArray[Index] = ChildProcessArray[Index].ProcessHandle;
                 if (ProcessHandleArray[Index] == NULL) {
                     break;
                 }
@@ -680,6 +803,13 @@ MakeExecuteRequiredTargets(
                 }
 
                 NumberActiveProcesses--;
+
+                //
+                //  Everything in the final entry has been moved to earlier
+                //  entries, so the final entry is uninitialized.
+                //
+
+                ZeroMemory(&ChildProcessArray[NumberActiveProcesses], sizeof(MAKE_CHILD_PROCESS));
             }
 
             if (Result == FALSE) {
@@ -703,18 +833,17 @@ Drain:
 
     while (NumberActiveProcesses > 0) {
         for (Index = 0; Index < NumberActiveProcesses; Index++) {
-            if (ChildProcessArray[Index].ProcessInfo.hProcess == NULL) {
+            if (ChildProcessArray[Index].ProcessHandle == NULL) {
                 break;
             }
-            ProcessHandleArray[Index] = ChildProcessArray[Index].ProcessInfo.hProcess;
+            ProcessHandleArray[Index] = ChildProcessArray[Index].ProcessHandle;
         }
 
         if (Index == NumberActiveProcesses) {
             Index = WaitForMultipleObjects(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE);
             Index = Index - WAIT_OBJECT_0;
 
-            CloseHandle(ChildProcessArray[Index].ProcessInfo.hProcess);
-            ChildProcessArray[Index].ProcessInfo.hProcess = NULL;
+            MakeProcessCompletion(&ChildProcessArray[Index]);
         }
 
         if (NumberActiveProcesses > Index + 1) {
