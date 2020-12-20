@@ -583,7 +583,10 @@ MakeProcessCompletion(
 {
     DWORD ExitCode;
     PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
+    YORI_STRING ProcessOutput;
     BOOLEAN Result;
+    BOOLEAN RestoreColor;
+    WORD DefaultColor;
 
     ExitCode = EXIT_SUCCESS;
 
@@ -597,16 +600,25 @@ MakeProcessCompletion(
     //
 
     if (ChildProcess->ProcessHandle != NULL) {
-        YORI_STRING ProcessOutput;
 
         ExitCode = 255;
         GetExitCodeProcess(ChildProcess->ProcessHandle, &ExitCode);
         ASSERT(ChildProcess->CmdContextPresent);
 
-        if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
-            YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FOREGROUND_RED | FOREGROUND_INTENSITY);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error in target: %y\nExitCode: %i\n"), &ChildProcess->Target->HashEntry.Key, ExitCode);
-            Result = FALSE;
+        DefaultColor = YoriLibVtGetDefaultColor();
+        RestoreColor = FALSE;
+
+        if (ExitCode != 0) {
+
+            if (!ChildProcess->Cmd->IgnoreErrors) {
+                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_INTENSITY));
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error in target: %y\n"), &ChildProcess->Target->HashEntry.Key);
+                Result = FALSE;
+            } else {
+                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
+            }
+
+            RestoreColor = TRUE;
         }
 
         //
@@ -633,6 +645,9 @@ MakeProcessCompletion(
 
         if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Command: %y\n"), &ChildProcess->Cmd->Cmd);
+        }
+
+        if (RestoreColor) {
             YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, YoriLibVtGetDefaultColor());
         }
 
