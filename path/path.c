@@ -3,7 +3,7 @@
  *
  * Yori shell display file name components
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2020 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,8 @@ CHAR strPathHelpText[] =
         "   $EXT$          The file extension\n"
         "   $FILE$         The file name including extension\n"
         "   $PARENT$       The path to the parent of the file\n"
-        "   $PATH$         The complete path to the file\n"
+        "   $PATH$         The complete natural path to the file\n"
+        "   $PATHNOSLASH$  The complete path to the file without trailing slashes\n"
         "   $SHARE$        The UNC share hosting the file\n";
 
 /**
@@ -71,7 +72,12 @@ typedef struct _YORI_PATH_COMPONENTS {
     /**
      The entire path, including everything.
      */
-    YORI_STRING EntirePath;
+    YORI_STRING EntireNaturalPath;
+
+    /**
+     The entire path, without trailing slashes.
+     */
+    YORI_STRING EntirePathWithoutTrailingSlash;
 
     /**
      A file extension, if present.  May contain NULL to indicate no extension
@@ -138,7 +144,9 @@ PathExpandVariables(
     PYORI_PATH_COMPONENTS PathComponents = (PYORI_PATH_COMPONENTS)Context;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("PATH")) == 0) {
-        CharsNeeded = PathComponents->EntirePath.LengthInChars;
+        CharsNeeded = PathComponents->EntireNaturalPath.LengthInChars;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PATHNOSLASH")) == 0) {
+        CharsNeeded = PathComponents->EntirePathWithoutTrailingSlash.LengthInChars;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("EXT")) == 0) {
         CharsNeeded = PathComponents->Extension.LengthInChars;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FILE")) == 0) {
@@ -162,7 +170,9 @@ PathExpandVariables(
     }
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("PATH")) == 0) {
-        memcpy(OutputString->StartOfString, PathComponents->EntirePath.StartOfString, CharsNeeded * sizeof(TCHAR));
+        memcpy(OutputString->StartOfString, PathComponents->EntireNaturalPath.StartOfString, CharsNeeded * sizeof(TCHAR));
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PATHNOSLASH")) == 0) {
+        memcpy(OutputString->StartOfString, PathComponents->EntirePathWithoutTrailingSlash.StartOfString, CharsNeeded * sizeof(TCHAR));
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("EXT")) == 0) {
         memcpy(OutputString->StartOfString, PathComponents->Extension.StartOfString, CharsNeeded * sizeof(TCHAR));
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FILE")) == 0) {
@@ -234,7 +244,7 @@ ENTRYPOINT(
                 PathHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2020"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 UseLongPath = TRUE;
@@ -274,30 +284,55 @@ ENTRYPOINT(
 
     ZeroMemory(&PathComponents, sizeof(PathComponents));
 
-    if (YoriLibUserStringToSingleFilePath(&ArgV[StartArg], UseLongPath, &PathComponents.EntirePath)) {
+    if (YoriLibUserStringToSingleFilePath(&ArgV[StartArg], UseLongPath, &PathComponents.EntireNaturalPath)) {
         DWORD CharIndex;
         BOOL ExtensionFound = FALSE;
         BOOL FileComponentFound = FALSE;
         DWORD KeepTrailingSlashesBefore;
 
+        //
+        //  Find the location where a natural path should retain trailing
+        //  slashes.  This occurs because C: refers to a different file to
+        //  C:\ , so C:\ would normally keep a trailing slash.
+        //
+
         KeepTrailingSlashesBefore = 0;
         if (UseLongPath) {
-            if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(&PathComponents.EntirePath)) {
+            if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(&PathComponents.EntireNaturalPath)) {
                 KeepTrailingSlashesBefore = sizeof("\\\\?\\C:\\") - 1;
             }
         } else {
-            if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntirePath)) {
+            if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntireNaturalPath)) {
                 KeepTrailingSlashesBefore = sizeof("C:\\") - 1;
             }
         }
 
         //
-        //  Remove any trailing slashes
+        //  Remove any trailing slashes up to the natural limit.
         //
 
-        for (CharIndex = PathComponents.EntirePath.LengthInChars - 1; CharIndex > KeepTrailingSlashesBefore; CharIndex--) {
-            if (PathComponents.EntirePath.StartOfString[CharIndex] == '\\') {
-                PathComponents.EntirePath.LengthInChars--;
+        for (CharIndex = PathComponents.EntireNaturalPath.LengthInChars - 1; CharIndex > KeepTrailingSlashesBefore; CharIndex--) {
+            if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] == '\\') {
+                PathComponents.EntireNaturalPath.LengthInChars--;
+            } else {
+                break;
+            }
+
+            if (CharIndex == 0) {
+                break;
+            }
+        }
+
+        //
+        //  Remove any trailing slashes unconditionally.
+        //
+
+        PathComponents.EntirePathWithoutTrailingSlash.StartOfString = PathComponents.EntireNaturalPath.StartOfString;
+        PathComponents.EntirePathWithoutTrailingSlash.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars;
+
+        for (CharIndex = PathComponents.EntirePathWithoutTrailingSlash.LengthInChars - 1; CharIndex > 0; CharIndex--) {
+            if (PathComponents.EntirePathWithoutTrailingSlash.StartOfString[CharIndex] == '\\') {
+                PathComponents.EntirePathWithoutTrailingSlash.LengthInChars--;
             } else {
                 break;
             }
@@ -311,18 +346,18 @@ ENTRYPOINT(
         //  Count backwards to find the file name and extension
         //
 
-        CharIndex = PathComponents.EntirePath.LengthInChars - 1;
+        CharIndex = PathComponents.EntireNaturalPath.LengthInChars - 1;
         while(TRUE) {
-            if (PathComponents.EntirePath.StartOfString[CharIndex] == '.' && !FileComponentFound && !ExtensionFound) {
+            if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] == '.' && !FileComponentFound && !ExtensionFound) {
                 ExtensionFound = TRUE;
-                PathComponents.Extension.StartOfString = &PathComponents.EntirePath.StartOfString[CharIndex + 1];
-                PathComponents.Extension.LengthInChars = PathComponents.EntirePath.LengthInChars - CharIndex - 1;
+                PathComponents.Extension.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex + 1];
+                PathComponents.Extension.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - CharIndex - 1;
             }
 
-            if (PathComponents.EntirePath.StartOfString[CharIndex] == '\\' && !FileComponentFound) {
+            if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] == '\\' && !FileComponentFound) {
                 FileComponentFound = TRUE;
-                PathComponents.FullFileName.StartOfString = &PathComponents.EntirePath.StartOfString[CharIndex + 1];
-                PathComponents.FullFileName.LengthInChars = PathComponents.EntirePath.LengthInChars - CharIndex - 1;
+                PathComponents.FullFileName.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex + 1];
+                PathComponents.FullFileName.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - CharIndex - 1;
 
                 PathComponents.BaseName.StartOfString = PathComponents.FullFileName.StartOfString;
                 PathComponents.BaseName.LengthInChars = PathComponents.FullFileName.LengthInChars;
@@ -330,7 +365,7 @@ ENTRYPOINT(
                     PathComponents.BaseName.LengthInChars -= PathComponents.Extension.LengthInChars + 1;
                 }
 
-                PathComponents.ParentName.StartOfString = PathComponents.EntirePath.StartOfString;
+                PathComponents.ParentName.StartOfString = PathComponents.EntireNaturalPath.StartOfString;
                 PathComponents.ParentName.LengthInChars = CharIndex;
 
                 break;
@@ -355,23 +390,23 @@ ENTRYPOINT(
             //  We kind of expect a long prefix if nothing else
             //
 
-            if (PathComponents.EntirePath.LengthInChars < 4) {
+            if (PathComponents.EntireNaturalPath.LengthInChars < 4) {
                 return EXIT_FAILURE;
             }
 
             YoriLibInitEmptyString(&PathAfterPrefix);
-            PathAfterPrefix.StartOfString = PathComponents.EntirePath.StartOfString + 4;
-            PathAfterPrefix.LengthInChars = PathComponents.EntirePath.LengthInChars - 4;
+            PathAfterPrefix.StartOfString = PathComponents.EntireNaturalPath.StartOfString + 4;
+            PathAfterPrefix.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - 4;
 
-            if (YoriLibIsFullPathUnc(&PathComponents.EntirePath)) {
+            if (YoriLibIsFullPathUnc(&PathComponents.EntireNaturalPath)) {
                 BOOL EndOfServerNameFound = FALSE;
     
                 //
                 //  We have a \\?\UNC\ UNC prefix in an escaped path
                 //
     
-                for (CharIndex = 8; PathComponents.EntirePath.StartOfString[CharIndex] != '\0'; CharIndex++) {
-                    if (PathComponents.EntirePath.StartOfString[CharIndex] == '\\') {
+                for (CharIndex = 8; PathComponents.EntireNaturalPath.StartOfString[CharIndex] != '\0'; CharIndex++) {
+                    if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] == '\\') {
                         if (!EndOfServerNameFound) {
                             EndOfServerNameFound = TRUE;
                         } else {
@@ -380,10 +415,10 @@ ENTRYPOINT(
                     }
                 }
     
-                if (PathComponents.EntirePath.StartOfString[CharIndex] != 0 ||
+                if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] != 0 ||
                     EndOfServerNameFound) {
     
-                    PathComponents.ShareName.StartOfString = PathComponents.EntirePath.StartOfString;
+                    PathComponents.ShareName.StartOfString = PathComponents.EntireNaturalPath.StartOfString;
                     PathComponents.ShareName.LengthInChars = CharIndex;
     
                     //
@@ -393,11 +428,11 @@ ENTRYPOINT(
                     //  so remove any reference to file name.
                     //
     
-                    if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntirePath.LengthInChars) {
+                    if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntireNaturalPath.LengthInChars) {
     
-                        PathComponents.PathFromRoot.StartOfString = &PathComponents.EntirePath.StartOfString[CharIndex];
-                        PathComponents.PathFromRoot.LengthInChars = PathComponents.EntirePath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
-                    } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntirePath.LengthInChars) {
+                        PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex];
+                        PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
+                    } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntireNaturalPath.LengthInChars) {
                         PathComponents.BaseName.LengthInChars = 0;
                         PathComponents.FullFileName.LengthInChars = 0;
                         PathComponents.Extension.LengthInChars = 0;
@@ -409,34 +444,34 @@ ENTRYPOINT(
                 //  We have a drive letter, colon and slash in an escaped path
                 //
     
-                PathComponents.DriveLetter.StartOfString = &PathComponents.EntirePath.StartOfString[4];
+                PathComponents.DriveLetter.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[4];
                 PathComponents.DriveLetter.LengthInChars = 1;
     
-                PathComponents.PathFromRoot.StartOfString = &PathComponents.EntirePath.StartOfString[6];
-                PathComponents.PathFromRoot.LengthInChars = PathComponents.EntirePath.LengthInChars - 6;
+                PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[6];
+                PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - 6;
     
                 if (PathComponents.FullFileName.StartOfString != NULL) {
                     PathComponents.PathFromRoot.LengthInChars -= PathComponents.FullFileName.LengthInChars + 1;
                 }
             }
         } else {
-            if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntirePath)) {
+            if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntireNaturalPath)) {
     
                 //
                 //  We have a drive letter, colon and slash in a non escaped path
                 //
     
-                PathComponents.DriveLetter.StartOfString = &PathComponents.EntirePath.StartOfString[0];
+                PathComponents.DriveLetter.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[0];
                 PathComponents.DriveLetter.LengthInChars = 1;
     
-                PathComponents.PathFromRoot.StartOfString = &PathComponents.EntirePath.StartOfString[2];
-                PathComponents.PathFromRoot.LengthInChars = PathComponents.EntirePath.LengthInChars - 2;
+                PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[2];
+                PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - 2;
     
                 if (PathComponents.FullFileName.StartOfString != NULL) {
                     PathComponents.PathFromRoot.LengthInChars -= PathComponents.FullFileName.LengthInChars + 1;
                 }
-            } else if ((PathComponents.EntirePath.StartOfString[0] == '\\') ||
-                       (PathComponents.EntirePath.StartOfString[1] == '\\')) {
+            } else if ((PathComponents.EntireNaturalPath.StartOfString[0] == '\\') ||
+                       (PathComponents.EntireNaturalPath.StartOfString[1] == '\\')) {
     
                 BOOL EndOfServerNameFound = FALSE;
     
@@ -444,8 +479,8 @@ ENTRYPOINT(
                 //  We have a \\ UNC prefix in a non escaped path
                 //
     
-                for (CharIndex = 2; PathComponents.EntirePath.StartOfString[CharIndex] != '\0'; CharIndex++) {
-                    if (PathComponents.EntirePath.StartOfString[CharIndex] == '\\') {
+                for (CharIndex = 2; PathComponents.EntireNaturalPath.StartOfString[CharIndex] != '\0'; CharIndex++) {
+                    if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] == '\\') {
                         if (!EndOfServerNameFound) {
                             EndOfServerNameFound = TRUE;
                         } else {
@@ -454,10 +489,10 @@ ENTRYPOINT(
                     }
                 }
     
-                if (PathComponents.EntirePath.StartOfString[CharIndex] != 0 ||
+                if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] != 0 ||
                     EndOfServerNameFound) {
     
-                    PathComponents.ShareName.StartOfString = PathComponents.EntirePath.StartOfString;
+                    PathComponents.ShareName.StartOfString = PathComponents.EntireNaturalPath.StartOfString;
                     PathComponents.ShareName.LengthInChars = CharIndex;
     
                     //
@@ -467,11 +502,11 @@ ENTRYPOINT(
                     //  so remove any reference to file name.
                     //
     
-                    if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntirePath.LengthInChars) {
+                    if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntireNaturalPath.LengthInChars) {
     
-                        PathComponents.PathFromRoot.StartOfString = &PathComponents.EntirePath.StartOfString[CharIndex];
-                        PathComponents.PathFromRoot.LengthInChars = PathComponents.EntirePath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
-                    } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntirePath.LengthInChars) {
+                        PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex];
+                        PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
+                    } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntireNaturalPath.LengthInChars) {
                         PathComponents.BaseName.LengthInChars = 0;
                         PathComponents.FullFileName.LengthInChars = 0;
                         PathComponents.Extension.LengthInChars = 0;
@@ -482,7 +517,7 @@ ENTRYPOINT(
 
         YoriLibInitEmptyString(&DisplayString);
         YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, PathExpandVariables, &PathComponents, &DisplayString);
-        YoriLibFreeStringContents(&PathComponents.EntirePath);
+        YoriLibFreeStringContents(&PathComponents.EntireNaturalPath);
         if (DisplayString.StartOfString != NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &DisplayString);
             YoriLibFreeStringContents(&DisplayString);
