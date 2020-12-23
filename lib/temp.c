@@ -86,6 +86,8 @@ YoriLibGetTempFileName(
 #endif
     Unique = (WORD)(GetCurrentProcessId() >> 2 ^ GetTickCount() << 12);
     Terminate = (WORD)(Unique - 1);
+    Err = ERROR_SUCCESS;
+    Handle = NULL;
     while(TRUE) {
         TestFileName.LengthInChars = YoriLibSPrintf(TestFileName.StartOfString, _T("%y\\%y%04x.tmp"), PathName, PrefixString, Unique);
 

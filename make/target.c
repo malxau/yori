@@ -1404,6 +1404,7 @@ MakeDetermineDependencies(
     PYORI_LIST_ENTRY ListEntry;
 
     ListEntry = YoriLibGetNextListEntry(&MakeContext->TargetsList, NULL);
+    Target = NULL;
     while (TRUE) {
         if (ListEntry == NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No target to make."));

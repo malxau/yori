@@ -327,6 +327,7 @@ MakeLaunchNextCmd(
     //  Check if this command is a builtin, and if so, execute it inline
     //
 
+    PuntToCmd = FALSE;
     while(TRUE) {
         ExecutedBuiltin = FALSE;
         PuntToCmd = FALSE;

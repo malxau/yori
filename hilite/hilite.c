@@ -186,6 +186,7 @@ HiliteGetNextMatch(
         PreviousEntry = NULL;
     }
 
+    ListEntry = NULL;
     while(TRUE) {
         ListEntry = YoriLibGetNextListEntry(ListHead, PreviousEntry);
         if (ListEntry != NULL) {
