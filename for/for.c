@@ -176,25 +176,23 @@ ForWaitForProcessToComplete(
  that point.  This means when quotes are added based on arguments with
  spaces, they will only span the text with spaces, not any operators.
 
- @param ArgC Pointer to the number of arguments.  On successful completion,
-        this routine may reallocate and increase this value.
-
- @param ArgV Pointer to an array of arguments.  On successful completion,
-        this routine may reallocate this array.  Note that all strings
-        contained on entry will still be referred to on completion, but
-        there may be more entries in the array referring to these strings
-        in more components.
+ @param CmdContext Pointer to the command context, containing the number of
+        arguments, argument values, and quote state of each argument.  These
+        values may be reallocated or changed within this routine.  Note that
+        this routine assumes that the contents of the strings are not part of
+        these allocations, so any new string allocations are still pointing
+        to the previous string locations.
 
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOLEAN
 ForBreakArgumentsAsNeeded(
-    __in PDWORD ArgC,
-    __in PYORI_STRING * ArgV
+    __in PYORI_LIBSH_CMD_CONTEXT CmdContext
     )
 {
     DWORD ArgCount;
     DWORD ArgIndex;
+    DWORD ExistingArg;
     DWORD CharsToConsume;
     DWORD InitialArgOffset;
     DWORD BraceNestingLevel;
@@ -205,12 +203,23 @@ ForBreakArgumentsAsNeeded(
     BOOLEAN LookingForFirstQuote = FALSE;
 
     YoriLibInitEmptyString(&Char);
-    ArgCount = *ArgC;
-    Arg = *ArgV;
+    ArgCount = CmdContext->ArgC;
+    Arg = CmdContext->ArgV;
     InitialArgOffset = 0;
     BraceNestingLevel = 0;
 
     for (ArgIndex = 0; ArgIndex < ArgCount; ArgIndex++) {
+
+        //
+        //  If the argument is already quoted on input, don't break it.
+        //  Breaking is for things that weren't quoted in the input
+        //  string and may require quotes to be inserted due to adding
+        //  file names or similar that contain spaces.
+        //
+
+        if (CmdContext->ArgContexts[ArgIndex].Quoted) {
+            continue;
+        }
 
         Char.StartOfString = Arg[ArgIndex].StartOfString;
         Char.LengthInChars = Arg[ArgIndex].LengthInChars;
@@ -273,8 +282,8 @@ ForBreakArgumentsAsNeeded(
             if (!QuoteOpen) {
                 if (YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
 
-                    PYORI_STRING NewArgV;
                     DWORD NewArgCount;
+                    YORI_LIBSH_CMD_CONTEXT NewCmd;
 
                     //
                     //  If the next arg is terminated but is already
@@ -302,41 +311,49 @@ ForBreakArgumentsAsNeeded(
                         NewArgCount = ArgCount + 1;
                     }
 
-                    NewArgV = YoriLibMalloc(NewArgCount * sizeof(YORI_STRING));
-                    if (NewArgV == NULL) {
+                    if (!YoriLibShAllocateArgCount(&NewCmd, NewArgCount, 0, NULL)) {
                         return FALSE;
                     }
 
-                    memcpy(NewArgV, Arg, (ArgIndex + 1) * sizeof(YORI_STRING));
-                    NewArgV[ArgIndex].LengthInChars = (DWORD)(Char.StartOfString - Arg[ArgIndex].StartOfString);
-                    YoriLibInitEmptyString(&NewArgV[ArgIndex + 1]);
-                    NewArgV[ArgIndex + 1].StartOfString = Char.StartOfString;
+                    for (ExistingArg = 0; ExistingArg <= ArgIndex; ExistingArg++) {
+                        YoriLibShCopyArg(CmdContext, ExistingArg, &NewCmd, ExistingArg);
+                    }
+
+                    NewCmd.ArgV[ArgIndex].LengthInChars = (DWORD)(Char.StartOfString - Arg[ArgIndex].StartOfString);
+                    YoriLibShCheckIfArgNeedsQuotes(&NewCmd, ArgIndex);
+                    YoriLibInitEmptyString(&NewCmd.ArgV[ArgIndex + 1]);
+                    NewCmd.ArgV[ArgIndex + 1].StartOfString = Char.StartOfString;
 
                     if (TerminateNextArg) {
-                        NewArgV[ArgIndex + 1].LengthInChars = CharsToConsume;
-                        YoriLibInitEmptyString(&NewArgV[ArgIndex + 2]);
-                        NewArgV[ArgIndex + 2].StartOfString = &Char.StartOfString[CharsToConsume];
-                        NewArgV[ArgIndex + 2].LengthInChars = Char.LengthInChars - CharsToConsume;
-                        if (ArgIndex + 1 < ArgCount) {
-                            memcpy(&NewArgV[ArgIndex + 3], &Arg[ArgIndex + 1], (ArgCount - ArgIndex - 1) * sizeof(YORI_STRING));
-                        }
+                        NewCmd.ArgV[ArgIndex + 1].LengthInChars = CharsToConsume;
+                        YoriLibShCheckIfArgNeedsQuotes(&NewCmd, ArgIndex + 1);
+                        YoriLibInitEmptyString(&NewCmd.ArgV[ArgIndex + 2]);
+                        NewCmd.ArgV[ArgIndex + 2].StartOfString = &Char.StartOfString[CharsToConsume];
+                        NewCmd.ArgV[ArgIndex + 2].LengthInChars = Char.LengthInChars - CharsToConsume;
+                        YoriLibShCheckIfArgNeedsQuotes(&NewCmd, ArgIndex + 2);
+                         for (ExistingArg = ArgIndex + 1; ExistingArg < ArgCount; ExistingArg++) {
+                             YoriLibShCopyArg(CmdContext, ExistingArg, &NewCmd, ExistingArg + 2);
+                         }
 
                         ArgIndex++;
 
                     } else {
-                        NewArgV[ArgIndex + 1].LengthInChars = Char.LengthInChars;
-                        if (ArgIndex + 1 < ArgCount) {
-                            memcpy(&NewArgV[ArgIndex + 2], &Arg[ArgIndex + 1], (ArgCount - ArgIndex - 1) * sizeof(YORI_STRING));
+                        NewCmd.ArgV[ArgIndex + 1].LengthInChars = Char.LengthInChars;
+                        YoriLibShCheckIfArgNeedsQuotes(&NewCmd, ArgIndex + 1);
+                        for (ExistingArg = ArgIndex + 1; ExistingArg < ArgCount; ExistingArg++) {
+                            YoriLibShCopyArg(CmdContext, ExistingArg, &NewCmd, ExistingArg + 1);
                         }
                         InitialArgOffset = CharsToConsume;
                     }
 
-                    *ArgC = NewArgCount;
-                    ArgCount = NewArgCount;
+                    YoriLibShFreeCmdContext(CmdContext);
+                    CmdContext->ArgC = NewArgCount;
+                    CmdContext->ArgV = NewCmd.ArgV;
+                    CmdContext->ArgContexts = NewCmd.ArgContexts;
+                    CmdContext->MemoryToFree = NewCmd.MemoryToFree;
 
-                    YoriLibFree(Arg);
-                    *ArgV = NewArgV;
-                    Arg = NewArgV;
+                    ArgCount = NewArgCount;
+                    Arg = NewCmd.ArgV;
 
                     break;
                 }
@@ -372,10 +389,10 @@ ForExecuteCommand(
     DWORD ArgLengthNeeded;
     YORI_STRING OldArg;
     YORI_STRING NewArgWritePoint;
-    PYORI_STRING NewArgArray;
     YORI_STRING CmdLine;
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
+    YORI_LIBSH_CMD_CONTEXT NewCmd;
 
     YoriLibInitEmptyString(&CmdLine);
 
@@ -390,15 +407,11 @@ ForExecuteCommand(
     PrefixArgCount = 2;
 #endif
 
-
     ArgsNeeded += PrefixArgCount;
 
-    NewArgArray = YoriLibMalloc(ArgsNeeded * sizeof(YORI_STRING));
-    if (NewArgArray == NULL) {
+    if (!YoriLibShAllocateArgCount(&NewCmd, ArgsNeeded, 0, NULL)) {
         return;
     }
-
-    ZeroMemory(NewArgArray, ArgsNeeded * sizeof(YORI_STRING));
 
     //
     //  If a full path is specified in the environment, use it.  If not,
@@ -409,31 +422,31 @@ ForExecuteCommand(
         if (ExecContext->InvokeCmd) {
             ArgLengthNeeded = GetEnvironmentVariable(_T("COMSPEC"), NULL, 0);
             if (ArgLengthNeeded != 0) {
-                if (YoriLibAllocateString(&NewArgArray[0], ArgLengthNeeded)) {
-                    NewArgArray[0].LengthInChars = GetEnvironmentVariable(_T("COMSPEC"), NewArgArray[0].StartOfString, NewArgArray[0].LengthAllocated);
-                    if (NewArgArray[0].LengthInChars == 0) {
-                        YoriLibFreeStringContents(&NewArgArray[0]);
+                if (YoriLibAllocateString(&NewCmd.ArgV[0], ArgLengthNeeded)) {
+                    NewCmd.ArgV[0].LengthInChars = GetEnvironmentVariable(_T("COMSPEC"), NewCmd.ArgV[0].StartOfString, NewCmd.ArgV[0].LengthAllocated);
+                    if (NewCmd.ArgV[0].LengthInChars == 0) {
+                        YoriLibFreeStringContents(&NewCmd.ArgV[0]);
                     }
                 }
             }
-            if (NewArgArray[0].LengthInChars == 0) {
-                YoriLibConstantString(&NewArgArray[0], _T("cmd.exe"));
+            if (NewCmd.ArgV[0].LengthInChars == 0) {
+                YoriLibConstantString(&NewCmd.ArgV[0], _T("cmd.exe"));
             }
         } else {
             ArgLengthNeeded = GetEnvironmentVariable(_T("YORISPEC"), NULL, 0);
             if (ArgLengthNeeded != 0) {
-                if (YoriLibAllocateString(&NewArgArray[0], ArgLengthNeeded)) {
-                    NewArgArray[0].LengthInChars = GetEnvironmentVariable(_T("YORISPEC"), NewArgArray[0].StartOfString, NewArgArray[0].LengthAllocated);
-                    if (NewArgArray[0].LengthInChars == 0) {
-                        YoriLibFreeStringContents(&NewArgArray[0]);
+                if (YoriLibAllocateString(&NewCmd.ArgV[0], ArgLengthNeeded)) {
+                    NewCmd.ArgV[0].LengthInChars = GetEnvironmentVariable(_T("YORISPEC"), NewCmd.ArgV[0].StartOfString, NewCmd.ArgV[0].LengthAllocated);
+                    if (NewCmd.ArgV[0].LengthInChars == 0) {
+                        YoriLibFreeStringContents(&NewCmd.ArgV[0]);
                     }
                 }
             }
-            if (NewArgArray[0].LengthInChars == 0) {
-                YoriLibConstantString(&NewArgArray[0], _T("yori.exe"));
+            if (NewCmd.ArgV[0].LengthInChars == 0) {
+                YoriLibConstantString(&NewCmd.ArgV[0], _T("yori.exe"));
             }
         }
-        YoriLibConstantString(&NewArgArray[1], _T("/c"));
+        YoriLibConstantString(&NewCmd.ArgV[1], _T("/c"));
     }
 
     //
@@ -449,6 +462,22 @@ ForExecuteCommand(
         OldArg.LengthInChars = ExecContext->ArgV[Count].LengthInChars;
         SubstitutesFound = 0;
 
+        //
+        //  MSFIX: Ideally this would have ArgContexts for the input arguments
+        //  and copy quote state of those rather than trying to infer whether
+        //  a quote is needed.  It makes complete sense for a user to specify
+        //  "%i" or similar (with quotes) as an input and expect them to be
+        //  applied universally.  For the external version of for, this could
+        //  be done by passing GetCommandLine() to YoriSh, but the builtin
+        //  version requires a little more thought.
+        //
+
+        YoriLibInitEmptyString(&NewCmd.ArgV[Count + PrefixArgCount]);
+        NewCmd.ArgV[Count + PrefixArgCount].StartOfString = OldArg.StartOfString;
+        NewCmd.ArgV[Count + PrefixArgCount].LengthInChars = OldArg.LengthInChars;
+
+        YoriLibShCheckIfArgNeedsQuotes(&NewCmd, Count + PrefixArgCount);
+
         while (YoriLibFindFirstMatchingSubstring(&OldArg, 1, ExecContext->SubstituteVariable, &FoundOffset)) {
             SubstitutesFound++;
             OldArg.StartOfString += FoundOffset + 1;
@@ -456,13 +485,13 @@ ForExecuteCommand(
         }
 
         ArgLengthNeeded = ExecContext->ArgV[Count].LengthInChars + SubstitutesFound * Match->LengthInChars - SubstitutesFound * ExecContext->SubstituteVariable->LengthInChars + 1;
-        if (!YoriLibAllocateString(&NewArgArray[Count + PrefixArgCount], ArgLengthNeeded)) {
+        if (!YoriLibAllocateString(&NewCmd.ArgV[Count + PrefixArgCount], ArgLengthNeeded)) {
             goto Cleanup;
         }
 
         YoriLibInitEmptyString(&NewArgWritePoint);
-        NewArgWritePoint.StartOfString = NewArgArray[Count + PrefixArgCount].StartOfString;
-        NewArgWritePoint.LengthAllocated = NewArgArray[Count + PrefixArgCount].LengthAllocated;
+        NewArgWritePoint.StartOfString = NewCmd.ArgV[Count + PrefixArgCount].StartOfString;
+        NewArgWritePoint.LengthAllocated = NewCmd.ArgV[Count + PrefixArgCount].LengthAllocated;
 
         YoriLibInitEmptyString(&OldArg);
         OldArg.StartOfString = ExecContext->ArgV[Count].StartOfString;
@@ -485,9 +514,9 @@ ForExecuteCommand(
                 NewArgWritePoint.LengthAllocated -= OldArg.LengthInChars;
                 NewArgWritePoint.StartOfString[0] = '\0';
 
-                NewArgArray[Count + PrefixArgCount].LengthInChars = (DWORD)(NewArgWritePoint.StartOfString - NewArgArray[Count + PrefixArgCount].StartOfString);
-                ASSERT(NewArgArray[Count + PrefixArgCount].LengthInChars < NewArgArray[Count + PrefixArgCount].LengthAllocated);
-                ASSERT(YoriLibIsStringNullTerminated(&NewArgArray[Count + PrefixArgCount]));
+                NewCmd.ArgV[Count + PrefixArgCount].LengthInChars = (DWORD)(NewArgWritePoint.StartOfString - NewCmd.ArgV[Count + PrefixArgCount].StartOfString);
+                ASSERT(NewCmd.ArgV[Count + PrefixArgCount].LengthInChars < NewCmd.ArgV[Count + PrefixArgCount].LengthAllocated);
+                ASSERT(YoriLibIsStringNullTerminated(&NewCmd.ArgV[Count + PrefixArgCount]));
                 break;
             }
         }
@@ -510,9 +539,9 @@ ForExecuteCommand(
     //  etc.
     //
 
-    ForBreakArgumentsAsNeeded(&ArgsNeeded, &NewArgArray);
+    ForBreakArgumentsAsNeeded(&NewCmd);
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgsNeeded, NewArgArray, TRUE, &CmdLine)) {
+    if (!YoriLibShBuildCmdlineFromCmdContext(&NewCmd, &CmdLine, FALSE, NULL, NULL)) {
         goto Cleanup;
     }
 
@@ -545,12 +574,8 @@ ForExecuteCommand(
 
 Cleanup:
 
-    for (Count = 0; Count < ArgsNeeded; Count++) {
-        YoriLibFreeStringContents(&NewArgArray[Count]);
-    }
-
+    YoriLibShFreeCmdContext(&NewCmd);
     YoriLibFreeStringContents(&CmdLine);
-    YoriLibFree(NewArgArray);
 }
 
 /**

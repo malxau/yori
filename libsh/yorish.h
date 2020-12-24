@@ -539,6 +539,15 @@ YoriLibShBuildCmdContextForCmdBuckPass (
 
 __success(return)
 BOOLEAN
+YoriLibShAllocateArgCount(
+    __out PYORI_LIBSH_CMD_CONTEXT CmdContext,
+    __in DWORD ArgCount,
+    __in DWORD ExtraByteCount,
+    __out_opt PVOID *ExtraData
+    );
+
+__success(return)
+BOOLEAN
 YoriLibShBuildCmdlineFromCmdContext(
     __in PYORI_LIBSH_CMD_CONTEXT CmdContext,
     __inout PYORI_STRING CmdLine,

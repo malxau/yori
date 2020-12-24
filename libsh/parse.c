@@ -170,6 +170,51 @@ YoriLibShIsArgumentSeperator(
 }
 
 /**
+ Allocate the ArgV and ArgContexts arrays within a CmdContext.  Optionally the
+ caller can request additional bytes to be in this allocation, and if so, this
+ routine will output a pointer to the additional payload.
+
+ @param CmdContext Pointer to the CmdContext whose arrays should be allocated.
+
+ @param ArgCount Specifies the number of arguments to allocate.
+
+ @param ExtraByteCount Specifies the number of extra bytes to include in the
+        allocation.  If this is nonzero, the ExtraData argument is mandatory.
+
+ @param ExtraData Pointer to a pointer that will receive the location of the
+        extra allocation, if ExtraByteCount is nonzero.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriLibShAllocateArgCount(
+    __out PYORI_LIBSH_CMD_CONTEXT CmdContext,
+    __in DWORD ArgCount,
+    __in DWORD ExtraByteCount,
+    __out_opt PVOID *ExtraData
+    )
+{
+    CmdContext->MemoryToFree = YoriLibReferencedMalloc((ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT))) +
+                                                       ExtraByteCount);
+    if (CmdContext->MemoryToFree == NULL) {
+        return FALSE;
+    }
+
+    ZeroMemory(CmdContext->MemoryToFree, ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
+
+    CmdContext->ArgC = ArgCount;
+    CmdContext->ArgV = CmdContext->MemoryToFree;
+
+    CmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, ArgCount * sizeof(YORI_STRING));
+    if (ExtraByteCount != 0 && ExtraData != NULL) {
+        *ExtraData = YoriLibAddToPointer(CmdContext->ArgContexts, ArgCount * sizeof(YORI_LIBSH_ARG_CONTEXT));
+    }
+
+    return TRUE;
+}
+
+/**
  Remove spaces from the beginning of a Yori string.  Note this implies
  advancing the StartOfString pointer, so a caller cannot assume this
  pointer is unchanged across the call.
@@ -502,16 +547,9 @@ YoriLibShParseCmdlineToCmdContext(
         return TRUE;
     }
 
-    CmdContext->MemoryToFree = YoriLibReferencedMalloc((ArgCount * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT))) +
-                                                       (RequiredCharCount + ArgCount) * sizeof(TCHAR));
-    if (CmdContext->MemoryToFree == NULL) {
+    if (!YoriLibShAllocateArgCount(CmdContext, ArgCount, (RequiredCharCount + ArgCount) * sizeof(TCHAR), &OutputString)) {
         return FALSE;
     }
-
-    CmdContext->ArgV = CmdContext->MemoryToFree;
-
-    CmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, ArgCount * sizeof(YORI_STRING));
-    OutputString = (LPTSTR)(CmdContext->ArgContexts + ArgCount);
 
     ArgCount = 0;
     BraceNestingLevel = 0;
@@ -965,13 +1003,9 @@ YoriLibShCopyCmdContext(
 {
     DWORD Count;
 
-    DestCmdContext->MemoryToFree = YoriLibReferencedMalloc(SrcCmdContext->ArgC * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
-    if (DestCmdContext->MemoryToFree == NULL) {
+    if (!YoriLibShAllocateArgCount(DestCmdContext, SrcCmdContext->ArgC, 0, NULL)) {
         return FALSE;
     }
-
-    DestCmdContext->ArgV = DestCmdContext->MemoryToFree;
-    DestCmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(DestCmdContext->ArgV, SrcCmdContext->ArgC * sizeof(YORI_STRING));
 
     DestCmdContext->ArgC = SrcCmdContext->ArgC;
     DestCmdContext->CurrentArg = SrcCmdContext->CurrentArg;
@@ -1296,13 +1330,10 @@ YoriLibShParseCmdContextToExecContext(
 
     ArgumentsConsumed = Count - InitialArgument;
 
-    ExecContext->CmdToExec.MemoryToFree = YoriLibReferencedMalloc(ArgumentsConsumed * (sizeof(YORI_STRING) + sizeof(YORI_LIBSH_ARG_CONTEXT)));
-    if (ExecContext->CmdToExec.MemoryToFree == NULL) {
+    if (!YoriLibShAllocateArgCount(&ExecContext->CmdToExec, ArgumentsConsumed, 0, NULL)) {
         return 0;
     }
-
-    ExecContext->CmdToExec.ArgV = ExecContext->CmdToExec.MemoryToFree;
-    ExecContext->CmdToExec.ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(ExecContext->CmdToExec.ArgV, ArgumentsConsumed * sizeof(YORI_STRING));
+    ExecContext->CmdToExec.ArgC = 0;
 
     for (Count = InitialArgument; Count < (InitialArgument + ArgumentsConsumed); Count++) {
 
