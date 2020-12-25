@@ -44,7 +44,7 @@ ENTRY=mainCRTStartup
 YENTRY=ymainCRTStartup
 
 !IF $(ANALYZE)==1
-CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -analyze:plugin EspXEngine.dll
+CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Wall -analyze:plugin EspXEngine.dll
 !ENDIF
 
 !IF $(DEBUG)==1
