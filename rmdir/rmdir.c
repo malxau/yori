@@ -47,7 +47,7 @@ CHAR strRmdirHelpText[] =
  Display usage text to the user.
  */
 BOOL
-RmdirHelp()
+RmdirHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Rmdir %i.%02i\n"), RMDIR_VER_MAJOR, RMDIR_VER_MINOR);
 #if YORI_BUILD_ID

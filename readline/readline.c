@@ -52,7 +52,7 @@ CHAR strReadLineHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ReadLineHelp()
+ReadLineHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ReadLine %i.%02i\n"), READLINE_VER_MAJOR, READLINE_VER_MINOR);
 #if YORI_BUILD_ID

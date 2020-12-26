@@ -42,7 +42,7 @@ CHAR strMkdirHelpText[] =
  Display usage text to the user.
  */
 BOOL
-MkdirHelp()
+MkdirHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Mkdir %i.%02i\n"), MKDIR_VER_MAJOR, MKDIR_VER_MINOR);
 #if YORI_BUILD_ID

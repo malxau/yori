@@ -64,7 +64,7 @@ CHAR strDateHelpText[] =
  Display usage text to the user.
  */
 BOOL
-DateHelp()
+DateHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Date %i.%02i\n"), DATE_VER_MAJOR, DATE_VER_MINOR);
 #if YORI_BUILD_ID

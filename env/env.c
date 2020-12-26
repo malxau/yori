@@ -46,7 +46,7 @@ CHAR strEnvHelpText[] =
  Display usage text to the user.
  */
 BOOL
-EnvHelp()
+EnvHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Env %i.%02i\n"), ENV_VER_MAJOR, ENV_VER_MINOR);
 #if YORI_BUILD_ID

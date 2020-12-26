@@ -232,7 +232,7 @@ YoriShDefaultAliasEntries[] = {
  @return TRUE to indicate success.
  */
 BOOL
-YoriShRegisterDefaultAliases()
+YoriShRegisterDefaultAliases(VOID)
 {
     DWORD Count;
     for (Count = 0; Count < sizeof(YoriShDefaultAliasEntries)/sizeof(YoriShDefaultAliasEntries[0]); Count++) {

@@ -85,7 +85,7 @@ YoriLibVtSetDefaultColor(
  @return The current default color for the process.
  */
 WORD
-YoriLibVtGetDefaultColor()
+YoriLibVtGetDefaultColor(VOID)
 {
     if (YoriLibVtResetColorSet) {
         return YoriLibVtResetColor;
@@ -125,7 +125,7 @@ YoriLibVtSetLineEnding(
  @return The current line ending string.
  */
 LPTSTR
-YoriLibVtGetLineEnding()
+YoriLibVtGetLineEnding(VOID)
 {
     return YoriLibVtLineEnding;
 }
@@ -1063,6 +1063,7 @@ YoriLibOutputInternal(
     marker = savedmarker;
     len = YoriLibVSPrintf(buf, len, szFmt, marker);
 
+    __analysis_assume(hOut != 0);
     Result = YoriLibProcessVtEscapesOnNewStream(buf, len, hOut, &Callbacks);
 
     if (buf != stack_buf) {

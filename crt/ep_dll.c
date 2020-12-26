@@ -37,7 +37,10 @@
 #pragma warning(disable: 4201) // nameless struct/union
 #pragma warning(disable: 4214) // bit field type other than int
 #pragma warning(disable: 4514) // unreferenced inline function
+
+#if defined(_MSC_VER) && (_MSC_VER <= 1500)
 #pragma warning(disable: 4705) // statement has no effect
+#endif
 
 #include <windows.h>
 

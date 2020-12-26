@@ -51,7 +51,7 @@ CHAR strIntCmpHelpText[] =
  Display usage text to the user.
  */
 BOOL
-IntCmpHelp()
+IntCmpHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("IntCmp %i.%02i\n"), INTCMP_VER_MAJOR, INTCMP_VER_MINOR);
 #if YORI_BUILD_ID

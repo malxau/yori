@@ -42,7 +42,7 @@ CHAR strYuiHelpText[] =
  Display usage text to the user.
  */
 BOOL
-YuiHelp()
+YuiHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Yui %i.%02i\n"), YUI_VER_MAJOR, YUI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -165,7 +165,7 @@ YuiNotifyResolutionChange(
          system, and FALSE if it appears to be a full UI system.
  */
 BOOL
-YuiIsServerCore()
+YuiIsServerCore(VOID)
 {
     DWORD ProductType;
 
@@ -216,7 +216,7 @@ YuiIsServerCore()
  @return TRUE to indicate the start menu was displayed successfully.
  */
 BOOL
-YuiDisplayMenu()
+YuiDisplayMenu(VOID)
 {
     if (YuiContext.MenuActive) {
         return TRUE;
@@ -501,7 +501,7 @@ YuiCreateWindow(
  notification.
  */ 
 VOID
-YuiCleanupGlobalState()
+YuiCleanupGlobalState(VOID)
 {
     DWORD Count;
     YuiMenuFreeAll(&YuiContext);

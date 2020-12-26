@@ -96,7 +96,7 @@ YORI_NTDLL_FUNCTIONS DllNtDll;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadNtDllFunctions()
+YoriLibLoadNtDllFunctions(VOID)
 {
     if (DllNtDll.hDll != NULL) {
         return TRUE;
@@ -182,7 +182,7 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadKernel32Functions()
+YoriLibLoadKernel32Functions(VOID)
 {
     DWORD Count;
     if (DllKernel32.hDll != NULL) {
@@ -213,7 +213,7 @@ YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadAdvApi32Functions()
+YoriLibLoadAdvApi32Functions(VOID)
 {
 
     if (DllAdvApi32.hDll != NULL) {
@@ -266,7 +266,7 @@ YORI_BCRYPT_FUNCTIONS DllBCrypt;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadBCryptFunctions()
+YoriLibLoadBCryptFunctions(VOID)
 {
 
     if (DllBCrypt.hDll != NULL) {
@@ -301,7 +301,7 @@ YORI_CABINET_FUNCTIONS DllCabinet;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadCabinetFunctions()
+YoriLibLoadCabinetFunctions(VOID)
 {
     if (DllCabinet.hDll != NULL) {
         return TRUE;
@@ -335,7 +335,7 @@ YORI_CTL3D_FUNCTIONS DllCtl3d;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadCtl3d32Functions()
+YoriLibLoadCtl3d32Functions(VOID)
 {
 
     if (DllCtl3d.hDll != NULL) {
@@ -365,7 +365,7 @@ YORI_DBGHELP_FUNCTIONS DllDbgHelp;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadDbgHelpFunctions()
+YoriLibLoadDbgHelpFunctions(VOID)
 {
 
     if (DllDbgHelp.hDll != NULL) {
@@ -394,7 +394,7 @@ YORI_OLE32_FUNCTIONS DllOle32;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadOle32Functions()
+YoriLibLoadOle32Functions(VOID)
 {
 
     if (DllOle32.hDll != NULL) {
@@ -425,7 +425,7 @@ YORI_PSAPI_FUNCTIONS DllPsapi;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadPsapiFunctions()
+YoriLibLoadPsapiFunctions(VOID)
 {
 
     if (DllPsapi.hDll != NULL) {
@@ -459,7 +459,7 @@ YORI_SHELL32_FUNCTIONS DllShell32;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadShell32Functions()
+YoriLibLoadShell32Functions(VOID)
 {
 
     if (DllShell32.hDll != NULL) {
@@ -494,7 +494,7 @@ YORI_SHFOLDER_FUNCTIONS DllShfolder;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadShfolderFunctions()
+YoriLibLoadShfolderFunctions(VOID)
 {
 
     if (DllShfolder.hDll != NULL) {
@@ -522,7 +522,7 @@ YORI_USER32_FUNCTIONS DllUser32;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadUser32Functions()
+YoriLibLoadUser32Functions(VOID)
 {
     if (DllUser32.hDll != NULL) {
         return TRUE;
@@ -572,7 +572,7 @@ YORI_VERSION_FUNCTIONS DllVersion;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadVersionFunctions()
+YoriLibLoadVersionFunctions(VOID)
 {
 
     if (DllVersion.hDll != NULL) {
@@ -613,7 +613,7 @@ YORI_VIRTDISK_FUNCTIONS DllVirtDisk;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadVirtDiskFunctions()
+YoriLibLoadVirtDiskFunctions(VOID)
 {
 
     if (DllVirtDisk.hDll != NULL) {
@@ -650,7 +650,7 @@ YORI_WININET_FUNCTIONS DllWinInet;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadWinInetFunctions()
+YoriLibLoadWinInetFunctions(VOID)
 {
 
     if (DllWinInet.hDll != NULL) {
@@ -686,7 +686,7 @@ YORI_WTSAPI32_FUNCTIONS DllWtsApi32;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibLoadWtsApi32Functions()
+YoriLibLoadWtsApi32Functions(VOID)
 {
 
     if (DllWtsApi32.hDll != NULL) {

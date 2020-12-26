@@ -42,7 +42,7 @@ CHAR strZHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ZHelp()
+ZHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Z %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -142,7 +142,7 @@ BOOL ZCallbacksRegistered;
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-ZListStack()
+ZListStack(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PZ_RECENT_DIRECTORY FoundRecentDir;
@@ -261,7 +261,7 @@ ZAddDirectoryToRecent(
  */
 VOID
 YORI_BUILTIN_FN
-ZNotifyUnload()
+ZNotifyUnload(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PZ_RECENT_DIRECTORY FoundRecentDir;

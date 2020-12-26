@@ -744,8 +744,7 @@ YoriShBuiltinUnregister(
  process exit.
  */
 VOID
-YoriShBuiltinUnregisterAll(
-    )
+YoriShBuiltinUnregisterAll(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PYORI_SH_BUILTIN_CALLBACK Callback;

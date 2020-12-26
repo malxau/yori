@@ -46,7 +46,7 @@ CHAR strReplHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ReplHelp()
+ReplHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Repl %i.%02i\n"), REPL_VER_MAJOR, REPL_VER_MINOR);
 #if YORI_BUILD_ID

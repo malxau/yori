@@ -207,8 +207,12 @@ YoriLibShAllocateArgCount(
     CmdContext->ArgV = CmdContext->MemoryToFree;
 
     CmdContext->ArgContexts = (PYORI_LIBSH_ARG_CONTEXT)YoriLibAddToPointer(CmdContext->ArgV, ArgCount * sizeof(YORI_STRING));
-    if (ExtraByteCount != 0 && ExtraData != NULL) {
-        *ExtraData = YoriLibAddToPointer(CmdContext->ArgContexts, ArgCount * sizeof(YORI_LIBSH_ARG_CONTEXT));
+    if (ExtraData != NULL) {
+        if (ExtraByteCount != 0) {
+            *ExtraData = YoriLibAddToPointer(CmdContext->ArgContexts, ArgCount * sizeof(YORI_LIBSH_ARG_CONTEXT));
+        } else {
+            *ExtraData = NULL;
+        }
     }
 
     return TRUE;

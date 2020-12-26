@@ -469,7 +469,6 @@ YoriPkgIsFileToBeDeletedOnReboot(
     );
 
 BOOL
-YoriPkgRemoveUninstallEntry(
-    );
+YoriPkgRemoveUninstallEntry(VOID);
 
 // vim:sw=4:ts=4:et:

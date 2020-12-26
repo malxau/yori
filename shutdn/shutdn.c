@@ -48,7 +48,7 @@ CHAR strShutdownHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ShutdownHelp()
+ShutdownHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Shutdown %i.%02i\n"), SHUTDN_VER_MAJOR, SHUTDN_VER_MINOR);
 #if YORI_BUILD_ID
@@ -65,7 +65,7 @@ ShutdownHelp()
  @return TRUE to indicate the privilege was enabled, FALSE if it was not.
  */
 BOOL
-ShutdownEnableShutdownPrivilege()
+ShutdownEnableShutdownPrivilege(VOID)
 {
     TOKEN_PRIVILEGES TokenPrivileges;
     LUID ShutdownLuid;

@@ -1324,7 +1324,7 @@ FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
  Display usage text to the user.
  */
 BOOL
-FInfoHelp()
+FInfoHelp(VOID)
 {
     DWORD Count;
     TCHAR NameWithQualifiers[32];

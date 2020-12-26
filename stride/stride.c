@@ -47,7 +47,7 @@ CHAR strStrideHelpText[] =
  Display usage text to the user.
  */
 BOOL
-StrideHelp()
+StrideHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Stride %i.%02i\n"), STRIDE_VER_MAJOR, STRIDE_VER_MINOR);
 #if YORI_BUILD_ID

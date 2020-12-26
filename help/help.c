@@ -41,7 +41,7 @@ CHAR strHelpHelpText[] =
  Display usage text to the user.
  */
 BOOL
-HelpHelp()
+HelpHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Help %i.%02i\n"), HELP_VER_MAJOR, HELP_VER_MINOR);
 #if YORI_BUILD_ID
@@ -191,7 +191,7 @@ CHAR strHelpHelpText4[] =
  Display usage text to the user.
  */
 BOOL
-HelpText()
+HelpText(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText1);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText2);

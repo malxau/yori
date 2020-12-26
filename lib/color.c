@@ -389,7 +389,7 @@ CHAR YoriLibDefaultFileColorString[] =
          file color string.
  */
 LPCSTR
-YoriLibGetDefaultFileColorString()
+YoriLibGetDefaultFileColorString(VOID)
 {
     return YoriLibDefaultFileColorString;
 }

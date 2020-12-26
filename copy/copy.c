@@ -72,7 +72,7 @@ CHAR strCopyHelpText[] =
  Display usage text to the user.
  */
 BOOL
-CopyHelp()
+CopyHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Copy %i.%02i\n"), COPY_VER_MAJOR, COPY_VER_MINOR);
 #if YORI_BUILD_ID
@@ -877,7 +877,7 @@ CopyFileFoundCallback(
  @return TRUE to indicate the privilege was enabled, FALSE if it was not.
  */
 BOOL
-CopyEnableSymlinkPrivilege()
+CopyEnableSymlinkPrivilege(VOID)
 {
     TOKEN_PRIVILEGES TokenPrivileges;
     LUID SymlinkLuid;

@@ -53,7 +53,7 @@ TCHAR strCopyrightYear[] = _T("2020");
  Display usage text to the user.
  */
 BOOL
-EditHelp()
+EditHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Edit %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID

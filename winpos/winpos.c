@@ -58,7 +58,7 @@ CHAR strWinPosHelpText[] =
  Display usage text to the user.
  */
 BOOL
-WinPosHelp()
+WinPosHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("WinPos %i.%02i\n"), WINPOS_VER_MAJOR, WINPOS_VER_MINOR);
 #if YORI_BUILD_ID

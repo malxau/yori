@@ -49,7 +49,7 @@ CHAR strIconvHelpText[] =
  Display usage text to the user.
  */
 BOOL
-IconvHelp()
+IconvHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Iconv %i.%02i\n"), ICONV_VER_MAJOR, ICONV_VER_MINOR);
 #if YORI_BUILD_ID

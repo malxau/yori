@@ -43,7 +43,7 @@ CHAR strGrpcmpHelpText[] =
  Display usage text to the user.
  */
 BOOL
-GrpcmpHelp()
+GrpcmpHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Grpcmp %i.%02i\n"), GRPCMP_VER_MAJOR, GRPCMP_VER_MINOR);
 #if YORI_BUILD_ID

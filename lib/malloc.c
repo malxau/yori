@@ -328,7 +328,7 @@ YoriLibFree(
  does nothing.
  */
 VOID
-YoriLibDisplayMemoryUsage()
+YoriLibDisplayMemoryUsage(VOID)
 {
 #if YORI_SPECIAL_HEAP
     if (YoriLibSpecialHeap.BytesCurrentlyAllocated > 0 ||

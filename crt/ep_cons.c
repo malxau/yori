@@ -224,7 +224,7 @@ int __cdecl CONSOLE_USER_ENTRYPOINT(int argc, LPTSTR argv[]);
 /**
  The entrypoint function that the Windows loader will commence execution from.
  */
-VOID __cdecl CONSOLE_CRT_ENTRYPOINT()
+VOID __cdecl CONSOLE_CRT_ENTRYPOINT(void)
 {
     TCHAR ** argv;
     int argc;

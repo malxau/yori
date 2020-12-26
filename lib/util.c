@@ -356,7 +356,7 @@ YoriLibIsPathUrl(
          from another source.
  */
 BOOL
-YoriLibIsStdInConsole()
+YoriLibIsStdInConsole(VOID)
 {
     DWORD ConsoleMode;
     if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &ConsoleMode)) {

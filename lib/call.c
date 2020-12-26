@@ -243,7 +243,7 @@ YoriCallBuiltinUnregister(
 /**
  Prototype for the @ref YoriApiClearHistoryStrings function.
  */
-typedef BOOL YORI_API_CLEAR_HISTORY_STRINGS();
+typedef BOOL YORI_API_CLEAR_HISTORY_STRINGS(VOID);
 
 /**
  Prototype for a pointer to the @ref YoriApiClearHistoryStrings function.
@@ -262,8 +262,7 @@ PYORI_API_CLEAR_HISTORY_STRINGS pYoriApiClearHistoryStrings;
  */
 __success(return)
 BOOL
-YoriCallClearHistoryStrings(
-    )
+YoriCallClearHistoryStrings(VOID)
 {
     if (pYoriApiClearHistoryStrings == NULL) {
         HMODULE hYori;
@@ -280,7 +279,7 @@ YoriCallClearHistoryStrings(
 /**
  Prototype for the @ref YoriApiDecrementPromptRecursionDepth function.
  */
-typedef BOOL YORI_API_DECREMENT_PROMPT_RECURSION_DEPTH();
+typedef BOOL YORI_API_DECREMENT_PROMPT_RECURSION_DEPTH(VOID);
 
 /**
  Prototype for a pointer to the @ref YoriApiDecrementPromptRecursionDepth function.
@@ -300,8 +299,7 @@ PYORI_API_DECREMENT_PROMPT_RECURSION_DEPTH pYoriApiDecrementPromptRecursionDepth
  */
 __success(return)
 BOOL
-YoriCallDecrementPromptRecursionDepth(
-    )
+YoriCallDecrementPromptRecursionDepth(VOID)
 {
     if (pYoriApiDecrementPromptRecursionDepth == NULL) {
         HMODULE hYori;
@@ -649,7 +647,7 @@ YoriCallGetEnvironmentVariable(
 /**
  Prototype for the @ref YoriApiGetErrorLevel function.
  */
-typedef DWORD YORI_API_GET_ERRORLEVEL();
+typedef DWORD YORI_API_GET_ERRORLEVEL(VOID);
 
 /**
  Prototype for a pointer to the @ref YoriApiGetErrorLevel function.
@@ -667,8 +665,7 @@ PYORI_API_GET_ERRORLEVEL pYoriApiGetErrorLevel;
  @return The previous errorlevel.
  */
 DWORD
-YoriCallGetErrorLevel(
-    )
+YoriCallGetErrorLevel(VOID)
 {
     if (pYoriApiGetErrorLevel == NULL) {
         HMODULE hYori;
@@ -1008,7 +1005,7 @@ YoriCallGetYoriVersion(
 /**
  Prototype for the @ref YoriApiIncrementPromptRecursionDepth function.
  */
-typedef BOOL YORI_API_INCREMENT_PROMPT_RECURSION_DEPTH();
+typedef BOOL YORI_API_INCREMENT_PROMPT_RECURSION_DEPTH(VOID);
 
 /**
  Prototype for a pointer to the @ref YoriApiIncrementPromptRecursionDepth function.
@@ -1028,8 +1025,7 @@ PYORI_API_INCREMENT_PROMPT_RECURSION_DEPTH pYoriApiIncrementPromptRecursionDepth
  */
 __success(return)
 BOOL
-YoriCallIncrementPromptRecursionDepth(
-    )
+YoriCallIncrementPromptRecursionDepth(VOID)
 {
     if (pYoriApiIncrementPromptRecursionDepth == NULL) {
         HMODULE hYori;
@@ -1046,7 +1042,7 @@ YoriCallIncrementPromptRecursionDepth(
 /**
  Prototype for the @ref YoriApiIsProcessExiting function.
  */
-typedef BOOL YORI_API_IS_PROCESS_EXITING();
+typedef BOOL YORI_API_IS_PROCESS_EXITING(VOID);
 
 /**
  Prototype for a pointer to the @ref YoriApiIsProcessExiting function.
@@ -1064,8 +1060,7 @@ PYORI_API_IS_PROCESS_EXITING pYoriApiIsProcessExiting;
  @return TRUE if the process is being requested to terminate, FALSE if not.
  */
 BOOL
-YoriCallIsProcessExiting(
-    )
+YoriCallIsProcessExiting(VOID)
 {
     if (pYoriApiIsProcessExiting == NULL) {
         HMODULE hYori;

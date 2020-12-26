@@ -51,7 +51,7 @@ CHAR strCvtvtHelpText[] =
  Display help text for this application.
  */
 BOOL
-CvtvtUsage()
+CvtvtUsage(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cvtvt %i.%02i\n"), CVTVT_VER_MAJOR, CVTVT_VER_MINOR);
 #if YORI_BUILD_ID

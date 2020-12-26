@@ -63,7 +63,7 @@ void *     MCRT_FN mini_memmove(void * dest, const void * src, unsigned int len)
 void *     MCRT_FN mini_memset(void * dest, char c, unsigned int len);
 
 void       MCRT_FN mini_srand(unsigned int seed);
-int        MCRT_VARARGFN mini_rand();
+int        MCRT_VARARGFN mini_rand(void);
 
 /**
  The ansi form of @ref mini_ttoi .

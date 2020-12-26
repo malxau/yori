@@ -54,7 +54,7 @@ SdirCancelHandler (
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirAppInitialize()
+SdirAppInitialize(VOID)
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE hConsoleOutput = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -199,7 +199,7 @@ SdirAppInitialize()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirOptInitialize()
+SdirOptInitialize(VOID)
 {
     ULONG i, j;
     YORILIB_COLOR_ATTRIBUTES Attr;
@@ -588,7 +588,7 @@ SdirInit(
  Tear down any global allocations caused by invoking the application.
  */
 VOID
-SdirAppCleanup()
+SdirAppCleanup(VOID)
 {
     SetConsoleCtrlHandler(SdirCancelHandler, FALSE);
     if (Opts != NULL) {

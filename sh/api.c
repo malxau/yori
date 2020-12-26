@@ -122,8 +122,7 @@ YoriApiBuiltinUnregister(
  @return TRUE if the history strings were successfully deleted, FALSE if not.
  */
 BOOL
-YoriApiClearHistoryStrings(
-    )
+YoriApiClearHistoryStrings(VOID)
 {
     YoriShClearAllHistory();
     return TRUE;
@@ -136,8 +135,7 @@ YoriApiClearHistoryStrings(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriApiDecrementPromptRecursionDepth(
-    )
+YoriApiDecrementPromptRecursionDepth(VOID)
 {
     ASSERT(YoriShGlobal.PromptRecursionDepth > 0);
     if (YoriShGlobal.PromptRecursionDepth > 0) {
@@ -283,7 +281,7 @@ YoriApiGetEnvironmentVariable(
  Return the most recently set exit code after a previous command completion.
  */
 DWORD
-YoriApiGetErrorLevel()
+YoriApiGetErrorLevel(VOID)
 {
     return YoriShGlobal.ErrorLevel;
 }
@@ -454,8 +452,7 @@ YoriApiGetYoriVersion(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriApiIncrementPromptRecursionDepth(
-    )
+YoriApiIncrementPromptRecursionDepth(VOID)
 {
     YoriShGlobal.PromptRecursionDepth++;
     return TRUE;
@@ -467,8 +464,7 @@ YoriApiIncrementPromptRecursionDepth(
  @return TRUE if the process is being requested to terminate, FALSE if not.
  */
 BOOL
-YoriApiIsProcessExiting(
-    )
+YoriApiIsProcessExiting(VOID)
 {
     return YoriShGlobal.ExitProcess;
 }

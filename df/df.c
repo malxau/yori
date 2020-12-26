@@ -43,7 +43,7 @@ CHAR strDfHelpText[] =
  Display usage text to the user.
  */
 BOOL
-DfHelp()
+DfHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Df %i.%02i\n"), DF_VER_MAJOR, DF_VER_MINOR);
 #if YORI_BUILD_ID

@@ -401,7 +401,7 @@ typedef YORI_CMD_BUILTIN *PYORI_CMD_BUILTIN;
 typedef
 VOID
 YORI_BUILTIN_FN
-YORI_BUILTIN_UNLOAD_NOTIFY();
+YORI_BUILTIN_UNLOAD_NOTIFY(VOID);
 
 /**
  A prototype for a pointer to a function to invoke when the module is being
@@ -478,22 +478,22 @@ YoriLibCloseCab(
 // *** CANCEL.C ***
 
 BOOL
-YoriLibCancelEnable();
+YoriLibCancelEnable(VOID);
 
 BOOL
-YoriLibCancelDisable();
+YoriLibCancelDisable(VOID);
 
 BOOL
-YoriLibCancelIgnore();
+YoriLibCancelIgnore(VOID);
 
 BOOL
-YoriLibIsOperationCancelled();
+YoriLibIsOperationCancelled(VOID);
 
 VOID
-YoriLibCancelReset();
+YoriLibCancelReset(VOID);
 
 HANDLE
-YoriLibCancelGetEvent();
+YoriLibCancelGetEvent(VOID);
 
 // *** CLIP.C ***
 
@@ -683,7 +683,7 @@ YoriLibAreColorsIdentical(
     );
 
 LPCSTR
-YoriLibGetDefaultFileColorString();
+YoriLibGetDefaultFileColorString(VOID);
 
 __success(return)
 BOOL
@@ -856,52 +856,52 @@ YoriLibDbgRealAssert(
 // *** DYLD.C ***
 
 BOOL
-YoriLibLoadNtDllFunctions();
+YoriLibLoadNtDllFunctions(VOID);
 
 BOOL
-YoriLibLoadKernel32Functions();
+YoriLibLoadKernel32Functions(VOID);
 
 BOOL
-YoriLibLoadAdvApi32Functions();
+YoriLibLoadAdvApi32Functions(VOID);
 
 BOOL
-YoriLibLoadBCryptFunctions();
+YoriLibLoadBCryptFunctions(VOID);
 
 BOOL
-YoriLibLoadCabinetFunctions();
+YoriLibLoadCabinetFunctions(VOID);
 
 BOOL
-YoriLibLoadCtl3d32Functions();
+YoriLibLoadCtl3d32Functions(VOID);
 
 BOOL
-YoriLibLoadDbgHelpFunctions();
+YoriLibLoadDbgHelpFunctions(VOID);
 
 BOOL
-YoriLibLoadOle32Functions();
+YoriLibLoadOle32Functions(VOID);
 
 BOOL
-YoriLibLoadPsapiFunctions();
+YoriLibLoadPsapiFunctions(VOID);
 
 BOOL
-YoriLibLoadShell32Functions();
+YoriLibLoadShell32Functions(VOID);
 
 BOOL
-YoriLibLoadShfolderFunctions();
+YoriLibLoadShfolderFunctions(VOID);
 
 BOOL
-YoriLibLoadUser32Functions();
+YoriLibLoadUser32Functions(VOID);
 
 BOOL
-YoriLibLoadVersionFunctions();
+YoriLibLoadVersionFunctions(VOID);
 
 BOOL
-YoriLibLoadVirtDiskFunctions();
+YoriLibLoadVirtDiskFunctions(VOID);
 
 BOOL
-YoriLibLoadWinInetFunctions();
+YoriLibLoadWinInetFunctions(VOID);
 
 BOOL
-YoriLibLoadWtsApi32Functions();
+YoriLibLoadWtsApi32Functions(VOID);
 
 // *** FILECOMP.C ***
 
@@ -1200,7 +1200,7 @@ typedef struct _YORI_LIB_FILE_FILT_COLOR_CRITERIA {
 } YORI_LIB_FILE_FILT_COLOR_CRITERIA, *PYORI_LIB_FILE_FILT_COLOR_CRITERIA;
 
 BOOL
-YoriLibFileFiltHelp();
+YoriLibFileFiltHelp(VOID);
 
 __success(return)
 BOOL
@@ -2181,13 +2181,13 @@ YoriLibHexDiff(
 #endif
 
 BOOLEAN
-YoriLibIsUtf8Supported();
+YoriLibIsUtf8Supported(VOID);
 
 DWORD
-YoriLibGetMultibyteOutputEncoding();
+YoriLibGetMultibyteOutputEncoding(VOID);
 
 DWORD
-YoriLibGetMultibyteInputEncoding();
+YoriLibGetMultibyteInputEncoding(VOID);
 
 VOID
 YoriLibSetMultibyteOutputEncoding(
@@ -2230,8 +2230,7 @@ YoriLibMultibyteInput(
 // *** JOBOBJ.C ***
 
 HANDLE
-YoriLibCreateJobObject(
-    );
+YoriLibCreateJobObject(VOID);
 
 BOOL
 YoriLibAssignProcessToJobObject(
@@ -2392,7 +2391,7 @@ YoriLibFree(
     );
 
 VOID
-YoriLibDisplayMemoryUsage();
+YoriLibDisplayMemoryUsage(VOID);
 
 
 VOID
@@ -2471,10 +2470,10 @@ YoriLibDoesProcessHave32BitPeb(
 // *** PRIV.C ***
 
 BOOL
-YoriLibEnableBackupPrivilege();
+YoriLibEnableBackupPrivilege(VOID);
 
 BOOL
-YoriLibEnableDebugPrivilege();
+YoriLibEnableDebugPrivilege(VOID);
 
 // *** PROCESS.C ***
 
@@ -2708,7 +2707,7 @@ YoriLibVtSetLineEnding(
     );
 
 LPTSTR
-YoriLibVtGetLineEnding();
+YoriLibVtGetLineEnding(VOID);
 
 VOID
 YoriLibVtSetDefaultColor(
@@ -2716,7 +2715,7 @@ YoriLibVtSetDefaultColor(
     );
 
 WORD
-YoriLibVtGetDefaultColor();
+YoriLibVtGetDefaultColor(VOID);
 
 BOOL
 YoriLibVtFinalColorFromSequence(
@@ -3200,7 +3199,7 @@ YoriLibSetSelectionColor(
     );
 
 BOOL
-YoriLibIsYoriQuickEditEnabled();
+YoriLibIsYoriQuickEditEnabled(VOID);
 
 
 // *** STRING.C ***
@@ -3580,6 +3579,6 @@ YoriLibIsPathUrl(
     __in PYORI_STRING PackagePath
     );
 
-BOOL YoriLibIsStdInConsole();
+BOOL YoriLibIsStdInConsole(VOID);
 
 // vim:sw=4:ts=4:et:

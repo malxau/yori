@@ -41,7 +41,7 @@ CHAR strSetVerHelpText[] =
  Display usage text to the user.
  */
 BOOL
-SetVerHelp()
+SetVerHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("SetVer %i.%02i\n"), SETVER_VER_MAJOR, SETVER_VER_MINOR);
 #if YORI_BUILD_ID

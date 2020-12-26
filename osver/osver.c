@@ -51,7 +51,7 @@ CHAR strOsVerHelpText[] =
  Display usage text to the user.
  */
 BOOL
-OsVerHelp()
+OsVerHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("OsVer %i.%02i\n"), OSVER_VER_MAJOR, OSVER_VER_MINOR);
 #if YORI_BUILD_ID

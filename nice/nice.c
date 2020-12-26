@@ -44,7 +44,7 @@ CHAR strNiceHelpText[] =
  Display usage text to the user.
  */
 BOOL
-NiceHelp()
+NiceHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Nice %i.%02i\n"), NICE_VER_MAJOR, NICE_VER_MINOR);
 #if YORI_BUILD_ID

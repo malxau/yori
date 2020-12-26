@@ -49,7 +49,7 @@ CHAR strSetlocalHelpText[] =
  Display usage text to the user.
  */
 BOOL
-SetlocalHelp()
+SetlocalHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Setlocal %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -73,7 +73,7 @@ CHAR strEndlocalHelpText[] =
  Display usage text to the user.
  */
 BOOL
-EndlocalHelp()
+EndlocalHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Endlocal %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -160,7 +160,7 @@ YORI_LIST_ENTRY SetlocalStack;
  */
 VOID
 YORI_BUILTIN_FN
-SetlocalNotifyUnload()
+SetlocalNotifyUnload(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PSETLOCAL_STACK StackLocation;
@@ -363,7 +363,7 @@ YoriCmd_ENDLOCAL(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SetlocalDisplayCurrentStackCount()
+SetlocalDisplayCurrentStackCount(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PSETLOCAL_STACK StackLocation;

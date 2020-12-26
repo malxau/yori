@@ -46,7 +46,7 @@ CHAR strTypeHelpText[] =
  Display usage text to the user.
  */
 BOOL
-TypeHelp()
+TypeHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Type %i.%02i\n"), TYPE_VER_MAJOR, TYPE_VER_MINOR);
 #if YORI_BUILD_ID

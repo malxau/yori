@@ -225,7 +225,7 @@ YoriLibFileFiltFilterOptions[] = {
  Display usage text to the user.
  */
 BOOL
-YoriLibFileFiltHelp()
+YoriLibFileFiltHelp(VOID)
 {
     DWORD Index;
 

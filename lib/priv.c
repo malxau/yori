@@ -83,7 +83,7 @@ YoriLibEnableNamedPrivilege(
          successfully.
  */
 BOOL
-YoriLibEnableBackupPrivilege()
+YoriLibEnableBackupPrivilege(VOID)
 {
     YoriLibEnableNamedPrivilege(SE_BACKUP_NAME);
     return TRUE;
@@ -96,7 +96,7 @@ YoriLibEnableBackupPrivilege()
  @return TRUE to indicate that the privilege enablement was successful.
  */
 BOOL
-YoriLibEnableDebugPrivilege()
+YoriLibEnableDebugPrivilege(VOID)
 {
     return YoriLibEnableNamedPrivilege(SE_DEBUG_NAME);
 }

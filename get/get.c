@@ -42,7 +42,7 @@ CHAR strGetHelpText[] =
  Display usage text to the user.
  */
 BOOL
-GetHelp()
+GetHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Get %i.%02i\n"), GET_VER_MAJOR, GET_VER_MINOR);
 #if YORI_BUILD_ID

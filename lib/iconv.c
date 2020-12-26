@@ -54,7 +54,7 @@ BOOLEAN YoriLibActiveInputEncodingInitialized;
  newer.
  */
 BOOLEAN
-YoriLibIsUtf8Supported()
+YoriLibIsUtf8Supported(VOID)
 {
     DWORD WinMajorVer;
     DWORD WinMinorVer;
@@ -75,7 +75,7 @@ YoriLibIsUtf8Supported()
  releases where this support is not available.
  */
 DWORD
-YoriLibGetMultibyteOutputEncoding()
+YoriLibGetMultibyteOutputEncoding(VOID)
 {
     if (!YoriLibActiveOutputEncodingInitialized) {
         if (YoriLibIsUtf8Supported()) {
@@ -94,7 +94,7 @@ YoriLibGetMultibyteOutputEncoding()
  releases where this support is not available.
  */
 DWORD
-YoriLibGetMultibyteInputEncoding()
+YoriLibGetMultibyteInputEncoding(VOID)
 {
     if (!YoriLibActiveInputEncodingInitialized) {
         if (YoriLibIsUtf8Supported()) {

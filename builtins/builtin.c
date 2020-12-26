@@ -42,7 +42,7 @@ CHAR strBuiltinHelpText[] =
  Display usage text to the user.
  */
 BOOL
-BuiltinHelp()
+BuiltinHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Builtin %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID

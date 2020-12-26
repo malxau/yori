@@ -151,7 +151,7 @@ YoriShRemoveOneHistoryEntry(
  Free all command history.
  */
 VOID
-YoriShClearAllHistory()
+YoriShClearAllHistory(VOID)
 {
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_SH_HISTORY_ENTRY HistoryEntry;
@@ -178,7 +178,7 @@ YoriShClearAllHistory()
  */
 __success(return)
 BOOL
-YoriShInitHistory()
+YoriShInitHistory(VOID)
 {
     DWORD EnvVarLength;
 
@@ -243,7 +243,7 @@ YoriShInitHistory()
  */
 __success(return)
 BOOL
-YoriShLoadHistoryFromFile()
+YoriShLoadHistoryFromFile(VOID)
 {
     DWORD EnvVarLength;
     YORI_STRING UserHistFileName;
@@ -342,7 +342,7 @@ YoriShLoadHistoryFromFile()
  */
 __success(return)
 BOOL
-YoriShSaveHistoryToFile()
+YoriShSaveHistoryToFile(VOID)
 {
     DWORD FileNameLength;
     YORI_STRING UserHistFileName;

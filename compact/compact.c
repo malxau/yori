@@ -48,7 +48,7 @@ CHAR strCompactHelpText[] =
  Display usage text to the user.
  */
 BOOL
-CompactHelp()
+CompactHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Compact %i.%02i\n"), COMPACT_VER_MAJOR, COMPACT_VER_MINOR);
 #if YORI_BUILD_ID

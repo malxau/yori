@@ -87,7 +87,7 @@ YoriLibCtrlCHandler(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibCancelEnable()
+YoriLibCancelEnable(VOID)
 {
     if (g_CancelEvent == NULL) {
         g_CancelEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -113,7 +113,7 @@ YoriLibCancelEnable()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibCancelDisable()
+YoriLibCancelDisable(VOID)
 {
     ASSERT(g_CancelHandlerSet);
     SetConsoleCtrlHandler(YoriLibCtrlCHandler, FALSE);
@@ -128,7 +128,7 @@ YoriLibCancelDisable()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibCancelIgnore()
+YoriLibCancelIgnore(VOID)
 {
     ASSERT(g_CancelHandlerSet);
     g_CancelIgnore = TRUE;
@@ -140,7 +140,7 @@ YoriLibCancelIgnore()
  has not.
  */
 BOOL
-YoriLibIsOperationCancelled()
+YoriLibIsOperationCancelled(VOID)
 {
     if (g_CancelEvent == NULL) {
         return FALSE;
@@ -157,7 +157,7 @@ YoriLibIsOperationCancelled()
  Reset any cancel state to prepare for the next cancellable operation.
  */
 VOID
-YoriLibCancelReset()
+YoriLibCancelReset(VOID)
 {
     if (g_CancelEvent) {
         ResetEvent(g_CancelEvent);
@@ -168,7 +168,7 @@ YoriLibCancelReset()
  Return the cancel event.
  */
 HANDLE
-YoriLibCancelGetEvent()
+YoriLibCancelGetEvent(VOID)
 {
     return g_CancelEvent;
 }

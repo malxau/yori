@@ -408,7 +408,7 @@ YoriShSaveRestartStateWorker(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriShSaveRestartState()
+YoriShSaveRestartState(VOID)
 {
     DWORD ThreadId;
 
@@ -438,7 +438,7 @@ YoriShSaveRestartState()
  the system.
  */
 VOID
-YoriShCleanupRestartSaveThreadIfCompleted()
+YoriShCleanupRestartSaveThreadIfCompleted(VOID)
 {
     if (YoriShGlobal.RestartSaveThread != NULL) {
         if (WaitForSingleObject(YoriShGlobal.RestartSaveThread, 0) == WAIT_OBJECT_0) {

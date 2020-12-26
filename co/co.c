@@ -43,7 +43,7 @@ CHAR strCoHelpText[] =
  Display usage text to the user.
  */
 BOOL
-CoHelp()
+CoHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Co %i.%02i\n"), CO_VER_MAJOR, CO_VER_MINOR);
 #if YORI_BUILD_ID
@@ -847,8 +847,7 @@ CoSortSelected(
  */
 __success(return)
 BOOL
-CoCreateSynchronousMenu(
-    )
+CoCreateSynchronousMenu(VOID)
 {
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
     PYORI_WIN_CTRL_HANDLE List;

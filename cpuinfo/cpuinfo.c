@@ -53,7 +53,7 @@ CHAR strCpuInfoHelpText[] =
  Display usage text to the user.
  */
 BOOL
-CpuInfoHelp()
+CpuInfoHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("CpuInfo %i.%02i\n"), CPUINFO_VER_MAJOR, CPUINFO_VER_MINOR);
 #if YORI_BUILD_ID

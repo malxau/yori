@@ -43,7 +43,7 @@ BOOL YoriShPromptAdminPresent;
  FALSE if not.
  */
 BOOL
-YoriShPromptIsAdmin()
+YoriShPromptIsAdmin(VOID)
 {
     YORI_STRING AdminName;
 
@@ -176,7 +176,7 @@ YoriShExpandPrompt(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriShDisplayPrompt()
+YoriShDisplayPrompt(VOID)
 {
     DWORD EnvVarLength;
     YORI_STRING PromptVar;
@@ -417,7 +417,7 @@ YoriShDisplayPrompt()
  @return TRUE to indicate a command was run, FALSE to indicate it was not.
  */
 BOOL
-YoriShExecPreCommandString()
+YoriShExecPreCommandString(VOID)
 {
     DWORD EnvVarLength;
     YORI_STRING EnvVar;

@@ -359,7 +359,7 @@ YoriShExpandAliasFromString(
  Free all aliases.
  */
 VOID
-YoriShClearAllAliases()
+YoriShClearAllAliases(VOID)
 {
     PYORI_LIST_ENTRY ListEntry = NULL;
     PYORI_ALIAS Alias;

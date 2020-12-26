@@ -62,7 +62,7 @@ CHAR strVolHelpText[] =
  Display usage text to the user.
  */
 BOOL
-VolHelp()
+VolHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Vol %i.%02i\n"), VOL_VER_MAJOR, VOL_VER_MINOR);
 #if YORI_BUILD_ID

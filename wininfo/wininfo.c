@@ -47,7 +47,7 @@ CHAR strWinInfoHelpText[] =
  Display usage text to the user.
  */
 BOOL
-WinInfoHelp()
+WinInfoHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("WinInfo %i.%02i\n"), WININFO_VER_MAJOR, WININFO_VER_MINOR);
 #if YORI_BUILD_ID

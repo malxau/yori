@@ -45,7 +45,7 @@ CHAR strMoveHelpText[] =
  Display usage text to the user.
  */
 BOOL
-MoveHelp()
+MoveHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Move %i.%02i\n"), MOVE_VER_MAJOR, MOVE_VER_MINOR);
 #if YORI_BUILD_ID

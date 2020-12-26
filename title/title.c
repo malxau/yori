@@ -41,7 +41,7 @@ CHAR strTitleHelpText[] =
  Display usage text to the user.
  */
 BOOL
-TitleHelp()
+TitleHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Title %i.%02i\n"), TITLE_VER_MAJOR, TITLE_VER_MINOR);
 #if YORI_BUILD_ID

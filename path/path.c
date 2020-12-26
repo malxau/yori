@@ -54,7 +54,7 @@ CHAR strPathHelpText[] =
  Display usage text to the user.
  */
 BOOL
-PathHelp()
+PathHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Path %i.%02i\n"), PATH_VER_MAJOR, PATH_VER_MINOR);
 #if YORI_BUILD_ID

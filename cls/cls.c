@@ -41,7 +41,7 @@ CHAR strClsHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ClsHelp()
+ClsHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cls %i.%02i\n"), CLS_VER_MAJOR, CLS_VER_MINOR);
 #if YORI_BUILD_ID

@@ -85,7 +85,7 @@ PSDIR_SUMMARY Summary;
 SDIR_GLOBAL SdirGlobal;
 
 BOOL
-SdirDisplayCollection();
+SdirDisplayCollection(VOID);
 
 /**
  Capture all required information from a file found by the system into a
@@ -849,7 +849,7 @@ TCHAR SdirLineElementsText[] = {'-', '+', '+', '|'};
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirNewlineThroughDisplay()
+SdirNewlineThroughDisplay(VOID)
 {
     SDIR_FMTCHAR Line;
 
@@ -888,7 +888,7 @@ SdirFeatureColor(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirDisplayCollection()
+SdirDisplayCollection(VOID)
 {
     PYORI_FILE_INFO CurrentEntry;
     DWORD Index, Ext;

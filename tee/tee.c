@@ -43,7 +43,7 @@ CHAR strTeeHelpText[] =
  Display usage text to the user.
  */
 BOOL
-TeeHelp()
+TeeHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Tee %i.%02i\n"), TEE_VER_MAJOR, TEE_VER_MINOR);
 #if YORI_BUILD_ID

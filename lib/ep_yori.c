@@ -47,7 +47,7 @@ DWORD CONSOLE_USER_ENTRYPOINT(DWORD ArgC, YORI_STRING ArgV[]);
 /**
  The entrypoint function that the Windows loader will commence execution from.
  */
-VOID __cdecl CONSOLE_CRT_ENTRYPOINT()
+VOID __cdecl CONSOLE_CRT_ENTRYPOINT(VOID)
 {
     PYORI_STRING ArgV;
     DWORD ArgC;

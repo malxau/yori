@@ -51,7 +51,7 @@ CHAR strClipHelpText[] =
  Display usage text for clip.
  */
 BOOL
-ClipHelp()
+ClipHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Clip %i.%02i\n"), CLIP_VER_MAJOR, CLIP_VER_MINOR);
 #if YORI_BUILD_ID
@@ -788,8 +788,7 @@ ClipPasteSpecifiedFormat(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-ClipPreserveText(
-    )
+ClipPreserveText(VOID)
 {
     HANDLE hMem;
     PUCHAR pMem;
@@ -852,8 +851,7 @@ ClipPreserveText(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-ClipEmptyClipboard(
-    )
+ClipEmptyClipboard(VOID)
 {
     DWORD  Err;
     LPTSTR ErrText;
@@ -888,8 +886,7 @@ ClipEmptyClipboard(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-ClipListFormats(
-    )
+ClipListFormats(VOID)
 {
     DWORD  Err;
     LPTSTR ErrText;

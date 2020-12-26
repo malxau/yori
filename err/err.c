@@ -45,7 +45,7 @@ CHAR strErrHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ErrHelp()
+ErrHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Err %i.%02i\n"), ERR_VER_MAJOR, ERR_VER_MINOR);
 #if YORI_BUILD_ID

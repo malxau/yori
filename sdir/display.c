@@ -250,7 +250,7 @@ SdirWriteStringWithAttribute (
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirRowDisplayed()
+SdirRowDisplayed(VOID)
 {
     if (Opts->EnablePause) {
         SdirWriteStringLinesDisplayed++;
@@ -407,7 +407,7 @@ SdirDisplayYsError (
          terminate.
  */
 BOOL
-SdirPressAnyKey ()
+SdirPressAnyKey (VOID)
 {
     HANDLE hConsole = GetStdHandle(STD_INPUT_HANDLE);
     INPUT_RECORD InputBuffer;

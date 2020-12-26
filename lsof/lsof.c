@@ -44,7 +44,7 @@ CHAR strLsofHelpText[] =
  Display usage text to the user.
  */
 BOOL
-LsofHelp()
+LsofHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Lsof %i.%02i\n"), LSOF_VER_MAJOR, LSOF_VER_MINOR);
 #if YORI_BUILD_ID

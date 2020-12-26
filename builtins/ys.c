@@ -101,7 +101,7 @@ CHAR strShiftHelpText[] =
  Display usage text to the user.
  */
 BOOL
-YsHelp()
+YsHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -121,7 +121,7 @@ YsHelp()
  Display usage text to the user.
  */
 BOOL
-CallHelp()
+CallHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -135,7 +135,7 @@ CallHelp()
  Display usage text to the user.
  */
 BOOL
-GotoHelp()
+GotoHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -149,7 +149,7 @@ GotoHelp()
  Display usage text to the user.
  */
 BOOL
-IncludeHelp()
+IncludeHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -163,7 +163,7 @@ IncludeHelp()
  Display usage text to the user.
  */
 BOOL
-ReturnHelp()
+ReturnHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -177,7 +177,7 @@ ReturnHelp()
  Display usage text to the user.
  */
 BOOL
-ShiftHelp()
+ShiftHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ys %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -312,7 +312,7 @@ PYS_SCRIPT YsActiveScript = NULL;
  to end, but ensures that it ends organically and all cleanup is performed.
  */
 VOID
-YsGotoScriptEnd()
+YsGotoScriptEnd(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PYS_SCRIPT_LINE Line;

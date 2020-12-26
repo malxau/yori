@@ -47,7 +47,7 @@ CHAR strPushdHelpText[] =
  Display usage text to the user.
  */
 BOOL
-PushdHelp()
+PushdHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PushD %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -74,7 +74,7 @@ CHAR strPopdHelpText[] =
  Display usage text to the user.
  */
 BOOL
-PopdHelp()
+PopdHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("PopD %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -113,7 +113,7 @@ YORI_LIST_ENTRY PushdStack;
  */
 VOID
 YORI_BUILTIN_FN
-PushdNotifyUnload()
+PushdNotifyUnload(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PPUSHD_STACK StackLocation;
@@ -138,7 +138,7 @@ PushdNotifyUnload()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-PushdDisplayCurrentStack()
+PushdDisplayCurrentStack(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PPUSHD_STACK StackLocation;
@@ -162,7 +162,7 @@ PushdDisplayCurrentStack()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-PushdDisplayCurrentStackCount()
+PushdDisplayCurrentStackCount(VOID)
 {
     PYORI_LIST_ENTRY ListEntry;
     PPUSHD_STACK StackLocation;

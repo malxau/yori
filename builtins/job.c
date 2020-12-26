@@ -47,7 +47,7 @@ CHAR strJobHelpText[] =
  Display usage text to the user.
  */
 BOOL
-JobHelp()
+JobHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Job %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID

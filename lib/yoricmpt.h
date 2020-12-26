@@ -4849,7 +4849,7 @@ typedef NT_QUERY_SYSTEM_INFORMATION *PNT_QUERY_SYSTEM_INFORMATION;
  */
 typedef
 LONG WINAPI
-RTL_GET_LAST_NT_STATUS();
+RTL_GET_LAST_NT_STATUS(VOID);
 
 /**
  A prototype for a pointer to the RtlGetLastNtStatus function.
@@ -5117,7 +5117,7 @@ typedef GET_CONSOLE_SCREEN_BUFFER_INFO_EX *PGET_CONSOLE_SCREEN_BUFFER_INFO_EX;
  */
 typedef
 HWND WINAPI
-GET_CONSOLE_WINDOW();
+GET_CONSOLE_WINDOW(VOID);
 
 /**
  A prototype for a pointer to the GetConsoleWindow function.
@@ -5153,7 +5153,7 @@ typedef GET_DISK_FREE_SPACE_EXW *PGET_DISK_FREE_SPACE_EXW;
  */
 typedef
 LPSTR WINAPI
-GET_ENVIRONMENT_STRINGS();
+GET_ENVIRONMENT_STRINGS(VOID);
 
 /**
  A prototype for a pointer to the GetEnvironmentStrings function.
@@ -5165,7 +5165,7 @@ typedef GET_ENVIRONMENT_STRINGS *PGET_ENVIRONMENT_STRINGS;
  */
 typedef
 LPWSTR WINAPI
-GET_ENVIRONMENT_STRINGSW();
+GET_ENVIRONMENT_STRINGSW(VOID);
 
 /**
  A prototype for a pointer to the GetEnvironmentStringsW function.
@@ -5261,7 +5261,7 @@ typedef GET_PRODUCT_INFO *PGET_PRODUCT_INFO;
  */
 typedef
 DWORDLONG WINAPI
-GET_TICK_COUNT_64();
+GET_TICK_COUNT_64(VOID);
 
 /**
  A prototype for a pointer to the GetTickCount64 function.
@@ -5997,7 +5997,7 @@ typedef REG_SET_VALUE_EXW *PREG_SET_VALUE_EXW;
  */
 typedef
 BOOL WINAPI
-REVERT_TO_SELF();
+REVERT_TO_SELF(VOID);
 
 /**
  A prototype for a pointer to the RevertToSelf function.
@@ -6809,7 +6809,7 @@ typedef CASCADE_WINDOWS *PCASCADE_WINDOWS;
  */
 typedef
 BOOL WINAPI
-CLOSE_CLIPBOARD();
+CLOSE_CLIPBOARD(VOID);
 
 /**
  A prototype for a pointer to the CloseClipboard function.
@@ -6821,7 +6821,7 @@ typedef CLOSE_CLIPBOARD *PCLOSE_CLIPBOARD;
  */
 typedef
 BOOL WINAPI
-EMPTY_CLIPBOARD();
+EMPTY_CLIPBOARD(VOID);
 
 /**
  A prototype for a pointer to the EmptyClipboard function.
@@ -6905,7 +6905,7 @@ typedef GET_CLIPBOARD_FORMAT_NAMEW *PGET_CLIPBOARD_FORMAT_NAMEW;
  */
 typedef
 HWND WINAPI
-GET_DESKTOP_WINDOW();
+GET_DESKTOP_WINDOW(VOID);
 
 /**
  A prototype for a pointer to the GetDesktopWindow function.
@@ -6941,7 +6941,7 @@ typedef GET_WINDOW_RECT *PGET_WINDOW_RECT;
  */
 typedef
 BOOL WINAPI
-LOCK_WORKSTATION();
+LOCK_WORKSTATION(VOID);
 
 /**
  A prototype for a pointer to the LockWorkStation function.
@@ -6965,7 +6965,7 @@ typedef MOVE_WINDOW *PMOVE_WINDOW;
  */
 typedef
 BOOL WINAPI
-OPEN_CLIPBOARD();
+OPEN_CLIPBOARD(HANDLE);
 
 /**
  A prototype for a pointer to the OpenClipboard function.

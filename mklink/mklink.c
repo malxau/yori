@@ -46,7 +46,7 @@ CHAR strMklinkHelpText[] =
  Display usage text to the user.
  */
 BOOL
-MklinkHelp()
+MklinkHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Mklink %i.%02i\n"), MKLINK_VER_MAJOR, MKLINK_VER_MINOR);
 #if YORI_BUILD_ID

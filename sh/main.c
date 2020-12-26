@@ -50,7 +50,7 @@ CHAR strHelpText[] =
  Display usage text to the user.
  */
 BOOL
-YoriShHelp()
+YoriShHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Yori %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -124,7 +124,7 @@ YoriShExecuteYoriInit(
  values.
  */
 BOOL
-YoriShInit()
+YoriShInit(VOID)
 {
     TCHAR Letter;
     TCHAR AliasName[3];
@@ -469,7 +469,7 @@ YoriShParseArgs(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriShDisplayWarnings()
+YoriShDisplayWarnings(VOID)
 {
     DWORD EnvVarLength;
     YORI_STRING ModuleName;
@@ -577,7 +577,7 @@ YoriShDisplayWarnings()
  Reset the console after one process has finished.
  */
 VOID
-YoriShPostCommand()
+YoriShPostCommand(VOID)
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE ConsoleHandle;

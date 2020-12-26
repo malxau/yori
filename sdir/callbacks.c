@@ -1479,7 +1479,7 @@ SdirOptions[] = {
  without having access to know what all of the things are.
  */
 DWORD
-SdirGetNumSdirOptions()
+SdirGetNumSdirOptions(VOID)
 {
     return sizeof(SdirOptions)/sizeof(SdirOptions[0]);
 }
@@ -1526,7 +1526,7 @@ SdirExec[] = {
  without having access to know what all of the things are.
  */
 DWORD
-SdirGetNumSdirExec()
+SdirGetNumSdirExec(VOID)
 {
     return sizeof(SdirExec)/sizeof(SdirExec[0]);
 }

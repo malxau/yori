@@ -47,7 +47,7 @@ CHAR strSyncHelpText[] =
  Display usage text to the user.
  */
 BOOL
-SyncHelp()
+SyncHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Sync %i.%02i\n"), SYNC_VER_MAJOR, SYNC_VER_MINOR);
 #if YORI_BUILD_ID

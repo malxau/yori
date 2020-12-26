@@ -41,7 +41,7 @@ CHAR strPauseHelpText[] =
  Display usage text to the user.
  */
 BOOL
-PauseHelp()
+PauseHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Pause %i.%02i\n"), PAUSE_VER_MAJOR, PAUSE_VER_MINOR);
 #if YORI_BUILD_ID

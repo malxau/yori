@@ -46,7 +46,7 @@ YORILIB_COLOR_ATTRIBUTES SdirUsageHeaderColor = {0, SDIR_USAGE_HEADER_COLOR};
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageVersionInfo()
+SdirUsageVersionInfo(VOID)
 {
     TCHAR   Line[160];
 
@@ -171,7 +171,7 @@ CHAR strHelpUsage1[] =
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageHelp()
+SdirUsageHelp(VOID)
 {
     TCHAR   strUsage[1024];
 
@@ -233,7 +233,7 @@ CHAR strCmdLineUsage2[] = "\n"
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageOpts()
+SdirUsageOpts(VOID)
 {
     TCHAR   strUsage[1024];
 
@@ -262,7 +262,7 @@ CHAR strLicenseHeader[] = "LICENSE";
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageLicense()
+SdirUsageLicense(VOID)
 {
     YORI_STRING License;
 
@@ -294,7 +294,7 @@ CHAR strDisplayHeader[] = "DISPLAY OPTIONS";
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageDisplay()
+SdirUsageDisplay(VOID)
 {
     DWORD   i;
     TCHAR   Line[80];
@@ -335,7 +335,7 @@ CHAR strSortHeader[] = "SORT OPTIONS";
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageSort()
+SdirUsageSort(VOID)
 {
     DWORD   i;
     TCHAR   strUsage[256];
@@ -453,7 +453,7 @@ CHAR strFileColorUsage3[] = "\n"
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageFileColor()
+SdirUsageFileColor(VOID)
 {
     TCHAR   Line[80];
     TCHAR   strUsage[2048];
@@ -633,7 +633,7 @@ CHAR strMetaColorUsage2[] = "\n"
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirUsageMetaColor()
+SdirUsageMetaColor(VOID)
 {
     TCHAR   Line[80];
     TCHAR   strUsage[1024];

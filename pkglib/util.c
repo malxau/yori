@@ -486,7 +486,7 @@ YoriPkgFreeMirrorList(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgDisplayMirrors()
+YoriPkgDisplayMirrors(VOID)
 {
     YORI_LIST_ENTRY MirrorsList;
     PYORI_LIST_ENTRY MirrorEntry;

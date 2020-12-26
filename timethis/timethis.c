@@ -60,7 +60,7 @@ CHAR strTimeThisHelpText[] =
  Display usage text to the user.
  */
 BOOL
-TimeThisHelp()
+TimeThisHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("TimeThis %i.%02i\n"), TIMETHIS_VER_MAJOR, TIMETHIS_VER_MINOR);
 #if YORI_BUILD_ID

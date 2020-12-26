@@ -741,7 +741,7 @@ YoriPkgFreeAllSourcesAndPackages(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgDisplayAvailableRemotePackages()
+YoriPkgDisplayAvailableRemotePackages(VOID)
 {
     YORI_LIST_ENTRY SourcesList;
     YORI_LIST_ENTRY PackageList;
@@ -1576,7 +1576,7 @@ YoriPkgIsNewerVersionAvailable(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgDisplaySources()
+YoriPkgDisplaySources(VOID)
 {
     YORI_LIST_ENTRY SourcesList;
     PYORI_LIST_ENTRY SourceEntry;

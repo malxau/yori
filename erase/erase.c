@@ -46,7 +46,7 @@ CHAR strEraseHelpText[] =
  Display usage text to the user.
  */
 BOOL
-EraseHelp()
+EraseHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Erase %i.%02i\n"), ERASE_VER_MAJOR, ERASE_VER_MINOR);
 #if YORI_BUILD_ID

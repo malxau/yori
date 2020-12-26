@@ -45,7 +45,7 @@ CHAR strColorHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ColorHelp()
+ColorHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Color %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID

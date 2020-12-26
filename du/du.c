@@ -53,7 +53,7 @@ CHAR strDuHelpText[] =
  Display usage text to the user.
  */
 BOOL
-DuHelp()
+DuHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Du %i.%02i\n"), DU_VER_MAJOR, DU_VER_MINOR);
 #if YORI_BUILD_ID

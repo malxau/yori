@@ -46,7 +46,7 @@ CHAR strMountHelpText[] =
  Display usage text to the user.
  */
 BOOL
-MountHelp()
+MountHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Mount %i.%02i\n"), MOUNT_VER_MAJOR, MOUNT_VER_MINOR);
 #if YORI_BUILD_ID

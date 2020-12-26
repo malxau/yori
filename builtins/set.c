@@ -49,7 +49,7 @@ CHAR strSetHelpText[] =
  Display usage text to the user.
  */
 BOOL
-SetHelp()
+SetHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Set %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID

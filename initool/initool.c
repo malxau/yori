@@ -52,7 +52,7 @@ CHAR strIniToolHelpText[] =
  Display usage text to the user.
  */
 BOOL
-IniToolHelp()
+IniToolHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("IniTool %i.%02i\n"), INITOOL_VER_MAJOR, INITOOL_VER_MINOR);
 #if YORI_BUILD_ID

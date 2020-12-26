@@ -1533,7 +1533,7 @@ YoriLibGetSelectionDoubleClickBreakChars(
          leave the user's selection for QuickEdit behavior in effect.
  */
 BOOL
-YoriLibIsYoriQuickEditEnabled()
+YoriLibIsYoriQuickEditEnabled(VOID)
 {
     YORI_STRING EnvVar;
     LONGLONG llTemp;

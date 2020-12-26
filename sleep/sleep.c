@@ -45,7 +45,7 @@ CHAR strSleepHelpText[] =
  Display usage text to the user.
  */
 BOOL
-SleepHelp()
+SleepHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Sleep %i.%02i\n"), SLEEP_VER_MAJOR, SLEEP_VER_MINOR);
 #if YORI_BUILD_ID

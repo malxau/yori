@@ -45,7 +45,7 @@ CHAR strStartHelpText[] =
  Display usage text to the user.
  */
 BOOL
-StartHelp()
+StartHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Start %i.%02i\n"), START_VER_MAJOR, START_VER_MINOR);
 #if YORI_BUILD_ID

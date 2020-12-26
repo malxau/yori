@@ -42,7 +42,18 @@
 #pragma warning(disable: 4996) // function (GetVersion) declared deprecated
 #endif
 #pragma warning(disable: 4702) // Unreachable code
+
+#if defined(_MSC_VER) && (_MSC_VER <= 1500)
 #pragma warning(disable: 4705) // statement has no effect
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(disable: 4668) // preprocessor conditional with nonexistent macro, SDK bug
+#pragma warning(disable: 4820) // implicit padding added in structure
+#pragma warning(disable: 5045) // spectre mitigation 
+#pragma warning(disable: 4061) // not all enumerators handled in switch statement
+#pragma warning(disable: 4062) // not all enumerators handled in switch statement
+#endif
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 #pragma warning(push)
@@ -105,6 +116,11 @@
 #include <yoricrt.h>
 
 #ifndef __in
+
+/**
+ SAL annotation indicating that a condition must be true.
+ */
+#define __analysis_assume(x)
 
 /**
  SAL annotation for an input value.

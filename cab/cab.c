@@ -49,7 +49,7 @@ CHAR strCabHelpText[] =
  Display usage text to the user.
  */
 BOOL
-CabHelp()
+CabHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cab %i.%02i\n"), CAB_VER_MAJOR, CAB_VER_MINOR);
 #if YORI_BUILD_ID

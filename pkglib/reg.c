@@ -547,8 +547,7 @@ Exit:
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgRemoveUninstallEntry(
-    )
+YoriPkgRemoveUninstallEntry(VOID)
 {
     HKEY hKey;
     DWORD Err;

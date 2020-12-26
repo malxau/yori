@@ -73,8 +73,7 @@ YoriPkgUpgradeSinglePackage(
     );
 
 BOOL
-YoriPkgInstallSourceForInstalledPackages(
-    );
+YoriPkgInstallSourceForInstalledPackages(VOID);
 
 BOOL
 YoriPkgInstallSourceForSinglePackage(
@@ -82,8 +81,7 @@ YoriPkgInstallSourceForSinglePackage(
     );
 
 BOOL
-YoriPkgInstallSymbolsForInstalledPackages(
-    );
+YoriPkgInstallSymbolsForInstalledPackages(VOID);
 
 BOOL
 YoriPkgInstallSymbolForSinglePackage(
@@ -101,10 +99,10 @@ YoriPkgInstallPseudoPackage(
     );
 
 BOOL
-YoriPkgDisplayAvailableRemotePackages();
+YoriPkgDisplayAvailableRemotePackages(VOID);
 
 BOOL
-YoriPkgDisplaySources();
+YoriPkgDisplaySources(VOID);
 
 BOOL
 YoriPkgAddNewSource(
@@ -118,7 +116,7 @@ YoriPkgDeleteSource(
     );
 
 BOOL
-YoriPkgDisplayMirrors();
+YoriPkgDisplayMirrors(VOID);
 
 BOOL
 YoriPkgAddNewMirror(
@@ -176,7 +174,6 @@ YoriPkgAddUninstallEntry(
     );
 
 BOOL
-YoriPkgUninstallAll(
-    );
+YoriPkgUninstallAll(VOID);
 
 // vim:sw=4:ts=4:et:

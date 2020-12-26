@@ -43,7 +43,7 @@ CHAR strChdirHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ChdirHelp()
+ChdirHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Chdir %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID

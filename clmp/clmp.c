@@ -44,7 +44,7 @@ CHAR strHelpText[] =
  Display the help and license information for this application.
  */
 BOOL
-ClmpHelp()
+ClmpHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Clmp %i.%02i\n"), CLMP_VER_MAJOR, CLMP_VER_MINOR);
 #if YORI_BUILD_ID

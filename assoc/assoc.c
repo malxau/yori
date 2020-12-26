@@ -48,7 +48,7 @@ CHAR strAssocHelpText[] =
  Display usage text to the user.
  */
 BOOL
-AssocHelp()
+AssocHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Assoc %i.%02i\n"), ASSOC_VER_MAJOR, ASSOC_VER_MINOR);
 #if YORI_BUILD_ID

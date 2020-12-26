@@ -45,7 +45,7 @@ CHAR strPsHelpText[] =
  Display usage text to the user.
  */
 BOOL
-PsHelp()
+PsHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ps %i.%02i\n"), PS_VER_MAJOR, PS_VER_MINOR);
 #if YORI_BUILD_ID

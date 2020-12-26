@@ -1556,8 +1556,7 @@ YoriShHotkey(
  settings.
  */
 VOID
-YoriShConfigureInputSettings(
-    )
+YoriShConfigureInputSettings(VOID)
 {
     DWORD EnvVarLength;
     YORI_STRING EnvVar;
@@ -3125,7 +3124,7 @@ YoriShGetExpression(
  On process termination, cleanup any currently active line parsing context,
  */
 VOID
-YoriShCleanupInputContext()
+YoriShCleanupInputContext(VOID)
 {
     if (YoriShGetExpressionLineContext != NULL) {
         YoriLibLineReadClose(YoriShGetExpressionLineContext);

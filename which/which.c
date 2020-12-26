@@ -59,7 +59,7 @@ CHAR strWhichUsageText[] =
  Display usage text to the user.
  */
 VOID
-WhichUsage()
+WhichUsage(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Which %i.%02i\n"), WHICH_VER_MAJOR, WHICH_VER_MINOR);
 #if YORI_BUILD_ID

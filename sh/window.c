@@ -213,7 +213,7 @@ YoriShKillProcessById(
          could not be terminated.
  */
 BOOLEAN
-YoriShCloseWindow()
+YoriShCloseWindow(VOID)
 {
     LPDWORD PidList = NULL;
     DWORD PidListSize = 0;

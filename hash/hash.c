@@ -56,7 +56,7 @@ CHAR strHashHelpText[] =
  Display usage text to the user.
  */
 BOOL
-HashHelp()
+HashHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Hash %i.%02i\n"), HASH_VER_MAJOR, HASH_VER_MINOR);
 #if YORI_BUILD_ID

@@ -58,7 +58,7 @@ CHAR strForHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ForHelp()
+ForHelp(VOID)
 {
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("For %i.%02i\n"), FOR_VER_MAJOR, FOR_VER_MINOR);
@@ -145,9 +145,11 @@ ForWaitForProcessToComplete(
 
     Result = WaitForMultipleObjects(ExecContext->CurrentConcurrentCount, ExecContext->HandleArray, FALSE, INFINITE);
 
-    ASSERT(Result >= WAIT_OBJECT_0 && Result < (WAIT_OBJECT_0 + ExecContext->CurrentConcurrentCount));
+    ASSERT(Result < (WAIT_OBJECT_0 + ExecContext->CurrentConcurrentCount));
 
     Index = Result - WAIT_OBJECT_0;
+
+    ASSERT(Index < ExecContext->CurrentConcurrentCount);
 
     CloseHandle(ExecContext->HandleArray[Index]);
 

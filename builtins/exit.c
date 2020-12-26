@@ -42,7 +42,7 @@ CHAR strExitHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ExitHelp()
+ExitHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Exit %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID

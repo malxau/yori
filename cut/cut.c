@@ -49,7 +49,7 @@ CHAR strCutHelpText[] =
  Display usage text to the user.
  */
 BOOL
-CutHelp()
+CutHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Cut %i.%02i\n"), CUT_VER_MAJOR, CUT_VER_MINOR);
 #if YORI_BUILD_ID

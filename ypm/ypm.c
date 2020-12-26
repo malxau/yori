@@ -98,7 +98,7 @@ CHAR strYpmHelpText2[] =
  Display usage text to the user.
  */
 BOOL
-YpmHelp()
+YpmHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ypm %i.%02i\n"), YPM_VER_MAJOR, YPM_VER_MINOR);
 #if YORI_BUILD_ID

@@ -707,10 +707,10 @@ SdirPasteStrAndPad (
     );
 
 BOOL
-SdirPressAnyKey ();
+SdirPressAnyKey (VOID);
 
 BOOL
-SdirRowDisplayed();
+SdirRowDisplayed(VOID);
 
 BOOL
 SdirWriteStringWithAttribute (
@@ -749,10 +749,10 @@ extern YORILIB_COLOR_ATTRIBUTES SdirDefaultColor;
 //
 
 DWORD
-SdirGetNumSdirOptions();
+SdirGetNumSdirOptions(VOID);
 
 DWORD
-SdirGetNumSdirExec();
+SdirGetNumSdirExec(VOID);
 
 ULONG
 SdirDisplaySummary(
@@ -790,10 +790,10 @@ SdirColorStringFromFeature(
     );
 
 BOOL
-SdirParseAttributeApplyString();
+SdirParseAttributeApplyString(VOID);
 
 BOOL
-SdirParseMetadataAttributeString();
+SdirParseMetadataAttributeString(VOID);
 
 BOOL
 SdirApplyAttribute(
@@ -813,7 +813,7 @@ SdirInit(
     );
 
 VOID
-SdirAppCleanup();
+SdirAppCleanup(VOID);
 
 //
 //  Functions from usage.c

@@ -515,7 +515,7 @@ YoriLibRemoveEnvironmentComponentFromString(
                     CharsPopulated = YoriLibSPrintf(&NewPathData[NewOffset], _T("%s"), ThisPath);
                 }
 
-                if (CharsPopulated < 0) {
+                if (CharsPopulated == (DWORD)-1) {
                     YoriLibDereference(NewPathData);
                     return FALSE;
                 }

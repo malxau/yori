@@ -47,7 +47,7 @@ CHAR strMakeHelpText[] =
  Display usage text to the user.
  */
 BOOL
-MakeHelp()
+MakeHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("YMake %i.%02i\n"), MAKE_VER_MAJOR, MAKE_VER_MINOR);
 #if YORI_BUILD_ID

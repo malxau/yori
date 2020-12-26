@@ -51,7 +51,7 @@ CHAR strTouchHelpText[] =
  Display usage text to the user.
  */
 BOOL
-TouchHelp()
+TouchHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Touch %i.%02i\n"), TOUCH_VER_MAJOR, TOUCH_VER_MINOR);
 #if YORI_BUILD_ID

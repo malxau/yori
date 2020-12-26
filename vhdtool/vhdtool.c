@@ -68,7 +68,7 @@ CHAR strVhdToolHelpText[] =
  Display usage text to the user.
  */
 BOOL
-VhdToolHelp()
+VhdToolHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("VhdTool %i.%02i\n"), VHDTOOL_VER_MAJOR, VHDTOOL_VER_MINOR);
 #if YORI_BUILD_ID

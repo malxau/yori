@@ -49,7 +49,7 @@ CHAR strStrCmpHelpText[] =
  Display usage text to the user.
  */
 BOOL
-StrCmpHelp()
+StrCmpHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("StrCmp %i.%02i\n"), STRCMP_VER_MAJOR, STRCMP_VER_MINOR);
 #if YORI_BUILD_ID

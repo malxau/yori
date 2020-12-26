@@ -65,7 +65,7 @@ unsigned int rand_seed = 0;
  */
 int
 MCRT_VARARGFN
-mini_rand()
+mini_rand(void)
 {
     unsigned int oldbits = bit_recycler>>23;
     bit_recycler = (bit_recycler<<7) + (rand_seed>>23);

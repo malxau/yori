@@ -55,7 +55,7 @@ CHAR strHexDumpHelpText[] =
  Display usage text to the user.
  */
 BOOL
-HexDumpHelp()
+HexDumpHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("HexDump %i.%02i\n"), HEXDUMP_VER_MAJOR, HEXDUMP_VER_MINOR);
 #if YORI_BUILD_ID

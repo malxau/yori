@@ -47,7 +47,7 @@ CHAR strEchoHelpText[] =
  Display usage text to the user.
  */
 BOOL
-EchoHelp()
+EchoHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Echo %i.%02i\n"), ECHO_VER_MAJOR, ECHO_VER_MINOR);
 #if YORI_BUILD_ID

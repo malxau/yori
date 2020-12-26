@@ -49,7 +49,7 @@ CHAR strHelpText[] =
  Display usage text to the user.
  */
 BOOL
-YsetupHelp()
+YsetupHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ysetup %i.%02i\n"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR);
 #if YORI_BUILD_ID
@@ -868,7 +868,7 @@ SetupUiDialogProc(
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOL
-SetupDisplayUi()
+SetupDisplayUi(VOID)
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     DWORD OsVerMajor;

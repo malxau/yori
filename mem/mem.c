@@ -60,7 +60,7 @@ CHAR strMemHelpText[] =
  Display usage text to the user.
  */
 BOOL
-MemHelp()
+MemHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Mem %i.%02i\n"), MEM_VER_MAJOR, MEM_VER_MINOR);
 #if YORI_BUILD_ID

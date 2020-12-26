@@ -35,8 +35,7 @@
  @return Handle to a job object, or NULL on failure.
  */
 HANDLE
-YoriLibCreateJobObject(
-    )
+YoriLibCreateJobObject(VOID)
 {
     if (DllKernel32.pCreateJobObjectW == NULL) {
         return NULL;

@@ -45,7 +45,7 @@ CHAR strMoreHelpText[] =
  Display usage text to the user.
  */
 BOOL
-MoreHelp()
+MoreHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("More %i.%02i\n"), MORE_VER_MAJOR, MORE_VER_MINOR);
 #if YORI_BUILD_ID

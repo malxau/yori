@@ -3003,7 +3003,7 @@ MoreViewportDisplay(
                 MoreCheckForStatusLineChange(MoreContext);
             }
         } else {
-            if (WaitObject < WAIT_OBJECT_0 || WaitObject >= WAIT_OBJECT_0 + HandleCountToWait) {
+            if (WaitObject >= WAIT_OBJECT_0 + HandleCountToWait) {
                 break;
             }
             if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == MoreContext->PhysicalLineAvailableEvent) {

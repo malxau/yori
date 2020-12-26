@@ -41,7 +41,7 @@ CHAR strKillHelpText[] =
  Display usage text to the user.
  */
 BOOL
-KillHelp()
+KillHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Kill %i.%02i\n"), KILL_VER_MAJOR, KILL_VER_MINOR);
 #if YORI_BUILD_ID

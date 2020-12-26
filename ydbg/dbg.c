@@ -54,7 +54,7 @@ CHAR strYDbgHelpText[] =
  Display usage text to the user.
  */
 BOOL
-YDbgHelp()
+YDbgHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("YDbg %i.%02i\n"), YDBG_VER_MAJOR, YDBG_VER_MINOR);
 #if YORI_BUILD_ID

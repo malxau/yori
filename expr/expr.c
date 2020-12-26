@@ -53,7 +53,7 @@ CHAR strExprHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ExprHelp()
+ExprHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Expr %i.%02i\n"), EXPR_VER_MAJOR, EXPR_VER_MINOR);
 #if YORI_BUILD_ID

@@ -1179,7 +1179,7 @@ YuiMenuReloadIfChanged(
         }
 
         FoundChange = TRUE;
-        if (WaitStatus >= WAIT_OBJECT_0 && WaitStatus < WAIT_OBJECT_0 + HandleCount) {
+        if (WaitStatus < WAIT_OBJECT_0 + HandleCount) {
             FindNextChangeNotification(YuiContext->StartChangeNotifications[WaitStatus - WAIT_OBJECT_0]);
         }
     }
@@ -1195,7 +1195,7 @@ YuiMenuReloadIfChanged(
  @return TRUE to indicate the privilege was enabled, FALSE if it was not.
  */
 BOOL
-YuiMenuEnableShutdownPrivilege()
+YuiMenuEnableShutdownPrivilege(VOID)
 {
     TOKEN_PRIVILEGES TokenPrivileges;
     LUID ShutdownLuid;

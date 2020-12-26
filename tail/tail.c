@@ -49,7 +49,7 @@ CHAR strTailHelpText[] =
  Display usage text to the user.
  */
 BOOL
-TailHelp()
+TailHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Tail %i.%02i\n"), TAIL_VER_MAJOR, TAIL_VER_MINOR);
 #if YORI_BUILD_ID

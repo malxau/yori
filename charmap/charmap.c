@@ -45,7 +45,7 @@ CHAR strCharMapHelpText[] =
  Display usage text to the user.
  */
 BOOL
-CharMapHelp()
+CharMapHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("CharMap %i.%02i\n"), CHARMAP_VER_MAJOR, CHARMAP_VER_MINOR);
 #if YORI_BUILD_ID

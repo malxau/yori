@@ -51,7 +51,7 @@ CHAR strHiliteHelpText[] =
  Display usage text to the user.
  */
 BOOL
-HiliteHelp()
+HiliteHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Hilite %i.%02i\n"), HILITE_VER_MAJOR, HILITE_VER_MINOR);
 #if YORI_BUILD_ID

@@ -45,7 +45,7 @@ CHAR strLinesHelpText[] =
  Display usage text to the user.
  */
 BOOL
-LinesHelp()
+LinesHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Lines %i.%02i\n"), LINES_VER_MAJOR, LINES_VER_MINOR);
 #if YORI_BUILD_ID

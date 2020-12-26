@@ -53,7 +53,7 @@ CHAR strFsCmpHelpText[] =
  Display usage text to the user.
  */
 BOOL
-FsCmpHelp()
+FsCmpHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("FsCmp %i.%02i\n"), FSCMP_VER_MAJOR, FSCMP_VER_MINOR);
 #if YORI_BUILD_ID

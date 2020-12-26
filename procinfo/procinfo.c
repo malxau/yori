@@ -63,7 +63,7 @@ CHAR strProcInfoHelpText[] =
  Display usage text to the user.
  */
 BOOL
-ProcInfoHelp()
+ProcInfoHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ProcInfo %i.%02i\n"), PROCINFO_VER_MAJOR, PROCINFO_VER_MINOR);
 #if YORI_BUILD_ID

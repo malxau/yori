@@ -62,7 +62,7 @@ YoriShExpandAliasFromString(
     );
 
 VOID
-YoriShClearAllAliases();
+YoriShClearAllAliases(VOID);
 
 /**
  Include user defined aliases in the output of YoriShGetAliasStrings .
@@ -158,8 +158,7 @@ YoriShBuiltinUnregister(
     );
 
 VOID
-YoriShBuiltinUnregisterAll(
-    );
+YoriShBuiltinUnregisterAll(VOID);
 
 // *** COMPLETE.C ***
 
@@ -324,19 +323,19 @@ YoriShRemoveOneHistoryEntry(
     );
 
 VOID
-YoriShClearAllHistory();
+YoriShClearAllHistory(VOID);
 
 __success(return)
 BOOL
-YoriShInitHistory();
+YoriShInitHistory(VOID);
 
 __success(return)
 BOOL
-YoriShLoadHistoryFromFile();
+YoriShLoadHistoryFromFile(VOID);
 
 __success(return)
 BOOL
-YoriShSaveHistoryToFile();
+YoriShSaveHistoryToFile(VOID);
 
 __success(return)
 BOOL
@@ -368,7 +367,7 @@ YoriShGetExpression(
     );
 
 VOID
-YoriShCleanupInputContext();
+YoriShCleanupInputContext(VOID);
 
 // *** JOB.C ***
 
@@ -458,18 +457,18 @@ YoriShResolveCommandToExecutable(
 
 // *** PROMPT.C ***
 BOOL
-YoriShDisplayPrompt();
+YoriShDisplayPrompt(VOID);
 
 BOOL
-YoriShExecPreCommandString();
+YoriShExecPreCommandString(VOID);
 
 // *** RESTART.C ***
 
 BOOL
-YoriShSaveRestartState();
+YoriShSaveRestartState(VOID);
 
 VOID
-YoriShCleanupRestartSaveThreadIfCompleted();
+YoriShCleanupRestartSaveThreadIfCompleted(VOID);
 
 BOOL
 YoriShLoadSavedRestartState(
@@ -509,11 +508,11 @@ YoriShSetWindowState(
     );
 
 BOOLEAN
-YoriShCloseWindow();
+YoriShCloseWindow(VOID);
 
 // *** YORIFULL.C / YORISTD.C / YORINONE.C ***
 
 BOOL
-YoriShRegisterDefaultAliases();
+YoriShRegisterDefaultAliases(VOID);
 
 // vim:sw=4:ts=4:et:

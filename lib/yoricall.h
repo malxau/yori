@@ -54,12 +54,10 @@ YoriCallBuiltinUnregister(
     );
 
 BOOL
-YoriCallClearHistoryStrings(
-    );
+YoriCallClearHistoryStrings(VOID);
 
 BOOL
-YoriCallDecrementPromptRecursionDepth(
-    );
+YoriCallDecrementPromptRecursionDepth(VOID);
 
 BOOL
 YoriCallDeleteAlias(
@@ -104,8 +102,7 @@ YoriCallGetEnvironmentVariable(
     );
 
 DWORD
-YoriCallGetErrorLevel(
-    );
+YoriCallGetErrorLevel(VOID);
 
 BOOL
 YoriCallGetEscapedArguments(
@@ -152,12 +149,10 @@ YoriCallGetYoriVersion(
     );
 
 BOOL
-YoriCallIncrementPromptRecursionDepth(
-    );
+YoriCallIncrementPromptRecursionDepth(VOID);
 
 BOOL
-YoriCallIsProcessExiting(
-    );
+YoriCallIsProcessExiting(VOID);
 
 BOOL
 YoriCallPipeJobOutput(

@@ -349,7 +349,14 @@ MakeLaunchNextCmd(
         ChildProcess->CmdContextPresent = TRUE;
         ExecContext = ChildProcess->ExecPlan.FirstCmd;
 
-        if (ExecContext->CmdToExec.ArgV != NULL) {
+        if (ExecContext->CmdToExec.ArgV == NULL ||
+            ExecContext->CmdToExec.ArgC == 0) {
+
+            ExecutedBuiltin = TRUE;
+            ChildProcess->ProcessHandle = NULL;
+
+        } else {
+
             DWORD Result = EXIT_SUCCESS;
             if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("IF")) == 0) {
                 if (MakeProcessIf(ChildProcess, ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV, &CmdToParse)) {
@@ -503,7 +510,7 @@ __success(return)
 BOOLEAN
 MakeLaunchNextTarget(
     __in PMAKE_CONTEXT MakeContext,
-    __out PMAKE_CHILD_PROCESS ChildProcess
+    __inout PMAKE_CHILD_PROCESS ChildProcess
     )
 {
     PMAKE_TARGET Target;

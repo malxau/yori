@@ -300,8 +300,7 @@ Exit:
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgInstallSourceForInstalledPackages(
-    )
+YoriPkgInstallSourceForInstalledPackages(VOID)
 {
     YORI_STRING PkgIniFile;
     YORI_STRING InstalledSection;
@@ -480,8 +479,7 @@ Exit:
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgInstallSymbolsForInstalledPackages(
-    )
+YoriPkgInstallSymbolsForInstalledPackages(VOID)
 {
     YORI_STRING PkgIniFile;
     YORI_STRING InstalledSection;
@@ -798,8 +796,7 @@ YoriPkgDeletePackage(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgDeleteAllPackages(
-    )
+YoriPkgDeleteAllPackages(VOID)
 {
     YORI_STRING PkgIniFile;
     YORI_STRING InstalledSection;
@@ -954,8 +951,7 @@ YoriPkgInstallPseudoPackage(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgUninstallAll(
-    )
+YoriPkgUninstallAll(VOID)
 {
     YORI_STRING TargetDirectory;
     YORI_STRING ExecutableFile;

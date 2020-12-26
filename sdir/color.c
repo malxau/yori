@@ -151,7 +151,7 @@ SdirMarkFeaturesForCollection(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirParseAttributeApplyString()
+SdirParseAttributeApplyString(VOID)
 {
     LPTSTR This;
     YORI_STRING Combined;
@@ -208,7 +208,7 @@ error_substring_return:
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-SdirParseMetadataAttributeString()
+SdirParseMetadataAttributeString(VOID)
 {
     TCHAR SingleElement[256];
     TCHAR SingleSwitch[20];

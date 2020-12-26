@@ -47,7 +47,7 @@ CHAR strDirenvHelpText[] =
  Display usage text to the user.
  */
 BOOL
-DirenvHelp()
+DirenvHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Direnv %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -72,7 +72,7 @@ CHAR strDirenvApplyHelpText[] =
  Display usage text to the user.
  */
 BOOL
-DirenvApplyHelp()
+DirenvApplyHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("DirenvApply %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -113,7 +113,7 @@ BOOLEAN DirenvApplyInvoked;
  */
 VOID
 YORI_BUILTIN_FN
-DirenvNotifyUnload()
+DirenvNotifyUnload(VOID)
 {
     YoriLibFreeStringContents(&DirenvPreviousExecutedScript);
     YoriLibFreeStringContents(&DirenvPreviousCurrentDirectory);
@@ -124,7 +124,7 @@ DirenvNotifyUnload()
  it performed, and free the previously executed script string.
  */
 VOID
-DirenvUndoPreviousScript()
+DirenvUndoPreviousScript(VOID)
 {
     YoriLibSPrintf(&DirenvPreviousExecutedScript.StartOfString[DirenvPreviousExecutedScript.LengthInChars], _T(" -undo"));
     DirenvPreviousExecutedScript.LengthInChars += sizeof(" -undo") - 1;
@@ -150,7 +150,7 @@ YoriCmd_DIRENVAPPLY(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-DirenvInstall()
+DirenvInstall(VOID)
 {
     YORI_STRING DirenvApplyCmd;
     DWORD ValueLength;
@@ -198,7 +198,7 @@ DirenvInstall()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-DirenvInstallApplyHook()
+DirenvInstallApplyHook(VOID)
 {
     YORI_STRING YoriPostcmd;
     YORI_STRING YoriPostcmdName;
@@ -255,7 +255,7 @@ DirenvInstallApplyHook()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-DirenvUninstall()
+DirenvUninstall(VOID)
 {
     YORI_STRING DirenvApplyCmd;
     YoriLibConstantString(&DirenvApplyCmd, _T("DIRENVAPPLY"));
@@ -271,7 +271,7 @@ DirenvUninstall()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-DirenvUninstallApplyHook()
+DirenvUninstallApplyHook(VOID)
 {
     YORI_STRING YoriPostcmd;
     YORI_STRING YoriPostcmdName;
@@ -347,7 +347,7 @@ DirenvUninstallApplyHook()
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 DWORD
-DirenvApplyInternal()
+DirenvApplyInternal(VOID)
 {
     DWORD CurrentDirectoryLength;
     YORI_STRING CurrentDirectory;

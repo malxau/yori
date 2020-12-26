@@ -52,7 +52,7 @@ CHAR strDirHelpText[] =
  Display usage text to the user.
  */
 BOOL
-DirHelp()
+DirHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Dir %i.%02i\n"), DIR_VER_MAJOR, DIR_VER_MINOR);
 #if YORI_BUILD_ID
