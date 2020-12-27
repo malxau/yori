@@ -321,9 +321,9 @@ DirOutputBeginningOfDirectorySummary(
         VtAttribute.StartOfString = VtAttributeBuffer;
         VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(VtAttributeBuffer[0]);
 
-        YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirContext->CurrentDirectoryName.StartOfString, TRUE);
+        if (!YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirContext->CurrentDirectoryName.StartOfString, TRUE) ||
+            !YoriLibFileFiltCheckColorMatch(&DirContext->ColorRules, &DirContext->CurrentDirectoryName, &FileInfo, &Attribute)) {
 
-        if (!YoriLibFileFiltCheckColorMatch(&DirContext->ColorRules, &DirContext->CurrentDirectoryName, &FileInfo, &Attribute)) {
             Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
             Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
         }
@@ -675,7 +675,9 @@ DirFileFoundCallback(
         YoriLibInitEmptyString(&LocalFileName);
 
         FileTimeToLocalFileTime(&FileInfo->ftLastWriteTime, &LocalFileTime);
-        FileTimeToSystemTime(&LocalFileTime, &FileWriteTime);
+        if (!FileTimeToSystemTime(&LocalFileTime, &FileWriteTime)) {
+            ZeroMemory(&FileWriteTime, sizeof(FileWriteTime));
+        }
         SizeString.StartOfString = SizeStringBuffer;
         SizeString.LengthAllocated = sizeof(SizeStringBuffer)/sizeof(SizeStringBuffer[0]);
         DisplayReparseBuffer = FALSE;
@@ -899,8 +901,9 @@ DirFileFoundCallback(
                             //  Update stream information
                             //
 
-                            YoriLibUpdateFindDataFromFileInformation(&BogusFileInfo, StreamFullPath.StartOfString, FALSE);
-                            DirInitializeVtAttributeForFile(DirContext, &StreamFullPath, &BogusFileInfo, &VtAttribute, &VtReset);
+                            if (YoriLibUpdateFindDataFromFileInformation(&BogusFileInfo, StreamFullPath.StartOfString, FALSE)) {
+                                DirInitializeVtAttributeForFile(DirContext, &StreamFullPath, &BogusFileInfo, &VtAttribute, &VtReset);
+                            }
                         }
                         YoriLibNumberToString(&SizeString, FindStreamData.StreamSize.QuadPart, 10, 3, ',');
                         if (SizeString.LengthInChars < DIR_SIZE_FIELD_SIZE) {

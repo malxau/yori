@@ -3194,6 +3194,7 @@ YoriWinMultilineEditDeleteSelection(
  
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriWinMultilineEditGetSelectedText(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,

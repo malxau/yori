@@ -231,7 +231,10 @@ ENTRYPOINT(
 
     ZeroMemory(&TouchContext, sizeof(TouchContext));
     GetSystemTime(&CurrentSystemTime);
-    SystemTimeToFileTime(&CurrentSystemTime, &TimestampToUse);
+    if (!SystemTimeToFileTime(&CurrentSystemTime, &TimestampToUse)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("touch: could not query system time\n"));
+        return EXIT_FAILURE;
+    }
 
     for (i = 1; i < ArgC; i++) {
 

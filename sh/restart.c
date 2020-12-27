@@ -32,6 +32,12 @@
  */
 BOOL YoriShProcessRegisteredForRestart = FALSE;
 
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(push)
+#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
+#endif
+
+
 /**
  Return a path to the temp directory, but allocate extra space for a file name
  to append to it.
@@ -67,6 +73,10 @@ YoriShGetTempPath(
 
     return TRUE;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(pop)
+#endif
 
 /**
  Try to save the current state of the process so that it can be recovered
@@ -308,6 +318,7 @@ YoriShSaveRestartStateWorker(
     //  Write the current aliases
     //
 
+    YoriLibInitEmptyString(&Env);
     if (YoriShGetAliasStrings(YORI_SH_GET_ALIAS_STRINGS_INCLUDE_USER, &Env)) {
         LPTSTR ThisPair;
         LPTSTR ThisVar;
@@ -471,7 +482,6 @@ YoriShLoadSavedRestartState(
 
         return FALSE;
     }
-
 
     if (!YoriShGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
         return FALSE;

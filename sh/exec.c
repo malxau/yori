@@ -362,7 +362,9 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
         }
         YoriLibFreeWinErrorText(ErrText);
         YoriLibShCleanupFailedProcessLaunch(ExecContext);
-        YoriLibFreeStringContents(&OriginalAliases);
+        if (HaveOriginalAliases) {
+            YoriLibFreeStringContents(&OriginalAliases);
+        }
         YoriLibShDereferenceExecContext(ExecContext, TRUE);
         SetEvent(InitializedEvent);
         return 0;
@@ -959,6 +961,8 @@ YoriShExecuteSingleProgram(
             if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
                 if (YoriShExecuteNamedModuleInProc(ExecContext->CmdToExec.ArgV[0].StartOfString, ExecContext, &ExitCode)) {
                     ExecProcess = FALSE;
+                } else {
+                    ExitCode = 0;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".ys1")) == 0) {
                 ExecProcess = FALSE;
@@ -1376,7 +1380,9 @@ YoriShExecuteExpressionAndCaptureOutput(
     YoriLibInitEmptyString(ProcessOutput);
     if (OutputBuffer != NULL) {
 
-        YoriLibShGetProcessOutputBuffer(OutputBuffer, ProcessOutput);
+        if (!YoriLibShGetProcessOutputBuffer(OutputBuffer, ProcessOutput)) {
+            YoriLibInitEmptyString(ProcessOutput);
+        }
 
         //
         //  Truncate any newlines from the output, which tools

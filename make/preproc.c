@@ -1574,6 +1574,7 @@ MakeCreateSubdirectoryDependency(
     if (!FoundExisting) {
 
         if (!MakeFindMakefileInDirectory(MakeContext->ActiveScope, &FullPath)) {
+            YoriLibInitEmptyString(&FullPath);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not find makefile in directory: %y\n"), &MakeContext->ActiveScope->HashEntry.Key);
             goto Exit;
         }
@@ -1648,7 +1649,9 @@ MakeAddRule(
     Subdirectories = FALSE;
     YoriLibInitEmptyString(&ParentTargetName);
     ReadIndex = Substring.LengthInChars + 2;
-    MakeDetermineTargetOptions(&Substring, &Subdirectories, &ParentTargetName);
+    if (!MakeDetermineTargetOptions(&Substring, &Subdirectories, &ParentTargetName)) {
+        Subdirectories = FALSE;
+    }
 
     //
     //  Ignore .SUFFIXES.  Currently YMAKE doesn't care about these and

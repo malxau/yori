@@ -114,7 +114,10 @@ ENTRYPOINT(
         INPUT_RECORD InputRecord;
 
         while(TRUE) {
-            ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &InputRecord, 1, &BytesRead);
+            if (!ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &InputRecord, 1, &BytesRead)) {
+                break;
+            }
+
             if (InputRecord.EventType == KEY_EVENT &&
                 InputRecord.Event.KeyEvent.bKeyDown) {
                 break;

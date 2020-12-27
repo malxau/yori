@@ -362,7 +362,7 @@ BOOLEAN
 YoriWinMenuCopySubMenu(
     __in PYORI_WIN_CTRL_MENU_HOTKEY_ARRAY HotkeyArray,
     __in PYORI_WIN_MENU_ENTRY Input,
-    __out PYORI_WIN_CTRL_MENU_ENTRY Output
+    __inout PYORI_WIN_CTRL_MENU_ENTRY Output
     );
 
 /**
@@ -531,7 +531,7 @@ BOOLEAN
 YoriWinMenuCopySubMenu(
     __in PYORI_WIN_CTRL_MENU_HOTKEY_ARRAY HotkeyArray,
     __in PYORI_WIN_MENU_ENTRY Input,
-    __out PYORI_WIN_CTRL_MENU_ENTRY Output
+    __inout PYORI_WIN_CTRL_MENU_ENTRY Output
     )
 {
     PYORI_WIN_CTRL_MENU_ENTRY NewItems;

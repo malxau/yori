@@ -283,7 +283,7 @@ YoriLibFileFiltParseFilterOperator(
     __in PYORI_STRING Operator,
     __in PYORI_STRING Value,
     __in PCYORI_LIB_FILE_FILT_FILTER_OPT MatchedOption,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
     //
@@ -393,7 +393,7 @@ YoriLibFileFiltParseFilterOptAndOperator(
     __in PYORI_STRING FilterElement,
     __out PCYORI_LIB_FILE_FILT_FILTER_OPT * Opt,
     __out PYORI_STRING Operator,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
     YORI_STRING SwitchName;
@@ -458,7 +458,7 @@ BOOL
 YoriLibFileFiltParseFilterElement(
     __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
     __in PYORI_STRING FilterElement,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
     YORI_STRING Operator;
@@ -503,7 +503,7 @@ BOOL
 YoriLibFileFiltParseColorElement(
     __out PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria,
     __in PYORI_STRING FilterElement,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
     YORI_STRING Operator;
@@ -586,7 +586,7 @@ YoriLibFileFiltParseFilterStringInternal(
     __in PYORI_STRING FilterString,
     __in PYORI_LIB_FILE_FILT_PARSE_FN Fn,
     __in DWORD AllocationSize,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
     YORI_STRING Remaining;
@@ -705,7 +705,7 @@ BOOL
 YoriLibFileFiltParseFilterString(
     __out PYORI_LIB_FILE_FILTER Filter,
     __in PYORI_STRING FilterString,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
     return YoriLibFileFiltParseFilterStringInternal(Filter, FilterString, YoriLibFileFiltParseFilterElement, sizeof(YORI_LIB_FILE_FILT_MATCH_CRITERIA), ErrorSubstring);
@@ -732,7 +732,7 @@ BOOL
 YoriLibFileFiltParseColorString(
     __out PYORI_LIB_FILE_FILTER Filter,
     __in PYORI_STRING ColorString,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     )
 {
     return YoriLibFileFiltParseFilterStringInternal(Filter, ColorString, YoriLibFileFiltParseColorElement, sizeof(YORI_LIB_FILE_FILT_COLOR_CRITERIA), ErrorSubstring);

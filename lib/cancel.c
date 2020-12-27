@@ -59,7 +59,7 @@ YoriLibCtrlCHandler(
 {
     ASSERT(g_CancelEvent != NULL);
     ASSERT(g_CancelHandlerSet);
-    if (!g_CancelIgnore) {
+    if (!g_CancelIgnore && g_CancelEvent != NULL) {
         SetEvent(g_CancelEvent);
     }
 

@@ -220,7 +220,9 @@ YoriLibHtmlGenerateInitialString(
     TCHAR szFontWeight[100];
     TCHAR szFontSize[100];
 
-    YoriLibCaptureConsoleFont(&FontInfo);
+    if (!YoriLibCaptureConsoleFont(&FontInfo)) {
+        FontInfo.FaceName[0] = '\0';
+    }
 
     if (FontInfo.FaceName[0] != '\0') {
         YoriLibSPrintf(szFontNames, _T("'%ls', monospace"), FontInfo.FaceName);

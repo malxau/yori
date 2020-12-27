@@ -801,6 +801,7 @@ YoriPkgConvertUserPackagePathToMirroredPath(
 
     if (!YoriLibIsPathUrl(PackagePath)) {
         if (!YoriLibUserStringToSingleFilePath(PackagePath, FALSE, &HumanFullPath)) {
+            YoriLibInitEmptyString(&HumanFullPath);
             goto Exit;
         }
         ReturnHumanPathIfNoMirrorFound = TRUE;
@@ -885,6 +886,11 @@ Exit:
     YoriLibFreeStringContents(&HumanFullPath);
     return Result;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(push)
+#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
+#endif
 
 /**
  Download a remote package into a temporary location and return the
@@ -1030,6 +1036,10 @@ Exit:
     return Result;
 }
 
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(pop)
+#endif
+
 /**
  Display the best available error text given an installation failure with the
  specified Win32 error code.
@@ -1063,8 +1073,7 @@ YoriPkgDisplayErrorStringForInstallFailure(
             break;
         case ERROR_ACCESS_DENIED:
             YoriLibConstantString(&AdminName, _T("Administrators"));
-            YoriLibIsCurrentUserInGroup(&AdminName, &RunningAsAdmin);
-            if (RunningAsAdmin) {
+            if (!YoriLibIsCurrentUserInGroup(&AdminName, &RunningAsAdmin) || RunningAsAdmin) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Access denied when writing to files.\n"));
             } else {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Not running as Administrator and could not write to files.  Perhaps elevation is required?\n"));

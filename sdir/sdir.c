@@ -101,11 +101,8 @@ SdirDisplayCollection(VOID);
  @param ForceDisplay If TRUE, suppress processing to hide the entry because it
         needs to be displayed unconditionally.  This is used for directory
         headers etc.  If FALSE, the regular user specified rules are applied.
-
- @return TRUE to indicate success, FALSE to indicate failure.
  */
-__success(return)
-BOOL
+VOID
 SdirCaptureFoundItemIntoDirent (
     __out PYORI_FILE_INFO CurrentEntry,
     __in PWIN32_FIND_DATA FindData,
@@ -116,7 +113,6 @@ SdirCaptureFoundItemIntoDirent (
     DWORD i;
 
     memset(CurrentEntry, 0, sizeof(*CurrentEntry));
-
 
     //
     //  Copy over the data from Win32's FindFirstFile into our own structure.
@@ -143,8 +139,6 @@ SdirCaptureFoundItemIntoDirent (
     //
     
     SdirApplyAttribute(CurrentEntry, ForceDisplay, &CurrentEntry->RenderAttributes);
-
-    return TRUE;
 }
 
 /**
@@ -454,7 +448,9 @@ SdirItemFoundCallback(
                     //  Populate stream information
                     //
 
-                    YoriLibUpdateFindDataFromFileInformation(&BogusFindData, ItemContext->StreamFullPath.StartOfString, FALSE);
+                    if (!YoriLibUpdateFindDataFromFileInformation(&BogusFindData, ItemContext->StreamFullPath.StartOfString, FALSE)) {
+                        memcpy(&BogusFindData, &FindData, sizeof(FindData));
+                    }
                     SdirAddToCollection(&BogusFindData, &ItemContext->StreamFullPath);
                 }
             } while (DllKernel32.pFindNextStreamW(hStreamFind, &FindStreamData));

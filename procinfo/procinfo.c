@@ -399,7 +399,11 @@ ENTRYPOINT(
     ProcInfoContext.UserTimeInMs.QuadPart = ProcInfoContext.UserTimeInMs.QuadPart / (10 * 1000);
 
     GetSystemTime(&stNow);
-    SystemTimeToFileTime(&stNow, &ftNow);
+    if (!SystemTimeToFileTime(&stNow, &ftNow)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("procinfo: could not query system time\n"));
+        CloseHandle(hProcess);
+        return EXIT_FAILURE;
+    }
     liNow.HighPart = ftNow.dwHighDateTime;
     liNow.LowPart = ftNow.dwLowDateTime;
 

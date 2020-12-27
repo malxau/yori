@@ -36,7 +36,7 @@ YoriPkgCreateBinaryPackage(
     __in_opt PYORI_STRING UpgradePath,
     __in_opt PYORI_STRING SourcePath,
     __in_opt PYORI_STRING SymbolPath,
-    __in_opt PYORI_STRING Replaces,
+    __in_ecount_opt(ReplaceCount) PYORI_STRING Replaces,
     __in DWORD ReplaceCount
     );
 

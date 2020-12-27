@@ -654,8 +654,7 @@ YoriLibAttributeFromLiteralString(
     __out PYORILIB_COLOR_ATTRIBUTES OutAttributes
     );
 
-__success(return)
-BOOL
+VOID
 YoriLibSetColorToWin32(
     __out PYORILIB_COLOR_ATTRIBUTES Attributes,
     __in UCHAR Win32Attribute
@@ -1207,7 +1206,7 @@ BOOL
 YoriLibFileFiltParseFilterString(
     __out PYORI_LIB_FILE_FILTER Filter,
     __in PYORI_STRING FilterString,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     );
 
 __success(return)
@@ -1215,7 +1214,7 @@ BOOL
 YoriLibFileFiltParseColorString(
     __out PYORI_LIB_FILE_FILTER Filter,
     __in PYORI_STRING ColorString,
-    __out PYORI_STRING ErrorSubstring
+    __out _On_failure_(_Post_valid_) PYORI_STRING ErrorSubstring
     );
 
 __success(return)
@@ -2792,7 +2791,7 @@ YoriLibLocateExecutableInPath(
     __in PYORI_STRING SearchFor,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
     __in_opt PVOID MatchAllContext,
-    __out PYORI_STRING PathName
+    __out _When_(MatchAllCallback != NULL, _Post_invalid_) PYORI_STRING PathName
     );
 
 
@@ -2823,6 +2822,14 @@ int
 YoriLibSPrintfA(
     __out LPSTR szDest,
     __in LPCSTR szFmt,
+    ...
+    );
+
+int
+YoriLibSPrintfSA(
+    __out_ecount(len) LPSTR szDest,
+    __in  DWORD len,
+    __in  LPCSTR szFmt,
     ...
     );
 

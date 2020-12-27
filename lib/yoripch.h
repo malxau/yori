@@ -43,20 +43,27 @@
 #endif
 #pragma warning(disable: 4702) // Unreachable code
 
-#if defined(_MSC_VER) && (_MSC_VER <= 1500)
+#if defined(_MSC_VER) && (_MSC_VER <= 1400)
 #pragma warning(disable: 4705) // statement has no effect
 #endif
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
 #pragma warning(disable: 4668) // preprocessor conditional with nonexistent macro, SDK bug
 #pragma warning(disable: 4820) // implicit padding added in structure
-#pragma warning(disable: 5045) // spectre mitigation 
 #pragma warning(disable: 4061) // not all enumerators handled in switch statement
 #pragma warning(disable: 4062) // not all enumerators handled in switch statement
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1910)
+#pragma warning(disable: 5045) // spectre mitigation 
+#endif
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
 #pragma warning(push)
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(disable: 4255) // no function prototype given.  8.1 and earlier SDKs exhibit this.
 #endif
 
 #include <windows.h>
@@ -115,12 +122,14 @@
 
 #include <yoricrt.h>
 
-#ifndef __in
-
+#ifndef __analysis_assume
 /**
  SAL annotation indicating that a condition must be true.
  */
 #define __analysis_assume(x)
+#endif
+
+#ifndef __in
 
 /**
  SAL annotation for an input value.
@@ -171,6 +180,12 @@
 #define __out_ecount(x)
 
 /**
+ SAL annotation describing an optional output buffer with a specified number of
+ elements.
+ */
+#define __out_ecount_opt(x)
+
+/**
  SAL annotation describing an optional output pointer whose value is changed.
  */
 #define __deref_opt_out
@@ -194,11 +209,26 @@
 
 #endif
 
-#ifndef _Return_type_success_
+#ifndef _Acquires_lock_
 /**
- SAL annotation for a return type.
+ SAL annotation to indicate a function acquires a lock.
  */
-#define _Return_type_success_(x)
+#define _Acquires_lock_(x)
+#endif
+
+#ifndef _Always_
+/**
+ SAL annotation describing a condition that is true on function success and
+ failure.
+ */
+#define _Always_(x)
+#endif
+
+#ifndef _On_failure_
+/**
+ SAL annotation describing a condition that is true on function failure.
+ */
+#define _On_failure_(x)
 #endif
 
 #ifndef _Post_satisfies_
@@ -208,13 +238,19 @@
 #define _Post_satisfies_(x)
 #endif
 
-#ifndef _Acquires_lock_
+#ifndef _Return_type_success_
 /**
- SAL annotation to indicate a function acquires a lock.
+ SAL annotation for a return type.
  */
-#define _Acquires_lock_(x)
+#define _Return_type_success_(x)
 #endif
 
+#ifndef _When_
+/**
+ SAL annotation describing a condition that must be true in some conditions.
+ */
+#define _When_(x, y)
+#endif
 
 #include <yoricmpt.h>
 

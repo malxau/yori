@@ -293,6 +293,7 @@ ZNotifyUnload(VOID)
  @return If the object resolves to a full path and that path exists, returns
          TRUE; otherwise, returns FALSE.
  */
+__success(return)
 BOOL
 ZResolveSpecificationToFullPath(
     __in PYORI_STRING OldCurrentDirectory,
@@ -300,7 +301,9 @@ ZResolveSpecificationToFullPath(
     __out PYORI_STRING FullNewDir
     )
 {
-    YoriLibInitEmptyString(FullNewDir);
+    YORI_STRING LocalDir;
+
+    YoriLibInitEmptyString(&LocalDir);
 
     if (UserSpecification->LengthInChars == 2 &&
         ((UserSpecification->StartOfString[0] >= 'A' && UserSpecification->StartOfString[0] <= 'Z') ||
@@ -328,11 +331,15 @@ ZResolveSpecificationToFullPath(
             return FALSE;
         }
 
-        YoriLibGetCurrentDirectoryOnDrive(UserSpecification->StartOfString[0], FullNewDir);
+        if (!YoriLibGetCurrentDirectoryOnDrive(UserSpecification->StartOfString[0], &LocalDir)) {
+            return FALSE;
+        }
 
     } else {
 
-        YoriLibUserStringToSingleFilePath(UserSpecification, FALSE, FullNewDir);
+        if (!YoriLibUserStringToSingleFilePath(UserSpecification, FALSE, &LocalDir)) {
+            return FALSE;
+        }
     }
 
     //
@@ -340,10 +347,11 @@ ZResolveSpecificationToFullPath(
     //  say we successfully couldn't generate a match.
     //
 
-    if (GetFileAttributes(FullNewDir->StartOfString) == (DWORD)-1) {
-        YoriLibFreeStringContents(FullNewDir);
+    if (GetFileAttributes(LocalDir.StartOfString) == (DWORD)-1) {
+        YoriLibFreeStringContents(&LocalDir);
     }
 
+    memcpy(FullNewDir, &LocalDir, sizeof(YORI_STRING));
     return TRUE;
 }
 

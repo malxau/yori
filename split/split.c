@@ -456,7 +456,9 @@ ENTRYPOINT(
                 if (ArgC > i + 1) {
                     ArgumentUnderstood = TRUE;
                     YoriLibFreeStringContents(&SplitContext.Prefix);
-                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], TRUE, &SplitContext.Prefix);
+                    if (!YoriLibUserStringToSingleFilePath(&ArgV[i + 1], TRUE, &SplitContext.Prefix)) {
+                        YoriLibInitEmptyString(&SplitContext.Prefix);
+                    }
                     i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {

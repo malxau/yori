@@ -1112,10 +1112,12 @@ HexDumpDisplayDiff(
         YoriLibInitEmptyString(&Objects[Count].FullFileName);
         if (Count == 0) {
             if (!YoriLibUserStringToSingleFilePath(FileA, TRUE, &Objects[Count].FullFileName)) {
+                YoriLibInitEmptyString(&Objects[Count].FullFileName);
                 goto Exit;
             }
         } else {
             if (!YoriLibUserStringToSingleFilePath(FileB, TRUE, &Objects[Count].FullFileName)) {
+                YoriLibInitEmptyString(&Objects[Count].FullFileName);
                 goto Exit;
             }
         }

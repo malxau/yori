@@ -565,7 +565,7 @@ ENTRYPOINT(
         if (!YoriLibStringToNumber(&ArgV[StartArg], FALSE, &TargetYear, &CharsConsumed) ||
             CharsConsumed == 0) {
 
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cal: invalid year specified: %y\n"), &ArgV[StartArg]);
+            TargetYear = 0;
         }
 
         if (TargetYear > 0 && TargetYear <= sizeof(CalMonthNames)/sizeof(CalMonthNames[0])) {
@@ -576,6 +576,7 @@ ENTRYPOINT(
 
         if (TargetYear < 1601 || TargetYear > 2100) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cal: invalid year specified: %y\n"), &ArgV[StartArg]);
+            return EXIT_FAILURE;
         }
 
         CalOutputCalendarForYear((WORD)TargetYear, NULL);

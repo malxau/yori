@@ -91,6 +91,7 @@ typedef struct _EXPR_NUMBER {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 ExprStringToNumber(
     __in PYORI_STRING String,
@@ -249,7 +250,9 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    ExprStringToNumber(&RemainingString, &Result, &CharsConsumed);
+    if (!ExprStringToNumber(&RemainingString, &Result, &CharsConsumed)) {
+        goto ParseFailure;
+    }
     RemainingString.StartOfString += CharsConsumed;
     RemainingString.LengthInChars -= CharsConsumed;
 
@@ -261,7 +264,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 Result.Value += Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
                 RemainingString.LengthInChars -= CharsConsumed;
@@ -271,7 +276,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 Result.Value *= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
                 RemainingString.LengthInChars -= CharsConsumed;
@@ -281,7 +288,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 Result.Value -= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
                 RemainingString.LengthInChars -= CharsConsumed;
@@ -291,7 +300,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 if (Temp.Value != 0) {
                     Result.Value /= Temp.Value;
                 } else {
@@ -307,7 +318,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 if (Temp.Value != 0) {
                     Result.Value %= Temp.Value;
                 } else {
@@ -323,7 +336,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 Result.Value <<= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
                 RemainingString.LengthInChars -= CharsConsumed;
@@ -333,7 +348,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 Result.Value >>= Temp.Value;
                 RemainingString.StartOfString += CharsConsumed;
                 RemainingString.LengthInChars -= CharsConsumed;
@@ -343,7 +360,9 @@ ENTRYPOINT(
                 RemainingString.StartOfString++;
                 RemainingString.LengthInChars--;
                 YoriLibTrimSpaces(&RemainingString);
-                ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed);
+                if (!ExprStringToNumber(&RemainingString, &Temp, &CharsConsumed)) {
+                    goto ParseFailure;
+                }
                 {
                     EXPR_NUMBER Temp2 = Result;
                     while (Temp.Value > 1) {
@@ -389,6 +408,11 @@ ENTRYPOINT(
     ExprOutputNumber(Result, OutputSeperator, OutputBase);
 
     return EXIT_SUCCESS;
+
+ParseFailure:
+    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("expr: could not parse to number: %y\n"), &RemainingString);
+    YoriLibFreeStringContents(&RemainingString);
+    return EXIT_FAILURE;
 }
 
 // vim:sw=4:ts=4:et:

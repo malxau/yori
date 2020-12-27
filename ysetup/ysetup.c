@@ -116,7 +116,7 @@ SetupFindLocalPkgPath(
 
         if (!YoriLibUserStringToSingleFilePath(&RelativePathToProbe, TRUE, &FullPathToProbe)) {
             YoriLibFreeStringContents(&RelativePathToProbe);
-            YoriLibFreeStringContents(&FullPathToProbe);
+            YoriLibInitEmptyString(&FullPathToProbe);
             return FALSE;
         }
 
@@ -173,6 +173,8 @@ SetupInstallToDirectory(
 
     if (SetupFindLocalPkgPath(&LocalPath)) {
         CustomSource = &LocalPath;
+    } else {
+        YoriLibInitEmptyString(&LocalPath);
     }
 
     if (!YoriLibCreateDirectoryAndParents(InstallDirectory)) {
@@ -517,6 +519,12 @@ Exit:
  */
 #define TSETUP_APP_DIR _T("\\Yori")
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(push)
+#pragma warning(disable: 6260) // sizeof*sizeof is used for character size
+                               // flexibility
+#endif
+
 /**
  Return the default installation directory.  This is normally
  "C:\Program Files\Yori" but the path can be reconfigured.
@@ -591,10 +599,6 @@ SetupGetDefaultInstallDir(
             }
             InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
             if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 6260) // sizeof*sizeof is used for character size
-                                // flexibility
-#endif
                 memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
                 InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
             } else {
@@ -617,10 +621,6 @@ SetupGetDefaultInstallDir(
             }
             InstallDir->LengthInChars = SizeNeeded / sizeof(TCHAR) - 1;
             if (InstallDir->LengthInChars + sizeof(SETUP_APP_DIR) <= InstallDir->LengthAllocated) {
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 6260) // sizeof*sizeof is used for character size
-                                // flexibility
-#endif
                 memcpy(&InstallDir->StartOfString[InstallDir->LengthInChars], TSETUP_APP_DIR, sizeof(SETUP_APP_DIR) * sizeof(TCHAR));
                 InstallDir->LengthInChars += sizeof(SETUP_APP_DIR) - 1;
             } else {
@@ -660,6 +660,10 @@ ReturnDefault:
     }
     return TRUE;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(pop)
+#endif
 
 /**
  The DialogProc for the setup dialog box.
@@ -975,7 +979,11 @@ ymain(
     }
 
     if (StartArg > 0) {
-        YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &NewDirectory);
+        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &NewDirectory)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: install failed\n"));
+            return EXIT_FAILURE;
+        }
+
         if (!SetupInstallToDirectory(&NewDirectory)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: install failed\n"));
             YoriLibFreeStringContents(&NewDirectory);

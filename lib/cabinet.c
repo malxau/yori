@@ -933,7 +933,9 @@ YoriLibCabNotify(
             YoriLibFreeStringContents(&FileName);
             return Handle;
         case YoriLibCabNotifyCloseFile:
-            GetTimeZoneInformation(&Tzi);
+            if (GetTimeZoneInformation(&Tzi) == TIME_ZONE_ID_INVALID) {
+                Tzi.Bias = 0;
+            }
 
             //
             //  Convert the DOS time into a local time zone relative NT time

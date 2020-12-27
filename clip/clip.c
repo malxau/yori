@@ -109,6 +109,20 @@ static const CHAR DummyFragEnd[] =
  */
 #define MAX_PIPE_SIZE (4*1024*1024)
 
+//
+//  Older versions of the analysis engine don't understand that a buffer
+//  allocated with GlobalAlloc and subsequently locked with GlobalLock has
+//  the same writable size as specified in the call to GlobalAlloc.  Since
+//  a generic overflow warning is useful, this is suppressed only for a
+//  couple of versions that have an analysis engine but can't interpret
+//  this condition.                  
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
+#pragma warning(push)
+#pragma warning(disable: 6386)
+#endif
+
 /**
  Copy the contents of a file or pipe to the clipboard in HTML format.
 
@@ -157,18 +171,19 @@ ClipCopyAsHtml(
     //  header.
     //
 
-    YoriLibSPrintfA((PCHAR)pMem,
-                    "Version:0.9\n"
-                    "StartHTML:%08i\n"
-                    "EndHTML:%08i\n"
-                    "StartFragment:%08i\n"
-                    "EndFragment:%08i\n"
-                    "<!--StartFragment-->"
-                    " ",
-                    (int)HTMLCLIP_HDR_SIZE,
-                    (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + HTMLCLIP_FRAGEND_SIZE + 1 + FileSize),
-                    (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE),
-                    (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + 1 + FileSize));
+    YoriLibSPrintfSA((PCHAR)pMem,
+                     AllocSize,
+                     "Version:0.9\n"
+                     "StartHTML:%08i\n"
+                     "EndHTML:%08i\n"
+                     "StartFragment:%08i\n"
+                     "EndFragment:%08i\n"
+                     "<!--StartFragment-->"
+                     " ",
+                     (int)HTMLCLIP_HDR_SIZE,
+                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + HTMLCLIP_FRAGEND_SIZE + 1 + FileSize),
+                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE),
+                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + 1 + FileSize));
 
     CurrentOffset = 0;
 
@@ -429,6 +444,10 @@ ClipCopyAsRtf(
     GlobalFree(hMem);
     return TRUE;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
+#pragma warning(pop)
+#endif
 
 /**
  Copy the contents of a file or pipe to the clipboard in text format.

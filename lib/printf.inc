@@ -31,10 +31,20 @@
 #undef PRINTF_PUSHCHAR
 #endif
 
-#define PRINTF_ANSI_TO_UNICODE(x)     (TCHAR)((UCHAR)x)
+#define PRINTF_ANSI_TO_UNICODE(x)     (TCHAR)((UCHAR)(x))
 #define PRINTF_UNICODE_TO_ANSI(x)     (TCHAR)((x>=0x20&&x<0x80)?x:'?')
 
 #ifdef PRINTF_SIZEONLY
+
+//
+//  The sizeonly variants are intentionally not manipulating the buffer, which
+//  makes the compiler wonder if we intentionally wanted to ignore the
+//  buffer operation.
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(disable: 6269) // Possibly incorrect order of operations, dereference ignored
+#endif
 
 #define PRINTF_FN YoriLibVSPrintfSize
 

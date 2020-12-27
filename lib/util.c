@@ -101,14 +101,19 @@ YoriLibGetWinErrorText(
     )
 {
     LPTSTR OutputBuffer = NULL;
+    DWORD CharsReturned;
 
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                  NULL,
-                  ErrorCode,
-                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                  (LPTSTR)&OutputBuffer,
-                  0,
-                  NULL);
+    CharsReturned = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+                                  NULL,
+                                  ErrorCode,
+                                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                  (LPTSTR)&OutputBuffer,
+                                  0,
+                                  NULL);
+
+    if (CharsReturned == 0) {
+        OutputBuffer = NULL;
+    }
     
     if (OutputBuffer == NULL) {
         OutputBuffer = NoWinErrorText;
@@ -133,16 +138,21 @@ YoriLibGetNtErrorText(
 {
     LPTSTR OutputBuffer = NULL;
     HANDLE NtdllHandle;
+    DWORD CharsReturned;
 
     NtdllHandle = GetModuleHandle(_T("NTDLL"));
 
-    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
-                  NtdllHandle,
-                  ErrorCode,
-                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-                  (LPTSTR)&OutputBuffer,
-                  0,
-                  NULL);
+    CharsReturned = FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS | FORMAT_MESSAGE_FROM_HMODULE,
+                                  NtdllHandle,
+                                  ErrorCode,
+                                  MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                                  (LPTSTR)&OutputBuffer,
+                                  0,
+                                  NULL);
+
+    if (CharsReturned == 0) {
+        OutputBuffer = NULL;
+    }
     
     if (OutputBuffer == NULL) {
         OutputBuffer = NoWinErrorText;

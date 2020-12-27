@@ -728,6 +728,11 @@ YoriPkgDeletePendingPackages(
     }
 }
 
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(push)
+#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
+#endif
+
 /**
  Given a package URL, download if necessary, extract metadata, check if an
  existing package needs to be upgraded or replaced, back up any packages that
@@ -767,7 +772,7 @@ YoriPkgPreparePackageForInstall(
     __in_opt PYORI_STRING TargetDirectory,
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
     __in PYORI_STRING PackageUrl,
-    __out_opt PYORI_STRING RedirectToPackageUrl
+    __out_opt _On_failure_(_When_(return == ERROR_OLD_WIN_VERSION, _Post_valid_)) PYORI_STRING RedirectToPackageUrl
     )
 {
     PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
@@ -969,6 +974,10 @@ Exit:
     return Result;
 }
 
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(pop)
+#endif
+
 /**
  Given a package URL, download if necessary, extract metadata, check if an
  alternate version of the package should be used instead, check if an existing
@@ -1029,7 +1038,6 @@ YoriPkgPreparePackageForInstallRedirectBuild(
             continue;
         }
         if (Error != ERROR_SUCCESS && Error != ERROR_OLD_WIN_VERSION) {
-            ASSERT(RedirectedUrl.MemoryToFree == NULL);
             break;
         }
     } while (Error == ERROR_OLD_WIN_VERSION);

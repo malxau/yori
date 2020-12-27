@@ -596,15 +596,18 @@ YoriPkgInstallPackage(
     //
 
     if (!YoriPkgGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
+        YoriLibInitEmptyString(&PkgIniFile);
         goto Exit;
     }
 
     if (TargetDirectory != NULL) {
         if (!YoriLibUserStringToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
+            YoriLibInitEmptyString(&FullTargetDirectory);
             goto Exit;
         }
     } else {
         if (!YoriPkgGetApplicationDirectory(&FullTargetDirectory)) {
+            YoriLibInitEmptyString(&FullTargetDirectory);
             goto Exit;
         }
     }

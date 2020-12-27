@@ -3007,11 +3007,15 @@ YoriLibGenerateFileId(
     )
 {
     DWORD CharsConsumed;
-    if (!YoriLibStringToNumber(String, TRUE, &Entry->FileId.QuadPart, &CharsConsumed) ||
+    DWORDLONG FileId;
+
+    if (!YoriLibStringToNumber(String, TRUE, &FileId, &CharsConsumed) ||
         CharsConsumed == 0) {
 
         return FALSE;
     }
+
+    Entry->FileId.QuadPart = FileId;
     return TRUE;
 }
 

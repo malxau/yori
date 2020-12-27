@@ -107,11 +107,14 @@ YoriLibRtfGenerateInitialString(
         if (YoriLibCaptureConsoleColorTable(&ColorTableToUse, &CurrentAttributes)) {
             FreeColorTable = TRUE;
         } else {
+            CurrentAttributes = CVTVT_DEFAULT_COLOR;
             ColorTableToUse = YoriLibDefaultColorTable;
         }
     }
 
-    YoriLibCaptureConsoleFont(&FontInfo);
+    if (!YoriLibCaptureConsoleFont(&FontInfo)) {
+        FontInfo.FaceName[0] = '\0';
+    }
 
     if (FontInfo.FaceName[0] == '\0') {
         YoriLibSPrintf(FontInfo.FaceName, _T("Courier New"));

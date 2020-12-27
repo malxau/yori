@@ -196,7 +196,9 @@ HistoryCreateSynchronousMenu(
     }
 
     Result = FALSE;
-    YoriWinProcessInputForWindow(Parent, &Result);
+    if (!YoriWinProcessInputForWindow(Parent, &Result)) {
+        Result = FALSE;
+    }
     if (Result) {
         if (!YoriWinListGetActiveOption(List, ActiveOption)) {
             Result = FALSE;
@@ -333,10 +335,13 @@ YoriCmd_HISTORY(
                 if (ArgC > i + 1) {
                     DWORD CharsConsumed;
                     LONGLONG llTemp;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-                    LineCount = (DWORD)llTemp;
-                    ArgumentUnderstood = TRUE;
-                    i++;
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                        CharsConsumed > 0) {
+
+                        LineCount = (DWORD)llTemp;
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
 

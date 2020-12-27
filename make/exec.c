@@ -457,8 +457,6 @@ MakeLaunchNextCmd(
         if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath) && FoundInPath.LengthInChars > 0) {
             YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
             memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
-        } else {
-            YoriLibFreeStringContents(&FoundInPath);
         }
     }
 
@@ -640,9 +638,10 @@ MakeProcessCompletion(
 
         if (ExecContext->StdOutType == StdOutTypeBuffer) {
             YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
-            YoriLibShGetProcessOutputBuffer(ExecContext->StdOut.Buffer.ProcessBuffers, &ProcessOutput);
-            if (ProcessOutput.LengthInChars > 0) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &ProcessOutput);
+            if (YoriLibShGetProcessOutputBuffer(ExecContext->StdOut.Buffer.ProcessBuffers, &ProcessOutput)) {
+                if (ProcessOutput.LengthInChars > 0) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &ProcessOutput);
+                }
                 YoriLibFreeStringContents(&ProcessOutput);
             }
 

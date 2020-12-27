@@ -739,8 +739,8 @@ YoriLibShTeardownSingleProcessBuffer(
         //  close things rather than double close because the process is about
         //  to die anyway.  But it's still evil.
         //
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 6258)
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(disable: 6258)
 #endif
         TerminateThread(ThisBuffer->hPumpThread, 0);
         if (WaitForSingleObject(ThisBuffer->hPumpThread, INFINITE) == WAIT_OBJECT_0) {

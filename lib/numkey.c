@@ -173,12 +173,16 @@ YoriLibTranslateNumericKeyToChar(
                               sizeof(CodePage));
             }
         }
-        MultiByteToWideChar(CodePage,
-                            0,
-                            &SmallKeyValue,
-                            1,
-                            HostKeyValue,
-                            1);
+
+        if (MultiByteToWideChar(CodePage,
+                                0,
+                                &SmallKeyValue,
+                                1,
+                                HostKeyValue,
+                                1) == 0) {
+
+            HostKeyValue[0] = 0;
+        }
     }
 
     *Char = HostKeyValue[0];

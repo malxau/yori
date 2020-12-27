@@ -292,13 +292,15 @@ SdirRowDisplayed(VOID)
 BOOL
 SdirPasteStrAndPad (
     __out_ecount(padsize) PSDIR_FMTCHAR str,
-    __in_ecount(count) LPTSTR src,
+    __in_ecount_opt(count) LPTSTR src,
     __in YORILIB_COLOR_ATTRIBUTES attr,
     __in DWORD count,
     __in DWORD padsize
     )
 {
     ULONG i;
+
+    __analysis_assume(count == 0 || src != NULL);
 
     for (i = 0; i < count && i < padsize; i++) {
         str[i].Char = src[i];
@@ -419,16 +421,28 @@ SdirPressAnyKey (VOID)
     //  Loop throwing away events until we get a key pressed
     //
 
-    while (ReadConsoleInput(hConsole, &InputBuffer, 1, &NumRead) &&
-           NumRead > 0 &&
-           (InputBuffer.EventType != KEY_EVENT ||
-            !InputBuffer.Event.KeyEvent.bKeyDown ||
-            InputBuffer.Event.KeyEvent.uChar.UnicodeChar == '\0'));
+    while (TRUE) {
 
-    if (InputBuffer.Event.KeyEvent.uChar.UnicodeChar == 'q' ||
-        InputBuffer.Event.KeyEvent.uChar.UnicodeChar == 'Q') {
+        if (!ReadConsoleInput(hConsole, &InputBuffer, 1, &NumRead)) {
+            break;
+        }
 
-        return FALSE;
+        if (NumRead == 0) {
+            break;
+        }
+
+        if (InputBuffer.EventType == KEY_EVENT &&
+            InputBuffer.Event.KeyEvent.bKeyDown &&
+            InputBuffer.Event.KeyEvent.uChar.UnicodeChar != '\0') {
+
+            if (InputBuffer.Event.KeyEvent.uChar.UnicodeChar == 'q' ||
+                InputBuffer.Event.KeyEvent.uChar.UnicodeChar == 'Q') {
+
+                return FALSE;
+            }
+
+            break;
+        }
     }
 
     //

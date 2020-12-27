@@ -411,8 +411,8 @@ ENTRYPOINT(
         //  Here we "know" the thread is very simple, holds no locks, does
         //  no cleanup of its own, etc.
         //
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 6258)
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(disable: 6258)
 #endif
         TerminateThread(InputPumpThread, 0);
         CloseHandle(InputPumpThread);

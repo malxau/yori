@@ -87,7 +87,7 @@ YoriLibSearchEnv(
 
     if (hFind != INVALID_HANDLE_VALUE) {
         FindClose(hFind);
-        if (!YoriLibGetFullPathNameReturnAllocation(FileName, FullPath, Out, &fn)) {
+        if (!YoriLibGetFullPathNameReturnAllocation(FileName, FullPath, Out, &fn) || fn == NULL) {
             Out->LengthInChars = 0;
             Out->StartOfString[0] = '\0';
             return;
@@ -965,7 +965,7 @@ YoriLibLocateExecutableInPath(
     __in PYORI_STRING SearchFor,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
     __in_opt PVOID MatchAllContext,
-    __out PYORI_STRING PathName
+    __out _When_(MatchAllCallback != NULL, _Post_invalid_) PYORI_STRING PathName
     )
 {
     BOOL SearchPathExt = TRUE;

@@ -567,6 +567,7 @@ YoriWinMultilineEditDeleteSelection(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
     );
 
+__success(return)
 BOOLEAN
 YoriWinMultilineEditGetSelectedText(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,

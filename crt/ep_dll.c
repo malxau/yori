@@ -38,11 +38,25 @@
 #pragma warning(disable: 4214) // bit field type other than int
 #pragma warning(disable: 4514) // unreferenced inline function
 
-#if defined(_MSC_VER) && (_MSC_VER <= 1500)
+#if defined(_MSC_VER) && (_MSC_VER <= 1400)
 #pragma warning(disable: 4705) // statement has no effect
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+#pragma warning(push)
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(disable: 4668) // preprocessor conditional with nonexistent macro, SDK bug
+#pragma warning(disable: 4255) // no function prototype given.  8.1 and earlier SDKs exhibit this.
+#pragma warning(disable: 4820) // implicit padding added in structure
+#endif
+
 #include <windows.h>
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+#pragma warning(pop)
+#endif
 
 /**
  Indicate to the standard CRT header that we're compiling the CRT itself.

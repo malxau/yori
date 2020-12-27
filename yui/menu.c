@@ -996,7 +996,9 @@ YuiMenuPopulate(
 
     YoriLibInitEmptyString(&YuiContext->FilterDirectory);
     YoriLibConstantString(&EnumDir, _T("~PROGRAMS"));
-    YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory);
+    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory)) {
+        YoriLibInitEmptyString(&YuiContext->FilterDirectory);
+    }
 
     YoriLibConstantString(&EnumDir, _T("~START\\*"));
 
@@ -1028,7 +1030,9 @@ YuiMenuPopulate(
     //
 
     YoriLibConstantString(&EnumDir, _T("~COMMONPROGRAMS"));
-    YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory);
+    if (!YoriLibUserStringToSingleFilePath(&EnumDir, TRUE, &YuiContext->FilterDirectory)) {
+        YoriLibInitEmptyString(&YuiContext->FilterDirectory);
+    }
 
     YoriLibConstantString(&EnumDir, _T("~COMMONSTART\\*"));
 

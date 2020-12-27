@@ -981,7 +981,9 @@ CoCreateSynchronousMenu(VOID)
 
     }
     Result = FALSE;
-    YoriWinProcessInputForWindow(Parent, &Result);
+    if (!YoriWinProcessInputForWindow(Parent, &Result)) {
+        Result = FALSE;
+    }
 
     CoFreeContext(&CoContext);
 

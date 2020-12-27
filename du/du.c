@@ -326,9 +326,8 @@ DuReportAndCloseStack(
                 VtAttribute.StartOfString = VtAttributeBuffer;
                 VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(VtAttributeBuffer[0]);
         
-                YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirStack->DirectoryName.StartOfString, TRUE);
-        
-                if (!YoriLibFileFiltCheckColorMatch(&DuContext->ColorRules, &DirStack->DirectoryName, &FileInfo, &Attribute)) {
+                if (!YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirStack->DirectoryName.StartOfString, TRUE) || 
+                    !YoriLibFileFiltCheckColorMatch(&DuContext->ColorRules, &DirStack->DirectoryName, &FileInfo, &Attribute)) {
                     Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
                     Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
                 }

@@ -688,7 +688,10 @@ YoriLibShParseCmdlineToCmdContext(
                 //
 
                 if (CharsToConsume == 0) {
-                    YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
+                    if (!YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+                        CharsToConsume = 0;
+                        TerminateNextArg = FALSE;
+                    }
                 }
 
                 if (CharsToConsume > 0) {
@@ -1461,8 +1464,12 @@ YoriLibShParseCmdContextToExecContext(
             if (CurrentArgIsForProgram != NULL) {
                 if (CmdContext->CurrentArg == Count) {
                     *CurrentArgIsForProgram = TRUE;
-                    *CurrentArgIndex = CmdToExec->ArgC;
-                    *CurrentArgOffset = CmdContext->CurrentArgOffset;
+                    if (CurrentArgIndex != NULL) {
+                        *CurrentArgIndex = CmdToExec->ArgC;
+                    }
+                    if (CurrentArgOffset != NULL) {
+                        *CurrentArgOffset = CmdContext->CurrentArgOffset;
+                    }
                 }
             }
             CmdToExec->ArgC++;

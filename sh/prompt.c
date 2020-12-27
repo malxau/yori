@@ -53,7 +53,9 @@ YoriShPromptIsAdmin(VOID)
 
     YoriLibConstantString(&AdminName, _T("Administrators"));
 
-    YoriLibIsCurrentUserInWellKnownGroup(DOMAIN_ALIAS_RID_ADMINS, &YoriShPromptAdminPresent);
+    if (!YoriLibIsCurrentUserInWellKnownGroup(DOMAIN_ALIAS_RID_ADMINS, &YoriShPromptAdminPresent)) {
+        YoriShPromptAdminPresent = FALSE;
+    }
     YoriShPromptAdminDetermined = TRUE;
 
     return YoriShPromptAdminPresent;
@@ -262,6 +264,8 @@ YoriShDisplayPrompt(VOID)
 
         if (YoriShExpandBackquotes(StringToUse, &PromptAfterBackquoteExpansion)) {
             StringToUse = &PromptAfterBackquoteExpansion;
+        } else {
+            YoriLibInitEmptyString(&PromptAfterBackquoteExpansion);
         }
 
         //
@@ -272,6 +276,8 @@ YoriShDisplayPrompt(VOID)
 
         if (YoriShExpandEnvironmentVariables(StringToUse, &PromptAfterEnvExpansion, NULL)) {
             StringToUse = &PromptAfterEnvExpansion;
+        } else {
+            YoriLibInitEmptyString(&PromptAfterEnvExpansion);
         }
 
         //
@@ -360,6 +366,8 @@ YoriShDisplayPrompt(VOID)
 
         if (YoriShExpandBackquotes(StringToUse, &PromptAfterBackquoteExpansion)) {
             StringToUse = &PromptAfterBackquoteExpansion;
+        } else {
+            YoriLibInitEmptyString(&PromptAfterBackquoteExpansion);
         }
 
         //
@@ -370,6 +378,8 @@ YoriShDisplayPrompt(VOID)
 
         if (YoriShExpandEnvironmentVariables(StringToUse, &PromptAfterEnvExpansion, NULL)) {
             StringToUse = &PromptAfterEnvExpansion;
+        } else {
+            YoriLibInitEmptyString(&PromptAfterEnvExpansion);
         }
 
         //

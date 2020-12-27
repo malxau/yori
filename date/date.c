@@ -150,13 +150,17 @@ DateExpandVariables(
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ms")) == 0) {
         CharsNeeded = 4;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COUNT_MS")) == 0) {
-        SystemTimeToFileTime(&DateContext->Time, &Clock);
+        if (!SystemTimeToFileTime(&DateContext->Time, &Clock)) {
+            return 0;
+        }
         liClock.HighPart = Clock.dwHighDateTime;
         liClock.LowPart = Clock.dwLowDateTime;
         liClock.QuadPart = liClock.QuadPart / 10000;
         CharsNeeded = YoriLibSPrintfSize(_T("%016lli"), liClock.QuadPart);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("count_ms")) == 0) {
-        SystemTimeToFileTime(&DateContext->Time, &Clock);
+        if (!SystemTimeToFileTime(&DateContext->Time, &Clock)) {
+            return 0;
+        }
         liClock.HighPart = Clock.dwHighDateTime;
         liClock.LowPart = Clock.dwLowDateTime;
         liClock.QuadPart = liClock.QuadPart / 10000;

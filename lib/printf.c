@@ -77,6 +77,11 @@ YoriLibSPrintfS(
     return out_len;
 }
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(push)
+#pragma warning(disable: 6386) // Obviously this is the buffer unsafe version
+#endif
+
 /**
  Process a printf format string and output the result into a NULL terminated
  buffer which is assumed to be large enough to hold the result.
@@ -99,13 +104,14 @@ YoriLibSPrintf(
     int out_len;
 
     va_start( marker, szFmt );
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 6386) // Obviously this is the buffer unsafe version
-#endif
     out_len = YoriLibVSPrintf(szDest, (DWORD)-1, szFmt, marker);
     va_end( marker );
     return out_len;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(pop)
+#endif
 
 /**
  Process a printf format string and output the result into a Yori string.

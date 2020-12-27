@@ -531,8 +531,12 @@ YoriCmd_RETURN(
         LONGLONG LlExitCode;
         DWORD CharsConsumed;
 
-        YoriLibStringToNumber(&ArgV[StartArg], TRUE, &LlExitCode, &CharsConsumed);
-        ExitCode = (DWORD)LlExitCode;
+        if (!YoriLibStringToNumber(&ArgV[StartArg], TRUE, &LlExitCode, &CharsConsumed) ||
+             CharsConsumed == 0) {
+            ExitCode = 0;
+        } else {
+            ExitCode = (DWORD)LlExitCode;
+        }
     }
 
     //

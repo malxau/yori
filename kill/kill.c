@@ -300,7 +300,9 @@ ENTRYPOINT(
             }
         } else {
             if (ProcessInfo == NULL) {
-                KillGetSystemProcessList(&ProcessInfo);
+                if (!KillGetSystemProcessList(&ProcessInfo)) {
+                    ProcessInfo = NULL;
+                }
             }
 
             if (ProcessInfo != NULL) {

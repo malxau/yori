@@ -356,9 +356,8 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 if (ArgC > i + 1) {
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-
-                    if (CharsConsumed > 0) {
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                        CharsConsumed > 0) {
 
                         StrideContext.Interval = (DWORD)llTemp;
                         ArgumentUnderstood = TRUE;
@@ -367,9 +366,8 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-
-                    if (CharsConsumed > 0) {
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                        CharsConsumed > 0) {
 
                         StrideContext.LinesOnEachInterval = (DWORD)llTemp;
                         ArgumentUnderstood = TRUE;
@@ -378,9 +376,8 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("o")) == 0) {
                 if (ArgC > i + 1) {
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-
-                    if (CharsConsumed > 0) {
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                        CharsConsumed > 0) {
 
                         StrideContext.Offset = (DWORD)llTemp;
                         ArgumentUnderstood = TRUE;

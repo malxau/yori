@@ -28,6 +28,11 @@
 #include <yorilib.h>
 #include "yoripkgp.h"
 
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(push)
+#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
+#endif
+
 /**
  Creates a binary (installable) package.  This could be architecture specific
  or architecture neutral.
@@ -82,7 +87,7 @@ YoriPkgCreateBinaryPackage(
     __in_opt PYORI_STRING UpgradePath,
     __in_opt PYORI_STRING SourcePath,
     __in_opt PYORI_STRING SymbolPath,
-    __in_opt PYORI_STRING Replaces,
+    __in_ecount_opt(ReplaceCount) PYORI_STRING Replaces,
     __in DWORD ReplaceCount
     )
 {
@@ -96,6 +101,8 @@ YoriPkgCreateBinaryPackage(
     DWORD Count;
 
     PVOID CabHandle;
+
+    __analysis_assume(ReplaceCount == 0 || Replaces != NULL);
 
     //
     //  Query for a temporary directory
@@ -654,5 +661,10 @@ YoriPkgCreateSourcePackage(
     YoriPkgCreateSourceFreeMatchLists(&CreateSourceContext);
     return TRUE;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER == 1500)
+#pragma warning(pop)
+#endif
+
 
 // vim:sw=4:ts=4:et:

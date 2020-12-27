@@ -42,7 +42,21 @@
 #pragma warning(disable: 26451) // Arithmetic overflow
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+#pragma warning(push)
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(disable: 4668) // preprocessor conditional with nonexistent macro, SDK bug
+#pragma warning(disable: 4255) // no function prototype given.  8.1 and earlier SDKs exhibit this.
+#pragma warning(disable: 4820) // implicit padding added in structure
+#endif
+
 #include <windows.h>
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+#pragma warning(pop)
+#endif
 
 /**
  Indicate to the standard CRT header that we're compiling the CRT itself.
@@ -166,6 +180,15 @@ mini_tcmdlinetoargs(LPTSTR szCmdLine, int * argc)
             }
             if (*c != '\0') {
                 arg_count++;
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+                //
+                //  The 2013 analyzer thinks this could overrun, but doesn't
+                //  provide much detail as to why.  I think it can't follow
+                //  that the logic above is the same as the logic below for
+                //  calculating the argument and character count.
+                //
+#pragma warning(suppress: 6386)
+#endif
                 ret[arg_count] = ret_str;
             }
         } else {

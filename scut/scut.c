@@ -277,7 +277,9 @@ ENTRYPOINT(
                 if (i + 1 < ArgC) {
                     op = ScutOperationExec;
                     YoriLibFreeStringContents(&szFile);
-                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
+                    if (!YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile)) {
+                        YoriLibInitEmptyString(&szFile);
+                    }
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
@@ -285,7 +287,9 @@ ENTRYPOINT(
                 if (i + 1 < ArgC) {
                     op = ScutOperationDump;
                     YoriLibFreeStringContents(&szFile);
-                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile);
+                    if (!YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szFile)) {
+                        YoriLibInitEmptyString(&szFile);
+                    }
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
@@ -317,33 +321,44 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("hotkey")) == 0) {
                 if (i + 1 < ArgC) {
                     llTemp = 0;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-                    wHotkey = (WORD)llTemp;
-                    ArgumentUnderstood = TRUE;
-                    i++;
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                        CharsConsumed > 0) {
+
+                        wHotkey = (WORD)llTemp;
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("iconpath")) == 0) {
                 if (i + 1 < ArgC) {
                     YoriLibFreeStringContents(&szIcon);
-                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szIcon);
+                    if (!YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szIcon)) {
+                        YoriLibInitEmptyString(&szIcon);
+                    }
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("iconindex")) == 0) {
                 if (i + 1 < ArgC) {
                     llTemp = 0;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-                    wIcon = (WORD)llTemp;
-                    ArgumentUnderstood = TRUE;
-                    i++;
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                        CharsConsumed > 0) {
+
+                        wIcon = (WORD)llTemp;
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("show")) == 0) {
                 if (i + 1 < ArgC) {
                     llTemp = 0;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed);
-                    wShow = (WORD)llTemp;
-                    ArgumentUnderstood = TRUE;
-                    i++;
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                        CharsConsumed > 0) {
+
+                        wShow = (WORD)llTemp;
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("target")) == 0) {
                 if (i + 1 < ArgC) {
@@ -354,7 +369,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("workingdir")) == 0) {
                 if (i + 1 < ArgC) {
                     YoriLibFreeStringContents(&szWorkingDir);
-                    YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szWorkingDir);
+                    if (!YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szWorkingDir)) {
+                        YoriLibInitEmptyString(&szWorkingDir);
+                    }
                     ArgumentUnderstood = TRUE;
                     i++;
                 }

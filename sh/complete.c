@@ -46,8 +46,10 @@ YoriShAddMatchToTabContext(
     )
 {
     ASSERT(TabContext->MatchHashTable != NULL);
+    __analysis_assume(TabContext->MatchHashTable != NULL);
     ASSERT(Match->Value.MemoryToFree != NULL);
     ASSERT(Match->CursorOffset <= Match->Value.LengthInChars);
+
     YoriLibHashInsertByKey(TabContext->MatchHashTable, &Match->Value, Match, &Match->HashEntry);
     if (EntryToInsertAfter == NULL) {
         YoriLibInsertList(&TabContext->MatchList, &Match->ListEntry);
@@ -474,7 +476,7 @@ YoriShPerformExecutableTabCompletion(
                                            YoriShAddExecutableToTabList,
                                            &ExecTabContext,
                                            &FoundExecutable);
-    ASSERT(FoundExecutable.StartOfString == NULL);
+    YoriLibInitEmptyString(&FoundExecutable);
 
     //
     //  Thirdly, search the table of builtins.
@@ -2224,7 +2226,9 @@ YoriShCompleteGenerateNewBufferString(
             }
         }
 
-        YoriLibShBuildCmdlineFromCmdContext(CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg);
+        if (!YoriLibShBuildCmdlineFromCmdContext(CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
+            NewString.StartOfString = NULL;
+        }
 
         if (OldArgv != NULL) {
             YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);

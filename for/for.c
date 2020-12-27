@@ -699,9 +699,10 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 if (i + 1 < ArgC) {
                     YORI_STRING ErrorSubstring;
+                    YORI_LIB_FILE_FILTER Filter;
                     YoriLibInitEmptyString(&ErrorSubstring);
 
-                    if (!YoriLibFileFiltParseFilterString(&ExecContext.Filter, &ArgV[i + 1], &ErrorSubstring)) {
+                    if (!YoriLibFileFiltParseFilterString(&Filter, &ArgV[i + 1], &ErrorSubstring)) {
                         if (ErrorSubstring.LengthInChars > 0) {
                             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("for: error parsing filter string '%y' at '%y'\n"), &ArgV[i + 1], &ErrorSubstring);
                         } else {
@@ -709,6 +710,7 @@ ENTRYPOINT(
                         }
                         goto cleanup_and_exit;
                     }
+                    memcpy(&ExecContext.Filter, &Filter, sizeof(YORI_LIB_FILE_FILTER));
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
@@ -719,13 +721,16 @@ ENTRYPOINT(
                 if (i + 1 < ArgC) {
                     LONGLONG LlNumberProcesses = 0;
                     DWORD CharsConsumed = 0;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LlNumberProcesses, &CharsConsumed);
-                    ExecContext.TargetConcurrentCount = (DWORD)LlNumberProcesses;
-                    ArgumentUnderstood = TRUE;
-                    if (ExecContext.TargetConcurrentCount < 1) {
-                        ExecContext.TargetConcurrentCount = 1;
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LlNumberProcesses, &CharsConsumed) &&
+                        CharsConsumed > 0) {
+
+                        ExecContext.TargetConcurrentCount = (DWORD)LlNumberProcesses;
+                        ArgumentUnderstood = TRUE;
+                        if (ExecContext.TargetConcurrentCount < 1) {
+                            ExecContext.TargetConcurrentCount = 1;
+                        }
+                        i++;
                     }
-                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 Recurse = TRUE;

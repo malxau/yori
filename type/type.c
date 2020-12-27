@@ -352,9 +352,8 @@ ENTRYPOINT(
                 if (ArgC > i + 1) {
                     DWORD CharsConsumed;
                     LONGLONG HeadLines = 0;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &HeadLines, &CharsConsumed);
-
-                    if (CharsConsumed == 0) {
+                    if (!YoriLibStringToNumber(&ArgV[i + 1], TRUE, &HeadLines, &CharsConsumed) ||
+                         CharsConsumed == 0) {
 
                         //
                         //  If it's not numeric, assume it's a file name.

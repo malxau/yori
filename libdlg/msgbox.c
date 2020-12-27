@@ -97,7 +97,9 @@ YoriDlgMessageBox(
     PYORI_WIN_CTRL_HANDLE Ctrl;
     DWORD_PTR Result;
 
-    YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize);
+    if (!YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize)) {
+        return FALSE;
+    }
 
     //
     //  The window decoration will take six characters (two border, two
@@ -199,7 +201,9 @@ YoriDlgMessageBox(
 
     Result = 0;
     YoriWinEnableNonAltAccelerators(Parent, TRUE);
-    YoriWinProcessInputForWindow(Parent, &Result);
+    if (!YoriWinProcessInputForWindow(Parent, &Result)) {
+        Result = 0;
+    }
     YoriWinDestroyWindow(Parent);
     return (DWORD)Result;
 }

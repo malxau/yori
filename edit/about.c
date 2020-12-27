@@ -103,7 +103,9 @@ EditAboutDialog(
 
     UNREFERENCED_PARAMETER(LeftText);
 
-    YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize);
+    if (!YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize)) {
+        return 0;
+    }
 
     //
     //  The window decoration will take six characters (two border, two
@@ -247,7 +249,9 @@ EditAboutDialog(
 
     Result = 0;
     YoriWinEnableNonAltAccelerators(Parent, TRUE);
-    YoriWinProcessInputForWindow(Parent, &Result);
+    if (!YoriWinProcessInputForWindow(Parent, &Result)) {
+        Result = 0;
+    }
     YoriWinDestroyWindow(Parent);
     return (DWORD)Result;
 }

@@ -181,21 +181,33 @@ YoriLibShInitializeRedirection(
     } else if (ExecContext->StdInType == StdInTypePipe) {
         if (ExecContext->StdIn.Pipe.PipeFromPriorProcess != NULL) {
 
-            YoriLibMakeInheritableHandle(ExecContext->StdIn.Pipe.PipeFromPriorProcess,
-                                         &ExecContext->StdIn.Pipe.PipeFromPriorProcess);
+            HANDLE NewHandle;
 
-            PreviousRedirectContext->ResetInput = TRUE;
-            SetStdHandle(STD_INPUT_HANDLE, ExecContext->StdIn.Pipe.PipeFromPriorProcess);
-            ExecContext->StdIn.Pipe.PipeFromPriorProcess = NULL;
+            if (!YoriLibMakeInheritableHandle(ExecContext->StdIn.Pipe.PipeFromPriorProcess,
+                                              &NewHandle)) {
+
+                Error = GetLastError();
+            } else {
+                PreviousRedirectContext->ResetInput = TRUE;
+                SetStdHandle(STD_INPUT_HANDLE, NewHandle);
+                ExecContext->StdIn.Pipe.PipeFromPriorProcess = NULL;
+            }
+
         } else {
             HANDLE ReadHandle;
             HANDLE WriteHandle;
+            HANDLE NewHandle;
 
             if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
-                YoriLibMakeInheritableHandle(ReadHandle, &ReadHandle);
-                PreviousRedirectContext->ResetInput = TRUE;
-                SetStdHandle(STD_INPUT_HANDLE, ReadHandle);
-                CloseHandle(WriteHandle);
+                if (!YoriLibMakeInheritableHandle(ReadHandle, &NewHandle)) {
+                    Error = GetLastError();
+                    CloseHandle(ReadHandle);
+                    CloseHandle(WriteHandle);
+                } else {
+                    PreviousRedirectContext->ResetInput = TRUE;
+                    SetStdHandle(STD_INPUT_HANDLE, ReadHandle);
+                    CloseHandle(WriteHandle);
+                }
             } else {
                 Error = GetLastError();
             }
@@ -257,16 +269,22 @@ YoriLibShInitializeRedirection(
     } else if (ExecContext->StdOutType == StdOutTypePipe) {
         HANDLE ReadHandle;
         HANDLE WriteHandle;
+        HANDLE NewHandle;
+
         if (ExecContext->NextProgram != NULL &&
             ExecContext->NextProgram->StdInType == StdInTypePipe) {
 
             if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
 
-                YoriLibMakeInheritableHandle(WriteHandle, &WriteHandle);
-
-                PreviousRedirectContext->ResetOutput = TRUE;
-                SetStdHandle(STD_OUTPUT_HANDLE, WriteHandle);
-                ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess = ReadHandle;
+                if (!YoriLibMakeInheritableHandle(WriteHandle, &NewHandle)) {
+                    Error = GetLastError();
+                    CloseHandle(ReadHandle);
+                    CloseHandle(WriteHandle);
+                } else {
+                    PreviousRedirectContext->ResetOutput = TRUE;
+                    SetStdHandle(STD_OUTPUT_HANDLE, NewHandle);
+                    ExecContext->NextProgram->StdIn.Pipe.PipeFromPriorProcess = ReadHandle;
+                }
             } else {
                 Error = GetLastError();
             }
@@ -274,13 +292,18 @@ YoriLibShInitializeRedirection(
     } else if (ExecContext->StdOutType == StdOutTypeBuffer) {
         HANDLE ReadHandle;
         HANDLE WriteHandle;
+        HANDLE NewHandle;
         if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
 
-            YoriLibMakeInheritableHandle(WriteHandle, &WriteHandle);
-
-            PreviousRedirectContext->ResetOutput = TRUE;
-            SetStdHandle(STD_OUTPUT_HANDLE, WriteHandle);
-            ExecContext->StdOut.Buffer.PipeFromProcess = ReadHandle;
+            if (!YoriLibMakeInheritableHandle(WriteHandle, &NewHandle)) {
+                Error = GetLastError();
+                CloseHandle(ReadHandle);
+                CloseHandle(WriteHandle);
+            } else {
+                PreviousRedirectContext->ResetOutput = TRUE;
+                SetStdHandle(STD_OUTPUT_HANDLE, NewHandle);
+                ExecContext->StdOut.Buffer.PipeFromProcess = ReadHandle;
+            }
         } else {
             Error = GetLastError();
         }
@@ -340,13 +363,18 @@ YoriLibShInitializeRedirection(
     } else if (ExecContext->StdErrType == StdErrTypeBuffer) {
         HANDLE ReadHandle;
         HANDLE WriteHandle;
+        HANDLE NewHandle;
         if (CreatePipe(&ReadHandle, &WriteHandle, NULL, 0)) {
 
-            YoriLibMakeInheritableHandle(WriteHandle, &WriteHandle);
-
-            PreviousRedirectContext->ResetError = TRUE;
-            SetStdHandle(STD_ERROR_HANDLE, WriteHandle);
-            ExecContext->StdErr.Buffer.PipeFromProcess = ReadHandle;
+            if (!YoriLibMakeInheritableHandle(WriteHandle, &NewHandle)) {
+                Error = GetLastError();
+                CloseHandle(ReadHandle);
+                CloseHandle(WriteHandle);
+            } else {
+                PreviousRedirectContext->ResetError = TRUE;
+                SetStdHandle(STD_ERROR_HANDLE, NewHandle);
+                ExecContext->StdErr.Buffer.PipeFromProcess = ReadHandle;
+            }
         } else {
             Error = GetLastError();
         }

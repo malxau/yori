@@ -415,9 +415,14 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD CharsConsumed;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &ContextLine, &CharsConsumed);
-                    ArgumentUnderstood = TRUE;
-                    i++;
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &ContextLine, &CharsConsumed) &&
+                        CharsConsumed > 0)  {
+
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    } else {
+                        ContextLine = -1;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 TailContext.WaitForMore = TRUE;
@@ -426,8 +431,9 @@ ENTRYPOINT(
                 if (ArgC > i + 1) {
                     LONGLONG LineCount;
                     DWORD CharsConsumed;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LineCount, &CharsConsumed);
-                    if (LineCount != 0 && LineCount < 1 * 1024 * 1024) {
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &LineCount, &CharsConsumed) &&
+                        LineCount != 0 && LineCount < 1 * 1024 * 1024) {
+
                         TailContext.LinesToDisplay = (DWORD)LineCount;
                         ArgumentUnderstood = TRUE;
                         i++;

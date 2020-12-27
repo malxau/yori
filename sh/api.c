@@ -217,6 +217,7 @@ YoriApiExitProcess(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriApiExpandAlias(
     __in PYORI_STRING CommandString,
@@ -268,6 +269,7 @@ YoriApiGetAliasStrings(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriApiGetEnvironmentVariable(
     __in PYORI_STRING VariableName,
@@ -351,6 +353,7 @@ YoriApiGetHistoryStrings(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL  
 YoriApiGetJobInformation(
     __in DWORD JobId,

@@ -164,7 +164,15 @@ YoriLibGetOsVersion(
         LocalMinorVersion == 2 &&
         LocalBuildNumber == 9200) {
 
-        YoriLibGetOsVersionFromPeb(&LocalMajorVersion, &LocalMinorVersion, &LocalBuildNumber);
+        DWORD PebMajorVersion;
+        DWORD PebMinorVersion;
+        DWORD PebBuildNumber;
+
+        if (YoriLibGetOsVersionFromPeb(&PebMajorVersion, &PebMinorVersion, &PebBuildNumber)) {
+            LocalMajorVersion = PebMajorVersion;
+            LocalMinorVersion = PebMinorVersion;
+            LocalBuildNumber = PebBuildNumber;
+        }
     }
 
     CachedMajorOsVersion = LocalMajorVersion;

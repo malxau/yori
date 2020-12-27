@@ -124,12 +124,13 @@ ENTRYPOINT(
                 if (i + 1 < ArgC) {
                     LONGLONG llRepeat;
                     DWORD CharsConsumed;
-                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llRepeat, &CharsConsumed);
-                    if (CharsConsumed > 0) {
+                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llRepeat, &CharsConsumed) &&
+                        CharsConsumed > 0) {
+
                         RepeatCount = (DWORD)llRepeat;
+                        ArgumentUnderstood = TRUE;
+                        i++;
                     }
-                    ArgumentUnderstood = TRUE;
-                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;

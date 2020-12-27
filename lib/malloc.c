@@ -150,7 +150,7 @@ YoriLibMalloc(
 }
 #else
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
 #pragma warning(disable: 6250) // Calling VirtualFree without MEM_RELEASE,
                                // this module uses two calls
 #endif

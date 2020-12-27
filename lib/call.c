@@ -63,6 +63,7 @@ YoriCallAddAlias(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiAddAlias = (PYORI_API_ADD_ALIAS)GetProcAddress(hYori, "YoriApiAddAlias");
         if (pYoriApiAddAlias == NULL) {
             return FALSE;
@@ -102,6 +103,7 @@ YoriCallAddHistoryString(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiAddHistoryString = (PYORI_API_ADD_HISTORY_STRING)GetProcAddress(hYori, "YoriApiAddHistoryString");
         if (pYoriApiAddHistoryString == NULL) {
             return FALSE;
@@ -145,6 +147,7 @@ YoriCallAddSystemAlias(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiAddSystemAlias = (PYORI_API_ADD_SYSTEM_ALIAS)GetProcAddress(hYori, "YoriApiAddSystemAlias");
         if (pYoriApiAddSystemAlias == NULL) {
             return FALSE;
@@ -188,6 +191,7 @@ YoriCallBuiltinRegister(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiBuiltinRegister = (PYORI_API_BUILTIN_REGISTER)GetProcAddress(hYori, "YoriApiBuiltinRegister");
         if (pYoriApiBuiltinRegister == NULL) {
             return FALSE;
@@ -231,6 +235,7 @@ YoriCallBuiltinUnregister(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiBuiltinUnregister = (PYORI_API_BUILTIN_UNREGISTER)GetProcAddress(hYori, "YoriApiBuiltinUnregister");
         if (pYoriApiBuiltinUnregister == NULL) {
             return FALSE;
@@ -268,6 +273,7 @@ YoriCallClearHistoryStrings(VOID)
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiClearHistoryStrings = (PYORI_API_CLEAR_HISTORY_STRINGS)GetProcAddress(hYori, "YoriApiClearHistoryStrings");
         if (pYoriApiClearHistoryStrings == NULL) {
             return FALSE;
@@ -305,6 +311,7 @@ YoriCallDecrementPromptRecursionDepth(VOID)
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiDecrementPromptRecursionDepth = (PYORI_API_DECREMENT_PROMPT_RECURSION_DEPTH)GetProcAddress(hYori, "YoriApiDecrementPromptRecursionDepth");
         if (pYoriApiDecrementPromptRecursionDepth == NULL) {
             return FALSE;
@@ -347,6 +354,7 @@ YoriCallDeleteAlias(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiDeleteAlias = (PYORI_API_DELETE_ALIAS)GetProcAddress(hYori, "YoriApiDeleteAlias");
         if (pYoriApiDeleteAlias == NULL) {
             return FALSE;
@@ -387,6 +395,7 @@ YoriCallExecuteBuiltin(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiExecuteBuiltin = (PYORI_API_EXECUTE_BUILTIN)GetProcAddress(hYori, "YoriApiExecuteBuiltin");
         if (pYoriApiExecuteBuiltin == NULL) {
             return FALSE;
@@ -429,6 +438,7 @@ YoriCallExecuteExpression(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiExecuteExpression = (PYORI_API_EXECUTE_EXPRESSION)GetProcAddress(hYori, "YoriApiExecuteExpression");
         if (pYoriApiExecuteExpression == NULL) {
             return FALSE;
@@ -473,6 +483,7 @@ YoriCallExpandAlias(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiExpandAlias = (PYORI_API_EXPAND_ALIAS)GetProcAddress(hYori, "YoriApiExpandAlias");
         if (pYoriApiExpandAlias == NULL) {
             return FALSE;
@@ -510,6 +521,7 @@ YoriCallExitProcess(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiExitProcess = (PYORI_API_EXIT_PROCESS)GetProcAddress(hYori, "YoriApiExitProcess");
         if (pYoriApiExitProcess == NULL) {
             return;
@@ -548,6 +560,7 @@ YoriCallFreeYoriString(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiFreeYoriString = (PYORI_API_FREE_YORI_STRING)GetProcAddress(hYori, "YoriApiFreeYoriString");
         if (pYoriApiFreeYoriString == NULL) {
             return;
@@ -591,6 +604,7 @@ YoriCallGetAliasStrings(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetAliasStrings = (PYORI_API_GET_ALIAS_STRINGS)GetProcAddress(hYori, "YoriApiGetAliasStrings");
         if (pYoriApiGetAliasStrings == NULL) {
             return FALSE;
@@ -636,6 +650,7 @@ YoriCallGetEnvironmentVariable(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetEnvironmentVariable = (PYORI_API_GET_ENVIRONMENT_VARIABLE)GetProcAddress(hYori, "YoriApiGetEnvironmentVariable");
         if (pYoriApiGetEnvironmentVariable == NULL) {
             return FALSE;
@@ -671,6 +686,7 @@ YoriCallGetErrorLevel(VOID)
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetErrorLevel = (PYORI_API_GET_ERRORLEVEL)GetProcAddress(hYori, "YoriApiGetErrorLevel");
         if (pYoriApiGetErrorLevel == NULL) {
             return 1;
@@ -715,6 +731,7 @@ YoriCallGetEscapedArguments(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetEscapedArguments = (PYORI_API_GET_ESCAPED_ARGUMENTS)GetProcAddress(hYori, "YoriApiGetEscapedArguments");
         if (pYoriApiGetEscapedArguments == NULL) {
             return FALSE;
@@ -763,6 +780,7 @@ YoriCallGetHistoryStrings(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetHistoryStrings = (PYORI_API_GET_HISTORY_STRINGS)GetProcAddress(hYori, "YoriApiGetHistoryStrings");
         if (pYoriApiGetHistoryStrings == NULL) {
             return FALSE;
@@ -820,6 +838,7 @@ YoriCallGetJobInformation(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetJobInformation = (PYORI_API_GET_JOB_INFORMATION)GetProcAddress(hYori, "YoriApiGetJobInformation");
         if (pYoriApiGetJobInformation == NULL) {
             return FALSE;
@@ -866,6 +885,7 @@ YoriCallGetJobOutput(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetJobOutput = (PYORI_API_GET_JOB_OUTPUT)GetProcAddress(hYori, "YoriApiGetJobOutput");
         if (pYoriApiGetJobOutput == NULL) {
             return 0;
@@ -907,6 +927,7 @@ YoriCallGetNextJobId(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetNextJobId = (PYORI_API_GET_NEXT_JOB_ID)GetProcAddress(hYori, "YoriApiGetNextJobId");
         if (pYoriApiGetNextJobId == NULL) {
             return 0;
@@ -949,6 +970,7 @@ YoriCallGetSystemAliasStrings(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetSystemAliasStrings = (PYORI_API_GET_SYSTEM_ALIAS_STRINGS)GetProcAddress(hYori, "YoriApiGetSystemAliasStrings");
         if (pYoriApiGetSystemAliasStrings == NULL) {
             return FALSE;
@@ -994,6 +1016,7 @@ YoriCallGetYoriVersion(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiGetYoriVersion = (PYORI_API_GET_YORI_VERSION)GetProcAddress(hYori, "YoriApiGetYoriVersion");
         if (pYoriApiGetYoriVersion == NULL) {
             return FALSE;
@@ -1031,6 +1054,7 @@ YoriCallIncrementPromptRecursionDepth(VOID)
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiIncrementPromptRecursionDepth = (PYORI_API_INCREMENT_PROMPT_RECURSION_DEPTH)GetProcAddress(hYori, "YoriApiIncrementPromptRecursionDepth");
         if (pYoriApiIncrementPromptRecursionDepth == NULL) {
             return FALSE;
@@ -1066,6 +1090,7 @@ YoriCallIsProcessExiting(VOID)
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiIsProcessExiting = (PYORI_API_IS_PROCESS_EXITING)GetProcAddress(hYori, "YoriApiIsProcessExiting");
         if (pYoriApiIsProcessExiting == NULL) {
             return FALSE;
@@ -1113,6 +1138,7 @@ YoriCallPipeJobOutput(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiPipeJobOutput = (PYORI_API_PIPE_JOB_OUTPUT)GetProcAddress(hYori, "YoriApiPipeJobOutput");
         if (pYoriApiPipeJobOutput == NULL) {
             return 0;
@@ -1157,6 +1183,7 @@ YoriCallSetDefaultColor(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiSetDefaultColor = (PYORI_API_SET_DEFAULT_COLOR)GetProcAddress(hYori, "YoriApiSetDefaultColor");
         if (pYoriApiSetDefaultColor == NULL) {
             return FALSE;
@@ -1201,6 +1228,7 @@ YoriCallSetEnvironmentVariable(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiSetEnvironmentVariable = (PYORI_API_SET_ENVIRONMENT_VARIABLE)GetProcAddress(hYori, "YoriApiSetEnvironmentVariable");
         if (pYoriApiSetEnvironmentVariable == NULL) {
             return FALSE;
@@ -1246,6 +1274,7 @@ YoriCallSetJobPriority(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiSetJobPriority = (PYORI_API_SET_JOB_PRIORITY)GetProcAddress(hYori, "YoriApiSetJobPriority");
         if (pYoriApiSetJobPriority == NULL) {
             return FALSE;
@@ -1287,6 +1316,7 @@ YoriCallSetNextCommand(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiSetNextCommand = (PYORI_API_SET_NEXT_COMMAND)GetProcAddress(hYori, "YoriApiSetNextCommand");
         if (pYoriApiSetNextCommand == NULL) {
             return FALSE;
@@ -1328,6 +1358,7 @@ YoriCallSetUnloadRoutine(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiSetUnloadRoutine = (PYORI_API_SET_UNLOAD_ROUTINE)GetProcAddress(hYori, "YoriApiSetUnloadRoutine");
         if (pYoriApiSetUnloadRoutine == NULL) {
             return FALSE;
@@ -1369,6 +1400,7 @@ YoriCallTerminateJob(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiTerminateJob = (PYORI_API_TERMINATE_JOB)GetProcAddress(hYori, "YoriApiTerminateJob");
         if (pYoriApiTerminateJob == NULL) {
             return FALSE;
@@ -1406,6 +1438,7 @@ YoriCallWaitForJob(
         HMODULE hYori;
 
         hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
         pYoriApiWaitForJob = (PYORI_API_WAIT_FOR_JOB)GetProcAddress(hYori, "YoriApiWaitForJob");
         if (pYoriApiWaitForJob == NULL) {
             return;

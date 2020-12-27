@@ -70,6 +70,20 @@ static const CHAR DummyFragEnd[] =
  */
 #define HTMLCLIP_FRAGEND_SIZE (sizeof(DummyFragEnd)-1)
 
+//
+//  Older versions of the analysis engine don't understand that a buffer
+//  allocated with GlobalAlloc and subsequently locked with GlobalLock has
+//  the same writable size as specified in the call to GlobalAlloc.  Since
+//  a generic overflow warning is useful, this is suppressed only for a
+//  couple of versions that have an analysis engine but can't interpret
+//  this condition.                  
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
+#pragma warning(push)
+#pragma warning(disable: 6386)
+#endif
+
 /**
  Convert a Yori string into clipboard format.
 
@@ -136,18 +150,19 @@ YoriLibBuildHtmlClipboardBuffer(
     //  header.
     //
 
-    YoriLibSPrintfA((PCHAR)pMem,
-                    "Version:0.9\n"
-                    "StartHTML:%08i\n"
-                    "EndHTML:%08i\n"
-                    "StartFragment:%08i\n"
-                    "EndFragment:%08i\n"
-                    "<!--StartFragment-->"
-                    " ",
-                    (int)HTMLCLIP_HDR_SIZE,
-                    (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + HTMLCLIP_FRAGEND_SIZE + 1 + UserBytes),
-                    (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE),
-                    (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + 1 + UserBytes));
+    YoriLibSPrintfSA((PCHAR)pMem,
+                     BytesNeeded,
+                     "Version:0.9\n"
+                     "StartHTML:%08i\n"
+                     "EndHTML:%08i\n"
+                     "StartFragment:%08i\n"
+                     "EndFragment:%08i\n"
+                     "<!--StartFragment-->"
+                     " ",
+                     (int)HTMLCLIP_HDR_SIZE,
+                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + HTMLCLIP_FRAGEND_SIZE + 1 + UserBytes),
+                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE),
+                     (int)(HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + 1 + UserBytes));
 
     Return = WideCharToMultiByte(EncodingToUse, 0, TextToCopy->StartOfString, TextToCopy->LengthInChars, (LPSTR)(pMem + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE), UserBytes, NULL, NULL);
     if (Return == 0) {
@@ -478,5 +493,9 @@ YoriLibCopyTextRtfAndHtml(
     GlobalFree(hHtml);
     return TRUE;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
+#pragma warning(pop)
+#endif
 
 // vim:sw=4:ts=4:et:

@@ -135,7 +135,9 @@ YoriDlgInput(
     }
 
     Result = FALSE;
-    YoriWinProcessInputForWindow(Parent, &Result);
+    if (!YoriWinProcessInputForWindow(Parent, &Result)) {
+        Result = FALSE;
+    }
 
     if (Result) {
         if (!YoriWinEditGetText(Edit, Text)) {

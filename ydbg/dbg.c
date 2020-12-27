@@ -996,9 +996,11 @@ YDbgDebugChildProcess(
     DisableLoaderSnaps = FALSE;
     YoriLibInitEmptyString(&Executable);
 
-    if (!YoriLibLocateExecutableInPath(&ArgV[0], NULL, NULL, &Executable) ||
-        Executable.LengthInChars == 0) {
+    if (!YoriLibLocateExecutableInPath(&ArgV[0], NULL, NULL, &Executable)) {
+        YoriLibInitEmptyString(&Executable);
+    }
 
+    if (Executable.LengthInChars == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: unable to find executable\n"));
         YoriLibFreeStringContents(&Executable);
         return EXIT_FAILURE;

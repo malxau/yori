@@ -700,7 +700,7 @@ SdirWrite (
 BOOL
 SdirPasteStrAndPad (
     __out_ecount(padsize) PSDIR_FMTCHAR str,
-    __in_ecount(count) LPTSTR src,
+    __in_ecount_opt(count) LPTSTR src,
     __in YORILIB_COLOR_ATTRIBUTES attr,
     __in DWORD count,
     __in DWORD padsize

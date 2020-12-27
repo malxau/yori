@@ -218,11 +218,8 @@ YoriLibAttributeFromLiteralString(
  @param Attributes Pointer to the color structure to set.
 
  @param Win32Attribute The Win32 color to set the structure to.
-
- @return TRUE to indicate success or FALSE to indicate failure.
  */
-__success(return)
-BOOL
+VOID
 YoriLibSetColorToWin32(
     __out PYORILIB_COLOR_ATTRIBUTES Attributes,
     __in UCHAR Win32Attribute
@@ -230,7 +227,6 @@ YoriLibSetColorToWin32(
 {
     Attributes->Ctrl = 0;
     Attributes->Win32Attr = Win32Attribute;
-    return TRUE;
 }
 
 /**

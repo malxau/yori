@@ -269,6 +269,8 @@ YoriPkgIsFileToBeDeletedOnReboot(
             return FALSE;
         }
 
+        __analysis_assume(ExistingValue.StartOfString != NULL);
+
         Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("PendingFileRenameOperations"), NULL, NULL, (LPBYTE)ExistingValue.StartOfString, &LengthRequired);
         if (Err != ERROR_SUCCESS) {
             YoriLibFreeStringContents(&ExistingValue);
@@ -279,7 +281,6 @@ YoriPkgIsFileToBeDeletedOnReboot(
         ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
 
         DllAdvApi32.pRegCloseKey(hKey);
-
 
         YoriLibInitEmptyString(&FoundFileEntry);
         FoundFileEntry.StartOfString = ExistingValue.StartOfString;

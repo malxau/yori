@@ -367,7 +367,9 @@ YuiCreateWindow(
                                    ScreenWidth,
                                    YUI_TASKBAR_HEIGHT,
                                    NULL, NULL, NULL, 0);
-    ASSERT(Context->hWnd != NULL);
+    if (Context->hWnd == NULL) {
+        return FALSE;
+    }
 
     YuiNotifyResolutionChange(Context->hWnd, ScreenWidth, ScreenHeight);
 
@@ -390,6 +392,12 @@ YuiCreateWindow(
                                 _T("Tahoma"));
     ReleaseDC(Context->hWnd, hDC);
 
+    if (Context->hFont == NULL) {
+        DestroyWindow(Context->hWnd);
+        Context->hWnd = NULL;
+        return FALSE;
+    }
+
     Context->hWndStart = CreateWindow(_T("BUTTON"),
                                       _T("Start"),
                                       BS_PUSHBUTTON | BS_CENTER | WS_VISIBLE | WS_CHILD,
@@ -401,7 +409,14 @@ YuiCreateWindow(
                                       (HMENU)(DWORD_PTR)YUI_START_BUTTON,
                                       NULL,
                                       NULL);
-    ASSERT(Context->hWndStart != NULL);
+
+    if (Context->hWndStart == NULL) {
+        DeleteObject(Context->hFont);
+        Context->hFont = NULL;
+        DestroyWindow(Context->hWnd);
+        Context->hWnd = NULL;
+        return FALSE;
+    }
 
     SendMessage(Context->hWndStart, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
 
@@ -421,7 +436,16 @@ YuiCreateWindow(
                                         NULL,
                                         NULL,
                                         NULL);
-    ASSERT(Context->hWndClock != NULL);
+
+    if (Context->hWndClock == NULL) {
+        DestroyWindow(Context->hWndStart);
+        Context->hWndStart = NULL;
+        DeleteObject(Context->hFont);
+        Context->hFont = NULL;
+        DestroyWindow(Context->hWnd);
+        Context->hWnd = NULL;
+        return FALSE;
+    }
 
     SendMessage(Context->hWndClock, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
     YuiTaskbarUpdateClock(Context);
@@ -642,7 +666,9 @@ ymain(
     }
 
     YuiMenuPopulate(&YuiContext);
-    YuiCreateWindow(&YuiContext);
+    if (!YuiCreateWindow(&YuiContext)) {
+        return EXIT_FAILURE;
+    }
 
     {
         MSG msg;

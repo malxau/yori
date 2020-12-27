@@ -45,6 +45,18 @@ YoriShIsEnvironmentVariableChar(
     return FALSE;
 }
 
+//
+//  Warning about manipulating the Variable buffer but failing the
+//  function.  This function is trying to mimic the behavior of the
+//  underlying API, so if it manipulates the buffer and fails, that's
+//  desirable behavior.
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(push)
+#pragma warning(suppress: 6103)
+#endif
+
 /**
  Wrapper around the Win32 GetEnvironmentVariable call, but augmented with
  "magic" things that appear to be variables but aren't, including %CD% and
@@ -62,6 +74,7 @@ YoriShIsEnvironmentVariableChar(
  @return The number of characters copied (without NULL), of if the buffer
          is too small, the number of characters needed (including NULL.)
  */
+__success(return != 0)
 DWORD
 YoriShGetEnvironmentVariableWithoutSubstitution(
     __in LPCTSTR Name,
@@ -101,6 +114,7 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
             Length++;
         }
     } else {
+
         Length = GetEnvironmentVariable(Name, Variable, Size);
     }
 
@@ -110,6 +124,10 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
 
     return Length;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(pop)
+#endif
 
 /**
  Wrapper around the Win32 GetEnvironmentVariable call, but augmented with
@@ -141,7 +159,7 @@ __success(return)
 BOOL
 YoriShGetEnvironmentVariable(
     __in LPCTSTR Name,
-    __out_ecount(Size) LPTSTR Variable,
+    __out_ecount_opt(Size) LPTSTR Variable,
     __in DWORD Size,
     __out PDWORD ReturnedSize,
     __out_opt PDWORD Generation
@@ -154,6 +172,8 @@ YoriShGetEnvironmentVariable(
     LPTSTR RawName;
     DWORD RawNameLength;
     DWORD ProcessedLength;
+
+    __analysis_assume(Size == 0 || Variable != NULL);
 
     //
     //  Find the colon which is followed by information about the substring

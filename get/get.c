@@ -151,7 +151,11 @@ ENTRYPOINT(
             FILETIME CreateTime;
 
             GetFileTime(hFile, &CreateTime, &LastAccessTime, &LastWriteTime);
-            FileTimeToSystemTime(&LastWriteTime, &ExistingFileTime);
+            if (!FileTimeToSystemTime(&LastWriteTime, &ExistingFileTime)) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("get: failed obtain time from file\n"));
+                CloseHandle(hFile);
+                return EXIT_FAILURE;
+            }
             CloseHandle(hFile);
         }
     }

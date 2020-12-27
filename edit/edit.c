@@ -464,6 +464,7 @@ EditSaveFile(
 
     if (EditContext->Newline.StartOfString == NULL) {
         YoriLibConstantString(&EditContext->Newline, _T("\r\n"));
+        __analysis_assume(EditContext->Newline.StartOfString != NULL);
     }
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
@@ -1390,14 +1391,20 @@ EditFindButtonClicked(
         YORI_STRING Newline;
 
         YoriLibInitEmptyString(&Newline);
-        YoriWinMultilineEditGetSelectedText(EditContext->MultilineEdit, &Newline, &InitialText);
+        if (!YoriWinMultilineEditGetSelectedText(EditContext->MultilineEdit, &Newline, &InitialText)) {
+            YoriLibInitEmptyString(&InitialText);
+        }
     }
 
-    YoriDlgFindText(YoriWinGetWindowManagerHandle(Parent),
-                    &Title,
-                    &InitialText,
-                    &MatchCase,
-                    &Text);
+    if (!YoriDlgFindText(YoriWinGetWindowManagerHandle(Parent),
+                         &Title,
+                         &InitialText,
+                         &MatchCase,
+                         &Text)) {
+
+        YoriLibFreeStringContents(&InitialText);
+        return;
+    }
 
     YoriLibFreeStringContents(&InitialText);
     if (Text.LengthInChars == 0) {
@@ -1571,7 +1578,11 @@ EditChangeButtonClicked(
                     YORI_STRING Newline;
 
                     YoriLibInitEmptyString(&Newline);
-                    YoriWinMultilineEditGetSelectedText(EditContext->MultilineEdit, &Newline, &InitialBeforeText);
+                    if (!YoriWinMultilineEditGetSelectedText(EditContext->MultilineEdit, &Newline, &InitialBeforeText)) {
+                        YoriLibInitEmptyString(&InitialBeforeText);
+                        InitialBeforeText.StartOfString = OldText.StartOfString;
+                        InitialBeforeText.LengthInChars = OldText.LengthInChars;
+                    }
                 }
             }
 
@@ -1592,7 +1603,10 @@ EditChangeButtonClicked(
                 WORD DialogHeight;
                 WORD RemainingEditHeight;
 
-                YoriWinGetWinMgrDimensions(WinMgr, &WinMgrSize);
+                if (!YoriWinGetWinMgrDimensions(WinMgr, &WinMgrSize)) {
+                    YoriLibFreeStringContents(&InitialBeforeText);
+                    break;
+                }
                 DialogHeight = YoriDlgReplaceGetDialogHeight(WinMgr);
                 DialogTop = (SHORT)(WinMgrSize.Y - DialogHeight - 1);
 
@@ -2318,7 +2332,9 @@ EditCreateMainWindow(
     EditNotifyCursorMove(MultilineEdit, 0, 0);
 
     Result = FALSE;
-    YoriWinProcessInputForWindow(Parent, &Result);
+    if (!YoriWinProcessInputForWindow(Parent, &Result)) {
+        Result = FALSE;
+    }
 
     YoriWinDestroyWindow(Parent);
     YoriWinCloseWindowManager(WinMgr);

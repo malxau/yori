@@ -410,7 +410,7 @@ YoriPkgPreparePackageForInstall(
     __in_opt PYORI_STRING TargetDirectory,
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
     __in PYORI_STRING PackageUrl,
-    __out_opt PYORI_STRING RedirectToPackageUrl
+    __out_opt _On_failure_(_When_(return == ERROR_OLD_WIN_VERSION, _Post_valid_)) PYORI_STRING RedirectToPackageUrl
     );
 
 DWORD

@@ -1699,7 +1699,8 @@ YoriShConfigureInputSettings(VOID)
 
         YoriLibConstantString(&MouseoverColorString, _T("mo"));
         if (!YoriLibGetMetadataColor(&MouseoverColorString, &MouseoverColor)) {
-            YoriShGlobal.MouseoverColor = (UCHAR)YoriLibVtGetDefaultColor();
+            MouseoverColor.Ctrl = 0;
+            MouseoverColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
         }
 
         YoriShGlobal.MouseoverColor = MouseoverColor.Win32Attr;

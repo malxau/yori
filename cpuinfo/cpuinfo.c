@@ -181,6 +181,20 @@ CpuInfoExpandVariables(
     return CharsNeeded;
 }
 
+
+//
+//  The CPUINFO_CONTEXT structure records a pointer to an array and the size
+//  of the array in bytes.  Unfortunately I can't see a way to describe this
+//  relationship for older analyzers, so they believe accessing array elements
+//  is walking off the end of the buffer.  Because this seems specific to
+//  older versions, the suppression is limited to those also.
+//
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
+#pragma warning(push)
+#pragma warning(disable: 6385)
+#endif
+
 /**
  Parse the array of information about processor topologies and count the
  number of elements in each.
@@ -422,6 +436,9 @@ CpuInfoDisplaySockets(
     return TRUE;
 }
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
+#pragma warning(pop)
+#endif
 
 /**
  Load processor information from GetLogicalProcessorInformationEx.

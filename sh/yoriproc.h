@@ -221,6 +221,7 @@ YoriShIsEnvironmentVariableChar(
     __in TCHAR Char
     );
 
+__success(return != 0)
 DWORD
 YoriShGetEnvironmentVariableWithoutSubstitution(
     __in LPCTSTR Name,
@@ -233,7 +234,7 @@ __success(return)
 BOOL
 YoriShGetEnvironmentVariable(
     __in LPCTSTR Name,
-    __out_ecount(Size) LPTSTR Variable,
+    __out_ecount_opt(Size) LPTSTR Variable,
     __in DWORD Size,
     __out PDWORD ReturnedSize,
     __out_opt PDWORD Generation

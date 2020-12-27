@@ -522,8 +522,12 @@ YoriShDisplayWarnings(VOID)
             LARGE_INTEGER liNow;
 
             GetFileTime(ExeHandle, &CreationTime, &AccessTime, &WriteTime);
+            CloseHandle(ExeHandle);
             GetSystemTime(&Now);
-            SystemTimeToFileTime(&Now, &FtNow);
+            if (!SystemTimeToFileTime(&Now, &FtNow)) {
+                YoriLibFreeStringContents(&ModuleName);
+                return FALSE;
+            }
             liNow.LowPart = FtNow.dwLowDateTime;
             liNow.HighPart = FtNow.dwHighDateTime;
             liWriteTime.LowPart = WriteTime.dwLowDateTime;

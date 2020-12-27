@@ -572,7 +572,7 @@ typedef union _YORI_LIB_FULL_PATH_TYPE {
  @return A win32 error code, or ERROR_SUCCESS to indicate successful
          completion.
  */
-__success(return)
+__success(return == ERROR_SUCCESS)
 DWORD
 YoriLibGetFullPathDeterminePathType(
     __in PYORI_STRING FileName,

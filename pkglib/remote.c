@@ -101,6 +101,12 @@ typedef struct _YORIPKG_REMOTE_SOURCE {
     YORI_STRING SourcePkgList;
 } YORIPKG_REMOTE_SOURCE, *PYORIPKG_REMOTE_SOURCE;
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(push)
+#pragma warning(disable: 6260) // sizeof*sizeof is used for character size
+                               // flexibility
+#endif
+
 /**
  Allocate and populate a remote source object.
 
@@ -119,10 +125,6 @@ YoriPkgAllocateRemoteSource(
     PYORIPKG_REMOTE_SOURCE RemoteSource;
     DWORD SizeToAllocate;
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 6260) // sizeof*sizeof is used for character size
-                                // flexibility
-#endif
     SizeToAllocate = sizeof(YORIPKG_REMOTE_SOURCE) +
                      (2 * (RemoteSourceUrl->LengthInChars + 1)) * sizeof(TCHAR) +
                      sizeof("/pkglist.ini") * sizeof(TCHAR);
@@ -158,6 +160,10 @@ YoriPkgAllocateRemoteSource(
 
     return RemoteSource;
 }
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
+#pragma warning(pop)
+#endif
 
 /**
  Frees a remote source object previously allocated with
@@ -504,6 +510,8 @@ YoriPkgCollectPackagesFromSource(
 
     Result = YoriPkgPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished);
     if (Result != ERROR_SUCCESS) {
+        YoriLibInitEmptyString(&LocalPath);
+        DeleteWhenFinished = FALSE;
         goto Exit;
     }
 
@@ -638,8 +646,8 @@ BOOL
 YoriPkgCollectAllSourcesAndPackages(
     __in_opt PYORI_STRING CustomSource,
     __in_opt PYORI_STRING NewDirectory,
-    __out PYORI_LIST_ENTRY SourcesList,
-    __out PYORI_LIST_ENTRY PackageList
+    __out _Always_(_Post_valid_) PYORI_LIST_ENTRY SourcesList,
+    __out _Always_(_Post_valid_) PYORI_LIST_ENTRY PackageList
     )
 {
     PYORI_LIST_ENTRY SourceEntry;
@@ -647,12 +655,12 @@ YoriPkgCollectAllSourcesAndPackages(
     DWORD Result;
     YORI_STRING PackagesIni;
 
+    YoriLibInitializeListHead(PackageList);
+    YoriLibInitializeListHead(SourcesList);
+
     if (!YoriPkgGetPackageIniFile(NewDirectory, &PackagesIni)) {
         return FALSE;
     }
-
-    YoriLibInitializeListHead(PackageList);
-    YoriLibInitializeListHead(SourcesList);
 
     if (CustomSource != NULL) {
         Source = YoriPkgAllocateRemoteSource(CustomSource);
@@ -1390,7 +1398,10 @@ YoriPkgIsNewerVersionAvailableFromCache(
                 DWORD OsBuild;
                 DWORD CharsConsumed;
                 LONGLONG RequiredBuildNumber = 0;
-                YoriLibStringToNumber(&KnownPackage->MinimumOSBuild, FALSE, &RequiredBuildNumber, &CharsConsumed);
+
+                if (!YoriLibStringToNumber(&KnownPackage->MinimumOSBuild, FALSE, &RequiredBuildNumber, &CharsConsumed)) {
+                    RequiredBuildNumber = 0;
+                }
 
                 YoriLibGetOsVersion(&OsMajor, &OsMinor, &OsBuild);
                 if (RequiredBuildNumber > OsBuild) {
@@ -1540,7 +1551,7 @@ YoriPkgIsNewerVersionAvailable(
         //  Check the cache again.
         //
 
-        ASSERT(RedirectedUrl.LengthInChars == 0);
+        YoriLibInitEmptyString(&RedirectedUrl);
         if (YoriPkgIsNewerVersionAvailableFromCache(PendingPackages, &MirroredPath, ExistingVersion, &NewerVersionAvailable, &RedirectedUrl)) {
             if (RedirectedUrl.LengthInChars > 0) {
                 YoriLibFreeStringContents(&MirroredPath);

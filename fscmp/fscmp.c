@@ -231,9 +231,11 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 if (i + 1 < ArgC) {
                     YORI_STRING ErrorSubstring;
+                    YORI_LIB_FILE_FILTER Filter;
                     YoriLibInitEmptyString(&ErrorSubstring);
                     
-                    if (!YoriLibFileFiltParseFilterString(&FsCmpContext.Filter, &ArgV[i + 1], &ErrorSubstring)) {
+                    YoriLibFileFiltFreeFilter(&FsCmpContext.Filter);
+                    if (!YoriLibFileFiltParseFilterString(&Filter, &ArgV[i + 1], &ErrorSubstring)) {
                         if (ErrorSubstring.LengthInChars > 0) {
                             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("fscmp: error parsing filter string '%y' at '%y'\n"), &ArgV[i + 1], &ErrorSubstring);
                         } else {
@@ -241,6 +243,7 @@ ENTRYPOINT(
                         }
                         goto cleanup_and_exit;
                     }
+                    memcpy(&FsCmpContext.Filter, &Filter, sizeof(Filter));
                     FsCmpContext.TestType = FsCmpTestTypeApplyFilter;
                     i++;
                     ArgumentUnderstood = TRUE;

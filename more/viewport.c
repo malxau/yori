@@ -827,12 +827,13 @@ MoreGetNextLogicalLines(
 
         if (CurrentInputLine != NULL) {
             ASSERT(CurrentInputLine->PhysicalLine != NULL);
+            __analysis_assume(CurrentInputLine->PhysicalLine != NULL);
             ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, &CurrentInputLine->PhysicalLine->LineList);
         } else {
             ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
         }
-        if (ListEntry == NULL) {
 
+        if (ListEntry == NULL) {
             break;
         }
 
@@ -1615,7 +1616,7 @@ MoreMoveViewportDown(
 
     Success = MoreGetNextLogicalLines(MoreContext, CurrentLine, TRUE, CappedLinesToMove, MoreContext->StagingViewportLines, &LinesReturned);
 
-    ASSERT(LinesReturned <= CappedLinesToMove);
+    ASSERT(!Success || LinesReturned <= CappedLinesToMove);
 
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 
@@ -1670,7 +1671,7 @@ MoreRegenerateViewport(
         YoriLibFreeStringContents(&LineToFollow->Line);
     }
 
-    ASSERT(LinesReturned <= CappedLinesToMove);
+    ASSERT(!Success || LinesReturned <= CappedLinesToMove);
 
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 

@@ -199,10 +199,13 @@ YoriDlgFileOkButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditCtrl = YoriWinFindControlById(Parent, YoriDlgFileControlFileText);
     ASSERT(EditCtrl != NULL);
+    __analysis_assume(EditCtrl != NULL);
     YoriLibInitEmptyString(&Text);
     if (!YoriWinEditGetText(EditCtrl, &Text)) {
         return;
     }
+
+    __analysis_assume(Text.StartOfString != NULL);
 
     State = YoriWinGetControlContext(Parent);
     YoriLibInitEmptyString(&PathComponent);
@@ -422,6 +425,7 @@ YoriDlgFileFileSelectionChanged(
 
     EditCtrl = YoriWinFindControlById(Parent, YoriDlgFileControlFileText);
     ASSERT(EditCtrl != NULL);
+    __analysis_assume(EditCtrl != NULL);
 
     YoriWinEditSetText(EditCtrl, &String);
     YoriWinEditSetSelectionRange(EditCtrl, 0, String.LengthInChars);
@@ -470,6 +474,7 @@ YoriDlgFileDirectorySelectionChanged(
 
     EditCtrl = YoriWinFindControlById(Parent, YoriDlgFileControlFileText);
     ASSERT(EditCtrl != NULL);
+    __analysis_assume(EditCtrl != NULL);
 
     YoriWinEditSetText(EditCtrl, &String);
     YoriWinEditSetSelectionRange(EditCtrl, 0, String.LengthInChars);
@@ -602,10 +607,13 @@ YoriDlgFileRefreshView(
 
     CurDirLabel = YoriWinFindControlById(Dialog, YoriDlgFileControlCurrentDirectory);
     ASSERT(CurDirLabel != NULL);
+    __analysis_assume(CurDirLabel != NULL);
     DirList = YoriWinFindControlById(Dialog, YoriDlgFileControlDirectoryList);
     ASSERT(DirList != NULL);
+    __analysis_assume(DirList != NULL);
     FileList = YoriWinFindControlById(Dialog, YoriDlgFileControlFileList);
     ASSERT(FileList != NULL);
+    __analysis_assume(FileList != NULL);
 
     YoriWinLabelSetCaption(CurDirLabel, &FullDir);
 
@@ -948,7 +956,9 @@ YoriDlgFile(
     YoriDlgFileRefreshView(Parent, &Caption, &Wildcard);
 
     Result = FALSE;
-    YoriWinProcessInputForWindow(Parent, &Result);
+    if (!YoriWinProcessInputForWindow(Parent, &Result)) {
+        Result = FALSE;
+    }
 
     if (Result) {
         if (Text->LengthAllocated >= State.FileToReturn.LengthInChars + 1) {
@@ -964,6 +974,7 @@ YoriDlgFile(
         for (Index = 0; Index < OptionCount; Index++) {
             Ctrl = YoriWinFindControlById(Parent, YoriDlgFileFirstCustomCombo + Index);
             ASSERT(Ctrl != NULL);
+            __analysis_assume(Ctrl != NULL);
             YoriWinComboGetActiveOption(Ctrl, &Options[Index].SelectedValue);
         }
     }

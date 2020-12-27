@@ -1152,6 +1152,7 @@ MakeGenerateExecScriptForTarget(
     }
 
     ASSERT(Target->ScopeContext != NULL);
+    __analysis_assume(Target->ScopeContext != NULL);
 
     YoriLibInitEmptyString(&Line);
     StartLineIndex = 0;

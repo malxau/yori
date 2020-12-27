@@ -244,7 +244,10 @@ YoriWinComboDisplayPullDown(
     YoriWinSetCustomNotification(ComboChildWindow, YoriWinEventKeyDown, YoriWinComboChildEvent);
     YoriWinSetCustomNotification(ComboChildWindow, YoriWinEventMouseDownInClient, YoriWinComboChildEvent);
     YoriWinSetCustomNotification(ComboChildWindow, YoriWinEventMouseDownOutsideWindow, YoriWinComboChildEvent);
-    YoriWinProcessInputForWindow(ComboChildWindow, &ChildResult);
+    ChildResult = 0;
+    if (!YoriWinProcessInputForWindow(ComboChildWindow, &ChildResult)) {
+        ChildResult = 0;
+    }
 
     YoriWinDestroyWindow(ComboChildWindow);
 
