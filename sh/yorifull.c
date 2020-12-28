@@ -154,6 +154,11 @@ YORI_CMD_BUILTIN YoriCmd_YENV;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_ENVDIFF;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YERASE;
 
 /**
@@ -525,6 +530,7 @@ YoriShBuiltins[] = {
                     {_T("CSHOT"),     YoriCmd_CSHOT},
                     {_T("CVTVT"),     YoriCmd_CVTVT},
                     {_T("DIRENV"),    YoriCmd_DIRENV},
+                    {_T("ENVDIFF"),   YoriCmd_ENVDIFF},
                     {_T("EXIT"),      YoriCmd_EXIT},
                     {_T("FALSE"),     YoriCmd_FALSE},
                     {_T("FG"),        YoriCmd_FG},

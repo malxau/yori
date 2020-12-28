@@ -65,6 +65,7 @@ YoriLibGetEnvironmentStrings(
         }
 
         memcpy(EnvStrings->StartOfString, OsEnvStrings, CharCount * sizeof(TCHAR));
+        EnvStrings->LengthInChars = CharCount;
 
         if (DllKernel32.pFreeEnvironmentStringsW) {
             DllKernel32.pFreeEnvironmentStringsW(OsEnvStrings);
@@ -86,6 +87,7 @@ YoriLibGetEnvironmentStrings(
         return FALSE;
     }
     MultiByteToWideChar(CP_ACP, 0, OsEnvStringsA, CharCount, EnvStrings->StartOfString, CharCount);
+    EnvStrings->LengthInChars = CharCount;
 
     return TRUE;
 }

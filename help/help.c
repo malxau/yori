@@ -84,6 +84,7 @@ CHAR strHelpHelpText1[] =
         "ECHO      Outputs text\n"
         "EDIT      Open a file for editing\n"
         "ENV       Set environment variables and launch a program\n"
+        "ENVDIFF   Compare the environment to another environment\n"
         ;
 
 /**

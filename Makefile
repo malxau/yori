@@ -87,6 +87,7 @@ DIRS=crt       \
      echo      \
      edit      \
      env       \
+     envdiff   \
      erase     \
      err       \
      expr      \
