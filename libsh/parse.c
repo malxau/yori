@@ -2187,11 +2187,13 @@ YoriLibShParseBackquoteSubstrings(
 {
     PYORI_LIBSH_BACKQUOTE_ENTRY Entry;
     DWORD Index;
+    BOOLEAN QuoteOpen;
 
     YoriLibInitializeListHead(&BackquoteContext->MatchList);
     BackquoteContext->MatchCount = 0;
     BackquoteContext->MaxDepth = 0;
     BackquoteContext->CurrentDepth = 0;
+    QuoteOpen = FALSE;
 
     for (Index = 0; Index < String->LengthInChars; Index++) {
 
@@ -2208,6 +2210,18 @@ YoriLibShParseBackquoteSubstrings(
             } else {
                 continue;
             }
+        }
+
+        if (String->StartOfString[Index] == '"') {
+            if (QuoteOpen) {
+                QuoteOpen = FALSE;
+            } else {
+                QuoteOpen = TRUE;
+            }
+        }
+
+        if (QuoteOpen) {
+            continue;
         }
 
         if (String->StartOfString[Index] == '`') {
