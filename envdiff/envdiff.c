@@ -35,7 +35,9 @@ CHAR strEnvDiffHelpText[] =
         "\n"
         "Compares the difference between the current environment and one in a file.\n"
         "\n"
-        "ENVDIFF [-license] [<file>]\n";
+        "ENVDIFF [-license] [-r] [<file>]\n"
+        "\n"
+        "   -r             Reverse to apply changes to source to current environment\n";
 
 /**
  Display usage text to the user.
@@ -525,6 +527,9 @@ ENTRYPOINT(
     YORI_STRING Arg;
     YORI_STRING CurrentEnvironment;
     YORI_STRING BaseEnvironment;
+    BOOLEAN Reverse;
+
+    Reverse = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -539,6 +544,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2021"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                Reverse = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             StartArg = i;
@@ -574,7 +582,11 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    EnvDiffCompareEnvironments(&BaseEnvironment, &CurrentEnvironment, EnvDiffOutputCmdBatch);
+    if (Reverse) {
+        EnvDiffCompareEnvironments(&CurrentEnvironment, &BaseEnvironment, EnvDiffOutputCmdBatch);
+    } else {
+        EnvDiffCompareEnvironments(&BaseEnvironment, &CurrentEnvironment, EnvDiffOutputCmdBatch);
+    }
 
     YoriLibFreeStringContents(&BaseEnvironment);
     YoriLibFreeStringContents(&CurrentEnvironment);
