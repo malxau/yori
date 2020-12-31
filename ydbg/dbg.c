@@ -3,7 +3,7 @@
  *
  * Yori shell debug processes
  *
- * Copyright (c) 2018-2020 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -582,12 +582,19 @@ YDbgFreeAllProcesses(
         When a process with this ID terminates, pumping events completes and
         this function returns.
 
+ @param DisplayLoaderSnaps TRUE if the program is asking to display loader
+        snaps.  When configured, this function will read many output strings
+        that originated in the loader, and will filter to those that seem
+        most valuable.  When FALSE, this function will assume all debugger
+        output came from the child process and will display it all.
+
  @return TRUE to indicate successful termination of the initial child process,
          FALSE to indicate failure.
  */
 BOOL
 YDbgPumpDebugEvents(
-    __in DWORD ProcessId
+    __in DWORD ProcessId,
+    __in BOOLEAN DisplayLoaderSnaps
     )
 {
     YORI_LIST_ENTRY Processes;
@@ -643,11 +650,14 @@ YDbgPumpDebugEvents(
                 //  two codes are for breakpoint and x86 breakpoint
                 //
 
-                dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
-                if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT ||
-                    DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001F) {
-
+                {
                     LPTSTR PrefixString;
+                    dwContinueStatus = DBG_EXCEPTION_NOT_HANDLED;
+                    if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT ||
+                        DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == 0x4000001F) {
+                        dwContinueStatus = DBG_CONTINUE;
+                    }
+
                     if (DbgEvent.u.Exception.dwFirstChance) {
                         PrefixString = _T("first chance");
                     } else {
@@ -656,7 +666,6 @@ YDbgPumpDebugEvents(
 
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: %s exception %08x\n"), PrefixString, DbgEvent.u.Exception.ExceptionRecord.ExceptionCode);
 
-                    dwContinueStatus = DBG_CONTINUE;
                 }
                 break;
             case OUTPUT_DEBUG_STRING_EVENT:
@@ -667,6 +676,7 @@ YDbgPumpDebugEvents(
                     DWORD BufferLengthInBytes;
                     SIZE_T BytesRead;
                     YORI_STRING OutputString;
+                    BOOLEAN DisplayString;
 
                     StringLengthInBytes = DbgEvent.u.DebugString.nDebugStringLength;
                     BufferLengthInBytes = StringLengthInBytes + 1;
@@ -707,6 +717,30 @@ YDbgPumpDebugEvents(
                     }
 
                     //
+                    //  If the user wants to see loader snaps, show only
+                    //  errors and warnings.
+                    //
+
+                    DisplayString = TRUE;
+                    if (DisplayLoaderSnaps) {
+                        YORI_STRING SearchText;
+                        YoriLibConstantString(&SearchText, _T("- Ldrp"));
+                        if (YoriLibFindFirstMatchingSubstring(&OutputString, 1, &SearchText, NULL)) {
+                            DisplayString = FALSE;
+                        }
+                        if (!DisplayString) {
+                            YoriLibConstantString(&SearchText, _T("ERROR"));
+                            if (YoriLibFindFirstMatchingSubstring(&OutputString, 1, &SearchText, NULL)) {
+                                DisplayString = TRUE;
+                            }
+                            YoriLibConstantString(&SearchText, _T("WARNING"));
+                            if (YoriLibFindFirstMatchingSubstring(&OutputString, 1, &SearchText, NULL)) {
+                                DisplayString = TRUE;
+                            }
+                        }
+                    }
+
+                    //
                     //  Trim any trailing newlines.  We'll insert a newline
                     //  unconditionally below.
                     //
@@ -717,7 +751,9 @@ YDbgPumpDebugEvents(
                         OutputString.LengthInChars--;
                     }
 
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: %y\n"), &OutputString);
+                    if (DisplayString) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: %y\n"), &OutputString);
+                    }
                     YoriLibFreeStringContents(&OutputString);
                     YoriLibFree(Buffer);
                 }
@@ -1065,7 +1101,7 @@ YDbgDebugChildProcess(
 
     YoriLibFreeStringContents(&CmdLine);
 
-    YDbgPumpDebugEvents(ProcessInfo.dwProcessId);
+    YDbgPumpDebugEvents(ProcessInfo.dwProcessId, EnableLoaderSnaps);
 
     if (DisableLoaderSnaps) {
         YDbgDisableLoaderSnaps(&Executable);
@@ -1149,7 +1185,7 @@ ENTRYPOINT(
                 YDbgHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2020"));
+                YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
