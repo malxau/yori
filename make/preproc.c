@@ -26,6 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#include <yorish.h>
 #include "make.h"
 
 /**
@@ -610,9 +611,6 @@ MakeExecuteCommandCaptureExitCode(
     __in PYORI_STRING Cmd
     )
 {
-    YORI_STRING EntireCmd;
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
     LARGE_INTEGER StartTime;
     LARGE_INTEGER EndTime;
     DWORD ExitCode;
@@ -620,38 +618,71 @@ MakeExecuteCommandCaptureExitCode(
     //
     //  Because DOS
     //
+
     ExitCode = 255;
 
-    YoriLibInitEmptyString(&EntireCmd);
-    YoriLibYPrintf(&EntireCmd, _T("cmd /c %y"), Cmd);
-    if (EntireCmd.StartOfString == NULL) {
-        return ExitCode;
-    }
-
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-
-#if MAKE_DEBUG_PREPROCESSOR
-    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Executing preprocessor command: %y\n"), &EntireCmd);
+#if MAKE_DEBUG_PREPROCESSOR_CREATEPROCESS
+    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Executing preprocessor command: %y\n"), Cmd);
 #endif
 
     QueryPerformanceCounter(&StartTime);
-    if (!CreateProcess(NULL, EntireCmd.StartOfString, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-        YoriLibFreeStringContents(&EntireCmd);
-        return ExitCode;
-    }
 
-    YoriLibFreeStringContents(&EntireCmd);
-    WaitForSingleObject(pi.hProcess, INFINITE);
+#if 1
+    {
+        YORI_LIBSH_CMD_CONTEXT CmdContext;
+        YORI_LIBSH_EXEC_PLAN ExecPlan;
+        if (!YoriLibShParseCmdlineToCmdContext(Cmd, 0, &CmdContext)) {
+            return ExitCode;
+        }
+    
+        if (!YoriLibShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
+            YoriLibShFreeCmdContext(&CmdContext);
+            return ExitCode;
+        }
+
+        ExitCode = MakeShExecExecPlan(&ExecPlan, NULL);
+    
+        YoriLibShFreeExecPlan(&ExecPlan);
+        YoriLibShFreeCmdContext(&CmdContext);
+    }
+#else
+    {
+        PROCESS_INFORMATION pi;
+        YORI_STRING EntireCmd;
+        STARTUPINFO si;
+
+        YoriLibInitEmptyString(&EntireCmd);
+        YoriLibYPrintf(&EntireCmd, _T("cmd /c %y"), Cmd);
+        if (EntireCmd.StartOfString == NULL) {
+            return ExitCode;
+        }
+    
+        ZeroMemory(&si, sizeof(si));
+        si.cb = sizeof(si);
+        if (!CreateProcess(NULL, EntireCmd.StartOfString, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
+            YoriLibFreeStringContents(&EntireCmd);
+            return ExitCode;
+        }
+    
+        YoriLibFreeStringContents(&EntireCmd);
+        WaitForSingleObject(pi.hProcess, INFINITE);
+
+        if (pi.hProcess != NULL) {
+            GetExitCodeProcess(pi.hProcess, &ExitCode);
+            CloseHandle(pi.hProcess);
+        }
+    
+        if (pi.hThread != NULL) {
+            CloseHandle(pi.hThread);
+        }
+    }
+#endif
     QueryPerformanceCounter(&EndTime);
     MakeContext->TimeInPreprocessorCreateProcess = MakeContext->TimeInPreprocessorCreateProcess + EndTime.QuadPart - StartTime.QuadPart;
-#if MAKE_DEBUG_PREPROCESSOR
+#if MAKE_DEBUG_PREPROCESSOR_CREATEPROCESS
     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("...took %lli\n"), EndTime.QuadPart - StartTime.QuadPart);
 #endif
 
-    GetExitCodeProcess(pi.hProcess, &ExitCode);
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
 
     return ExitCode;
 }

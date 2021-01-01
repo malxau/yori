@@ -31,6 +31,12 @@
 #define MAKE_DEBUG_PREPROCESSOR 0
 
 /**
+ Set to nonzero to output extra information as part of launching child
+ processes during preprocessing.
+ */
+#define MAKE_DEBUG_PREPROCESSOR_CREATEPROCESS 0
+
+/**
  Set to nonzero to output extra information as part nested scope processing.
  */
 #define MAKE_DEBUG_SCOPE        0
@@ -720,6 +726,14 @@ BOOLEAN
 MakeExecuteSetVariable(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in PYORI_STRING Line
+    );
+
+// *** MINISH.C ***
+
+DWORD
+MakeShExecExecPlan(
+    __in PYORI_LIBSH_EXEC_PLAN ExecPlan,
+    __out_opt PVOID * OutputBuffer
     );
 
 // *** PREPROC.C ***

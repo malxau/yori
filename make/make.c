@@ -26,6 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#include <yorish.h>
 #include "make.h"
 
 /**

@@ -13,6 +13,7 @@ BIN_OBJS=\
 	 alloc.obj        \
 	 exec.obj         \
 	 make.obj         \
+	 minish.obj       \
 	 preproc.obj      \
 	 scope.obj        \
 	 target.obj       \
@@ -22,6 +23,7 @@ MOD_OBJS=\
 	 alloc.obj        \
 	 exec.obj         \
 	 mod_make.obj     \
+	 minish.obj       \
 	 preproc.obj      \
 	 scope.obj        \
 	 target.obj       \
