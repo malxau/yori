@@ -93,7 +93,7 @@ YoriApiBuiltinRegister(
     __in PYORI_CMD_BUILTIN CallbackFn
     )
 {
-    return YoriShBuiltinRegister(BuiltinCmd, CallbackFn);
+    return YoriLibShBuiltinRegister(BuiltinCmd, CallbackFn);
 }
 
 /**
@@ -113,7 +113,7 @@ YoriApiBuiltinUnregister(
     __in PYORI_CMD_BUILTIN CallbackFn
     )
 {
-    return YoriShBuiltinUnregister(BuiltinCmd, CallbackFn);
+    return YoriLibShBuiltinUnregister(BuiltinCmd, CallbackFn);
 }
 
 /**
@@ -581,7 +581,7 @@ YoriApiSetUnloadRoutine(
     __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
     )
 {
-    return YoriShSetUnloadRoutine(UnloadNotify);
+    return YoriLibShSetUnloadRoutine(UnloadNotify);
 }
 
 /**

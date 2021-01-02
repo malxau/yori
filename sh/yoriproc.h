@@ -137,29 +137,6 @@ YoriShExecuteBuiltinString(
     __in PYORI_STRING Expression
     );
 
-__success(return)
-BOOL
-YoriShSetUnloadRoutine(
-    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
-    );
-
-__success(return)
-BOOL
-YoriShBuiltinRegister(
-    __in PYORI_STRING BuiltinCmd,
-    __in PYORI_CMD_BUILTIN CallbackFn
-    );
-
-__success(return)
-BOOL
-YoriShBuiltinUnregister(
-    __in PYORI_STRING BuiltinCmd,
-    __in PYORI_CMD_BUILTIN CallbackFn
-    );
-
-VOID
-YoriShBuiltinUnregisterAll(VOID);
-
 // *** COMPLETE.C ***
 
 VOID

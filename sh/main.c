@@ -147,7 +147,7 @@ YoriShInit(VOID)
         YORI_STRING YsCommandName;
 
         YoriLibConstantString(&YsCommandName, BuiltinNameMapping->CommandName);
-        if (!YoriShBuiltinRegister(&YsCommandName, BuiltinNameMapping->BuiltinFn)) {
+        if (!YoriLibShBuiltinRegister(&YsCommandName, BuiltinNameMapping->BuiltinFn)) {
             return FALSE;
         }
         BuiltinNameMapping++;
@@ -742,7 +742,7 @@ ymain (
     YoriShScanJobsReportCompletion(TRUE);
     YoriShClearAllHistory();
     YoriShClearAllAliases();
-    YoriShBuiltinUnregisterAll();
+    YoriLibShBuiltinUnregisterAll();
     YoriShDiscardSavedRestartState(NULL);
     YoriShCleanupInputContext();
     YoriLibFreeStringContents(&YoriShGlobal.PreCmdVariable);

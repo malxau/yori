@@ -355,73 +355,6 @@ typedef struct _YORI_SH_DEFAULT_ALIAS_ENTRY {
 extern CONST YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[];
 
 /**
- A structure containing information about a currently loaded DLL.
- */
-typedef struct _YORI_SH_LOADED_MODULE {
-
-    /**
-     The entry for this loaded module on the list of actively loaded
-     modules.
-     */
-    YORI_LIST_ENTRY ListEntry;
-
-    /**
-     A string describing the DLL file name.
-     */
-    YORI_STRING DllName;
-
-    /**
-     A callback function to invoke on unload to facilitate cleanup.
-     */
-    PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify;
-
-    /**
-     The reference count of this module.
-     */
-    ULONG ReferenceCount;
-
-    /**
-     A handle to the DLL.
-     */
-    HANDLE ModuleHandle;
-} YORI_SH_LOADED_MODULE, *PYORI_SH_LOADED_MODULE;
-
-/**
- A structure containing an individual builtin callback.
- */
-typedef struct _YORI_SH_BUILTIN_CALLBACK {
-
-    /**
-     Links between the registered builtin callbacks.
-     */
-    YORI_LIST_ENTRY ListEntry;
-
-    /**
-     The name of the callback.
-     */
-    YORI_STRING BuiltinName;
-
-    /**
-     The hash entry for this match.  Paired with @ref YoriShBuiltinHash .
-     */
-    YORI_HASH_ENTRY HashEntry;
-
-    /**
-     A function pointer to the builtin.
-     */
-    PYORI_CMD_BUILTIN BuiltInFn;
-
-    /**
-     Pointer to a referenced module that implements this builtin function.
-     This may be NULL if it's a function statically linked into the main
-     executable.
-     */
-    PYORI_SH_LOADED_MODULE ReferencedModule;
-
-} YORI_SH_BUILTIN_CALLBACK, *PYORI_SH_BUILTIN_CALLBACK;
-
-
-/**
  A structure containing state that is global across the Yori shell process.
  */
 typedef struct _YORI_SH_GLOBALS {
@@ -497,11 +430,6 @@ typedef struct _YORI_SH_GLOBALS {
      List of command history.
      */
     YORI_LIST_ENTRY CommandHistory;
-
-    /**
-     List of builtin callbacks currently registered with Yori.
-     */
-    YORI_LIST_ENTRY BuiltinCallbacks;
 
     /**
      The contents of the YORIPRECMD environment variable.

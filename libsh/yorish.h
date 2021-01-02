@@ -429,6 +429,130 @@ typedef struct _YORI_LIBSH_EXEC_PLAN {
 
 } YORI_LIBSH_EXEC_PLAN, *PYORI_LIBSH_EXEC_PLAN;
 
+/**
+ A structure containing information about a currently loaded DLL.
+ */
+typedef struct _YORI_LIBSH_LOADED_MODULE {
+
+    /**
+     The entry for this loaded module on the list of actively loaded
+     modules.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     A string describing the DLL file name.
+     */
+    YORI_STRING DllName;
+
+    /**
+     A callback function to invoke on unload to facilitate cleanup.
+     */
+    PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify;
+
+    /**
+     The reference count of this module.
+     */
+    ULONG ReferenceCount;
+
+    /**
+     A handle to the DLL.
+     */
+    HANDLE ModuleHandle;
+} YORI_LIBSH_LOADED_MODULE, *PYORI_LIBSH_LOADED_MODULE;
+
+/**
+ A structure containing an individual builtin callback.
+ */
+typedef struct _YORI_LIBSH_BUILTIN_CALLBACK {
+
+    /**
+     Links between the registered builtin callbacks.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The name of the callback.
+     */
+    YORI_STRING BuiltinName;
+
+    /**
+     The hash entry for this match.
+     */
+    YORI_HASH_ENTRY HashEntry;
+
+    /**
+     A function pointer to the builtin.
+     */
+    PYORI_CMD_BUILTIN BuiltInFn;
+
+    /**
+     Pointer to a referenced module that implements this builtin function.
+     This may be NULL if it's a function statically linked into the main
+     executable.
+     */
+    PYORI_LIBSH_LOADED_MODULE ReferencedModule;
+
+} YORI_LIBSH_BUILTIN_CALLBACK, *PYORI_LIBSH_BUILTIN_CALLBACK;
+
+// *** BUILTIN.C ***
+
+PYORI_LIBSH_LOADED_MODULE
+YoriLibShLoadDll(
+    __in LPTSTR DllName
+    );
+
+VOID
+YoriLibShReleaseDll(
+    __in PYORI_LIBSH_LOADED_MODULE LoadedModule
+    );
+
+VOID
+YoriLibShReferenceDll(
+    __in PYORI_LIBSH_LOADED_MODULE LoadedModule
+    );
+
+PYORI_LIBSH_LOADED_MODULE
+YoriLibShGetActiveModule(VOID);
+
+VOID
+YoriLibShSetActiveModule(
+    __in PYORI_LIBSH_LOADED_MODULE NewModule
+    );
+
+PYORI_LIBSH_BUILTIN_CALLBACK
+YoriLibShLookupBuiltinByName(
+    __in PYORI_STRING Name
+    );
+
+PYORI_LIBSH_BUILTIN_CALLBACK
+YoriLibShGetPreviousBuiltinCallback(
+    __in_opt PYORI_LIBSH_BUILTIN_CALLBACK Existing
+    );
+
+__success(return)
+BOOL
+YoriLibShBuiltinRegister(
+    __in PYORI_STRING BuiltinCmd,
+    __in PYORI_CMD_BUILTIN CallbackFn
+    );
+
+__success(return)
+BOOL
+YoriLibShBuiltinUnregister(
+    __in PYORI_STRING BuiltinCmd,
+    __in PYORI_CMD_BUILTIN CallbackFn
+    );
+
+VOID
+YoriLibShBuiltinUnregisterAll(VOID);
+
+__success(return)
+BOOL
+YoriLibShSetUnloadRoutine(
+    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
+    );
+
 // *** CMDBUF.C ***
 
 __success(return)

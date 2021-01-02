@@ -482,17 +482,15 @@ YoriShPerformExecutableTabCompletion(
     //  Thirdly, search the table of builtins.
     //
 
-    if (IncludeBuiltins && YoriShGlobal.BuiltinCallbacks.Next != NULL) {
-        PYORI_LIST_ENTRY ListEntry;
-        PYORI_SH_BUILTIN_CALLBACK Callback;
+    if (IncludeBuiltins) {
+        PYORI_LIBSH_BUILTIN_CALLBACK Callback;
 
         //
         //  Scan backwards, ie., oldest to newest.
         //
 
-        ListEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.BuiltinCallbacks, NULL);
-        while (ListEntry != NULL) {
-            Callback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_CALLBACK, ListEntry);
+        Callback = YoriLibShGetPreviousBuiltinCallback(NULL);
+        while (Callback != NULL) {
             if (YoriLibCompareStringInsensitiveCount(&SearchString, &Callback->BuiltinName, CompareLength) == 0) {
 
                 //
@@ -522,7 +520,7 @@ YoriShPerformExecutableTabCompletion(
 
                 YoriShAddMatchToTabContextAtEnd(TabContext, Match);
             }
-            ListEntry = YoriLibGetPreviousListEntry(&YoriShGlobal.BuiltinCallbacks, ListEntry);
+            Callback = YoriLibShGetPreviousBuiltinCallback(Callback);
         }
     }
 }

@@ -1,5 +1,5 @@
 /**
- * @file sh/builtin.c
+ * @file /sh/builtin.c
  *
  * Yori shell built in function handler
  *
@@ -25,155 +25,6 @@
  */
 
 #include "yori.h"
-
-
-/**
- A list of currently loaded modules.
- */
-YORI_LIST_ENTRY YoriShLoadedModules;
-
-/**
- Hash table of builtin callbacks currently registered with Yori.
- */
-PYORI_HASH_TABLE YoriShBuiltinHash;
-
-/**
- A list of unload functions to invoke.  These are only for code statically
- linked into the shell executable, not loadable modules.  Once added, a
- callback is never removed - the code is guaranteed to still exist, so the
- worst case is calling something that has no work to do.
- */
-YORI_LIST_ENTRY YoriShBuiltinUnloadCallbacks;
-
-/**
- A single callback function to invoke on shell exit that is part of the
- shell executable.
- */
-typedef struct _YORI_SH_BUILTIN_UNLOAD_CALLBACK {
-
-    /**
-     A list of unload notifications to make within the shell executable.
-     This is paired with YoriShBuiltinUnloadCallbacks.
-     */
-    YORI_LIST_ENTRY ListEntry;
-
-    /**
-     Pointer to a function to call on shell exit.
-     */
-    PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify;
-} YORI_SH_BUILTIN_UNLOAD_CALLBACK, *PYORI_SH_BUILTIN_UNLOAD_CALLBACK;
-
-/**
- Load a DLL file into a loaded module object that can be referenced.
-
- @param DllName Pointer to a NULL terminated string of a DLL to load.
-
- @return Pointer a referenced loaded module.  This module is linked into
-         the loaded module list.  NULL on failure.
- */
-PYORI_SH_LOADED_MODULE
-YoriShLoadDll(
-    __in LPTSTR DllName
-    )
-{
-    PYORI_SH_LOADED_MODULE FoundEntry = NULL;
-    PYORI_LIST_ENTRY ListEntry;
-    DWORD DllNameLength;
-    DWORD OldErrorMode;
-
-    if (YoriShLoadedModules.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShLoadedModules, NULL);
-        while (ListEntry != NULL) {
-            FoundEntry = CONTAINING_RECORD(ListEntry, YORI_SH_LOADED_MODULE, ListEntry);
-            if (YoriLibCompareStringWithLiteralInsensitive(&FoundEntry->DllName, DllName) == 0) {
-                FoundEntry->ReferenceCount++;
-                return FoundEntry;
-            }
-
-            ListEntry = YoriLibGetNextListEntry(&YoriShLoadedModules, ListEntry);
-        }
-    }
-
-    DllNameLength = _tcslen(DllName);
-    FoundEntry = YoriLibMalloc(sizeof(YORI_SH_LOADED_MODULE) + (DllNameLength + 1) * sizeof(TCHAR));
-    if (FoundEntry == NULL) {
-        return NULL;
-    }
-
-    YoriLibInitEmptyString(&FoundEntry->DllName);
-    FoundEntry->DllName.StartOfString = (LPTSTR)(FoundEntry + 1);
-    FoundEntry->DllName.LengthInChars = DllNameLength;
-    memcpy(FoundEntry->DllName.StartOfString, DllName, DllNameLength * sizeof(TCHAR));
-    FoundEntry->ReferenceCount = 1;
-    FoundEntry->UnloadNotify = NULL;
-
-    //
-    //  Disable the dialog if the file is not a valid DLL.  This might really
-    //  be a DOS executable, not a DLL.
-    //
-
-    OldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
-
-    FoundEntry->ModuleHandle = LoadLibrary(DllName);
-    if (FoundEntry->ModuleHandle == NULL) {
-        SetErrorMode(OldErrorMode);
-        YoriLibFree(FoundEntry);
-        return NULL;
-    }
-    SetErrorMode(OldErrorMode);
-
-    if (YoriShLoadedModules.Next == NULL) {
-        YoriLibInitializeListHead(&YoriShLoadedModules);
-    }
-    YoriLibAppendList(&YoriShLoadedModules, &FoundEntry->ListEntry);
-    return FoundEntry;
-}
-
-/**
- Dereference a loaded DLL module and free it if the reference count reaches
- zero.
-
- @param LoadedModule The module to dereference.
- */
-VOID
-YoriShReleaseDll(
-    __in PYORI_SH_LOADED_MODULE LoadedModule
-    )
-{
-    if (LoadedModule->ReferenceCount > 1) {
-        LoadedModule->ReferenceCount--;
-        return;
-    }
-
-    YoriLibRemoveListItem(&LoadedModule->ListEntry);
-    if (LoadedModule->UnloadNotify != NULL) {
-        LoadedModule->UnloadNotify();
-    }
-    if (LoadedModule->ModuleHandle != NULL) {
-        FreeLibrary(LoadedModule->ModuleHandle);
-    }
-    YoriLibFree(LoadedModule);
-}
-
-/**
- Add a reference to a previously loaded DLL module.
-
- @param LoadedModule The module to reference.
- */
-VOID
-YoriShReferenceDll(
-    __in PYORI_SH_LOADED_MODULE LoadedModule
-    )
-{
-    ASSERT(LoadedModule->ReferenceCount > 0);
-    LoadedModule->ReferenceCount++;
-}
-
-/**
- Pointer to the active module, being the DLL that was most recently invoked
- by the shell.
- */
-PYORI_SH_LOADED_MODULE YoriShActiveModule = NULL;
 
 /**
  Invoke a different program to complete executing the command.  This may be
@@ -483,29 +334,29 @@ YoriShExecuteNamedModuleInProc(
     )
 {
     PYORI_CMD_BUILTIN Main;
-    PYORI_SH_LOADED_MODULE Module;
+    PYORI_LIBSH_LOADED_MODULE Module;
 
-    Module = YoriShLoadDll(ModuleFileName);
+    Module = YoriLibShLoadDll(ModuleFileName);
     if (Module == NULL) {
         return FALSE;
     }
 
     Main = (PYORI_CMD_BUILTIN)GetProcAddress(Module->ModuleHandle, "YoriMain");
     if (Main == NULL) {
-        YoriShReleaseDll(Module);
+        YoriLibShReleaseDll(Module);
         return FALSE;
     }
 
     if (Main) {
-        PYORI_SH_LOADED_MODULE PreviousModule;
+        PYORI_LIBSH_LOADED_MODULE PreviousModule;
 
-        PreviousModule = YoriShActiveModule;
-        YoriShActiveModule = Module;
+        PreviousModule = YoriLibShGetActiveModule();
+        YoriLibShSetActiveModule(Module);
         *ExitCode = YoriShExecuteInProc(Main, ExecContext);
-        YoriShActiveModule = PreviousModule;
+        YoriLibShSetActiveModule(PreviousModule);
     }
 
-    YoriShReleaseDll(Module);
+    YoriLibShReleaseDll(Module);
     return TRUE;
 }
 
@@ -527,20 +378,17 @@ YoriShBuiltIn (
     DWORD ExitCode = 1;
     PYORI_LIBSH_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
     PYORI_CMD_BUILTIN BuiltInCmd = NULL;
-    PYORI_SH_BUILTIN_CALLBACK CallbackEntry = NULL;
-    PYORI_HASH_ENTRY HashEntry;
+    PYORI_LIBSH_BUILTIN_CALLBACK CallbackEntry = NULL;
 
-    if (YoriShBuiltinHash != NULL) {
-        HashEntry = YoriLibHashLookupByKey(YoriShBuiltinHash, &CmdContext->ArgV[0]);
-        if (HashEntry != NULL) {
-            CallbackEntry = (PYORI_SH_BUILTIN_CALLBACK)HashEntry->Context;
-            BuiltInCmd = CallbackEntry->BuiltInFn;
-        }
+
+    CallbackEntry = YoriLibShLookupBuiltinByName(&CmdContext->ArgV[0]);
+    if (CallbackEntry != NULL) {
+        BuiltInCmd = CallbackEntry->BuiltInFn;
     }
 
     if (BuiltInCmd) {
-        PYORI_SH_LOADED_MODULE PreviousModule;
-        PYORI_SH_LOADED_MODULE HostingModule = NULL;
+        PYORI_LIBSH_LOADED_MODULE PreviousModule;
+        PYORI_LIBSH_LOADED_MODULE HostingModule = NULL;
 
         ASSERT(CallbackEntry != NULL);
 
@@ -551,21 +399,21 @@ YoriShBuiltIn (
 
         if (CallbackEntry != NULL && CallbackEntry->ReferencedModule != NULL) {
             HostingModule = CallbackEntry->ReferencedModule;
-            YoriShReferenceDll(HostingModule);
+            YoriLibShReferenceDll(HostingModule);
         }
 
         //
         //  Indicate which module is currently executing, and execute from it.
         //
 
-        PreviousModule = YoriShActiveModule;
-        YoriShActiveModule = HostingModule;
+        PreviousModule = YoriLibShGetActiveModule();
+        YoriLibShSetActiveModule(HostingModule);
         ExitCode = YoriShExecuteInProc(BuiltInCmd, ExecContext);
-        ASSERT(YoriShActiveModule == HostingModule);
-        YoriShActiveModule = PreviousModule;
+        ASSERT(YoriLibShGetActiveModule() == HostingModule);
+        YoriLibShSetActiveModule(PreviousModule);
 
         if (HostingModule != NULL) {
-            YoriShReleaseDll(HostingModule);
+            YoriLibShReleaseDll(HostingModule);
         }
     } else {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Unrecognized command: %y\n"), &CmdContext->ArgV[0]);
@@ -579,211 +427,6 @@ YoriShBuiltIn (
 
     return ExitCode;
 }
-
-
-/**
- Add a new function to invoke on shell exit or module unload.
-
- @param UnloadNotify Pointer to the function to invoke.
-
- @return TRUE if the callback was successfully added, FALSE if it was not.
- */
-__success(return)
-BOOL
-YoriShSetUnloadRoutine(
-    __in PYORI_BUILTIN_UNLOAD_NOTIFY UnloadNotify
-    )
-{
-    if (YoriShActiveModule != NULL) {
-
-        if (YoriShActiveModule->UnloadNotify == NULL) {
-            YoriShActiveModule->UnloadNotify = UnloadNotify;
-        }
-
-        if (YoriShActiveModule->UnloadNotify == UnloadNotify) {
-            return TRUE;
-        }
-
-        return FALSE;
-    } else {
-
-        PYORI_LIST_ENTRY ListEntry = NULL;
-        PYORI_SH_BUILTIN_UNLOAD_CALLBACK Callback;
-
-        if (YoriShBuiltinUnloadCallbacks.Next == NULL) {
-            YoriLibInitializeListHead(&YoriShBuiltinUnloadCallbacks);
-        }
-
-        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, NULL);
-        while (ListEntry != NULL) {
-            Callback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_UNLOAD_CALLBACK, ListEntry);
-            if (Callback->UnloadNotify == UnloadNotify) {
-                return TRUE;
-            }
-            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, ListEntry);
-        }
-
-        Callback = YoriLibMalloc(sizeof(YORI_SH_BUILTIN_UNLOAD_CALLBACK));
-        if (Callback == NULL) {
-            return FALSE;
-        }
-
-        Callback->UnloadNotify = UnloadNotify;
-        YoriLibAppendList(&YoriShBuiltinUnloadCallbacks, &Callback->ListEntry);
-    }
-
-    return FALSE;
-}
-
-/**
- Associate a new builtin command with a function pointer to be invoked when
- the command is specified.
-
- @param BuiltinCmd The command to register.
-
- @param CallbackFn The function to invoke in response to the command.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOL
-YoriShBuiltinRegister(
-    __in PYORI_STRING BuiltinCmd,
-    __in PYORI_CMD_BUILTIN CallbackFn
-    )
-{
-    PYORI_SH_BUILTIN_CALLBACK NewCallback;
-    if (YoriShGlobal.BuiltinCallbacks.Next == NULL) {
-        YoriLibInitializeListHead(&YoriShGlobal.BuiltinCallbacks);
-    }
-    if (YoriShBuiltinHash == NULL) {
-        YoriShBuiltinHash = YoriLibAllocateHashTable(50);
-        if (YoriShBuiltinHash == NULL) {
-            return FALSE;
-        }
-    }
-
-    NewCallback = YoriLibReferencedMalloc(sizeof(YORI_SH_BUILTIN_CALLBACK) + (BuiltinCmd->LengthInChars + 1) * sizeof(TCHAR));
-    if (NewCallback == NULL) {
-        return FALSE;
-    }
-
-    YoriLibInitEmptyString(&NewCallback->BuiltinName);
-    NewCallback->BuiltinName.StartOfString = (LPTSTR)(NewCallback + 1);
-    NewCallback->BuiltinName.LengthInChars = BuiltinCmd->LengthInChars;
-    memcpy(NewCallback->BuiltinName.StartOfString, BuiltinCmd->StartOfString, BuiltinCmd->LengthInChars * sizeof(TCHAR));
-    NewCallback->BuiltinName.StartOfString[BuiltinCmd->LengthInChars] = '\0';
-    YoriLibReference(NewCallback);
-    NewCallback->BuiltinName.MemoryToFree = NewCallback;
-
-    NewCallback->BuiltInFn = CallbackFn;
-    if (YoriShActiveModule != NULL) {
-        YoriShActiveModule->ReferenceCount++;
-    }
-    NewCallback->ReferencedModule = YoriShActiveModule;
-
-    //
-    //  Insert at the front of the list so the most recently added entry
-    //  will be found first, and the most recently added entry will be
-    //  the first to be removed.
-    //
-
-    YoriLibInsertList(&YoriShGlobal.BuiltinCallbacks, &NewCallback->ListEntry);
-    YoriLibHashInsertByKey(YoriShBuiltinHash, &NewCallback->BuiltinName, NewCallback, &NewCallback->HashEntry);
-    return TRUE;
-}
-
-/**
- Dissociate a previously associated builtin command such that the function is
- no longer invoked in response to the command.
-
- @param BuiltinCmd The command to unregister.
-
- @param CallbackFn The previously registered function to stop invoking in
-        response to the command.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOL
-YoriShBuiltinUnregister(
-    __in PYORI_STRING BuiltinCmd,
-    __in PYORI_CMD_BUILTIN CallbackFn
-    )
-{
-    PYORI_SH_BUILTIN_CALLBACK Callback;
-    PYORI_HASH_ENTRY HashEntry;
-
-    UNREFERENCED_PARAMETER(CallbackFn);
-
-    if (YoriShBuiltinHash == NULL) {
-        return FALSE;
-    }
-
-
-    if (YoriShBuiltinHash != NULL) {
-        HashEntry = YoriLibHashRemoveByKey(YoriShBuiltinHash, BuiltinCmd);
-        if (HashEntry != NULL) {
-            Callback = (PYORI_SH_BUILTIN_CALLBACK)HashEntry->Context;
-            ASSERT(CallbackFn == Callback->BuiltInFn);
-            YoriLibRemoveListItem(&Callback->ListEntry);
-            if (Callback->ReferencedModule != NULL) {
-                YoriShReleaseDll(Callback->ReferencedModule);
-                Callback->ReferencedModule = NULL;
-            }
-            YoriLibFreeStringContents(&Callback->BuiltinName);
-            YoriLibDereference(Callback);
-        }
-    }
-
-    return FALSE;
-}
-
-/**
- Dissociate all previously associated builtin commands in preparation for
- process exit.
- */
-VOID
-YoriShBuiltinUnregisterAll(VOID)
-{
-    PYORI_LIST_ENTRY ListEntry;
-    PYORI_SH_BUILTIN_CALLBACK Callback;
-    PYORI_SH_BUILTIN_UNLOAD_CALLBACK UnloadCallback;
-
-    if (YoriShGlobal.BuiltinCallbacks.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.BuiltinCallbacks, NULL);
-        while (ListEntry != NULL) {
-            Callback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_CALLBACK, ListEntry);
-            YoriLibRemoveListItem(&Callback->ListEntry);
-            YoriLibHashRemoveByEntry(&Callback->HashEntry);
-            if (Callback->ReferencedModule != NULL) {
-                YoriShReleaseDll(Callback->ReferencedModule);
-                Callback->ReferencedModule = NULL;
-            }
-            YoriLibFreeStringContents(&Callback->BuiltinName);
-            YoriLibDereference(Callback);
-            ListEntry = YoriLibGetNextListEntry(&YoriShGlobal.BuiltinCallbacks, NULL);
-        }
-    }
-
-    if (YoriShBuiltinHash != NULL) {
-        YoriLibFreeEmptyHashTable(YoriShBuiltinHash);
-    }
-
-    if (YoriShBuiltinUnloadCallbacks.Next != NULL) {
-        ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, NULL);
-        while (ListEntry != NULL) {
-            UnloadCallback = CONTAINING_RECORD(ListEntry, YORI_SH_BUILTIN_UNLOAD_CALLBACK, ListEntry);
-            ListEntry = YoriLibGetNextListEntry(&YoriShBuiltinUnloadCallbacks, ListEntry);
-            YoriLibRemoveListItem(&UnloadCallback->ListEntry);
-            UnloadCallback->UnloadNotify();
-            YoriLibFree(UnloadCallback);
-        }
-    }
-
-    return;
-}
-
 
 /**
  Execute a command that is built in to the shell.  This can be used by in
