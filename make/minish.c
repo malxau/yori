@@ -186,10 +186,14 @@ MakeShExecExecPlan(
 
         ExecutableFound = FALSE;
         YoriLibInitEmptyString(&FoundInPath);
-        if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath) && FoundInPath.LengthInChars > 0) {
-            YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
-            memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
-            ExecutableFound = TRUE;
+        if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath)) {
+            if (FoundInPath.LengthInChars > 0) {
+                YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
+                memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
+                ExecutableFound = TRUE;
+            } else {
+                YoriLibFreeStringContents(&FoundInPath);
+            }
         }
 
         //
@@ -200,7 +204,12 @@ MakeShExecExecPlan(
         if (ExecutableFound) {
             ExitCode = MakeShExecuteSingleProgram(ExecContext);
         } else {
+            PYORI_LIBSH_BUILTIN_CALLBACK Callback;
             ExitCode = 255;
+            Callback = YoriLibShLookupBuiltinByName(&ExecContext->CmdToExec.ArgV[0]);
+            if (Callback != NULL) {
+                ExitCode = Callback->BuiltInFn(ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
+            }
         }
 
         //

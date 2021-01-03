@@ -95,6 +95,50 @@ CONST MAKE_DEFAULT_MACRO MakeDefaultMacros[] = {
     { YORILIB_CONSTANT_STRING(_T("RC")),  YORILIB_CONSTANT_STRING(_T("rc")) }
 };
 
+/**
+ A structure defining a mapping between a command name and a function to
+ execute.  This is used to populate builtin commands.
+ */
+typedef struct _MAKE_BUILTIN_NAME_MAPPING {
+
+    /**
+     The command name.
+     */
+    LPTSTR CommandName;
+
+    /**
+     Pointer to the function to execute.
+     */
+    PYORI_CMD_BUILTIN BuiltinFn;
+} MAKE_BUILTIN_NAME_MAPPING, *PMAKE_BUILTIN_NAME_MAPPING;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_YECHO;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_YMKDIR;
+
+/**
+ Declaration for the builtin command.
+ */
+YORI_CMD_BUILTIN YoriCmd_YRMDIR;
+
+/**
+ The list of builtin commands supported by this build of Yori.
+ */
+CONST MAKE_BUILTIN_NAME_MAPPING
+MakeBuiltinCmds[] = {
+    {_T("ECHO"),      YoriCmd_YECHO},
+    {_T("MKDIR"),     YoriCmd_YMKDIR},
+    {_T("RMDIR"),     YoriCmd_YRMDIR},
+    {NULL,            NULL}
+};
+
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the ymake builtin command.
@@ -147,6 +191,21 @@ ENTRYPOINT(
     YoriLibInitializeListHead(&MakeContext.TargetsRunning);
     YoriLibInitializeListHead(&MakeContext.TargetsReady);
     YoriLibInitializeListHead(&MakeContext.TargetsWaiting);
+
+    {
+        MAKE_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = MakeBuiltinCmds;
+
+        while (BuiltinNameMapping->CommandName != NULL) {
+            YORI_STRING YsCommandName;
+
+            YoriLibConstantString(&YsCommandName, BuiltinNameMapping->CommandName);
+            if (!YoriLibShBuiltinRegister(&YsCommandName, BuiltinNameMapping->BuiltinFn)) {
+                Result = EXIT_FAILURE;
+                goto Cleanup;
+            }
+            BuiltinNameMapping++;
+        }
+    }
 
     MakeContext.Scopes = YoriLibAllocateHashTable(1000);
     if (MakeContext.Scopes == NULL) {
@@ -427,6 +486,7 @@ Cleanup:
     MakeDeleteAllScopes(&MakeContext);
 
     YoriLibFreeStringContents(&MakeContext.FileToProbe);
+    YoriLibShBuiltinUnregisterAll();
 
     if (MakeContext.ErrorTermination) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error!!\n"));

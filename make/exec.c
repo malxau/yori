@@ -71,48 +71,6 @@ typedef struct _MAKE_CHILD_PROCESS {
 } MAKE_CHILD_PROCESS, *PMAKE_CHILD_PROCESS;
 
 /**
- A structure defining a mapping between a command name and a function to
- execute.  This is used to populate builtin commands.
- */
-typedef struct _MAKE_BUILTIN_NAME_MAPPING {
-
-    /**
-     The command name.
-     */
-    LPTSTR CommandName;
-
-    /**
-     Pointer to the function to execute.
-     */
-    PYORI_CMD_BUILTIN BuiltinFn;
-} MAKE_BUILTIN_NAME_MAPPING, *PMAKE_BUILTIN_NAME_MAPPING;
-
-/**
- Declaration for the builtin command.
- */
-YORI_CMD_BUILTIN YoriCmd_YECHO;
-
-/**
- Declaration for the builtin command.
- */
-YORI_CMD_BUILTIN YoriCmd_YMKDIR;
-
-/**
- Declaration for the builtin command.
- */
-YORI_CMD_BUILTIN YoriCmd_YRMDIR;
-
-/**
- The list of builtin commands supported by this build of Yori.
- */
-CONST MAKE_BUILTIN_NAME_MAPPING
-MakeBuiltinCmds[] = {
-    {_T("ECHO"),      YoriCmd_YECHO},
-    {_T("MKDIR"),     YoriCmd_YMKDIR},
-    {_T("RMDIR"),     YoriCmd_YRMDIR}
-};
-
-/**
  The list of commands to invoke via cmd /c without trying to spawn an
  external process.
  */
@@ -363,20 +321,20 @@ MakeLaunchNextCmd(
                     Reparse = TRUE;
                 }
             } else {
-                for (Index = 0; Index < sizeof(MakeBuiltinCmds)/sizeof(MakeBuiltinCmds[0]); Index++) {
-                    if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], MakeBuiltinCmds[Index].CommandName) == 0) {
+                PYORI_LIBSH_BUILTIN_CALLBACK Callback;
 
-                        // 
-                        //  MSFIX This needs to SetCurrentDirectory or ensure
-                        //  that nothing depends on current directory
-                        //
+                Callback = YoriLibShLookupBuiltinByName(&ExecContext->CmdToExec.ArgV[0]);
+                if (Callback) {
 
-                        Result = MakeBuiltinCmds[Index].BuiltinFn(ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
+                    // 
+                    //  MSFIX This needs to SetCurrentDirectory or ensure
+                    //  that nothing depends on current directory
+                    //
 
-                        ExecutedBuiltin = TRUE;
-                        ChildProcess->ProcessHandle = NULL;
-                        break;
-                    }
+                    Result = Callback->BuiltInFn(ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
+
+                    ExecutedBuiltin = TRUE;
+                    ChildProcess->ProcessHandle = NULL;
                 }
             }
 
@@ -454,9 +412,13 @@ MakeLaunchNextCmd(
         ExecContext = ChildProcess->ExecPlan.FirstCmd;
 
         YoriLibInitEmptyString(&FoundInPath);
-        if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath) && FoundInPath.LengthInChars > 0) {
-            YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
-            memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
+        if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath)) {
+            if (FoundInPath.LengthInChars > 0) {
+                YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
+                memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
+            } else {
+                YoriLibFreeStringContents(&FoundInPath);
+            }
         }
     }
 
