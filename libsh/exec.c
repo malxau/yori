@@ -205,7 +205,7 @@ YoriLibShInitializeRedirection(
                     CloseHandle(WriteHandle);
                 } else {
                     PreviousRedirectContext->ResetInput = TRUE;
-                    SetStdHandle(STD_INPUT_HANDLE, ReadHandle);
+                    SetStdHandle(STD_INPUT_HANDLE, NewHandle);
                     CloseHandle(WriteHandle);
                 }
             } else {
