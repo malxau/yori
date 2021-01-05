@@ -84,6 +84,154 @@ MakeShExecuteSingleProgram(
 }
 
 /**
+ Call a builtin function.  This is part of the main excecutable and is
+ executed synchronously via a call rather than a CreateProcess.
+
+ @param Fn The function associated with the builtin operation to call.
+
+ @param ExecContext The context surrounding this particular function.
+
+ @return ExitCode, typically zero for success, nonzero for failure.
+ */
+DWORD
+MakeShExecuteInProc(
+    __in PYORI_CMD_BUILTIN Fn,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
+    )
+{
+    YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
+    BOOLEAN WasPipe = FALSE;
+    PYORI_LIBSH_CMD_CONTEXT OriginalCmdContext = &ExecContext->CmdToExec;
+    YORI_LIBSH_CMD_CONTEXT NoEscapesCmdContext;
+    YORI_STRING CmdLine;
+    PYORI_STRING ArgV;
+    DWORD ArgC;
+    DWORD Count;
+    DWORD ExitCode = 0;
+
+    if (!YoriLibShRemoveEscapesFromCmdContext(OriginalCmdContext, &NoEscapesCmdContext)) {
+        return ERROR_OUTOFMEMORY;
+    }
+
+    //
+    //  We execute builtins on a single thread due to the amount of
+    //  process wide state that could get messed up if we don't (eg.
+    //  stdout.)  Unfortunately this means we can't natively implement
+    //  things like pipe from builtins, because the builtin has to
+    //  finish before the next process can start.  So if a pipe is
+    //  requested, convert it into a buffer, and let the process
+    //  finish.
+    //
+
+    if (ExecContext->StdOutType == StdOutTypePipe) {
+        WasPipe = TRUE;
+        ExecContext->StdOutType = StdOutTypeBuffer;
+    }
+
+    //
+    //  Check if an argument isn't quoted but requires quotes.  This implies
+    //  something happened outside the user's immediate control, such as
+    //  environment variable expansion.  When this occurs, reprocess the
+    //  command back to a string form and recompose into ArgC/ArgV using the
+    //  same routines as would occur for an external process.
+    //
+
+    ArgC = NoEscapesCmdContext.ArgC;
+    ArgV = NoEscapesCmdContext.ArgV;
+
+    for (Count = 0; Count < NoEscapesCmdContext.ArgC; Count++) {
+        ASSERT(YoriLibIsStringNullTerminated(&NoEscapesCmdContext.ArgV[Count]));
+        if (!NoEscapesCmdContext.ArgContexts[Count].Quoted &&
+            YoriLibCheckIfArgNeedsQuotes(&NoEscapesCmdContext.ArgV[Count]) &&
+            ArgV == NoEscapesCmdContext.ArgV) {
+
+            YoriLibInitEmptyString(&CmdLine);
+            if (!YoriLibShBuildCmdlineFromCmdContext(&NoEscapesCmdContext, &CmdLine, TRUE, NULL, NULL)) {
+                YoriLibShFreeCmdContext(&NoEscapesCmdContext);
+                return ERROR_OUTOFMEMORY;
+            }
+
+            ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+            ArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, &ArgC);
+            YoriLibFreeStringContents(&CmdLine);
+
+            if (ArgV == NULL) {
+                YoriLibShFreeCmdContext(&NoEscapesCmdContext);
+                return ERROR_OUTOFMEMORY;
+            }
+        }
+    }
+
+    ExitCode = YoriLibShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
+    if (ExitCode != ERROR_SUCCESS) {
+        if (ArgV != NoEscapesCmdContext.ArgV) {
+            for (Count = 0; Count < ArgC; Count++) {
+                YoriLibFreeStringContents(&ArgV[Count]);
+            }
+            YoriLibDereference(ArgV);
+        }
+        YoriLibShFreeCmdContext(&NoEscapesCmdContext);
+
+        return ExitCode;
+    }
+
+    //
+    //  Unlike external processes, builtins need to start buffering
+    //  before they start to ensure that output during execution has
+    //  somewhere to go.
+    //
+
+    if (ExecContext->StdOutType == StdOutTypeBuffer) {
+        if (ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
+            if (YoriLibShAppendToExistingProcessBuffer(ExecContext)) {
+                ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
+            } else {
+                ExecContext->StdOut.Buffer.ProcessBuffers = NULL;
+            }
+        } else {
+            if (YoriLibShCreateNewProcessBuffer(ExecContext)) {
+                ExecContext->StdOut.Buffer.PipeFromProcess = NULL;
+            }
+        }
+    }
+
+    ExitCode = Fn(ArgC, ArgV);
+    YoriLibShRevertRedirection(&PreviousRedirectContext);
+
+    if (WasPipe) {
+        YoriLibShForwardProcessBufferToNextProcess(ExecContext);
+    } else {
+
+        //
+        //  Once the process has completed, if it's outputting to
+        //  buffers, wait for the buffers to contain final data.
+        //
+
+        if (ExecContext->StdOutType == StdOutTypeBuffer &&
+            ExecContext->StdOut.Buffer.ProcessBuffers != NULL)  {
+
+            YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
+        }
+
+        if (ExecContext->StdErrType == StdErrTypeBuffer &&
+            ExecContext->StdErr.Buffer.ProcessBuffers != NULL) {
+
+            YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdErr.Buffer.ProcessBuffers);
+        }
+    }
+
+    if (ArgV != NoEscapesCmdContext.ArgV) {
+        for (Count = 0; Count < ArgC; Count++) {
+            YoriLibFreeStringContents(&ArgV[Count]);
+        }
+        YoriLibDereference(ArgV);
+    }
+    YoriLibShFreeCmdContext(&NoEscapesCmdContext);
+
+    return ExitCode;
+}
+
+/**
  Cancel an exec plan.  This is invoked after the user hits Ctrl+C and attempts
  to terminate all outstanding processes associated with the request.
 
@@ -161,8 +309,8 @@ MakeShExecExecPlan(
 {
     PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext;
     PVOID PreviouslyObservedOutputBuffer = NULL;
+    PYORI_LIBSH_BUILTIN_CALLBACK Callback;
     YORI_STRING FoundInPath;
-    BOOL ExecutableFound;
     DWORD ExitCode = 0;
 
     ExecContext = ExecPlan->FirstCmd;
@@ -184,31 +332,21 @@ MakeShExecExecPlan(
             break;
         }
 
-        ExecutableFound = FALSE;
-        YoriLibInitEmptyString(&FoundInPath);
-        if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath)) {
-            if (FoundInPath.LengthInChars > 0) {
-                YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
-                memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
-                ExecutableFound = TRUE;
-            } else {
-                YoriLibFreeStringContents(&FoundInPath);
-            }
-        }
-
-        //
-        //  MSFIX: If !ExecutableFound, need to consult table of builtins.
-        //  This seems like it belongs in YoriSh, needs a bit of porting.
-        //
-
-        if (ExecutableFound) {
-            ExitCode = MakeShExecuteSingleProgram(ExecContext);
+        ExitCode = 255;
+        Callback = YoriLibShLookupBuiltinByName(&ExecContext->CmdToExec.ArgV[0]);
+        if (Callback != NULL) {
+            ExitCode = MakeShExecuteInProc(Callback->BuiltInFn, ExecContext);
         } else {
-            PYORI_LIBSH_BUILTIN_CALLBACK Callback;
-            ExitCode = 255;
-            Callback = YoriLibShLookupBuiltinByName(&ExecContext->CmdToExec.ArgV[0]);
-            if (Callback != NULL) {
-                ExitCode = Callback->BuiltInFn(ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
+            YoriLibInitEmptyString(&FoundInPath);
+            if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath)) {
+                if (FoundInPath.LengthInChars > 0) {
+                    YoriLibFreeStringContents(&ExecContext->CmdToExec.ArgV[0]);
+                    memcpy(&ExecContext->CmdToExec.ArgV[0], &FoundInPath, sizeof(YORI_STRING));
+
+                    ExitCode = MakeShExecuteSingleProgram(ExecContext);
+                } else {
+                    YoriLibFreeStringContents(&FoundInPath);
+                }
             }
         }
 

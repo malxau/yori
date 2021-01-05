@@ -731,6 +731,12 @@ MakeExecuteSetVariable(
 // *** MINISH.C ***
 
 DWORD
+MakeShExecuteInProc(
+    __in PYORI_CMD_BUILTIN Fn,
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
+    );
+
+DWORD
 MakeShExecExecPlan(
     __in PYORI_LIBSH_EXEC_PLAN ExecPlan,
     __out_opt PVOID * OutputBuffer

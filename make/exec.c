@@ -331,7 +331,7 @@ MakeLaunchNextCmd(
                     //  that nothing depends on current directory
                     //
 
-                    Result = Callback->BuiltInFn(ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
+                    Result = MakeShExecuteInProc(Callback->BuiltInFn, ExecContext);
 
                     ExecutedBuiltin = TRUE;
                     ChildProcess->ProcessHandle = NULL;
