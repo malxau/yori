@@ -39,6 +39,11 @@ YORI_CMD_BUILTIN YoriCmd_YASSOC;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YATTRIB;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_BUILTIN;
 
 /**
@@ -575,6 +580,7 @@ YoriShBuiltins[] = {
                     {_T("WININFO"),   YoriCmd_WININFO},
                     {_T("WINPOS"),    YoriCmd_WINPOS},
                     {_T("YASSOC"),    YoriCmd_YASSOC},
+                    {_T("YATTRIB"),   YoriCmd_YATTRIB},
                     {_T("YCAL"),      YoriCmd_YCAL},
                     {_T("YCHARMAP"),  YoriCmd_YCHARMAP},
                     {_T("YCLIP"),     YoriCmd_YCLIP},
@@ -630,6 +636,7 @@ CONST YORI_SH_DEFAULT_ALIAS_ENTRY
 YoriShDefaultAliasEntries[] = {
     {_T("F7"),       _T("history -u")},
     {_T("assoc"),    _T("yassoc $*$")},
+    {_T("attrib"),   _T("yattrib $*$")},
     {_T("cal"),      _T("ycal $*$")},
     {_T("cd"),       _T("chdir $*$")},
     {_T("clip"),     _T("yclip $*$")},

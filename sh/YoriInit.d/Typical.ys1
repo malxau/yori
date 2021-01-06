@@ -1,3 +1,4 @@
+builtin alias -s attrib=yattrib $*$
 builtin alias -s cal=ycal $*$
 builtin alias -s clip=yclip $*$
 builtin alias -s co=yco $*$

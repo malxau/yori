@@ -67,6 +67,7 @@ DIRS=crt       \
      libsh     \
      builtins  \
      assoc     \
+     attrib    \
      cab       \
      cal       \
      charmap   \

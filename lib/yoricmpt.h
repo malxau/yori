@@ -1738,7 +1738,7 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
 /**
  The file attribute indicating presence of a reparse point.
  */
-#define FILE_ATTRIBUTE_REPARSE_POINT      (0x400)
+#define FILE_ATTRIBUTE_REPARSE_POINT         (0x00000400)
 #endif
 
 #ifndef FILE_ATTRIBUTE_SPARSE_FILE
@@ -1746,7 +1746,7 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
  Specifies the value for a file that is sparse if the compilation environment
  doesn't provide it.
  */
-#define FILE_ATTRIBUTE_SPARSE_FILE        (0x200)
+#define FILE_ATTRIBUTE_SPARSE_FILE           (0x00000200)
 #endif
 
 #ifndef FILE_ATTRIBUTE_COMPRESSED
@@ -1754,7 +1754,7 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
  Specifies the value for a file that has been compressed if the compilation
  environment doesn't provide it.
  */
-#define FILE_ATTRIBUTE_COMPRESSED         (0x800)
+#define FILE_ATTRIBUTE_COMPRESSED            (0x00000800)
 #endif
 
 #ifndef FILE_ATTRIBUTE_OFFLINE
@@ -1762,7 +1762,15 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
  Specifies the value for a file that is on slow storage if the compilation
  environment doesn't provide it.
  */
-#define FILE_ATTRIBUTE_OFFLINE           (0x1000)
+#define FILE_ATTRIBUTE_OFFLINE               (0x00001000)
+#endif
+
+#ifndef FILE_ATTRIBUTE_NOT_CONTENT_INDEXED
+/**
+ Specifies the value for a file that should not be indexed by the search
+ indexer if the compilation environment doesn't provide it.
+ */
+#define FILE_ATTRIBUTE_NOT_CONTENT_INDEXED   (0x00002000)
 #endif
 
 #ifndef FILE_ATTRIBUTE_ENCRYPTED
@@ -1770,7 +1778,7 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
  Specifies the value for a file that has been encrypted if the compilation
  environment doesn't provide it.
  */
-#define FILE_ATTRIBUTE_ENCRYPTED         (0x4000)
+#define FILE_ATTRIBUTE_ENCRYPTED             (0x00004000)
 #endif
 
 #ifndef FILE_ATTRIBUTE_INTEGRITY_STREAM
@@ -1778,8 +1786,41 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
  Specifies the value for a file subject to CRC integrity detection if the
  compilation environment doesn't provide it.
  */
-#define FILE_ATTRIBUTE_INTEGRITY_STREAM  (0x8000)
+#define FILE_ATTRIBUTE_INTEGRITY_STREAM      (0x00008000)
 #endif
+
+#ifndef FILE_ATTRIBUTE_NO_SCRUB_DATA
+/**
+ Specifies the value for a file that should not be read by background
+ scrubbing.
+ */
+#define FILE_ATTRIBUTE_NO_SCRUB_DATA         (0x00020000)
+#endif
+
+#ifndef FILE_ATTRIBUTE_PINNED
+/**
+ Specifies the value for a file that should be always available offline.
+ */
+#define FILE_ATTRIBUTE_PINNED                (0x00080000)
+#endif
+
+#ifndef FILE_ATTRIBUTE_UNPINNED
+/**
+ Specifies the value for a file that should not be stored locally if possible.
+ */
+#define FILE_ATTRIBUTE_UNPINNED              (0x00100000)
+#endif
+
+#ifndef FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL
+/**
+ Specifies the value for a file that should not be stored locally if possible.
+ */
+#define FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL   (0x20000000)
+#endif
+
+
+
+
 
 #ifndef FILE_FLAG_OPEN_NO_RECALL
 /**

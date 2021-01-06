@@ -61,6 +61,7 @@ CHAR strHelpHelpText1[] =
         "\n"
         "ALIAS     Displays or updates command aliases\n"
         "ASSOC     Display or edit file associations\n"
+        "ATTRIB    Display or edit file attributes\n"
         "BUILTIN   Executes a command explicitly as a builtin\n"
         "CAB       Compress or decompress cabinet archives\n"
         "CAL       Display the calendar\n"
