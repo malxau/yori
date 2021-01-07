@@ -517,7 +517,7 @@ YoriLibShGetActiveModule(VOID);
 
 VOID
 YoriLibShSetActiveModule(
-    __in PYORI_LIBSH_LOADED_MODULE NewModule
+    __in_opt PYORI_LIBSH_LOADED_MODULE NewModule
     );
 
 PYORI_LIBSH_BUILTIN_CALLBACK

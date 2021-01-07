@@ -221,8 +221,8 @@ typedef enum _ENVDIFF_OUTPUT_FORMAT {
 BOOLEAN
 EnvDiffOutputDifference(
     __in PYORI_STRING Key,
-    __in_opt PYORI_STRING BaseValue,
-    __in_opt PYORI_STRING NewValue,
+    __in_opt _When_(ChangeType == EnvDiffChangeModify, __in) PYORI_STRING BaseValue,
+    __in_opt _When_(ChangeType == EnvDiffChangeModify, __in) PYORI_STRING NewValue,
     __in ENVDIFF_OUTPUT_FORMAT Format,
     __in ENVDIFF_CHANGE_TYPE ChangeType
     )
@@ -451,6 +451,7 @@ EnvDiffLoadStreamIntoEnvironmentBlock(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 EnvDiffLoadFileIntoEnvironmentBlock(
     __in PYORI_STRING FileName,
@@ -571,7 +572,6 @@ ENTRYPOINT(
         }
     } else {
         if (!EnvDiffLoadFileIntoEnvironmentBlock(&ArgV[StartArg], &BaseEnvironment)) {
-            YoriLibFreeStringContents(&CurrentEnvironment);
             return EXIT_FAILURE;
         }
     }

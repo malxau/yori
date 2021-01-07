@@ -320,11 +320,6 @@ ENTRYPOINT(
         }
     }
 
-    //
-    //  If no file name is specified, use stdin; otherwise open
-    //  the file and use that
-    //
-
     if (StartArg == 0 || StartArg == ArgC) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("compact: missing argument\n"));
         return EXIT_FAILURE;
