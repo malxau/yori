@@ -1,8 +1,4 @@
 Ways to improve on NMAKE:
-- Enhance preprocessor CreateProcess capabilities so cmd/find/redirects
-  aren't necessary to answer simple questions
-- Cache results of preprocessor children so find can execute multiple times
-  per child process for different things
 - Find a way to execute preprocessor CreateProcess calls in parallel
 - A dependency-aware way to describe install, so $(BINDIR)\foo.exe: foo.exe,
   and it's only copied if the source has changed.  The challenge is that this

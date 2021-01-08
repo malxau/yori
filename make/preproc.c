@@ -595,10 +595,361 @@ MakeBeginNestedConditionFalse(
 }
 
 /**
+ Generate the name of the preprocessor cache file from the specified
+ make file name.
+
+ @param MakeFileName Pointer to the make file name.
+
+ @param CacheFileName On successful completion, updated to contain a newly
+        allocated string referring to the file name of the cache file.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+MakeGetCacheFileNameFromMakeFileName(
+    __in PYORI_STRING MakeFileName,
+    __out PYORI_STRING CacheFileName
+    )
+{
+    YoriLibInitEmptyString(CacheFileName);
+    if (MakeFileName->LengthInChars > 0) {
+        if (YoriLibAllocateString(CacheFileName, MakeFileName->LengthInChars + sizeof(".pru"))) {
+            CacheFileName->LengthInChars = YoriLibSPrintf(CacheFileName->StartOfString, _T("%y.pru"), MakeFileName);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
+ Load preprocessor cache entries from cache file.
+
+ @param MakeContext Pointer to the context.
+
+ @param MakeFileName Pointer to the file name of the makefile.  If this
+        contains a string, it will be used as the base name for the cache.
+ */
+VOID
+MakeLoadPreprocessorCacheEntries(
+    __inout PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING MakeFileName
+    )
+{
+    PMAKE_PREPROC_EXEC_CACHE_ENTRY Entry;
+    YORI_STRING CacheFileName;
+    YORI_STRING Key;
+    YORI_STRING LineString;
+    DWORD CharsConsumed;
+    LONGLONG llTemp;
+    HANDLE hCache;
+    PVOID LineContext = NULL;
+
+    if (!MakeGetCacheFileNameFromMakeFileName(MakeFileName, &CacheFileName)) {
+        return;
+    }
+
+    hCache = CreateFile(CacheFileName.StartOfString, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    YoriLibFreeStringContents(&CacheFileName);
+    if (hCache == INVALID_HANDLE_VALUE) {
+        return;
+    }
+
+    YoriLibInitEmptyString(&LineString);
+
+    while (TRUE) {
+        if (!YoriLibReadLineToString(&LineString, &LineContext, hCache)) {
+            break;
+        }
+
+        Entry = YoriLibMalloc(sizeof(MAKE_PREPROC_EXEC_CACHE_ENTRY));
+        if (Entry == NULL) {
+            break;
+        }
+
+        ZeroMemory(Entry, sizeof(MAKE_PREPROC_EXEC_CACHE_ENTRY));
+
+        //
+        //  The format of each line is expected to be:
+        //  ExitCode:HashKey
+        //
+        //  Check that the first portion is numeric
+        //
+
+        if (!YoriLibStringToNumber(&LineString, FALSE, &llTemp, &CharsConsumed) ||
+            CharsConsumed == 0) {
+
+            YoriLibFree(Entry);
+            break;
+        }
+        Entry->ExitCode = (DWORD)llTemp;
+
+        //
+        //  Check that the line is long enough to contain an actual command
+        //
+
+        if (CharsConsumed + 1 + sizeof(DWORD) * 2 * 2 >= LineString.LengthInChars) {
+            YoriLibFree(Entry);
+            break;
+        }
+
+        //
+        //  Check that the seperator is where it should be
+        //
+
+        if (LineString.StartOfString[CharsConsumed] != ':') {
+            YoriLibFree(Entry);
+            break;
+        }
+
+        //
+        //  Copy the trailing portion of the line so the hash package has
+        //  an allocation that won't go away
+        //
+
+        if (!YoriLibAllocateString(&Key, LineString.LengthInChars - CharsConsumed - 1)) {
+            YoriLibFree(Entry);
+            break;
+        }
+
+        memcpy(Key.StartOfString, &LineString.StartOfString[CharsConsumed + 1], (LineString.LengthInChars - CharsConsumed - 1) * sizeof(TCHAR));
+        Key.LengthInChars = LineString.LengthInChars - CharsConsumed - 1;
+
+        YoriLibHashInsertByKey(MakeContext->PreprocessorCache, &Key, Entry, &Entry->HashEntry);
+
+        YoriLibAppendList(&MakeContext->PreprocessorCacheList, &Entry->ListEntry);
+
+        YoriLibFreeStringContents(&Key);
+    }
+
+    YoriLibLineReadClose(LineContext);
+    YoriLibFreeStringContents(&LineString);
+    CloseHandle(hCache);
+}
+
+/**
+ Deallocate all preprocessor cache entries and optionally write them to a
+ file.
+
+ @param MakeContext Pointer to the context.
+
+ @param MakeFileName Pointer to the file name of the makefile.  If this
+        contains a string, it will be used as the base name for the cache.
+ */
+VOID
+MakeSaveAndDeleteAllPreprocessorCacheEntries(
+    __inout PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING MakeFileName
+    )
+{ 
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PMAKE_PREPROC_EXEC_CACHE_ENTRY Entry;
+    YORI_STRING CacheFileName;
+    HANDLE hCache;
+
+    if (MakeContext->PreprocessorCache == NULL) {
+        return;
+    }
+
+    hCache = NULL;
+    YoriLibInitEmptyString(&CacheFileName);
+    if (MakeGetCacheFileNameFromMakeFileName(MakeFileName, &CacheFileName)) {
+        hCache = CreateFile(CacheFileName.StartOfString, GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+        if (hCache == INVALID_HANDLE_VALUE) {
+            hCache = NULL;
+        }
+        YoriLibFreeStringContents(&CacheFileName);
+    }
+
+    ListEntry = YoriLibGetNextListEntry(&MakeContext->PreprocessorCacheList, NULL);
+    while (ListEntry != NULL) {
+        Entry = CONTAINING_RECORD(ListEntry, MAKE_PREPROC_EXEC_CACHE_ENTRY, ListEntry);
+
+        if (hCache != NULL) {
+            YoriLibOutputToDevice(hCache, 0, _T("%i:%y\n"), Entry->ExitCode, &Entry->HashEntry.Key);
+        }
+        YoriLibRemoveListItem(&Entry->ListEntry);
+        YoriLibHashRemoveByEntry(&Entry->HashEntry);
+        YoriLibFree(Entry);
+        ListEntry = YoriLibGetNextListEntry(&MakeContext->PreprocessorCacheList, NULL);
+    }
+    YoriLibFreeEmptyHashTable(MakeContext->PreprocessorCache);
+
+    if (hCache != NULL) {
+        CloseHandle(hCache);
+    }
+}
+
+/**
+ Given a command and a point in time in execution, calculate the cache key
+ for the command.  The key consists of a hash of the environment, a hash of
+ all makefile variables at this point in execution, and the command itself.
+
+ @param ScopeContext Pointer to the scope context containing all currently
+        in scope variables.
+
+ @param Cmd Pointer to the command to execute.
+
+ @param Key On successful completion, updated to contain a newly allocated
+        string containing the key.  The caller is expected to free this
+        with YoriLibFreeStringContents.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+MakeBuildKeyForCacheCmd(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING Cmd,
+    __out PYORI_STRING Key
+    )
+{
+    YORI_STRING Env;
+    YORI_STRING Substring;
+    PMAKE_CONTEXT MakeContext;
+    DWORD EnvHash;
+    DWORD VarHash;
+
+    MakeContext = ScopeContext->MakeContext;
+
+    if (!MakeContext->EnvHashCalculated) {
+        if (!YoriLibGetEnvironmentStrings(&Env)) {
+            return FALSE;
+        }
+
+        MakeContext->EnvHash = YoriLibHashString32(0, &Env);
+        MakeContext->EnvHashCalculated = TRUE;
+
+        YoriLibFreeStringContents(&Env);
+    }
+
+    EnvHash = MakeContext->EnvHash;
+
+    VarHash = MakeHashAllVariables(ScopeContext);
+
+    if (!YoriLibAllocateString(Key, (sizeof(EnvHash) + sizeof(VarHash)) * 2 + Cmd->LengthInChars + 1)) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&Substring);
+    Substring.StartOfString = Key->StartOfString;
+    Substring.LengthAllocated = Key->LengthAllocated;
+    YoriLibHexBufferToString((PUCHAR)&EnvHash, sizeof(EnvHash), &Substring);
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+
+    //
+    //  "Potential" mismatch between sizeof and countof.  I meant sizeof.
+    //
+
+#pragma warning(push)
+#pragma warning(disable: 6305)
+#endif
+
+    Substring.StartOfString = Substring.StartOfString + sizeof(EnvHash) * 2;
+    Substring.LengthInChars = Substring.LengthInChars - sizeof(EnvHash) * 2;
+
+    YoriLibHexBufferToString((PUCHAR)&VarHash, sizeof(VarHash), &Substring);
+
+    Substring.StartOfString = Substring.StartOfString + sizeof(VarHash) * 2;
+    Substring.LengthInChars = Substring.LengthInChars - sizeof(VarHash) * 2;
+
+    memcpy(Substring.StartOfString, Cmd->StartOfString, Cmd->LengthInChars * sizeof(TCHAR));
+    Key->LengthInChars = (sizeof(EnvHash) + sizeof(VarHash)) * 2 + Cmd->LengthInChars;
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(pop)
+#endif
+
+    return TRUE;
+}
+
+/**
+ Look for a matching entry in the cache for the specified preprocessor
+ command.
+
+ @param ScopeContext Pointer to the scope context.
+
+ @param Cmd Pointer to the command to execute.
+
+ @return Pointer to the cache entry if one was found, or NULL if no match
+         was found.
+ */
+PMAKE_PREPROC_EXEC_CACHE_ENTRY
+MakeLookupPreprocessorCache(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING Cmd
+    )
+{
+    PYORI_HASH_ENTRY HashEntry;
+    PMAKE_PREPROC_EXEC_CACHE_ENTRY Entry;
+    YORI_STRING Key;
+
+    if (!MakeBuildKeyForCacheCmd(ScopeContext, Cmd, &Key)) {
+        return NULL;
+    }
+
+    HashEntry = YoriLibHashLookupByKey(ScopeContext->MakeContext->PreprocessorCache, &Key);
+    YoriLibFreeStringContents(&Key);
+    if (HashEntry == NULL) {
+        return NULL;
+    }
+
+    Entry = CONTAINING_RECORD(HashEntry, MAKE_PREPROC_EXEC_CACHE_ENTRY, HashEntry);
+    return Entry;
+}
+
+/**
+ Add an entry to the preprocessor cache.  This occurs after the child process
+ has completed to record its result.
+
+ @param ScopeContext Pointer to the scope context.
+
+ @param Cmd Pointer to the command string.
+
+ @param ExitCode Indicates the result of the command.
+ */
+VOID
+MakeAddToPreprocessorCache(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING Cmd,
+    __in DWORD ExitCode
+    )
+{
+    PMAKE_PREPROC_EXEC_CACHE_ENTRY Entry;
+    PYORI_HASH_ENTRY HashEntry;
+    YORI_STRING Key;
+
+    if (!MakeBuildKeyForCacheCmd(ScopeContext, Cmd, &Key)) {
+        return;
+    }
+
+    HashEntry = YoriLibHashLookupByKey(ScopeContext->MakeContext->PreprocessorCache, &Key);
+    if (HashEntry != NULL) {
+        YoriLibFreeStringContents(&Key);
+        return;
+    }
+
+    Entry = YoriLibMalloc(sizeof(MAKE_PREPROC_EXEC_CACHE_ENTRY));
+    if (Entry == NULL) {
+        YoriLibFreeStringContents(&Key);
+        return;
+    }
+
+    ZeroMemory(Entry, sizeof(MAKE_PREPROC_EXEC_CACHE_ENTRY));
+    Entry->ExitCode = ExitCode;
+
+    YoriLibHashInsertByKey(ScopeContext->MakeContext->PreprocessorCache, &Key, Entry, &Entry->HashEntry);
+
+    YoriLibAppendList(&ScopeContext->MakeContext->PreprocessorCacheList, &Entry->ListEntry);
+    YoriLibFreeStringContents(&Key);
+}
+
+/**
  Execute a subcommand and capture the result.  Currently this is used to
  evaluate preprocessor if statements only.
 
- @param MakeContext Pointer to the context.
+ @param ScopeContext Pointer to the scope context.
 
  @param Cmd Pointer to the command to execute.
 
@@ -607,10 +958,13 @@ MakeBeginNestedConditionFalse(
  */
 DWORD
 MakeExecuteCommandCaptureExitCode(
-    __in PMAKE_CONTEXT MakeContext,
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in PYORI_STRING Cmd
     )
 {
+    PMAKE_PREPROC_EXEC_CACHE_ENTRY Entry;
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
+    YORI_LIBSH_EXEC_PLAN ExecPlan;
     LARGE_INTEGER StartTime;
     LARGE_INTEGER EndTime;
     DWORD ExitCode;
@@ -627,62 +981,39 @@ MakeExecuteCommandCaptureExitCode(
 
     QueryPerformanceCounter(&StartTime);
 
-#if 1
-    {
-        YORI_LIBSH_CMD_CONTEXT CmdContext;
-        YORI_LIBSH_EXEC_PLAN ExecPlan;
-        if (!YoriLibShParseCmdlineToCmdContext(Cmd, 0, &CmdContext)) {
-            return ExitCode;
+    if (ScopeContext->MakeContext->PreprocessorCache != NULL) {
+        Entry = MakeLookupPreprocessorCache(ScopeContext, Cmd);
+        if (Entry != NULL) {
+            ExitCode = Entry->ExitCode;
+            goto Complete;
         }
-    
-        if (!YoriLibShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
-            YoriLibShFreeCmdContext(&CmdContext);
-            return ExitCode;
-        }
+    }
 
-        ExitCode = MakeShExecExecPlan(&ExecPlan, NULL);
-    
-        YoriLibShFreeExecPlan(&ExecPlan);
+    if (!YoriLibShParseCmdlineToCmdContext(Cmd, 0, &CmdContext)) {
+        goto Complete;
+    }
+
+    if (!YoriLibShParseCmdContextToExecPlan(&CmdContext, &ExecPlan, NULL, NULL, NULL, NULL)) {
         YoriLibShFreeCmdContext(&CmdContext);
+        goto Complete;
     }
-#else
-    {
-        PROCESS_INFORMATION pi;
-        YORI_STRING EntireCmd;
-        STARTUPINFO si;
 
-        YoriLibInitEmptyString(&EntireCmd);
-        YoriLibYPrintf(&EntireCmd, _T("cmd /c %y"), Cmd);
-        if (EntireCmd.StartOfString == NULL) {
-            return ExitCode;
-        }
-    
-        ZeroMemory(&si, sizeof(si));
-        si.cb = sizeof(si);
-        if (!CreateProcess(NULL, EntireCmd.StartOfString, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-            YoriLibFreeStringContents(&EntireCmd);
-            return ExitCode;
-        }
-    
-        YoriLibFreeStringContents(&EntireCmd);
-        WaitForSingleObject(pi.hProcess, INFINITE);
+    ExitCode = MakeShExecExecPlan(&ExecPlan, NULL);
 
-        if (pi.hProcess != NULL) {
-            GetExitCodeProcess(pi.hProcess, &ExitCode);
-            CloseHandle(pi.hProcess);
-        }
-    
-        if (pi.hThread != NULL) {
-            CloseHandle(pi.hThread);
-        }
+    YoriLibShFreeExecPlan(&ExecPlan);
+    YoriLibShFreeCmdContext(&CmdContext);
+
+    if (ScopeContext->MakeContext->PreprocessorCache != NULL) {
+        MakeAddToPreprocessorCache(ScopeContext, Cmd, ExitCode);
     }
-#endif
+
+Complete:
+
     QueryPerformanceCounter(&EndTime);
-    MakeContext->TimeInPreprocessorCreateProcess = MakeContext->TimeInPreprocessorCreateProcess + EndTime.QuadPart - StartTime.QuadPart;
+    ScopeContext->MakeContext->TimeInPreprocessorCreateProcess = ScopeContext->MakeContext->TimeInPreprocessorCreateProcess + EndTime.QuadPart - StartTime.QuadPart;
 #if MAKE_DEBUG_PREPROCESSOR_CREATEPROCESS
     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("...took %lli\n"), EndTime.QuadPart - StartTime.QuadPart);
 #endif
-
 
     return ExitCode;
 }
@@ -816,7 +1147,7 @@ MakeFindFirstMatchingSubstringSkipQuotes(
  is TRUE or FALSE if it is FALSE.  On error, this function informs the user
  and marks execution to terminate.
 
- @param MakeContext Pointer to the context.
+ @param ScopeContext Pointer to the scope context.
 
  @param Expression Pointer to the expression to evaluate.
 
@@ -824,17 +1155,20 @@ MakeFindFirstMatchingSubstringSkipQuotes(
  */
 BOOLEAN
 MakePreprocessorEvaluateCondition(
-    __in PMAKE_CONTEXT MakeContext,
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in PYORI_STRING Expression
     )
 {
     YORI_STRING OperatorMatches[MAKE_IF_OPERATOR_BEYOND_MAX];
+    PMAKE_CONTEXT MakeContext;
     PYORI_STRING MatchingOperator;
     YORI_STRING FirstPart;
     YORI_STRING SecondPart;
     DWORD OperatorIndex;
     BOOLEAN FirstPartIsString;
     BOOLEAN SecondPartIsString;
+
+    MakeContext = ScopeContext->MakeContext;
 
     //
     //  MSFIX
@@ -924,7 +1258,7 @@ MakePreprocessorEvaluateCondition(
             YoriLibInitEmptyString(&Substring);
             Substring.StartOfString = &FirstPart.StartOfString[1];
             Substring.LengthInChars = FirstPart.LengthInChars - 2;
-            FirstNumber = MakeExecuteCommandCaptureExitCode(MakeContext, &Substring);
+            FirstNumber = MakeExecuteCommandCaptureExitCode(ScopeContext, &Substring);
         } else {
             if (!YoriLibStringToNumber(&FirstPart, TRUE, &FirstNumber, &CharsConsumed) || CharsConsumed == 0) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Syntax error in expression: %y\n"), Expression);
@@ -942,7 +1276,7 @@ MakePreprocessorEvaluateCondition(
             YoriLibInitEmptyString(&Substring);
             Substring.StartOfString = &SecondPart.StartOfString[1];
             Substring.LengthInChars = SecondPart.LengthInChars - 2;
-            SecondNumber = MakeExecuteCommandCaptureExitCode(MakeContext, &Substring);
+            SecondNumber = MakeExecuteCommandCaptureExitCode(ScopeContext, &Substring);
         } else {
             if (!YoriLibStringToNumber(&SecondPart, TRUE, &SecondNumber, &CharsConsumed) || CharsConsumed == 0) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Syntax error in expression: %y\n"), Expression);
@@ -1135,7 +1469,7 @@ MakePreprocessor(
                     ScopeContext->RuleExcludedOnNestingLevel = 0;
                 }
 
-                if (MakePreprocessorEvaluateCondition(MakeContext, &Arg)) {
+                if (MakePreprocessorEvaluateCondition(ScopeContext, &Arg)) {
                     ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
                     ScopeContext->ActiveConditionalNestingLevelExecutionOccurred = TRUE;
                 }
@@ -1181,7 +1515,7 @@ MakePreprocessor(
             MakeContext->ErrorTermination = TRUE;
             break;
         case MakePreprocessorLineTypeIf:
-            if (MakePreprocessorEvaluateCondition(MakeContext, &Arg)) {
+            if (MakePreprocessorEvaluateCondition(ScopeContext, &Arg)) {
                 MakeBeginNestedConditionTrue(ScopeContext);
             } else {
                 MakeBeginNestedConditionFalse(ScopeContext);

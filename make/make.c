@@ -37,11 +37,13 @@ CHAR strMakeHelpText[] =
         "\n"
         "Execute makefiles.\n"
         "\n"
-        "YMAKE [-license] [-f file] [-j n] [var=value] [target]\n"
+        "YMAKE [-license] [-f file] [-j n] [-perf] [-pru] [var=value] [target]\n"
         "\n"
         "   --             Treat all further arguments as display parameters\n"
         "   -f             Name of the makefile to use, default YMkFile or Makefile\n"
-        "   -j             The number of child processes, default number of processors+1\n";
+        "   -j             The number of child processes, default number of processors+1\n"
+        "   -perf          Display how much time was spent in each phase of processing\n"
+        "   -pru           Keep a cache of preprocessor recently executed results\n";
 
 
 /**
@@ -191,6 +193,8 @@ ENTRYPOINT(
     YoriLibInitializeListHead(&MakeContext.TargetsRunning);
     YoriLibInitializeListHead(&MakeContext.TargetsReady);
     YoriLibInitializeListHead(&MakeContext.TargetsWaiting);
+    YoriLibInitializeListHead(&MakeContext.PreprocessorCacheList);
+    YoriLibInitEmptyString(&FullFileName);
 
     {
         MAKE_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = MakeBuiltinCmds;
@@ -278,6 +282,16 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("perf")) == 0) {
                 MakeContext.PerfDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("pru")) == 0) {
+                if (MakeContext.PreprocessorCache == NULL) {
+                    MakeContext.PreprocessorCache = YoriLibAllocateHashTable(100);
+                    if (MakeContext.PreprocessorCache == NULL) {
+                        Result = EXIT_FAILURE;
+                        goto Cleanup;
+                    }
+                }
+                ArgumentUnderstood = TRUE;
+
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
@@ -419,14 +433,26 @@ ENTRYPOINT(
             goto Cleanup;
         }
     }
+
+    //
+    //  When using a cache, try to load any cached preprocessor conditions for
+    //  this makefile.
+    //
+
+    if (MakeContext.PreprocessorCache != NULL) {
+        MakeLoadPreprocessorCacheEntries(&MakeContext, &FullFileName);
+    }
+
     hStream = CreateFile(FullFileName.StartOfString, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
     if (hStream == INVALID_HANDLE_VALUE) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No makefile found\n"));
-        YoriLibFreeStringContents(&FullFileName);
         Result = EXIT_FAILURE;
         goto Cleanup;
     }
-    YoriLibFreeStringContents(&FullFileName);
+
+    //
+    //  Preprocess the makefile
+    //
 
     QueryPerformanceCounter(&StartTime);
     MakeProcessStream(hStream, &MakeContext);
@@ -484,6 +510,9 @@ Cleanup:
     }
 
     MakeDeleteAllScopes(&MakeContext);
+    MakeSaveAndDeleteAllPreprocessorCacheEntries(&MakeContext, &FullFileName);
+
+    YoriLibFreeStringContents(&FullFileName);
 
     YoriLibFreeStringContents(&MakeContext.FileToProbe);
     YoriLibShBuiltinUnregisterAll();

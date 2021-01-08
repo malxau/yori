@@ -1,8 +1,10 @@
 if strcmp -- %1%==-undo; goto undo
 
-alias mk=ymake DEBUG=1 $*$
-alias F3=ymake DEBUG=1
+alias mk=ymake -pru DEBUG=1 $*$
+alias cln=ymake clean $*$
+alias F3=ymake -pru DEBUG=1
 alias F5=ymake distclean
+alias F6=ymake clean
 alias F8=doxygen
 set SAVEDPROMPT=%YORIPROMPT%
 set YORIPROMPT=[$E$[32;1m^`git rev-parse --abbrev-ref HEAD 2^>NUL^`$E$[0m] $E$[35;1m$P$$E$[0m$G_OR_ADMIN_G$

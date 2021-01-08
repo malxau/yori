@@ -75,6 +75,43 @@ MakeDeleteAllVariables(
 }
 
 /**
+ Calculate a hash of all variables defined up to this point.  This hash as
+ currently written depends on the order variables are defined, so it can be
+ used to detect changes, but two different hashes can still be returned for
+ functionally equivalent states.
+
+ @param ScopeContext Pointer to the scope context.
+
+ @return A 32 bit hash value.
+ */
+DWORD
+MakeHashAllVariables(
+    __inout PMAKE_SCOPE_CONTEXT ScopeContext
+    )
+{ 
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PMAKE_SCOPE_CONTEXT SearchScopeContext;
+    PMAKE_VARIABLE Variable;
+    DWORD Hash;
+
+    Hash = 0;
+
+    SearchScopeContext = ScopeContext;
+    while (SearchScopeContext != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&ScopeContext->VariableList, NULL);
+        while (ListEntry != NULL) {
+            Variable = CONTAINING_RECORD(ListEntry, MAKE_VARIABLE, ListEntry);
+            Hash = YoriLibHashString32(Hash, &Variable->HashEntry.Key);
+            Hash = YoriLibHashString32(Hash, &Variable->Value);
+            ListEntry = YoriLibGetNextListEntry(&ScopeContext->VariableList, ListEntry);
+        }
+        SearchScopeContext = SearchScopeContext->ParentScope;
+    }
+
+    return Hash;
+}
+
+/**
  Lookup a variable by name.
 
  @param ScopeContext Pointer to the scope context.

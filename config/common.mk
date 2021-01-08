@@ -342,6 +342,7 @@ clean:
 	@if exist *.lib erase *.lib
 	@if exist *.exp erase *.exp
 	@if exist *.res erase *.res
+	@if exist *.pru erase *.pru
 	@if exist *~ erase *~
 	@if exist *.exe.manifest erase *.exe.manifest
 

@@ -88,6 +88,32 @@ typedef struct _MAKE_SLAB_ALLOC {
 } MAKE_SLAB_ALLOC, *PMAKE_SLAB_ALLOC;
 
 /**
+ A record of the exitcode of a preprocessor command.  These can be recorded
+ to save time on a subsequent compilation.
+ */
+typedef struct _MAKE_PREPROC_EXEC_CACHE_ENTRY {
+
+    /**
+     The hash entry of the preprocessor command.  This includes the command
+     string as well as a hash of the environment and variable state so that
+     if a different compilation environment is used, the cache will not
+     match.
+     */
+    YORI_HASH_ENTRY HashEntry;
+
+    /**
+     A list of all entries to facilitate efficient teardown.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The exit code of the preprocessor command.
+     */
+    DWORD ExitCode;
+
+} MAKE_PREPROC_EXEC_CACHE_ENTRY, *PMAKE_PREPROC_EXEC_CACHE_ENTRY;
+
+/**
  Context describing a scope.  In this program a scope generally refers to
  a single makefile, although note that one makefile can include others
  without changing scope.  Scopes are when one makefile target depends on
@@ -592,6 +618,16 @@ typedef struct _MAKE_CONTEXT {
     YORI_LIST_ENTRY TargetsWaiting;
 
     /**
+     A hash table of cached preprocessor commands.
+     */
+    PYORI_HASH_TABLE PreprocessorCache;
+
+    /**
+     A list of known preprocessor scope entries, used to facilitate bulk delete.
+     */
+    YORI_LIST_ENTRY PreprocessorCacheList;
+
+    /**
      An allocation used to generate files to look for when determining which
      inference rules to apply.  Because this is very temporary, it is only
      used in one place, but is retained to avoid repeated allocations.
@@ -661,6 +697,14 @@ typedef struct _MAKE_CONTEXT {
     DWORD NumberProcesses;
 
     /**
+     The 32 bit hash of the environment block. This process does not modify
+     its own environment, so this can be calculated once for the lifetime
+     of the process.  Its purpose is to distinguish preprocessor commands
+     executed after the environment has changed.
+     */
+    DWORD EnvHash;
+
+    /**
      TRUE if an error has been encountered that should cause further
      processing to stop.
      */
@@ -670,6 +714,11 @@ typedef struct _MAKE_CONTEXT {
      TRUE to display time spent at various points on exit.
      */
     BOOLEAN PerfDisplay;
+
+    /**
+     TRUE to indicate that EnvHash above has been calculated.
+     */
+    BOOLEAN EnvHashCalculated;
 
 } MAKE_CONTEXT, *PMAKE_CONTEXT;
 
@@ -719,7 +768,12 @@ MakeExpandVariables(
 
 VOID
 MakeDeleteAllVariables(
-    __inout PMAKE_SCOPE_CONTEXT MakeContext
+    __inout PMAKE_SCOPE_CONTEXT ScopeContext
+    );
+
+DWORD
+MakeHashAllVariables(
+    __inout PMAKE_SCOPE_CONTEXT ScopeContext
     );
 
 BOOLEAN
@@ -768,6 +822,20 @@ MakeProcessStream(
     __in HANDLE hSource,
     __in PMAKE_CONTEXT MakeContext
     );
+
+VOID
+MakeLoadPreprocessorCacheEntries(
+    __inout PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING MakeFileName
+    );
+
+VOID
+MakeSaveAndDeleteAllPreprocessorCacheEntries(
+    __inout PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING MakeFileName
+    );
+
+// *** SCOPE.C ***
 
 PMAKE_SCOPE_CONTEXT
 MakeAllocateNewScope(

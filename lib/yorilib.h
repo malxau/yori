@@ -2077,6 +2077,12 @@ YoriLibIsCurrentUserInWellKnownGroup(
 
 // *** HASH.C ***
 
+DWORD
+YoriLibHashString32(
+    __in DWORD InitialHash,
+    __in PCYORI_STRING String
+    );
+
 PYORI_HASH_TABLE
 YoriLibAllocateHashTable(
     __in DWORD NumberBuckets

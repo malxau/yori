@@ -83,6 +83,43 @@ YoriLibFreeEmptyHashTable(
 }
 
 /**
+ Hash a yori string into a 32 bit hash value.
+
+ @param InitialHash The starting value to use for the hash.
+
+ @param String The string to generate a hash for.
+
+ @return A 32 bit hash value for the string.
+ */
+DWORD
+YoriLibHashString32(
+    __in DWORD InitialHash,
+    __in PCYORI_STRING String
+    )
+{
+    DWORD Hash;
+    DWORD Index;
+
+    //
+    //  Simple string xor hash
+    //
+
+    Hash = InitialHash;
+    for (Index = 0; Index < String->LengthInChars; Index++) {
+        Hash = (Hash << 3) ^ YoriLibUpcaseChar(String->StartOfString[Index]) ^ (Hash >> 29);
+    }
+
+    //
+    //  Move some high bits into the low bits since the low bits
+    //  will likely be used as a bucket index.  Note we're moving
+    //  bits 16 here and 3 above (ie., not divisible and won't
+    //  cancel out.)
+    //
+
+    return Hash;
+}
+
+/**
  Hash a yori string into a 16 bit hash value.
 
  @param String The string to generate a hash for.
@@ -95,16 +132,7 @@ YoriLibHashString(
     )
 {
     DWORD Hash;
-    DWORD Index;
-
-    //
-    //  Simple string xor hash
-    //
-
-    Hash = 0;
-    for (Index = 0; Index < String->LengthInChars; Index++) {
-        Hash = (Hash << 3) ^ YoriLibUpcaseChar(String->StartOfString[Index]) ^ (Hash >> 29);
-    }
+    Hash = YoriLibHashString32(0, String);
 
     //
     //  Move some high bits into the low bits since the low bits
