@@ -145,7 +145,7 @@ HexDumpDoesStringStartWithHexDigits(
     DWORD Index;
     TCHAR Char;
 
-    if (DigitsToCheck >= String->LengthInChars) {
+    if (DigitsToCheck > String->LengthInChars) {
         return FALSE;
     }
 
@@ -262,32 +262,32 @@ HexDumpDetectReverseFormatFromLine(
     Substring.LengthInChars = Line->LengthInChars - ReverseContext->CharsInInputLineToIgnore;
 
 
-    if (Substring.LengthInChars >= 2 * 4 + 1 &&
-        HexDumpDoesStringStartWithHexDigits(&Substring, 8) &&
-        Substring.StartOfString[8] == ' ') {
+    if (Substring.LengthInChars >= 2 * 4 &&
+        HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 4) &&
+        (Substring.LengthInChars == 2 * 4 || Substring.StartOfString[2 * 4] == ' ')) {
 
         ReverseContext->BytesPerWord = 4;
 
-    } else if (Substring.LengthInChars >= 2 * 2 + 1 &&
-               HexDumpDoesStringStartWithHexDigits(&Substring, 4) &&
-               Substring.StartOfString[4] == ' ') {
+    } else if (Substring.LengthInChars >= 2 * 2 &&
+               HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 2) &&
+               (Substring.LengthInChars == 2 * 2 || Substring.StartOfString[2 * 2] == ' ')) {
 
         ReverseContext->BytesPerWord = 2;
 
-    } else if (Substring.LengthInChars >= 1 * 2 + 1 &&
-               HexDumpDoesStringStartWithHexDigits(&Substring, 2) &&
-               Substring.StartOfString[2] == ' ') {
+    } else if (Substring.LengthInChars >= 2 * 1 &&
+               HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 1) &&
+               (Substring.LengthInChars == 2 * 1 || Substring.StartOfString[2 * 1] == ' ')) {
 
         ReverseContext->BytesPerWord = 1;
-    } else if (Substring.LengthInChars >= 2 * 4 * 2 + 2 &&
-        HexDumpDoesStringStartWithHexDigits(&Substring, 8) &&
-        Substring.StartOfString[8] == '`') {
+    } else if (Substring.LengthInChars >= 2 * 4 + 1 + 2 * 4 &&
+        HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 4) &&
+        Substring.StartOfString[2 * 4] == '`') {
 
-        Substring.LengthInChars -= 9;
-        Substring.StartOfString += 9;
+        Substring.LengthInChars -= 2 * 4 + 1;
+        Substring.StartOfString += 2 * 4 + 1;
 
-        if (HexDumpDoesStringStartWithHexDigits(&Substring, 8) &&
-            Substring.StartOfString[8] == ' ') {
+        if (HexDumpDoesStringStartWithHexDigits(&Substring, 2 * 4) &&
+            (Substring.LengthInChars == 2 * 4 || Substring.StartOfString[2 * 4] == ' ')) {
 
             ReverseContext->BytesPerWord = 8;
         }
