@@ -3,7 +3,7 @@
  *
  * Yori shell display a file or files in hexadecimal form
  *
- * Copyright (c) 2017-2020 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,9 +38,10 @@ CHAR strHexDumpHelpText[] =
         "Output the contents of one or more files in hex.\n"
         "\n"
         "HEXDUMP [-license] [-b] [-d] [-g1|-g2|-g4|-g8|-i] [-hc] [-ho]\n"
-        "        [-l length] [-o offset] [-r] [-s] [<file>...]\n"
+        "        [-l length] [-o offset] [-bin|-r] [-s] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -bin           Process a stream of hex back into binary\n"
         "   -d             Display the differences between two files\n"
         "   -g             Number of bytes per display group\n"
         "   -hc            Hide character display\n"
@@ -48,7 +49,7 @@ CHAR strHexDumpHelpText[] =
         "   -i             C-style include output\n"
         "   -l             Length of the section to display\n"
         "   -o             Offset within the stream to display\n"
-        "   -r             Reverse process hex back into binary\n"
+        "   -r             Reverse process hexdump hex back into binary\n"
         "   -s             Process files from all subdirectories\n";
 
 /**
@@ -189,9 +190,22 @@ typedef struct _HEXDUMP_REVERSE_CONTEXT {
     DWORD WordsPerLine;
 
     /**
-     The buffer to populate with data as each line is parsed.
+     The buffer to populate with data as each line is parsed.  This may point
+     to StaticOutputBuffer below, or may be a heap allocation in binary mode.
      */
-    UCHAR OutputBuffer[YORI_LIB_HEXDUMP_BYTES_PER_LINE];
+    PUCHAR OutputBuffer;
+
+    /**
+     A small buffer which is used initially.  This is all that is needed for
+     reverse mode, but may be insufficient when processing arbitrary length
+     binary lines.
+     */
+    UCHAR StaticOutputBuffer[YORI_LIB_HEXDUMP_BYTES_PER_LINE];
+
+    /**
+     The number of bytes of OutputBuffer that have been allocated.
+     */
+    DWORD BytesAllocated;
 
     /**
      The number of bytes of OutputBuffer that have been filled.  Note that
@@ -343,6 +357,7 @@ HexDumpReverseParseByte(
     }
     Value = ThisByte;
 
+    ASSERT(ReverseContext->BytesThisLine + sizeof(Value) <= ReverseContext->BytesAllocated);
     memcpy(&ReverseContext->OutputBuffer[ReverseContext->BytesThisLine], &Value, sizeof(Value));
     ReverseContext->BytesThisLine += sizeof(Value);
 
@@ -394,6 +409,7 @@ HexDumpReverseParseWord(
         Value = (WORD)(Value | ThisByte);
     }
 
+    ASSERT(ReverseContext->BytesThisLine + sizeof(Value) <= ReverseContext->BytesAllocated);
     memcpy(&ReverseContext->OutputBuffer[ReverseContext->BytesThisLine], &Value, sizeof(Value));
     ReverseContext->BytesThisLine += sizeof(Value);
 
@@ -445,6 +461,7 @@ HexDumpReverseParseDword(
         Value = Value | ThisByte;
     }
 
+    ASSERT(ReverseContext->BytesThisLine + sizeof(Value) <= ReverseContext->BytesAllocated);
     memcpy(&ReverseContext->OutputBuffer[ReverseContext->BytesThisLine], &Value, sizeof(Value));
     ReverseContext->BytesThisLine += sizeof(Value);
 
@@ -501,6 +518,7 @@ HexDumpReverseParseDwordLong(
         Value = Value | ThisByte;
     }
 
+    ASSERT(ReverseContext->BytesThisLine + sizeof(Value) <= ReverseContext->BytesAllocated);
     memcpy(&ReverseContext->OutputBuffer[ReverseContext->BytesThisLine], &Value, sizeof(Value));
     ReverseContext->BytesThisLine += sizeof(Value);
 
@@ -590,7 +608,10 @@ HexDumpReverseParseLine(
 
 /**
  Convert a single stream of hex encoded input into binary output.  The format
- of the input is detected heuristically.
+ of the input is detected heuristically, but is expected to be one that can
+ be output by hexdump.  That implies it may have a leading offset field or
+ characters at the end of each line.  For that reason, this is not suitable
+ for interpreting a flat array of hex data.
 
  @param hSource Handle to a source stream containing hex encoded data.
 
@@ -625,6 +646,8 @@ HexDumpReverseProcessStream(
         return FALSE;
     }
 
+    ReverseContext.OutputBuffer = ReverseContext.StaticOutputBuffer;
+    ReverseContext.BytesAllocated = sizeof(ReverseContext.StaticOutputBuffer);
     OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
     while (TRUE) {
@@ -645,6 +668,230 @@ HexDumpReverseProcessStream(
 
     return TRUE;
 }
+
+/**
+ Process a line of hex encoded text into binary.  The format must have been
+ determined prior to this point.
+
+ @param Line Pointer to a line of hex encoded text.
+
+ @param ReverseContext Pointer to the reverse hex dump context.  On input
+        indicates the format and it is populated with the binary form on
+        output.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+HexDumpBinaryParseLine(
+    __in PYORI_STRING Line,
+    __inout PHEXDUMP_REVERSE_CONTEXT ReverseContext
+    )
+{
+    YORI_STRING Substring;
+    DWORD StartChar;
+    DWORD Index;
+    BOOL Result;
+
+    YoriLibInitEmptyString(&Substring);
+
+    //
+    //  Trim trailing spaces.
+    //
+
+    while (Line->LengthInChars > 0 &&
+           Line->StartOfString[Line->LengthInChars - 1] == ' ') {
+
+        Line->LengthInChars--;
+    }
+
+    ReverseContext->BytesThisLine = 0;
+
+    Index = 0;
+    Result = TRUE;
+
+    while(TRUE) {
+
+        StartChar = Index * (ReverseContext->BytesPerWord * 2 + 1);
+
+        //
+        //  8 byte words have a seperator, so they consist of 17 raw chars
+        //
+
+        if (ReverseContext->BytesPerWord == 8 && Index > 0) {
+            StartChar += Index;
+        }
+
+        //
+        //  If the first char to parse is at the end of the line, this line
+        //  is finished successfully.  Note that it might be beyond the end
+        //  of the line due to a space, but that still constitutes success.
+        //
+
+        if (StartChar >= Line->LengthInChars) {
+            break;
+        }
+
+        //
+        //  If the line has more characters but not enough for a word, that
+        //  indicates parse failure.  We don't know what these characters
+        //  are for.
+        //
+
+        if (StartChar + ReverseContext->BytesPerWord > Line->LengthInChars) {
+            break;
+        }
+
+        //
+        //  If there is more data to output than the buffer can hold, grow
+        //  the buffer.  Since the buffer is reused across lines, grow it
+        //  substantially to avoid doing this too often.
+        //
+
+        if (ReverseContext->BytesThisLine + ReverseContext->BytesPerWord > ReverseContext->BytesAllocated) {
+            PUCHAR NewBuffer;
+            DWORD NewLength;
+
+            NewLength = ReverseContext->BytesAllocated * 4;
+            if (NewLength < 0x800) {
+                NewLength = 0x800;
+            }
+
+            NewBuffer = YoriLibMalloc(NewLength);
+            if (NewBuffer == NULL) {
+                Result = FALSE;
+                break;
+            }
+
+            memcpy(NewBuffer, ReverseContext->OutputBuffer, ReverseContext->BytesThisLine);
+            if (ReverseContext->OutputBuffer != ReverseContext->StaticOutputBuffer) {
+                YoriLibFree(ReverseContext->OutputBuffer);
+            }
+
+            ReverseContext->OutputBuffer = NewBuffer;
+            ReverseContext->BytesAllocated = NewLength;
+        }
+
+        Substring.StartOfString = &Line->StartOfString[StartChar];
+        Substring.LengthInChars = Line->LengthInChars - StartChar;
+
+        switch(ReverseContext->BytesPerWord) {
+            case 1:
+                if (!HexDumpReverseParseByte(&Substring, ReverseContext)) {
+                    Result = FALSE;
+                }
+                break;
+            case 2:
+                if (!HexDumpReverseParseWord(&Substring, ReverseContext)) {
+                    Result = FALSE;
+                }
+                break;
+            case 4:
+                if (!HexDumpReverseParseDword(&Substring, ReverseContext)) {
+                    Result = FALSE;
+                }
+                break;
+            case 8:
+                if (!HexDumpReverseParseDwordLong(&Substring, ReverseContext)) {
+                    Result = FALSE;
+                }
+                break;
+            default:
+                Result = FALSE;
+                break;
+        }
+
+        if (Result == FALSE) {
+            break;
+        }
+
+        Index++;
+    }
+
+    return Result;
+}
+
+/**
+ Convert a single stream of hex encoded input into binary output.  The format
+ of the input can contain any supported word length.
+
+ @param hSource Handle to a source stream containing hex encoded data.
+
+ @param HexDumpContext Pointer to hex dump context.  Currently unused for
+        reverse processing.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+HexDumpBinaryProcessStream(
+    __in HANDLE hSource,
+    __in PHEXDUMP_CONTEXT HexDumpContext
+    )
+{
+    PVOID LineContext = NULL;
+    YORI_STRING LineString;
+    HANDLE OutputHandle;
+    DWORD BytesWritten;
+    DWORDLONG LineNumber;
+    HEXDUMP_REVERSE_CONTEXT ReverseContext;
+
+    YoriLibInitEmptyString(&LineString);
+    HexDumpContext->FilesFound++;
+    HexDumpContext->FilesFoundThisArg++;
+
+    LineNumber = 0;
+
+    if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
+        return TRUE;
+    }
+
+    LineNumber++;
+
+    if (!HexDumpDetectReverseFormatFromLine(&LineString, &ReverseContext)) {
+        YoriLibLineReadClose(LineContext);
+        YoriLibFreeStringContents(&LineString);
+        return FALSE;
+    }
+
+    if (ReverseContext.CharsInInputLineToIgnore != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a stream of hex digits, line %lli\n"), LineNumber);
+        YoriLibLineReadClose(LineContext);
+        YoriLibFreeStringContents(&LineString);
+        return FALSE;
+    }
+    ReverseContext.OutputBuffer = ReverseContext.StaticOutputBuffer;
+    ReverseContext.BytesAllocated = sizeof(ReverseContext.StaticOutputBuffer);
+
+    OutputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    while (TRUE) {
+
+        if (!HexDumpBinaryParseLine(&LineString, &ReverseContext)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a stream of hex digits, line %lli\n"), LineNumber);
+            break;
+        }
+
+        if (ReverseContext.BytesThisLine > 0) {
+            WriteFile(OutputHandle, ReverseContext.OutputBuffer, ReverseContext.BytesThisLine, &BytesWritten, NULL);
+        }
+
+        if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
+            break;
+        }
+
+        LineNumber++;
+    }
+
+    if (ReverseContext.OutputBuffer != ReverseContext.StaticOutputBuffer) {
+        YoriLibFree(ReverseContext.OutputBuffer);
+        ReverseContext.OutputBuffer = NULL;
+    }
+
+    YoriLibLineReadClose(LineContext);
+    YoriLibFreeStringContents(&LineString);
+
+    return TRUE;
+}
+
 
 /**
  Process a single opened stream, enumerating through all lines and displaying
@@ -840,33 +1087,45 @@ HexDumpProcessStream(
 }
 
 /**
+ Prototype for a function which can perform the user's requested action on a
+ successfully opened stream.
+ */
+typedef BOOL HEXDUMP_PROCESS_STREAM_FN(HANDLE hSource, PHEXDUMP_CONTEXT HexDumpContext);
+
+/**
+ Pointer to a function which can perform the user's requested action on a
+ successfully opened stream.
+ */
+typedef HEXDUMP_PROCESS_STREAM_FN *PHEXDUMP_PROCESS_STREAM_FN;
+
+/**
  A callback that is invoked when a file is found that matches a search criteria
- specified in the set of strings to enumerate.
+ specified in the set of strings to enumerate.  This function takes a function
+ pointer to invoke in order to process any successfully opened file.
 
  @param FilePath Pointer to the file path that was found.
 
  @param FileInfo Information about the file.  Can be NULL if the file being
         opened was not found by enumeration.
 
- @param Depth Specifies recursion depth.  Ignored in this application.
-
- @param Context Pointer to the hexdump context structure indicating the
+ @param HexDumpContext Pointer to the hexdump context structure indicating the
         action to perform and populated with the file and line count found.
+
+ @param Fn Pointer to a function to invoke if the file can be successfully
+        opened.  This function is expected to perform the requested processing
+        on the file.
 
  @return TRUE to continute enumerating, FALSE to abort.
  */
 BOOL
-HexDumpFileFoundCallback(
+HexDumpCommonFileFoundCallback(
     __in PYORI_STRING FilePath,
     __in_opt PWIN32_FIND_DATA FileInfo,
-    __in DWORD Depth,
-    __in PVOID Context
+    __in PHEXDUMP_CONTEXT HexDumpContext,
+    __in PHEXDUMP_PROCESS_STREAM_FN Fn
     )
 {
     HANDLE FileHandle;
-    PHEXDUMP_CONTEXT HexDumpContext = (PHEXDUMP_CONTEXT)Context;
-
-    UNREFERENCED_PARAMETER(Depth);
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
@@ -892,12 +1151,41 @@ HexDumpFileFoundCallback(
         }
 
         HexDumpContext->SavedErrorThisArg = ERROR_SUCCESS;
-        HexDumpProcessStream(FileHandle, HexDumpContext);
+        Fn(FileHandle, HexDumpContext);
 
         CloseHandle(FileHandle);
     }
 
     return TRUE;
+}
+
+/**
+ A callback that is invoked when a file is found that matches a search criteria
+ specified in the set of strings to enumerate.
+
+ @param FilePath Pointer to the file path that was found.
+
+ @param FileInfo Information about the file.  Can be NULL if the file being
+        opened was not found by enumeration.
+
+ @param Depth Specifies recursion depth.  Ignored in this application.
+
+ @param Context Pointer to the hexdump context structure indicating the
+        action to perform and populated with the file and line count found.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+HexDumpFileFoundCallback(
+    __in PYORI_STRING FilePath,
+    __in_opt PWIN32_FIND_DATA FileInfo,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PHEXDUMP_CONTEXT HexDumpContext = (PHEXDUMP_CONTEXT)Context;
+    UNREFERENCED_PARAMETER(Depth);
+    return HexDumpCommonFileFoundCallback(FilePath, FileInfo, HexDumpContext, HexDumpProcessStream);
 }
 
 /**
@@ -924,43 +1212,39 @@ HexDumpReverseFileFoundCallback(
     __in PVOID Context
     )
 {
-    HANDLE FileHandle;
     PHEXDUMP_CONTEXT HexDumpContext = (PHEXDUMP_CONTEXT)Context;
-
     UNREFERENCED_PARAMETER(Depth);
-
-    ASSERT(YoriLibIsStringNullTerminated(FilePath));
-
-    if (FileInfo == NULL ||
-        (FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
-
-        FileHandle = CreateFile(FilePath->StartOfString,
-                                GENERIC_READ,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                                NULL,
-                                OPEN_EXISTING,
-                                FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                                NULL);
-
-        if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-            if (HexDumpContext->SavedErrorThisArg == ERROR_SUCCESS) {
-                DWORD LastError = GetLastError();
-                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: open of %y failed: %s"), FilePath, ErrText);
-                YoriLibFreeWinErrorText(ErrText);
-            }
-            return TRUE;
-        }
-
-        HexDumpContext->SavedErrorThisArg = ERROR_SUCCESS;
-        HexDumpReverseProcessStream(FileHandle, HexDumpContext);
-
-        CloseHandle(FileHandle);
-    }
-
-    return TRUE;
+    return HexDumpCommonFileFoundCallback(FilePath, FileInfo, HexDumpContext, HexDumpReverseProcessStream);
 }
 
+/**
+ A callback that is invoked when a file is found that matches a search criteria
+ specified in the set of strings to enumerate.
+
+ @param FilePath Pointer to the file path that was found.
+
+ @param FileInfo Information about the file.  Can be NULL if the file being
+        opened was not found by enumeration.
+
+ @param Depth Specifies recursion depth.  Ignored in this application.
+
+ @param Context Pointer to the hexdump context structure indicating the
+        action to perform and populated with the file and line count found.
+
+ @return TRUE to continute enumerating, FALSE to abort.
+ */
+BOOL
+HexDumpBinaryFileFoundCallback(
+    __in PYORI_STRING FilePath,
+    __in_opt PWIN32_FIND_DATA FileInfo,
+    __in DWORD Depth,
+    __in PVOID Context
+    )
+{
+    PHEXDUMP_CONTEXT HexDumpContext = (PHEXDUMP_CONTEXT)Context;
+    UNREFERENCED_PARAMETER(Depth);
+    return HexDumpCommonFileFoundCallback(FilePath, FileInfo, HexDumpContext, HexDumpBinaryProcessStream);
+}
 
 /**
  A callback that is invoked when a directory cannot be successfully enumerated.
@@ -1321,14 +1605,15 @@ ENTRYPOINT(
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
+    BOOLEAN ArgumentUnderstood;
     DWORD i;
     DWORD StartArg = 0;
     DWORD MatchFlags;
     DWORD CharsConsumed;
-    BOOL BasicEnumeration = FALSE;
-    BOOL DiffMode = FALSE;
-    BOOL Reverse = FALSE;
+    BOOLEAN BasicEnumeration = FALSE;
+    BOOLEAN DiffMode = FALSE;
+    BOOLEAN BinaryEncode = FALSE;
+    BOOLEAN Reverse = FALSE;
     HEXDUMP_CONTEXT HexDumpContext;
     YORI_STRING Arg;
 
@@ -1346,10 +1631,15 @@ ENTRYPOINT(
                 HexDumpHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2020"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("bin")) == 0) {
+                BinaryEncode = TRUE;
+                Reverse = FALSE;
+                HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 DiffMode = TRUE;
@@ -1397,6 +1687,7 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 Reverse = TRUE;
+                BinaryEncode = FALSE;
                 HexDumpContext.CStyleInclude = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
@@ -1452,7 +1743,9 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
 
-        if (Reverse) {
+        if (BinaryEncode) {
+            HexDumpBinaryProcessStream(GetStdHandle(STD_INPUT_HANDLE), &HexDumpContext);
+        } else if (Reverse) {
             HexDumpReverseProcessStream(GetStdHandle(STD_INPUT_HANDLE), &HexDumpContext);
         } else {
             HexDumpProcessStream(GetStdHandle(STD_INPUT_HANDLE), &HexDumpContext);
@@ -1471,7 +1764,14 @@ ENTRYPOINT(
             HexDumpContext.FilesFoundThisArg = 0;
             HexDumpContext.SavedErrorThisArg = ERROR_SUCCESS;
 
-            if (Reverse) {
+            if (BinaryEncode) {
+                YoriLibForEachStream(&ArgV[i],
+                                     MatchFlags,
+                                     0,
+                                     HexDumpBinaryFileFoundCallback,
+                                     HexDumpFileEnumerateErrorCallback,
+                                     &HexDumpContext);
+            } else if (Reverse) {
                 YoriLibForEachStream(&ArgV[i],
                                      MatchFlags,
                                      0,
@@ -1491,7 +1791,9 @@ ENTRYPOINT(
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
-                    if (Reverse) {
+                    if (BinaryEncode) {
+                        HexDumpBinaryFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
+                    } else if (Reverse) {
                         HexDumpReverseFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
                     } else {
                         HexDumpFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
