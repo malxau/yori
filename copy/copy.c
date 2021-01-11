@@ -1,9 +1,9 @@
 /**
  * @file copy/copy.c
  *
- * Yori shell perform simple math operations
+ * Yori shell copy files
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -705,6 +705,55 @@ CopyTimestamps(
 }
 
 /**
+ Call CopyFile, and if the operation fails, check if it's due to readonly,
+ hidden or system attributes on the target, clear those and retry.
+
+ @param SourceFile The source file name, expected to be NULL terminated.
+
+ @param DestFile The destination file name, expected to be NULL terminated.
+
+ @return The Win32 error code, possibly ERROR_SUCCESS or appropriate error
+         on failure.
+ */
+DWORD
+CopyFileWithDestAttributeOverride(
+    __in PYORI_STRING SourceFile,
+    __in PYORI_STRING DestFile
+    )
+{
+    DWORD Error;
+    DWORD Attributes;
+    DWORD NewAttributes;
+
+    ASSERT(YoriLibIsStringNullTerminated(SourceFile));
+    ASSERT(YoriLibIsStringNullTerminated(DestFile));
+
+    Error = ERROR_SUCCESS;
+    if (!CopyFile(SourceFile->StartOfString, DestFile->StartOfString, FALSE)) {
+        Error = GetLastError();
+        if (Error == ERROR_ACCESS_DENIED) {
+            Attributes = GetFileAttributes(DestFile->StartOfString);
+            if (Attributes != (DWORD)-1 &&
+                (Attributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) != 0) {
+
+                NewAttributes = Attributes & ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
+                if (!SetFileAttributes(DestFile->StartOfString, NewAttributes)) {
+                    return Error;
+                }
+
+                if (!CopyFile(SourceFile->StartOfString, DestFile->StartOfString, FALSE)) {
+                    SetFileAttributes(DestFile->StartOfString, Attributes);
+                    return Error;
+                }
+                Error = ERROR_SUCCESS;
+            }
+        }
+    }
+
+    return Error;
+}
+
+/**
  A callback that is invoked when a file is found that matches a search criteria
  specified in the set of strings to enumerate.
 
@@ -740,6 +789,7 @@ CopyFileFoundCallback(
     PYORI_STRING DestNameToDisplay;
     DWORD SlashesFound;
     DWORD Index;
+    DWORD LastError;
 
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
@@ -812,7 +862,7 @@ CopyFileFoundCallback(
         } else if (FileInfo != NULL &&
                    FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             if (!CreateDirectory(FullDest.StartOfString, NULL)) {
-                DWORD LastError = GetLastError();
+                LastError = GetLastError();
                 if (LastError != ERROR_ALREADY_EXISTS) {
                     LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("CreateDirectory failed: %s: %s"), FullDest.StartOfString, ErrText);
@@ -822,8 +872,8 @@ CopyFileFoundCallback(
         } else if (CopyContext->DestinationIsDevice || YoriLibIsFileNameDeviceName(FilePath)) {
             CopyAsDumbDataMove(FilePath, &FullDest);
         } else {
-            if (!CopyFile(FilePath->StartOfString, FullDest.StartOfString, FALSE)) {
-                DWORD LastError = GetLastError();
+            LastError = CopyFileWithDestAttributeOverride(FilePath, &FullDest);
+            if (LastError != ERROR_SUCCESS) {
 
                 //
                 //  If it failed with an error indicating CopyFile couldn't
@@ -989,10 +1039,15 @@ ENTRYPOINT(
                 CopyHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
+                CompressionAlgorithm.EntireAlgorithm = 0;
+                CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS16K;
+                CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:lzx")) == 0) {
 
