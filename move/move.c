@@ -112,6 +112,7 @@ MoveFileFoundCallback(
 {
     PMOVE_CONTEXT MoveContext = (PMOVE_CONTEXT)Context;
     YORI_STRING FullDest;
+    DWORD LastError;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -140,8 +141,8 @@ MoveFileFoundCallback(
         }
     }
 
-    if (!YoriLibMoveFile(FilePath, &FullDest, MoveContext->ReplaceExisting)) {
-        DWORD LastError = GetLastError();
+    LastError = YoriLibMoveFile(FilePath, &FullDest, MoveContext->ReplaceExisting);
+    if (LastError != ERROR_SUCCESS) {
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("MoveFile failed: %s"), ErrText);
         YoriLibFreeWinErrorText(ErrText);

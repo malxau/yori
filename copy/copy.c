@@ -705,55 +705,6 @@ CopyTimestamps(
 }
 
 /**
- Call CopyFile, and if the operation fails, check if it's due to readonly,
- hidden or system attributes on the target, clear those and retry.
-
- @param SourceFile The source file name, expected to be NULL terminated.
-
- @param DestFile The destination file name, expected to be NULL terminated.
-
- @return The Win32 error code, possibly ERROR_SUCCESS or appropriate error
-         on failure.
- */
-DWORD
-CopyFileWithDestAttributeOverride(
-    __in PYORI_STRING SourceFile,
-    __in PYORI_STRING DestFile
-    )
-{
-    DWORD Error;
-    DWORD Attributes;
-    DWORD NewAttributes;
-
-    ASSERT(YoriLibIsStringNullTerminated(SourceFile));
-    ASSERT(YoriLibIsStringNullTerminated(DestFile));
-
-    Error = ERROR_SUCCESS;
-    if (!CopyFile(SourceFile->StartOfString, DestFile->StartOfString, FALSE)) {
-        Error = GetLastError();
-        if (Error == ERROR_ACCESS_DENIED) {
-            Attributes = GetFileAttributes(DestFile->StartOfString);
-            if (Attributes != (DWORD)-1 &&
-                (Attributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) != 0) {
-
-                NewAttributes = Attributes & ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
-                if (!SetFileAttributes(DestFile->StartOfString, NewAttributes)) {
-                    return Error;
-                }
-
-                if (!CopyFile(SourceFile->StartOfString, DestFile->StartOfString, FALSE)) {
-                    SetFileAttributes(DestFile->StartOfString, Attributes);
-                    return Error;
-                }
-                Error = ERROR_SUCCESS;
-            }
-        }
-    }
-
-    return Error;
-}
-
-/**
  A callback that is invoked when a file is found that matches a search criteria
  specified in the set of strings to enumerate.
 
@@ -872,7 +823,7 @@ CopyFileFoundCallback(
         } else if (CopyContext->DestinationIsDevice || YoriLibIsFileNameDeviceName(FilePath)) {
             CopyAsDumbDataMove(FilePath, &FullDest);
         } else {
-            LastError = CopyFileWithDestAttributeOverride(FilePath, &FullDest);
+            LastError = YoriLibCopyFile(FilePath, &FullDest);
             if (LastError != ERROR_SUCCESS) {
 
                 //

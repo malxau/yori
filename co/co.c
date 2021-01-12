@@ -686,6 +686,7 @@ CoMoveButtonClicked(
     YORI_STRING FullDir;
     YORI_STRING FullDest;
     DWORD Index;
+    DWORD LastError;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
     YORI_STRING Title;
@@ -712,8 +713,8 @@ CoMoveButtonClicked(
 
             FullDest.LengthInChars = YoriLibSPrintfS(FullDest.StartOfString, FullDest.LengthAllocated, _T("%y\\%y"), &FullDir, &CoContext.FileArray[Index]->DisplayName);
 
-            if (!YoriLibMoveFile(&CoContext.FileArray[Index]->FullFilePath, &FullDest, TRUE)) {
-                DWORD LastError;
+            LastError = YoriLibMoveFile(&CoContext.FileArray[Index]->FullFilePath, &FullDest, TRUE);
+            if (LastError != ERROR_SUCCESS) {
                 LPTSTR ErrText;
                 LastError = GetLastError();
                 ErrText = YoriLibGetWinErrorText(LastError);
@@ -756,6 +757,7 @@ CoCopyButtonClicked(
     YORI_STRING FullDir;
     YORI_STRING FullDest;
     DWORD Index;
+    DWORD LastError;
     BOOLEAN ListChanged = FALSE;
     YORI_STRING Buttons[1];
     YORI_STRING Title;
@@ -781,8 +783,8 @@ CoCopyButtonClicked(
         if (YoriWinListIsOptionSelected(CoContext.List, Index)) {
             FullDest.LengthInChars = YoriLibSPrintfS(FullDest.StartOfString, FullDest.LengthAllocated, _T("%y\\%y"), &FullDir, &CoContext.FileArray[Index]->DisplayName);
 
-            if (!CopyFile(CoContext.FileArray[Index]->FullFilePath.StartOfString, FullDest.StartOfString, FALSE)) {
-                DWORD LastError;
+            LastError = YoriLibCopyFile(&CoContext.FileArray[Index]->FullFilePath, &FullDest);
+            if (LastError != ERROR_SUCCESS) {
                 LPTSTR ErrText;
                 LastError = GetLastError();
                 ErrText = YoriLibGetWinErrorText(LastError);

@@ -2411,11 +2411,17 @@ YoriLibDereference(
 
 // *** MOVEFILE.C ***
 
-BOOLEAN
+DWORD
 YoriLibMoveFile(
     __in PYORI_STRING Source,
     __in PYORI_STRING FullDest,
     __in BOOLEAN ReplaceExisting
+    );
+
+DWORD
+YoriLibCopyFile(
+    __in PYORI_STRING SourceFile,
+    __in PYORI_STRING DestFile
     );
 
 // *** NUMKEY.C ***
