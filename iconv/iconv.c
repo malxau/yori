@@ -115,6 +115,8 @@ IconvProcessStream(
     DWORD OriginalInputEncoding;
     DWORD OriginalOutputEncoding;
     LPTSTR OriginalLineEnding;
+    BOOL TimeoutReached;
+    YORI_LIB_LINE_ENDING LineEnding;
 
     IconvContext->FilesFound++;
 
@@ -130,13 +132,17 @@ IconvProcessStream(
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
+        LineEnding = YoriLibLineEndingNone;
+        if (!YoriLibReadLineToStringEx(&LineString, &LineContext, TRUE, INFINITE, hSource, &LineEnding, &TimeoutReached)) {
             break;
         }
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &LineString);
-        if (LineString.LengthInChars == 0 || !GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo) || ScreenInfo.dwCursorPosition.X != 0) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+
+        if (LineEnding != YoriLibLineEndingNone) {
+            if (LineString.LengthInChars == 0 || !GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo) || ScreenInfo.dwCursorPosition.X != 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            }
         }
     }
 
