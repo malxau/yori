@@ -1212,7 +1212,7 @@ ENTRYPOINT(
     if (DirContext.FilesFound == 0 && DirContext.DirsFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("dir: no matching files found\n"));
         return EXIT_FAILURE;
-    } else if (DirContext.Recursive) {
+    } else if (DirContext.Recursive && !DirContext.MinimalDisplay) {
         DirOutputEndOfRecursiveSummary(&DirContext);
     }
 
