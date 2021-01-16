@@ -428,6 +428,7 @@ ENTRYPOINT(
     DWORD i;
     YORI_STRING Arg;
     YORI_STRING YsFormatString;
+    DWORD StartArg = 0;
 
     YoriLibInitEmptyString(&YsFormatString);
 
@@ -447,9 +448,7 @@ ENTRYPOINT(
             }
         } else {
             ArgumentUnderstood = TRUE;
-            YsFormatString.StartOfString = ArgV[i].StartOfString;
-            YsFormatString.LengthInChars = ArgV[i].LengthInChars;
-            YsFormatString.LengthAllocated = ArgV[i].LengthAllocated;
+            StartArg = i;
             break;
         }
 
@@ -458,8 +457,12 @@ ENTRYPOINT(
         }
     }
 
-    if (YsFormatString.StartOfString == NULL) {
+    if (StartArg == 0) {
         YoriLibConstantString(&YsFormatString, FormatString);
+    } else {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &YsFormatString)) {
+            return EXIT_FAILURE;
+        }
     }
 
     YoriLibInitEmptyString(&DisplayString);
@@ -470,6 +473,7 @@ ENTRYPOINT(
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
         YoriLibFreeStringContents(&DisplayString);
     }
+    YoriLibFreeStringContents(&YsFormatString);
 
     return EXIT_SUCCESS;
 }
