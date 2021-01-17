@@ -84,6 +84,7 @@ ENTRYPOINT(
     DWORD StartArg = 0;
     DWORD i;
     YORI_STRING Arg;
+    DWORD Result;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -120,10 +121,13 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+    Result = EXIT_SUCCESS;
+
     for (i = StartArg; i < ArgC; i++) {
         YORI_STRING FullPath;
         if (!YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mkdir: could not resolve full path: %y\n"), &ArgV[i]);
+            Result = EXIT_FAILURE;
         } else {
 
             //
@@ -136,12 +140,13 @@ ENTRYPOINT(
                 LPTSTR ErrText = YoriLibGetWinErrorText(Err);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mkdir: create failed: %y: %s"), &FullPath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
+                Result = EXIT_FAILURE;
             }
             YoriLibFreeStringContents(&FullPath);
         }
     }
 
-    return EXIT_SUCCESS;
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:
