@@ -73,6 +73,11 @@ typedef struct _RMDIR_CONTEXT {
      */
     BOOLEAN DeleteFiles;
 
+    /**
+     The number of directories successfully removed.
+     */
+    DWORD DirectoriesRemoved;
+
 } RMDIR_CONTEXT, *PRMDIR_CONTEXT;
 
 BOOL
@@ -136,6 +141,9 @@ RmdirFileFoundCallback(
 
     if (RmdirContext->RecycleBin) {
         if (YoriLibRecycleBinFile(FilePath)) {
+            if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+                RmdirContext->DirectoriesRemoved++;
+            }
             FileDeleted = TRUE;
         }
     }
@@ -148,6 +156,8 @@ RmdirFileFoundCallback(
         } else {
             if (!RemoveDirectory(FilePath->StartOfString)) {
                 Err = GetLastError();
+            } else {
+                RmdirContext->DirectoriesRemoved++;
             }
         }
     }
@@ -176,6 +186,8 @@ RmdirFileFoundCallback(
             } else {
                 if (!RemoveDirectory(FilePath->StartOfString)) {
                     Err = GetLastError();
+                } else {
+                    RmdirContext->DirectoriesRemoved++;
                 }
             }
 
@@ -377,6 +389,9 @@ ENTRYPOINT(
                            &RmdirContext);
     }
 
+    if (RmdirContext.DirectoriesRemoved == 0) {
+        return EXIT_FAILURE;
+    }
     return EXIT_SUCCESS;
 }
 
