@@ -189,16 +189,6 @@ PushdDisplayCurrentStackCount(VOID)
 
  @return ExitCode, zero for success, nonzero for failure.
  */
-
-/**
- The main entrypoint for the popd command.
-
- @param ArgC The number of arguments.
-
- @param ArgV The argument array.
-
- @return ExitCode, zero for success, nonzero for failure.
- */
 DWORD
 YORI_BUILTIN_FN
 YoriCmd_POPD(
