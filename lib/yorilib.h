@@ -897,6 +897,9 @@ BOOL
 YoriLibLoadVirtDiskFunctions(VOID);
 
 BOOL
+YoriLibLoadWinBrandFunctions(VOID);
+
+BOOL
 YoriLibLoadWinInetFunctions(VOID);
 
 BOOL
@@ -2464,6 +2467,12 @@ YoriLibGetOsVersion(
     __out PDWORD MajorVersion,
     __out PDWORD MinorVersion,
     __out PDWORD BuildNumber
+    );
+
+__success(return)
+BOOL
+YoriLibLoadOsEdition(
+    __out PYORI_STRING Edition
     );
 
 __success(return)

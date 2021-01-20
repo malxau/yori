@@ -185,6 +185,154 @@ YoriLibGetOsVersion(
 }
 
 /**
+ Return the OS edition as a string.  On newer systems this is obtained
+ directly from the system's branding provider, on older systems it needs to
+ be emulated, and on really old systems it's just a string literal.
+
+ @param Edition On successful completion, updated to contain a newly allocated
+        string containing the system edition.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibLoadOsEdition(
+    __out PYORI_STRING Edition
+    )
+{
+    YORI_OS_VERSION_INFO_EX OsVersionInfoEx;
+    LPWSTR BrandingString;
+    DWORD Length;
+
+    YoriLibLoadWinBrandFunctions();
+
+    //
+    //  If the operating system supports asking for its brand, use that.
+    //  This should exist on Vista+.
+    //
+
+    if (DllWinBrand.pBrandingFormatString != NULL) {
+        BrandingString = DllWinBrand.pBrandingFormatString(L"%WINDOWS_LONG%");
+        if (BrandingString == NULL) {
+            return FALSE;
+        }
+    
+        Length = wcslen(BrandingString);
+    
+        if (!YoriLibAllocateString(Edition, Length + 1)) {
+            return FALSE;
+        }
+    
+        Edition->LengthInChars = YoriLibSPrintf(Edition->StartOfString, _T("%s"), BrandingString);
+        GlobalFree(BrandingString);
+        return TRUE;
+    }
+
+    //
+    //  Query the suite mask and system version.  This should only be needed
+    //  for systems that predate version lies, so this can be a little
+    //  careless.
+    //
+
+    OsVersionInfoEx.Core.dwOsVersionInfoSize = sizeof(OsVersionInfoEx);
+    if (DllKernel32.pGetVersionExW == NULL ||
+        !DllKernel32.pGetVersionExW(&OsVersionInfoEx.Core)) {
+        BrandingString = _T("Windows NT");
+    } else {
+        DWORD WinVer;
+
+        WinVer = OsVersionInfoEx.Core.dwMajorVersion << 16 | OsVersionInfoEx.Core.dwMinorVersion;
+
+        switch(WinVer) {
+            case 0x40000:
+                if (OsVersionInfoEx.wSuiteMask & VER_SUITE_SMALLBUSINESS ||
+                    OsVersionInfoEx.wSuiteMask & VER_SUITE_SMALLBUSINESS_RESTRICTED) {
+                    BrandingString = _T("Small Business Server 4.x");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_ENTERPRISE) {
+                    BrandingString = _T("Windows NT 4.0 Enterprise Edition");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_BACKOFFICE) {
+                    BrandingString = _T("BackOffice Server 4.x");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_TERMINAL) {
+                    BrandingString = _T("Windows NT 4.0 Terminal Server Edition");
+                } else if (OsVersionInfoEx.wProductType == VER_NT_SERVER ||
+                           OsVersionInfoEx.wProductType == VER_NT_DOMAIN_CONTROLLER) {
+                    BrandingString = _T("Windows NT 4.0 Server");
+                } else if (OsVersionInfoEx.wProductType == VER_NT_WORKSTATION) {
+                    BrandingString = _T("Windows NT 4.0 Workstation");
+                } else {
+                    BrandingString = _T("Windows NT 4.0 Unknown");
+                }
+                break;
+            case 0x50000:
+                if (OsVersionInfoEx.wSuiteMask & VER_SUITE_SMALLBUSINESS ||
+                    OsVersionInfoEx.wSuiteMask & VER_SUITE_SMALLBUSINESS_RESTRICTED) {
+                    BrandingString = _T("Small Business Server 2000");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_ENTERPRISE) {
+                    BrandingString = _T("Windows 2000 Advanced Server");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_DATACENTER) {
+                    BrandingString = _T("Windows 2000 DataCenter Server");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_BACKOFFICE) {
+                    BrandingString = _T("BackOffice 2000");
+                } else if (OsVersionInfoEx.wProductType == VER_NT_SERVER ||
+                           OsVersionInfoEx.wProductType == VER_NT_DOMAIN_CONTROLLER) {
+                    BrandingString = _T("Windows 2000 Server");
+                } else if (OsVersionInfoEx.wProductType == VER_NT_WORKSTATION) {
+                    BrandingString = _T("Windows 2000 Professional");
+                } else {
+                    BrandingString = _T("Windows 2000 Unknown");
+                }
+                break;
+            case 0x50001:
+                if (OsVersionInfoEx.wSuiteMask & VER_SUITE_EMBEDDEDNT) {
+                    BrandingString = _T("Windows XP Embedded");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_PERSONAL) {
+                    BrandingString = _T("Windows XP Home");
+                } else {
+                    BrandingString = _T("Windows XP Professional");
+                }
+                break;
+            case 0x50002:
+                if (OsVersionInfoEx.wSuiteMask & VER_SUITE_SMALLBUSINESS ||
+                    OsVersionInfoEx.wSuiteMask & VER_SUITE_SMALLBUSINESS_RESTRICTED) {
+                    BrandingString = _T("Small Business Server 2003");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_ENTERPRISE) {
+                    BrandingString = _T("Windows Server 2003 Enterprise Edition");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_DATACENTER) {
+                    BrandingString = _T("Windows Server 2003 Datacenter Edition");
+                } else if (OsVersionInfoEx.wSuiteMask & VER_SUITE_BLADE) {
+                    BrandingString = _T("Windows Server 2003 Web Edition");
+                } else if (OsVersionInfoEx.wProductType == VER_NT_SERVER ||
+                           OsVersionInfoEx.wProductType == VER_NT_DOMAIN_CONTROLLER) {
+                    BrandingString = _T("Windows Server 2003");
+                } else if (OsVersionInfoEx.wProductType == VER_NT_WORKSTATION) {
+                    BrandingString = _T("Windows XP 64 bit edition");
+                } else {
+                    BrandingString = _T("Windows Server 2003 Unknown");
+                }
+                break;
+            default:
+
+                //
+                //  WinBrand.dll should be available on Vista+, and SuiteMask
+                //  is not available before NT 4.0 SP6, so this fallback
+                //  should be somewhat accurate.
+                //
+
+                BrandingString = _T("Unknown Windows");
+                break;
+        }
+    }
+
+    YoriLibInitEmptyString(Edition);
+    YoriLibYPrintf(Edition, _T("%s"), BrandingString);
+    if (Edition->StartOfString == NULL) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
  Return TRUE to indicate the target process is 32 bit, or FALSE if the target
  process is 64 bit.
 

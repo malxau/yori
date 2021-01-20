@@ -4,7 +4,7 @@
  * Yori shell header file to define OS things that the compilation environment
  * doesn't support.
  *
- * Copyright (c) 2017-2020 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1090,6 +1090,143 @@ typedef struct _YORI_OS_VERSION_INFO {
      */
     TCHAR szCSDVersion[128];
 } YORI_OS_VERSION_INFO, *PYORI_OS_VERSION_INFO;
+
+/**
+ An implementation of the OSVERSIONINFOEX structure.
+ */
+typedef struct _YORI_OS_VERSION_INFO_EX {
+
+    /**
+     The base form of this structure.
+     */
+    YORI_OS_VERSION_INFO Core;
+
+    /**
+     On successful completion, the service pack major version.
+     */
+    WORD wServicePackMajor;
+
+    /**
+     On successful completion, the service pack minor version.
+     */
+    WORD wServicePackMinor;
+
+    /**
+     On successful completion, a set of capability flags indicating the
+     capabilities of the edition.
+     */
+    WORD wSuiteMask;
+
+    /**
+     On successful completion, indicates the broad class of product.
+     */
+    BYTE wProductType;
+
+    /**
+     Reserved for future use.
+     */
+    BYTE wReserved;
+} YORI_OS_VERSION_INFO_EX, *PYORI_OS_VERSION_INFO_EX;
+
+#ifndef VER_SUITE_SMALLBUSINESS
+/**
+ Definition of the suite mask flag for small business server for compilation
+ environments which don't provide it.
+ */
+#define VER_SUITE_SMALLBUSINESS 0x0001
+#endif
+
+#ifndef VER_SUITE_ENTERPRISE
+/**
+ Definition of the suite mask flag for enterprise edition for compilation
+ environments which don't provide it.
+ */
+#define VER_SUITE_ENTERPRISE 0x0002
+#endif
+
+#ifndef VER_SUITE_BACKOFFICE
+/**
+ Definition of the suite mask flag for backoffice server for compilation
+ environments which don't provide it.
+ */
+#define VER_SUITE_BACKOFFICE 0x0004
+#endif
+
+#ifndef VER_SUITE_TERMINAL
+/**
+ Definition of the suite mask flag for terminal server for compilation
+ environments which don't provide it.
+ */
+#define VER_SUITE_TERMINAL 0x0010
+#endif
+
+#ifndef VER_SUITE_SMALLBUSINESS_RESTRICTED
+/**
+ Definition of the suite mask flag for small business server for compilation
+ environments which don't provide it.
+ */
+#define VER_SUITE_SMALLBUSINESS_RESTRICTED 0x0020
+#endif
+
+#ifndef VER_SUITE_EMBEDDEDNT
+/**
+ Definition of the suite mask flag for embedded for compilation environments
+ which don't provide it.
+ */
+#define VER_SUITE_EMBEDDEDNT 0x0040
+#endif
+
+#ifndef VER_SUITE_DATACENTER
+/**
+ Definition of the suite mask flag for datacenter server for compilation
+ environments which don't provide it.
+ */
+#define VER_SUITE_DATACENTER 0x0080
+#endif
+
+#ifndef VER_SUITE_PERSONAL
+/**
+ Definition of the suite mask flag for home edition for compilation
+ environments which don't provide it.
+ */
+#define VER_SUITE_PERSONAL 0x0200
+#endif
+
+#ifndef VER_SUITE_BLADE
+/**
+ Definition of the suite mask flag for web server for compilation environments
+ which don't provide it.
+ */
+#define VER_SUITE_BLADE 0x0400
+#endif
+
+#ifndef VER_NT_WORKSTATION
+/**
+ Definition of the product type flag for a workstation for compilation
+ environments which don't provide it.
+ */
+#define VER_NT_WORKSTATION 0x0001
+#endif
+
+#ifndef VER_NT_DOMAIN_CONTROLLER
+/**
+ Definition of the product type flag for a domain controller for compilation
+ environments which don't provide it.
+ */
+#define VER_NT_DOMAIN_CONTROLLER 0x0002
+#endif
+
+#ifndef VER_NT_SERVER
+/**
+ Definition of the product type flag for a server for compilation environments
+ which don't provide it.
+ */
+#define VER_NT_SERVER 0x0003
+#endif
+
+
+
+
 
 /**
  Output from the GetSystemInfo system call.  This is defined here so that it
@@ -7470,6 +7607,39 @@ typedef struct _YORI_VIRTDISK_FUNCTIONS {
 } YORI_VIRTDISK_FUNCTIONS, *PYORI_VIRTDISK_FUNCTIONS;
 
 extern YORI_VIRTDISK_FUNCTIONS DllVirtDisk;
+
+/**
+ A prototype for the BrandingFormatString function.
+ */
+typedef
+LPWSTR WINAPI
+BRANDING_FORMAT_STRING(LPCWSTR);
+
+/**
+ A prototype for a pointer to the BrandingFormatString function.
+ */
+typedef BRANDING_FORMAT_STRING *PBRANDING_FORMAT_STRING;
+
+/**
+ A structure containing optional function pointers to winbrand.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_WINBRAND_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to
+     BrandingFormatString.
+     */
+    PBRANDING_FORMAT_STRING pBrandingFormatString;
+
+} YORI_WINBRAND_FUNCTIONS, *PYORI_WINBRAND_FUNCTIONS;
+
+extern YORI_WINBRAND_FUNCTIONS DllWinBrand;
 
 /**
  A prototype for the InternetOpenA function.

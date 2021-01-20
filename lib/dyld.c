@@ -3,7 +3,7 @@
  *
  * Yori dynamically loaded OS function support
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -635,6 +635,34 @@ YoriLibLoadVirtDiskFunctions(VOID)
     DllVirtDisk.pMergeVirtualDisk = (PMERGE_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "MergeVirtualDisk");
     DllVirtDisk.pResizeVirtualDisk = (PRESIZE_VIRTUAL_DISK)GetProcAddress(DllVirtDisk.hDll, "ResizeVirtualDisk");
 
+    return TRUE;
+}
+
+/**
+ A structure containing pointers to winbrand.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_WINBRAND_FUNCTIONS DllWinBrand;
+
+/**
+ Load pointers to all optional WinBrand.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadWinBrandFunctions(VOID)
+{
+
+    if (DllWinBrand.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllWinBrand.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("WINBRAND.DLL"));
+    if (DllWinBrand.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllWinBrand.pBrandingFormatString = (PBRANDING_FORMAT_STRING)GetProcAddress(DllWinBrand.hDll, "BrandingFormatString");
     return TRUE;
 }
 
