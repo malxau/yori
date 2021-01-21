@@ -84,6 +84,10 @@ YoriLibMoveFile(
                 Error = ERROR_SUCCESS;
             }
         }
+
+        if (Error != ERROR_SUCCESS) {
+            return Error;
+        }
     }
 
     YoriLibGetOsVersion(&OsMajor, &OsMinor, &OsBuild);
