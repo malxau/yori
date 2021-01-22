@@ -506,7 +506,11 @@ YoriLibReadLineToStringEx(
 
             Sleep(DelayTime);
             CumulativeDelay += DelayTime;
-            DelayTime *= 2;
+            if (DelayTime < 10) {
+                DelayTime++;
+            } else {
+                DelayTime = DelayTime * 5 / 4;
+            }
             if (DelayTime > 500) {
                 DelayTime = 500;
             }
