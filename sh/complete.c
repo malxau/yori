@@ -2162,6 +2162,8 @@ YoriShCompleteGenerateNewBufferString(
         PYORI_STRING OldArgv = NULL;
         PYORI_LIBSH_ARG_CONTEXT OldArgContext = NULL;
         DWORD OldArgCount = 0;
+        DWORD CharsToConsume;
+        BOOLEAN QuotesAdded;
 
         if (CmdContext->CurrentArg >= CmdContext->ArgC) {
             DWORD Count;
@@ -2190,13 +2192,53 @@ YoriShCompleteGenerateNewBufferString(
         YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
         YoriLibCloneString(&CmdContext->ArgV[CmdContext->CurrentArg], &Match->Value);
         CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars = CharsFromMatchToUse;
-        if (ForceQuotes) {
-            CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = TRUE;
-            CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = TRUE;
-        } else {
-            CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
-            CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = FALSE;
-            YoriLibShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
+
+        //
+        //  If the argument doesn't currently have quotes, see if it needs
+        //  them added.
+        //
+
+        QuotesAdded = FALSE;
+        if (!CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted ||
+            !CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated) {
+
+            if (ForceQuotes) {
+                CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = TRUE;
+                CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = TRUE;
+            } else {
+                CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
+                CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = FALSE;
+                YoriLibShCheckIfArgNeedsQuotes(CmdContext, CmdContext->CurrentArg);
+            }
+
+            //
+            //  If it starts with an argument seperator, don't add the quotes
+            //  around it.
+            //
+
+            if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted &&
+                YoriLibShIsArgumentSeperator(&CmdContext->ArgV[CmdContext->CurrentArg], NULL, &CharsToConsume, NULL)) {
+
+                YORI_STRING Prefix;
+                YORI_STRING Suffix;
+                YORI_STRING NewArg;
+
+                YoriLibInitEmptyString(&Prefix);
+                YoriLibInitEmptyString(&Suffix);
+                YoriLibInitEmptyString(&NewArg);
+                Prefix.StartOfString = CmdContext->ArgV[CmdContext->CurrentArg].StartOfString;
+                Prefix.LengthInChars = CharsToConsume;
+                Suffix.StartOfString = &CmdContext->ArgV[CmdContext->CurrentArg].StartOfString[CharsToConsume];
+                Suffix.LengthInChars = CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars - CharsToConsume;
+                YoriLibYPrintf(&NewArg, _T("%y\"%y\""), &Prefix, &Suffix);
+                if (NewArg.StartOfString != NULL) {
+                    QuotesAdded = TRUE;
+                    YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
+                    memcpy(&CmdContext->ArgV[CmdContext->CurrentArg], &NewArg, sizeof(YORI_STRING));
+                    CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
+                    CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = FALSE;
+                }
+            }
         }
 
         //
@@ -2213,7 +2255,17 @@ YoriShCompleteGenerateNewBufferString(
             CursorOffset = CharsFromMatchToUse;
         }
         ASSERT(CursorOffset <= CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars);
-        if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted) {
+
+        if (QuotesAdded) {
+            if (CursorOffset > 0) {
+                if (!ForceQuotes &&
+                    CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars - 2) {
+                    CursorOffset += 2;
+                } else {
+                    CursorOffset += 1;
+                }
+            }
+        } else if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted) {
             if (CursorOffset > 0) {
                 if (!ForceQuotes &&
                     CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars) {
