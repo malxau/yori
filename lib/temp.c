@@ -138,4 +138,41 @@ YoriLibGetTempFileName(
     return TRUE;
 }
 
+/**
+ Return a path to the temp directory, but allocate extra space for a file name
+ to append to it.
+
+ @param TempPathName On successful completion, returns a newly allocated
+        string populated with the temp directory.
+
+ @param ExtraChars Specifies the number of extra characters to allocate in the
+        string in addition to the temp directory size.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGetTempPath(
+    __out PYORI_STRING TempPathName,
+    __in DWORD ExtraChars
+    )
+{
+    TempPathName->LengthAllocated = GetTempPath(0, NULL);
+    if (TempPathName->LengthAllocated == 0) {
+        return FALSE;
+    }
+
+    TempPathName->LengthAllocated += ExtraChars;
+
+    if (!YoriLibAllocateString(TempPathName, TempPathName->LengthAllocated)) {
+        return FALSE;
+    }
+
+    TempPathName->LengthInChars = GetTempPath(TempPathName->LengthAllocated,
+                                              TempPathName->StartOfString);
+
+
+    return TRUE;
+}
+
+
 // vim:sw=4:ts=4:et:

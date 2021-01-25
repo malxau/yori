@@ -635,6 +635,23 @@ typedef struct _MAKE_CONTEXT {
     YORI_STRING FileToProbe;
 
     /**
+     The temporary path applied to the ymake process.  Child processes are
+     assigned subdirectories under this path to use for their own temporary
+     file needs.
+     */
+    YORI_STRING TempPath;
+
+    /**
+     A bitmask representing which job IDs have been allocated.
+     */
+    DWORDLONG JobIdsAllocated;
+
+    /**
+     A bitmask representing temporary directories which have been created.
+     */
+    DWORDLONG TempDirectoriesCreated;
+
+    /**
      The time taken to execute processes as part of preprocessor commands.
      */
     DWORDLONG TimeInPreprocessorCreateProcess;
@@ -930,6 +947,11 @@ MakeExpandTargetVariable(
     );
 
 // *** EXEC.C ***
+
+VOID
+MakeCleanupTemporaryDirectories(
+    __in PMAKE_CONTEXT MakeContext
+    );
 
 BOOLEAN
 MakeExecuteRequiredTargets(

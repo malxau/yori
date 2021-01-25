@@ -211,6 +211,11 @@ ENTRYPOINT(
         }
     }
 
+    if (!YoriLibGetTempPath(&MakeContext.TempPath, 0)) {
+        Result = EXIT_FAILURE;
+        goto Cleanup;
+    }
+
     MakeContext.Scopes = YoriLibAllocateHashTable(1000);
     if (MakeContext.Scopes == NULL) {
         Result = EXIT_FAILURE;
@@ -493,6 +498,8 @@ Cleanup:
 
     QueryPerformanceCounter(&StartTime);
 
+    MakeCleanupTemporaryDirectories(&MakeContext);
+
     ASSERT(MakeContext.ActiveScope == MakeContext.RootScope ||
            MakeContext.ActiveScope == NULL);
     if (MakeContext.RootScope != NULL) {
@@ -514,6 +521,7 @@ Cleanup:
 
     YoriLibFreeStringContents(&FullFileName);
 
+    YoriLibFreeStringContents(&MakeContext.TempPath);
     YoriLibFreeStringContents(&MakeContext.FileToProbe);
     YoriLibShBuiltinUnregisterAll();
 

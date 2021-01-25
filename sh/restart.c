@@ -38,42 +38,6 @@ BOOL YoriShProcessRegisteredForRestart = FALSE;
 #endif
 
 
-/**
- Return a path to the temp directory, but allocate extra space for a file name
- to append to it.
-
- @param RestartFileName On successful completion, returns a newly allocated
-        string populated with the temp directory.
-
- @param ExtraChars Specifies the number of extra characters to allocate in the
-        string in addition to the temp directory size.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriShGetTempPath(
-    __out PYORI_STRING RestartFileName,
-    __in DWORD ExtraChars
-    )
-{
-    RestartFileName->LengthAllocated = GetTempPath(0, NULL);
-    if (RestartFileName->LengthAllocated == 0) {
-        return FALSE;
-    }
-
-    RestartFileName->LengthAllocated += ExtraChars;
-
-    if (!YoriLibAllocateString(RestartFileName, RestartFileName->LengthAllocated)) {
-        return FALSE;
-    }
-
-    RestartFileName->LengthInChars = GetTempPath(RestartFileName->LengthAllocated,
-                                                 RestartFileName->StartOfString);
-
-
-    return TRUE;
-}
-
 #if defined(_MSC_VER) && (_MSC_VER == 1500)
 #pragma warning(pop)
 #endif
@@ -179,7 +143,7 @@ YoriShSaveRestartStateWorker(
         return 0;
     }
 
-    if (!YoriShGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
+    if (!YoriLibGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
         return 0;
     }
 
@@ -483,7 +447,7 @@ YoriShLoadSavedRestartState(
         return FALSE;
     }
 
-    if (!YoriShGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
+    if (!YoriLibGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
         return FALSE;
     }
 
@@ -757,7 +721,7 @@ YoriShDiscardSavedRestartState(
         YoriShGlobal.RestartSaveThread = NULL;
     }
 
-    if (!YoriShGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
+    if (!YoriLibGetTempPath(&RestartFileName, sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD))) {
         return;
     }
 

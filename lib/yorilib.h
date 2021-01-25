@@ -2533,6 +2533,12 @@ YoriLibGetTempFileName(
     __out_opt PYORI_STRING TempFileName
     );
 
+BOOL
+YoriLibGetTempPath(
+    __out PYORI_STRING TempPathName,
+    __in DWORD ExtraChars
+    );
+
 // *** VT.C ***
 
 /**

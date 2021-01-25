@@ -43,6 +43,11 @@ typedef struct _MAKE_CHILD_PROCESS {
     BOOLEAN CmdContextPresent;
 
     /**
+     Indicates the job identifier.
+     */
+    DWORD JobId;
+
+    /**
      The target that has requested this child process to be performed.
      */
     PMAKE_TARGET Target;
@@ -69,6 +74,148 @@ typedef struct _MAKE_CHILD_PROCESS {
      */
     YORI_LIBSH_EXEC_PLAN ExecPlan;
 } MAKE_CHILD_PROCESS, *PMAKE_CHILD_PROCESS;
+
+/**
+ Attempt to set the temporary directory for this process to match the
+ specified JobId, creating the directory if it does not exist.
+
+ @param MakeContext Pointer to the make context, indicating which directories
+        have been created and what the parent temporary path is.
+
+ @param JobId Specifies the job identifier.
+
+ @return TRUE to indicate the directory exists and has been set to be the
+         active temporary directory, or FALSE if the directory could not be
+         changed.
+ */
+BOOL
+MakeSetTemporaryDirectory(
+    __in PMAKE_CONTEXT MakeContext,
+    __in DWORD JobId
+    )
+{
+    DWORDLONG TestMask;
+    YORI_STRING JobTempPath;
+
+    ASSERT(JobId < MakeContext->NumberProcesses);
+    TestMask = 1;
+    TestMask = TestMask << JobId;
+
+    if (!YoriLibAllocateString(&JobTempPath, MakeContext->TempPath.LengthInChars + sizeof("\\YMAKE12"))) {
+        return FALSE;
+    }
+
+    JobTempPath.LengthInChars = YoriLibSPrintf(JobTempPath.StartOfString, _T("%y\\YMAKE%i"), &MakeContext->TempPath, JobId);
+
+    if ((MakeContext->TempDirectoriesCreated & TestMask) == 0) {
+        if (!YoriLibCreateDirectoryAndParents(&JobTempPath, NULL)) {
+            YoriLibFreeStringContents(&JobTempPath);
+            return FALSE;
+        }
+
+        MakeContext->TempDirectoriesCreated = MakeContext->TempDirectoriesCreated | TestMask;
+    }
+
+    if (!SetEnvironmentVariable(_T("TEMP"), JobTempPath.StartOfString)) {
+        YoriLibFreeStringContents(&JobTempPath);
+        return FALSE;
+    }
+
+    if (!SetEnvironmentVariable(_T("TMP"), JobTempPath.StartOfString)) {
+        YoriLibFreeStringContents(&JobTempPath);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&JobTempPath);
+    return TRUE;
+}
+
+/**
+ Attempt to remove any temporary directories created by this program.
+ Currently directories that contain files are not removed.  This occurs if a
+ child process did not clean up temporary files.
+
+ @param MakeContext Pointer to the make context.
+ */
+VOID
+MakeCleanupTemporaryDirectories(
+    __in PMAKE_CONTEXT MakeContext
+    )
+{
+    DWORD Probe;
+    DWORDLONG TestMask;
+    YORI_STRING TempPath;
+
+    if (!YoriLibAllocateString(&TempPath, MakeContext->TempPath.LengthInChars + sizeof("\\YMAKE12"))) {
+        return;
+    }
+
+    for (Probe = 0; Probe < MakeContext->NumberProcesses; Probe++) {
+        TestMask = 1;
+        TestMask = TestMask << Probe;
+        if ((MakeContext->TempDirectoriesCreated & TestMask) != 0) {
+            TempPath.LengthInChars = YoriLibSPrintf(TempPath.StartOfString, _T("%y\\YMAKE%i"), &MakeContext->TempPath, Probe);
+            RemoveDirectory(TempPath.StartOfString);
+        }
+    }
+
+    YoriLibFreeStringContents(&TempPath);
+}
+
+/**
+ Allocate a job identifier for the child process.  This is a number between
+ zero to the maximum number of child processes minus one.  Because of the
+ limit in the number of child processes, one of these values should always
+ be available.
+
+ @param MakeContext Pointer to the make context.
+
+ @return The job identifier.
+ */
+DWORD
+MakeAllocateJobId(
+    __in PMAKE_CONTEXT MakeContext
+    )
+{
+    DWORD Probe;
+    DWORDLONG TestMask;
+
+    for (Probe = 0; Probe < MakeContext->NumberProcesses; Probe++) {
+        TestMask = 1;
+        TestMask = TestMask << Probe;
+        if ((MakeContext->JobIdsAllocated & TestMask) == 0) {
+            MakeContext->JobIdsAllocated = MakeContext->JobIdsAllocated | TestMask;
+            MakeSetTemporaryDirectory(MakeContext, Probe);
+            return Probe;
+        }
+    }
+
+    ASSERT(Probe < MakeContext->NumberProcesses);
+    return Probe;
+}
+
+/**
+ Free a job identifier that was previously associated with a child process.
+
+ @param MakeContext Pointer to the make context.
+
+ @param JobId The job identifier.
+ */
+VOID
+MakeFreeJobId(
+    __in PMAKE_CONTEXT MakeContext,
+    __in DWORD JobId
+    )
+{
+    DWORDLONG TestMask;
+
+    ASSERT(JobId < MakeContext->NumberProcesses);
+
+    TestMask = 1;
+    TestMask = TestMask << JobId;
+    ASSERT(MakeContext->JobIdsAllocated & TestMask);
+    MakeContext->JobIdsAllocated = MakeContext->JobIdsAllocated & ~(TestMask);
+}
 
 /**
  The list of commands to invoke via cmd /c without trying to spawn an
@@ -223,6 +370,8 @@ MakeFreeCmdContextIfNecessary(
 /**
  Start executing the next command within a target.
 
+ @param MakeContext Pointer to the make context.
+
  @param ChildProcess Pointer to the child process structure specifying the
         target.
 
@@ -234,6 +383,7 @@ MakeFreeCmdContextIfNecessary(
  */
 BOOLEAN
 MakeLaunchNextCmd(
+    __in PMAKE_CONTEXT MakeContext,
     __inout PMAKE_CHILD_PROCESS ChildProcess
     )
 {
@@ -432,19 +582,21 @@ MakeLaunchNextCmd(
         }
     }
 
+    ChildProcess->JobId = MakeAllocateJobId(MakeContext);
+
     Error = YoriLibShCreateProcess(ExecContext,
                                    ChildProcess->Target->ScopeContext->HashEntry.Key.StartOfString,
                                    &FailedInRedirection);
 
     if (Error != ERROR_SUCCESS) {
+        MakeFreeJobId(MakeContext, ChildProcess->JobId);
+        ChildProcess->ProcessHandle = NULL;
         if (!CmdToExec->IgnoreErrors) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &CmdToParse);
             YoriLibFreeStringContents(&CmdToParse);
             MakeFreeCmdContextIfNecessary(ChildProcess);
             return FALSE;
         }
-
-        ChildProcess->ProcessHandle = NULL;
     } else {
         CloseHandle(ExecContext->hPrimaryThread);
         ExecContext->hPrimaryThread = NULL;
@@ -496,7 +648,7 @@ MakeLaunchNextTarget(
     ChildProcess->Target = Target;
     ChildProcess->Cmd = NULL;
 
-    return MakeLaunchNextCmd(ChildProcess);
+    return MakeLaunchNextCmd(MakeContext, ChildProcess);
 }
 
 /**
@@ -539,6 +691,8 @@ MakeUpdateDependenciesForTarget(
  failed.  A failed process that the makefile indicates is allowed to fail
  is considered success.
 
+ @param MakeContext Pointer to the make context.
+
  @param ChildProcess Pointer to the child that has completed.
 
  @return TRUE to indicate the process succeeded, FALSE to indicate the process
@@ -546,6 +700,7 @@ MakeUpdateDependenciesForTarget(
  */
 BOOLEAN
 MakeProcessCompletion(
+    __in PMAKE_CONTEXT MakeContext,
     __in PMAKE_CHILD_PROCESS ChildProcess
     )
 {
@@ -626,6 +781,7 @@ MakeProcessCompletion(
 
         ASSERT(ChildProcess->CmdContextPresent);
         ChildProcess->ProcessHandle = NULL;
+        MakeFreeJobId(MakeContext, ChildProcess->JobId);
     }
 
     MakeFreeCmdContextIfNecessary(ChildProcess);
@@ -757,10 +913,10 @@ MakeExecuteRequiredTargets(
             //
 
             MoveToNextTarget = TRUE;
-            Result = MakeProcessCompletion(&ChildProcessArray[Index]);
+            Result = MakeProcessCompletion(MakeContext, &ChildProcessArray[Index]);
             if (Result) {
                 if (MakeDoesTargetHaveMoreCommands(&ChildProcessArray[Index])) {
-                    if (MakeLaunchNextCmd(&ChildProcessArray[Index])) {
+                    if (MakeLaunchNextCmd(MakeContext, &ChildProcessArray[Index])) {
                         MoveToNextTarget = FALSE;
                     } else {
                         Result = FALSE;
@@ -827,7 +983,7 @@ Drain:
             Index = WaitForMultipleObjects(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE);
             Index = Index - WAIT_OBJECT_0;
 
-            MakeProcessCompletion(&ChildProcessArray[Index]);
+            MakeProcessCompletion(MakeContext, &ChildProcessArray[Index]);
         }
 
         if (NumberActiveProcesses > Index + 1) {
@@ -841,7 +997,6 @@ Drain:
 
     YoriLibFree(ChildProcessArray);
     YoriLibFree(ProcessHandleArray);
-
 
     return Result;
 }
