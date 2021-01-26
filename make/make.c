@@ -37,11 +37,12 @@ CHAR strMakeHelpText[] =
         "\n"
         "Execute makefiles.\n"
         "\n"
-        "YMAKE [-license] [-f file] [-j n] [-perf] [-pru] [var=value] [target]\n"
+        "YMAKE [-license] [-f file] [-j n] [-m] [-perf] [-pru] [var=value] [target]\n"
         "\n"
         "   --             Treat all further arguments as display parameters\n"
         "   -f             Name of the makefile to use, default YMkFile or Makefile\n"
         "   -j             The number of child processes, default number of processors+1\n"
+        "   -m             Perform tasks at low priority\n"
         "   -perf          Display how much time was spent in each phase of processing\n"
         "   -pru           Keep a cache of preprocessor recently executed results\n";
 
@@ -284,6 +285,9 @@ ENTRYPOINT(
                         ArgumentUnderstood = TRUE;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
+                SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("perf")) == 0) {
                 MakeContext.PerfDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
