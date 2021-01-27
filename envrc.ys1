@@ -1,8 +1,8 @@
 if strcmp -- %1%==-undo; goto undo
 
-alias mk=ymake -pru DEBUG=1 $*$
+alias mk=ymake -m -pru DEBUG=1 $*$
 alias cln=ymake clean $*$
-alias F3=ymake -pru DEBUG=1
+alias F3=ymake -m -pru DEBUG=1
 alias F5=ymake distclean
 alias F6=ymake clean
 alias F8=doxygen

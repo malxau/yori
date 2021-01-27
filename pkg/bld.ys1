@@ -45,7 +45,7 @@ ymake clean >NUL
 mkdir %OUTDIR% >NUL 2>&1
 
 echo *** Building debug
-ymake PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+ymake -m PDB=1 DEBUG=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
 if intcmp %ERRORLEVEL%!=0; goto exit
 
 echo *** Generating debug installer
@@ -67,7 +67,7 @@ echo *** Cleaning tree
 ymake clean >NUL
 
 echo *** Building retail
-ymake PDB=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
+ymake -m PDB=1 UNICODE=1 YORI_BUILD_ID=%BLDID%
 if intcmp %ERRORLEVEL%!=0; goto exit
 
 wait
