@@ -42,14 +42,6 @@
  @param String Pointer to the remainder of the string to parse for
         argument breaks.
 
- @param BraceNestingLevel Optionally points to a value that maintains the
-        nesting level of $(foo) style backquotes.  This routine will update
-        this value when it encounters a start operator, or a terminating
-        brace when this value is nonzero.  Note that for this to work, the
-        caller cannot call this function on the same range of the string
-        twice - if this function indicates an argument break, that argument
-        break is assumed to be processed.
-
  @param CharsToConsumeOut On successful completion, indicates the number of
         characters that form part of this argument.
 
@@ -69,7 +61,6 @@ __success(return)
 BOOLEAN
 YoriLibShIsArgumentSeperator(
     __in PYORI_STRING String,
-    __inout_opt PDWORD BraceNestingLevel,
     __out_opt PDWORD CharsToConsumeOut,
     __out_opt PBOOLEAN TerminateArgOut
     )
@@ -128,29 +119,6 @@ YoriLibShIsArgumentSeperator(
                     Terminate = TRUE;
                 }
             }
-        } else if (String->StartOfString[0] == '`') {
-            CharsToConsume++;
-            Terminate = TRUE;
-        } else if (String->StartOfString[0] == '$') {
-            if (String->LengthInChars >= 2 && String->StartOfString[1] == '(') {
-
-                if (BraceNestingLevel != NULL) {
-                    (*BraceNestingLevel)++;
-                }
-
-                CharsToConsume += 2;
-                Terminate = TRUE;
-            }
-
-        } else if (String->StartOfString[0] == ')' &&
-                   (BraceNestingLevel == NULL || (*BraceNestingLevel) > 0)) {
-
-            if (BraceNestingLevel != NULL) {
-                (*BraceNestingLevel)--;
-            }
-
-            CharsToConsume++;
-            Terminate = TRUE;
         }
     }
 
@@ -295,7 +263,6 @@ YoriLibShParseCmdlineToCmdContext(
     DWORD ArgOffset = 0;
     DWORD RequiredCharCount = 0;
     DWORD CharsToConsume = 0;
-    DWORD BraceNestingLevel = 0;
     BOOLEAN TerminateArg;
     BOOLEAN TerminateNextArg = FALSE;
     BOOL QuoteOpen = FALSE;
@@ -411,7 +378,7 @@ YoriLibShParseCmdlineToCmdContext(
                 TerminateNextArg = FALSE;
                 CharsToConsume = 0;
             } else if ((ArgCount > 0 || RequiredCharCount > 0) &&
-                       YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+                       YoriLibShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg)) {
                 TerminateArg = TRUE;
             }
         }
@@ -455,7 +422,7 @@ YoriLibShParseCmdlineToCmdContext(
             //
 
             if (CharsToConsume == 0) {
-                YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg);
+                YoriLibShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg);
             }
 
             RequiredCharCount += CharsToConsume;
@@ -556,7 +523,6 @@ YoriLibShParseCmdlineToCmdContext(
     }
 
     ArgCount = 0;
-    BraceNestingLevel = 0;
     QuoteOpen = FALSE;
     IsMultiCommandOperatorArgument = FALSE;
     YoriLibInitEmptyString(&CmdContext->ArgV[ArgCount]);
@@ -652,7 +618,7 @@ YoriLibShParseCmdlineToCmdContext(
                 TerminateNextArg = FALSE;
                 CharsToConsume = 0;
             } else if ((ArgCount > 0 || (DWORD)(OutputString - CmdContext->ArgV[ArgCount].StartOfString) > 0) &&
-                       YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+                       YoriLibShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg)) {
                 TerminateArg = TRUE;
             }
         }
@@ -688,7 +654,7 @@ YoriLibShParseCmdlineToCmdContext(
                 //
 
                 if (CharsToConsume == 0) {
-                    if (!YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+                    if (!YoriLibShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg)) {
                         CharsToConsume = 0;
                         TerminateNextArg = FALSE;
                     }

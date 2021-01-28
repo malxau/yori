@@ -172,11 +172,82 @@ ForWaitForProcessToComplete(
 }
 
 /**
+ Add a quote to a substring within an argument.  This is used because the
+ string may contain backquotes, where any quotes need to only surround the
+ text, without quoting the backquote.
+
+ @param Arg Pointer to the string that contains the entire argument.  This
+        argument can be reallocated within this routine as needed.
+
+ @param ArgContext Pointer to the argument context, indicating whether the
+        argument is quoted.
+
+ @param Section Pointer to a substring within Arg.
+
+ @param WhiteSpaceInSection If TRUE, the substring contains white space,
+        indicating the substring requires quoting.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ForQuoteSectionIfNeeded(
+    __in PYORI_STRING Arg,
+    __in PYORI_LIBSH_ARG_CONTEXT ArgContext,
+    __in PYORI_STRING Section,
+    __in BOOLEAN WhiteSpaceInSection
+    )
+{
+    if (!ArgContext->Quoted && WhiteSpaceInSection && Section->LengthInChars > 0) {
+
+        //
+        //  If there's whitespace in it, the section should have characters
+        //
+
+        ASSERT(Section->LengthInChars > 0);
+
+        if (Section->StartOfString == Arg->StartOfString &&
+            Section->LengthInChars == Arg->LengthInChars) {
+
+            ArgContext->Quoted = TRUE;
+            ArgContext->QuoteTerminated = TRUE;
+        } else {
+            YORI_STRING NewArg;
+            YORI_STRING Prefix;
+            YORI_STRING Suffix;
+
+            YoriLibInitEmptyString(&Prefix);
+            YoriLibInitEmptyString(&Suffix);
+
+            Prefix.StartOfString = Arg->StartOfString;
+            Prefix.LengthInChars = (DWORD)(Section->StartOfString - Arg->StartOfString);
+
+            Suffix.StartOfString = Section->StartOfString + Section->LengthInChars;
+            Suffix.LengthInChars = Arg->LengthInChars - (DWORD)(Suffix.StartOfString - Arg->StartOfString);
+
+            if (!YoriLibAllocateString(&NewArg, Arg->LengthInChars + 3)) {
+                return FALSE;
+            }
+
+            NewArg.LengthInChars = YoriLibSPrintf(NewArg.StartOfString, _T("%y\"%y\"%y"), &Prefix, Section, &Suffix);
+            YoriLibFreeStringContents(Arg);
+            memcpy(Arg, &NewArg, sizeof(YORI_STRING));
+        }
+    }
+
+    return TRUE;
+}
+
+/**
  Search through arguments for a character that would normally implicitly
  terminate an argument.  This includes shell operators like redirectors,
  pipes, or backquotes.  When these are encountered, split the argument at
  that point.  This means when quotes are added based on arguments with
  spaces, they will only span the text with spaces, not any operators.
+
+ If there are characters within an argument, such as a backquote, the
+ argument cannot be split without altering its meaning.  In this case, real
+ quotes need to be inserted around a substring without splitting the
+ argument.
 
  @param CmdContext Pointer to the command context, containing the number of
         arguments, argument values, and quote state of each argument.  These
@@ -200,28 +271,20 @@ ForBreakArgumentsAsNeeded(
     DWORD BraceNestingLevel;
     PYORI_STRING Arg;
     YORI_STRING Char;
+    YORI_STRING Section;
     BOOLEAN TerminateNextArg;
     BOOL QuoteOpen = FALSE;
     BOOLEAN LookingForFirstQuote = FALSE;
+    BOOLEAN WhiteSpaceInSection = FALSE;
 
     YoriLibInitEmptyString(&Char);
+    YoriLibInitEmptyString(&Section);
     ArgCount = CmdContext->ArgC;
     Arg = CmdContext->ArgV;
     InitialArgOffset = 0;
     BraceNestingLevel = 0;
 
     for (ArgIndex = 0; ArgIndex < ArgCount; ArgIndex++) {
-
-        //
-        //  If the argument is already quoted on input, don't break it.
-        //  Breaking is for things that weren't quoted in the input
-        //  string and may require quotes to be inserted due to adding
-        //  file names or similar that contain spaces.
-        //
-
-        if (CmdContext->ArgContexts[ArgIndex].Quoted) {
-            continue;
-        }
 
         Char.StartOfString = Arg[ArgIndex].StartOfString;
         Char.LengthInChars = Arg[ArgIndex].LengthInChars;
@@ -231,12 +294,15 @@ ForBreakArgumentsAsNeeded(
             Char.LengthInChars = Char.LengthInChars - InitialArgOffset;
         }
 
+        Section.StartOfString = Char.StartOfString;
+
         //
         //  Remove leading spaces
         //
 
         while (Char.LengthInChars > 0) {
             if (Char.StartOfString[0] == ' ') {
+                WhiteSpaceInSection = TRUE;
                 Char.StartOfString++;
                 Char.LengthInChars--;
             } else {
@@ -244,7 +310,10 @@ ForBreakArgumentsAsNeeded(
             }
         }
 
-        if (Char.LengthInChars > 0 && Char.StartOfString[0] == '"') {
+        if (CmdContext->ArgContexts[ArgIndex].Quoted) {
+            LookingForFirstQuote = TRUE;
+            QuoteOpen = TRUE;
+        } else if (Char.LengthInChars > 0 && Char.StartOfString[0] == '"') {
             LookingForFirstQuote = TRUE;
         } else {
             LookingForFirstQuote = FALSE;
@@ -261,6 +330,10 @@ ForBreakArgumentsAsNeeded(
             if (YoriLibIsEscapeChar(Char.StartOfString[0])) {
                 Char.StartOfString++;
                 Char.LengthInChars--;
+                if (Char.LengthInChars > 0) {
+                    Char.StartOfString++;
+                    Char.LengthInChars--;
+                }
                 continue;
             }
 
@@ -282,10 +355,70 @@ ForBreakArgumentsAsNeeded(
             }
 
             if (!QuoteOpen) {
-                if (YoriLibShIsArgumentSeperator(&Char, &BraceNestingLevel, &CharsToConsume, &TerminateNextArg)) {
+
+                //
+                //  MSFIX: Current thinking goes something like, maintain a
+                //  section string that starts at the beginning of the arg
+                //  and is extended up to a terminating backquote, or the end
+                //  of the string.  As we go, check if a whitespace is
+                //  detected.  At the end of the section, if the arg doesn't
+                //  already have quotes, insert them around that section.
+                //
+                //  This could be optimized in the common case (section ==
+                //  arg) by setting the ArgContext flag.
+                //
+                //  Note that backquote accounting needs to happen across all
+                //  arguments, although we "know" that a quoted arg doesn't
+                //  apply backquote updates.
+                //
+
+                if (Char.StartOfString[0] == '$' &&
+                    Char.LengthInChars >= 2 &&
+                    Char.StartOfString[1] == '(') {
+
+                    Section.LengthInChars = (DWORD)(Char.StartOfString - Section.StartOfString);
+                    ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
+                                            &CmdContext->ArgContexts[ArgIndex],
+                                            &Section,
+                                            WhiteSpaceInSection);
+                    Section.StartOfString = &Char.StartOfString[2];
+                    WhiteSpaceInSection = FALSE;
+                    BraceNestingLevel++;
+                } else if (Char.StartOfString[0] == ')' &&
+                           BraceNestingLevel > 0) {
+
+                    Section.LengthInChars = (DWORD)(Char.StartOfString - Section.StartOfString);
+                    ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
+                                            &CmdContext->ArgContexts[ArgIndex],
+                                            &Section,
+                                            WhiteSpaceInSection);
+                    Section.StartOfString = &Char.StartOfString[1];
+                    WhiteSpaceInSection = FALSE;
+                    BraceNestingLevel--;
+                } else if (Char.StartOfString[0] == '`') {
+                    Section.LengthInChars = (DWORD)(Char.StartOfString - Section.StartOfString);
+                    ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
+                                            &CmdContext->ArgContexts[ArgIndex],
+                                            &Section,
+                                            WhiteSpaceInSection);
+                    Section.StartOfString = &Char.StartOfString[1];
+                    WhiteSpaceInSection = FALSE;
+                } else if (Char.StartOfString[0] == ' ') {
+                    WhiteSpaceInSection = TRUE;
+                }
+
+                if (!CmdContext->ArgContexts[ArgIndex].Quoted &&
+                    YoriLibShIsArgumentSeperator(&Char, &CharsToConsume, &TerminateNextArg)) {
 
                     DWORD NewArgCount;
                     YORI_LIBSH_CMD_CONTEXT NewCmd;
+
+                    Section.LengthInChars = (DWORD)(Char.StartOfString - Section.StartOfString);
+                    ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
+                                            &CmdContext->ArgContexts[ArgIndex],
+                                            &Section,
+                                            WhiteSpaceInSection);
+                    WhiteSpaceInSection = FALSE;
 
                     //
                     //  If the next arg is terminated but is already
@@ -348,6 +481,25 @@ ForBreakArgumentsAsNeeded(
                         InitialArgOffset = CharsToConsume;
                     }
 
+                    //
+                    //  MSFIX: Need to update Section and Char to refer to
+                    //  their respective locations in the new argument.  Note
+                    //  that the argument index may have changed, and the
+                    //  argument length may have changed.
+                    //
+                    //  The nightmare case is something like:
+                    //  %i>>foo
+                    //
+                    //  Where we want:
+                    //  "My File">>foo
+                    //
+                    //  Meaning that the section is being terminated by the
+                    //  argument seperator but the previous section needs to
+                    //  be resolved.
+                    //
+
+                    WhiteSpaceInSection = FALSE;
+
                     YoriLibShFreeCmdContext(CmdContext);
                     CmdContext->ArgC = NewArgCount;
                     CmdContext->ArgV = NewCmd.ArgV;
@@ -363,6 +515,15 @@ ForBreakArgumentsAsNeeded(
 
             Char.StartOfString++;
             Char.LengthInChars--;
+        }
+
+        if (WhiteSpaceInSection) {
+            Section.LengthInChars = (DWORD)(Char.StartOfString - Section.StartOfString);
+            ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
+                                    &CmdContext->ArgContexts[ArgIndex],
+                                    &Section,
+                                    WhiteSpaceInSection);
+            WhiteSpaceInSection = FALSE;
         }
     }
 

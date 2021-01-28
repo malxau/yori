@@ -737,7 +737,6 @@ __success(return)
 BOOLEAN
 YoriLibShIsArgumentSeperator(
     __in PYORI_STRING String,
-    __inout_opt PDWORD BraceNestingLevel,
     __out_opt PDWORD CharsToConsumeOut,
     __out_opt PBOOLEAN TerminateArgOut
     );

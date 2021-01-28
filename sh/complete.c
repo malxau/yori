@@ -2217,7 +2217,7 @@ YoriShCompleteGenerateNewBufferString(
             //
 
             if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted &&
-                YoriLibShIsArgumentSeperator(&CmdContext->ArgV[CmdContext->CurrentArg], NULL, &CharsToConsume, NULL)) {
+                YoriLibShIsArgumentSeperator(&CmdContext->ArgV[CmdContext->CurrentArg], &CharsToConsume, NULL)) {
 
                 YORI_STRING Prefix;
                 YORI_STRING Suffix;
