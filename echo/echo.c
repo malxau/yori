@@ -148,7 +148,7 @@ ENTRYPOINT(
         }
     }
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &Text)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, FALSE, &Text)) {
         return EXIT_FAILURE;
     }
 

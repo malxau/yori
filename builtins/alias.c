@@ -137,7 +137,7 @@ YoriCmd_ALIAS(
         YORI_STRING ExpandedAlias;
         YORI_STRING CmdLine;
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, FALSE, &CmdLine)) {
             return EXIT_FAILURE;
         }
 

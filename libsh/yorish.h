@@ -767,6 +767,13 @@ YoriLibShReferenceExecContext(
 
 __success(return)
 BOOLEAN
+YoriLibShRemoveEscapesFromArgCArgV(
+    __in DWORD ArgC,
+    __inout PYORI_STRING ArgV
+    );
+
+__success(return)
+BOOLEAN
 YoriLibShRemoveEscapesFromCmdContext(
     __in PYORI_LIBSH_CMD_CONTEXT EscapedCmdContext,
     __out PYORI_LIBSH_CMD_CONTEXT NoEscapedCmdContext

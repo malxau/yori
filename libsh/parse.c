@@ -302,50 +302,46 @@ YoriLibShParseCmdlineToCmdContext(
             Char.LengthInChars--;
             RequiredCharCount++;
             ArgOffset++;
+
             if (Char.LengthInChars > 0) {
                 Char.StartOfString++;
                 Char.LengthInChars--;
                 RequiredCharCount++;
                 ArgOffset++;
-                if (Char.LengthInChars == 0) {
-                    ArgCount++;
-                }
-            } else {
-                ArgCount++;
             }
-            continue;
-        }
 
-        //
-        //  If the argument started with a quote and we found the end to that
-        //  quote, don't copy it into the output string.
-        //
-
-        if (Char.StartOfString[0] == '"' && QuoteOpen && LookingForFirstQuote) {
-            QuoteOpen = FALSE;
-            LookingForFirstQuote = FALSE;
-            Char.StartOfString++;
-            Char.LengthInChars--;
             if (Char.LengthInChars == 0) {
-                if (!CurrentArgFound) {
-                    CurrentArgFound = TRUE;
-                    CmdContext->CurrentArg = ArgCount;
-                    CmdContext->CurrentArgOffset = ArgOffset;
-                }
                 ArgCount++;
-                ArgOffset = 0;
             }
+
             continue;
         }
 
-        //
-        //  If we see a quote, either we're opening a section that belongs in
-        //  one argument or we're ending that section.
-        //
+        if (Char.LengthInChars >= 2 &&
+            Char.StartOfString[0] == '\\' &&
+            (Char.StartOfString[1] == '\\' || Char.StartOfString[1] == '"')) {
 
-        if (Char.StartOfString[0] == '"') {
-            QuoteOpen = !QuoteOpen;
-            if (LookingForFirstQuote) {
+            RequiredCharCount += 2;
+            ArgOffset += 2;
+            Char.StartOfString += 2;
+            Char.LengthInChars -= 2;
+
+            if (Char.LengthInChars == 0) {
+                ArgCount++;
+            }
+
+            continue;
+
+        } else {
+
+            //
+            //  If the argument started with a quote and we found the end to that
+            //  quote, don't copy it into the output string.
+            //
+
+            if (Char.StartOfString[0] == '"' && QuoteOpen && LookingForFirstQuote) {
+                QuoteOpen = FALSE;
+                LookingForFirstQuote = FALSE;
                 Char.StartOfString++;
                 Char.LengthInChars--;
                 if (Char.LengthInChars == 0) {
@@ -358,6 +354,29 @@ YoriLibShParseCmdlineToCmdContext(
                     ArgOffset = 0;
                 }
                 continue;
+            }
+
+            //
+            //  If we see a quote, either we're opening a section that belongs in
+            //  one argument or we're ending that section.
+            //
+
+            if (Char.StartOfString[0] == '"') {
+                QuoteOpen = !QuoteOpen;
+                if (LookingForFirstQuote) {
+                    Char.StartOfString++;
+                    Char.LengthInChars--;
+                    if (Char.LengthInChars == 0) {
+                        if (!CurrentArgFound) {
+                            CurrentArgFound = TRUE;
+                            CmdContext->CurrentArg = ArgCount;
+                            CmdContext->CurrentArgOffset = ArgOffset;
+                        }
+                        ArgCount++;
+                        ArgOffset = 0;
+                    }
+                    continue;
+                }
             }
         }
 
@@ -572,32 +591,47 @@ YoriLibShParseCmdlineToCmdContext(
             continue;
         }
 
-        //
-        //  If the argument started with a quote and we found the end to that
-        //  quote, don't copy it into the output string.
-        //
+        if (Char.LengthInChars >= 2 &&
+            Char.StartOfString[0] == '\\' &&
+            (Char.StartOfString[1] == '\\' || Char.StartOfString[1] == '"')) {
 
-        if (Char.StartOfString[0] == '"' && QuoteOpen && LookingForFirstQuote) {
-            QuoteOpen = FALSE;
-            LookingForFirstQuote = FALSE;
-            ASSERT(!CmdContext->ArgContexts[ArgCount].QuoteTerminated);
-            CmdContext->ArgContexts[ArgCount].QuoteTerminated = TRUE;
-            Char.StartOfString++;
-            Char.LengthInChars--;
+            OutputString[0] = '\\';
+            OutputString[1] = Char.StartOfString[1];
+            OutputString += 2;
+            Char.StartOfString += 2;
+            Char.LengthInChars -= 2;
+
             continue;
-        }
 
-        //
-        //  If we see a quote, either we're opening a section that belongs in
-        //  one argument or we're ending that section.
-        //
+        } else {
 
-        if (Char.StartOfString[0] == '"') {
-            QuoteOpen = !QuoteOpen;
-            if (LookingForFirstQuote) {
+            //
+            //  If the argument started with a quote and we found the end to that
+            //  quote, don't copy it into the output string.
+            //
+
+            if (Char.StartOfString[0] == '"' && QuoteOpen && LookingForFirstQuote) {
+                QuoteOpen = FALSE;
+                LookingForFirstQuote = FALSE;
+                ASSERT(!CmdContext->ArgContexts[ArgCount].QuoteTerminated);
+                CmdContext->ArgContexts[ArgCount].QuoteTerminated = TRUE;
                 Char.StartOfString++;
                 Char.LengthInChars--;
                 continue;
+            }
+
+            //
+            //  If we see a quote, either we're opening a section that belongs in
+            //  one argument or we're ending that section.
+            //
+
+            if (Char.StartOfString[0] == '"') {
+                QuoteOpen = !QuoteOpen;
+                if (LookingForFirstQuote) {
+                    Char.StartOfString++;
+                    Char.LengthInChars--;
+                    continue;
+                }
             }
         }
 
@@ -769,10 +803,15 @@ YoriLibShBuildCmdlineFromCmdContext(
     DWORD DestOffset;
 
     for (count = 0; count < CmdContext->ArgC; count++) {
-        BufferLength += 3 + CmdContext->ArgV[count].LengthInChars;
+        BufferLength += 1;
+        if (CmdContext->ArgContexts[count].Quoted) {
+            BufferLength += 2;
+        }
+        ThisArg = &CmdContext->ArgV[count];
+        BufferLength += ThisArg->LengthInChars;
     }
 
-    BufferLength += 2;
+    BufferLength += 1;
 
     if (CmdLine->LengthAllocated < BufferLength) {
         if (!YoriLibReallocateStringWithoutPreservingContents(CmdLine, BufferLength)) {
@@ -833,6 +872,8 @@ YoriLibShBuildCmdlineFromCmdContext(
         }
     }
 
+    ASSERT(CmdLineOffset < CmdLine->LengthAllocated);
+
     String[CmdLineOffset] = '\0';
 
     CmdLine->LengthInChars = CmdLineOffset;
@@ -840,26 +881,21 @@ YoriLibShBuildCmdlineFromCmdContext(
 }
 
 /**
- Remove escapes from an existing CmdContext.  This is used before invoking a
- builtin which expects ArgC/ArgV formed arguments, but does not want escapes
- preserved.
+ Remove escapes from a ArgC/ArgV array.  This operates on the inputs with
+ no allocations or copies.
 
- @param EscapedCmdContext Pointer to the command context which may contain
-        escapes.
+ @param ArgC Specifies the number of arguments.
 
- @param NoEscapedCmdContext On successful completion, updated to contain a
-        CmdContext which does not contain escapes.  This may refer to
-        referenced instances of the strings from EscapedCmdContext if no
-        changes needed to be made.
+ @param ArgV Pointer to an array of arguments.
 
  @return TRUE to indicate all escapes were removed, FALSE if not all could
          be successfully processed.
  */
 __success(return)
 BOOLEAN
-YoriLibShRemoveEscapesFromCmdContext(
-    __in PYORI_LIBSH_CMD_CONTEXT EscapedCmdContext,
-    __out PYORI_LIBSH_CMD_CONTEXT NoEscapedCmdContext
+YoriLibShRemoveEscapesFromArgCArgV(
+    __in DWORD ArgC,
+    __inout PYORI_STRING ArgV
     )
 {
     DWORD ArgIndex;
@@ -868,17 +904,8 @@ YoriLibShRemoveEscapesFromCmdContext(
     BOOLEAN EscapeFound;
     PYORI_STRING ThisArg;
 
-    //
-    //  MSFIX: This will perform a memory allocation which could be
-    //  optimized away if no escapes are found
-    //
-
-    if (!YoriLibShCopyCmdContext(NoEscapedCmdContext, EscapedCmdContext)) {
-        return FALSE;
-    }
-
-    for (ArgIndex = 0; ArgIndex < NoEscapedCmdContext->ArgC; ArgIndex++) {
-        ThisArg = &NoEscapedCmdContext->ArgV[ArgIndex];
+    for (ArgIndex = 0; ArgIndex < ArgC; ArgIndex++) {
+        ThisArg = &ArgV[ArgIndex];
 
         EscapeFound = FALSE;
 
@@ -916,13 +943,48 @@ YoriLibShRemoveEscapesFromCmdContext(
             NewArg.StartOfString[DestIndex] = '\0';
             NewArg.LengthInChars = DestIndex;
 
-            YoriLibFreeStringContents(&NoEscapedCmdContext->ArgV[ArgIndex]);
+            YoriLibFreeStringContents(&ArgV[ArgIndex]);
 
-            memcpy(&NoEscapedCmdContext->ArgV[ArgIndex], &NewArg, sizeof(YORI_STRING));
+            memcpy(&ArgV[ArgIndex], &NewArg, sizeof(YORI_STRING));
         }
     }
 
     return TRUE;
+}
+
+/**
+ Remove escapes from an existing CmdContext.  This is used before invoking a
+ builtin which expects ArgC/ArgV formed arguments, but does not want escapes
+ preserved.
+
+ @param EscapedCmdContext Pointer to the command context which may contain
+        escapes.
+
+ @param NoEscapedCmdContext On successful completion, updated to contain a
+        CmdContext which does not contain escapes.  This may refer to
+        referenced instances of the strings from EscapedCmdContext if no
+        changes needed to be made.
+
+ @return TRUE to indicate all escapes were removed, FALSE if not all could
+         be successfully processed.
+ */
+__success(return)
+BOOLEAN
+YoriLibShRemoveEscapesFromCmdContext(
+    __in PYORI_LIBSH_CMD_CONTEXT EscapedCmdContext,
+    __out PYORI_LIBSH_CMD_CONTEXT NoEscapedCmdContext
+    )
+{
+    //
+    //  MSFIX: This will perform a memory allocation which could be
+    //  optimized away if no escapes are found
+    //
+
+    if (!YoriLibShCopyCmdContext(NoEscapedCmdContext, EscapedCmdContext)) {
+        return FALSE;
+    }
+
+    return YoriLibShRemoveEscapesFromArgCArgV(NoEscapedCmdContext->ArgC, NoEscapedCmdContext->ArgV);
 }
 
 /**
@@ -1809,7 +1871,7 @@ YoriLibShParseCmdContextToExecPlan(
             CurrentArg++;
         }
     }
-    
+
     if (CmdContext->CurrentArg >= CmdContext->ArgC &&
         PreviousProgram != NULL &&
         !FoundProgramMatch) {
@@ -1975,7 +2037,7 @@ YoriLibShFreeBackquoteContext(
         BackquoteContext->MatchCount--;
         YoriLibRemoveListItem(&BackquoteEntry->MatchList);
         YoriLibDereference(BackquoteEntry);
-        
+
         ListEntry = YoriLibGetNextListEntry(&BackquoteContext->MatchList, NULL);
     }
 

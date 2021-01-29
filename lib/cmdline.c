@@ -1,9 +1,9 @@
 /**
  * @file lib/cmdline.c
  *
- * Converts argc/argv command lines back into strings
+ * Converts between strings and argc/argv arrays
  *
- * Copyright (c) 2017 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -127,6 +127,15 @@ YoriLibCheckIfArgNeedsQuotes(
  @param EncloseInQuotes If the argument contains a space, enclose it in quotes.
         If FALSE, return purely space delimited arguments.
 
+ @param ApplyChildProcessEscapes If TRUE, quotes and backslashes preceeding
+        quotes are escaped with an extra backslash.  If FALSE, this does not
+        occur and the argument retains its original form.  Generally, this
+        should be TRUE if the purpose of constructing the command line is to
+        launch a child process, which is expected to process its command line
+        and remove these escapes, and FALSE if the string is constructed to
+        facilitate display or similar where the user specified the escapes to
+        indicate how to display text and they should now be removed.
+
  @param CmdLine On successful completion, updated to point to a newly
         allocated string containing the entire command line.
 
@@ -138,59 +147,132 @@ YoriLibBuildCmdlineFromArgcArgv(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[],
     __in BOOLEAN EncloseInQuotes,
+    __in BOOLEAN ApplyChildProcessEscapes,
     __out PYORI_STRING CmdLine
     )
 {
     DWORD count;
     PYORI_STRING ThisArg;
-    DWORD i;
-    BOOL Quoted;
+    DWORD BufferLength;
+    DWORD SlashesToWrite;
+    DWORD SrcOffset;
+    DWORD SlashCount;
+    DWORD DestOffset;
+    DWORD CmdLineOffset;
+    DWORD WriteSlashCount;
+    BOOLEAN Quoted;
+    BOOLEAN AddQuote;
 
     YoriLibInitEmptyString(CmdLine);
 
+    BufferLength = 0;
+
     for (count = 0; count < ArgC; count++) {
-        CmdLine->LengthAllocated += 3 + ArgV[count].LengthInChars;
+        BufferLength += 1;
+        ThisArg = &ArgV[count];
+        Quoted = FALSE;
+        if (EncloseInQuotes) {
+            Quoted = YoriLibCheckIfArgNeedsQuotes(ThisArg);
+            if (Quoted) {
+                BufferLength += 2;
+            }
+        }
+        for (SrcOffset = 0; SrcOffset < ThisArg->LengthInChars; SrcOffset++) {
+            if (ApplyChildProcessEscapes &&
+                (ThisArg->StartOfString[SrcOffset] == '\\' ||
+                 ThisArg->StartOfString[SrcOffset] == '"')) {
+
+                for (SlashCount = 0; SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '\\'; SlashCount++);
+                if (SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '"') {
+                    SlashesToWrite = SlashCount * 2 + 1;
+                    SrcOffset += SlashCount;
+                    BufferLength += 1;
+                } else if (SrcOffset + SlashCount == ThisArg->LengthInChars && Quoted) {
+                    SlashesToWrite = SlashCount * 2;
+                    SrcOffset += SlashCount - 1;
+                } else {
+                    SlashesToWrite = SlashCount;
+                    SrcOffset += SlashCount - 1;
+                }
+                BufferLength += SlashesToWrite;
+            } else {
+                BufferLength += 1;
+            }
+        }
     }
 
-    CmdLine->LengthAllocated += 2;
+    BufferLength += 1;
 
-    if (!YoriLibAllocateString(CmdLine, CmdLine->LengthAllocated)) {
+    if (!YoriLibAllocateString(CmdLine, BufferLength)) {
         return FALSE;
     }
 
+    CmdLineOffset = 0;
     for (count = 0; count < ArgC; count++) {
         ThisArg = &ArgV[count];
 
         if (count != 0) {
-            CmdLine->StartOfString[CmdLine->LengthInChars] = ' ';
-            CmdLine->LengthInChars++;
+            CmdLine->StartOfString[CmdLineOffset] = ' ';
+            CmdLineOffset++;
         }
 
         if (EncloseInQuotes) {
             Quoted = YoriLibCheckIfArgNeedsQuotes(ThisArg);
 
             if (Quoted) {
-                CmdLine->StartOfString[CmdLine->LengthInChars] = '"';
-                CmdLine->LengthInChars++;
+                CmdLine->StartOfString[CmdLineOffset] = '"';
+                CmdLineOffset++;
             }
         } else {
             Quoted = FALSE;
         }
 
-        for (i = 0; i < ThisArg->LengthInChars; i++) {
-            CmdLine->StartOfString[CmdLine->LengthInChars + i] = ThisArg->StartOfString[i];
+        for (SrcOffset = DestOffset = 0; SrcOffset < ThisArg->LengthInChars; SrcOffset++, DestOffset++) {
+            if (ApplyChildProcessEscapes &&
+                (ThisArg->StartOfString[SrcOffset] == '\\' ||
+                 ThisArg->StartOfString[SrcOffset] == '"')) {
+
+                for (SlashCount = 0; SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '\\'; SlashCount++);
+                if (SrcOffset + SlashCount < ThisArg->LengthInChars && ThisArg->StartOfString[SrcOffset + SlashCount] == '"') {
+                    // Escape the escapes and the quote
+                    SlashesToWrite = SlashCount * 2 + 1;
+                    AddQuote = TRUE;
+                } else if (SrcOffset + SlashCount == ThisArg->LengthInChars && Quoted) {
+                    // Escape the escapes but not the quote
+                    SlashesToWrite = SlashCount * 2;
+                    AddQuote = FALSE;
+                } else {
+                    // No escapes, just copy verbatim
+                    SlashesToWrite = SlashCount;
+                    AddQuote = FALSE;
+                }
+                for (WriteSlashCount = 0; WriteSlashCount < SlashesToWrite; WriteSlashCount++) {
+                    CmdLine->StartOfString[CmdLineOffset + DestOffset + WriteSlashCount] = '\\';
+                }
+                if (AddQuote) {
+                    CmdLine->StartOfString[CmdLineOffset + DestOffset + WriteSlashCount] = '"';
+                    SrcOffset += SlashCount;
+                    DestOffset += WriteSlashCount;
+                } else {
+                    SrcOffset += SlashCount - 1;
+                    DestOffset += WriteSlashCount - 1;
+                }
+            } else {
+                CmdLine->StartOfString[CmdLineOffset + DestOffset] = ThisArg->StartOfString[SrcOffset];
+            }
         }
-        CmdLine->LengthInChars += i;
+        CmdLineOffset += DestOffset;
 
         if (EncloseInQuotes) {
             if (Quoted) {
-                CmdLine->StartOfString[CmdLine->LengthInChars] = '"';
-                CmdLine->LengthInChars++;
+                CmdLine->StartOfString[CmdLineOffset] = '"';
+                CmdLineOffset++;
             }
         }
     }
 
-    CmdLine->StartOfString[CmdLine->LengthInChars] = '\0';
+    CmdLine->StartOfString[CmdLineOffset] = '\0';
+    CmdLine->LengthInChars = CmdLineOffset;
 
     return TRUE;
 }
@@ -332,10 +414,12 @@ YoriLibCmdlineToArgcArgv(
 {
     DWORD ArgCount = 0;
     DWORD CharCount = 0;
+    DWORD SlashCount;
     TCHAR BreakChar = ' ';
     TCHAR * c;
     PYORI_STRING ArgvArray;
     LPTSTR ReturnStrings;
+    BOOLEAN EndArg;
 
     //
     //  Consume all spaces.  After this, we're either at
@@ -351,7 +435,34 @@ YoriLibCmdlineToArgcArgv(
     }
 
     while (*c != '\0') {
-        if (ArgCount + 1 < MaxArgs && *c == BreakChar) {
+        EndArg = FALSE;
+
+        if (*c == '\\') {
+            for (SlashCount = 1; c[SlashCount] == '\\'; SlashCount++);
+            if (c[SlashCount] == '"') {
+
+                //
+                //  Because one char is left for regular processing, only
+                //  adjust for one less pair.  Three slashes means consume
+                //  two chars, output one; four means consume three, output
+                //  one, etc.
+                //
+
+                if ((SlashCount % 2) == 0) {
+                    SlashCount--;
+                }
+                CharCount += SlashCount / 2;
+                c += SlashCount;
+            }
+        } else if (*c == BreakChar) {
+            if (*c == '"' && c[1] == '"') {
+                c++;
+            } else {
+                EndArg = TRUE;
+            }
+        }
+
+        if (ArgCount + 1 < MaxArgs && EndArg) {
             BreakChar = ' ';
             c++;
             while (*c == BreakChar) c++;
@@ -412,7 +523,38 @@ YoriLibCmdlineToArgcArgv(
     }
 
     while (*c != '\0') {
-        if (ArgCount + 1 < MaxArgs && *c == BreakChar) {
+        EndArg = FALSE;
+
+        if (*c == '\\') {
+            for (SlashCount = 1; c[SlashCount] == '\\'; SlashCount++);
+            if (c[SlashCount] == '"') {
+
+                //
+                //  Always add one character in the regular path, below.  This
+                //  code therefore needs to process each double-slash except
+                //  the last one, and advance the c pointer to skip the first
+                //  slash of the last pair.  After that can either be a slash
+                //  or a double quote, which will be processed as a regular
+                //  character below.
+                //
+
+                for (CharCount = 2; CharCount < SlashCount; CharCount += 2) {
+                    *ReturnStrings = '\\';
+                    ReturnStrings++;
+                    ArgvArray[ArgCount].LengthInChars++;
+                    c += 2;
+                }
+                c++;
+            }
+        } else if (*c == BreakChar) {
+            if (*c == '"' && c[1] == '"') {
+                c++;
+            } else {
+                EndArg = TRUE;
+            }
+        }
+
+        if (ArgCount + 1 < MaxArgs && EndArg) {
             *ReturnStrings = '\0';
             ReturnStrings++;
             ArgvArray[ArgCount].LengthAllocated = ArgvArray[ArgCount].LengthInChars + 1;

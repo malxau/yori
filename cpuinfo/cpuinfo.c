@@ -839,7 +839,7 @@ ENTRYPOINT(
     //
 
     if (StartArg > 0) {
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &AllocatedFormatString)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, FALSE, &AllocatedFormatString)) {
             YoriLibFree(CpuInfoContext.ProcInfo);
             return EXIT_FAILURE;
         }

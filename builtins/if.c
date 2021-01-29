@@ -277,7 +277,7 @@ YoriCmd_IF(
     //  for the test condition.
     //
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - EscapedStartArg, &EscapedArgV[EscapedStartArg], FALSE, &EscapedCmdLine)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - EscapedStartArg, &EscapedArgV[EscapedStartArg], FALSE, TRUE, &EscapedCmdLine)) {
         return EXIT_FAILURE;
     }
 
@@ -286,7 +286,7 @@ YoriCmd_IF(
     //  for the execution conditions.
     //
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &CmdLine)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, TRUE, &CmdLine)) {
         YoriLibFreeStringContents(&EscapedCmdLine);
         return EXIT_FAILURE;
     }

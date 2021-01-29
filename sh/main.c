@@ -435,7 +435,7 @@ YoriShParseArgs(
     if (StartArgToExec > 0) {
         YORI_STRING YsCmdToExec;
 
-        if (YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArgToExec, &ArgV[StartArgToExec], TRUE, &YsCmdToExec)) {
+        if (YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArgToExec, &ArgV[StartArgToExec], TRUE, TRUE, &YsCmdToExec)) {
             if (YsCmdToExec.LengthInChars > 0) {
                 if (YoriShExecuteExpression(&YsCmdToExec)) {
                     *ExitCode = YoriShGlobal.ErrorLevel;

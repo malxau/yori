@@ -884,7 +884,7 @@ ENTRYPOINT(
         //
 
 #ifdef YORI_BUILTIN
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, FALSE, &CmdLine)) {
             return EXIT_FAILURE;
         }
 #else

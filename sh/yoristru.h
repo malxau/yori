@@ -376,11 +376,18 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD PreviousJobId;
 
     /**
-     A pointer to the command context of the currently active builtin
+     A pointer to the argument count of the currently active builtin
      command before escapes have been removed.  This can be given to a
      builtin if it needs to know the original escaped string.
      */
-    PYORI_LIBSH_CMD_CONTEXT EscapedCmdContext;
+    DWORD EscapedArgC;
+
+    /**
+     A pointer to the argument array of the currently active builtin
+     command before escapes have been removed.  This can be given to a
+     builtin if it needs to know the original escaped string.
+     */
+    PYORI_STRING EscapedArgV;
 
     /**
      Count of recursion depth.  This is incremented when calling a builtin

@@ -374,7 +374,7 @@ ENTRYPOINT(
         memcpy(&ChildArgs[1], &ArgV[StartArg + 1], (ArgC - StartArg - 1) * sizeof(YORI_STRING));
     }
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, ChildArgs, TRUE, &CmdLine)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, ChildArgs, TRUE, TRUE, &CmdLine)) {
         YoriLibFree(ChildArgs);
         YoriLibFreeStringContents(&Executable);
         YoriLibFreeStringContents(&AllocatedFormatString);

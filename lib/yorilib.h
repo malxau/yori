@@ -549,6 +549,7 @@ YoriLibBuildCmdlineFromArgcArgv(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[],
     __in BOOLEAN EncloseInQuotes,
+    __in BOOLEAN ApplyChildProcessEscapes,
     __out PYORI_STRING CmdLine
     );
 

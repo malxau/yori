@@ -247,7 +247,7 @@ ENTRYPOINT(
             }
 
             YoriLibInitEmptyString(&CmdLine);
-            if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &CmdLine)) {
+            if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, TRUE, &CmdLine)) {
                 YoriLibFreeStringContents(&FileName);
                 return EXIT_FAILURE;
             }

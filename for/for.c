@@ -1005,7 +1005,7 @@ ENTRYPOINT(
         YORI_STRING FoundMatch;
         YORI_STRING Criteria;
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(CmdArg - ListArg, &ArgV[ListArg], FALSE, &Criteria)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(CmdArg - ListArg, &ArgV[ListArg], FALSE, TRUE, &Criteria)) {
             goto cleanup_and_exit;
         }
 

@@ -209,7 +209,7 @@ ENTRYPOINT(
             YoriLibBuiltinSetEnvironmentStrings(&SavedEnvironment);
             return EXIT_FAILURE;
         }
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartCmdArg, &ArgV[StartCmdArg], TRUE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartCmdArg, &ArgV[StartCmdArg], TRUE, TRUE, &CmdLine)) {
             return EXIT_FAILURE;
         }
 
@@ -254,7 +254,7 @@ ENTRYPOINT(
             memcpy(&ChildArgs[1], &ArgV[StartCmdArg + 1], (ArgC - StartCmdArg - 1) * sizeof(YORI_STRING));
         }
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartCmdArg, ChildArgs, TRUE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartCmdArg, ChildArgs, TRUE, TRUE, &CmdLine)) {
             YoriLibFree(ChildArgs);
             YoriLibFreeStringContents(&Executable);
             return EXIT_FAILURE;

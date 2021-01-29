@@ -246,7 +246,7 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &RemainingString)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, FALSE, &RemainingString)) {
         return EXIT_FAILURE;
     }
 

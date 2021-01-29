@@ -131,7 +131,7 @@ ENTRYPOINT(
 
         OldPriority = GetPriorityClass(GetCurrentProcess());
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, TRUE, &CmdLine)) {
             return EXIT_FAILURE;
         }
 
@@ -171,7 +171,7 @@ ENTRYPOINT(
             memcpy(&ChildArgs[1], &ArgV[StartArg + 1], (ArgC - StartArg - 1) * sizeof(YORI_STRING));
         }
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, ChildArgs, TRUE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, ChildArgs, TRUE, TRUE, &CmdLine)) {
             YoriLibFree(ChildArgs);
             YoriLibFreeStringContents(&Executable);
             return EXIT_FAILURE;

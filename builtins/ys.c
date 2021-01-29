@@ -1012,7 +1012,7 @@ YsExpandArgumentVariables(
         }
 
         YoriLibInitEmptyString(&EntireLine);
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgContext->ArgC - ArgContext->ShiftCount - 1, &ArgContext->ArgV[ArgContext->ShiftCount + 1], TRUE, &EntireLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgContext->ArgC - ArgContext->ShiftCount - 1, &ArgContext->ArgV[ArgContext->ShiftCount + 1], TRUE, FALSE, &EntireLine)) {
             return 0;
         }
 

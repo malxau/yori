@@ -319,7 +319,7 @@ ENTRYPOINT(
     }
 
     if (StartArg > 0) {
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, &AllocatedFormatString)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, FALSE, &AllocatedFormatString)) {
             return EXIT_FAILURE;
         }
     } else {

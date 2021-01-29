@@ -304,8 +304,8 @@ YoriApiGetEscapedArguments(
     __out PYORI_STRING * ArgV
     )
 {
-    *ArgC = YoriShGlobal.EscapedCmdContext->ArgC;
-    *ArgV = YoriShGlobal.EscapedCmdContext->ArgV;
+    *ArgC = YoriShGlobal.EscapedArgC;
+    *ArgV = YoriShGlobal.EscapedArgV;
     return TRUE;
 }
 

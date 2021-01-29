@@ -192,7 +192,7 @@ YoriCmd_SET(
         YORI_STRING CmdLine;
         YORI_STRING Variable;
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - StartArg, &EscapedArgV[StartArg], FALSE, &CmdLine)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - StartArg, &EscapedArgV[StartArg], FALSE, FALSE, &CmdLine)) {
             return EXIT_FAILURE;
         }
 

@@ -80,7 +80,7 @@ StartShellExecute(
 
     YoriLibInitEmptyString(&Args);
     if (ArgC > 1) {
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - 1, &ArgV[1], TRUE, &Args)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - 1, &ArgV[1], TRUE, TRUE, &Args)) {
             return FALSE;
         }
         ASSERT(YoriLibIsStringNullTerminated(&Args));

@@ -338,7 +338,7 @@ MakeProcessIf(
     }
 
     if (ArgC > Index + 2 && ConditionTrue) {
-        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - Index - 2, &ArgV[Index + 2], TRUE, &FullPath)) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - Index - 2, &ArgV[Index + 2], TRUE, TRUE, &FullPath)) {
             return FALSE;
         }
     }

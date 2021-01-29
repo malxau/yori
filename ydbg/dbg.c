@@ -1053,7 +1053,7 @@ YDbgDebugChildProcess(
         memcpy(&ChildArgs[1], &ArgV[1], (ArgC - 1) * sizeof(YORI_STRING));
     }
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC, ChildArgs, TRUE, &CmdLine)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC, ChildArgs, TRUE, TRUE, &CmdLine)) {
         YoriLibFreeStringContents(&Executable);
         YoriLibFree(ChildArgs);
         return EXIT_FAILURE;

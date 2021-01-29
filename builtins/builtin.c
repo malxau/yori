@@ -109,7 +109,7 @@ YoriCmd_BUILTIN(
     }
 
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, &CmdLine)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, TRUE, &CmdLine)) {
         return EXIT_FAILURE;
     }
 
