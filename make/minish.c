@@ -102,15 +102,58 @@ MakeShExecuteInProc(
     YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     BOOLEAN WasPipe = FALSE;
     PYORI_LIBSH_CMD_CONTEXT OriginalCmdContext = &ExecContext->CmdToExec;
-    YORI_LIBSH_CMD_CONTEXT NoEscapesCmdContext;
     YORI_STRING CmdLine;
-    PYORI_STRING ArgV;
+    PYORI_STRING EscapedArgV;
+    PYORI_STRING NoEscapedArgV;
     DWORD ArgC;
     DWORD Count;
     DWORD ExitCode = 0;
 
-    if (!YoriLibShRemoveEscapesFromCmdContext(OriginalCmdContext, &NoEscapesCmdContext)) {
-        return ERROR_OUTOFMEMORY;
+    EscapedArgV = NULL;
+    NoEscapedArgV = NULL;
+    ArgC = 0;
+
+    //
+    //  Build a command line, leaving all escapes in the command line.
+    //
+
+    YoriLibInitEmptyString(&CmdLine);
+    if (!YoriLibShBuildCmdlineFromCmdContext(OriginalCmdContext, &CmdLine, FALSE, NULL, NULL)) {
+        ExitCode = ERROR_OUTOFMEMORY;
+        goto Cleanup;
+    }
+
+    //
+    //  Parse the command line in the same way that a child process would.
+    //
+
+    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, TRUE, &ArgC);
+    YoriLibFreeStringContents(&CmdLine);
+
+    if (EscapedArgV == NULL) {
+        ExitCode = ERROR_OUTOFMEMORY;
+        goto Cleanup;
+    }
+
+    //
+    //  Remove the escapes from the command line.  This allows the builtin to
+    //  have access to the escaped form if required.
+    //
+
+    NoEscapedArgV = YoriLibReferencedMalloc(ArgC * sizeof(YORI_STRING));
+    if (NoEscapedArgV == NULL) {
+        ExitCode = ERROR_OUTOFMEMORY;
+        goto Cleanup;
+    }
+
+    for (Count = 0; Count < ArgC; Count++) {
+        YoriLibCloneString(&NoEscapedArgV[Count], &EscapedArgV[Count]);
+    }
+
+    if (!YoriLibShRemoveEscapesFromArgCArgV(ArgC, NoEscapedArgV)) {
+        ExitCode = ERROR_OUTOFMEMORY;
+        goto Cleanup;
     }
 
     //
@@ -128,51 +171,9 @@ MakeShExecuteInProc(
         ExecContext->StdOutType = StdOutTypeBuffer;
     }
 
-    //
-    //  Check if an argument isn't quoted but requires quotes.  This implies
-    //  something happened outside the user's immediate control, such as
-    //  environment variable expansion.  When this occurs, reprocess the
-    //  command back to a string form and recompose into ArgC/ArgV using the
-    //  same routines as would occur for an external process.
-    //
-
-    ArgC = NoEscapesCmdContext.ArgC;
-    ArgV = NoEscapesCmdContext.ArgV;
-
-    for (Count = 0; Count < NoEscapesCmdContext.ArgC; Count++) {
-        ASSERT(YoriLibIsStringNullTerminated(&NoEscapesCmdContext.ArgV[Count]));
-        if (!NoEscapesCmdContext.ArgContexts[Count].Quoted &&
-            YoriLibCheckIfArgNeedsQuotes(&NoEscapesCmdContext.ArgV[Count]) &&
-            ArgV == NoEscapesCmdContext.ArgV) {
-
-            YoriLibInitEmptyString(&CmdLine);
-            if (!YoriLibShBuildCmdlineFromCmdContext(&NoEscapesCmdContext, &CmdLine, TRUE, NULL, NULL)) {
-                YoriLibShFreeCmdContext(&NoEscapesCmdContext);
-                return ERROR_OUTOFMEMORY;
-            }
-
-            ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-            ArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, &ArgC);
-            YoriLibFreeStringContents(&CmdLine);
-
-            if (ArgV == NULL) {
-                YoriLibShFreeCmdContext(&NoEscapesCmdContext);
-                return ERROR_OUTOFMEMORY;
-            }
-        }
-    }
-
     ExitCode = YoriLibShInitializeRedirection(ExecContext, TRUE, &PreviousRedirectContext);
     if (ExitCode != ERROR_SUCCESS) {
-        if (ArgV != NoEscapesCmdContext.ArgV) {
-            for (Count = 0; Count < ArgC; Count++) {
-                YoriLibFreeStringContents(&ArgV[Count]);
-            }
-            YoriLibDereference(ArgV);
-        }
-        YoriLibShFreeCmdContext(&NoEscapesCmdContext);
-
-        return ExitCode;
+        goto Cleanup;
     }
 
     //
@@ -195,7 +196,7 @@ MakeShExecuteInProc(
         }
     }
 
-    ExitCode = Fn(ArgC, ArgV);
+    ExitCode = Fn(ArgC, NoEscapedArgV);
     YoriLibShRevertRedirection(&PreviousRedirectContext);
 
     if (WasPipe) {
@@ -220,13 +221,21 @@ MakeShExecuteInProc(
         }
     }
 
-    if (ArgV != NoEscapesCmdContext.ArgV) {
+Cleanup:
+
+    if (NoEscapedArgV != NULL) {
         for (Count = 0; Count < ArgC; Count++) {
-            YoriLibFreeStringContents(&ArgV[Count]);
+            YoriLibFreeStringContents(&NoEscapedArgV[Count]);
         }
-        YoriLibDereference(ArgV);
+        YoriLibDereference(NoEscapedArgV);
     }
-    YoriLibShFreeCmdContext(&NoEscapesCmdContext);
+
+    if (EscapedArgV != NULL) {
+        for (Count = 0; Count < ArgC; Count++) {
+            YoriLibFreeStringContents(&EscapedArgV[Count]);
+        }
+        YoriLibDereference(EscapedArgV);
+    }
 
     return ExitCode;
 }

@@ -205,7 +205,7 @@ YoriShExecuteInProc(
     //
 
     ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, &ArgC);
+    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, TRUE, &ArgC);
     YoriLibFreeStringContents(&CmdLine);
 
     if (EscapedArgV == NULL) {

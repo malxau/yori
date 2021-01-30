@@ -557,6 +557,7 @@ PYORI_STRING
 YoriLibCmdlineToArgcArgv(
     __in LPTSTR szCmdLine,
     __in DWORD MaxArgs,
+    __in BOOLEAN ApplyCaretAsEscape,
     __out PDWORD argc
     );
 

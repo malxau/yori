@@ -400,6 +400,14 @@ YoriLibExpandCommandVariables(
  @param MaxArgs The maximum number of arguments to return.  All trailing
         arguments are joined with the final argument.
 
+ @param ApplyCaretAsEscape If TRUE, a caret character indicates the following
+        character should be interpreted literally and should not be used to
+        break arguments.  Caret characters are only meaningful within the
+        shell, so external processes should generally use FALSE.  TRUE is
+        used when parsing ArgC/ArgV to invoke builtin commands, where escapes
+        need to be retained and removed later so the builtin can observe the
+        escaped arguments.
+
  @param argc On successful completion, populated with the count of arguments.
 
  @return A pointer to an array of YORI_STRINGs containing the parsed
@@ -409,6 +417,7 @@ PYORI_STRING
 YoriLibCmdlineToArgcArgv(
     __in LPTSTR CmdLine,
     __in DWORD MaxArgs,
+    __in BOOLEAN ApplyCaretAsEscape,
     __out PDWORD argc
     )
 {
@@ -437,7 +446,10 @@ YoriLibCmdlineToArgcArgv(
     while (*c != '\0') {
         EndArg = FALSE;
 
-        if (*c == '\\') {
+        if (*c == '^' && c[1] != '\0' && ApplyCaretAsEscape) {
+            c++;
+            CharCount++;
+        } else if (*c == '\\') {
             for (SlashCount = 1; c[SlashCount] == '\\'; SlashCount++);
             if (c[SlashCount] == '"') {
 
@@ -525,7 +537,12 @@ YoriLibCmdlineToArgcArgv(
     while (*c != '\0') {
         EndArg = FALSE;
 
-        if (*c == '\\') {
+        if (*c == '^' && c[1] != '\0' && ApplyCaretAsEscape) {
+            *ReturnStrings = *c;
+            ReturnStrings++;
+            ArgvArray[ArgCount].LengthInChars++;
+            c++;
+        } else if (*c == '\\') {
             for (SlashCount = 1; c[SlashCount] == '\\'; SlashCount++);
             if (c[SlashCount] == '"') {
 
