@@ -384,17 +384,23 @@ YoriCmd_PUSHD(
 
     } else {
 
+        YORI_STRING ChdirArgV[2];
+
         //
         //  Invoke chdir to actually change directory.  This provides consistent
         //  path parsing and will handle things like drive switching consistently.
         //
 
-        if (!YoriLibAllocateString(&ChdirCmd, 8 + ArgV[StartArg].LengthInChars + 1)) {
+        YoriLibConstantString(&ChdirArgV[0], _T("CHDIR"));
+        YoriLibInitEmptyString(&ChdirArgV[1]);
+        ChdirArgV[1].StartOfString = ArgV[StartArg].StartOfString;
+        ChdirArgV[1].LengthInChars = ArgV[StartArg].LengthInChars;
+
+        if (!YoriLibBuildCmdlineFromArgcArgv(2, ChdirArgV, TRUE, TRUE, &ChdirCmd)) {
             YoriLibFree(NewStackEntry);
             return EXIT_FAILURE;
         }
 
-        ChdirCmd.LengthInChars = YoriLibSPrintf(ChdirCmd.StartOfString, _T("CHDIR \"%y\""), &ArgV[StartArg]);
         YoriCallExecuteExpression(&ChdirCmd);
         YoriLibFreeStringContents(&ChdirCmd);
 
