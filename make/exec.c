@@ -108,7 +108,7 @@ MakeSetTemporaryDirectory(
     JobTempPath.LengthInChars = YoriLibSPrintf(JobTempPath.StartOfString, _T("%y\\YMAKE%i"), &MakeContext->TempPath, JobId);
 
     if ((MakeContext->TempDirectoriesCreated & TestMask) == 0) {
-        if (!YoriLibCreateDirectoryAndParents(&JobTempPath, NULL)) {
+        if (!YoriLibCreateDirectoryAndParents(&JobTempPath)) {
             YoriLibFreeStringContents(&JobTempPath);
             return FALSE;
         }
