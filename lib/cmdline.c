@@ -467,11 +467,7 @@ YoriLibCmdlineToArgcArgv(
                 c += SlashCount;
             }
         } else if (*c == BreakChar) {
-            if (*c == '"' && c[1] == '"') {
-                c++;
-            } else {
-                EndArg = TRUE;
-            }
+            EndArg = TRUE;
         }
 
         if (ArgCount + 1 < MaxArgs && EndArg) {
@@ -564,11 +560,7 @@ YoriLibCmdlineToArgcArgv(
                 c++;
             }
         } else if (*c == BreakChar) {
-            if (*c == '"' && c[1] == '"') {
-                c++;
-            } else {
-                EndArg = TRUE;
-            }
+            EndArg = TRUE;
         }
 
         if (ArgCount + 1 < MaxArgs && EndArg) {
