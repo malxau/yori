@@ -71,6 +71,11 @@ typedef struct _ERASE_CONTEXT {
      */
     DWORDLONG FilesFound;
 
+    /**
+     The number of files successfully marked for delete.
+     */
+    DWORDLONG FilesMarkedForDelete;
+
 } ERASE_CONTEXT, *PERASE_CONTEXT;
 
 /**
@@ -138,6 +143,8 @@ EraseFileFoundCallback(
         
                     if (!DeleteFile(FilePath->StartOfString)) {
                         Err = GetLastError();
+                    } else {
+                        FileDeleted = TRUE;
                     }
         
                     if (Err != NO_ERROR) {
@@ -151,6 +158,12 @@ EraseFileFoundCallback(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("erase: delete of %y failed: %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
             }
+        } else {
+            FileDeleted = TRUE;
+        }
+
+        if (FileDeleted) {
+            EraseContext->FilesMarkedForDelete++;
         }
     }
     return TRUE;
@@ -327,6 +340,10 @@ ENTRYPOINT(
 
     if (Context.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("erase: no matching files found\n"));
+        ASSERT(Context.FilesMarkedForDelete == 0);
+    }
+
+    if (Context.FilesMarkedForDelete == 0) {
         return EXIT_FAILURE;
     }
 
