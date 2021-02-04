@@ -1224,10 +1224,6 @@ typedef struct _YORI_OS_VERSION_INFO_EX {
 #define VER_NT_SERVER 0x0003
 #endif
 
-
-
-
-
 /**
  Output from the GetSystemInfo system call.  This is defined here so that it
  can contain newer fields than older compilers include, which may be returned
@@ -1696,6 +1692,14 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
         YORI_PROCESSOR_GROUP_RELATIONSHIP Group;
     } u;
 } YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, *PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
+
+#ifndef PROCESS_MODE_BACKGROUND_BEGIN
+/**
+ Define the value for low CPU, disk and memory priority for compilation
+ environments that don't define it.
+ */
+#define PROCESS_MODE_BACKGROUND_BEGIN 0x00100000
+#endif
 
 #ifndef STARTF_TITLEISLINKNAME
 /**
