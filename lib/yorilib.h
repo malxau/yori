@@ -3617,4 +3617,7 @@ YoriLibIsPathUrl(
 
 BOOL YoriLibIsStdInConsole(VOID);
 
+LONGLONG
+YoriLibGetSystemTimeAsInteger(VOID);
+
 // vim:sw=4:ts=4:et:

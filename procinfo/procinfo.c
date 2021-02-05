@@ -310,8 +310,6 @@ ENTRYPOINT(
     FILETIME ftExitTime;
     FILETIME ftKernelTime;
     FILETIME ftUserTime;
-    SYSTEMTIME stNow;
-    FILETIME ftNow;
     LARGE_INTEGER liNow;
     HANDLE hProcess;
 
@@ -398,14 +396,7 @@ ENTRYPOINT(
     ProcInfoContext.UserTimeInMs.LowPart = ftUserTime.dwLowDateTime;
     ProcInfoContext.UserTimeInMs.QuadPart = ProcInfoContext.UserTimeInMs.QuadPart / (10 * 1000);
 
-    GetSystemTime(&stNow);
-    if (!SystemTimeToFileTime(&stNow, &ftNow)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("procinfo: could not query system time\n"));
-        CloseHandle(hProcess);
-        return EXIT_FAILURE;
-    }
-    liNow.HighPart = ftNow.dwHighDateTime;
-    liNow.LowPart = ftNow.dwLowDateTime;
+    liNow.QuadPart = YoriLibGetSystemTimeAsInteger();
 
     ProcInfoContext.ElapsedTimeInMs.QuadPart = (liNow.QuadPart - liCreationTime.QuadPart) / (10 * 1000);
 

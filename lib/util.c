@@ -375,4 +375,45 @@ YoriLibIsStdInConsole(VOID)
     return FALSE;
 }
 
+/**
+ Report the system time in NT units as an integer.  This is implemented as a
+ helper because NT 3.1 doesn't have GetSystemTimeAsFileTime, and that
+ function also doesn't return things in a LARGE_INTEGER so it needs to be
+ manually manipulated to get a single number anyway.
+
+ @return The system time as an integer.
+ */
+LONGLONG
+YoriLibGetSystemTimeAsInteger(VOID)
+{
+    SYSTEMTIME CurrentSystemTime;
+    FILETIME CurrentSystemTimeAsFileTime;
+    LARGE_INTEGER ReturnValue;
+
+    //
+    //  This roundabout implementation occurs because NT 3.1 doesn't have
+    //  GetSystemTimeAsFileTime.  As a performance optimization, this
+    //  logic could use that API where it exists.  It is still frustrating
+    //  to have to convert the result of that to an aligned integer, and
+    //  bypassing Win32 completely could avoid that.
+    //
+
+    GetSystemTime(&CurrentSystemTime);
+
+    // 
+    //  This function can fail if it's given input that's not within a valid
+    //  range.  That can't really happen here, but static analysis complains
+    //  if the condition isn't checked.
+    //
+
+    if (!SystemTimeToFileTime(&CurrentSystemTime, &CurrentSystemTimeAsFileTime)) {
+        CurrentSystemTimeAsFileTime.dwHighDateTime = 0;
+        CurrentSystemTimeAsFileTime.dwLowDateTime = 0;
+    }
+
+    ReturnValue.HighPart = CurrentSystemTimeAsFileTime.dwHighDateTime;
+    ReturnValue.LowPart = CurrentSystemTimeAsFileTime.dwLowDateTime;
+    return ReturnValue.QuadPart;
+}
+
 // vim:sw=4:ts=4:et:

@@ -165,8 +165,6 @@ ENTRYPOINT(
     CancelHandle = YoriLibCancelGetEvent();
 
     if (CountdownMode) {
-        SYSTEMTIME CurrentSystemTime;
-        FILETIME Temp;
         DWORDLONG LongTimeToSleep;
         DWORD WaitResult;
         LARGE_INTEGER StartTime;
@@ -180,22 +178,14 @@ ENTRYPOINT(
             ConsoleMode = TRUE;
         }
 
-        GetSystemTime(&CurrentSystemTime);
-        SystemTimeToFileTime(&CurrentSystemTime, &Temp);
-
-        StartTime.LowPart = Temp.dwLowDateTime;
-        StartTime.HighPart = Temp.dwHighDateTime;
+        StartTime.QuadPart = YoriLibGetSystemTimeAsInteger();
 
         LongTimeToSleep = TimeToSleep;
         EndTime.QuadPart = StartTime.QuadPart + LongTimeToSleep * 1000 * 10;
 
         while(TRUE) {
 
-            GetSystemTime(&CurrentSystemTime);
-            SystemTimeToFileTime(&CurrentSystemTime, &Temp);
-
-            CurrentTime.LowPart = Temp.dwLowDateTime;
-            CurrentTime.HighPart = Temp.dwHighDateTime;
+            CurrentTime.QuadPart = YoriLibGetSystemTimeAsInteger();
 
             if (CurrentTime.QuadPart > EndTime.QuadPart) {
 

@@ -516,20 +516,13 @@ YoriShDisplayWarnings(VOID)
             FILETIME CreationTime;
             FILETIME AccessTime;
             FILETIME WriteTime;
-            SYSTEMTIME Now;
-            FILETIME FtNow;
             LARGE_INTEGER liWriteTime;
             LARGE_INTEGER liNow;
 
             GetFileTime(ExeHandle, &CreationTime, &AccessTime, &WriteTime);
             CloseHandle(ExeHandle);
-            GetSystemTime(&Now);
-            if (!SystemTimeToFileTime(&Now, &FtNow)) {
-                YoriLibFreeStringContents(&ModuleName);
-                return FALSE;
-            }
-            liNow.LowPart = FtNow.dwLowDateTime;
-            liNow.HighPart = FtNow.dwHighDateTime;
+
+            liNow.QuadPart = YoriLibGetSystemTimeAsInteger();
             liWriteTime.LowPart = WriteTime.dwLowDateTime;
             liWriteTime.HighPart = WriteTime.dwHighDateTime;
 
