@@ -31,6 +31,43 @@
 #include "winpriv.h"
 
 /**
+ A timer that can be attached to the window manager.
+ */
+typedef struct _YORI_WIN_TIMER {
+
+    /**
+     An entry for this timer within the window manager's timer list.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The control to notify on a timer tick.
+     */
+    PYORI_WIN_CTRL NotifyCtrl;
+
+    /**
+     The next time (in system time terms) when the timer should be invoked.
+     This is reevaluated based on start time and tick length below.
+     */
+    LONGLONG ExpirationTime;
+
+    /**
+     The time of the system when the timer was first created.
+     */
+    LONGLONG PeriodicStartTime;
+
+    /**
+     The time between each timer tick.
+     */
+    DWORD    PeriodicIntervalInMs;
+
+    /**
+     The number of times the timer has already ticked.
+     */
+    DWORD    PeriodsExpired;
+} YORI_WIN_TIMER, *PYORI_WIN_TIMER;
+
+/**
  A structure describing a window manager
  */
 typedef struct _YORI_WIN_WINDOW_MANAGER {
@@ -56,6 +93,11 @@ typedef struct _YORI_WIN_WINDOW_MANAGER {
      the list is the topmost window, and the tail is the bottom most.
      */
     YORI_LIST_ENTRY TopLevelWindowList;
+
+    /**
+     The list of timers active in the window manager.
+     */
+    YORI_LIST_ENTRY TimerList;
 
     /**
      Information about the cursor from when the window manager was started.
@@ -167,6 +209,7 @@ YoriWinOpenWindowManager(
 
     WinMgr->hConOriginal = NULL;
     YoriLibInitializeListHead(&WinMgr->TopLevelWindowList);
+    YoriLibInitializeListHead(&WinMgr->TimerList);
 
     WinMgr->hConOut = CreateFile(_T("CONOUT$"), GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
     if (WinMgr->hConOut == INVALID_HANDLE_VALUE) {
@@ -430,6 +473,112 @@ YoriWinMgrPopWindow(
 }
 
 /**
+ Determine the next time, in absolute time terms, that a recurring timer
+ should fire.
+
+ @param Timer The timer to recalculate.
+ */
+VOID
+YoriWinMgrCalculateNextExpiration(
+    __in PYORI_WIN_TIMER Timer
+    )
+{
+    LONGLONG IntervalInNtUnits;
+
+    IntervalInNtUnits = Timer->PeriodicIntervalInMs;
+    IntervalInNtUnits = IntervalInNtUnits * 1000 * 10;
+
+    Timer->ExpirationTime = Timer->PeriodicStartTime + IntervalInNtUnits * (Timer->PeriodsExpired + 1);
+}
+
+/**
+ Allocate and initialize a new recurring timer.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param Ctrl Pointer to the control to send events to when the timer event
+        fires.
+
+ @param PeriodicInterval The time in milliseconds between each timer event.
+
+ @return A pointer to the timer object.
+ */
+PYORI_WIN_CTRL_HANDLE
+YoriWinMgrAllocateRecurringTimer(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_WIN_CTRL Ctrl,
+    __in DWORD PeriodicInterval
+    )
+{
+    PYORI_WIN_TIMER Timer;
+    PYORI_WIN_WINDOW_MANAGER WinMgr;
+
+    Timer = YoriLibMalloc(sizeof(YORI_WIN_TIMER));
+    if (Timer == NULL) {
+        return NULL;
+    }
+
+    WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+
+    Timer->PeriodicStartTime = YoriLibGetSystemTimeAsInteger();
+    Timer->NotifyCtrl = Ctrl;
+    Timer->PeriodicIntervalInMs = PeriodicInterval;
+    Timer->PeriodsExpired = 0;
+    YoriWinMgrCalculateNextExpiration(Timer);
+    YoriLibInsertList(&WinMgr->TimerList, &Timer->ListEntry);
+    return (PYORI_WIN_CTRL_HANDLE)Timer;
+}
+
+/**
+ Free a specified timer.
+
+ @param TimerHandle Pointer to the timer to free.
+ */
+VOID
+YoriWinMgrFreeTimer(
+    __in PYORI_WIN_CTRL_HANDLE TimerHandle
+    )
+{
+    PYORI_WIN_TIMER Timer;
+
+    Timer = (PYORI_WIN_TIMER)TimerHandle;
+    YoriLibRemoveListItem(&Timer->ListEntry);
+    YoriLibFree(Timer);
+}
+
+/**
+ When a control is being torn down, tear down all associated timers.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param Ctrl The control being torn down.
+ */
+VOID
+YoriWinMgrRemoveTimersForControl(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_WIN_CTRL Ctrl
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr;
+    PYORI_WIN_TIMER Timer;
+    PYORI_LIST_ENTRY ListEntry;
+    WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+
+    ListEntry = YoriLibGetNextListEntry(&WinMgr->TimerList, NULL);
+    while(TRUE) {
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        Timer = CONTAINING_RECORD(ListEntry, YORI_WIN_TIMER, ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&WinMgr->TimerList, ListEntry);
+        if (Timer->NotifyCtrl == Ctrl) {
+            YoriWinMgrFreeTimer(Timer);
+        }
+    }
+}
+
+/**
  Search through the stack of opened windows from top to bottom, finding the
  first window that is not in the process of closing.  If all windows in the
  stack are in the process of closing, returns NULL.
@@ -503,9 +652,52 @@ YoriWinReadConsoleInputDetectWindowChange(
     )
 {
     DWORD Err;
+    DWORD TimeoutInMs;
+
+    //
+    //  Timeout every 400ms to check for buffer resize.
+    //
+
+    TimeoutInMs = 400;
+
+    //
+    //  If there's a timer set to expire before then, timeout when that
+    //  timer is due.
+    //
+
+    if (!YoriLibIsListEmpty(&WinMgr->TimerList)) {
+        PYORI_WIN_TIMER Timer;
+        PYORI_LIST_ENTRY ListEntry;
+        LONGLONG CurrentTime;
+        LONGLONG MinimumFoundDelayTime;
+
+        MinimumFoundDelayTime = TimeoutInMs * 1000 * 10;
+
+        CurrentTime = YoriLibGetSystemTimeAsInteger();
+
+        ListEntry = YoriLibGetNextListEntry(&WinMgr->TimerList, NULL);
+        while(TRUE) {
+            if (ListEntry == NULL) {
+                break;
+            }
+
+            Timer = CONTAINING_RECORD(ListEntry, YORI_WIN_TIMER, ListEntry);
+            ListEntry = YoriLibGetNextListEntry(&WinMgr->TimerList, ListEntry);
+            if (Timer->ExpirationTime - CurrentTime < MinimumFoundDelayTime) {
+                MinimumFoundDelayTime = Timer->ExpirationTime - CurrentTime;
+            }
+        }
+
+        if (MinimumFoundDelayTime < 0) {
+            MinimumFoundDelayTime = 0;
+        }
+
+        TimeoutInMs = (DWORD)(MinimumFoundDelayTime / (1000 * 10));
+    }
+
     while (TRUE) {
 
-        Err = WaitForSingleObject(WinMgr->hConIn, 400);
+        Err = WaitForSingleObject(WinMgr->hConIn, TimeoutInMs);
 
         if (Err == WAIT_TIMEOUT) {
             CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
@@ -521,6 +713,9 @@ YoriWinReadConsoleInputDetectWindowChange(
                 Buffer->Event.WindowBufferSizeEvent.dwSize.Y = ScreenInfo.dwSize.Y;
 
                 *NumberOfEventsRead = 1;
+                return TRUE;
+            } else if (!YoriLibIsListEmpty(&WinMgr->TimerList)) {
+                *NumberOfEventsRead = 0;
                 return TRUE;
             }
         } else {
@@ -580,6 +775,35 @@ YoriWinMgrProcessEvents(
     Result = FALSE;
 
     while(TRUE) {
+
+        //
+        //  Process any expired timers.
+        //
+
+        if (!YoriLibIsListEmpty(&WinMgr->TimerList)) {
+            PYORI_WIN_TIMER Timer;
+            PYORI_LIST_ENTRY ListEntry;
+            LONGLONG CurrentTime;
+
+            CurrentTime = YoriLibGetSystemTimeAsInteger();
+
+            ListEntry = YoriLibGetNextListEntry(&WinMgr->TimerList, NULL);
+            while(TRUE) {
+                if (ListEntry == NULL) {
+                    break;
+                }
+
+                Timer = CONTAINING_RECORD(ListEntry, YORI_WIN_TIMER, ListEntry);
+                ListEntry = YoriLibGetNextListEntry(&WinMgr->TimerList, ListEntry);
+                if (Timer->ExpirationTime < CurrentTime) {
+                    Event.EventType = YoriWinEventTimer;
+                    Event.Timer.Timer = Timer;
+                    Timer->NotifyCtrl->NotifyEventFn(Timer->NotifyCtrl, &Event);
+                    Timer->PeriodsExpired++;
+                    YoriWinMgrCalculateNextExpiration(Timer);
+                }
+            }
+        }
 
         //
         //  Process any posted events for the window.

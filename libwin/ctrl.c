@@ -109,6 +109,7 @@ YoriWinDestroyControl(
     __in PYORI_WIN_CTRL Ctrl
     )
 {
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle = NULL;
 
     //
     //  Notify all controls that the parent is going away in case they
@@ -126,9 +127,14 @@ YoriWinDestroyControl(
         if (Ctrl->Parent->Parent == NULL) {
             PYORI_WIN_WINDOW Window;
             Window = YoriWinGetWindowFromWindowCtrl(Ctrl->Parent);
+            WinMgrHandle = YoriWinGetWindowManagerHandle(Window);
             YoriWinRemoveControlFromWindow(Window, Ctrl);
         }
         YoriLibRemoveListItem(&Ctrl->ParentControlList);
+    }
+
+    if (WinMgrHandle != NULL) {
+        YoriWinMgrRemoveTimersForControl(WinMgrHandle, Ctrl);
     }
 }
 

@@ -120,7 +120,8 @@ typedef struct _YORI_WIN_EVENT {
         YoriWinEventWindowManagerResize         = 32,
         YoriWinEventParentResize                = 33,
         YoriWinEventMouseMoveOutsideWindow      = 34,
-        YoriWinEventBeyondMax                   = 35
+        YoriWinEventTimer                       = 35,
+        YoriWinEventBeyondMax                   = 36
     } EventType;
 
     /**
@@ -177,6 +178,10 @@ typedef struct _YORI_WIN_EVENT {
             SMALL_RECT OldWinMgrDimensions;
             SMALL_RECT NewWinMgrDimensions;
         } WindowManagerResize;
+
+        struct {
+            PYORI_WIN_CTRL_HANDLE Timer;
+        } Timer;
     };
 } YORI_WIN_EVENT, *PYORI_WIN_EVENT;
 
@@ -796,6 +801,24 @@ VOID
 YoriWinMgrPopWindow(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_LIST_ENTRY TopLevelWindowListEntry
+    );
+
+PYORI_WIN_CTRL_HANDLE
+YoriWinMgrAllocateRecurringTimer(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_WIN_CTRL Ctrl,
+    __in DWORD PeriodicInterval
+    );
+
+VOID
+YoriWinMgrFreeTimer(
+    __in PYORI_WIN_CTRL_HANDLE TimerHandle
+    );
+
+VOID
+YoriWinMgrRemoveTimersForControl(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_WIN_CTRL Ctrl
     );
 
 __success(return)

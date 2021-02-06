@@ -334,6 +334,22 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
      */
     YORI_WIN_MULTILINE_EDIT_SELECT Selection;
 
+
+    /**
+     Records the last observed mouse location when a mouse selection is
+     active.  This is repeatedly used via a timer when the mouse moves off
+     the control area.  Once the mouse returns to the control area or the
+     button is released (completing the selection) this value is undefined.
+     */
+    YORI_WIN_BOUNDED_COORD LastMousePos;
+
+    /**
+     A timer that is used to indicate the previous mouse position should be
+     repeated to facilitate scroll.  This can be NULL if auto scroll is not
+     in effect.
+     */
+    PYORI_WIN_CTRL_HANDLE Timer;
+
     /**
      When inputting a character by value, the current value that has been
      accumulated (since this requires multiple key events.)
@@ -3522,6 +3538,11 @@ YoriWinMultilineEditFinishMouseSelection(
             Selection->Active = YoriWinMultilineEditSelectNotActive;
         }
     }
+
+    if (MultilineEdit->Timer != NULL) {
+        YoriWinMgrFreeTimer(MultilineEdit->Timer);
+        MultilineEdit->Timer = NULL;
+    }
 }
 
 
@@ -4540,6 +4561,17 @@ YoriWinMultilineEditScrollForMouseSelect(
     DWORD NewViewportTop;
     DWORD NewViewportLeft;
     DWORD DisplayOffset;
+    BOOLEAN SetTimer;
+
+    SetTimer = FALSE;
+    if (MousePos != &MultilineEdit->LastMousePos) {
+        MultilineEdit->LastMousePos.Pos.X = MousePos->Pos.X;
+        MultilineEdit->LastMousePos.Pos.Y = MousePos->Pos.Y;
+        MultilineEdit->LastMousePos.Above = MousePos->Above;
+        MultilineEdit->LastMousePos.Below = MousePos->Below;
+        MultilineEdit->LastMousePos.Left = MousePos->Left;
+        MultilineEdit->LastMousePos.Right = MousePos->Right;
+    }
 
     YoriWinGetControlClientSize(&MultilineEdit->Ctrl, &ClientSize);
     LineCountToDisplay = ClientSize.Y;
@@ -4564,6 +4596,7 @@ YoriWinMultilineEditScrollForMouseSelect(
         } else {
             NewCursorLine = NewViewportTop - 1;
         }
+        SetTimer = TRUE;
     } else if (MousePos->Below) {
         if (NewViewportTop + 1 + LineCountToDisplay > MultilineEdit->LinesPopulated) {
             if (MultilineEdit->LinesPopulated > 0) {
@@ -4574,6 +4607,7 @@ YoriWinMultilineEditScrollForMouseSelect(
         } else {
             NewCursorLine = NewViewportTop + LineCountToDisplay + 1;
         }
+        SetTimer = TRUE;
     } else {
         if (NewViewportTop + MousePos->Pos.Y < MultilineEdit->LinesPopulated) {
             NewCursorLine = NewViewportTop + MousePos->Pos.Y;
@@ -4597,11 +4631,28 @@ YoriWinMultilineEditScrollForMouseSelect(
         } else {
             DisplayOffset = 0;
         }
+        SetTimer = TRUE;
     } else if (MousePos->Right) {
         DisplayOffset = NewViewportLeft + ClientSize.X + 1;
+        SetTimer = TRUE;
     } else {
         DisplayOffset = NewViewportLeft + MousePos->Pos.X;
     }
+
+    if (SetTimer) {
+        if (MultilineEdit->Timer == NULL) {
+            PYORI_WIN_WINDOW TopLevelWindow;
+            TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
+            MultilineEdit->Timer = YoriWinMgrAllocateRecurringTimer(YoriWinGetWindowManagerHandle(TopLevelWindow), &MultilineEdit->Ctrl, 100);
+        }
+    } else {
+        if (MultilineEdit->Timer != NULL) {
+            YoriWinMgrFreeTimer(MultilineEdit->Timer);
+            MultilineEdit->Timer = NULL;
+        }
+    }
+
+
     YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, DisplayOffset, &NewCursorOffset);
 
     //
@@ -5269,6 +5320,13 @@ YoriWinMultilineEditEventHandler(
                 YoriWinBoundCoordInSubRegion(&Event->MouseMoveOutsideWindow.Location, &Ctrl->ClientRect, &ClientPos);
                 YoriWinMultilineEditScrollForMouseSelect(MultilineEdit, &ClientPos);
             }
+            break;
+        case YoriWinEventTimer:
+            ASSERT(MultilineEdit->MouseButtonDown);
+            ASSERT(MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromTopDown ||
+                   MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromBottomUp);
+            ASSERT(Event->Timer.Timer == MultilineEdit->Timer);
+            YoriWinMultilineEditScrollForMouseSelect(MultilineEdit, &MultilineEdit->LastMousePos);
             break;
         case YoriWinEventMouseUpInClient:
         case YoriWinEventMouseUpOutsideWindow:
