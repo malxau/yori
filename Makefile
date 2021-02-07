@@ -129,6 +129,7 @@ DIRS=crt       \
      setver    \
      shutdn    \
      sleep     \
+     slmenu    \
      split     \
      sponge    \
      start     \

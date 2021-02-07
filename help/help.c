@@ -162,6 +162,7 @@ const
 CHAR strHelpHelpText4[] =
         "SHUTDN    Shutdown, reboot or logoff the system\n"
         "SLEEP     Waits for a specified number of seconds\n"
+        "SLMENU    Display a menu of items from input and output the user selection\n"
         "SPLIT     Split a file into pieces\n"
         "SPONGE    Read input into memory then output, allowing rewrite of input\n"
         "START     Ask the shell to open a file\n"

@@ -404,6 +404,11 @@ YORI_CMD_BUILTIN YoriCmd_SLEEP;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_SLMENU;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YSPLIT;
 
 /**
@@ -566,6 +571,7 @@ YoriShBuiltins[] = {
                     {_T("SETLOCAL"),  YoriCmd_SETLOCAL},
                     {_T("SETVER"),    YoriCmd_SETVER},
                     {_T("SLEEP"),     YoriCmd_SLEEP},
+                    {_T("SLMENU"),    YoriCmd_SLMENU},
                     {_T("STRCMP"),    YoriCmd_STRCMP},
                     {_T("SYNC"),      YoriCmd_SYNC},
                     {_T("TAIL"),      YoriCmd_TAIL},
