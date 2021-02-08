@@ -1195,7 +1195,7 @@ YsFreeScript(
     NextEntry = YoriLibGetNextListEntry(&Script->CallStackLinks, NULL);
     while(NextEntry != NULL) {
         StackLocation = CONTAINING_RECORD(NextEntry, YS_CALL_STACK, StackLinks);
-        NextEntry = YoriLibGetNextListEntry(&StackLocation->StackLinks, NextEntry);
+        NextEntry = YoriLibGetNextListEntry(&Script->CallStackLinks, NextEntry);
 
         YsFreeCallStack(StackLocation);
         CallStackFound = TRUE;
