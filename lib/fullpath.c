@@ -303,6 +303,77 @@ YoriLibSetCurrentDirectoryOnDrive(
 }
 
 /**
+ Change the current directory to an arbitrary path and modify any per-drive
+ current directory if changing to a different drive.
+
+ @param NewCurrentDirectory Pointer to the new directory.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(
+    __in PYORI_STRING NewCurrentDirectory
+    )
+{
+    YORI_STRING OldCurrentDirectory;
+    DWORD OldCurrentDirectoryLength;
+    TCHAR NewDrive;
+    TCHAR OldDrive;
+
+    ASSERT(YoriLibIsStringNullTerminated(NewCurrentDirectory));
+
+    OldCurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    if (!YoriLibAllocateString(&OldCurrentDirectory, OldCurrentDirectoryLength)) {
+        return FALSE;
+    }
+
+    OldCurrentDirectory.LengthInChars = GetCurrentDirectory(OldCurrentDirectory.LengthAllocated, OldCurrentDirectory.StartOfString);
+
+    if (OldCurrentDirectory.LengthInChars == 0 ||
+        OldCurrentDirectory.LengthInChars >= OldCurrentDirectory.LengthAllocated) {
+        YoriLibFreeStringContents(&OldCurrentDirectory);
+        return FALSE;
+    }
+
+    if (!SetCurrentDirectory(NewCurrentDirectory->StartOfString)) {
+        YoriLibFreeStringContents(&OldCurrentDirectory);
+        return FALSE;
+    }
+
+    //
+    //  Convert the first character to uppercase for comparison later.
+    //
+
+    OldDrive = OldCurrentDirectory.StartOfString[0];
+    if (OldDrive >= 'a' && OldDrive <= 'z') {
+        OldDrive = YoriLibUpcaseChar(OldDrive);
+    }
+
+    NewDrive = NewCurrentDirectory->StartOfString[0];
+    if (NewDrive >= 'a' && NewDrive <= 'z') {
+        NewDrive = YoriLibUpcaseChar(NewDrive);
+    }
+
+    //
+    //  If the old current directory is drive letter based, preserve the old
+    //  current directory in the environment.
+    //
+
+    if (OldDrive >= 'A' &&
+        OldDrive <= 'Z' &&
+        OldCurrentDirectory.StartOfString[1] == ':') {
+
+        if (NewDrive != OldDrive) {
+            YoriLibSetCurrentDirectoryOnDrive(OldDrive, &OldCurrentDirectory);
+        }
+    }
+
+    YoriLibFreeStringContents(&OldCurrentDirectory);
+    return TRUE;
+}
+
+
+/**
  Given a fully qualified path containing a drive letter or UNC root, determine
  where the root component is that cannot be traversed above.  The path may
  still contain .. components, it must have a parent directory specified
@@ -2411,5 +2482,6 @@ YoriLibGetDiskFreeSpace(
 
     return TRUE;
 }
+
 
 // vim:sw=4:ts=4:et:

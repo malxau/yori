@@ -1941,6 +1941,11 @@ YoriLibSetCurrentDirectoryOnDrive(
     __in PYORI_STRING DriveCurrentDirectory
     );
 
+BOOLEAN
+YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(
+    __in PYORI_STRING NewCurrentDirectory
+    );
+
 BOOL
 YoriLibIsDriveLetterWithColon(
     __in PYORI_STRING Path

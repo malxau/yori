@@ -283,7 +283,27 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS32 {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR32 Ignored2[10];
+    YORI_LIB_PTR32 Ignored2[5];
+
+    /**
+     The number of bytes in the CurrentDirectory.
+     */
+    WORD CurrentDirectoryLengthInBytes;
+
+    /**
+     The number of bytes allocated for the CurrentDirectory.
+     */
+    WORD CurrentDirectoryMaximumLengthInBytes;
+
+    /**
+     Pointer to the CurrentDirectory.
+     */
+    YORI_LIB_PTR32 CurrentDirectory;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored3[3];
 
     /**
      The number of bytes in the ImagePathName.
@@ -577,7 +597,27 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS64 {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR64 Ignored2[10];
+    YORI_LIB_PTR64 Ignored2[5];
+
+    /**
+     The number of bytes in the CurrentDirectory.
+     */
+    WORD CurrentDirectoryLengthInBytes;
+
+    /**
+     The number of bytes allocated for the CurrentDirectory.
+     */
+    WORD CurrentDirectoryMaximumLengthInBytes;
+
+    /**
+     Pointer to the CurrentDirectory.
+     */
+    YORI_LIB_PTR64 CurrentDirectory;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR64 Ignored3[3];
 
     /**
      The number of bytes in the ImagePathName.
@@ -592,7 +632,7 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS64 {
     /**
      Padding in 64 bit
      */
-    DWORD Ignored3;
+    DWORD Ignored4;
 
     /**
      Pointer to the ImagePathName.
@@ -612,7 +652,7 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS64 {
     /**
      Padding in 64 bit
      */
-    DWORD Ignored4;
+    DWORD Ignored5;
 
     /**
      Pointer to the CommandLine.

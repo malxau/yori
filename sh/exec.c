@@ -57,13 +57,17 @@
  @param EnvString On successful completion, a newly allocated string
         containing the child process environment.
 
+ @param CurrentDirectory On successful completion, a newly allocated string
+        containing the child current directory.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriShSuckEnv(
     __in HANDLE ProcessHandle,
-    __out PYORI_STRING EnvString
+    __out PYORI_STRING EnvString,
+    __out PYORI_STRING CurrentDirectory
     )
 {
     PROCESS_BASIC_INFORMATION BasicInfo;
@@ -72,8 +76,10 @@ YoriShSuckEnv(
     DWORD dwBytesReturned;
     SIZE_T BytesReturned;
     DWORD EnvironmentBlockPageOffset;
-    DWORD CharsToMask;
+    DWORD EnvCharsToMask;
+    DWORD CurrentDirectoryCharsToRead;
     PVOID ProcessParamsBlockToRead;
+    PVOID CurrentDirectoryToRead;
     PVOID EnvironmentBlockToRead;
     BOOL TargetProcess32BitPeb;
     DWORD OsVerMajor;
@@ -149,6 +155,8 @@ YoriShSuckEnv(
                        YORI_LIB_HEX_FLAG_DISPLAY_OFFSET);
 #endif
 
+        CurrentDirectoryToRead = (PVOID)(ULONG_PTR)ProcessParameters.CurrentDirectory;
+        CurrentDirectoryCharsToRead = ProcessParameters.CurrentDirectoryLengthInBytes / sizeof(TCHAR);
         EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
         EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (DWORD)ProcessParameters.EnvironmentBlock;
     } else {
@@ -158,13 +166,15 @@ YoriShSuckEnv(
             return FALSE;
         }
 
+        CurrentDirectoryToRead = (PVOID)(ULONG_PTR)ProcessParameters.CurrentDirectory;
+        CurrentDirectoryCharsToRead = ProcessParameters.CurrentDirectoryLengthInBytes / sizeof(TCHAR);
         EnvironmentBlockToRead = (PVOID)(ULONG_PTR)ProcessParameters.EnvironmentBlock;
         EnvironmentBlockPageOffset = (YORI_SH_MEMORY_PROTECTION_SIZE - 1) & (DWORD)ProcessParameters.EnvironmentBlock;
     }
 
-    CharsToMask = EnvironmentBlockPageOffset / sizeof(TCHAR);
+    EnvCharsToMask = EnvironmentBlockPageOffset / sizeof(TCHAR);
 #if YORI_SH_DEBUG_DEBUGGER
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvironmentBlock at %p PageOffset %04x CharsToMask %04x\n"), EnvironmentBlockToRead, EnvironmentBlockPageOffset, CharsToMask);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("EnvironmentBlock at %p PageOffset %04x EnvCharsToMask %04x\n"), EnvironmentBlockToRead, EnvironmentBlockPageOffset, EnvCharsToMask);
 #endif
 
     //
@@ -174,7 +184,7 @@ YoriShSuckEnv(
     //  a result, this may be truncated, which is acceptable.
     //
 
-    if (!YoriLibAllocateString(EnvString, 32 * 1024 - CharsToMask)) {
+    if (!YoriLibAllocateString(EnvString, 32 * 1024 - EnvCharsToMask)) {
         return FALSE;
     }
 
@@ -264,6 +274,19 @@ YoriShSuckEnv(
         YoriLibFreeStringContents(EnvString);
         return FALSE;
     }
+
+    if (!YoriLibAllocateString(CurrentDirectory, CurrentDirectoryCharsToRead + 1)) {
+        YoriLibFreeStringContents(EnvString);
+        return FALSE;
+    }
+
+    if (!ReadProcessMemory(ProcessHandle, CurrentDirectoryToRead, CurrentDirectory->StartOfString, CurrentDirectoryCharsToRead * sizeof(TCHAR), &BytesReturned)) {
+        YoriLibFreeStringContents(EnvString);
+        return FALSE;
+    }
+
+    CurrentDirectory->LengthInChars = CurrentDirectoryCharsToRead;
+    CurrentDirectory->StartOfString[CurrentDirectoryCharsToRead] = '\0';
 
     return TRUE;
 }
@@ -505,6 +528,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
             DbgEvent.dwProcessId == ExecContext->dwProcessId) {
 
             YORI_STRING EnvString;
+            YORI_STRING CurrentDirectory;
 
             //
             //  If the user sent this task the background after starting it,
@@ -516,9 +540,12 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
             }
 
             if (ApplyEnvironment &&
-                YoriShSuckEnv(ExecContext->hProcess, &EnvString)) {
+                YoriShSuckEnv(ExecContext->hProcess, &EnvString, &CurrentDirectory)) {
                 YoriShSetEnvironmentStrings(&EnvString);
+
+                YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(&CurrentDirectory);
                 YoriLibFreeStringContents(&EnvString);
+                YoriLibFreeStringContents(&CurrentDirectory);
             }
         }
 
