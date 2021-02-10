@@ -1,5 +1,5 @@
 /**
- * @file libwin/window.c
+ * @file libwin/winmgr.c
  *
  * Yori manage multiple overlapping windows
  *
@@ -389,6 +389,37 @@ YoriWinGetWinMgrLocation(
     Rect->Bottom = SrcRect->Bottom;
     return TRUE;
 }
+
+/**
+ Return the location of the cursor at the time the window manager was
+ started.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param CursorLocation On successful completion, populated with the location
+        of the cursor.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinGetWinMgrInitialCursorLocation(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __out PCOORD CursorLocation
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+
+    if (!WinMgr->HaveSavedScreenBufferInfo) {
+        return FALSE;
+    }
+
+    CursorLocation->X = WinMgr->SavedScreenBufferInfo.dwCursorPosition.X;
+    CursorLocation->Y = WinMgr->SavedScreenBufferInfo.dwCursorPosition.Y;
+
+    return TRUE;
+}
+
 
 /**
  Return the mask of mouse buttons which were pressed last time mouse input was

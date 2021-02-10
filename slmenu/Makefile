@@ -17,7 +17,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-slmenu.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+slmenu.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIWIN)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIWIN) -version:$(SLMENU_VER_MAJOR).$(SLMENU_VER_MINOR) $(LINKPDB) -out:$@
 

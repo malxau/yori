@@ -351,6 +351,16 @@ YoriWinLabelReposition(
  */
 #define YORI_WIN_LIST_STYLE_DESELECT_ON_LOSE_FOCUS (0x0004)
 
+/**
+ The list should display multiple items on one line
+ */
+#define YORI_WIN_LIST_STYLE_HORIZONTAL  (0x0008)
+
+/**
+ The list should not have a border around the control
+ */
+#define YORI_WIN_LIST_STYLE_NO_BORDER   (0x0010)
+
 PYORI_WIN_CTRL_HANDLE
 YoriWinListCreate(
     __in PYORI_WIN_WINDOW_HANDLE Parent,
@@ -407,6 +417,12 @@ BOOLEAN
 YoriWinListReposition(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PSMALL_RECT CtrlRect
+    );
+
+BOOLEAN
+YoriWinListSetHorizontalItemWidth(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in WORD ItemWidth
     );
 
 BOOLEAN
@@ -898,6 +914,13 @@ BOOLEAN
 YoriWinGetWinMgrLocation(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __out PSMALL_RECT Rect
+    );
+
+__success(return)
+BOOLEAN
+YoriWinGetWinMgrInitialCursorLocation(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __out PCOORD CursorLocation
     );
 
 VOID
