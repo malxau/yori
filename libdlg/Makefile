@@ -4,6 +4,7 @@ compile: yoridlg.lib
 !INCLUDE "..\config\common.mk"
 
 OBJS=\
+	 dir.obj      \
 	 file.obj     \
 	 find.obj     \
 	 input.obj    \

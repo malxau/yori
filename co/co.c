@@ -458,7 +458,7 @@ CoGetTargetDirectory(
 
     YoriLibInitEmptyString(&Directory);
     YoriLibConstantString(&Title, _T("Enter Directory"));
-    if (!YoriDlgInput(WinMgr, &Title, &Directory)) {
+    if (!YoriDlgDir(WinMgr, &Title, 0, NULL, &Directory)) {
         return FALSE;
     }
 

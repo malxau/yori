@@ -65,6 +65,16 @@ typedef struct _YORI_DLG_FILE_CUSTOM_OPTION {
 
 __success(return)
 BOOLEAN
+YoriDlgDir(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_STRING Title,
+    __in DWORD OptionCount,
+    __in_opt PYORI_DLG_FILE_CUSTOM_OPTION Options,
+    __inout PYORI_STRING Text
+    );
+
+__success(return)
+BOOLEAN
 YoriDlgFile(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
