@@ -584,6 +584,9 @@ YoriWinInvokeAccelerator(
             if (Ctrl->AcceleratorChar &&
                 YoriLibUpcaseChar(Ctrl->AcceleratorChar) == UpcaseChar) {
 
+                BOOLEAN ActivateNext;
+                ActivateNext = FALSE;
+
                 // 
                 //  Labels are special in that they support accelerators but
                 //  the intention is to activate the next control
@@ -596,12 +599,17 @@ YoriWinInvokeAccelerator(
 
                     Ctrl = CONTAINING_RECORD(ListEntry, YORI_WIN_CTRL, ParentControlList);
                     ListEntry = YoriLibGetNextListEntry(&Window->Ctrl.ChildControlList, ListEntry);
+                    ActivateNext = TRUE;
                 }
 
-                ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
-                CtrlEvent.EventType = YoriWinEventExecute;
+                if (ActivateNext) {
+                    YoriWinSetFocus(Window, Ctrl);
+                } else {
+                    ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
+                    CtrlEvent.EventType = YoriWinEventExecute;
 
-                return Ctrl->NotifyEventFn(Ctrl, &CtrlEvent);
+                    return Ctrl->NotifyEventFn(Ctrl, &CtrlEvent);
+                }
             }
         }
     }
