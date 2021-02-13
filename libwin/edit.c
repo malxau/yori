@@ -1948,7 +1948,9 @@ YoriWinEditGetText(
         memcpy(Text, &NewString, sizeof(YORI_STRING));
     }
 
-    YoriWinEditPopulateTextRange(Edit, 0, Edit->Text.LengthInChars, Text);
+    if (Edit->Text.LengthInChars > 0) {
+        YoriWinEditPopulateTextRange(Edit, 0, Edit->Text.LengthInChars, Text);
+    }
     Text->StartOfString[Text->LengthInChars] = '\0';
     return TRUE;
 }
