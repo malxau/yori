@@ -868,9 +868,24 @@ CoCreateSynchronousMenu(VOID)
         return FALSE;
     }
 
+    if (!YoriWinGetWinMgrDimensions(WinMgr, &WindowSize)) {
+        WindowSize.X = 80;
+        WindowSize.X = 25;
+    } else {
+        WindowSize.X = (SHORT)(WindowSize.X * 9 / 10);
+        if (WindowSize.X < 80) {
+            WindowSize.X = 80;
+        }
+
+        WindowSize.Y = (SHORT)(WindowSize.Y * 4 / 5);
+        if (WindowSize.Y < 25) {
+            WindowSize.Y = 25;
+        }
+    }
+
     YoriLibConstantString(&Title, _T("Co"));
 
-    if (!YoriWinCreateWindow(WinMgr, 80, 25, 80, 25, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Title, &Parent)) {
+    if (!YoriWinCreateWindow(WinMgr, WindowSize.X, WindowSize.Y, WindowSize.X, WindowSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Title, &Parent)) {
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
