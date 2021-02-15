@@ -3,7 +3,7 @@
  *
  * Yori shell mini file manager
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -968,6 +968,18 @@ CoCreateSynchronousMenu(VOID)
     ButtonArea.Top += 4;
     ButtonArea.Bottom = ButtonArea.Top;
 
+    YoriLibConstantString(&Caption, _T("&Sort:"));
+    Ctrl = YoriWinLabelCreate(Parent, &ButtonArea, &Caption, 0);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Parent);
+        YoriWinCloseWindowManager(WinMgr);
+        return FALSE;
+    }
+
+    ButtonArea.Top += 1;
+    ButtonArea.Bottom = ButtonArea.Top;
+    ButtonArea.Left += 1;
+
     YoriLibConstantString(&Caption, _T(""));
     Ctrl = YoriWinComboCreate(Parent, &ButtonArea, CoSortBeyondMaximum, &Caption, 0, CoSortSelected);
     if (Ctrl == NULL) {
@@ -1054,7 +1066,7 @@ ENTRYPOINT(
                 CoHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2021"));
                 return EXIT_SUCCESS;
             }
         } else {
