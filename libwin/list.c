@@ -517,11 +517,12 @@ YoriWinListNotifyMouseWheel(
  @return TRUE to indicate there is a list item corresponding to this mouse
          location, FALSE if there is not.
  */
+__success(return)
 BOOLEAN
 YoriWinListGetItemSelectedByMouseLocation(
     __in PYORI_WIN_CTRL_LIST List,
     __in COORD MousePos,
-    __in PDWORD SelectedItem
+    __out PDWORD SelectedItem
     )
 {
     DWORD ItemRelativeToFirstDisplayed;

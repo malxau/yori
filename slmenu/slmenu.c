@@ -206,7 +206,7 @@ SlmenuCreateSinglelineMenu(
     __in PYORI_STRING MenuOptions,
     __in DWORD NumberOptions,
     __in SLMENU_LOCATION Location,
-    __in PYORI_STRING Title,
+    __in_opt PYORI_STRING Title,
     __out PDWORD ActiveOption
     )
 {
