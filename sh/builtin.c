@@ -160,58 +160,40 @@ YoriShBuckPassToCmd (
 
 /**
  Call a builtin function.  This may be in a DLL or part of the main executable,
- but it is executed synchronously via a call rather than a CreateProcess.
+ but it is executed synchronously via a call rather than a CreateProcess.  The
+ caller is required to reparse the ExecContext to expand environment variables,
+ ensuring arguments are in their correct position after expansion.
 
  @param Fn The function associated with the builtin operation to call.
 
- @param ExecContext The context surrounding this particular function.
+ @param ExecContext The context surrounding this particular function.  This
+        is used to establish redirection context, but the command is expected
+        to have already been reparsed on function entry to perform environment
+        variable expansion.
+
+ @param ArgC The number of arguments to execute.
+
+ @param EscapedArgV An array of arguments to pass to the builtin.
 
  @return ExitCode, typically zero for success, nonzero for failure.
  */
 int
 YoriShExecuteInProc(
     __in PYORI_CMD_BUILTIN Fn,
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
+    __in DWORD ArgC,
+    __in PYORI_STRING EscapedArgV
     )
 {
     YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT PreviousRedirectContext;
     BOOLEAN WasPipe = FALSE;
-    PYORI_LIBSH_CMD_CONTEXT OriginalCmdContext = &ExecContext->CmdToExec;
-    YORI_STRING CmdLine;
-    PYORI_STRING EscapedArgV;
     PYORI_STRING NoEscapedArgV;
     PYORI_STRING SavedEscapedArgV;
     DWORD SavedEscapedArgC;
-    DWORD ArgC;
     DWORD Count;
     DWORD ExitCode = 0;
 
-    EscapedArgV = NULL;
     NoEscapedArgV = NULL;
-    ArgC = 0;
-
-    //
-    //  Build a command line, leaving all escapes in the command line.
-    //
-
-    YoriLibInitEmptyString(&CmdLine);
-    if (!YoriLibShBuildCmdlineFromCmdContext(OriginalCmdContext, &CmdLine, FALSE, NULL, NULL)) {
-        ExitCode = ERROR_OUTOFMEMORY;
-        goto Cleanup;
-    }
-
-    //
-    //  Parse the command line in the same way that a child process would.
-    //
-
-    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, TRUE, &ArgC);
-    YoriLibFreeStringContents(&CmdLine);
-
-    if (EscapedArgV == NULL) {
-        ExitCode = ERROR_OUTOFMEMORY;
-        goto Cleanup;
-    }
 
     //
     //  Remove the escapes from the command line.  This allows the builtin to
@@ -315,13 +297,6 @@ Cleanup:
         YoriLibDereference(NoEscapedArgV);
     }
 
-    if (EscapedArgV != NULL) {
-        for (Count = 0; Count < ArgC; Count++) {
-            YoriLibFreeStringContents(&EscapedArgV[Count]);
-        }
-        YoriLibDereference(EscapedArgV);
-    }
-
     return ExitCode;
 }
 
@@ -362,11 +337,43 @@ YoriShExecuteNamedModuleInProc(
 
     if (Main) {
         PYORI_LIBSH_LOADED_MODULE PreviousModule;
+        YORI_STRING CmdLine;
+        DWORD ArgC;
+        DWORD Count;
+        PYORI_STRING EscapedArgV;
+
+        //
+        //  Build a command line, leaving all escapes in the command line.
+        //
+
+        YoriLibInitEmptyString(&CmdLine);
+        if (!YoriLibShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &CmdLine, FALSE, NULL, NULL)) {
+            YoriLibShReleaseDll(Module);
+            return FALSE;
+        }
+
+        //
+        //  Parse the command line in the same way that a child process would.
+        //
+
+        ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+        EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, TRUE, &ArgC);
+        YoriLibFreeStringContents(&CmdLine);
+
+        if (EscapedArgV == NULL) {
+            YoriLibShReleaseDll(Module);
+            return FALSE;
+        }
 
         PreviousModule = YoriLibShGetActiveModule();
         YoriLibShSetActiveModule(Module);
-        *ExitCode = YoriShExecuteInProc(Main, ExecContext);
+        *ExitCode = YoriShExecuteInProc(Main, ExecContext, ArgC, EscapedArgV);
         YoriLibShSetActiveModule(PreviousModule);
+
+        for (Count = 0; Count < ArgC; Count++) {
+            YoriLibFreeStringContents(&EscapedArgV[Count]);
+        }
+        YoriLibDereference(EscapedArgV);
     }
 
     YoriLibShReleaseDll(Module);
@@ -389,12 +396,37 @@ YoriShBuiltIn (
     )
 {
     DWORD ExitCode = 1;
-    PYORI_LIBSH_CMD_CONTEXT CmdContext = &ExecContext->CmdToExec;
     PYORI_CMD_BUILTIN BuiltInCmd = NULL;
     PYORI_LIBSH_BUILTIN_CALLBACK CallbackEntry = NULL;
+    YORI_STRING CmdLine;
+    DWORD ArgC;
+    DWORD Count;
+    PYORI_STRING EscapedArgV;
 
+    //
+    //  Build a command line, leaving all escapes in the command line.
+    //
 
-    CallbackEntry = YoriLibShLookupBuiltinByName(&CmdContext->ArgV[0]);
+    YoriLibInitEmptyString(&CmdLine);
+    if (!YoriLibShBuildCmdlineFromCmdContext(&ExecContext->CmdToExec, &CmdLine, FALSE, NULL, NULL)) {
+        ExitCode = ERROR_OUTOFMEMORY;
+        return ExitCode;
+    }
+
+    //
+    //  Parse the command line in the same way that a child process would.
+    //
+
+    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+    EscapedArgV = YoriLibCmdlineToArgcArgv(CmdLine.StartOfString, (DWORD)-1, TRUE, &ArgC);
+    YoriLibFreeStringContents(&CmdLine);
+
+    if (EscapedArgV == NULL) {
+        ExitCode = ERROR_OUTOFMEMORY;
+        return ExitCode;
+    }
+
+    CallbackEntry = YoriLibShLookupBuiltinByName(&EscapedArgV[0]);
     if (CallbackEntry != NULL) {
         BuiltInCmd = CallbackEntry->BuiltInFn;
     }
@@ -421,7 +453,7 @@ YoriShBuiltIn (
 
         PreviousModule = YoriLibShGetActiveModule();
         YoriLibShSetActiveModule(HostingModule);
-        ExitCode = YoriShExecuteInProc(BuiltInCmd, ExecContext);
+        ExitCode = YoriShExecuteInProc(BuiltInCmd, ExecContext, ArgC, EscapedArgV);
         ASSERT(YoriLibShGetActiveModule() == HostingModule);
         YoriLibShSetActiveModule(PreviousModule);
 
@@ -429,7 +461,7 @@ YoriShBuiltIn (
             YoriLibShReleaseDll(HostingModule);
         }
     } else {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Unrecognized command: %y\n"), &CmdContext->ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Unrecognized command: %y\n"), &EscapedArgV[0]);
         if (ExecContext->StdOutType == StdOutTypePipe &&
             ExecContext->NextProgram != NULL &&
             ExecContext->NextProgram->StdInType == StdInTypePipe) {
@@ -437,6 +469,11 @@ YoriShBuiltIn (
             ExecContext->NextProgramType = NextProgramExecNever;
         }
     }
+
+    for (Count = 0; Count < ArgC; Count++) {
+        YoriLibFreeStringContents(&EscapedArgV[Count]);
+    }
+    YoriLibDereference(EscapedArgV);
 
     return ExitCode;
 }
