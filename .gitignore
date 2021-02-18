@@ -14,9 +14,15 @@ bin/**
 sym/**
 pkg/out/**
 pkg/amd64/**
-pkg/win32/**
+pkg/arm/**
 pkg/arm64/**
+pkg/ia64/**
+pkg/mips/**
+pkg/win32/**
 pkg/amd64-dbg/**
-pkg/win32-dbg/**
+pkg/arm-dbg/**
 pkg/arm64-dbg/**
+pkg/ia64-dbg/**
+pkg/mips-dbg/**
+pkg/win32-dbg/**
 !crt/i386/*.obj

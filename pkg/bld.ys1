@@ -17,14 +17,27 @@ cl /? 2>&1 | findstr /C:"for x64" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=amd64
 cl /? 2>&1 | findstr /C:"for AMD64" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=amd64
+cl /? 2>&1 | findstr /C:"for ARM" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=arm
 cl /? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=arm64
 cl /? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=mips
+cl /? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=ia64
 
 pushd ..
 
 set BINPKGS=yori-modular yori-core yori-typical yori-extra yori-ypm yori-one
+
+REM
+REM Find the version of ypm running on the host.  For oneyori, this is a
+REM builtin.  This version is always used in preference to the version just
+REM compiled, because that may not be for the same architecture as the host.
+REM
+
+set YPM=`which ypm` 2>NUL
+if strcmp "%YPM%==Not found" ; set YPM=builtin ypm
 
 REM
 REM Extract Yori version from ver.inc and generate string containing the
@@ -50,17 +63,17 @@ if intcmp %ERRORLEVEL%!=0; goto exit
 
 echo *** Generating debug installer
 
-ypm -cs %OUTDIR%\yori-source-noarch.cab yori-source %BUILDSTRING% -filepath . &
+if fscmp -f "%OUTDIR%\yori-source-noarch.cab" ;; %YPM% -cs %OUTDIR%\yori-source-noarch.cab yori-source %BUILDSTRING% -filepath . &
 
 if fscmp -d pkg\%ARCH%-dbg; rd /s pkg\%ARCH%-dbg
 mkdir pkg\%ARCH%-dbg
 move bin\%ARCH% pkg\%ARCH%-dbg\bin
 move sym\%ARCH% pkg\%ARCH%-dbg\sym
 pushd pkg\%ARCH%-dbg\bin
-for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-%ARCH%.cab %%i-dbg %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-dbg-pdb-%ARCH%.cab -replaces %%i -filelist ..\..\%%i.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do %YPM% -c %OUTDIR%\%%i-dbg-%ARCH%.cab %%i-dbg %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-dbg-pdb-%ARCH%.cab -replaces %%i -filelist ..\..\%%i.lst
 popd
 pushd pkg\%ARCH%-dbg\sym
-for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-dbg-pdb-%ARCH%.cab %%i-dbg-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-pdb -filelist ..\..\%%i-pdb.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do %YPM% -c %OUTDIR%\%%i-dbg-pdb-%ARCH%.cab %%i-dbg-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-dbg-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-pdb -filelist ..\..\%%i-pdb.lst
 popd
 
 echo *** Cleaning tree
@@ -78,10 +91,10 @@ mkdir pkg\%ARCH%
 move bin\%ARCH% pkg\%ARCH%\bin
 move sym\%ARCH% pkg\%ARCH%\sym
 pushd pkg\%ARCH%\bin
-for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-%ARCH%.cab %%i %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-pdb-%ARCH%.cab -replaces %%i-dbg -filelist ..\..\%%i.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do %YPM% -c %OUTDIR%\%%i-%ARCH%.cab %%i %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -symbolpath %SOURCEPATH%/%%i-pdb-%ARCH%.cab -replaces %%i-dbg -filelist ..\..\%%i.lst
 popd
 pushd pkg\%ARCH%\sym
-for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do ypm -c %OUTDIR%\%%i-pdb-%ARCH%.cab %%i-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-dbg-pdb -filelist ..\..\%%i-pdb.lst
+for -p %NUMBER_OF_PROCESSORS% %%i in (%BINPKGS%) do %YPM% -c %OUTDIR%\%%i-pdb-%ARCH%.cab %%i-pdb %BUILDSTRING% %ARCH% -upgradepath %UPGRADEPATH%/%%i-pdb-%ARCH%.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -replaces %%i-dbg-pdb -filelist ..\..\%%i-pdb.lst
 popd
 
 if strcmp %ARCH%==win32;mkdir %OUTDIR%\%ARCH% ^& copy pkg\%ARCH%\bin\ysetup.exe %OUTDIR%\%ARCH% >NUL 2>&1
@@ -91,7 +104,7 @@ REM Generate yori-completion which is special because it's architecture
 REM agnostic
 REM
 
-ypm -c %OUTDIR%\yori-completion-noarch.cab yori-completion %BUILDSTRING% noarch -upgradepath %UPGRADEPATH%/yori-completion-noarch.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -filelist pkg\yori-completion.lst
+if fscmp -f "%OUTDIR%\yori-completion-noarch.cab" ;;%YPM% -c %OUTDIR%\yori-completion-noarch.cab yori-completion %BUILDSTRING% noarch -upgradepath %UPGRADEPATH%/yori-completion-noarch.cab -sourcepath %SOURCEPATH%/yori-source-noarch.cab -filelist pkg\yori-completion.lst
 
 REM
 REM Generate pkglist.ini so that tools can find packages provided by this
