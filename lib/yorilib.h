@@ -2494,6 +2494,9 @@ YoriLibDoesProcessHave32BitPeb(
     __in HANDLE ProcessHandle
     );
 
+DWORD
+YoriLibGetArchitecture(VOID);
+
 // *** PRIV.C ***
 
 BOOL

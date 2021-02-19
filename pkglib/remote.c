@@ -494,7 +494,7 @@ YoriPkgCollectPackagesFromSource(
     BOOL DeleteWhenFinished = FALSE;
     LPTSTR ThisLine;
     LPTSTR Equals;
-    LPTSTR KnownArchitectures[] = {_T("noarch"), _T("win32"), _T("amd64")};
+    LPTSTR KnownArchitectures[] = {_T("noarch"), _T("win32"), _T("mips"), _T("alpha"), _T("ppc"), _T("arm"), _T("ia64"), _T("amd64"), _T("arm64")};
 
     // Worst case architecture and worst case key
     TCHAR IniKey[sizeof("noarch.packagepathforolderbuilds")];
@@ -584,8 +584,6 @@ YoriPkgCollectPackagesFromSource(
                         YoriLibSPrintf(IniKey, _T("%y.packagepathforolderbuilds"), &Architecture);
                         PackagePathForOlderBuilds.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, IniKey, _T(""), PackagePathForOlderBuilds.StartOfString, PackagePathForOlderBuilds.LengthAllocated, LocalPath.StartOfString);
                     }
-
-
 
                     Package = YoriPkgAllocateRemotePackage(&PkgNameOnly,
                                                            &PkgVersion,
@@ -1089,29 +1087,65 @@ YoriPkgFindRemotePackages(
                 InstallCount++;
             }
         } else {
-            BOOL WantAmd64;
-            YORI_STRING YsArch;
-#ifdef _WIN64
-            WantAmd64 = TRUE;
-#else
-            WantAmd64 = FALSE;
-            if (DllKernel32.pIsWow64Process) {
-                DllKernel32.pIsWow64Process(GetCurrentProcess(), &WantAmd64);
-            }
-#endif
+            YORI_STRING ArchString[4];
+            DWORD ValidArchCount;
+            DWORD HostArch;
+            DWORD Index;
 
-            YoriLibConstantString(&YsArch, _T("amd64"));
-            if (WantAmd64 && YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, PackagesMatchingCriteria)) {
-                InstallCount++;
-            } else {
-                YoriLibConstantString(&YsArch, _T("win32"));
-                if (YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, PackagesMatchingCriteria)) {
+            ValidArchCount = 0;
+
+            HostArch = YoriLibGetArchitecture();
+
+            switch(HostArch) {
+                case YORI_PROCESSOR_ARCHITECTURE_INTEL:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("win32"));
+                    ValidArchCount++;
+                    break;
+                case YORI_PROCESSOR_ARCHITECTURE_MIPS:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("mips"));
+                    ValidArchCount++;
+                    break;
+                case YORI_PROCESSOR_ARCHITECTURE_ALPHA:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("alpha"));
+                    ValidArchCount++;
+                    break;
+                case YORI_PROCESSOR_ARCHITECTURE_PPC:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("ppc"));
+                    ValidArchCount++;
+                    break;
+                case YORI_PROCESSOR_ARCHITECTURE_ARM:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("arm"));
+                    ValidArchCount++;
+                    break;
+                case YORI_PROCESSOR_ARCHITECTURE_IA64:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("ia64"));
+                    ValidArchCount++;
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("win32"));
+                    ValidArchCount++;
+                    break;
+                case YORI_PROCESSOR_ARCHITECTURE_AMD64:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("amd64"));
+                    ValidArchCount++;
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("win32"));
+                    ValidArchCount++;
+                    break;
+                case YORI_PROCESSOR_ARCHITECTURE_ARM64:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("arm64"));
+                    ValidArchCount++;
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("arm"));
+                    ValidArchCount++;
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("win32"));
+                    ValidArchCount++;
+                    break;
+            }
+
+            YoriLibConstantString(&ArchString[ValidArchCount], _T("noarch"));
+            ValidArchCount++;
+
+            for (Index = 0; Index < ValidArchCount; Index++) {
+                if (YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &ArchString[Index], PackagesMatchingCriteria)) {
                     InstallCount++;
-                } else {
-                    YoriLibConstantString(&YsArch, _T("noarch"));
-                    if (YoriPkgFindRemotePackageMatchingArchitecture(&PackagesMatchingVersion, &YsArch, PackagesMatchingCriteria)) {
-                        InstallCount++;
-                    }
+                    break;
                 }
             }
         }

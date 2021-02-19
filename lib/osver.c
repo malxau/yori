@@ -333,6 +333,106 @@ YoriLibLoadOsEdition(
 }
 
 /**
+ Capture the architecture number from the running system.  Note this is the
+ native architecture, not the emulated WOW architecture.
+
+ @return The architecture number from the host system.
+ */
+DWORD
+YoriLibGetArchitecture(VOID)
+{
+    YORI_SYSTEM_INFO SysInfo;
+    DWORD MajorVersion;
+    DWORD MinorVersion;
+    DWORD BuildNumber;
+    DWORD Architecture;
+    WORD ProcessArch;
+    WORD SystemArch;
+
+    YoriLibGetOsVersion(&MajorVersion, &MinorVersion, &BuildNumber);
+
+    if (DllKernel32.pIsWow64Process2 &&
+        DllKernel32.pIsWow64Process2(GetCurrentProcess(), &ProcessArch, &SystemArch)) {
+
+        Architecture = YORI_PROCESSOR_ARCHITECTURE_INTEL;
+
+        switch(SystemArch) {
+            case IMAGE_FILE_MACHINE_I386:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_INTEL;
+                break;
+            case IMAGE_FILE_MACHINE_R3000:
+            case IMAGE_FILE_MACHINE_R4000:
+            case IMAGE_FILE_MACHINE_R10000:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_MIPS;
+                break;
+            case IMAGE_FILE_MACHINE_ALPHA:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_ALPHA;
+                break;
+            case IMAGE_FILE_MACHINE_POWERPC:
+            case IMAGE_FILE_MACHINE_POWERPCFP:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_PPC;
+                break;
+            case IMAGE_FILE_MACHINE_IA64:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_IA64;
+                break;
+            case IMAGE_FILE_MACHINE_ARMNT:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_ARM;
+                break;
+            case IMAGE_FILE_MACHINE_AMD64:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_AMD64;
+                break;
+            case IMAGE_FILE_MACHINE_ARM64:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_ARM64;
+                break;
+        }
+
+        return Architecture;
+    }
+
+    if (MajorVersion < 4) {
+        GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
+
+        Architecture = YORI_PROCESSOR_ARCHITECTURE_INTEL;
+
+        //
+        //  In old versions the wProcessorArchitecture member does not exist.
+        //  For these systems, we have to look at dwProcessorType.
+        //  Fortunately since these are old versions, the list is static.
+        //
+
+        switch(SysInfo.dwProcessorType) {
+            case YORI_PROCESSOR_INTEL_386:
+            case YORI_PROCESSOR_INTEL_486:
+            case YORI_PROCESSOR_INTEL_PENTIUM:
+            case YORI_PROCESSOR_INTEL_686:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_INTEL;
+                break;
+            case YORI_PROCESSOR_MIPS_R4000:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_MIPS;
+                break;
+            case YORI_PROCESSOR_ALPHA_21064:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_ALPHA;
+                break;
+            case YORI_PROCESSOR_PPC_601:
+            case YORI_PROCESSOR_PPC_603:
+            case YORI_PROCESSOR_PPC_604:
+            case YORI_PROCESSOR_PPC_620:
+                Architecture = YORI_PROCESSOR_ARCHITECTURE_PPC;
+                break;
+        }
+
+        return Architecture;
+
+    } else if (DllKernel32.pGetNativeSystemInfo) {
+        DllKernel32.pGetNativeSystemInfo((LPSYSTEM_INFO)&SysInfo);
+    } else {
+        GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
+    }
+    Architecture = SysInfo.wProcessorArchitecture;
+    return Architecture;
+}
+
+/**
  Return TRUE to indicate the target process is 32 bit, or FALSE if the target
  process is 64 bit.
 

@@ -3036,6 +3036,54 @@ typedef struct _GUID {
  */
 #define YORI_PROCESSOR_PPC_620                      620
 
+#ifndef IMAGE_FILE_MACHINE_R10000
+/**
+ An executable image machine type for MIPS R10000 if the compilation
+ environment didn't supply it.
+ */
+#define IMAGE_FILE_MACHINE_R10000                  (0x0168)
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_POWERPCFP
+/**
+ An executable image machine type for PowerPC with floating point if the
+ compilation environment didn't supply it.
+ */
+#define IMAGE_FILE_MACHINE_POWERPCFP               (0x01f1)
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_IA64
+/**
+ An executable image machine type for Itanium if the compilation environment
+ didn't supply it.
+ */
+#define IMAGE_FILE_MACHINE_IA64                    (0x0200)
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARMNT
+/**
+ An executable image machine type for ARM if the compilation environment
+ didn't supply it.
+ */
+#define IMAGE_FILE_MACHINE_ARMNT                   (0x01c4)
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_AMD64
+/**
+ An executable image machine type for AMD64 if the compilation environment
+ didn't supply it.
+ */
+#define IMAGE_FILE_MACHINE_AMD64                   (0x8664)
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARM64
+/**
+ An executable image machine type for ARM64 if the compilation environment
+ didn't supply it.
+ */
+#define IMAGE_FILE_MACHINE_ARM64                   (0xAA64)
+#endif
+
 /**
  A private definition of CONSOLE_FONT_INFOEX in case the compilation
  environment doesn't provide it.
@@ -5551,6 +5599,18 @@ IS_WOW64_PROCESS(HANDLE, PBOOL);
 typedef IS_WOW64_PROCESS *PIS_WOW64_PROCESS;
 
 /**
+ A prototype for the IsWow64Process2 function.
+ */
+typedef
+BOOL WINAPI
+IS_WOW64_PROCESS2(HANDLE, PWORD, PWORD);
+
+/**
+ A prototype for a pointer to the IsWow64Process2 function.
+ */
+typedef IS_WOW64_PROCESS2 *PIS_WOW64_PROCESS2;
+
+/**
  A prototype for the OpenThread function.
  */
 typedef
@@ -5874,6 +5934,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to IsWow64Process.
      */
     PIS_WOW64_PROCESS pIsWow64Process;
+
+    /**
+     If it's available on the current system, a pointer to IsWow64Process2.
+     */
+    PIS_WOW64_PROCESS2 pIsWow64Process2;
 
     /**
      If it's available on the current system, a pointer to OpenThread.

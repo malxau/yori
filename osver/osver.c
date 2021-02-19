@@ -365,46 +365,7 @@ OsVerGetArchitecture(
     __inout POSVER_VERSION_RESULT VersionResult
     )
 {
-    YORI_SYSTEM_INFO SysInfo;
-
-    if (VersionResult->MajorVersion < 4) {
-        GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
-
-        //
-        //  In old versions the wProcessorArchitecture member does not exist.
-        //  For these systems, we have to look at dwProcessorType.
-        //  Fortunately since these are old versions, the list is static.
-        //
-
-        switch(SysInfo.dwProcessorType) {
-            case YORI_PROCESSOR_INTEL_386:
-            case YORI_PROCESSOR_INTEL_486:
-            case YORI_PROCESSOR_INTEL_PENTIUM:
-            case YORI_PROCESSOR_INTEL_686:
-                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_INTEL;
-                break;
-            case YORI_PROCESSOR_MIPS_R4000:
-                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_MIPS;
-                break;
-            case YORI_PROCESSOR_ALPHA_21064:
-                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_ALPHA;
-                break;
-            case YORI_PROCESSOR_PPC_601:
-            case YORI_PROCESSOR_PPC_603:
-            case YORI_PROCESSOR_PPC_604:
-            case YORI_PROCESSOR_PPC_620:
-                VersionResult->Architecture = YORI_PROCESSOR_ARCHITECTURE_PPC;
-                break;
-        }
-
-        return;
-
-    } else if (DllKernel32.pGetNativeSystemInfo) {
-        DllKernel32.pGetNativeSystemInfo((LPSYSTEM_INFO)&SysInfo);
-    } else {
-        GetSystemInfo((LPSYSTEM_INFO)&SysInfo);
-    }
-    VersionResult->Architecture = SysInfo.wProcessorArchitecture;
+    VersionResult->Architecture = YoriLibGetArchitecture();
 }
 
 #ifdef YORI_BUILTIN
