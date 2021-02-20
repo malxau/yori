@@ -499,7 +499,7 @@ MakeLaunchNextCmd(
 
             if (Result != EXIT_SUCCESS && !CmdToExec->IgnoreErrors) {
                 MakeFreeCmdContextIfNecessary(ChildProcess);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &CmdToExec->Cmd);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch:\n%y\n"), &CmdToExec->Cmd);
                 return FALSE;
             }
         }
@@ -592,7 +592,7 @@ MakeLaunchNextCmd(
         MakeFreeJobId(MakeContext, ChildProcess->JobId);
         ChildProcess->ProcessHandle = NULL;
         if (!CmdToExec->IgnoreErrors) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch %y\n"), &CmdToParse);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch:\n%y\n"), &CmdToParse);
             YoriLibFreeStringContents(&CmdToParse);
             MakeFreeCmdContextIfNecessary(ChildProcess);
             return FALSE;
@@ -768,7 +768,7 @@ MakeProcessCompletion(
         }
 
         if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Command: %y\n"), &ChildProcess->Cmd->Cmd);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Command:\n%y\n"), &ChildProcess->Cmd->Cmd);
         }
 
         if (RestoreColor) {
@@ -849,8 +849,10 @@ MakeExecuteRequiredTargets(
     PMAKE_CHILD_PROCESS ChildProcessArray;
     BOOLEAN Result;
     BOOLEAN MoveToNextTarget;
+    BOOLEAN TargetFailureObserved;
 
     NumberActiveProcesses = 0;
+    TargetFailureObserved = FALSE;
 
     ProcessHandleArray = YoriLibMalloc(MakeContext->NumberProcesses * sizeof(HANDLE));
     if (ProcessHandleArray == NULL) {
@@ -953,7 +955,11 @@ MakeExecuteRequiredTargets(
             }
 
             if (Result == FALSE) {
-                goto Drain;
+                if (MakeContext->KeepGoing) {
+                    TargetFailureObserved = TRUE;
+                } else {
+                    goto Drain;
+                }
             }
         }
 
@@ -964,9 +970,13 @@ MakeExecuteRequiredTargets(
         //
 
         if (NumberActiveProcesses == 0 && YoriLibIsListEmpty(&MakeContext->TargetsReady)) {
-            ASSERT(YoriLibIsListEmpty(&MakeContext->TargetsWaiting));
+            ASSERT(MakeContext->KeepGoing || YoriLibIsListEmpty(&MakeContext->TargetsWaiting));
             break;
         }
+    }
+
+    if (TargetFailureObserved) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failures encountered, build incomplete\n"));
     }
 
 Drain:

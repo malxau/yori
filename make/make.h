@@ -737,6 +737,12 @@ typedef struct _MAKE_CONTEXT {
      */
     BOOLEAN EnvHashCalculated;
 
+    /**
+     TRUE to indicate that execution should continue after failure as much
+     as possible.
+     */
+    BOOLEAN KeepGoing;
+
 } MAKE_CONTEXT, *PMAKE_CONTEXT;
 
 // *** ALLOC.C ***

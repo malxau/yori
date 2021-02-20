@@ -42,6 +42,7 @@ CHAR strMakeHelpText[] =
         "   --             Treat all further arguments as display parameters\n"
         "   -f             Name of the makefile to use, default YMkFile or Makefile\n"
         "   -j             The number of child processes, default number of processors+1\n"
+        "   -k             Keep executing jobs after errors\n"
         "   -m             Perform tasks at low priority\n"
         "   -mm            Perform tasks at very low priority\n"
         "   -perf          Display how much time was spent in each phase of processing\n"
@@ -297,6 +298,9 @@ ENTRYPOINT(
                         ArgumentUnderstood = TRUE;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
+                MakeContext.KeepGoing = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
                 Priority = MakePriorityLow;
                 ArgumentUnderstood = TRUE;
