@@ -4538,15 +4538,13 @@ YoriWinMultilineEditNotifyMouseWheel(
 }
 
 /**
- Adjust the viewport and selection to reflect the mouse being dragged outside
- the control's client area while the button is held down, thereby extending
- the selection.
+ Adjust the viewport and selection to reflect the mouse being dragged,
+ potentially outside the control's client area while the button is held down,
+ thereby extending the selection.
 
  @param MultilineEdit Pointer to the multiline edit control.
 
- @param MousePos Specifies the mouse position.  This should be outside the
-        client area in at least one dimension, otherwise no scrolling would
-        need to take place.
+ @param MousePos Specifies the mouse position.
  */
 VOID
 YoriWinMultilineEditScrollForMouseSelect(
@@ -4579,11 +4577,6 @@ YoriWinMultilineEditScrollForMouseSelect(
     NewViewportTop = MultilineEdit->ViewportTop;
     NewViewportLeft = MultilineEdit->ViewportLeft;
     NewCursorLine = MultilineEdit->CursorLine;
-
-    //
-    //  MSFIX: Need to set a timer somewhere; if the mouse stops
-    //         moving, we still want to scroll periodically
-    //
 
     //
     //  First find the cursor line.  This can be above the viewport, below
@@ -4651,7 +4644,6 @@ YoriWinMultilineEditScrollForMouseSelect(
             MultilineEdit->Timer = NULL;
         }
     }
-
 
     YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit, NewCursorLine, DisplayOffset, &NewCursorOffset);
 

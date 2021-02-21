@@ -2130,6 +2130,64 @@ YoriWinEditDelete(
 }
 
 /**
+ Adjust the viewport and selection to reflect the mouse being dragged,
+ potentially outside the control's client area while the button is held down,
+ thereby extending the selection.
+
+ @param Edit Pointer to the edit control.
+
+ @param MousePos Specifies the mouse position.
+ */
+VOID
+YoriWinEditScrollForMouseSelect(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in PYORI_WIN_BOUNDED_COORD MousePos
+    )
+{
+    COORD ClientSize;
+    DWORD NewCursorOffset;
+    DWORD NewViewportLeft;
+
+    YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
+
+    NewViewportLeft = Edit->DisplayOffset;
+
+    //
+    //  Now find the cursor column.  This can be left of the viewport, right
+    //  of the viewport, or any column within the viewport.  When in the
+    //  viewport, this needs to be translated from a display location to
+    //  a buffer location.
+    //
+
+    if (MousePos->Left) {
+        if (NewViewportLeft > 0) {
+            NewCursorOffset = NewViewportLeft - 1;
+        } else {
+            NewCursorOffset = 0;
+        }
+    } else if (MousePos->Right) {
+        NewCursorOffset = NewViewportLeft + ClientSize.X + 1;
+    } else {
+        NewCursorOffset = NewViewportLeft + MousePos->Pos.X;
+    }
+
+    if (NewCursorOffset > Edit->Text.LengthInChars) {
+        NewCursorOffset = Edit->Text.LengthInChars;
+    }
+
+    Edit->CursorOffset = NewCursorOffset;
+
+    if (Edit->Selection.Active == YoriWinEditSelectMouseFromTopDown ||
+        Edit->Selection.Active == YoriWinEditSelectMouseFromBottomUp) {
+        YoriWinEditExtendSelectionToCursor(Edit);
+    } else {
+        YoriWinEditStartSelectionAtCursor(Edit, TRUE);
+    }
+    YoriWinEditEnsureCursorVisible(Edit);
+    YoriWinEditPaint(Edit);
+}
+
+/**
  Process a key that may be an enhanced key.  Some of these keys can be either
  enhanced or non-enhanced.
 
@@ -2279,8 +2337,6 @@ YoriWinEditEventHandler(
             // This code is trying to handle the AltGr cases while not
             // handling pure right Alt which would normally be an accelerator.
             //
-            // MSFIX: Copy/paste
-            //
 
             if (Event->KeyDown.CtrlMask == 0 ||
                 Event->KeyDown.CtrlMask == SHIFT_PRESSED ||
@@ -2395,22 +2451,46 @@ YoriWinEditEventHandler(
 
         case YoriWinEventMouseMoveInClient:
             if (Edit->MouseButtonDown) {
-                DWORD ClickOffset;
-                ClickOffset = Edit->DisplayOffset + Event->MouseMove.Location.X;
-                if (ClickOffset > Edit->Text.LengthInChars) {
-                    ClickOffset = Edit->Text.LengthInChars;
-                }
-                Edit->CursorOffset = ClickOffset;
-                if (Edit->Selection.Active == YoriWinEditSelectMouseFromTopDown ||
-                    Edit->Selection.Active == YoriWinEditSelectMouseFromBottomUp) {
+                YORI_WIN_BOUNDED_COORD ClientPos;
+                ClientPos.Left = FALSE;
+                ClientPos.Right = FALSE;
+                ClientPos.Above = FALSE;
+                ClientPos.Below = FALSE;
+                ClientPos.Pos.X = Event->MouseMove.Location.X;
+                ClientPos.Pos.Y = Event->MouseMove.Location.Y;
 
-                    YoriWinEditExtendSelectionToCursor(Edit);
-                } else {
-                    YoriWinEditStartSelectionAtCursor(Edit, TRUE);
-                }
+                YoriWinEditScrollForMouseSelect(Edit, &ClientPos);
+            }
+            break;
 
-                YoriWinEditEnsureCursorVisible(Edit);
-                YoriWinEditPaint(Edit);
+        case YoriWinEventMouseMoveInNonClient:
+            if (Edit->MouseButtonDown) {
+                YORI_WIN_BOUNDED_COORD Pos;
+                YORI_WIN_BOUNDED_COORD ClientPos;
+                Pos.Left = FALSE;
+                Pos.Right = FALSE;
+                Pos.Above = FALSE;
+                Pos.Below = FALSE;
+                Pos.Pos.X = Event->MouseMove.Location.X;
+                Pos.Pos.Y = Event->MouseMove.Location.Y;
+
+                YoriWinBoundCoordInSubRegion(&Pos, &Ctrl->ClientRect, &ClientPos);
+
+                YoriWinEditScrollForMouseSelect(Edit, &ClientPos);
+            }
+            break;
+        case YoriWinEventMouseMoveOutsideWindow:
+            if (Edit->MouseButtonDown) {
+
+                //
+                //  Translate any coordinates that are present into client
+                //  relative form.  Anything that's out of bounds will stay
+                //  that way.
+                //
+
+                YORI_WIN_BOUNDED_COORD ClientPos;
+                YoriWinBoundCoordInSubRegion(&Event->MouseMoveOutsideWindow.Location, &Ctrl->ClientRect, &ClientPos);
+                YoriWinEditScrollForMouseSelect(Edit, &ClientPos);
             }
             break;
 
