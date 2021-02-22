@@ -137,6 +137,12 @@ typedef struct _YORI_WIN_WINDOW_MANAGER {
      */
     BOOLEAN HaveSavedScreenBufferInfo;
 
+    /**
+     Set to TRUE to use characters from the first 127 for drawing.  If FALSE,
+     Unicode characters can be used.
+     */
+    BOOLEAN UseAsciiDrawing;
+
 } YORI_WIN_WINDOW_MANAGER, *PYORI_WIN_WINDOW_MANAGER;
 
 /**
@@ -271,8 +277,169 @@ YoriWinOpenWindowManager(
     SetConsoleMode(WinMgr->hConIn, ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
     SetConsoleMode(WinMgr->hConIn, ENABLE_MOUSE_INPUT);
 
+    WinMgr->UseAsciiDrawing = FALSE;
+
     *WinMgrHandle = WinMgr;
     return TRUE;
+}
+
+/**
+ Change if the window manager should use 7 bit characters or extended
+ characters to display visual elements.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param UseAsciiDrawing If TRUE, only 7 bit characters should be used for
+        visual elements.  If FALSE, extended characters should be used.
+ */
+VOID
+YoriWinMgrSetAsciiDrawing(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in BOOLEAN UseAsciiDrawing
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+    WinMgr->UseAsciiDrawing = UseAsciiDrawing;
+}
+
+/**
+ Characters forming a single line rectangle border, in order of appearance:
+ Top left corner, top line, top right corner, left line, right line,
+ bottom left corner, bottom line, bottom right corner
+ */
+CONST TCHAR YoriWinSingleLineBorder[] = { 0x250c, 0x2500, 0x2510, 0x2502, 0x2502, 0x2514, 0x2500, 0x2518 };
+
+/**
+ Characters forming a double line rectangle border, in order of appearance
+ */
+CONST TCHAR YoriWinDoubleLineBorder[] = { 0x2554, 0x2550, 0x2557, 0x2551, 0x2551, 0x255A, 0x2550, 0x255D };
+
+/**
+ Characters forming a solid full height character border, in order of appearance
+ */
+CONST TCHAR YoriWinFullSolidBorder[] =  { 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588 };
+
+/**
+ Characters forming a solid half height character border, in order of appearance
+ */
+CONST TCHAR YoriWinHalfSolidBorder[] =  { 0x2588, 0x2580, 0x2588, 0x2588, 0x2588, 0x2588, 0x2584, 0x2588 };
+
+/**
+ Characters forming a single line rectangular border using only ASCII
+ characters, in order of appearance
+ */
+CONST TCHAR YoriWinSingleLineAsciiBorder[] = { '+', '-', '+', '|', '|', '+', '-', '+' };
+
+/**
+ Characters forming a double line rectangular border using only ASCII
+ characters, in order of appearance
+ */
+CONST TCHAR YoriWinDoubleLineAsciiBorder[] = { '+', '=', '+', '|', '|', '+', '=', '+' };
+
+/**
+ Characters forming a menu, left T, horizontal line, right T, check
+ */
+CONST TCHAR YoriWinMenu[] =  { 0x251c, 0x2500, 0x2524, 0x221a };
+
+/**
+ Characters forming a menu, left T, horizontal line, right T, check,
+ using only ASCII characters
+ */
+CONST TCHAR YoriWinAsciiMenu[] =  { '+', '-', '+', '*' };
+
+/**
+ Characters forming a scroll bar, in order of appearance
+ */
+CONST TCHAR YoriWinScrollBar[] = { 0x2191, 0x2588, 0x2591, 0x2193 };
+
+/**
+ Characters forming a scroll bar using only ASCII characters, in order of
+ appearance
+ */
+CONST TCHAR YoriWinAsciiScrollBar[] = { '^', '#', ' ', 'v' };
+
+/**
+ Characters forming a window shadow, from least dense to most dense
+ */
+CONST TCHAR YoriWinShadow[] = { 0x2591, 0x2592, 0x2593, 0x2588 };
+
+/**
+ Characters forming a window shadow using only ASCII characters
+ */
+CONST TCHAR YoriWinAsciiShadow[] = { '#', '#', '#', '#' };
+
+/**
+ Characters forming a combo box down arrow
+ */
+CONST TCHAR YoriWinComboDown[] = { 0x2193 };
+
+/**
+ Characters forming a combo box down arrow using only ASCII characters
+ */
+CONST TCHAR YoriWinAsciiComboDown[] = { 'v' };
+
+
+/**
+ An array of known characters used for visuals.  This must correspond to the
+ order defined in winpriv.h.
+ */
+LPCTSTR YoriWinCharacterSetChars[] = {
+    YoriWinSingleLineBorder,
+    YoriWinDoubleLineBorder,
+    YoriWinFullSolidBorder,
+    YoriWinHalfSolidBorder,
+    YoriWinSingleLineAsciiBorder,
+    YoriWinDoubleLineAsciiBorder,
+    YoriWinMenu,
+    YoriWinAsciiMenu,
+    YoriWinScrollBar,
+    YoriWinAsciiScrollBar,
+    YoriWinShadow,
+    YoriWinAsciiShadow,
+    YoriWinComboDown,
+    YoriWinAsciiComboDown,
+};
+
+
+/**
+ Return the specified set of characters for drawing visuals.  If the display
+ is configured for text only display with no extended characters, those are
+ substituted here.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param CharacterSet Specifies the set of characters to obtain.
+
+ @return A pointer to a global set of characters for this visual element.
+ */
+LPCTSTR
+YoriWinGetDrawingCharacters(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in YORI_WIN_CHARACTERS CharacterSet
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+    YORI_WIN_CHARACTERS EffectiveCharacterSet;
+
+    EffectiveCharacterSet = CharacterSet;
+
+    if (WinMgr->UseAsciiDrawing) {
+        if (EffectiveCharacterSet == YoriWinCharsDoubleLineBorder) {
+            EffectiveCharacterSet = YoriWinCharsDoubleLineAsciiBorder;
+        } else if (EffectiveCharacterSet == YoriWinCharsMenu) {
+            EffectiveCharacterSet = YoriWinCharsAsciiMenu;
+        } else if (EffectiveCharacterSet == YoriWinCharsScrollBar) {
+            EffectiveCharacterSet = YoriWinCharsAsciiScrollBar;
+        } else if (EffectiveCharacterSet == YoriWinCharsShadow) {
+            EffectiveCharacterSet = YoriWinCharsAsciiShadow;
+        } else if (EffectiveCharacterSet == YoriWinCharsComboDown) {
+            EffectiveCharacterSet = YoriWinCharsAsciiComboDown;
+        } else {
+            EffectiveCharacterSet = YoriWinCharsSingleLineAsciiBorder;
+        }
+    }
+
+    return YoriWinCharacterSetChars[EffectiveCharacterSet];
 }
 
 /**

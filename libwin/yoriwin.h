@@ -902,6 +902,12 @@ YoriWinOpenWindowManager(
     __out PYORI_WIN_WINDOW_MANAGER_HANDLE *WinMgrHandle
     );
 
+VOID
+YoriWinMgrSetAsciiDrawing(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in BOOLEAN UseAsciiDrawing
+    );
+
 __success(return)
 BOOLEAN
 YoriWinGetWinMgrDimensions(

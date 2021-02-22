@@ -304,6 +304,27 @@ typedef struct _YORI_WIN_CTRL {
 
 } YORI_WIN_CTRL;
 
+/**
+ A set of character arrays which describe various drawing operations.  Note
+ the order here corresponds to the order these are defined in winmgr.c.
+ */
+typedef enum _YORI_WIN_CHARACTERS {
+    YoriWinCharsSingleLineBorder,
+    YoriWinCharsDoubleLineBorder,
+    YoriWinCharsFullSolidBorder,
+    YoriWinCharsHalfSolidBorder,
+    YoriWinCharsSingleLineAsciiBorder,
+    YoriWinCharsDoubleLineAsciiBorder,
+    YoriWinCharsMenu,
+    YoriWinCharsAsciiMenu,
+    YoriWinCharsScrollBar,
+    YoriWinCharsAsciiScrollBar,
+    YoriWinCharsShadow,
+    YoriWinCharsAsciiShadow,
+    YoriWinCharsComboDown,
+    YoriWinCharsAsciiComboDown
+} YORI_WIN_CHARACTERS;
+
 // ITEMARAY.C
 
 /**
@@ -764,6 +785,12 @@ YoriWinWindowFromTopLevelListEntry(
     );
 
 // WINMGR.C
+
+LPCTSTR
+YoriWinGetDrawingCharacters(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in YORI_WIN_CHARACTERS CharacterSet
+    );
 
 HANDLE
 YoriWinGetConsoleInputHandle(

@@ -122,8 +122,13 @@ YoriWinScrollBarPaint(
     WORD NumberSelectedPositionCells;
     WORD Index;
     DWORDLONG ValueCountPerCell;
+    CONST TCHAR* ScrollChars;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     WindowAttributes = ScrollBar->Ctrl.DefaultAttributes;
+
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(&ScrollBar->Ctrl));
+    ScrollChars = YoriWinGetDrawingCharacters(WinMgrHandle, YoriWinCharsScrollBar);
 
     ClientHeight = (WORD)(ScrollBar->Ctrl.ClientRect.Bottom - ScrollBar->Ctrl.ClientRect.Top + 1);
     NumberPositionCells = (WORD)(ClientHeight - 2);
@@ -151,15 +156,15 @@ YoriWinScrollBarPaint(
         FirstSelectedPositionCell = (WORD)(NumberPositionCells - NumberSelectedPositionCells);
     }
 
-    YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, 0, 0x2191, WindowAttributes);
+    YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, 0, ScrollChars[0], WindowAttributes);
     for (Index = 0; Index < NumberPositionCells; Index++) {
         if (Index >= FirstSelectedPositionCell && Index < FirstSelectedPositionCell + NumberSelectedPositionCells) {
-            YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, (WORD)(1 + Index), 0x2588, WindowAttributes);
+            YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, (WORD)(1 + Index), ScrollChars[1], WindowAttributes);
         } else {
-            YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, (WORD)(1 + Index), 0x2591, WindowAttributes);
+            YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, (WORD)(1 + Index), ScrollChars[2], WindowAttributes);
         }
     }
-    YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, (WORD)(1 + Index), 0x2193, WindowAttributes);
+    YoriWinSetControlClientCell(&ScrollBar->Ctrl, 0, (WORD)(1 + Index), ScrollChars[3], WindowAttributes);
 
     return TRUE;
 }

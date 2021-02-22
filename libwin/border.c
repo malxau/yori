@@ -32,28 +32,6 @@
 
 
 /**
- Characters forming a single line rectangle border, in order of appearance:
- Top left corner, top line, top right corner, left line, right line,
- bottom left corner, bottom line, bottom right corner
- */
-CONST TCHAR YoriWinSingleLineBorder[] = { 0x250c, 0x2500, 0x2510, 0x2502, 0x2502, 0x2514, 0x2500, 0x2518 };
-
-/**
- Characters forming a double line rectangle border, in order of appearance
- */
-CONST TCHAR YoriWinDoubleLineBorder[] = { 0x2554, 0x2550, 0x2557, 0x2551, 0x2551, 0x255A, 0x2550, 0x255D };
-
-/**
- Characters forming a solid full height character border, in order of appearance
- */
-CONST TCHAR YoriWinFullSolidBorder[] =  { 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588, 0x2588 };
-
-/**
- Characters forming a solid half height character border, in order of appearance
- */
-CONST TCHAR YoriWinHalfSolidBorder[] =  { 0x2588, 0x2580, 0x2588, 0x2588, 0x2588, 0x2588, 0x2584, 0x2588 };
-
-/**
  Returns the bright shade for a highlight
 
  @param OriginalAttributes The original color to get the bright shade for
@@ -97,6 +75,8 @@ YoriWinBorderGetLightAttributes(
  Given the requested border style and attributes, calculate the bright and
  dark attributes as well as characters to use for the border.
 
+ @param WinMgrHandle Pointer to the window manager.
+
  @param Attributes The base attributes of the region.
 
  @param BorderType The border style to apply.
@@ -112,6 +92,7 @@ YoriWinBorderGetLightAttributes(
  */
 BOOLEAN
 YoriWinTranslateAttributesAndBorderStyle(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in WORD Attributes,
     __in WORD BorderType,
     __out PWORD TopAttributes,
@@ -121,6 +102,7 @@ YoriWinTranslateAttributesAndBorderStyle(
 { 
     WORD ThreeDMask;
     WORD BorderStyleMask;
+    YORI_WIN_CHARACTERS CharSet;
 
     ThreeDMask = (WORD)(BorderType & YORI_WIN_BORDER_THREED_MASK);
     *TopAttributes = *BottomAttributes = Attributes;
@@ -135,19 +117,21 @@ YoriWinTranslateAttributesAndBorderStyle(
             break;
     }
 
-    *BorderChars = YoriWinSingleLineBorder;
+    CharSet = YoriWinCharsSingleLineBorder;
     BorderStyleMask = (WORD)(BorderType & YORI_WIN_BORDER_STYLE_MASK);
     switch(BorderStyleMask) {
         case YORI_WIN_BORDER_TYPE_DOUBLE:
-            *BorderChars = YoriWinDoubleLineBorder;
+            CharSet = YoriWinCharsDoubleLineBorder;
             break;
         case YORI_WIN_BORDER_TYPE_SOLID_FULL:
-            *BorderChars = YoriWinFullSolidBorder;
+            CharSet = YoriWinCharsFullSolidBorder;
             break;
         case YORI_WIN_BORDER_TYPE_SOLID_HALF:
-            *BorderChars = YoriWinHalfSolidBorder;
+            CharSet = YoriWinCharsHalfSolidBorder;
             break;
     }
+
+    *BorderChars = YoriWinGetDrawingCharacters(WinMgrHandle, CharSet);
 
     return TRUE;
 }
@@ -179,8 +163,11 @@ YoriWinDrawBorderOnControl(
     WORD TopAttributes;
     WORD BottomAttributes;
     CONST TCHAR* BorderChars;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
-    YoriWinTranslateAttributesAndBorderStyle(Attributes, BorderType, &TopAttributes, &BottomAttributes, &BorderChars);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(Ctrl));
+
+    YoriWinTranslateAttributesAndBorderStyle(WinMgrHandle, Attributes, BorderType, &TopAttributes, &BottomAttributes, &BorderChars);
 
     YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, Dimensions->Top, BorderChars[0], TopAttributes);
     for (CellIndex = (WORD)(Dimensions->Left + 1); CellIndex < Dimensions->Right; CellIndex++) {

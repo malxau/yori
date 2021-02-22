@@ -376,6 +376,8 @@ YoriWinComboReposition(
 {
     PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     PYORI_WIN_CTRL_COMBO Combo;
+    CONST TCHAR* DownChars;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Combo = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_COMBO, Ctrl);
@@ -384,7 +386,10 @@ YoriWinComboReposition(
         return FALSE;
     }
 
-    YoriWinSetControlNonClientCell(&Combo->Ctrl, (SHORT)(Combo->Ctrl.ClientRect.Right + 1), 0, 0x2193, Combo->Ctrl.DefaultAttributes);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(Ctrl));
+    DownChars = YoriWinGetDrawingCharacters(WinMgrHandle, YoriWinCharsComboDown);
+
+    YoriWinSetControlNonClientCell(&Combo->Ctrl, (SHORT)(Combo->Ctrl.ClientRect.Right + 1), 0, DownChars[0], Combo->Ctrl.DefaultAttributes);
     YoriWinEditReposition(Combo->Edit, &Combo->Ctrl.ClientRect);
     return TRUE;
 }
@@ -424,6 +429,8 @@ YoriWinComboCreate(
 {
     PYORI_WIN_CTRL_COMBO Combo;
     PYORI_WIN_WINDOW Parent;
+    CONST TCHAR* DownChars;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Parent = (PYORI_WIN_WINDOW)ParentHandle;
 
@@ -444,7 +451,11 @@ YoriWinComboCreate(
         return NULL;
     }
 
-    YoriWinSetControlNonClientCell(&Combo->Ctrl, Combo->Ctrl.ClientRect.Right, 0, 0x2193, Combo->Ctrl.DefaultAttributes);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(&Combo->Ctrl));
+    DownChars = YoriWinGetDrawingCharacters(WinMgrHandle, YoriWinCharsComboDown);
+
+
+    YoriWinSetControlNonClientCell(&Combo->Ctrl, Combo->Ctrl.ClientRect.Right, 0, DownChars[0], Combo->Ctrl.DefaultAttributes);
 
     Combo->Ctrl.ClientRect.Right--;
 

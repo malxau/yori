@@ -38,8 +38,9 @@ CHAR strEditHelpText[] =
         "\n"
         "Displays editor.\n"
         "\n"
-        "EDIT [-license] [-e encoding] [-m]\n"
+        "EDIT [-license] [-a] [-e encoding] [-m]\n"
         "\n"
+        "   -a             Use ASCII characters for drawing\n"
         "   -e <encoding>  Specifies the character encoding to use\n"
         "   -m             Use modern keyboard navigation instead of Edit compatible\n";
 
@@ -168,6 +169,11 @@ typedef struct _EDIT_CONTEXT {
      the previous line, or right at the end of a line moves to the next line.
      */
     BOOLEAN TraditionalNavigation;
+
+    /**
+     TRUE to use only 7 bit ASCII characters for visual display.
+     */
+    BOOLEAN UseAsciiDrawing;
 
 } EDIT_CONTEXT, *PEDIT_CONTEXT;
 
@@ -2260,6 +2266,8 @@ EditCreateMainWindow(
         return FALSE;
     }
 
+    YoriWinMgrSetAsciiDrawing(WinMgr, EditContext->UseAsciiDrawing);
+
     if (!YoriWinGetWinMgrDimensions(WinMgr, &WindowSize)) {
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
@@ -2421,6 +2429,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(strCopyrightYear);
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
+                GlobalEditContext.UseAsciiDrawing = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
                 if (ArgC > i + 1) {
                     DWORD NewEncoding;

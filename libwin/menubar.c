@@ -659,11 +659,15 @@ YoriWinMenuPopupPaint(
     WORD CharAttributes;
     PYORI_WIN_CTRL_MENU_ENTRY Item;
     COORD ClientSize;
+    CONST TCHAR* Chars;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     TextAttributes = MenuPopup->Ctrl.DefaultAttributes;
     YoriWinGetControlClientSize(&MenuPopup->Ctrl, &ClientSize);
 
     YoriWinDrawBorderOnControl(&MenuPopup->Ctrl, &MenuPopup->Ctrl.ClientRect, TextAttributes, YORI_WIN_BORDER_TYPE_SINGLE);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(&MenuPopup->Ctrl));
+    Chars = YoriWinGetDrawingCharacters(WinMgrHandle, YoriWinCharsMenu);
 
     for (Index = 0; Index < MenuPopup->ItemCount; Index++) {
         Item = &MenuPopup->Items[Index];
@@ -677,15 +681,15 @@ YoriWinMenuPopupPaint(
         }
 
         if (Item->Flags & YORI_WIN_MENU_ENTRY_SEPERATOR) {
-            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 0, (WORD)(Index + 1), 0x251c, ItemAttributes);
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 0, (WORD)(Index + 1), Chars[0], ItemAttributes);
             for (CharIndex = 1; (SHORT)CharIndex < ClientSize.X - 1; CharIndex++) {
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), (WORD)(Index + 1), 0x2500, ItemAttributes);
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), (WORD)(Index + 1), Chars[1], ItemAttributes);
             }
-            YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), (WORD)(Index + 1), 0x2524, ItemAttributes);
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), (WORD)(Index + 1), Chars[2], ItemAttributes);
         } else {
             YoriWinSetControlClientCell(&MenuPopup->Ctrl, 1, (WORD)(Index + 1), ' ', ItemAttributes);
             if (Item->Flags & YORI_WIN_MENU_ENTRY_CHECKED) {
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, (WORD)(Index + 1), 0x221a, ItemAttributes);
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, (WORD)(Index + 1), Chars[3], ItemAttributes);
             } else {
                 YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, (WORD)(Index + 1), ' ', ItemAttributes);
             }

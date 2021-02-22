@@ -216,7 +216,7 @@ YoriWinGetTopLevelWindow(
     PYORI_WIN_CTRL Parent;
     PYORI_WIN_WINDOW Window;
 
-    Parent = Ctrl->Parent;
+    Parent = Ctrl;
     while (Parent->Parent != NULL) {
         Parent = Parent->Parent;
     }

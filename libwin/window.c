@@ -899,6 +899,9 @@ YoriWinPaintWindowNonClientArea(
     WORD ShadowWidth;
     WORD ShadowHeight;
     COORD BufferPosition;
+    CONST TCHAR* ShadowChars;
+
+    ShadowChars = YoriWinGetDrawingCharacters(Window->WinMgrHandle, YoriWinCharsShadow);
 
     if (Window->Style & (YORI_WIN_WINDOW_STYLE_SHADOW_SOLID | YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT)) {
         ShadowWidth = 2;
@@ -928,7 +931,7 @@ YoriWinPaintWindowNonClientArea(
 
     if (ShadowWidth > 0 || ShadowHeight > 0) {
         ShadowColor = (WORD)(YoriLibVtGetDefaultColor() & 0xF0 | FOREGROUND_INTENSITY);
-        ShadowChar = 0x2591;
+        ShadowChar = ShadowChars[0];
         for (BufferPosition.Y = 0; BufferPosition.Y < (SHORT)Window->WindowSize.Y; BufferPosition.Y++) {
             if (BufferPosition.Y < ShadowHeight) {
 
