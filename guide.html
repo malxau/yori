@@ -1,0 +1,574 @@
+<HTML>
+<HEAD>
+<TITLE>Yori: Guide to Yori</TITLE>
+<STYLE>
+body{
+    font-family: Verdana, Tahoma;
+    background-color: RGB(208,208,208);
+}
+h1 {
+    text-align: center;
+}
+</STYLE>
+</HEAD>
+<BODY>
+    <H1>Yori: Guide to Yori</H1>
+    <P STYLE="text-align: center;"><A HREF="http://www.malsmith.net/yori/">Yori</A> | <A HREF="http://www.malsmith.net/">malsmith home</A></P>
+
+    <P>Yori aims to be a natural and familar shell for those used to operating with CMD.  It does not attempt to be fully compatible, because doing so would impact its ability to make improvements.  Rather, it aims to be a natural evolution.</P>
+
+    <OL>
+        <LI><A HREF="#differences">Notable differences from CMD</A>
+        <OL TYPE="a">
+            <LI><A HREF="#diff_wait">Command wait semantics</A></LI>
+            <LI><A HREF="#diff_encoding">Text encoding is UTF-8</A></LI>
+            <LI><A HREF="#diff_vt100">VT100/ANSI colors</A></LI>
+            <LI><A HREF="#diff_fileprefix">\\?\ file prefixes</A></LI>
+            <LI><A HREF="#diff_filematch">Enhanced file matching</A></LI>
+            <LI><A HREF="#diff_aliases">Aliases</A></LI>
+        </OL>
+        </LI>
+        <LI><A HREF="#keyboard">Keyboard input</A>
+        <OL TYPE="a">
+            <LI><A HREF="#key_history">Command history</A></LI>
+            <LI><A HREF="#key_tab">Tab completion</A></LI>
+            <LI><A HREF="#key_completionscripts">Completion scripts</A></LI>
+        </OL>
+        </LI>
+        <LI><A HREF="#mouse">Mouse input</A></LI>
+        <LI><A HREF="#environment">Environment variables</A>
+        <OL TYPE="a">
+            <LI><A HREF="#env_yoriautorestart">YORIAUTORESTART</A></LI>
+            <LI><A HREF="#env_yoricdpath">YORICDPATH</A></LI>
+            <LI><A HREF="#env_yoricolorappend">YORICOLORAPPEND</A></LI>
+            <LI><A HREF="#env_yoricolormetadata">YORICOLORMETADATA</A></LI>
+            <LI><A HREF="#env_yoricolorprepend">YORICOLORPREPEND</A></LI>
+            <LI><A HREF="#env_yoricolorreplace">YORICOLORREPLACE</A></LI>
+            <LI><A HREF="#env_yoricompletelistall">YORICOMPLETELISTALL</A></LI>
+            <LI><A HREF="#env_yoricompletepath">YORICOMPLETEPATH</A></LI>
+            <LI><A HREF="#env_yoricompletewithtrailingslash">YORICOMPLETEWITHTRAILINGSLASH</A></LI>
+            <LI><A HREF="#env_yorihistfile">YORIHISTFILE</A></LI>
+            <LI><A HREF="#env_yorihistsize">YORIHISTSIZE</A></LI>
+            <LI><A HREF="#env_yorimouseover">YORIMOUSEOVER</A></LI>
+            <LI><A HREF="#env_yoriprecmd">YORIPRECMD</A></LI>
+            <LI><A HREF="#env_yoripostcmd">YORIPOSTCMD</A></LI>
+            <LI><A HREF="#env_yoriprompt">YORIPROMPT</A></LI>
+            <LI><A HREF="#env_yoriquickedit">YORIQUICKEDIT</A></LI>
+            <LI><A HREF="#env_yoriquickeditbreakchars">YORIQUICKEDITBREAKCHARS</A></LI>
+            <LI><A HREF="#env_yorisuggestiondelay">YORISUGGESTIONDELAY</A></LI>
+            <LI><A HREF="#env_yorisuggestionminchars">YORISUGGESTIONMINCHARS</A></LI>
+            <LI><A HREF="#env_yorititle">YORITITLE</A></LI>
+        </OL>
+        </LI>
+        <LI><A HREF="#color">Using color</A>
+        <OL TYPE="a">
+            <LI><A HREF="#color_escapes">Color by escapes</A></LI>
+            <LI><A HREF="#color_file">Highlighting files with color</A></LI>
+            <LI><A HREF="#color_metadata">Selecting color for metadata elements</A></LI>
+        </OL>
+        </LI>
+        <LI><A HREF="#backquotes">Using backquotes</A>
+        <OL TYPE="a">
+            <LI><A HREF="#backq_escape">Escaping backquotes</A></LI>
+        </OL>
+        </LI>
+        <LI><A HREF="#modules">Modules</A></LI>
+        <LI><A HREF="#scripting">Scripting</A>
+        <OL TYPE="a">
+            <LI><A HREF="#script_subroutine">Subroutine semantics</A></LI>
+            <LI><A HREF="#script_cmd">CMD script semantics</A></LI>
+            <LI><A HREF="#script_autoinit">AutoInit scripts</A></LI>
+        </OL>
+        </LI>
+        <LI><A HREF="#updating">Updating</A></LI>
+    </OL>
+
+    <A NAME=differences></A>
+    <H2>Notable differences from CMD</H2>
+
+        <A NAME=diff_wait></A>
+        <H3>Command wait semantics</H3>
+
+        <P>CMD.EXE will wait for console processes to complete, but will return immediately when GUI processes are launched.  Yori uses "&amp;" at the end of commands to indicate whether to return to the shell.  "&amp;!" will return to the shell and send the output of the command to an in memory buffer rather than the console; these buffers can be displayed with the job command.</P>
+
+        <A NAME=diff_encoding></A>
+        <H3>Text encoding is UTF-8</H3>
+
+        <P>CMD.EXE typically uses ASCII 8-bit characters.  Yori outputs in UTF-8, which provides compatibility for the first 127 characters while allowing for far more characters to be expressed.  Where ASCII or other encodings are needed, output can be piped through iconv.exe to convert to other encodings.</P>
+
+        <A NAME=diff_vt100></A>
+        <H3>VT100/ANSI colors</H3>
+
+        <P>ANSI escapes have traditionally not been provided in Windows NT and its derivatives.  Newer versions of Windows 10 provide this capability, but CMD does not enable it.  Yori enables this capability for applications, and provides color VT100 support in all of its tools, including prompt and echo.</P>
+
+        <A NAME=diff_fileprefix></A>
+        <H3>\\?\ file prefixes</H3>
+
+        <P>In Windows, argument parsing is performed by the program receiving the string.  Programs included with Yori resolve all relative paths to absolute paths with a \\?\ prefix.  This allows paths to exceed MAX_PATH, allows files whose names end in a period or a space.  It also means that Yori programs treat device names as devices only if a path is not explicitly specified; "CON" is a device, "C:\CON" is not.</P>
+
+        <A NAME=diff_filematch></A>
+        <H3>Enhanced file matching</H3>
+
+        <P>Yori programs have several extensions to regular file matching operators.  In addition to "*" and "?", Yori supports operators such as "[]" to allow a match of any specified character, or "{}" to allow a match of any specified string in a set.  For example, "File[AB]" will match FileA and FileB but not FileC.  "File.{ext1,ext2}" will match File.ext1 and File.ext2.  Files will be matched with "/" or "\" slashes, and file:/// prefixes are stripped to access the underlying file.</P>
+
+        <P>Special directories are also expanded to their system defined value:</P>
+        <TABLE COLS=2>
+            <TR><TD>~</TD><TD>Home directory, as set in %HOMEDRIVE%%HOMEPATH%</TD></TR>
+            <TR><TD>~Appdata</TD><TD>User's AppData\Roaming directory</TD></TR>
+            <TR><TD>~Appdir</TD><TD>Directory containing the Yori executable</TD></TR>
+            <TR><TD>~Commonappdata</TD><TD>The system application data directory</TD></TR>
+            <TR><TD>~Commondesktop</TD><TD>The system desktop, shared across all users</TD></TR>
+            <TR><TD>~Commondocuments</TD><TD>System documents, shared across all users</TD></TR>
+            <TR><TD>~Commonprograms</TD><TD>System's Start Menu\Programs directory</TD></TR>
+            <TR><TD>~Commonstart</TD><TD>System's Start Menu directory</TD></TR>
+            <TR><TD>~Desktop</TD><TD>User's desktop</TD></TR>
+            <TR><TD>~Documents</TD><TD>User's documents directory</TD></TR>
+            <TR><TD>~Downloads</TD><TD>User's downloads directory</TD></TR>
+            <TR><TD>~LocalAppData</TD><TD>User's AppData\Local directory</TD></TR>
+            <TR><TD>~Programs</TD><TD>User's Start Menu\Programs directory</TD></TR>
+            <TR><TD>~Programfiles</TD><TD>System's Program Files directory</TD></TR>
+            <TR><TD>~Programfiles32</TD><TD>System's Program Files (x86) directory or Program Files in 32 bit environments</TD></TR>
+            <TR><TD>~Programfiles64</TD><TD>System's Program Files directory in 64 bit environments</TD></TR>
+            <TR><TD>~Start</TD><TD>User's Start Menu directory</TD></TR>
+            <TR><TD>~Startup</TD><TD>User's Start Menu\Programs\Startup directory</TD></TR>
+            <TR><TD>~System</TD><TD>System's Windows\System32 directory</TD></TR>
+            <TR><TD>~Windows</TD><TD>System's Windows directory</TD></TR>
+        </TABLE>
+
+        <A NAME=diff_aliases></A>
+        <H3>Aliases</H3>
+
+        <P>CMD.EXE supports macros via the DOSKEY command.  These are expanded by the console, not by CMD, and only if the macro is at the beginning of the line.  Yori provides its own alias support which will expand commands regardless of how they appear in the command line, or in scripts.  These aliases can be defined by the alias command. Unlike DOSKEY aliases, Yori aliases indicate arguments surrounded by $, as in "$1$" rather than "$1".</P>
+
+        <P>Aliases defined for CMD via DOSKEY will be imported and converted for use by Yori when it starts.</P>
+
+    <A NAME=keyboard></A>
+    <H2>Keyboard input</H2>
+
+    <P>Most keyboard input is modelled on the same keyboard navigation as CMD. Standard left and right arrow, home, end, insert, delete keys behave as expected.  Ctrl+Left and Ctrl+Right navigate along command arguments. Ctrl+A moves to the beginning of the line as is common on Linux, and Ctrl+E moves to the end.  Ctrl+L can be used to clear the screen. Shift+Left and Shift+Right can be used to select text to allow for overwrite or delete.</P>
+
+        <A NAME=key_history></A>
+        <H3>Command history</H3>
+
+        <P>The up arrow key moves to the previous command.  Unlike CMD, the down arrow will not move to the "next" command; command history is unidirectional, with the most recent command at the bottom, and up moving to progressively less recent commands. Ctrl+Up will take a newly entered characters and find previously entered commands with the same starting characters.  Ctrl+Del will delete a command from history and move to the previous command.</P>
+
+        <A NAME=key_tab></A>
+        <H3>Tab completion</H3>
+
+        <P>Tab will attempt to complete a command or argument.  By default, tab in the first argument attempts to match an executable program, and tab for later arguments attempts to match file and directory matches.  Ctrl+Tab will perform matches by completing the full path rather than just a file name.</P>
+
+        <P>By default, Yori implements tab completion in a CMD-like fashion.  It can optionally add trailing backslashes, as PowerShell does, by setting YORICOMPLETEWITHTRAILINGSLASH=1.  It can optionally prompt for all available matches and wait for the user to specify another character, as bash does, by setting YORICOMPLETELISTALL=1.</P>
+
+        <A NAME=key_completionscripts></A>
+        <H3>Completion scripts</H3>
+
+        <P>Custom completion rules can be defined for specific programs in %YORICOMPLETEPATH%.  These scripts can be Yori scripts or any other executable.  The first argument to a completion script is the argument number being completed; the second argument is the argument string that has been entered so far requiring completion.  A completion script can output: </P>
+
+        <TABLE COLS=2>
+            <TR><TD>/commands</TD><TD>Matches executables and builtin commands</TD></TR>
+            <TR><TD>/directories</TD><TD>Matches directories only (not files)</TD></TR>
+            <TR><TD>/executables</TD><TD>Matches executables only</TD></TR>
+            <TR><TD>/files</TD><TD>Matches files and directories</TD></TR>
+            <TR><TD>/filesonly</TD><TD>Matches files (not directories)</TD></TR>
+            <TR><TD>/insensitivelist &lt;strings&gt;</TD><TD>Matches against an explicitly specified list, case insensitively</TD></TR>
+            <TR><TD>/sensitivelist &lt;strings&gt;</TD><TD>Matches against an explicitly specified list, case sensitively</TD></TR>
+        </TABLE>
+
+    <A NAME=mouse></A>
+    <H2>Mouse input</H2>
+
+    <P>Yori is capable of handling mouse input in one of three ways:</P>
+    <UL>
+        <LI>With console QuickEdit enabled, Yori (or other programs) will not handle mouse input but generic Windows select and copy behavior is in effect.</LI>
+        <LI>With console QuickEdit disabled, Yori will handle mouse selection to copy as well as select and navigate along commands being entered.</LI>
+        <LI>If YORIQUICKEDIT is set to 1, Yori will handle mouse selection and navigation when at the command line, and enable console QuickEdit when running applications.</LI>
+    </UL>
+
+    <P>With YORIQUICKEDIT or Windows Quickedit disabled, when at the prompt, Ctrl+Click can be used to select text that is displayed on the console to insert into the current command.  This text is highlighted.  To disable this highlight, set YORIMOUSEOVER to 0.</P>
+
+    <P>Yori's mouse selection is similar to QuickEdit but has some differences:</P>
+    <UL>
+        <LI>It can navigate along commands, or select portions of commands to allow them to be overwritten or deleted;</LI>
+        <LI>It will copy text as plain text as well as in RTF and HTML formats for use where rich text is desired;</LI>
+        <LI>Because it is implemented by a single program outside of the console, a selection will not stop execution of other programs in the console.</LI>
+    </UL>
+
+    <A NAME=environment></A>
+    <H2>Environment variables</H2>
+
+        <A NAME=env_yoriautorestart></A>
+        <H3>YORIAUTORESTART</H3>
+
+        <P>When set to 1, Yori will periodically save the state of the shell and the window so that if Yori crashes or Windows Update restarts the system the state will be automatically restored.  The default is off.  Optionally the 1 can be followed by a comma and the number of lines of screen buffer to record.  Saving a smaller amount of screen buffer can improve performance of the save operation.</P>
+
+        <A NAME=env_yoricdpath></A>
+        <H3>YORICDPATH</H3>
+
+        <P>Specifies a semicolon delimited list of paths to check for matches when a relative path is given to chdir or cd.  Typically one element in this list should be "." for the current directory, but frequently used directories can also be consulted for fast access.</P>
+
+        <A NAME=env_yoricolorappend></A>
+        <H3>YORICOLORAPPEND</H3>
+
+        <P>Specifies the critieria to apply when highlighting files with color.  Entries in this list are processed in order after any system defaults. For more information, see <A HREF="#color_file">highlighting files with color</A>.</P>
+
+        <A NAME=env_yoricolormetadata></A>
+        <H3>YORICOLORMETADATA</H3>
+
+        <P>Specifies the critieria to apply to file metadata and UI elements.  Entries in this list are processed in order before any system defaults. For more information, see <A HREF="#color_metadata">selecting color for metadata elements</A>.</P>
+
+
+        <A NAME=env_yoricolorprepend></A>
+        <H3>YORICOLORPREPEND</H3>
+
+        <P>Specifies the critieria to apply when highlighting files with color.  Entries in this list are processed in order and before any system defaults. For more information, see <A HREF="#color_file">highlighting files with color</A>.</P>
+
+        <A NAME=env_yoricolorreplace></A>
+        <H3>YORICOLORREPLACE</H3>
+
+        <P>Specifies the critieria to apply when highlighting files with color.  Entries in this list replace any system defaults. For more information, see <A HREF="#color_file">highlighting files with color</A>.</P>
+
+        <A NAME=env_yoricompletelistall></A>
+        <H3>YORICOMPLETELISTALL</H3>
+
+        <P>When set to 1, if tab completion could indicate multiple options, each option is displayed and the user is prompted to specify additional characters to indicate a choice.  By default, tab completion cycles between available matches.</P>
+
+        <A NAME=env_yoricompletepath></A>
+        <H3>YORICOMPLETEPATH</H3>
+
+        <P>Specifies a semicolon delimited list of paths to check for completion scipts or programs.  When a tab completion is invoked for a program, the completion script, if present, determines which options are available for the tab completion.  If no completion script is found, files and directories are used.</P>
+
+        <A NAME=env_yoricompletewithtrailingslash></A>
+        <H3>YORICOMPLETEWITHTRAILINGSLASH</H3>
+
+        <P>When set to 1, when tab completion is completing a directory, it will add a trailing backslash.  By default, no trailing backslash is included.</P>
+
+        <A NAME=env_yorihistfile></A>
+        <H3>YORIHISTFILE</H3>
+
+        <P>If specified, provides a file to save command history to when the Yori process exits, and to load history from when the process is started.</P>
+
+        <A NAME=env_yorihistsize></A>
+        <H3>YORIHISTSIZE</H3>
+
+        <P>If specified, provides the number of commands that should be retained as command history.  The current default, as of this writing, is 250.</P>
+
+        <A NAME=env_yorimouseover></A>
+        <H3>YORIMOUSEOVER</H3>
+
+        <P>If specified, and set to zero, disables the default behavior of highlighting text which can be inserted into the current command with Ctrl+Click.  Note that disabling the highlight does not disable Ctrl+click behavior.</P>
+
+        <A NAME=env_yoriprecmd></A>
+        <H3>YORIPRECMD</H3>
+
+        <P>If specified, contains a command to execute after the user has entered a command to execute but before the user entered command is executed.</P>
+
+        <A NAME=env_yoripostcmd></A>
+        <H3>YORIPOSTCMD</H3>
+
+        <P>If specified, contains a command to execute after the user entered command has finished executing but before the prompt command is executed.</P>
+
+        <A NAME=env_yoriprompt></A>
+        <H3>YORIPROMPT</H3>
+
+        <P>Defines the prompt value to use for Yori.  This is similar to CMD's PROMPT variable, although variables are surrounded by $, as in "$P$" rather than CMD's "$P".  YORIPROMPT can contain environment variables to expand, or backquotes to execute each time the prompt is displayed.  Defined variables for the prompt are:</P>
+
+        <TABLE>
+            <TR><TD>$A$</TD><TD>&amp;</TD></TR>
+            <TR><TD>$B$</TD><TD>|</TD></TR>
+            <TR><TD>$C$</TD><TD>(</TD></TR>
+            <TR><TD>$E$</TD><TD>Escape character.  Used to initiate VT100 sequences.</TD></TR>
+            <TR><TD>$F$</TD><TD>)</TD></TR>
+            <TR><TD>$G$</TD><TD>&gt;</TD></TR>
+            <TR><TD>$G_OR_ADMIN_G$</TD><TD>&gt; for a non-administrative prompt, &raquo; for an administrative prompt</TD></TR>
+            <TR><TD>$L$</TD><TD>&lt;</TD></TR>
+            <TR><TD>$P$</TD><TD>Current directory</TD></TR>
+            <TR><TD>$Q$</TD><TD>=</TD></TR>
+            <TR><TD>$S$</TD><TD>Space</TD></TR>
+            <TR><TD>$_$</TD><TD>New line</TD></TR>
+        </TABLE>
+
+        <A NAME=env_yoriquickedit></A>
+        <H3>YORIQUICKEDIT</H3>
+
+        <P>If set to 1, Yori will use its internal mouse support when entering text at the prompt, and the console quickedit when running applications.  If not set, the current console mode (either quickedit or not) will be used constantly.  For more information, see <A HREF="#mouse">mouse input</A>.</P>
+
+        <A NAME=env_yoriquickeditbreakchars></A>
+        <H3>YORIQUICKEDITBREAKCHARS</H3>
+
+        <P>When double clicking on the console window to select items, Yori will end the selection if any character in the YORIQUICKEDITBREAKCHARS variable is encountered.  By default, this includes space, apostrophe, greater than, less than, and vertical bar symbols.  This variable can include either characters or a comma seperated list of character codes.  For more information, see <A HREF="#mouse">mouse input</A>.</P>
+
+        <A NAME=env_yorisuggestiondelay></A>
+        <H3>YORISUGGESTIONDELAY</H3>
+
+        <P>Specifies the amount of time to wait, in milliseconds, before suggesting a completion for the entered command.  The default, as of this writing, is 400 milliseconds.  If this value is set to zero, suggestions are disabled.</P>
+
+        <A NAME=env_yorisuggestionminchars></A>
+        <H3>YORISUGGESTIONMINCHARS</H3>
+
+        <P>Specifies the number of characters that must be entered in a path before suggestions should be made.  Because an empty string could match anything, this value is used to only suggest things once enough data is present to make the suggestions meaningful.  The default is 2 characters.</P>
+
+        <A NAME=env_yorititle></A>
+        <H3>YORITITLE</H3>
+
+        <P>This variable behaves the same as YORIPROMPT, including expanding environment variables and backquotes, and sets the title of the window after each command.</P>
+
+    <A NAME=color></A>
+    <H2>Using color</H2>
+
+        <A NAME=color_escapes></A>
+        <H3>Color by escapes</H3>
+
+        <P>Yori supports VT100 escapes to provide color.  This means that if it encounters a raw VT100 string, such as "&lt;ESC&gt;[31m" it will apply the requested color rather than displaying the literal text.  A raw VT100 string can be entered on the command line by holding down Alt, then pressing 2, then 7, then releasing Alt.  This inserts character 27, which is the VT100 escape character.  Subsequent letters can be typed normally.  When using color with a prompt, $E$ can be used to generate the ESC character, so manually entering the character is not needed.  Futher, the raw VT100 codes can be generated by using the supplied COLOR command. Typically the COLOR command is used in backquotes so as to generate the VT100 escape sequence and supply it to some other command, such as ECHO.  Without doing this, the current color will be changed but no text will be displayed using the changed color.</P>
+
+        <P>Sequences to generate foreground colors are:</P>
+
+        <TABLE COLS=2>
+            <TR><TD>COLOR black</TD><TD>&lt;ESC&gt;[30m</TD></TR>
+            <TR><TD>COLOR red</TD><TD>&lt;ESC&gt;[31m</TD></TR>
+            <TR><TD>COLOR green</TD><TD>&lt;ESC&gt;[32m</TD></TR>
+            <TR><TD>COLOR brown</TD><TD>&lt;ESC&gt;[33m</TD></TR>
+            <TR><TD>COLOR blue</TD><TD>&lt;ESC&gt;[34m</TD></TR>
+            <TR><TD>COLOR magenta</TD><TD>&lt;ESC&gt;[35m</TD></TR>
+            <TR><TD>COLOR cyan</TD><TD>&lt;ESC&gt;[36m</TD></TR>
+            <TR><TD>COLOR gray</TD><TD>&lt;ESC&gt;[37m</TD></TR>
+            <TR><TD>COLOR darkgray</TD><TD>&lt;ESC&gt;[30;1m</TD></TR>
+            <TR><TD>COLOR lightred</TD><TD>&lt;ESC&gt;[31;1m</TD></TR>
+            <TR><TD>COLOR lightgreen</TD><TD>&lt;ESC&gt;[32;1m</TD></TR>
+            <TR><TD>COLOR yellow</TD><TD>&lt;ESC&gt;[33;1m</TD></TR>
+            <TR><TD>COLOR lightblue</TD><TD>&lt;ESC&gt;[34;1m</TD></TR>
+            <TR><TD>COLOR lightmagenta</TD><TD>&lt;ESC&gt;[35;1m</TD></TR>
+            <TR><TD>COLOR lightcyan</TD><TD>&lt;ESC&gt;[36;1m</TD></TR>
+            <TR><TD>COLOR white</TD><TD>&lt;ESC&gt;[37;1m</TD></TR>
+        </TABLE>
+
+        <P>Sequences to generate background colors are:</P>
+
+        <TABLE COLS=2>
+            <TR><TD>COLOR bg_black</TD><TD>&lt;ESC&gt;[40m</TD></TR>
+            <TR><TD>COLOR bg_red</TD><TD>&lt;ESC&gt;[41m</TD></TR>
+            <TR><TD>COLOR bg_green</TD><TD>&lt;ESC&gt;[42m</TD></TR>
+            <TR><TD>COLOR bg_brown</TD><TD>&lt;ESC&gt;[43m</TD></TR>
+            <TR><TD>COLOR bg_blue</TD><TD>&lt;ESC&gt;[44m</TD></TR>
+            <TR><TD>COLOR bg_magenta</TD><TD>&lt;ESC&gt;[45m</TD></TR>
+            <TR><TD>COLOR bg_cyan</TD><TD>&lt;ESC&gt;[46m</TD></TR>
+            <TR><TD>COLOR bg_gray</TD><TD>&lt;ESC&gt;[47m</TD></TR>
+            <TR><TD>COLOR bg_darkgray</TD><TD>&lt;ESC&gt;[100m</TD></TR>
+            <TR><TD>COLOR bg_lightred</TD><TD>&lt;ESC&gt;[101m</TD></TR>
+            <TR><TD>COLOR bg_lightgreen</TD><TD>&lt;ESC&gt;[102m</TD></TR>
+            <TR><TD>COLOR bg_yellow</TD><TD>&lt;ESC&gt;[103m</TD></TR>
+            <TR><TD>COLOR bg_lightblue</TD><TD>&lt;ESC&gt;[104m</TD></TR>
+            <TR><TD>COLOR bg_lightmagenta</TD><TD>&lt;ESC&gt;[105m</TD></TR>
+            <TR><TD>COLOR bg_lightcyan</TD><TD>&lt;ESC&gt;[106m</TD></TR>
+            <TR><TD>COLOR bg_white</TD><TD>&lt;ESC&gt;[107m</TD></TR>
+        </TABLE>
+
+        <P>Both in raw VT100 form and from the COLOR command, multiple colors can be combined.  To set yellow text on a blue background in VT100, use "&lt;ESC&gt;[44;33;1m".  To set yellow text on a blue background from the COLOR command, use "color bg_blue+yellow".</P>
+
+        <A NAME=color_file></A>
+        <H3>Highlighting files with color</H3>
+
+        <P>Some tools within Yori support displaying files in color based on criteria about the file.  These tools include dir, du, and sdir.  Color coding for files is defined via three environment variables, processed in order:</P>
+        <OL>
+            <LI>YORICOLORPREPEND, processed first</LI>
+            <LI>YORICOLORREPLACE, if defined; otherwise, built in defaults apply</LI>
+            <LI>YORICOLORAPPEND, processed last</LI>
+        </OL>
+        
+        <P>Each variable contains a semicolon delimited list of rules.  Each rule takes the form of:</P>
+        
+        <P>[file attribute][operator][criteria],[color]</P>
+        
+        <P>Valid operators are:</P>
+        <UL>
+            <LI>=   File attribute matches criteria</LI>
+            <LI>!=  File attribute does not match criteria</LI>
+            <LI>&gt;   File attribute greater than criteria</LI>
+            <LI>&gt;=  File attribute greater than or equal to criteria</LI>
+            <LI>&lt;   File attribute less than criteria</LI>
+            <LI>&lt;=  File attribute less than or equal to criteria</LI>
+            <LI>&amp;   File attribute includes criteria or wildcard string</LI>
+            <LI>!&amp;  File attribute does not include criteria or wildcard string</LI>
+        </UL>
+        
+        <P>Valid attributes and corresponding operators are:</P>
+        <UL>
+            <LI>ac (allocated range count), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>ad (access date), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>ar (CPU architecture), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>as (allocation size), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>at (access time), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>ca (compression algorithm), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>cd (create date), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>cs (compressed size), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>ct (create time), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>de (description), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>ep (effective permissions), =, !=, &gt;, &gt;=, &lt;, &lt;=, &amp;, !&amp;</LI>
+            <LI>fa (file attributes), =, !=, &gt;, &gt;=, &lt;, &lt;=, &amp;, !&amp;</LI>
+            <LI>fc (fragment count), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>fe (file extension), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>fn (file name), =, !=, &gt;, &gt;=, &lt;, &lt;=, &amp;, !&amp;</LI>
+            <LI>fs (file size), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>fv (file version string), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>lc (link count), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>oi (object id), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>os (minimum OS version), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>ow (owner), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>rt (reparse tag), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>sc (stream count), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>sn (short name), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>ss (subsystem), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>us (USN), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>vr (version), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>wd (write date), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+            <LI>wt (write time), =, !=, &gt;, &gt;=, &lt;, &lt;=</LI>
+        </UL>
+        
+        <P>The default set of file color attributes is:</P>
+        <UL>
+            <LI>fa&amp;r,magenta;</LI>
+            <LI>fa&amp;D,lightmagenta;</LI>
+            <LI>fa&amp;R,green;</LI>
+            <LI>fa&amp;H,green;</LI>
+            <LI>fa&amp;S,green;</LI>
+            <LI>fe=bat,lightred;</LI>
+            <LI>fe=cmd,lightred;</LI>
+            <LI>fe=com,lightcyan;</LI>
+            <LI>fe=dll,cyan;</LI>
+            <LI>fe=doc,white;</LI>
+            <LI>fe=docx,white;</LI>
+            <LI>fe=exe,lightcyan;</LI>
+            <LI>fe=htm,white;</LI>
+            <LI>fe=html,white;</LI>
+            <LI>fe=pdf,white;</LI>
+            <LI>fe=pl,red;</LI>
+            <LI>fe=ppt,white;</LI>
+            <LI>fe=pptx,white;</LI>
+            <LI>fe=ps1,lightred;</LI>
+            <LI>fe=psd1,red;</LI>
+            <LI>fe=psm1,red;</LI>
+            <LI>fe=sys,cyan;</LI>
+            <LI>fe=xls,white;</LI>
+            <LI>fe=xlsx,white;</LI>
+            <LI>fe=ys1,lightred;</LI>
+        </UL>
+
+        <A NAME=color_metadata></A>
+        <H3>Selecting color for metadata elements</H3>
+
+        <P>Color coding for metadata attributes is defined via YORICOLORMETADATA.  This variable also contains a semicolon delimited list of rules.  Each rule takes the form of:</P>
+
+        <P>[file attribute],[color]</P>
+
+        <P>Common metadata attributes and their current defaults are:</P>
+
+        <TABLE COLS=3 BORDER=1>
+            <TR><TD>file size</TD><TD>fs</TD><TD>yellow</TD></TR>
+            <TR><TD>mouse over</TD><TD>mo</TD><TD>underline+lightblue</TD></TR>
+            <TR><TD>number files</TD><TD>nf</TD><TD>lightgreen</TD></TR>
+        </TABLE>
+
+        <P>Sdir has additional options for its metadata elements.  See sdir -? -metacolor for more information.</P>
+
+    <A NAME=backquotes></A>
+    <H2>Using backquotes</H2>
+
+    <P>Backquotes work by firstly parsing a command line to find matching instances of the "`" character, then executing the command contained between the match and substituting the output of the command into the command line.  This is very useful to execute one command to drive the action of another command.</P>
+
+        <A NAME=backq_escape></A>
+        <H3>Escaping backquotes</H3>
+
+        <P>Frequently when creating a command line a choice must be made about when backquote expressions should be executed.  By default, these are executed before performing the command line.  However, often it is useful to pass the backquote expression to another command, such as for or set.  Doing this requires escaping the backquotes, so they are not executed initially but are instead preserved as a string to the next command.  As in CMD, Yori uses the "^" character to indicate the following character should be handled literally.  For example:</P>
+    <CODE>
+    <PRE>
+    SET YORIPROMPT=`whoami` $P$$G$
+    </PRE>
+    </CODE>
+
+    <P>Will evaluate "whoami" into a string, then place that string hardcoded into the prompt.  However, the prompt can also evaluate the expression every time the prompt is displayed, even if the state changes.  Doing this requires escaping to ensure that the SET command receives the backquoted string:</P>
+    <CODE>
+    <PRE>
+    SET YORIPROMPT=^`whoami^` $P$$G$
+    </PRE>
+    </CODE>
+
+    <P>The same approach applies to environment variables.  Consider the following:</P>
+    <CODE>
+    <PRE>
+    SET YORIPROMPT=%USERNAME% $P$$G$
+    SET YORIPROMPT=^%USERNAME^% $P$$G$
+    </PRE>
+    </CODE>
+
+    <A NAME=modules></A>
+    <H2>Modules</H2>
+
+    <P>Many commands in any shell need to be evaluated within the shell process itself.  Some state, such as the current directory or environment, affects the shell process and these commands are only meaningful as in-process commands.  Many shells, including CMD.EXE, only support internal commands coded into the shell.  Yori allows in-process commands to be added externally and loaded in the form of DLLs with a .COM extension.  Any .COM file, when executed, is checked to see if is it a DLL to execute in process, or if it is a regular executable.</P>
+
+    <P>Executables in the PATH used in preference to statically provided builtin commands.  This is the oppose of CMD's behavior, and is provided so that internal commands can be superseded with enhanced versions in any environment.  Every internal command supported by Yori is generated as a DLL as part of the build process, and can be altered or extended as needed.</P>
+
+    <P>Modules depend on being able to manipulate process state.  In some cases, this can be done by calling the Windows API directly.  To interact with functionality provided by the shell, YORI.EXE exports functions which modules can call.</P>
+
+    <A NAME=scripting></A>
+    <H2>Scripting</H2>
+
+    <P>Yori does not execute CMD scripts.  CMD scripts are executed by CMD.  Yori executes its own scripts, which end in a .YS1 extension.  When a script is executed, Yori provides extra commands that are not available or meaningful from an interactive command line.  These include CALL, GOTO, INCLUDE, RETURN, and SHIFT.  Help about these commands is available from "YS /?".</P>
+
+    <P>Unlike CMD, a Yori script can invoke another script without terminating execution of the first script (CALL is not required for this.)  Environment variables are evaluated when each line is executed (which CMD optionally does via SETLOCAL ENABLEDELAYEDEXPANSION.)  Arguments in scripts are referred with training and leading %, as in %1%, whereas CMD uses %1 only.  %*% matches all arguments.</P>
+
+        <A NAME=script_subroutine></A>
+        <H3>Subroutine semantics</H3>
+
+        <P>Labels within scripts follow the same syntax as CMD, being ":Label" at the beginning of a line.  GOTO works similarly to CMD.  However, Yori introduces CALL to execute a subroutine, which returns to the call site via the RETURN command.  When calling a subroutine, %1% et al refer to arguments passed to the subroutine.  Changes within the subroutine are not returned to the calling function by default.  The RETURN command specifies which variables should have their changes made to global scope.  Consider this simple example:</P>
+
+    <CODE>
+    <PRE>
+    CALL subroutine Arg1
+    ECHO LOCALVARIABLE=%LOCALVARIABLE% GLOBALVARIABLE=%GLOBALVARIABLE%
+    GOTO :eof
+
+    :subroutine
+    SET LOCALVARIABLE=%1%
+    SET GLOBALVARIABLE=%1%
+    RETURN 0 GLOBALVARIABLE
+    </PRE>
+    </CODE>
+
+        <P>In this example, only GLOBALVARIABLE will be set in the main scope, since it was the only value explicitly returned from the subroutine.</P>
+
+        <A NAME=script_autoinit></A>
+        <H3>AutoInit scripts</H3>
+
+        <P>Because Yori's configuration is driven through environment variables, scripts can be used to customize a Yori environment, similar to profile scripts on other shells.  Note in particular that Yori has no configuration files; configuration is driven through scripts, as is common for many shells.  Although these scripts are typically .YS1 scripts, they can also be .CMD scripts or any other program.  Yori searches for scripts to automatically execute in the following locations:</P>
+
+        <OL>
+            <LI>Scripts under the ~AppDir\YoriInit.d directory.  ie., system-wide files placed in the YoriInit.d subdirectory underneath the directory containing Yori.exe.</LI>
+            <LI>Any script called ~AppDir\YoriInit*.  ie., system-wide files placed in the same directory as Yori.exe whose name begins with YoriInit.</LI>
+            <LI>Scripts under the ~\YoriInit.d directory.  ie., per-user files placed in the YoriInit.d subdirectory underneath %HOMEDRIVE%%HOMEPATH%.</LI>
+            <LI>Any script called ~\YoriInit*.  ie., per-user files placed in %HOMEDRIVE%%HOMEPATH% whose name begins with YoriInit.</LI>
+        </OL>
+
+        <P>Note that as with CMD, it is often useful to have per-shortcut settings.  This can be accomplished by adding "/k path_to_script.ys1" to the arguments in the shortcut.</P>
+
+        <A NAME=script_cmd></A>
+        <H3>CMD script semantics</H3>
+
+        <P>Yori executes CMD scripts with CMD.  However, to provide compatibility with CMD's behavior when executing CMD scripts, it will try to apply changes made by the script to the environment and aliases back to the Yori process.  This means that a CMD script containing "SET FOO=BAR" should result in %FOO% being defined in Yori when the script has finished executing.</P>
+
+    <A NAME=updating></A>
+    <H2>Updating</H2>
+
+    <P>Yori and its tools can be updated via the Yori Package Manager, or ypm.  In the typical case, running "ypm -u" will update your system to the latest version.  Note this requires write access to the Yori binaries, which will be replaced if they are out of date.</P>
+
+    <P>Ypm can also be used to install and uninstall packages with a fully qualified file name or URL.  It can also search for packages in a list of sources, either local or remote.  By default, ypm will use www.malsmith.net as a source.  This can be modified by creating a [Sources] section in packages.ini, and adding Source&lt;n&gt;=&lt;URL&gt; lines where n is a monotonically increasing number.</P>
+
+    <P>Ypm can also mirror packages, re-routing requests destined to one source to another source.  To do this, add a [Mirrors] section in packages.ini with each line containing a value to substitute with another value.  The '%' character can be used to indicate an '=' character, which is otherwise inexpressible because it delimits the value to replace with the new value to use.  For example, to remap malsmith.net packages to a local location, use:</P>
+
+    <CODE>
+    <PRE>
+    [Mirrors]
+    http://www.malsmith.net/download/?obj%yori/latest-stable/=c:\local\packages\
+    </PRE>
+    </CODE>
+
+</BODY>
+</HTML>
