@@ -430,6 +430,26 @@ EditLoadFile(
         return FALSE;
     }
 
+    if (EditContext->Encoding == CP_UTF8_OR_16) {
+        DWORD NewEncoding;
+        DWORD BytesRead;
+        UCHAR LeadingBytes[2];
+
+        NewEncoding = CP_UTF8;
+
+        if (ReadFile(hFile, LeadingBytes, sizeof(LeadingBytes), &BytesRead, NULL)) {
+            if (BytesRead == sizeof(LeadingBytes) &&
+                LeadingBytes[0] == 0xFF &&
+                LeadingBytes[1] == 0xFE) {
+
+                NewEncoding = CP_UTF16;
+            }
+        }
+
+        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+        EditContext->Encoding = NewEncoding;
+    }
+
     YoriWinMultilineEditClear(EditContext->MultilineEdit);
     SavedEncoding = YoriLibGetMultibyteInputEncoding();
     YoriLibSetMultibyteInputEncoding(EditContext->Encoding);
@@ -506,6 +526,10 @@ EditSaveFile(
     //
 
     LineCount = YoriWinMultilineEditGetLineCount(EditContext->MultilineEdit);
+
+    if (EditContext->Encoding == CP_UTF8_OR_16) {
+        EditContext->Encoding = CP_UTF8;
+    }
 
     SavedEncoding = YoriLibGetMultibyteOutputEncoding();
     YoriLibSetMultibyteOutputEncoding(EditContext->Encoding);
@@ -673,17 +697,25 @@ EditNewButtonClicked(
  @param EncodingValues Pointer to an array of values to populate.  The array
         must have space for at least four elements.
 
+ @param EncodingsForOpen If TRUE, this is for an open operation, so encodings
+        can include those that involve detection.  If FALSE, this is for a
+        save operation, and cannot be heuristically detected.
+
  @return The number of elements populated into the array.
  */
 DWORD
 EditPopulateEncodingArray(
-    __out_ecount(4) PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues
+    __out_ecount(5) PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues,
+    __in BOOLEAN EncodingsForOpen
     )
 {
     DWORD EncodingIndex;
 
     EncodingIndex = 0;
     if (YoriLibIsUtf8Supported()) {
+        if (EncodingsForOpen) {
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8/16 based on BOM"));
+        }
         YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8"));
     }
     YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ANSI"));
@@ -700,12 +732,17 @@ EditPopulateEncodingArray(
  @param EncodingIndex The zero based array index of the encoding that the
         user selected.
 
+ @param EncodingsForOpen If TRUE, this is for an open operation, so encodings
+        can include those that involve detection.  If FALSE, this is for a
+        save operation, and cannot be heuristically detected.
+
  @return the CP_ encoding value to use.  Can return -1 on failure, but this
          implies the supplied index is not valid.
  */
 DWORD
 EditEncodingFromArrayIndex(
-    __in DWORD EncodingIndex
+    __in DWORD EncodingIndex,
+    __in BOOLEAN EncodingsForOpen
     )
 {
     DWORD Index;
@@ -713,10 +750,18 @@ EditEncodingFromArrayIndex(
 
     Index = EncodingIndex;
     if (YoriLibIsUtf8Supported()) {
-        if (Index == 0) {
-            return CP_UTF8;
+        if (EncodingsForOpen) {
+            if (Index == 0) {
+                return CP_UTF8_OR_16;
+            } else if (Index == 1) {
+                return CP_UTF8;
+            }
+            Index--;
+        } else {
+            if (Index == 0) {
+                return CP_UTF8;
+            }
         }
-
         Index--;
     }
 
@@ -751,7 +796,7 @@ EditOpenButtonClicked(
     YORI_STRING Text;
     YORI_STRING FullName;
     PEDIT_CONTEXT EditContext;
-    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[4];
+    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[5];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[1];
     DWORD Encoding;
     DWORD EncodingCount;
@@ -760,7 +805,7 @@ EditOpenButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    EncodingCount = EditPopulateEncodingArray(EncodingValues);
+    EncodingCount = EditPopulateEncodingArray(EncodingValues, TRUE);
 
     YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Encoding:"));
     CustomOptionArray[0].ValueCount = EncodingCount;
@@ -787,7 +832,7 @@ EditOpenButtonClicked(
         return;
     }
 
-    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue);
+    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, TRUE);
     if (Encoding != -1) {
         EditContext->Encoding = Encoding;
     }
@@ -880,7 +925,7 @@ EditSaveAsButtonClicked(
     YORI_STRING Text;
     YORI_STRING FullName;
     PEDIT_CONTEXT EditContext;
-    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[4];
+    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[5];
     YORI_DLG_FILE_CUSTOM_VALUE LineEndingValues[3];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[2];
     DWORD Encoding;
@@ -890,7 +935,7 @@ EditSaveAsButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    EncodingCount = EditPopulateEncodingArray(EncodingValues);
+    EncodingCount = EditPopulateEncodingArray(EncodingValues, FALSE);
 
     YoriLibConstantString(&LineEndingValues[0].ValueText, _T("Windows (CRLF)"));
     YoriLibConstantString(&LineEndingValues[1].ValueText, _T("UNIX (LF)"));
@@ -933,7 +978,13 @@ EditSaveAsButtonClicked(
         return;
     }
 
-    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue);
+    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, FALSE);
+
+    //
+    //  Can't autodetect how to save, only how to open.
+    //
+
+    ASSERT(Encoding != CP_UTF8_OR_16);
     if (Encoding != -1) {
         EditContext->Encoding = Encoding;
     }
@@ -2409,7 +2460,7 @@ ENTRYPOINT(
 
     ZeroMemory(&GlobalEditContext, sizeof(GlobalEditContext));
     if (YoriLibIsUtf8Supported()) {
-        GlobalEditContext.Encoding = CP_UTF8;
+        GlobalEditContext.Encoding = CP_UTF8_OR_16;
     } else {
         GlobalEditContext.Encoding = CP_ACP;
     }

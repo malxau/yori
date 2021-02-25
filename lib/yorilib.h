@@ -2178,6 +2178,16 @@ YoriLibHexDiff(
 
 // *** ICONV.C ***
 
+#ifndef CP_UTF8_OR_16
+
+/**
+ A code to describe UTF8_OR_16 encoding.  This encoding is implemented within
+ this library, and refers to UTF16 text if the BOM explicitly indicates it,
+ and UTF8 otherwise.
+ */
+#define CP_UTF8_OR_16 0xFEF8
+#endif
+
 #ifndef CP_UTF16
 
 /**
