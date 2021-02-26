@@ -309,6 +309,16 @@ typedef struct _YORI_FILE_INFO {
     WORD          Subsystem;
 
     /**
+     The directory's case sensitivity status.
+     */
+    BOOLEAN       CaseSensitive;
+
+    /**
+     Unused space used for alignment.
+     */
+    BOOLEAN       ReservedForAlignment;
+
+    /**
      A string description of the file's owner.
      */
     TCHAR         Owner[17];
@@ -1353,6 +1363,13 @@ YoriLibCollectArch (
     );
 
 BOOL
+YoriLibCollectCaseSensitivity (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    );
+
+BOOL
 YoriLibCollectCompressionAlgorithm (
     __inout PYORI_FILE_INFO Entry,
     __in PWIN32_FIND_DATA FindData,
@@ -1568,6 +1585,12 @@ YoriLibCompareArch (
     );
 
 DWORD
+YoriLibCompareCaseSensitivity (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
 YoriLibCompareCompressionAlgorithm (
     __in PYORI_FILE_INFO Left,
     __in PYORI_FILE_INFO Right
@@ -1761,6 +1784,12 @@ YoriLibGenerateAllocationSize(
 
 BOOL
 YoriLibGenerateArch(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateCaseSensitivity(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
     );

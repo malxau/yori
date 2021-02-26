@@ -192,6 +192,26 @@ typedef struct _FILE_PROCESS_IDS_USING_FILE_INFORMATION {
 } FILE_PROCESS_IDS_USING_FILE_INFORMATION, *PFILE_PROCESS_IDS_USING_FILE_INFORMATION;
 
 /**
+ Definition of the information class to obtain case sensitivity information
+ for a directory for compilation environments that don't define it.
+ */
+#define FileCaseSensitiveInformation (71)
+
+/**
+ Information about the case sensitivity state for a directory.
+ */
+typedef struct _YORI_FILE_CASE_SENSITIVE_INFORMATION {
+
+    /**
+     Flags indicating case sensitivity information for a directory.  The only
+     known flag is 1, indicating that per-directory case sensitivity is
+     enabled for that directory.
+     */
+    DWORD Flags;
+
+} YORI_FILE_CASE_SENSITIVE_INFORMATION, *PYORI_FILE_CASE_SENSITIVE_INFORMATION;
+
+/**
  Definition of the information class to query memory usage of a process for
  compilation environments that don't define it.
  */

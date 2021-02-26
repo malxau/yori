@@ -6,7 +6,7 @@
  * This module implements functions to collect, display, sort, and deserialize
  * individual data types associated with files that we can enumerate.
  *
- * Copyright (c) 2014-2018 Malcolm J. Smith
+ * Copyright (c) 2014-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -532,6 +532,60 @@ YoriLibCollectArch (
 
     return TRUE;
 }
+
+/**
+ Collect information from a directory enumerate and full file name relating
+ to the directory's case sensitivity status.
+
+ @param Entry The directory entry to populate.
+
+ @param FindData The directory enumeration information.
+
+ @param FullPath Pointer to a string to the full file name.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibCollectCaseSensitivity (
+    __inout PYORI_FILE_INFO Entry,
+    __in PWIN32_FIND_DATA FindData,
+    __in PYORI_STRING FullPath
+    )
+{
+    HANDLE hFile;
+
+    UNREFERENCED_PARAMETER(FindData);
+    ASSERT(YoriLibIsStringNullTerminated(FullPath));
+
+    Entry->CaseSensitive = FALSE;
+    if (DllNtDll.pNtQueryInformationFile == NULL) {
+        return TRUE;
+    }
+
+    hFile = CreateFile(FullPath->StartOfString,
+                       FILE_READ_ATTRIBUTES,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                       NULL,
+                       OPEN_EXISTING,
+                       FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
+                       NULL);
+
+    if (hFile != INVALID_HANDLE_VALUE) {
+
+        IO_STATUS_BLOCK IoStatusBlock;
+        YORI_FILE_CASE_SENSITIVE_INFORMATION CaseSensitiveInfo;
+
+        if (DllNtDll.pNtQueryInformationFile(hFile, &IoStatusBlock, &CaseSensitiveInfo, sizeof(CaseSensitiveInfo), FileCaseSensitiveInformation) == 0) {
+            if (CaseSensitiveInfo.Flags & 1) {
+                Entry->CaseSensitive = TRUE;
+            }
+        }
+
+        CloseHandle(hFile);
+    }
+    return TRUE;
+}
+
 
 /**
  Collect information from a directory enumerate and full file name relating
@@ -1939,6 +1993,31 @@ YoriLibCompareArch (
 }
 
 /**
+ Compare two directory entry case sensitivity states.
+
+ @param Left The first algorithm to compare.
+
+ @param Right The second algorithm to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareCaseSensitivity (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    if (Left->CaseSensitive < Right->CaseSensitive) {
+        return YORI_LIB_LESS_THAN;
+    } else if (Left->CaseSensitive > Right->CaseSensitive) {
+        return YORI_LIB_GREATER_THAN;
+    }
+    return YORI_LIB_EQUAL;
+}
+
+/**
  Compare two directory entry compression algorithms.
 
  @param Left The first algorithm to compare.
@@ -2748,6 +2827,33 @@ YoriLibGenerateArch(
         Entry->Architecture = IMAGE_FILE_MACHINE_ARMNT;
     } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("arm64")) == 0) {
         Entry->Architecture = IMAGE_FILE_MACHINE_ARM64;
+    } else {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/**
+ Parse a string and populate a directory entry to facilitate
+ comparisons for a directory's case sensitivity.
+
+ @param Entry The directory entry to populate from the string.
+
+ @param String Pointer to a string to use to populate the
+        directory entry.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGenerateCaseSensitivity(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    )
+{
+    if (YoriLibCompareStringWithLiteralInsensitive(String, _T("ci")) == 0) {
+        Entry->CaseSensitive = FALSE;
+    } else if (YoriLibCompareStringWithLiteralInsensitive(String, _T("cs")) == 0) {
+        Entry->CaseSensitive = TRUE;
     } else {
         return FALSE;
     }

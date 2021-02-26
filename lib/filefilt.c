@@ -128,6 +128,10 @@ YoriLibFileFiltFilterOptions[] = {
      YoriLibCompareCreateDate,               NULL,
      YoriLibGenerateCreateDate,              "create date"},
 
+    {_T("ci"),                               YoriLibCollectCaseSensitivity,
+     YoriLibCompareCaseSensitivity,          NULL,
+     YoriLibGenerateCaseSensitivity,         "case insensitivity"},
+
     {_T("cs"),                               YoriLibCollectCompressedFileSize,
      YoriLibCompareCompressedFileSize,       NULL,
      YoriLibGenerateCompressedFileSize,      "compressed size"},

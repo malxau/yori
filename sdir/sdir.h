@@ -294,6 +294,11 @@ typedef struct _SDIR_OPTS {
     SDIR_FEATURE    FtArch;
 
     /**
+     The volatile configuration for the directory's case sensitivity.
+     */
+    SDIR_FEATURE    FtCaseSensitivity;
+
+    /**
      The volatile configuration for the file's compression algorithm.
      */
     SDIR_FEATURE    FtCompressionAlgorithm;

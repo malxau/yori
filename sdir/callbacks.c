@@ -339,6 +339,44 @@ SdirDisplayCompressionAlgorithm (
 
 /**
  Take the data inside a directory entry, convert it to a formatted string, and
+ output the result to a buffer for a directory's case sensitivity state.
+
+ @param Buffer The formatted string to be updated to contain the information.
+        If not specified, the length of characters needed to hold the result
+        is returned.
+
+ @param Attributes The color to use when writing the formatted data to the
+        string.
+
+ @param Entry The directory entry containing the information to write.
+
+ @return The number of characters written to the buffer, or the number of
+         characters required to hold the data if the buffer is not present.
+ */
+ULONG
+SdirDisplayCaseSensitivity (
+    PSDIR_FMTCHAR Buffer,
+    __in YORILIB_COLOR_ATTRIBUTES Attributes,
+    __in PYORI_FILE_INFO Entry
+    )
+{
+    TCHAR StrBuf[4];
+    LPTSTR StrFixed;
+    if (Buffer) {
+        if (Entry->CaseSensitive) {
+            StrFixed = _T("cs");
+        } else {
+            StrFixed = _T("ci");
+        }
+
+        YoriLibSPrintfS(StrBuf, sizeof(StrBuf)/sizeof(StrBuf[0]), _T(" %2s"), StrFixed);
+        SdirPasteStr(Buffer, StrBuf, Attributes, 3);
+    }
+    return 3;
+}
+
+/**
+ Take the data inside a directory entry, convert it to a formatted string, and
  output the result to a buffer for a file's compressed file size.
 
  @param Buffer The formatted string to be updated to contain the information.
@@ -1300,6 +1338,12 @@ SdirOptions[] = {
         YoriLibCompareCreateDate,            NULL,
         YoriLibGenerateCreateDate,           "create date"},
 
+    {OPT_OS(FtCaseSensitivity),              _T("ci"),
+        {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, YORILIB_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},
+        SdirDisplayCaseSensitivity,          YoriLibCollectCaseSensitivity,
+        YoriLibCompareCaseSensitivity,       NULL,
+        YoriLibGenerateCaseSensitivity,      "case insensitivity"},
+
     {OPT_OS(FtCompressedFileSize),           _T("cs"),
         {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, YORILIB_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_INTENSITY},
         SdirDisplayCompressedFileSize,       YoriLibCollectCompressedFileSize,
@@ -1518,6 +1562,7 @@ SdirExec[] = {
     {OPT_OS(FtCompressionAlgorithm), SdirDisplayCompressionAlgorithm},
     {OPT_OS(FtFragmentCount),        SdirDisplayFragmentCount},
     {OPT_OS(FtAllocatedRangeCount),  SdirDisplayAllocatedRangeCount},
+    {OPT_OS(FtCaseSensitivity),      SdirDisplayCaseSensitivity},
 };
 
 /**
