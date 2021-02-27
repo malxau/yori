@@ -3,7 +3,7 @@
  *
  * Yori shell display file metadata
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -345,6 +345,31 @@ FInfoOutputAllocationSizeHex(
     )
 {
     return FInfoOutputLargeInteger(Context->Entry.AllocationSize, 16, OutputString);
+}
+
+/**
+ Output the case sensitivity state.
+
+ @param Context Pointer to context about the file, including previously
+        obtained information to satisfy the output request.
+
+ @param OutputString Pointer to a string to populate with the contents of
+        the variable.
+
+ @return The number of characters populated into the variable, or the number
+         of characters required to successfully populate the contents into
+         the variable.
+ */
+DWORD
+FInfoOutputCaseSensitivity(
+    __in PFINFO_CONTEXT Context,
+    __inout PYORI_STRING OutputString
+    )
+{
+    if (OutputString->LengthAllocated >= 1) {
+        YoriLibYPrintf(OutputString, _T("%01i"), Context->Entry.CaseSensitive);
+    }
+    return 1;
 }
 
 /**
@@ -1223,6 +1248,9 @@ FINFO_KNOWN_VARIABLE FInfoKnownVariables[] = {
     {_T("ALLOCSIZE_HEX"),      YoriLibCollectAllocationSize,        FInfoOutputAllocationSizeHex,
      _T("The number of allocated bytes in the file in hex.")},
 
+    {_T("CASESENSITIVE"),      YoriLibCollectCaseSensitivity,       FInfoOutputCaseSensitivity,
+     _T("The case sensitivity status of the directory.")},
+
     {_T("COMPRESSEDSIZE"),     YoriLibCollectCompressedFileSize,    FInfoOutputCompressedSize,
      _T("The number of compressed bytes in the file in decimal.")},
 
@@ -1445,6 +1473,7 @@ TCHAR DefaultFormatString[] =
     _T("CREATETIME:       $CREATETIME_HOUR$:$CREATETIME_MIN$:$CREATETIME_SEC$\n")
     _T("ALLOCRANGECOUNT:  $ALLOCRANGECOUNT$\n")
     _T("ALLOCSIZE:        $ALLOCSIZE$\n")
+    _T("CASESENSITIVE:    $CASESENSITIVE$\n")
     _T("COMPRESSEDSIZE:   $COMPRESSEDSIZE$\n")
     _T("EXT:              $EXT$\n")
     _T("FILEID_HEX:       $FILEID_HEX$\n")
@@ -1510,7 +1539,7 @@ ENTRYPOINT(
                 FInfoHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
