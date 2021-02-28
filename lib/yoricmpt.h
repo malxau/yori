@@ -5135,16 +5135,16 @@ NT_QUERY_SYSTEM_INFORMATION(DWORD, PVOID, DWORD, PDWORD);
 typedef NT_QUERY_SYSTEM_INFORMATION *PNT_QUERY_SYSTEM_INFORMATION;
 
 /**
- A prototype for the RtlGetLastNtStatus function.
+ A prototype for the NtSetInformationFile function.
  */
 typedef
 LONG WINAPI
-RTL_GET_LAST_NT_STATUS(VOID);
+NT_SET_INFORMATION_FILE(HANDLE, PIO_STATUS_BLOCK, PVOID, DWORD, DWORD);
 
 /**
- A prototype for a pointer to the RtlGetLastNtStatus function.
+ A prototype for a pointer to the NtSetInformationFile function.
  */
-typedef RTL_GET_LAST_NT_STATUS *PRTL_GET_LAST_NT_STATUS;
+typedef NT_SET_INFORMATION_FILE *PNT_SET_INFORMATION_FILE;
 
 /**
  A prototype for the NtSystemDebugControl function.
@@ -5157,6 +5157,18 @@ NT_SYSTEM_DEBUG_CONTROL(DWORD, PVOID, DWORD, PVOID, DWORD, PDWORD);
  A prototype for a pointer to the NtSystemDebugControl function.
  */
 typedef NT_SYSTEM_DEBUG_CONTROL *PNT_SYSTEM_DEBUG_CONTROL;
+
+/**
+ A prototype for the RtlGetLastNtStatus function.
+ */
+typedef
+LONG WINAPI
+RTL_GET_LAST_NT_STATUS(VOID);
+
+/**
+ A prototype for a pointer to the RtlGetLastNtStatus function.
+ */
+typedef RTL_GET_LAST_NT_STATUS *PRTL_GET_LAST_NT_STATUS;
 
 /**
  A structure containing optional function pointers to ntdll.dll exported
@@ -5192,6 +5204,12 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      NtQuerySystemInformation.
      */
     PNT_QUERY_SYSTEM_INFORMATION pNtQuerySystemInformation;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtSetInformationFile.
+     */
+    PNT_SET_INFORMATION_FILE pNtSetInformationFile;
 
     /**
      If it's available on the current system, a pointer to

@@ -15,6 +15,7 @@
 ..\date\builtins.lib
 ..\df\builtins.lib
 ..\dir\builtins.lib
+..\dircase\builtins.lib
 ..\du\builtins.lib
 ..\echo\builtins.lib
 ..\edit\builtins.lib

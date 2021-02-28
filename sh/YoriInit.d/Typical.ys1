@@ -5,6 +5,7 @@ builtin alias -s co=yco $*$
 builtin alias -s compact=ycompact $*$
 builtin alias -s cpuinfo=ycpuinfo $*$
 builtin alias -s df=ydf $*$
+builtin alias -s dircase=ydircase $*$
 builtin alias -s du=ydu $*$
 builtin alias -s dos2unix=iconv -u $*$
 builtin alias -s edit=yedit $*$

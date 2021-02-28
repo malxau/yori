@@ -202,7 +202,8 @@ YoriLibForEachFileEnum(
                 NewFileSpec.LengthInChars = YoriLibSPrintf(NewFileSpec.StartOfString, _T("%y\\*"), &ForEachContext->EffectiveFileSpec);
                 memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
             }
-        } else if ((MatchFlags & (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) != 0) {
+        } else if ((MatchFlags & (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) != 0 ||
+                   (MatchFlags & (YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_RETURN_FILES)) == YORILIB_FILEENUM_RETURN_DIRECTORIES) {
             FileAttributes = GetFileAttributes(FileSpec->StartOfString);
             if (FileAttributes != (DWORD)-1 &&
                 (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {

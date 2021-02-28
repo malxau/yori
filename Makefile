@@ -84,6 +84,7 @@ DIRS=crt       \
      date      \
      df        \
      dir       \
+     dircase   \
      du        \
      echo      \
      edit      \

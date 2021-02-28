@@ -79,6 +79,7 @@ CHAR strHelpHelpText1[] =
         "DATE      Outputs the system date and time in a specified format\n"
         "DF        Display disk free space\n"
         "DIR       Enumerate the contents of directories in a traditional way\n"
+        "DIRCASE   Update case sensitivity behavior for a directory\n"
         "DIRENV    Apply environment changes from per-directory scripts\n"
         "DOS2UNIX  Convert line endings to UNIX (LF) form\n"
         "DU        Display disk space used within a directory tree\n"
