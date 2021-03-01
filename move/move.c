@@ -3,7 +3,7 @@
  *
  * Yori shell move or rename files
  *
- * Copyright (c) 2017-2020 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -113,6 +113,7 @@ MoveFileFoundCallback(
     PMOVE_CONTEXT MoveContext = (PMOVE_CONTEXT)Context;
     YORI_STRING FullDest;
     DWORD LastError;
+    BOOLEAN TrailingSlash;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -120,12 +121,39 @@ MoveFileFoundCallback(
 
     YoriLibInitEmptyString(&FullDest);
 
-    if (MoveContext->DestAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    //
+    //  If the destination ends in a trailing slash, assume it's a
+    //  directory, even if the object is not found.
+    //
+
+    TrailingSlash = FALSE;
+    if (MoveContext->Dest.LengthInChars > 0 &&
+        YoriLibIsSep(MoveContext->Dest.StartOfString[MoveContext->Dest.LengthInChars - 1])) {
+        TrailingSlash = TRUE;
+    }
+
+    //
+    //  For directories, concatenate the desired file name with the directory
+    //  target.  For files, the entire path is the intended target.
+    //
+
+    if (MoveContext->DestAttributes & FILE_ATTRIBUTE_DIRECTORY || TrailingSlash) {
         YORI_STRING DestWithFile;
         if (!YoriLibAllocateString(&DestWithFile, MoveContext->Dest.LengthInChars + 1 + _tcslen(FileInfo->cFileName) + 1)) {
             return FALSE;
         }
-        DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%s"), &MoveContext->Dest, FileInfo->cFileName);
+
+        //
+        //  If the path already ends in a trailing slash, don't add another
+        //  one.
+        //
+
+        if (TrailingSlash) {
+            DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y%s"), &MoveContext->Dest, FileInfo->cFileName);
+        } else {
+            DestWithFile.LengthInChars = YoriLibSPrintf(DestWithFile.StartOfString, _T("%y\\%s"), &MoveContext->Dest, FileInfo->cFileName);
+        }
+
         if (!YoriLibGetFullPathNameReturnAllocation(&DestWithFile, TRUE, &FullDest, NULL)) {
             return FALSE;
         }
@@ -264,7 +292,7 @@ ENTRYPOINT(
                 MoveHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2020"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
