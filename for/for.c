@@ -187,6 +187,14 @@ ForWaitForProcessToComplete(
  @param WhiteSpaceInSection If TRUE, the substring contains white space,
         indicating the substring requires quoting.
 
+ @param CurrentPosition This function is called when processing an argument,
+        and the caller describes its position with a string whose start is
+        within the argument and whose length is the remainder of characters
+        to process.  Because this function can reallocate the argument, this
+        position must be updated, including to reflect any modifications
+        performed by this routine that would adjust the position relative to
+        the newly created argument.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
@@ -194,9 +202,22 @@ ForQuoteSectionIfNeeded(
     __in PYORI_STRING Arg,
     __in PYORI_LIBSH_ARG_CONTEXT ArgContext,
     __in PYORI_STRING Section,
-    __in BOOLEAN WhiteSpaceInSection
+    __in BOOLEAN WhiteSpaceInSection,
+    __inout PYORI_STRING CurrentPosition
     )
 {
+    DWORD Offset;
+
+    //
+    //  This routine will update the current position and depends upon the
+    //  current position being relative to the current argument, and not
+    //  having any extra memory to consider.
+    //
+
+    ASSERT(CurrentPosition->MemoryToFree == NULL);
+
+    Offset = (DWORD)(CurrentPosition->StartOfString - Arg->StartOfString);
+
     if (!ArgContext->Quoted && WhiteSpaceInSection && Section->LengthInChars > 0) {
 
         //
@@ -214,6 +235,7 @@ ForQuoteSectionIfNeeded(
             YORI_STRING NewArg;
             YORI_STRING Prefix;
             YORI_STRING Suffix;
+            DWORD ExtraOffsetChars;
 
             YoriLibInitEmptyString(&Prefix);
             YoriLibInitEmptyString(&Suffix);
@@ -228,9 +250,21 @@ ForQuoteSectionIfNeeded(
                 return FALSE;
             }
 
+            ExtraOffsetChars = 0;
+            if (Offset >= Prefix.LengthInChars + Section->LengthInChars) {
+                ExtraOffsetChars += 1;
+            }
+
+            if (Offset >= Prefix.LengthInChars) {
+                ExtraOffsetChars += 1;
+            }
+
             NewArg.LengthInChars = YoriLibSPrintf(NewArg.StartOfString, _T("%y\"%y\"%y"), &Prefix, Section, &Suffix);
             YoriLibFreeStringContents(Arg);
             memcpy(Arg, &NewArg, sizeof(YORI_STRING));
+
+            CurrentPosition->StartOfString = NewArg.StartOfString + Offset + ExtraOffsetChars;
+            CurrentPosition->LengthInChars = NewArg.LengthInChars - Offset - ExtraOffsetChars;
         }
     }
 
@@ -380,7 +414,8 @@ ForBreakArgumentsAsNeeded(
                     ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
                                             &CmdContext->ArgContexts[ArgIndex],
                                             &Section,
-                                            WhiteSpaceInSection);
+                                            WhiteSpaceInSection,
+                                            &Char);
                     Section.StartOfString = &Char.StartOfString[2];
                     WhiteSpaceInSection = FALSE;
                     BraceNestingLevel++;
@@ -391,7 +426,8 @@ ForBreakArgumentsAsNeeded(
                     ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
                                             &CmdContext->ArgContexts[ArgIndex],
                                             &Section,
-                                            WhiteSpaceInSection);
+                                            WhiteSpaceInSection,
+                                            &Char);
                     Section.StartOfString = &Char.StartOfString[1];
                     WhiteSpaceInSection = FALSE;
                     BraceNestingLevel--;
@@ -400,7 +436,8 @@ ForBreakArgumentsAsNeeded(
                     ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
                                             &CmdContext->ArgContexts[ArgIndex],
                                             &Section,
-                                            WhiteSpaceInSection);
+                                            WhiteSpaceInSection,
+                                            &Char);
                     Section.StartOfString = &Char.StartOfString[1];
                     WhiteSpaceInSection = FALSE;
                 } else if (Char.StartOfString[0] == ' ') {
@@ -417,7 +454,8 @@ ForBreakArgumentsAsNeeded(
                     ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
                                             &CmdContext->ArgContexts[ArgIndex],
                                             &Section,
-                                            WhiteSpaceInSection);
+                                            WhiteSpaceInSection,
+                                            &Char);
                     WhiteSpaceInSection = FALSE;
 
                     //
@@ -522,7 +560,8 @@ ForBreakArgumentsAsNeeded(
             ForQuoteSectionIfNeeded(&CmdContext->ArgV[ArgIndex],
                                     &CmdContext->ArgContexts[ArgIndex],
                                     &Section,
-                                    WhiteSpaceInSection);
+                                    WhiteSpaceInSection,
+                                    &Char);
             WhiteSpaceInSection = FALSE;
         }
     }
