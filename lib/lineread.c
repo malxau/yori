@@ -226,6 +226,8 @@ YoriLibReadLineToStringEx(
 {
     PYORI_LIB_LINE_READ_CONTEXT ReadContext;
     DWORD Count = 0;
+    DWORD LastError;
+    DWORD BytesToRead;
     DWORD BytesRead;
     DWORD CharsToCopy;
     DWORD CharsToSkip;
@@ -524,10 +526,33 @@ YoriLibReadLineToStringEx(
 
         BytesRead = 0;
         if (!TerminateProcessing) {
-            if (!ReadFile(FileHandle, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->BytesInBuffer), ReadContext->LengthOfBuffer - ReadContext->BytesInBuffer, &BytesRead, NULL)) {
-#if DBG
-                DWORD LastError = GetLastError();
 
+            BytesToRead = ReadContext->LengthOfBuffer - ReadContext->BytesInBuffer;
+            LastError = ERROR_SUCCESS;
+
+            while(TRUE) {
+                if (ReadFile(FileHandle, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->BytesInBuffer), BytesToRead, &BytesRead, NULL)) {
+                    LastError = ERROR_SUCCESS;
+                    break;
+                }
+
+                //
+                //  NT 3.1 can fail reads with NOT_ENOUGH_MEMORY if the buffer
+                //  is too large.  Work around this by shrinking the requested
+                //  number of bytes to read.
+                //
+
+                LastError = GetLastError();
+                if (LastError == ERROR_NOT_ENOUGH_MEMORY && BytesToRead > 16384) {
+                    BytesToRead = 16384;
+                    continue;
+                }
+
+                break;
+            }
+
+            if (LastError != ERROR_SUCCESS) {
+#if DBG
                 //
                 //  Most of these indicate the source has gone away or ended.
                 //  ERROR_INVALID_PARAMETER happens when we're trying to
