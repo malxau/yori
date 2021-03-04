@@ -453,7 +453,7 @@ YoriLibShCreateProcess(
         CreationFlags |= DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS;
     }
 
-    CreationFlags |= CREATE_NEW_PROCESS_GROUP;
+    CreationFlags |= CREATE_NEW_PROCESS_GROUP | CREATE_DEFAULT_ERROR_MODE;
 
     LastError = YoriLibShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
     if (LastError != ERROR_SUCCESS) {

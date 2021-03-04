@@ -465,7 +465,7 @@ ymain(
                 StartupInfo.hStdError = WriteErrPipe;
             }
 
-            if (!CreateProcess(NULL, szCmdComplete, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
+            if (!CreateProcess(NULL, szCmdComplete, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
                 GlobalExitCode = EXIT_FAILURE;
                 goto drain;
             }
@@ -490,7 +490,7 @@ ymain(
         ZeroMemory(&StartupInfo, sizeof(StartupInfo));
         StartupInfo.cb = sizeof(StartupInfo);
 
-        if (!CreateProcess(NULL, szCmdCommon, NULL, NULL, TRUE, 0, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
+        if (!CreateProcess(NULL, szCmdCommon, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
             return EXIT_FAILURE;
         }
 

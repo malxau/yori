@@ -427,7 +427,7 @@ YoriLibExecuteShortcut(
                                    NULL,
                                    NULL,
                                    FALSE,
-                                   CREATE_NEW_PROCESS_GROUP | CREATE_NEW_CONSOLE,
+                                   CREATE_NEW_PROCESS_GROUP | CREATE_NEW_CONSOLE | CREATE_DEFAULT_ERROR_MODE,
                                    NULL,
                                    ExpandedWorkingDirectory.StartOfString,
                                    &si,

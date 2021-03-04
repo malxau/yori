@@ -1084,7 +1084,7 @@ YDbgDebugChildProcess(
     memset(&StartupInfo, 0, sizeof(StartupInfo));
     StartupInfo.cb = sizeof(StartupInfo);
 
-    ProcessFlags = DEBUG_PROCESS;
+    ProcessFlags = DEBUG_PROCESS | CREATE_DEFAULT_ERROR_MODE;
     if (CreateNewWindow) {
         ProcessFlags = ProcessFlags | CREATE_NEW_CONSOLE;
     }

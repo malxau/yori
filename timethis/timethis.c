@@ -388,7 +388,7 @@ ENTRYPOINT(
     memset(&StartupInfo, 0, sizeof(StartupInfo));
     StartupInfo.cb = sizeof(StartupInfo);
 
-    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CREATE_SUSPENDED, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CREATE_SUSPENDED | CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo)) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("timethis: execution failed: %s"), ErrText);

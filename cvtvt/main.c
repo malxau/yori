@@ -304,7 +304,7 @@ ENTRYPOINT(
                                NULL,
                                NULL,
                                TRUE,
-                               0,
+                               CREATE_DEFAULT_ERROR_MODE,
                                NULL,
                                NULL,
                                &StartupInfo,
