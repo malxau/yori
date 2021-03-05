@@ -470,11 +470,13 @@ ENTRYPOINT(
 
     if (FileName == NULL) {
         if (!MakeFindMakefileInDirectory(MakeContext.RootScope, &FullFileName)) {
+            YoriLibInitEmptyString(&FullFileName);
             Result = EXIT_FAILURE;
             goto Cleanup;
         }
     } else {
         if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+            YoriLibInitEmptyString(&FullFileName);
             Result = EXIT_FAILURE;
             goto Cleanup;
         }

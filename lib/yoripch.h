@@ -82,6 +82,7 @@
 //  windows header.
 //
 #pragma warning(disable: 6001) // Using uninitialized memory
+#pragma warning(disable: 26451) // Arithmetic overflow
 #endif
 
 #include <winioctl.h>
@@ -90,6 +91,17 @@
 #pragma warning(pop)
 #else
 #pragma warning(disable: 4001) // Single line comment, again
+#endif
+
+#if defined(_MSC_VER) && (_MSC_VER >= 1800) && (_MSC_VER <= 1800)
+#pragma warning(disable: 6102) // Out parameter from failed function used
+                               // Generically there's nothing wrong with doing
+                               // this so long as the contract is defined. This
+                               // compiler doesn't understand that setting a
+                               // struct member via an out parameter won't
+                               // invalidate the whole struct on failure, 
+                               // which makes this warning more than mildly
+                               // annoying.
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)

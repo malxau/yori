@@ -151,9 +151,13 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
          returns FALSE to indicate that the variable was not found.
  */
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 6054) // Can return non-NULL terminated string,
-                                // which is detected by the caller as
-                                // ReturnedSize > Size
+#pragma warning(push)
+#pragma warning(disable: 6054) // Can return non-NULL terminated string,
+                               // which is detected by the caller as
+                               // ReturnedSize > Size
+#pragma warning(disable: 6101 6103) // Returning uninitialized memory,
+                               // which is detected by the caller as
+                               // ReturnedSize > Size
 #endif
 __success(return)
 BOOL
@@ -406,6 +410,9 @@ YoriShGetEnvironmentVariable(
     *ReturnedSize = ProcessedLength;
     return TRUE;
 }
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(pop)
+#endif
 
 /**
  Capture the value from an environment variable, allocating a Yori string of
