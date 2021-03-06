@@ -492,6 +492,13 @@ typedef struct _MAKE_TARGET {
     BOOLEAN DependenciesEvaluated;
 
     /**
+     TRUE if dependencies are currently being evaluated, so detecting a
+     target whose dependencies are being evaluated while evaluating
+     dependencies implies a circular dependency that will never resolve.
+     */
+    BOOLEAN EvaluatingDependencies;
+
+    /**
      TRUE if the commands to execute require a shell.  This occurs if the
      commands include any redirection operator, or there are multiple
      commands present.

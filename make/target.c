@@ -122,7 +122,7 @@ VOID
 MakeDeleteAllTargets(
     __inout PMAKE_CONTEXT MakeContext
     )
-{ 
+{
     PYORI_LIST_ENTRY ListEntry = NULL;
     PMAKE_TARGET Target;
     PMAKE_TARGET_DEPENDENCY Dependency;
@@ -219,6 +219,7 @@ MakeLookupOrCreateTarget(
     Target->ExecuteViaShell = FALSE;
     Target->RebuildRequired = FALSE;
     Target->DependenciesEvaluated = FALSE;
+    Target->EvaluatingDependencies = FALSE;
     Target->InferenceRulePseudoTarget = FALSE;
     Target->ModifiedTime.QuadPart = 0;
     Target->InferenceRule = NULL;
@@ -631,7 +632,7 @@ MakeFindInferenceRuleForTarget(
     }
 
     //
-    //  If there's no inference rule that can generate this extension, 
+    //  If there's no inference rule that can generate this extension,
     //  give up.
     //
 
@@ -942,7 +943,7 @@ MakeExpandTargetVariable(
                 !DependentTarget->Parent->FileExists ||
                 DependentTarget->Parent->ModifiedTime.QuadPart > Target->ModifiedTime.QuadPart) {
 
-                memcpy(&VariableData->StartOfString[Index], 
+                memcpy(&VariableData->StartOfString[Index],
                        DependentTarget->Parent->HashEntry.Key.StartOfString,
                        DependentTarget->Parent->HashEntry.Key.LengthInChars * sizeof(TCHAR));
 
@@ -973,7 +974,7 @@ MakeExpandTargetVariable(
         while (ListEntry != NULL) {
             DependentTarget = CONTAINING_RECORD(ListEntry, MAKE_TARGET_DEPENDENCY, ChildDependents);
 
-            memcpy(&VariableData->StartOfString[Index], 
+            memcpy(&VariableData->StartOfString[Index],
                    DependentTarget->Parent->HashEntry.Key.StartOfString,
                    DependentTarget->Parent->HashEntry.Key.LengthInChars * sizeof(TCHAR));
 
@@ -1328,6 +1329,13 @@ MakeDetermineDependenciesForTarget(
         return TRUE;
     }
 
+    if (Target->EvaluatingDependencies) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Circular dependency encountered on %y\n"), &Target->HashEntry.Key);
+        return FALSE;
+    }
+
+    Target->EvaluatingDependencies = TRUE;
+
     SetRebuildRequired = FALSE;
 
     //
@@ -1355,12 +1363,12 @@ MakeDetermineDependenciesForTarget(
             Parent->InferenceRuleParentTarget != NULL) {
 
             if (!MakeApplyInferenceRuleDependencyToTarget(MakeContext, Parent)) {
-                return FALSE;
+                goto Fail;
             }
         }
 
         if (!MakeDetermineDependenciesForTarget(MakeContext, Parent)) {
-            return FALSE;
+            goto Fail;
         }
         if (Dependency->Parent->RebuildRequired) {
             Target->NumberParentsToBuild = Target->NumberParentsToBuild + 1;
@@ -1372,6 +1380,7 @@ MakeDetermineDependenciesForTarget(
         ListEntry = YoriLibGetNextListEntry(&Target->ParentDependents, ListEntry);
     }
 
+    Target->EvaluatingDependencies = FALSE;
     Target->DependenciesEvaluated = TRUE;
 
     if (!Target->FileExists) {
@@ -1385,6 +1394,10 @@ MakeDetermineDependenciesForTarget(
     }
 
     return TRUE;
+
+Fail:
+    Target->EvaluatingDependencies = FALSE;
+    return FALSE;
 }
 
 /**
