@@ -236,40 +236,10 @@ ENTRYPOINT(
         goto Cleanup;
     }
 
-    YoriLibInitEmptyString(&RootDir);
-    YoriLibConstantString(&Arg, _T("."));
-    if (!YoriLibGetFullPathNameReturnAllocation(&Arg, FALSE, &RootDir, NULL)) {
-        Result = EXIT_FAILURE;
-        goto Cleanup;
-    }
-
-    MakeContext.RootScope = MakeAllocateNewScope(&MakeContext, &RootDir);
-    YoriLibFreeStringContents(&RootDir);
-    if (MakeContext.RootScope == NULL) {
-        Result = EXIT_FAILURE;
-        goto Cleanup;
-    }
-
-    MakeContext.RootScope->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
-
     MakeContext.Targets = YoriLibAllocateHashTable(4000);
     if (MakeContext.Targets == NULL) {
         Result = EXIT_FAILURE;
         goto Cleanup;
-    }
-
-    for (i = 0; i < sizeof(MakeDefaultMacros)/sizeof(MakeDefaultMacros[0]); i++) {
-        MakeSetVariable(MakeContext.RootScope, &MakeDefaultMacros[i].Variable, &MakeDefaultMacros[i].Value, TRUE, MakeVariablePrecedencePredefined);
-    }
-
-    {
-        YORI_STRING VariableName;
-        YORI_STRING YMakeVer;
-        YoriLibInitEmptyString(&YMakeVer);
-        YoriLibYPrintf(&YMakeVer, _T("%03i%03i"), MAKE_VER_MAJOR, MAKE_VER_MINOR);
-        YoriLibConstantString(&VariableName, _T("_YMAKE_VER"));
-        MakeSetVariable(MakeContext.RootScope, &VariableName, &YMakeVer, TRUE, MakeVariablePrecedencePredefined);
-        YoriLibFreeStringContents(&YMakeVer);
     }
 
     for (i = 1; i < ArgC; i++) {
@@ -376,8 +346,6 @@ ENTRYPOINT(
         MakeContext.NumberProcesses = 64;
     }
 
-    MakeContext.ActiveScope = MakeContext.RootScope;
-
     if (Priority == MakePriorityVeryLow) {
         DWORD MajorVersion;
         DWORD MinorVersion;
@@ -394,6 +362,78 @@ ENTRYPOINT(
 
     if (Priority == MakePriorityLow) {
         SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+    }
+
+    //
+    //  Find the directory containing the makefile and populate it as the
+    //  initial scope.
+    //
+
+    if (FileName == NULL) {
+        YoriLibInitEmptyString(&RootDir);
+        YoriLibConstantString(&Arg, _T("."));
+        if (!YoriLibGetFullPathNameReturnAllocation(&Arg, FALSE, &RootDir, NULL)) {
+            Result = EXIT_FAILURE;
+            goto Cleanup;
+        }
+    } else {
+        if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+            YoriLibInitEmptyString(&FullFileName);
+            Result = EXIT_FAILURE;
+            goto Cleanup;
+        }
+
+        YoriLibCloneString(&RootDir, &FullFileName);
+
+        for (i = RootDir.LengthInChars; i > 0; i--) {
+            if (YoriLibIsSep(RootDir.StartOfString[i - 1])) {
+                RootDir.LengthInChars = i - 1;
+                break;
+            }
+        }
+    }
+
+    //
+    //  Allocate and initialize the scope.
+    //
+
+    MakeContext.RootScope = MakeAllocateNewScope(&MakeContext, &RootDir);
+    YoriLibFreeStringContents(&RootDir);
+    if (MakeContext.RootScope == NULL) {
+        Result = EXIT_FAILURE;
+        goto Cleanup;
+    }
+
+    MakeContext.RootScope->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
+
+    for (i = 0; i < sizeof(MakeDefaultMacros)/sizeof(MakeDefaultMacros[0]); i++) {
+        MakeSetVariable(MakeContext.RootScope, &MakeDefaultMacros[i].Variable, &MakeDefaultMacros[i].Value, TRUE, MakeVariablePrecedencePredefined);
+    }
+
+    {
+        YORI_STRING VariableName;
+        YORI_STRING YMakeVer;
+        YoriLibInitEmptyString(&YMakeVer);
+        YoriLibYPrintf(&YMakeVer, _T("%03i%03i"), MAKE_VER_MAJOR, MAKE_VER_MINOR);
+        YoriLibConstantString(&VariableName, _T("_YMAKE_VER"));
+        MakeSetVariable(MakeContext.RootScope, &VariableName, &YMakeVer, TRUE, MakeVariablePrecedencePredefined);
+        YoriLibFreeStringContents(&YMakeVer);
+    }
+
+    MakeContext.ActiveScope = MakeContext.RootScope;
+
+    //
+    //  Find or open the makefile
+    //
+
+    if (FileName == NULL) {
+        if (!MakeFindMakefileInDirectory(MakeContext.RootScope, &FullFileName)) {
+            YoriLibInitEmptyString(&FullFileName);
+            Result = EXIT_FAILURE;
+            goto Cleanup;
+        }
+    } else {
+        ASSERT(FullFileName.LengthInChars > 0);
     }
 
     //
@@ -431,6 +471,7 @@ ENTRYPOINT(
                 MakeSetVariable(MakeContext.RootScope, &VariableName, &Value, TRUE, MakeVariablePrecedenceCommandLine);
             } else {
                 YORI_STRING EmptyString;
+                YORI_STRING FullTarget;
                 YoriLibInitEmptyString(&EmptyString);
 
                 //
@@ -456,10 +497,18 @@ ENTRYPOINT(
                     RootTarget->ScopeContext = MakeContext.RootScope;
                 }
 
-                if (!MakeCreateRuleDependency(&MakeContext, RootTarget, ThisArg)) {
+                YoriLibInitEmptyString(&FullTarget);
+                if (!YoriLibGetFullPathNameReturnAllocation(ThisArg, FALSE, &FullTarget, NULL)) {
                     Result = EXIT_FAILURE;
                     goto Cleanup;
                 }
+
+                if (!MakeCreateRuleDependency(&MakeContext, RootTarget, &FullTarget)) {
+                    YoriLibFreeStringContents(&FullTarget);
+                    Result = EXIT_FAILURE;
+                    goto Cleanup;
+                }
+                YoriLibFreeStringContents(&FullTarget);
             }
         }
     }
@@ -467,20 +516,6 @@ ENTRYPOINT(
 #if YORI_BUILTIN
     YoriLibCancelEnable();
 #endif
-
-    if (FileName == NULL) {
-        if (!MakeFindMakefileInDirectory(MakeContext.RootScope, &FullFileName)) {
-            YoriLibInitEmptyString(&FullFileName);
-            Result = EXIT_FAILURE;
-            goto Cleanup;
-        }
-    } else {
-        if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
-            YoriLibInitEmptyString(&FullFileName);
-            Result = EXIT_FAILURE;
-            goto Cleanup;
-        }
-    }
 
     //
     //  When using a cache, try to load any cached preprocessor conditions for
