@@ -570,7 +570,7 @@ YoriWinListEventHandler(
                 Event->KeyDown.CtrlMask == 0) {
 
                 if (Event->KeyDown.VirtualKeyCode == VK_UP ||
-                    (List->HorizontalDisplay && Event->KeyDown.VirtualKeyCode == VK_RIGHT)) {
+                    (List->HorizontalDisplay && Event->KeyDown.VirtualKeyCode == VK_LEFT)) {
                     if (List->ItemActive) {
                         if (List->ActiveOption > 0) {
                             List->ActiveOption--;
@@ -590,7 +590,7 @@ YoriWinListEventHandler(
                         YoriWinListPaint(List);
                     }
                 } else if (Event->KeyDown.VirtualKeyCode == VK_DOWN ||
-                    (List->HorizontalDisplay && Event->KeyDown.VirtualKeyCode == VK_LEFT)) {
+                    (List->HorizontalDisplay && Event->KeyDown.VirtualKeyCode == VK_RIGHT)) {
                     if (List->ItemActive) {
                         if (List->ActiveOption + 1 < List->ItemArray.Count) {
                             List->ActiveOption++;
