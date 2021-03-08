@@ -503,7 +503,7 @@ ENTRYPOINT(
                     goto Cleanup;
                 }
 
-                if (!MakeCreateRuleDependency(&MakeContext, RootTarget, &FullTarget)) {
+                if (!MakeCreateCommandLineDependency(&MakeContext, RootTarget, &FullTarget)) {
                     YoriLibFreeStringContents(&FullTarget);
                     Result = EXIT_FAILURE;
                     goto Cleanup;

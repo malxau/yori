@@ -146,6 +146,15 @@ typedef struct _MAKE_SCOPE_CONTEXT {
     struct _MAKE_CONTEXT *MakeContext;
 
     /**
+     Pointer to the "default" target for this scope.  The default target has
+     the same name as the scope and is created when the scope is first
+     created.  The first target listed within the scope becomes a dependent
+     target for the default scope, so references to the scope will build the
+     first target within that scope.
+     */
+    struct _MAKE_TARGET *DefaultTarget;
+
+    /**
      The hash entry for the scope.  Paired with MAKE_CONTEXT::Scopes.  The key
      is the directory being treated as the current operating directory.  This
      refers to the path that contains the original makefile being built,
@@ -188,6 +197,14 @@ typedef struct _MAKE_SCOPE_CONTEXT {
      scope will attempt to resolve inference rules on scope exit.
      */
     YORI_LIST_ENTRY InferenceRuleNeededList;
+
+    /**
+     The number of targets that have been created against this scope.  When
+     this value transitions from 1 to 2, that is the first explicitly listed
+     target within the scope, and it becomes a dependent target for the
+     default target.
+     */
+    DWORD TargetCount;
 
     /**
      The current preprocessor conditional nesting level (number of nested if
@@ -841,7 +858,7 @@ MakeFindMakefileInDirectory(
     );
 
 BOOLEAN
-MakeCreateRuleDependency(
+MakeCreateCommandLineDependency(
     __in PMAKE_CONTEXT MakeContext,
     __in PMAKE_TARGET ChildTarget,
     __in PYORI_STRING ParentDependency

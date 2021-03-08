@@ -1823,6 +1823,73 @@ MakeCreateRuleDependency(
 }
 
 /**
+ Add a single target as a prerequisite for another target based on command
+ line input.  This is similar to the above but is capable of ignoring
+ redundant work as opposed to flagging a circular reference.
+
+ @param MakeContext The global context.
+
+ @param ChildTarget Pointer to the target which depends on this entry.
+
+ @param ParentDependency Pointer to the name of the target to execute before
+        ChildTarget.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+MakeCreateCommandLineDependency(
+    __in PMAKE_CONTEXT MakeContext,
+    __in PMAKE_TARGET ChildTarget,
+    __in PYORI_STRING ParentDependency
+    )
+{
+    PMAKE_TARGET RequiredParentTarget;
+    PMAKE_SCOPE_CONTEXT ScopeContext;
+    YORI_STRING EffectiveDependency;
+
+    ScopeContext = MakeContext->ActiveScope;
+
+    YoriLibInitEmptyString(&EffectiveDependency);
+    EffectiveDependency.StartOfString = ParentDependency->StartOfString;
+    EffectiveDependency.LengthInChars = ParentDependency->LengthInChars;
+
+    //
+    //  Truncate any trailing slashes
+    //
+
+    while(EffectiveDependency.LengthInChars > 0 &&
+          YoriLibIsSep(EffectiveDependency.StartOfString[EffectiveDependency.LengthInChars - 1])) {
+
+        EffectiveDependency.LengthInChars--;
+    }
+
+    RequiredParentTarget = MakeLookupOrCreateTarget(ScopeContext, &EffectiveDependency);
+    if (RequiredParentTarget == NULL) {
+        return FALSE;
+    }
+
+    //
+    //  If the parent and child are the same, then this target is going to be
+    //  built soon enough anyway, so just ignore the request.  This is
+    //  different to the rule case where an object depending on itself will
+    //  never resolve.
+    //
+
+    if (RequiredParentTarget == ChildTarget) {
+        return TRUE;
+    }
+
+    MakeMarkTargetInferenceRuleNeededIfNeeded(ScopeContext, RequiredParentTarget);
+
+    if (!MakeCreateParentChildDependency(MakeContext, RequiredParentTarget, ChildTarget)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+/**
  Enumerate the contents of a file and treat each list as a prerequisite target
  for another target.
 
@@ -2341,6 +2408,9 @@ MakeProcessStream(
             MakePreprocessor(ScopeContext, &ExpandedLine);
         } else if (LineType == MakeLineTypeRule) {
             ActiveRecipeTarget = MakeAddRule(ScopeContext, &ExpandedLine);
+            if (ActiveRecipeTarget == NULL) {
+                ScopeContext->RecipeActive = FALSE;
+            }
         } else if (LineType == MakeLineTypeRecipe &&
                    ActiveRecipeTarget != NULL &&
                    !ActiveRecipeTarget->InferenceRulePseudoTarget) {

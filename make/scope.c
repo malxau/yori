@@ -72,12 +72,25 @@ MakeAllocateNewScope(
     YoriLibInitializeListHead(&ScopeContext->InferenceRuleNeededList);
     YoriLibAppendList(&MakeContext->ScopesList, &ScopeContext->ListEntry);
 
+    ScopeContext->TargetCount = 0;
     ScopeContext->CurrentConditionalNestingLevel = 0;
     ScopeContext->ActiveConditionalNestingLevel = 0;
     ScopeContext->RuleExcludedOnNestingLevel = 0;
     ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
     ScopeContext->ActiveConditionalNestingLevelExecutionOccurred = FALSE;
     ScopeContext->RecipeActive = FALSE;
+
+    ScopeContext->DefaultTarget = MakeLookupOrCreateTarget(ScopeContext, Directory);
+    if (ScopeContext->DefaultTarget == NULL) {
+        if (ScopeContext->Variables != NULL) {
+            YoriLibFreeEmptyHashTable(ScopeContext->Variables);
+        }
+        YoriLibRemoveListItem(&ScopeContext->ListEntry);
+        YoriLibHashRemoveByEntry(&ScopeContext->HashEntry);
+        YoriLibFreeStringContents(&ScopeContext->CurrentIncludeDirectory);
+        YoriLibDereference(ScopeContext);
+        return NULL;
+    }
 
     return ScopeContext;
 }

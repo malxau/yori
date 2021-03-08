@@ -249,7 +249,23 @@ MakeLookupOrCreateTarget(
         }
         CloseHandle(FileHandle);
     }
+
     YoriLibFreeStringContents(&FullPath);
+
+    ScopeContext->TargetCount++;
+
+    //
+    //  The first target within the scope context is the default one created
+    //  when the scope is created.  The second is the first user defined one.
+    //
+
+    if (ScopeContext->TargetCount == 2) {
+        ASSERT(ScopeContext->DefaultTarget != NULL);
+        if (!MakeCreateParentChildDependency(ScopeContext->MakeContext, Target, ScopeContext->DefaultTarget)) {
+            MakeDeactivateTarget(Target);
+            return NULL;
+        }
+    }
 
     return Target;
 }
@@ -794,7 +810,7 @@ MakeFindInferenceRulesForScope(
 
 /**
  Describe the relationship between a parent and a child in a dependency
- relationship.
+ relationship.  A child can only be built once its parents have been built.
 
  @param MakeContext Pointer to the context.
 
@@ -817,6 +833,10 @@ MakeCreateParentChildDependency(
     if (Dependency == NULL) {
         return FALSE;
     }
+
+#if MAKE_DEBUG_TARGETS
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Creating parent %y for child %y\n"), &Parent->HashEntry.Key, &Child->HashEntry.Key);
+#endif
 
     MakeContext->AllocDependency++;
 
@@ -1149,8 +1169,12 @@ MakeGenerateExecScriptForTarget(
         SourceString = &Target->Recipe;
     }
 
+    //
+    //  There's nothing to do, and it's been done successfully.
+    //
+
     if (SourceString == NULL) {
-        return FALSE;
+        return TRUE;
     }
 
     ASSERT(Target->ScopeContext != NULL);
@@ -1227,7 +1251,10 @@ MakeMarkTargetForRebuild(
         return TRUE;
     }
 
-    if (!Target->ExplicitRecipeFound && Target->InferenceRule == NULL) {
+    if (!Target->ExplicitRecipeFound &&
+         Target->InferenceRule == NULL &&
+        YoriLibIsListEmpty(&Target->ParentDependents)) {
+
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Don't know how to build %y!\n"), &Target->HashEntry.Key);
         MakeContext->ErrorTermination = TRUE;
         return FALSE;
