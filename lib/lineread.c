@@ -62,6 +62,11 @@ typedef struct _YORI_LIB_LINE_READ_CONTEXT {
     DWORD CurrentBufferOffset;
 
     /**
+     The type of the handle (file, pipe, etc.)
+     */
+    DWORD FileType;
+
+    /**
      If TRUE, the read operation is performed on 16 bit characters.  If FALSE,
      the input contains 8 bit characters.  Unlike most other encodings, this
      matters because it defines the form of the newlines that this module is
@@ -236,14 +241,12 @@ YoriLibReadLineToStringEx(
     HANDLE HandleArray[2];
     DWORD HandleCount;
     DWORD WaitResult;
-    DWORD FileType;
     DWORD DelayTime;
     DWORD CharsRemaining;
     DWORD CumulativeDelay;
     YORI_LIB_LINE_ENDING LocalLineEnding;
 
     *TimeoutReached = FALSE;
-    FileType = GetFileType(FileHandle);
 
     //
     //  If we don't have a line read context yet, allocate one.
@@ -262,6 +265,7 @@ YoriLibReadLineToStringEx(
         ReadContext->LengthOfBuffer = 0;
         ReadContext->CurrentBufferOffset = 0;
         ReadContext->LinesRead = 0;
+        ReadContext->FileType = GetFileType(FileHandle);
         if (YoriLibGetMultibyteInputEncoding() == CP_UTF16) {
             ReadContext->ReadWChars = TRUE;
         } else {
@@ -478,7 +482,7 @@ YoriLibReadLineToStringEx(
                 break;
             }
 
-            if (FileType != FILE_TYPE_PIPE) {
+            if (ReadContext->FileType != FILE_TYPE_PIPE) {
                 break;
             }
 
@@ -570,7 +574,7 @@ YoriLibReadLineToStringEx(
                 TerminateProcessing = TRUE;
             }
 
-            if (FileType != FILE_TYPE_PIPE && BytesRead == 0) {
+            if (ReadContext->FileType != FILE_TYPE_PIPE && BytesRead == 0) {
 
                 TerminateProcessing = TRUE;
             }
