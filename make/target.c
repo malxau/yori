@@ -131,7 +131,7 @@ MakeDeleteAllTargets(
     while (ListEntry != NULL) {
         Target = CONTAINING_RECORD(ListEntry, MAKE_TARGET, ListEntry);
 #if MAKE_DEBUG_TARGETS
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Deleting target: %y (exists %i timestamp %llx)\n"), &Target->HashEntry.Key, Target->FileExists, Target->ModifiedTime.QuadPart);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Deleting target: %y (probed %i exists %i timestamp %llx)\n"), &Target->HashEntry.Key, Target->FileProbed, Target->FileExists, Target->ModifiedTime.QuadPart);
 #endif
 
         ListEntry = YoriLibGetNextListEntry(&Target->ParentDependents, NULL);
@@ -155,6 +155,49 @@ MakeDeleteAllTargets(
 }
 
 /**
+ Open the target and query its timestamp.  The target may not exist (implying
+ it needs to be rebuilt.)
+
+ @param Target Pointer to the target to query.
+ */
+VOID
+MakeProbeTargetFile(
+    __in PMAKE_TARGET Target
+    )
+{
+    HANDLE FileHandle;
+    BY_HANDLE_FILE_INFORMATION FileInfo;
+
+    if (Target->FileProbed) {
+        return;
+    }
+
+    //
+    //  Check if the object already exists, and if so, when it was last
+    //  modified.
+    //
+    //  MSFIX In the longer run, one thing to consider would be using the
+    //  USN value rather than timestamps.  These will be updated for any
+    //  metadata operation so may be overactive, but the strict ordering
+    //  makes it effectively impossible to have identical timestamps or
+    //  clocks going backwards in time that produce false negatives.
+    //
+
+    ASSERT(YoriLibIsStringNullTerminated(&Target->HashEntry.Key));
+    FileHandle = CreateFile(Target->HashEntry.Key.StartOfString, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+    if (FileHandle != INVALID_HANDLE_VALUE) {
+        if (GetFileInformationByHandle(FileHandle, &FileInfo)) {
+            Target->FileExists = TRUE;
+            Target->ModifiedTime.LowPart = FileInfo.ftLastWriteTime.dwLowDateTime;
+            Target->ModifiedTime.HighPart = FileInfo.ftLastWriteTime.dwHighDateTime;
+        }
+        CloseHandle(FileHandle);
+    }
+
+    Target->FileProbed = TRUE;
+}
+
+/**
  Lookup a target in the current hash table of targets, and if it doesn't
  exist, create a new entry for it.
 
@@ -174,8 +217,6 @@ MakeLookupOrCreateTarget(
     YORI_STRING FullPath;
     PMAKE_TARGET Target;
     PYORI_HASH_ENTRY HashEntry;
-    HANDLE FileHandle;
-    BY_HANDLE_FILE_INFORMATION FileInfo;
     PMAKE_CONTEXT MakeContext;
 
     //
@@ -215,6 +256,7 @@ MakeLookupOrCreateTarget(
     Target->NumberParentsToBuild = 0;
     Target->ExplicitRecipeFound = FALSE;
     Target->Executed = FALSE;
+    Target->FileProbed = FALSE;
     Target->FileExists = FALSE;
     Target->ExecuteViaShell = FALSE;
     Target->RebuildRequired = FALSE;
@@ -228,27 +270,6 @@ MakeLookupOrCreateTarget(
     YoriLibInitializeListHead(&Target->ExecCmds);
     YoriLibHashInsertByKey(MakeContext->Targets, &FullPath, Target, &Target->HashEntry);
     YoriLibAppendList(&MakeContext->TargetsList, &Target->ListEntry);
-
-    //
-    //  Check if the object already exists, and if so, when it was last
-    //  modified.
-    //
-    //  MSFIX In the longer run, one thing to consider would be using the
-    //  USN value rather than timestamps.  These will be updated for any
-    //  metadata operation so may be overactive, but the strict ordering
-    //  makes it effectively impossible to have identical timestamps or
-    //  clocks going backwards in time that produce false negatives.
-    //
-
-    FileHandle = CreateFile(FullPath.StartOfString, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
-    if (FileHandle != INVALID_HANDLE_VALUE) {
-        if (GetFileInformationByHandle(FileHandle, &FileInfo)) {
-            Target->FileExists = TRUE;
-            Target->ModifiedTime.LowPart = FileInfo.ftLastWriteTime.dwLowDateTime;
-            Target->ModifiedTime.HighPart = FileInfo.ftLastWriteTime.dwHighDateTime;
-        }
-        CloseHandle(FileHandle);
-    }
 
     YoriLibFreeStringContents(&FullPath);
 
@@ -894,6 +915,7 @@ MakeExpandTargetVariable(
     if (SymbolChars == 0) {
         return FALSE;
     }
+    MakeProbeTargetFile(Target);
 
     YoriLibInitEmptyString(&BaseVariableName);
     BaseVariableName.StartOfString = VariableName->StartOfString;
@@ -941,6 +963,7 @@ MakeExpandTargetVariable(
         ListEntry = YoriLibGetNextListEntry(&Target->ParentDependents, NULL);
         while (ListEntry != NULL) {
             DependentTarget = CONTAINING_RECORD(ListEntry, MAKE_TARGET_DEPENDENCY, ChildDependents);
+            MakeProbeTargetFile(DependentTarget->Parent);
             if (!Target->FileExists ||
                 !DependentTarget->Parent->FileExists ||
                 DependentTarget->Parent->ModifiedTime.QuadPart > Target->ModifiedTime.QuadPart) {
@@ -959,6 +982,7 @@ MakeExpandTargetVariable(
         ListEntry = YoriLibGetNextListEntry(&Target->ParentDependents, NULL);
         while (ListEntry != NULL) {
             DependentTarget = CONTAINING_RECORD(ListEntry, MAKE_TARGET_DEPENDENCY, ChildDependents);
+            MakeProbeTargetFile(DependentTarget->Parent);
             if (!Target->FileExists ||
                 !DependentTarget->Parent->FileExists ||
                 DependentTarget->Parent->ModifiedTime.QuadPart > Target->ModifiedTime.QuadPart) {
@@ -1361,6 +1385,8 @@ MakeDetermineDependenciesForTarget(
         return FALSE;
     }
 
+    MakeProbeTargetFile(Target);
+
     Target->EvaluatingDependencies = TRUE;
 
     SetRebuildRequired = FALSE;
@@ -1401,6 +1427,7 @@ MakeDetermineDependenciesForTarget(
             Target->NumberParentsToBuild = Target->NumberParentsToBuild + 1;
             SetRebuildRequired = TRUE;
         }
+        MakeProbeTargetFile(Parent);
         if (Parent->FileExists && Target->FileExists && Parent->ModifiedTime.QuadPart > Target->ModifiedTime.QuadPart) {
             SetRebuildRequired = TRUE;
         }

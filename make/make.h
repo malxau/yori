@@ -498,7 +498,14 @@ typedef struct _MAKE_TARGET {
     BOOLEAN Executed;
 
     /**
-     TRUE if the file is known to exist, FALSE if it does not.
+     TRUE if the file has been queried for existence and timestamp.  FALSE if
+     this has been deferred because it may not be needed.
+     */
+    BOOLEAN FileProbed;
+
+    /**
+     TRUE if the file is known to exist, FALSE if it does not.  This is only
+     meaningful if FileProbed is TRUE.
      */
     BOOLEAN FileExists;
 
@@ -537,7 +544,7 @@ typedef struct _MAKE_TARGET {
 
     /**
      The timestamp of the file.  This is only meaningful if FileExists is
-     TRUE.
+     TRUE (implying FileProbed is also TRUE.)
      */
     LARGE_INTEGER ModifiedTime;
 
