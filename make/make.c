@@ -603,6 +603,8 @@ Cleanup:
     YoriLibFreeStringContents(&MakeContext.FileToProbe);
     YoriLibShBuiltinUnregisterAll();
 
+    YoriLibLineReadCleanupCache();
+
     if (MakeContext.ErrorTermination) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Parse error!!\n"));
         Result = EXIT_FAILURE;

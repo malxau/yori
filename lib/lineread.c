@@ -181,6 +181,162 @@ YoriLibBytesInBom(
     return 0;
 }
 
+/**
+ The number of cached read line contexts to keep.
+ */
+#define YORI_LIB_READ_LINE_CACHE_ENTRIES 4
+
+/**
+ An array of line read contexts.  Each element is synchronized with
+ interlocked operations.  In the event of a race, it is valid to
+ ignore the cache and perform a fresh allocation.
+ */
+PYORI_LIB_LINE_READ_CONTEXT YoriLibReadLineCachedContext[YORI_LIB_READ_LINE_CACHE_ENTRIES];
+
+/**
+ Return TRUE if InterlockedCompareExchangePointer is available.  This exists
+ on all 64 bit systems, but only exists on 32 but systems from NT 4 or newer.
+ Check for the export for 32 bit systems.
+
+ @return TRUE if the system supports an implementation of
+         InterlockedCompareExchangePointer, or FALSE if it does not.
+ */
+BOOLEAN
+YoriLibIsInterlockedCompareExchangePointerAvailable(VOID)
+{
+#if defined(_WIN64)
+    return TRUE;
+#else
+    if (DllKernel32.pInterlockedCompareExchange) {
+        return TRUE;
+    }
+    return FALSE;
+#endif
+}
+
+/**
+ Perform an InterlockedCompareExchange of pointer size.  This function assumes
+ the caller has firstly called
+ YoriLibIsInterlockedCompareExchangePointerAvailable to verify that the
+ functionality exists.
+
+ @param Dest Pointer to the value to compare and change.
+
+ @param Exchange The value to store into Dest if the comparison is successful.
+
+ @param Comperand The value to compare to the value in Dest.
+
+ @return The original value of Dest.
+ */
+PVOID
+YoriLibInterlockedCompareExchangePointer(volatile PVOID * Dest, PVOID Exchange, PVOID Comperand)
+{
+#if defined(_WIN64)
+    return InterlockedCompareExchangePointer(Dest, Exchange, Comperand);
+#else
+    return (PVOID)(DllKernel32.pInterlockedCompareExchange((volatile LONG *)Dest, (LONG)Exchange, (LONG)Comperand));
+#endif
+}
+
+/**
+ Allocate a line read context, which may be from a previously saved cache
+ entry, or may be from the heap.
+ */
+PYORI_LIB_LINE_READ_CONTEXT
+YoriLibReadLineAllocateContext(VOID)
+{
+    PYORI_LIB_LINE_READ_CONTEXT ReadContext;
+
+    if (YoriLibIsInterlockedCompareExchangePointerAvailable()) {
+        DWORD ProbeIndex;
+
+        ReadContext = NULL;
+        for (ProbeIndex = 0;
+             ProbeIndex < YORI_LIB_READ_LINE_CACHE_ENTRIES;
+             ProbeIndex++) {
+
+            ReadContext = YoriLibReadLineCachedContext[ProbeIndex];
+            if (ReadContext != NULL) {
+                break;
+            }
+        }
+
+        if (ReadContext != NULL) {
+            if (YoriLibInterlockedCompareExchangePointer(&YoriLibReadLineCachedContext[ProbeIndex], NULL, ReadContext) == ReadContext) {
+                return ReadContext;
+            }
+        }
+    }
+
+    ReadContext = YoriLibMalloc(sizeof(YORI_LIB_LINE_READ_CONTEXT));
+    if (ReadContext == NULL) {
+        return NULL;
+    }
+    ReadContext->PreviousBuffer = NULL;
+    ReadContext->LengthOfBuffer = 0;
+    return ReadContext;
+}
+
+/**
+ Close a line read context, and store it in the cache if there is an
+ available slot for it.  After using this routine, a caller is expected to
+ call YoriLibLineReadCleanupCache to teardown any saved cache entries.
+
+ @param Context Pointer to the context to free.
+ */
+VOID
+YoriLibLineReadCloseOrCache(
+    __in_opt PVOID Context
+    )
+{
+    if (YoriLibIsInterlockedCompareExchangePointerAvailable()) {
+        PYORI_LIB_LINE_READ_CONTEXT ReadContext = (PYORI_LIB_LINE_READ_CONTEXT)Context;
+        PYORI_LIB_LINE_READ_CONTEXT OldContext;
+        DWORD ProbeIndex;
+
+        OldContext = NULL;
+        for (ProbeIndex = 0;
+             ProbeIndex < YORI_LIB_READ_LINE_CACHE_ENTRIES;
+             ProbeIndex++) {
+
+            OldContext = YoriLibReadLineCachedContext[ProbeIndex];
+            if (OldContext == NULL) {
+                break;
+            }
+        }
+
+        if (OldContext == NULL) {
+            if (YoriLibInterlockedCompareExchangePointer(&YoriLibReadLineCachedContext[ProbeIndex], ReadContext, NULL) == NULL) {
+                return;
+            }
+        }
+    }
+
+    YoriLibLineReadClose(Context);
+}
+
+/**
+ Tear down any unused cached line read context entries.
+ */
+VOID
+YoriLibLineReadCleanupCache(VOID)
+{
+    if (YoriLibIsInterlockedCompareExchangePointerAvailable()) {
+        PYORI_LIB_LINE_READ_CONTEXT OldContext;
+        DWORD ProbeIndex;
+
+        for (ProbeIndex = 0;
+             ProbeIndex < YORI_LIB_READ_LINE_CACHE_ENTRIES;
+             ProbeIndex++) {
+
+            OldContext = YoriLibReadLineCachedContext[ProbeIndex];
+            if (YoriLibInterlockedCompareExchangePointer(&YoriLibReadLineCachedContext[ProbeIndex], NULL, OldContext) == OldContext) {
+                YoriLibLineReadClose(OldContext);
+            }
+        }
+    }
+}
+
 
 /**
  Read a line from an input stream.
@@ -253,16 +409,14 @@ YoriLibReadLineToStringEx(
     //
 
     if (*Context == NULL) {
-        ReadContext = YoriLibMalloc(sizeof(YORI_LIB_LINE_READ_CONTEXT));
+        ReadContext = YoriLibReadLineAllocateContext();
         if (ReadContext == NULL) {
             UserString->LengthInChars = 0;
             *LineEnding = YoriLibLineEndingNone;
             return NULL;
         }
         *Context = ReadContext;
-        ReadContext->PreviousBuffer = NULL;
         ReadContext->BytesInBuffer = 0;
-        ReadContext->LengthOfBuffer = 0;
         ReadContext->CurrentBufferOffset = 0;
         ReadContext->LinesRead = 0;
         ReadContext->FileType = GetFileType(FileHandle);
@@ -283,7 +437,11 @@ YoriLibReadLineToStringEx(
     //  If the line read context doesn't have a buffer yet, allocate it
     //
 
-    if (ReadContext->PreviousBuffer == NULL) {
+    if (ReadContext->PreviousBuffer == NULL || UserString->LengthAllocated > ReadContext->LengthOfBuffer) {
+        if (ReadContext->PreviousBuffer != NULL) {
+            YoriLibFree(ReadContext->PreviousBuffer);
+            ReadContext->PreviousBuffer = NULL;
+        }
         ReadContext->LengthOfBuffer = UserString->LengthAllocated;
         if (ReadContext->LengthOfBuffer < 256 * 1024) {
             ReadContext->LengthOfBuffer = 256 * 1024;

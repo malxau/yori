@@ -2351,6 +2351,14 @@ YoriLibLineReadClose(
     __in_opt PVOID Context
     );
 
+VOID
+YoriLibLineReadCloseOrCache(
+    __in_opt PVOID Context
+    );
+
+VOID
+YoriLibLineReadCleanupCache(VOID);
+
 // *** LIST.C ***
 
 VOID

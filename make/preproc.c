@@ -722,7 +722,7 @@ MakeLoadPreprocessorCacheEntries(
         YoriLibFreeStringContents(&Key);
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
     CloseHandle(hCache);
 }
@@ -1958,7 +1958,7 @@ MakeCreateFileListDependency(
     }
 
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
     YoriLibFreeStringContents(&FullPath);
     CloseHandle(hStream);
@@ -2425,7 +2425,7 @@ MakeProcessStream(
         JoinedLine.LengthInChars = 0;
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
     YoriLibFreeStringContents(&JoinedLine);
     YoriLibFreeStringContents(&ExpandedLine);

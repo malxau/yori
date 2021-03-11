@@ -80,6 +80,7 @@ typedef DWORD_PTR *PDWORD_PTR;
  Definition for pointer size integer for compilers that don't contain it.
  */
 typedef ULONG ULONG_PTR;
+
 #endif
 #endif
 
@@ -5625,6 +5626,18 @@ GLOBAL_MEMORY_STATUS_EX(PYORI_MEMORYSTATUSEX);
 typedef GLOBAL_MEMORY_STATUS_EX *PGLOBAL_MEMORY_STATUS_EX;
 
 /**
+ A prototype for the InterlockedCompareExchange function.
+ */
+typedef
+LONG WINAPI
+INTERLOCKED_COMPARE_EXCHANGE(LONG volatile *, LONG, LONG);
+
+/**
+ A prototype for a pointer to the InterlockedCompareExchange function.
+ */
+typedef INTERLOCKED_COMPARE_EXCHANGE *PINTERLOCKED_COMPARE_EXCHANGE;
+
+/**
  A prototype for the IsWow64Process function.
  */
 typedef
@@ -5967,6 +5980,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GlobalMemoryStatusEx.
      */
     PGLOBAL_MEMORY_STATUS_EX pGlobalMemoryStatusEx;
+
+    /**
+     If it's available on the current system, a pointer to InterlockedCompareExchange.
+     */
+    PINTERLOCKED_COMPARE_EXCHANGE pInterlockedCompareExchange;
 
     /**
      If it's available on the current system, a pointer to IsWow64Process.

@@ -159,6 +159,7 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pGetVolumePathNamesForVolumeNameW, "GetVolumePathNamesForVolumeNameW"},
     {(FARPROC *)&DllKernel32.pGetVolumePathNameW, "GetVolumePathNameW"},
     {(FARPROC *)&DllKernel32.pGlobalMemoryStatusEx, "GlobalMemoryStatusEx"},
+    {(FARPROC *)&DllKernel32.pInterlockedCompareExchange, "InterlockedCompareExchange"},
     {(FARPROC *)&DllKernel32.pIsWow64Process, "IsWow64Process"},
     {(FARPROC *)&DllKernel32.pIsWow64Process2, "IsWow64Process2"},
     {(FARPROC *)&DllKernel32.pOpenThread, "OpenThread"},
