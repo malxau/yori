@@ -1,6 +1,7 @@
 if strcmp -- %1%==-undo; goto undo
 
 alias mk=ymake -m -pru DEBUG=1 $*$
+alias mkd=ymake -m -pru DEBUG=1 -f `ypath -f $PARENT$ %~SCRIPTNAME%`\Makefile .\$*$
 alias cln=ymake clean $*$
 alias F3=ymake -m -pru DEBUG=1
 alias F5=ymake distclean
