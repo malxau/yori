@@ -353,9 +353,4 @@ install: $(INSTALL_DEPENDENCIES)
 	@if not "$(MODULES)."=="." for %%i in ($(MODULES)) do @if exist %%~dpni.pdb copy %%~dpni.pdb $(SYMDIR) >NUL
 	@if not "$(INITFILES)."=="." for %%i in ($(INITFILES)) do @copy %%i $(BINDIR)\YoriInit.d >NUL
 
-delbins:
-	@erase $(BINARIES)
-
-relink: delbins link
-
 !ENDIF
