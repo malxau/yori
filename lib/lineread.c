@@ -193,10 +193,17 @@ YoriLibBytesInBom(
  */
 PYORI_LIB_LINE_READ_CONTEXT YoriLibReadLineCachedContext[YORI_LIB_READ_LINE_CACHE_ENTRIES];
 
+#if defined(_MSC_VER) && defined(_M_IX86) && (_MSC_VER >= 1010) && (_M_IX86 >= 400)
+LONG _InterlockedCompareExchange(LONG volatile *, LONG, LONG);
+#pragma intrinsic(_InterlockedCompareExchange)
+#endif
+
 /**
  Return TRUE if InterlockedCompareExchangePointer is available.  This exists
- on all 64 bit systems, but only exists on 32 but systems from NT 4 or newer.
- Check for the export for 32 bit systems.
+ on all 64 bit systems, and on 32 bit x86 it requires a 486 or newer.  If
+ targeting a 486 or above with Visual C++ 4.1 or newer, use the intrinsic;
+ because this is an instruction it can run on older versions of NT.
+ Otherwise, fallback to using the export, requiring NT 4 or above.
 
  @return TRUE if the system supports an implementation of
          InterlockedCompareExchangePointer, or FALSE if it does not.
@@ -205,6 +212,8 @@ BOOLEAN
 YoriLibIsInterlockedCompareExchangePointerAvailable(VOID)
 {
 #if defined(_WIN64)
+    return TRUE;
+#elif defined(_MSC_VER) && defined(_M_IX86) && (_MSC_VER >= 1010) && (_M_IX86 >= 400)
     return TRUE;
 #else
     if (DllKernel32.pInterlockedCompareExchange) {
@@ -233,6 +242,8 @@ YoriLibInterlockedCompareExchangePointer(volatile PVOID * Dest, PVOID Exchange, 
 {
 #if defined(_WIN64)
     return InterlockedCompareExchangePointer(Dest, Exchange, Comperand);
+#elif defined(_MSC_VER) && defined(_M_IX86) && (_MSC_VER >= 1010) && (_M_IX86 >= 400)
+    return (PVOID)(_InterlockedCompareExchange((volatile LONG *)Dest, (LONG)Exchange, (LONG)Comperand));
 #else
     return (PVOID)(DllKernel32.pInterlockedCompareExchange((volatile LONG *)Dest, (LONG)Exchange, (LONG)Comperand));
 #endif
