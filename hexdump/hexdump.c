@@ -641,7 +641,7 @@ HexDumpReverseProcessStream(
     }
 
     if (!HexDumpDetectReverseFormatFromLine(&LineString, &ReverseContext)) {
-        YoriLibLineReadClose(LineContext);
+        YoriLibLineReadCloseOrCache(LineContext);
         YoriLibFreeStringContents(&LineString);
         return FALSE;
     }
@@ -663,7 +663,7 @@ HexDumpReverseProcessStream(
         }
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -847,14 +847,14 @@ HexDumpBinaryProcessStream(
     LineNumber++;
 
     if (!HexDumpDetectReverseFormatFromLine(&LineString, &ReverseContext)) {
-        YoriLibLineReadClose(LineContext);
+        YoriLibLineReadCloseOrCache(LineContext);
         YoriLibFreeStringContents(&LineString);
         return FALSE;
     }
 
     if (ReverseContext.CharsInInputLineToIgnore != 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: not a stream of hex digits, line %lli\n"), LineNumber);
-        YoriLibLineReadClose(LineContext);
+        YoriLibLineReadCloseOrCache(LineContext);
         YoriLibFreeStringContents(&LineString);
         return FALSE;
     }
@@ -886,7 +886,7 @@ HexDumpBinaryProcessStream(
         ReverseContext.OutputBuffer = NULL;
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -1806,6 +1806,10 @@ ENTRYPOINT(
             }
         }
     }
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (HexDumpContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hexdump: no matching files found\n"));

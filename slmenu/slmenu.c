@@ -537,7 +537,7 @@ SlmenuProcessStream(
         MenuContext->StringCount++;
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     return TRUE;
 }
 
@@ -610,6 +610,7 @@ ENTRYPOINT(
     PYORI_STRING DisplayPrompt;
     DWORD DisplayLineCount;
     DWORD Index;
+    DWORD Result;
 
     ZeroMemory(&MenuContext, sizeof(MenuContext));
     Op = SlmenuDisplaySinglelineMenu;
@@ -672,20 +673,25 @@ ENTRYPOINT(
         }
     }
 
+    Result = EXIT_SUCCESS;
+    Index = 0;
+
     if (Op == SlmenuDisplaySinglelineMenu) {
 
         if (!SlmenuProcessStream(GetStdHandle(STD_INPUT_HANDLE), &MenuContext)) {
-            SlmenuCleanupContext(&MenuContext);
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
 
-        if (!SlmenuCreateSinglelineMenu(MenuContext.StringArray, MenuContext.StringCount, Location, DisplayPrompt, &Index)) {
-            SlmenuCleanupContext(&MenuContext);
-            return EXIT_FAILURE;
+        if (Result == EXIT_SUCCESS) {
+            if (!SlmenuCreateSinglelineMenu(MenuContext.StringArray, MenuContext.StringCount, Location, DisplayPrompt, &Index)) {
+                Result = EXIT_FAILURE;
+            }
         }
 
-        if (Index < MenuContext.StringCount) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MenuContext.StringArray[Index]);
+        if (Result == EXIT_SUCCESS) {
+            if (Index < MenuContext.StringCount) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MenuContext.StringArray[Index]);
+            }
         }
 
         SlmenuCleanupContext(&MenuContext);
@@ -693,23 +699,29 @@ ENTRYPOINT(
     } else if (Op == SlmenuDisplayMultilineMenu) {
 
         if (!SlmenuProcessStream(GetStdHandle(STD_INPUT_HANDLE), &MenuContext)) {
-            SlmenuCleanupContext(&MenuContext);
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
 
-        if (!SlmenuCreateMultilineMenu(MenuContext.StringArray, MenuContext.StringCount, &Prompt, DisplayLineCount, &Index)) {
-            SlmenuCleanupContext(&MenuContext);
-            return EXIT_FAILURE;
+        if (Result == EXIT_SUCCESS) {
+            if (!SlmenuCreateMultilineMenu(MenuContext.StringArray, MenuContext.StringCount, &Prompt, DisplayLineCount, &Index)) {
+                Result = EXIT_FAILURE;
+            }
         }
 
-        if (Index < MenuContext.StringCount) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MenuContext.StringArray[Index]);
+        if (Result == EXIT_SUCCESS) {
+            if (Index < MenuContext.StringCount) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &MenuContext.StringArray[Index]);
+            }
         }
 
         SlmenuCleanupContext(&MenuContext);
     }
 
-    return EXIT_SUCCESS;
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
+
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:

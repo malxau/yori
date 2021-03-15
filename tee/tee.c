@@ -103,7 +103,7 @@ TeeProcessStream(
         YoriLibOutputToDevice(TeeContext->hFile, 0, _T("%y\n"), &LineString);
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -220,6 +220,10 @@ ENTRYPOINT(
     }
 
     TeeProcessStream(GetStdHandle(STD_INPUT_HANDLE), &TeeContext);
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     CloseHandle(TeeContext.hFile);
     YoriLibFreeStringContents(&FileName);

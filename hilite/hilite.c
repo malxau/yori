@@ -391,7 +391,7 @@ HiliteProcessStream(
         }
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -726,6 +726,10 @@ ENTRYPOINT(
     }
 
     HiliteCleanupContext(&HiliteContext);
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (HiliteContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hilite: no matching files found\n"));

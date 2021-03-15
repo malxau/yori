@@ -134,7 +134,7 @@ LinesProcessStream(
         LinesContext->FileLinesFound++;
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     LinesContext->TotalLinesFound += LinesContext->FileLinesFound;
@@ -414,6 +414,10 @@ ENTRYPOINT(
             }
         }
     }
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (LinesContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lines: no matching files found\n"));

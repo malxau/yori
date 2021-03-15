@@ -2357,6 +2357,7 @@ YoriLibLineReadCloseOrCache(
     );
 
 VOID
+YORI_BUILTIN_FN
 YoriLibLineReadCleanupCache(VOID);
 
 // *** LIST.C ***

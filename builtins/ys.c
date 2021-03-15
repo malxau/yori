@@ -425,7 +425,7 @@ YsLoadLines(
 
         ThisLine = YoriLibMalloc(sizeof(YS_SCRIPT_LINE));
         if (ThisLine == NULL) {
-            YoriLibLineReadClose(LineContext);
+            YoriLibLineReadCloseOrCache(LineContext);
             return FALSE;
         }
 
@@ -433,7 +433,7 @@ YsLoadLines(
 
         if (!YoriLibReadLineToString(&ThisLine->LineContents, &LineContext, Handle)) {
             YoriLibFree(ThisLine);
-            YoriLibLineReadClose(LineContext);
+            YoriLibLineReadCloseOrCache(LineContext);
             return TRUE;
         }
 
@@ -552,33 +552,33 @@ YoriCmd_RETURN(
         //
         //  Restore the current directory.
         //
-    
+
         if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
             YsFreeCallStack(StackLocation);
             return EXIT_FAILURE;
         }
-    
+
         //
         //  Query the current environment and delete everything in it.
         //
-    
+
         if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
             YsFreeCallStack(StackLocation);
             return EXIT_FAILURE;
         }
-    
+
         YoriLibInitEmptyString(&VariableName);
         YoriLibInitEmptyString(&ValueName);
-    
+
         ThisVar = CurrentEnvironment.StartOfString;
         while (*ThisVar != '\0') {
             VarLen = _tcslen(ThisVar);
-    
+
             //
             //  We know there's at least one char.  Skip it if it's equals since
             //  that's how drive current directories are recorded.
             //
-    
+
             ThisValue = _tcschr(&ThisVar[1], '=');
             if (ThisValue != NULL) {
                 ThisValue[0] = '\0';
@@ -594,25 +594,25 @@ YoriCmd_RETURN(
                     YoriCallSetEnvironmentVariable(&VariableName, NULL);
                 }
             }
-    
+
             ThisVar += VarLen;
             ThisVar++;
         }
         YoriLibFreeStringContents(&CurrentEnvironment);
-    
+
         //
         //  Now restore the saved environment.
         //
-    
+
         ThisVar = StackLocation->PreviousEnvironment.StartOfString;
         while (*ThisVar != '\0') {
             VarLen = _tcslen(ThisVar);
-    
+
             //
             //  We know there's at least one char.  Skip it if it's equals since
             //  that's how drive current directories are recorded.
             //
-    
+
             ThisValue = _tcschr(&ThisVar[1], '=');
             if (ThisValue != NULL) {
                 ThisValue[0] = '\0';
@@ -632,11 +632,11 @@ YoriCmd_RETURN(
                     YoriCallSetEnvironmentVariable(&VariableName, &ValueName);
                 }
             }
-    
+
             ThisVar += VarLen;
             ThisVar++;
         }
-    
+
         YsActiveScript->ActiveLine = StackLocation->CallingLine;
         YsFreeCallStack(StackLocation);
         ListEntry = YoriLibGetPreviousListEntry(&YsActiveScript->CallStackLinks, NULL);
@@ -1315,6 +1315,10 @@ YoriCmd_YS(
         return EXIT_FAILURE;
     }
 
+    if (!YoriCallSetUnloadRoutine(YoriLibLineReadCleanupCache)) {
+        YoriLibFreeStringContents(&FileName);
+        return EXIT_FAILURE;
+    }
 
     if (!YsLoadScript(FileHandle, &Script)) {
         YoriLibFreeStringContents(&FileName);

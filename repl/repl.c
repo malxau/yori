@@ -209,7 +209,7 @@ ReplProcessStream(
         }
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
     YoriLibFreeStringContents(&AlternateStrings[0]);
     YoriLibFreeStringContents(&AlternateStrings[1]);
@@ -448,9 +448,9 @@ ENTRYPOINT(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
-    
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,
@@ -459,6 +459,10 @@ ENTRYPOINT(
                                  &ReplContext);
         }
     }
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (ReplContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("repl: no matching files found\n"));

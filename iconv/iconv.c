@@ -150,7 +150,7 @@ IconvProcessStream(
     YoriLibSetMultibyteOutputEncoding(OriginalOutputEncoding);
     YoriLibVtSetLineEnding(OriginalLineEnding);
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -432,9 +432,9 @@ ENTRYPOINT(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
-    
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,
@@ -443,6 +443,10 @@ ENTRYPOINT(
                                  &IconvContext);
         }
     }
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (IconvContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("iconv: no matching files found\n"));

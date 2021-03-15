@@ -689,7 +689,7 @@ YoriShLoadSavedRestartState(
 
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &LineString);
             }
-            YoriLibLineReadClose(LineContext);
+            YoriLibLineReadCloseOrCache(LineContext);
             YoriLibFreeStringContents(&LineString);
             CloseHandle(hBufferFile);
         }

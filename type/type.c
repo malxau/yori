@@ -168,7 +168,7 @@ TypeProcessStream(
         }
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -457,6 +457,10 @@ ENTRYPOINT(
             }
         }
     }
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (TypeContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("type: no matching files found\n"));

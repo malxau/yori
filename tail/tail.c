@@ -200,7 +200,7 @@ TailProcessStream(
                 SeekToEndOffset = 0;
                 SetFilePointer(hSource, 0, NULL, FILE_BEGIN);
             }
-            YoriLibLineReadClose(LineContext);
+            YoriLibLineReadCloseOrCache(LineContext);
             LineContext = NULL;
             continue;
         } else {
@@ -228,7 +228,7 @@ TailProcessStream(
         }
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     return TRUE;
 }
 
@@ -535,6 +535,10 @@ ENTRYPOINT(
         YoriLibFreeStringContents(&TailContext.LinesArray[Count]);
     }
     YoriLibFree(TailContext.LinesArray);
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (TailContext.FilesFound == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("tail: no matching files found\n"));

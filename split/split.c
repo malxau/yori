@@ -183,7 +183,7 @@ SplitProcessStream(
             if (hDestFile == NULL) {
                 hDestFile = SplitOpenTargetForCurrentPart(SplitContext);
                 if (hDestFile == NULL) {
-                    YoriLibLineReadClose(LineContext);
+                    YoriLibLineReadCloseOrCache(LineContext);
                     YoriLibFreeStringContents(&LineString);
                     return FALSE;
                 }
@@ -194,7 +194,7 @@ SplitProcessStream(
             LineNumber++;
         }
 
-        YoriLibLineReadClose(LineContext);
+        YoriLibLineReadCloseOrCache(LineContext);
         YoriLibFreeStringContents(&LineString);
     } else {
         PVOID Buffer;
@@ -414,6 +414,7 @@ ENTRYPOINT(
     BOOL ArgumentUnderstood;
     DWORD i;
     DWORD StartArg = 0;
+    DWORD Result;
     SPLIT_CONTEXT SplitContext;
     YORI_STRING Arg;
     BOOL JoinMode = FALSE;
@@ -496,6 +497,8 @@ ENTRYPOINT(
         }
     }
 
+    Result = EXIT_SUCCESS;
+
     if (JoinMode) {
         if (StartArg == 0) {
             YoriLibFreeStringContents(&SplitContext.Prefix);
@@ -504,24 +507,24 @@ ENTRYPOINT(
         }
 
         if (!SplitJoin(&SplitContext.Prefix, &ArgV[StartArg])) {
-            YoriLibFreeStringContents(&SplitContext.Prefix);
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
-        YoriLibFreeStringContents(&SplitContext.Prefix);
     } else {
         if (SplitContext.LinesMode) {
             if (SplitContext.LinesPerPart == 0) {
-                YoriLibFreeStringContents(&SplitContext.Prefix);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: invalid lines per part\n"));
-                return EXIT_FAILURE;
+                Result = EXIT_FAILURE;
             }
         } else {
             if (SplitContext.BytesPerPart == 0 || SplitContext.BytesPerPart >= (DWORD)-1) {
-                YoriLibFreeStringContents(&SplitContext.Prefix);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: invalid bytes per part\n"));
-                return EXIT_FAILURE;
+                Result = EXIT_FAILURE;
             }
         }
+
+    }
+
+    if (Result == EXIT_SUCCESS && !JoinMode) {
 
         //
         //  Attempt to enable backup privilege so an administrator can access more
@@ -537,51 +540,59 @@ ENTRYPOINT(
 
         if (StartArg == 0) {
             if (YoriLibIsStdInConsole()) {
-                YoriLibFreeStringContents(&SplitContext.Prefix);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: no file or pipe for input\n"));
-                return EXIT_FAILURE;
+                Result = EXIT_FAILURE;
             }
 
-            if (!SplitProcessStream(GetStdHandle(STD_INPUT_HANDLE), &SplitContext)) {
-                YoriLibFreeStringContents(&SplitContext.Prefix);
-                return EXIT_FAILURE;
+            if (Result == EXIT_SUCCESS) {
+                if (!SplitProcessStream(GetStdHandle(STD_INPUT_HANDLE), &SplitContext)) {
+                    Result = EXIT_FAILURE;
+                }
             }
         } else {
             HANDLE FileHandle;
             YORI_STRING FilePath;
 
             if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FilePath)) {
-                return EXIT_FAILURE;
-            }
-            FileHandle = CreateFile(FilePath.StartOfString,
-                                    GENERIC_READ,
-                                    FILE_SHARE_READ | FILE_SHARE_DELETE,
-                                    NULL,
-                                    OPEN_EXISTING,
-                                    FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
-                                    NULL);
-
-            if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
-                DWORD LastError = GetLastError();
-                LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %y failed: %s"), &FilePath, ErrText);
-                YoriLibFreeWinErrorText(ErrText);
-                return TRUE;
+                Result = EXIT_FAILURE;
             }
 
-            YoriLibFreeStringContents(&FilePath);
+            FileHandle = NULL;
+            if (Result == EXIT_SUCCESS) {
+                FileHandle = CreateFile(FilePath.StartOfString,
+                                        GENERIC_READ,
+                                        FILE_SHARE_READ | FILE_SHARE_DELETE,
+                                        NULL,
+                                        OPEN_EXISTING,
+                                        FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+                                        NULL);
 
-            if (!SplitProcessStream(FileHandle, &SplitContext)) {
+                if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
+                    DWORD LastError = GetLastError();
+                    LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("split: open of %y failed: %s"), &FilePath, ErrText);
+                    YoriLibFreeWinErrorText(ErrText);
+                    Result = EXIT_FAILURE;
+                }
+
+                YoriLibFreeStringContents(&FilePath);
+            }
+
+            if (Result == EXIT_SUCCESS) {
+                if (!SplitProcessStream(FileHandle, &SplitContext)) {
+                    Result = EXIT_FAILURE;
+                }
                 CloseHandle(FileHandle);
-                YoriLibFreeStringContents(&SplitContext.Prefix);
-                return EXIT_FAILURE;
             }
-            CloseHandle(FileHandle);
         }
         YoriLibFreeStringContents(&SplitContext.Prefix);
     }
 
-    return EXIT_SUCCESS;
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
+
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:

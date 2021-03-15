@@ -3128,7 +3128,7 @@ VOID
 YoriShCleanupInputContext(VOID)
 {
     if (YoriShGetExpressionLineContext != NULL) {
-        YoriLibLineReadClose(YoriShGetExpressionLineContext);
+        YoriLibLineReadCloseOrCache(YoriShGetExpressionLineContext);
     }
 }
 

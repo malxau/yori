@@ -261,7 +261,7 @@ HistoryLoadHistoryFromFile(
         }
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
     CloseHandle(FileHandle);
     return TRUE;
@@ -370,6 +370,10 @@ YoriCmd_HISTORY(
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("history: getfullpathname of %y failed: %s"), &ArgV[StartArg], ErrText);
             YoriLibFreeWinErrorText(ErrText);
+            return EXIT_FAILURE;
+        }
+        if (!YoriCallSetUnloadRoutine(YoriLibLineReadCleanupCache)) {
+            YoriLibFreeStringContents(&FileName);
             return EXIT_FAILURE;
         }
         if (!HistoryLoadHistoryFromFile(&FileName)) {

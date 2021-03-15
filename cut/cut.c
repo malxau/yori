@@ -188,7 +188,7 @@ CutFilterHandle(
         }
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -350,6 +350,7 @@ ENTRYPOINT(
     YORI_STRING Arg;
     LONGLONG Temp;
     DWORD CharsConsumed;
+    DWORD Result;
 
     ZeroMemory(&CutContext, sizeof(CutContext));
 
@@ -433,6 +434,8 @@ ENTRYPOINT(
 
     YoriLibEnableBackupPrivilege();
 
+    Result = EXIT_SUCCESS;
+
     if (StartArg == 0 || StartArg == ArgC) {
         if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
@@ -476,10 +479,15 @@ ENTRYPOINT(
 
         if (CutContext.FilesFound == 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: no matching files found\n"));
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     }
-    return EXIT_SUCCESS;
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
+
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:

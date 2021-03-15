@@ -123,7 +123,7 @@ ENTRYPOINT(
     HANDLE hOutput = INVALID_HANDLE_VALUE;
     HANDLE hControl = INVALID_HANDLE_VALUE;
     HANDLE InputPumpThread = NULL;
-    
+
     DWORD  CurrentOffset;
     PVOID  LineReadContext = NULL;
     BOOL   Result;
@@ -358,7 +358,7 @@ ENTRYPOINT(
     YoriLibInitEmptyString(&LineString);
 
     Result = TRUE;
-    
+
     while (YoriLibReadLineToStringEx(&LineString, &LineReadContext, TRUE, 100, hSource, &LineEnding, &TimeoutReached) || TimeoutReached) {
 
         //
@@ -399,7 +399,7 @@ ENTRYPOINT(
         Callbacks.EndStream(hOutput);
     }
 
-    YoriLibLineReadClose(LineReadContext);
+    YoriLibLineReadCloseOrCache(LineReadContext);
     YoriLibFreeStringContents(&LineString);
     if (hSource != INVALID_HANDLE_VALUE && UserFileName != NULL) {
         CloseHandle(hSource);
@@ -423,6 +423,10 @@ ENTRYPOINT(
     }
 
     YoriLibFreeStringContents(&FileName);
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     if (Result) {
         return EXIT_SUCCESS;

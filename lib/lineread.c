@@ -330,6 +330,7 @@ YoriLibLineReadCloseOrCache(
  Tear down any unused cached line read context entries.
  */
 VOID
+YORI_BUILTIN_FN
 YoriLibLineReadCleanupCache(VOID)
 {
     if (YoriLibIsInterlockedCompareExchangePointerAvailable()) {

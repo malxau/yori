@@ -131,25 +131,25 @@ MoreProcessStream(
             //  If the string is <ESC>[, then treat it as an escape sequence.
             //  Look for the final letter after any numbers or semicolon.
             //
-    
+
             if (LineString.LengthInChars > CharIndex + 2 &&
                 LineString.StartOfString[CharIndex] == 27 &&
                 LineString.StartOfString[CharIndex + 1] == '[') {
-    
+
                 YORI_STRING EscapeSubset;
                 DWORD EndOfEscape;
-    
+
                 YoriLibInitEmptyString(&EscapeSubset);
                 EscapeSubset.StartOfString = &LineString.StartOfString[CharIndex + 2];
                 EscapeSubset.LengthInChars = LineString.LengthInChars - CharIndex - 2;
                 EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
-    
+
                 //
                 //  Count everything as consuming the source and needing buffer
                 //  space in the destination but consuming no display cells.  This
                 //  may include the final letter, if we found one.
                 //
-    
+
                 if (LineString.LengthInChars > CharIndex + 2 + EndOfEscape) {
                     EscapeSubset.StartOfString -= 2;
                     EscapeSubset.LengthInChars = EndOfEscape + 3;
@@ -205,7 +205,7 @@ MoreProcessStream(
         YoriLibDereference(Buffer);
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
@@ -311,9 +311,9 @@ MoreIngestThread(
         if (MoreContext->BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = 0; i < MoreContext->InputSourceCount; i++) {
-    
+
             YoriLibForEachStream(&MoreContext->InputSources[i], MatchFlags, 0, MoreFileFoundCallback, NULL, MoreContext);
         }
     }

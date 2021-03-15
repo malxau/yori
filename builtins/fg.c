@@ -152,7 +152,11 @@ YoriCmd_FG(
 
         YoriLibFreeStringContents(&Line);
         YoriLibCancelDisable();
-        YoriLibLineReadClose(LineContext);
+        if (!YoriCallSetUnloadRoutine(YoriLibLineReadCleanupCache)) {
+            YoriLibLineReadClose(LineContext);
+        } else {
+            YoriLibLineReadCloseOrCache(LineContext);
+        }
         CloseHandle(ReadPipe);
     }
     return EXIT_SUCCESS;

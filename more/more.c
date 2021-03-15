@@ -86,6 +86,7 @@ ENTRYPOINT(
     DWORD i;
     DWORD StartArg = 0;
     DWORD CurrentMode;
+    DWORD Result;
     BOOLEAN Recursive = FALSE;
     BOOLEAN BasicEnumeration = FALSE;
     BOOL InitComplete;
@@ -154,13 +155,20 @@ ENTRYPOINT(
         InitComplete = MoreInitContext(&MoreContext, ArgC-StartArg, &ArgV[StartArg], Recursive, BasicEnumeration, DebugDisplay, SuspendPagination);
     }
 
+    Result = EXIT_SUCCESS;
     if (!InitComplete) {
         MoreCleanupContext(&MoreContext);
-        return EXIT_FAILURE;
+        Result = EXIT_FAILURE;
     }
 
-    MoreViewportDisplay(&MoreContext);
-    MoreGracefulExit(&MoreContext);
+    if (Result == EXIT_SUCCESS) {
+        MoreViewportDisplay(&MoreContext);
+        MoreGracefulExit(&MoreContext);
+    }
+
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
 
     return EXIT_SUCCESS;
 }

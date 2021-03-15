@@ -367,7 +367,7 @@ EditPopulateFromStream(
         YoriLibDereference(Buffer);
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
 
     if (Result == FALSE) {
@@ -2456,6 +2456,7 @@ ENTRYPOINT(
     BOOL ArgumentUnderstood;
     DWORD i;
     DWORD StartArg = 0;
+    DWORD Result;
     YORI_STRING Arg;
 
     ZeroMemory(&GlobalEditContext, sizeof(GlobalEditContext));
@@ -2516,13 +2517,18 @@ ENTRYPOINT(
         }
     }
 
+    Result = EXIT_SUCCESS;
+
     if (!EditCreateMainWindow(&GlobalEditContext)) {
-        EditFreeEditContext(&GlobalEditContext);
-        return EXIT_FAILURE;
+        Result = EXIT_FAILURE;
     }
 
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
+
     EditFreeEditContext(&GlobalEditContext);
-    return EXIT_SUCCESS;
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:

@@ -417,7 +417,7 @@ EnvDiffLoadStreamIntoEnvironmentBlock(
             if (!YoriLibReallocateString(EnvironmentBlock, BufferSize)) {
                 YoriLibFreeStringContents(EnvironmentBlock);
                 YoriLibFreeStringContents(&LineString);
-                YoriLibLineReadClose(LineContext);
+                YoriLibLineReadCloseOrCache(LineContext);
                 return FALSE;
             }
         }
@@ -432,7 +432,7 @@ EnvDiffLoadStreamIntoEnvironmentBlock(
     }
 
     YoriLibFreeStringContents(&LineString);
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
 
     EnvironmentBlock->StartOfString[EnvironmentBlock->LengthInChars] = '\0';
     EnvironmentBlock->LengthInChars++;
@@ -525,6 +525,7 @@ ENTRYPOINT(
     BOOL ArgumentUnderstood;
     DWORD i;
     DWORD StartArg = 0;
+    DWORD Result;
     YORI_STRING Arg;
     YORI_STRING CurrentEnvironment;
     YORI_STRING BaseEnvironment;
@@ -560,38 +561,47 @@ ENTRYPOINT(
         }
     }
 
+    Result = EXIT_SUCCESS;
+
     if (StartArg == 0) {
         if (YoriLibIsStdInConsole()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("envdiff: No file or pipe for input\n"));
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         } else {
             if (!EnvDiffLoadStreamIntoEnvironmentBlock(GetStdHandle(STD_INPUT_HANDLE), &BaseEnvironment)) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("envdiff: could not load environment\n"));
-                return EXIT_FAILURE;
+                Result = EXIT_FAILURE;
             }
         }
     } else {
         if (!EnvDiffLoadFileIntoEnvironmentBlock(&ArgV[StartArg], &BaseEnvironment)) {
-            return EXIT_FAILURE;
+            Result = EXIT_FAILURE;
         }
     }
 
-    if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("envdiff: could not load environment\n"));
-        YoriLibFreeStringContents(&BaseEnvironment);
-        return EXIT_FAILURE;
+    if (Result == EXIT_SUCCESS) {
+        if (!YoriLibGetEnvironmentStrings(&CurrentEnvironment)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("envdiff: could not load environment\n"));
+            Result = EXIT_FAILURE;
+        }
     }
 
-    if (Reverse) {
-        EnvDiffCompareEnvironments(&CurrentEnvironment, &BaseEnvironment, EnvDiffOutputCmdBatch);
-    } else {
-        EnvDiffCompareEnvironments(&BaseEnvironment, &CurrentEnvironment, EnvDiffOutputCmdBatch);
+    if (Result == EXIT_SUCCESS) {
+        if (Reverse) {
+            EnvDiffCompareEnvironments(&CurrentEnvironment, &BaseEnvironment, EnvDiffOutputCmdBatch);
+        } else {
+            EnvDiffCompareEnvironments(&BaseEnvironment, &CurrentEnvironment, EnvDiffOutputCmdBatch);
+        }
     }
 
     YoriLibFreeStringContents(&BaseEnvironment);
     YoriLibFreeStringContents(&CurrentEnvironment);
 
-    return EXIT_SUCCESS;
+#if !YORI_BUILTIN
+    YoriLibLineReadCleanupCache();
+#endif
+
+    return Result;
 }
 
 // vim:sw=4:ts=4:et:

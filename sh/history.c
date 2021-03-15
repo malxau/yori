@@ -328,7 +328,7 @@ YoriShLoadHistoryFromFile(VOID)
         YoriLibInitEmptyString(&LineString);
     }
 
-    YoriLibLineReadClose(LineContext);
+    YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);
     CloseHandle(FileHandle);
     return TRUE;
