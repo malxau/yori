@@ -466,7 +466,7 @@ YoriLibAddEnvironmentComponent(
         YoriLibFreeStringContents(&EnvData);
         return FALSE;
     }
-    
+
     YoriLibFreeStringContents(&EnvData);
     return TRUE;
 }
@@ -645,7 +645,7 @@ YoriLibRemoveEnvironmentComponent(
         YoriLibFreeStringContents(&CombinedString);
         return FALSE;
     }
-    
+
     YoriLibFreeStringContents(&CombinedString);
     return TRUE;
 }

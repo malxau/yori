@@ -196,7 +196,7 @@ YoriCmd_JOB(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%i has not completed.\n"), JobId);
                 return EXIT_FAILURE;
             }
-            
+
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i"), ExitCode);
         } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[1], _T("kill")) == 0) {
             if (ArgC < 3) {

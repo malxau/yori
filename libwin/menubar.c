@@ -1721,7 +1721,7 @@ YoriWinMenuBarGetSubmenuHandle(
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MenuBar = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MENUBAR, Ctrl);
-    
+
     if (ParentItemHandle == NULL) {
         if (SubIndex < MenuBar->ItemCount) {
             return &MenuBar->Items[SubIndex];

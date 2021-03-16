@@ -611,7 +611,7 @@ YoriPkgCreateSourcePackage(
                                        OPEN_EXISTING,
                                        FILE_ATTRIBUTE_NORMAL,
                                        NULL);
-    
+
         if (ExcludeFileHandle != INVALID_HANDLE_VALUE) {
             YoriLibInitEmptyString(&LineString);
             while(TRUE) {

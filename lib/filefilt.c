@@ -770,7 +770,7 @@ YoriLibFileFiltCheckFilterMatch(
     YORI_FILE_INFO CompareEntry;
     PYORI_LIB_FILE_FILT_MATCH_CRITERIA CriteriaArray;
     PYORI_LIB_FILE_FILT_MATCH_CRITERIA Criteria;
-    
+
     if (Filter->NumberCriteria == 0) {
         return TRUE;
     }

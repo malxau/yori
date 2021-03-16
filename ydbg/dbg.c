@@ -396,7 +396,7 @@ YDbgDumpKernel(
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: OS support not present\n"));
         return FALSE;
     }
-    
+
     if (!YoriLibEnableDebugPrivilege()) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: could not enable debug privilege (access denied)\n"));
         return FALSE;
@@ -623,7 +623,7 @@ YDbgPumpDebugEvents(
                 if (Process == NULL) {
                     break;
                 }
-                
+
                 ZeroMemory(Process, sizeof(YDBG_OUTSTANDING_PROCESS));
                 DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hProcess, GetCurrentProcess(), &Process->hProcess, 0, FALSE, DUPLICATE_SAME_ACCESS);
                 DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hThread, GetCurrentProcess(), &Process->hInitialThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
@@ -1027,7 +1027,7 @@ YDbgDebugChildProcess(
     PROCESS_INFORMATION ProcessInfo;
     STARTUPINFO StartupInfo;
     BOOLEAN DisableLoaderSnaps;
-    
+
 
     DisableLoaderSnaps = FALSE;
     YoriLibInitEmptyString(&Executable);

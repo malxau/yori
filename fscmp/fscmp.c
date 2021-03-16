@@ -233,7 +233,7 @@ ENTRYPOINT(
                     YORI_STRING ErrorSubstring;
                     YORI_LIB_FILE_FILTER Filter;
                     YoriLibInitEmptyString(&ErrorSubstring);
-                    
+
                     YoriLibFileFiltFreeFilter(&FsCmpContext.Filter);
                     if (!YoriLibFileFiltParseFilterString(&Filter, &ArgV[i + 1], &ErrorSubstring)) {
                         if (ErrorSubstring.LengthInChars > 0) {

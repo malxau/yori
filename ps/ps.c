@@ -305,22 +305,22 @@ PsDisplayProcessByStructure(
 
         YoriLibInitEmptyString(&CommitString);
         YoriLibInitEmptyString(&WorkingSetString);
-    
+
         CommitString.StartOfString = CommitStringBuffer;
         CommitString.LengthAllocated = sizeof(CommitStringBuffer)/sizeof(CommitStringBuffer[0]);
-    
+
         WorkingSetString.StartOfString = WorkingSetStringBuffer;
         WorkingSetString.LengthAllocated = sizeof(WorkingSetStringBuffer)/sizeof(WorkingSetStringBuffer[0]);
-    
+
         //
         //  Hack to fix formats
         //
-    
+
         liCommit.QuadPart = ProcessInfo->CommitSize;
         liWorkingSet.QuadPart = ProcessInfo->WorkingSetSize;
         YoriLibFileSizeToString(&CommitString, &liCommit);
         YoriLibFileSizeToString(&WorkingSetString, &liWorkingSet);
-    
+
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-6i | %02i:%02i:%02i | %-15y | %-10y | %-10y"), ProcessInfo->ProcessId, ProcessInfo->ParentProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName, &WorkingSetString, &CommitString);
     } else {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-6i | %02i:%02i:%02i | %-15y"), ProcessInfo->ProcessId, ProcessInfo->ParentProcessId, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName);
@@ -331,7 +331,7 @@ PsDisplayProcessByStructure(
     }
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
-    
+
     return TRUE;
 }
 
@@ -443,7 +443,7 @@ PsDisplayConsoleProcesses(
             }
             return FALSE;
         }
-    
+
         if (PidCountReturned > 0 && PidCountReturned <= PidListSize) {
             break;
         }

@@ -55,7 +55,7 @@ YoriLibFileAttrPairs[] = {
  
  @param Count On successful completion, populated with the number of elements
         in the array.
-        
+
  @param Pairs On successful completion, populated with a pointer to the array.
         Note the memory in this array is read only.
  */
@@ -90,7 +90,7 @@ YoriLibFilePermissionPairs[] = {
  
  @param Count On successful completion, populated with the number of elements
         in the array.
-        
+
  @param Pairs On successful completion, populated with a pointer to the array.
         Note the memory in this array is read only.
  */
@@ -320,10 +320,10 @@ YoriLibCollectAllocationSize (
                            OPEN_EXISTING,
                            FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
                            NULL);
-    
+
         if (hFile != INVALID_HANDLE_VALUE) {
             FILE_STANDARD_INFO StandardInfo;
-    
+
             if (DllKernel32.pGetFileInformationByHandleEx(hFile, FileStandardInfo, &StandardInfo, sizeof(StandardInfo))) {
                 Entry->AllocationSize = StandardInfo.AllocationSize;
                 RealAllocSize = TRUE;
@@ -645,7 +645,7 @@ YoriLibCollectCompressionAlgorithm (
 
         if (Entry->CompressionAlgorithm == YoriLibCompressionNone) {
             if (DeviceIoControl(hFile, FSCTL_GET_EXTERNAL_BACKING, NULL, 0, &WofInfo, sizeof(WofInfo), &BytesReturned, NULL)) {
-    
+
                 if (WofInfo.WofHeader.Provider == WOF_PROVIDER_WIM) {
                     Entry->CompressionAlgorithm = YoriLibCompressionWim;
                 } else if (WofInfo.WofHeader.Provider == WOF_PROVIDER_FILE) {
@@ -1574,7 +1574,7 @@ YoriLibCollectStreamCount (
     ASSERT(YoriLibIsStringNullTerminated(FullPath));
 
     Entry->StreamCount = 0;
-    
+
     //
     //  These APIs are Unicode only.  We could do an ANSI to Unicode thunk here, but
     //  since Unicode is the default build and ANSI is only useful for older systems
@@ -2335,7 +2335,7 @@ YoriLibCompareObjectId (
     )
 {
     int result = memcmp(&Left->ObjectId, &Right->ObjectId, sizeof(Left->ObjectId));
-    
+
     if (result < 0) {
         return YORI_LIB_LESS_THAN;
     } else if (result > 0) {
@@ -3549,7 +3549,7 @@ YoriLibGenerateVersion(
         if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '.') {
             Substring.LengthInChars -= CharsConsumed + 1;
             Substring.StartOfString += CharsConsumed + 1;
-    
+
             if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
                 CharsConsumed == 0) {
 
@@ -3561,7 +3561,7 @@ YoriLibGenerateVersion(
             if (CharsConsumed < Substring.LengthInChars && Substring.StartOfString[CharsConsumed] == '.') {
                 Substring.LengthInChars -= CharsConsumed + 1;
                 Substring.StartOfString += CharsConsumed + 1;
-        
+
                 if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) ||
                     CharsConsumed == 0) {
                     return FALSE;

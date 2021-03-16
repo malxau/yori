@@ -419,7 +419,7 @@ MoreCopyRangeIntoLogicalLine(
         }
 
         CharsInOutputBuffer = 0;
-    
+
         MatchOffset = 0;
         MatchLength = 0;
         YoriLibInitEmptyString(&MatchEscapeChars);
@@ -433,7 +433,7 @@ MoreCopyRangeIntoLogicalLine(
         } else {
             MatchFound = FALSE;
         }
-    
+
         for (SourceIndex = 0; SourceIndex < PhysicalLineSubset.LengthInChars; ) {
 
             //
@@ -441,10 +441,10 @@ MoreCopyRangeIntoLogicalLine(
             //  offset.  On the first character we're doing this check if the
             //  search string is not empty.
             //
-    
+
             if (MatchFound &&
                 SourceIndex == MatchOffset + MatchLength) {
-    
+
                 YORI_STRING StringForNextMatch;
                 YoriLibInitEmptyString(&StringForNextMatch);
                 StringForNextMatch.StartOfString = &PhysicalLineSubset.StartOfString[SourceIndex];
@@ -462,27 +462,27 @@ MoreCopyRangeIntoLogicalLine(
             //  If the string is <ESC>[, then treat it as an escape sequence.
             //  Look for the final letter after any numbers or semicolon.
             //
-    
+
             if (PhysicalLineSubset.LengthInChars > SourceIndex + 2 &&
                 PhysicalLineSubset.StartOfString[SourceIndex] == 27 &&
                 PhysicalLineSubset.StartOfString[SourceIndex + 1] == '[') {
-    
+
                 YoriLibInitEmptyString(&EscapeSubset);
                 EscapeSubset.StartOfString = &PhysicalLineSubset.StartOfString[SourceIndex + 2];
                 EscapeSubset.LengthInChars = PhysicalLineSubset.LengthInChars - SourceIndex - 2;
                 EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
-    
+
                 //
                 //  Count everything as consuming the source and needing buffer
                 //  space in the destination but consuming no display cells.  This
                 //  may include the final letter, if we found one.
                 //
-    
+
                 if (PhysicalLineSubset.LengthInChars > SourceIndex + 2 + EndOfEscape) {
                     memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], &PhysicalLineSubset.StartOfString[SourceIndex], (3 + EndOfEscape) * sizeof(TCHAR));
                     CharsInOutputBuffer += 3 + EndOfEscape;
                     SourceIndex += 3 + EndOfEscape;
-    
+
                     EscapeSubset.StartOfString -= 2;
                     EscapeSubset.LengthInChars = EndOfEscape + 3;
                     YoriLibVtFinalColorFromSequence(CurrentUserColor, &EscapeSubset, &CurrentUserColor);
@@ -492,7 +492,7 @@ MoreCopyRangeIntoLogicalLine(
                     SourceIndex += 2 + EndOfEscape;
                 }
             } else {
-    
+
                 if (MatchFound) {
                     if (MatchOffset == SourceIndex) {
                         YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, MoreContext->SearchColor);
@@ -500,14 +500,14 @@ MoreCopyRangeIntoLogicalLine(
                         CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
                     }
                 }
-    
+
                 LogicalLine->Line.StartOfString[CharsInOutputBuffer] = PhysicalLineSubset.StartOfString[SourceIndex];
                 CharsInOutputBuffer++;
                 SourceIndex++;
             }
 
             ASSERT(CharsInOutputBuffer <= LogicalLine->Line.LengthAllocated);
-    
+
             if (MatchFound) {
 
                 if (MatchOffset + MatchLength <= SourceIndex) {
@@ -787,7 +787,7 @@ MoreGetNextLogicalLines(
     if (CurrentInputLine != NULL) {
         if (StartFromNextLine) {
             LogicalLineCount = MoreCountLogicalLinesOnPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
-    
+
             if (CurrentInputLine->LogicalLineIndex < LogicalLineCount - 1) {
                 LineIndexToCopy = CurrentInputLine->LogicalLineIndex + 1;
                 if (LogicalLineCount - CurrentInputLine->LogicalLineIndex - 1 > LinesRemaining) {
@@ -1234,7 +1234,7 @@ MoreDisplayChangedLinesInViewport(
     //
 
     ASSERT(NumberWritten == MoreContext->LinesInViewport);
-                            
+
     for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
 
         if (YoriLibCompareString(&MoreContext->DisplayViewportLines[Index].Line, &MoreContext->StagingViewportLines[Index].Line) != 0) {
@@ -1244,20 +1244,20 @@ MoreDisplayChangedLinesInViewport(
             //
             //  Clear the region we want to overwrite
             //
-    
+
             NewPosition.X = 0;
             NewPosition.Y = (USHORT)(ScreenInfo.dwCursorPosition.Y - MoreContext->LinesInViewport + Index);
             FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X, NewPosition, &NumberWritten);
             FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X, NewPosition, &NumberWritten);
-    
+
             //
             //  Set the cursor to the top of the viewport
             //
-    
+
             SetConsoleCursorPosition(StdOutHandle, NewPosition);
 
             MoreCloneLogicalLine(&MoreContext->DisplayViewportLines[Index], &MoreContext->StagingViewportLines[Index]);
-    
+
             MoreOutputSeriesOfLines(&MoreContext->DisplayViewportLines[Index], 1);
         }
     }

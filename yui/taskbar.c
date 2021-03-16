@@ -350,7 +350,7 @@ YuiTaskbarNotifyNewWindow(
                        TRUE);
         } else {
             ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
-    
+
             ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
                                                   ThisButton->ButtonText.StartOfString,
                                                   BS_PUSHBUTTON | BS_LEFT | WS_VISIBLE | WS_CHILD,

@@ -198,7 +198,7 @@ YoriShAddAlias(
 
     YoriLibAppendList(&YoriShAliasesList, &NewAlias->ListEntry);
     YoriLibHashInsertByKey(YoriShAliasesHash, &NewAlias->Alias, NewAlias, &NewAlias->HashEntry);
-    
+
     return TRUE;
 }
 
@@ -492,7 +492,7 @@ YoriShAddAliasLiteral(
 {
     YORI_STRING YsAlias;
     YORI_STRING YsValue;
-    
+
     YoriLibConstantString(&YsAlias, Alias);
     YoriLibConstantString(&YsValue, Value);
 

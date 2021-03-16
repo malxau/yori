@@ -114,7 +114,7 @@ YoriLibGetWinErrorText(
     if (CharsReturned == 0) {
         OutputBuffer = NULL;
     }
-    
+
     if (OutputBuffer == NULL) {
         OutputBuffer = NoWinErrorText;
     }
@@ -153,7 +153,7 @@ YoriLibGetNtErrorText(
     if (CharsReturned == 0) {
         OutputBuffer = NULL;
     }
-    
+
     if (OutputBuffer == NULL) {
         OutputBuffer = NoWinErrorText;
     }

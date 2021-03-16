@@ -321,7 +321,7 @@ YoriLibShCmdBufferPump(
                               BytesToWrite,
                               &BytesWritten,
                               NULL)) {
-        
+
                     ThisBuffer->BytesSent += BytesWritten;
                 } else {
                     hTemp = ThisBuffer->hMirror;
@@ -656,7 +656,7 @@ YoriLibShGetProcessBuffer(
 
     return TRUE;
 }
-    
+
 
 /**
  Return contents of a process standard output buffer.

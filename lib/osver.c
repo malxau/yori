@@ -216,13 +216,13 @@ YoriLibLoadOsEdition(
         if (BrandingString == NULL) {
             return FALSE;
         }
-    
+
         Length = wcslen(BrandingString);
-    
+
         if (!YoriLibAllocateString(Edition, Length + 1)) {
             return FALSE;
         }
-    
+
         Edition->LengthInChars = YoriLibSPrintf(Edition->StartOfString, _T("%s"), BrandingString);
         GlobalFree(BrandingString);
         return TRUE;

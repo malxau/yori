@@ -135,7 +135,7 @@ YoriLibRewriteConsoleContents(
             DWORD CellIndex;
 
             CellIndex = ReadBufferOffset.Y * ReadBufferSize.X + ReadBufferOffset.X;
-            
+
             if (ReadBuffer[CellIndex].Attributes != LastAttribute) {
                 YoriLibVtSetConsoleTextAttributeOnDevice(hTarget, 0, 0, ReadBuffer[CellIndex].Attributes);
                 LastAttribute = ReadBuffer[CellIndex].Attributes;

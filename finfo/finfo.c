@@ -126,7 +126,7 @@ FInfoOutputLargeInteger(
     if (OutputString->LengthAllocated >= String.LengthInChars) {
         memcpy(OutputString->StartOfString, String.StartOfString, String.LengthInChars * sizeof(TCHAR));
     }
-    
+
     return String.LengthInChars;
 }
 
@@ -613,7 +613,7 @@ FInfoOutputExt(
     )
 {
     DWORD ExtLen = 0;
-    
+
     if (Context->Entry.Extension != NULL) {
         ExtLen = _tcslen(Context->Entry.Extension);
 
@@ -1600,7 +1600,7 @@ ENTRYPOINT(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
 
             FInfoContext.FilesFoundThisArg = 0;

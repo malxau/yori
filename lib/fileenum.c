@@ -193,12 +193,12 @@ YoriLibForEachFileEnum(
             FileAttributes = GetFileAttributes(ForEachContext->EffectiveFileSpec.StartOfString);
             if (FileAttributes != (DWORD)-1 &&
                 (FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
-    
+
                 if (!YoriLibAllocateString(&NewFileSpec, ForEachContext->EffectiveFileSpec.LengthInChars + 3)) {
                     YoriLibFree(ForEachContext);
                     return FALSE;
                 }
-    
+
                 NewFileSpec.LengthInChars = YoriLibSPrintf(NewFileSpec.StartOfString, _T("%y\\*"), &ForEachContext->EffectiveFileSpec);
                 memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
             }

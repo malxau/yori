@@ -135,18 +135,18 @@ EraseFileFoundCallback(
             if (Err == ERROR_ACCESS_DENIED) {
                 DWORD OldAttributes = GetFileAttributes(FilePath->StartOfString);
                 DWORD NewAttributes = OldAttributes & ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
-        
+
                 if (OldAttributes != NewAttributes) {
                     SetFileAttributes(FilePath->StartOfString, NewAttributes);
-        
+
                     Err = NO_ERROR;
-        
+
                     if (!DeleteFile(FilePath->StartOfString)) {
                         Err = GetLastError();
                     } else {
                         FileDeleted = TRUE;
                     }
-        
+
                     if (Err != NO_ERROR) {
                         SetFileAttributes(FilePath->StartOfString, OldAttributes);
                     }

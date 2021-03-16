@@ -211,7 +211,7 @@ ENTRYPOINT(
     YORI_STRING szIcon;
     WORD    wIcon         = 0;
     WORD    wShow         = (WORD)-1;
-    TCHAR * szTarget      = NULL;    
+    TCHAR * szTarget      = NULL;
     YORI_STRING szWorkingDir;
     IShellLinkW *scut     = NULL;
     IPersistFile *savedfile = NULL;

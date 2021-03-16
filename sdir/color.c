@@ -127,7 +127,7 @@ SdirMarkFeaturesForCollection(
         if (ThisMatch->CollectFn != NULL) {
             for (FeatureNumber = 0; FeatureNumber < SdirGetNumSdirOptions(); FeatureNumber++) {
                 if (ThisMatch->CollectFn == SdirOptions[FeatureNumber].CollectFn) {
-    
+
                     Feature = SdirFeatureByOptionNumber(FeatureNumber);
                     Feature->Flags |= SDIR_FEATURE_COLLECT;
                     break;
@@ -432,7 +432,7 @@ SdirApplyAttribute(
         ASSERT((SdirGlobal.FileHideCriteria.ElementSize == 0 &&
                 SdirGlobal.FileHideCriteria.NumberCriteria == 0) ||
                SdirGlobal.FileHideCriteria.ElementSize == sizeof(YORI_LIB_FILE_FILT_MATCH_CRITERIA));
-    
+
         Matches = (PYORI_LIB_FILE_FILT_MATCH_CRITERIA)SdirGlobal.FileHideCriteria.Criteria;
         for (Index = 0; Index < SdirGlobal.FileHideCriteria.NumberCriteria; Index++) {
             ThisMatch = &Matches[Index];
@@ -457,7 +457,7 @@ SdirApplyAttribute(
         //  We expect each element to be the criteria determining a match and
         //  color to apply in event of a match.
         //
-    
+
         ASSERT((SdirGlobal.FileColorCriteria.ElementSize == 0 &&
                 SdirGlobal.FileColorCriteria.NumberCriteria == 0) ||
                SdirGlobal.FileColorCriteria.ElementSize == sizeof(YORI_LIB_FILE_FILT_COLOR_CRITERIA));
@@ -468,18 +468,18 @@ SdirApplyAttribute(
                 YoriLibCombineColors(ThisAttribute, ThisApply->Color, &ThisAttribute);
                 if ((!ForceDisplay || (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_HIDE) == 0) &&
                     (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
-    
+
                     YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, FALSE, &ThisAttribute);
-    
+
                     if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_INVERT) {
                         ThisAttribute.Win32Attr = (UCHAR)(((ThisAttribute.Win32Attr & 0x0F) << 4) + ((ThisAttribute.Win32Attr & 0xF0) >> 4));
                     }
-    
+
                     Attribute->Ctrl = ThisAttribute.Ctrl;
                     Attribute->Win32Attr = ThisAttribute.Win32Attr;
                     return TRUE;
                 }
-    
+
                 ThisAttribute.Ctrl = (UCHAR)(ThisAttribute.Ctrl & ~(YORILIB_ATTRCTRL_CONTINUE));
             }
         }
@@ -500,7 +500,7 @@ SdirApplyAttribute(
 
     Attribute->Ctrl = SdirDefaultColor.Ctrl;
     Attribute->Win32Attr = SdirDefaultColor.Win32Attr;
-    
+
     return FALSE;
 }
 

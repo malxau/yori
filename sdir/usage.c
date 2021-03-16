@@ -124,7 +124,7 @@ SdirUsageHeader(
     //  If we're outputting to a file, assume a newline is always needed
     //  since we won't have wrapping behavior.
     //
-    
+
     if (!Opts->OutputHasAutoLineWrap) {
         ExtraNewline = TRUE;
     }

@@ -225,7 +225,7 @@ YoriCmd_SET(
 
             YoriLibBuiltinRemoveEmptyVariables(&Value);
             Value.StartOfString[Value.LengthInChars] = '\0';
-            
+
             if (Value.LengthInChars == 0) {
                 YoriCallSetEnvironmentVariable(&Variable, NULL);
             } else {
@@ -257,7 +257,7 @@ YoriCmd_SET(
         } else {
             YORI_STRING EnvironmentStrings;
             LPTSTR ThisVar;
-    
+
             if (!YoriLibGetEnvironmentStrings(&EnvironmentStrings)) {
                 YoriLibFreeStringContents(&CmdLine);
                 return EXIT_FAILURE;

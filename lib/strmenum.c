@@ -126,7 +126,7 @@ YoriLibStreamEnumFileFoundCallback(
         //
         //  Check if it exists, and if so, call the user's callback
         //
-    
+
         if (GetFileAttributes(StreamContext->FullPathWithStream.StartOfString) != 0xFFFFFFFF) {
             //
             //  Assume file state is stream state
@@ -134,7 +134,7 @@ YoriLibStreamEnumFileFoundCallback(
 
             memcpy(&BogusFileInfo, FileInfo, FIELD_OFFSET(WIN32_FIND_DATA, cFileName));
             BogusFileInfo.cAlternateFileName[0] = '\0';
-            
+
             //
             //  Populate stream name
             //
@@ -210,26 +210,26 @@ YoriLibStreamEnumFileFoundCallback(
                         //
                         //  Generate a full path to the stream
                         //
-    
+
                         StreamContext->FullPathWithStream.LengthInChars = YoriLibSPrintfS(StreamContext->FullPathWithStream.StartOfString, StreamContext->FullPathWithStream.LengthAllocated, _T("%y:%y"), FilePath, &FoundStreamName);
-    
+
                         //
                         //  Assume file state is stream state
                         //
-    
+
                         memcpy(&BogusFileInfo, FileInfo, FIELD_OFFSET(WIN32_FIND_DATA, cFileName));
                         BogusFileInfo.cAlternateFileName[0] = '\0';
-    
+
                         //
                         //  Populate stream name
                         //
-    
+
                         YoriLibSPrintfS(BogusFileInfo.cFileName, sizeof(BogusFileInfo.cFileName)/sizeof(BogusFileInfo.cFileName[0]), _T("%s:%y"), FileInfo->cFileName, &FoundStreamName);
-    
+
                         //
                         //  Update stream information
                         //
-    
+
                         YoriLibUpdateFindDataFromFileInformation(&BogusFileInfo, StreamContext->FullPathWithStream.StartOfString, FALSE);
 
                         Result = StreamContext->UserCallback(&StreamContext->FullPathWithStream,

@@ -193,7 +193,7 @@ YoriWinControlReposition(
 
     Ctrl->ClientRect.Right = (SHORT)(MaxCell.X - ClientGap.Right);
     Ctrl->ClientRect.Bottom = (SHORT)(MaxCell.Y - ClientGap.Bottom);
-    
+
     ASSERT(Ctrl->ClientRect.Right <= MaxCell.X);
     ASSERT(Ctrl->ClientRect.Top <= MaxCell.Y);
 

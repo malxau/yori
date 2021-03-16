@@ -322,16 +322,16 @@ DuReportAndCloseStack(
             YoriLibInitEmptyString(&VtAttribute);
             if (DuContext->ColorRules.NumberCriteria) {
                 WIN32_FIND_DATA FileInfo;
-        
+
                 VtAttribute.StartOfString = VtAttributeBuffer;
                 VtAttribute.LengthAllocated = sizeof(VtAttributeBuffer)/sizeof(VtAttributeBuffer[0]);
-        
+
                 if (!YoriLibUpdateFindDataFromFileInformation(&FileInfo, DirStack->DirectoryName.StartOfString, TRUE) || 
                     !YoriLibFileFiltCheckColorMatch(&DuContext->ColorRules, &DirStack->DirectoryName, &FileInfo, &Attribute)) {
                     Attribute.Ctrl = YORILIB_ATTRCTRL_WINDOW_BG | YORILIB_ATTRCTRL_WINDOW_FG;
                     Attribute.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
                 }
-        
+
                 YoriLibVtStringForTextAttribute(&VtAttribute, Attribute.Ctrl, Attribute.Win32Attr);
             }
 
@@ -548,9 +548,9 @@ DuCalculateSpaceUsedByFile(
     if (!ForceSizeZero) {
         if (DuContext->CompressedFileSize &&
             DllKernel32.pGetCompressedFileSizeW) {
-    
+
             FileSize.LowPart = DllKernel32.pGetCompressedFileSizeW(FilePath->StartOfString, (PDWORD)&FileSize.HighPart);
-    
+
             if (FileSize.LowPart == INVALID_FILE_SIZE && GetLastError() != NO_ERROR) {
                 FileSize.LowPart = FileInfo->nFileSizeLow;
                 FileSize.HighPart = FileInfo->nFileSizeHigh;

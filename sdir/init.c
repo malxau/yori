@@ -127,11 +127,11 @@ SdirAppInitialize(VOID)
     } else {
         Opts->ConsoleBufferWidth = 
         Opts->ConsoleWidth = ScreenInfo.dwSize.X;
-        
+
         if (Opts->ConsoleWidth > (DWORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1)) {
             Opts->ConsoleWidth = (DWORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1);
         }
-    
+
         Opts->ConsoleHeight = ScreenInfo.dwSize.Y;
         if (Opts->ConsoleHeight > (DWORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1)) {
             Opts->ConsoleHeight = (DWORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1);
@@ -225,7 +225,7 @@ SdirOptInitialize(VOID)
         PSDIR_FEATURE Feature;
 
         Feature = SdirFeatureByOptionNumber(i);
-       
+
         //
         //  If we're displaying or sorting, we need the data to use
         //
@@ -244,7 +244,7 @@ SdirOptInitialize(VOID)
 
         //
         //  If we're displaying, we need space to display in
-        //  
+        //
 
         if ((Feature->Flags & SDIR_FEATURE_DISPLAY) &&
                SdirOptions[i].WidthFn) {

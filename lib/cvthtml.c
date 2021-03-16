@@ -137,7 +137,7 @@ YoriLibCaptureConsoleColorTable(
                               OPEN_EXISTING,
                               0,
                               NULL);
-    
+
         if (hConsole == INVALID_HANDLE_VALUE) {
             return FALSE;
         }
@@ -360,7 +360,7 @@ YoriLibHtmlGenerateTextString(
             //  Escape things that could be tags, and parse escape sequences
             //  we understand
             //
-    
+
             if (*SrcPoint == '<') {
                 if (DestOffset + sizeof("&lt;") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("&lt;"), sizeof(_T("&lt;")) - sizeof(TCHAR));
@@ -528,7 +528,7 @@ YoriLibHtmlGenerateEscapeStringInternal(
 
             if (RemainingLength == 0 ||
                 *SrcPoint != ';') {
-                
+
                 break;
             }
         }

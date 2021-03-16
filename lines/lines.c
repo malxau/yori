@@ -388,12 +388,12 @@ ENTRYPOINT(
         if (BasicEnumeration) {
             MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
         }
-    
+
         for (i = StartArg; i < ArgC; i++) {
 
             LinesContext.FilesFoundThisArg = 0;
             LinesContext.SavedErrorThisArg = ERROR_SUCCESS;
-    
+
             YoriLibForEachStream(&ArgV[i],
                                  MatchFlags,
                                  0,

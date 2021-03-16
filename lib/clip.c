@@ -76,7 +76,7 @@ static const CHAR DummyFragEnd[] =
 //  the same writable size as specified in the call to GlobalAlloc.  Since
 //  a generic overflow warning is useful, this is suppressed only for a
 //  couple of versions that have an analysis engine but can't interpret
-//  this condition.                  
+//  this condition.
 //
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)

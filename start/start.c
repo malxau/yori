@@ -227,7 +227,7 @@ ENTRYPOINT(
     if (!YoriLibLocateExecutableInPath(&ArgV[StartArg], NULL, NULL, &FoundExecutable)) {
         YoriLibInitEmptyString(&FoundExecutable);
     }
-   
+
     if (FoundExecutable.LengthInChars > 0) {
         LPTSTR Ext;
         YORI_STRING YsExt;

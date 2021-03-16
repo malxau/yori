@@ -499,7 +499,7 @@ YoriShGetJobInformation(
         ThisJob = CONTAINING_RECORD(ListEntry, YORI_JOB, ListEntry);
         ListEntry = YoriLibGetNextListEntry(&JobList, ListEntry);
         if (ThisJob->JobId == JobId) {
-           
+
             if (ThisJob->JobState == JobStateCompletedAwaitingDelete ||
                 ThisJob->JobState == JobStateRetained) {
 

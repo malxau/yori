@@ -64,7 +64,7 @@ typedef struct _LSOF_CONTEXT {
      the program assumes the request is to create a new file.
      */
     DWORD FilesFoundThisArg;
-    
+
     /**
      The number of bytes in the Buffer below.
      */

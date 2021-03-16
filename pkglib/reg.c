@@ -303,7 +303,7 @@ YoriPkgIsFileToBeDeletedOnReboot(
                     }
                     FoundFileEntry.StartOfString = NULL;
                     FoundFileEntry.LengthInChars = 0;
-                    
+
                 }
             } else if (FoundFileEntry.StartOfString != NULL) {
                 FoundFileEntry.LengthInChars++;

@@ -400,11 +400,11 @@ ENTRYPOINT(
 
             if (YoriLibIsFullPathUnc(&PathComponents.EntireNaturalPath)) {
                 BOOL EndOfServerNameFound = FALSE;
-    
+
                 //
                 //  We have a \\?\UNC\ UNC prefix in an escaped path
                 //
-    
+
                 for (CharIndex = 8; PathComponents.EntireNaturalPath.StartOfString[CharIndex] != '\0'; CharIndex++) {
                     if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] == '\\') {
                         if (!EndOfServerNameFound) {
@@ -414,22 +414,22 @@ ENTRYPOINT(
                         }
                     }
                 }
-    
+
                 if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] != 0 ||
                     EndOfServerNameFound) {
-    
+
                     PathComponents.ShareName.StartOfString = PathComponents.EntireNaturalPath.StartOfString;
                     PathComponents.ShareName.LengthInChars = CharIndex;
-    
+
                     //
                     //  If we have enough chars for a share name plus file name,
                     //  check for an intermediate directory.  If we don't, that
                     //  implies the file name is the last part of the share name,
                     //  so remove any reference to file name.
                     //
-    
+
                     if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntireNaturalPath.LengthInChars) {
-    
+
                         PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex];
                         PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
                     } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntireNaturalPath.LengthInChars) {
@@ -443,42 +443,42 @@ ENTRYPOINT(
                 //
                 //  We have a drive letter, colon and slash in an escaped path
                 //
-    
+
                 PathComponents.DriveLetter.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[4];
                 PathComponents.DriveLetter.LengthInChars = 1;
-    
+
                 PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[6];
                 PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - 6;
-    
+
                 if (PathComponents.FullFileName.StartOfString != NULL) {
                     PathComponents.PathFromRoot.LengthInChars -= PathComponents.FullFileName.LengthInChars + 1;
                 }
             }
         } else {
             if (YoriLibIsDriveLetterWithColonAndSlash(&PathComponents.EntireNaturalPath)) {
-    
+
                 //
                 //  We have a drive letter, colon and slash in a non escaped path
                 //
-    
+
                 PathComponents.DriveLetter.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[0];
                 PathComponents.DriveLetter.LengthInChars = 1;
-    
+
                 PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[2];
                 PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - 2;
-    
+
                 if (PathComponents.FullFileName.StartOfString != NULL) {
                     PathComponents.PathFromRoot.LengthInChars -= PathComponents.FullFileName.LengthInChars + 1;
                 }
             } else if ((PathComponents.EntireNaturalPath.StartOfString[0] == '\\') ||
                        (PathComponents.EntireNaturalPath.StartOfString[1] == '\\')) {
-    
+
                 BOOL EndOfServerNameFound = FALSE;
-    
+
                 //
                 //  We have a \\ UNC prefix in a non escaped path
                 //
-    
+
                 for (CharIndex = 2; PathComponents.EntireNaturalPath.StartOfString[CharIndex] != '\0'; CharIndex++) {
                     if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] == '\\') {
                         if (!EndOfServerNameFound) {
@@ -488,22 +488,22 @@ ENTRYPOINT(
                         }
                     }
                 }
-    
+
                 if (PathComponents.EntireNaturalPath.StartOfString[CharIndex] != 0 ||
                     EndOfServerNameFound) {
-    
+
                     PathComponents.ShareName.StartOfString = PathComponents.EntireNaturalPath.StartOfString;
                     PathComponents.ShareName.LengthInChars = CharIndex;
-    
+
                     //
                     //  If we have enough chars for a share name plus file name,
                     //  check for an intermediate directory.  If we don't, that
                     //  implies the file name is the last part of the share name,
                     //  so remove any reference to file name.
                     //
-    
+
                     if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntireNaturalPath.LengthInChars) {
-    
+
                         PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex];
                         PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
                     } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntireNaturalPath.LengthInChars) {

@@ -160,7 +160,7 @@ YoriLibOutputTextToMultibyteDevice(
         LPSTR ansi_buf;
 
         AnsiBytesNeeded = YoriLibGetMultibyteOutputSizeNeeded(StringBuffer, BufferLength);
-    
+
         if (AnsiBytesNeeded > (int)sizeof(ansi_stack_buf)) {
             ansi_buf = YoriLibMalloc(AnsiBytesNeeded);
         } else {
@@ -280,7 +280,7 @@ YoriLibConsoleInitializeStream(
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
-    
+
     return TRUE;
 }
 
@@ -907,7 +907,7 @@ YoriLibProcessVtEscapesOnOpenStream(
 
             if (PreviouslyConsumed + 2 < StringLength &&
                 CurrentPoint[1] == '[') {
-    
+
                 DWORD EndOfEscape;
                 SearchString.StartOfString = &CurrentPoint[2];
                 SearchString.LengthInChars = StringLength - PreviouslyConsumed - 2;

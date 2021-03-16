@@ -137,7 +137,7 @@ SdirCaptureFoundItemIntoDirent (
     //
     //  Determine the color to display each entry from extensions and attributes.
     //
-    
+
     SdirApplyAttribute(CurrentEntry, ForceDisplay, &CurrentEntry->RenderAttributes);
 }
 
@@ -559,7 +559,7 @@ SdirEnumeratePathWithDepth (
     //  At this point we should have a directory and an enumeration criteria.
     //  Copy the directory name and clobber the enumeration criteria.
     //
-    
+
     if (Opts->ParentName.MemoryToFree != NULL) {
         YoriLibFreeStringContents(&Opts->ParentName);
     }
@@ -608,12 +608,12 @@ SdirEnumeratePathWithDepth (
                         Opts->ParentName.StartOfString[3] == '\\' &&
                         Opts->ParentName.StartOfString[5] == ':' &&
                         Opts->ParentName.StartOfString[6] == '\\') {
-    
+
                         VolumeRootLength = 7;
-    
+
                     } else if (Opts->ParentName.StartOfString[1] == ':' &&
                                Opts->ParentName.StartOfString[2] == '\\') {
-    
+
                         VolumeRootLength = 3;
                     }
                 }
@@ -667,7 +667,7 @@ SdirEnumeratePathWithDepth (
                 SdirDisplayError(GetLastError(), _T("YoriLibMalloc"));
                 return FALSE;
             }
-    
+
             NewSdirDirSorted = YoriLibMalloc(SdirAllocatedDirents * sizeof(PYORI_FILE_INFO));
             if (NewSdirDirSorted == NULL) {
                 SdirAllocatedDirents = SdirDirCollectionCurrent;
@@ -682,20 +682,20 @@ SdirEnumeratePathWithDepth (
             //  everything in the sorted array which were based on the
             //  previous collection and now need to be based on the new one.
             //
-    
+
             if (DirEntsToPreserve > 0 && SdirDirCollection != NULL) {
                 memcpy(NewSdirDirCollection, SdirDirCollection, sizeof(YORI_FILE_INFO)*DirEntsToPreserve);
                 SdirMoveSortedEntries(SdirDirCollection, NewSdirDirCollection, DirEntsToPreserve, SdirDirSorted, NewSdirDirSorted, PreviousAllocatedDirents);
             }
-    
+
             if (SdirDirCollection != NULL) {
                 YoriLibFree(SdirDirCollection);
             }
-    
+
             if (SdirDirSorted != NULL) {
                 YoriLibFree(SdirDirSorted);
             }
-    
+
             SdirDirCollection = NewSdirDirCollection;
             SdirDirSorted = NewSdirDirSorted;
             SdirDirCollectionCurrent = DirEntsToPreserve;
@@ -1020,11 +1020,11 @@ SdirDisplayCollection(VOID)
 
             Attributes.Ctrl = CurrentEntry->RenderAttributes.Ctrl;
             Attributes.Win32Attr = CurrentEntry->RenderAttributes.Win32Attr;
-    
+
             //
             //  Paste file name into buffer
             //
-    
+
             if (Opts->FtFileName.Flags & SDIR_FEATURE_DISPLAY) {
                 SdirFeatureColor(&Opts->FtFileName, Attributes, &FeatureColor);
                 if (CurrentEntry->FileNameLengthInChars > LongestDisplayedFileName) {
@@ -1096,7 +1096,7 @@ SdirDisplayCollection(VOID)
                 }
             }
         }
-    
+
         //
         //  We're starting a new column.  If it's the final one we might want a newline,
         //  otherwise we might want a gridline.  Do this manually so we only write the
@@ -1228,10 +1228,10 @@ SdirForEachPathSpec (
                                   FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_OPEN_NO_RECALL,
                                   NULL);
             }
-    
+
             if (hDir != INVALID_HANDLE_VALUE) {
                 BY_HANDLE_FILE_INFORMATION HandleInfo;
-    
+
                 if (!GetFileInformationByHandle(hDir, &HandleInfo)) {
                     HandleInfo.dwFileAttributes = 0;
                 }
@@ -1258,7 +1258,7 @@ SdirForEachPathSpec (
                     FindStr.StartOfString = FindStrWithWild;
                     FindStr.LengthAllocated = FindStr.LengthInChars + 1;
                 }
-    
+
                 CloseHandle(hDir);
             }
 
@@ -1308,7 +1308,7 @@ SdirEnumerateAndDisplay (
     if (!SdirDisplayCollection()) {
         return FALSE;
     }
-    
+
     return TRUE;
 }
 
@@ -1424,7 +1424,7 @@ SdirEnumerateAndDisplaySubtree (
         } else {
             SdirWriteStringWithAttribute(&ParentDirectory.StartOfString[4], RenderAttributes);
         }
-    
+
         SdirNewlineThroughDisplay();
 
         if (!SdirRowDisplayed()) {
@@ -1464,7 +1464,7 @@ SdirEnumerateAndDisplaySubtree (
     }
 
     hFind = FindFirstFile(NextSubDir.StartOfString, &FindData);
-    
+
     if (hFind == NULL || hFind == INVALID_HANDLE_VALUE) {
         DWORD Err = GetLastError();
         Opts->ErrorsFound = TRUE;
@@ -1482,7 +1482,7 @@ SdirEnumerateAndDisplaySubtree (
             return TRUE;
         }
     }
-    
+
     do {
         if (FindData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY &&
             _tcscmp(FindData.cFileName, _T(".")) != 0 &&
@@ -1507,7 +1507,7 @@ SdirEnumerateAndDisplaySubtree (
                     YoriLibFreeStringContents(&NextSubDir);
                     return FALSE;
                 }
-    
+
                 if (!SdirEnumerateAndDisplaySubtree(Depth + 1, &NextSubDir)) {
                     FindClose(hFind);
                     YoriLibFreeStringContents(&NextSubDir);
@@ -1518,7 +1518,7 @@ SdirEnumerateAndDisplaySubtree (
     } while (FindNextFile(hFind, &FindData) && !Opts->Cancelled);
 
     YoriLibFreeStringContents(&NextSubDir);
-    
+
     FindClose(hFind);
 
     return TRUE;

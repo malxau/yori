@@ -476,7 +476,7 @@ YoriLibRtfGenerateEscapeString(
 
             if (RemainingLength == 0 ||
                 *SrcPoint != ';') {
-                
+
                 break;
             }
         }

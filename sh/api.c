@@ -354,7 +354,7 @@ YoriApiGetHistoryStrings(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
-BOOL  
+BOOL
 YoriApiGetJobInformation(
     __in DWORD JobId,
     __out PBOOL HasCompleted,

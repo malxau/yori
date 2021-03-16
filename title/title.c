@@ -134,7 +134,7 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
         ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
-    
+
         SetConsoleTitle(CmdLine.StartOfString);
         YoriLibFreeStringContents(&CmdLine);
     }

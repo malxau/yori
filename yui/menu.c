@@ -278,7 +278,7 @@ YuiDirectoryNodeExists(
         if (CompareResult == 0) {
             return TRUE;
         }
-        
+
         ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildDirectories, ListEntry);
     }
     return FALSE;
@@ -310,7 +310,7 @@ YuiInsertDirectoryInOrder(
         if (CompareResult < 0) {
             break;
         }
-        
+
         ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildDirectories, ListEntry);
     }
 
@@ -743,7 +743,7 @@ YuiFileFoundCallback(
             if (Ext.StartOfString != NULL) {
                 Ext.LengthInChars = FilePath->LengthInChars - (DWORD)(Ext.StartOfString - FilePath->StartOfString);
             }
-    
+
             if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".lnk")) == 0 &&
                 YuiFindDepthComponent(FilePath, &FriendlyName, 0, TRUE)) {
 

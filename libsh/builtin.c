@@ -37,12 +37,12 @@ typedef struct _YORI_LIBSH_BUILTIN_GLOBAL {
      A list of currently loaded modules.
      */
     YORI_LIST_ENTRY LoadedModules;
-    
+
     /**
      Hash table of builtin callbacks currently registered with Yori.
      */
     PYORI_HASH_TABLE Hash;
-    
+
     /**
      A list of unload functions to invoke.  These are only for code statically
      linked into the shell executable, not loadable modules.  Once added, a

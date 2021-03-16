@@ -33,7 +33,7 @@
 const
 CHAR strMitLicenseTextPart1[] = 
      "Copyright (c) ";
-    
+
 /**
  License text to display to the user.
  */
@@ -82,7 +82,7 @@ YoriLibMitLicenseText(
     if (YoriLibYPrintf(String, _T("%hs%s%hs"), strMitLicenseTextPart1, CopyrightYear, strMitLicenseTextPart2) > 0) {
         return TRUE;
     }
-        
+
     return FALSE;
 }
 

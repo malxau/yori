@@ -451,7 +451,7 @@ SetVerPumpDebugEvents(
                 if (Process == NULL) {
                     break;
                 }
-                
+
                 ZeroMemory(Process, sizeof(SETVER_OUTSTANDING_PROCESS));
                 DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hProcess, GetCurrentProcess(), &Process->hProcess, 0, FALSE, DUPLICATE_SAME_ACCESS);
                 DuplicateHandle(GetCurrentProcess(), DbgEvent.u.CreateProcessInfo.hThread, GetCurrentProcess(), &Process->hInitialThread, 0, FALSE, DUPLICATE_SAME_ACCESS);
@@ -608,7 +608,7 @@ SetVerPumpDebugEvents(
 #endif
                         ThreadContext.Eip = (DWORD_PTR)(LPVOID)Process->StartRoutine;
 #endif
-                        
+
                         WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
                         FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
 
@@ -637,7 +637,7 @@ SetVerPumpDebugEvents(
                         if (DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress == Process->StartRoutine) {
                             YORI_LIB_WOW64_CONTEXT ThreadContext;
                             ZeroMemory(&ThreadContext, sizeof(ThreadContext));
-    
+
                             ThreadContext.ContextFlags = YORI_WOW64_CONTEXT_CONTROL | YORI_WOW64_CONTEXT_INTEGER;
                             DllKernel32.pWow64GetThreadContext(Process->hInitialThread, &ThreadContext);
 #if SETVER_DEBUG
@@ -649,7 +649,7 @@ SetVerPumpDebugEvents(
                             FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
                             Process->ProcessStarted = TRUE;
                         }
-                        
+
                         if (!SetVerApplyVersionToProcess(Context, Process->hProcess)) {
                             break;
                         }

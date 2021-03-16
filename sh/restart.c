@@ -360,7 +360,7 @@ YoriShSaveRestartStateWorker(
     //
     //  Register the process to be restarted on failure
     //
-    
+
     if (!YoriShProcessRegisteredForRestart) {
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("-restart %x"), GetCurrentProcessId());
 

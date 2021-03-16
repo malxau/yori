@@ -621,7 +621,7 @@ YoriLibLocateFileExtensionsInOnePath(
                 }
             }
         }
-        
+
     } while(FindNextFile(hFind, &FindData));
 
     FindClose(hFind);
@@ -770,7 +770,7 @@ YoriLibPathLocateUnknownExtensionUnknownLocation(
                     YoriLibPathFreePathExtComponents(PathExtComponents, PathExtCount);
                     return FALSE;
                 }
-     
+
                 if (FoundPath->StartOfString[0] != '\0') {
                     break;
                 }
@@ -1104,7 +1104,7 @@ YoriLibLocateExecutableInPath(
 
     PathData.StartOfString[0] = '\0';
     PathData.LengthInChars = GetEnvironmentVariable(_T("PATH"), PathData.StartOfString, PathData.LengthAllocated);
-    
+
     if (SearchPath && SearchPathExt) {
         if (!YoriLibPathLocateUnknownExtensionUnknownLocation(SearchFor, &PathData, MatchAllCallback, MatchAllContext, &FoundPath)) {
             YoriLibFreeStringContents(&FoundPath);

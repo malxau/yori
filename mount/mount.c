@@ -470,7 +470,7 @@ ENTRYPOINT(
 
     if (FileName != NULL &&
         YoriLibIsCommandLineOption(FileName, &Arg)) {
-        
+
         if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
             MountHelp();
             return EXIT_SUCCESS;
