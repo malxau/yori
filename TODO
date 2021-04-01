@@ -1,8 +1,9 @@
-v1.5:
+v1.6:
  - General MSFIX review
  - Explicit Ctrl+C by detecting console process before launch, if not console
    process on same console don't use GenerateConsoleCtrlEvent
- - Libdlg directory selection
+ - Tab completion on %i
+ - "."=="." becomes ".=="."" due to quote parsing which confuses if badly
 
 To consider:
  - Use CopyFileEx when compressing to eliminate CreateFile?
@@ -11,6 +12,8 @@ To consider:
  - Edit horizontal scroll bar
  - More select should use logical line coordinates rather than conhost
    buffer coordinates to allow selection beyond screen size
+ - Attempt to use dbghelp stack formatting again.  Seems useful for ydbg
+   to be able to output the stack of exceptions etc.
 
 v2.0:
  - Port pcre
