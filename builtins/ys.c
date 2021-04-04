@@ -1317,11 +1317,13 @@ YoriCmd_YS(
 
     if (!YoriCallSetUnloadRoutine(YoriLibLineReadCleanupCache)) {
         YoriLibFreeStringContents(&FileName);
+        CloseHandle(FileHandle);
         return EXIT_FAILURE;
     }
 
     if (!YsLoadScript(FileHandle, &Script)) {
         YoriLibFreeStringContents(&FileName);
+        CloseHandle(FileHandle);
         return EXIT_FAILURE;
     }
 
