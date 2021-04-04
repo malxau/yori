@@ -215,8 +215,6 @@ YoriLibShSetUnloadRoutine(
         if (YoriLibShBuiltinGlobal.ActiveModule->UnloadNotify == UnloadNotify) {
             return TRUE;
         }
-
-        return FALSE;
     } else {
 
         PYORI_LIST_ENTRY ListEntry = NULL;
@@ -242,6 +240,7 @@ YoriLibShSetUnloadRoutine(
 
         Callback->UnloadNotify = UnloadNotify;
         YoriLibAppendList(&YoriLibShBuiltinGlobal.UnloadCallbacks, &Callback->ListEntry);
+        return TRUE;
     }
 
     return FALSE;
