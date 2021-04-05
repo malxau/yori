@@ -3,7 +3,7 @@
  *
  * Yori shell replace text with other text on an input stream
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -383,7 +383,7 @@ ENTRYPOINT(
                 ReplHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2019"));
+                YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -410,18 +410,23 @@ ENTRYPOINT(
         }
     }
 
-    //
-    //  If no file name is specified, use stdin; otherwise open
-    //  the file and use that
-    //
-
     if (StartArg == 0 || StartArg >= ArgC) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("repl: missing argument\n"));
         return EXIT_FAILURE;
     }
 
+    //
+    //  Locate arguments.  It's valid to replace something with nothing, but
+    //  it's not valid to replace nothing with something.
+    //
+
     YoriLibInitEmptyString(&EmptyString);
     ReplContext.MatchString = &ArgV[StartArg];
+    if (ReplContext.MatchString->LengthInChars == 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("repl: missing search string\n"));
+        return EXIT_FAILURE;
+    }
+
     if (StartArg + 1 >= ArgC) {
         ReplContext.NewString = &EmptyString;
     } else {
@@ -432,6 +437,11 @@ ENTRYPOINT(
 #if YORI_BUILTIN
     YoriLibCancelEnable();
 #endif
+
+    //
+    //  If no file name is specified, use stdin; otherwise open
+    //  the file and use that
+    //
 
     if (StartArg == 0 || StartArg >= ArgC) {
         if (YoriLibIsStdInConsole()) {
