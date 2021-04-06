@@ -3,7 +3,7 @@
  *
  * Yori shell highlight lines or text in an input stream
  *
- * Copyright (c) 2018-2020 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -237,6 +237,8 @@ HiliteProcessStream(
     YORI_STRING Substring;
     YORI_STRING DisplayString;
     PHILITE_MATCH_CRITERIA MatchCriteria;
+    PHILITE_MATCH_CRITERIA BestMatchCriteria;
+    DWORD BestMatchOffset;
     YORILIB_COLOR_ATTRIBUTES ColorToUse;
     PYORI_LIST_ENTRY ListHead;
     BOOLEAN MatchFound;
@@ -270,6 +272,8 @@ HiliteProcessStream(
             //  could be in the middle of a line.
             //
 
+            BestMatchCriteria = NULL;
+            BestMatchOffset = 0;
             AnyMatchFound = FALSE;
             if (Substring.StartOfString == LineString.StartOfString) {
                 ListHead = &HiliteContext->StartMatches;
@@ -328,42 +332,78 @@ HiliteProcessStream(
                     }
                 }
 
+
                 //
-                //  If this is highlighting a search term only, display any
-                //  text before the match in regular color, then display the
-                //  match in the requested color.  If highlighting the whole
-                //  line, display all the text.  Then start searching again,
-                //  from all entries that can be in the middle of lines.
+                //  When highlighting specific terms, look for the first match
+                //  within the line.  That string should be processed first.
+                //  When not matching specific terms, just use the first found
+                //  match to highlight the entire line.
                 //
 
-                DisplayString.StartOfString = Substring.StartOfString;
-                DisplayString.LengthInChars = Substring.LengthInChars;
                 if (MatchFound) {
-                    AnyMatchFound = TRUE;
-                    if (HiliteContext->HighlightMatchText) {
-                        if (MatchOffset > 0) {
-                            DisplayString.LengthInChars = MatchOffset;
-                            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
-                            DisplayString.StartOfString = &Substring.StartOfString[MatchOffset];
-                            Substring.LengthInChars = Substring.LengthInChars - MatchOffset;
-                            Substring.StartOfString = &Substring.StartOfString[MatchOffset];
-                        }
-                        DisplayString.LengthInChars = MatchCriteria->MatchString.LengthInChars;
-                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
-                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
-                    } else {
-                        ColorToUse.Ctrl = MatchCriteria->Color.Ctrl;
-                        ColorToUse.Win32Attr = MatchCriteria->Color.Win32Attr;
+
+                    if (!HiliteContext->HighlightMatchText) {
+                        BestMatchCriteria = MatchCriteria;
+                        BestMatchOffset = MatchOffset;
+                        break;
                     }
 
-                    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, ColorToUse.Win32Attr);
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
-                    YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, HiliteContext->DefaultColor.Win32Attr);
-                    Substring.StartOfString = &Substring.StartOfString[DisplayString.LengthInChars];
-                    Substring.LengthInChars = Substring.LengthInChars - DisplayString.LengthInChars;
-                    break;
+                    if (MatchCriteria->MatchString.LengthInChars > 0 &&
+                        (BestMatchCriteria == NULL || MatchOffset < BestMatchOffset)) {
+                        BestMatchCriteria = MatchCriteria;
+                        BestMatchOffset = MatchOffset;
+                    }
                 }
+
                 MatchCriteria = HiliteGetNextMatch(HiliteContext, &ListHead, MatchCriteria);
+            }
+
+            //
+            //  If this is highlighting a search term only, display any
+            //  text before the match in regular color, then display the
+            //  match in the requested color.  If highlighting the whole
+            //  line, display all the text.  Then start searching again,
+            //  from all entries that can be in the middle of lines.
+            //
+
+            DisplayString.StartOfString = Substring.StartOfString;
+            DisplayString.LengthInChars = Substring.LengthInChars;
+            if (BestMatchCriteria != NULL) {
+                AnyMatchFound = TRUE;
+                if (HiliteContext->HighlightMatchText) {
+                    if (BestMatchOffset > 0) {
+                        DisplayString.LengthInChars = BestMatchOffset;
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                        DisplayString.StartOfString = &Substring.StartOfString[BestMatchOffset];
+                        Substring.LengthInChars = Substring.LengthInChars - BestMatchOffset;
+                        Substring.StartOfString = &Substring.StartOfString[BestMatchOffset];
+                    }
+                    DisplayString.LengthInChars = BestMatchCriteria->MatchString.LengthInChars;
+                    //
+                    //  If searching for an empty string, treat it as not
+                    //  found and move to the next line.  This is only
+                    //  done when highlighting specific text; when
+                    //  highlighting an entire line, the empty string
+                    //  matches the line, and execution continues on the
+                    //  next line.
+                    //
+
+                    if (DisplayString.LengthInChars == 0) {
+                        ASSERT(BestMatchOffset == 0);
+                        break;
+                    }
+                    ColorToUse.Ctrl = BestMatchCriteria->Color.Ctrl;
+                    ColorToUse.Win32Attr = BestMatchCriteria->Color.Win32Attr;
+                } else {
+                    ColorToUse.Ctrl = BestMatchCriteria->Color.Ctrl;
+                    ColorToUse.Win32Attr = BestMatchCriteria->Color.Win32Attr;
+                }
+
+                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, ColorToUse.Win32Attr);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, HiliteContext->DefaultColor.Win32Attr);
+                Substring.StartOfString = &Substring.StartOfString[DisplayString.LengthInChars];
+                Substring.LengthInChars = Substring.LengthInChars - DisplayString.LengthInChars;
             }
 
             //
@@ -603,7 +643,7 @@ ENTRYPOINT(
                 HiliteCleanupContext(&HiliteContext);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2020"));
+                YoriLibDisplayMitLicense(_T("2018-2021"));
                 HiliteCleanupContext(&HiliteContext);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
