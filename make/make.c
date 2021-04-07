@@ -3,7 +3,7 @@
  *
  * Yori shell make program
  *
- * Copyright (c) 2020 Malcolm J. Smith
+ * Copyright (c) 2020-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -253,7 +253,7 @@ ENTRYPOINT(
                 Result = EXIT_SUCCESS;
                 goto Cleanup;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2020"));
+                YoriLibDisplayMitLicense(_T("2021"));
                 Result = EXIT_SUCCESS;
                 goto Cleanup;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
@@ -327,9 +327,21 @@ ENTRYPOINT(
     }
 
     //
-    //  If -j isn't specified, set a default number of jobs to execute as
-    //  the number of logical processors plus one.
+    //  If -j isn't specified, attempt to set the number of jobs based on the
+    //  environment variable.  If that's not available, set a default number
+    //  of jobs to execute as the number of logical processors plus one.
     //
+
+    if (MakeContext.NumberProcesses == 0) {
+        YORI_STRING JobCount;
+        YoriLibInitEmptyString(&JobCount);
+        if (YoriLibAllocateAndGetEnvironmentVariable(_T("YMAKE_JOB_COUNT"), &JobCount)) {
+            if (YoriLibStringToNumber(&JobCount, FALSE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
+                MakeContext.NumberProcesses = (DWORD)llTemp;
+            }
+            YoriLibFreeStringContents(&JobCount);
+        }
+    }
 
     if (MakeContext.NumberProcesses == 0) {
         SYSTEM_INFO SysInfo;
