@@ -318,7 +318,7 @@ SlmenuCreateSinglelineMenu(
     CtrlRect.Left = (SHORT)(WindowSize.X - 1 - 2 * (ButtonWidth + 2) - 1);
     CtrlRect.Right = (WORD)(CtrlRect.Left + ButtonWidth + 1);
 
-    Ctrl = YoriWinButtonCreate(Parent, &CtrlRect, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, SlmenuOkButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &CtrlRect, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT | YORI_WIN_BUTTON_STYLE_DISABLE_FOCUS, SlmenuOkButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -330,7 +330,7 @@ SlmenuCreateSinglelineMenu(
     CtrlRect.Left = (SHORT)(WindowSize.X - 1 - (ButtonWidth + 2));
     CtrlRect.Right = (WORD)(CtrlRect.Left + ButtonWidth + 1);
 
-    Ctrl = YoriWinButtonCreate(Parent, &CtrlRect, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, SlmenuCancelButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &CtrlRect, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL | YORI_WIN_BUTTON_STYLE_DISABLE_FOCUS, SlmenuCancelButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);

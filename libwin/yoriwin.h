@@ -70,6 +70,11 @@ YoriWinButtonReposition(
  */
 #define YORI_WIN_BUTTON_STYLE_CANCEL  (0x0002)
 
+/**
+ The button can never receive keyboard focus, but is still functional.
+ */
+#define YORI_WIN_BUTTON_STYLE_DISABLE_FOCUS  (0x0004)
+
 PYORI_WIN_CTRL_HANDLE
 YoriWinButtonCreate(
     __in PYORI_WIN_WINDOW_HANDLE Parent,

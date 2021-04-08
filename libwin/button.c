@@ -74,6 +74,12 @@ typedef struct _YORI_WIN_CTRL_BUTTON {
      */
     BOOLEAN HasFocus;
 
+    /**
+     TRUE if the button should not receive focus.  FALSE for a regular button
+     that can receive focus via the tab key.
+     */
+    BOOLEAN DisableFocus;
+
 } YORI_WIN_CTRL_BUTTON, *PYORI_WIN_CTRL_BUTTON;
 
 /**
@@ -202,12 +208,14 @@ YoriWinButtonEventHandler(
             Button->EffectiveCancel = FALSE;
             break;
         case YoriWinEventLoseFocus:
+            ASSERT(!Button->DisableFocus);
             ASSERT(Button->HasFocus);
             Button->HasFocus = FALSE;
             YoriWinRestoreDefaultControl(Button->Ctrl.Parent);
             YoriWinButtonPaint(Button);
             break;
         case YoriWinEventGetFocus:
+            ASSERT(!Button->DisableFocus);
             ASSERT(!Button->HasFocus);
             Button->HasFocus = TRUE;
             YoriWinSuppressDefaultControl(Button->Ctrl.Parent);
@@ -296,9 +304,12 @@ YoriWinButtonCreate(
     }
 
     ZeroMemory(Button, sizeof(YORI_WIN_CTRL_BUTTON));
+    if (Style & YORI_WIN_BUTTON_STYLE_DISABLE_FOCUS) {
+        Button->DisableFocus = TRUE;
+    }
 
     Button->Ctrl.NotifyEventFn = YoriWinButtonEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &Button->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, !Button->DisableFocus, &Button->Ctrl)) {
         YoriLibDereference(Button);
         return NULL;
     }
