@@ -583,10 +583,20 @@ MakeLaunchNextCmd(
     }
 
     ChildProcess->JobId = MakeAllocateJobId(MakeContext);
+    {
+        YORI_STRING CurrentDirectory;
+        YoriLibInitEmptyString(&CurrentDirectory);
+        CurrentDirectory.StartOfString = ChildProcess->Target->ScopeContext->HashEntry.Key.StartOfString;
+        CurrentDirectory.LengthInChars = ChildProcess->Target->ScopeContext->HashEntry.Key.LengthInChars;
+        if (YoriLibIsPathPrefixed(&CurrentDirectory)) {
+            CurrentDirectory.StartOfString += sizeof("\\\\.\\") - 1;
+            CurrentDirectory.LengthInChars -= sizeof("\\\\.\\") - 1;
+        }
 
-    Error = YoriLibShCreateProcess(ExecContext,
-                                   ChildProcess->Target->ScopeContext->HashEntry.Key.StartOfString,
-                                   &FailedInRedirection);
+        Error = YoriLibShCreateProcess(ExecContext,
+                                       CurrentDirectory.StartOfString,
+                                       &FailedInRedirection);
+    }
 
     if (Error != ERROR_SUCCESS) {
         MakeFreeJobId(MakeContext, ChildProcess->JobId);
