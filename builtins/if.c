@@ -4,7 +4,7 @@
  * Yori shell invoke an expression and perform different actions based on
  * the result
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -50,99 +50,6 @@ IfHelp(VOID)
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strIfHelpText);
-    return TRUE;
-}
-
-/**
- Escape any redirection operators.  This is used on the test condition which
- frequently contains characters like > or < which may be intended to describe
- the evaluation condition (and should be passed to the test application.) IO
- redirection is heuristically detected by checking if the characters following
- the redirection operator is numeric (implying comparison), or anything else
- (implying redirection.)
-
- @param String The string to expand redirection operators in.  This string may
-        be reallocated to be large enough to contain the escaped string.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-IfExpandRedirectOperators(
-    __in PYORI_STRING String
-    )
-{
-    DWORD Index;
-    DWORD DestIndex;
-    DWORD MatchCount;
-    LPTSTR NewAllocation;
-
-    MatchCount = 0;
-    for (Index = 0; Index < String->LengthInChars; Index++) {
-        if (String->StartOfString[Index] == '>' ||
-            String->StartOfString[Index] == '<') {
-
-            if (Index + 1 >= String->LengthInChars) {
-                MatchCount++;
-            } else {
-                TCHAR TestChar;
-
-                TestChar = String->StartOfString[Index + 1];
-                if (TestChar == '-' ||
-                    TestChar == '=' ||
-                    (TestChar <= '9' &&
-                     TestChar >= '0')) {
-
-                    MatchCount++;
-                }
-            }
-        }
-    }
-
-    if (MatchCount == 0) {
-        return TRUE;
-    }
-
-    NewAllocation = YoriLibReferencedMalloc((String->LengthInChars + MatchCount + 1) * sizeof(TCHAR));
-    if (NewAllocation == NULL) {
-        return FALSE;
-    }
-
-    DestIndex = 0;
-    for (Index = 0; Index < String->LengthInChars; Index++) {
-        if (String->StartOfString[Index] == '>' ||
-            String->StartOfString[Index] == '<') {
-
-            if (Index + 1 >= String->LengthInChars) {
-                NewAllocation[DestIndex] = '^';
-                DestIndex++;
-            } else {
-                TCHAR TestChar;
-
-                TestChar = String->StartOfString[Index + 1];
-                if (TestChar == '-' ||
-                    TestChar == '=' ||
-                    (TestChar <= '9' &&
-                     TestChar >= '0')) {
-
-                    NewAllocation[DestIndex] = '^';
-                    DestIndex++;
-                }
-            }
-        }
-        NewAllocation[DestIndex] = String->StartOfString[Index];
-        DestIndex++;
-    }
-    NewAllocation[DestIndex] = '\0';
-
-    if (String->MemoryToFree != NULL) {
-        YoriLibDereference(String->MemoryToFree);
-    }
-
-    String->MemoryToFree = NewAllocation;
-    String->StartOfString = NewAllocation;
-    String->LengthInChars = DestIndex;
-    String->LengthAllocated = DestIndex + 1;
-
     return TRUE;
 }
 
@@ -246,7 +153,7 @@ YoriCmd_IF(
                 IfHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2019"));
+                YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
             }
         } else {
@@ -277,7 +184,7 @@ YoriCmd_IF(
     //  for the test condition.
     //
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - EscapedStartArg, &EscapedArgV[EscapedStartArg], FALSE, TRUE, &EscapedCmdLine)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - EscapedStartArg, &EscapedArgV[EscapedStartArg], TRUE, TRUE, &EscapedCmdLine)) {
         return EXIT_FAILURE;
     }
 
@@ -286,7 +193,7 @@ YoriCmd_IF(
     //  for the execution conditions.
     //
 
-    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], FALSE, TRUE, &CmdLine)) {
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, TRUE, &CmdLine)) {
         YoriLibFreeStringContents(&EscapedCmdLine);
         return EXIT_FAILURE;
     }
