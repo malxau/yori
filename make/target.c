@@ -184,12 +184,17 @@ MakeProbeTargetFile(
     //
 
     ASSERT(YoriLibIsStringNullTerminated(&Target->HashEntry.Key));
-    FileHandle = CreateFile(Target->HashEntry.Key.StartOfString, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
+    FileHandle = CreateFile(Target->HashEntry.Key.StartOfString, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (FileHandle != INVALID_HANDLE_VALUE) {
         if (GetFileInformationByHandle(FileHandle, &FileInfo)) {
             Target->FileExists = TRUE;
-            Target->ModifiedTime.LowPart = FileInfo.ftLastWriteTime.dwLowDateTime;
-            Target->ModifiedTime.HighPart = FileInfo.ftLastWriteTime.dwHighDateTime;
+            if (FileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+                Target->ModifiedTime.LowPart = 0;
+                Target->ModifiedTime.HighPart = 0;
+            } else {
+                Target->ModifiedTime.LowPart = FileInfo.ftLastWriteTime.dwLowDateTime;
+                Target->ModifiedTime.HighPart = FileInfo.ftLastWriteTime.dwHighDateTime;
+            }
         }
         CloseHandle(FileHandle);
     }
@@ -236,51 +241,61 @@ MakeLookupOrCreateTarget(
     if (HashEntry != NULL) {
         Target = HashEntry->Context;
         YoriLibFreeStringContents(&FullPath);
-        return Target;
-    }
+    } else {
 
-    Target = MakeSlabAlloc(&ScopeContext->MakeContext->TargetAllocator, sizeof(MAKE_TARGET));
-    if (Target == NULL) {
+        Target = MakeSlabAlloc(&ScopeContext->MakeContext->TargetAllocator, sizeof(MAKE_TARGET));
+        if (Target == NULL) {
+            YoriLibFreeStringContents(&FullPath);
+            return NULL;
+        }
+        ScopeContext->MakeContext->AllocTarget++;
+
+        YoriLibInitializeListHead(&Target->ParentDependents);
+        YoriLibInitializeListHead(&Target->ChildDependents);
+        YoriLibInitializeListHead(&Target->RebuildList);
+        YoriLibInitializeListHead(&Target->InferenceRuleNeededList);
+
+        Target->ScopeContext = NULL;
+        Target->ReferenceCount = 1;
+        Target->NumberParentsToBuild = 0;
+        Target->ExplicitRecipeFound = FALSE;
+        Target->Executed = FALSE;
+        Target->FileProbed = FALSE;
+        Target->FileExists = FALSE;
+        Target->ExecuteViaShell = FALSE;
+        Target->RebuildRequired = FALSE;
+        Target->DependenciesEvaluated = FALSE;
+        Target->EvaluatingDependencies = FALSE;
+        Target->InferenceRulePseudoTarget = FALSE;
+        Target->ModifiedTime.QuadPart = 0;
+        Target->InferenceRule = NULL;
+        Target->InferenceRuleParentTarget = NULL;
+        YoriLibInitEmptyString(&Target->Recipe);
+        YoriLibInitializeListHead(&Target->ExecCmds);
+        YoriLibHashInsertByKey(MakeContext->Targets, &FullPath, Target, &Target->HashEntry);
+        YoriLibAppendList(&MakeContext->TargetsList, &Target->ListEntry);
+
         YoriLibFreeStringContents(&FullPath);
-        return NULL;
     }
-    ScopeContext->MakeContext->AllocTarget++;
-
-    YoriLibInitializeListHead(&Target->ParentDependents);
-    YoriLibInitializeListHead(&Target->ChildDependents);
-    YoriLibInitializeListHead(&Target->RebuildList);
-    YoriLibInitializeListHead(&Target->InferenceRuleNeededList);
-
-    Target->ScopeContext = NULL;
-    Target->ReferenceCount = 1;
-    Target->NumberParentsToBuild = 0;
-    Target->ExplicitRecipeFound = FALSE;
-    Target->Executed = FALSE;
-    Target->FileProbed = FALSE;
-    Target->FileExists = FALSE;
-    Target->ExecuteViaShell = FALSE;
-    Target->RebuildRequired = FALSE;
-    Target->DependenciesEvaluated = FALSE;
-    Target->EvaluatingDependencies = FALSE;
-    Target->InferenceRulePseudoTarget = FALSE;
-    Target->ModifiedTime.QuadPart = 0;
-    Target->InferenceRule = NULL;
-    Target->InferenceRuleParentTarget = NULL;
-    YoriLibInitEmptyString(&Target->Recipe);
-    YoriLibInitializeListHead(&Target->ExecCmds);
-    YoriLibHashInsertByKey(MakeContext->Targets, &FullPath, Target, &Target->HashEntry);
-    YoriLibAppendList(&MakeContext->TargetsList, &Target->ListEntry);
-
-    YoriLibFreeStringContents(&FullPath);
-
-    ScopeContext->TargetCount++;
 
     //
-    //  The first target within the scope context is the default one created
-    //  when the scope is created.  The second is the first user defined one.
+    //  An empty target name in the given scope refers to the default target
+    //  for the scope.
     //
 
-    if (ScopeContext->TargetCount == 2) {
+    if (TargetName->LengthInChars > 0) {
+        ScopeContext->TargetCount++;
+    }
+#if MAKE_DEBUG_TARGETS
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Scope %y TargetCount %i Target %y\n"), &ScopeContext->HashEntry.Key, ScopeContext->TargetCount, &Target->HashEntry.Key);
+#endif
+
+    //
+    //  The first user defined target within the scope should be executed in
+    //  response to executing the scope.
+    //
+
+    if (ScopeContext->TargetCount == 1) {
         ASSERT(ScopeContext->DefaultTarget != NULL);
         if (!MakeCreateParentChildDependency(ScopeContext->MakeContext, Target, ScopeContext->DefaultTarget)) {
             MakeDeactivateTarget(Target);
@@ -1442,6 +1457,9 @@ MakeDetermineDependenciesForTarget(
     }
 
     if (SetRebuildRequired && !Target->RebuildRequired) {
+#if MAKE_DEBUG_TARGETS
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("RebuildRequired on %y\n"), &Target->HashEntry.Key);
+#endif
         if (!MakeMarkTargetForRebuild(MakeContext, Target)) {
             return FALSE;
         }
