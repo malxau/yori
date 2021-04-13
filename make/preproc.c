@@ -1916,6 +1916,7 @@ MakeCreateFileListDependency(
     YORI_STRING LineString;
     PVOID LineContext;
     HANDLE hStream;
+    DWORD Index;
     BOOLEAN Result;
 
     ScopeContext = MakeContext->ActiveScope;
@@ -1951,12 +1952,23 @@ MakeCreateFileListDependency(
             break;
         }
 
+        //
+        //  A pipe is an illegal character in a file name.  Treat it as the
+        //  end of the string, just so other tools can add extra characters.
+        //  (This is really a horrible hack for ypm to create packages.)
+        //
+
+        for (Index = 0; Index < LineString.LengthInChars; Index++) {
+            if (LineString.StartOfString[Index] == '|') {
+                LineString.LengthInChars = Index;
+            }
+        }
+
         if (!MakeCreateRuleDependency(MakeContext, ChildTarget, &LineString)) {
             Result = FALSE;
             break;
         }
     }
-
 
     YoriLibLineReadCloseOrCache(LineContext);
     YoriLibFreeStringContents(&LineString);

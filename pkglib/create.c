@@ -96,6 +96,7 @@ YoriPkgCreateBinaryPackage(
     YORI_STRING PkgInfoName;
     YORI_STRING LineString;
     YORI_STRING FullFileListFile;
+    YORI_STRING FileNameInCab;
     PVOID LineContext = NULL;
     HANDLE FileListSource;
     DWORD Count;
@@ -196,11 +197,33 @@ YoriPkgCreateBinaryPackage(
     }
 
     YoriLibInitEmptyString(&LineString);
+    YoriLibInitEmptyString(&FileNameInCab);
     while(TRUE) {
         if (!YoriLibReadLineToString(&LineString, &LineContext, FileListSource)) {
             break;
         }
-        if (!YoriLibAddFileToCab(CabHandle, &LineString, &LineString)) {
+
+        FileNameInCab.StartOfString = LineString.StartOfString;
+        FileNameInCab.LengthInChars = LineString.LengthInChars;
+
+        //
+        //  If there's a pipe character, treat all of the text before it as
+        //  the file path to store in the cab, and all of the text after it
+        //  as the name to use within the cab.  If there's no pipe character,
+        //  the same string is used for both meanings.
+        //
+
+        for (Count = 0; Count < LineString.LengthInChars; Count++) {
+            if (LineString.StartOfString[Count] == '|') {
+                FileNameInCab.StartOfString = &LineString.StartOfString[Count + 1];
+                FileNameInCab.LengthInChars = LineString.LengthInChars - Count - 1;
+
+                LineString.LengthInChars = Count;
+                break;
+            }
+        }
+
+        if (!YoriLibAddFileToCab(CabHandle, &LineString, &FileNameInCab)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibAddFileToCab cannot add %y\n"), &LineString);
             DeleteFile(TempFile.StartOfString);
             YoriLibFreeStringContents(&TempFile);
