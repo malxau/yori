@@ -119,6 +119,7 @@ DIRS=crt       \
      osver     \
      path      \
      pause     \
+     pkg       \
      pkglib    \
      procinfo  \
      ps        \
