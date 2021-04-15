@@ -1,12 +1,30 @@
 setlocal
 
+REM
+REM Determine architecture by looking at compiler output.
+REM
+
+set ARCH=win32
+cl /? 2>&1 | findstr /C:"for x64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=amd64
+cl /? 2>&1 | findstr /C:"for AMD64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=amd64
+cl /? 2>&1 | findstr /C:"for ARM" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=arm
+cl /? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=arm64
+cl /? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=mips
+cl /? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=ia64
+
 REM 
 REM Set build ID.  For release builds, this needs to be zero.
 REM
 
 set BLDID=
 if strcmp -i %1%!=official;set BLDID=`date`;set BLDID=0
-if strcmp %BLDID%==0;echo Building OFFICIAL build;echo Building DAILY build
+if strcmp %BLDID%==0;echo Building OFFICIAL build;echo Building DAILY %ARCH% build
 
 REM
 REM Extract Yori version from ver.inc and generate string containing the
@@ -26,7 +44,7 @@ popd
 
 mkdir %OUTDIR% >NUL 2>&1
 
-echo *** Building debug
+echo *** Building %ARCH% debug
 ymake -f ..\Makefile -m DEBUG=1 YORI_BUILD_ID=%BLDID% .
 if intcmp %ERRORLEVEL%!=0; goto exit
 
@@ -35,7 +53,7 @@ pushd ..
 ymake clean >NUL
 popd
 
-echo *** Building retail
+echo *** Building %ARCH% retail
 ymake -f ..\Makefile -m YORI_BUILD_ID=%BLDID% .
 if intcmp %ERRORLEVEL%!=0; goto exit
 
@@ -45,24 +63,6 @@ REM
 REM Generate pkglist.ini so that tools can find packages provided by this
 REM directory
 REM
-
-REM
-REM Determine architecture by looking at compiler output.
-REM
-
-set ARCH=win32
-cl /? 2>&1 | findstr /C:"for x64" >NUL 2>&1
-if intcmp %ERRORLEVEL%==0;set ARCH=amd64
-cl /? 2>&1 | findstr /C:"for AMD64" >NUL 2>&1
-if intcmp %ERRORLEVEL%==0;set ARCH=amd64
-cl /? 2>&1 | findstr /C:"for ARM" >NUL 2>&1
-if intcmp %ERRORLEVEL%==0;set ARCH=arm
-cl /? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1
-if intcmp %ERRORLEVEL%==0;set ARCH=arm64
-cl /? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1
-if intcmp %ERRORLEVEL%==0;set ARCH=mips
-cl /? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1
-if intcmp %ERRORLEVEL%==0;set ARCH=ia64
 
 set BINPKGS=yori-modular yori-core yori-typical yori-extra yori-ypm yori-one
 for %%i in (%BINPKGS%) do bld-pkglist %%i %ARCH% ^& bld-pkglist %%i-pdb %ARCH% ^& bld-pkglist %%i-dbg %ARCH% ^& bld-pkglist %%i-dbg-pdb %ARCH%
