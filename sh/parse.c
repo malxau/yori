@@ -49,12 +49,17 @@ YoriShResolveCommandToExecutable(
     )
 {
     YORI_STRING FoundExecutable;
+    YORI_STRING ExpandedCmd;
 
     YoriLibInitEmptyString(&FoundExecutable);
 
     YoriShExpandAlias(CmdContext);
 
-    if (YoriLibLocateExecutableInPath(&CmdContext->ArgV[0], NULL, NULL, &FoundExecutable)) {
+    if (!YoriLibExpandHomeDirectories(&CmdContext->ArgV[0], &ExpandedCmd)) {
+        YoriLibCloneString(&ExpandedCmd, &CmdContext->ArgV[0]);
+    }
+
+    if (YoriLibLocateExecutableInPath(&ExpandedCmd, NULL, NULL, &FoundExecutable)) {
 
         if (FoundExecutable.LengthInChars > 0) {
             YoriLibFreeStringContents(&CmdContext->ArgV[0]);
@@ -67,6 +72,8 @@ YoriShResolveCommandToExecutable(
     } else {
         *ExecutableFound = FALSE;
     }
+
+    YoriLibFreeStringContents(&ExpandedCmd);
 
     return TRUE;
 }
