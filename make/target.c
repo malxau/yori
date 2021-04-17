@@ -918,8 +918,6 @@ MakeExpandTargetVariable(
     DWORD SymbolChars;
     BOOLEAN Result;
 
-    UNREFERENCED_PARAMETER(MakeContext);
-
     SymbolChars = YoriLibCountStringContainingChars(VariableName, _T("@*<?"));
 
     //

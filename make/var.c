@@ -227,7 +227,10 @@ MakeSubstituteNamedVariable(
     DWORD LengthNeeded;
     LPTSTR Ptr;
 
-    if (MakeIsVariableTargetSpecific(VariableName)) {
+    if (YoriLibCompareStringWithLiteralCount(VariableName, _T("$"), 1) == 0) {
+        YoriLibYPrintf(VariableData, _T("$"));
+        return TRUE;
+    } else if (MakeIsVariableTargetSpecific(VariableName)) {
         if (Target == NULL) {
             YoriLibYPrintf(VariableData, _T("$(%y)"), VariableName);
             return TRUE;
@@ -410,10 +413,6 @@ MakeExpandVariables(
                 }
             } else {
 
-                // 
-                //  MSFIX Check what $$ means
-                //
-
                 if (ReadIndex + 2 < Line->LengthInChars &&
                     (VariableName.StartOfString[0] == '$' && VariableName.StartOfString[1] == '@') ||
                     (VariableName.StartOfString[0] == '*' && VariableName.StartOfString[1] == '*')) {
@@ -473,10 +472,6 @@ MakeExpandVariables(
                     }
                 }
             } else {
-
-                // 
-                //  MSFIX Check what $$ means
-                //
 
                 if (ReadIndex + 2 < Line->LengthInChars &&
                     (VariableName.StartOfString[0] == '$' && VariableName.StartOfString[1] == '@') ||

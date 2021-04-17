@@ -225,6 +225,25 @@ ENTRYPOINT(
         }
     }
 
+    CharsConsumed = GetCurrentDirectory(0, NULL);
+    if (CharsConsumed == 0) {
+        Result = EXIT_FAILURE;
+        goto Cleanup;
+    }
+
+    if (!YoriLibAllocateString(&MakeContext.ProcessCurrentDirectory, CharsConsumed)) {
+        Result = EXIT_FAILURE;
+        goto Cleanup;
+    }
+
+    MakeContext.ProcessCurrentDirectory.LengthInChars = GetCurrentDirectory(MakeContext.ProcessCurrentDirectory.LengthAllocated, MakeContext.ProcessCurrentDirectory.StartOfString);
+    if (MakeContext.ProcessCurrentDirectory.LengthInChars == 0) {
+        Result = EXIT_FAILURE;
+        goto Cleanup;
+    }
+
+    ASSERT(YoriLibIsStringNullTerminated(&MakeContext.ProcessCurrentDirectory));
+
     if (!YoriLibGetTempPath(&MakeContext.TempPath, 0)) {
         Result = EXIT_FAILURE;
         goto Cleanup;
@@ -612,6 +631,7 @@ Cleanup:
     YoriLibFreeStringContents(&FullFileName);
 
     YoriLibFreeStringContents(&MakeContext.TempPath);
+    YoriLibFreeStringContents(&MakeContext.ProcessCurrentDirectory);
     YoriLibFreeStringContents(&MakeContext.FileToProbe);
     YoriLibShBuiltinUnregisterAll();
 

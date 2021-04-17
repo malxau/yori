@@ -396,6 +396,7 @@ MakeLaunchNextCmd(
     DWORD Error;
     BOOL FailedInRedirection;
     YORI_STRING CmdToParse;
+    YORI_STRING CurrentDirectory;
     BOOLEAN ExecutedBuiltin;
     BOOLEAN PuntToCmd;
     BOOLEAN Reparse;
@@ -426,6 +427,18 @@ MakeLaunchNextCmd(
     if (CmdToExec->DisplayCmd) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &CmdToExec->Cmd);
     }
+
+    YoriLibInitEmptyString(&CurrentDirectory);
+    CurrentDirectory.StartOfString = Target->ScopeContext->HashEntry.Key.StartOfString;
+    CurrentDirectory.LengthInChars = Target->ScopeContext->HashEntry.Key.LengthInChars;
+    CurrentDirectory.LengthAllocated = Target->ScopeContext->HashEntry.Key.LengthAllocated;
+    if (YoriLibIsPathPrefixed(&CurrentDirectory)) {
+        CurrentDirectory.StartOfString += sizeof("\\\\.\\") - 1;
+        CurrentDirectory.LengthInChars -= sizeof("\\\\.\\") - 1;
+        CurrentDirectory.LengthAllocated -= sizeof("\\\\.\\") - 1;
+    }
+
+    ASSERT(YoriLibIsStringNullTerminated(&CurrentDirectory));
 
     YoriLibInitEmptyString(&CmdToParse);
     CmdToParse.StartOfString = CmdToExec->Cmd.StartOfString;
@@ -476,12 +489,9 @@ MakeLaunchNextCmd(
                 Callback = YoriLibShLookupBuiltinByName(&ExecContext->CmdToExec.ArgV[0]);
                 if (Callback) {
 
-                    // 
-                    //  MSFIX This needs to SetCurrentDirectory or ensure
-                    //  that nothing depends on current directory
-                    //
-
+                    SetCurrentDirectory(CurrentDirectory.StartOfString);
                     Result = MakeShExecuteInProc(Callback->BuiltInFn, ExecContext);
+                    SetCurrentDirectory(MakeContext->ProcessCurrentDirectory.StartOfString);
 
                     ExecutedBuiltin = TRUE;
                     ChildProcess->ProcessHandle = NULL;
@@ -583,20 +593,10 @@ MakeLaunchNextCmd(
     }
 
     ChildProcess->JobId = MakeAllocateJobId(MakeContext);
-    {
-        YORI_STRING CurrentDirectory;
-        YoriLibInitEmptyString(&CurrentDirectory);
-        CurrentDirectory.StartOfString = ChildProcess->Target->ScopeContext->HashEntry.Key.StartOfString;
-        CurrentDirectory.LengthInChars = ChildProcess->Target->ScopeContext->HashEntry.Key.LengthInChars;
-        if (YoriLibIsPathPrefixed(&CurrentDirectory)) {
-            CurrentDirectory.StartOfString += sizeof("\\\\.\\") - 1;
-            CurrentDirectory.LengthInChars -= sizeof("\\\\.\\") - 1;
-        }
 
-        Error = YoriLibShCreateProcess(ExecContext,
-                                       CurrentDirectory.StartOfString,
-                                       &FailedInRedirection);
-    }
+    Error = YoriLibShCreateProcess(ExecContext,
+                                   CurrentDirectory.StartOfString,
+                                   &FailedInRedirection);
 
     if (Error != ERROR_SUCCESS) {
         MakeFreeJobId(MakeContext, ChildProcess->JobId);
@@ -726,10 +726,10 @@ MakeProcessCompletion(
     Result = TRUE;
 
     //
-    //  MSFIX: Because we need an event to wait on anyway, it makes more
-    //  sense to wait for the process buffer thread than process termination.
-    //  Here we just risk injecting delay by stalling the pipeline waiting
-    //  for one specific thread.
+    //  Ideally this would wait for the process buffer threads rather than
+    //  wait for process termination, then get here and wait for the process
+    //  buffer threads.  Unfortunately since there are two threads and we're
+    //  hitting the 64 object wait limit, it seems like the lesser evil.
     //
 
     if (ChildProcess->ProcessHandle != NULL) {

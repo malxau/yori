@@ -49,7 +49,7 @@ MakeAllocateNewScope(
     PMAKE_SCOPE_CONTEXT ScopeContext;
     YORI_STRING Empty;
 
-    ScopeContext = YoriLibReferencedMalloc(sizeof(MAKE_SCOPE_CONTEXT));
+    ScopeContext = YoriLibReferencedMalloc(sizeof(MAKE_SCOPE_CONTEXT) + (Directory->LengthInChars + 1) * sizeof(TCHAR));
     if (ScopeContext == NULL) {
         return NULL;
     }
@@ -65,8 +65,21 @@ MakeAllocateNewScope(
         return NULL;
     }
 
-    YoriLibHashInsertByKey(MakeContext->Scopes, Directory, ScopeContext, &ScopeContext->HashEntry);
-    YoriLibCloneString(&ScopeContext->CurrentIncludeDirectory, Directory);
+    //
+    //  Copy and NULL terminate the directory
+    //
+
+    YoriLibInitEmptyString(&ScopeContext->CurrentIncludeDirectory);
+    YoriLibReference(ScopeContext);
+    ScopeContext->CurrentIncludeDirectory.LengthInChars = Directory->LengthInChars;
+    ScopeContext->CurrentIncludeDirectory.LengthAllocated = Directory->LengthInChars + 1;
+    ScopeContext->CurrentIncludeDirectory.StartOfString = (LPTSTR)(ScopeContext + 1);
+    ScopeContext->CurrentIncludeDirectory.MemoryToFree = ScopeContext;
+
+    memcpy(ScopeContext->CurrentIncludeDirectory.StartOfString, Directory->StartOfString, Directory->LengthInChars * sizeof(TCHAR));
+    ScopeContext->CurrentIncludeDirectory.StartOfString[Directory->LengthInChars] = '\0';
+
+    YoriLibHashInsertByKey(MakeContext->Scopes, &ScopeContext->CurrentIncludeDirectory, ScopeContext, &ScopeContext->HashEntry);
 
     YoriLibInitializeListHead(&ScopeContext->VariableList);
     YoriLibInitializeListHead(&ScopeContext->InferenceRuleList);

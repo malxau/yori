@@ -384,13 +384,11 @@ typedef struct _MAKE_TARGET_DEPENDENCY {
 /**
  A single command to execute as part of building a target.
 
- MSFIX At some future point, certain commands could be evaluated by this
- program internally.  Notably, this may include commands like cd or set.
- In order to implement these, each target needs its own notion of current
- directory or environment.  CreateProcess allows these to be specified
- explicitly for any process not builtin.
-
- It might also make sense to hack in echo just for performance.
+ MSFIX At some future point, certain state changing commands could be
+ evaluated by this program internally like cd or set.  In order to implement
+ these, each target needs its own notion of current directory or environment.
+ CreateProcess allows these to be specified explicitly for any process not
+ builtin.
  */
 typedef struct _MAKE_CMD_TO_EXEC {
 
@@ -416,6 +414,7 @@ typedef struct _MAKE_CMD_TO_EXEC {
      The command string to execute.
      */
     YORI_STRING Cmd;
+
 } MAKE_CMD_TO_EXEC, *PMAKE_CMD_TO_EXEC;
 
 /**
@@ -592,6 +591,11 @@ typedef struct _MAKE_CONTEXT {
      Pointer to the initial scope of the first makefile to execute.
      */
     PMAKE_SCOPE_CONTEXT RootScope;
+
+    /**
+     The current directory at the time the process was launched.
+     */
+    YORI_STRING ProcessCurrentDirectory;
 
     /**
      An allocator used to preallocate and suballocate target structures.
