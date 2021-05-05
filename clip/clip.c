@@ -1044,117 +1044,115 @@ ENTRYPOINT(
 
     Op = ClipOperationUnknown;
 
+    for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
+
+        ASSERT(YoriLibIsStringNullTerminated(&ArgV[CurrentArg]));
+
+        if (YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
+            BOOL ArgParsed = FALSE;
+
+            if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
+                ClipHelp();
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
+                YoriLibDisplayMitLicense(_T("2015-2020"));
+                return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationEmpty;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationCopyHtml;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationListFormats;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationPasteText;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ph")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationPasteHTML;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("pr")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationPasteRichText;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationCopyRtf;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
+                if (Op == ClipOperationUnknown) {
+                    ArgParsed = TRUE;
+                    Op = ClipOperationPreserveText;
+                }
+            }
+
+            if (!ArgParsed) {
+                ClipHelp();
+                return EXIT_FAILURE;
+            }
+        }
+    }
+
+    if (Op == ClipOperationUnknown) {
+        Op = ClipOperationCopyText;
+    }
+
     //
     //  If the user specified a file, go read it.  If not, read
     //  from standard input.
     //
 
-    if (ArgC > 1) {
+    if (Op == ClipOperationCopyText ||
+        Op == ClipOperationCopyRtf ||
+        Op == ClipOperationCopyHtml ||
+        Op == ClipOperationPasteText ||
+        Op == ClipOperationPasteRichText ||
+        Op == ClipOperationPasteHTML) {
 
         for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
-
-            ASSERT(YoriLibIsStringNullTerminated(&ArgV[CurrentArg]));
-
-            if (YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
-                BOOL ArgParsed = FALSE;
-
-                if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
-                    ClipHelp();
-                    return EXIT_SUCCESS;
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                    YoriLibDisplayMitLicense(_T("2015-2020"));
-                    return EXIT_SUCCESS;
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationEmpty;
-                    }
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationCopyHtml;
-                    }
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationListFormats;
-                    }
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationPasteText;
-                    }
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ph")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationPasteHTML;
-                    }
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("pr")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationPasteRichText;
-                    }
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationCopyRtf;
-                    }
-                } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
-                    if (Op == ClipOperationUnknown) {
-                        ArgParsed = TRUE;
-                        Op = ClipOperationPreserveText;
-                    }
+            if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
+                if (Op == ClipOperationPasteText ||
+                    Op == ClipOperationPasteRichText ||
+                    Op == ClipOperationPasteHTML) {
+                    hFile = CreateFile(ArgV[CurrentArg].StartOfString,
+                                       GENERIC_WRITE,
+                                       FILE_SHARE_READ|FILE_SHARE_DELETE,
+                                       NULL,
+                                       OPEN_ALWAYS,
+                                       FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
+                                       NULL);
+                } else {
+                    hFile = CreateFile(ArgV[CurrentArg].StartOfString,
+                                       GENERIC_READ,
+                                       FILE_SHARE_READ|FILE_SHARE_DELETE,
+                                       NULL,
+                                       OPEN_EXISTING,
+                                       FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
+                                       NULL);
                 }
-
-                if (!ArgParsed) {
-                    ClipHelp();
+                if (hFile == INVALID_HANDLE_VALUE) {
+                    Err = GetLastError();
+                    ErrText = YoriLibGetWinErrorText(Err);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: open failed: %s\n"), ErrText);
                     return EXIT_FAILURE;
                 }
-            }
-        }
-        if (Op == ClipOperationUnknown) {
-            Op = ClipOperationCopyText;
-        }
 
-        if (Op == ClipOperationCopyText ||
-            Op == ClipOperationCopyRtf ||
-            Op == ClipOperationCopyHtml ||
-            Op == ClipOperationPasteText ||
-            Op == ClipOperationPasteRichText ||
-            Op == ClipOperationPasteHTML) {
-
-            for (CurrentArg = 1; CurrentArg < ArgC; CurrentArg++) {
-                if (!YoriLibIsCommandLineOption(&ArgV[CurrentArg], &Arg)) {
-                    if (Op == ClipOperationPasteText ||
-                        Op == ClipOperationPasteRichText ||
-                        Op == ClipOperationPasteHTML) {
-                        hFile = CreateFile(ArgV[CurrentArg].StartOfString,
-                                           GENERIC_WRITE,
-                                           FILE_SHARE_READ|FILE_SHARE_DELETE,
-                                           NULL,
-                                           OPEN_ALWAYS,
-                                           FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
-                                           NULL);
-                    } else {
-                        hFile = CreateFile(ArgV[CurrentArg].StartOfString,
-                                           GENERIC_READ,
-                                           FILE_SHARE_READ|FILE_SHARE_DELETE,
-                                           NULL,
-                                           OPEN_EXISTING,
-                                           FILE_ATTRIBUTE_NORMAL|FILE_FLAG_BACKUP_SEMANTICS,
-                                           NULL);
-                    }
-                    if (hFile == INVALID_HANDLE_VALUE) {
-                        Err = GetLastError();
-                        ErrText = YoriLibGetWinErrorText(Err);
-                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: open failed: %s\n"), ErrText);
-                        return EXIT_FAILURE;
-                    }
-
-                    FileSize = GetFileSize(hFile, NULL);
-                    OpenedFile = TRUE;
-                    break;
-                }
+                FileSize = GetFileSize(hFile, NULL);
+                OpenedFile = TRUE;
+                break;
             }
         }
     }
