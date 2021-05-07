@@ -302,13 +302,14 @@ CpuInfoDisplayCores(
     while (Entry != NULL) {
 
         if (Entry->Relationship == YoriProcessorRelationProcessorCore) {
+            if (CoreIndex > 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Core %i\n"), CoreIndex);
             CoreIndex++;
             for (GroupIndex = 0; GroupIndex < Entry->u.Processor.GroupCount; GroupIndex++) {
                 CpuInfoDisplayProcessorMask(Entry->u.Processor.GroupMask[GroupIndex].Group, Entry->u.Processor.GroupMask[GroupIndex].Mask);
             }
-
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
 
         CurrentOffset += Entry->SizeInBytes;
@@ -336,18 +337,22 @@ CpuInfoDisplayGroups(
     PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX Entry;
     DWORD CurrentOffset = 0;
     WORD GroupIndex;
+    BOOLEAN DisplayedGroup = FALSE;
 
     Entry = CpuInfoContext->ProcInfo;
 
     while (Entry != NULL) {
 
         if (Entry->Relationship == YoriProcessorRelationGroup) {
+            if (DisplayedGroup) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            }
+
             for (GroupIndex = 0; GroupIndex < Entry->u.Group.MaximumGroupCount; GroupIndex++) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Group %i\n"), GroupIndex);
                 CpuInfoDisplayProcessorMask(GroupIndex, Entry->u.Group.GroupInfo[GroupIndex].ActiveProcessorMask);
-
+                DisplayedGroup = TRUE;
             }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
 
         CurrentOffset += Entry->SizeInBytes;
@@ -374,15 +379,19 @@ CpuInfoDisplayNuma(
 {
     PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX Entry;
     DWORD CurrentOffset = 0;
+    BOOLEAN DisplayedNode = FALSE;
 
     Entry = CpuInfoContext->ProcInfo;
 
     while (Entry != NULL) {
 
         if (Entry->Relationship == YoriProcessorRelationNumaNode) {
+            if (DisplayedNode) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Numa Node %i\n"), Entry->u.NumaNode.NodeNumber);
             CpuInfoDisplayProcessorMask(Entry->u.NumaNode.GroupMask.Group, Entry->u.NumaNode.GroupMask.Mask);
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            DisplayedNode = TRUE;
         }
 
         CurrentOffset += Entry->SizeInBytes;
@@ -417,13 +426,14 @@ CpuInfoDisplaySockets(
     while (Entry != NULL) {
 
         if (Entry->Relationship == YoriProcessorRelationProcessorPackage) {
+            if (SocketIndex > 0) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+            }
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Socket %i\n"), SocketIndex);
             SocketIndex++;
             for (GroupIndex = 0; GroupIndex < Entry->u.Processor.GroupCount; GroupIndex++) {
                 CpuInfoDisplayProcessorMask(Entry->u.Processor.GroupMask[GroupIndex].Group, Entry->u.Processor.GroupMask[GroupIndex].Mask);
             }
-
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
 
         CurrentOffset += Entry->SizeInBytes;
@@ -738,6 +748,8 @@ ENTRYPOINT(
     BOOLEAN DisplayGroups = FALSE;
     BOOLEAN DisplayNuma = FALSE;
     BOOLEAN DisplaySockets = FALSE;
+    BOOLEAN DisplayFormatString = TRUE;
+    BOOLEAN InsertNewline = FALSE;
     YORI_STRING Arg;
     CPUINFO_CONTEXT CpuInfoContext;
     YORI_STRING DisplayString;
@@ -769,15 +781,19 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 DisplayCores = TRUE;
+                DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("g")) == 0) {
                 DisplayGroups = TRUE;
+                DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
                 DisplayNuma = TRUE;
+                DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 DisplaySockets = TRUE;
+                DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
             }
         } else {
@@ -820,43 +836,67 @@ ENTRYPOINT(
 
     if (DisplayCores) {
         CpuInfoDisplayCores(&CpuInfoContext);
+        InsertNewline = TRUE;
     }
 
     if (DisplayGroups) {
+        if (InsertNewline) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
         CpuInfoDisplayGroups(&CpuInfoContext);
+        InsertNewline = TRUE;
     }
 
     if (DisplayNuma) {
+        if (InsertNewline) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
         CpuInfoDisplayNuma(&CpuInfoContext);
+        InsertNewline = TRUE;
     }
 
     if (DisplaySockets) {
+        if (InsertNewline) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
         CpuInfoDisplaySockets(&CpuInfoContext);
+        InsertNewline = TRUE;
     }
 
     //
     //  Obtain a format string.
     //
 
+    YoriLibInitEmptyString(&AllocatedFormatString);
     if (StartArg > 0) {
         if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, FALSE, &AllocatedFormatString)) {
             YoriLibFree(CpuInfoContext.ProcInfo);
             return EXIT_FAILURE;
         }
     } else {
-        YoriLibConstantString(&AllocatedFormatString, DefaultFormatString);
+        if (DisplayFormatString) {
+            YoriLibConstantString(&AllocatedFormatString, DefaultFormatString);
+        }
     }
 
-    //
-    //  Output the format string with summary counts.
-    //
+    if (AllocatedFormatString.LengthInChars > 0) {
 
-    YoriLibInitEmptyString(&DisplayString);
-    YoriLibExpandCommandVariables(&AllocatedFormatString, '$', FALSE, CpuInfoExpandVariables, &CpuInfoContext, &DisplayString);
-    if (DisplayString.StartOfString != NULL) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
-        YoriLibFreeStringContents(&DisplayString);
+        if (InsertNewline) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
+
+        //
+        //  Output the format string with summary counts.
+        //
+
+        YoriLibInitEmptyString(&DisplayString);
+        YoriLibExpandCommandVariables(&AllocatedFormatString, '$', FALSE, CpuInfoExpandVariables, &CpuInfoContext, &DisplayString);
+        if (DisplayString.StartOfString != NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+            YoriLibFreeStringContents(&DisplayString);
+        }
     }
+
     YoriLibFreeStringContents(&AllocatedFormatString);
     YoriLibFree(CpuInfoContext.ProcInfo);
 
