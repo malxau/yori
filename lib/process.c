@@ -61,7 +61,7 @@ YoriLibGetSystemProcessList(
 
         if (BytesAllocated == 0) {
             BytesAllocated = 64 * 1024;
-        } else if (BytesAllocated <= 1024 * 1024) {
+        } else if (BytesAllocated <= 16 * 1024 * 1024) {
             BytesAllocated = BytesAllocated * 4;
         } else {
             return FALSE;

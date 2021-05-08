@@ -391,6 +391,7 @@ PsDisplayAllProcesses(
 
     PYORI_SYSTEM_PROCESS_INFORMATION CurrentEntry;
     if (!YoriLibGetSystemProcessList(&ProcessInfo)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yps: Unable to load system process list\n"));
         return FALSE;
     }
 
