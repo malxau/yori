@@ -159,70 +159,6 @@ KillTerminateProcessByName(
 }
 
 
-/**
- Load information about all processes currently executing in the system.
-
- @param ProcessInfo On successful completion, updated to point to a list of
-        processes executing within the system.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOL
-KillGetSystemProcessList(
-    __out PYORI_SYSTEM_PROCESS_INFORMATION *ProcessInfo
-    )
-{
-    PYORI_SYSTEM_PROCESS_INFORMATION LocalProcessInfo = NULL;
-    DWORD BytesReturned;
-    DWORD BytesAllocated;
-    LONG Status;
-
-    if (DllNtDll.pNtQuerySystemInformation == NULL) {
-
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("OS support not present\n"));
-        return FALSE;
-    }
-
-    BytesAllocated = 0;
-
-    do {
-
-        if (LocalProcessInfo != NULL) {
-            YoriLibFree(LocalProcessInfo);
-        }
-
-        if (BytesAllocated == 0) {
-            BytesAllocated = 64 * 1024;
-        } else if (BytesAllocated <= 1024 * 1024) {
-            BytesAllocated = BytesAllocated * 4;
-        } else {
-            return FALSE;
-        }
-
-        LocalProcessInfo = YoriLibMalloc(BytesAllocated);
-        if (LocalProcessInfo == NULL) {
-            return FALSE;
-        }
-
-        Status = DllNtDll.pNtQuerySystemInformation(SystemProcessInformation, LocalProcessInfo, BytesAllocated, &BytesReturned);
-    } while (Status == (LONG)0xc0000004);
-
-
-    if (Status != 0) {
-        YoriLibFree(LocalProcessInfo);
-        return FALSE;
-    }
-
-    if (BytesReturned == 0) {
-        YoriLibFree(LocalProcessInfo);
-        return FALSE;
-    }
-
-    *ProcessInfo = LocalProcessInfo;
-    return TRUE;
-}
-
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the kill builtin command.
@@ -300,7 +236,9 @@ ENTRYPOINT(
             }
         } else {
             if (ProcessInfo == NULL) {
-                if (!KillGetSystemProcessList(&ProcessInfo)) {
+                if (DllNtDll.pNtQuerySystemInformation == NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("OS support not present\n"));
+                } else if (!YoriLibGetSystemProcessList(&ProcessInfo)) {
                     ProcessInfo = NULL;
                 }
             }
