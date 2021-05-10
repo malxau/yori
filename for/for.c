@@ -38,8 +38,8 @@ const
 CHAR strForHelpText[] =
         "Enumerates through a list of strings or files.\n"
         "\n"
-        "FOR [-license] [-b] [-c] [-d] [-i <criteria>] [-p n] [-r] <var> in (<list>)\n"
-        "    do <cmd>\n"
+        "FOR [-license] [-b] [-c] [-d] [-i <criteria>] [-l] [-p n] [-r]\n"
+        "    <var> in (<list>) do <cmd>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Use cmd as a subshell rather than Yori\n"
