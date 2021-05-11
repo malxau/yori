@@ -562,6 +562,8 @@ ENTRYPOINT(
     }
 
     Result = EXIT_SUCCESS;
+    YoriLibInitEmptyString(&BaseEnvironment);
+    YoriLibInitEmptyString(&CurrentEnvironment);
 
     if (StartArg == 0) {
         if (YoriLibIsStdInConsole()) {
