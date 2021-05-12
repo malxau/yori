@@ -3,7 +3,7 @@
  *
  * Yori shell display cpu topology information
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#include <winperf.h>
 
 /**
  Help text to display to the user.
@@ -35,19 +36,21 @@ CHAR strCpuInfoHelpText[] =
         "\n"
         "Display cpu topology information.\n"
         "\n"
-        "CPUINFO [-license] [-a] [-c] [-g] [-n] [-s] [<fmt>]\n"
+        "CPUINFO [-license] [-a] [-c] [-g] [-n] [-s] [-w ms] [<fmt>]\n"
         "\n"
         "   -a             Display all information\n"
         "   -c             Display information about processor cores\n"
         "   -g             Display information about processor groups\n"
         "   -n             Display information about NUMA nodes\n"
         "   -s             Display information about processor sockets\n"
+        "   -w ms          Wait time to measure CPU utilization\n"
         "\n"
         "Format specifiers are:\n"
         "   $CORECOUNT$            The number of processor cores\n"
         "   $GROUPCOUNT$           The number of processor groups\n"
+        "   $LOGICALCOUNT$         The number of logical processors\n"
         "   $NUMANODECOUNT$        The number of NUMA nodes\n"
-        "   $LOGICALCOUNT$         The number of logical processors\n";
+        "   $UTILIZATION$          The current CPU utilization\n";
 
 /**
  Display usage text to the user.
@@ -113,6 +116,26 @@ typedef struct _CPUINFO_CONTEXT {
     DWORD BytesInBuffer;
 
     /**
+     The time to wait when measuring CPU utilization.
+     */
+    DWORD WaitTime;
+
+    /**
+     The CPU utilization in hundredths of a percent.
+     */
+    DWORD Utilization;
+
+    /**
+     TRUE if the CPU utilization has already been loaded.
+     */
+    BOOLEAN UtilizationLoaded;
+
+    /**
+     TRUE if the CPU topological information has already been loaded.
+     */
+    BOOLEAN TopologyLoaded;
+
+    /**
      An array of entries describing information about the current system.
      */
     PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX ProcInfo;
@@ -139,6 +162,206 @@ typedef struct _CPUINFO_CONTEXT {
     LARGE_INTEGER GroupCount;
 
 } CPUINFO_CONTEXT, *PCPUINFO_CONTEXT;
+
+/**
+ Scan through the performance counter information looking for counter "6"
+ which is CPU utilization, on instance "_Total" for all processors.  If
+ _Total is not available, just take the first processor.
+
+ @param PerfData Pointer to the performance counter information.
+
+ @param IdleTime On successful completion, updated to contain the amount of
+        time the processor has been idle since system start.
+
+ @return TRUE to indicate success, FALSE to indicate that the coutner was not
+         found.
+ */
+__success(return)
+BOOLEAN
+CpuInfoCaptureProcessorIdleTime(
+    __in PPERF_DATA_BLOCK PerfData,
+    __out PDWORDLONG IdleTime
+    )
+{
+    PPERF_OBJECT_TYPE PerfObject;
+    PPERF_INSTANCE_DEFINITION PerfInstance;
+    PPERF_COUNTER_DEFINITION PerfCounter;
+    PPERF_COUNTER_BLOCK PerfBlock;
+    DWORD PerfDataObjectIndex;
+    DWORD TargetInstance;
+    DWORD CounterIndex;
+    YORI_STRING InstanceString;
+
+    YoriLibInitEmptyString(&InstanceString);
+
+    PerfObject = YoriLibAddToPointer(PerfData, PerfData->HeaderLength);
+    for (PerfDataObjectIndex = 0; PerfDataObjectIndex < PerfData->NumObjectTypes; PerfDataObjectIndex++) {
+
+        PerfCounter = YoriLibAddToPointer(PerfObject, PerfObject->HeaderLength);
+
+        //
+        //  The CPU counter has instances.
+        //
+
+        if (PerfObject->NumInstances > 0) {
+
+            PerfInstance = YoriLibAddToPointer(PerfObject, PerfObject->DefinitionLength);
+            PerfBlock = YoriLibAddToPointer(PerfInstance, PerfInstance->ByteLength);
+
+            //
+            //  Look for an instance called "_Total"
+            //
+
+            for (TargetInstance = 0; TargetInstance < (DWORD)PerfObject->NumInstances; TargetInstance++) {
+
+                InstanceString.StartOfString = YoriLibAddToPointer(PerfInstance, PerfInstance->NameOffset);
+                InstanceString.LengthInChars = PerfInstance->NameLength / sizeof(TCHAR);
+                if (InstanceString.LengthInChars > 0) {
+                    InstanceString.LengthInChars--;
+                }
+
+                if (YoriLibCompareStringWithLiteralInsensitive(&InstanceString, _T("_Total")) == 0) {
+                    break;
+                }
+
+                PerfBlock = YoriLibAddToPointer(PerfInstance, PerfInstance->ByteLength);
+                PerfInstance = YoriLibAddToPointer(PerfBlock, PerfBlock->ByteLength);
+            }
+
+            //
+            //  Failing that, older versions of the OS don't include _Total if
+            //  there's only one processor, so just take the first
+            //
+
+            if (TargetInstance == (DWORD)PerfObject->NumInstances) {
+                TargetInstance = 0;
+                PerfInstance = YoriLibAddToPointer(PerfObject, PerfObject->DefinitionLength);
+            }
+
+            //
+            //  Within that instance, look for a counter with a value of 6,
+            //  being processor utilization
+            //
+
+            PerfCounter = YoriLibAddToPointer(PerfObject, PerfObject->HeaderLength);
+            for (CounterIndex = 0; CounterIndex < PerfObject->NumCounters; CounterIndex++) {
+                if (PerfCounter->CounterNameTitleIndex == 6 &&
+                    PerfCounter->CounterSize == sizeof(DWORDLONG)) {
+                    PDWORDLONG Value;
+
+                    Value = YoriLibAddToPointer(PerfBlock, PerfCounter->CounterOffset);
+                    *IdleTime = *Value;
+                    return TRUE;
+                }
+                PerfCounter = YoriLibAddToPointer(PerfCounter, PerfCounter->ByteLength);
+            }
+        }
+        PerfObject = YoriLibAddToPointer(PerfObject, PerfObject->TotalByteLength);
+    }
+
+    return FALSE;
+}
+
+/**
+ Determine the amount of processor utilization.  Note this requires sleeping
+ for a period of time, so it is deferred until it is required.
+
+ @param CpuInfoContext Pointer to the CpuInfo context to populate with
+        processor utilization information.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+CpuInfoLoadProcessorUtilization(
+    __inout PCPUINFO_CONTEXT CpuInfoContext
+    )
+{
+    DWORD BufferSize;
+    DWORD BufferPopulated;
+    PPERF_DATA_BLOCK PerfData;
+    DWORD TimeIndex;
+    DWORD Err;
+    LARGE_INTEGER TimeValue[2];
+    DWORDLONG IdleValue[2];
+
+    UNREFERENCED_PARAMETER(CpuInfoContext);
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegQueryValueExW == NULL) {
+        return FALSE;
+    }
+
+    BufferSize = 64 * 1024;
+    PerfData = YoriLibMalloc(BufferSize);
+    if (PerfData == NULL) {
+        return FALSE;
+    }
+
+    for (TimeIndex = 0; TimeIndex < 2; TimeIndex++) {
+        Err = ERROR_SUCCESS;
+
+        //
+        //  Query the registry, resizing the buffer if it's too small.
+        //
+
+        while (TRUE) {
+            BufferPopulated = BufferSize;
+            Err = DllAdvApi32.pRegQueryValueExW(HKEY_PERFORMANCE_DATA, _T("238"), NULL, NULL, (LPBYTE)PerfData, &BufferPopulated);
+            if (Err != ERROR_MORE_DATA) {
+                break;
+            }
+
+            if (BufferSize <= 16 * 1024 * 1024) {
+                BufferSize = BufferSize * 4;
+            }
+
+            YoriLibFree(PerfData);
+            PerfData = YoriLibMalloc(BufferSize);
+            if (PerfData == NULL) {
+                return FALSE;
+            }
+        }
+
+        if (Err != ERROR_SUCCESS) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RegQueryValueExW failed %i\n"), Err);
+            YoriLibFree(PerfData);
+            return FALSE;
+        }
+
+        TimeValue[TimeIndex].QuadPart = PerfData->PerfTime100nSec.QuadPart;
+        if (!CpuInfoCaptureProcessorIdleTime(PerfData, &IdleValue[TimeIndex])) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Cannot find idle time in performance data\n"));
+            YoriLibFree(PerfData);
+            return FALSE;
+        }
+
+        Sleep(CpuInfoContext->WaitTime);
+    }
+    YoriLibFree(PerfData);
+
+    {
+        DWORDLONG TimeDelta;
+        DWORDLONG IdleDelta;
+        DWORD BusyPercent;
+        DWORD IdlePercent;
+
+        TimeDelta = TimeValue[1].QuadPart - TimeValue[0].QuadPart;
+        IdleDelta = IdleValue[1] - IdleValue[0];
+
+        if (IdleDelta > TimeDelta) {
+            IdleDelta = TimeDelta;
+        }
+        IdlePercent = (DWORD)(IdleDelta * 10000 / TimeDelta);
+        BusyPercent = 10000 - IdlePercent;
+
+        CpuInfoContext->Utilization = BusyPercent;
+        CpuInfoContext->UtilizationLoaded = TRUE;
+    }
+
+    return TRUE;
+}
+
 
 /**
  A callback function to expand any known variables found when parsing the
@@ -174,13 +397,20 @@ CpuInfoExpandVariables(
         return CpuInfoOutputLargeInteger(CpuInfoContext->LogicalProcessorCount, 10, OutputBuffer);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("NUMANODECOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->NumaNodeCount, 10, OutputBuffer);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("UTILIZATION")) == 0) {
+        if (!CpuInfoContext->UtilizationLoaded) {
+            CpuInfoLoadProcessorUtilization(CpuInfoContext);
+        }
+        CharsNeeded = 7;
+        if (OutputBuffer->LengthAllocated > CharsNeeded) {
+            CharsNeeded = YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i.%02i%%"), CpuInfoContext->Utilization / 100, CpuInfoContext->Utilization % 100);
+        }
     } else {
         return 0;
     }
 
     return CharsNeeded;
 }
-
 
 //
 //  The CPUINFO_CONTEXT structure records a pointer to an array and the size
@@ -754,12 +984,15 @@ ENTRYPOINT(
     CPUINFO_CONTEXT CpuInfoContext;
     YORI_STRING DisplayString;
     YORI_STRING AllocatedFormatString;
-    LPTSTR DefaultFormatString = _T("Core count: $CORECOUNT$\n")
+    LPTSTR DefaultFormatString = _T("Utilization: $UTILIZATION$\n")
+                                 _T("Core count: $CORECOUNT$\n")
                                  _T("Group count: $GROUPCOUNT$\n")
                                  _T("Logical processors: $LOGICALCOUNT$\n")
                                  _T("Numa nodes: $NUMANODECOUNT$\n");
+    LPTSTR DefaultUtilizationFormatString = _T("Utilization: $UTILIZATION$\n");
 
     ZeroMemory(&CpuInfoContext, sizeof(CpuInfoContext));
+    CpuInfoContext.WaitTime = 300;
     for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
@@ -771,7 +1004,7 @@ ENTRYPOINT(
                 CpuInfoHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 DisplayCores = TRUE;
@@ -795,6 +1028,20 @@ ENTRYPOINT(
                 DisplaySockets = TRUE;
                 DisplayFormatString = FALSE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0 &&
+                       i + 1 < ArgC) {
+
+                LONGLONG llTemp;
+                DWORD CharsConsumed;
+
+                llTemp = 0;
+                if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                    CharsConsumed > 0) {
+
+                    CpuInfoContext.WaitTime = (DWORD)llTemp;
+                }
+                i = i + 1;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -809,30 +1056,32 @@ ENTRYPOINT(
 
     //
     //  If the Win7 API is not present, should fall back to the 2003 API and
-    //  emulate the Win7 one.  If neither are present this app can't produce
-    //  meaningful output.
+    //  emulate the Win7 one.  If neither are present this app can't output
+    //  topologicalinformation.
     //
 
-    if (DllKernel32.pGetLogicalProcessorInformationEx == NULL &&
-        DllKernel32.pGetLogicalProcessorInformation == NULL) {
-
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("OS support not present\n"));
-        return EXIT_FAILURE;
-    } else if (DllKernel32.pGetLogicalProcessorInformationEx != NULL) {
+    if (DllKernel32.pGetLogicalProcessorInformationEx != NULL) {
         if (!CpuInfoLoadProcessorInfo(&CpuInfoContext)) {
             return EXIT_FAILURE;
         }
-    } else {
+        CpuInfoContext.TopologyLoaded = TRUE;
+    } else if (DllKernel32.pGetLogicalProcessorInformation != NULL) {
         if (!CpuInfoLoadAndUpconvertProcessorInfo(&CpuInfoContext)) {
             return EXIT_FAILURE;
         }
+        CpuInfoContext.TopologyLoaded = TRUE;
     }
 
     //
     //  Parse the processor information into summary counts.
     //
 
-    CpuInfoCountSummaries(&CpuInfoContext);
+    if (CpuInfoContext.TopologyLoaded) {
+        CpuInfoCountSummaries(&CpuInfoContext);
+    } else if (DisplayCores || DisplayGroups || DisplayNuma || DisplaySockets) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("OS support not present\n"));
+        return EXIT_FAILURE;
+    }
 
     if (DisplayCores) {
         CpuInfoDisplayCores(&CpuInfoContext);
@@ -875,7 +1124,11 @@ ENTRYPOINT(
         }
     } else {
         if (DisplayFormatString) {
-            YoriLibConstantString(&AllocatedFormatString, DefaultFormatString);
+            if (CpuInfoContext.TopologyLoaded) {
+                YoriLibConstantString(&AllocatedFormatString, DefaultFormatString);
+            } else {
+                YoriLibConstantString(&AllocatedFormatString, DefaultUtilizationFormatString);
+            }
         }
     }
 
@@ -898,7 +1151,10 @@ ENTRYPOINT(
     }
 
     YoriLibFreeStringContents(&AllocatedFormatString);
-    YoriLibFree(CpuInfoContext.ProcInfo);
+    ASSERT(!CpuInfoContext.TopologyLoaded || CpuInfoContext.ProcInfo != NULL);
+    if (CpuInfoContext.ProcInfo != NULL) {
+        YoriLibFree(CpuInfoContext.ProcInfo);
+    }
 
     return EXIT_SUCCESS;
 }
