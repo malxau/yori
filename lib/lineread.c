@@ -752,7 +752,19 @@ YoriLibReadLineToStringEx(
 
         if (TerminateProcessing) {
             if (ReturnFinalNonTerminatedLine) {
-                ReadContext->Terminated = TRUE;
+
+                //
+                //  Timeouts are used to return partial lines if a full line
+                //  doesn't arrive promptly.  A timeout does not mean that
+                //  there is no more data to read ever, it just means data
+                //  isn't arriving immediately (and may be arriving
+                //  interactively in cvtvt -exec.)
+                //
+
+                if (*TimeoutReached == FALSE) {
+                    ReadContext->Terminated = TRUE;
+                }
+
                 if (ReadContext->BytesInBuffer > 0) {
 
                     //
