@@ -76,13 +76,16 @@ CvtvtInputPumpThread(
     )
 {
     HANDLE hOutput = (HANDLE)Context;
+    HANDLE hInput;
     UCHAR StupidBuffer[256];
     DWORD BytesRead;
     DWORD BytesWritten;
 
-    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+    hInput = GetStdHandle(STD_INPUT_HANDLE);
 
-    while (ReadFile(GetStdHandle(STD_INPUT_HANDLE), StupidBuffer, sizeof(StupidBuffer), &BytesRead, NULL)) {
+    SetConsoleMode(hInput, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+
+    while (ReadFile(hInput, StupidBuffer, sizeof(StupidBuffer), &BytesRead, NULL)) {
         if (!WriteFile(hOutput, StupidBuffer, BytesRead, &BytesWritten, NULL)) {
             break;
         }
