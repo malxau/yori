@@ -83,6 +83,7 @@ SdirAppInitialize(VOID)
     //  failure can occur.
     //
 
+    SdirDefaultColor.Win32Attr = (UCHAR)YoriLibVtGetDefaultColor();
     Opts->PreviousAttributes.Ctrl = SdirDefaultColor.Ctrl;
     Opts->PreviousAttributes.Win32Attr = SdirDefaultColor.Win32Attr;
 

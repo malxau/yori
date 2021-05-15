@@ -850,7 +850,8 @@ SdirNewlineThroughDisplay(VOID)
     SDIR_FMTCHAR Line;
 
     Line.Char = '\n';
-    YoriLibSetColorToWin32(&Line.Attr, (UCHAR)YoriLibVtGetDefaultColor());
+    Line.Attr.Ctrl = SdirDefaultColor.Ctrl;
+    Line.Attr.Win32Attr = SdirDefaultColor.Win32Attr;
 
     SdirWrite(&Line, 1);
     return TRUE;

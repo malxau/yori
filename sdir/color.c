@@ -469,7 +469,7 @@ SdirApplyAttribute(
                 if ((!ForceDisplay || (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_HIDE) == 0) &&
                     (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_CONTINUE) == 0) {
 
-                    YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, FALSE, &ThisAttribute);
+                    YoriLibResolveWindowColorComponents(ThisAttribute, Opts->PreviousAttributes, TRUE, &ThisAttribute);
 
                     if (ThisAttribute.Ctrl & YORILIB_ATTRCTRL_INVERT) {
                         ThisAttribute.Win32Attr = (UCHAR)(((ThisAttribute.Win32Attr & 0x0F) << 4) + ((ThisAttribute.Win32Attr & 0xF0) >> 4));
