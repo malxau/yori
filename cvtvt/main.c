@@ -94,6 +94,149 @@ CvtvtInputPumpThread(
     return 0;
 }
 
+/**
+ Launch a specified child process, with input and output handles created as
+ pipes.  This function returns the ends of the pipe used to communicate with
+ the child process.
+
+ @param PathName Pointer to the string for the program to launch.  This will
+        be located in the path before executing.
+
+ @param CmdLine Pointer to the entire command line including arguments.
+
+ @param hSource On successful completion, updated to contain a handle that
+        reads the output from the child process.
+
+ @param hControl On successful completion, updated to contain a handle that
+        writes the input into the child process.
+
+ @return Win32 error code, ERROR_SUCCESS for success.
+ */
+__success(return == ERROR_SUCCESS)
+DWORD
+CvtvtLaunchChildProcess(
+    __in PYORI_STRING PathName,
+    __in PYORI_STRING CmdLine,
+    __out PHANDLE hSource,
+    __out PHANDLE hControl
+    )
+{
+    HANDLE hProcessInput;
+    HANDLE hProcessOutput;
+    HANDLE hParentInput;
+    HANDLE hParentOutput;
+    STARTUPINFO StartupInfo;
+    PROCESS_INFORMATION ProcessInfo;
+    TCHAR szTermVar[256];
+    DWORD dwConsoleMode;
+    DWORD Err;
+    CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
+    YORI_STRING ExpandedCmd;
+    YORI_STRING FoundExecutable;
+
+    if (!YoriLibExpandHomeDirectories(PathName, &ExpandedCmd)) {
+        YoriLibCloneString(&ExpandedCmd, PathName);
+    }
+
+    YoriLibInitEmptyString(&FoundExecutable);
+    if (!YoriLibLocateExecutableInPath(&ExpandedCmd, NULL, NULL, &FoundExecutable)) {
+        YoriLibFreeStringContents(&ExpandedCmd);
+        return ERROR_FILE_NOT_FOUND;
+    }
+
+    YoriLibFreeStringContents(&ExpandedCmd);
+
+    if (FoundExecutable.LengthInChars == 0) {
+        YoriLibFreeStringContents(&FoundExecutable);
+        return ERROR_FILE_NOT_FOUND;
+    }
+
+    ZeroMemory(&StartupInfo, sizeof(StartupInfo));
+    ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+
+    if (!CreatePipe(&hProcessInput, &hParentOutput, NULL, 2048)) {
+        Err = GetLastError();
+        YoriLibFreeStringContents(&FoundExecutable);
+        return Err;
+    }
+
+    if (!CreatePipe(&hParentInput, &hProcessOutput, NULL, 2048)) {
+        Err = GetLastError();
+        CloseHandle(hProcessInput);
+        CloseHandle(hParentOutput);
+        YoriLibFreeStringContents(&FoundExecutable);
+        return Err;
+    }
+
+    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ConsoleInfo)) {
+        YoriLibSPrintf(szTermVar, _T("%i"), ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1);
+        SetEnvironmentVariable(_T("COLUMNS"), szTermVar);
+        YoriLibSPrintf(szTermVar, _T("%i"), ConsoleInfo.srWindow.Bottom - ConsoleInfo.srWindow.Top + 1);
+        SetEnvironmentVariable(_T("LINES"), szTermVar);
+
+        if (GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &dwConsoleMode)) {
+
+            //
+            //  If the window right edge is the end of the buffer, then
+            //  auto line wrap is in effect if the console has it
+            //  enabled.  If neither of these is true, then apps must
+            //  explicitly emit newlines.
+            //
+
+            if (ConsoleInfo.dwSize.X != (ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1)) {
+                dwConsoleMode = 0;
+            }
+            YoriLibSPrintf(szTermVar, _T("color;extendedchars%s"), dwConsoleMode&ENABLE_WRAP_AT_EOL_OUTPUT?_T(";autolinewrap"):_T(""));
+            SetEnvironmentVariable(_T("YORITERM"), szTermVar);
+        }
+
+    }
+
+    YoriLibMakeInheritableHandle(hProcessInput, &hProcessInput);
+    YoriLibMakeInheritableHandle(hProcessOutput, &hProcessOutput);
+
+    StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+    StartupInfo.hStdInput = hProcessInput;
+    StartupInfo.hStdOutput = hProcessOutput;
+    StartupInfo.hStdError = hProcessOutput;
+
+    SetEnvironmentVariable(_T("PROMPT"), _T("$e[31;1m$p$e[37m$g"));
+
+    if (!CreateProcess(FoundExecutable.StartOfString,
+                       CmdLine->StartOfString,
+                       NULL,
+                       NULL,
+                       TRUE,
+                       CREATE_DEFAULT_ERROR_MODE,
+                       NULL,
+                       NULL,
+                       &StartupInfo,
+                       &ProcessInfo)) {
+
+        YoriLibFreeStringContents(&FoundExecutable);
+
+        CloseHandle(hProcessInput);
+        CloseHandle(hProcessOutput);
+
+        CloseHandle(hParentInput);
+        CloseHandle(hParentOutput);
+
+        return GetLastError();
+    }
+
+    YoriLibFreeStringContents(&FoundExecutable);
+
+    CloseHandle(hProcessInput);
+    CloseHandle(hProcessOutput);
+
+    CloseHandle(ProcessInfo.hProcess);
+    CloseHandle(ProcessInfo.hThread);
+
+    *hControl = hParentOutput;
+    *hSource = hParentInput;
+    return ERROR_SUCCESS;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the cvtvt builtin command.
@@ -236,96 +379,21 @@ ENTRYPOINT(
             CvtvtUsage();
             return EXIT_FAILURE;
         } else {
-            HANDLE hProcessInput;
-            HANDLE hProcessOutput;
-            STARTUPINFO StartupInfo;
-            PROCESS_INFORMATION ProcessInfo;
-            TCHAR szTermVar[256];
-            DWORD dwConsoleMode;
             YORI_STRING CmdLine;
-            CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
-
-            if (!YoriLibUserStringToSingleFilePath(UserFileName, TRUE, &FileName)) {
-                return EXIT_FAILURE;
-            }
+            DWORD Err;
 
             YoriLibInitEmptyString(&CmdLine);
             if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, TRUE, &CmdLine)) {
-                YoriLibFreeStringContents(&FileName);
                 return EXIT_FAILURE;
             }
-
-            ZeroMemory(&StartupInfo, sizeof(StartupInfo));
-            ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
-
-            CreatePipe(&hProcessInput,
-                       &hControl,
-                       NULL,
-                       2048);
-
-            CreatePipe(&hSource,
-                       &hProcessOutput,
-                       NULL,
-                       2048);
-
-            if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ConsoleInfo)) {
-                YoriLibSPrintf(szTermVar, _T("%i"), ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1);
-                SetEnvironmentVariable(_T("COLUMNS"), szTermVar);
-                YoriLibSPrintf(szTermVar, _T("%i"), ConsoleInfo.srWindow.Bottom - ConsoleInfo.srWindow.Top + 1);
-                SetEnvironmentVariable(_T("LINES"), szTermVar);
-
-                if (GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), &dwConsoleMode)) {
-
-                    //
-                    //  If the window right edge is the end of the buffer, then
-                    //  auto line wrap is in effect if the console has it
-                    //  enabled.  If neither of these is true, then apps must
-                    //  explicitly emit newlines.
-                    //
-
-                    if (ConsoleInfo.dwSize.X != (ConsoleInfo.srWindow.Right - ConsoleInfo.srWindow.Left + 1)) {
-                        dwConsoleMode = 0;
-                    }
-                    YoriLibSPrintf(szTermVar, _T("color;extendedchars%s"), dwConsoleMode&ENABLE_WRAP_AT_EOL_OUTPUT?_T(";autolinewrap"):_T(""));
-                    SetEnvironmentVariable(_T("YORITERM"), szTermVar);
-                }
-
-            }
-
-            YoriLibMakeInheritableHandle(hProcessInput, &hProcessInput);
-            YoriLibMakeInheritableHandle(hProcessOutput, &hProcessOutput);
-
-            StartupInfo.dwFlags = STARTF_USESTDHANDLES;
-            StartupInfo.hStdInput = hProcessInput;
-            StartupInfo.hStdOutput = hProcessOutput;
-            StartupInfo.hStdError = hProcessOutput;
-
-            SetEnvironmentVariable(_T("PROMPT"), _T("$e[31;1m$p$e[37m$g"));
-
-            if (!CreateProcess(FileName.StartOfString,
-                               CmdLine.StartOfString,
-                               NULL,
-                               NULL,
-                               TRUE,
-                               CREATE_DEFAULT_ERROR_MODE,
-                               NULL,
-                               NULL,
-                               &StartupInfo,
-                               &ProcessInfo)) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cvtvt: could not launch process %s, error %i\n"), FileName.StartOfString, (int)GetLastError());
-                YoriLibFreeStringContents(&FileName);
-                YoriLibFreeStringContents(&CmdLine);
-                return EXIT_FAILURE;
-            }
-
+            Err = CvtvtLaunchChildProcess(&ArgV[StartArg], &CmdLine, &hSource, &hControl);
             YoriLibFreeStringContents(&CmdLine);
-
-            CloseHandle(hProcessInput);
-            CloseHandle(hProcessOutput);
-
-            CloseHandle(ProcessInfo.hProcess);
-            CloseHandle(ProcessInfo.hThread);
-
+            if (Err != ERROR_SUCCESS) {
+                LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cvtvt: could not launch process: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return EXIT_FAILURE;
+            }
             InputPumpThread = CreateThread(NULL, 0, CvtvtInputPumpThread, hControl, 0, NULL);
         }
     } else if (UserFileName != NULL) {
