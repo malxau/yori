@@ -1411,10 +1411,51 @@ EditFindPreviousMatchingString(
     return FALSE;
 }
 
-VOID
-EditFindNextButtonClicked(
-    __in PYORI_WIN_CTRL_HANDLE Ctrl
-    );
+/**
+ Find the next match from the cursor position or selection.  This is shared
+ between find and find next.
+
+ @param EditContext Pointer to the edit context.
+
+ @return TRUE if a match is found, FALSE if it is not.
+ */
+BOOLEAN
+EditFindNextFromCurrentPosition(
+    __in PEDIT_CONTEXT EditContext
+    )
+{
+    DWORD CursorOffset;
+    DWORD CursorLine;
+    DWORD NextMatchLine;
+    DWORD NextMatchOffset;
+
+    DWORD SelectionEndLine;
+    DWORD SelectionEndOffset;
+
+    //
+    //  If a selection is active, start from the second character in the
+    //  selection.  If not, start from the cursor.
+    //
+
+    if (!YoriWinMultilineEditGetSelectionRange(EditContext->MultilineEdit, &CursorLine, &CursorOffset, &SelectionEndLine, &SelectionEndOffset)) {
+        YoriWinMultilineEditGetCursorLocation(EditContext->MultilineEdit, &CursorOffset, &CursorLine);
+    } else {
+
+        //
+        //  Move forward for the next match.
+        //
+
+        CursorOffset++;
+    }
+
+    if (EditFindNextMatchingString(EditContext, CursorLine, CursorOffset, &NextMatchLine, &NextMatchOffset)) {
+
+        YoriWinMultilineEditSetSelectionRange(EditContext->MultilineEdit, NextMatchLine, NextMatchOffset, NextMatchLine, NextMatchOffset + EditContext->SearchString.LengthInChars);
+        return TRUE;
+    }
+
+    return FALSE;
+}
 
 /**
  A callback invoked when the find menu item is invoked.
@@ -1473,7 +1514,21 @@ EditFindButtonClicked(
     memcpy(&EditContext->SearchString, &Text, sizeof(YORI_STRING));
     EditContext->SearchMatchCase = MatchCase;
 
-    EditFindNextButtonClicked(Ctrl);
+    if (!EditFindNextFromCurrentPosition(EditContext)) {
+        YORI_STRING ButtonText[1];
+
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("Text not found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+    }
 }
 
 /**
@@ -1486,15 +1541,8 @@ EditFindNextButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
-    DWORD CursorOffset;
-    DWORD CursorLine;
-    DWORD NextMatchLine;
-    DWORD NextMatchOffset;
     PYORI_WIN_CTRL_HANDLE Parent;
     PEDIT_CONTEXT EditContext;
-
-    DWORD SelectionEndLine;
-    DWORD SelectionEndOffset;
 
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
@@ -1503,25 +1551,22 @@ EditFindNextButtonClicked(
         return;
     }
 
-    //
-    //  If a selection is active, start from the second character in the
-    //  selection.  If not, start from the cursor.
-    //
+    if (!EditFindNextFromCurrentPosition(EditContext)) {
+        YORI_STRING Title;
+        YORI_STRING Text;
+        YORI_STRING ButtonText[1];
 
-    if (!YoriWinMultilineEditGetSelectionRange(EditContext->MultilineEdit, &CursorLine, &CursorOffset, &SelectionEndLine, &SelectionEndOffset)) {
-        YoriWinMultilineEditGetCursorLocation(EditContext->MultilineEdit, &CursorOffset, &CursorLine);
-    } else {
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("No more matches found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
 
-        //
-        //  Move forward for the next match.
-        //
-
-        CursorOffset++;
-    }
-
-    if (EditFindNextMatchingString(EditContext, CursorLine, CursorOffset, &NextMatchLine, &NextMatchOffset)) {
-
-        YoriWinMultilineEditSetSelectionRange(EditContext->MultilineEdit, NextMatchLine, NextMatchOffset, NextMatchLine, NextMatchOffset + EditContext->SearchString.LengthInChars);
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
     }
 }
 
@@ -1576,6 +1621,22 @@ EditFindPreviousButtonClicked(
     if (EditFindPreviousMatchingString(EditContext, CursorLine, CursorOffset, &NextMatchLine, &NextMatchOffset)) {
 
         YoriWinMultilineEditSetSelectionRange(EditContext->MultilineEdit, NextMatchLine, NextMatchOffset, NextMatchLine, NextMatchOffset + EditContext->SearchString.LengthInChars);
+    } else {
+        YORI_STRING Title;
+        YORI_STRING Text;
+        YORI_STRING ButtonText[1];
+
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("No more matches found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
     }
 }
 
