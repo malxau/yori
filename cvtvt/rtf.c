@@ -27,6 +27,12 @@
 #include "cvtvt.h"
 
 /**
+ While parsing, TRUE if underlining is in effect.  This global is updated
+ when text is generated.
+ */
+BOOLEAN CvtvtRtfUnderlineOn = FALSE;
+
+/**
  Indicate the beginning of a stream and perform any initial output.
 
  @param hOutput The stream to output any footer information to.
@@ -147,10 +153,12 @@ CvtvtRtfProcessAndOutputEscape(
 {
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
+    BOOLEAN DummyUnderlineState;
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    DummyUnderlineState = CvtvtRtfUnderlineOn;
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &DummyUnderlineState)) {
         return FALSE;
     }
 
@@ -159,7 +167,7 @@ CvtvtRtfProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &CvtvtRtfUnderlineOn)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }

@@ -33,27 +33,6 @@
 #define CVTVT_DEFAULT_COLOR (7)
 
 /**
- The dialect of HTML to use.
- */
-DWORD YoriLibHtmlVersion = 5;
-
-/**
- While parsing, TRUE if a tag is currently open so that it can be closed on
- the next font change.
- */
-BOOLEAN YoriLibHtmlTagOpen = FALSE;
-
-/**
- While parsing, TRUE if underlining is in effect.
- */
-BOOLEAN YoriLibHtmlUnderlineOn = FALSE;
-
-/**
- While parsing, TRUE if bold is in effect.
- */
-BOOLEAN YoriLibHtmlBoldOn = FALSE;
-
-/**
  Attempt to capture the current console font.  This is only available on
  newer systems.
 
@@ -207,12 +186,17 @@ CONST TCHAR YoriLibHtmlFooter[] = _T("</DIV></BODY></HTML>");
  @param TextString On successful completion, updated to contain the start of
         an HTML stream.  Note this string maybe allocated in this function.
 
+ @param GenerateContext Pointer to the context recording state while
+        generation is in progress.  On input, this specifies the HTML dialect
+        to use; on output, other state fields are initialized.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibHtmlGenerateInitialString(
-    __inout PYORI_STRING TextString
+    __inout PYORI_STRING TextString,
+    __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
 {
     YORI_CONSOLE_FONT_INFOEX FontInfo;
@@ -238,27 +222,30 @@ YoriLibHtmlGenerateInitialString(
     }
 
     YoriLibSPrintf(szFontSize, _T("; font-size: %ipx"), FontInfo.dwFontSize.Y);
-    if (YoriLibHtmlVersion == 4) {
+    if (GenerateContext->HtmlVersion == 4) {
         szFontWeight[0] = '\0';
     } else {
         YoriLibSPrintf(szFontWeight, _T("; font-weight: %i"), FontInfo.FontWeight);
     }
 
+    GenerateContext->TagOpen = FALSE;
+    GenerateContext->UnderlineOn = FALSE;
+
     if (FontInfo.FontWeight >= 600) {
-        YoriLibHtmlBoldOn = TRUE;
+        GenerateContext->BoldOn = TRUE;
     } else {
-        YoriLibHtmlBoldOn = FALSE;
+        GenerateContext->BoldOn = FALSE;
     }
 
     YoriLibYPrintf(TextString,
                    _T("%s%s%s%s%s%s%s"),
                    YoriLibHtmlHeader,
-                   (YoriLibHtmlVersion == 4)?YoriLibHtmlVer4Header:YoriLibHtmlVer5Header,
+                   (GenerateContext->HtmlVersion == 4)?YoriLibHtmlVer4Header:YoriLibHtmlVer5Header,
                    szFontNames,
-                   (YoriLibHtmlVersion == 5)?szFontWeight:_T(""),
+                   (GenerateContext->HtmlVersion == 5)?szFontWeight:_T(""),
                    szFontSize,
                    YoriLibHtmlVerHeaderEnd,
-                   (YoriLibHtmlVersion == 4 && YoriLibHtmlBoldOn)?_T("<B>"):_T(""));
+                   (GenerateContext->HtmlVersion == 4 && GenerateContext->BoldOn)?_T("<B>"):_T(""));
 
     if (TextString->StartOfString == NULL) {
         return FALSE;
@@ -274,19 +261,23 @@ YoriLibHtmlGenerateInitialString(
  @param TextString On successful completion, updated to contain the end of
         an HTML stream.  Note this string maybe allocated in this function.
 
+ @param GenerateContext Pointer to the context recording state while
+        generation is in progress.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibHtmlGenerateEndString(
-    __inout PYORI_STRING TextString
+    __inout PYORI_STRING TextString,
+    __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
 {
     YoriLibYPrintf(TextString,
                    _T("%s%s%s%s"),
-                   (YoriLibHtmlTagOpen?(YoriLibHtmlUnderlineOn?_T("</U>"):_T("")):_T("")),
-                   (YoriLibHtmlTagOpen?(YoriLibHtmlVersion == 4?_T("</FONT>"):_T("</SPAN>")):_T("")),
-                   (YoriLibHtmlVersion == 4 && YoriLibHtmlBoldOn)?_T("</B>"):_T(""),
+                   (GenerateContext->TagOpen?(GenerateContext->UnderlineOn?_T("</U>"):_T("")):_T("")),
+                   (GenerateContext->TagOpen?(GenerateContext->HtmlVersion == 4?_T("</FONT>"):_T("</SPAN>")):_T("")),
+                   (GenerateContext->HtmlVersion == 4 && GenerateContext->BoldOn)?_T("</B>"):_T(""),
                    YoriLibHtmlFooter);
 
     if (TextString->StartOfString == NULL) {
@@ -426,6 +417,9 @@ YoriLibHtmlGenerateTextString(
 
  @param BufferLength Specifies the number of characters in StringBuffer.
 
+ @param GenerateContext Pointer to the context recording state while
+        generation is in progress.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -435,7 +429,8 @@ YoriLibHtmlGenerateEscapeStringInternal(
     __out PDWORD BufferSizeNeeded,
     __in_opt PDWORD ColorTable,
     __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in DWORD BufferLength,
+    __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
 {
     LPTSTR SrcPoint = StringBuffer;
@@ -533,14 +528,14 @@ YoriLibHtmlGenerateEscapeStringInternal(
             }
         }
 
-        if (YoriLibHtmlTagOpen) {
-            if (YoriLibHtmlUnderlineOn) {
+        if (GenerateContext->TagOpen) {
+            if (GenerateContext->UnderlineOn) {
                 if (DestOffset + sizeof("</U>") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("</U>"), sizeof(_T("</U>")) - sizeof(TCHAR));
                 }
                 DestOffset += sizeof("</U>") - 1;
             }
-            if (YoriLibHtmlVersion == 4) {
+            if (GenerateContext->HtmlVersion == 4) {
                 if (DestOffset + sizeof("</FONT>") - 1 < TextString->LengthAllocated) {
                     memcpy(&TextString->StartOfString[DestOffset], _T("</FONT>"), sizeof(_T("</FONT>")) - sizeof(TCHAR));
                 }
@@ -564,7 +559,7 @@ YoriLibHtmlGenerateEscapeStringInternal(
         //  Output the appropriate tag depending on the version the user wanted
         //
 
-        if (YoriLibHtmlVersion == 4) {
+        if (GenerateContext->HtmlVersion == 4) {
             SrcOffset = YoriLibSPrintf(NewTag,
                                        _T("<FONT COLOR=#%02x%02x%02x>"),
                                        GetRValue(ColorTableToUse[NewColor & 0xf]),
@@ -593,10 +588,8 @@ YoriLibHtmlGenerateEscapeStringInternal(
             DestOffset += sizeof("<U>") - 1;
         }
 
-        if (TextString->StartOfString != NULL) {
-            YoriLibHtmlUnderlineOn = NewUnderline;
-            YoriLibHtmlTagOpen = TRUE;
-        }
+        GenerateContext->UnderlineOn = NewUnderline;
+        GenerateContext->TagOpen = TRUE;
     }
 
     if (DestOffset < TextString->LengthAllocated) {
@@ -629,6 +622,9 @@ YoriLibHtmlGenerateEscapeStringInternal(
 
  @param BufferLength Specifies the number of characters in StringBuffer.
 
+ @param GenerateContext Pointer to the context recording state while
+        generation is in progress.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -637,30 +633,11 @@ YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
     __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in DWORD BufferLength,
+    __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
 {
-    return YoriLibHtmlGenerateEscapeStringInternal(TextString, BufferSizeNeeded, NULL, StringBuffer, BufferLength);
-}
-
-/**
- Set the version of HTML to use for future encoding operations.
-
- @param HtmlVersion The version to use.  Can be 4 or 5.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-__success(return)
-BOOL
-YoriLibHtmlSetVersion(
-    __in DWORD HtmlVersion
-    )
-{
-    if (HtmlVersion != 4 && HtmlVersion != 5) {
-        return FALSE;
-    }
-    YoriLibHtmlVersion = HtmlVersion;
-    return TRUE;
+    return YoriLibHtmlGenerateEscapeStringInternal(TextString, BufferSizeNeeded, NULL, StringBuffer, BufferLength, GenerateContext);
 }
 
 /**
@@ -680,6 +657,12 @@ typedef struct _YORI_LIB_HTML_CONVERT_CONTEXT {
      RGB.  If NULL, a default mapping is used.
      */
     PDWORD ColorTable;
+
+    /**
+     The context recording state while generation is in progress.
+     */
+    YORILIB_HTML_GENERATE_CONTEXT GenerateContext;
+
 } YORI_LIB_HTML_CONVERT_CONTEXT, *PYORI_LIB_HTML_CONVERT_CONTEXT;
 
 /**
@@ -729,7 +712,7 @@ YoriLibHtmlCnvInitializeStream(
     PYORI_LIB_HTML_CONVERT_CONTEXT Context = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
 
     YoriLibInitEmptyString(&OutputString);
-    if (!YoriLibHtmlGenerateInitialString(&OutputString)) {
+    if (!YoriLibHtmlGenerateInitialString(&OutputString, &Context->GenerateContext)) {
         return FALSE;
     }
 
@@ -760,7 +743,7 @@ YoriLibHtmlCnvEndStream(
     PYORI_LIB_HTML_CONVERT_CONTEXT Context = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
     YoriLibInitEmptyString(&OutputString);
 
-    if (!YoriLibHtmlGenerateEndString(&OutputString)) {
+    if (!YoriLibHtmlGenerateEndString(&OutputString, &Context->GenerateContext)) {
         return FALSE;
     }
 
@@ -851,10 +834,13 @@ YoriLibHtmlCnvProcessAndOutputEscape(
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
     PYORI_LIB_HTML_CONVERT_CONTEXT Context = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+    YORILIB_HTML_GENERATE_CONTEXT DummyGenerateContext;
+
+    memcpy(&DummyGenerateContext, &Context->GenerateContext, sizeof(YORILIB_HTML_GENERATE_CONTEXT));
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength, &DummyGenerateContext)) {
         return FALSE;
     }
 
@@ -863,7 +849,7 @@ YoriLibHtmlCnvProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength, &Context->GenerateContext)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -908,8 +894,6 @@ YoriLibHtmlConvertToHtmlFromVt(
     YORI_LIB_HTML_CONVERT_CONTEXT Context;
     BOOL FreeColorTable = FALSE;
 
-    YoriLibHtmlSetVersion(HtmlVersion);
-
     Context.HtmlText = HtmlText;
     Context.ColorTable = ColorTable;
     if (ColorTable == NULL) {
@@ -919,6 +903,7 @@ YoriLibHtmlConvertToHtmlFromVt(
             Context.ColorTable = YoriLibDefaultColorTable;
         }
     }
+    Context.GenerateContext.HtmlVersion = HtmlVersion;
 
     CallbackFunctions.InitializeStream = YoriLibHtmlCnvInitializeStream;
     CallbackFunctions.EndStream = YoriLibHtmlCnvEndStream;

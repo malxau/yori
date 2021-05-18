@@ -33,18 +33,6 @@
 #define CVTVT_DEFAULT_COLOR (7)
 
 /**
- While parsing, TRUE if underlining is in effect.  This global is updated
- when text is generated.
- */
-BOOLEAN YoriLibRtfUnderlineOn = FALSE;
-
-/**
- While parsing, TRUE if underlining is in effect.  This global is updated
- when buffer size checks are made but no text is generated.
- */
-BOOLEAN YoriLibRtfUnderlineOnBufferCheck = FALSE;
-
-/**
  Output to include at the beginning of any RTF stream.
  */
 CONST TCHAR YoriLibRtfHeader[] = _T("{\\rtf1\\ansi\\ansicpg1252\\deff0{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 %s;}}\n");
@@ -378,6 +366,11 @@ YoriLibRtfGenerateTextString(
 
  @param BufferLength Specifies the number of characters in StringBuffer.
 
+ @param UnderlineState Points to a value containing the underline state.
+        On input, this value should be TRUE to indicate text is currently
+        underlined; on output, this value is updated to be TRUE if future
+        text should start as underlined.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -386,7 +379,8 @@ YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
     __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in DWORD BufferLength,
+    __inout PBOOLEAN UnderlineState
     )
 {
     LPTSTR SrcPoint = StringBuffer;
@@ -481,19 +475,15 @@ YoriLibRtfGenerateEscapeString(
             }
         }
 
-        if (TextString->StartOfString != NULL) {
-            PreviousUnderlineOn = YoriLibRtfUnderlineOn;
-        } else {
-            PreviousUnderlineOn = YoriLibRtfUnderlineOnBufferCheck;
-        }
+        PreviousUnderlineOn = *UnderlineState;
 
         UnderlineString = _T("");
         if (NewUnderline && !PreviousUnderlineOn) {
             UnderlineString = _T("\\ul");
-            PreviousUnderlineOn = TRUE;
+            *UnderlineState = TRUE;
         } else if (!NewUnderline && PreviousUnderlineOn) {
             UnderlineString = _T("\\ul0");
-            PreviousUnderlineOn = FALSE;
+            *UnderlineState = FALSE;
         }
 
         //
@@ -517,12 +507,6 @@ YoriLibRtfGenerateEscapeString(
             memcpy(&TextString->StartOfString[DestOffset], NewTag, SrcOffset * sizeof(TCHAR));
         }
         DestOffset += SrcOffset;
-
-        if (TextString->StartOfString != NULL) {
-            YoriLibRtfUnderlineOn = PreviousUnderlineOn;
-        } else {
-            YoriLibRtfUnderlineOnBufferCheck = PreviousUnderlineOn;
-        }
     }
 
     if (DestOffset < TextString->LengthAllocated) {
@@ -556,6 +540,12 @@ typedef struct _YORI_LIB_RTF_CONVERT_CONTEXT {
      RGB.  If NULL, a default mapping is used.
      */
     PDWORD ColorTable;
+
+    /**
+     The current state of underline.
+     */
+    BOOLEAN UnderlineState;
+
 } YORI_LIB_RTF_CONVERT_CONTEXT, *PYORI_LIB_RTF_CONVERT_CONTEXT;
 
 /**
@@ -726,10 +716,12 @@ YoriLibRtfCnvProcessAndOutputEscape(
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
     PYORI_LIB_RTF_CONVERT_CONTEXT Context = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
+    BOOLEAN DummyUnderlineState;
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    DummyUnderlineState = Context->UnderlineState;
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &DummyUnderlineState)) {
         return FALSE;
     }
 
@@ -738,7 +730,7 @@ YoriLibRtfCnvProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &Context->UnderlineState)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -788,6 +780,7 @@ YoriLibRtfConvertToRtfFromVt(
             Context.ColorTable = YoriLibDefaultColorTable;
         }
     }
+    Context.UnderlineState = FALSE;
 
     CallbackFunctions.InitializeStream = YoriLibRtfCnvInitializeStream;
     CallbackFunctions.EndStream = YoriLibRtfCnvEndStream;

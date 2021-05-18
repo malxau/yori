@@ -729,6 +729,33 @@ YoriLibGenerateVtStringFromConsoleBuffers(
 
 // *** CVTHTML.C ***
 
+/**
+ When generating HTML, context recording which operations are in effect
+ that will affect future parsing.
+ */
+typedef struct _YORILIB_HTML_GENERATE_CONTEXT {
+    /**
+     The dialect of HTML to use.
+     */
+    DWORD HtmlVersion;
+
+    /**
+     While parsing, TRUE if a tag is currently open so that it can be closed
+     on the next font change.
+     */
+    BOOLEAN TagOpen;
+
+    /**
+     While parsing, TRUE if underlining is in effect.
+     */
+    BOOLEAN UnderlineOn;
+
+    /**
+     While parsing, TRUE if bold is in effect.
+     */
+    BOOLEAN BoldOn;
+} YORILIB_HTML_GENERATE_CONTEXT, *PYORILIB_HTML_GENERATE_CONTEXT;
+
 extern DWORD YoriLibDefaultColorTable[];
 
 __success(return)
@@ -747,13 +774,15 @@ YoriLibCaptureConsoleColorTable(
 __success(return)
 BOOL
 YoriLibHtmlGenerateInitialString(
-    __inout PYORI_STRING TextString
+    __inout PYORI_STRING TextString,
+    __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     );
 
 __success(return)
 BOOL
 YoriLibHtmlGenerateEndString(
-    __inout PYORI_STRING TextString
+    __inout PYORI_STRING TextString,
+    __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     );
 
 __success(return)
@@ -771,13 +800,8 @@ YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
     __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
-    );
-
-__success(return)
-BOOL
-YoriLibHtmlSetVersion(
-    __in DWORD HtmlVersion
+    __in DWORD BufferLength,
+    __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     );
 
 __success(return)
@@ -819,7 +843,8 @@ YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
     __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in DWORD BufferLength,
+    __inout PBOOLEAN UnderlineState
     );
 
 __success(return)

@@ -27,6 +27,12 @@
 #include "cvtvt.h"
 
 /**
+ The context recording state while generation is in progress, including the
+ HTML dialect to generate.
+ */
+YORILIB_HTML_GENERATE_CONTEXT CvtvtHtmlGenerateContext;
+
+/**
  Indicate the beginning of a stream and perform any initial output.
 
  @param hOutput The stream to output any footer information to.
@@ -41,7 +47,7 @@ CvtvtHtmlInitializeStream(
     YORI_STRING OutputString;
 
     YoriLibInitEmptyString(&OutputString);
-    if (!YoriLibHtmlGenerateInitialString(&OutputString)) {
+    if (!YoriLibHtmlGenerateInitialString(&OutputString, &CvtvtHtmlGenerateContext)) {
         return FALSE;
     }
 
@@ -66,7 +72,7 @@ CvtvtHtmlEndStream(
     YORI_STRING OutputString;
     YoriLibInitEmptyString(&OutputString);
 
-    if (!YoriLibHtmlGenerateEndString(&OutputString)) {
+    if (!YoriLibHtmlGenerateEndString(&OutputString, &CvtvtHtmlGenerateContext)) {
         return FALSE;
     }
 
@@ -148,10 +154,12 @@ CvtvtHtmlProcessAndOutputEscape(
 {
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
+    YORILIB_HTML_GENERATE_CONTEXT DummyGenerateContext;
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    memcpy(&DummyGenerateContext, &CvtvtHtmlGenerateContext, sizeof(YORILIB_HTML_GENERATE_CONTEXT));
+    if (!YoriLibHtmlGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &DummyGenerateContext)) {
         return FALSE;
     }
 
@@ -160,7 +168,7 @@ CvtvtHtmlProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibHtmlGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &CvtvtHtmlGenerateContext)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -184,7 +192,7 @@ CvtvtHtml4SetFunctions(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     )
 {
-    YoriLibHtmlSetVersion(4);
+    CvtvtHtmlGenerateContext.HtmlVersion = 4;
     CallbackFunctions->InitializeStream = CvtvtHtmlInitializeStream;
     CallbackFunctions->EndStream = CvtvtHtmlEndStream;
     CallbackFunctions->ProcessAndOutputText = CvtvtHtmlProcessAndOutputText;
@@ -205,7 +213,7 @@ CvtvtHtml5SetFunctions(
     __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
     )
 {
-    YoriLibHtmlSetVersion(5);
+    CvtvtHtmlGenerateContext.HtmlVersion = 5;
     CallbackFunctions->InitializeStream = CvtvtHtmlInitializeStream;
     CallbackFunctions->EndStream = CvtvtHtmlEndStream;
     CallbackFunctions->ProcessAndOutputText = CvtvtHtmlProcessAndOutputText;
