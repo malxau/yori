@@ -536,14 +536,14 @@ EditSaveFile(
     for (LineIndex = 0; LineIndex < LineCount; LineIndex++) {
         Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, LineIndex);
         if (Line->LengthInChars > 0) {
-            if (!YoriLibOutputTextToMultibyteDevice(TempHandle, Line->StartOfString, Line->LengthInChars)) {
+            if (!YoriLibOutputTextToMultibyteDevice(TempHandle, Line)) {
                 CloseHandle(TempHandle);
                 DeleteFile(TempFileName.StartOfString);
                 YoriLibFreeStringContents(&TempFileName);
                 return FALSE;
             }
         }
-        if (!YoriLibOutputTextToMultibyteDevice(TempHandle, EditContext->Newline.StartOfString, EditContext->Newline.LengthInChars)) {
+        if (!YoriLibOutputTextToMultibyteDevice(TempHandle, &EditContext->Newline)) {
             CloseHandle(TempHandle);
             DeleteFile(TempFileName.StartOfString);
             YoriLibFreeStringContents(&TempFileName);

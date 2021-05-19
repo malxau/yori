@@ -226,10 +226,8 @@ YoriLibRtfGenerateEndString(
  @param BufferSizeNeeded On successful completion, indicates the number of
         characters needed in the TextString buffer to complete the operation.
 
- @param StringBuffer Pointer to the string containing a VT100 escape to
-        convert to RTF.
-
- @param BufferLength Specifies the number of characters in StringBuffer.
+ @param SrcString Pointer to the string containing a VT100 escape to convert
+        to RTF.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -238,8 +236,7 @@ BOOL
 YoriLibRtfGenerateTextString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING SrcString
     )
 {
 
@@ -253,7 +250,7 @@ YoriLibRtfGenerateTextString(
     //
 
     TextString->LengthInChars = 0;
-    SrcPoint = StringBuffer;
+    SrcPoint = SrcString->StartOfString;
 
     do {
 
@@ -338,7 +335,7 @@ YoriLibRtfGenerateTextString(
             SrcConsumed++;
         }
 
-    } while (SrcConsumed < BufferLength);
+    } while (SrcConsumed < SrcString->LengthInChars);
 
     if (DestOffset < TextString->LengthAllocated) {
         TextString->StartOfString[DestOffset] = '\0';
@@ -361,10 +358,8 @@ YoriLibRtfGenerateTextString(
  @param BufferSizeNeeded On successful completion, indicates the number of
         characters needed in the TextString buffer to complete the operation.
 
- @param StringBuffer Pointer to the string containing a VT100 escape to
-        convert to RTF.
-
- @param BufferLength Specifies the number of characters in StringBuffer.
+ @param SrcString Pointer to the string containing a VT100 escape to convert
+        to RTF.
 
  @param UnderlineState Points to a value containing the underline state.
         On input, this value should be TRUE to indicate text is currently
@@ -378,13 +373,12 @@ BOOL
 YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength,
+    __in PCYORI_STRING SrcString,
     __inout PBOOLEAN UnderlineState
     )
 {
-    LPTSTR SrcPoint = StringBuffer;
-    DWORD  SrcOffset = 0;
+    LPTSTR SrcPoint;
+    DWORD  SrcOffset;
     WORD   NewColor = CVTVT_DEFAULT_COLOR;
     DWORD  RemainingLength;
     DWORD  DestOffset;
@@ -392,10 +386,12 @@ YoriLibRtfGenerateEscapeString(
     LPTSTR UnderlineString;
     BOOLEAN PreviousUnderlineOn;
 
-    RemainingLength = BufferLength;
+    RemainingLength = SrcString->LengthInChars;
 
     TextString->LengthInChars = 0;
     DestOffset = 0;
+    SrcPoint = SrcString->StartOfString;
+    SrcOffset = 0;
 
     //
     //  We expect an escape initiator (two chars) and a 'm' for color
@@ -403,8 +399,8 @@ YoriLibRtfGenerateEscapeString(
     //  is redundant.
     //
 
-    if (BufferLength >= 3 &&
-        SrcPoint[BufferLength - 1] == 'm') {
+    if (SrcString->LengthInChars >= 3 &&
+        SrcPoint[SrcString->LengthInChars - 1] == 'm') {
 
         DWORD code;
         TCHAR NewTag[128];
@@ -646,10 +642,7 @@ YoriLibRtfCnvEndStream(
  @param hOutput The output context to populate with the translated text
         information.
 
- @param StringBuffer Pointer to a string buffer containing the text to
-        process.
-
- @param BufferLength Indicates the number of characters in StringBuffer.
+ @param String Pointer to a string buffer containing the text to process.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -657,8 +650,7 @@ __success(return)
 BOOL
 YoriLibRtfCnvProcessAndOutputText(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
 
@@ -668,7 +660,7 @@ YoriLibRtfCnvProcessAndOutputText(
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, String)) {
         return FALSE;
     }
 
@@ -677,7 +669,7 @@ YoriLibRtfCnvProcessAndOutputText(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, String)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -698,10 +690,7 @@ YoriLibRtfCnvProcessAndOutputText(
  @param hOutput The output context to populate with the translated escape
         information.
 
- @param StringBuffer Pointer to a string buffer containing the escape to
-        process.
-
- @param BufferLength Indicates the number of characters in StringBuffer.
+ @param String Pointer to a string buffer containing the escape to process.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -709,8 +698,7 @@ __success(return)
 BOOL
 YoriLibRtfCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
     YORI_STRING TextString;
@@ -721,7 +709,7 @@ YoriLibRtfCnvProcessAndOutputEscape(
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
     DummyUnderlineState = Context->UnderlineState;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &DummyUnderlineState)) {
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, String, &DummyUnderlineState)) {
         return FALSE;
     }
 
@@ -730,7 +718,7 @@ YoriLibRtfCnvProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &Context->UnderlineState)) {
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, String, &Context->UnderlineState)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }

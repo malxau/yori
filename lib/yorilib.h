@@ -790,8 +790,7 @@ BOOL
 YoriLibHtmlGenerateTextString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING SrcString
     );
 
 __success(return)
@@ -799,8 +798,7 @@ BOOL
 YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength,
+    __in PCYORI_STRING SrcString,
     __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     );
 
@@ -833,8 +831,7 @@ BOOL
 YoriLibRtfGenerateTextString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING SrcString
     );
 
 __success(return)
@@ -842,8 +839,7 @@ BOOL
 YoriLibRtfGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength,
+    __in PCYORI_STRING SrcString,
     __inout PBOOLEAN UnderlineState
     );
 
@@ -2659,8 +2655,7 @@ YoriLibGetTempPath(
 BOOL
 YoriLibOutputTextToMultibyteDevice(
     __in HANDLE hOutput,
-    __in LPCTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     );
 
 /**
@@ -2701,13 +2696,13 @@ typedef BOOL (* YORI_LIB_VT_END_STREAM_FN)(HANDLE);
 /**
  Output text between escapes to the output device.
 */
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, LPTSTR, DWORD);
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, PCYORI_STRING);
 
 /**
  A callback function to receive an escape and translate it into the
  appropriate action.
 */
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, LPTSTR, DWORD);
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, PCYORI_STRING);
 
 /**
  A set of callback functions that can be invoked when processing VT100
@@ -2829,7 +2824,7 @@ YoriLibVtGetDefaultColor(VOID);
 BOOL
 YoriLibVtFinalColorFromSequence(
     __in WORD InitialColor,
-    __in PYORI_STRING EscapeSequence,
+    __in PCYORI_STRING EscapeSequence,
     __out PWORD FinalColor
     );
 

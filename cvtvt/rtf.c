@@ -51,7 +51,7 @@ CvtvtRtfInitializeStream(
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, OutputString.StartOfString, OutputString.LengthInChars);
+    YoriLibOutputTextToMultibyteDevice(hOutput, &OutputString);
     YoriLibFreeStringContents(&OutputString);
     return TRUE;
 }
@@ -76,7 +76,7 @@ CvtvtRtfEndStream(
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, OutputString.StartOfString, OutputString.LengthInChars);
+    YoriLibOutputTextToMultibyteDevice(hOutput, &OutputString);
     YoriLibFreeStringContents(&OutputString);
 
     return TRUE;
@@ -90,18 +90,14 @@ CvtvtRtfEndStream(
  @param hOutput The output stream to populate with the translated text
         information.
 
- @param StringBuffer Pointer to a string buffer containing the text to
-        process.
-
- @param BufferLength Indicates the number of characters in StringBuffer.
+ @param String Pointer to a string buffer containing the text to process.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtRtfProcessAndOutputText(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
 
@@ -110,7 +106,7 @@ CvtvtRtfProcessAndOutputText(
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, String)) {
         return FALSE;
     }
 
@@ -119,12 +115,12 @@ CvtvtRtfProcessAndOutputText(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibRtfGenerateTextString(&TextString, &BufferSizeNeeded, String)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, TextString.StartOfString, TextString.LengthInChars);
+    YoriLibOutputTextToMultibyteDevice(hOutput, &TextString);
 
     YoriLibFreeStringContents(&TextString);
     return TRUE;
@@ -137,18 +133,14 @@ CvtvtRtfProcessAndOutputText(
  @param hOutput The output stream to populate with the translated escape
         information.
 
- @param StringBuffer Pointer to a string buffer containing the escape to
-        process.
-
- @param BufferLength Indicates the number of characters in StringBuffer.
+ @param String Pointer to a string buffer containing the escape to process.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtRtfProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
     YORI_STRING TextString;
@@ -158,7 +150,7 @@ CvtvtRtfProcessAndOutputEscape(
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
     DummyUnderlineState = CvtvtRtfUnderlineOn;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &DummyUnderlineState)) {
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, String, &DummyUnderlineState)) {
         return FALSE;
     }
 
@@ -167,12 +159,12 @@ CvtvtRtfProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength, &CvtvtRtfUnderlineOn)) {
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, String, &CvtvtRtfUnderlineOn)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
 
-    YoriLibOutputTextToMultibyteDevice(hOutput, TextString.StartOfString, TextString.LengthInChars);
+    YoriLibOutputTextToMultibyteDevice(hOutput, &TextString);
 
     YoriLibFreeStringContents(&TextString);
     return TRUE;

@@ -4,7 +4,7 @@
  * Convert VT100/ANSI escape sequences into other formats, including the 
  * console.
  *
- * Copyright (c) 2015-20 Malcolm J. Smith
+ * Copyright (c) 2015-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -136,55 +136,55 @@ YoriLibVtGetLineEnding(VOID)
 
  @param hOutput Handle to the device to receive any output.
 
- @param StringBuffer Pointer to the string to output which is in host (UTF16)
+ @param String Pointer to the string to output which is in host (UTF16)
         encoding.
-
- @param BufferLength Length of StringBuffer, in characters.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibOutputTextToMultibyteDevice(
     __in HANDLE hOutput,
-    __in LPCTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
-    DWORD  BytesTransferred;
+    DWORD BytesTransferred;
     BOOL Result;
 
 #ifdef UNICODE
     {
-        CHAR ansi_stack_buf[64 + 1];
+        CHAR AnsiStackBuf[64 + 1];
         DWORD AnsiBytesNeeded;
-        LPSTR ansi_buf;
+        LPSTR AnsiBuf;
 
-        AnsiBytesNeeded = YoriLibGetMultibyteOutputSizeNeeded(StringBuffer, BufferLength);
+        AnsiBytesNeeded = YoriLibGetMultibyteOutputSizeNeeded(String->StartOfString, String->LengthInChars);
 
-        if (AnsiBytesNeeded > (int)sizeof(ansi_stack_buf)) {
-            ansi_buf = YoriLibMalloc(AnsiBytesNeeded);
+        if (AnsiBytesNeeded > (int)sizeof(AnsiStackBuf)) {
+            AnsiBuf = YoriLibMalloc(AnsiBytesNeeded);
         } else {
-            ansi_buf = ansi_stack_buf;
+            AnsiBuf = AnsiStackBuf;
         }
 
-        if (ansi_buf != NULL) {
-            YoriLibMultibyteOutput(StringBuffer,
-                                   BufferLength,
-                                   ansi_buf,
+        if (AnsiBuf != NULL) {
+            YoriLibMultibyteOutput(String->StartOfString,
+                                   String->LengthInChars,
+                                   AnsiBuf,
                                    AnsiBytesNeeded);
 
-            Result = WriteFile(hOutput, ansi_buf, AnsiBytesNeeded, &BytesTransferred, NULL);
+            Result = WriteFile(hOutput, AnsiBuf, AnsiBytesNeeded, &BytesTransferred, NULL);
 
-            if (ansi_buf != ansi_stack_buf) {
-                YoriLibFree(ansi_buf);
+            if (AnsiBuf != AnsiStackBuf) {
+                YoriLibFree(AnsiBuf);
             }
         } else {
             Result = FALSE;
-            BufferLength = 0;
         }
     }
 #else
-    Result = WriteFile(hOutput,StringBuffer,BufferLength*sizeof(TCHAR),&BytesTransferred,NULL);
+    Result = WriteFile(hOutput,
+                       String->StartOfString,
+                       String->LengthInChars*sizeof(TCHAR),
+                       &BytesTransferred,
+                       NULL);
 #endif
     return Result;
 }
@@ -195,27 +195,27 @@ YoriLibOutputTextToMultibyteDevice(
 
  @param hOutput Handle to the device to receive any output.
 
- @param StringBuffer Pointer to the string to output, which can have any line
+ @param String Pointer to the string to output, which can have any line
         ending and is in host (UTF16) encoding.
-
- @param BufferLength Length of StringBuffer, in characters.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YoriLibOutputTextToMultibyteNormalizeLineEnding(
     __in HANDLE hOutput,
-    __in LPCTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
     YORI_STRING SearchString;
+    YORI_STRING DisplayString;
     DWORD NonLineEndLength;
     DWORD CharsToIgnore;
     BOOL GenerateLineEnd;
 
-    SearchString.StartOfString = (LPTSTR)StringBuffer;
-    SearchString.LengthInChars = BufferLength;
+    YoriLibInitEmptyString(&DisplayString);
+    YoriLibInitEmptyString(&SearchString);
+    SearchString.StartOfString = String->StartOfString;
+    SearchString.LengthInChars = String->LengthInChars;
 
     while(TRUE) {
         NonLineEndLength = YoriLibCountStringNotContainingChars(&SearchString, _T("\r\n"));
@@ -239,14 +239,18 @@ YoriLibOutputTextToMultibyteNormalizeLineEnding(
             }
         }
 
-        if (NonLineEndLength > 0 &&
-            !YoriLibOutputTextToMultibyteDevice(hOutput, SearchString.StartOfString, NonLineEndLength)) {
+        if (NonLineEndLength > 0) {
+            DisplayString.StartOfString = SearchString.StartOfString;
+            DisplayString.LengthInChars = NonLineEndLength;
 
-            return FALSE;
+            if (!YoriLibOutputTextToMultibyteDevice(hOutput, &DisplayString)) {
+                return FALSE;
+            }
         }
 
         if (GenerateLineEnd) {
-            if (!YoriLibOutputTextToMultibyteDevice(hOutput, YoriLibVtLineEnding, _tcslen(YoriLibVtLineEnding))) {
+            YoriLibConstantString(&DisplayString, YoriLibVtLineEnding);
+            if (!YoriLibOutputTextToMultibyteDevice(hOutput, &DisplayString)) {
                 return FALSE;
             }
         }
@@ -305,24 +309,23 @@ YoriLibConsoleEndStream(
 
  @param hOutput Handle to the output console.
 
- @param StringBuffer Pointer to the string to output.
-
- @param BufferLength Number of characters in the string.
+ @param String Pointer to the string to output.
 
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibConsoleProcessAndOutputText(
-    HANDLE hOutput,
-    LPTSTR StringBuffer,
-    DWORD BufferLength
+    __in HANDLE hOutput,
+    __in PCYORI_STRING String
     )
 {
     DWORD  BytesTransferred;
 
-    UNREFERENCED_PARAMETER(hOutput);
-
-    WriteConsole(hOutput,StringBuffer,BufferLength,&BytesTransferred,NULL);
+    WriteConsole(hOutput,
+                 String->StartOfString,
+                 String->LengthInChars,
+                 &BytesTransferred,
+                 NULL);
     return TRUE;
 }
 
@@ -331,23 +334,19 @@ YoriLibConsoleProcessAndOutputText(
  
  @param hOutput Handle to the output console.
 
- @param StringBuffer Pointer to a buffer describing the escape.
-
- @param BufferLength The number of characters in the escape.
+ @param String Pointer to a buffer describing the escape.
 
  @return TRUE for success, FALSE for failure.  Note this particular variant
          can't exactly fail.
  */
 BOOL
 YoriLibConsoleProcessAndIgnoreEscape(
-    HANDLE hOutput,
-    LPTSTR StringBuffer,
-    DWORD BufferLength
+    __in HANDLE hOutput,
+    __in PCYORI_STRING String
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
-    UNREFERENCED_PARAMETER(StringBuffer);
-    UNREFERENCED_PARAMETER(BufferLength);
+    UNREFERENCED_PARAMETER(String);
 
     return TRUE;
 }
@@ -368,7 +367,7 @@ YoriLibConsoleProcessAndIgnoreEscape(
 BOOL
 YoriLibVtFinalColorFromSequence(
     __in WORD InitialColor,
-    __in PYORI_STRING EscapeSequence,
+    __in PCYORI_STRING EscapeSequence,
     __out PWORD FinalColor
     )
 {
@@ -481,22 +480,25 @@ YoriLibVtFinalColorFromSequence(
  
  @param hOutput Handle to the output console.
 
- @param StringBuffer Pointer to a buffer describing the escape.
-
- @param BufferLength The number of characters in the escape.
+ @param String Pointer to a buffer describing the escape.
 
  @return TRUE for success, FALSE for failure.
  */
 BOOL
 YoriLibConsoleProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
-    YORI_STRING EscapeCode;
     WORD NewColor;
+
+    //
+    //  MSFIX: Optimize this.  It should be possible to have
+    //  FinalColorFromSequence output a color and two booleans indicating
+    //  whether the current foreground or background should be applied,
+    //  so the query can be deferred except for single-color change events.
+    //
 
     ConsoleInfo.wAttributes = DEFAULT_COLOR;
     GetConsoleScreenBufferInfo(hOutput, &ConsoleInfo);
@@ -507,11 +509,7 @@ YoriLibConsoleProcessAndOutputEscape(
         YoriLibVtResetColorSet = TRUE;
     }
 
-    YoriLibInitEmptyString(&EscapeCode);
-    EscapeCode.StartOfString = StringBuffer;
-    EscapeCode.LengthInChars = BufferLength;
-
-    if (YoriLibVtFinalColorFromSequence(NewColor, &EscapeCode, &NewColor)) {
+    if (YoriLibVtFinalColorFromSequence(NewColor, String, &NewColor)) {
 
         SetConsoleTextAttribute(hOutput, NewColor);
     }
@@ -621,20 +619,17 @@ YoriLibUtf8TextEndStream(
 
  @param hOutput Handle to the output device.
 
- @param StringBuffer Pointer to the string to output.
-
- @param BufferLength Number of characters in the string.
+ @param String Pointer to the string to output.
 
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibUtf8TextProcessAndOutputText(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
-    return YoriLibOutputTextToMultibyteNormalizeLineEnding(hOutput, StringBuffer, BufferLength);
+    return YoriLibOutputTextToMultibyteNormalizeLineEnding(hOutput, String);
 }
 
 /**
@@ -642,22 +637,18 @@ YoriLibUtf8TextProcessAndOutputText(
  
  @param hOutput Handle to the output device (ignored.)
 
- @param StringBuffer Pointer to a buffer describing the escape (ignored.)
-
- @param BufferLength The number of characters in the escape (ignored.)
+ @param String Pointer to a buffer describing the escape (ignored.)
 
  @return TRUE for success, FALSE for failure.
  */
 BOOL
 YoriLibUtf8TextProcessAndOutputEscape(
-    HANDLE hOutput,
-    LPTSTR StringBuffer,
-    DWORD BufferLength
+    __in HANDLE hOutput,
+    __in PCYORI_STRING String
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
-    UNREFERENCED_PARAMETER(StringBuffer);
-    UNREFERENCED_PARAMETER(BufferLength);
+    UNREFERENCED_PARAMETER(String);
 
     return TRUE;
 }
@@ -745,17 +736,14 @@ YoriLibDebuggerEndStream(
 
  @param hOutput Handle to the output device, ignored for debugger.
 
- @param StringBuffer Pointer to the string to output.
-
- @param BufferLength Number of characters in the string.
+ @param String Pointer to the string to output.
 
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibDebuggerProcessAndOutputText(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
     TCHAR StackBuf[64 + 1];
@@ -765,27 +753,27 @@ YoriLibDebuggerProcessAndOutputText(
 
     UNREFERENCED_PARAMETER(hOutput);
 
-    if (BufferLength <= 64) {
+    if (String->LengthInChars <= 64) {
         Buffer = StackBuf;
     } else {
-        Buffer = YoriLibMalloc((BufferLength + 1) * sizeof(TCHAR));
+        Buffer = YoriLibMalloc((String->LengthInChars + 1) * sizeof(TCHAR));
         if (Buffer == NULL) {
             return FALSE;
         }
     }
 
     WriteIndex = 0;
-    for (ReadIndex = 0; ReadIndex < BufferLength; ReadIndex++) {
-        if (StringBuffer[ReadIndex] == '\r') {
-            if (ReadIndex + 1 < BufferLength &&
-                StringBuffer[ReadIndex] == '\n') {
+    for (ReadIndex = 0; ReadIndex < String->LengthInChars; ReadIndex++) {
+        if (String->StartOfString[ReadIndex] == '\r') {
+            if (ReadIndex + 1 < String->LengthInChars &&
+                String->StartOfString[ReadIndex] == '\n') {
 
                 ReadIndex++;
             } else {
                 Buffer[WriteIndex++] = '\n';
             }
         } else {
-            Buffer[WriteIndex++] = StringBuffer[ReadIndex];
+            Buffer[WriteIndex++] = String->StartOfString[ReadIndex];
         }
     }
 
@@ -804,22 +792,18 @@ YoriLibDebuggerProcessAndOutputText(
  
  @param hOutput Handle to the output device (ignored.)
 
- @param StringBuffer Pointer to a buffer describing the escape (ignored.)
-
- @param BufferLength The number of characters in the escape (ignored.)
+ @param String Pointer to a buffer describing the escape (ignored.)
 
  @return TRUE for success, FALSE for failure.
  */
 BOOL
 YoriLibDebuggerProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
-    UNREFERENCED_PARAMETER(StringBuffer);
-    UNREFERENCED_PARAMETER(BufferLength);
+    UNREFERENCED_PARAMETER(String);
 
     return TRUE;
 }
@@ -872,9 +856,11 @@ YoriLibProcessVtEscapesOnOpenStream(
     DWORD PreviouslyConsumed;
     TCHAR VtEscape[] = {27, '\0'};
     YORI_STRING SearchString;
+    YORI_STRING DisplayString;
 
     CurrentPoint = String;
     YoriLibInitEmptyString(&SearchString);
+    YoriLibInitEmptyString(&DisplayString);
     SearchString.StartOfString = CurrentPoint;
     SearchString.LengthInChars = StringLength;
     CurrentOffset = YoriLibCountStringNotContainingChars(&SearchString, VtEscape);
@@ -887,7 +873,9 @@ YoriLibProcessVtEscapesOnOpenStream(
         //
 
         if (CurrentOffset > 0) {
-            if (!Callbacks->ProcessAndOutputText(hOutput, CurrentPoint, CurrentOffset)) {
+            DisplayString.StartOfString = CurrentPoint;
+            DisplayString.LengthInChars = CurrentOffset;
+            if (!Callbacks->ProcessAndOutputText(hOutput, &DisplayString)) {
                 return FALSE;
             }
 
@@ -932,7 +920,10 @@ YoriLibProcessVtEscapesOnOpenStream(
                     break;
                 }
 
-                if (!Callbacks->ProcessAndOutputEscape(hOutput, CurrentPoint, EndOfEscape + 3)) {
+                DisplayString.StartOfString = CurrentPoint;
+                DisplayString.LengthInChars = EndOfEscape + 3;
+
+                if (!Callbacks->ProcessAndOutputEscape(hOutput, &DisplayString)) {
                     return FALSE;
                 }
                 CurrentPoint = CurrentPoint + EndOfEscape + 3;
@@ -944,7 +935,9 @@ YoriLibProcessVtEscapesOnOpenStream(
                 //  match
                 //
 
-                if (!Callbacks->ProcessAndOutputText(hOutput, CurrentPoint, 1)) {
+                DisplayString.StartOfString = CurrentPoint;
+                DisplayString.LengthInChars = 1;
+                if (!Callbacks->ProcessAndOutputText(hOutput, &DisplayString)) {
                     return FALSE;
                 }
                 CurrentPoint++;

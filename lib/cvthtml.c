@@ -297,10 +297,8 @@ YoriLibHtmlGenerateEndString(
  @param BufferSizeNeeded On successful completion, indicates the number of
         characters needed in the TextString buffer to complete the operation.
 
- @param StringBuffer Pointer to the string containing a VT100 escape to
+ @param SrcString Pointer to the string containing a VT100 escape to
         convert to HTML.
-
- @param BufferLength Specifies the number of characters in StringBuffer.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -309,8 +307,7 @@ BOOL
 YoriLibHtmlGenerateTextString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING SrcString
     )
 {
 
@@ -328,11 +325,11 @@ YoriLibHtmlGenerateTextString(
     //
 
     TextString->LengthInChars = 0;
-    SrcPoint = StringBuffer;
+    SrcPoint = SrcString->StartOfString;
 
     do {
         SearchString.StartOfString = SrcPoint;
-        SearchString.LengthInChars = BufferLength - SrcConsumed;
+        SearchString.LengthInChars = SrcString->LengthInChars - SrcConsumed;
         SrcOffset = YoriLibCountStringNotContainingChars(&SearchString, LookFor);
         if (SrcOffset > 0) {
             if (DestOffset + SrcOffset < TextString->LengthAllocated) {
@@ -345,7 +342,7 @@ YoriLibHtmlGenerateTextString(
             SrcConsumed += SrcOffset;
         }
 
-        if (SrcConsumed < BufferLength) {
+        if (SrcConsumed < SrcString->LengthInChars) {
 
             //
             //  Escape things that could be tags, and parse escape sequences
@@ -386,7 +383,7 @@ YoriLibHtmlGenerateTextString(
             }
         }
 
-    } while (SrcConsumed < BufferLength);
+    } while (SrcConsumed < SrcString->LengthInChars);
 
     if (DestOffset < TextString->LengthAllocated) {
         TextString->StartOfString[DestOffset] = '\0';
@@ -412,10 +409,8 @@ YoriLibHtmlGenerateTextString(
  @param ColorTable Pointer to a color table describing how to convert the 16
         colors into RGB.  If NULL, a default mapping is used.
 
- @param StringBuffer Pointer to the string containing a VT100 escape to
-        convert to HTML.
-
- @param BufferLength Specifies the number of characters in StringBuffer.
+ @param SrcString Pointer to the string containing a VT100 escape to convert
+        to HTML.
 
  @param GenerateContext Pointer to the context recording state while
         generation is in progress.
@@ -428,22 +423,23 @@ YoriLibHtmlGenerateEscapeStringInternal(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
     __in_opt PDWORD ColorTable,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength,
+    __in PCYORI_STRING SrcString,
     __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
 {
-    LPTSTR SrcPoint = StringBuffer;
-    DWORD  SrcOffset = 0;
+    LPTSTR SrcPoint;
+    DWORD  SrcOffset;
     WORD   NewColor = CVTVT_DEFAULT_COLOR;
     DWORD  RemainingLength;
     DWORD  DestOffset;
     YORI_STRING SearchString;
 
-    RemainingLength = BufferLength;
+    SrcPoint = SrcString->StartOfString;
+    RemainingLength = SrcString->LengthInChars;
 
     TextString->LengthInChars = 0;
     DestOffset = 0;
+    SrcOffset = 0;
 
     //
     //  We expect an escape initiator (two chars) and a 'm' for color
@@ -451,8 +447,8 @@ YoriLibHtmlGenerateEscapeStringInternal(
     //  is redundant.
     //
 
-    if (BufferLength >= 3 &&
-        SrcPoint[BufferLength - 1] == 'm') {
+    if (SrcString->LengthInChars >= 3 &&
+        SrcPoint[SrcString->LengthInChars - 1] == 'm') {
 
         DWORD code;
         TCHAR NewTag[128];
@@ -617,10 +613,8 @@ YoriLibHtmlGenerateEscapeStringInternal(
  @param BufferSizeNeeded On successful completion, indicates the number of
         characters needed in the TextString buffer to complete the operation.
 
- @param StringBuffer Pointer to the string containing a VT100 escape to
-        convert to HTML.
-
- @param BufferLength Specifies the number of characters in StringBuffer.
+ @param SrcString Pointer to the string containing a VT100 escape to convert
+        to HTML.
 
  @param GenerateContext Pointer to the context recording state while
         generation is in progress.
@@ -632,12 +626,11 @@ BOOL
 YoriLibHtmlGenerateEscapeString(
     __inout PYORI_STRING TextString,
     __out PDWORD BufferSizeNeeded,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength,
+    __in PCYORI_STRING SrcString,
     __inout PYORILIB_HTML_GENERATE_CONTEXT GenerateContext
     )
 {
-    return YoriLibHtmlGenerateEscapeStringInternal(TextString, BufferSizeNeeded, NULL, StringBuffer, BufferLength, GenerateContext);
+    return YoriLibHtmlGenerateEscapeStringInternal(TextString, BufferSizeNeeded, NULL, SrcString, GenerateContext);
 }
 
 /**
@@ -763,10 +756,7 @@ YoriLibHtmlCnvEndStream(
  @param hOutput The output context to populate with the translated text
         information.
 
- @param StringBuffer Pointer to a string buffer containing the text to
-        process.
-
- @param BufferLength Indicates the number of characters in StringBuffer.
+ @param String Pointer to a string buffer containing the text to process.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -774,8 +764,7 @@ __success(return)
 BOOL
 YoriLibHtmlCnvProcessAndOutputText(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
 
@@ -785,7 +774,7 @@ YoriLibHtmlCnvProcessAndOutputText(
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateTextString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibHtmlGenerateTextString(&TextString, &BufferSizeNeeded, String)) {
         return FALSE;
     }
 
@@ -794,7 +783,7 @@ YoriLibHtmlCnvProcessAndOutputText(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateTextString(&TextString, &BufferSizeNeeded, StringBuffer, BufferLength)) {
+    if (!YoriLibHtmlGenerateTextString(&TextString, &BufferSizeNeeded, String)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -816,10 +805,7 @@ YoriLibHtmlCnvProcessAndOutputText(
  @param hOutput The output context to populate with the translated escape
         information.
 
- @param StringBuffer Pointer to a string buffer containing the escape to
-        process.
-
- @param BufferLength Indicates the number of characters in StringBuffer.
+ @param String Pointer to a string buffer containing the escape to process.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
@@ -827,8 +813,7 @@ __success(return)
 BOOL
 YoriLibHtmlCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in LPTSTR StringBuffer,
-    __in DWORD BufferLength
+    __in PCYORI_STRING String
     )
 {
     YORI_STRING TextString;
@@ -840,7 +825,7 @@ YoriLibHtmlCnvProcessAndOutputEscape(
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength, &DummyGenerateContext)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, String, &DummyGenerateContext)) {
         return FALSE;
     }
 
@@ -849,7 +834,7 @@ YoriLibHtmlCnvProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, StringBuffer, BufferLength, &Context->GenerateContext)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, String, &Context->GenerateContext)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
