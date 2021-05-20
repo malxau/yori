@@ -2686,23 +2686,23 @@ YoriLibOutputTextToMultibyteDevice(
 /**
  Initialize the output stream with any header information.
 */
-typedef BOOL (* YORI_LIB_VT_INITIALIZE_STREAM_FN)(HANDLE);
+typedef BOOL (* YORI_LIB_VT_INITIALIZE_STREAM_FN)(HANDLE, DWORDLONG*);
 
 /**
  End processing for the specified stream.
 */
-typedef BOOL (* YORI_LIB_VT_END_STREAM_FN)(HANDLE);
+typedef BOOL (* YORI_LIB_VT_END_STREAM_FN)(HANDLE, DWORDLONG*);
 
 /**
  Output text between escapes to the output device.
 */
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, PCYORI_STRING);
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
 
 /**
  A callback function to receive an escape and translate it into the
  appropriate action.
 */
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, PCYORI_STRING);
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
 
 /**
  A set of callback functions that can be invoked when processing VT100
@@ -2730,6 +2730,11 @@ typedef struct _YORI_LIB_VT_CALLBACK_FUNCTIONS {
      appropriate action.
     */
     YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN ProcessAndOutputEscape;
+
+    /**
+     Context which is passed between functions and is opaque to the VT engine.
+     */
+    DWORDLONG Context;
 
 } YORI_LIB_VT_CALLBACK_FUNCTIONS, *PYORI_LIB_VT_CALLBACK_FUNCTIONS;
 

@@ -37,14 +37,19 @@ BOOLEAN CvtvtRtfUnderlineOn = FALSE;
 
  @param hOutput The stream to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtRtfInitializeStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __in PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&OutputString);
     if (!YoriLibRtfGenerateInitialString(&OutputString, NULL)) {
@@ -62,14 +67,18 @@ CvtvtRtfInitializeStream(
 
  @param hOutput The stream to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtRtfEndStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __in PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
+    UNREFERENCED_PARAMETER(Context);
     YoriLibInitEmptyString(&OutputString);
 
     if (!YoriLibRtfGenerateEndString(&OutputString)) {
@@ -92,17 +101,22 @@ CvtvtRtfEndStream(
 
  @param String Pointer to a string buffer containing the text to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtRtfProcessAndOutputText(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __in PDWORDLONG Context
     )
 {
 
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
@@ -135,17 +149,22 @@ CvtvtRtfProcessAndOutputText(
 
  @param String Pointer to a string buffer containing the escape to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtRtfProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __in PDWORDLONG Context
     )
 {
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
     BOOLEAN DummyUnderlineState;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;

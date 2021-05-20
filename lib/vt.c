@@ -276,14 +276,18 @@ YoriLibOutputTextToMultibyteNormalizeLineEnding(
 
  @param hOutput The output stream to initialize.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibConsoleInitializeStream(
-    HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -292,14 +296,20 @@ YoriLibConsoleInitializeStream(
  End processing for the specified stream.  For console output, this is
  pointless.
 
+ @param hOutput The output stream to end.
+
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibConsoleEndStream(
-    HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -311,15 +321,19 @@ YoriLibConsoleEndStream(
 
  @param String Pointer to the string to output.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibConsoleProcessAndOutputText(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
-    DWORD  BytesTransferred;
+    DWORD BytesTransferred;
+    UNREFERENCED_PARAMETER(Context);
 
     WriteConsole(hOutput,
                  String->StartOfString,
@@ -336,20 +350,42 @@ YoriLibConsoleProcessAndOutputText(
 
  @param String Pointer to a buffer describing the escape.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE for failure.  Note this particular variant
          can't exactly fail.
  */
 BOOL
 YoriLibConsoleProcessAndIgnoreEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
     UNREFERENCED_PARAMETER(String);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
+
+/**
+ Specifies the value to indicate a new color derives its foreground from the
+ existing color.
+ */
+#define INITIAL_COMPONENT_FOREGROUND 0x0001
+
+/**
+ Specifies the value to indicate a new color derives its background from the
+ existing color.
+ */
+#define INITIAL_COMPONENT_BACKGROUND 0x0002
+
+/**
+ Specifies the value to indicate a new color derives its underline from the
+ existing color.
+ */
+#define INITIAL_COMPONENT_UNDERLINE  0x0004
 
 /**
  Given a starting color and a VT sequence which may change it, generate the
@@ -362,18 +398,24 @@ YoriLibConsoleProcessAndIgnoreEscape(
  @param FinalColor On successful completion, updated to contain the final
         color.
 
+ @param InitialComponentsUsed On successful completion, updated to indicate
+        which components of the initial color are propagated into the new
+        color.
+
  @return TRUE to indicate successful completion, FALSE to indicate failure.
  */
 BOOL
-YoriLibVtFinalColorFromSequence(
+YoriLibVtFinalColorFromSequenceEx(
     __in WORD InitialColor,
     __in PCYORI_STRING EscapeSequence,
-    __out PWORD FinalColor
+    __out PWORD FinalColor,
+    __out PWORD InitialComponentsUsed
     )
 {
     LPTSTR CurrentPoint = EscapeSequence->StartOfString;
     DWORD CurrentOffset = 0;
     DWORD RemainingLength;
+    WORD  ComponentsUsed = INITIAL_COMPONENT_FOREGROUND | INITIAL_COMPONENT_BACKGROUND | INITIAL_COMPONENT_UNDERLINE;
     WORD  NewColor;
     YORI_STRING SearchString;
 
@@ -389,7 +431,7 @@ YoriLibVtFinalColorFromSequence(
     if (EscapeSequence->LengthInChars >= 3 &&
         CurrentPoint[EscapeSequence->LengthInChars - 1] == 'm') {
 
-        DWORD code;
+        DWORD Code;
         BOOLEAN NewUnderline = FALSE;
         DWORD ColorTable[] = {0,
                               FOREGROUND_RED,
@@ -420,28 +462,36 @@ YoriLibVtFinalColorFromSequence(
 
             SearchString.StartOfString = CurrentPoint;
             SearchString.LengthInChars = RemainingLength;
-            code = YoriLibDecimalStringToInt(&SearchString);
-            if (code == 0) {
+            Code = YoriLibDecimalStringToInt(&SearchString);
+            if (Code == 0) {
+                ComponentsUsed = 0;
                 NewColor = YoriLibVtResetColor;
                 NewUnderline = FALSE;
-            } else if (code == 1) {
+            } else if (Code == 1) {
                 NewColor |= FOREGROUND_INTENSITY;
-            } else if (code == 4) {
+            } else if (Code == 4) {
+                ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_UNDERLINE));
                 NewUnderline = TRUE;
-            } else if (code == 7) {
+            } else if (Code == 7) {
                 NewColor = (WORD)(((NewColor & 0xf) << 4) | ((NewColor & 0xf0) >> 4));
-            } else if (code == 39) {
+            } else if (Code == 39) {
+                ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_FOREGROUND));
                 NewColor = (WORD)((NewColor & ~(0xf)) | (YoriLibVtResetColor & 0xf));
-            } else if (code == 49) {
+            } else if (Code == 49) {
+                ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_BACKGROUND));
                 NewColor = (WORD)((NewColor & ~(0xf0)) | (YoriLibVtResetColor & 0xf0));
-            } else if (code >= 30 && code <= 37) {
-                NewColor = (WORD)((NewColor & ~(0xf)) | ColorTable[code - 30]);
-            } else if (code >= 40 && code <= 47) {
-                NewColor = (WORD)((NewColor & ~(0xf0)) | (ColorTable[code - 40]<<4));
-            } else if (code >= 90 && code <= 97) {
-                NewColor = (WORD)((NewColor & ~(0xf)) | FOREGROUND_INTENSITY | ColorTable[code - 90]);
-            } else if (code >= 100 && code <= 107) {
-                NewColor = (WORD)((NewColor & ~(0xf0)) | BACKGROUND_INTENSITY | (ColorTable[code - 100]<<4));
+            } else if (Code >= 30 && Code <= 37) {
+                ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_FOREGROUND));
+                NewColor = (WORD)((NewColor & ~(0xf)) | ColorTable[Code - 30]);
+            } else if (Code >= 40 && Code <= 47) {
+                ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_BACKGROUND));
+                NewColor = (WORD)((NewColor & ~(0xf0)) | (ColorTable[Code - 40]<<4));
+            } else if (Code >= 90 && Code <= 97) {
+                ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_FOREGROUND));
+                NewColor = (WORD)((NewColor & ~(0xf)) | FOREGROUND_INTENSITY | ColorTable[Code - 90]);
+            } else if (Code >= 100 && Code <= 107) {
+                ComponentsUsed = (WORD)(ComponentsUsed & ~(INITIAL_COMPONENT_BACKGROUND));
+                NewColor = (WORD)((NewColor & ~(0xf0)) | BACKGROUND_INTENSITY | (ColorTable[Code - 100]<<4));
             }
 
             //
@@ -470,8 +520,34 @@ YoriLibVtFinalColorFromSequence(
     }
 
     *FinalColor = NewColor;
+    *InitialComponentsUsed = ComponentsUsed;
 
     return TRUE;
+}
+
+/**
+ Given a starting color and a VT sequence which may change it, generate the
+ final color.  Both colors are in Win32 attribute form.
+
+ @param InitialColor The starting color, in Win32 form.
+
+ @param EscapeSequence The VT100 sequence to apply to the starting color.
+
+ @param FinalColor On successful completion, updated to contain the final
+        color.
+
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
+ */
+BOOL
+YoriLibVtFinalColorFromSequence(
+    __in WORD InitialColor,
+    __in PCYORI_STRING EscapeSequence,
+    __out PWORD FinalColor
+    )
+{
+    WORD InitialComponentsUsed;
+
+    return YoriLibVtFinalColorFromSequenceEx(InitialColor, EscapeSequence, FinalColor, &InitialComponentsUsed);
 }
 
 /**
@@ -482,31 +558,62 @@ YoriLibVtFinalColorFromSequence(
 
  @param String Pointer to a buffer describing the escape.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE for failure.
  */
 BOOL
 YoriLibConsoleProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ConsoleInfo;
     WORD NewColor;
+    DWORD PreviousAttributes;
+    BOOLEAN NeedExistingColor;
+
+    PreviousAttributes = (DWORD)*Context;
 
     //
-    //  MSFIX: Optimize this.  It should be possible to have
-    //  FinalColorFromSequence output a color and two booleans indicating
-    //  whether the current foreground or background should be applied,
-    //  so the query can be deferred except for single-color change events.
+    //  Save the current color in the low 16 bits.  If a bit is set above
+    //  the 16 bits, it indicates those bits are meaningful.  If not,
+    //  the existing color requires a query from the console.
     //
 
-    ConsoleInfo.wAttributes = DEFAULT_COLOR;
-    GetConsoleScreenBufferInfo(hOutput, &ConsoleInfo);
-    NewColor = ConsoleInfo.wAttributes;
+    NewColor = LOWORD(PreviousAttributes);
+    NeedExistingColor = TRUE;
+    if (HIWORD(PreviousAttributes) != 0) {
+        NeedExistingColor = FALSE;
+    } else if (YoriLibVtResetColorSet) {
+        WORD InitialComponentsUsed;
 
-    if (!YoriLibVtResetColorSet) {
-        YoriLibVtResetColor = ConsoleInfo.wAttributes;
-        YoriLibVtResetColorSet = TRUE;
+        //
+        //  Check if the escape sequence can be resolved without querying
+        //  from the console, because it is fully specified.  If so, apply
+        //  the result without querying the previous color.
+        //
+
+        if (YoriLibVtFinalColorFromSequenceEx(0, String, &NewColor, &InitialComponentsUsed)) {
+            if (InitialComponentsUsed == 0) {
+                SetConsoleTextAttribute(hOutput, NewColor);
+                return TRUE;
+            }
+        }
+    }
+
+    if (NeedExistingColor) {
+        ConsoleInfo.wAttributes = DEFAULT_COLOR;
+        GetConsoleScreenBufferInfo(hOutput, &ConsoleInfo);
+        NewColor = ConsoleInfo.wAttributes;
+    
+        if (!YoriLibVtResetColorSet) {
+            YoriLibVtResetColor = ConsoleInfo.wAttributes;
+            YoriLibVtResetColorSet = TRUE;
+        }
+
+        *Context = ((1 << 16) | NewColor);
     }
 
     if (YoriLibVtFinalColorFromSequence(NewColor, String, &NewColor)) {
@@ -533,6 +640,7 @@ YoriLibConsoleSetFunctions(
     CallbackFunctions->EndStream = YoriLibConsoleEndStream;
     CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcessAndOutputText;
     CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcessAndOutputEscape;
+    CallbackFunctions->Context = 0;
     return TRUE;
 }
 
@@ -553,6 +661,7 @@ YoriLibConsoleNoEscapeSetFunctions(
     CallbackFunctions->EndStream = YoriLibConsoleEndStream;
     CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcessAndOutputText;
     CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcessAndIgnoreEscape;
+    CallbackFunctions->Context = 0;
     return TRUE;
 }
 
@@ -573,6 +682,7 @@ YoriLibConsoleIncludeEscapeSetFunctions(
     CallbackFunctions->EndStream = YoriLibConsoleEndStream;
     CallbackFunctions->ProcessAndOutputText = YoriLibConsoleProcessAndOutputText;
     CallbackFunctions->ProcessAndOutputEscape = YoriLibConsoleProcessAndOutputText;
+    CallbackFunctions->Context = 0;
     return TRUE;
 }
 
@@ -586,14 +696,18 @@ YoriLibConsoleIncludeEscapeSetFunctions(
 
  @param hOutput The output stream to initialize.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibUtf8TextInitializeStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -602,14 +716,20 @@ YoriLibUtf8TextInitializeStream(
  End processing for the specified stream.  For text output, this is
  pointless.
 
+ @param hOutput Handle to the output device.
+
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibUtf8TextEndStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -621,14 +741,18 @@ YoriLibUtf8TextEndStream(
 
  @param String Pointer to the string to output.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibUtf8TextProcessAndOutputText(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
+    UNREFERENCED_PARAMETER(Context);
     return YoriLibOutputTextToMultibyteNormalizeLineEnding(hOutput, String);
 }
 
@@ -639,16 +763,20 @@ YoriLibUtf8TextProcessAndOutputText(
 
  @param String Pointer to a buffer describing the escape (ignored.)
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE for failure.
  */
 BOOL
 YoriLibUtf8TextProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
     UNREFERENCED_PARAMETER(String);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -670,6 +798,7 @@ YoriLibUtf8TextNoEscapesSetFunctions(
     CallbackFunctions->EndStream = YoriLibUtf8TextEndStream;
     CallbackFunctions->ProcessAndOutputText = YoriLibUtf8TextProcessAndOutputText;
     CallbackFunctions->ProcessAndOutputEscape = YoriLibUtf8TextProcessAndOutputEscape;
+    CallbackFunctions->Context = 0;
     return TRUE;
 }
 
@@ -690,6 +819,7 @@ YoriLibUtf8TextWithEscapesSetFunctions(
     CallbackFunctions->EndStream = YoriLibUtf8TextEndStream;
     CallbackFunctions->ProcessAndOutputText = YoriLibUtf8TextProcessAndOutputText;
     CallbackFunctions->ProcessAndOutputEscape = YoriLibUtf8TextProcessAndOutputText;
+    CallbackFunctions->Context = 0;
     return TRUE;
 }
 
@@ -703,14 +833,18 @@ YoriLibUtf8TextWithEscapesSetFunctions(
 
  @param hOutput The output stream to initialize.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibDebuggerInitializeStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -719,14 +853,20 @@ YoriLibDebuggerInitializeStream(
  End processing for the specified stream.  For debugger output, this is
  pointless.
 
+ @param hOutput Handle to the output device, ignored for debugger.
+
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibDebuggerEndStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -738,12 +878,15 @@ YoriLibDebuggerEndStream(
 
  @param String Pointer to the string to output.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE on failure.
  */
 BOOL
 YoriLibDebuggerProcessAndOutputText(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     TCHAR StackBuf[64 + 1];
@@ -752,6 +895,7 @@ YoriLibDebuggerProcessAndOutputText(
     DWORD WriteIndex;
 
     UNREFERENCED_PARAMETER(hOutput);
+    UNREFERENCED_PARAMETER(Context);
 
     if (String->LengthInChars <= 64) {
         Buffer = StackBuf;
@@ -794,16 +938,20 @@ YoriLibDebuggerProcessAndOutputText(
 
  @param String Pointer to a buffer describing the escape (ignored.)
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE for success, FALSE for failure.
  */
 BOOL
 YoriLibDebuggerProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     UNREFERENCED_PARAMETER(hOutput);
     UNREFERENCED_PARAMETER(String);
+    UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
 }
@@ -825,6 +973,7 @@ YoriLibDebuggerSetFunctions(
     CallbackFunctions->EndStream = YoriLibDebuggerEndStream;
     CallbackFunctions->ProcessAndOutputText = YoriLibDebuggerProcessAndOutputText;
     CallbackFunctions->ProcessAndOutputEscape = YoriLibDebuggerProcessAndOutputEscape;
+    CallbackFunctions->Context = 0;
     return TRUE;
 }
 
@@ -875,7 +1024,7 @@ YoriLibProcessVtEscapesOnOpenStream(
         if (CurrentOffset > 0) {
             DisplayString.StartOfString = CurrentPoint;
             DisplayString.LengthInChars = CurrentOffset;
-            if (!Callbacks->ProcessAndOutputText(hOutput, &DisplayString)) {
+            if (!Callbacks->ProcessAndOutputText(hOutput, &DisplayString, &Callbacks->Context)) {
                 return FALSE;
             }
 
@@ -923,7 +1072,7 @@ YoriLibProcessVtEscapesOnOpenStream(
                 DisplayString.StartOfString = CurrentPoint;
                 DisplayString.LengthInChars = EndOfEscape + 3;
 
-                if (!Callbacks->ProcessAndOutputEscape(hOutput, &DisplayString)) {
+                if (!Callbacks->ProcessAndOutputEscape(hOutput, &DisplayString, &Callbacks->Context)) {
                     return FALSE;
                 }
                 CurrentPoint = CurrentPoint + EndOfEscape + 3;
@@ -937,7 +1086,7 @@ YoriLibProcessVtEscapesOnOpenStream(
 
                 DisplayString.StartOfString = CurrentPoint;
                 DisplayString.LengthInChars = 1;
-                if (!Callbacks->ProcessAndOutputText(hOutput, &DisplayString)) {
+                if (!Callbacks->ProcessAndOutputText(hOutput, &DisplayString, &Callbacks->Context)) {
                     return FALSE;
                 }
                 CurrentPoint++;
@@ -984,11 +1133,11 @@ YoriLibProcessVtEscapesOnNewStream(
 {
     BOOL Result;
 
-    Callbacks->InitializeStream(hOutput);
+    Callbacks->InitializeStream(hOutput, &Callbacks->Context);
 
     Result = YoriLibProcessVtEscapesOnOpenStream(String, StringLength, hOutput, Callbacks);
 
-    Callbacks->EndStream(hOutput);
+    Callbacks->EndStream(hOutput, &Callbacks->Context);
     return Result;
 }
 

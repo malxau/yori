@@ -693,23 +693,28 @@ YoriLibHtmlCvtAppendWithReallocate(
 
  @param hOutput The context to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibHtmlCnvInitializeStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
-    PYORI_LIB_HTML_CONVERT_CONTEXT Context = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_HTML_CONVERT_CONTEXT HtmlContext = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&OutputString);
-    if (!YoriLibHtmlGenerateInitialString(&OutputString, &Context->GenerateContext)) {
+    if (!YoriLibHtmlGenerateInitialString(&OutputString, &HtmlContext->GenerateContext)) {
         return FALSE;
     }
 
-    if (!YoriLibHtmlCvtAppendWithReallocate(Context->HtmlText, &OutputString)) {
+    if (!YoriLibHtmlCvtAppendWithReallocate(HtmlContext->HtmlText, &OutputString)) {
         YoriLibFreeStringContents(&OutputString);
         return FALSE;
     }
@@ -724,23 +729,29 @@ YoriLibHtmlCnvInitializeStream(
 
  @param hOutput The context to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibHtmlCnvEndStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
-    PYORI_LIB_HTML_CONVERT_CONTEXT Context = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_HTML_CONVERT_CONTEXT HtmlContext = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+
+    UNREFERENCED_PARAMETER(Context);
+
     YoriLibInitEmptyString(&OutputString);
 
-    if (!YoriLibHtmlGenerateEndString(&OutputString, &Context->GenerateContext)) {
+    if (!YoriLibHtmlGenerateEndString(&OutputString, &HtmlContext->GenerateContext)) {
         return FALSE;
     }
 
-    if (!YoriLibHtmlCvtAppendWithReallocate(Context->HtmlText, &OutputString)) {
+    if (!YoriLibHtmlCvtAppendWithReallocate(HtmlContext->HtmlText, &OutputString)) {
         YoriLibFreeStringContents(&OutputString);
         return FALSE;
     }
@@ -758,19 +769,24 @@ YoriLibHtmlCnvEndStream(
 
  @param String Pointer to a string buffer containing the text to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibHtmlCnvProcessAndOutputText(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
 
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
-    PYORI_LIB_HTML_CONVERT_CONTEXT Context = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_HTML_CONVERT_CONTEXT HtmlContext = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
@@ -788,7 +804,7 @@ YoriLibHtmlCnvProcessAndOutputText(
         return FALSE;
     }
 
-    if (!YoriLibHtmlCvtAppendWithReallocate(Context->HtmlText, &TextString)) {
+    if (!YoriLibHtmlCvtAppendWithReallocate(HtmlContext->HtmlText, &TextString)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -807,25 +823,30 @@ YoriLibHtmlCnvProcessAndOutputText(
 
  @param String Pointer to a string buffer containing the escape to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibHtmlCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
-    PYORI_LIB_HTML_CONVERT_CONTEXT Context = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_HTML_CONVERT_CONTEXT HtmlContext = (PYORI_LIB_HTML_CONVERT_CONTEXT)hOutput;
     YORILIB_HTML_GENERATE_CONTEXT DummyGenerateContext;
 
-    memcpy(&DummyGenerateContext, &Context->GenerateContext, sizeof(YORILIB_HTML_GENERATE_CONTEXT));
+    UNREFERENCED_PARAMETER(Context);
+
+    memcpy(&DummyGenerateContext, &HtmlContext->GenerateContext, sizeof(YORILIB_HTML_GENERATE_CONTEXT));
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, String, &DummyGenerateContext)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, HtmlContext->ColorTable, String, &DummyGenerateContext)) {
         return FALSE;
     }
 
@@ -834,12 +855,12 @@ YoriLibHtmlCnvProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, Context->ColorTable, String, &Context->GenerateContext)) {
+    if (!YoriLibHtmlGenerateEscapeStringInternal(&TextString, &BufferSizeNeeded, HtmlContext->ColorTable, String, &HtmlContext->GenerateContext)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
 
-    if (!YoriLibHtmlCvtAppendWithReallocate(Context->HtmlText, &TextString)) {
+    if (!YoriLibHtmlCvtAppendWithReallocate(HtmlContext->HtmlText, &TextString)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -876,52 +897,53 @@ YoriLibHtmlConvertToHtmlFromVt(
     )
 {
     YORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions;
-    YORI_LIB_HTML_CONVERT_CONTEXT Context;
+    YORI_LIB_HTML_CONVERT_CONTEXT HtmlContext;
     BOOL FreeColorTable = FALSE;
 
-    Context.HtmlText = HtmlText;
-    Context.ColorTable = ColorTable;
+    HtmlContext.HtmlText = HtmlText;
+    HtmlContext.ColorTable = ColorTable;
     if (ColorTable == NULL) {
-        if (YoriLibCaptureConsoleColorTable(&Context.ColorTable, NULL)) {
+        if (YoriLibCaptureConsoleColorTable(&HtmlContext.ColorTable, NULL)) {
             FreeColorTable = TRUE;
         } else {
-            Context.ColorTable = YoriLibDefaultColorTable;
+            HtmlContext.ColorTable = YoriLibDefaultColorTable;
         }
     }
-    Context.GenerateContext.HtmlVersion = HtmlVersion;
+    HtmlContext.GenerateContext.HtmlVersion = HtmlVersion;
 
     CallbackFunctions.InitializeStream = YoriLibHtmlCnvInitializeStream;
     CallbackFunctions.EndStream = YoriLibHtmlCnvEndStream;
     CallbackFunctions.ProcessAndOutputText = YoriLibHtmlCnvProcessAndOutputText;
     CallbackFunctions.ProcessAndOutputEscape = YoriLibHtmlCnvProcessAndOutputEscape;
+    CallbackFunctions.Context = 0;
 
-    if (!YoriLibHtmlCnvInitializeStream((HANDLE)&Context)) {
+    if (!YoriLibHtmlCnvInitializeStream((HANDLE)&HtmlContext, &CallbackFunctions.Context)) {
         if (FreeColorTable) {
-            YoriLibDereference(Context.ColorTable);
+            YoriLibDereference(HtmlContext.ColorTable);
         }
         return FALSE;
     }
 
     if (!YoriLibProcessVtEscapesOnOpenStream(VtText->StartOfString,
                                              VtText->LengthInChars,
-                                             (HANDLE)&Context,
+                                             (HANDLE)&HtmlContext,
                                              &CallbackFunctions)) {
 
         if (FreeColorTable) {
-            YoriLibDereference(Context.ColorTable);
+            YoriLibDereference(HtmlContext.ColorTable);
         }
 
         return FALSE;
     }
 
-    if (!YoriLibHtmlCnvEndStream((HANDLE)&Context)) {
+    if (!YoriLibHtmlCnvEndStream((HANDLE)&HtmlContext, &CallbackFunctions.Context)) {
         if (FreeColorTable) {
-            YoriLibDereference(Context.ColorTable);
+            YoriLibDereference(HtmlContext.ColorTable);
         }
         return FALSE;
     }
     if (FreeColorTable) {
-        YoriLibDereference(Context.ColorTable);
+        YoriLibDereference(HtmlContext.ColorTable);
     }
 
     return TRUE;

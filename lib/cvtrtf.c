@@ -579,23 +579,28 @@ YoriLibRtfCvtAppendWithReallocate(
 
  @param hOutput The context to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibRtfCnvInitializeStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
-    PYORI_LIB_RTF_CONVERT_CONTEXT Context = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_RTF_CONVERT_CONTEXT RtfContext = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&OutputString);
-    if (!YoriLibRtfGenerateInitialString(&OutputString, Context->ColorTable)) {
+    if (!YoriLibRtfGenerateInitialString(&OutputString, RtfContext->ColorTable)) {
         return FALSE;
     }
 
-    if (!YoriLibRtfCvtAppendWithReallocate(Context->RtfText, &OutputString)) {
+    if (!YoriLibRtfCvtAppendWithReallocate(RtfContext->RtfText, &OutputString)) {
         YoriLibFreeStringContents(&OutputString);
         return FALSE;
     }
@@ -610,23 +615,28 @@ YoriLibRtfCnvInitializeStream(
 
  @param hOutput The context to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibRtfCnvEndStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
-    PYORI_LIB_RTF_CONVERT_CONTEXT Context = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_RTF_CONVERT_CONTEXT RtfContext = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
     YoriLibInitEmptyString(&OutputString);
+
+    UNREFERENCED_PARAMETER(Context);
 
     if (!YoriLibRtfGenerateEndString(&OutputString)) {
         return FALSE;
     }
 
-    if (!YoriLibRtfCvtAppendWithReallocate(Context->RtfText, &OutputString)) {
+    if (!YoriLibRtfCvtAppendWithReallocate(RtfContext->RtfText, &OutputString)) {
         YoriLibFreeStringContents(&OutputString);
         return FALSE;
     }
@@ -644,19 +654,24 @@ YoriLibRtfCnvEndStream(
 
  @param String Pointer to a string buffer containing the text to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibRtfCnvProcessAndOutputText(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
 
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
-    PYORI_LIB_RTF_CONVERT_CONTEXT Context = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_RTF_CONVERT_CONTEXT RtfContext = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
@@ -674,7 +689,7 @@ YoriLibRtfCnvProcessAndOutputText(
         return FALSE;
     }
 
-    if (!YoriLibRtfCvtAppendWithReallocate(Context->RtfText, &TextString)) {
+    if (!YoriLibRtfCvtAppendWithReallocate(RtfContext->RtfText, &TextString)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -692,23 +707,28 @@ YoriLibRtfCnvProcessAndOutputText(
 
  @param String Pointer to a string buffer containing the escape to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibRtfCnvProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
-    PYORI_LIB_RTF_CONVERT_CONTEXT Context = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
+    PYORI_LIB_RTF_CONVERT_CONTEXT RtfContext = (PYORI_LIB_RTF_CONVERT_CONTEXT)hOutput;
     BOOLEAN DummyUnderlineState;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
-    DummyUnderlineState = Context->UnderlineState;
+    DummyUnderlineState = RtfContext->UnderlineState;
     if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, String, &DummyUnderlineState)) {
         return FALSE;
     }
@@ -718,12 +738,12 @@ YoriLibRtfCnvProcessAndOutputEscape(
     }
 
     BufferSizeNeeded = 0;
-    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, String, &Context->UnderlineState)) {
+    if (!YoriLibRtfGenerateEscapeString(&TextString, &BufferSizeNeeded, String, &RtfContext->UnderlineState)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
 
-    if (!YoriLibRtfCvtAppendWithReallocate(Context->RtfText, &TextString)) {
+    if (!YoriLibRtfCvtAppendWithReallocate(RtfContext->RtfText, &TextString)) {
         YoriLibFreeStringContents(&TextString);
         return FALSE;
     }
@@ -756,52 +776,53 @@ YoriLibRtfConvertToRtfFromVt(
     )
 {
     YORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions;
-    YORI_LIB_RTF_CONVERT_CONTEXT Context;
+    YORI_LIB_RTF_CONVERT_CONTEXT RtfContext;
     BOOL FreeColorTable = FALSE;
 
-    Context.RtfText = RtfText;
-    Context.ColorTable = ColorTable;
+    RtfContext.RtfText = RtfText;
+    RtfContext.ColorTable = ColorTable;
     if (ColorTable == NULL) {
-        if (YoriLibCaptureConsoleColorTable(&Context.ColorTable, NULL)) {
+        if (YoriLibCaptureConsoleColorTable(&RtfContext.ColorTable, NULL)) {
             FreeColorTable = TRUE;
         } else {
-            Context.ColorTable = YoriLibDefaultColorTable;
+            RtfContext.ColorTable = YoriLibDefaultColorTable;
         }
     }
-    Context.UnderlineState = FALSE;
+    RtfContext.UnderlineState = FALSE;
 
     CallbackFunctions.InitializeStream = YoriLibRtfCnvInitializeStream;
     CallbackFunctions.EndStream = YoriLibRtfCnvEndStream;
     CallbackFunctions.ProcessAndOutputText = YoriLibRtfCnvProcessAndOutputText;
     CallbackFunctions.ProcessAndOutputEscape = YoriLibRtfCnvProcessAndOutputEscape;
+    CallbackFunctions.Context = 0;
 
-    if (!YoriLibRtfCnvInitializeStream((HANDLE)&Context)) {
+    if (!YoriLibRtfCnvInitializeStream((HANDLE)&RtfContext, &CallbackFunctions.Context)) {
         if (FreeColorTable) {
-            YoriLibDereference(Context.ColorTable);
+            YoriLibDereference(RtfContext.ColorTable);
         }
         return FALSE;
     }
 
     if (!YoriLibProcessVtEscapesOnOpenStream(VtText->StartOfString,
                                              VtText->LengthInChars,
-                                             (HANDLE)&Context,
+                                             (HANDLE)&RtfContext,
                                              &CallbackFunctions)) {
 
         if (FreeColorTable) {
-            YoriLibDereference(Context.ColorTable);
+            YoriLibDereference(RtfContext.ColorTable);
         }
         return FALSE;
     }
 
-    if (!YoriLibRtfCnvEndStream((HANDLE)&Context)) {
+    if (!YoriLibRtfCnvEndStream((HANDLE)&RtfContext, &CallbackFunctions.Context)) {
         if (FreeColorTable) {
-            YoriLibDereference(Context.ColorTable);
+            YoriLibDereference(RtfContext.ColorTable);
         }
         return FALSE;
     }
 
     if (FreeColorTable) {
-        YoriLibDereference(Context.ColorTable);
+        YoriLibDereference(RtfContext.ColorTable);
     }
     return TRUE;
 }

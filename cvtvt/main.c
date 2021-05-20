@@ -289,6 +289,7 @@ ENTRYPOINT(
     YORI_LIB_LINE_ENDING LineEnding;
     BOOL TimeoutReached;
 
+    Callbacks.Context = 0;
     CvtvtHtml4SetFunctions(&Callbacks);
 
     //
@@ -437,7 +438,7 @@ ENTRYPOINT(
         //
 
         if (!StreamStarted) {
-            Callbacks.InitializeStream(hOutput);
+            Callbacks.InitializeStream(hOutput, &Callbacks.Context);
             StreamStarted = TRUE;
         }
 
@@ -467,7 +468,7 @@ ENTRYPOINT(
     }
 
     if (StreamStarted) {
-        Callbacks.EndStream(hOutput);
+        Callbacks.EndStream(hOutput, &Callbacks.Context);
     }
 
     YoriLibLineReadCloseOrCache(LineReadContext);

@@ -37,14 +37,19 @@ YORILIB_HTML_GENERATE_CONTEXT CvtvtHtmlGenerateContext;
 
  @param hOutput The stream to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtHtmlInitializeStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&OutputString);
     if (!YoriLibHtmlGenerateInitialString(&OutputString, &CvtvtHtmlGenerateContext)) {
@@ -62,14 +67,19 @@ CvtvtHtmlInitializeStream(
 
  @param hOutput The stream to output any footer information to.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtHtmlEndStream(
-    __in HANDLE hOutput
+    __in HANDLE hOutput,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING OutputString;
+    UNREFERENCED_PARAMETER(Context);
+
     YoriLibInitEmptyString(&OutputString);
 
     if (!YoriLibHtmlGenerateEndString(&OutputString, &CvtvtHtmlGenerateContext)) {
@@ -92,17 +102,21 @@ CvtvtHtmlEndStream(
 
  @param String Pointer to a string buffer containing the text to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtHtmlProcessAndOutputText(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
-
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
@@ -136,17 +150,22 @@ CvtvtHtmlProcessAndOutputText(
 
  @param String Pointer to a string buffer containing the escape to process.
 
+ @param Context Pointer to context (unused.)
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 CvtvtHtmlProcessAndOutputEscape(
     __in HANDLE hOutput,
-    __in PCYORI_STRING String
+    __in PCYORI_STRING String,
+    __inout PDWORDLONG Context
     )
 {
     YORI_STRING TextString;
     DWORD BufferSizeNeeded;
     YORILIB_HTML_GENERATE_CONTEXT DummyGenerateContext;
+
+    UNREFERENCED_PARAMETER(Context);
 
     YoriLibInitEmptyString(&TextString);
     BufferSizeNeeded = 0;
