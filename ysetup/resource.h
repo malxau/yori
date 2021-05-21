@@ -125,28 +125,33 @@
 #define IDC_START_SHORTCUT 401
 
 /**
+ The checkbox for creating a Windows Terminal profile.
+ */
+#define IDC_TERMINAL_PROFILE 402
+
+/**
  The checkbox for updating the system path.
  */
-#define IDC_SYSTEM_PATH 402
+#define IDC_SYSTEM_PATH 403
 
 /**
  The checkbox for updating the user path.
  */
-#define IDC_USER_PATH 403
+#define IDC_USER_PATH 404
 
 /**
  The checkbox for installing source.
  */
-#define IDC_SOURCE 404
+#define IDC_SOURCE 405
 
 /**
  The checkbox for installing debug symbols.
  */
-#define IDC_SYMBOLS 405
+#define IDC_SYMBOLS 406
 
 /**
  The checkbox for registering an uninstall handler.
  */
-#define IDC_UNINSTALL 406
+#define IDC_UNINSTALL 407
 
 

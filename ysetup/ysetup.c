@@ -59,6 +59,54 @@ YsetupHelp(VOID)
     return TRUE;
 }
 
+
+/**
+ The first block of text to include in any Windows Terminal profile.
+ */
+CONST CHAR YsetupTerminalProfilePart1[] = 
+"{\n"
+"  \"profiles\": [\n"
+"    {\n"
+"      \"name\": \"Yori\",\n"
+"      \"commandline\": \"";
+
+/**
+ The second block of text to include in any Windows Terminal profile.
+ */
+CONST CHAR YsetupTerminalProfilePart2[] = 
+"\",\n"
+"      \"fontFace\": \"Consolas\",\n"
+"      \"fontSize\": 10,\n"
+"      \"colorScheme\": \"CGA\"\n"
+"    }\n"
+"  ],\n"
+"  \"schemes\": [\n"
+"    {\n"
+"      \"name\": \"CGA\",\n"
+"\n"
+"      \"background\": \"#000000\",\n"
+"      \"foreground\": \"#AAAAAA\",\n"
+"\n"
+"      \"black\": \"#000000\",\n"
+"      \"red\": \"#AA0000\",\n"
+"      \"green\": \"#00AA00\",\n"
+"      \"yellow\": \"#AA5500\",\n"
+"      \"blue\": \"#0000AA\",\n"
+"      \"purple\": \"#AA00AA\",\n"
+"      \"cyan\": \"#00AAAA\",\n"
+"      \"white\": \"#AAAAAA\",\n"
+"      \"brightBlack\": \"#555555\",\n"
+"      \"brightRed\": \"#FF5555\",\n"
+"      \"brightGreen\": \"#55FF55\",\n"
+"      \"brightYellow\": \"#FFFF55\",\n"
+"      \"brightBlue\": \"#5555FF\",\n"
+"      \"brightPurple\": \"#FF55FF\",\n"
+"      \"brightCyan\": \"#55FFFF\",\n"
+"      \"brightWhite\": \"#FFFFFF\"\n"
+"    }\n"
+"  ]\n"
+"}\n";
+
 /**
  A list of subdirectories from the application to check for packages.
  */
@@ -201,6 +249,118 @@ SetupInstallToDirectory(
 }
 
 /**
+ Create a Windows Terminal fragment file adding a Yori profile.
+
+ @param ProfileFileName Pointer to the fully qualified path for the profile
+        fragment JSON file.
+
+ @param YoriExeFullPath Pointer to the Yori executable path.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YsetupWriteTerminalProfile(
+    __in PYORI_STRING ProfileFileName,
+    __in PYORI_STRING YoriExeFullPath
+    )
+{
+    HANDLE JsonFile;
+    DWORD Index;
+    YORI_STRING ParentDirectory;
+    DWORD BytesNeeded;
+    DWORD BytesWritten;
+    YORI_STRING EscapedExePath;
+    LPSTR MultibyteEscapedExePath;
+
+    //
+    //  Find the parent directory and attempt to create it.
+    //
+
+    YoriLibInitEmptyString(&ParentDirectory);
+    ParentDirectory.StartOfString = ProfileFileName->StartOfString;
+    ParentDirectory.LengthInChars = ProfileFileName->LengthInChars;
+
+    for (Index = ParentDirectory.LengthInChars;
+         Index > 0;
+         Index--) {
+
+        if (YoriLibIsSep(ParentDirectory.StartOfString[Index - 1])) {
+            ParentDirectory.LengthInChars = Index - 1;
+            ParentDirectory.StartOfString[Index - 1] = '\0';
+            YoriLibCreateDirectoryAndParents(&ParentDirectory);
+            ParentDirectory.StartOfString[Index - 1] = '\\';
+            break;
+        }
+    }
+
+    //
+    //  Create the JSON file.
+    //
+
+    JsonFile = CreateFile(ProfileFileName->StartOfString, GENERIC_WRITE, FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (JsonFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    WriteFile(JsonFile, YsetupTerminalProfilePart1, sizeof(YsetupTerminalProfilePart1) - 1, &BytesWritten, NULL);
+
+    //
+    //  Escape all of the backslashes in the executable path.
+    //
+
+    BytesNeeded = 0;
+    for (Index = 0; Index < YoriExeFullPath->LengthInChars; Index++) {
+        if (YoriExeFullPath->StartOfString[Index] == '\\') {
+            BytesNeeded++;
+        }
+    }
+
+    if (!YoriLibAllocateString(&EscapedExePath, YoriExeFullPath->LengthInChars + BytesNeeded + 1)) {
+        CloseHandle(JsonFile);
+        DeleteFile(ProfileFileName->StartOfString);
+        return FALSE;
+    }
+
+    BytesNeeded = 0;
+    for (Index = 0; Index < YoriExeFullPath->LengthInChars; Index++) {
+        EscapedExePath.StartOfString[Index + BytesNeeded] = YoriExeFullPath->StartOfString[Index];
+        if (YoriExeFullPath->StartOfString[Index] == '\\') {
+            BytesNeeded++;
+            EscapedExePath.StartOfString[Index + BytesNeeded] = YoriExeFullPath->StartOfString[Index];
+        }
+    }
+    EscapedExePath.StartOfString[Index + BytesNeeded] = '\0';
+    EscapedExePath.LengthInChars = YoriExeFullPath->LengthInChars + BytesNeeded;
+
+    //
+    //  Convert that into UTF-8 for the file contents
+    //
+
+    BytesNeeded = YoriLibGetMultibyteOutputSizeNeeded(EscapedExePath.StartOfString, EscapedExePath.LengthInChars);
+    MultibyteEscapedExePath = YoriLibMalloc(BytesNeeded);
+    if (MultibyteEscapedExePath == NULL) {
+        YoriLibFreeStringContents(&EscapedExePath);
+        CloseHandle(JsonFile);
+        DeleteFile(ProfileFileName->StartOfString);
+        return FALSE;
+        
+    }
+
+    //
+    //  Write the path to the executable and the rest of the file contents
+    //
+
+    YoriLibMultibyteOutput(EscapedExePath.StartOfString, EscapedExePath.LengthInChars, MultibyteEscapedExePath, BytesNeeded);
+    WriteFile(JsonFile, MultibyteEscapedExePath, BytesNeeded, &BytesWritten, NULL);
+    WriteFile(JsonFile, YsetupTerminalProfilePart2, sizeof(YsetupTerminalProfilePart2) - 1, &BytesWritten, NULL);
+
+    YoriLibFreeStringContents(&EscapedExePath);
+    YoriLibFree(MultibyteEscapedExePath);
+    CloseHandle(JsonFile);
+    return TRUE;
+}
+
+/**
  Install the user specified set of packages and options from the dialog.
 
  @param hDlg Specifies the hWnd of the dialog box.
@@ -218,7 +378,7 @@ SetupInstallSelectedFromDialog(
     PYORI_STRING PkgNames;
     PYORI_STRING PackageUrls;
     YORI_STRING LocalPath;
-    YORI_STRING ShortcutNameFullPath[2];
+    YORI_STRING ShortcutNameFullPath[3];
     DWORD ShortcutCount;
     PYORI_STRING CustomSource;
     DWORD PkgCount;
@@ -387,7 +547,8 @@ SetupInstallSelectedFromDialog(
     //
 
     if (IsDlgButtonChecked(hDlg, IDC_DESKTOP_SHORTCUT) ||
-        IsDlgButtonChecked(hDlg, IDC_START_SHORTCUT)) {
+        IsDlgButtonChecked(hDlg, IDC_START_SHORTCUT) ||
+        IsDlgButtonChecked(hDlg, IDC_TERMINAL_PROFILE)) {
 
         YORI_STRING YSetupPkgName;
         YORI_STRING YSetupPkgVersion;
@@ -438,6 +599,21 @@ SetupInstallSelectedFromDialog(
                 MessageBox(hDlg, _T("Failed to create start menu shortcut."), _T("Installation failed."), MB_ICONSTOP);
                 goto Exit;
             }
+        }
+
+        if (IsDlgButtonChecked(hDlg, IDC_TERMINAL_PROFILE)) {
+            YoriLibInitEmptyString(&ShortcutNameFullPath[ShortcutCount]);
+
+            YoriLibConstantString(&RelativeShortcutName, _T("~LocalAppData\\Microsoft\\Windows Terminal\\Fragments\\Yori\\Yori.json"));
+            if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
+                YoriLibFreeStringContents(&YoriExeFullPath);
+                MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
+                goto Exit;
+            }
+            ShortcutCount++;
+
+            YsetupWriteTerminalProfile(&ShortcutNameFullPath[ShortcutCount - 1],
+                                       &YoriExeFullPath);
         }
 
         YoriLibConstantString(&YSetupPkgName, _T("ysetup-shortcuts"));
@@ -709,6 +885,7 @@ SetupUiDialogProc(
                     break;
                 case IDC_DESKTOP_SHORTCUT:
                 case IDC_START_SHORTCUT:
+                case IDC_TERMINAL_PROFILE:
                 case IDC_SYSTEM_PATH:
                 case IDC_USER_PATH:
                 case IDC_SOURCE:
@@ -819,6 +996,7 @@ SetupUiDialogProc(
                     IDC_COMPLETE,
                     IDC_DESKTOP_SHORTCUT,
                     IDC_START_SHORTCUT,
+                    IDC_TERMINAL_PROFILE,
                     IDC_SYSTEM_PATH,
                     IDC_USER_PATH,
                     IDC_SOURCE,
@@ -856,6 +1034,7 @@ SetupUiDialogProc(
                 EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_START_SHORTCUT), FALSE);
+                EnableWindow(GetDlgItem(hDlg, IDC_TERMINAL_PROFILE), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_UNINSTALL), FALSE);
             }
 
