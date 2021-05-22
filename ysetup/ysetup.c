@@ -75,6 +75,13 @@ CONST CHAR YsetupTerminalProfilePart1[] =
  */
 CONST CHAR YsetupTerminalProfilePart2[] = 
 "\",\n"
+"      \"icon\": \"";
+
+/**
+ The third block of text to include in any Windows Terminal profile.
+ */
+CONST CHAR YsetupTerminalProfilePart3[] = 
+"\",\n"
 "      \"fontFace\": \"Consolas\",\n"
 "      \"fontSize\": 10,\n"
 "      \"colorScheme\": \"CGA\"\n"
@@ -343,16 +350,28 @@ YsetupWriteTerminalProfile(
         CloseHandle(JsonFile);
         DeleteFile(ProfileFileName->StartOfString);
         return FALSE;
-        
     }
 
     //
-    //  Write the path to the executable and the rest of the file contents
+    //  Write the path to the executable
     //
 
     YoriLibMultibyteOutput(EscapedExePath.StartOfString, EscapedExePath.LengthInChars, MultibyteEscapedExePath, BytesNeeded);
     WriteFile(JsonFile, MultibyteEscapedExePath, BytesNeeded, &BytesWritten, NULL);
+
+    //
+    //  Munge it into the path to the icon
+    //
+
+    if (BytesNeeded > 3) {
+        MultibyteEscapedExePath[BytesNeeded - 3] = 'i';
+        MultibyteEscapedExePath[BytesNeeded - 2] = 'c';
+        MultibyteEscapedExePath[BytesNeeded - 1] = 'o';
+    }
     WriteFile(JsonFile, YsetupTerminalProfilePart2, sizeof(YsetupTerminalProfilePart2) - 1, &BytesWritten, NULL);
+    WriteFile(JsonFile, MultibyteEscapedExePath, BytesNeeded, &BytesWritten, NULL);
+
+    WriteFile(JsonFile, YsetupTerminalProfilePart3, sizeof(YsetupTerminalProfilePart3) - 1, &BytesWritten, NULL);
 
     YoriLibFreeStringContents(&EscapedExePath);
     YoriLibFree(MultibyteEscapedExePath);
