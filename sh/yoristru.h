@@ -489,6 +489,32 @@ typedef struct _YORI_SH_GLOBALS {
     YORI_STRING NextCommand;
 
     /**
+     Two buffers that contain the current directory.  After each command, this
+     state is loaded into the next buffer, allowing comparison with the
+     previous current directory.  The ActiveCurrentDirectory index below
+     indicates which buffer to use.
+     */
+    YORI_STRING CurrentDirectoryBuffers[2];
+
+    /**
+     Which of the two current directory buffers above contains the current
+     directory.
+     */
+    DWORD ActiveCurrentDirectory;
+
+    /**
+     When set to TRUE, the output device supports VT sequences.  When FALSE,
+     VT sequences are only supported by YoriLib.
+     */
+    BOOLEAN OutputSupportsVt;
+
+    /**
+     When set to TRUE, the capabilities of the output device for VT sequences
+     have been determined.  When FALSE, the state is not yet known.
+     */
+    BOOLEAN OutputSupportsVtDetermined;
+
+    /**
      When set to TRUE, the process should end rather than seek another
      command.
      */

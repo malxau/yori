@@ -130,9 +130,12 @@ YoriShExpandPrompt(
             OutputString->StartOfString[0] = '<';
         }
     } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("P")) == 0) {
-        CharsNeeded = GetCurrentDirectory(0, NULL);
+        PYORI_STRING CurrentDirectory;
+        CurrentDirectory = &YoriShGlobal.CurrentDirectoryBuffers[YoriShGlobal.ActiveCurrentDirectory];
+        CharsNeeded = CurrentDirectory->LengthInChars;
         if (OutputString->LengthAllocated > CharsNeeded) {
-            CharsNeeded = GetCurrentDirectory(OutputString->LengthAllocated, OutputString->StartOfString);
+            memcpy(OutputString->StartOfString, CurrentDirectory->StartOfString, CharsNeeded * sizeof(TCHAR));
+            OutputString->StartOfString[CharsNeeded] = '\0';
         }
     } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("PID")) == 0) {
         CharsNeeded = 10;

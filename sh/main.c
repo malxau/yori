@@ -596,14 +596,11 @@ YoriShPostCommand(VOID)
     ConsoleMode = GetConsoleScreenBufferInfo(ConsoleHandle, &ScreenInfo);
     if (ConsoleMode)  {
 
-        //
-        //  Old versions will fail and ignore any call that contains a flag
-        //  they don't understand, so attempt a lowest common denominator
-        //  setting and try to upgrade it, which might fail.
-        //
-
-        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
-        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        if (YoriShGlobal.OutputSupportsVt) {
+            SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        } else {
+            SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
+        }
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%c[0m"), 27);
         if (ScreenInfo.srWindow.Left > 0) {
@@ -631,6 +628,61 @@ YoriShPostCommand(VOID)
 }
 
 /**
+ Load the current directory.  If the current directory has changed and the
+ terminal supports VT escapes, indicate to the terminal what the current
+ directory now is.  This allows the terminal to inherit and apply that
+ state into other shells.
+ */
+VOID
+YoriShCaptureCurrentDirectoryAndInformTerminal(VOID)
+{
+    HANDLE ConsoleHandle;
+    DWORD NextCurrentDirectoryIndex;
+    DWORD CurrentDirectoryLength;
+    PYORI_STRING NextCurrentDirectory;
+
+    NextCurrentDirectoryIndex = (YoriShGlobal.ActiveCurrentDirectory + 1) % (sizeof(YoriShGlobal.CurrentDirectoryBuffers)/sizeof(YoriShGlobal.CurrentDirectoryBuffers[0]));
+
+    NextCurrentDirectory = &YoriShGlobal.CurrentDirectoryBuffers[NextCurrentDirectoryIndex];
+
+    CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+    if (CurrentDirectoryLength > NextCurrentDirectory->LengthAllocated) {
+        if (!YoriLibReallocateStringWithoutPreservingContents(NextCurrentDirectory, CurrentDirectoryLength + 0x40)) {
+            return;
+        }
+    }
+
+    NextCurrentDirectory->LengthInChars = GetCurrentDirectory(NextCurrentDirectory->LengthAllocated, NextCurrentDirectory->StartOfString);
+
+    if (!YoriShGlobal.OutputSupportsVtDetermined) {
+        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+
+        //
+        //  Old versions will fail and ignore any call that contains a flag
+        //  they don't understand, so attempt a lowest common denominator
+        //  setting and try to upgrade it, which might fail.
+        //
+
+        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
+        if (SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+            YoriShGlobal.OutputSupportsVt = TRUE;
+        }
+        YoriShGlobal.OutputSupportsVtDetermined = TRUE;
+    } else if (YoriShGlobal.OutputSupportsVt) {
+        ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
+
+    if (YoriShGlobal.OutputSupportsVt) {
+        if (YoriLibCompareString(&YoriShGlobal.CurrentDirectoryBuffers[YoriShGlobal.ActiveCurrentDirectory], NextCurrentDirectory) != 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT | YORI_LIB_OUTPUT_PASSTHROUGH_VT, _T("\x1b]9;9;\"%y\"\x1b\\"), NextCurrentDirectory);
+        }
+    }
+
+    YoriShGlobal.ActiveCurrentDirectory = NextCurrentDirectoryIndex;
+}
+
+/**
  Prepare the console for entry of the next command.
 
  @param EnableVt If TRUE, VT processing should be enabled if the console
@@ -654,16 +706,12 @@ YoriShPreCommand(
     YoriLibCancelIgnore();
     YoriLibCancelReset();
 
-    //
-    //  Old versions will fail and ignore any call that contains a flag
-    //  they don't understand, so attempt a lowest common denominator
-    //  setting and try to upgrade it, which might fail.
-    //
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-    SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
-    if (EnableVt) {
+    if (YoriShGlobal.OutputSupportsVt && EnableVt) {
         SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    } else {
+        SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
     }
 }
 
@@ -701,6 +749,8 @@ ymain (
             if (YoriShGlobal.ExitProcess) {
                 break;
             }
+
+            YoriShCaptureCurrentDirectoryAndInformTerminal();
 
             //
             //  Don't enable VT processing while displaying the prompt.  This
@@ -745,6 +795,8 @@ ymain (
     YoriLibFreeStringContents(&YoriShGlobal.TitleVariable);
     YoriLibFreeStringContents(&YoriShGlobal.NextCommand);
     YoriLibFreeStringContents(&YoriShGlobal.YankBuffer);
+    YoriLibFreeStringContents(&YoriShGlobal.CurrentDirectoryBuffers[0]);
+    YoriLibFreeStringContents(&YoriShGlobal.CurrentDirectoryBuffers[1]);
 
     return YoriShGlobal.ExitProcessExitCode;
 }

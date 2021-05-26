@@ -1750,8 +1750,11 @@ YoriShConfigureConsoleForInput(
     )
 {
     SetConsoleCursorInfo(Buffer->ConsoleOutputHandle, &Buffer->CursorInfo);
-    SetConsoleMode(Buffer->ConsoleInputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
-    SetConsoleMode(Buffer->ConsoleOutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    if (YoriShGlobal.OutputSupportsVt) {
+        SetConsoleMode(Buffer->ConsoleOutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    } else {
+        SetConsoleMode(Buffer->ConsoleInputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+    }
     YoriShConfigureInputSettings();
     YoriShConfigureMouseForPrompt(Buffer->ConsoleInputHandle);
     SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, TRUE);
