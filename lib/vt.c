@@ -598,6 +598,7 @@ YoriLibConsoleProcessAndOutputEscape(
         if (YoriLibVtFinalColorFromSequenceEx(0, String, &NewColor, &InitialComponentsUsed)) {
             if (InitialComponentsUsed == 0) {
                 SetConsoleTextAttribute(hOutput, NewColor);
+                *Context = ((1 << 16) | NewColor);
                 return TRUE;
             }
         }
@@ -613,12 +614,11 @@ YoriLibConsoleProcessAndOutputEscape(
             YoriLibVtResetColorSet = TRUE;
         }
 
-        *Context = ((1 << 16) | NewColor);
     }
 
     if (YoriLibVtFinalColorFromSequence(NewColor, String, &NewColor)) {
-
         SetConsoleTextAttribute(hOutput, NewColor);
+        *Context = ((1 << 16) | NewColor);
     }
     return TRUE;
 }
