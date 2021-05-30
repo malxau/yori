@@ -83,6 +83,47 @@ MakeTrimWhitespace(
 }
 
 /**
+ Remove separators from the beginning and end of a Yori string.
+ Note this implies advancing the StartOfString pointer, so a caller
+ cannot assume this pointer is unchanged across the call.
+
+ @param String Pointer to the Yori string to remove spaces from.
+ */
+VOID
+MakeTrimSeparators(
+    __in PYORI_STRING String
+    )
+{
+    while (String->LengthInChars > 0) {
+
+        if (String->LengthInChars >= 2 &&
+            String->StartOfString[0] == '.' &&
+            YoriLibIsSep(String->StartOfString[1])) {
+
+            String->StartOfString = String->StartOfString + 2;
+            String->LengthInChars = String->LengthInChars - 2;
+
+        } else if (String->LengthInChars == 1 &&
+                   String->StartOfString[0] == '.') {
+            String->LengthInChars--;
+        } else if (YoriLibIsSep(String->StartOfString[0])) {
+            String->StartOfString++;
+            String->LengthInChars--;
+        } else {
+            break;
+        }
+    }
+
+    while (String->LengthInChars > 0) {
+        if (YoriLibIsSep(String->StartOfString[String->LengthInChars - 1])) {
+            String->LengthInChars--;
+        } else {
+            break;
+        }
+    }
+}
+
+/**
  When a line ends with a trailing backslash, it needs to be concatenated.
  This function performs that concatenation where a new part can be joined
  with an existing part of a line.  Note that this concatenation removes
@@ -1560,9 +1601,19 @@ MakePreprocessor(
 
  @param Line Pointer to the line.  This is expected to be a rule type line.
 
+ @param FromDir Optionally points to a string that is populated with the
+        source directory defined by this inference rule if the line
+        is an inference rule.  This may be an empty string to refer to the
+        current scope directory.
+
  @param FromExt Optionally points to a string that is populated with the
         source file extension defined by this inference rule if the line
         is an inference rule.
+
+ @param ToDir Optionally points to a string that is populated with the
+        target directory defined by this inference rule if the line
+        is an inference rule.  This may be an empty string to refer to the
+        current scope directory.
 
  @param ToExt Optionally points to a string that is populated with the
         target file extension defined by this inference rule if the line
@@ -1575,52 +1626,129 @@ __success(return)
 BOOLEAN
 MakeIsTargetInferenceRule(
     __in PYORI_STRING Line,
+    __out_opt PYORI_STRING FromDir,
     __out_opt PYORI_STRING FromExt,
+    __out_opt PYORI_STRING ToDir,
     __out_opt PYORI_STRING ToExt
     )
 {
     DWORD Index;
     BOOLEAN FoundFirstExt;
+    YORI_STRING LocalFromDir;
     YORI_STRING LocalFromExt;
+    YORI_STRING LocalToDir;
     YORI_STRING LocalToExt;
+    YORI_STRING Remaining;
 
+    YoriLibInitEmptyString(&LocalFromDir);
     YoriLibInitEmptyString(&LocalFromExt);
+    YoriLibInitEmptyString(&LocalToDir);
     YoriLibInitEmptyString(&LocalToExt);
     FoundFirstExt = FALSE;
 
     if (Line->LengthInChars < 1 ||
-        Line->StartOfString[0] != '.') {
+        (Line->StartOfString[0] != '.' &&
+         Line->StartOfString[0] != '{')) {
 
         return FALSE;
     }
 
-    LocalFromExt.StartOfString = &Line->StartOfString[1];
-    for (Index = 1; Index < Line->LengthInChars; Index++) {
-        if (Line->StartOfString[Index] == '.') {
-            if (FoundFirstExt == FALSE) {
-                LocalFromExt.LengthInChars = Index - 1;
-                LocalToExt.StartOfString = &Line->StartOfString[Index + 1];
-                FoundFirstExt = TRUE;
-            } else {
-                return FALSE;
+    Remaining.StartOfString = Line->StartOfString;
+    Remaining.LengthInChars = Line->LengthInChars;
+
+    if (Remaining.StartOfString[0] == '{') {
+        LocalFromDir.StartOfString = &Remaining.StartOfString[1];
+        for (Index = 1; Index < Remaining.LengthInChars; Index++) {
+            if (Remaining.StartOfString[Index] == '}') {
+                LocalFromDir.LengthInChars = Index - 1;
+                break;
             }
         }
+        if (Index == Remaining.LengthInChars) {
+            return FALSE;
+        }
+        Remaining.StartOfString = Remaining.StartOfString + LocalFromDir.LengthInChars + 2;
+        Remaining.LengthInChars = Remaining.LengthInChars - LocalFromDir.LengthInChars - 2;
+    }
 
-        if (Line->StartOfString[Index] == ':') {
+    if (Remaining.LengthInChars < 1 || 
+        Remaining.StartOfString[0] != '.') {
+        return FALSE;
+    }
+
+    LocalFromExt.StartOfString = &Remaining.StartOfString[1];
+    for (Index = 1; Index < Remaining.LengthInChars; Index++) {
+        if (Remaining.StartOfString[Index] == ':') {
+            return FALSE;
+        }
+        if (Remaining.StartOfString[Index] == '.' ||
+            Remaining.StartOfString[Index] == '{') {
+
+            LocalFromExt.LengthInChars = Index - 1;
             break;
         }
     }
 
-    if (FoundFirstExt == FALSE) {
+    if (Index == Remaining.LengthInChars) {
         return FALSE;
     }
 
-    LocalToExt.LengthInChars = Index - LocalFromExt.LengthInChars - 2;
+    Remaining.StartOfString = &Remaining.StartOfString[Index];
+    Remaining.LengthInChars = Remaining.LengthInChars - Index;
 
+    if (Remaining.LengthInChars < 1) {
+        return FALSE;
+    }
+
+    if (Remaining.StartOfString[0] == '{') {
+        LocalToDir.StartOfString = &Remaining.StartOfString[1];
+        for (Index = 1; Index < Remaining.LengthInChars; Index++) {
+            if (Remaining.StartOfString[Index] == '}') {
+                LocalToDir.LengthInChars = Index - 1;
+                break;
+            }
+        }
+        if (Index == Remaining.LengthInChars) {
+            return FALSE;
+        }
+        Remaining.StartOfString = Remaining.StartOfString + LocalToDir.LengthInChars + 2;
+        Remaining.LengthInChars = Remaining.LengthInChars - LocalToDir.LengthInChars - 2;
+    }
+
+    if (Remaining.LengthInChars < 1 || 
+        Remaining.StartOfString[0] != '.') {
+        return FALSE;
+    }
+
+    LocalToExt.StartOfString = &Remaining.StartOfString[1];
+    for (Index = 1; Index < Remaining.LengthInChars; Index++) {
+        if (Remaining.StartOfString[Index] == ':') {
+            LocalToExt.LengthInChars = Index - 1;
+            break;
+        }
+    }
+
+    if (Index == Remaining.LengthInChars) {
+        return FALSE;
+    }
+
+    MakeTrimWhitespace(&LocalFromDir);
+    MakeTrimWhitespace(&LocalFromExt);
+    MakeTrimWhitespace(&LocalToDir);
     MakeTrimWhitespace(&LocalToExt);
+    MakeTrimSeparators(&LocalFromDir);
+    MakeTrimSeparators(&LocalToDir);
+
+    if (FromDir != NULL) {
+        memcpy(FromDir, &LocalFromDir, sizeof(YORI_STRING));
+    }
 
     if (FromExt != NULL) {
         memcpy(FromExt, &LocalFromExt, sizeof(YORI_STRING));
+    }
+
+    if (ToDir != NULL) {
+        memcpy(ToDir, &LocalToDir, sizeof(YORI_STRING));
     }
 
     if (ToExt != NULL) {
@@ -2073,7 +2201,9 @@ MakeAddRule(
     BOOLEAN SwallowingWhitespace;
     PMAKE_CONTEXT MakeContext;
     PMAKE_TARGET Target;
+    YORI_STRING FromDir;
     YORI_STRING FromExt;
+    YORI_STRING ToDir;
     YORI_STRING ToExt;
     YORI_STRING ParentTargetName;
     BOOLEAN Subdirectories;
@@ -2127,11 +2257,11 @@ MakeAddRule(
     //  already exists.
     //
 
-    if (MakeIsTargetInferenceRule(Line, &FromExt, &ToExt)) {
+    if (MakeIsTargetInferenceRule(Line, &FromDir, &FromExt, &ToDir, &ToExt)) {
         PMAKE_INFERENCE_RULE InferenceRule;
 
         YoriLibFreeStringContents(&Target->Recipe);
-        InferenceRule = MakeCreateInferenceRule(ScopeContext, &FromExt, &ToExt, Target);
+        InferenceRule = MakeCreateInferenceRule(ScopeContext, &FromDir, &FromExt, &ToDir, &ToExt, Target);
         if (InferenceRule == NULL) {
             return NULL;
         }
@@ -2380,6 +2510,7 @@ MakeProcessStream(
             }
 
             if (LineType != MakeLineTypePreprocessor) {
+                JoinedLine.LengthInChars = 0;
                 continue;
             }
 
@@ -2387,6 +2518,7 @@ MakeProcessStream(
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("MiniPreprocessor: %y\n"), &LineToProcess);
 #endif
             MakePreprocessorPerformMinimalConditionalTracking(ScopeContext, &LineToProcess);
+            JoinedLine.LengthInChars = 0;
             continue;
         }
 

@@ -632,7 +632,8 @@ Cleanup:
 
     YoriLibFreeStringContents(&MakeContext.TempPath);
     YoriLibFreeStringContents(&MakeContext.ProcessCurrentDirectory);
-    YoriLibFreeStringContents(&MakeContext.FileToProbe);
+    YoriLibFreeStringContents(&MakeContext.FilesToProbe[0]);
+    YoriLibFreeStringContents(&MakeContext.FilesToProbe[1]);
     YoriLibShBuiltinUnregisterAll();
 
     YoriLibLineReadCleanupCache();

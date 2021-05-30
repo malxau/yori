@@ -331,9 +331,19 @@ typedef struct _MAKE_INFERENCE_RULE {
     DWORD ReferenceCount;
 
     /**
+     The relative source directory.  Can be empty.
+     */
+    YORI_STRING RelativeSourceDirectory;
+
+    /**
      The source extension of the rule.
      */
     YORI_STRING SourceExtension;
+
+    /**
+     The relative target directory.  Can be empty.
+     */
+    YORI_STRING RelativeTargetDirectory;
 
     /**
      The target extension of the rule.
@@ -663,11 +673,13 @@ typedef struct _MAKE_CONTEXT {
     YORI_LIST_ENTRY PreprocessorCacheList;
 
     /**
-     An allocation used to generate files to look for when determining which
-     inference rules to apply.  Because this is very temporary, it is only
-     used in one place, but is retained to avoid repeated allocations.
+     Allocations used to generate files to look for when determining which
+     inference rules to apply.  Because these are very temporary, they are
+     only used in one place, but are retained to avoid repeated allocations.
+     Two are needed because inference rules can search recursively for two
+     levels.
      */
-    YORI_STRING FileToProbe;
+    YORI_STRING FilesToProbe[2];
 
     /**
      The temporary path applied to the ymake process.  Child processes are
@@ -950,7 +962,9 @@ MakeLookupOrCreateTarget(
 PMAKE_INFERENCE_RULE
 MakeCreateInferenceRule(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING SourceDir,
     __in PYORI_STRING SourceExt,
+    __in PYORI_STRING TargetDir,
     __in PYORI_STRING TargetExt,
     __in PMAKE_TARGET Target
     );
