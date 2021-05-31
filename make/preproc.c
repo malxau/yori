@@ -1678,7 +1678,8 @@ MakeIsTargetInferenceRule(
 
     LocalFromExt.StartOfString = &Remaining.StartOfString[1];
     for (Index = 1; Index < Remaining.LengthInChars; Index++) {
-        if (Remaining.StartOfString[Index] == ':') {
+        if (Remaining.StartOfString[Index] == ':' ||
+            YoriLibIsSep(Remaining.StartOfString[Index])) {
             return FALSE;
         }
         if (Remaining.StartOfString[Index] == '.' ||
@@ -1722,6 +1723,9 @@ MakeIsTargetInferenceRule(
 
     LocalToExt.StartOfString = &Remaining.StartOfString[1];
     for (Index = 1; Index < Remaining.LengthInChars; Index++) {
+        if (YoriLibIsSep(Remaining.StartOfString[Index])) {
+            return FALSE;
+        }
         if (Remaining.StartOfString[Index] == ':') {
             LocalToExt.LengthInChars = Index - 1;
             break;
