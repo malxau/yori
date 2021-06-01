@@ -1317,7 +1317,37 @@ MakeExpandTargetVariable(
         return Result;
     }
 
-    if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("B")) == 0) {
+    if (FileNamePartQualifier.LengthInChars == 0) {
+        DWORD LastFoundSepIndex;
+        YORI_STRING ScopeDir;
+
+        YoriLibInitEmptyString(&ScopeDir);
+        ScopeDir.StartOfString = Target->ScopeContext->HashEntry.Key.StartOfString;
+        ScopeDir.LengthInChars = Target->ScopeContext->HashEntry.Key.LengthInChars;
+        LastFoundSepIndex = 0;
+
+        if (YoriLibIsPathPrefixed(&ScopeDir)) {
+            ScopeDir.StartOfString = ScopeDir.StartOfString + (sizeof("\\\\.\\") - 1);
+            ScopeDir.LengthInChars = ScopeDir.LengthInChars - (sizeof("\\\\.\\") - 1);
+        }
+
+        for (Index = 0; Index < ScopeDir.LengthInChars; Index++) {
+            if (Index >= VariableData->LengthInChars ||
+                YoriLibUpcaseChar(VariableData->StartOfString[Index]) != YoriLibUpcaseChar(ScopeDir.StartOfString[Index]))
+
+                break;
+        }
+
+        if (Index == ScopeDir.LengthInChars) {
+            while (Index < VariableData->LengthInChars &&
+                   YoriLibIsSep(VariableData->StartOfString[Index])) {
+                Index++;
+            }
+
+            VariableData->StartOfString = VariableData->StartOfString + Index;
+            VariableData->LengthInChars = VariableData->LengthInChars - Index;
+        }
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("B")) == 0) {
         BOOLEAN FinalDotFound = FALSE;
         BOOLEAN FinalSeperatorFound = FALSE;
         DWORD FinalDotIndex = 0;
@@ -1356,16 +1386,8 @@ MakeExpandTargetVariable(
             VariableData->LengthInChars = Index - 1;
         }
 
-    } else if (FileNamePartQualifier.LengthInChars == 0 ||
-               YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("F")) == 0) {
+    } else if (YoriLibCompareStringWithLiteralInsensitive(&FileNamePartQualifier, _T("F")) == 0) {
         BOOLEAN FinalSeperatorFound = FALSE;
-
-        //
-        //  MSFIX: This branch is taken by default.  To NMAKE, file names are
-        //  opaque strings so it doesn't need to consider the default.
-        //  File name only behavior works for files in the same directory,
-        //  but is wrong if the file name refers to a different directory.
-        //
 
         for (Index = VariableData->LengthInChars; Index > 0; Index--) {
             if (YoriLibIsSep(VariableData->StartOfString[Index - 1])) {
