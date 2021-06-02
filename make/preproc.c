@@ -2224,6 +2224,8 @@ MakeAddRule(
     Colon = YoriLibFindLeftMostCharacter(Line, ':');
     Substring.LengthInChars = (DWORD)(Colon - Line->StartOfString);
 
+    MakeTrimWhitespace(&Substring);
+
     Subdirectories = FALSE;
     YoriLibInitEmptyString(&ParentTargetName);
     ReadIndex = Substring.LengthInChars + 2;
