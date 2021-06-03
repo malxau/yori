@@ -2211,6 +2211,7 @@ MakeAddRule(
     YORI_STRING ToExt;
     YORI_STRING ParentTargetName;
     BOOLEAN Subdirectories;
+    BOOLEAN QuoteOpen;
 
     //
     //  MSFIX This parsing logic is very minimal and not really up to par.
@@ -2223,12 +2224,12 @@ MakeAddRule(
     Substring.StartOfString = Line->StartOfString;
     Colon = YoriLibFindLeftMostCharacter(Line, ':');
     Substring.LengthInChars = (DWORD)(Colon - Line->StartOfString);
+    ReadIndex = Substring.LengthInChars + 2;
 
     MakeTrimWhitespace(&Substring);
 
     Subdirectories = FALSE;
     YoriLibInitEmptyString(&ParentTargetName);
-    ReadIndex = Substring.LengthInChars + 2;
     if (!MakeDetermineTargetOptions(&Substring, &Subdirectories, &ParentTargetName)) {
         Subdirectories = FALSE;
     }
@@ -2291,10 +2292,20 @@ MakeAddRule(
     MakeContext = ScopeContext->MakeContext;
 
     SwallowingWhitespace = TRUE;
+    QuoteOpen = FALSE;
     Substring.LengthInChars = 0;
     for (; ReadIndex < Line->LengthInChars; ReadIndex++) {
 
+        if (Line->StartOfString[ReadIndex] == '"') {
+            if (QuoteOpen) {
+                QuoteOpen = FALSE;
+            } else {
+                QuoteOpen = TRUE;
+            }
+        }
+
         if (SwallowingWhitespace) {
+
             if (Line->StartOfString[ReadIndex] == ' ' ||
                 Line->StartOfString[ReadIndex] == '\t') {
 
@@ -2305,9 +2316,24 @@ MakeAddRule(
             Substring.StartOfString = &Line->StartOfString[ReadIndex];
             Substring.LengthInChars = 1;
         } else {
-            if (Line->StartOfString[ReadIndex] == ' ' ||
-                Line->StartOfString[ReadIndex] == '\t') {
+            if (!QuoteOpen &&
+                (Line->StartOfString[ReadIndex] == ' ' ||
+                 Line->StartOfString[ReadIndex] == '\t')) {
+
                 SwallowingWhitespace = TRUE;
+
+                //
+                //  If the string is quoted and has contents, strip off the
+                //  quotes.
+                //
+
+                if (Substring.LengthInChars >= 3 &&
+                    Substring.StartOfString[0] == '"' &&
+                    Substring.StartOfString[Substring.LengthInChars - 1] == '"') {
+
+                    Substring.StartOfString++;
+                    Substring.LengthInChars = Substring.LengthInChars - 2;
+                }
 
                 if (Subdirectories) {
                     if (!MakeCreateSubdirectoryDependency(MakeContext, Target, &Substring, &ParentTargetName)) {
@@ -2334,6 +2360,20 @@ MakeAddRule(
     }
 
     if (Substring.LengthInChars) {
+
+        //
+        //  If the string is quoted and has contents, strip off the
+        //  quotes.
+        //
+
+        if (Substring.LengthInChars >= 3 &&
+            Substring.StartOfString[0] == '"' &&
+            Substring.StartOfString[Substring.LengthInChars - 1] == '"') {
+
+            Substring.StartOfString++;
+            Substring.LengthInChars = Substring.LengthInChars - 2;
+        }
+
         if (Subdirectories) {
             if (!MakeCreateSubdirectoryDependency(MakeContext, Target, &Substring, &ParentTargetName)) {
                 return NULL;

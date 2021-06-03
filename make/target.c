@@ -220,6 +220,7 @@ MakeLookupOrCreateTarget(
     )
 {
     YORI_STRING FullPath;
+    YORI_STRING TargetNoQuotes;
     PMAKE_TARGET Target;
     PYORI_HASH_ENTRY HashEntry;
     PMAKE_CONTEXT MakeContext;
@@ -230,8 +231,18 @@ MakeLookupOrCreateTarget(
     //  for more complex cases?
     //
 
+    YoriLibInitEmptyString(&TargetNoQuotes);
+    TargetNoQuotes.StartOfString = TargetName->StartOfString;
+    TargetNoQuotes.LengthInChars = TargetName->LengthInChars;
+    if (TargetNoQuotes.LengthInChars >= 2 &&
+        TargetNoQuotes.StartOfString[0] == '"' &&
+        TargetNoQuotes.StartOfString[TargetNoQuotes.LengthInChars - 1] == '"') {
+
+        TargetNoQuotes.StartOfString++;
+        TargetNoQuotes.LengthInChars = TargetNoQuotes.LengthInChars - 2;
+    }
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibGetFullPathNameRelativeTo(&ScopeContext->HashEntry.Key, TargetName, FALSE, &FullPath, NULL)) {
+    if (!YoriLibGetFullPathNameRelativeTo(&ScopeContext->HashEntry.Key, &TargetNoQuotes, FALSE, &FullPath, NULL)) {
         return NULL;
     }
 
