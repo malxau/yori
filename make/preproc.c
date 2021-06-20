@@ -203,8 +203,9 @@ typedef enum _MAKE_LINE_TYPE {
     MakeLineTypeSetVariable = 2,
     MakeLineTypeRule = 3,
     MakeLineTypeRecipe = 4,
-    MakeLineTypeDebugBreak = 5,
-    MakeLineTypeError = 6
+    MakeLineTypeInlineFile = 5,
+    MakeLineTypeDebugBreak = 6,
+    MakeLineTypeError = 7
 } MAKE_LINE_TYPE;
 
 
@@ -213,24 +214,23 @@ typedef enum _MAKE_LINE_TYPE {
 
  @param Line Pointer to the line in the makefile.
 
- @param RecipeActive On input, set to TRUE to indicate that the previous line
-        was crafting a recipe.  On output, can be updated to TRUE to indicate
-        that the next line should form part of that recipe, or FALSE to
-        indicate the recipe is over.
+ @param ScopeContext Pointer to the scope context which indicates the current
+        parsing state.  This is not modified in this function, because this
+        function has not determined whether the line is within the
+        preprocessor scope.
 
  @return The type of the line.
  */
 MAKE_LINE_TYPE
 MakeDetermineLineType(
     __in PYORI_STRING Line,
-    __inout PBOOLEAN RecipeActive
+    __in PMAKE_SCOPE_CONTEXT ScopeContext
     )
 {
     DWORD Index;
     DWORD BraceDepth;
 
     if (Line->LengthInChars == 0) {
-        *RecipeActive = FALSE;
         return MakeLineTypeEmpty;
     }
 
@@ -252,8 +252,10 @@ MakeDetermineLineType(
     //  prior to calling this function.
     //
 
-    if (*RecipeActive) {
+    if (ScopeContext->ParserState == MakeParserRecipeActive) {
         return MakeLineTypeRecipe;
+    } else if (ScopeContext->ParserState == MakeParserInlineFileActive) {
+        return MakeLineTypeInlineFile;
     }
 
     BraceDepth = 0;
@@ -268,7 +270,7 @@ MakeDetermineLineType(
             if (Line->StartOfString[Index] == '=') {
                 return MakeLineTypeSetVariable;
             } else if (Line->StartOfString[Index] == ':') {
-                *RecipeActive = TRUE;
+                ASSERT(ScopeContext->ParserState == MakeParserDefault);
                 return MakeLineTypeRule;
             }
         }
@@ -573,11 +575,6 @@ MakePreprocessorPerformMinimalConditionalTracking(
         case MakePreprocessorLineTypeEndIf:
 
             ScopeContext->CurrentConditionalNestingLevel--;
-            if (ScopeContext->RuleExcludedOnNestingLevel > ScopeContext->CurrentConditionalNestingLevel) {
-                ASSERT(ScopeContext->RecipeActive);
-                ScopeContext->RecipeActive = FALSE;
-                ScopeContext->RuleExcludedOnNestingLevel = 0;
-            }
             if (ScopeContext->ActiveConditionalNestingLevel > ScopeContext->CurrentConditionalNestingLevel) {
                 ScopeContext->ActiveConditionalNestingLevel = ScopeContext->CurrentConditionalNestingLevel;
                 ScopeContext->ActiveConditionalNestingLevelExecutionOccurred = TRUE;
@@ -589,7 +586,6 @@ MakePreprocessorPerformMinimalConditionalTracking(
         case MakePreprocessorLineTypeElseIfDef:
         case MakePreprocessorLineTypeElseIfNDef:
             if (ScopeContext->ActiveConditionalNestingLevelExecutionEnabled) {
-                ASSERT(ScopeContext->RuleExcludedOnNestingLevel < ScopeContext->CurrentConditionalNestingLevel);
                 ASSERT(ScopeContext->ActiveConditionalNestingLevelExecutionOccurred);
                 ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = FALSE;
             }
@@ -1488,13 +1484,6 @@ MakePreprocessor(
             if (ScopeContext->CurrentConditionalNestingLevel == ScopeContext->ActiveConditionalNestingLevel &&
                 !ScopeContext->ActiveConditionalNestingLevelExecutionOccurred) {
 
-                if (ScopeContext->RuleExcludedOnNestingLevel >= ScopeContext->CurrentConditionalNestingLevel) {
-                    ASSERT(ScopeContext->RuleExcludedOnNestingLevel == ScopeContext->CurrentConditionalNestingLevel);
-                    ASSERT(ScopeContext->RecipeActive);
-                    ScopeContext->RecipeActive = FALSE;
-                    ScopeContext->RuleExcludedOnNestingLevel = 0;
-                }
-
                 ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
                 ScopeContext->ActiveConditionalNestingLevelExecutionOccurred = TRUE;
             }
@@ -1502,13 +1491,6 @@ MakePreprocessor(
         case MakePreprocessorLineTypeElseIf:
             if (ScopeContext->CurrentConditionalNestingLevel == ScopeContext->ActiveConditionalNestingLevel &&
                 !ScopeContext->ActiveConditionalNestingLevelExecutionOccurred) {
-
-                if (ScopeContext->RuleExcludedOnNestingLevel >= ScopeContext->CurrentConditionalNestingLevel) {
-                    ASSERT(ScopeContext->RuleExcludedOnNestingLevel == ScopeContext->CurrentConditionalNestingLevel);
-                    ASSERT(ScopeContext->RecipeActive);
-                    ScopeContext->RecipeActive = FALSE;
-                    ScopeContext->RuleExcludedOnNestingLevel = 0;
-                }
 
                 if (MakePreprocessorEvaluateCondition(ScopeContext, &Arg)) {
                     ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
@@ -1520,13 +1502,6 @@ MakePreprocessor(
             ASSERT(ScopeContext->CurrentConditionalNestingLevel == ScopeContext->ActiveConditionalNestingLevel);
             ASSERT(!ScopeContext->ActiveConditionalNestingLevelExecutionOccurred);
 
-            if (ScopeContext->RuleExcludedOnNestingLevel >= ScopeContext->CurrentConditionalNestingLevel) {
-                ASSERT(ScopeContext->RuleExcludedOnNestingLevel == ScopeContext->CurrentConditionalNestingLevel);
-                ASSERT(ScopeContext->RecipeActive);
-                ScopeContext->RecipeActive = FALSE;
-                ScopeContext->RuleExcludedOnNestingLevel = 0;
-            }
-
             if (MakeIsVariableDefined(ScopeContext, &Arg)) {
                 ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
                 ScopeContext->ActiveConditionalNestingLevelExecutionOccurred = TRUE;
@@ -1535,13 +1510,6 @@ MakePreprocessor(
         case MakePreprocessorLineTypeElseIfNDef:
             ASSERT(ScopeContext->CurrentConditionalNestingLevel == ScopeContext->ActiveConditionalNestingLevel);
             ASSERT(!ScopeContext->ActiveConditionalNestingLevelExecutionOccurred);
-
-            if (ScopeContext->RuleExcludedOnNestingLevel >= ScopeContext->CurrentConditionalNestingLevel) {
-                ASSERT(ScopeContext->RuleExcludedOnNestingLevel == ScopeContext->CurrentConditionalNestingLevel);
-                ASSERT(ScopeContext->RecipeActive);
-                ScopeContext->RecipeActive = FALSE;
-                ScopeContext->RuleExcludedOnNestingLevel = 0;
-            }
 
             if (!MakeIsVariableDefined(ScopeContext, &Arg)) {
                 ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
@@ -2213,11 +2181,7 @@ MakeAddRule(
     BOOLEAN Subdirectories;
     BOOLEAN QuoteOpen;
 
-    //
-    //  MSFIX This parsing logic is very minimal and not really up to par.
-    //  Note it has no concept of quotes, and currently all inference rules
-    //  end up here and we need to distinguish those from specific targets.
-    //
+    ASSERT(ScopeContext->ParserState == MakeParserRecipeActive);
 
     YoriLibInitEmptyString(&Substring);
 
@@ -2248,7 +2212,7 @@ MakeAddRule(
     //
 
     if (YoriLibCompareStringWithLiteralInsensitive(&Substring, _T(".SUFFIXES")) == 0) {
-        ScopeContext->RecipeActive = FALSE;
+        ScopeContext->ParserState = MakeParserDefault;
         return NULL;
     }
 
@@ -2401,9 +2365,159 @@ MakeAddRule(
 }
 
 /**
- Add a command to a recipe.
+ Create a temporary file to contain inline file contents.
 
- @param MakeContext Pointer to the context.
+ @param MakeContext Pointer to the global make context.
+
+ @param TrailingLine Pointer to the line after the inline file operator.
+        NMAKE allows the file name to be specified here.
+
+ @return Pointer to the inline file structure on success, NULL on failure.
+ */
+PMAKE_INLINE_FILE
+MakeCreateInlineFile(
+    __in PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING TrailingLine
+    )
+{
+    PMAKE_INLINE_FILE InlineFile;
+    YORI_STRING TempPrefix;
+    YORI_STRING TempPath;
+
+    //
+    //  MSFIX: NMAKE allows the user to specify a file name after the inline
+    //  file operator, which is not implemented here yet
+    //
+
+    UNREFERENCED_PARAMETER(TrailingLine);
+
+    InlineFile = YoriLibReferencedMalloc(sizeof(MAKE_INLINE_FILE));
+    if (InlineFile == NULL) {
+        return NULL;
+    }
+
+    //
+    //  Take the globally collected temp path and truncate any trailing
+    //  seperators from it
+    //
+
+    YoriLibInitEmptyString(&TempPath);
+    TempPath.StartOfString = MakeContext->TempPath.StartOfString;
+    TempPath.LengthInChars = MakeContext->TempPath.LengthInChars;
+
+    while (TempPath.LengthInChars > 0 &&
+           YoriLibIsSep(TempPath.StartOfString[TempPath.LengthInChars - 1])) {
+
+        TempPath.LengthInChars--;
+    }
+
+    YoriLibConstantString(&TempPrefix, _T("YMK"));
+
+    //
+    //  Generate a temporary name and keep the handle open
+    //
+
+    if (!YoriLibGetTempFileName(&TempPath, &TempPrefix, &InlineFile->FileHandle, &InlineFile->FileName)) {
+        YoriLibDereference(InlineFile);
+        return NULL;
+    }
+
+    YoriLibAppendList(&MakeContext->InlineFileList, &InlineFile->InlineFileList);
+    return InlineFile;
+}
+
+/**
+ Delete all inline files on process exit.
+
+ @param MakeContext Pointer to the global make context.
+ */
+VOID
+MakeDeleteInlineFiles(
+    __in PMAKE_CONTEXT MakeContext
+    )
+{
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PMAKE_INLINE_FILE InlineFile;
+
+    ListEntry = YoriLibGetNextListEntry(&MakeContext->InlineFileList, NULL);
+    while (ListEntry != NULL) {
+        InlineFile = CONTAINING_RECORD(ListEntry, MAKE_INLINE_FILE, InlineFileList);
+        YoriLibRemoveListItem(&InlineFile->InlineFileList);
+        if (InlineFile->FileHandle != INVALID_HANDLE_VALUE) {
+            CloseHandle(InlineFile->FileHandle);
+            InlineFile->FileHandle = INVALID_HANDLE_VALUE;
+        }
+        DeleteFile(InlineFile->FileName.StartOfString);
+        YoriLibFreeStringContents(&InlineFile->FileName);
+        YoriLibDereference(InlineFile);
+        ListEntry = YoriLibGetNextListEntry(&MakeContext->InlineFileList, NULL);
+    }
+}
+
+/**
+ Add a line to an opened inline file.  Note that depending on the line the
+ inline file may terminate here and the parsing mode will switch back to
+ recipe.
+
+ @param ScopeContext Pointer to the scope context, which can be used to
+        locate the current inline file.
+
+ @param Line Pointer to the line to add.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+MakeAddInlineFileLine(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING Line
+    )
+{
+    PYORI_LIST_ENTRY ListEntry = NULL;
+    PMAKE_INLINE_FILE InlineFile;
+    YORI_STRING Newline;
+
+    //
+    //  MSFIX This takes the most recent inline file which seems correct but
+    //  also doesn't match the more explicit tracking style used for scope
+    //  contexts and targets
+    //
+
+    ListEntry = YoriLibGetPreviousListEntry(&ScopeContext->MakeContext->InlineFileList, NULL);
+    ASSERT(ListEntry != NULL);
+
+    InlineFile = CONTAINING_RECORD(ListEntry, MAKE_INLINE_FILE, InlineFileList);
+
+    //
+    //  If the line starts with <<, this inline file is over.  Close the
+    //  handle so the file can be opened by the build task, and move the
+    //  parser state back to recipe.
+    //
+    //  MSFIX NMAKE supports a KEEP and NOKEEP qualifier after this which
+    //  indicates whether the file should be deleted or not on process exit
+    //
+
+    if (Line->LengthInChars >= 2 &&
+        Line->StartOfString[0] == '<' &&
+        Line->StartOfString[1] == '<') {
+
+        ASSERT(InlineFile->FileHandle != NULL && InlineFile->FileHandle != INVALID_HANDLE_VALUE);
+        CloseHandle(InlineFile->FileHandle);
+        InlineFile->FileHandle = INVALID_HANDLE_VALUE;
+        ScopeContext->ParserState = MakeParserRecipeActive;
+        return TRUE;
+    }
+
+    YoriLibOutputTextToMultibyteDevice(InlineFile->FileHandle, Line);
+    YoriLibConstantString(&Newline, _T("\r\n"));
+    YoriLibOutputTextToMultibyteDevice(InlineFile->FileHandle, &Newline);
+    return TRUE;
+}
+
+/**
+ Add a command to a recipe.  Note the command may indicate that an inline
+ file should be created, which will switch the parsing mode to inline file.
+
+ @param ScopeContext Pointer to the scope context.
 
  @param Target Pointer to the target to add recipe lines to.
 
@@ -2413,17 +2527,63 @@ MakeAddRule(
  */
 BOOLEAN
 MakeAddRecipeCommand(
-    __in PMAKE_CONTEXT MakeContext,
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in PMAKE_TARGET Target,
     __in PYORI_STRING Line
     )
 {
 
+    PMAKE_INLINE_FILE InlineFile;
     DWORD CharsNeeded;
+    DWORD Index;
+    YORI_STRING LineSubset;
 
-    UNREFERENCED_PARAMETER(MakeContext);
+    //
+    //  Start by assuming the entire line should be added to the recipe.
+    //
 
-    CharsNeeded = Target->Recipe.LengthInChars + sizeof("\n") + Line->LengthInChars + 1;
+    YoriLibInitEmptyString(&LineSubset);
+    LineSubset.StartOfString = Line->StartOfString;
+    LineSubset.LengthInChars = Line->LengthInChars;
+    InlineFile = NULL;
+
+    //
+    //  Look through the line for an indication that an inline file should
+    //  be created.  When this happens, the file name is substituted into
+    //  the recipe line.
+    //
+    //  MSFIX Because the recipe is just a pile of text, the inline file
+    //  needs to be created in the sense of having a file name assigned
+    //  immediately.  This seems inefficient if a makefile contains inline
+    //  files which are part of targets that are never executed.  Avoiding
+    //  this requires a recipe to have a smarter data structure.
+    //
+
+    if (Line->LengthInChars >= 2) {
+        for (Index = 0; Index < Line->LengthInChars - 1; Index++) {
+            if (Line->StartOfString[Index] == '<' &&
+                Line->StartOfString[Index + 1] == '<') {
+
+                YORI_STRING TrailingText;
+                YoriLibInitEmptyString(&TrailingText);
+                TrailingText.StartOfString = &Line->StartOfString[Index + 2];
+                TrailingText.LengthInChars = Line->LengthInChars - Index - 2;
+
+                InlineFile = MakeCreateInlineFile(ScopeContext->MakeContext, &TrailingText);
+                if (InlineFile == NULL) {
+                    return FALSE;
+                }
+
+                LineSubset.LengthInChars = Index;
+                ScopeContext->ParserState = MakeParserInlineFileActive;
+            }
+        }
+    }
+
+    CharsNeeded = Target->Recipe.LengthInChars + sizeof("\n") + LineSubset.LengthInChars + 1;
+    if (InlineFile != NULL) {
+        CharsNeeded = CharsNeeded + InlineFile->FileName.LengthInChars;
+    }
 
     if (CharsNeeded > Target->Recipe.LengthAllocated) {
         if (!YoriLibReallocateString(&Target->Recipe, CharsNeeded * 2)) {
@@ -2431,8 +2591,13 @@ MakeAddRecipeCommand(
         }
     }
 
-    memcpy(&Target->Recipe.StartOfString[Target->Recipe.LengthInChars], Line->StartOfString, Line->LengthInChars * sizeof(TCHAR));
-    Target->Recipe.LengthInChars = Target->Recipe.LengthInChars + Line->LengthInChars;
+    memcpy(&Target->Recipe.StartOfString[Target->Recipe.LengthInChars], LineSubset.StartOfString, LineSubset.LengthInChars * sizeof(TCHAR));
+    Target->Recipe.LengthInChars = Target->Recipe.LengthInChars + LineSubset.LengthInChars;
+
+    if (InlineFile != NULL) {
+        memcpy(&Target->Recipe.StartOfString[Target->Recipe.LengthInChars], InlineFile->FileName.StartOfString, InlineFile->FileName.LengthInChars * sizeof(TCHAR));
+        Target->Recipe.LengthInChars = Target->Recipe.LengthInChars + InlineFile->FileName.LengthInChars;
+    }
 
     Target->Recipe.StartOfString[Target->Recipe.LengthInChars] = '\n';
     Target->Recipe.StartOfString[Target->Recipe.LengthInChars + 1] = '\0';
@@ -2483,14 +2648,15 @@ MakeProcessStream(
         }
 
         //
-        //  MSFIX - Line might be:
+        //  Line might be:
         //   - Commented (truncate)
         //   - Joined line (ends with \)
         //   - Have variables (expand), including $@ etc
         //   - Preprocessor command (!)
         //   - Set variable (= found)
         //   - Target (: found)
-        //   - Recipe (all lines after target until first blank line)
+        //   - Recipe (lines after target until first blank line)
+        //   - Inline file (lines between << and << within a recipe)
         //
 
         LineToProcess.StartOfString = LineString.StartOfString;
@@ -2513,11 +2679,7 @@ MakeProcessStream(
             LineToProcess.LengthInChars = JoinedLine.LengthInChars;
         }
 
-        LineType = MakeDetermineLineType(&LineToProcess, &ScopeContext->RecipeActive);
-        if (!ScopeContext->RecipeActive) {
-            ScopeContext->RuleExcludedOnNestingLevel = 0;
-            ActiveRecipeTarget = NULL;
-        }
+        LineType = MakeDetermineLineType(&LineToProcess, ScopeContext);
 
         switch(LineType) {
             case MakeLineTypeEmpty:
@@ -2535,6 +2697,9 @@ MakeProcessStream(
             case MakeLineTypeRecipe:
                 PrefixString = _T("Recipe");
                 break;
+            case MakeLineTypeInlineFile:
+                PrefixString = _T("InlineFile");
+                break;
             case MakeLineTypeDebugBreak:
                 PrefixString = _T("DebugBreak");
                 DebugBreak();
@@ -2551,15 +2716,6 @@ MakeProcessStream(
         //
 
         if (!MakePreprocessorShouldExecuteLine(ScopeContext, &LineToProcess, LineType)) {
-
-            //
-            //  If a rule is being excluded based on scope, then the lines
-            //  that follow are not part of a recipe.
-            //
-
-            if (LineType == MakeLineTypeRule) {
-                ScopeContext->RuleExcludedOnNestingLevel = ScopeContext->CurrentConditionalNestingLevel;
-            }
 
             if (LineType != MakeLineTypePreprocessor) {
                 JoinedLine.LengthInChars = 0;
@@ -2580,12 +2736,28 @@ MakeProcessStream(
         }
 
         //
-        //  MSFIX: Variables should not be expanded for inference rule
-        //  recipes.  NMAKE expands these only when they are instantiated
-        //  into commands to execute.  Note the implication is they need to
-        //  be expanded with scope-specific variables, either when the scope
-        //  exits or we keep scope state alive until processing the
-        //  dependency graph to execute
+        //  Now that the line has been determined to be included by the
+        //  preprocessor and not in error, apply any state transformations.
+        //
+
+        if (LineType == MakeLineTypeEmpty) {
+            if (ScopeContext->ParserState == MakeParserInlineFileActive) {
+                LineType = MakeLineTypeInlineFile;
+            } else if (ScopeContext->ParserState == MakeParserRecipeActive) {
+                ScopeContext->ParserState = MakeParserDefault;
+            }
+        } else if (LineType == MakeLineTypeRule) {
+            ASSERT(ScopeContext->ParserState == MakeParserDefault);
+            ScopeContext->ParserState = MakeParserRecipeActive;
+        }
+
+        //
+        //  Variables should not be expanded for inference rule recipes.
+        //  NMAKE expands these only when they are instantiated into commands
+        //  to execute.  Note the implication is they need to be expanded
+        //  with scope-specific variables, either when the scope exits or we
+        //  keep scope state alive until processing the dependency graph to
+        //  execute
         //
 
         ASSERT(LineType != MakeLineTypeRecipe || ActiveRecipeTarget != NULL);
@@ -2595,22 +2767,24 @@ MakeProcessStream(
 
             MakeExpandVariables(ScopeContext, NULL, &ExpandedLine, &LineToProcess);
         } else {
-            MakeAddRecipeCommand(MakeContext, ActiveRecipeTarget, &LineToProcess);
+            MakeAddRecipeCommand(ScopeContext, ActiveRecipeTarget, &LineToProcess);
         }
 
         if (LineType == MakeLineTypeSetVariable) {
             MakeExecuteSetVariable(ScopeContext, &ExpandedLine);
         } else if (LineType == MakeLineTypePreprocessor) {
             MakePreprocessor(ScopeContext, &ExpandedLine);
+        } else if (LineType == MakeLineTypeInlineFile) {
+            MakeAddInlineFileLine(ScopeContext, &ExpandedLine);
         } else if (LineType == MakeLineTypeRule) {
             ActiveRecipeTarget = MakeAddRule(ScopeContext, &ExpandedLine);
             if (ActiveRecipeTarget == NULL) {
-                ScopeContext->RecipeActive = FALSE;
+                ScopeContext->ParserState = MakeParserDefault;
             }
         } else if (LineType == MakeLineTypeRecipe &&
                    ActiveRecipeTarget != NULL &&
                    !ActiveRecipeTarget->InferenceRulePseudoTarget) {
-            MakeAddRecipeCommand(MakeContext, ActiveRecipeTarget, &ExpandedLine);
+            MakeAddRecipeCommand(ScopeContext, ActiveRecipeTarget, &ExpandedLine);
         }
 #if MAKE_DEBUG_PREPROCESSOR
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%12s: %y\n"), PrefixString, &ExpandedLine);

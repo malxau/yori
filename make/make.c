@@ -202,6 +202,7 @@ ENTRYPOINT(
     RootTarget = NULL;
     ZeroMemory(&MakeContext, sizeof(MakeContext));
     YoriLibInitializeListHead(&MakeContext.ScopesList);
+    YoriLibInitializeListHead(&MakeContext.InlineFileList);
     YoriLibInitializeListHead(&MakeContext.TargetsList);
     YoriLibInitializeListHead(&MakeContext.TargetsFinished);
     YoriLibInitializeListHead(&MakeContext.TargetsRunning);
@@ -613,6 +614,7 @@ Cleanup:
 
     QueryPerformanceCounter(&StartTime);
 
+    MakeDeleteInlineFiles(&MakeContext);
     MakeCleanupTemporaryDirectories(&MakeContext);
 
     ASSERT(MakeContext.ActiveScope == MakeContext.RootScope ||

@@ -88,10 +88,9 @@ MakeAllocateNewScope(
 
     ScopeContext->CurrentConditionalNestingLevel = 0;
     ScopeContext->ActiveConditionalNestingLevel = 0;
-    ScopeContext->RuleExcludedOnNestingLevel = 0;
+    ScopeContext->ParserState = MakeParserDefault;
     ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
     ScopeContext->ActiveConditionalNestingLevelExecutionOccurred = FALSE;
-    ScopeContext->RecipeActive = FALSE;
 
     YoriLibInitEmptyString(&Empty);
     ScopeContext->FirstUserTarget = NULL;
