@@ -114,6 +114,14 @@ typedef struct _MAKE_PREPROC_EXEC_CACHE_ENTRY {
 } MAKE_PREPROC_EXEC_CACHE_ENTRY, *PMAKE_PREPROC_EXEC_CACHE_ENTRY;
 
 /**
+ The name of the default target within a scope.  This refers to the first
+ user defined target within the scope.  Note this name is chosen to be an
+ invalid target name, because a user cannot specify a target that contains
+ a colon.
+ */
+#define MAKE_DEFAULT_SCOPE_TARGET_NAME _T(":Default")
+
+/**
  Indicates the state of parsing, indicating whether the next line corresponds
  to an inline file, a recipe, or only rules are acceptable.
  */
@@ -849,7 +857,6 @@ MakeSlabCleanup(
     __in PMAKE_SLAB_ALLOC Alloc
     );
 
-
 // *** VAR.C ***
 
 BOOLEAN
@@ -917,13 +924,6 @@ BOOLEAN
 MakeFindMakefileInDirectory(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __out PYORI_STRING FileName
-    );
-
-BOOLEAN
-MakeCreateCommandLineDependency(
-    __in PMAKE_CONTEXT MakeContext,
-    __in PMAKE_TARGET ChildTarget,
-    __in PYORI_STRING ParentDependency
     );
 
 BOOL
@@ -998,6 +998,12 @@ MakeDeactivateAllInferenceRules(
     );
 
 PMAKE_TARGET
+MakeLookupTarget(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING TargetName
+    );
+
+PMAKE_TARGET
 MakeLookupOrCreateTarget(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in PYORI_STRING TargetName,
@@ -1030,6 +1036,12 @@ MakeCreateParentChildDependency(
     __in PMAKE_CONTEXT MakeContext,
     __in PMAKE_TARGET Parent,
     __in PMAKE_TARGET Child
+    );
+
+BOOLEAN
+MakeMarkCommandLineTargetForBuild(
+    __in PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING TargetName
     );
 
 BOOLEAN

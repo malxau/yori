@@ -47,7 +47,7 @@ MakeAllocateNewScope(
     )
 {
     PMAKE_SCOPE_CONTEXT ScopeContext;
-    YORI_STRING Empty;
+    YORI_STRING Default;
 
     ScopeContext = YoriLibReferencedMalloc(sizeof(MAKE_SCOPE_CONTEXT) + (Directory->LengthInChars + 1) * sizeof(TCHAR));
     if (ScopeContext == NULL) {
@@ -92,9 +92,9 @@ MakeAllocateNewScope(
     ScopeContext->ActiveConditionalNestingLevelExecutionEnabled = TRUE;
     ScopeContext->ActiveConditionalNestingLevelExecutionOccurred = FALSE;
 
-    YoriLibInitEmptyString(&Empty);
+    YoriLibConstantString(&Default, MAKE_DEFAULT_SCOPE_TARGET_NAME);
     ScopeContext->FirstUserTarget = NULL;
-    ScopeContext->DefaultTarget = MakeLookupOrCreateTarget(ScopeContext, &Empty, FALSE);
+    ScopeContext->DefaultTarget = MakeLookupOrCreateTarget(ScopeContext, &Default, FALSE);
     if (ScopeContext->DefaultTarget == NULL) {
         if (ScopeContext->Variables != NULL) {
             YoriLibFreeEmptyHashTable(ScopeContext->Variables);

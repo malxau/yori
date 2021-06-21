@@ -48,6 +48,7 @@ MakeDereferenceTarget(
     PMAKE_CMD_TO_EXEC CmdToExec;
 
     if (InterlockedDecrement(&Target->ReferenceCount) == 0) {
+
         YoriLibFreeStringContents(&Target->Recipe);
 
         if (Target->InferenceRule != NULL) {
@@ -203,6 +204,85 @@ MakeProbeTargetFile(
 }
 
 /**
+ Resolve a user specified target name, as it might appear in a makefile, into
+ one that contains a full path.
+
+ @param ScopeContext Pointer to the scope context.
+
+ @param TargetName Pointer to the user specified name.
+
+ @param TargetNoQuotes On successful completion, points to the subset of the
+        user specified name that is between quotes.
+
+ @param FullPath On successful completion, updated to contain the full path
+        to this target.  The caller is expected to free this with
+        @ref YoriLibFreeStringContents .
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+MakeResolveFullTargetName(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING TargetName,
+    __out PYORI_STRING TargetNoQuotes,
+    __out PYORI_STRING FullPath
+    )
+{
+    YoriLibInitEmptyString(TargetNoQuotes);
+    TargetNoQuotes->StartOfString = TargetName->StartOfString;
+    TargetNoQuotes->LengthInChars = TargetName->LengthInChars;
+    if (TargetNoQuotes->LengthInChars >= 2 &&
+        TargetNoQuotes->StartOfString[0] == '"' &&
+        TargetNoQuotes->StartOfString[TargetNoQuotes->LengthInChars - 1] == '"') {
+
+        TargetNoQuotes->StartOfString++;
+        TargetNoQuotes->LengthInChars = TargetNoQuotes->LengthInChars - 2;
+    }
+    YoriLibInitEmptyString(FullPath);
+    if (!YoriLibGetFullPathNameRelativeTo(&ScopeContext->HashEntry.Key, TargetNoQuotes, FALSE, FullPath, NULL)) {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/**
+ Lookup a target if it exists but do not create it.
+
+ @param ScopeContext Pointer to the scope that the target is relative to.
+
+ @param TargetName Pointer to the target name.
+
+ @return Pointer to the target if it exists, or NULL if it does not.
+ */
+PMAKE_TARGET
+MakeLookupTarget(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING TargetName
+    )
+{
+    YORI_STRING FullPath;
+    YORI_STRING TargetNoQuotes;
+    PMAKE_TARGET Target;
+    PYORI_HASH_ENTRY HashEntry;
+    PMAKE_CONTEXT MakeContext;
+
+    if (!MakeResolveFullTargetName(ScopeContext, TargetName, &TargetNoQuotes, &FullPath)) {
+        return FALSE;
+    }
+
+    MakeContext = ScopeContext->MakeContext;
+
+    HashEntry = YoriLibHashLookupByKey(MakeContext->Targets, &FullPath);
+    YoriLibFreeStringContents(&FullPath);
+    if (HashEntry != NULL) {
+        Target = HashEntry->Context;
+        return Target;
+    }
+
+    return NULL;
+}
+
+/**
  Lookup a target in the current hash table of targets, and if it doesn't
  exist, create a new entry for it.
 
@@ -230,25 +310,8 @@ MakeLookupOrCreateTarget(
     PYORI_HASH_ENTRY HashEntry;
     PMAKE_CONTEXT MakeContext;
 
-    //
-    //  MSFIX Make this cheaper.  Maybe we can consume the directory and
-    //  unqualified file name into a single hash and only build the string
-    //  for more complex cases?
-    //
-
-    YoriLibInitEmptyString(&TargetNoQuotes);
-    TargetNoQuotes.StartOfString = TargetName->StartOfString;
-    TargetNoQuotes.LengthInChars = TargetName->LengthInChars;
-    if (TargetNoQuotes.LengthInChars >= 2 &&
-        TargetNoQuotes.StartOfString[0] == '"' &&
-        TargetNoQuotes.StartOfString[TargetNoQuotes.LengthInChars - 1] == '"') {
-
-        TargetNoQuotes.StartOfString++;
-        TargetNoQuotes.LengthInChars = TargetNoQuotes.LengthInChars - 2;
-    }
-    YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibGetFullPathNameRelativeTo(&ScopeContext->HashEntry.Key, &TargetNoQuotes, FALSE, &FullPath, NULL)) {
-        return NULL;
+    if (!MakeResolveFullTargetName(ScopeContext, TargetName, &TargetNoQuotes, &FullPath)) {
+        return FALSE;
     }
 
     MakeContext = ScopeContext->MakeContext;
@@ -303,9 +366,9 @@ MakeLookupOrCreateTarget(
     //  response to executing the scope.
     //
 
-    if (TargetNoQuotes.LengthInChars > 0 &&
-        ScopeContext->FirstUserTarget == NULL &&
-        !TargetIsInferenceRule) {
+    if (ScopeContext->FirstUserTarget == NULL &&
+        !TargetIsInferenceRule &&
+        YoriLibCompareStringWithLiteralInsensitive(&TargetNoQuotes, MAKE_DEFAULT_SCOPE_TARGET_NAME) != 0) {
 
         if (!MakeCreateParentChildDependency(ScopeContext->MakeContext, Target, ScopeContext->DefaultTarget)) {
             MakeDeactivateTarget(Target);
@@ -1748,10 +1811,82 @@ Fail:
 }
 
 /**
- Evaluate all of the dependencies for the requested build target to determine
- what requires rebuilding.
+ Add a single target name as a target to build.
 
- MSFIX Right now this means the first target in the makefile.
+ @param MakeContext The global context.
+
+ @param TargetName Pointer to the name of the target to execute.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+MakeMarkCommandLineTargetForBuild(
+    __in PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING TargetName
+    )
+{
+    PMAKE_TARGET RequiredTarget;
+    PMAKE_SCOPE_CONTEXT ScopeContext;
+    YORI_STRING EffectiveName;
+    YORI_STRING FullTarget;
+    YORI_STRING DefaultTarget;
+
+    ScopeContext = MakeContext->ActiveScope;
+
+    YoriLibInitEmptyString(&EffectiveName);
+    EffectiveName.StartOfString = TargetName->StartOfString;
+    EffectiveName.LengthInChars = TargetName->LengthInChars;
+
+    //
+    //  Truncate any trailing slashes
+    //
+
+    while(EffectiveName.LengthInChars > 0 &&
+          YoriLibIsSep(EffectiveName.StartOfString[EffectiveName.LengthInChars - 1])) {
+
+        EffectiveName.LengthInChars--;
+    }
+
+    YoriLibInitEmptyString(&FullTarget);
+
+    if (!YoriLibGetFullPathNameReturnAllocation(&EffectiveName, FALSE, &FullTarget, NULL)) {
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&DefaultTarget, FullTarget.LengthInChars + sizeof("\\") + sizeof(MAKE_DEFAULT_SCOPE_TARGET_NAME)/sizeof(TCHAR))) {
+        YoriLibFreeStringContents(&FullTarget);
+        return FALSE;
+    }
+
+    //
+    //  Look for the :Default target under a scope.  If that's not found,
+    //  treat the user input as explicitly indicating a target.
+    //
+
+    DefaultTarget.LengthInChars = YoriLibSPrintf(DefaultTarget.StartOfString, _T("%y\\%s"), &FullTarget, MAKE_DEFAULT_SCOPE_TARGET_NAME);
+    RequiredTarget = MakeLookupTarget(ScopeContext, &DefaultTarget);
+    if (RequiredTarget == NULL) {
+        RequiredTarget = MakeLookupTarget(ScopeContext, &FullTarget);
+    }
+
+    YoriLibFreeStringContents(&DefaultTarget);
+    YoriLibFreeStringContents(&FullTarget);
+
+    if (RequiredTarget == NULL) {
+        return FALSE;
+    }
+
+    MakeMarkTargetInferenceRuleNeededIfNeeded(ScopeContext, RequiredTarget);
+    if (!MakeDetermineDependenciesForTarget(MakeContext, RequiredTarget)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Evaluate all of the dependencies for the first build target to determine
+ what requires rebuilding.
 
  @param MakeContext Pointer to the context.
 

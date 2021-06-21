@@ -197,6 +197,7 @@ ENTRYPOINT(
     DWORD Result;
     DWORD CharsConsumed;
     MAKE_PRIORITY Priority;
+    BOOLEAN ExplicitTargetFound;
 
     FileName = NULL;
     RootTarget = NULL;
@@ -211,6 +212,7 @@ ENTRYPOINT(
     YoriLibInitializeListHead(&MakeContext.PreprocessorCacheList);
     YoriLibInitEmptyString(&FullFileName);
     Priority = MakePriorityNormal;
+    ExplicitTargetFound = FALSE;
 
     {
         MAKE_BUILTIN_NAME_MAPPING CONST *BuiltinNameMapping = MakeBuiltinCmds;
@@ -475,8 +477,8 @@ ENTRYPOINT(
     }
 
     //
-    //  Loop through the arguments again, finding any variable definitions or
-    //  targets, and apply those now.
+    //  Loop through the arguments again, finding any variable definitions,
+    //  and apply those now.
     //
 
     for (i = 1; i < ArgC; i++) {
@@ -507,46 +509,6 @@ ENTRYPOINT(
                 Value.LengthInChars = ThisArg->LengthInChars - VariableName.LengthInChars - 1;
 
                 MakeSetVariable(MakeContext.RootScope, &VariableName, &Value, TRUE, MakeVariablePrecedenceCommandLine);
-            } else {
-                YORI_STRING EmptyString;
-                YORI_STRING FullTarget;
-                YoriLibInitEmptyString(&EmptyString);
-
-                //
-                //  If the user specified any explicit targets, create a dummy
-                //  root target.  This has no name to ensure that it cannot be
-                //  specified within the make file, and is created first so
-                //  it will be the first thing for execution to find.
-                //
-                //  MSFIX There's currently no way to indicate that everything
-                //  from the first parent dependency is done before the second
-                //  parent dependency starts, so there's no way to express
-                //  "clean then all."
-                //
-
-                if (RootTarget == NULL) {
-                    RootTarget = MakeLookupOrCreateTarget(MakeContext.RootScope, &EmptyString, FALSE);
-                    if (RootTarget == NULL) {
-                        Result = EXIT_FAILURE;
-                        goto Cleanup;
-                    }
-                    RootTarget->ExplicitRecipeFound = TRUE;
-                    MakeReferenceScope(MakeContext.RootScope);
-                    RootTarget->ScopeContext = MakeContext.RootScope;
-                }
-
-                YoriLibInitEmptyString(&FullTarget);
-                if (!YoriLibGetFullPathNameReturnAllocation(ThisArg, FALSE, &FullTarget, NULL)) {
-                    Result = EXIT_FAILURE;
-                    goto Cleanup;
-                }
-
-                if (!MakeCreateCommandLineDependency(&MakeContext, RootTarget, &FullTarget)) {
-                    YoriLibFreeStringContents(&FullTarget);
-                    Result = EXIT_FAILURE;
-                    goto Cleanup;
-                }
-                YoriLibFreeStringContents(&FullTarget);
             }
         }
     }
@@ -590,13 +552,68 @@ ENTRYPOINT(
 
     MakeFindInferenceRulesForScope(MakeContext.RootScope);
 
+    //
+    //  Determine the tasks to execute
+    //
+
     QueryPerformanceCounter(&StartTime);
-    if (!MakeDetermineDependencies(&MakeContext)) {
-        Result = EXIT_FAILURE;
-        goto Cleanup;
+
+    //
+    //  Scan through command line arguments again, this time looking for
+    //  targets to execute.
+    //
+
+    for (i = 1; i < ArgC; i++) {
+        PYORI_STRING ThisArg;
+        LPTSTR Equals;
+
+        if (i < StartArg && YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
+            for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
+                if (YoriLibCompareStringInsensitive(&Arg, &MakeArgsWithParameter[j]) == 0) {
+                    i++;
+                    break;
+                }
+            }
+        } else {
+
+            ThisArg = &ArgV[i];
+
+            Equals = YoriLibFindLeftMostCharacter(ThisArg, '=');
+            if (Equals == NULL) {
+                if (!MakeMarkCommandLineTargetForBuild(&MakeContext, ThisArg)) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not determine how to build target %y\n"), ThisArg);
+                    Result = EXIT_FAILURE;
+                    goto Cleanup;
+                }
+
+                //
+                //  MSFIX There's currently no way to indicate that everything
+                //  from the first target is done before the second target
+                //  starts, so there's no way to express  "clean then all."
+                //
+
+                ExplicitTargetFound = TRUE;
+            }
+        }
     }
+
+    //
+    //  If the user didn't explicitly indicate a target, try the first.
+    //
+
+    if (!ExplicitTargetFound) {
+        if (!MakeDetermineDependencies(&MakeContext)) {
+            Result = EXIT_FAILURE;
+            goto Cleanup;
+        }
+    }
+
     QueryPerformanceCounter(&EndTime);
     MakeContext.TimeBuildingGraph = EndTime.QuadPart - StartTime.QuadPart;
+
+    //
+    //  Execute the tasks
+    //
 
     StartTime.QuadPart = EndTime.QuadPart;
     if (!MakeExecuteRequiredTargets(&MakeContext)) {
