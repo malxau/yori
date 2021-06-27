@@ -1940,7 +1940,7 @@ MakeCreateRuleDependency(
 
     ScopeContext = MakeContext->ActiveScope;
 
-    RequiredParentTarget = MakeLookupOrCreateTarget(ScopeContext, ParentDependency);
+    RequiredParentTarget = MakeLookupOrCreateTarget(ScopeContext, ParentDependency, FALSE);
     if (RequiredParentTarget == NULL) {
         return FALSE;
     }
@@ -1995,7 +1995,7 @@ MakeCreateCommandLineDependency(
         EffectiveDependency.LengthInChars--;
     }
 
-    RequiredParentTarget = MakeLookupOrCreateTarget(ScopeContext, &EffectiveDependency);
+    RequiredParentTarget = MakeLookupOrCreateTarget(ScopeContext, &EffectiveDependency, FALSE);
     if (RequiredParentTarget == NULL) {
         return FALSE;
     }
@@ -2252,11 +2252,6 @@ MakeAddRule(
         return NULL;
     }
 
-    Target = MakeLookupOrCreateTarget(ScopeContext, &Substring);
-    if (Target == NULL) {
-        return NULL;
-    }
-
     //
     //  MSFIX: If a target is found, discard its recipe and start over?
     //  NMAKE seems to have some more strange logic in this case.  For
@@ -2267,6 +2262,11 @@ MakeAddRule(
     if (MakeIsTargetInferenceRule(Line, &FromDir, &FromExt, &ToDir, &ToExt)) {
         PMAKE_INFERENCE_RULE InferenceRule;
 
+        Target = MakeLookupOrCreateTarget(ScopeContext, &Substring, TRUE);
+        if (Target == NULL) {
+            return NULL;
+        }
+
         YoriLibFreeStringContents(&Target->Recipe);
         InferenceRule = MakeCreateInferenceRule(ScopeContext, &FromDir, &FromExt, &ToDir, &ToExt, Target);
         if (InferenceRule == NULL) {
@@ -2275,6 +2275,12 @@ MakeAddRule(
 
         Target->InferenceRulePseudoTarget = TRUE;
     } else {
+
+        Target = MakeLookupOrCreateTarget(ScopeContext, &Substring, FALSE);
+        if (Target == NULL) {
+            return NULL;
+        }
+
         MakeMarkTargetInferenceRuleNeededIfNeeded(ScopeContext, Target);
     }
 

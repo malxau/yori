@@ -211,12 +211,17 @@ MakeProbeTargetFile(
  @param TargetName Pointer to the target name.  This function will resolve
         this to a fully qualified path name.
 
+ @param TargetIsInferenceRule If TRUE, this target will become an inference
+        rule, and cannot be explicitly constructed.  If FALSE, this is a
+        regular target.
+
  @return Pointer to the newly created target, or NULL on allocation failure.
  */
 PMAKE_TARGET
 MakeLookupOrCreateTarget(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
-    __in PYORI_STRING TargetName
+    __in PYORI_STRING TargetName,
+    __in BOOLEAN TargetIsInferenceRule
     )
 {
     YORI_STRING FullPath;
@@ -289,16 +294,8 @@ MakeLookupOrCreateTarget(
         YoriLibFreeStringContents(&FullPath);
     }
 
-    //
-    //  An empty target name in the given scope refers to the default target
-    //  for the scope.
-    //
-
-    if (TargetName->LengthInChars > 0) {
-        ScopeContext->TargetCount++;
-    }
 #if MAKE_DEBUG_TARGETS
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Scope %y TargetCount %i Target %y\n"), &ScopeContext->HashEntry.Key, ScopeContext->TargetCount, &Target->HashEntry.Key);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Scope %y Target %y\n"), &ScopeContext->HashEntry.Key, &Target->HashEntry.Key);
 #endif
 
     //
@@ -306,12 +303,16 @@ MakeLookupOrCreateTarget(
     //  response to executing the scope.
     //
 
-    if (ScopeContext->TargetCount == 1) {
-        ASSERT(ScopeContext->DefaultTarget != NULL);
+    if (TargetNoQuotes.LengthInChars > 0 &&
+        ScopeContext->FirstUserTarget == NULL &&
+        !TargetIsInferenceRule) {
+
         if (!MakeCreateParentChildDependency(ScopeContext->MakeContext, Target, ScopeContext->DefaultTarget)) {
             MakeDeactivateTarget(Target);
             return NULL;
         }
+
+        ScopeContext->FirstUserTarget = Target;
     }
 
     return Target;
@@ -759,7 +760,7 @@ MakeAssignInferenceRuleToTarget(
     __in PYORI_STRING SourceFileName
     )
 {
-    Target->InferenceRuleParentTarget = MakeLookupOrCreateTarget(ScopeContext, SourceFileName);
+    Target->InferenceRuleParentTarget = MakeLookupOrCreateTarget(ScopeContext, SourceFileName, FALSE);
     if (Target->InferenceRuleParentTarget == NULL) {
         return FALSE;
     }

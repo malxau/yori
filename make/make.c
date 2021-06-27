@@ -518,7 +518,7 @@ ENTRYPOINT(
                 //
 
                 if (RootTarget == NULL) {
-                    RootTarget = MakeLookupOrCreateTarget(MakeContext.RootScope, &EmptyString);
+                    RootTarget = MakeLookupOrCreateTarget(MakeContext.RootScope, &EmptyString, FALSE);
                     if (RootTarget == NULL) {
                         Result = EXIT_FAILURE;
                         goto Cleanup;

@@ -86,7 +86,6 @@ MakeAllocateNewScope(
     YoriLibInitializeListHead(&ScopeContext->InferenceRuleNeededList);
     YoriLibAppendList(&MakeContext->ScopesList, &ScopeContext->ListEntry);
 
-    ScopeContext->TargetCount = 0;
     ScopeContext->CurrentConditionalNestingLevel = 0;
     ScopeContext->ActiveConditionalNestingLevel = 0;
     ScopeContext->RuleExcludedOnNestingLevel = 0;
@@ -95,7 +94,8 @@ MakeAllocateNewScope(
     ScopeContext->RecipeActive = FALSE;
 
     YoriLibInitEmptyString(&Empty);
-    ScopeContext->DefaultTarget = MakeLookupOrCreateTarget(ScopeContext, &Empty);
+    ScopeContext->FirstUserTarget = NULL;
+    ScopeContext->DefaultTarget = MakeLookupOrCreateTarget(ScopeContext, &Empty, FALSE);
     if (ScopeContext->DefaultTarget == NULL) {
         if (ScopeContext->Variables != NULL) {
             YoriLibFreeEmptyHashTable(ScopeContext->Variables);
