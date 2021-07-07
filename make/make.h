@@ -788,6 +788,12 @@ typedef struct _MAKE_CONTEXT {
      */
     BOOLEAN KeepGoing;
 
+    /**
+     TRUE to indicate the user has requested to suppress display of commands
+     as they are executing globally.
+     */
+    BOOLEAN SilentCommandLaunching;
+
 } MAKE_CONTEXT, *PMAKE_CONTEXT;
 
 // *** ALLOC.C ***

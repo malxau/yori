@@ -37,7 +37,7 @@ CHAR strMakeHelpText[] =
         "\n"
         "Execute makefiles.\n"
         "\n"
-        "YMAKE [-license] [-f file] [-j n] [-m] [-perf] [-pru] [var=value] [target]\n"
+        "YMAKE [-license] [-f file] [-j n] [-m] [-perf] [-pru] [-s] [var=value] [target]\n"
         "\n"
         "   --             Treat all further arguments as display parameters\n"
         "   -f             Name of the makefile to use, default YMkFile or Makefile\n"
@@ -46,7 +46,8 @@ CHAR strMakeHelpText[] =
         "   -m             Perform tasks at low priority\n"
         "   -mm            Perform tasks at very low priority\n"
         "   -perf          Display how much time was spent in each phase of processing\n"
-        "   -pru           Keep a cache of preprocessor recently executed results\n";
+        "   -pru           Keep a cache of preprocessor recently executed results\n"
+        "   -s             Silently launch child processes\n";
 
 
 /**
@@ -296,6 +297,8 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("mm")) == 0) {
                 Priority = MakePriorityVeryLow;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nologo")) == 0) {
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("perf")) == 0) {
                 MakeContext.PerfDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -309,6 +312,9 @@ ENTRYPOINT(
                 }
                 ArgumentUnderstood = TRUE;
 
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                MakeContext.SilentCommandLaunching = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;

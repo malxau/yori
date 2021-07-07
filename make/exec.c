@@ -424,7 +424,7 @@ MakeLaunchNextCmd(
     si.cb = sizeof(si);
 
     CmdToExec = CONTAINING_RECORD(ListEntry, MAKE_CMD_TO_EXEC, ListEntry);
-    if (CmdToExec->DisplayCmd) {
+    if (CmdToExec->DisplayCmd && !MakeContext->SilentCommandLaunching) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &CmdToExec->Cmd);
     }
 
