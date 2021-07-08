@@ -742,6 +742,7 @@ YoriShFileTabCompletionCallback(
     PYORI_SH_TAB_COMPLETE_MATCH Existing;
     INT CompareResult;
     PYORI_SH_FILE_COMPLETE_CONTEXT FileCompleteContext = (PYORI_SH_FILE_COMPLETE_CONTEXT)Context;
+    BOOLEAN FilenameHasTrailingSlash;
 
     UNREFERENCED_PARAMETER(Depth);
 
@@ -765,11 +766,19 @@ YoriShFileTabCompletionCallback(
         YoriLibReference(Match);
         Match->Value.MemoryToFree = Match;
 
+        FilenameHasTrailingSlash = FALSE;
+        if (Filename->LengthInChars > 0 &&
+            YoriLibIsSep(Filename->StartOfString[Filename->LengthInChars - 1])) {
+
+            FilenameHasTrailingSlash = TRUE;
+        }
+
         if (FileCompleteContext->Suffix.LengthInChars > 0) {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y\\%y"), &FileCompleteContext->Prefix, Filename, &FileCompleteContext->Suffix);
             Match->CursorOffset = Match->Value.LengthInChars - FileCompleteContext->Suffix.LengthInChars;
         } else if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 &&
-                   YoriShGlobal.CompletionTrailingSlash) {
+                   YoriShGlobal.CompletionTrailingSlash &&
+                   !FilenameHasTrailingSlash) {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y\\"), &FileCompleteContext->Prefix, Filename);
             Match->CursorOffset = Match->Value.LengthInChars;
         } else {
@@ -844,12 +853,19 @@ YoriShFileTabCompletionCallback(
         StringToFinalSlash.StartOfString = FileCompleteContext->SearchString;
         StringToFinalSlash.LengthInChars = FileCompleteContext->CharsToFinalSlash;
 
+        FilenameHasTrailingSlash = FALSE;
+        if (FileNameToUse->LengthInChars > 0 &&
+            YoriLibIsSep(FileNameToUse->StartOfString[FileNameToUse->LengthInChars - 1])) {
+
+            FilenameHasTrailingSlash = TRUE;
+        }
 
         if (FileCompleteContext->Suffix.LengthInChars > 0) {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y\\%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse, &FileCompleteContext->Suffix);
             Match->CursorOffset = Match->Value.LengthInChars - FileCompleteContext->Suffix.LengthInChars;
         } else if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 &&
-                   YoriShGlobal.CompletionTrailingSlash) {
+                   YoriShGlobal.CompletionTrailingSlash &&
+                   !FilenameHasTrailingSlash) {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y\\"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
             Match->CursorOffset = Match->Value.LengthInChars;
         } else {
@@ -1815,6 +1831,34 @@ YoriShPerformArgumentTabCompletion(
         return;
     }
 
+    if (CurrentExecContext->CmdToExec.ArgContexts[CurrentExecContextArg].QuoteTerminated) {
+        DWORD TrailingSlashCount;
+        PYORI_STRING Arg;
+
+        Arg = &CurrentExecContext->CmdToExec.ArgV[CurrentExecContextArg];
+
+        //
+        //  Because tab completion is about to add text and hence change
+        //  text before the quote, remove any trailing slashes which are
+        //  escapes.
+        //
+
+        TrailingSlashCount = YoriLibCountStringTrailingChars(Arg, _T("\\"));
+
+        //
+        //  If a terminating quote is found, the number of backslashes
+        //  should be even - if it was odd, this quote would be escaped
+        //  and not terminate the argument.
+        //
+
+        ASSERT((TrailingSlashCount % 2) == 0);
+        TrailingSlashCount = TrailingSlashCount / 2;
+
+        if (CurrentExecContextArgOffset > Arg->LengthInChars - TrailingSlashCount) {
+            CurrentExecContextArgOffset = Arg->LengthInChars - TrailingSlashCount;
+        }
+    }
+
     TabContext->SearchStringOffset = CurrentExecContextArgOffset;
 
     //
@@ -1964,6 +2008,26 @@ YoriShPopulateTabCompletionMatches(
 
     if (CmdContext->CurrentArg < CmdContext->ArgC) {
         memcpy(&CurrentArgString, &CmdContext->ArgV[CmdContext->CurrentArg], sizeof(YORI_STRING));
+        if (CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated) {
+            DWORD TrailingSlashCount;
+
+            //
+            //  Because tab completion is about to add text and hence change
+            //  text before the quote, remove any trailing slashes which are
+            //  escapes.
+            //
+
+            TrailingSlashCount = YoriLibCountStringTrailingChars(&CurrentArgString, _T("\\"));
+            //
+            //  If a terminating quote is found, the number of backslashes
+            //  should be even - if it was odd, this quote would be escaped
+            //  and not terminate the argument.
+            //
+
+            ASSERT((TrailingSlashCount % 2) == 0);
+
+            CurrentArgString.LengthInChars = CurrentArgString.LengthInChars - TrailingSlashCount / 2;
+        }
     }
 
     if (SearchHistory) {
@@ -2149,6 +2213,7 @@ YoriShCompleteGenerateNewBufferString(
     DWORD EndCurrentArg;
     YORI_STRING NewString;
     DWORD CursorOffset;
+    DWORD CharsAdded;
 
     YoriLibInitEmptyString(&NewString);
 
@@ -2163,7 +2228,10 @@ YoriShCompleteGenerateNewBufferString(
         PYORI_LIBSH_ARG_CONTEXT OldArgContext = NULL;
         DWORD OldArgCount = 0;
         DWORD CharsToConsume;
+        DWORD TrailingSlashCount;
+        DWORD Index;
         BOOLEAN QuotesAdded;
+        YORI_STRING NewArg;
 
         if (CmdContext->CurrentArg >= CmdContext->ArgC) {
             DWORD Count;
@@ -2199,6 +2267,7 @@ YoriShCompleteGenerateNewBufferString(
         //
 
         QuotesAdded = FALSE;
+        TrailingSlashCount = 0;
         if (!CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted ||
             !CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated) {
 
@@ -2221,7 +2290,6 @@ YoriShCompleteGenerateNewBufferString(
 
                 YORI_STRING Prefix;
                 YORI_STRING Suffix;
-                YORI_STRING NewArg;
 
                 YoriLibInitEmptyString(&Prefix);
                 YoriLibInitEmptyString(&Suffix);
@@ -2230,14 +2298,62 @@ YoriShCompleteGenerateNewBufferString(
                 Prefix.LengthInChars = CharsToConsume;
                 Suffix.StartOfString = &CmdContext->ArgV[CmdContext->CurrentArg].StartOfString[CharsToConsume];
                 Suffix.LengthInChars = CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars - CharsToConsume;
-                YoriLibYPrintf(&NewArg, _T("%y\"%y\""), &Prefix, &Suffix);
-                if (NewArg.StartOfString != NULL) {
+
+                //
+                //  If the string contains a trailing backslash, the intention
+                //  is to include it rather than escape the quote, so escape
+                //  all backslashes.
+                //
+
+                if (Suffix.LengthInChars > 0) {
+                    TrailingSlashCount = YoriLibCountStringTrailingChars(&Suffix, _T("\\"));
+                }
+
+                //
+                //  Allocate a string for the prefix, a quote, the suffix, as
+                //  any additional backslashes for escapes, a quote, and a NULL
+                //  terminator.
+                //
+
+                if (YoriLibAllocateString(&NewArg, Prefix.LengthInChars + 1 + Suffix.LengthInChars + TrailingSlashCount + 1 + 1)) {
+                    NewArg.LengthInChars = YoriLibSPrintf(NewArg.StartOfString, _T("%y\"%y"), &Prefix, &Suffix);
+                    for (Index = 0; Index < TrailingSlashCount; Index++) {
+                        NewArg.StartOfString[NewArg.LengthInChars + Index] = '\\';
+                    }
+                    NewArg.LengthInChars = NewArg.LengthInChars + TrailingSlashCount;
+                    NewArg.StartOfString[NewArg.LengthInChars] = '"';
+                    NewArg.LengthInChars++;
                     QuotesAdded = TRUE;
                     YoriLibFreeStringContents(&CmdContext->ArgV[CmdContext->CurrentArg]);
                     memcpy(&CmdContext->ArgV[CmdContext->CurrentArg], &NewArg, sizeof(YORI_STRING));
                     CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted = FALSE;
                     CmdContext->ArgContexts[CmdContext->CurrentArg].QuoteTerminated = FALSE;
                 }
+            }
+        }
+
+        //
+        //  If it's a quoted argument, check if it terminates with
+        //  backslashes, and if so, add extra backslashes as escapes.
+        //  Individual match entries don't know if quotes will end up
+        //  added, so this is done here, and the match logic does not
+        //  need to consider escapes.
+        //
+
+        if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted) {
+            PYORI_STRING Arg;
+
+            Arg = &CmdContext->ArgV[CmdContext->CurrentArg];
+
+            TrailingSlashCount = YoriLibCountStringTrailingChars(Arg, _T("\\"));
+            if (TrailingSlashCount > 0) {
+                if (YoriLibReallocateString(Arg, Arg->LengthInChars + TrailingSlashCount)) {
+                    for (Index = 0; Index < TrailingSlashCount; Index++) {
+                        Arg->StartOfString[Arg->LengthInChars + Index] = '\\';
+                    }
+                    Arg->LengthInChars = Arg->LengthInChars + TrailingSlashCount;
+                }
+
             }
         }
 
@@ -2254,30 +2370,34 @@ YoriShCompleteGenerateNewBufferString(
         if (CharsFromMatchToUse < CursorOffset) {
             CursorOffset = CharsFromMatchToUse;
         }
-        ASSERT(CursorOffset <= CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars);
-
-        if (QuotesAdded) {
-            if (CursorOffset > 0) {
-                if (!ForceQuotes &&
-                    CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars - 2) {
-                    CursorOffset += 2;
-                } else {
-                    CursorOffset += 1;
-                }
-            }
-        } else if (CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted) {
-            if (CursorOffset > 0) {
-                if (!ForceQuotes &&
-                    CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars) {
-                    CursorOffset += 2;
-                } else {
-                    CursorOffset += 1;
-                }
-            }
-        }
 
         if (!YoriLibShBuildCmdlineFromCmdContext(CmdContext, &NewString, FALSE, &BeginCurrentArg, &EndCurrentArg)) {
             NewString.StartOfString = NULL;
+        }
+
+        ASSERT(CursorOffset <= CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars);
+        CharsAdded = 0;
+        if (QuotesAdded) {
+            CharsAdded = CharsAdded + 2;
+        }
+        CharsAdded = CharsAdded + TrailingSlashCount;
+
+        if (QuotesAdded || CmdContext->ArgContexts[CmdContext->CurrentArg].Quoted) {
+            if (CursorOffset > 0) {
+                if (!ForceQuotes &&
+                    CursorOffset == CmdContext->ArgV[CmdContext->CurrentArg].LengthInChars - CharsAdded) {
+
+                    //
+                    //  If the cursor should be at the end of the argument,
+                    //  just use the end offset.
+                    //
+
+                    ASSERT(EndCurrentArg >= BeginCurrentArg);
+                    CursorOffset = (EndCurrentArg - BeginCurrentArg + 1);
+                } else {
+                    CursorOffset += 1;
+                }
+            }
         }
 
         if (OldArgv != NULL) {

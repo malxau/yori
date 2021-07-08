@@ -1044,7 +1044,7 @@ YoriLibCountStringMatchingCharsInsensitive(
 }
 
 /**
- Return the count of consecutive characters in String that listed in the
+ Return the count of consecutive characters in String that are listed in the
  characters of the NULL terminated chars array.
 
  @param String The string to check for consecutive characters.
@@ -1104,6 +1104,39 @@ YoriLibCountStringNotContainingChars(
     }
 
     return len;
+}
+
+/**
+ Return the count of consecutive characters at the end of String that are
+ listed in the characters of the NULL terminated chars array.
+
+ @param String The string to check for consecutive characters.
+
+ @param chars A null terminated list of characters to look for.
+
+ @return The number of characters in String that occur in chars.
+ */
+DWORD
+YoriLibCountStringTrailingChars(
+    __in PCYORI_STRING String,
+    __in LPCTSTR chars
+    )
+{
+    DWORD len = 0;
+    DWORD i;
+
+    for (len = String->LengthInChars; len > 0; len--) {
+        for (i = 0; chars[i] != '\0'; i++) {
+            if (String->StartOfString[len - 1] == chars[i]) {
+                break;
+            }
+        }
+        if (chars[i] == '\0') {
+            return String->LengthInChars - len;
+        }
+    }
+
+    return String->LengthInChars - len;
 }
 
 /**

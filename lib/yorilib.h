@@ -3502,6 +3502,12 @@ YoriLibCountStringNotContainingChars(
     __in LPCTSTR match
     );
 
+DWORD
+YoriLibCountStringTrailingChars(
+    __in PCYORI_STRING String,
+    __in LPCTSTR chars
+    );
+
 PYORI_STRING
 YoriLibFindFirstMatchingSubstring(
     __in PYORI_STRING String,

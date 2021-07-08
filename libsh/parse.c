@@ -267,6 +267,7 @@ YoriLibShParseCmdlineToCmdContext(
     BOOLEAN TerminateNextArg = FALSE;
     BOOL QuoteOpen = FALSE;
     YORI_STRING Char;
+    YORI_STRING Remaining;
     LPTSTR OutputString;
     BOOLEAN CurrentArgFound = FALSE;
     BOOLEAN LookingForFirstQuote = FALSE;
@@ -317,14 +318,72 @@ YoriLibShParseCmdlineToCmdContext(
             continue;
         }
 
-        if (Char.LengthInChars >= 2 &&
-            Char.StartOfString[0] == '\\' &&
-            (Char.StartOfString[1] == '\\' || Char.StartOfString[1] == '"')) {
+        //
+        //  A backslash is encountered.  There are four cases to consider:
+        //  1. The backslashes are not followed by a quote, so preserve them
+        //     into the argument (no argument break.)
+        //  2. An odd number of backslashes are followed by a quote, so
+        //     preserve the backslashes and quote into the argument (no
+        //     argument break.)
+        //  3. An even number of backslashes is followed by a quote, and the
+        //     quote is followed by an argument break.  Preserve the
+        //     backslashes and let the quote be described in the ArgContext.
+        //  4. An even number of backslashes is followed by a quote, but the
+        //     argument does not break (eg. "C:\Program Files\\"WindowsApps).
+        //     In this case the quote will move, so only half of the
+        //     backslashes should be carried forward.
+        //
 
-            RequiredCharCount += 2;
-            ArgOffset += 2;
-            Char.StartOfString += 2;
-            Char.LengthInChars -= 2;
+        if (Char.StartOfString[0] == '\\') {
+
+            DWORD ConsecutiveBackslashes;
+            DWORD CharsToOutput;
+            DWORD CharsToIgnore;
+            BOOLEAN TrailingQuote;
+
+            ConsecutiveBackslashes = YoriLibCountStringContainingChars(&Char, _T("\\"));
+
+            CharsToOutput = CharsToConsume = ConsecutiveBackslashes;
+            TrailingQuote = FALSE;
+            if (Char.LengthInChars > ConsecutiveBackslashes &&
+                Char.StartOfString[ConsecutiveBackslashes] == '"') {
+
+                TrailingQuote = TRUE;
+            }
+
+            if (TrailingQuote) {
+
+                if ((ConsecutiveBackslashes % 2) != 0) {
+
+                    CharsToConsume++;
+                    CharsToOutput++;
+                } else if (QuoteOpen && LookingForFirstQuote) {
+
+                    YoriLibInitEmptyString(&Remaining);
+                    Remaining.StartOfString = &Char.StartOfString[ConsecutiveBackslashes + 1];
+                    Remaining.LengthInChars = Char.LengthInChars - ConsecutiveBackslashes - 1;
+
+                    if (Remaining.LengthInChars > 0 &&
+                        Remaining.StartOfString[0] != ' ' &&
+                        !YoriLibShIsArgumentSeperator(&Remaining, &CharsToIgnore, &TerminateNextArg)) {
+
+                        CharsToOutput = ConsecutiveBackslashes / 2;
+                    }
+                }
+            }
+
+            RequiredCharCount += CharsToOutput;
+            ArgOffset += CharsToOutput;
+            Char.StartOfString += CharsToConsume;
+            Char.LengthInChars -= CharsToConsume;
+
+            if (!CurrentArgFound &&
+                (Char.StartOfString - CmdLine->StartOfString >= (LONG)CurrentOffset)) {
+
+                CurrentArgFound = TRUE;
+                CmdContext->CurrentArg = ArgCount;
+                CmdContext->CurrentArgOffset = ArgOffset;
+            }
 
             if (Char.LengthInChars == 0) {
                 ArgCount++;
@@ -591,15 +650,74 @@ YoriLibShParseCmdlineToCmdContext(
             continue;
         }
 
-        if (Char.LengthInChars >= 2 &&
-            Char.StartOfString[0] == '\\' &&
-            (Char.StartOfString[1] == '\\' || Char.StartOfString[1] == '"')) {
+        //
+        //  A backslash is encountered.  There are four cases to consider:
+        //  1. The backslashes are not followed by a quote, so preserve them
+        //     into the argument (no argument break.)
+        //  2. An odd number of backslashes are followed by a quote, so
+        //     preserve the backslashes and quote into the argument (no
+        //     argument break.)
+        //  3. An even number of backslashes is followed by a quote, and the
+        //     quote is followed by an argument break.  Preserve the
+        //     backslashes and let the quote be described in the ArgContext.
+        //  4. An even number of backslashes is followed by a quote, but the
+        //     argument does not break (eg. "C:\Program Files\\"WindowsApps).
+        //     In this case the quote will move, so only half of the
+        //     backslashes should be carried forward.
+        //
 
-            OutputString[0] = '\\';
-            OutputString[1] = Char.StartOfString[1];
-            OutputString += 2;
-            Char.StartOfString += 2;
-            Char.LengthInChars -= 2;
+        if (Char.StartOfString[0] == '\\') {
+
+            DWORD ConsecutiveBackslashes;
+            DWORD CharsToOutput;
+            DWORD CharsToIgnore;
+            BOOLEAN TrailingQuote;
+
+            ConsecutiveBackslashes = YoriLibCountStringContainingChars(&Char, _T("\\"));
+
+            CharsToOutput = CharsToConsume = ConsecutiveBackslashes;
+            TrailingQuote = FALSE;
+            if (Char.LengthInChars > ConsecutiveBackslashes &&
+                Char.StartOfString[ConsecutiveBackslashes] == '"') {
+
+                TrailingQuote = TRUE;
+            }
+
+            if (TrailingQuote) {
+
+                if ((ConsecutiveBackslashes % 2) != 0) {
+
+                    CharsToConsume++;
+                    CharsToOutput++;
+                } else if (QuoteOpen && LookingForFirstQuote) {
+
+                    YoriLibInitEmptyString(&Remaining);
+                    Remaining.StartOfString = &Char.StartOfString[ConsecutiveBackslashes + 1];
+                    Remaining.LengthInChars = Char.LengthInChars - ConsecutiveBackslashes - 1;
+
+                    if (Remaining.LengthInChars > 0 &&
+                        Remaining.StartOfString[0] != ' ' &&
+                        !YoriLibShIsArgumentSeperator(&Remaining, &CharsToIgnore, &TerminateNextArg)) {
+
+                        CharsToOutput = ConsecutiveBackslashes / 2;
+                    }
+                }
+            }
+
+            ASSERT(CharsToConsume >= CharsToOutput);
+            if (CharsToConsume > CharsToOutput) {
+                Char.StartOfString += (CharsToConsume - CharsToOutput);
+                Char.LengthInChars -= (CharsToConsume - CharsToOutput);
+                CharsToConsume = 0;
+            }
+
+            for (CharsToConsume = 0; CharsToConsume < CharsToOutput; CharsToConsume++) {
+                OutputString[CharsToConsume] = Char.StartOfString[CharsToConsume];
+            }
+
+            OutputString += CharsToOutput;
+            Char.StartOfString += CharsToOutput;
+            Char.LengthInChars -= CharsToOutput;
 
             continue;
 
