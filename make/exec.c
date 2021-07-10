@@ -228,7 +228,8 @@ MakePuntToCmd[] = {
     _T("FOR"),
     _T("IF"),
     _T("MOVE"),
-    _T("REN")
+    _T("REN"),
+    _T("TYPE")
 };
 
 /**
