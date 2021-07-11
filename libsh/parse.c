@@ -234,6 +234,115 @@ YoriLibShTrimSpacesAndAtsFromBeginning(
 
 
 /**
+ A backslash is encountered while parsing into arguments.
+
+ There are five cases to consider:
+  1. The backslashes are not followed by a quote or argument break, so
+     preserve them into the argument.
+  2. An odd number of backslashes are followed by a quote, so preserve the
+     backslashes and quote into the argument (no argument break.)
+  3. An even number of backslashes is followed by a quote, and the quote is
+     followed by an argument break.  Preserve the backslashes and let the
+     quote be described in the ArgContext.
+  4. An even number of backslashes is followed by a quote, but the argument
+     does not break (eg. "C:\Program Files\\"WindowsApps).  In this case the
+     quote will move, so only half of the backslashes should be carried
+     forward.
+  5. Backslashes are followed by an argument break, but not a quote.  If a
+     quote is about to be implicitly moved to follow these backslashes, they
+     need to be escaped (ie., doubled.)
+
+ In order to express this, this routine determines the number of characters
+ to read from the source string and the number to write to the target.
+
+ If the number to write is greater than the number to read, the first char is
+ applied multiple times.  If the number to read is greater than the number to
+ write, the difference is swallowed from the source string.
+
+ @param Char Pointer to the current point of the string being parsed.
+
+ @param QuoteOpen Indicates whether a quoted region is currently active.
+
+ @param LookingForFirstQuote Indicates whether a quote opened the argument
+        and the parser is looking for the next quote to terminate it.
+
+ @param QuoteImplicitlyAddedAtEnd If TRUE, a quote will be added at the end
+        of the argument.  This occurs when a quote terminated within the
+        argument, and more text follows, then the argument itself terminates.
+
+ @param CharsToConsume On completion, indicates the number of characters to
+        read from the source string.
+
+ @param CharsToOutput On completion, indicates the numbre of characters to
+        write to the destination argument.
+ */
+VOID
+YoriLibShCountCharsAtBackslash(
+    __in PYORI_STRING Char,
+    __in BOOLEAN QuoteOpen,
+    __in BOOLEAN LookingForFirstQuote,
+    __in BOOLEAN QuoteImplicitlyAddedAtEnd,
+    __out PDWORD CharsToConsume,
+    __out PDWORD CharsToOutput
+    )
+{
+    YORI_STRING Remaining;
+    DWORD ConsecutiveBackslashes;
+    DWORD LocalCharsToConsume;
+    DWORD LocalCharsToOutput;
+    DWORD CharsToIgnore;
+    BOOLEAN TrailingQuote;
+    BOOLEAN TerminateArg;
+    BOOLEAN TerminateNextArg;
+
+    ConsecutiveBackslashes = YoriLibCountStringContainingChars(Char, _T("\\"));
+
+    YoriLibInitEmptyString(&Remaining);
+    Remaining.StartOfString = &Char->StartOfString[ConsecutiveBackslashes];
+    Remaining.LengthInChars = Char->LengthInChars - ConsecutiveBackslashes;
+
+    LocalCharsToOutput = LocalCharsToConsume = ConsecutiveBackslashes;
+    TrailingQuote = FALSE;
+    TerminateArg = FALSE;
+    if (Remaining.LengthInChars > 0 &&
+        Remaining.StartOfString[0] == '"') {
+        Remaining.StartOfString = Remaining.StartOfString + 1;
+        Remaining.LengthInChars = Remaining.LengthInChars - 1;
+        TrailingQuote = TRUE;
+    } else if (!QuoteOpen) {
+        if (Remaining.LengthInChars == 0 ||
+            Remaining.StartOfString[0] == ' ' ||
+            YoriLibShIsArgumentSeperator(&Remaining, &CharsToIgnore, &TerminateNextArg)) {
+            TerminateArg = TRUE;
+        }
+    }
+
+    if (TrailingQuote) {
+
+        if ((ConsecutiveBackslashes % 2) != 0) {
+
+            LocalCharsToConsume++;
+            LocalCharsToOutput++;
+        } else if (QuoteOpen && LookingForFirstQuote) {
+
+
+            if (Remaining.LengthInChars > 0 &&
+                Remaining.StartOfString[0] != ' ' &&
+                !YoriLibShIsArgumentSeperator(&Remaining, &CharsToIgnore, &TerminateNextArg)) {
+
+                LocalCharsToOutput = ConsecutiveBackslashes / 2;
+            }
+        }
+    } else if (TerminateArg && QuoteImplicitlyAddedAtEnd) {
+        LocalCharsToOutput = LocalCharsToConsume * 2;
+    }
+
+    *CharsToConsume = LocalCharsToConsume;
+    *CharsToOutput = LocalCharsToOutput;
+}
+
+
+/**
  Parse a single command string into a series of arguments.  This routine takes
  care of splitting things based on the presence or absence of quotes, as well
  as performing environment variable expansion.  The resulting string has no
@@ -265,9 +374,8 @@ YoriLibShParseCmdlineToCmdContext(
     DWORD CharsToConsume = 0;
     BOOLEAN TerminateArg;
     BOOLEAN TerminateNextArg = FALSE;
-    BOOL QuoteOpen = FALSE;
+    BOOLEAN QuoteOpen = FALSE;
     YORI_STRING Char;
-    YORI_STRING Remaining;
     LPTSTR OutputString;
     BOOLEAN CurrentArgFound = FALSE;
     BOOLEAN LookingForFirstQuote = FALSE;
@@ -318,59 +426,24 @@ YoriLibShParseCmdlineToCmdContext(
             continue;
         }
 
-        //
-        //  A backslash is encountered.  There are four cases to consider:
-        //  1. The backslashes are not followed by a quote, so preserve them
-        //     into the argument (no argument break.)
-        //  2. An odd number of backslashes are followed by a quote, so
-        //     preserve the backslashes and quote into the argument (no
-        //     argument break.)
-        //  3. An even number of backslashes is followed by a quote, and the
-        //     quote is followed by an argument break.  Preserve the
-        //     backslashes and let the quote be described in the ArgContext.
-        //  4. An even number of backslashes is followed by a quote, but the
-        //     argument does not break (eg. "C:\Program Files\\"WindowsApps).
-        //     In this case the quote will move, so only half of the
-        //     backslashes should be carried forward.
-        //
-
         if (Char.StartOfString[0] == '\\') {
 
-            DWORD ConsecutiveBackslashes;
             DWORD CharsToOutput;
-            DWORD CharsToIgnore;
-            BOOLEAN TrailingQuote;
 
-            ConsecutiveBackslashes = YoriLibCountStringContainingChars(&Char, _T("\\"));
+            //
+            //  Pessimistically claim that there's always an implied quote at
+            //  the end of the argument.  This will return the number of chars
+            //  needed to escape all of the quotes in that case, which is
+            //  a pessimistic size estimate, but it means avoiding extra
+            //  tracking when sizing the buffer.
+            //
 
-            CharsToOutput = CharsToConsume = ConsecutiveBackslashes;
-            TrailingQuote = FALSE;
-            if (Char.LengthInChars > ConsecutiveBackslashes &&
-                Char.StartOfString[ConsecutiveBackslashes] == '"') {
-
-                TrailingQuote = TRUE;
-            }
-
-            if (TrailingQuote) {
-
-                if ((ConsecutiveBackslashes % 2) != 0) {
-
-                    CharsToConsume++;
-                    CharsToOutput++;
-                } else if (QuoteOpen && LookingForFirstQuote) {
-
-                    YoriLibInitEmptyString(&Remaining);
-                    Remaining.StartOfString = &Char.StartOfString[ConsecutiveBackslashes + 1];
-                    Remaining.LengthInChars = Char.LengthInChars - ConsecutiveBackslashes - 1;
-
-                    if (Remaining.LengthInChars > 0 &&
-                        Remaining.StartOfString[0] != ' ' &&
-                        !YoriLibShIsArgumentSeperator(&Remaining, &CharsToIgnore, &TerminateNextArg)) {
-
-                        CharsToOutput = ConsecutiveBackslashes / 2;
-                    }
-                }
-            }
+            YoriLibShCountCharsAtBackslash(&Char,
+                                           QuoteOpen,
+                                           LookingForFirstQuote,
+                                           TRUE,
+                                           &CharsToConsume,
+                                           &CharsToOutput);
 
             RequiredCharCount += CharsToOutput;
             ArgOffset += CharsToOutput;
@@ -421,7 +494,7 @@ YoriLibShParseCmdlineToCmdContext(
             //
 
             if (Char.StartOfString[0] == '"') {
-                QuoteOpen = !QuoteOpen;
+                QuoteOpen = (BOOLEAN)(!QuoteOpen);
                 if (LookingForFirstQuote) {
                     Char.StartOfString++;
                     Char.LengthInChars--;
@@ -543,7 +616,6 @@ YoriLibShParseCmdlineToCmdContext(
                 LookingForFirstQuote = FALSE;
             }
 
-
         } else {
 
             RequiredCharCount++;
@@ -650,65 +722,26 @@ YoriLibShParseCmdlineToCmdContext(
             continue;
         }
 
-        //
-        //  A backslash is encountered.  There are four cases to consider:
-        //  1. The backslashes are not followed by a quote, so preserve them
-        //     into the argument (no argument break.)
-        //  2. An odd number of backslashes are followed by a quote, so
-        //     preserve the backslashes and quote into the argument (no
-        //     argument break.)
-        //  3. An even number of backslashes is followed by a quote, and the
-        //     quote is followed by an argument break.  Preserve the
-        //     backslashes and let the quote be described in the ArgContext.
-        //  4. An even number of backslashes is followed by a quote, but the
-        //     argument does not break (eg. "C:\Program Files\\"WindowsApps).
-        //     In this case the quote will move, so only half of the
-        //     backslashes should be carried forward.
-        //
-
         if (Char.StartOfString[0] == '\\') {
 
-            DWORD ConsecutiveBackslashes;
             DWORD CharsToOutput;
-            DWORD CharsToIgnore;
-            BOOLEAN TrailingQuote;
 
-            ConsecutiveBackslashes = YoriLibCountStringContainingChars(&Char, _T("\\"));
+            YoriLibShCountCharsAtBackslash(&Char,
+                                           QuoteOpen,
+                                           LookingForFirstQuote,
+                                           CmdContext->ArgContexts[ArgCount].QuoteTerminated,
+                                           &CharsToConsume,
+                                           &CharsToOutput);
 
-            CharsToOutput = CharsToConsume = ConsecutiveBackslashes;
-            TrailingQuote = FALSE;
-            if (Char.LengthInChars > ConsecutiveBackslashes &&
-                Char.StartOfString[ConsecutiveBackslashes] == '"') {
-
-                TrailingQuote = TRUE;
-            }
-
-            if (TrailingQuote) {
-
-                if ((ConsecutiveBackslashes % 2) != 0) {
-
-                    CharsToConsume++;
-                    CharsToOutput++;
-                } else if (QuoteOpen && LookingForFirstQuote) {
-
-                    YoriLibInitEmptyString(&Remaining);
-                    Remaining.StartOfString = &Char.StartOfString[ConsecutiveBackslashes + 1];
-                    Remaining.LengthInChars = Char.LengthInChars - ConsecutiveBackslashes - 1;
-
-                    if (Remaining.LengthInChars > 0 &&
-                        Remaining.StartOfString[0] != ' ' &&
-                        !YoriLibShIsArgumentSeperator(&Remaining, &CharsToIgnore, &TerminateNextArg)) {
-
-                        CharsToOutput = ConsecutiveBackslashes / 2;
-                    }
-                }
-            }
-
-            ASSERT(CharsToConsume >= CharsToOutput);
             if (CharsToConsume > CharsToOutput) {
                 Char.StartOfString += (CharsToConsume - CharsToOutput);
                 Char.LengthInChars -= (CharsToConsume - CharsToOutput);
                 CharsToConsume = 0;
+            } else if (CharsToOutput > CharsToConsume) {
+                for (;CharsToOutput > CharsToConsume; CharsToOutput--) {
+                    OutputString[0] = Char.StartOfString[0];
+                    OutputString++;
+                }
             }
 
             for (CharsToConsume = 0; CharsToConsume < CharsToOutput; CharsToConsume++) {
@@ -744,7 +777,7 @@ YoriLibShParseCmdlineToCmdContext(
             //
 
             if (Char.StartOfString[0] == '"') {
-                QuoteOpen = !QuoteOpen;
+                QuoteOpen = (BOOLEAN)(!QuoteOpen);
                 if (LookingForFirstQuote) {
                     Char.StartOfString++;
                     Char.LengthInChars--;
