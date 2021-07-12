@@ -503,6 +503,12 @@ typedef struct _YORI_SH_GLOBALS {
     DWORD ActiveCurrentDirectory;
 
     /**
+     The current yanked string, similar to the system clipboard but used only
+     for the kill and yank commands (Ctrl+K and Ctrl+Y).
+     */
+    YORI_STRING YankBuffer;
+
+    /**
      When set to TRUE, the output device supports VT sequences.  When FALSE,
      VT sequences are only supported by YoriLib.
      */
@@ -567,18 +573,18 @@ typedef struct _YORI_SH_GLOBALS {
      TRUE if mouseover support is enabled, FALSE if it is disabled.  Note this
      is currently enabled by default.
      */
-    BOOL MouseoverEnabled;
+    BOOLEAN MouseoverEnabled;
+
+    /**
+     TRUE if this is an interactive shell, meaning one spawned without /c or
+     /ss.  In particular, note that /k is considered interactive.
+     */
+    BOOLEAN InteractiveMode;
 
     /**
      The Win32 color to use when changing text color due to a mouse over.
      */
     WORD MouseoverColor;
-
-    /**
-     The current yanked string, similar to the system clipboard but used only
-     for the kill and yank commands (Ctrl+K and Ctrl+Y).
-     */
-    YORI_STRING YankBuffer;
 
 } YORI_SH_GLOBALS, *PYORI_SH_GLOBALS;
 

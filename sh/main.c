@@ -3,7 +3,7 @@
  *
  * Yori shell entrypoint
  *
- * Copyright (c) 2017-2020 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -366,6 +366,7 @@ YoriShParseArgs(
     YORI_STRING Arg;
     BOOLEAN ExecuteStartupScripts = TRUE;
     BOOLEAN IgnoreUserScripts = FALSE;
+    BOOLEAN Interactive = TRUE;
 
     *TerminateApp = FALSE;
     *ExitCode = 0;
@@ -381,11 +382,12 @@ YoriShParseArgs(
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2020"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 *TerminateApp = TRUE;
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c")) == 0) {
                 if (ArgC > i + 1) {
+                    Interactive = FALSE;
                     *TerminateApp = TRUE;
                     StartArgToExec = i + 1;
                     ArgumentUnderstood = TRUE;
@@ -412,6 +414,7 @@ YoriShParseArgs(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ss")) == 0) {
                 if (ArgC > i + 1) {
+                    Interactive = FALSE;
                     YoriShGlobal.RecursionDepth++;
                     YoriShGlobal.SubShell = TRUE;
                     ExecuteStartupScripts = FALSE;
@@ -426,6 +429,10 @@ YoriShParseArgs(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (Interactive) {
+        SetEnvironmentVariable(_T("YORIINTERACTIVE"), _T("1"));
     }
 
     if (ExecuteStartupScripts) {
