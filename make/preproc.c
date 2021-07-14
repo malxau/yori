@@ -1180,9 +1180,9 @@ MakeFindFirstMatchingSubstringSkipQuotes(
 
 
 /**
- Evaluate a preprocessor !IF expression, and return TRUE if the expression
- is TRUE or FALSE if it is FALSE.  On error, this function informs the user
- and marks execution to terminate.
+ Evaluate a single comparison in a preprocessor !IF expression, and return
+ TRUE if the expression is TRUE or FALSE if it is FALSE.  On error, this
+ function informs the user and marks execution to terminate.
 
  @param ScopeContext Pointer to the scope context.
 
@@ -1191,7 +1191,7 @@ MakeFindFirstMatchingSubstringSkipQuotes(
  @return TRUE if the condition is TRUE, FALSE if the condition is FALSE.
  */
 BOOLEAN
-MakePreprocessorEvaluateCondition(
+MakePreprocessorEvaluateSingleCondition(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in PYORI_STRING Expression
     )
@@ -1206,12 +1206,6 @@ MakePreprocessorEvaluateCondition(
     BOOLEAN SecondPartIsString;
 
     MakeContext = ScopeContext->MakeContext;
-
-    //
-    //  MSFIX
-    //   - NMAKE has operator evaluation order and supports compound
-    //     expressions
-    //
 
     YoriLibConstantString(&OperatorMatches[MAKE_IF_OPERATOR_EXACT_MATCH], _T("=="));
     YoriLibConstantString(&OperatorMatches[MAKE_IF_OPERATOR_NO_MATCH], _T("!="));
@@ -1379,6 +1373,108 @@ MakePreprocessorEvaluateCondition(
 
     ASSERT(FALSE);
     return FALSE;
+}
+
+/**
+ An array index for an operator indicating an and condition.
+ */
+#define MAKE_IF_COMPOUND_OPERATOR_AND        0
+
+/**
+ An array index for an operator indicating an or condition.
+ */
+#define MAKE_IF_COMPOUND_OPERATOR_OR         1
+
+/**
+ An array index beyond the array, ie., the number of elements in the array.
+ */
+#define MAKE_IF_COMPOUND_OPERATOR_BEYOND_MAX 2
+
+
+/**
+ Evaluate a preprocessor !IF expression, and return TRUE if the expression
+ is TRUE or FALSE if it is FALSE.  On error, this function informs the user
+ and marks execution to terminate.
+
+ @param ScopeContext Pointer to the scope context.
+
+ @param Expression Pointer to the expression to evaluate.
+
+ @return TRUE if the condition is TRUE, FALSE if the condition is FALSE.
+ */
+BOOLEAN
+MakePreprocessorEvaluateCondition(
+    __in PMAKE_SCOPE_CONTEXT ScopeContext,
+    __in PYORI_STRING Expression
+    )
+{
+    YORI_STRING OperatorMatches[MAKE_IF_COMPOUND_OPERATOR_BEYOND_MAX];
+    PMAKE_CONTEXT MakeContext;
+    PYORI_STRING MatchingOperator;
+    PYORI_STRING PreviousMatchingOperator;
+    YORI_STRING Current;
+    YORI_STRING Remaining;
+    DWORD OperatorIndex;
+    BOOLEAN CumulativeResult;
+    BOOLEAN CurrentResult;
+
+    MakeContext = ScopeContext->MakeContext;
+
+    YoriLibConstantString(&OperatorMatches[MAKE_IF_COMPOUND_OPERATOR_AND], _T("&&"));
+    YoriLibConstantString(&OperatorMatches[MAKE_IF_COMPOUND_OPERATOR_OR], _T("||"));
+
+    YoriLibInitEmptyString(&Remaining);
+    YoriLibInitEmptyString(&Current);
+    Remaining.StartOfString = Expression->StartOfString;
+    Remaining.LengthInChars = Expression->LengthInChars;
+    CumulativeResult = FALSE;
+    PreviousMatchingOperator = NULL;
+
+    while(Remaining.LengthInChars > 0) {
+
+        MatchingOperator = MakeFindFirstMatchingSubstringSkipQuotes(&Remaining, sizeof(OperatorMatches)/sizeof(OperatorMatches[0]), OperatorMatches, &OperatorIndex);
+        if (MatchingOperator == NULL) {
+            Current.StartOfString = Remaining.StartOfString;
+            Current.LengthInChars = Remaining.LengthInChars;
+            Remaining.LengthInChars = 0;
+        } else {
+
+            Current.StartOfString = Remaining.StartOfString;
+            Current.LengthInChars = OperatorIndex;
+
+            Remaining.StartOfString = Remaining.StartOfString + OperatorIndex + MatchingOperator->LengthInChars;
+            Remaining.LengthInChars = Remaining.LengthInChars - OperatorIndex - MatchingOperator->LengthInChars;
+        }
+
+        MakeTrimWhitespace(&Current);
+        MakeTrimWhitespace(&Remaining);
+
+        CurrentResult = MakePreprocessorEvaluateSingleCondition(ScopeContext, &Current);
+        if (MakeContext->ErrorTermination) {
+            return FALSE;
+        }
+
+        if (PreviousMatchingOperator == &OperatorMatches[MAKE_IF_COMPOUND_OPERATOR_AND]) {
+            if (CumulativeResult && CurrentResult) {
+                CumulativeResult = TRUE;
+            } else {
+                CumulativeResult = FALSE;
+            }
+        } else if (PreviousMatchingOperator == &OperatorMatches[MAKE_IF_COMPOUND_OPERATOR_OR]) {
+            if (CumulativeResult || CurrentResult) {
+                CumulativeResult = TRUE;
+            } else {
+                CumulativeResult = FALSE;
+            }
+        } else {
+            ASSERT(PreviousMatchingOperator == NULL);
+            CumulativeResult = CurrentResult;
+        }
+
+        PreviousMatchingOperator = MatchingOperator;
+    }
+
+    return CumulativeResult;
 }
 
 BOOL
