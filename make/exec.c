@@ -32,7 +32,7 @@
 /**
  Information about a currently executing child process.
  */
-typedef struct _MAKE_CHILD_PROCESS {
+typedef struct _MAKE_CHILD_RECIPE {
 
     /**
      Set to TRUE to indicate that the command for the child has been parsed
@@ -46,6 +46,11 @@ typedef struct _MAKE_CHILD_PROCESS {
      Indicates the job identifier.
      */
     DWORD JobId;
+
+    /**
+     The current directory for this recipe.
+     */
+    YORI_STRING CurrentDirectory;
 
     /**
      The target that has requested this child process to be performed.
@@ -73,7 +78,7 @@ typedef struct _MAKE_CHILD_PROCESS {
      An execution plan.  Should be deallocated if CmdContextPresent is TRUE.
      */
     YORI_LIBSH_EXEC_PLAN ExecPlan;
-} MAKE_CHILD_PROCESS, *PMAKE_CHILD_PROCESS;
+} MAKE_CHILD_RECIPE, *PMAKE_CHILD_RECIPE;
 
 /**
  Attempt to set the temporary directory for this process to match the
@@ -236,7 +241,7 @@ MakePuntToCmd[] = {
  Return TRUE if there are more commands to execute as part of constructing
  this target, or FALSE if this target is complete.
 
- @param ChildProcess Pointer to the child process structure specifying the
+ @param ChildRecipe Pointer to the child recipe structure specifying the
         target.
 
  @return TRUE if there are more commands to execute as part of constructing
@@ -244,16 +249,61 @@ MakePuntToCmd[] = {
  */
 BOOLEAN
 MakeDoesTargetHaveMoreCommands(
-    __in PMAKE_CHILD_PROCESS ChildProcess
+    __in PMAKE_CHILD_RECIPE ChildRecipe
     )
 {
     PYORI_LIST_ENTRY ListEntry;
-    ListEntry = YoriLibGetNextListEntry(&ChildProcess->Target->ExecCmds, &ChildProcess->Cmd->ListEntry);
+    ListEntry = YoriLibGetNextListEntry(&ChildRecipe->Target->ExecCmds, &ChildRecipe->Cmd->ListEntry);
     if (ListEntry == NULL) {
         return FALSE;
     }
 
     return TRUE;
+}
+
+/**
+ Change the current directory for the recipe.
+
+ Unlike a "real" change current directory, this is not modifying global
+ process state.  It can evaluate relative paths to the current recipe path,
+ which is common, but it cannot evaluate things relative to other drive
+ letters without recording a full per-drive set of current directories for
+ each recipe.  This seems unnecessary because build systems want to traverse
+ directories within their build tree, and changing drives would be outside
+ that.  If changing drives were supported, we'd also need to implement the
+ x: alias notation.
+
+ @param ChildRecipe Pointer to the child recipe specifying the current
+        directory for the recipe.
+
+ @param ArgC Specifies the number of arguments.
+
+ @param ArgV Pointer to an array of arguments.
+
+ @return EXIT_FAILURE or EXIT_SUCCESS as appropriate.
+ */
+DWORD
+MakeProcessCd(
+    __in PMAKE_CHILD_RECIPE ChildRecipe,
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[]
+    )
+{
+    YORI_STRING NewCurrentDirectory;
+
+    if (ArgC < 2) {
+        return EXIT_FAILURE;
+    }
+
+    YoriLibInitEmptyString(&NewCurrentDirectory);
+
+    if (!YoriLibGetFullPathNameRelativeTo(&ChildRecipe->CurrentDirectory, &ArgV[1], FALSE, &NewCurrentDirectory, NULL)) {
+        return EXIT_FAILURE;
+    }
+
+    YoriLibFreeStringContents(&ChildRecipe->CurrentDirectory);
+    memcpy(&ChildRecipe->CurrentDirectory, &NewCurrentDirectory, sizeof(YORI_STRING));
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -264,7 +314,7 @@ MakeDoesTargetHaveMoreCommands(
  an empty string, indicating the condition is not satisfied, and no command
  needs to be executed.
 
- @param ChildProcess Pointer to information about the child process to
+ @param ChildRecipe Pointer to information about the child recipe to
         execute, including the working directory.
 
  @param ArgC Specifies the number of arguments.
@@ -283,7 +333,7 @@ MakeDoesTargetHaveMoreCommands(
 __success(return)
 BOOLEAN
 MakeProcessIf(
-    __in PMAKE_CHILD_PROCESS ChildProcess,
+    __in PMAKE_CHILD_RECIPE ChildRecipe,
     __in DWORD ArgC,
     __in YORI_STRING ArgV[],
     __inout PYORI_STRING CmdToExec
@@ -319,7 +369,7 @@ MakeProcessIf(
     }
 
     YoriLibInitEmptyString(&FullPath);
-    if (!YoriLibGetFullPathNameRelativeTo(&ChildProcess->Target->ScopeContext->HashEntry.Key, &ArgV[Index + 1], TRUE, &FullPath, NULL)) {
+    if (!YoriLibGetFullPathNameRelativeTo(&ChildRecipe->CurrentDirectory, &ArgV[Index + 1], TRUE, &FullPath, NULL)) {
         return FALSE;
     }
 
@@ -354,17 +404,17 @@ MakeProcessIf(
  If there is a CmdContext or ExecPlan attached to the child process structure,
  free it now in preparation for reuse.
 
- @param ChildProcess Pointer to the child process structure.
+ @param ChildRecipe Pointer to the child recipe structure.
  */
 VOID
 MakeFreeCmdContextIfNecessary(
-    __in PMAKE_CHILD_PROCESS ChildProcess
+    __in PMAKE_CHILD_RECIPE ChildRecipe
     )
 {
-    if (ChildProcess->CmdContextPresent) {
-        YoriLibShFreeExecPlan(&ChildProcess->ExecPlan);
-        YoriLibShFreeCmdContext(&ChildProcess->CmdContext);
-        ChildProcess->CmdContextPresent = FALSE;
+    if (ChildRecipe->CmdContextPresent) {
+        YoriLibShFreeExecPlan(&ChildRecipe->ExecPlan);
+        YoriLibShFreeCmdContext(&ChildRecipe->CmdContext);
+        ChildRecipe->CmdContextPresent = FALSE;
     }
 }
 
@@ -373,19 +423,19 @@ MakeFreeCmdContextIfNecessary(
 
  @param MakeContext Pointer to the make context.
 
- @param ChildProcess Pointer to the child process structure specifying the
+ @param ChildRecipe Pointer to the child recipe structure specifying the
         target.
 
  @return TRUE to indicate that a child process was successfully created, or
          FALSE if it was not.  Note that if the command indicates that failure
          is tolerable, this function can return TRUE without creating a 
-         child process, which is indicated by the ChildProcess->ProcessHandle
+         child process, which is indicated by the ChildRecipe->ProcessHandle
          member being NULL.
  */
 BOOLEAN
 MakeLaunchNextCmd(
     __in PMAKE_CONTEXT MakeContext,
-    __inout PMAKE_CHILD_PROCESS ChildProcess
+    __inout PMAKE_CHILD_RECIPE ChildRecipe
     )
 {
     STARTUPINFO si;
@@ -397,29 +447,32 @@ MakeLaunchNextCmd(
     DWORD Error;
     BOOL FailedInRedirection;
     YORI_STRING CmdToParse;
-    YORI_STRING CurrentDirectory;
     BOOLEAN ExecutedBuiltin;
     BOOLEAN PuntToCmd;
     BOOLEAN Reparse;
 
-    ASSERT(!ChildProcess->CmdContextPresent);
+    ASSERT(!ChildRecipe->CmdContextPresent);
 
-    Target = ChildProcess->Target;
+    Target = ChildRecipe->Target;
 
-    if (ChildProcess->Cmd == NULL) {
+    //
+    //  Get the next command within the recipe.
+    //
+
+    if (ChildRecipe->Cmd == NULL) {
         ListEntry = YoriLibGetNextListEntry(&Target->ExecCmds, NULL);
     } else {
-        ListEntry = YoriLibGetNextListEntry(&Target->ExecCmds, &ChildProcess->Cmd->ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&Target->ExecCmds, &ChildRecipe->Cmd->ListEntry);
     }
 
     //
-    //  Each target being executed should have one command, and when
+    //  Each target being executed should have at least one command, and when
     //  it finishes, we need to check whether to call here or update
     //  dependencies and move to the next target
     //
 
     ASSERT(ListEntry != NULL);
-    ChildProcess->Cmd = CONTAINING_RECORD(ListEntry, MAKE_CMD_TO_EXEC, ListEntry);
+    ChildRecipe->Cmd = CONTAINING_RECORD(ListEntry, MAKE_CMD_TO_EXEC, ListEntry);
 
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
@@ -429,17 +482,6 @@ MakeLaunchNextCmd(
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &CmdToExec->Cmd);
     }
 
-    YoriLibInitEmptyString(&CurrentDirectory);
-    CurrentDirectory.StartOfString = Target->ScopeContext->HashEntry.Key.StartOfString;
-    CurrentDirectory.LengthInChars = Target->ScopeContext->HashEntry.Key.LengthInChars;
-    CurrentDirectory.LengthAllocated = Target->ScopeContext->HashEntry.Key.LengthAllocated;
-    if (YoriLibIsPathPrefixed(&CurrentDirectory)) {
-        CurrentDirectory.StartOfString += sizeof("\\\\.\\") - 1;
-        CurrentDirectory.LengthInChars -= sizeof("\\\\.\\") - 1;
-        CurrentDirectory.LengthAllocated -= sizeof("\\\\.\\") - 1;
-    }
-
-    ASSERT(YoriLibIsStringNullTerminated(&CurrentDirectory));
 
     YoriLibInitEmptyString(&CmdToParse);
     CmdToParse.StartOfString = CmdToExec->Cmd.StartOfString;
@@ -455,47 +497,51 @@ MakeLaunchNextCmd(
         PuntToCmd = FALSE;
         Reparse = FALSE;
 
-        ASSERT(!ChildProcess->CmdContextPresent);
+        ASSERT(!ChildRecipe->CmdContextPresent);
 
-        if (!YoriLibShParseCmdlineToCmdContext(&CmdToParse, 0, &ChildProcess->CmdContext)) {
+        if (!YoriLibShParseCmdlineToCmdContext(&CmdToParse, 0, &ChildRecipe->CmdContext)) {
             YoriLibFreeStringContents(&CmdToParse);
             return FALSE;
         }
 
-        if (!YoriLibShParseCmdContextToExecPlan(&ChildProcess->CmdContext, &ChildProcess->ExecPlan, NULL, NULL, NULL, NULL)) {
-            YoriLibShFreeCmdContext(&ChildProcess->CmdContext);
+        if (!YoriLibShParseCmdContextToExecPlan(&ChildRecipe->CmdContext, &ChildRecipe->ExecPlan, NULL, NULL, NULL, NULL)) {
+            YoriLibShFreeCmdContext(&ChildRecipe->CmdContext);
             YoriLibFreeStringContents(&CmdToParse);
             return FALSE;
         }
 
-        ChildProcess->CmdContextPresent = TRUE;
-        ExecContext = ChildProcess->ExecPlan.FirstCmd;
+        ChildRecipe->CmdContextPresent = TRUE;
+        ExecContext = ChildRecipe->ExecPlan.FirstCmd;
 
         if (ExecContext->CmdToExec.ArgV == NULL ||
             ExecContext->CmdToExec.ArgC == 0) {
 
             ExecutedBuiltin = TRUE;
-            ChildProcess->ProcessHandle = NULL;
+            ChildRecipe->ProcessHandle = NULL;
 
         } else {
 
             DWORD Result = EXIT_SUCCESS;
             if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("IF")) == 0) {
-                if (MakeProcessIf(ChildProcess, ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV, &CmdToParse)) {
+                if (MakeProcessIf(ChildRecipe, ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV, &CmdToParse)) {
                     Reparse = TRUE;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("CD")) == 0) {
+                Result = MakeProcessCd(ChildRecipe, ExecContext->CmdToExec.ArgC, ExecContext->CmdToExec.ArgV);
+                ExecutedBuiltin = TRUE;
+                ChildRecipe->ProcessHandle = NULL;
             } else {
                 PYORI_LIBSH_BUILTIN_CALLBACK Callback;
 
                 Callback = YoriLibShLookupBuiltinByName(&ExecContext->CmdToExec.ArgV[0]);
                 if (Callback) {
 
-                    SetCurrentDirectory(CurrentDirectory.StartOfString);
+                    SetCurrentDirectory(ChildRecipe->CurrentDirectory.StartOfString);
                     Result = MakeShExecuteInProc(Callback->BuiltInFn, ExecContext);
                     SetCurrentDirectory(MakeContext->ProcessCurrentDirectory.StartOfString);
 
                     ExecutedBuiltin = TRUE;
-                    ChildProcess->ProcessHandle = NULL;
+                    ChildRecipe->ProcessHandle = NULL;
                 }
             }
 
@@ -509,7 +555,7 @@ MakeLaunchNextCmd(
             }
 
             if (Result != EXIT_SUCCESS && !CmdToExec->IgnoreErrors) {
-                MakeFreeCmdContextIfNecessary(ChildProcess);
+                MakeFreeCmdContextIfNecessary(ChildRecipe);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch:\n%y\n"), &CmdToExec->Cmd);
                 return FALSE;
             }
@@ -524,11 +570,11 @@ MakeLaunchNextCmd(
             break;
         }
 
-        MakeFreeCmdContextIfNecessary(ChildProcess);
+        MakeFreeCmdContextIfNecessary(ChildRecipe);
 
         if (CmdToParse.LengthInChars == 0) {
             YoriLibFreeStringContents(&CmdToParse);
-            ChildProcess->ProcessHandle = NULL;
+            ChildRecipe->ProcessHandle = NULL;
             return TRUE;
         }
     }
@@ -540,8 +586,8 @@ MakeLaunchNextCmd(
     //
 
     if (!PuntToCmd) {
-        ASSERT(ChildProcess->CmdContextPresent);
-        if (ChildProcess->ExecPlan.NumberCommands > 1) {
+        ASSERT(ChildRecipe->CmdContextPresent);
+        if (ChildRecipe->ExecPlan.NumberCommands > 1) {
             PuntToCmd = TRUE;
         }
     }
@@ -554,23 +600,23 @@ MakeLaunchNextCmd(
 
     if (PuntToCmd) {
 
-        MakeFreeCmdContextIfNecessary(ChildProcess);
+        MakeFreeCmdContextIfNecessary(ChildRecipe);
 
-        if (!YoriLibShBuildCmdContextForCmdBuckPass(&ChildProcess->CmdContext, &CmdToParse)) {
+        if (!YoriLibShBuildCmdContextForCmdBuckPass(&ChildRecipe->CmdContext, &CmdToParse)) {
             YoriLibFreeStringContents(&CmdToParse);
             return FALSE;
         }
 
-        if (!YoriLibShParseCmdContextToExecPlan(&ChildProcess->CmdContext, &ChildProcess->ExecPlan, NULL, NULL, NULL, NULL)) {
-            YoriLibShFreeCmdContext(&ChildProcess->CmdContext);
+        if (!YoriLibShParseCmdContextToExecPlan(&ChildRecipe->CmdContext, &ChildRecipe->ExecPlan, NULL, NULL, NULL, NULL)) {
+            YoriLibShFreeCmdContext(&ChildRecipe->CmdContext);
             return FALSE;
         }
 
-        ChildProcess->CmdContextPresent = TRUE;
+        ChildRecipe->CmdContextPresent = TRUE;
     } else {
         YORI_STRING FoundInPath;
 
-        ExecContext = ChildProcess->ExecPlan.FirstCmd;
+        ExecContext = ChildRecipe->ExecPlan.FirstCmd;
 
         YoriLibInitEmptyString(&FoundInPath);
         if (YoriLibLocateExecutableInPath(&ExecContext->CmdToExec.ArgV[0], NULL, NULL, &FoundInPath)) {
@@ -583,9 +629,9 @@ MakeLaunchNextCmd(
         }
     }
 
-    ExecContext = ChildProcess->ExecPlan.FirstCmd;
+    ExecContext = ChildRecipe->ExecPlan.FirstCmd;
 
-    ASSERT(ChildProcess->ExecPlan.NumberCommands == 1);
+    ASSERT(ChildRecipe->ExecPlan.NumberCommands == 1);
     if (ExecContext->StdOutType == StdOutTypeDefault) {
         ExecContext->StdOutType = StdOutTypeBuffer;
         if (ExecContext->StdErrType == StdErrTypeDefault) {
@@ -593,25 +639,25 @@ MakeLaunchNextCmd(
         }
     }
 
-    ChildProcess->JobId = MakeAllocateJobId(MakeContext);
+    ChildRecipe->JobId = MakeAllocateJobId(MakeContext);
 
     Error = YoriLibShCreateProcess(ExecContext,
-                                   CurrentDirectory.StartOfString,
+                                   ChildRecipe->CurrentDirectory.StartOfString,
                                    &FailedInRedirection);
 
     if (Error != ERROR_SUCCESS) {
-        MakeFreeJobId(MakeContext, ChildProcess->JobId);
-        ChildProcess->ProcessHandle = NULL;
+        MakeFreeJobId(MakeContext, ChildRecipe->JobId);
+        ChildRecipe->ProcessHandle = NULL;
         if (!CmdToExec->IgnoreErrors) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Failure to launch:\n%y\n"), &CmdToParse);
             YoriLibFreeStringContents(&CmdToParse);
-            MakeFreeCmdContextIfNecessary(ChildProcess);
+            MakeFreeCmdContextIfNecessary(ChildRecipe);
             return FALSE;
         }
     } else {
         CloseHandle(ExecContext->hPrimaryThread);
         ExecContext->hPrimaryThread = NULL;
-        ChildProcess->ProcessHandle = ExecContext->hProcess;
+        ChildRecipe->ProcessHandle = ExecContext->hProcess;
         YoriLibShCommenceProcessBuffersIfNeeded(ExecContext);
     }
     YoriLibFreeStringContents(&CmdToParse);
@@ -624,7 +670,7 @@ MakeLaunchNextCmd(
 
  @param MakeContext Pointer to the context.
 
- @param ChildProcess Pointer to the child process structure to populate with
+ @param ChildRecipe Pointer to the child process structure to populate with
         information about the child process that has been initiated.
 
  @return TRUE to indicate success, FALSE to indicate failure.
@@ -633,18 +679,26 @@ __success(return)
 BOOLEAN
 MakeLaunchNextTarget(
     __in PMAKE_CONTEXT MakeContext,
-    __inout PMAKE_CHILD_PROCESS ChildProcess
+    __inout PMAKE_CHILD_RECIPE ChildRecipe
     )
 {
     PMAKE_TARGET Target;
     PYORI_LIST_ENTRY ListEntry;
 
-    ASSERT(!ChildProcess->CmdContextPresent);
+    //
+    //  This recipe structure should be available for use.
+    //
+
+    ASSERT(!ChildRecipe->CmdContextPresent);
+
+    //
+    //  Get the next target.
+    //
 
     ListEntry = YoriLibGetNextListEntry(&MakeContext->TargetsReady, NULL);
 
     //
-    //  The caller should have checked for this
+    //  The caller should have checked that there is a target.
     //
 
     ASSERT(ListEntry != NULL);
@@ -656,10 +710,55 @@ MakeLaunchNextTarget(
     YoriLibAppendList(&MakeContext->TargetsRunning, ListEntry);
     Target = CONTAINING_RECORD(ListEntry, MAKE_TARGET, RebuildList);
 
-    ChildProcess->Target = Target;
-    ChildProcess->Cmd = NULL;
+    ChildRecipe->Target = Target;
+    ChildRecipe->Cmd = NULL;
 
-    return MakeLaunchNextCmd(MakeContext, ChildProcess);
+    //
+    //  The previous recipe should have been cleaned up.
+    //
+
+    ASSERT(ChildRecipe->CurrentDirectory.LengthInChars == 0);
+    ASSERT(ChildRecipe->CurrentDirectory.MemoryToFree == NULL);
+
+    //
+    //  Initialize the recipe current directory as the scope context
+    //  directory.  The recipe is able to change it.
+    //
+
+    YoriLibCloneString(&ChildRecipe->CurrentDirectory, &Target->ScopeContext->HashEntry.Key);
+    if (YoriLibIsPathPrefixed(&ChildRecipe->CurrentDirectory)) {
+        ChildRecipe->CurrentDirectory.StartOfString += sizeof("\\\\.\\") - 1;
+        ChildRecipe->CurrentDirectory.LengthInChars -= sizeof("\\\\.\\") - 1;
+        ChildRecipe->CurrentDirectory.LengthAllocated -= sizeof("\\\\.\\") - 1;
+    }
+
+    ASSERT(YoriLibIsStringNullTerminated(&ChildRecipe->CurrentDirectory));
+
+    return MakeLaunchNextCmd(MakeContext, ChildRecipe);
+}
+
+/**
+ Indicate that an entire recipe has completed.  This may have succeeded, or
+ may have failed partway.  This function needs to clean up regardless.
+
+ @param MakeContext Pointer to the make context.
+
+ @param ChildRecipe Pointer to the recipe to clean up for reuse.
+ */
+VOID
+MakeRecipeCompletion(
+    __in PMAKE_CONTEXT MakeContext,
+    __inout PMAKE_CHILD_RECIPE ChildRecipe
+    )
+{
+    UNREFERENCED_PARAMETER(MakeContext);
+
+    //
+    //  This recipe structure should not have child processes executing.
+    //
+
+    ASSERT(!ChildRecipe->CmdContextPresent);
+    YoriLibFreeStringContents(&ChildRecipe->CurrentDirectory);
 }
 
 /**
@@ -704,7 +803,7 @@ MakeUpdateDependenciesForTarget(
 
  @param MakeContext Pointer to the make context.
 
- @param ChildProcess Pointer to the child that has completed.
+ @param ChildRecipe Pointer to the child that has completed.
 
  @return TRUE to indicate the process succeeded, FALSE to indicate the process
          failed.
@@ -712,7 +811,7 @@ MakeUpdateDependenciesForTarget(
 BOOLEAN
 MakeProcessCompletion(
     __in PMAKE_CONTEXT MakeContext,
-    __in PMAKE_CHILD_PROCESS ChildProcess
+    __in PMAKE_CHILD_RECIPE ChildRecipe
     )
 {
     DWORD ExitCode;
@@ -733,20 +832,20 @@ MakeProcessCompletion(
     //  hitting the 64 object wait limit, it seems like the lesser evil.
     //
 
-    if (ChildProcess->ProcessHandle != NULL) {
+    if (ChildRecipe->ProcessHandle != NULL) {
 
         ExitCode = 255;
-        GetExitCodeProcess(ChildProcess->ProcessHandle, &ExitCode);
-        ASSERT(ChildProcess->CmdContextPresent);
+        GetExitCodeProcess(ChildRecipe->ProcessHandle, &ExitCode);
+        ASSERT(ChildRecipe->CmdContextPresent);
 
         DefaultColor = YoriLibVtGetDefaultColor();
         RestoreColor = FALSE;
 
         if (ExitCode != 0) {
 
-            if (!ChildProcess->Cmd->IgnoreErrors) {
+            if (!ChildRecipe->Cmd->IgnoreErrors) {
                 YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_INTENSITY));
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error in target: %y\n"), &ChildProcess->Target->HashEntry.Key);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error in target: %y\n"), &ChildRecipe->Target->HashEntry.Key);
                 Result = FALSE;
             } else {
                 YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, (WORD)((DefaultColor & 0xF0) | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY));
@@ -762,7 +861,7 @@ MakeProcessCompletion(
         //  child processes from being launched, but output will be ordered.
         //
 
-        ExecContext = ChildProcess->ExecPlan.FirstCmd;
+        ExecContext = ChildRecipe->ExecPlan.FirstCmd;
 
         if (ExecContext->StdOutType == StdOutTypeBuffer) {
             YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
@@ -778,8 +877,8 @@ MakeProcessCompletion(
             ASSERT(ExecContext->StdErrType != StdErrTypeBuffer);
         }
 
-        if (!ChildProcess->Cmd->IgnoreErrors && ExitCode != 0) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Command:\n%y\n"), &ChildProcess->Cmd->Cmd);
+        if (!ChildRecipe->Cmd->IgnoreErrors && ExitCode != 0) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Command:\n%y\n"), &ChildRecipe->Cmd->Cmd);
         }
 
         if (RestoreColor) {
@@ -790,12 +889,12 @@ MakeProcessCompletion(
         //  This is closed implicitly as part of FreeExecPlan below
         //
 
-        ASSERT(ChildProcess->CmdContextPresent);
-        ChildProcess->ProcessHandle = NULL;
-        MakeFreeJobId(MakeContext, ChildProcess->JobId);
+        ASSERT(ChildRecipe->CmdContextPresent);
+        ChildRecipe->ProcessHandle = NULL;
+        MakeFreeJobId(MakeContext, ChildRecipe->JobId);
     }
 
-    MakeFreeCmdContextIfNecessary(ChildProcess);
+    MakeFreeCmdContextIfNecessary(ChildRecipe);
 
     return Result;
 }
@@ -857,7 +956,7 @@ MakeExecuteRequiredTargets(
     DWORD NumberActiveProcesses;
     DWORD Index;
     HANDLE *ProcessHandleArray;
-    PMAKE_CHILD_PROCESS ChildProcessArray;
+    PMAKE_CHILD_RECIPE ChildRecipeArray;
     BOOLEAN Result;
     BOOLEAN MoveToNextTarget;
     BOOLEAN TargetFailureObserved;
@@ -872,20 +971,20 @@ MakeExecuteRequiredTargets(
 
     ZeroMemory(ProcessHandleArray, MakeContext->NumberProcesses * sizeof(HANDLE));
 
-    ChildProcessArray = YoriLibMalloc(MakeContext->NumberProcesses * sizeof(MAKE_CHILD_PROCESS));
-    if (ChildProcessArray == NULL) {
+    ChildRecipeArray = YoriLibMalloc(MakeContext->NumberProcesses * sizeof(MAKE_CHILD_RECIPE));
+    if (ChildRecipeArray == NULL) {
         YoriLibFree(ProcessHandleArray);
         return FALSE;
     }
 
-    ZeroMemory(ChildProcessArray, MakeContext->NumberProcesses * sizeof(MAKE_CHILD_PROCESS));
+    ZeroMemory(ChildRecipeArray, MakeContext->NumberProcesses * sizeof(MAKE_CHILD_RECIPE));
     Result = TRUE;
 
     while (TRUE) {
 
         while (NumberActiveProcesses < MakeContext->NumberProcesses && !YoriLibIsListEmpty(&MakeContext->TargetsReady)) {
             if (!MakeCompleteReadyWithNoRecipe(MakeContext)) {
-                if (!MakeLaunchNextTarget(MakeContext, &ChildProcessArray[NumberActiveProcesses])) {
+                if (!MakeLaunchNextTarget(MakeContext, &ChildRecipeArray[NumberActiveProcesses])) {
                     Result = FALSE;
                     goto Drain;
                 }
@@ -909,7 +1008,7 @@ MakeExecuteRequiredTargets(
             //
 
             for (Index = 0; Index < NumberActiveProcesses; Index++) {
-                ProcessHandleArray[Index] = ChildProcessArray[Index].ProcessHandle;
+                ProcessHandleArray[Index] = ChildRecipeArray[Index].ProcessHandle;
                 if (ProcessHandleArray[Index] == NULL) {
                     break;
                 }
@@ -926,14 +1025,16 @@ MakeExecuteRequiredTargets(
             //
 
             MoveToNextTarget = TRUE;
-            Result = MakeProcessCompletion(MakeContext, &ChildProcessArray[Index]);
+            Result = MakeProcessCompletion(MakeContext, &ChildRecipeArray[Index]);
             if (Result) {
-                if (MakeDoesTargetHaveMoreCommands(&ChildProcessArray[Index])) {
-                    if (MakeLaunchNextCmd(MakeContext, &ChildProcessArray[Index])) {
+                if (MakeDoesTargetHaveMoreCommands(&ChildRecipeArray[Index])) {
+                    if (MakeLaunchNextCmd(MakeContext, &ChildRecipeArray[Index])) {
                         MoveToNextTarget = FALSE;
                     } else {
                         Result = FALSE;
                     }
+                } else {
+                    MakeRecipeCompletion(MakeContext, &ChildRecipeArray[Index]);
                 }
             }
 
@@ -946,13 +1047,15 @@ MakeExecuteRequiredTargets(
 
             if (MoveToNextTarget) {
                 if (Result) {
-                    MakeUpdateDependenciesForTarget(MakeContext, ChildProcessArray[Index].Target);
+                    MakeUpdateDependenciesForTarget(MakeContext, ChildRecipeArray[Index].Target);
+                } else {
+                    MakeRecipeCompletion(MakeContext, &ChildRecipeArray[Index]);
                 }
 
                 if (NumberActiveProcesses > Index + 1) {
-                    memmove(&ChildProcessArray[Index],
-                            &ChildProcessArray[Index + 1],
-                            (NumberActiveProcesses - Index - 1) * sizeof(MAKE_CHILD_PROCESS));
+                    memmove(&ChildRecipeArray[Index],
+                            &ChildRecipeArray[Index + 1],
+                            (NumberActiveProcesses - Index - 1) * sizeof(MAKE_CHILD_RECIPE));
                 }
 
                 NumberActiveProcesses--;
@@ -962,7 +1065,7 @@ MakeExecuteRequiredTargets(
                 //  entries, so the final entry is uninitialized.
                 //
 
-                ZeroMemory(&ChildProcessArray[NumberActiveProcesses], sizeof(MAKE_CHILD_PROCESS));
+                ZeroMemory(&ChildRecipeArray[NumberActiveProcesses], sizeof(MAKE_CHILD_RECIPE));
             }
 
             if (Result == FALSE) {
@@ -994,29 +1097,30 @@ Drain:
 
     while (NumberActiveProcesses > 0) {
         for (Index = 0; Index < NumberActiveProcesses; Index++) {
-            if (ChildProcessArray[Index].ProcessHandle == NULL) {
+            if (ChildRecipeArray[Index].ProcessHandle == NULL) {
                 break;
             }
-            ProcessHandleArray[Index] = ChildProcessArray[Index].ProcessHandle;
+            ProcessHandleArray[Index] = ChildRecipeArray[Index].ProcessHandle;
         }
 
         if (Index == NumberActiveProcesses) {
             Index = WaitForMultipleObjects(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE);
             Index = Index - WAIT_OBJECT_0;
 
-            MakeProcessCompletion(MakeContext, &ChildProcessArray[Index]);
+            MakeProcessCompletion(MakeContext, &ChildRecipeArray[Index]);
+            MakeRecipeCompletion(MakeContext, &ChildRecipeArray[Index]);
         }
 
         if (NumberActiveProcesses > Index + 1) {
-            memmove(&ChildProcessArray[Index],
-                    &ChildProcessArray[Index + 1],
-                    (NumberActiveProcesses - Index - 1) * sizeof(MAKE_CHILD_PROCESS));
+            memmove(&ChildRecipeArray[Index],
+                    &ChildRecipeArray[Index + 1],
+                    (NumberActiveProcesses - Index - 1) * sizeof(MAKE_CHILD_RECIPE));
         }
 
         NumberActiveProcesses--;
     }
 
-    YoriLibFree(ChildProcessArray);
+    YoriLibFree(ChildRecipeArray);
     YoriLibFree(ProcessHandleArray);
 
     return Result;
