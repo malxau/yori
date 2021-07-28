@@ -1831,7 +1831,8 @@ YoriShPerformArgumentTabCompletion(
         return;
     }
 
-    if (CurrentExecContext->CmdToExec.ArgContexts[CurrentExecContextArg].QuoteTerminated) {
+    if (CurrentExecContextArg < CurrentExecContext->CmdToExec.ArgC &&
+        CurrentExecContext->CmdToExec.ArgContexts[CurrentExecContextArg].QuoteTerminated) {
         DWORD TrailingSlashCount;
         PYORI_STRING Arg;
 
