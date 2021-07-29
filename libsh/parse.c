@@ -380,6 +380,7 @@ YoriLibShParseCmdlineToCmdContext(
     BOOLEAN CurrentArgFound = FALSE;
     BOOLEAN LookingForFirstQuote = FALSE;
     BOOLEAN IsMultiCommandOperatorArgument = FALSE;
+    BOOLEAN QuoteTerminated = FALSE;
 
     CmdContext->TrailingChars = FALSE;
 
@@ -421,6 +422,8 @@ YoriLibShParseCmdlineToCmdContext(
 
             if (Char.LengthInChars == 0) {
                 ArgCount++;
+                ArgOffset = 0;
+                QuoteTerminated = FALSE;
             }
 
             continue;
@@ -441,7 +444,7 @@ YoriLibShParseCmdlineToCmdContext(
             YoriLibShCountCharsAtBackslash(&Char,
                                            QuoteOpen,
                                            LookingForFirstQuote,
-                                           TRUE,
+                                           QuoteTerminated,
                                            &CharsToConsume,
                                            &CharsToOutput);
 
@@ -460,6 +463,8 @@ YoriLibShParseCmdlineToCmdContext(
 
             if (Char.LengthInChars == 0) {
                 ArgCount++;
+                ArgOffset = 0;
+                QuoteTerminated = FALSE;
             }
 
             continue;
@@ -474,6 +479,8 @@ YoriLibShParseCmdlineToCmdContext(
             if (Char.StartOfString[0] == '"' && QuoteOpen && LookingForFirstQuote) {
                 QuoteOpen = FALSE;
                 LookingForFirstQuote = FALSE;
+                ASSERT(!QuoteTerminated);
+                QuoteTerminated = TRUE;
                 Char.StartOfString++;
                 Char.LengthInChars--;
                 if (Char.LengthInChars == 0) {
@@ -484,6 +491,7 @@ YoriLibShParseCmdlineToCmdContext(
                     }
                     ArgCount++;
                     ArgOffset = 0;
+                    QuoteTerminated = FALSE;
                 }
                 continue;
             }
@@ -506,6 +514,7 @@ YoriLibShParseCmdlineToCmdContext(
                         }
                         ArgCount++;
                         ArgOffset = 0;
+                        QuoteTerminated = FALSE;
                     }
                     continue;
                 }
@@ -553,6 +562,7 @@ YoriLibShParseCmdlineToCmdContext(
 
             ArgCount++;
             ArgOffset = 0;
+            QuoteTerminated = FALSE;
 
             //
             //  Note this is intentionally not trying to set CurrentArg.
@@ -589,6 +599,7 @@ YoriLibShParseCmdlineToCmdContext(
                 }
                 ArgCount++;
                 ArgOffset = 0;
+                QuoteTerminated = FALSE;
                 break;
             }
 
@@ -608,6 +619,7 @@ YoriLibShParseCmdlineToCmdContext(
 
                 ArgCount++;
                 ArgOffset = 0;
+                QuoteTerminated = FALSE;
             }
 
             if (Char.LengthInChars > 0 && Char.StartOfString[0] == '"') {
@@ -646,6 +658,7 @@ YoriLibShParseCmdlineToCmdContext(
                 }
                 ArgOffset = 0;
                 ArgCount++;
+                QuoteTerminated = FALSE;
             }
         }
     }
