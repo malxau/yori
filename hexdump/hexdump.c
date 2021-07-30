@@ -38,7 +38,7 @@ CHAR strHexDumpHelpText[] =
         "Output the contents of one or more files in hex.\n"
         "\n"
         "HEXDUMP [-license] [-b] [-d] [-g1|-g2|-g4|-g8|-i] [-hc] [-ho]\n"
-        "        [-l length] [-o offset] [-bin|-r] [-s] [<file>...]\n"
+        "        [-l length] [-o offset] [-bin|-r] [-s] [-w] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -bin           Process a stream of hex back into binary\n"
@@ -50,7 +50,8 @@ CHAR strHexDumpHelpText[] =
         "   -l             Length of the section to display\n"
         "   -o             Offset within the stream to display\n"
         "   -r             Reverse process hexdump hex back into binary\n"
-        "   -s             Process files from all subdirectories\n";
+        "   -s             Process files from all subdirectories\n"
+        "   -w             Display wide (16 bit) characters\n";
 
 /**
  Display usage text to the user.
@@ -114,6 +115,11 @@ typedef struct _HEXDUMP_CONTEXT {
      If TRUE, hide the character display within the buffer.
      */
     BOOLEAN HideCharacters;
+
+    /**
+     If TRUE, display characters as wide.
+     */
+    BOOLEAN WideCharacters;
 
     /**
      If TRUE, output with C-style include output.
@@ -934,7 +940,11 @@ HexDumpProcessStream(
         DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET;
     }
     if (!HexDumpContext->HideCharacters) {
-        DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_CHARS;
+        if (HexDumpContext->WideCharacters) {
+            DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_WCHARS;
+        } else {
+            DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_CHARS;
+        }
     }
     if (HexDumpContext->CStyleInclude) {
         DisplayFlags |= YORI_LIB_HEX_FLAG_C_STYLE;
@@ -1381,7 +1391,11 @@ HexDumpDisplayDiff(
         DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET;
     }
     if (!HexDumpContext->HideCharacters) {
-        DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_CHARS;
+        if (HexDumpContext->WideCharacters) {
+            DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_WCHARS;
+        } else {
+            DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_CHARS;
+        }
     }
     StreamOffset.QuadPart = HexDumpContext->OffsetToDisplay;
 
@@ -1692,6 +1706,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 HexDumpContext.Recursive = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+                HexDumpContext.WideCharacters = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;

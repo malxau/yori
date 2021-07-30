@@ -2186,25 +2186,30 @@ YoriLibHashRemoveByKey(
 #define YORI_LIB_HEXDUMP_BYTES_PER_LINE 16
 
 /**
- If set, display the characters as well as the hex values.
+ If set, display the one byte characters as well as the hex values.
  */
 #define YORI_LIB_HEX_FLAG_DISPLAY_CHARS        (0x00000001)
 
 /**
+ If set, display the two byte characters as well as the hex values.
+ */
+#define YORI_LIB_HEX_FLAG_DISPLAY_WCHARS       (0x00000002)
+
+/**
  If set, display the buffer offset as a 32 bit value.
  */
-#define YORI_LIB_HEX_FLAG_DISPLAY_OFFSET       (0x00000002)
+#define YORI_LIB_HEX_FLAG_DISPLAY_OFFSET       (0x00000004)
 
 /**
  If set, display the buffer offset as a 64 bit value.
  */
-#define YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET (0x00000004)
+#define YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET (0x00000008)
 
 /**
  If set, output as comma-delimited C include style.  Incompatible with
  YORI_LIB_HEX_FLAG_DISPLAY_CHARS .
  */
-#define YORI_LIB_HEX_FLAG_C_STYLE              (0x00000008)
+#define YORI_LIB_HEX_FLAG_C_STYLE              (0x00000010)
 
 BOOL
 YoriLibHexDump(
