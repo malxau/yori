@@ -324,6 +324,11 @@ typedef struct _SDIR_OPTS {
     SDIR_FEATURE    FtDescription;
 
     /**
+     The volatile configuration for file's directory attribute.
+     */
+    SDIR_FEATURE    FtDirectory;
+
+    /**
      The volatile configuration for how to display errors.
      */
     SDIR_FEATURE    FtError;

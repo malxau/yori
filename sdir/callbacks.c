@@ -7,7 +7,7 @@
  * This module implements functions to collect, display, sort, and deserialize
  * individual data types associated with files that we can enumerate.
  *
- * Copyright (c) 2014-2018 Malcolm J. Smith
+ * Copyright (c) 2014-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -76,13 +76,6 @@ SdirCollectSummary(
 
     return TRUE;
 }
-
-//
-//  When criteria are specified to apply attributes, we need to load the
-//  specification into a dummy dirent to perform comparisons against.  The
-//  below functions implement these.
-//
-
 
 
 //
@@ -1270,9 +1263,6 @@ SdirDisplayFileWriteTime (
     return SdirDisplayFileTime(Buffer, Attributes, &Entry->WriteTime);
 }
 
-//
-//
-
 /**
  Determine the offset of a feature within the global options structure.
  */
@@ -1361,6 +1351,12 @@ SdirOptions[] = {
         SdirDisplayDescription,              YoriLibCollectDescription,
         YoriLibCompareDescription,           NULL,
         YoriLibGenerateDescription,          "description"},
+
+    {OPT_OS(FtDirectory),                    _T("dr"),
+        {SDIR_FEATURE_ALLOW_SORT, YORILIB_ATTRCTRL_FILE, 0},
+        NULL,                                YoriLibCollectFileAttributes,
+        YoriLibCompareDirectory,             NULL,
+        YoriLibGenerateDirectory,            "directory"},
 
     {OPT_OS(FtEffectivePermissions),         _T("ep"),
         {SDIR_FEATURE_ALLOW_DISPLAY|SDIR_FEATURE_ALLOW_SORT, YORILIB_ATTRCTRL_WINDOW_BG, FOREGROUND_RED|FOREGROUND_GREEN},

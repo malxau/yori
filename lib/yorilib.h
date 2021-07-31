@@ -1345,6 +1345,12 @@ YoriLibGetFileAttrPairs(
     );
 
 VOID
+YoriLibGetDirectoryPairs(
+    __out PDWORD Count,
+    __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
+    );
+
+VOID
 YoriLibGetFilePermissionPairs(
     __out PDWORD Count,
     __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
@@ -1642,6 +1648,12 @@ YoriLibCompareDescription (
     );
 
 DWORD
+YoriLibCompareDirectory (
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    );
+
+DWORD
 YoriLibCompareEffectivePermissions (
     __in PYORI_FILE_INFO Left,
     __in PYORI_FILE_INFO Right
@@ -1841,6 +1853,12 @@ YoriLibGenerateCreateTime(
 
 BOOL
 YoriLibGenerateDescription(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibGenerateDirectory(
     __inout PYORI_FILE_INFO Entry,
     __in PYORI_STRING String
     );

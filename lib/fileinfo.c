@@ -70,6 +70,35 @@ YoriLibGetFileAttrPairs(
 }
 
 /**
+ A table that maps file directory flags as returned by the system to character
+ representations used in UI or specified by the user.
+ */
+const YORI_LIB_CHAR_TO_DWORD_FLAG
+YoriLibFileDirectoryPairs[] = {
+    {FILE_ATTRIBUTE_DIRECTORY,         'D'},
+    };
+
+/**
+ Return a pointer to the array of directory character to flag pairs and the
+ number of elements in the array.
+ 
+ @param Count On successful completion, populated with the number of elements
+        in the array.
+
+ @param Pairs On successful completion, populated with a pointer to the array.
+        Note the memory in this array is read only.
+ */
+VOID
+YoriLibGetDirectoryPairs(
+    __out PDWORD Count,
+    __out PCYORI_LIB_CHAR_TO_DWORD_FLAG * Pairs
+    )
+{
+    *Pairs = YoriLibFileDirectoryPairs;
+    *Count = sizeof(YoriLibFileDirectoryPairs)/sizeof(YoriLibFileDirectoryPairs[0]);
+}
+
+/**
  A table that maps file permission flags as returned by the system to
  character representations used in UI or specified by the user.
  */
@@ -2123,6 +2152,38 @@ YoriLibCompareDescription (
 }
 
 /**
+ Compare two directory entry file attribute directory bits.
+
+ @param Left The first set of attributes to compare.
+
+ @param Right The second set of attributes to compare.
+
+ @return YORI_LIB_LESS_THAN if the first is less than the second,
+         YORI_LIB_GREATER_THAN if the first is greater than the second,
+         YORI_LIB_EQUAL if the two are the same.
+ */
+DWORD
+YoriLibCompareDirectory(
+    __in PYORI_FILE_INFO Left,
+    __in PYORI_FILE_INFO Right
+    )
+{
+    DWORD LeftDirectory;
+    DWORD RightDirectory;
+
+    LeftDirectory = Left->FileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+    RightDirectory = Right->FileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+
+    if (LeftDirectory && !RightDirectory) {
+        return YORI_LIB_LESS_THAN;
+    } else if (!LeftDirectory && RightDirectory) {
+        return YORI_LIB_GREATER_THAN;
+    }
+
+    return YORI_LIB_EQUAL;
+}
+
+/**
  Compare two directory entry effective permissions.
 
  @param Left The first set of permissions to compare.
@@ -2984,6 +3045,44 @@ YoriLibGenerateDescription(
     YoriLibSPrintfS(Entry->Description, sizeof(Entry->Description)/sizeof(Entry->Description[0]), _T("%y"), String);
     Entry->Description[sizeof(Entry->Description)/sizeof(Entry->Description[0]) - 1] = '\0';
 
+    return TRUE;
+}
+
+/**
+ Parse a string and populate a directory entry to facilitate comparisons for
+ a file's directory attribute.
+
+ @param Entry The directory entry to populate from the string.
+
+ @param String Pointer to a string to use to populate the directory entry.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibGenerateDirectory(
+    __inout PYORI_FILE_INFO Entry,
+    __in PYORI_STRING String
+    )
+{
+    DWORD i;
+    DWORD StringIndex = 0;
+    PCYORI_LIB_CHAR_TO_DWORD_FLAG Pairs;
+    DWORD PairCount;
+
+    Entry->FileAttributes = 0;
+
+    YoriLibGetDirectoryPairs(&PairCount, &Pairs);
+
+    while (StringIndex < String->LengthInChars) {
+
+        for (i = 0; i < PairCount; i++) {
+            if (String->StartOfString[StringIndex] == Pairs[i].DisplayLetter) {
+                Entry->FileAttributes |= Pairs[i].Flag;
+            }
+        }
+
+        StringIndex++;
+    }
     return TRUE;
 }
 

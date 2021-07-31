@@ -3,7 +3,7 @@
  *
  * Yori shell filter enumerated files according to criteria
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -143,6 +143,10 @@ YoriLibFileFiltFilterOptions[] = {
     {_T("de"),                               YoriLibCollectDescription,
      YoriLibCompareDescription,              NULL,
      YoriLibGenerateDescription,             "description"},
+
+    {_T("dr"),                               YoriLibCollectFileAttributes,
+     YoriLibCompareDirectory,                NULL,
+     YoriLibGenerateDirectory,               "directory"},
 
     {_T("ep"),                               YoriLibCollectEffectivePermissions,
      YoriLibCompareEffectivePermissions,     YoriLibBitwiseEffectivePermissions,

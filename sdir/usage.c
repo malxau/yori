@@ -266,7 +266,7 @@ SdirUsageLicense(VOID)
 {
     YORI_STRING License;
 
-    YoriLibMitLicenseText(_T("2014-2018"), &License);
+    YoriLibMitLicenseText(_T("2014-2021"), &License);
 
     if (!SdirUsageHeader(strLicenseHeader)) {
         YoriLibFreeStringContents(&License);
