@@ -1,9 +1,9 @@
 /**
  * @file ypm/ypm.c
  *
- * Yori shell update tool
+ * Yori shell package manager tool
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,8 +39,8 @@ CHAR strYpmHelpText1[] =
         "YPM [-license]\n"
         "YPM -c <file> <pkgname> <version> <arch> -filelist <file>\n"
         "       [-minimumosbuild <number>] [-packagepathforolderbuilds <path>]\n"
-        "       [-upgradepath <path>] [-sourcepath <path>] [-symbolpath <path>]\n"
-        "       [-replaces <packages>]\n"
+        "       [-upgradedaily <path>] [-upgradepath <path>] [-upgradestable <path>]\n"
+        "       [-sourcepath <path>] [-symbolpath <path>] [-replaces <packages>]\n"
         "YPM -cs <file> <pkgname> <version> -filepath <directory>\n"
         "YPM -d <pkg>\n"
         "YPM -download <source> <target>\n"
@@ -175,6 +175,8 @@ ENTRYPOINT(
     PYORI_STRING NewName = NULL;
     PYORI_STRING SourcePath = NULL;
     PYORI_STRING UpgradePath = NULL;
+    PYORI_STRING UpgradeToStablePath = NULL;
+    PYORI_STRING UpgradeToDailyPath = NULL;
     PYORI_STRING SymbolPath = NULL;
     PYORI_STRING FileList = NULL;
     PYORI_STRING FilePath = NULL;
@@ -199,7 +201,7 @@ ENTRYPOINT(
                 YpmHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 if (i + 1 < ArgC) {
@@ -375,9 +377,21 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uninstall")) == 0) {
                 Op = YpmOpUninstall;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradedaily")) == 0) {
+                if (i + 1 < ArgC) {
+                    UpgradeToDailyPath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradepath")) == 0) {
                 if (i + 1 < ArgC) {
                     UpgradePath = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("upgradestable")) == 0) {
+                if (i + 1 < ArgC) {
+                    UpgradeToStablePath = &ArgV[i + 1];
                     i++;
                     ArgumentUnderstood = TRUE;
                 }
@@ -455,6 +469,8 @@ ENTRYPOINT(
                                    UpgradePath,
                                    SourcePath,
                                    SymbolPath,
+                                   UpgradeToStablePath,
+                                   UpgradeToDailyPath,
                                    Replaces,
                                    ReplaceCount);
     } else if (Op == YpmOpCreateSourcePackage) {

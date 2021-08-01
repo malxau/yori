@@ -3,7 +3,7 @@
  *
  * Yori shell create packages
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -67,6 +67,14 @@
         for the package.  If not specified, no SourcePath is included in the
         package.
 
+ @param UpgradeToStablePath Optionally points to a URL to upgrade to the
+        latest stable version of the package from.  If not specified, no
+        UpgradeToStablePath is included in the package.
+
+ @param UpgradeToDailyPath Optionally points to a URL to upgrade to the
+        latest daily version of the package from.  If not specified, no
+        UpgradeToDailyPath is included in the package.
+
  @param Replaces Pointer to an array of strings containing package names that
         this package should replace.  If this package should not replace
         packages with other names, this can be NULL.
@@ -87,6 +95,8 @@ YoriPkgCreateBinaryPackage(
     __in_opt PYORI_STRING UpgradePath,
     __in_opt PYORI_STRING SourcePath,
     __in_opt PYORI_STRING SymbolPath,
+    __in_opt PYORI_STRING UpgradeToStablePath,
+    __in_opt PYORI_STRING UpgradeToDailyPath,
     __in_ecount_opt(ReplaceCount) PYORI_STRING Replaces,
     __in DWORD ReplaceCount
     )
@@ -150,6 +160,12 @@ YoriPkgCreateBinaryPackage(
     }
     if (SymbolPath != NULL) {
         WritePrivateProfileString(_T("Package"), _T("SymbolPath"), SymbolPath->StartOfString, TempFile.StartOfString);
+    }
+    if (UpgradeToStablePath != NULL) {
+        WritePrivateProfileString(_T("Package"), _T("UpgradeToStablePath"), UpgradeToStablePath->StartOfString, TempFile.StartOfString);
+    }
+    if (UpgradeToDailyPath != NULL) {
+        WritePrivateProfileString(_T("Package"), _T("UpgradeToDailyPath"), UpgradeToDailyPath->StartOfString, TempFile.StartOfString);
     }
 
     for (Count = 0; Count < ReplaceCount; Count++) {
