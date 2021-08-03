@@ -3,7 +3,7 @@
  *
  * Private/internal header for Yori package routines
  *
- * Copyright (c) 2018-2019 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -116,6 +116,21 @@ typedef struct _YORIPKG_BACKUP_PACKAGE {
      not be restored into the INI file.
      */
     YORI_STRING SymbolPath;
+
+    /**
+     The upgrade path to the latest daily package for the package that was
+     backed up.  This can be an empty string indicating no daily upgrade
+     path, in which case this entry will not be restored into the INI file.
+     */
+    YORI_STRING UpgradeToDailyPath;
+
+    /**
+     The upgrade path to the latest stable package for the package that was
+     backed up.  This can be an empty string indicating no stable upgrade
+     path, in which case this entry will not be restored into the INI file.
+     */
+    YORI_STRING UpgradeToStablePath;
+
 } YORIPKG_BACKUP_PACKAGE, *PYORIPKG_BACKUP_PACKAGE;
 
 /**
@@ -233,6 +248,18 @@ typedef struct _YORIPKG_PACKAGE_PENDING_INSTALL {
     YORI_STRING SymbolPath;
 
     /**
+     A string for the path to upgrade the package to a daily package from.
+     This can be an empty string indicating no daily upgrade path.
+     */
+    YORI_STRING UpgradeToDailyPath;
+
+    /**
+     A string for the path to upgrade the package to a stable package from.
+     This can be an empty string indicating no stable upgrade path.
+     */
+    YORI_STRING UpgradeToStablePath;
+
+    /**
      A path to a local file containing the CAB file to install.
      */
     YORI_STRING LocalPackagePath;
@@ -289,7 +316,9 @@ YoriPkgGetPackageInfo(
     __out PYORI_STRING PackagePathForOlderBuilds,
     __out PYORI_STRING UpgradePath,
     __out PYORI_STRING SourcePath,
-    __out PYORI_STRING SymbolPath
+    __out PYORI_STRING SymbolPath,
+    __out PYORI_STRING UpgradeToDailyPath,
+    __out PYORI_STRING UpgradeToStablePath
     );
 
 __success(return)
@@ -301,7 +330,9 @@ YoriPkgGetInstalledPackageInfo(
     __out PYORI_STRING PackageArch,
     __out PYORI_STRING UpgradePath,
     __out PYORI_STRING SourcePath,
-    __out PYORI_STRING SymbolPath
+    __out PYORI_STRING SymbolPath,
+    __out PYORI_STRING UpgradeToDailyPath,
+    __out PYORI_STRING UpgradeToStablePath
     );
 
 BOOL

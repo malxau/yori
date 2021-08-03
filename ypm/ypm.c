@@ -61,7 +61,7 @@ CHAR strYpmHelpText1[] =
         "YPM -src [<pkg>]\n"
         "YPM -sym [<pkg>]\n"
         "YPM -uninstall\n"
-        "YPM [-a <arch>] -u [<pkg>]\n";
+        "YPM [-a <arch>] -u|-ud|-us [<pkg>]\n";
 
 /**
  More help text to display to the user.
@@ -92,6 +92,10 @@ CHAR strYpmHelpText2[] =
         "   -src           Install source for specified package or all packages\n"
         "   -sym           Install debug symbols for specified package or all packages\n"
         "   -u             Upgrade a package or all currently installed packages\n"
+        "   -ud            Upgrade a package or all currently installed packages\n"
+        "                  to the latest daily build\n"
+        "   -us            Upgrade a package or all currently installed packages\n"
+        "                  to the latest stable build\n"
         "   -uninstall     Remove all installed packages from the system\n";
 
 /**
@@ -187,8 +191,10 @@ ENTRYPOINT(
     PYORI_STRING PackagePathForOlderBuilds = NULL;
     DWORD ReplaceCount = 0;
     YPM_OPERATION Op;
+    YORIPKG_UPGRADE_PREFER UpgradePrefer;
 
     Op = YpmOpNone;
+    UpgradePrefer = YoriPkgUpgradePreferSame;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -373,6 +379,15 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("u")) == 0) {
                 Op = YpmOpUpgradeInstalled;
+                UpgradePrefer = YoriPkgUpgradePreferSame;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ud")) == 0) {
+                Op = YpmOpUpgradeInstalled;
+                UpgradePrefer = YoriPkgUpgradePreferDaily;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("us")) == 0) {
+                Op = YpmOpUpgradeInstalled;
+                UpgradePrefer = YoriPkgUpgradePreferStable;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uninstall")) == 0) {
                 Op = YpmOpUninstall;
@@ -438,10 +453,10 @@ ENTRYPOINT(
         YoriPkgListInstalledPackages(TRUE);
     } else if (Op == YpmOpUpgradeInstalled) {
         if (StartArg == 0 || StartArg >= ArgC) {
-            YoriPkgUpgradeInstalledPackages(NewArch);
+            YoriPkgUpgradeInstalledPackages(UpgradePrefer, NewArch);
         } else {
             for (i = StartArg; i < ArgC; i++) {
-                YoriPkgUpgradeSinglePackage(&ArgV[i], NewArch);
+                YoriPkgUpgradeSinglePackage(&ArgV[i], UpgradePrefer, NewArch);
             }
         }
     } else if (Op == YpmOpDeleteInstalled) {

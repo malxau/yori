@@ -51,6 +51,8 @@ YoriPkgFreeBackupPackage(
     YoriLibFreeStringContents(&PackageBackup->UpgradePath);
     YoriLibFreeStringContents(&PackageBackup->SourcePath);
     YoriLibFreeStringContents(&PackageBackup->SymbolPath);
+    YoriLibFreeStringContents(&PackageBackup->UpgradeToDailyPath);
+    YoriLibFreeStringContents(&PackageBackup->UpgradeToStablePath);
 
     YoriLibFree(PackageBackup);
 }
@@ -222,6 +224,18 @@ YoriPkgRollbackPackage(
         WritePrivateProfileString(PackageBackup->PackageName.StartOfString, _T("SymbolPath"), NULL, IniPath->StartOfString);
     }
 
+    if (PackageBackup->UpgradeToDailyPath.LengthInChars > 0) {
+        WritePrivateProfileString(PackageBackup->PackageName.StartOfString, _T("UpgradeToDailyPath"), PackageBackup->UpgradeToDailyPath.StartOfString, IniPath->StartOfString);
+    } else {
+        WritePrivateProfileString(PackageBackup->PackageName.StartOfString, _T("UpgradeToDailyPath"), NULL, IniPath->StartOfString);
+    }
+
+    if (PackageBackup->UpgradeToStablePath.LengthInChars > 0) {
+        WritePrivateProfileString(PackageBackup->PackageName.StartOfString, _T("UpgradeToStablePath"), PackageBackup->UpgradeToStablePath.StartOfString, IniPath->StartOfString);
+    } else {
+        WritePrivateProfileString(PackageBackup->PackageName.StartOfString, _T("UpgradeToStablePath"), NULL, IniPath->StartOfString);
+    }
+
     //
     //  Indicate the package is installed.
     //
@@ -300,7 +314,7 @@ YoriPkgBackupPackage(
     Context->PackageName.LengthInChars = PackageName->LengthInChars;
     Context->PackageName.StartOfString[PackageName->LengthInChars] = '\0';
 
-    if (!YoriPkgGetInstalledPackageInfo(IniPath, &Context->PackageName, &Context->Version, &Context->Architecture, &Context->UpgradePath, &Context->SourcePath, &Context->SymbolPath)) {
+    if (!YoriPkgGetInstalledPackageInfo(IniPath, &Context->PackageName, &Context->Version, &Context->Architecture, &Context->UpgradePath, &Context->SourcePath, &Context->SymbolPath, &Context->UpgradeToDailyPath, &Context->UpgradeToStablePath)) {
         YoriLibFreeStringContents(&FullTargetDirectory);
         YoriPkgFreeBackupPackage(Context);
         return ERROR_NOT_ENOUGH_MEMORY;
@@ -683,6 +697,8 @@ YoriPkgDeletePendingPackage(
     YoriLibFreeStringContents(&PendingPackage->UpgradePath);
     YoriLibFreeStringContents(&PendingPackage->SourcePath);
     YoriLibFreeStringContents(&PendingPackage->SymbolPath);
+    YoriLibFreeStringContents(&PendingPackage->UpgradeToDailyPath);
+    YoriLibFreeStringContents(&PendingPackage->UpgradeToStablePath);
     YoriLibFree(PendingPackage);
 }
 
@@ -845,7 +861,9 @@ YoriPkgPreparePackageForInstall(
                                &PendingPackage->PackagePathForOlderBuilds,
                                &PendingPackage->UpgradePath,
                                &PendingPackage->SourcePath,
-                               &PendingPackage->SymbolPath)) {
+                               &PendingPackage->SymbolPath,
+                               &PendingPackage->UpgradeToDailyPath,
+                               &PendingPackage->UpgradeToStablePath)) {
         Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }

@@ -32,6 +32,9 @@
 /**
  Upgrade all installed packages in the system.
 
+ @param Prefer Indicate if the upgrade would prefer to move to stable, daily,
+        or keep the current setting for the package.
+
  @param NewArchitecture Optionally points to the new architecture to apply.
         If not specified, the current architecture is retained.
 
@@ -39,6 +42,7 @@
  */
 BOOL
 YoriPkgUpgradeInstalledPackages(
+    __in YORIPKG_UPGRADE_PREFER Prefer,
     __in_opt PYORI_STRING NewArchitecture
     )
 {
@@ -97,7 +101,16 @@ YoriPkgUpgradeInstalledPackages(
             YoriLibInitEmptyString(&InstalledVersion);
         }
 
-        UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradePath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
+        UpgradePath.LengthInChars = 0;
+        if (Prefer == YoriPkgUpgradePreferStable) {
+            UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradeToStablePath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
+        } else if (Prefer == YoriPkgUpgradePreferDaily) {
+            UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradeToDailyPath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
+        }
+
+        if (UpgradePath.LengthInChars == 0) {
+            UpgradePath.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, _T("UpgradePath"), _T(""), UpgradePath.StartOfString, UpgradePath.LengthAllocated, PkgIniFile.StartOfString);
+        }
         if (UpgradePath.LengthInChars > 0) {
             UpgradeThisPackage = TRUE;
             YoriLibInitEmptyString(&RedirectedPath);
@@ -161,6 +174,9 @@ Exit:
 
  @param PackageName The name of the package to upgrade.
 
+ @param Prefer Indicate if the upgrade would prefer to move to stable, daily,
+        or keep the current setting for the package.
+
  @param NewArchitecture Optionally points to the new architecture to apply.
         If not specified, the current architecture is retained.
 
@@ -169,6 +185,7 @@ Exit:
 BOOL
 YoriPkgUpgradeSinglePackage(
     __in PYORI_STRING PackageName,
+    __in YORIPKG_UPGRADE_PREFER Prefer,
     __in_opt PYORI_STRING NewArchitecture
     )
 {
@@ -202,7 +219,16 @@ YoriPkgUpgradeSinglePackage(
         return FALSE;
     }
 
-    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    IniValue.LengthInChars = 0;
+    if (Prefer == YoriPkgUpgradePreferStable) {
+        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradeToStablePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    } else if (Prefer == YoriPkgUpgradePreferDaily) {
+        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradeToDailyPath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    }
+
+    if (IniValue.LengthInChars == 0) {
+        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile.StartOfString);
+    }
 
     if (IniValue.LengthInChars == 0) {
         YoriPkgDeletePendingPackages(&PendingPackages);

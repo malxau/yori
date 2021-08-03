@@ -3,7 +3,7 @@
  *
  * Yori package manager helper functions
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -173,6 +173,12 @@ YoriPkgGetPackageIniFile(
  @param SymbolPath On successful completion, populated with a URL that will
         return the symbols for the package.
 
+ @param UpgradeToDailyPath On successful completion, populated with a URL
+        that will return the latest daily version of the package.
+
+ @param UpgradeToStablePath On successful completion, populated with a URL
+        that will return the latest stable version of the package.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -186,13 +192,15 @@ YoriPkgGetPackageInfo(
     __out PYORI_STRING PackagePathForOlderBuilds,
     __out PYORI_STRING UpgradePath,
     __out PYORI_STRING SourcePath,
-    __out PYORI_STRING SymbolPath
+    __out PYORI_STRING SymbolPath,
+    __out PYORI_STRING UpgradeToDailyPath,
+    __out PYORI_STRING UpgradeToStablePath
     )
 {
     YORI_STRING TempBuffer;
     DWORD MaxFieldSize = YORIPKG_MAX_FIELD_LENGTH;
 
-    if (!YoriLibAllocateString(&TempBuffer, 8 * MaxFieldSize)) {
+    if (!YoriLibAllocateString(&TempBuffer, 10 * MaxFieldSize)) {
         return FALSE;
     }
 
@@ -243,6 +251,18 @@ YoriPkgGetPackageInfo(
 
     SymbolPath->LengthInChars = GetPrivateProfileString(_T("Package"), _T("SymbolPath"), _T(""), SymbolPath->StartOfString, SymbolPath->LengthAllocated, IniPath->StartOfString);
 
+    YoriLibCloneString(UpgradeToDailyPath, &TempBuffer);
+    UpgradeToDailyPath->StartOfString += 8 * MaxFieldSize;
+    UpgradeToDailyPath->LengthAllocated = MaxFieldSize;
+
+    UpgradeToDailyPath->LengthInChars = GetPrivateProfileString(_T("Package"), _T("UpgradeToDailyPath"), _T(""), UpgradeToDailyPath->StartOfString, UpgradeToDailyPath->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(UpgradeToStablePath, &TempBuffer);
+    UpgradeToStablePath->StartOfString += 9 * MaxFieldSize;
+    UpgradeToStablePath->LengthAllocated = MaxFieldSize;
+
+    UpgradeToStablePath->LengthInChars = GetPrivateProfileString(_T("Package"), _T("UpgradeToStablePath"), _T(""), UpgradeToStablePath->StartOfString, UpgradeToStablePath->LengthAllocated, IniPath->StartOfString);
+
     YoriLibFreeStringContents(&TempBuffer);
     return TRUE;
 }
@@ -270,6 +290,12 @@ YoriPkgGetPackageInfo(
  @param SymbolPath On successful completion, populated with a URL that will
         return the symbols for the package.
 
+ @param UpgradeToDailyPath On successful completion, populated with a URL
+        that will return the latest daily version of the package.
+
+ @param UpgradeToStablePath On successful completion, populated with a URL
+        that will return the latest stable version of the package.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -281,7 +307,9 @@ YoriPkgGetInstalledPackageInfo(
     __out PYORI_STRING PackageArch,
     __out PYORI_STRING UpgradePath,
     __out PYORI_STRING SourcePath,
-    __out PYORI_STRING SymbolPath
+    __out PYORI_STRING SymbolPath,
+    __out PYORI_STRING UpgradeToDailyPath,
+    __out PYORI_STRING UpgradeToStablePath
     )
 {
     YORI_STRING TempBuffer;
@@ -290,7 +318,7 @@ YoriPkgGetInstalledPackageInfo(
     ASSERT(YoriLibIsStringNullTerminated(IniPath));
     ASSERT(YoriLibIsStringNullTerminated(PackageName));
 
-    if (!YoriLibAllocateString(&TempBuffer, 5 * MaxFieldSize)) {
+    if (!YoriLibAllocateString(&TempBuffer, 7 * MaxFieldSize)) {
         return FALSE;
     }
 
@@ -322,6 +350,18 @@ YoriPkgGetInstalledPackageInfo(
     SymbolPath->LengthAllocated = MaxFieldSize;
 
     SymbolPath->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), _T(""), SymbolPath->StartOfString, SymbolPath->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(UpgradeToDailyPath, &TempBuffer);
+    UpgradeToDailyPath->StartOfString += 5 * MaxFieldSize;
+    UpgradeToDailyPath->LengthAllocated = MaxFieldSize;
+
+    UpgradeToDailyPath->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradeToDailyPath"), _T(""), UpgradeToDailyPath->StartOfString, UpgradeToDailyPath->LengthAllocated, IniPath->StartOfString);
+
+    YoriLibCloneString(UpgradeToStablePath, &TempBuffer);
+    UpgradeToStablePath->StartOfString += 5 * MaxFieldSize;
+    UpgradeToStablePath->LengthAllocated = MaxFieldSize;
+
+    UpgradeToStablePath->LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("UpgradeToStablePath"), _T(""), UpgradeToStablePath->StartOfString, UpgradeToStablePath->LengthAllocated, IniPath->StartOfString);
 
     YoriLibFreeStringContents(&TempBuffer);
     return TRUE;

@@ -24,6 +24,16 @@
  * THE SOFTWARE.
  */
 
+/**
+ When upgrading a package, indicate whether to prefer a stable package, a
+ daily package, or keep the existing type of package.
+ */
+typedef enum _YORIPKG_UPGRADE_PREFER {
+    YoriPkgUpgradePreferSame = 0,
+    YoriPkgUpgradePreferStable = 1,
+    YoriPkgUpgradePreferDaily = 2
+} YORIPKG_UPGRADE_PREFER;
+
 BOOL
 YoriPkgCreateBinaryPackage(
     __in PYORI_STRING FileName,
@@ -65,12 +75,14 @@ YoriPkgInstallSinglePackage(
 
 BOOL
 YoriPkgUpgradeInstalledPackages(
+    __in YORIPKG_UPGRADE_PREFER Prefer,
     __in_opt PYORI_STRING NewArchitecture
     );
 
 BOOL
 YoriPkgUpgradeSinglePackage(
     __in PYORI_STRING PackageName,
+    __in YORIPKG_UPGRADE_PREFER Prefer,
     __in_opt PYORI_STRING NewArchitecture
     );
 

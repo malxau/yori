@@ -417,6 +417,8 @@ YoriPkgDeletePackageInternal(
     WritePrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), NULL, PkgIniFile->StartOfString);
     WritePrivateProfileString(PackageName->StartOfString, _T("SourcePath"), NULL, PkgIniFile->StartOfString);
     WritePrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("UpgradeToDailyPath"), NULL, PkgIniFile->StartOfString);
+    WritePrivateProfileString(PackageName->StartOfString, _T("UpgradeToStablePath"), NULL, PkgIniFile->StartOfString);
     WritePrivateProfileString(PackageName->StartOfString, _T("Version"), NULL, PkgIniFile->StartOfString);
     WritePrivateProfileString(_T("Installed"), PackageName->StartOfString, NULL, PkgIniFile->StartOfString);
 
@@ -704,6 +706,13 @@ YoriPkgInstallPackage(
     }
     if (Package->SymbolPath.LengthInChars > 0) {
         WritePrivateProfileString(Package->PackageName.StartOfString, _T("SymbolPath"), Package->SymbolPath.StartOfString, PkgIniFile.StartOfString);
+    }
+    if (Package->UpgradeToDailyPath.LengthInChars > 0) {
+        WritePrivateProfileString(Package->PackageName.StartOfString, _T("UpgradeToDailyPath"), Package->UpgradeToDailyPath.StartOfString, PkgIniFile.StartOfString);
+    }
+
+    if (Package->UpgradeToStablePath.LengthInChars > 0) {
+        WritePrivateProfileString(Package->PackageName.StartOfString, _T("UpgradeToStablePath"), Package->UpgradeToStablePath.StartOfString, PkgIniFile.StartOfString);
     }
 
     YoriLibSPrintf(FileIndexString, _T("%i"), InstallContext.NumberFiles);
