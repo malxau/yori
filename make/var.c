@@ -366,6 +366,11 @@ MakeSubstituteNamedVariable(
 
  @param Line Pointer to the line in the makefile to expand variables for.
 
+ @param VariableNotFound Optionally points to a string which will be
+        populated with the substring of Line referring to a variable which
+        could not be resolved.  If no such variable is encountered, this
+        value will be empty.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
@@ -373,7 +378,8 @@ MakeExpandVariables(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in_opt PMAKE_TARGET Target,
     __inout PYORI_STRING ExpandedLine,
-    __in PYORI_STRING Line
+    __in PYORI_STRING Line,
+    __out_opt PYORI_STRING VariableNotFound
     )
 {
     YORI_STRING VariableName;
@@ -387,6 +393,9 @@ MakeExpandVariables(
 
     YoriLibInitEmptyString(&VariableName);
     YoriLibInitEmptyString(&VariableContents);
+    if (VariableNotFound != NULL) {
+        YoriLibInitEmptyString(VariableNotFound);
+    }
 
     LengthNeeded = 0;
     for (ReadIndex = 0; ReadIndex < Line->LengthInChars; ReadIndex++) {
@@ -427,6 +436,11 @@ MakeExpandVariables(
                 if (MakeSubstituteNamedVariable(ScopeContext, Target, &VariableName, &VariableContents)) {
                     LengthNeeded = LengthNeeded + VariableContents.LengthInChars;
                     YoriLibFreeStringContents(&VariableContents);
+                } else if (VariableNotFound != NULL &&
+                           VariableNotFound->LengthInChars == 0) {
+
+                    VariableNotFound->StartOfString = VariableName.StartOfString;
+                    VariableNotFound->LengthInChars = VariableName.LengthInChars;
                 }
             }
         } else if (ReadIndex + 1 < Line->LengthInChars &&

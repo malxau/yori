@@ -837,6 +837,11 @@ typedef struct _MAKE_CONTEXT {
      */
     BOOLEAN SilentCommandLaunching;
 
+    /**
+     TRUE to warn on an undefined variable being consumed in a makefile.
+     */
+    BOOLEAN WarnOnUndefinedVariable;
+
 } MAKE_CONTEXT, *PMAKE_CONTEXT;
 
 // *** ALLOC.C ***
@@ -879,7 +884,8 @@ MakeExpandVariables(
     __in PMAKE_SCOPE_CONTEXT ScopeContext,
     __in_opt PMAKE_TARGET Target,
     __inout PYORI_STRING ExpandedLine,
-    __in PYORI_STRING Line
+    __in PYORI_STRING Line,
+    __out_opt PYORI_STRING VariableNotFound
     );
 
 VOID
@@ -929,7 +935,8 @@ MakeFindMakefileInDirectory(
 BOOL
 MakeProcessStream(
     __in HANDLE hSource,
-    __in PMAKE_CONTEXT MakeContext
+    __in PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING FileName
     );
 
 VOID

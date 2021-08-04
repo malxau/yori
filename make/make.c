@@ -318,6 +318,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 MakeContext.SilentCommandLaunching = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("wundef")) == 0) {
+                MakeContext.WarnOnUndefinedVariable = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 StartArg = i + 1;
                 ArgumentUnderstood = TRUE;
@@ -538,7 +541,7 @@ ENTRYPOINT(
     //
 
     QueryPerformanceCounter(&StartTime);
-    MakeProcessStream(hStream, &MakeContext);
+    MakeProcessStream(hStream, &MakeContext, &FullFileName);
     QueryPerformanceCounter(&EndTime);
 
     MakeContext.TimeInPreprocessor = EndTime.QuadPart - StartTime.QuadPart;

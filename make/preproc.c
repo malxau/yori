@@ -1477,12 +1477,6 @@ MakePreprocessorEvaluateCondition(
     return CumulativeResult;
 }
 
-BOOL
-MakeProcessStream(
-    __in HANDLE hSource,
-    __in PMAKE_CONTEXT MakeContext
-    );
-
 /**
  Include a new makefile at the current line.
 
@@ -1531,7 +1525,7 @@ MakeInclude(
     YoriLibCloneString(&ScopeContext->CurrentIncludeDirectory, &FullPath);
     ScopeContext->CurrentIncludeDirectory.LengthInChars = (DWORD)((FilePart - ScopeContext->CurrentIncludeDirectory.StartOfString) - 1);
 
-    if (!MakeProcessStream(hStream, ScopeContext->MakeContext)) {
+    if (!MakeProcessStream(hStream, ScopeContext->MakeContext, &FullPath)) {
 #if MAKE_DEBUG_PREPROCESSOR
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ERROR: MakeProcessStream failed: %y\n"), &FullPath);
 #endif
@@ -2158,7 +2152,7 @@ MakeCreateSubdirectoryDependency(
             goto Exit;
         }
 
-        if (!MakeProcessStream(hStream, MakeContext)) {
+        if (!MakeProcessStream(hStream, MakeContext, &FullPath)) {
 #if MAKE_DEBUG_PREPROCESSOR
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ERROR: MakeProcessStream failed: %y\n"), &FullPath);
 #endif
@@ -2644,12 +2638,15 @@ MakeAddRecipeCommand(
  @param MakeContext Pointer to context information specifying which lines to
         display.
 
+ @param FileName Pointer to the file name string, used in error reporting.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 MakeProcessStream(
     __in HANDLE hSource,
-    __in PMAKE_CONTEXT MakeContext
+    __in PMAKE_CONTEXT MakeContext,
+    __in PYORI_STRING FileName
     )
 {
     PVOID LineContext = NULL;
@@ -2657,11 +2654,13 @@ MakeProcessStream(
     YORI_STRING LineString;
     YORI_STRING LineToProcess;
     YORI_STRING ExpandedLine;
+    YORI_STRING VariableNotFound;
     MAKE_LINE_TYPE LineType;
     BOOLEAN MoreLinesNeeded;
     LPTSTR PrefixString;
     PMAKE_TARGET ActiveRecipeTarget = NULL;
     PMAKE_SCOPE_CONTEXT ScopeContext;
+    DWORD LineNumber;
 
     ScopeContext = MakeContext->ActiveScope;
 
@@ -2669,12 +2668,18 @@ MakeProcessStream(
     YoriLibInitEmptyString(&JoinedLine);
     YoriLibInitEmptyString(&LineToProcess);
     YoriLibInitEmptyString(&ExpandedLine);
+    LineNumber = 0;
+
+#if MAKE_DEBUG_PREPROCESSOR
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Processing %y\n"), FileName);
+#endif
 
     while (TRUE) {
 
         if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
             break;
         }
+        LineNumber++;
 
         //
         //  Line might be:
@@ -2752,7 +2757,7 @@ MakeProcessStream(
             }
 
 #if MAKE_DEBUG_PREPROCESSOR
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("MiniPreprocessor: %y\n"), &LineToProcess);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i MiniPreprocessor: %y\n"), LineNumber, &LineToProcess);
 #endif
             MakePreprocessorPerformMinimalConditionalTracking(ScopeContext, &LineToProcess);
             JoinedLine.LengthInChars = 0;
@@ -2760,7 +2765,7 @@ MakeProcessStream(
         }
 
         if (LineType == MakeLineTypeError) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error parsing: %y\n"), &LineToProcess);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y(%i) Parse error: %y\n"), FileName, LineNumber, &LineToProcess);
             MakeContext->ErrorTermination = TRUE;
         }
 
@@ -2794,7 +2799,12 @@ MakeProcessStream(
             ActiveRecipeTarget == NULL ||
             !ActiveRecipeTarget->InferenceRulePseudoTarget) {
 
-            MakeExpandVariables(ScopeContext, NULL, &ExpandedLine, &LineToProcess);
+            YoriLibInitEmptyString(&VariableNotFound);
+            if (!MakeExpandVariables(ScopeContext, NULL, &ExpandedLine, &LineToProcess, &VariableNotFound)) {
+                MakeContext->ErrorTermination = TRUE;
+            } else if (VariableNotFound.LengthInChars > 0 && MakeContext->WarnOnUndefinedVariable) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%y(%i) Undefined variable %y\n"), FileName, LineNumber, &VariableNotFound);
+            }
         } else {
             MakeAddRecipeCommand(ScopeContext, ActiveRecipeTarget, &LineToProcess);
         }
@@ -2816,7 +2826,7 @@ MakeProcessStream(
             MakeAddRecipeCommand(ScopeContext, ActiveRecipeTarget, &ExpandedLine);
         }
 #if MAKE_DEBUG_PREPROCESSOR
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%12s: %y\n"), PrefixString, &ExpandedLine);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%04i %12s: %y\n"), LineNumber, PrefixString, &ExpandedLine);
 #endif
         if (MakeContext->ErrorTermination) {
             break;

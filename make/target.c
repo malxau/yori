@@ -1594,7 +1594,7 @@ MakeGenerateExecScriptForTarget(
 
 
             YoriLibInitEmptyString(&CmdToExec->Cmd);
-            if (!MakeExpandVariables(Target->ScopeContext, Target, &CmdToExec->Cmd, &Line)) {
+            if (!MakeExpandVariables(Target->ScopeContext, Target, &CmdToExec->Cmd, &Line, NULL)) {
                 return FALSE;
             }
 
