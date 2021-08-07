@@ -367,6 +367,7 @@ YoriShParseArgs(
     BOOLEAN ExecuteStartupScripts = TRUE;
     BOOLEAN IgnoreUserScripts = FALSE;
     BOOLEAN Interactive = TRUE;
+    BOOLEAN IgnoreInteractive = FALSE;
 
     *TerminateApp = FALSE;
     *ExitCode = 0;
@@ -415,6 +416,7 @@ YoriShParseArgs(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ss")) == 0) {
                 if (ArgC > i + 1) {
                     Interactive = FALSE;
+                    IgnoreInteractive = TRUE;
                     YoriShGlobal.RecursionDepth++;
                     YoriShGlobal.SubShell = TRUE;
                     ExecuteStartupScripts = FALSE;
@@ -433,6 +435,10 @@ YoriShParseArgs(
 
     if (Interactive) {
         SetEnvironmentVariable(_T("YORIINTERACTIVE"), _T("1"));
+    } else if (!IgnoreInteractive) {
+        if (GetEnvironmentVariable(_T("YORIINTERACTIVE"), NULL, 0) == 0) {
+            SetEnvironmentVariable(_T("YORIINTERACTIVE"), _T("0"));
+        }
     }
 
     if (ExecuteStartupScripts) {
