@@ -282,6 +282,34 @@ YoriLibRenameFileToBackupName(
 {
     DWORD ProbeIndex;
     HANDLE hDeadFile;
+    YORI_STRING ShortFullPath;
+    BOOLEAN ShortMode;
+    DWORD Index;
+    DWORD EndIndex;
+    DWORD Err;
+
+    ShortMode = FALSE;
+    YoriLibInitEmptyString(&ShortFullPath);
+    ShortFullPath.StartOfString = FullPath->StartOfString;
+    ShortFullPath.LengthInChars = FullPath->LengthInChars;
+
+    //
+    //  Find the short name by truncating to any period until a seperator
+    //  is reached, and once the seperator is reached, truncate to 8 chars.
+    //  This is used if the file system can't handle long file names.
+
+    EndIndex = ShortFullPath.LengthInChars;
+    for (Index = ShortFullPath.LengthInChars; Index > 0; Index--) {
+        if (ShortFullPath.StartOfString[Index - 1] == '.') {
+            EndIndex = Index - 1;
+        } else if (YoriLibIsSep(ShortFullPath.StartOfString[Index - 1])) {
+            if (Index - 1 + 8 < EndIndex) {
+                EndIndex = Index - 1 + 8;
+            }
+            break;
+        }
+    }
+    ShortFullPath.LengthInChars = EndIndex;
 
     if (!YoriLibAllocateString(NewName, FullPath->LengthInChars + sizeof(".old.9"))) {
         return FALSE;
@@ -289,10 +317,18 @@ YoriLibRenameFileToBackupName(
 
     for (ProbeIndex = 0; ProbeIndex < 10; ProbeIndex++) {
 
-        if (ProbeIndex == 0) {
-            NewName->LengthInChars = YoriLibSPrintf(NewName->StartOfString, _T("%y.old"), FullPath);
+        if (ShortMode) {
+            if (ProbeIndex == 0) {
+                NewName->LengthInChars = YoriLibSPrintf(NewName->StartOfString, _T("%y.old"), &ShortFullPath);
+            } else {
+                NewName->LengthInChars = YoriLibSPrintf(NewName->StartOfString, _T("%y.ol%i"), &ShortFullPath, ProbeIndex);
+            }
         } else {
-            NewName->LengthInChars = YoriLibSPrintf(NewName->StartOfString, _T("%y.old.%i"), FullPath, ProbeIndex);
+            if (ProbeIndex == 0) {
+                NewName->LengthInChars = YoriLibSPrintf(NewName->StartOfString, _T("%y.old"), FullPath);
+            } else {
+                NewName->LengthInChars = YoriLibSPrintf(NewName->StartOfString, _T("%y.old.%i"), FullPath, ProbeIndex);
+            }
         }
 
         //
@@ -310,8 +346,20 @@ YoriLibRenameFileToBackupName(
                                FILE_FLAG_DELETE_ON_CLOSE | FILE_FLAG_BACKUP_SEMANTICS,
                                NULL);
 
+        //
+        //  If it failed with ERROR_INVALID_NAME, use 8.3 compliant temporary
+        //  file names and see if that works better
+        //
+
         if (hDeadFile != INVALID_HANDLE_VALUE) {
             CloseHandle(hDeadFile);
+        } else {
+            Err = GetLastError();
+            if (Err == ERROR_INVALID_NAME && !ShortMode) {
+                ShortMode = TRUE;
+                ProbeIndex--;
+                continue;
+            }
         }
 
         if (MoveFileEx(FullPath->StartOfString, NewName->StartOfString, MOVEFILE_REPLACE_EXISTING)) {
