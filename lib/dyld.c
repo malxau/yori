@@ -293,40 +293,6 @@ YoriLibLoadBCryptFunctions(VOID)
 }
 
 /**
- A structure containing pointers to cabinet.dll functions that can be used if
- they are found but programs do not have a hard dependency on.
- */
-YORI_CABINET_FUNCTIONS DllCabinet;
-
-/**
- Load pointers to all optional cabinet.dll functions.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriLibLoadCabinetFunctions(VOID)
-{
-    if (DllCabinet.hDll != NULL) {
-        return TRUE;
-    }
-
-    DllCabinet.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("CABINET.DLL"));
-    if (DllCabinet.hDll == NULL) {
-        return FALSE;
-    }
-
-    DllCabinet.pFciAddFile = (PCAB_FCI_ADD_FILE)GetProcAddress(DllCabinet.hDll, "FCIAddFile");
-    DllCabinet.pFciCreate = (PCAB_FCI_CREATE)GetProcAddress(DllCabinet.hDll, "FCICreate");
-    DllCabinet.pFciDestroy = (PCAB_FCI_DESTROY)GetProcAddress(DllCabinet.hDll, "FCIDestroy");
-    DllCabinet.pFciFlushCabinet = (PCAB_FCI_FLUSH_CABINET)GetProcAddress(DllCabinet.hDll, "FCIFlushCabinet");
-    DllCabinet.pFciFlushFolder = (PCAB_FCI_FLUSH_FOLDER)GetProcAddress(DllCabinet.hDll, "FCIFlushFolder");
-    DllCabinet.pFdiCreate = (PCAB_FDI_CREATE)GetProcAddress(DllCabinet.hDll, "FDICreate");
-    DllCabinet.pFdiCopy = (PCAB_FDI_COPY)GetProcAddress(DllCabinet.hDll, "FDICopy");
-    DllCabinet.pFdiDestroy = (PCAB_FDI_DESTROY)GetProcAddress(DllCabinet.hDll, "FDIDestroy");
-    return TRUE;
-}
-
-/**
  A structure containing pointers to ctl3d32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */

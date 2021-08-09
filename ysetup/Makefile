@@ -24,5 +24,5 @@ compile: $(OBJS)
 
 ysetup.exe: $(OBJS) $(YORILIB) $(YORICRT) $(YORIPKG)
 	@echo $@
-	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) -version:$(YSETUP_VER_MAJOR).$(YSETUP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) $(FDILIB) -version:$(YSETUP_VER_MAJOR).$(YSETUP_VER_MINOR) $(LINKPDB) -out:$@
 

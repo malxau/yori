@@ -887,6 +887,11 @@ YoriLibDbgRealAssert(
 
 // *** DYLD.C ***
 
+HMODULE
+YoriLibLoadLibraryFromSystemDirectory(
+    __in LPCTSTR DllName
+    );
+
 BOOL
 YoriLibLoadNtDllFunctions(VOID);
 

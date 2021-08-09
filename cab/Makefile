@@ -19,7 +19,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 cab.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(CAB_VER_MAJOR).$(CAB_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(FDILIB) -version:$(CAB_VER_MAJOR).$(CAB_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_cab.obj: cab.c
 	@echo $@

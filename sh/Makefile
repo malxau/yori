@@ -62,5 +62,5 @@ ONEYORI_DEPLIST=@yorifull.lst
 
 oneyori.exe: $(OBJS) yorifull.obj oneyori.def yorifull.lst $(YORILIB) $(YORICRT) $(YORISH) $(STD_BUILTINLIBS) $(ONEYORI_DEPLIST)
 	@$(LIB32) $(LIBFLAGS) @yorifull.lst /out:yorifull.lib
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yorifull.obj $(CRTLIB) $(YORILIB) $(YORISH) $(FULL_BUILTINLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(FULL_PDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yorifull.obj $(CRTLIB) $(YORILIB) $(YORISH) $(FULL_BUILTINLIBS) $(FDILIB) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(FULL_PDB) -out:$@
 

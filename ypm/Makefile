@@ -19,7 +19,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 ypm.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIPKG)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) -version:$(YPM_VER_MAJOR).$(YPM_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) $(FDILIB) -version:$(YPM_VER_MAJOR).$(YPM_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_ypm.obj: ypm.c
 	@echo $@
