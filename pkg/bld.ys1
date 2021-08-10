@@ -18,6 +18,12 @@ if intcmp %ERRORLEVEL%==0;set ARCH=mips
 cl /? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=ia64
 
+REM
+REM For Win32 builds, use static fdi.lib to support NT 3.1
+REM
+set FDI=0
+if strcmp -i %ARCH%==win32;set FDI=1
+
 REM 
 REM Set build ID.  For release builds, this needs to be zero.
 REM
@@ -45,7 +51,7 @@ popd
 mkdir %OUTDIR% >NUL 2>&1
 
 echo *** Building %ARCH% debug
-ymake -f ..\Makefile -m DEBUG=1 YORI_BUILD_ID=%BLDID% .
+ymake -f ..\Makefile -m DEBUG=1 YORI_BUILD_ID=%BLDID% FDI=%FDI% .
 if intcmp %ERRORLEVEL%!=0; goto exit
 
 echo *** Cleaning tree
@@ -54,7 +60,7 @@ ymake clean >NUL
 popd
 
 echo *** Building %ARCH% retail
-ymake -f ..\Makefile -m YORI_BUILD_ID=%BLDID% .
+ymake -f ..\Makefile -m YORI_BUILD_ID=%BLDID% FDI=%FDI% .
 if intcmp %ERRORLEVEL%!=0; goto exit
 
 REM if strcmp %ARCH%==win32;mkdir %OUTDIR%\%ARCH% ^& copy pkg\%ARCH%\bin\ysetup.exe %OUTDIR%\%ARCH% >NUL 2>&1
