@@ -145,7 +145,8 @@ OSVER_BUILD_DESCRIPTION OsVerBuildDescriptions[] = {
     {19041, "Windows 10 20H1 2004"},
     {19042, "Windows 10 20H2"},
     {19043, "Windows 10 21H1"},
-    {20348, "Windows Server 2022"}
+    {20348, "Windows Server 2022"},
+    {22000, "Windows 11"}
 };
 
 /**
