@@ -4673,6 +4673,52 @@ YoriWinMultilineEditScrollForMouseSelect(
     YoriWinMultilineEditPaint(MultilineEdit);
 }
 
+/**
+ When the user presses a regular key, insert that key into the control.
+
+ @param MultilineEdit Pointer to the multiline edit control, specifying the
+        location of the cursor and contents of the control.
+
+ @param Char The character to insert.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditAddChar(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in TCHAR Char
+    )
+{
+    DWORD NewCursorLine;
+    DWORD NewCursorOffset;
+    YORI_STRING String;
+
+    if (YoriWinMultilineEditSelectionActive(MultilineEdit)) {
+        YoriWinMultilineEditDeleteSelection(MultilineEdit);
+    }
+
+    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
+
+    YoriLibInitEmptyString(&String);
+    String.StartOfString = &Char;
+    String.LengthInChars = 1;
+
+    if (!MultilineEdit->InsertMode) {
+        if (!YoriWinMultilineEditOverwriteTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
+            return FALSE;
+        }
+    } else {
+        if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
+            return FALSE;
+        }
+    }
+
+    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
+
+    return TRUE;
+
+}
+
 
 /**
  Process a key that may be an enhanced key.  Some of these keys can be either
@@ -4877,6 +4923,12 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
             YoriWinMultilineEditPaint(MultilineEdit);
         }
         Recognized = TRUE;
+    } else if (Event->KeyDown.VirtualKeyCode == VK_RETURN) {
+        if (!MultilineEdit->ReadOnly && YoriWinMultilineEditAddChar(MultilineEdit, '\r')) {
+            YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
+            YoriWinMultilineEditPaint(MultilineEdit);
+        }
+        Recognized = TRUE;
     }
 
     return Recognized;
@@ -5005,52 +5057,6 @@ YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(
     return Recognized;
 }
 
-
-/**
- When the user presses a regular key, insert that key into the control.
-
- @param MultilineEdit Pointer to the multiline edit control, specifying the
-        location of the cursor and contents of the control.
-
- @param Char The character to insert.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOLEAN
-YoriWinMultilineEditAddChar(
-    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
-    __in TCHAR Char
-    )
-{
-    DWORD NewCursorLine;
-    DWORD NewCursorOffset;
-    YORI_STRING String;
-
-    if (YoriWinMultilineEditSelectionActive(MultilineEdit)) {
-        YoriWinMultilineEditDeleteSelection(MultilineEdit);
-    }
-
-    YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
-
-    YoriLibInitEmptyString(&String);
-    String.StartOfString = &Char;
-    String.LengthInChars = 1;
-
-    if (!MultilineEdit->InsertMode) {
-        if (!YoriWinMultilineEditOverwriteTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
-            return FALSE;
-        }
-    } else {
-        if (!YoriWinMultilineEditInsertTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, MultilineEdit->CursorOffset, &String, &NewCursorLine, &NewCursorOffset)) {
-            return FALSE;
-        }
-    }
-
-    YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
-
-    return TRUE;
-
-}
 
 /**
  Process input events for a multiline edit control.
