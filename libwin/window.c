@@ -2050,10 +2050,28 @@ YoriWinNotifyEvent(
 
         DWORD EffectiveCtrlMask;
 
+        //
+        //  If a control has focus, send the event to it.  Translate
+        //  VK_DIVIDE which reports as ENHANCED_KEY, unlike all the similar
+        //  keys on the number pad.
+        //
+
         if (Window->KeyboardFocusCtrl != NULL &&
             Window->KeyboardFocusCtrl->NotifyEventFn != NULL) {
 
-            Terminate = Window->KeyboardFocusCtrl->NotifyEventFn(Window->KeyboardFocusCtrl, Event);
+            ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
+            CtrlEvent.EventType = Event->EventType;
+            CtrlEvent.KeyDown.CtrlMask = Event->KeyDown.CtrlMask;
+            CtrlEvent.KeyDown.VirtualKeyCode = Event->KeyDown.VirtualKeyCode;
+            CtrlEvent.KeyDown.VirtualScanCode = Event->KeyDown.VirtualScanCode;
+            CtrlEvent.KeyDown.Char = Event->KeyDown.Char;
+
+            if (CtrlEvent.KeyDown.VirtualKeyCode == VK_DIVIDE &&
+                (CtrlEvent.KeyDown.CtrlMask & ENHANCED_KEY) != 0) {
+                CtrlEvent.KeyDown.CtrlMask = CtrlEvent.KeyDown.CtrlMask & ~(ENHANCED_KEY);
+            }
+
+            Terminate = Window->KeyboardFocusCtrl->NotifyEventFn(Window->KeyboardFocusCtrl, &CtrlEvent);
             if (Terminate) {
                 return Terminate;
             }
