@@ -4954,6 +4954,8 @@ YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(
     )
 {
     BOOLEAN Recognized;
+    DWORD ProbeLine;
+    DWORD ProbeOffset;
     Recognized = FALSE;
 
     if (Event->KeyDown.VirtualKeyCode == VK_HOME) {
@@ -4996,23 +4998,34 @@ YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(
         } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
             YoriWinMultilineEditClearSelection(MultilineEdit);
         }
-        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
-            DWORD Index;
-            YORI_STRING WhitespaceChars = YORILIB_CONSTANT_STRING(_T(" -\t"));
-            PYORI_STRING Line;
+        ProbeLine = MultilineEdit->CursorLine;
+        ProbeOffset = MultilineEdit->CursorOffset;
+        if (ProbeLine < MultilineEdit->LinesPopulated) {
+            while (TRUE) {
+                DWORD Index;
+                YORI_STRING WhitespaceChars = YORILIB_CONSTANT_STRING(_T(" -\t"));
+                PYORI_STRING Line;
 
-            Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
-            Index = MultilineEdit->CursorOffset;
-            if (Index > Line->LengthInChars) {
-                Index = Line->LengthInChars;
+                Line = &MultilineEdit->LineArray[ProbeLine];
+                Index = ProbeOffset;
+                if (Index > Line->LengthInChars) {
+                    Index = Line->LengthInChars;
+                }
+                while(Index > 0 && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index - 1])) {
+                    Index--;
+                }
+                if (Index == 0 && ProbeLine > 0) {
+                    ProbeLine--;
+                    ProbeOffset = MultilineEdit->LineArray[ProbeLine].LengthInChars;
+                    continue;
+                }
+                while(Index > 0 && (YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index - 1]) == NULL)) {
+                    Index--;
+                }
+                MultilineEdit->CursorLine = ProbeLine;
+                MultilineEdit->CursorOffset = Index;
+                break;
             }
-            while(Index > 0 && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index - 1])) {
-                Index--;
-            }
-            while(Index > 0 && (YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index - 1]) == NULL)) {
-                Index--;
-            }
-            MultilineEdit->CursorOffset = Index;
         } else {
             MultilineEdit->CursorOffset = 0;
         }
@@ -5022,30 +5035,46 @@ YoriWinMultilineEditProcessPossiblyEnhancedCtrlKey(
         YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
         YoriWinMultilineEditPaint(MultilineEdit);
     } else if (Event->KeyDown.VirtualKeyCode == VK_RIGHT) {
+        BOOLEAN SkipCurrentWord;
         if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
             YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, FALSE);
         } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
             YoriWinMultilineEditClearSelection(MultilineEdit);
         }
-        if (MultilineEdit->CursorLine < MultilineEdit->LinesPopulated) {
-            DWORD Index;
-            YORI_STRING WhitespaceChars = YORILIB_CONSTANT_STRING(_T(" -\t"));
-            PYORI_STRING Line;
-
-            Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
-            Index = MultilineEdit->CursorOffset;
-            if (Index > Line->LengthInChars) {
-                Index = Line->LengthInChars;
-            }
-            while(Index < Line->LengthInChars && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index]) == NULL) {
-                Index++;
-            }
-            while(Index < Line->LengthInChars && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index])) {
-                Index++;
-            }
-            MultilineEdit->CursorOffset = Index;
-        } else {
+        ProbeLine = MultilineEdit->CursorLine;
+        ProbeOffset = MultilineEdit->CursorOffset;
+        SkipCurrentWord = TRUE;
+        if (ProbeLine >= MultilineEdit->LinesPopulated) {
             MultilineEdit->CursorOffset = 0;
+        } else {
+            while (ProbeLine < MultilineEdit->LinesPopulated) {
+                DWORD Index;
+                YORI_STRING WhitespaceChars = YORILIB_CONSTANT_STRING(_T(" -\t"));
+                PYORI_STRING Line;
+
+                Line = &MultilineEdit->LineArray[ProbeLine];
+                Index = ProbeOffset;
+                if (Index > Line->LengthInChars) {
+                    Index = Line->LengthInChars;
+                }
+                if (SkipCurrentWord) {
+                    while(Index < Line->LengthInChars && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index]) == NULL) {
+                        Index++;
+                    }
+                }
+                while(Index < Line->LengthInChars && YoriLibFindLeftMostCharacter(&WhitespaceChars, Line->StartOfString[Index])) {
+                    Index++;
+                }
+                if (Index == Line->LengthInChars && ProbeLine + 1 < MultilineEdit->LinesPopulated) {
+                    ProbeLine++;
+                    ProbeOffset = 0;
+                    SkipCurrentWord = FALSE;
+                    continue;
+                }
+                MultilineEdit->CursorLine = ProbeLine;
+                MultilineEdit->CursorOffset = Index;
+                break;
+            }
         }
         if (Event->KeyDown.CtrlMask & SHIFT_PRESSED) {
             YoriWinMultilineEditExtendSelectionToCursor(MultilineEdit);
