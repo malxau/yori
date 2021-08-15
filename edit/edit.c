@@ -626,7 +626,7 @@ EditPromptForSaveIfModified(
                                      3,
                                      ButtonText,
                                      0,
-                                     0);
+                                     2);
 
         //
         //  If the dialog failed or the cancel button was pressed, don't
