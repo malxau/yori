@@ -143,6 +143,8 @@ TailProcessStream(
     YORI_LIB_LINE_ENDING LineEnding;
     BOOL TimeoutReached;
     DWORD SeekToEndOffset = 0;
+    DWORD Err;
+    DWORD BytesWritten;
 
     DWORD FileType = GetFileType(hSource);
     FileType = FileType & ~(FILE_TYPE_REMOTE);
@@ -218,9 +220,23 @@ TailProcessStream(
         while (TRUE) {
 
             if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[0], &LineContext, FALSE, INFINITE, hSource, &LineEnding, &TimeoutReached)) {
+
+                //
+                //  Check if the target handle is still around
+                //
+
+                if (!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), NULL, 0, &BytesWritten, NULL)) {
+                    Err = GetLastError();
+                    if (Err == ERROR_NO_DATA ||
+                        Err == ERROR_PIPE_NOT_CONNECTED) {
+                        break;
+                    }
+                }
+
                 if (YoriLibIsOperationCancelled()) {
                     break;
                 }
+
                 Sleep(200);
                 continue;
             }
