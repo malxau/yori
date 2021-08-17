@@ -149,6 +149,14 @@ ENTRYPOINT(
 
     YoriLibEnableBackupPrivilege();
 
+    //
+    //  Enabling cancel allows the process to terminate if it's waiting for
+    //  input (so the pipe is active) but the user requests the process to
+    //  exit.  This is needed for both builtin and non-builtin forms.
+    //
+
+    YoriLibCancelEnable();
+
     if (StartArg == 0 || StartArg == ArgC) {
         InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay, SuspendPagination);
     } else {

@@ -257,6 +257,7 @@ MoreGracefulExit(
     PMORE_PHYSICAL_LINE PhysicalLine;
     DWORD Index;
 
+    YoriLibCancelSet();
     SetEvent(MoreContext->ShutdownEvent);
     WaitForSingleObject(MoreContext->IngestThread, INFINITE);
     for (Index = 0; Index < MoreContext->ViewportHeight; Index++) {

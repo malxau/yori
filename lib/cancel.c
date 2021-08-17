@@ -44,6 +44,17 @@ BOOL g_CancelHandlerSet;
 BOOL g_CancelIgnore;
 
 /**
+ Indicate that the operation should be cancelled.
+ */
+VOID
+YoriLibCancelSet(VOID)
+{
+    if (!g_CancelIgnore && g_CancelEvent != NULL) {
+        SetEvent(g_CancelEvent);
+    }
+}
+
+/**
  A handler to be invoked when a Ctrl+C or Ctrl+Break event is caught.
 
  @param CtrlType Indicates the type of the control message.
@@ -59,9 +70,7 @@ YoriLibCtrlCHandler(
 {
     ASSERT(g_CancelEvent != NULL);
     ASSERT(g_CancelHandlerSet);
-    if (!g_CancelIgnore && g_CancelEvent != NULL) {
-        SetEvent(g_CancelEvent);
-    }
+    YoriLibCancelSet();
 
     if (CtrlType == CTRL_CLOSE_EVENT ||
         CtrlType == CTRL_LOGOFF_EVENT ||

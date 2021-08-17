@@ -487,6 +487,9 @@ YoriLibCloseCab(
 
 // *** CANCEL.C ***
 
+VOID
+YoriLibCancelSet(VOID);
+
 BOOL
 YoriLibCancelEnable(VOID);
 
