@@ -623,8 +623,9 @@ MoreGenerateLogicalLinesFromPhysicalLine(
  @param MoreContext Pointer to the more context specifying the data to
         display.
 
- @param CurrentLine Points to the current line that the previous lines should
-        be returned for.
+ @param CurrentLine Optionally points to the current line that the previous
+        lines should be returned for. If NULL, start from the last line in
+        the buffer.
 
  @param LinesToOutput Specifies the number of lines to output.
 
@@ -642,7 +643,7 @@ __success(return)
 BOOL
 MoreGetPreviousLogicalLines(
     __inout PMORE_CONTEXT MoreContext,
-    __in PMORE_LOGICAL_LINE CurrentLine,
+    __in_opt PMORE_LOGICAL_LINE CurrentLine,
     __in DWORD LinesToOutput,
     __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
     __out PDWORD NumberLinesGenerated
@@ -663,7 +664,7 @@ MoreGetPreviousLogicalLines(
     //  lines before this one on that physical line.
     //
 
-    if (CurrentInputLine->LogicalLineIndex > 0) {
+    if (CurrentInputLine != NULL && CurrentInputLine->LogicalLineIndex > 0) {
         if (CurrentInputLine->LogicalLineIndex > LinesRemaining) {
             LinesToCopy = LinesRemaining;
             LineIndexToCopy = CurrentInputLine->LogicalLineIndex - LinesToCopy;
@@ -696,7 +697,11 @@ MoreGetPreviousLogicalLines(
         PYORI_LIST_ENTRY ListEntry;
         DWORD LogicalLineCount;
 
-        ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, &CurrentInputLine->PhysicalLine->LineList);
+        if (CurrentInputLine != NULL) {
+            ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, &CurrentInputLine->PhysicalLine->LineList);
+        } else {
+            ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, NULL);
+        }
         if (ListEntry == NULL) {
             break;
         }
@@ -745,7 +750,7 @@ MoreGetPreviousLogicalLines(
         display.
 
  @param CurrentLine Optionally points to the current line that the next lines
-        should follow.
+        should follow. If NULL, start from the first line in the buffer.
 
  @param StartFromNextLine If TRUE, logical lines should be generated following
         CurrentLine.  If FALSE, logical lines should be generated including
@@ -1381,6 +1386,16 @@ MoreDisplayPreviousLinesInViewport(
     StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
 
+    //
+    //  Note this logic is assuming that if the lines in viewport are less
+    //  than the viewport height, this routine is not making new lines
+    //  available, or else they would already have been visible.  That is,
+    //  this program does not allow a pagedown or similar to leave a half
+    //  populated screen, then allow the user to press up to add a line at
+    //  the top of the viewport.  Pagedown will fill the viewport, even if
+    //  that means moving by less than a page.
+    //
+
     OldLinesInViewport = MoreContext->LinesInViewport;
 
     //
@@ -1405,17 +1420,6 @@ MoreDisplayPreviousLinesInViewport(
         MoreMoveLogicalLine(&MoreContext->DisplayViewportLines[Index],
                             &NewLines[Index]);
     }
-
-    //
-    //  If the buffer has more lines as a result, update the number of
-    //  lines.
-    //
-
-    MoreContext->LinesInViewport += NewLineCount;
-    if (MoreContext->LinesInViewport > MoreContext->ViewportHeight) {
-        MoreContext->LinesInViewport = MoreContext->ViewportHeight;
-    }
-    MoreContext->LinesInPage = MoreContext->LinesInViewport;
 
     if (MoreContext->DebugDisplay) {
         MoreDegenerateDisplay(MoreContext);
@@ -1515,6 +1519,76 @@ MoreAddNewLinesToViewport(
 
     MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
 
+}
+
+/**
+ Move the viewport to the top of the buffer of text.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @return The number of lines actually moved.
+ */
+DWORD
+MoreMoveViewportToTop(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    BOOL Success;
+    DWORD LinesReturned;
+
+    if (MoreContext->LinesInViewport == 0) {
+        return 0;
+    }
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+
+    Success = MoreGetNextLogicalLines(MoreContext, NULL, TRUE, MoreContext->ViewportHeight, MoreContext->StagingViewportLines, &LinesReturned);
+
+    ASSERT(!Success || LinesReturned <= MoreContext->ViewportHeight);
+
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    if (!Success || LinesReturned == 0) {
+        return 0;
+    }
+
+    MoreDisplayPreviousLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
+    return LinesReturned;
+}
+
+/**
+ Move the viewport to the bottom of the buffer of text.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @return The number of lines actually moved.
+ */
+DWORD
+MoreMoveViewportToBottom(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    BOOL Success;
+    DWORD LinesReturned;
+
+    if (MoreContext->LinesInViewport == 0) {
+        return 0;
+    }
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+
+    Success = MoreGetPreviousLogicalLines(MoreContext, NULL, MoreContext->ViewportHeight, MoreContext->StagingViewportLines, &LinesReturned);
+
+    ASSERT(!Success || LinesReturned <= MoreContext->ViewportHeight);
+
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    if (!Success || LinesReturned == 0) {
+        return 0;
+    }
+
+    MoreDisplayPreviousLinesInViewport(MoreContext, &MoreContext->StagingViewportLines[MoreContext->ViewportHeight - LinesReturned], LinesReturned);
+    return LinesReturned;
 }
 
 /**
@@ -2153,6 +2227,38 @@ MoreProcessEnhancedKeyDown(
         MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
     } else if (KeyCode == VK_PRIOR) {
         MoreMoveViewportUp(MoreContext, MoreContext->ViewportHeight);
+    } else if (KeyCode == VK_HOME) {
+        MoreMoveViewportToTop(MoreContext);
+    } else if (KeyCode == VK_END) {
+        MoreMoveViewportToBottom(MoreContext);
+    }
+}
+
+/**
+ Process a key that is typically an enhanced key with Ctrl held, including
+ home/end.  The "normal" placement of these keys is as enhanced, but the
+ original XT keys are the ones on the number pad when num lock is off,
+ which have the same key codes but don't have the enhanced bit set.  This
+ function is invoked to handle either case.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @param InputRecord Pointer to the structure describing the key that was
+        pressed.
+ */
+VOID
+MoreProcessEnhancedCtrlKeyDown(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord
+    )
+{
+    WORD KeyCode;
+    KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
+
+    if (KeyCode == VK_HOME) {
+        MoreMoveViewportToTop(MoreContext);
+    } else if (KeyCode == VK_END) {
+        MoreMoveViewportToBottom(MoreContext);
     }
 }
 
@@ -2264,6 +2370,9 @@ MoreProcessKeyDown(
     } else if (CtrlMask == ENHANCED_KEY) {
         ClearSelection = TRUE;
         MoreProcessEnhancedKeyDown(MoreContext, InputRecord);
+    } else if (CtrlMask == (ENHANCED_KEY | LEFT_CTRL_PRESSED) ||
+               CtrlMask == (ENHANCED_KEY | RIGHT_CTRL_PRESSED)) {
+        MoreProcessEnhancedCtrlKeyDown(MoreContext, InputRecord);
     } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
                CtrlMask == LEFT_CTRL_PRESSED) {
         if (KeyCode == 'C') {
@@ -2273,6 +2382,8 @@ MoreProcessKeyDown(
         } else if (KeyCode == 'S') {
             MoreContext->SuspendPagination = FALSE;
             *RedrawStatus = TRUE;
+        } else if (Char == '\0') {
+            MoreProcessEnhancedCtrlKeyDown(MoreContext, InputRecord);
         }
     }
 
