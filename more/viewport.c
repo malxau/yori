@@ -1413,6 +1413,12 @@ MoreDisplayPreviousLinesInViewport(
     }
 
     //
+    //  Scrolling up means no new data should be displayed as it arrives.
+    //
+
+    MoreContext->LinesInPage = MoreContext->LinesInViewport;
+
+    //
     //  Add new lines to the top of the buffer.
     //
 
