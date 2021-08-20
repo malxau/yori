@@ -3011,7 +3011,7 @@ MoreViewportDisplay(
     __inout PMORE_CONTEXT MoreContext
     )
 {
-    HANDLE ObjectsToWaitFor[3];
+    HANDLE ObjectsToWaitFor[4];
     HANDLE InHandle;
     DWORD WaitObject;
     DWORD HandleCountToWait;
@@ -3065,6 +3065,7 @@ MoreViewportDisplay(
 
         HandleCountToWait = 0;
         ObjectsToWaitFor[HandleCountToWait++] = InHandle;
+        ObjectsToWaitFor[HandleCountToWait++] = YoriLibCancelGetEvent();
         if (WaitForNewLines) {
             ObjectsToWaitFor[HandleCountToWait++] = MoreContext->PhysicalLineAvailableEvent;
         }
@@ -3150,6 +3151,9 @@ MoreViewportDisplay(
                         break;
                     }
                 }
+            } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == YoriLibCancelGetEvent()) {
+                MoreClearStatusLine(MoreContext);
+                break;
             } else if (ObjectsToWaitFor[WaitObject - WAIT_OBJECT_0] == InHandle) {
                 INPUT_RECORD InputRecords[20];
                 PINPUT_RECORD InputRecord;
