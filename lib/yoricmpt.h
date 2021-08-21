@@ -167,6 +167,29 @@ typedef struct _IO_STATUS_BLOCK {
     DWORD_PTR Information;
 } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
 
+/**
+ An NT Unicode string structure so it's available to be embedded in later
+ structures.
+ */
+typedef struct _YORI_UNICODE_STRING {
+
+    /**
+     The length of the string buffer, in bytes.
+     */
+    WORD LengthInBytes;
+
+    /**
+     The maximum length of the string buffer, in bytes.
+     */
+    WORD LengthAllocatedInBytes;
+
+    /**
+     Pointer to the string buffer.
+     */
+    LPWSTR Buffer;
+
+} YORI_UNICODE_STRING, *PYORI_UNICODE_STRING;
+
 
 /**
  Definition of the information class to enumerate process IDs using a file
@@ -743,6 +766,19 @@ typedef struct _YORI_LIB_PEB64 {
 #define SystemProcessInformation (5)
 
 /**
+ Definition of the system handle information enumeration class for
+ NtQuerySystemInformation .
+ */
+#define SystemHandleInformation (16)
+
+/**
+ Definition of the system extended handle information enumeration class for
+ NtQuerySystemInformation .
+ */
+#define SystemExtendedHandleInformation (64)
+
+
+/**
  Information returned about every process in the system.
  */
 typedef struct _YORI_SYSTEM_PROCESS_INFORMATION {
@@ -880,6 +916,159 @@ typedef struct _YORI_SYSTEM_THREAD_INFORMATION {
      */
     ULONG Reserved4[5];
 } YORI_SYSTEM_THREAD_INFORMATION, *PYORI_SYSTEM_THREAD_INFORMATION;
+
+/**
+ Information about each opened handle in the system.
+ */
+typedef struct YORI_SYSTEM_HANDLE_ENTRY {
+
+    /**
+     The process that has the handle opened.
+     */
+    WORD ProcessId;
+
+    /**
+     An index indicating the stack that created the handle.
+     */
+    WORD CreatorStack;
+
+    /**
+     The object type for the handle.
+     */
+    UCHAR ObjectType;
+
+    /**
+     Attributes for the handle.
+     */
+    UCHAR HandleAttributes;
+
+    /**
+     The handle identifier.
+     */
+    WORD HandleValue;
+
+    /**
+     Pointer to the object.
+     */
+    PVOID Object;
+
+    /**
+     The access that the handle was opened with.
+     */
+    DWORD GrantedAccess;
+} YORI_SYSTEM_HANDLE_ENTRY, *PYORI_SYSTEM_HANDLE_ENTRY;
+
+/**
+ Information about handles currently opened in the system.
+ */
+typedef struct _YORI_SYSTEM_HANDLE_INFORMATION {
+
+    /**
+     The number of handles in the array.
+     */
+    DWORD NumberOfHandles;
+
+    /**
+     Array of information about handles.
+     */
+    YORI_SYSTEM_HANDLE_ENTRY Handles[1];
+} YORI_SYSTEM_HANDLE_INFORMATION, *PYORI_SYSTEM_HANDLE_INFORMATION;
+
+/**
+ Information about each opened handle in the system.
+ */
+typedef struct YORI_SYSTEM_HANDLE_ENTRY_EX {
+
+    /**
+     Pointer to the object.
+     */
+    PVOID Object;
+
+    /**
+     The process that has the handle opened.
+     */
+    DWORD_PTR ProcessId;
+
+    /**
+     The handle identifier.
+     */
+    DWORD_PTR HandleValue;
+
+    /**
+     The access that the handle was opened with.
+     */
+    DWORD GrantedAccess;
+
+    /**
+     An index indicating the stack that created the handle.
+     */
+    WORD CreatorStack;
+
+    /**
+     The object type for the handle.
+     */
+    WORD ObjectType;
+
+    /**
+     Attributes for the handle.
+     */
+    DWORD HandleAttributes;
+
+    /**
+     Reserved for future use.
+     */
+    DWORD Reserved;
+} YORI_SYSTEM_HANDLE_ENTRY_EX, *PYORI_SYSTEM_HANDLE_ENTRY_EX;
+
+/**
+ Information about handles currently opened in the system.
+ */
+typedef struct _YORI_SYSTEM_HANDLE_INFORMATION_EX {
+
+    /**
+     The number of handles in the array.
+     */
+    DWORD_PTR NumberOfHandles;
+
+    /**
+     Reserved for future use.
+     */
+    DWORD_PTR Reserved;
+
+    /**
+     Array of information about handles.
+     */
+    YORI_SYSTEM_HANDLE_ENTRY_EX Handles[1];
+} YORI_SYSTEM_HANDLE_INFORMATION_EX, *PYORI_SYSTEM_HANDLE_INFORMATION_EX;
+
+/**
+ A structure describing an object name.  The string itself is returned
+ following this structure.
+ */
+typedef struct _YORI_OBJECT_NAME_INFORMATION {
+
+    /**
+     The name of the object.
+     */
+    YORI_UNICODE_STRING Name;
+} YORI_OBJECT_NAME_INFORMATION, *PYORI_OBJECT_NAME_INFORMATION;
+
+/**
+ A structure describing an object type.  The string itself is returned
+ following this structure.
+ */
+typedef struct _YORI_OBJECT_TYPE_INFORMATION {
+
+    /**
+     The type name in a UNICODE_STRING.
+     */
+    YORI_UNICODE_STRING TypeName;
+
+    /**
+     Documented as reserved and not used in this program.
+     */
+    DWORD Reserved[22];
+} YORI_OBJECT_TYPE_INFORMATION, *PYORI_OBJECT_TYPE_INFORMATION;
 
 /**
  A structure describing how to take a live dump.
@@ -5124,6 +5313,18 @@ NT_QUERY_INFORMATION_THREAD(HANDLE, DWORD, PVOID, DWORD, PDWORD);
 typedef NT_QUERY_INFORMATION_THREAD *PNT_QUERY_INFORMATION_THREAD;
 
 /**
+ A prototype for the NtQueryObject function.
+ */
+typedef
+LONG WINAPI
+NT_QUERY_OBJECT(HANDLE, DWORD, PVOID, DWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the NtQueryObject function.
+ */
+typedef NT_QUERY_OBJECT *PNT_QUERY_OBJECT;
+
+/**
  A prototype for the NtQuerySystemInformation function.
  */
 typedef
@@ -5199,6 +5400,12 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      NtQueryInformationThread.
      */
     PNT_QUERY_INFORMATION_THREAD pNtQueryInformationThread;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtQueryObject.
+     */
+    PNT_QUERY_OBJECT pNtQueryObject;
 
     /**
      If it's available on the current system, a pointer to

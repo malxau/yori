@@ -90,4 +90,67 @@ YoriLibGetSystemProcessList(
     return TRUE;
 }
 
+/**
+ Load information about all handles currently open in the system.
+
+ @param HandlesInfo On successful completion, updated to point to a list of
+        handles open within the system.  The caller is expected to free this
+        with YoriLibFree.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibGetSystemHandlesList(
+    __out PYORI_SYSTEM_HANDLE_INFORMATION_EX *HandlesInfo
+    )
+{
+    PYORI_SYSTEM_HANDLE_INFORMATION_EX LocalHandlesInfo = NULL;
+    DWORD BytesReturned;
+    DWORD BytesAllocated;
+    LONG Status;
+
+    if (DllNtDll.pNtQuerySystemInformation == NULL) {
+        return FALSE;
+    }
+
+    BytesAllocated = 0;
+
+    do {
+
+        if (LocalHandlesInfo != NULL) {
+            YoriLibFree(LocalHandlesInfo);
+        }
+
+        if (BytesAllocated == 0) {
+            BytesAllocated = 64 * 1024;
+        } else if (BytesAllocated <= 16 * 1024 * 1024) {
+            BytesAllocated = BytesAllocated * 4;
+        } else {
+            return FALSE;
+        }
+
+        LocalHandlesInfo = YoriLibMalloc(BytesAllocated);
+        if (LocalHandlesInfo == NULL) {
+            return FALSE;
+        }
+
+        Status = DllNtDll.pNtQuerySystemInformation(SystemExtendedHandleInformation, LocalHandlesInfo, BytesAllocated, &BytesReturned);
+    } while (Status == (LONG)0xc0000004);
+
+
+    if (Status != 0) {
+        YoriLibFree(LocalHandlesInfo);
+        return FALSE;
+    }
+
+    if (BytesReturned == 0) {
+        YoriLibFree(LocalHandlesInfo);
+        return FALSE;
+    }
+
+    *HandlesInfo = LocalHandlesInfo;
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:

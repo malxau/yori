@@ -2613,6 +2613,12 @@ YoriLibGetSystemProcessList(
     __out PYORI_SYSTEM_PROCESS_INFORMATION *ProcessInfo
     );
 
+__success(return)
+BOOL
+YoriLibGetSystemHandlesList(
+    __out PYORI_SYSTEM_HANDLE_INFORMATION_EX *HandlesInfo
+    );
+
 // *** RECYCLE.C ***
 
 BOOL

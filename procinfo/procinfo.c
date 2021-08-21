@@ -1,9 +1,9 @@
 /**
  * @file procinfo/procinfo.c
  *
- * Yori shell child process timer tool
+ * Yori shell child process statistics tool
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,9 @@ CHAR strProcInfoHelpText[] =
         "\n"
         "Collects information about a running system process.\n"
         "\n"
-        "PROCINFO [-license] [-f <fmt>] <pid>\n"
+        "PROCINFO [-license] [-f <fmt>] [-h] <pid>\n"
+        "\n"
+        "   -h              Display handles opened within the process\n"
         "\n"
         "Format specifiers are:\n"
         "   $COMMIT$        Amount of Kb of memory committed by the process\n"
@@ -268,6 +270,95 @@ ProcInfoExpandVariables(
     return 0;
 }
 
+/**
+ Display information about handles opened for a specific process.
+
+ @param ProcessHandle Handle to the process to enumerates handles for.
+
+ @param Pid The process to enumerate handles for.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ProcInfoDumpHandles(
+    __in HANDLE ProcessHandle,
+    __in DWORD Pid
+    )
+{
+    PYORI_SYSTEM_HANDLE_INFORMATION_EX Handles;
+    DWORD_PTR Index;
+    PYORI_SYSTEM_HANDLE_ENTRY_EX ThisHandle;
+    HANDLE LocalProcessHandle;
+    PYORI_OBJECT_NAME_INFORMATION ObjectName;
+    PYORI_OBJECT_TYPE_INFORMATION ObjectType;
+    YORI_STRING ObjectNameString;
+    YORI_STRING ObjectTypeString;
+    DWORD ObjectNameLength;
+    DWORD ObjectTypeLength;
+    DWORD LengthReturned;
+
+    if (!YoriLibGetSystemHandlesList(&Handles)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error getting system handle list\n"));
+        return FALSE;
+    }
+
+    ObjectNameLength = 0x10000;
+    ObjectName = YoriLibMalloc(ObjectNameLength);
+    if (ObjectName == NULL) {
+        YoriLibFree(Handles);
+        return FALSE;
+    }
+
+    ObjectTypeLength = 0x1000;
+    ObjectType = YoriLibMalloc(ObjectTypeLength);
+    if (ObjectName == NULL) {
+        YoriLibFree(ObjectName);
+        YoriLibFree(Handles);
+        return FALSE;
+    }
+
+    for (Index = 0; Index < Handles->NumberOfHandles; Index++) {
+        ThisHandle = &Handles->Handles[Index];
+        if (ThisHandle->ProcessId == Pid) {
+            ObjectName->Name.LengthInBytes = 0;
+            ObjectType->TypeName.LengthInBytes = 0;
+
+            //
+            //  Get a local instance of the handle and see what information
+            //  can be extracted from them
+            //
+
+            if (DuplicateHandle(ProcessHandle, (HANDLE)ThisHandle->HandleValue, GetCurrentProcess(), &LocalProcessHandle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+                DllNtDll.pNtQueryObject(LocalProcessHandle, 1, ObjectName, ObjectNameLength, &LengthReturned);
+                DllNtDll.pNtQueryObject(LocalProcessHandle, 2, ObjectType, ObjectTypeLength, &LengthReturned);
+                CloseHandle(LocalProcessHandle);
+            }
+
+            //
+            //  Convert any output into strings for display
+            //
+
+            YoriLibInitEmptyString(&ObjectNameString);
+            if (ObjectName->Name.LengthInBytes > 0) {
+                ObjectNameString.LengthInChars = ObjectName->Name.LengthInBytes / sizeof(WCHAR);
+                ObjectNameString.StartOfString = ObjectName->Name.Buffer;
+            }
+            YoriLibInitEmptyString(&ObjectTypeString);
+            if (ObjectType->TypeName.LengthInBytes > 0) {
+                ObjectTypeString.LengthInChars = ObjectType->TypeName.LengthInBytes / sizeof(WCHAR);
+                ObjectTypeString.StartOfString = ObjectType->TypeName.Buffer;
+            }
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Process %lli Handle %lli Object %p Type %y(%i) Name %y\n"), ThisHandle->ProcessId, ThisHandle->HandleValue, ThisHandle->Object, &ObjectTypeString, ThisHandle->ObjectType, &ObjectNameString);
+        }
+    }
+
+    YoriLibFree(ObjectType);
+    YoriLibFree(ObjectName);
+    YoriLibFree(Handles);
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the procinfo builtin command.
@@ -312,6 +403,7 @@ ENTRYPOINT(
     FILETIME ftUserTime;
     LARGE_INTEGER liNow;
     HANDLE hProcess;
+    BOOLEAN DumpHandles;
 
     LARGE_INTEGER liCreationTime;
 
@@ -323,6 +415,7 @@ ENTRYPOINT(
                                  _T("Elapsed time:    $ELAPSED$\n")
                                  _T("Working set:     $WORKINGSET$ Kb\n");
 
+    DumpHandles = FALSE;
     YoriLibInitEmptyString(&AllocatedFormatString);
     YoriLibConstantString(&AllocatedFormatString, DefaultFormatString);
     ZeroMemory(&ProcInfoContext, sizeof(ProcInfoContext));
@@ -338,7 +431,7 @@ ENTRYPOINT(
                 ProcInfoHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
@@ -347,6 +440,9 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+                DumpHandles = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -372,6 +468,24 @@ ENTRYPOINT(
     }
 
     Pid = (DWORD)llTemp;
+
+    if (DumpHandles) {
+        hProcess = OpenProcess(PROCESS_DUP_HANDLE, FALSE, Pid);
+        if (hProcess == NULL) {
+            DWORD LastError = GetLastError();
+            LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("procinfo: open process failed: %s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            return EXIT_FAILURE;
+        }
+
+        if (!ProcInfoDumpHandles(hProcess, Pid)) {
+            CloseHandle(hProcess);
+            return EXIT_FAILURE;
+        }
+        CloseHandle(hProcess);
+        return EXIT_SUCCESS;
+    }
 
     hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, Pid);
     if (hProcess == NULL) {
