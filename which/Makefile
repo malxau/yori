@@ -1,13 +1,16 @@
 
 BINARIES=which.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(WHICH_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(WHICH_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:which.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DWHICH_VER_MAJOR=$(WHICH_VER_MAJOR) -DWHICH_VER_MINOR=$(WHICH_VER_MINOR)
+CFLAGS=$(CFLAGS) -DWHICH_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DWHICH_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 which.obj         \
@@ -17,9 +20,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-which.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+which.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(WHICH_VER_MAJOR).$(WHICH_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_which.obj: which.c
 	@echo $@

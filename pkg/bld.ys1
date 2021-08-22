@@ -33,12 +33,12 @@ if strcmp -i %1%!=official;set BLDID=`date`;set BLDID=0
 if strcmp %BLDID%==0;echo Building OFFICIAL build;echo Building DAILY %ARCH% build
 
 REM
-REM Extract Yori version from ver.inc and generate string containing the
+REM Extract Yori version from ver.mk and generate string containing the
 REM version
 REM
 
-set YORI_VER_MAJOR=`findstr YORI_BASE_VER_MAJOR= ..\config\ver.inc|cut -d = -f 1`
-set YORI_VER_MINOR=`findstr YORI_BASE_VER_MINOR= ..\config\ver.inc|cut -d = -f 1`
+set YORI_VER_MAJOR=`findstr YORI_BASE_VER_MAJOR= ..\config\ver.mk|cut -d = -f 1`
+set YORI_VER_MINOR=`findstr YORI_BASE_VER_MINOR= ..\config\ver.mk|cut -d = -f 1`
 if strcmp %BLDID%==0; set BUILDSTRING=%YORI_VER_MAJOR%.%YORI_VER_MINOR%; set BUILDSTRING=%YORI_VER_MAJOR%.%YORI_VER_MINOR%.%BLDID%
 
 set OUTDIR=%CD%\out

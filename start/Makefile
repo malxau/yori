@@ -1,13 +1,16 @@
 
 BINARIES=ystart.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(START_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(START_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:ystart.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DSTART_VER_MAJOR=$(START_VER_MAJOR) -DSTART_VER_MINOR=$(START_VER_MINOR)
+CFLAGS=$(CFLAGS) -DSTART_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DSTART_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 start.obj         \
@@ -17,9 +20,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ystart.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+ystart.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(START_VER_MAJOR).$(START_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_start.obj: start.c
 	@echo $@

@@ -1,13 +1,16 @@
 
 BINARIES=yenv.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(ENV_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(ENV_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:yenv.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DENV_VER_MAJOR=$(ENV_VER_MAJOR) -DENV_VER_MINOR=$(ENV_VER_MINOR)
+CFLAGS=$(CFLAGS) -DENV_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DENV_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 env.obj         \
@@ -17,9 +20,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yenv.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+yenv.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(ENV_VER_MAJOR).$(ENV_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_env.obj: env.c
 	@echo $@

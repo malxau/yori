@@ -5,7 +5,7 @@
 #
 
 !IFNDEF YORI_BASE_VER_MAJOR
-!INCLUDE "VER.INC"
+!INCLUDE "VER.MK"
 !ENDIF
 YORI_BUILD_ID=0
 
@@ -101,6 +101,7 @@ YORIDLG=..\libdlg\yoridlg.lib
 YORILIB=..\lib\yorilib.lib
 YORIPKG=..\pkglib\yoripkg.lib
 YORISH=..\libsh\yorish.lib
+YORIVER=yoriver.obj
 YORIWIN=..\libwin\yoriwin.lib
 CRTLIB=$(YORICRT)
 
@@ -335,6 +336,7 @@ writeconfigcache:
 	@echo YORILIB=$(YORILIB) >>$(WRITECONFIGCACHEFILE)
 	@echo YORIPKG=$(YORIPKG) >>$(WRITECONFIGCACHEFILE)
 	@echo YORISH=$(YORISH) >>$(WRITECONFIGCACHEFILE)
+	@echo YORIVER=$(YORIVER) >>$(WRITECONFIGCACHEFILE)
 	@echo YORIWIN=$(YORIWIN) >>$(WRITECONFIGCACHEFILE)
 
 !ENDIF
@@ -362,10 +364,16 @@ link: $(BINARIES) $(MODULES) compile
 !ENDIF
 	@$(CC) $(CFLAGS) -c $<
 
+yoriver.obj: ..\lib\yoriver.rc
+	@echo $(**F)
+	@if exist $@ erase $@
+	@$(RC) /fo$(@B).res $(RCFLAGS) /d YORI_VER_MAJOR=$(YORI_BASE_VER_MAJOR) /d YORI_VER_MINOR=$(YORI_BASE_VER_MINOR) /d YORI_BIN_VER_MAJOR=$(YORI_BIN_VER_MAJOR) /d YORI_BIN_VER_MINOR=$(YORI_BIN_VER_MINOR) $** >NUL
+	@if not exist $@ ren $(@B).res $@
+
 .rc.obj:
 	@echo $(**F)
 	@if exist $@ erase $@
-	@$(RC) /fo$(@B).res $(RCFLAGS) $** >NUL
+	@$(RC) /fo$(@B).res $(RCFLAGS) /d YORI_VER_MAJOR=$(YORI_BASE_VER_MAJOR) /d YORI_VER_MINOR=$(YORI_BASE_VER_MINOR) /d YORI_BIN_VER_MAJOR=$(YORI_BIN_VER_MAJOR) /d YORI_BIN_VER_MINOR=$(YORI_BIN_VER_MINOR) $** >NUL
 	@if not exist $@ ren $(@B).res $@
 
 clean:

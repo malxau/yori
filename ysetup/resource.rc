@@ -4,6 +4,8 @@
 
 1                       ICON    DISCARDABLE     "..\\lib\\yori.ico"
 
+#include "../lib/yoriver.rc"
+
 //
 // We can build the manifest using old resource compilers,
 // but need to ensure the definitions are in place.

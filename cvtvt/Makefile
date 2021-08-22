@@ -1,13 +1,16 @@
 
 BINARIES=cvtvt.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(CVTVT_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(CVTVT_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:cvtvt.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DCVTVT_VER_MAJOR=$(CVTVT_VER_MAJOR) -DCVTVT_VER_MINOR=$(CVTVT_VER_MINOR)
+CFLAGS=$(CFLAGS) -DCVTVT_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DCVTVT_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 html.obj        \
@@ -21,9 +24,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-cvtvt.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+cvtvt.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(CVTVT_VER_MAJOR).$(CVTVT_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_main.obj: main.c
 	@echo $@
@@ -32,5 +35,3 @@ mod_main.obj: main.c
 builtins.lib: $(MOD_OBJS)
 	@echo $@
 	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
-
-

@@ -1,9 +1,12 @@
 
 BINARIES=ypm.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(YPM_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(YPM_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
-CFLAGS=$(CFLAGS) -DYPM_VER_MAJOR=$(YPM_VER_MAJOR) -DYPM_VER_MINOR=$(YPM_VER_MINOR) -I..\pkglib
+CFLAGS=$(CFLAGS) -DYPM_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DYPM_VER_MINOR=$(YORI_BIN_VER_MINOR) -I..\pkglib
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:ypm.pdb
@@ -17,9 +20,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ypm.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIPKG)
+ypm.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIPKG) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) $(FDILIB) -version:$(YPM_VER_MAJOR).$(YPM_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) $(FDILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_ypm.obj: ypm.c
 	@echo $@

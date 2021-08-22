@@ -1,13 +1,16 @@
 
 BINARIES=ycharmap.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(CHARMAP_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(CHARMAP_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:ycharmap.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DCHARMAP_VER_MAJOR=$(CHARMAP_VER_MAJOR) -DCHARMAP_VER_MINOR=$(CHARMAP_VER_MINOR)
+CFLAGS=$(CFLAGS) -DCHARMAP_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DCHARMAP_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 charmap.obj         \
@@ -17,9 +20,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ycharmap.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+ycharmap.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(CHARMAP_VER_MAJOR).$(CHARMAP_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_charmap.obj: charmap.c
 	@echo $@

@@ -1,13 +1,16 @@
 
 BINARIES=sdir.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(SDIR_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(SDIR_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:sdir.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DSDIR_VER_MAJOR=$(SDIR_VER_MAJOR) -DSDIR_VER_MINOR=$(SDIR_VER_MINOR)
+CFLAGS=$(CFLAGS) -DSDIR_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DSDIR_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 		 callbacks.obj \
@@ -30,9 +33,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-sdir.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+sdir.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(SDIR_VER_MAJOR).$(SDIR_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_sdir.obj: sdir.c
 	@echo $@

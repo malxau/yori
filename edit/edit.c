@@ -56,7 +56,7 @@ TCHAR strCopyrightYear[] = _T("2020");
 BOOL
 EditHelp(VOID)
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Edit %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Edit %i.%02i\n"), EDIT_VER_MAJOR, EDIT_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif

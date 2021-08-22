@@ -1,13 +1,16 @@
 
 BINARIES=yedit.exe
 
+!INCLUDE "..\config\ver.mk"
+YORI_BIN_VER_MAJOR=$(EDIT_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(EDIT_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:yedit.pdb
 !ENDIF
 
-CFLAGS=$(CFLAGS) -DCO_VER_MAJOR=$(CO_VER_MAJOR) -DCO_VER_MINOR=$(CO_VER_MINOR)
+CFLAGS=$(CFLAGS) -DEDIT_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DEDIT_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 edit.obj         \
@@ -21,9 +24,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yedit.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIWIN) $(YORIDLG)
+yedit.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIWIN) $(YORIDLG) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIWIN) $(YORIDLG) -version:$(CO_VER_MAJOR).$(CO_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIWIN) $(YORIDLG) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_edit.obj: edit.c
 	@echo $@
