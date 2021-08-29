@@ -2209,10 +2209,6 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
 #define FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL   (0x20000000)
 #endif
 
-
-
-
-
 #ifndef FILE_FLAG_OPEN_NO_RECALL
 /**
  Specifies the value for opening a file without recalling from slow storage
@@ -3500,6 +3496,23 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
      */
     HANDLE Port;
 } YORI_JOB_ASSOCIATE_COMPLETION_PORT, *PYORI_JOB_ASSOCIATE_COMPLETION_PORT;
+
+
+#ifndef SYMBOLIC_LINK_FLAG_DIRECTORY
+/**
+ A definition for SYMBOLIC_LINK_FLAG_DIRECTORY if it is not defined by the
+ current compilation environment.
+ */
+#define SYMBOLIC_LINK_FLAG_DIRECTORY 1
+#endif
+
+#ifndef SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE
+/**
+ A definition for SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE if it is not
+ defined by the current compilation environment.
+ */
+#define SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE 2
+#endif
 
 #ifndef LOCALE_RETURN_NUMBER
 /**

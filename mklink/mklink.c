@@ -278,6 +278,7 @@ ENTRYPOINT(
     YORI_STRING ExistingFileName;
     YORI_STRING Arg;
     DWORD ExitCode;
+    DWORD SymLinkFlags;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -343,6 +344,20 @@ ENTRYPOINT(
 
     YoriLibEnableBackupPrivilege();
 
+    SymLinkFlags = 0;
+
+    {
+        DWORD MajorVersion;
+        DWORD MinorVersion;
+        DWORD BuildNumber;
+
+        YoriLibGetOsVersion(&MajorVersion, &MinorVersion, &BuildNumber);
+
+        if (BuildNumber >= 15063) {
+            SymLinkFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+        }
+    }
+
     ExitCode = EXIT_SUCCESS;
 
     switch(LinkType) {
@@ -352,12 +367,12 @@ ENTRYPOINT(
             }
             break;
         case MklinkLinkTypeDirSym:
-            if (!MklinkCreateSymbolicLink(NewLinkName.StartOfString, ExistingFileName.StartOfString, 1)) {
+            if (!MklinkCreateSymbolicLink(NewLinkName.StartOfString, ExistingFileName.StartOfString, SYMBOLIC_LINK_FLAG_DIRECTORY | SymLinkFlags)) {
                 ExitCode = EXIT_FAILURE;
             }
             break;
         case MklinkLinkTypeFileSym:
-            if (!MklinkCreateSymbolicLink(NewLinkName.StartOfString, ExistingFileName.StartOfString, 0)) {
+            if (!MklinkCreateSymbolicLink(NewLinkName.StartOfString, ExistingFileName.StartOfString, SymLinkFlags)) {
                 ExitCode = EXIT_FAILURE;
             }
             break;
