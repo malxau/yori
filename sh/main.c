@@ -802,6 +802,7 @@ ymain (
     YoriShDiscardSavedRestartState(NULL);
     YoriShCleanupInputContext();
     YoriLibLineReadCleanupCache();
+    YoriLibCleanupCurrentDirectory();
     YoriLibFreeStringContents(&YoriShGlobal.PreCmdVariable);
     YoriLibFreeStringContents(&YoriShGlobal.PostCmdVariable);
     YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);

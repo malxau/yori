@@ -4,7 +4,7 @@
  * Yori call from modules into external API.  Functions in this file can only
  * be called from code running within the Yori process.
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1147,6 +1147,47 @@ YoriCallPipeJobOutput(
     return pYoriApiPipeJobOutput(JobId, hPipeOutput, hPipeErrors);
 }
 
+/**
+ Prototype for the YoriApiSetCurrentDirectory function.
+ */
+typedef BOOL YORI_API_SET_CURRENT_DIRECTORY(PYORI_STRING);
+
+/**
+ Prototype for a pointer to the YoriApiSetCurrentDirectory function.
+ */
+typedef YORI_API_SET_CURRENT_DIRECTORY *PYORI_API_SET_CURRENT_DIRECTORY;
+
+/**
+ Pointer to the @ref YoriApiSetCurrentDirectory function.
+ */
+PYORI_API_SET_CURRENT_DIRECTORY pYoriApiSetCurrentDirectory;
+
+/**
+ Set the current directory in the Yori shell process.
+
+ @param NewCurrentDirectory The new current directory to apply.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriCallSetCurrentDirectory(
+    __in PYORI_STRING NewCurrentDirectory
+    )
+{
+    if (pYoriApiSetCurrentDirectory == NULL) {
+        HMODULE hYori;
+
+        hYori = GetModuleHandle(NULL);
+        __analysis_assume(hYori != NULL);
+        pYoriApiSetCurrentDirectory = (PYORI_API_SET_CURRENT_DIRECTORY)GetProcAddress(hYori, "YoriApiSetCurrentDirectory");
+        if (pYoriApiSetCurrentDirectory == NULL) {
+            return FALSE;
+        }
+    }
+    pYoriApiSetCurrentDirectory(NewCurrentDirectory);
+    return TRUE;
+}
 
 /**
  Prototype for the YoriApiSetDefaultColor function.

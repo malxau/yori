@@ -263,7 +263,7 @@ YoriCmd_POPD(
         YoriCallBuiltinUnregister(&PopdCmd, YoriCmd_POPD);
     }
 
-    if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
+    if (!YoriCallSetCurrentDirectory(&StackLocation->PreviousDirectory)) {
         YoriLibFree(StackLocation);
         return EXIT_FAILURE;
     }
@@ -373,7 +373,7 @@ YoriCmd_PUSHD(
 
         ListEntry = YoriLibGetPreviousListEntry(&PushdStack, NULL);
         StackLocation = CONTAINING_RECORD(ListEntry, PUSHD_STACK, StackLinks);
-        if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
+        if (!YoriCallSetCurrentDirectory(&StackLocation->PreviousDirectory)) {
             YoriLibFree(NewStackEntry);
             return EXIT_FAILURE;
         }

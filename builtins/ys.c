@@ -553,7 +553,7 @@ YoriCmd_RETURN(
         //  Restore the current directory.
         //
 
-        if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
+        if (!YoriCallSetCurrentDirectory(&StackLocation->PreviousDirectory)) {
             YsFreeCallStack(StackLocation);
             return EXIT_FAILURE;
         }

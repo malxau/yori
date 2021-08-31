@@ -535,7 +535,7 @@ YoriShLoadSavedRestartState(
 
     ReadBuffer.LengthInChars = GetPrivateProfileString(_T("Window"), _T("CurrentDirectory"), _T(""), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
     if (ReadBuffer.LengthInChars > 0) {
-        SetCurrentDirectory(ReadBuffer.StartOfString);
+        YoriLibSetCurrentDirectory(&ReadBuffer);
     }
 
     //

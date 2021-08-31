@@ -719,7 +719,7 @@ YoriCmd_Z(
     ZAddDirectoryToRecent(&OldCurrentDirectory);
     ZAddDirectoryToRecent(&BestMatch);
 
-    Result = SetCurrentDirectory(BestMatch.StartOfString);
+    Result = YoriCallSetCurrentDirectory(&BestMatch);
     if (!Result) {
         DWORD LastError = GetLastError();
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);

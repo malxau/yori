@@ -12,6 +12,7 @@ OBJS=\
 	 cmdline.obj  \
 	 color.obj    \
 	 cshot.obj    \
+	 curdir.obj   \
 	 cvthtml.obj  \
 	 cvtrtf.obj   \
 	 debug.obj    \

@@ -730,6 +730,52 @@ YoriLibGenerateVtStringFromConsoleBuffers(
     __in PWORD AttrBuffer
     );
 
+// *** CURDIR.C ***
+
+__success(return)
+BOOL
+YoriLibGetOnDiskCaseForPath(
+    __in PYORI_STRING Path,
+    __out PYORI_STRING OnDiskCasePath
+    );
+
+__success(return)
+BOOL
+YoriLibGetCurrentDirectoryOnDrive(
+    __in TCHAR Drive,
+    __out PYORI_STRING DriveCurrentDirectory
+    );
+
+__success(return)
+BOOL
+YoriLibSetCurrentDirectoryOnDrive(
+    __in TCHAR Drive,
+    __in PYORI_STRING DriveCurrentDirectory
+    );
+
+BOOLEAN
+YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(
+    __in PYORI_STRING NewCurrentDirectory
+    );
+
+BOOL
+YoriLibGetCurrentDirectory(
+    __out PYORI_STRING CurrentDirectory
+    );
+
+BOOL
+YoriLibGetCurrentDirectoryForDisplay(
+    __out PYORI_STRING CurrentDirectory
+    );
+
+BOOL
+YoriLibSetCurrentDirectory(
+    __in PYORI_STRING NewCurrentDirectory
+    );
+
+VOID
+YoriLibCleanupCurrentDirectory(VOID);
+
 // *** CVTHTML.C ***
 
 /**
@@ -2001,25 +2047,6 @@ YoriLibGenerateWriteTime(
 BOOL
 YoriLibIsPathPrefixed(
     __in PYORI_STRING Path
-    );
-
-__success(return)
-BOOL
-YoriLibGetCurrentDirectoryOnDrive(
-    __in TCHAR Drive,
-    __out PYORI_STRING DriveCurrentDirectory
-    );
-
-__success(return)
-BOOL
-YoriLibSetCurrentDirectoryOnDrive(
-    __in TCHAR Drive,
-    __in PYORI_STRING DriveCurrentDirectory
-    );
-
-BOOLEAN
-YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(
-    __in PYORI_STRING NewCurrentDirectory
     );
 
 BOOL

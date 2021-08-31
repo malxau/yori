@@ -3,7 +3,7 @@
  *
  * Yori exported API for modules to call
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -159,6 +159,12 @@ YoriCallPipeJobOutput(
     __in DWORD JobId,
     __in_opt HANDLE hPipeOutput,
     __in_opt HANDLE hPipeErrors
+    );
+
+__success(return)
+BOOL
+YoriCallSetCurrentDirectory(
+    __in PYORI_STRING NewCurrentDirectory
     );
 
 BOOL

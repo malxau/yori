@@ -27,6 +27,7 @@ EXPORTS
     YoriApiIncrementPromptRecursionDepth
     YoriApiIsProcessExiting
     YoriApiPipeJobOutput
+    YoriApiSetCurrentDirectory
     YoriApiSetDefaultColor
     YoriApiSetEnvironmentVariable
     YoriApiSetJobPriority

@@ -3,7 +3,7 @@
  *
  * Yori shell change directory
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,6 +26,7 @@
 
 #include <yoripch.h>
 #include <yorilib.h>
+#include <yoricall.h>
 
 /**
  Help text to display to the user.
@@ -96,7 +97,7 @@ YoriCmd_CHDIR(
                 ChdirHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 ArgumentUnderstood = TRUE;
@@ -299,7 +300,7 @@ YoriCmd_CHDIR(
         YoriLibFreeStringContents(&CdPath);
     }
 
-    Result = SetCurrentDirectory(NewCurrentDirectory.StartOfString);
+    Result = YoriCallSetCurrentDirectory(&NewCurrentDirectory);
     if (!Result) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);

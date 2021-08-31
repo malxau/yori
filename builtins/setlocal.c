@@ -270,7 +270,7 @@ YoriCmd_ENDLOCAL(
     //
 
     if (StackLocation->AttributesSaved & SETLOCAL_ATTRIBUTE_DIRECTORY) {
-        if (!SetCurrentDirectory(StackLocation->PreviousDirectory.StartOfString)) {
+        if (!YoriCallSetCurrentDirectory(&StackLocation->PreviousDirectory)) {
             SetlocalFreeStack(StackLocation);
             return EXIT_FAILURE;
         }

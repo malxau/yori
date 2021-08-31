@@ -139,6 +139,11 @@ typedef struct _CO_CONTEXT {
      Pointer to the window manager.
      */
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+
+    /**
+     The current directory for the application.
+     */
+    YORI_STRING CurrentDirectory;
 } CO_CONTEXT, *PCO_CONTEXT;
 
 
@@ -149,7 +154,7 @@ typedef struct _CO_CONTEXT {
  @param CoContext Pointer to the context of found files to free.
  */
 VOID
-CoFreeContext(
+CoFreeFileList(
     __in PCO_CONTEXT CoContext
     )
 {
@@ -174,6 +179,20 @@ CoFreeContext(
     }
 
     CoContext->FilesFoundCount = 0;
+}
+
+/**
+ Free all allocations in the context.
+
+ @param CoContext Pointer to the context of found files to free.
+ */
+VOID
+CoFreeContext(
+    __in PCO_CONTEXT CoContext
+    )
+{
+    CoFreeFileList(CoContext);
+    YoriLibFreeStringContents(&CoContext->CurrentDirectory);
 }
 
 /**
@@ -271,8 +290,10 @@ CoPopulateList(
     PCO_FOUND_FILE CompareFile;
     PCO_FOUND_FILE BestFile;
 
-    YoriLibConstantString(&FileSpec, _T("*"));
+    YoriLibInitEmptyString(&FileSpec);
+    YoriLibYPrintf(&FileSpec, _T("%y\\*"), &CoContext->CurrentDirectory);
     YoriLibForEachFile(&FileSpec, YORILIB_FILEENUM_BASIC_EXPANSION | YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES, 0, CoFileFoundCallback, NULL, CoContext);
+    YoriLibFreeStringContents(&FileSpec);
 
     if (CoContext->FilesFoundCount == 0) {
         return TRUE;
@@ -371,7 +392,7 @@ CoRepopulateList(
     __in PCO_CONTEXT CoContext
     )
 {
-    CoFreeContext(CoContext);
+    CoFreeFileList(CoContext);
     YoriWinListClearAllItems(CoContext->List);
     return CoPopulateList(CoContext);
 }
@@ -564,6 +585,7 @@ CoChdirButtonClicked(
     YORI_STRING Label;
     YORI_STRING FullDir;
     DWORD LastError;
+    DWORD FileAttr;
     LPTSTR ErrText;
 
     UNREFERENCED_PARAMETER(Ctrl);
@@ -589,31 +611,25 @@ CoChdirButtonClicked(
                 return;
             }
 
-            //
-            //  MSFIX: Should probably maintain this explicitly rather than
-            //  using OS current directory
-            //
+            FileAttr = GetFileAttributes(FullDir.StartOfString);
+            if (FileAttr == (DWORD)-1 ||
+                ((FileAttr & FILE_ATTRIBUTE_DIRECTORY) == 0)) {
 
-            if (!SetCurrentDirectory(FullDir.StartOfString)) {
-                LastError = GetLastError();
-                ErrText = YoriLibGetWinErrorText(LastError);
-                if (ErrText != NULL) {
-                    YoriLibConstantString(&Buttons[0], _T("&Ok"));
-                    YoriLibConstantString(&Title, _T("Error"));
-                    YoriLibInitEmptyString(&Label);
-                    YoriLibYPrintf(&Label, _T("Could not change directory to \"%y\": %s"), &FullDir, ErrText);
-                    if (Label.LengthInChars > 0) {
-                        CoTrimTrailingNewlines(&Label);
-                        YoriDlgMessageBox(CoContext.WinMgr, &Title, &Label, 1, Buttons, 0, 0);
-                        YoriLibFreeStringContents(&Label);
-                    }
-                    YoriLibFreeWinErrorText(ErrText);
+                YoriLibConstantString(&Buttons[0], _T("&Ok"));
+                YoriLibConstantString(&Title, _T("Error"));
+                YoriLibInitEmptyString(&Label);
+                YoriLibYPrintf(&Label, _T("Could not change directory to \"%y\""), &FullDir);
+                if (Label.LengthInChars > 0) {
+                    CoTrimTrailingNewlines(&Label);
+                    YoriDlgMessageBox(CoContext.WinMgr, &Title, &Label, 1, Buttons, 0, 0);
+                    YoriLibFreeStringContents(&Label);
                 }
+                YoriLibFreeStringContents(&FullDir);
             } else {
+                YoriLibFreeStringContents(&CoContext.CurrentDirectory);
+                memcpy(&CoContext.CurrentDirectory, &FullDir, sizeof(YORI_STRING));
                 ListChanged = TRUE;
             }
-
-            YoriLibFreeStringContents(&FullDir);
         }
     }
     if (ListChanged) {
@@ -1000,6 +1016,13 @@ CoCreateSynchronousMenu(VOID)
     CoContext.FileArray = NULL;
     CoContext.List = List;
     CoContext.WinMgr = WinMgr;
+    if (!YoriLibGetCurrentDirectory(&CoContext.CurrentDirectory)) {
+        CoFreeContext(&CoContext);
+        YoriWinDestroyWindow(Parent);
+        YoriWinCloseWindowManager(WinMgr);
+        CoContext.WinMgr = NULL;
+        return FALSE;
+    }
 
     if (!CoPopulateList(&CoContext)) {
         CoFreeContext(&CoContext);

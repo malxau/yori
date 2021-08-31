@@ -495,6 +495,21 @@ YoriApiPipeJobOutput(
 }
 
 /**
+ Set the current directory in the Yori shell process.
+
+ @param NewCurrentDirectory The new current directory to apply.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriApiSetCurrentDirectory(
+    __in PYORI_STRING NewCurrentDirectory
+    )
+{
+    return YoriLibSetCurrentDirectory(NewCurrentDirectory);
+}
+
+/**
  Sets the default color associated with the process.
 
  @param NewDefaultColor The new default color in Win32 format.
