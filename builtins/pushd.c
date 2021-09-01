@@ -363,6 +363,7 @@ YoriCmd_PUSHD(
 
     YoriLibInitEmptyString(&NewStackEntry->PreviousDirectory);
     NewStackEntry->PreviousDirectory.StartOfString = (LPTSTR)(NewStackEntry + 1);
+    NewStackEntry->PreviousDirectory.LengthAllocated = CurrentDirectoryLength;
     NewStackEntry->PreviousDirectory.LengthInChars = GetCurrentDirectory(CurrentDirectoryLength, NewStackEntry->PreviousDirectory.StartOfString);
 
     if (StartArg == 0) {
