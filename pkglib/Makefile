@@ -1,12 +1,7 @@
 
 compile: yoripkg.lib 
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(YPM_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(YPM_VER_MINOR)
 !INCLUDE "..\config\common.mk"
-
-CFLAGS=$(CFLAGS) -DYPM_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DYPM_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 OBJS=\
 	 api.obj         \

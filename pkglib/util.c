@@ -1026,7 +1026,7 @@ YoriPkgPackagePathToLocalPath(
         TempFileName.LengthInChars = _tcslen(TempFileName.StartOfString);
 
         YoriLibInitEmptyString(&UserAgent);
-        YoriLibYPrintf(&UserAgent, _T("ypm %i.%02i\r\n"), YPM_VER_MAJOR, YPM_VER_MINOR);
+        YoriLibYPrintf(&UserAgent, _T("ypm %i.%02i\r\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
         if (UserAgent.StartOfString == NULL) {
             YoriLibFreeStringContents(&TempPath);
             YoriLibFreeStringContents(&TempFileName);

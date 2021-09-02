@@ -1,16 +1,11 @@
 
 BINARIES=ykill.exe
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(KILL_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(KILL_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:ykill.pdb
 !ENDIF
-
-CFLAGS=$(CFLAGS) -DKILL_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DKILL_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 kill.obj         \
@@ -22,7 +17,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 ykill.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_kill.obj: kill.c
 	@echo $@

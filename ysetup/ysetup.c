@@ -51,7 +51,7 @@ CHAR strHelpText[] =
 BOOL
 YsetupHelp(VOID)
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ysetup %i.%02i\n"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ysetup %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -674,9 +674,9 @@ SetupInstallSelectedFromDialog(
         TCHAR VerBuffer[32];
 
 #if YORI_BUILD_ID
-        YoriLibSPrintf(VerBuffer, _T("%i.%02i.%i"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR, YORI_BUILD_ID);
+        YoriLibSPrintf(VerBuffer, _T("%i.%02i.%i"), YORI_VER_MAJOR, YORI_VER_MINOR, YORI_BUILD_ID);
 #else
-        YoriLibSPrintf(VerBuffer, _T("%i.%02i"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR);
+        YoriLibSPrintf(VerBuffer, _T("%i.%02i"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #endif
 
         YoriLibConstantString(&VerString, VerBuffer);
@@ -969,9 +969,9 @@ SetupUiDialogProc(
                 TCHAR Version[32];
 
 #if YORI_BUILD_ID
-                YoriLibSPrintf(Version, _T("%i.%02i.%i"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR, YORI_BUILD_ID);
+                YoriLibSPrintf(Version, _T("%i.%02i.%i"), YORI_VER_MAJOR, YORI_VER_MINOR, YORI_BUILD_ID);
 #else
-                YoriLibSPrintf(Version, _T("%i.%02i"), YSETUP_VER_MAJOR, YSETUP_VER_MINOR);
+                YoriLibSPrintf(Version, _T("%i.%02i"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #endif
                 SetDlgItemText(hDlg, IDC_VERSION, Version);
             }

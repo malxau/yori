@@ -101,7 +101,7 @@ YORIDLG=..\libdlg\yoridlg.lib
 YORILIB=..\lib\yorilib.lib
 YORIPKG=..\pkglib\yoripkg.lib
 YORISH=..\libsh\yorish.lib
-YORIVER=yoriver.obj
+YORIVER=..\lib\yoriver.obj
 YORIWIN=..\libwin\yoriwin.lib
 CRTLIB=$(YORICRT)
 
@@ -363,12 +363,6 @@ link: $(BINARIES) $(MODULES) compile
 .c.obj:
 !ENDIF
 	@$(CC) $(CFLAGS) -c $<
-
-yoriver.obj: ..\lib\yoriver.rc
-	@echo $(**F)
-	@if exist $@ erase $@
-	@$(RC) /fo$(@B).res $(RCFLAGS) /d YORI_VER_MAJOR=$(YORI_BASE_VER_MAJOR) /d YORI_VER_MINOR=$(YORI_BASE_VER_MINOR) /d YORI_BIN_VER_MAJOR=$(YORI_BIN_VER_MAJOR) /d YORI_BIN_VER_MINOR=$(YORI_BIN_VER_MINOR) $** >NUL
-	@if not exist $@ ren $(@B).res $@
 
 .rc.obj:
 	@echo $(**F)

@@ -1,7 +1,7 @@
 /**
  * @file get/get.c
  *
- * Yori shell display command line output
+ * Yori shell fetch objects from HTTP
  *
  * Copyright (c) 2017-2019 Malcolm J. Smith
  *
@@ -44,7 +44,7 @@ CHAR strGetHelpText[] =
 BOOL
 GetHelp(VOID)
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Get %i.%02i\n"), GET_VER_MAJOR, GET_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Get %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -162,7 +162,7 @@ ENTRYPOINT(
 
     ExistingUrlName = ArgV[StartArg].StartOfString;
 
-    YoriLibSPrintf(szAgent, _T("YGet %i.%02i\r\n"), GET_VER_MAJOR, GET_VER_MINOR);
+    YoriLibSPrintf(szAgent, _T("YGet %i.%02i\r\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
     Error = YoriLibUpdateBinaryFromUrl(ExistingUrlName, NewFileName.StartOfString, szAgent, NewerOnly?&ExistingFileTime:NULL);
     YoriLibFreeStringContents(&NewFileName);
     if (Error != YoriLibUpdErrorSuccess) {

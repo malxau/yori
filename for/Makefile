@@ -2,9 +2,6 @@
 MODULES=\
 	for.com
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(FOR_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(FOR_VER_MINOR)
 BINARIES=yfor.exe
 
 !INCLUDE "..\config\common.mk"
@@ -12,8 +9,6 @@ BINARIES=yfor.exe
 !IF $(PDB)==1
 LINKPDB=/Pdb:yfor.pdb
 !ENDIF
-
-CFLAGS=$(CFLAGS) -DFOR_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DFOR_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	for.obj        \
@@ -25,7 +20,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 yfor.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORISH) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_for.obj: for.c
 	@echo $@
@@ -37,4 +32,4 @@ builtins.lib: $(MOD_OBJS)
 
 for.com: $(MOD_OBJS) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) -def:for.def -out:$@
+	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:for.def -out:$@

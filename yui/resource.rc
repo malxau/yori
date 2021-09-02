@@ -4,7 +4,7 @@
 
 1                       ICON    DISCARDABLE     "..\\lib\\yori.ico"
 
-#include "../lib/yoriver.rc"
+#include "../lib/yoriver.inc"
 
 RUNDIALOG DIALOGEX 0, 0, 400, 60
 STYLE WS_POPUP | WS_CAPTION | DS_MODALFRAME

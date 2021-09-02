@@ -56,7 +56,7 @@ CHAR strMakeHelpText[] =
 BOOL
 MakeHelp(VOID)
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("YMake %i.%02i\n"), MAKE_VER_MAJOR, MAKE_VER_MINOR);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("YMake %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
@@ -458,7 +458,7 @@ ENTRYPOINT(
         YORI_STRING VariableName;
         YORI_STRING YMakeVer;
         YoriLibInitEmptyString(&YMakeVer);
-        YoriLibYPrintf(&YMakeVer, _T("%03i%03i"), MAKE_VER_MAJOR, MAKE_VER_MINOR);
+        YoriLibYPrintf(&YMakeVer, _T("%03i%03i"), YORI_VER_MAJOR, YORI_VER_MINOR);
         YoriLibConstantString(&VariableName, _T("_YMAKE_VER"));
         MakeSetVariable(MakeContext.RootScope, &VariableName, &YMakeVer, TRUE, MakeVariablePrecedencePredefined);
         YoriLibFreeStringContents(&YMakeVer);

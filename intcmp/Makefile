@@ -1,16 +1,11 @@
 
 BINARIES=yintcmp.exe
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(INTCMP_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(INTCMP_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:yintcmp.pdb
 !ENDIF
-
-CFLAGS=$(CFLAGS) -DINTCMP_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DINTCMP_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 intcmp.obj        \
@@ -22,7 +17,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 yintcmp.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_intcmp.obj: intcmp.c
 	@echo $@

@@ -1,16 +1,11 @@
 
 BINARIES=ystride.exe
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(STRIDE_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(STRIDE_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:ystride.pdb
 !ENDIF
-
-CFLAGS=$(CFLAGS) -DSTRIDE_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DSTRIDE_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 stride.obj         \
@@ -22,7 +17,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 ystride.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_stride.obj: stride.c
 	@echo $@

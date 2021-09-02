@@ -52,7 +52,15 @@ OBJS=\
 	 util.obj     \
 	 vt.obj       \
 
+all: yorilib.lib yoriver.obj
+
 yorilib.lib: $(OBJS)
 	@echo $@
 	@$(LIB32) $(LIBFLAGS) $(OBJS) /out:yorilib.lib
+
+yoriver.obj: yoriver.inc
+	@echo $(**F)
+	@if exist $@ erase $@
+	@$(RC) /fo$(@B).res $(RCFLAGS) /d YORI_VER_MAJOR=$(YORI_VER_MAJOR) /d YORI_VER_MINOR=$(YORI_VER_MINOR) /d YORI_BIN_VER_MAJOR=$(YORI_VER_MAJOR) /d YORI_BIN_VER_MINOR=$(YORI_VER_MINOR) $** >NUL
+	@if not exist $@ ren $(@B).res $@
 

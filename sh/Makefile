@@ -2,10 +2,9 @@
 BINARIES=yori.exe yorimin.exe oneyori.exe
 INITFILES=YoriInit.d\*
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(YORI_BASE_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(YORI_BASE_VER_MINOR)
 !INCLUDE "..\config\common.mk"
+YORI_BIN_VER_MAJOR=$(YORI_VER_MAJOR)
+YORI_BIN_VER_MINOR=$(YORI_VER_MINOR)
 
 YORIMINPDB=
 YORISTDPDB=
@@ -54,10 +53,10 @@ FULL_BUILTINLIBS=\
 compile: $(OBJS) $(BUILTINTABLE_OBJS)
 
 yorimin.exe: $(OBJS) yorinone.obj yorimin.def $(YORILIB) $(YORICRT) $(YORISH)
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) yorinone.obj $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) -def:$(@B).def $(MIN_PDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) yorinone.obj $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(MIN_PDB) -out:$@
 
 yori.exe: $(OBJS) yoristd.obj yori.def $(YORILIB) $(YORICRT) $(YORISH) $(STD_BUILTINLIBS)
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yoristd.obj $(CRTLIB) $(YORILIB) $(YORISH) $(STD_BUILTINLIBS) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) -def:$(@B).def $(STD_PDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yoristd.obj $(CRTLIB) $(YORILIB) $(YORISH) $(STD_BUILTINLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(STD_PDB) -out:$@
 
 !IFDEF _YMAKE_VER
 ONEYORI_DEPLIST=@yorifull.lst
@@ -65,5 +64,5 @@ ONEYORI_DEPLIST=@yorifull.lst
 
 oneyori.exe: $(OBJS) yorifull.obj oneyori.def yorifull.lst $(YORILIB) $(YORICRT) $(YORISH) $(STD_BUILTINLIBS) $(ONEYORI_DEPLIST)
 	@$(LIB32) $(LIBFLAGS) @yorifull.lst /out:yorifull.lib
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yorifull.obj $(CRTLIB) $(YORILIB) $(YORISH) $(FULL_BUILTINLIBS) $(FDILIB) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) -def:$(@B).def $(FULL_PDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(OBJS) $(LIBS) yorifull.obj $(CRTLIB) $(YORILIB) $(YORISH) $(FULL_BUILTINLIBS) $(FDILIB) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:$(@B).def $(FULL_PDB) -out:$@
 

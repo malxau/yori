@@ -1,16 +1,11 @@
 
 BINARIES=ymake.exe
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(MAKE_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(MAKE_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:ymake.pdb
 !ENDIF
-
-CFLAGS=$(CFLAGS) -DMAKE_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DMAKE_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 alloc.obj        \
@@ -38,7 +33,7 @@ MAKE_LIBS=$(YORILIB) $(YORICRT) $(YORISH) $(YORIVER) ..\echo\builtins.lib ..\mkd
 
 ymake.exe: $(BIN_OBJS) $(MAKE_LIBS)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(MAKE_LIBS) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(MAKE_LIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_make.obj: make.c
 	@echo $@

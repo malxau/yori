@@ -1,16 +1,11 @@
 
 BINARIES=osver.exe
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(OSVER_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(OSVER_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:osver.pdb
 !ENDIF
-
-CFLAGS=$(CFLAGS) -DOSVER_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DOSVER_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 osver.obj        \
@@ -22,7 +17,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 osver.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_osver.obj: osver.c
 	@echo $@

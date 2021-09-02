@@ -46,9 +46,6 @@ BUILTINS = alias.obj     \
 
 all: compile link
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(YORI_BASE_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(YORI_BASE_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 compile: $(YORIVER) builtins.lib
@@ -65,5 +62,5 @@ COM_LIBS = $(YORICRT) $(YORILIB) $(YORIWIN) $(YORIVER)
 .obj.com:
 !ENDIF
 	@echo $@
-	@$(LINK) $(LDFLAGS) $< -dll -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LIBS) $(COM_LIBS) $(CRTLIB) -def:$(<B).def -out:$@
+	@$(LINK) $(LDFLAGS) $< -dll -version:$(YORI_BASE_VER_MAJOR).$(YORI_BASE_VER_MINOR) $(LIBS) $(COM_LIBS) $(CRTLIB) -def:$(<B).def -out:$@
 

@@ -1,16 +1,11 @@
 
 BINARIES=ystrcmp.exe
 
-!INCLUDE "..\config\ver.mk"
-YORI_BIN_VER_MAJOR=$(STRCMP_VER_MAJOR)
-YORI_BIN_VER_MINOR=$(STRCMP_VER_MINOR)
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
 LINKPDB=/Pdb:ystrcmp.pdb
 !ENDIF
-
-CFLAGS=$(CFLAGS) -DSTRCMP_VER_MAJOR=$(YORI_BIN_VER_MAJOR) -DSTRCMP_VER_MINOR=$(YORI_BIN_VER_MINOR)
 
 BIN_OBJS=\
 	 strcmp.obj        \
@@ -22,7 +17,7 @@ compile: $(BIN_OBJS) builtins.lib
 
 ystrcmp.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_strcmp.obj: strcmp.c
 	@echo $@
