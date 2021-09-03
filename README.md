@@ -4,7 +4,7 @@ Yori is a CMD replacement shell that supports backquotes, job control, and impro
 
 ## Build
 
-Compiling currently requires Visual C++, version 2 or newer.  To compile, run NMAKE.
+Compiling currently requires Visual C++, version 2 or newer.  To compile, run NMAKE.  Once compiled, YMAKE.EXE allows for more efficient subsequent compilation, using all cores in the machine.
 
 ## License
 
@@ -12,4 +12,14 @@ Yori is available under the MIT license.
 
 ## System requirements
 
-For the core shell and components, NT 3.1 or newer for 32 bit; XP 64 or newer for 64 bit.  Individual features may require newer versions.  Note the ysetup.exe installer requires NT 4 with IE 4 or newer.
+For the core shell and components, NT 3.1 or newer for 32 bit; XP 64 or newer for 64 bit.  Individual features may require newer versions.  Note the ysetup.exe installer works best with NT 4 and IE 4 or newer.
+
+To install on older versions:
+
+| Release | Considerations |
+|---------|----------------|
+| 95, 98 or Me | These releases are not supported and extensive changes would be required to execute on them. |
+| NT 4 with IE 3 | Installer cannot create shortcuts, they must be created manually |
+| NT 4 with IE 2 | Install the [wintdist.exe](<http://www.malsmith.net/download/?obj=yori/latest-redist/wintdist.exe>) redistributable which contains the IE 3 wininet.dll before running the installer.  The installer cannot create shortcuts. |
+| NT 3.5x | Install the [wint351.exe](<http://www.malsmith.net/download/?obj=yori/latest-redist/wint351.exe>) redistributable which contains the IE 3 wininet.dll before running the installer.  The installer cannot create program manager groups or items. |
+| NT 3.1 | No installer exists.  Files must be copies to the machine manually. |
