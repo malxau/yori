@@ -3554,6 +3554,126 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define ICON_BIG 1
 #endif
 
+#ifndef MS_DEF_PROV
+/**
+ A definition for the base crypto provider if it is not defined by the current
+ compilation environment.
+ */
+#define MS_DEF_PROV L"Microsoft Base Cryptographic Provider v1.0"
+#endif
+
+#ifndef MS_ENH_RSA_AES_PROV_XP
+/**
+ A definition for the prototype enhanced crypto provider if it is not defined
+ by the current compilation environment.
+ */
+#define MS_ENH_RSA_AES_PROV_XP L"Microsoft Enhanced RSA and AES Cryptographic Provider (Prototype)"
+#endif
+
+#ifndef MS_ENH_RSA_AES_PROV
+/**
+ A definition for the enhanced crypto provider if it is not defined by the
+ current compilation environment.
+ */
+#define MS_ENH_RSA_AES_PROV L"Microsoft Enhanced RSA and AES Cryptographic Provider"
+#endif
+
+#ifndef CALG_MD4
+/**
+ A definition for the MD4 hash algorithm if it is not defined by the current
+ compilation environment.
+ */
+#define CALG_MD4  ((4 << 13) | 2)
+#endif
+
+#ifndef CALG_MD4
+/**
+ A definition for the MD4 hash algorithm if it is not defined by the current
+ compilation environment.
+ */
+#define CALG_MD4  ((4 << 13) | 2)
+#endif
+
+#ifndef CALG_MD5
+/**
+ A definition for the MD5 hash algorithm if it is not defined by the current
+ compilation environment.
+ */
+#define CALG_MD5  ((4 << 13) | 3)
+#endif
+
+#ifndef CALG_SHA1
+/**
+ A definition for the SHA1 hash algorithm if it is not defined by the current
+ compilation environment.
+ */
+#define CALG_SHA1 ((4 << 13) | 4)
+#endif
+
+#ifndef CALG_SHA_256
+/**
+ A definition for the SHA256 hash algorithm if it is not defined by the
+ current compilation environment.
+ */
+#define CALG_SHA_256 ((4 << 13) | 12)
+#endif
+
+#ifndef CALG_SHA_384
+/**
+ A definition for the SHA384 hash algorithm if it is not defined by the
+ current compilation environment.
+ */
+#define CALG_SHA_384 ((4 << 13) | 13)
+#endif
+
+#ifndef CALG_SHA_512
+/**
+ A definition for the SHA512 hash algorithm if it is not defined by the
+ current compilation environment.
+ */
+#define CALG_SHA_512 ((4 << 13) | 14)
+#endif
+
+#ifndef PROV_RSA_FULL
+/**
+ A definition for the RSA provider if it is not defined by the current
+ compilation environment.
+ */
+#define PROV_RSA_FULL 1
+#endif
+
+#ifndef PROV_RSA_AES
+/**
+ A definition for the RSA provider if it is not defined by the current
+ compilation environment.
+ */
+#define PROV_RSA_AES 24
+#endif
+
+#ifndef CRYPT_VERIFYCONTEXT
+/**
+ A definition for a flag to tell the provider that no private key material is
+ required if it is not defined by the current compilation environment.
+ */
+#define CRYPT_VERIFYCONTEXT 0xF0000000
+#endif
+
+#ifndef HP_HASHVAL
+/**
+ A definition for the value to obtain the hash result if it is not defined by
+ the current compilation environment.
+ */
+#define HP_HASHVAL 2
+#endif
+
+#ifndef HP_HASHSIZE
+/**
+ A definition for the value to obtain the size of the hash if it is not
+ defined by the current compilation environment.
+ */
+#define HP_HASHSIZE 4
+#endif
+
 #ifndef DIAMONDAPI
 /**
  If not defined by the compilation environment, the calling convention used
@@ -6328,6 +6448,78 @@ CHECK_TOKEN_MEMBERSHIP(HANDLE, PSID, PBOOL);
 typedef CHECK_TOKEN_MEMBERSHIP *PCHECK_TOKEN_MEMBERSHIP;
 
 /**
+ Prototype for the CryptAcquireContext function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_ACQUIRE_CONTEXTW(PDWORD_PTR, LPCWSTR, LPCWSTR, DWORD, DWORD);
+
+/**
+ Prototype for a pointer to the CryptAcquireContext function.
+ */
+typedef CRYPT_ACQUIRE_CONTEXTW *PCRYPT_ACQUIRE_CONTEXTW;
+
+/**
+ Prototype for the CryptCreateHash function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_CREATE_HASH(DWORD_PTR, DWORD, DWORD_PTR, DWORD, PDWORD_PTR);
+
+/**
+ Prototype for a pointer to the CryptCreateHash function.
+ */
+typedef CRYPT_CREATE_HASH *PCRYPT_CREATE_HASH;
+
+/**
+ Prototype for the CryptDestroyHash function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_DESTROY_HASH(DWORD_PTR);
+
+/**
+ Prototype for a pointer to the CryptDestroyHash function.
+ */
+typedef CRYPT_DESTROY_HASH *PCRYPT_DESTROY_HASH;
+
+/**
+ Prototype for the CryptGetHashParam function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_GET_HASH_PARAM(DWORD_PTR, DWORD, BYTE*, DWORD*, DWORD);
+
+/**
+ Prototype for a pointer to the CryptGetHashParam function.
+ */
+typedef CRYPT_GET_HASH_PARAM *PCRYPT_GET_HASH_PARAM;
+
+/**
+ Prototype for the CryptHashData function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_HASH_DATA(DWORD_PTR, BYTE*, DWORD, DWORD);
+
+/**
+ Prototype for a pointer to the CryptHashData function.
+ */
+typedef CRYPT_HASH_DATA *PCRYPT_HASH_DATA;
+
+/**
+ Prototype for the CryptReleaseContext function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_RELEASE_CONTEXT(DWORD_PTR, DWORD);
+
+/**
+ Prototype for a pointer to the CryptReleaseContext function.
+ */
+typedef CRYPT_RELEASE_CONTEXT *PCRYPT_RELEASE_CONTEXT;
+
+/**
  Prototype for the FreeSid function.
  */
 typedef
@@ -6608,6 +6800,36 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to CheckTokenMembership.
      */
     PCHECK_TOKEN_MEMBERSHIP pCheckTokenMembership;
+
+    /**
+     If it's available on the current system, a pointer to CryptAcquireContextW.
+     */
+    PCRYPT_ACQUIRE_CONTEXTW pCryptAcquireContextW;
+
+    /**
+     If it's available on the current system, a pointer to CryptCreateHash.
+     */
+    PCRYPT_CREATE_HASH pCryptCreateHash;
+
+    /**
+     If it's available on the current system, a pointer to CryptDestroyHash.
+     */
+    PCRYPT_DESTROY_HASH pCryptDestroyHash;
+
+    /**
+     If it's available on the current system, a pointer to CryptGetHashParam.
+     */
+    PCRYPT_GET_HASH_PARAM pCryptGetHashParam;
+
+    /**
+     If it's available on the current system, a pointer to CryptHashData.
+     */
+    PCRYPT_HASH_DATA pCryptHashData;
+
+    /**
+     If it's available on the current system, a pointer to CryptReleaseContext.
+     */
+    PCRYPT_RELEASE_CONTEXT pCryptReleaseContext;
 
     /**
      If it's available on the current system, a pointer to FreeSid.

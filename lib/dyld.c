@@ -233,6 +233,12 @@ YoriLibLoadAdvApi32Functions(VOID)
     DllAdvApi32.pAdjustTokenPrivileges = (PADJUST_TOKEN_PRIVILEGES)GetProcAddress(DllAdvApi32.hDll, "AdjustTokenPrivileges");
     DllAdvApi32.pAllocateAndInitializeSid = (PALLOCATE_AND_INITIALIZE_SID)GetProcAddress(DllAdvApi32.hDll, "AllocateAndInitializeSid");
     DllAdvApi32.pCheckTokenMembership = (PCHECK_TOKEN_MEMBERSHIP)GetProcAddress(DllAdvApi32.hDll, "CheckTokenMembership");
+    DllAdvApi32.pCryptAcquireContextW = (PCRYPT_ACQUIRE_CONTEXTW)GetProcAddress(DllAdvApi32.hDll, "CryptAcquireContextW");
+    DllAdvApi32.pCryptCreateHash = (PCRYPT_CREATE_HASH)GetProcAddress(DllAdvApi32.hDll, "CryptCreateHash");
+    DllAdvApi32.pCryptDestroyHash = (PCRYPT_DESTROY_HASH)GetProcAddress(DllAdvApi32.hDll, "CryptDestroyHash");
+    DllAdvApi32.pCryptGetHashParam = (PCRYPT_GET_HASH_PARAM)GetProcAddress(DllAdvApi32.hDll, "CryptGetHashParam");
+    DllAdvApi32.pCryptHashData = (PCRYPT_HASH_DATA)GetProcAddress(DllAdvApi32.hDll, "CryptHashData");
+    DllAdvApi32.pCryptReleaseContext = (PCRYPT_RELEASE_CONTEXT)GetProcAddress(DllAdvApi32.hDll, "CryptReleaseContext");
     DllAdvApi32.pFreeSid = (PFREE_SID)GetProcAddress(DllAdvApi32.hDll, "FreeSid");
     DllAdvApi32.pGetFileSecurityW = (PGET_FILE_SECURITYW)GetProcAddress(DllAdvApi32.hDll, "GetFileSecurityW");
     DllAdvApi32.pGetSecurityDescriptorOwner = (PGET_SECURITY_DESCRIPTOR_OWNER)GetProcAddress(DllAdvApi32.hDll, "GetSecurityDescriptorOwner");
