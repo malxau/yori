@@ -3,7 +3,7 @@
  *
  * Yori shell hash a file
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -78,16 +78,10 @@ typedef struct _HASH_CONTEXT {
     BOOLEAN Recursive;
 
     /**
-     BCrypt handle to the algorithm provider.  If NULL, the algorithm provider
+     WinCrypt handle to the algorithm provider.  If 0, the algorithm provider
      has not been initialized.
      */
-    PVOID Algorithm;
-
-    /**
-     Pointer to an opaque blob of memory which is used by BCrypt to generate
-     the hash.
-     */
-    PVOID ScratchBuffer;
+    DWORD_PTR Provider;
 
     /**
      The first error encountered when enumerating objects from a single arg.
@@ -98,9 +92,9 @@ typedef struct _HASH_CONTEXT {
     DWORD SavedErrorThisArg;
 
     /**
-     Specifies the number of bytes in ScratchBuffer.
+     The algorithm to use in CALG_* format.
      */
-    DWORD ScratchBufferLength;
+    DWORD Algorithm;
 
     /**
      Pointer to a blob of memory containing the result of the hash calculation
@@ -158,23 +152,24 @@ HashProcessStream(
     __in PHASH_CONTEXT HashContext
     )
 {
-    LONG Status;
-    PVOID hHash;
+    DWORD Err;
+    DWORD_PTR hHash;
     DWORD BytesRead;
 
     HashContext->FilesFound++;
     HashContext->FilesFoundThisArg++;
 
-    Status = DllBCrypt.pBCryptCreateHash(HashContext->Algorithm, &hHash, HashContext->ScratchBuffer, HashContext->ScratchBufferLength, NULL, 0, 0);
-
-    if (Status != STATUS_SUCCESS) {
+    if (!DllAdvApi32.pCryptCreateHash(HashContext->Provider, HashContext->Algorithm, 0, 0, &hHash)) {
         return FALSE;
     }
 
-    Status = STATUS_SUCCESS;
 
+    Err = ERROR_SUCCESS;
     while (TRUE) {
         if (!ReadFile(hSource, HashContext->ReadBuffer, HashContext->ReadBufferLength, &BytesRead, NULL)) {
+            // MSFIX: Distinguish errors here better? EOF means success,
+            // read error means hash is wrong.  Could be reading from a pipe
+            // etc though
             break;
         }
 
@@ -182,25 +177,26 @@ HashProcessStream(
             break;
         }
 
-        Status = DllBCrypt.pBCryptHashData(hHash, HashContext->ReadBuffer, BytesRead, 0);
-        if (Status != STATUS_SUCCESS) {
+        if (!DllAdvApi32.pCryptHashData(hHash, HashContext->ReadBuffer, BytesRead, 0)) {
+            Err = GetLastError();
             break;
         }
 
     }
 
-    if (Status == STATUS_SUCCESS) {
-        Status = DllBCrypt.pBCryptFinishHash(hHash, HashContext->HashBuffer, HashContext->HashLength, 0);
-        if (Status == STATUS_SUCCESS) {
+    if (Err == ERROR_SUCCESS) {
+        DWORD HashLength;
+        HashLength = HashContext->HashLength;
+        if (DllAdvApi32.pCryptGetHashParam(hHash, HP_HASHVAL, HashContext->HashBuffer, &HashLength, 0)) {
             if (!YoriLibHexBufferToString(HashContext->HashBuffer, HashContext->HashLength, &HashContext->HashString)) {
-                Status = !(STATUS_SUCCESS);
+                Err = !(ERROR_SUCCESS);
             }
         }
     }
 
-    DllBCrypt.pBCryptDestroyHash(hHash);
+    DllAdvApi32.pCryptDestroyHash(hHash);
 
-    if (Status != STATUS_SUCCESS) {
+    if (Err != STATUS_SUCCESS) {
         return FALSE;
     }
 
@@ -298,12 +294,7 @@ HashCleanupContext(
     __in PHASH_CONTEXT HashContext
     )
 {
-    LONG Status;
-
-    if (HashContext->ScratchBuffer != NULL) {
-        YoriLibFree(HashContext->ScratchBuffer);
-        HashContext->ScratchBuffer = NULL;
-    }
+    BOOL Result;
 
     if (HashContext->HashBuffer != NULL) {
         YoriLibFree(HashContext->HashBuffer);
@@ -317,10 +308,10 @@ HashCleanupContext(
 
     YoriLibFreeStringContents(&HashContext->HashString);
 
-    if (HashContext->Algorithm != NULL) {
-        Status = DllBCrypt.pBCryptCloseAlgorithmProvider(HashContext->Algorithm, 0);
-        ASSERT(Status == STATUS_SUCCESS);
-        HashContext->Algorithm = NULL;
+    if (HashContext->Provider != 0) {
+        Result = DllAdvApi32.pCryptReleaseContext(HashContext->Provider, 0);
+        ASSERT(Result);
+        HashContext->Provider = 0;
     }
 }
 
@@ -330,49 +321,58 @@ HashCleanupContext(
 
  @param HashContext Pointer to the hash context to initialize.
 
- @param Algorithm Specifies a NULL terminated string indicating the BCrypt
-        hash algorithm to initialize.
+ @param Algorithm Specifies a CALG_* algorithm indicating the algorithm to
+        initialize.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 HashInitializeContext(
     __in PHASH_CONTEXT HashContext,
-    __in LPCWSTR Algorithm
+    __in DWORD Algorithm
     )
 {
-    LONG Status;
-    DWORD BytesReturned;
+    DWORD_PTR hHash;
+    DWORD LastError;
+    LPTSTR ErrText;
 
-    Status = DllBCrypt.pBCryptOpenAlgorithmProvider(&HashContext->Algorithm, Algorithm, MS_PRIMITIVE_PROVIDER, 0);
-    if (Status != STATUS_SUCCESS) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: algorithm provider not functional, status 0x%08x\n"), Status);
+    if (!DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider, NULL, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
+        if (!DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider, NULL, MS_ENH_RSA_AES_PROV_XP, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
+            if (!DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider, NULL, MS_DEF_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
+                LastError = GetLastError();
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: algorithm provider not functional: %s\n"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                HashCleanupContext(HashContext);
+                return FALSE;
+            }
+        }
+    }
+
+    if (!DllAdvApi32.pCryptCreateHash(HashContext->Provider, Algorithm, 0, 0, &hHash)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: operating system support not present\n"));
         HashCleanupContext(HashContext);
         return FALSE;
     }
 
-    Status = DllBCrypt.pBCryptGetProperty(HashContext->Algorithm, L"HashDigestLength", &HashContext->HashLength, sizeof(HashContext->HashLength), &BytesReturned, 0);
-    if (Status != STATUS_SUCCESS) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: algorithm provider did not return required hash length, status 0x%08x\n"), Status);
-        HashCleanupContext(HashContext);
-        return FALSE;
+    if (!DllAdvApi32.pCryptGetHashParam(hHash, HP_HASHVAL, NULL, &HashContext->HashLength, 0)) {
+        LastError = GetLastError();
+        if (LastError != ERROR_MORE_DATA) {
+            ErrText = YoriLibGetWinErrorText(LastError);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: could not determine hash length: %s\n"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+            DllAdvApi32.pCryptDestroyHash(hHash);
+            HashCleanupContext(HashContext);
+            return FALSE;
+        }
     }
+
+    DllAdvApi32.pCryptDestroyHash(hHash);
+
+    HashContext->Algorithm = Algorithm;
 
     HashContext->HashBuffer = YoriLibMalloc(HashContext->HashLength);
     if (HashContext->HashBuffer == NULL) {
-        HashCleanupContext(HashContext);
-        return FALSE;
-    }
-
-    Status = DllBCrypt.pBCryptGetProperty(HashContext->Algorithm, L"ObjectLength", &HashContext->ScratchBufferLength, sizeof(HashContext->ScratchBufferLength), &BytesReturned, 0);
-    if (Status != STATUS_SUCCESS) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: algorithm provider did not return required scratch space, status 0x%08x\n"), Status);
-        HashCleanupContext(HashContext);
-        return FALSE;
-    }
-
-    HashContext->ScratchBuffer = YoriLibMalloc(HashContext->ScratchBufferLength);
-    if (HashContext->ScratchBuffer == NULL) {
         HashCleanupContext(HashContext);
         return FALSE;
     }
@@ -489,7 +489,7 @@ ENTRYPOINT(
     BOOL BasicEnumeration = FALSE;
     HASH_CONTEXT HashContext;
     YORI_STRING Arg;
-    LPTSTR Algorithm = L"SHA1";
+    DWORD Algorithm = CALG_SHA1;
 
     ZeroMemory(&HashContext, sizeof(HashContext));
 
@@ -504,34 +504,34 @@ ENTRYPOINT(
                 HashHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 if (i + 1 < ArgC) {
                     if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("MD4")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
-                        Algorithm = _T("MD4");
+                        Algorithm = CALG_MD4;
                     } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("MD5")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
-                        Algorithm = _T("MD5");
+                        Algorithm = CALG_MD5;
                     } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA1")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
-                        Algorithm = _T("SHA1");
+                        Algorithm = CALG_SHA1;
                     } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA256")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
-                        Algorithm = _T("SHA256");
+                        Algorithm = CALG_SHA_256;
                     } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA384")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
-                        Algorithm = _T("SHA384");
+                        Algorithm = CALG_SHA_384;
                     } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[i + 1], _T("SHA512")) == 0) {
                         ArgumentUnderstood = TRUE;
                         i++;
-                        Algorithm = _T("SHA512");
+                        Algorithm = CALG_SHA_512;
                     } else {
                         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: algorithm not recognized.  Supported algorithms are MD4, MD5, SHA1, SHA256, SHA384, and SHA512\n"));
                         return EXIT_FAILURE;
@@ -559,14 +559,13 @@ ENTRYPOINT(
         }
     }
 
-    YoriLibLoadBCryptFunctions();
-    if (DllBCrypt.pBCryptCloseAlgorithmProvider == NULL ||
-        DllBCrypt.pBCryptCreateHash == NULL ||
-        DllBCrypt.pBCryptDestroyHash == NULL ||
-        DllBCrypt.pBCryptFinishHash == NULL ||
-        DllBCrypt.pBCryptGetProperty == NULL ||
-        DllBCrypt.pBCryptHashData == NULL ||
-        DllBCrypt.pBCryptOpenAlgorithmProvider == NULL) {
+    YoriLibLoadAdvApi32Functions();
+    if (DllAdvApi32.pCryptAcquireContextW == NULL ||
+        DllAdvApi32.pCryptCreateHash == NULL ||
+        DllAdvApi32.pCryptDestroyHash == NULL ||
+        DllAdvApi32.pCryptGetHashParam == NULL ||
+        DllAdvApi32.pCryptHashData == NULL ||
+        DllAdvApi32.pCryptReleaseContext == NULL) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: operating system support not present\n"));
         return EXIT_FAILURE;
@@ -642,7 +641,7 @@ ENTRYPOINT(
     HashCleanupContext(&HashContext);
 
     if (HashContext.FilesFound == 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lines: no matching files found\n"));
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: no matching files found\n"));
         return EXIT_FAILURE;
     }
 
