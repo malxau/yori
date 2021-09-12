@@ -951,9 +951,6 @@ BOOL
 YoriLibLoadAdvApi32Functions(VOID);
 
 BOOL
-YoriLibLoadBCryptFunctions(VOID);
-
-BOOL
 YoriLibLoadCabinetFunctions(VOID);
 
 BOOL

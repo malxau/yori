@@ -265,41 +265,6 @@ YoriLibLoadAdvApi32Functions(VOID)
 }
 
 /**
- A structure containing pointers to bcrypt.dll functions that can be used if
- they are found but programs do not have a hard dependency on.
- */
-YORI_BCRYPT_FUNCTIONS DllBCrypt;
-
-/**
- Load pointers to all optional bcrypt.dll functions.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriLibLoadBCryptFunctions(VOID)
-{
-
-    if (DllBCrypt.hDll != NULL) {
-        return TRUE;
-    }
-
-    DllBCrypt.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("BCRYPT.DLL"));
-    if (DllBCrypt.hDll == NULL) {
-        return FALSE;
-    }
-
-    DllBCrypt.pBCryptCloseAlgorithmProvider = (PBCRYPT_CLOSE_ALGORITHM_PROVIDER)GetProcAddress(DllBCrypt.hDll, "BCryptCloseAlgorithmProvider");
-    DllBCrypt.pBCryptCreateHash = (PBCRYPT_CREATE_HASH)GetProcAddress(DllBCrypt.hDll, "BCryptCreateHash");
-    DllBCrypt.pBCryptDestroyHash = (PBCRYPT_DESTROY_HASH)GetProcAddress(DllBCrypt.hDll, "BCryptDestroyHash");
-    DllBCrypt.pBCryptFinishHash = (PBCRYPT_FINISH_HASH)GetProcAddress(DllBCrypt.hDll, "BCryptFinishHash");
-    DllBCrypt.pBCryptGetProperty = (PBCRYPT_GET_PROPERTY)GetProcAddress(DllBCrypt.hDll, "BCryptGetProperty");
-    DllBCrypt.pBCryptHashData = (PBCRYPT_HASH_DATA)GetProcAddress(DllBCrypt.hDll, "BCryptHashData");
-    DllBCrypt.pBCryptOpenAlgorithmProvider = (PBCRYPT_OPEN_ALGORITHM_PROVIDER)GetProcAddress(DllBCrypt.hDll, "BCryptOpenAlgorithmProvider");
-
-    return TRUE;
-}
-
-/**
  A structure containing pointers to ctl3d32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
