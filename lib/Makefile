@@ -17,6 +17,7 @@ OBJS=\
 	 cvtrtf.obj   \
 	 debug.obj    \
 	 dyld.obj     \
+	 dyld_adv.obj \
 	 dyld_cab.obj \
 	 env.obj      \
 	 ep_yori.obj  \

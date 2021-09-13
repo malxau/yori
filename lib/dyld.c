@@ -206,65 +206,6 @@ YoriLibLoadKernel32Functions(VOID)
 }
 
 /**
- A structure containing pointers to advapi32.dll functions that can be used if
- they are found but programs do not have a hard dependency on.
- */
-YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
-
-/**
- Load pointers to all optional advapi32.dll functions.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriLibLoadAdvApi32Functions(VOID)
-{
-
-    if (DllAdvApi32.hDll != NULL) {
-        return TRUE;
-    }
-
-    DllAdvApi32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("ADVAPI32.DLL"));
-    if (DllAdvApi32.hDll == NULL) {
-        return FALSE;
-    }
-
-    DllAdvApi32.pAccessCheck = (PACCESS_CHECK)GetProcAddress(DllAdvApi32.hDll, "AccessCheck");
-    DllAdvApi32.pAdjustTokenPrivileges = (PADJUST_TOKEN_PRIVILEGES)GetProcAddress(DllAdvApi32.hDll, "AdjustTokenPrivileges");
-    DllAdvApi32.pAllocateAndInitializeSid = (PALLOCATE_AND_INITIALIZE_SID)GetProcAddress(DllAdvApi32.hDll, "AllocateAndInitializeSid");
-    DllAdvApi32.pCheckTokenMembership = (PCHECK_TOKEN_MEMBERSHIP)GetProcAddress(DllAdvApi32.hDll, "CheckTokenMembership");
-    DllAdvApi32.pCryptAcquireContextW = (PCRYPT_ACQUIRE_CONTEXTW)GetProcAddress(DllAdvApi32.hDll, "CryptAcquireContextW");
-    DllAdvApi32.pCryptCreateHash = (PCRYPT_CREATE_HASH)GetProcAddress(DllAdvApi32.hDll, "CryptCreateHash");
-    DllAdvApi32.pCryptDestroyHash = (PCRYPT_DESTROY_HASH)GetProcAddress(DllAdvApi32.hDll, "CryptDestroyHash");
-    DllAdvApi32.pCryptGetHashParam = (PCRYPT_GET_HASH_PARAM)GetProcAddress(DllAdvApi32.hDll, "CryptGetHashParam");
-    DllAdvApi32.pCryptHashData = (PCRYPT_HASH_DATA)GetProcAddress(DllAdvApi32.hDll, "CryptHashData");
-    DllAdvApi32.pCryptReleaseContext = (PCRYPT_RELEASE_CONTEXT)GetProcAddress(DllAdvApi32.hDll, "CryptReleaseContext");
-    DllAdvApi32.pFreeSid = (PFREE_SID)GetProcAddress(DllAdvApi32.hDll, "FreeSid");
-    DllAdvApi32.pGetFileSecurityW = (PGET_FILE_SECURITYW)GetProcAddress(DllAdvApi32.hDll, "GetFileSecurityW");
-    DllAdvApi32.pGetSecurityDescriptorOwner = (PGET_SECURITY_DESCRIPTOR_OWNER)GetProcAddress(DllAdvApi32.hDll, "GetSecurityDescriptorOwner");
-    DllAdvApi32.pImpersonateSelf = (PIMPERSONATE_SELF)GetProcAddress(DllAdvApi32.hDll, "ImpersonateSelf");
-    DllAdvApi32.pInitializeAcl = (PINITIALIZE_ACL)GetProcAddress(DllAdvApi32.hDll, "InitializeAcl");
-    DllAdvApi32.pLookupAccountNameW = (PLOOKUP_ACCOUNT_NAMEW)GetProcAddress(DllAdvApi32.hDll, "LookupAccountNameW");
-    DllAdvApi32.pLookupAccountSidW = (PLOOKUP_ACCOUNT_SIDW)GetProcAddress(DllAdvApi32.hDll, "LookupAccountSidW");
-    DllAdvApi32.pLookupPrivilegeValueW = (PLOOKUP_PRIVILEGE_VALUEW)GetProcAddress(DllAdvApi32.hDll, "LookupPrivilegeValueW");
-    DllAdvApi32.pOpenProcessToken = (POPEN_PROCESS_TOKEN)GetProcAddress(DllAdvApi32.hDll, "OpenProcessToken");
-    DllAdvApi32.pOpenThreadToken = (POPEN_THREAD_TOKEN)GetProcAddress(DllAdvApi32.hDll, "OpenThreadToken");
-    DllAdvApi32.pRegCloseKey = (PREG_CLOSE_KEY)GetProcAddress(DllAdvApi32.hDll, "RegCloseKey");
-    DllAdvApi32.pRegCreateKeyExW = (PREG_CREATE_KEY_EXW)GetProcAddress(DllAdvApi32.hDll, "RegCreateKeyExW");
-    DllAdvApi32.pRegDeleteKeyW = (PREG_DELETE_KEYW)GetProcAddress(DllAdvApi32.hDll, "RegDeleteKeyW");
-    DllAdvApi32.pRegDeleteValueW = (PREG_DELETE_VALUEW)GetProcAddress(DllAdvApi32.hDll, "RegDeleteValueW");
-    DllAdvApi32.pRegEnumKeyExW = (PREG_ENUM_KEY_EXW)GetProcAddress(DllAdvApi32.hDll, "RegEnumKeyExW");
-    DllAdvApi32.pRegEnumValueW = (PREG_ENUM_VALUEW)GetProcAddress(DllAdvApi32.hDll, "RegEnumValueW");
-    DllAdvApi32.pRegOpenKeyExW = (PREG_OPEN_KEY_EXW)GetProcAddress(DllAdvApi32.hDll, "RegOpenKeyExW");
-    DllAdvApi32.pRegQueryValueExW = (PREG_QUERY_VALUE_EXW)GetProcAddress(DllAdvApi32.hDll, "RegQueryValueExW");
-    DllAdvApi32.pRegSetValueExW = (PREG_SET_VALUE_EXW)GetProcAddress(DllAdvApi32.hDll, "RegSetValueExW");
-    DllAdvApi32.pRevertToSelf = (PREVERT_TO_SELF)GetProcAddress(DllAdvApi32.hDll, "RevertToSelf");
-    DllAdvApi32.pSetNamedSecurityInfoW = (PSET_NAMED_SECURITY_INFOW)GetProcAddress(DllAdvApi32.hDll, "SetNamedSecurityInfoW");
-
-    return TRUE;
-}
-
-/**
  A structure containing pointers to ctl3d32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
