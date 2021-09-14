@@ -1280,19 +1280,21 @@ EditFindNextMatchingString(
 
     Line = YoriWinMultilineEditGetLineByIndex(EditContext->MultilineEdit, StartLine);
 
-    YoriLibInitEmptyString(&Substring);
-    Substring.StartOfString = Line->StartOfString + StartOffset;
-    Substring.LengthInChars = Line->LengthInChars - StartOffset;
-    if (EditContext->SearchMatchCase) {
-        Match = YoriLibFindFirstMatchingSubstring(&Substring, 1, &EditContext->SearchString, &Offset);
-    } else {
-        Match = YoriLibFindFirstMatchingSubstringInsensitive(&Substring, 1, &EditContext->SearchString, &Offset);
-    }
+    if (StartOffset < Line->LengthInChars) {
+        YoriLibInitEmptyString(&Substring);
+        Substring.StartOfString = Line->StartOfString + StartOffset;
+        Substring.LengthInChars = Line->LengthInChars - StartOffset;
+        if (EditContext->SearchMatchCase) {
+            Match = YoriLibFindFirstMatchingSubstring(&Substring, 1, &EditContext->SearchString, &Offset);
+        } else {
+            Match = YoriLibFindFirstMatchingSubstringInsensitive(&Substring, 1, &EditContext->SearchString, &Offset);
+        }
 
-    if (Match != NULL) {
-        *NextMatchLine = StartLine;
-        *NextMatchOffset = Offset + StartOffset;
-        return TRUE;
+        if (Match != NULL) {
+            *NextMatchLine = StartLine;
+            *NextMatchOffset = Offset + StartOffset;
+            return TRUE;
+        }
     }
 
     //
