@@ -4,7 +4,7 @@
  * Header for library routines that may be of value from the shell as well
  * as external tools.
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -758,11 +758,13 @@ YoriLibSetCurrentDirectorySaveDriveCurrentDirectory(
     __in PYORI_STRING NewCurrentDirectory
     );
 
+__success(return)
 BOOL
 YoriLibGetCurrentDirectory(
     __out PYORI_STRING CurrentDirectory
     );
 
+__success(return)
 BOOL
 YoriLibGetCurrentDirectoryForDisplay(
     __out PYORI_STRING CurrentDirectory

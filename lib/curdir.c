@@ -223,6 +223,7 @@ YoriLibSetCurrentDirectoryOnDrive(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetCurrentDirectory(
     __out PYORI_STRING CurrentDirectory
@@ -270,6 +271,7 @@ YoriLibGetCurrentDirectory(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibGetCurrentDirectoryForDisplay(
     __out PYORI_STRING CurrentDirectory
