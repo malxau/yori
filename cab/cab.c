@@ -375,13 +375,15 @@ CabExpandFileFoundCallback(
 {
     PCAB_EXPAND_CONTEXT ExpandContext = (PCAB_EXPAND_CONTEXT)Context;
     YORI_STRING ErrorString;
+    DWORD ErrorCode;
 
     UNREFERENCED_PARAMETER(FileInfo);
     UNREFERENCED_PARAMETER(Depth);
 
     YoriLibInitEmptyString(&ErrorString);
+    ErrorCode = ERROR_SUCCESS;
 
-    if (!YoriLibExtractCab(FilePath, &ExpandContext->FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, NULL, &ErrorString)) {
+    if (!YoriLibExtractCab(FilePath, &ExpandContext->FullTargetDirectory, TRUE, 0, NULL, 0, NULL, NULL, NULL, NULL, &ErrorCode, &ErrorString)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibExtractCab failed on %y: %y\n"), FilePath, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
     }

@@ -583,6 +583,7 @@ YoriPkgInstallPackage(
     YORI_STRING ErrorString;
     YORIPKG_INSTALL_PKG_CONTEXT InstallContext;
 
+    DWORD Error = ERROR_SUCCESS;
     BOOL Result = FALSE;
     TCHAR FileIndexString[16];
 
@@ -683,10 +684,35 @@ YoriPkgInstallPackage(
     InstallContext.NumberFiles = 0;
     InstallContext.ConflictingFileFound = FALSE;
     YoriLibInitEmptyString(&ErrorString);
-    if (!YoriLibExtractCab(&Package->LocalPackagePath, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YoriPkgInstallPackageFileCallback, YoriPkgCompressPackageFileCallback, &InstallContext, &ErrorString)) {
+    if (!YoriLibExtractCab(&Package->LocalPackagePath, &FullTargetDirectory, TRUE, 1, &PkgInfoFile, 0, NULL, YoriPkgInstallPackageFileCallback, YoriPkgCompressPackageFileCallback, &InstallContext, &Error, &ErrorString)) {
+
+        //
+        //  Mark the package as not requiring upgrade
+        //
+
         WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not create or write to file %y: %y\n"), &Package->LocalPackagePath, &ErrorString);
+
+        //
+        //  Remove any trailing newlines in the returned error string
+        //
+
+        while (ErrorString.LengthInChars > 0 &&
+               (ErrorString.StartOfString[ErrorString.LengthInChars - 1] == '\r' ||
+                ErrorString.StartOfString[ErrorString.LengthInChars - 1] == '\n')) {
+            ErrorString.LengthInChars--;
+        }
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not install %y: %y\n"), &Package->LocalPackagePath, &ErrorString);
         YoriLibFreeStringContents(&ErrorString);
+
+        //
+        //  If it's access denied, display the message indicating elevation
+        //  may be required
+        //
+
+        if (Error == ERROR_ACCESS_DENIED) {
+            YoriPkgDisplayErrorStringForInstallFailure(Error);
+        }
         goto Exit;
     }
 

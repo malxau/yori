@@ -840,9 +840,8 @@ YoriPkgPreparePackageForInstall(
     //
 
     YoriLibInitEmptyString(&ErrorString);
-    if (!YoriLibExtractCab(&PendingPackage->LocalPackagePath, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, NULL, &ErrorString)) {
+    if (!YoriLibExtractCab(&PendingPackage->LocalPackagePath, &TempPath, FALSE, 0, NULL, 1, &PkgInfoFile, NULL, NULL, NULL, &Result, &ErrorString)) {
         YoriLibFreeStringContents(&ErrorString);
-        Result = ERROR_WRITE_FAULT;
         goto Exit;
     }
 

@@ -3,7 +3,7 @@
  *
  * Yori shell extract .cab files
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -77,6 +77,11 @@ typedef struct _YORI_LIB_CAB_EXPAND_CONTEXT {
      Context information to pass to the user specified callback.
      */
     PVOID UserContext;
+
+    /**
+     Error code describing the result of the operation.
+     */
+    DWORD ErrorCode;
 
     /**
      Optionally points to a string to populate with error information to
@@ -382,6 +387,9 @@ YoriLibCabShouldIncludeFile(
 
  @param FullPath Pointer to a string describing the file to open.
 
+ @param ErrorCode Optionally points to a value to populate with the error code
+        encountered in the extraction process.
+
  @param ErrorString Optionally points to a string to populate with information
         about any error encountered in the extraction process.
 
@@ -391,6 +399,7 @@ __success(return != INVALID_HANDLE_VALUE)
 DWORD_PTR
 YoriLibCabFileOpenForExtract(
     __in PYORI_STRING FullPath,
+    __inout PDWORD ErrorCode,
     __inout_opt PYORI_STRING ErrorString
     )
 {
@@ -461,8 +470,12 @@ YoriLibCabFileOpenForExtract(
         }
     }
 
-    if (ErrorString != NULL) {
-        if (hFile == INVALID_HANDLE_VALUE) {
+    if (hFile == INVALID_HANDLE_VALUE) {
+        if (*ErrorCode == ERROR_SUCCESS) {
+            *ErrorCode = Err;
+        }
+
+        if (ErrorString != NULL) {
             LPTSTR ErrText;
             ErrText = YoriLibGetWinErrorText(Err);
             YoriLibYPrintf(ErrorString, _T("Error opening %y: %s"), FullPath, ErrText);
@@ -913,6 +926,7 @@ YoriLibCabNotify(
         case YoriLibCabNotifyCopyFile:
             ExpandContext = (PYORI_LIB_CAB_EXPAND_CONTEXT)Notification->Context;
             if (!YoriLibCabBuildFileNames(ExpandContext->TargetDirectory, Notification->String1, &FullPath, &FileName)) {
+                ExpandContext->ErrorCode = ERROR_NOT_ENOUGH_MEMORY;
                 if (ExpandContext->ErrorString != NULL) {
                     YoriLibYPrintf(ExpandContext->ErrorString, _T("Could not build file name for directory %y CAB name %hs"), ExpandContext->TargetDirectory, Notification->String1);
                 }
@@ -922,7 +936,7 @@ YoriLibCabNotify(
                 if (ExpandContext->CommenceExtractCallback == NULL ||
                     ExpandContext->CommenceExtractCallback(&FullPath, &FileName, ExpandContext->UserContext)) {
 
-                    Handle = YoriLibCabFileOpenForExtract(&FullPath, ExpandContext->ErrorString);
+                    Handle = YoriLibCabFileOpenForExtract(&FullPath, &ExpandContext->ErrorCode, ExpandContext->ErrorString);
                 } else {
                     Handle = 0;
                 }
@@ -1013,6 +1027,9 @@ YoriLibCabNotify(
  @param UserContext Optionally points to context to pass to
         CommenceExtractCallback and CompleteExtractCallback.
 
+ @param ErrorCode Optionally points to a value to populate with the error code
+        encountered in the extraction process.
+
  @param ErrorString Optionally points to a string to populate with information
         about any error encountered in the extraction process.
 
@@ -1031,6 +1048,7 @@ YoriLibExtractCab(
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
+    __inout_opt PDWORD ErrorCode,
     __inout_opt PYORI_STRING ErrorString
     )
 {
@@ -1051,6 +1069,9 @@ YoriLibExtractCab(
     if (DllCabinet.pFdiCreate == NULL ||
         DllCabinet.pFdiCopy == NULL) {
 
+        if (ErrorCode != NULL) {
+            *ErrorCode = ERROR_MOD_NOT_FOUND;
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Cabinet.dll not loaded or expected functions not found"));
         }
@@ -1070,9 +1091,13 @@ YoriLibExtractCab(
     ExpandContext.CommenceExtractCallback = CommenceExtractCallback;
     ExpandContext.CompleteExtractCallback = CompleteExtractCallback;
     ExpandContext.UserContext = UserContext;
+    ExpandContext.ErrorCode = ERROR_SUCCESS;
     ExpandContext.ErrorString = ErrorString;
 
     if (!YoriLibUserStringToSingleFilePath(CabFileName, FALSE, &FullCabFileName)) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = GetLastError();
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Cannot convert %y to full path"), CabFileName);
         }
@@ -1080,6 +1105,9 @@ YoriLibExtractCab(
     }
 
     if (!YoriLibUserStringToSingleFilePath(TargetDirectory, FALSE, &FullTargetDirectory)) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = GetLastError();
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Cannot convert %y to full path"), TargetDirectory);
         }
@@ -1092,6 +1120,9 @@ YoriLibExtractCab(
 
     FinalBackslash = YoriLibFindRightMostCharacter(&FullCabFileName, '\\');
     if (FinalBackslash == NULL) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = ERROR_BAD_PATHNAME;
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Cannot find final seperator in %y"), &FullCabFileName);
         }
@@ -1109,6 +1140,9 @@ YoriLibExtractCab(
 
     AnsiCabParentDirectory = YoriLibMalloc(CabParentDirectory.LengthInChars + 1 + CabFileNameOnly.LengthInChars + 1);
     if (AnsiCabParentDirectory == NULL) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = ERROR_NOT_ENOUGH_MEMORY;
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Allocation failure"));
         }
@@ -1118,6 +1152,9 @@ YoriLibExtractCab(
     AnsiCabFileName = AnsiCabParentDirectory + CabParentDirectory.LengthInChars + 1;
 
     if (WideCharToMultiByte(CP_ACP, 0, CabParentDirectory.StartOfString, CabParentDirectory.LengthInChars, AnsiCabParentDirectory, CabParentDirectory.LengthInChars + 1, NULL, &DefaultUsed) != (INT)(CabParentDirectory.LengthInChars)) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = GetLastError();
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabParentDirectory);
         }
@@ -1125,6 +1162,9 @@ YoriLibExtractCab(
     }
 
     if (DefaultUsed) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = ERROR_NO_UNICODE_TRANSLATION;
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabParentDirectory);
         }
@@ -1134,6 +1174,9 @@ YoriLibExtractCab(
     AnsiCabParentDirectory[CabParentDirectory.LengthInChars] = '\0';
 
     if (WideCharToMultiByte(CP_ACP, 0, CabFileNameOnly.StartOfString, CabFileNameOnly.LengthInChars, AnsiCabFileName, CabFileNameOnly.LengthInChars + 1, NULL, &DefaultUsed) != (INT)(CabFileNameOnly.LengthInChars)) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = GetLastError();
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabFileNameOnly);
         }
@@ -1141,6 +1184,9 @@ YoriLibExtractCab(
     }
 
     if (DefaultUsed) {
+        if (ErrorCode != NULL) {
+            *ErrorCode = ERROR_NO_UNICODE_TRANSLATION;
+        }
         if (ErrorString != NULL) {
             YoriLibYPrintf(ErrorString, _T("Error converting %y to ANSI"), &CabFileNameOnly);
         }
@@ -1152,6 +1198,9 @@ YoriLibExtractCab(
     hFdi = DllCabinet.pFdiCreate(YoriLibCabAlloc, YoriLibCabFree, YoriLibCabFdiFileOpen, YoriLibCabFdiFileRead, YoriLibCabFdiFileWrite, YoriLibCabFdiFileClose, YoriLibCabFdiFileSeek, -1, &CabErrors);
 
     if (hFdi == NULL) {
+        if (ErrorCode != NULL && *ErrorCode == ERROR_SUCCESS) {
+            *ErrorCode = GetLastError();
+        }
         if (ErrorString != NULL && ErrorString->LengthInChars == 0) {
             YoriLibYPrintf(ErrorString, _T("Error %i in pFdiCreate"), GetLastError());
         }
@@ -1167,6 +1216,9 @@ YoriLibExtractCab(
                              YoriLibCabNotify,
                              NULL,
                              &ExpandContext)) {
+        if (ErrorCode != NULL && *ErrorCode == ERROR_SUCCESS) {
+            *ErrorCode = GetLastError();
+        }
         if (ErrorString != NULL && ErrorString->LengthInChars == 0) {
             YoriLibYPrintf(ErrorString, _T("Error %i in pFdiCopy"), GetLastError());
         }

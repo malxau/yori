@@ -462,6 +462,7 @@ YoriLibExtractCab(
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CommenceExtractCallback,
     __in_opt PYORI_LIB_CAB_EXPAND_FILE_CALLBACK CompleteExtractCallback,
     __in_opt PVOID UserContext,
+    __inout_opt PDWORD ErrorCode,
     __inout_opt PYORI_STRING ErrorString
     );
 
