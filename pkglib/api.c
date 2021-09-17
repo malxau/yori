@@ -781,7 +781,7 @@ YoriPkgDeletePackage(
     YORI_STRING PkgIniFile;
     YORI_STRING IniValue;
     DWORD FileCount;
-    BOOL Result;
+    DWORD Error;
 
     if (!YoriPkgGetPackageIniFile(TargetDirectory, &PkgIniFile)) {
         return FALSE;
@@ -810,10 +810,14 @@ YoriPkgDeletePackage(
         return FALSE;
     }
 
-    Result = YoriPkgDeletePackageInternal(&PkgIniFile, TargetDirectory, PackageName, FALSE);
+    Error = YoriPkgDeletePackageInternal(&PkgIniFile, TargetDirectory, PackageName, FALSE);
     YoriLibFreeStringContents(&PkgIniFile);
     YoriLibFreeStringContents(&IniValue);
-    return Result;
+    if (Error != ERROR_SUCCESS) {
+        YoriPkgDisplayErrorStringForInstallFailure(Error);
+        return FALSE;
+    }
+    return TRUE;
 }
 
 /**
@@ -830,6 +834,7 @@ YoriPkgDeleteAllPackages(VOID)
     LPTSTR Equals;
     YORI_STRING PkgNameOnly;
     BOOL Result;
+    DWORD Error;
 
     if (!YoriPkgGetPackageIniFile(NULL, &PkgIniFile)) {
         return FALSE;
@@ -898,8 +903,10 @@ YoriPkgDeleteAllPackages(VOID)
         ThisLine++;
 
         PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
-        if (!YoriPkgDeletePackageInternal(&PkgIniFile, NULL, &PkgNameOnly, TRUE)) {
+        Error = YoriPkgDeletePackageInternal(&PkgIniFile, NULL, &PkgNameOnly, TRUE);
+        if (Error != ERROR_SUCCESS) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not remove package %y\n"), &PkgNameOnly);
+            YoriPkgDisplayErrorStringForInstallFailure(Error);
             Result = FALSE;
             break;
         }

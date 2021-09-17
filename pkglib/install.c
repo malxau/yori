@@ -230,16 +230,20 @@ YoriPkgCheckIfPackageDeleteable(
 
  @param FilePath Pointer to the file to remove.
 
- @return TRUE if one or more objects were successfully scheduled for deletion.
+ @return ERROR_SUCCESS to indicate success, or other Win32 error to indicate
+         the type of failure.
  */
-BOOL
+DWORD
 YoriPkgDeleteInstalledPackageFile(
     __in PYORI_STRING FilePath
     )
 {
     DWORD Index;
     DWORD RetryCount = 0;
+    DWORD Error;
     BOOL FileDeleted = FALSE;
+
+    Error = ERROR_SUCCESS;
 
     if (FilePath->LengthInChars == 0) {
         return FALSE;
@@ -254,24 +258,23 @@ YoriPkgDeleteInstalledPackageFile(
             FileDeleted = TRUE;
             break;
         }
+        Error = GetLastError();
         Sleep(20);
     }
 
     //
-    //  MSFIX: If the file can't be deleted, one option is to defer until
-    //  reboot, but this presumably requires privilege to modify the
-    //  registry, and we risk creating problems if a future installation
-    //  occurs while a previous uninstallation is pending on the next
-    //  reboot.  Working with delete-delayed-until-reboot therefore implies
-    //  being able to detect and/or fix it on installation.
+    //  If the file can't be deleted, one option is to defer until reboot,
+    //  but this requires privilege to modify the registry.
     //
     //  But since this requires privilege anyway, another option is to see
     //  what other options exist for deleting an in use binary.
     //
 
     if (!FileDeleted) {
-        return FALSE;
+        return Error;
     }
+
+    Error = ERROR_SUCCESS;
 
     for (Index = FilePath->LengthInChars - 1; Index > 0; Index--) {
 
@@ -286,13 +289,13 @@ YoriPkgDeleteInstalledPackageFile(
             FilePath->StartOfString[Index] = '\0';
             if (!RemoveDirectory(FilePath->StartOfString)) {
                 FilePath->StartOfString[Index] = '\\';
-                return TRUE;
+                return Error;
             }
             FilePath->StartOfString[Index] = '\\';
         }
     }
 
-    return TRUE;
+    return Error;
 }
 
 /**
@@ -312,9 +315,10 @@ YoriPkgDeleteInstalledPackageFile(
         currently executing program is the first program in the package to
         delete, abort the delete with an error.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @return ERROR_SUCCESS to indicate success, or other Win32 error to indicate
+         the type of failure.
  */
-BOOL
+DWORD
 YoriPkgDeletePackageInternal(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,
@@ -329,20 +333,20 @@ YoriPkgDeletePackageInternal(
     DWORD FileCount;
     DWORD FileIndex;
     TCHAR FileIndexString[16];
-    BOOL DeleteResult;
+    DWORD DeleteResult;
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     if (TargetDirectory == NULL) {
         if (!YoriPkgGetApplicationDirectory(&AppPath)) {
             YoriLibFreeStringContents(&IniValue);
-            return FALSE;
+            return ERROR_NOT_ENOUGH_MEMORY;
         }
     } else {
         if (!YoriLibAllocateString(&AppPath, TargetDirectory->LengthInChars + MAX_PATH)) {
-            return FALSE;
+            return ERROR_NOT_ENOUGH_MEMORY;
         }
         memcpy(AppPath.StartOfString, TargetDirectory->StartOfString, TargetDirectory->LengthInChars * sizeof(TCHAR));
         AppPath.StartOfString[TargetDirectory->LengthInChars] = '\0';
@@ -353,14 +357,14 @@ YoriPkgDeletePackageInternal(
     if (FileCount == 0) {
         YoriLibFreeStringContents(&AppPath);
         YoriLibFreeStringContents(&IniValue);
-        return FALSE;
+        return ERROR_MOD_NOT_FOUND;
     }
 
     YoriLibInitEmptyString(&FileToDelete);
     if (!YoriLibAllocateString(&FileToDelete, AppPath.LengthInChars + YORIPKG_MAX_FIELD_LENGTH)) {
         YoriLibFreeStringContents(&AppPath);
         YoriLibFreeStringContents(&IniValue);
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
@@ -376,7 +380,7 @@ YoriPkgDeletePackageInternal(
             }
             DeleteResult = YoriPkgDeleteInstalledPackageFile(FileBeingDeleted);
 
-            if (!DeleteResult && IgnoreFailureOfCurrentExecutable) {
+            if (DeleteResult != ERROR_SUCCESS && IgnoreFailureOfCurrentExecutable) {
                 YORI_STRING ModuleName;
 
                 if (!YoriPkgGetExecutableFile(&ModuleName)) {
@@ -390,7 +394,7 @@ YoriPkgDeletePackageInternal(
                 //
 
                 if (YoriLibCompareStringInsensitive(&ModuleName, FileBeingDeleted) == 0) {
-                    DeleteResult = TRUE;
+                    DeleteResult = ERROR_SUCCESS;
                 }
                 YoriLibFreeStringContents(&ModuleName);
             }
@@ -401,11 +405,11 @@ YoriPkgDeletePackageInternal(
             //  inconsistent.
             //
 
-            if (!DeleteResult && FileIndex == 1) {
+            if (DeleteResult != ERROR_SUCCESS && FileIndex == 1) {
                 YoriLibFreeStringContents(&IniValue);
                 YoriLibFreeStringContents(&AppPath);
                 YoriLibFreeStringContents(&FileToDelete);
-                return FALSE;
+                return DeleteResult;
             }
         }
 
@@ -428,9 +432,8 @@ YoriPkgDeletePackageInternal(
     YoriLibFreeStringContents(&AppPath);
     YoriLibFreeStringContents(&FileToDelete);
 
-    return TRUE;
+    return ERROR_SUCCESS;
 }
-
 
 
 /**

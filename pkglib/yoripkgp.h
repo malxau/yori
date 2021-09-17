@@ -479,7 +479,7 @@ YoriPkgCheckIfPackageDeleteable(
     __in BOOLEAN IgnoreFailureOfCurrentExecutable
     );
 
-BOOL
+DWORD
 YoriPkgDeletePackageInternal(
     __in PYORI_STRING PkgIniFile,
     __in_opt PYORI_STRING TargetDirectory,
