@@ -7468,6 +7468,102 @@ CLOSE_CLIPBOARD(VOID);
 typedef CLOSE_CLIPBOARD *PCLOSE_CLIPBOARD;
 
 /**
+ A prototype for the DdeClientTransaction function.
+ */
+typedef
+HDDEDATA WINAPI
+DDE_CLIENT_TRANSACTION(LPBYTE, DWORD, HCONV, HSZ, DWORD, DWORD, DWORD, LPDWORD);
+
+/**
+ A prototype for a pointer to the DdeClientTransaction function.
+ */
+typedef DDE_CLIENT_TRANSACTION *PDDE_CLIENT_TRANSACTION;
+
+/**
+ A prototype for the DdeConnect function.
+ */
+typedef
+HCONV WINAPI
+DDE_CONNECT(DWORD, HSZ, HSZ, PCONVCONTEXT);
+
+/**
+ A prototype for a pointer to the DdeConnect function.
+ */
+typedef DDE_CONNECT *PDDE_CONNECT;
+
+/**
+ A prototype for the DdeCreateDataHandle function.
+ */
+typedef
+HDDEDATA WINAPI
+DDE_CREATE_DATA_HANDLE(DWORD, LPBYTE, DWORD, DWORD, HSZ, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the DdeCreateDataHandle function.
+ */
+typedef DDE_CREATE_DATA_HANDLE *PDDE_CREATE_DATA_HANDLE;
+
+/**
+ A prototype for the DdeCreateStringHandle function.
+ */
+typedef
+HSZ WINAPI
+DDE_CREATE_STRING_HANDLEW(DWORD, LPWSTR, INT);
+
+/**
+ A prototype for a pointer to the DdeCreateStringHandle function.
+ */
+typedef DDE_CREATE_STRING_HANDLEW *PDDE_CREATE_STRING_HANDLEW;
+
+/**
+ A prototype for the DdeDisconnect function.
+ */
+typedef
+BOOL WINAPI
+DDE_DISCONNECT(HCONV);
+
+/**
+ A prototype for a pointer to the DdeDisconnect function.
+ */
+typedef DDE_DISCONNECT *PDDE_DISCONNECT;
+
+/**
+ A prototype for the DdeFreeStringHandle function.
+ */
+typedef
+BOOL WINAPI
+DDE_FREE_STRING_HANDLE(DWORD, HSZ);
+
+/**
+ A prototype for a pointer to the DdeFreeStringHandle function.
+ */
+typedef DDE_FREE_STRING_HANDLE *PDDE_FREE_STRING_HANDLE;
+
+/**
+ A prototype for the DdeInitializeW function.
+ */
+typedef
+DWORD WINAPI
+DDE_INITIALIZEW(LPDWORD, PFNCALLBACK, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the DdeInitializeW function.
+ */
+typedef DDE_INITIALIZEW *PDDE_INITIALIZEW;
+
+/**
+ A prototype for the DdeUninitialize function.
+ */
+typedef
+BOOL WINAPI
+DDE_UNINITIALIZE(DWORD);
+
+/**
+ A prototype for a pointer to the DdeUninitialize function.
+ */
+typedef DDE_UNINITIALIZE *PDDE_UNINITIALIZE;
+
+/**
  A prototype for the EmptyClipboard function.
  */
 typedef
@@ -7738,6 +7834,46 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to CloseClipboard.
      */
     PCLOSE_CLIPBOARD pCloseClipboard;
+
+    /**
+     If it's available on the current system, a pointer to DdeClientTransaction.
+     */
+    PDDE_CLIENT_TRANSACTION pDdeClientTransaction;
+
+    /**
+     If it's available on the current system, a pointer to DdeClientTransaction.
+     */
+    PDDE_CONNECT pDdeConnect;
+
+    /**
+     If it's available on the current system, a pointer to DdeCreateDataHandle.
+     */
+    PDDE_CREATE_DATA_HANDLE pDdeCreateDataHandle;
+
+    /**
+     If it's available on the current system, a pointer to DdeCreateStringHandleW.
+     */
+    PDDE_CREATE_STRING_HANDLEW pDdeCreateStringHandleW;
+
+    /**
+     If it's available on the current system, a pointer to DdeDisconnect.
+     */
+    PDDE_DISCONNECT pDdeDisconnect;
+
+    /**
+     If it's available on the current system, a pointer to DdeFreeStringHandle.
+     */
+    PDDE_FREE_STRING_HANDLE pDdeFreeStringHandle;
+
+    /**
+     If it's available on the current system, a pointer to DdeInitializeW.
+     */
+    PDDE_INITIALIZEW pDdeInitializeW;
+
+    /**
+     If it's available on the current system, a pointer to DdeUninitialize.
+     */
+    PDDE_UNINITIALIZE pDdeUninitialize;
 
     /**
      If it's available on the current system, a pointer to EmptyClipboard.

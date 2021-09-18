@@ -93,6 +93,8 @@
 #pragma warning(disable: 4001) // Single line comment, again
 #endif
 
+#include <ddeml.h>
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1800) && (_MSC_VER <= 1800)
 #pragma warning(disable: 6102) // Out parameter from failed function used
                                // Generically there's nothing wrong with doing

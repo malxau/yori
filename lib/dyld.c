@@ -417,6 +417,14 @@ YoriLibLoadUser32Functions(VOID)
 
     DllUser32.pCascadeWindows = (PCASCADE_WINDOWS)GetProcAddress(DllUser32.hDll, "CascadeWindows");
     DllUser32.pCloseClipboard = (PCLOSE_CLIPBOARD)GetProcAddress(DllUser32.hDll, "CloseClipboard");
+    DllUser32.pDdeClientTransaction = (PDDE_CLIENT_TRANSACTION)GetProcAddress(DllUser32.hDll, "DdeClientTransaction");
+    DllUser32.pDdeConnect = (PDDE_CONNECT)GetProcAddress(DllUser32.hDll, "DdeConnect");
+    DllUser32.pDdeCreateDataHandle = (PDDE_CREATE_DATA_HANDLE)GetProcAddress(DllUser32.hDll, "DdeCreateDataHandle");
+    DllUser32.pDdeCreateStringHandleW = (PDDE_CREATE_STRING_HANDLEW)GetProcAddress(DllUser32.hDll, "DdeCreateStringHandleW");
+    DllUser32.pDdeDisconnect = (PDDE_DISCONNECT)GetProcAddress(DllUser32.hDll, "DdeDisconnect");
+    DllUser32.pDdeFreeStringHandle = (PDDE_FREE_STRING_HANDLE)GetProcAddress(DllUser32.hDll, "DdeFreeStringHandle");
+    DllUser32.pDdeInitializeW = (PDDE_INITIALIZEW)GetProcAddress(DllUser32.hDll, "DdeInitializeW");
+    DllUser32.pDdeUninitialize = (PDDE_UNINITIALIZE)GetProcAddress(DllUser32.hDll, "DdeUninitialize");
     DllUser32.pEmptyClipboard = (PEMPTY_CLIPBOARD)GetProcAddress(DllUser32.hDll, "EmptyClipboard");
     DllUser32.pEnumClipboardFormats = (PENUM_CLIPBOARD_FORMATS)GetProcAddress(DllUser32.hDll, "EnumClipboardFormats");
     DllUser32.pExitWindowsEx = (PEXIT_WINDOWS_EX)GetProcAddress(DllUser32.hDll, "ExitWindowsEx");
