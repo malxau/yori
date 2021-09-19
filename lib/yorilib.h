@@ -2646,6 +2646,19 @@ YoriLibGetSystemHandlesList(
     __out PYORI_SYSTEM_HANDLE_INFORMATION_EX *HandlesInfo
     );
 
+// *** PROGMAN.C ***
+
+__success(return)
+BOOL
+YoriLibAddProgmanItem(
+    __in PCYORI_STRING GroupName,
+    __in PCYORI_STRING ItemName,
+    __in PCYORI_STRING ItemPath,
+    __in_opt PCYORI_STRING WorkingDirectory,
+    __in_opt PCYORI_STRING IconPath,
+    __in DWORD IconIndex
+    );
+
 // *** RECYCLE.C ***
 
 BOOL

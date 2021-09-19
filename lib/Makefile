@@ -43,6 +43,7 @@ OBJS=\
 	 printfa.obj  \
 	 priv.obj     \
 	 process.obj  \
+	 progman.obj  \
 	 recycle.obj  \
 	 scut.obj     \
 	 select.obj   \
