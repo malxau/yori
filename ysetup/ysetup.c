@@ -3,7 +3,7 @@
  *
  * Yori shell bootstrap installer
  *
- * Copyright (c) 2018-2020 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -49,7 +49,7 @@ CHAR strHelpText[] =
  Display usage text to the user.
  */
 BOOL
-YsetupHelp(VOID)
+SetupHelp(VOID)
 {
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Ysetup %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #if YORI_BUILD_ID
@@ -63,7 +63,7 @@ YsetupHelp(VOID)
 /**
  The first block of text to include in any Windows Terminal profile.
  */
-CONST CHAR YsetupTerminalProfilePart1[] = 
+CONST CHAR SetupTerminalProfilePart1[] = 
 "{\n"
 "  \"profiles\": [\n"
 "    {\n"
@@ -73,14 +73,14 @@ CONST CHAR YsetupTerminalProfilePart1[] =
 /**
  The second block of text to include in any Windows Terminal profile.
  */
-CONST CHAR YsetupTerminalProfilePart2[] = 
+CONST CHAR SetupTerminalProfilePart2[] = 
 "\",\n"
 "      \"icon\": \"";
 
 /**
  The third block of text to include in any Windows Terminal profile.
  */
-CONST CHAR YsetupTerminalProfilePart3[] = 
+CONST CHAR SetupTerminalProfilePart3[] = 
 "\",\n"
 "      \"fontFace\": \"Consolas\",\n"
 "      \"fontSize\": 10,\n"
@@ -256,6 +256,43 @@ SetupInstallToDirectory(
 }
 
 /**
+ Return TRUE if the platform supports shortcuts.  This implies a version 4 OS
+ that also has an updated Shell32 or Shfolder to locate the Desktop or Start
+ Menu folders.  Technically this could support querying the registry for
+ these, but it seems easier to just fall back to DDE rather than have an
+ extra case.
+
+ @return TRUE if the platform can create shortcut files, FALSE if it requires
+         DDE.
+ */
+BOOL
+SetupPlatformSupportsShortcuts(VOID)
+{
+    //
+    //  If there's no COM, there's no way to create shortcuts.
+    //
+
+    if (DllOle32.pCoCreateInstance == NULL ||
+        DllOle32.pCoInitialize == NULL) {
+
+        return FALSE;
+    }
+
+    //
+    //  If there's no SHGetSpecialFolderPath or SHGetFolderPath, we don't
+    //  know where to create shortcuts.
+    //
+
+    if (DllShell32.pSHGetSpecialFolderPathW == NULL &&
+        DllShfolder.pSHGetFolderPathW == NULL) {
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
  Create a Windows Terminal fragment file adding a Yori profile.
 
  @param ProfileFileName Pointer to the fully qualified path for the profile
@@ -266,7 +303,7 @@ SetupInstallToDirectory(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YsetupWriteTerminalProfile(
+SetupWriteTerminalProfile(
     __in PYORI_STRING ProfileFileName,
     __in PYORI_STRING YoriExeFullPath
     )
@@ -309,7 +346,7 @@ YsetupWriteTerminalProfile(
         return FALSE;
     }
 
-    WriteFile(JsonFile, YsetupTerminalProfilePart1, sizeof(YsetupTerminalProfilePart1) - 1, &BytesWritten, NULL);
+    WriteFile(JsonFile, SetupTerminalProfilePart1, sizeof(SetupTerminalProfilePart1) - 1, &BytesWritten, NULL);
 
     //
     //  Escape all of the backslashes in the executable path.
@@ -368,10 +405,10 @@ YsetupWriteTerminalProfile(
         MultibyteEscapedExePath[BytesNeeded - 2] = 'c';
         MultibyteEscapedExePath[BytesNeeded - 1] = 'o';
     }
-    WriteFile(JsonFile, YsetupTerminalProfilePart2, sizeof(YsetupTerminalProfilePart2) - 1, &BytesWritten, NULL);
+    WriteFile(JsonFile, SetupTerminalProfilePart2, sizeof(SetupTerminalProfilePart2) - 1, &BytesWritten, NULL);
     WriteFile(JsonFile, MultibyteEscapedExePath, BytesNeeded, &BytesWritten, NULL);
 
-    WriteFile(JsonFile, YsetupTerminalProfilePart3, sizeof(YsetupTerminalProfilePart3) - 1, &BytesWritten, NULL);
+    WriteFile(JsonFile, SetupTerminalProfilePart3, sizeof(SetupTerminalProfilePart3) - 1, &BytesWritten, NULL);
 
     YoriLibFreeStringContents(&EscapedExePath);
     YoriLibFree(MultibyteEscapedExePath);
@@ -604,19 +641,29 @@ SetupInstallSelectedFromDialog(
 
         if (IsDlgButtonChecked(hDlg, IDC_START_SHORTCUT)) {
 
-            YoriLibInitEmptyString(&ShortcutNameFullPath[ShortcutCount]);
+            if (SetupPlatformSupportsShortcuts()) {
 
-            YoriLibConstantString(&RelativeShortcutName, _T("~Programs\\Yori.lnk"));
-            if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
-                YoriLibFreeStringContents(&YoriExeFullPath);
-                MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
-                goto Exit;
-            }
-            ShortcutCount++;
-            if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, &YoriExeFullPath, 0, 1, (WORD)-1, TRUE, TRUE)) {
-                YoriLibFreeStringContents(&YoriExeFullPath);
-                MessageBox(hDlg, _T("Failed to create start menu shortcut."), _T("Installation failed."), MB_ICONSTOP);
-                goto Exit;
+                YoriLibInitEmptyString(&ShortcutNameFullPath[ShortcutCount]);
+
+                YoriLibConstantString(&RelativeShortcutName, _T("~Programs\\Yori.lnk"));
+                if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
+                    YoriLibFreeStringContents(&YoriExeFullPath);
+                    MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
+                    goto Exit;
+                }
+                ShortcutCount++;
+                if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, &YoriExeFullPath, 0, 1, (WORD)-1, TRUE, TRUE)) {
+                    YoriLibFreeStringContents(&YoriExeFullPath);
+                    MessageBox(hDlg, _T("Failed to create start menu shortcut."), _T("Installation failed."), MB_ICONSTOP);
+                    goto Exit;
+                }
+            } else {
+                YORI_STRING ItemName = YORILIB_CONSTANT_STRING(_T("Yori"));
+                if (!YoriLibAddProgmanItem(&ItemName, &ItemName, &YoriExeFullPath, NULL, &YoriExeFullPath, 0)) {
+                    YoriLibFreeStringContents(&YoriExeFullPath);
+                    MessageBox(hDlg, _T("Failed to create Program Manager shortcut."), _T("Installation failed."), MB_ICONSTOP);
+                    goto Exit;
+                }
             }
         }
 
@@ -631,8 +678,8 @@ SetupInstallSelectedFromDialog(
             }
             ShortcutCount++;
 
-            YsetupWriteTerminalProfile(&ShortcutNameFullPath[ShortcutCount - 1],
-                                       &YoriExeFullPath);
+            SetupWriteTerminalProfile(&ShortcutNameFullPath[ShortcutCount - 1],
+                                      &YoriExeFullPath);
         }
 
         YoriLibConstantString(&YSetupPkgName, _T("ysetup-shortcuts"));
@@ -928,7 +975,6 @@ SetupUiDialogProc(
                     EndDialog(hDlg, FALSE);
                     return TRUE;
                 case IDC_BROWSE:
-                    YoriLibLoadShell32Functions();
                     if (DllShell32.pSHBrowseForFolderW != NULL &&
                         DllShell32.pSHGetPathFromIDListW != NULL) {
                         YORI_BROWSEINFO BrowseInfo;
@@ -1052,9 +1098,12 @@ SetupUiDialogProc(
 
                 EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
-                EnableWindow(GetDlgItem(hDlg, IDC_START_SHORTCUT), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_TERMINAL_PROFILE), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_UNINSTALL), FALSE);
+            }
+
+            if (!SetupPlatformSupportsShortcuts()) {
+                SetDlgItemText(hDlg, IDC_START_SHORTCUT, _T("Install Program Manager &shortcut"));
             }
 
             return TRUE;
@@ -1087,6 +1136,15 @@ SetupDisplayUi(VOID)
         DllOle32.pCoInitialize(NULL);
     }
 
+    //
+    //  Shell is needed for a few different things, like the Browse button,
+    //  or shortcut creation.  Load it now so we can check if it's there
+    //  easily.
+    //
+
+    YoriLibLoadShell32Functions();
+    YoriLibLoadShfolderFunctions();
+
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
         if (ScreenInfo.dwCursorPosition.X == 0 && ScreenInfo.dwCursorPosition.Y == 0) {
             FreeConsole();
@@ -1110,7 +1168,7 @@ SetupDisplayUi(VOID)
     YoriLibLoadCabinetFunctions();
     YoriLibLoadWinInetFunctions();
 
-    if (DllCabinet.hDll == NULL || DllWinInet.hDll == NULL) {
+    if (DllCabinet.pFdiCopy == NULL || DllWinInet.hDll == NULL) {
         MessageBox(NULL,
                    _T("Ysetup requires Cabinet.dll and WinInet.dll.  These are included with Internet Explorer 5 or later.  At a minimum, WinInet.dll from Internet Explorer 3 and Cabinet.dll from Internet Explorer 5 can be copied to the System32 directory to proceed."),
                    _T("YSetup"),
@@ -1155,10 +1213,10 @@ ymain(
         if (YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
 
             if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("?")) == 0) {
-                YsetupHelp();
+                SetupHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2020"));
+                YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
