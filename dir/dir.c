@@ -3,7 +3,7 @@
  *
  * Yori shell enumerate files in directories
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -41,6 +41,7 @@ CHAR strDirHelpText[] =
         "   -color         Use file color highlighting\n"
         "   -g             Use global time and date format, ignoring locale\n"
         "   -h             Hide hidden and system files\n"
+        "   -l             Don't traverse symbolic links or mount points\n"
         "   -m             Minimal display, file names only\n"
         "   -r             Display named streams\n"
         "   -s             Process files from all subdirectories\n"
@@ -120,6 +121,12 @@ typedef struct _DIR_CONTEXT {
      TRUE if the display should be minimal and only include file names.
      */
     BOOLEAN MinimalDisplay;
+
+    /**
+     TRUE if the directory enumerate should not recurse into symbolic links or
+     mount points, FALSE if it should.
+     */
+    BOOLEAN NoLinkTraverse;
 
     /**
      TRUE if the directory enumerate is recursively scanning through
@@ -1104,6 +1111,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
                 DirContext.HideHidden = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                DirContext.NoLinkTraverse = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
                 DirContext.MinimalDisplay = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -1174,6 +1184,9 @@ ENTRYPOINT(
     }
     if (DirContext.Recursive) {
         MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
+    }
+    if (DirContext.NoLinkTraverse) {
+        MatchFlags |= YORILIB_FILEENUM_NO_LINK_TRAVERSE;
     }
     if (BasicEnumeration) {
         MatchFlags |= YORILIB_FILEENUM_BASIC_EXPANSION;
