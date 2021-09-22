@@ -59,6 +59,23 @@ SetupHelp(VOID)
     return TRUE;
 }
 
+/**
+ Error message to display if the system doesn't have Cabinet.dll functions.
+ This happens on a custom compile that's not linked against Fdi.lib.
+ */
+CONST CHAR SetupDllMissingWarning1[] = "Ysetup requires Cabinet.dll and WinInet.dll.\n\n"
+                                       "These are included with Internet Explorer 5 or later.\n\n"
+                                       "At a minimum, WinInet.dll from Internet Explorer 3 and Cabinet.dll from Internet Explorer 5 can be copied to the System32 directory to proceed.";
+
+/**
+ Error message to display if the system doesn't have WinInet.dll functions but
+ Cabinet functions are present.  This is the common case in official
+ distributions which are statically linked to Cabinet functions.
+ */
+CONST CHAR SetupDllMissingWarning2[] = "Ysetup requires WinInet.dll.\n\n"
+                                       "This is included with Internet Explorer 3 or later.\n\n"
+                                       "Alternatively, this can be installed standalone.  See links at http://www.malsmith.net/yori/nt3x/";
+
 
 /**
  The first block of text to include in any Windows Terminal profile.
@@ -1100,9 +1117,7 @@ SetupUiDialogProc(
                 EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_TERMINAL_PROFILE), FALSE);
                 EnableWindow(GetDlgItem(hDlg, IDC_UNINSTALL), FALSE);
-            }
 
-            if (!SetupPlatformSupportsShortcuts()) {
                 SetDlgItemText(hDlg, IDC_START_SHORTCUT, _T("Install Program Manager &shortcut"));
             }
 
@@ -1169,8 +1184,14 @@ SetupDisplayUi(VOID)
     YoriLibLoadWinInetFunctions();
 
     if (DllCabinet.pFdiCopy == NULL || DllWinInet.hDll == NULL) {
+        TCHAR MessageString[sizeof(SetupDllMissingWarning1)];
+        if (DllCabinet.pFdiCopy == NULL) {
+            YoriLibSPrintf(MessageString, _T("%hs"), SetupDllMissingWarning1);
+        } else {
+            YoriLibSPrintf(MessageString, _T("%hs"), SetupDllMissingWarning2);
+        }
         MessageBox(NULL,
-                   _T("Ysetup requires Cabinet.dll and WinInet.dll.  These are included with Internet Explorer 5 or later.  At a minimum, WinInet.dll from Internet Explorer 3 and Cabinet.dll from Internet Explorer 5 can be copied to the System32 directory to proceed."),
+                   MessageString,
                    _T("YSetup"),
                    MB_ICONEXCLAMATION);
         return TRUE;
