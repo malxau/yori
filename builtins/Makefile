@@ -48,7 +48,7 @@ all: compile link
 
 !INCLUDE "..\config\common.mk"
 
-compile: $(YORIVER) builtins.lib
+compile: builtins.lib
 
 builtins.lib: $(BUILTINS) 
 	@echo $@

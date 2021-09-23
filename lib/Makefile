@@ -1,5 +1,5 @@
 
-compile: yorilib.lib
+compile: yorilib.lib yoriver.obj
 
 !INCLUDE "..\config\common.mk"
 
