@@ -238,6 +238,13 @@
 #define _Always_(x)
 #endif
 
+#ifndef _Interlocked_operand_
+/**
+ SAL annotation to indicate a function implements an interlock.
+ */
+#define _Interlocked_operand_
+#endif
+
 #ifndef _On_failure_
 /**
  SAL annotation describing a condition that is true on function failure.

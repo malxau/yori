@@ -194,7 +194,7 @@ YoriLibBytesInBom(
 PYORI_LIB_LINE_READ_CONTEXT YoriLibReadLineCachedContext[YORI_LIB_READ_LINE_CACHE_ENTRIES];
 
 #if defined(_MSC_VER) && defined(_M_IX86) && (_MSC_VER >= 1010) && (_M_IX86 >= 400)
-LONG _InterlockedCompareExchange(LONG volatile *, LONG, LONG);
+LONG _InterlockedCompareExchange(__inout _Interlocked_operand_ LONG volatile *, __in LONG, __in LONG);
 #pragma intrinsic(_InterlockedCompareExchange)
 #endif
 
