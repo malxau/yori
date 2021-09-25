@@ -2624,6 +2624,9 @@ YoriLibDoesProcessHave32BitPeb(
 DWORD
 YoriLibGetArchitecture(VOID);
 
+BOOLEAN
+YoriLibIsNanoServer(VOID);
+
 // *** PRIV.C ***
 
 BOOL

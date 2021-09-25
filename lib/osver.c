@@ -3,7 +3,7 @@
  *
  * Yori OS version query routines
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -510,7 +510,29 @@ YoriLibDoesProcessHave32BitPeb(
     }
 
     return FALSE;
+}
 
+/**
+ Check if this is Nano server.  Nano is a bit strange since it uses a
+ graphical console that doesn't behave like the regular one.  The official
+ way to test for it is to check the registry; rather than do that, this
+ routine exploits the fact that Nano uses a cut-down kernel32.dll that
+ doesn't contain expected exports.  In particular, GetCurrentConsoleFontEx
+ isn't supplied (which exists on Vista+) but GetConsoleScreenBufferInfoEx
+ is supplied (also Vista+.)  This might break on some Vista beta build.
+
+ @return TRUE if running on Nano server, FALSE if not.
+ */
+BOOLEAN
+YoriLibIsNanoServer(VOID)
+{
+    if (DllKernel32.pGetCurrentConsoleFontEx == NULL &&
+        DllKernel32.pGetConsoleScreenBufferInfoEx != NULL) {
+
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 // vim:sw=4:ts=4:et:
