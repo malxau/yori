@@ -686,7 +686,14 @@ YoriShCaptureCurrentDirectoryAndInformTerminal(VOID)
         SetConsoleMode(ConsoleHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 
-    if (YoriShGlobal.OutputSupportsVt) {
+    //
+    //  Don't output this on Nano which will just dump it on the console.
+    //  This should probably apply to all builds <= DecentLevelOfVtSupport,
+    //  but OpenConsole supports running on 8.1, so testing for OS versions
+    //  doesn't tell us much about the terminal's capabilities.
+    //
+
+    if (YoriShGlobal.OutputSupportsVt && !YoriLibIsNanoServer()) {
         if (YoriLibCompareString(&YoriShGlobal.CurrentDirectoryBuffers[YoriShGlobal.ActiveCurrentDirectory], NextCurrentDirectory) != 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT | YORI_LIB_OUTPUT_PASSTHROUGH_VT, _T("\x1b]9;9;\"%y\"\x1b\\"), NextCurrentDirectory);
         }
