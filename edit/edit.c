@@ -2380,7 +2380,9 @@ EditCreateMainWindow(
         return FALSE;
     }
 
-    YoriWinMgrSetAsciiDrawing(WinMgr, EditContext->UseAsciiDrawing);
+    if (EditContext->UseAsciiDrawing) {
+        YoriWinMgrSetAsciiDrawing(WinMgr, EditContext->UseAsciiDrawing);
+    }
 
     if (!YoriWinGetWinMgrDimensions(WinMgr, &WindowSize)) {
         YoriWinCloseWindowManager(WinMgr);

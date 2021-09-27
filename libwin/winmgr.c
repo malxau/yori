@@ -278,6 +278,9 @@ YoriWinOpenWindowManager(
     SetConsoleMode(WinMgr->hConIn, ENABLE_MOUSE_INPUT);
 
     WinMgr->UseAsciiDrawing = FALSE;
+    if (YoriLibIsNanoServer()) {
+        WinMgr->UseAsciiDrawing = TRUE;
+    }
 
     *WinMgrHandle = WinMgr;
     return TRUE;
