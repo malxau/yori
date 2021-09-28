@@ -1630,10 +1630,21 @@ YoriLibQueryConsoleCapabilities(
             *SupportsColor = TRUE;
         }
         if (SupportsExtendedChars != NULL) {
-            *SupportsExtendedChars = TRUE;
+            if (!YoriLibIsNanoServer()) {
+                *SupportsExtendedChars = TRUE;
+            } else {
+                *SupportsExtendedChars = FALSE;
+            }
         }
         if (SupportsAutoLineWrap != NULL) {
-            if (Mode & ENABLE_WRAP_AT_EOL_OUTPUT) {
+
+            //
+            //  Nano gives auto line wrap whether you want it or not.
+            //
+
+            if (YoriLibIsNanoServer()) {
+                *SupportsAutoLineWrap = TRUE;
+            } else if (Mode & ENABLE_WRAP_AT_EOL_OUTPUT) {
                 *SupportsAutoLineWrap = TRUE;
             } else {
                 *SupportsAutoLineWrap = FALSE;

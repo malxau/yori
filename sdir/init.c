@@ -62,6 +62,8 @@ SdirAppInitialize(VOID)
     DWORD MajorVersion;
     DWORD MinorVersion;
     DWORD BuildNumber;
+    BOOL SupportsAutoLineWrap;
+    BOOL SupportsExtendedChars;
 
     Opts = YoriLibMalloc(sizeof(SDIR_OPTS));
     if (Opts == NULL) {
@@ -92,22 +94,21 @@ SdirAppInitialize(VOID)
     //  (file, pipe, etc.)
     //
 
-    if (!GetConsoleMode(hConsoleOutput, &CurrentMode)) {
-        BOOL SupportsAutoLineWrap;
-        BOOL SupportsExtendedChars;
-        Opts->OutputWithConsoleApi = FALSE;
-        if (YoriLibQueryConsoleCapabilities(hConsoleOutput, NULL, &SupportsExtendedChars, &SupportsAutoLineWrap)) {
-            if (SupportsExtendedChars) {
-                Opts->OutputExtendedCharacters = TRUE;
-            }
-            if (SupportsAutoLineWrap) {
-                Opts->OutputHasAutoLineWrap = TRUE;
-            }
-        }
+    Opts->OutputExtendedCharacters = FALSE;
+    Opts->OutputHasAutoLineWrap = FALSE;
 
+    if (YoriLibQueryConsoleCapabilities(hConsoleOutput, NULL, &SupportsExtendedChars, &SupportsAutoLineWrap)) {
+        if (SupportsExtendedChars) {
+            Opts->OutputExtendedCharacters = TRUE;
+        }
+        if (SupportsAutoLineWrap) {
+            Opts->OutputHasAutoLineWrap = TRUE;
+        }
+    }
+
+    if (!GetConsoleMode(hConsoleOutput, &CurrentMode)) {
+        Opts->OutputWithConsoleApi = FALSE;
     } else {
-        Opts->OutputHasAutoLineWrap = TRUE;
-        Opts->OutputExtendedCharacters = TRUE;
         Opts->OutputWithConsoleApi = TRUE;
         Opts->EnablePause = TRUE;
     }
