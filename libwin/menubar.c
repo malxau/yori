@@ -675,7 +675,7 @@ YoriWinMenuPopupPaint(
         if (MenuPopup->ActiveMenuItem &&
             Index == MenuPopup->ActiveItemIndex) {
 
-            ItemAttributes = (WORD)(((ItemAttributes & 0xF0) >> 4) | ((ItemAttributes & 0x0F) << 4));
+            ItemAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelected);
         } else if (Item->Flags & YORI_WIN_MENU_ENTRY_DISABLED) {
             ItemAttributes = (WORD)((ItemAttributes & 0xF0) | FOREGROUND_INTENSITY);
         }
@@ -700,7 +700,13 @@ YoriWinMenuPopupPaint(
                     Item->AcceleratorChar != '\0' &&
                     Item->AcceleratorOffset == CharIndex) {
 
-                    CharAttributes = (WORD)((CharAttributes & 0xF0) | (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY));
+                    if (MenuPopup->ActiveMenuItem &&
+                        Index == MenuPopup->ActiveItemIndex) {
+
+                        CharAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelectedAccelerator);
+                    } else {
+                        CharAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuAccelerator);
+                    }
                 }
                 YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), (WORD)(Index + 1), Item->DisplayCaption.StartOfString[CharIndex], CharAttributes);
             }
@@ -1209,8 +1215,13 @@ YoriWinMenuBarPaint(
     WORD ItemAttributes;
     WORD AcceleratorAttributes;
     COORD ClientSize;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
-    TextAttributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+    TopLevelWindow = YoriWinGetTopLevelWindow(&MenuBar->Ctrl);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+    TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuDefault);
 
     YoriWinGetControlClientSize(&MenuBar->Ctrl, &ClientSize);
     for (CellIndex = 0; CellIndex < 1; CellIndex++) {
@@ -1222,7 +1233,7 @@ YoriWinMenuBarPaint(
         ItemAttributes = TextAttributes;
 
         if (MenuBar->ActiveMenuItem && ItemIndex == MenuBar->ActiveItemIndex) {
-            ItemAttributes = (WORD)(((ItemAttributes & 0xf0) >> 4) | ((ItemAttributes & 0x0f) << 4));
+            ItemAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelected);
         }
         YoriWinSetControlClientCell(&MenuBar->Ctrl, CellIndex, 0, ' ', ItemAttributes);
         CellIndex++;
@@ -1231,7 +1242,12 @@ YoriWinMenuBarPaint(
                 MenuBar->Items[ItemIndex].AcceleratorChar != '\0' &&
                 CharIndex == MenuBar->Items[ItemIndex].AcceleratorOffset) {
 
-                AcceleratorAttributes = (WORD)(ItemAttributes & (BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE) | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+                if (MenuBar->ActiveMenuItem && ItemIndex == MenuBar->ActiveItemIndex) {
+                    AcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelectedAccelerator);
+                } else {
+                    AcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuAccelerator);
+                }
+
                 YoriWinSetControlClientCell(&MenuBar->Ctrl, CellIndex, 0, MenuBar->Items[ItemIndex].DisplayCaption.StartOfString[CharIndex], AcceleratorAttributes);
             } else {
                 YoriWinSetControlClientCell(&MenuBar->Ctrl, CellIndex, 0, MenuBar->Items[ItemIndex].DisplayCaption.StartOfString[CharIndex], ItemAttributes);

@@ -184,7 +184,13 @@ YoriWinListPaintVerticalList(
         if (List->ItemActive &&
             RowIndex + List->FirstDisplayedOption == List->ActiveOption) {
 
-            Attributes = (WORD)(((Attributes & 0xf0) >> 4) | ((Attributes & 0x0f) << 4));
+            PYORI_WIN_WINDOW TopLevelWindow;
+            PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
+            TopLevelWindow = YoriWinGetTopLevelWindow(&List->Ctrl);
+            WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+            Attributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorListActive);
         }
         if (List->MultiSelect) {
             CharsToDisplay = (WORD)(ClientSize.X - 2);

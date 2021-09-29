@@ -781,6 +781,8 @@ YoriWinMultilineEditPaintNonClient(
         DWORD CaptionCharsToDisplay;
         DWORD StartOffset;
         COORD ClientSize;
+        PYORI_WIN_WINDOW TopLevelWindow;
+        PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
         YoriWinGetControlClientSize(&MultilineEdit->Ctrl, &ClientSize);
 
@@ -790,7 +792,9 @@ YoriWinMultilineEditPaintNonClient(
         }
 
         StartOffset = (ClientSize.X - CaptionCharsToDisplay) / 2;
-        TextAttributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+        TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
+        WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+        TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMultilineCaption);
         for (ColumnIndex = 0; ColumnIndex < CaptionCharsToDisplay; ColumnIndex++) {
             YoriWinSetControlNonClientCell(&MultilineEdit->Ctrl, (WORD)(ColumnIndex + StartOffset), 0, MultilineEdit->Caption.StartOfString[ColumnIndex], TextAttributes);
         }
@@ -826,14 +830,21 @@ YoriWinMultilineEditPaintSingleLine(
     WORD ColumnIndex;
     WORD WindowAttributes;
     WORD TextAttributes;
+    WORD SelectedAttributes;
     WORD RowIndex;
     BOOLEAN SelectionActive;
     YORI_STRING Line;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     ColumnIndex = 0;
     RowIndex = (WORD)(LineIndex - MultilineEdit->ViewportTop);
     WindowAttributes = MultilineEdit->TextAttributes;
     SelectionActive = YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl);
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+    SelectedAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorEditSelectedText);
 
     if (LineIndex < MultilineEdit->LinesPopulated) {
         TextAttributes = WindowAttributes;
@@ -845,7 +856,7 @@ YoriWinMultilineEditPaintSingleLine(
         if (SelectionActive &&
             LineIndex > MultilineEdit->Selection.FirstLine &&
             LineIndex < MultilineEdit->Selection.LastLine) {
-            TextAttributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+            TextAttributes = SelectedAttributes;
         }
 
         if (!YoriWinMultilineEditGenerateDisplayLine(MultilineEdit, LineIndex, &Line)) {
@@ -864,17 +875,17 @@ YoriWinMultilineEditPaintSingleLine(
                     TextAttributes = WindowAttributes;
                     if (ColumnIndex + MultilineEdit->ViewportLeft >= DisplayFirstCharOffset &&
                         ColumnIndex + MultilineEdit->ViewportLeft < DisplayLastCharOffset) {
-                        TextAttributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+                        TextAttributes = SelectedAttributes;
                     }
                 } else if (LineIndex == MultilineEdit->Selection.FirstLine) {
                     TextAttributes = WindowAttributes;
                     if (ColumnIndex + MultilineEdit->ViewportLeft >= DisplayFirstCharOffset) {
-                        TextAttributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+                        TextAttributes = SelectedAttributes;
                     }
                 } else if (LineIndex == MultilineEdit->Selection.LastLine) {
                     TextAttributes = WindowAttributes;
                     if (ColumnIndex + MultilineEdit->ViewportLeft < DisplayLastCharOffset) {
-                        TextAttributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+                        TextAttributes = SelectedAttributes;
                     }
                 }
             }

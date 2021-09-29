@@ -119,7 +119,13 @@ YoriWinButtonPaint(
 
     TextAttributes = WindowAttributes;
     if (Button->HasFocus || Button->PressedAppearance) {
-        TextAttributes = (WORD)((TextAttributes & 0xF0) >> 4 | (TextAttributes & 0x0F) << 4);
+        PYORI_WIN_WINDOW TopLevelWindow;
+        PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
+        TopLevelWindow = YoriWinGetTopLevelWindow(&Button->Ctrl);
+        WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+        TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorControlSelected);
     }
 
     YoriWinLabelSetTextAttributes(Button->Label, TextAttributes);

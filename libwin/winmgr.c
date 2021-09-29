@@ -111,6 +111,11 @@ typedef struct _YORI_WIN_WINDOW_MANAGER {
     CONSOLE_SCREEN_BUFFER_INFO SavedScreenBufferInfo;
 
     /**
+     The color table of default control colors to use.
+     */
+    YORI_WIN_COLOR_TABLE_HANDLE ColorTable;
+
+    /**
      The mouse buttons that were pressed last time a mouse event was
      processed.  This is used to detect which buttons were pressed or
      released.
@@ -217,6 +222,7 @@ YoriWinOpenWindowManager(
     YoriLibInitializeListHead(&WinMgr->TopLevelWindowList);
     YoriLibInitializeListHead(&WinMgr->TimerList);
 
+    WinMgr->ColorTable = YoriWinGetDefaultColorTable();
     WinMgr->hConOut = CreateFile(_T("CONOUT$"), GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE, NULL, OPEN_EXISTING, 0, NULL);
     if (WinMgr->hConOut == INVALID_HANDLE_VALUE) {
         WinMgr->hConOut = NULL;
@@ -443,6 +449,26 @@ YoriWinGetDrawingCharacters(
     }
 
     return YoriWinCharacterSetChars[EffectiveCharacterSet];
+}
+
+/**
+ Lookup a specified color value within the window manager's configuration.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param ColorId An identifier of a system color.
+
+ @return The attribute value to use.
+ */
+UCHAR
+YoriWinMgrDefaultColorLookup(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in YORI_WIN_COLOR_ID ColorId
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+
+    return YoriWinDefaultColorLookup(WinMgr->ColorTable, ColorId);
 }
 
 /**

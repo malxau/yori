@@ -642,7 +642,13 @@ YoriWinLabelPaint(
                     !AcceleratorPreviouslyFound &&
                     OffsetToAcceleratorInDisplay == CharIndex) {
 
-                    CharAttributes = (WORD)((TextAttributes & 0xF0) | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
+                    PYORI_WIN_WINDOW TopLevelWindow;
+                    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
+                    TopLevelWindow = YoriWinGetTopLevelWindow(&Label->Ctrl);
+                    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+                    CharAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorAcceleratorDefault);
                 } else {
                     CharAttributes = TextAttributes;
                 }

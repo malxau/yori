@@ -467,6 +467,39 @@ YoriWinDrawBorderOnControl(
     __in WORD BorderType
     );
 
+// COLOR.C
+
+/**
+ An opaque handle to a color table.
+ */
+typedef PVOID YORI_WIN_COLOR_TABLE_HANDLE;
+
+/**
+ The set of well known system colors.
+ */
+typedef enum _YORI_WIN_COLOR_ID {
+    YoriWinColorWindowDefault = 0,
+    YoriWinColorTitleBarDefault,
+    YoriWinColorMenuDefault,
+    YoriWinColorMenuSelected,
+    YoriWinColorMenuAccelerator,
+    YoriWinColorMenuSelectedAccelerator,
+    YoriWinColorMultilineCaption,
+    YoriWinColorEditSelectedText,
+    YoriWinColorAcceleratorDefault,
+    YoriWinColorListActive,
+    YoriWinColorControlSelected,
+    YoriWinColorBeyondMax
+} YORI_WIN_COLOR_ID;
+
+YORI_WIN_COLOR_TABLE_HANDLE
+YoriWinGetDefaultColorTable(VOID);
+
+UCHAR
+YoriWinDefaultColorLookup(
+    __in YORI_WIN_COLOR_TABLE_HANDLE ColorTableHandle,
+    __in YORI_WIN_COLOR_ID ColorId
+    );
 
 // CTRL.C
 
@@ -790,6 +823,12 @@ LPCTSTR
 YoriWinGetDrawingCharacters(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in YORI_WIN_CHARACTERS CharacterSet
+    );
+
+UCHAR
+YoriWinMgrDefaultColorLookup(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in YORI_WIN_COLOR_ID ColorId
     );
 
 HANDLE

@@ -2435,14 +2435,18 @@ EditCreateMainWindow(
         return FALSE;
     }
 
-    YoriWinLabelSetTextAttributes(StatusBar, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
+    if (!YoriLibIsNanoServer()) {
+        YoriWinLabelSetTextAttributes(StatusBar, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
+    }
 
     EditContext->WinMgr = WinMgr;
     EditContext->MultilineEdit = MultilineEdit;
     EditContext->MenuBar = MenuBar;
     EditContext->StatusBar = StatusBar;
 
-    YoriWinMultilineEditSetColor(MultilineEdit, BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    if (!YoriLibIsNanoServer()) {
+        YoriWinMultilineEditSetColor(MultilineEdit, BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    }
     YoriWinMultilineEditSetCursorMoveNotifyCallback(MultilineEdit, EditNotifyCursorMove);
 
     YoriWinSetWindowManagerResizeNotifyCallback(Parent, EditResizeWindowManager);

@@ -56,6 +56,8 @@ YoriWinCreateControl(
     __out PYORI_WIN_CTRL Ctrl
     )
 {
+    PYORI_WIN_WINDOW Window;
+
     if (Rect->Right < Rect->Left || Rect->Bottom < Rect->Top) {
         return FALSE;
     }
@@ -88,12 +90,14 @@ YoriWinCreateControl(
         Ctrl->DefaultAttributes = Ctrl->Parent->DefaultAttributes;
         YoriLibAppendList(&Parent->ChildControlList, &Ctrl->ParentControlList);
         if (Parent->Parent == NULL) {
-            PYORI_WIN_WINDOW Window;
             Window = YoriWinGetWindowFromWindowCtrl(Parent);
             YoriWinAddControlToWindow(Parent, Ctrl);
         }
     } else {
-        Ctrl->DefaultAttributes = BACKGROUND_RED | BACKGROUND_BLUE | BACKGROUND_GREEN;
+        PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+        Window = YoriWinGetWindowFromWindowCtrl(Ctrl);
+        WinMgrHandle = YoriWinGetWindowManagerHandle(Window);
+        Ctrl->DefaultAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorWindowDefault);
     }
 
     return TRUE;

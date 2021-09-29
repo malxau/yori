@@ -391,13 +391,20 @@ YoriWinEditPaint(
     WORD CellIndex;
     WORD CharIndex;
     WORD DisplayCursorOffset;
+    WORD SelectedAttributes;
     COORD ClientSize;
     YORI_STRING DisplayLine;
     BOOLEAN SelectionActive;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
     WinAttributes = Edit->Ctrl.DefaultAttributes;
     TextAttributes = Edit->TextAttributes;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(&Edit->Ctrl);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+    SelectedAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorEditSelectedText);
 
     YoriLibInitEmptyString(&DisplayLine);
 
@@ -447,7 +454,7 @@ YoriWinEditPaint(
             if (CharIndex + Edit->DisplayOffset >= Edit->Selection.FirstCharOffset &&
                 CharIndex + Edit->DisplayOffset < Edit->Selection.LastCharOffset) {
 
-                TextAttributes = (WORD)(((TextAttributes & 0xF) << 4) | ((TextAttributes & 0xF0) >> 4));
+                TextAttributes = SelectedAttributes;
             }
         }
         YoriWinSetControlClientCell(&Edit->Ctrl, (WORD)(StartColumn + CharIndex), 0, DisplayLine.StartOfString[CharIndex], TextAttributes);

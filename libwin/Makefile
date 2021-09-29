@@ -7,6 +7,7 @@ OBJS=\
 	 border.obj   \
 	 button.obj   \
 	 checkbox.obj \
+	 color.obj    \
 	 combo.obj    \
 	 ctrl.obj     \
 	 edit.obj     \

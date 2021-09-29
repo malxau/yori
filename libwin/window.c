@@ -870,7 +870,7 @@ YoriWinEraseWindowBackground(
 
     for (BufferPosition.Y = BorderHeight; BufferPosition.Y < (SHORT)(Window->WindowSize.Y - ShadowHeight - BorderHeight); BufferPosition.Y++) {
         for (BufferPosition.X = BorderWidth; BufferPosition.X < (SHORT)(Window->WindowSize.X - ShadowWidth - BorderWidth); BufferPosition.X++) {
-            Window->Contents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes = BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE;
+            Window->Contents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Attributes = Window->Ctrl.DefaultAttributes;
             Window->Contents[BufferPosition.Y * Window->WindowSize.X + BufferPosition.X].Char.UnicodeChar = ' ';
         }
     }
@@ -1037,7 +1037,7 @@ YoriWinPaintWindowNonClientArea(
         }
 
         Offset = ((Window->WindowSize.X - ShadowWidth) - Length) / 2;
-        TitleBarColor = BACKGROUND_BLUE | BACKGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY;
+        TitleBarColor = YoriWinMgrDefaultColorLookup(Window->WinMgrHandle, YoriWinColorTitleBarDefault);
 
         for (Index = 1; Index < Offset; Index++) {
             Window->Contents[Index].Attributes = TitleBarColor;
