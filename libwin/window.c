@@ -1558,6 +1558,18 @@ YoriWinSetInitialFocus(
     PYORI_WIN_CTRL Ctrl;
     PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
 
+    //
+    //  Nano's console won't indicate a pure VK_MENU keypress or release.
+    //  Just force accelerators to always be displayed, old skool.
+    //
+
+    if (!Window->AcceleratorsDisplayed && YoriLibIsNanoServer()) {
+        ZeroMemory(&Event, sizeof(Event));
+        Event.EventType = YoriWinEventDisplayAccelerators;
+        YoriWinNotifyAllControls(&Window->Ctrl, &Event);
+        Window->AcceleratorsDisplayed = TRUE;
+    }
+
     Ctrl = Window->KeyboardFocusCtrl;
 
     if (Ctrl != NULL &&
@@ -2131,7 +2143,7 @@ YoriWinNotifyEvent(
                 }
             } else {
                 if (Event->KeyDown.Char) {
-                    if (Window->AcceleratorsDisplayed) {
+                    if (Window->AcceleratorsDisplayed && !YoriLibIsNanoServer()) {
                         ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
                         CtrlEvent.EventType = YoriWinEventHideAccelerators;
                         YoriWinNotifyAllControls(&Window->Ctrl, &CtrlEvent);
@@ -2146,7 +2158,8 @@ YoriWinNotifyEvent(
             }
         } else if (Event->EventType == YoriWinEventKeyUp) {
             if (Event->KeyDown.VirtualKeyCode == VK_MENU &&
-                Window->AcceleratorsDisplayed) {
+                Window->AcceleratorsDisplayed &&
+                !YoriLibIsNanoServer()) {
 
                 ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
                 CtrlEvent.EventType = YoriWinEventHideAccelerators;
