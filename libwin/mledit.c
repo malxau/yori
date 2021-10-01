@@ -2328,6 +2328,7 @@ YoriWinMultilineEditDeleteTextRange(
 
         Line->LengthInChars -= CharsToDelete;
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, FirstLine, FirstLine);
+        MultilineEdit->UserModified = TRUE;
         return TRUE;
     }
 
