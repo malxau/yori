@@ -17,6 +17,7 @@ OBJS=\
 	 cpuinfo.obj  \
 	 cshot.obj    \
 	 curdir.obj   \
+	 cvtcons.obj  \
 	 cvthtml.obj  \
 	 cvtrtf.obj   \
 	 debug.obj    \

@@ -912,6 +912,33 @@ YoriLibSetCurrentDirectory(
 VOID
 YoriLibCleanupCurrentDirectory(VOID);
 
+// *** CVTCONS.C ***
+
+BOOLEAN
+YoriLibConsoleVtConvertGetCursorLocation(
+    __in PVOID Context,
+    __out PDWORD X,
+    __out PDWORD Y
+    );
+
+BOOLEAN
+YoriLibConsoleVtConvertDisplayToConsole(
+    __in PVOID Context,
+    __in HANDLE hConsole,
+    __in DWORD X,
+    __in DWORD Y
+    );
+
+PVOID
+YoriLibAllocateConsoleVtConvertContext(
+    __in WORD Columns,
+    __in DWORD AllocateLines,
+    __in DWORD MaximumLines,
+    __in WORD DefaultAttributes,
+    __in WORD CurrentAttributes,
+    __in BOOLEAN LineWrap
+    );
+
 // *** CVTHTML.C ***
 
 /**
