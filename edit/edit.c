@@ -1097,13 +1097,21 @@ EditEditButtonClicked(
         YoriWinMenuBarDisableMenuItem(RedoItem);
     }
 
-    if (TextSelected) {
+    //
+    //  Nano doesn't have a clipboard, or a user32.
+    //
+
+    if (TextSelected && DllUser32.pOpenClipboard != NULL) {
         YoriWinMenuBarEnableMenuItem(CutItem);
         YoriWinMenuBarEnableMenuItem(CopyItem);
-        YoriWinMenuBarEnableMenuItem(ClearItem);
     } else {
         YoriWinMenuBarDisableMenuItem(CutItem);
         YoriWinMenuBarDisableMenuItem(CopyItem);
+    }
+
+    if (TextSelected) {
+        YoriWinMenuBarEnableMenuItem(ClearItem);
+    } else {
         YoriWinMenuBarDisableMenuItem(ClearItem);
     }
 
