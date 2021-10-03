@@ -1189,8 +1189,19 @@ ENTRYPOINT(
 
     YoriLibLoadUser32Functions();
     Result = EXIT_SUCCESS;
+    if (DllUser32.pCloseClipboard == NULL ||
+        DllUser32.pEmptyClipboard == NULL ||
+        DllUser32.pEnumClipboardFormats == NULL ||
+        DllUser32.pGetClipboardData == NULL ||
+        DllUser32.pGetClipboardFormatNameW == NULL ||
+        DllUser32.pOpenClipboard == NULL ||
+        DllUser32.pRegisterClipboardFormatW == NULL ||
+        DllUser32.pSetClipboardData == NULL) {
 
-    if (Op == ClipOperationEmpty) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: OS support not present\n"));
+        Result = EXIT_FAILURE;
+
+    } else if (Op == ClipOperationEmpty) {
         if (!ClipEmptyClipboard()) {
             Result = EXIT_FAILURE;
         }
