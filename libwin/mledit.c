@@ -836,6 +836,7 @@ YoriWinMultilineEditPaintSingleLine(
     YORI_STRING Line;
     PYORI_WIN_WINDOW TopLevelWindow;
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+    TCHAR Char;
 
     ColumnIndex = 0;
     RowIndex = (WORD)(LineIndex - MultilineEdit->ViewportTop);
@@ -890,7 +891,18 @@ YoriWinMultilineEditPaintSingleLine(
                 }
             }
 
-            YoriWinSetControlClientCell(&MultilineEdit->Ctrl, ColumnIndex, RowIndex, Line.StartOfString[ColumnIndex + MultilineEdit->ViewportLeft], TextAttributes);
+            Char = Line.StartOfString[ColumnIndex + MultilineEdit->ViewportLeft];
+
+            //
+            //  Nano server interprets NULL as "leave previous contents alone"
+            //  which is hazardous for an editor.
+            //
+
+            if (Char == 0 && YoriLibIsNanoServer()) {
+                Char = ' ';
+            }
+
+            YoriWinSetControlClientCell(&MultilineEdit->Ctrl, ColumnIndex, RowIndex, Char, TextAttributes);
         }
 
         //

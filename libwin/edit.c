@@ -397,6 +397,7 @@ YoriWinEditPaint(
     BOOLEAN SelectionActive;
     PYORI_WIN_WINDOW TopLevelWindow;
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+    TCHAR Char;
 
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
     WinAttributes = Edit->Ctrl.DefaultAttributes;
@@ -457,7 +458,18 @@ YoriWinEditPaint(
                 TextAttributes = SelectedAttributes;
             }
         }
-        YoriWinSetControlClientCell(&Edit->Ctrl, (WORD)(StartColumn + CharIndex), 0, DisplayLine.StartOfString[CharIndex], TextAttributes);
+        Char = DisplayLine.StartOfString[CharIndex];
+
+        //
+        //  Nano server interprets NULL as "leave previous contents alone"
+        //  which is hazardous for an editor.
+        //
+
+        if (Char == 0 && YoriLibIsNanoServer()) {
+            Char = ' ';
+        }
+
+        YoriWinSetControlClientCell(&Edit->Ctrl, (WORD)(StartColumn + CharIndex), 0, Char, TextAttributes);
     }
 
     //
