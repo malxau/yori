@@ -344,8 +344,12 @@ YoriLibSetCurrentDirectory(
     if (AllocatedDirectory) {
         YoriLibDereference(NullTerminatedDirectory);
     }
-    YoriLibFreeStringContents(&YoriLibCurrentDirectoryForDisplay);
-    memcpy(&YoriLibCurrentDirectoryForDisplay, &NewDisplayString, sizeof(YORI_STRING));
+    if (Result) {
+        YoriLibFreeStringContents(&YoriLibCurrentDirectoryForDisplay);
+        memcpy(&YoriLibCurrentDirectoryForDisplay, &NewDisplayString, sizeof(YORI_STRING));
+    } else {
+        YoriLibFreeStringContents(&NewDisplayString);
+    }
     SetLastError(LastErr);
 
     return Result;

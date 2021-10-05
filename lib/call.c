@@ -1185,8 +1185,7 @@ YoriCallSetCurrentDirectory(
             return FALSE;
         }
     }
-    pYoriApiSetCurrentDirectory(NewCurrentDirectory);
-    return TRUE;
+    return pYoriApiSetCurrentDirectory(NewCurrentDirectory);
 }
 
 /**
