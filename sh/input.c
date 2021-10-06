@@ -1969,6 +1969,76 @@ YoriShProcessEnhancedKeyDown(
 
 /**
  Process a key that is typically an enhanced key, including arrows, insert,
+ delete, home, end, etc, when Shift is also held.  The "normal" placement of
+ these keys is as enhanced, but the original XT keys are the ones on the
+ number pad when num lock is off, which have the same key codes but don't
+ have the enhanced bit set.  This function is invoked to handle either case.
+
+ @param Buffer Pointer to the input buffer to update.
+
+ @param InputRecord Pointer to the console input event.
+
+ @param ClearSelection On successful completion, set to FALSE to indicate
+        that this key press is manipulating selection and the selection
+        should not be cleared.  Most key press events clear selections, so
+        this is initialized to TRUE on entry and set to FALSE to indicate a
+        key press manipulating selection.
+
+ @return TRUE to indicate that input processing should stop; FALSE to indicate
+         regular buffer display should occur.
+ */
+BOOL
+YoriShProcessShiftEnhancedKeyDown(
+    __inout PYORI_SH_INPUT_BUFFER Buffer,
+    __in PINPUT_RECORD InputRecord,
+    __inout PBOOL ClearSelection
+    )
+{
+    WORD KeyCode;
+
+    KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
+
+    if (KeyCode == VK_INSERT) {
+        YORI_STRING ClipboardData;
+        YoriLibInitEmptyString(&ClipboardData);
+        if (YoriLibPasteText(&ClipboardData)) {
+            if (ClipboardData.LengthInChars > 0) {
+                YoriShAddYoriStringToInput(Buffer, &ClipboardData);
+            }
+            YoriLibFreeStringContents(&ClipboardData);
+        }
+    } else if (KeyCode == VK_LEFT) {
+        if (Buffer->CurrentOffset > 0) {
+            YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset - 1);
+        }
+        *ClearSelection = FALSE;
+    } else if (KeyCode == VK_RIGHT) {
+        if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
+            if (Buffer->CurrentOffset + 1< Buffer->String.LengthInChars) {
+                YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset + 1);
+            } else {
+                YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset);
+            }
+        }
+        *ClearSelection = FALSE;
+    } else if (KeyCode == VK_HOME) {
+        if (Buffer->CurrentOffset > 0) {
+            YoriShSelectToBufferOffset(Buffer, 0);
+        }
+        *ClearSelection = FALSE;
+    } else if (KeyCode == VK_END) {
+        if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
+            YoriShSelectToBufferOffset(Buffer, Buffer->String.LengthInChars - 1);
+        }
+        *ClearSelection = FALSE;
+    }
+
+    return FALSE;
+}
+
+
+/**
+ Process a key that is typically an enhanced key, including arrows, insert,
  delete, home, end, etc, when Ctrl is also held.  The "normal" placement of
  these keys is as enhanced, but the original XT keys are the ones on the
  number pad when num lock is off, which have the same key codes but don't
@@ -2136,8 +2206,14 @@ YoriShProcessKeyDown(
                 YoriShBackspace(Buffer, InputRecord->Event.KeyEvent.wRepeatCount);
             }
         } else if (Char == '\0') {
-            if (YoriShProcessEnhancedKeyDown(Buffer, InputRecord, TerminateInput)) {
-                return TRUE;
+            if (CtrlMask & SHIFT_PRESSED) {
+                if (YoriShProcessShiftEnhancedKeyDown(Buffer, InputRecord, &ClearSelection)) {
+                    return TRUE;
+                }
+            } else {
+                if (YoriShProcessEnhancedKeyDown(Buffer, InputRecord, TerminateInput)) {
+                    return TRUE;
+                }
             }
         } else {
             for (Count = 0; Count < InputRecord->Event.KeyEvent.wRepeatCount; Count++) {
@@ -2287,44 +2363,25 @@ YoriShProcessKeyDown(
             }
         }
     } else if (CtrlMask == (SHIFT_PRESSED | ENHANCED_KEY)) {
-        if (KeyCode == VK_INSERT) {
-            YORI_STRING ClipboardData;
-            YoriLibInitEmptyString(&ClipboardData);
-            if (YoriLibPasteText(&ClipboardData)) {
-                if (ClipboardData.LengthInChars > 0) {
-                    YoriShAddYoriStringToInput(Buffer, &ClipboardData);
-                }
-                YoriLibFreeStringContents(&ClipboardData);
-            }
-        } else if (KeyCode == VK_LEFT) {
-            if (Buffer->CurrentOffset > 0) {
-                YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset - 1);
-            }
-            ClearSelection = FALSE;
-        } else if (KeyCode == VK_RIGHT) {
-            if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
-                if (Buffer->CurrentOffset + 1< Buffer->String.LengthInChars) {
-                    YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset + 1);
-                } else {
-                    YoriShSelectToBufferOffset(Buffer, Buffer->CurrentOffset);
-                }
-            }
-            ClearSelection = FALSE;
-        } else if (KeyCode == VK_HOME) {
-            if (Buffer->CurrentOffset > 0) {
-                YoriShSelectToBufferOffset(Buffer, 0);
-            }
-            ClearSelection = FALSE;
-        } else if (KeyCode == VK_END) {
-            if (Buffer->CurrentOffset < Buffer->String.LengthInChars) {
-                YoriShSelectToBufferOffset(Buffer, Buffer->String.LengthInChars - 1);
-            }
-            ClearSelection = FALSE;
+        if (YoriShProcessShiftEnhancedKeyDown(Buffer, InputRecord, &ClearSelection)) {
+            return TRUE;
         }
     }
 
-    if (KeyCode != VK_SHIFT &&
-        KeyCode != VK_CONTROL) {
+    //
+    //  The documentation says that left and right specific codes aren't
+    //  returned from these APIs, but Nano didn't read that part of the
+    //  documentation.  It also sends events with Char of 0 and KeyCode of
+    //  0, which we must ignore.
+    //
+
+    if (KeyCode != 0 &&
+        KeyCode != VK_SHIFT &&
+        KeyCode != VK_LSHIFT &&
+        KeyCode != VK_RSHIFT &&
+        KeyCode != VK_CONTROL &&
+        KeyCode != VK_LCONTROL &&
+        KeyCode != VK_RCONTROL) {
 
         if (ClearSelection) {
             YoriShClearInputSelections(Buffer);
