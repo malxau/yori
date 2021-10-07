@@ -314,8 +314,9 @@ YoriLibReadConsoleOutputAttributeForSelection(
 
 /**
  Return the selection color to use.  On Vista and newer systems this is the
- console popup color, which is what quickedit would do.  On older systems it
- is currently hardcoded to Yellow on Blue.
+ console popup color, which is what quickedit would do.  On Nano server,
+ which doesn't support background colors, it's bright Yellow.  On older
+ systems it is currently hardcoded to Yellow on Blue.
 
  @param ConsoleHandle Handle to the console output device.
 
@@ -328,13 +329,33 @@ YoriLibGetSelectionColor(
 {
     WORD SelectionColor;
 
-    SelectionColor = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+    if (YoriLibIsNanoServer()) {
+        SelectionColor = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+    } else {
+        SelectionColor = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+    }
+
     if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
         YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenInfo;
         ZeroMemory(&ScreenInfo, sizeof(ScreenInfo));
         ScreenInfo.cbSize = sizeof(ScreenInfo);
         if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfo)) {
-            SelectionColor = ScreenInfo.wPopupAttributes;
+            UCHAR Background;
+            UCHAR Foreground;
+
+            Background = (UCHAR)((ScreenInfo.wPopupAttributes & 0xF0) >> 4);
+            Foreground = (UCHAR)(ScreenInfo.wPopupAttributes & 0xF);
+
+            //
+            //  If background == foreground, the selection would be invisible,
+            //  so fall back to defaults.  This is mainly to handle Nano which
+            //  succeeds the above call with a popup color of zero (black on
+            //  black.)
+            //
+
+            if (Background != Foreground) {
+                SelectionColor = ScreenInfo.wPopupAttributes;
+            }
         }
     }
 
