@@ -48,7 +48,7 @@ CHAR strEditHelpText[] =
  The copyright year string to display with license text.
  */
 const
-TCHAR strCopyrightYear[] = _T("2020");
+TCHAR strCopyrightYear[] = _T("2020-2021");
 
 /**
  Display usage text to the user.
@@ -155,6 +155,11 @@ typedef struct _EDIT_CONTEXT {
      The index of the traditional item in the options menu.
      */
     DWORD OptionsTraditionalMenuIndex;
+
+    /**
+     TRUE if a BOM should be written to the output stream, FALSE if not.
+     */
+    BOOLEAN WriteBom;
 
     /**
      TRUE if the search should be case sensitive.  FALSE if it should be case
@@ -433,16 +438,26 @@ EditLoadFile(
     if (EditContext->Encoding == CP_UTF8_OR_16) {
         DWORD NewEncoding;
         DWORD BytesRead;
-        UCHAR LeadingBytes[2];
+        UCHAR LeadingBytes[3];
 
         NewEncoding = CP_UTF8;
 
         if (ReadFile(hFile, LeadingBytes, sizeof(LeadingBytes), &BytesRead, NULL)) {
-            if (BytesRead == sizeof(LeadingBytes) &&
+
+            if (BytesRead >= 2 &&
                 LeadingBytes[0] == 0xFF &&
                 LeadingBytes[1] == 0xFE) {
 
                 NewEncoding = CP_UTF16;
+                EditContext->WriteBom = TRUE;
+            }
+
+            if (BytesRead >= 3 &&
+                LeadingBytes[0] == 0xEF &&
+                LeadingBytes[1] == 0xBB &&
+                LeadingBytes[2] == 0xBF) {
+
+                EditContext->WriteBom = TRUE;
             }
         }
 
@@ -531,6 +546,34 @@ EditSaveFile(
         EditContext->Encoding = CP_UTF8;
     }
 
+    if (EditContext->WriteBom) {
+        UCHAR BomBuffer[3];
+        DWORD BomLength;
+        DWORD BytesWritten;
+
+        BomLength = 0;
+
+        if (EditContext->Encoding == CP_UTF8) {
+            BomBuffer[0] = 0xEF;
+            BomBuffer[1] = 0xBB;
+            BomBuffer[2] = 0xBF;
+            BomLength = 3;
+        } else if (EditContext->Encoding == CP_UTF16) {
+            BomBuffer[0] = 0xFF;
+            BomBuffer[1] = 0xFE;
+            BomLength = 2;
+        }
+
+        if (BomLength > 0) {
+            if (!WriteFile(TempHandle, BomBuffer, BomLength, &BytesWritten, NULL)) {
+                CloseHandle(TempHandle);
+                DeleteFile(TempFileName.StartOfString);
+                YoriLibFreeStringContents(&TempFileName);
+                return FALSE;
+            }
+        }
+    }
+
     SavedEncoding = YoriLibGetMultibyteOutputEncoding();
     YoriLibSetMultibyteOutputEncoding(EditContext->Encoding);
     for (LineIndex = 0; LineIndex < LineCount; LineIndex++) {
@@ -540,6 +583,7 @@ EditSaveFile(
                 CloseHandle(TempHandle);
                 DeleteFile(TempFileName.StartOfString);
                 YoriLibFreeStringContents(&TempFileName);
+                YoriLibSetMultibyteOutputEncoding(SavedEncoding);
                 return FALSE;
             }
         }
@@ -547,6 +591,7 @@ EditSaveFile(
             CloseHandle(TempHandle);
             DeleteFile(TempFileName.StartOfString);
             YoriLibFreeStringContents(&TempFileName);
+            YoriLibSetMultibyteOutputEncoding(SavedEncoding);
             return FALSE;
         }
     }
@@ -683,6 +728,7 @@ EditNewButtonClicked(
         return;
     }
 
+    EditContext->WriteBom = FALSE;
     YoriWinMultilineEditClear(EditContext->MultilineEdit);
     YoriLibFreeStringContents(&EditContext->OpenFileName);
     EditUpdateOpenedFileCaption(EditContext);
