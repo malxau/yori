@@ -103,6 +103,12 @@ typedef struct _MORE_LOGICAL_LINE {
     WORD InitialUserColor;
 
     /**
+     If TRUE, an explicit newline should be added after this line.  If FALSE,
+     the console auto wraps and no newline should be issued.
+     */
+    BOOLEAN ExplicitNewlineRequired;
+
+    /**
      If TRUE, there are more logical lines to follow this one that are derived
      from the same physical line.  If FALSE, this logical line is the end of
      the physical line.
@@ -242,6 +248,16 @@ typedef struct _MORE_CONTEXT {
      Handle to the thread that is adding to the physical line array.
      */
     HANDLE IngestThread;
+
+    /**
+     TRUE if the display implies that text at the last cell in a line auto
+     wraps to the next line.  This behavior is generally undesirable on NT,
+     because it updates the attributes of the new line to match the final
+     cell on the previous line, and resizing the window will display the
+     text in a different location.  On Nano, we have no choice and need to
+     operate in this degraded way.
+     */
+    BOOLEAN AutoWrapAtLineEnd;
 
     /**
      TRUE if the set of files should be enumerated recursively.  FALSE if they

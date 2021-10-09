@@ -47,6 +47,17 @@ typedef struct _MORE_LINE_END_CONTEXT {
     WORD FinalUserColor;
 
     /**
+     Set to TRUE to indicate that once this line is displayed an explicit
+     newline character should be written.  This allows a logical line to be
+     generated referring only to characters within a physical line (no
+     reallocation or double buffering) but still terminate the line before
+     starting the next line.  This is typically FALSE because a logical line
+     has written to the edge of the console window so that processing is
+     resuming on the next console line without a newline present.
+     */
+    BOOLEAN ExplicitNewlineRequired;
+
+    /**
      Set to TRUE to indicate the logical line needs to be parsed character
      by character because the contents of the logical line are not merely
      a subset of characters from a physical line.  FALSE if the line is
@@ -54,7 +65,7 @@ typedef struct _MORE_LINE_END_CONTEXT {
      when a search is present so that the logical line contains extra
      escape sequences that the physical line does not.
      */
-    BOOL RequiresGeneration;
+    BOOLEAN RequiresGeneration;
 
     /**
      Specifies the number of characters needed to describe the logical line
@@ -142,6 +153,7 @@ MoreGetLogicalLineLength(
     CellsDisplayed = 0;
 
     if (LineEndContext != NULL) {
+        LineEndContext->ExplicitNewlineRequired = TRUE;
         LineEndContext->RequiresGeneration = FALSE;
     }
 
@@ -246,7 +258,21 @@ MoreGetLogicalLineLength(
 
         ASSERT(CellsDisplayed <= MaximumVisibleCharacters);
         if (CellsDisplayed == MaximumVisibleCharacters) {
-            break;
+
+            //
+            //  If the line is full of text but the next text is an escape
+            //  sequence, keep processing despite the line being full.
+            //
+
+            if (PhysicalLineSubset->LengthInChars <= SourceIndex + 2 ||
+                PhysicalLineSubset->StartOfString[SourceIndex] != 27 ||
+                PhysicalLineSubset->StartOfString[SourceIndex + 1] != '[') {
+
+                if (LineEndContext != NULL && MoreContext->AutoWrapAtLineEnd) {
+                    LineEndContext->ExplicitNewlineRequired = FALSE;
+                }
+                break;
+            }
         }
     }
 
@@ -592,6 +618,7 @@ MoreGenerateLogicalLinesFromPhysicalLine(
             } else {
                 ThisLine->MoreLogicalLines = TRUE;
             }
+            ThisLine->ExplicitNewlineRequired = LineEndContext.ExplicitNewlineRequired;
 
             ASSERT(ThisLine->CharactersRemainingInMatch == 0 || ThisLine->InitialUserColor != ThisLine->InitialDisplayColor);
 
@@ -1115,7 +1142,11 @@ MoreDegenerateDisplay(
             YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, MoreContext->DisplayViewportLines[Index].InitialDisplayColor);
         }
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y%c[0m\n"), &MoreContext->DisplayViewportLines[Index].Line, 27);
+        if (MoreContext->DisplayViewportLines[Index].ExplicitNewlineRequired) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\x1b[0m\n"), &MoreContext->DisplayViewportLines[Index].Line);
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\x1b[0m"), &MoreContext->DisplayViewportLines[Index].Line);
+        }
     }
 
     MoreDrawStatusLine(MoreContext);
@@ -1172,7 +1203,18 @@ MoreOutputSeriesOfLines(
             CharsRequired += VtAttribute.LengthInChars;
             memcpy(&CombinedBuffer.StartOfString[CharsRequired], FirstLine[Index].Line.StartOfString, FirstLine[Index].Line.LengthInChars * sizeof(TCHAR));
             CharsRequired += FirstLine[Index].Line.LengthInChars;
-            CharsRequired += YoriLibSPrintf(&CombinedBuffer.StartOfString[CharsRequired], _T("%c[0m\n"), 27);
+            CombinedBuffer.StartOfString[CharsRequired] = 0x1b;
+            CharsRequired++;
+            CombinedBuffer.StartOfString[CharsRequired] = '[';
+            CharsRequired++;
+            CombinedBuffer.StartOfString[CharsRequired] = '0';
+            CharsRequired++;
+            CombinedBuffer.StartOfString[CharsRequired] = 'm';
+            CharsRequired++;
+            if (FirstLine[Index].ExplicitNewlineRequired) {
+                CombinedBuffer.StartOfString[CharsRequired] = '\n';
+                CharsRequired++;
+            }
         }
         CombinedBuffer.StartOfString[CharsRequired] = '\0';
         CombinedBuffer.LengthInChars = CharsRequired;
@@ -1188,7 +1230,11 @@ MoreOutputSeriesOfLines(
             //  reset the color before displaying the newline.
             //
 
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y%c[0m\n"), &FirstLine[Index].Line, 27);
+            if (FirstLine[Index].ExplicitNewlineRequired) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\x1b[0m\n"), &FirstLine[Index].Line);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\x1b[0m"), &FirstLine[Index].Line);
+            }
         }
     }
 }
@@ -3041,13 +3087,31 @@ MoreViewportDisplay(
 
     SetConsoleMode(InHandle, InputFlags);
 
-    //
-    //  A better way to read this is "disable ENABLE_WRAP_AT_EOL_OUTPUT"
-    //  which is the default.  This program must emit explicit newlines
-    //  after each viewport line.
-    //
+    if (YoriLibIsNanoServer()) {
 
-    SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT);
+        //
+        //  The nano console implicitly wraps at line end whether we like it
+        //  or not.  On regular consoles, this is bad because on auto wrap the
+        //  attributes of the next line are set to match the previous cell,
+        //  but on Nano this is benign since no background colors are
+        //  supported anyway.  On regular consoles, resize causes text to
+        //  move lines without an explicit newline, but the Nano console is
+        //  incapable of resize anyway.
+        //
+
+        MoreContext->AutoWrapAtLineEnd = TRUE;
+        SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
+
+    } else {
+
+        //
+        //  A better way to read this is "disable ENABLE_WRAP_AT_EOL_OUTPUT"
+        //  which is the default.  This program must emit explicit newlines
+        //  after each viewport line.
+        //
+
+        SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_PROCESSED_OUTPUT);
+    }
 
     while(TRUE) {
 
