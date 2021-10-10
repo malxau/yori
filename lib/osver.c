@@ -43,6 +43,17 @@ DWORD CachedMinorOsVersion;
  */
 DWORD CachedBuildNumber;
 
+/**
+ Background support has been determined.
+ */
+BOOLEAN YoriLibBackgroundColorSupportDetermined;
+
+/**
+ The console supports background colors.  Only meaningful if
+ YoriLibBackgroundColorSupportDetermined is TRUE.
+ */
+BOOLEAN YoriLibBackgroundColorSupported;
+
 #if _WIN64
 /**
  On 64 bit builds, the current process PEB is 64 bit.
@@ -533,6 +544,35 @@ YoriLibIsNanoServer(VOID)
     }
 
     return FALSE;
+}
+
+/**
+ Check if this console doesn't support background colors.  Nano ships with a
+ buggy console that doesn't handle these correctly.  Outside of Nano, assume
+ background color support is present; within Nano, assume it's not unless
+ explicitly enabled.
+ */
+BOOLEAN
+YoriLibDoesSystemSupportBackgroundColors(VOID)
+{
+    if (!YoriLibIsNanoServer()) {
+        return TRUE;
+    }
+
+    if (!YoriLibBackgroundColorSupportDetermined) {
+        LONGLONG Enabled;
+
+        if (!YoriLibGetEnvironmentVariableAsNumber(_T("YORIBACKGROUND"), &Enabled)) {
+            Enabled = 0;
+        }
+
+        YoriLibBackgroundColorSupportDetermined = TRUE;
+        if (Enabled != 0) {
+            YoriLibBackgroundColorSupported = TRUE;
+        }
+    }
+
+    return YoriLibBackgroundColorSupported;
 }
 
 // vim:sw=4:ts=4:et:

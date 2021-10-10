@@ -2489,7 +2489,7 @@ EditCreateMainWindow(
         return FALSE;
     }
 
-    if (!YoriLibIsNanoServer()) {
+    if (YoriLibDoesSystemSupportBackgroundColors()) {
         YoriWinLabelSetTextAttributes(StatusBar, BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
     }
 
@@ -2498,7 +2498,7 @@ EditCreateMainWindow(
     EditContext->MenuBar = MenuBar;
     EditContext->StatusBar = StatusBar;
 
-    if (!YoriLibIsNanoServer()) {
+    if (YoriLibDoesSystemSupportBackgroundColors()) {
         YoriWinMultilineEditSetColor(MultilineEdit, BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
     }
     YoriWinMultilineEditSetCursorMoveNotifyCallback(MultilineEdit, EditNotifyCursorMove);

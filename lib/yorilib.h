@@ -2627,6 +2627,9 @@ YoriLibGetArchitecture(VOID);
 BOOLEAN
 YoriLibIsNanoServer(VOID);
 
+BOOLEAN
+YoriLibDoesSystemSupportBackgroundColors(VOID);
+
 // *** PRIV.C ***
 
 BOOL

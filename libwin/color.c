@@ -73,7 +73,7 @@ CONST UCHAR YoriWinNanoColors[] = {
 YORI_WIN_COLOR_TABLE_HANDLE
 YoriWinGetDefaultColorTable(VOID)
 {
-    if (YoriLibIsNanoServer()) {
+    if (!YoriLibDoesSystemSupportBackgroundColors()) {
         return (YORI_WIN_COLOR_TABLE_HANDLE)YoriWinNanoColors;
     }
     return (YORI_WIN_COLOR_TABLE_HANDLE)YoriWinVgaColors;
