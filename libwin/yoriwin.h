@@ -646,7 +646,8 @@ YoriWinMultilineEditGetSelectionRange(
 VOID
 YoriWinMultilineEditSetColor(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in WORD Attributes
+    __in WORD Attributes,
+    __in WORD SelectedAttributes
     );
 
 DWORD

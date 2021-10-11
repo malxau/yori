@@ -2499,7 +2499,9 @@ EditCreateMainWindow(
     EditContext->StatusBar = StatusBar;
 
     if (YoriLibDoesSystemSupportBackgroundColors()) {
-        YoriWinMultilineEditSetColor(MultilineEdit, BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        YoriWinMultilineEditSetColor(MultilineEdit,
+                                     BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE,
+                                     BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE);
     }
     YoriWinMultilineEditSetCursorMoveNotifyCallback(MultilineEdit, EditNotifyCursorMove);
 

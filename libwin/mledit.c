@@ -369,6 +369,16 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
     WORD TextAttributes;
 
     /**
+     The attributes to display selected text in.
+     */
+    WORD SelectedAttributes;
+
+    /**
+     The attributes to display the caption in.
+     */
+    WORD CaptionAttributes;
+
+    /**
      0 if the cursor is currently not visible.  20 for insert mode, 50 for
      overwrite mode.  Paint calculates the desired value and based on
      comparing the new value with the current value decides on the action
@@ -764,7 +774,6 @@ YoriWinMultilineEditPaintNonClient(
     SMALL_RECT BorderLocation;
     WORD BorderFlags;
     WORD WindowAttributes;
-    WORD TextAttributes;
     WORD ColumnIndex;
 
     BorderLocation.Left = 0;
@@ -781,8 +790,6 @@ YoriWinMultilineEditPaintNonClient(
         DWORD CaptionCharsToDisplay;
         DWORD StartOffset;
         COORD ClientSize;
-        PYORI_WIN_WINDOW TopLevelWindow;
-        PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
         YoriWinGetControlClientSize(&MultilineEdit->Ctrl, &ClientSize);
 
@@ -792,11 +799,8 @@ YoriWinMultilineEditPaintNonClient(
         }
 
         StartOffset = (ClientSize.X - CaptionCharsToDisplay) / 2;
-        TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
-        WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
-        TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMultilineCaption);
         for (ColumnIndex = 0; ColumnIndex < CaptionCharsToDisplay; ColumnIndex++) {
-            YoriWinSetControlNonClientCell(&MultilineEdit->Ctrl, (WORD)(ColumnIndex + StartOffset), 0, MultilineEdit->Caption.StartOfString[ColumnIndex], TextAttributes);
+            YoriWinSetControlNonClientCell(&MultilineEdit->Ctrl, (WORD)(ColumnIndex + StartOffset), 0, MultilineEdit->Caption.StartOfString[ColumnIndex], MultilineEdit->CaptionAttributes);
         }
     }
 
@@ -830,22 +834,15 @@ YoriWinMultilineEditPaintSingleLine(
     WORD ColumnIndex;
     WORD WindowAttributes;
     WORD TextAttributes;
-    WORD SelectedAttributes;
     WORD RowIndex;
     BOOLEAN SelectionActive;
     YORI_STRING Line;
-    PYORI_WIN_WINDOW TopLevelWindow;
-    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
     TCHAR Char;
 
     ColumnIndex = 0;
     RowIndex = (WORD)(LineIndex - MultilineEdit->ViewportTop);
     WindowAttributes = MultilineEdit->TextAttributes;
     SelectionActive = YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl);
-
-    TopLevelWindow = YoriWinGetTopLevelWindow(&MultilineEdit->Ctrl);
-    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
-    SelectedAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorEditSelectedText);
 
     if (LineIndex < MultilineEdit->LinesPopulated) {
         TextAttributes = WindowAttributes;
@@ -857,7 +854,7 @@ YoriWinMultilineEditPaintSingleLine(
         if (SelectionActive &&
             LineIndex > MultilineEdit->Selection.FirstLine &&
             LineIndex < MultilineEdit->Selection.LastLine) {
-            TextAttributes = SelectedAttributes;
+            TextAttributes = MultilineEdit->SelectedAttributes;
         }
 
         if (!YoriWinMultilineEditGenerateDisplayLine(MultilineEdit, LineIndex, &Line)) {
@@ -876,17 +873,17 @@ YoriWinMultilineEditPaintSingleLine(
                     TextAttributes = WindowAttributes;
                     if (ColumnIndex + MultilineEdit->ViewportLeft >= DisplayFirstCharOffset &&
                         ColumnIndex + MultilineEdit->ViewportLeft < DisplayLastCharOffset) {
-                        TextAttributes = SelectedAttributes;
+                        TextAttributes = MultilineEdit->SelectedAttributes;
                     }
                 } else if (LineIndex == MultilineEdit->Selection.FirstLine) {
                     TextAttributes = WindowAttributes;
                     if (ColumnIndex + MultilineEdit->ViewportLeft >= DisplayFirstCharOffset) {
-                        TextAttributes = SelectedAttributes;
+                        TextAttributes = MultilineEdit->SelectedAttributes;
                     }
                 } else if (LineIndex == MultilineEdit->Selection.LastLine) {
                     TextAttributes = WindowAttributes;
                     if (ColumnIndex + MultilineEdit->ViewportLeft < DisplayLastCharOffset) {
-                        TextAttributes = SelectedAttributes;
+                        TextAttributes = MultilineEdit->SelectedAttributes;
                     }
                 }
             }
@@ -3813,11 +3810,15 @@ YoriWinMultilineEditInsertTextAtCursor(
 
  @param Attributes Specifies the foreground and background color for the
         multiline edit control to use.
+
+ @param SelectedAttributes Specifies the foreground and background color
+        to use for selected text within the multiline edit control.
  */
 VOID
 YoriWinMultilineEditSetColor(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in WORD Attributes
+    __in WORD Attributes,
+    __in WORD SelectedAttributes
     )
 {
     PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
@@ -3827,6 +3828,7 @@ YoriWinMultilineEditSetColor(
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
 
     MultilineEdit->TextAttributes = Attributes;
+    MultilineEdit->SelectedAttributes = SelectedAttributes;
     YoriWinMultilineEditExpandDirtyRange(MultilineEdit, 0, (DWORD)-1);
     YoriWinMultilineEditPaintNonClient(MultilineEdit);
     YoriWinMultilineEditPaint(MultilineEdit);
@@ -5520,6 +5522,8 @@ YoriWinMultilineEditCreate(
     PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
     PYORI_WIN_WINDOW Parent;
     SMALL_RECT ScrollBarRect;
+    PYORI_WIN_WINDOW_HANDLE TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Parent = (PYORI_WIN_WINDOW)ParentHandle;
 
@@ -5573,6 +5577,10 @@ YoriWinMultilineEditCreate(
 
     MultilineEdit->InsertMode = TRUE;
     MultilineEdit->TextAttributes = MultilineEdit->Ctrl.DefaultAttributes;
+    TopLevelWindow = YoriWinGetTopLevelWindow(Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+    MultilineEdit->SelectedAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorEditSelectedText);
+    MultilineEdit->CaptionAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMultilineCaption);
 
     MultilineEdit->TabWidth = 4;
     YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
