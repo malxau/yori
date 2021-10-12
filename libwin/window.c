@@ -140,6 +140,16 @@ typedef struct _YORI_WIN_WINDOW {
     COORD CursorPosition;
 
     /**
+     Cursor visibility as explicitly set by this window.
+     */
+    BOOL CursorVisible;
+
+    /**
+     The size of the cursor as explicitly set by this window.
+     */
+    DWORD CursorSizePercentage;
+
+    /**
      The dimensions within the window buffer that have changed and need to
      be redrawn on the next call to redraw.  Note these are relative to the
      window's rectangle, not its client area.
@@ -352,6 +362,9 @@ YoriWinSetCursorState(
     CursorInfo.bVisible = Visible;
     CursorInfo.dwSize = SizePercentage;
 
+    Window->CursorVisible = Visible;
+    Window->CursorSizePercentage = SizePercentage;
+
     hConOut = YoriWinGetConsoleOutputHandle(Window->WinMgrHandle);
     if (!SetConsoleCursorInfo(hConOut, &CursorInfo)) {
         return FALSE;
@@ -538,6 +551,15 @@ YoriWinDisplayWindowContents(
     }
 
     Window->Dirty = FALSE;
+
+    if (YoriLibIsNanoServer() && Window->CursorVisible) {
+        DWORD SavedCursorPercentage;
+        SavedCursorPercentage = Window->CursorSizePercentage;
+
+        YoriWinSetCursorState(Window, FALSE, 0);
+        YoriWinSetCursorState(Window, TRUE, SavedCursorPercentage);
+        YoriWinSetCursorPosition(Window, Window->CursorPosition.X, Window->CursorPosition.Y);
+    }
 
     return TRUE;
 }

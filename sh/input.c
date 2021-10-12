@@ -456,28 +456,32 @@ YoriShDisplayAfterKeyPress(
             }
         }
 
-        if (NumberToWrite > 0 ||
-            Buffer->SuggestionDirty ||
-            Buffer->CurrentOffset != Buffer->PreviousCurrentOffset) {
+        //
+        //  On non-Nano, if the cursor moved, move it.  This is done first
+        //  for aesthetic reasons, so the first visual update is the cursor
+        //  move rather than the newly typed text.
+        //
 
-            //
-            //  Now that we know where the text should go, advance the cursor
-            //  and render the text.
-            //
+        if (!YoriLibIsNanoServer() &&
+            Buffer->CurrentOffset != Buffer->PreviousCurrentOffset) {
 
             if (!YoriShMoveCursorCacheResult(Buffer, &ScreenInfo, Buffer->CurrentOffset - Buffer->PreviousCurrentOffset)) {
                 return FALSE;
             }
+        }
 
-            if (NumberToWrite) {
-                WriteConsoleOutputCharacter(hConsole, &Buffer->String.StartOfString[Buffer->DirtyBeginOffset], NumberToWrite, WritePosition, &NumberWritten);
-                FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
-            }
+        //
+        //  Render any new text.
+        //
 
-            if (Buffer->SuggestionDirty) {
-                WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
-                FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
-            }
+        if (NumberToWrite) {
+            WriteConsoleOutputCharacter(hConsole, &Buffer->String.StartOfString[Buffer->DirtyBeginOffset], NumberToWrite, WritePosition, &NumberWritten);
+            FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToWrite, WritePosition, &NumberWritten);
+        }
+
+        if (Buffer->SuggestionDirty) {
+            WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+            FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
         }
 
         //
@@ -488,6 +492,19 @@ YoriShDisplayAfterKeyPress(
         if (NumberToFill) {
             FillConsoleOutputCharacter(hConsole, ' ', NumberToFill, FillPosition, &NumberWritten);
             FillConsoleOutputAttribute(hConsole, ScreenInfo.wAttributes, NumberToFill, FillPosition, &NumberWritten);
+        }
+
+        //
+        //  On Nano, if the cursor moved, move it.  This is done last because
+        //  Nano can  overwrite the cursor with changed buffer contents.
+        //
+
+        if (YoriLibIsNanoServer() &&
+            Buffer->CurrentOffset != Buffer->PreviousCurrentOffset) {
+
+            if (!YoriShMoveCursorCacheResult(Buffer, &ScreenInfo, Buffer->CurrentOffset - Buffer->PreviousCurrentOffset)) {
+                return FALSE;
+            }
         }
 
         Buffer->PreviousCurrentOffset = Buffer->CurrentOffset;
