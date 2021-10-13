@@ -148,6 +148,7 @@ ENTRYPOINT(
     BOOL Force;
     BOOL Powerdown;
     DWORD ShutdownOptions;
+    DWORD Err;
 
     Op = ShutdownOpUsage;
     Force = FALSE;
@@ -197,11 +198,8 @@ ENTRYPOINT(
         }
     }
 
+    YoriLibLoadAdvApi32Functions();
     YoriLibLoadUser32Functions();
-    if (DllUser32.pExitWindowsEx == NULL) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: OS support not present\n"));
-        return EXIT_FAILURE;
-    }
 
     ShutdownEnableShutdownPrivilege();
 
@@ -212,6 +210,10 @@ ENTRYPOINT(
             ShutdownHelp();
             break;
         case ShutdownOpLogoff:
+            if (DllUser32.pExitWindowsEx == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: OS support not present\n"));
+                return EXIT_FAILURE;
+            }
             ShutdownOptions = EWX_LOGOFF;
             if (Force) {
                 ShutdownOptions = ShutdownOptions | EWX_FORCE;
@@ -224,28 +226,63 @@ ENTRYPOINT(
             }
             break;
         case ShutdownOpReboot:
-            ShutdownOptions = EWX_REBOOT;
-            if (Force) {
-                ShutdownOptions = ShutdownOptions | EWX_FORCE;
+            if (DllUser32.pExitWindowsEx == NULL && DllAdvApi32.pInitiateShutdownW == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: OS support not present\n"));
+                return EXIT_FAILURE;
             }
-            Result = DllUser32.pExitWindowsEx(ShutdownOptions, 0);
-            if (!Result) {
-                ErrText = YoriLibGetWinErrorText(GetLastError());
+            Err = ERROR_SUCCESS;
+            if (DllUser32.pExitWindowsEx != NULL) {
+                ShutdownOptions = EWX_REBOOT;
+                if (Force) {
+                    ShutdownOptions = ShutdownOptions | EWX_FORCE;
+                }
+                Result = DllUser32.pExitWindowsEx(ShutdownOptions, 0);
+                if (!Result) {
+                    Err = GetLastError();
+                }
+            } else {
+                ShutdownOptions = SHUTDOWN_RESTART;
+                if (Force) {
+                    ShutdownOptions = ShutdownOptions | SHUTDOWN_FORCE_OTHERS | SHUTDOWN_FORCE_SELF;
+                }
+                Err = DllAdvApi32.pInitiateShutdownW(NULL, NULL, 0, ShutdownOptions, 0);
+            }
+            if (Err != ERROR_SUCCESS) {
+                ErrText = YoriLibGetWinErrorText(Err);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Reboot failed: %s"), ErrText);
                 YoriLibFreeWinErrorText(ErrText);
             }
             break;
         case ShutdownOpShutdown:
-            ShutdownOptions = EWX_SHUTDOWN;
-            if (Force) {
-                ShutdownOptions = ShutdownOptions | EWX_FORCE;
+            if (DllUser32.pExitWindowsEx == NULL && DllAdvApi32.pInitiateShutdownW == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("shutdn: OS support not present\n"));
+                return EXIT_FAILURE;
             }
-            if (Powerdown) {
-                ShutdownOptions = ShutdownOptions | EWX_POWEROFF;
+            Err = ERROR_SUCCESS;
+            if (DllUser32.pExitWindowsEx != NULL) {
+                ShutdownOptions = EWX_SHUTDOWN;
+                if (Force) {
+                    ShutdownOptions = ShutdownOptions | EWX_FORCE;
+                }
+                if (Powerdown) {
+                    ShutdownOptions = ShutdownOptions | EWX_POWEROFF;
+                }
+                if (!DllUser32.pExitWindowsEx(ShutdownOptions, 0)) {
+                    Err = GetLastError();
+                }
+            } else {
+                ShutdownOptions = SHUTDOWN_NOREBOOT;
+                if (Powerdown) {
+                    ShutdownOptions = SHUTDOWN_POWEROFF;
+                }
+
+                if (Force) {
+                    ShutdownOptions = ShutdownOptions | SHUTDOWN_FORCE_OTHERS | SHUTDOWN_FORCE_SELF;
+                }
+                Err = DllAdvApi32.pInitiateShutdownW(NULL, NULL, 0, ShutdownOptions, 0);
             }
-            Result = DllUser32.pExitWindowsEx(ShutdownOptions, 0);
             if (!Result) {
-                ErrText = YoriLibGetWinErrorText(GetLastError());
+                ErrText = YoriLibGetWinErrorText(Err);
                 YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Shutdown failed: %s"), ErrText);
                 YoriLibFreeWinErrorText(ErrText);
             }

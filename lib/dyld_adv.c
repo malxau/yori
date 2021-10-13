@@ -74,6 +74,7 @@ CONST YORI_DLL_NAME_MAP DllAdvApi32Symbols[] = {
     {(FARPROC *)&DllAdvApi32.pGetSecurityDescriptorOwner, "GetSecurityDescriptorOwner"},
     {(FARPROC *)&DllAdvApi32.pImpersonateSelf, "ImpersonateSelf"},
     {(FARPROC *)&DllAdvApi32.pInitializeAcl, "InitializeAcl"},
+    {(FARPROC *)&DllAdvApi32.pInitiateShutdownW, "InitiateShutdownW"},
     {(FARPROC *)&DllAdvApi32.pLookupAccountNameW, "LookupAccountNameW"},
     {(FARPROC *)&DllAdvApi32.pLookupAccountSidW, "LookupAccountSidW"},
     {(FARPROC *)&DllAdvApi32.pLookupPrivilegeValueW, "LookupPrivilegeValueW"},
@@ -108,7 +109,25 @@ YoriLibLoadAdvApi32Functions(VOID)
 
     DllAdvApi32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("ADVAPI32.DLL"));
     if (DllAdvApi32.hDll == NULL) {
-        return FALSE;
+
+        //
+        //  Nano server includes advapi32legacy.dll (and kernel32legacy.dll.)
+        //  Unfortunately it redirects on the import table but not on dynamic
+        //  load, so we need to explicitly indicate that we want the advapi32
+        //  implementation here.
+        //
+        //  (It is amusing that functions for the registry or ACLs are
+        //   considered legacy.  For whatever reason, there's a temptation to
+        //   declare anything that exists as legacy without understanding why
+        //   it's there.)
+        //
+
+        if (YoriLibIsNanoServer()) {
+            DllAdvApi32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("ADVAPI32LEGACY.DLL"));
+        }
+        if (DllAdvApi32.hDll == NULL) {
+            return FALSE;
+        }
     }
 
     for (Count = 0; Count < sizeof(DllAdvApi32Symbols)/sizeof(DllAdvApi32Symbols[0]); Count++) {

@@ -3674,6 +3674,46 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define HP_HASHSIZE 4
 #endif
 
+#ifndef SHUTDOWN_FORCE_OTHERS
+/**
+ A definition for the value to force shutdown if it is not defined by the
+ current compilation environment.
+ */
+#define SHUTDOWN_FORCE_OTHERS    0x0001
+#endif
+
+#ifndef SHUTDOWN_FORCE_SELF
+/**
+ A definition for the value to force shutdown if it is not defined by the
+ current compilation environment.
+ */
+#define SHUTDOWN_FORCE_SELF      0x0002
+#endif
+
+#ifndef SHUTDOWN_NOREBOOT
+/**
+ A definition for the value to shutdown without rebooting if it is not
+ defined by the current compilation environment.
+ */
+#define SHUTDOWN_NOREBOOT        0x0010
+#endif
+
+#ifndef SHUTDOWN_RESTART
+/**
+ A definition for the value to reboot if it is not defined by the current
+ compilation environment.
+ */
+#define SHUTDOWN_RESTART         0x0004
+#endif
+
+#ifndef SHUTDOWN_POWEROFF
+/**
+ A definition for the value to shutdown and power off if it is not defined
+ by the current compilation environment.
+ */
+#define SHUTDOWN_POWEROFF        0x0008
+#endif
+
 #ifndef DIAMONDAPI
 /**
  If not defined by the compilation environment, the calling convention used
@@ -6580,6 +6620,18 @@ INITIALIZE_ACL(PACL, DWORD, DWORD);
 typedef INITIALIZE_ACL *PINITIALIZE_ACL;
 
 /**
+ A prototype for the InitiateShutdownW function.
+ */
+typedef
+BOOL WINAPI
+INITIATE_SHUTDOWNW(LPWSTR, LPWSTR, DWORD, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the InitiateShutdownW function.
+ */
+typedef INITIATE_SHUTDOWNW *PINITIATE_SHUTDOWNW;
+
+/**
  A prototype for the LookupAccountNameW function.
  */
 typedef
@@ -6855,6 +6907,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to InitializeAcl.
      */
     PINITIALIZE_ACL pInitializeAcl;
+
+    /**
+     If it's available on the current system, a pointer to InitiateShutdownW.
+     */
+    PINITIATE_SHUTDOWNW pInitiateShutdownW;
 
     /**
      If it's available on the current system, a pointer to LookupAccountNameW.
