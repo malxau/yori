@@ -1120,7 +1120,7 @@ EditEditButtonClicked(
     EditContext = YoriWinGetControlContext(Parent);
 
     YoriLibInitEmptyString(&ClipboardText);
-    YoriLibPasteText(&ClipboardText);
+    YoriLibPasteTextWithProcessFallback(&ClipboardText);
 
     TextSelected = YoriWinMultilineEditSelectionActive(EditContext->MultilineEdit);
     EditMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->EditMenuIndex);
@@ -1143,11 +1143,7 @@ EditEditButtonClicked(
         YoriWinMenuBarDisableMenuItem(RedoItem);
     }
 
-    //
-    //  Nano doesn't have a clipboard, or a user32.
-    //
-
-    if (TextSelected && DllUser32.pOpenClipboard != NULL) {
+    if (TextSelected) {
         YoriWinMenuBarEnableMenuItem(CutItem);
         YoriWinMenuBarEnableMenuItem(CopyItem);
     } else {

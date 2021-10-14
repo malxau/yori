@@ -818,6 +818,7 @@ ymain (
     YoriLibFreeStringContents(&YoriShGlobal.YankBuffer);
     YoriLibFreeStringContents(&YoriShGlobal.CurrentDirectoryBuffers[0]);
     YoriLibFreeStringContents(&YoriShGlobal.CurrentDirectoryBuffers[1]);
+    YoriLibEmptyProcessClipboard();
 
     return YoriShGlobal.ExitProcessExitCode;
 }

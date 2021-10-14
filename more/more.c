@@ -176,6 +176,7 @@ ENTRYPOINT(
 
 #if !YORI_BUILTIN
     YoriLibLineReadCleanupCache();
+    YoriLibEmptyProcessClipboard();
 #endif
 
     return EXIT_SUCCESS;

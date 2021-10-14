@@ -188,6 +188,7 @@ YoriWinCloseWindowManager(
     }
 
     YoriLibFree(WinMgr);
+    YoriLibEmptyProcessClipboard();
 }
 
 

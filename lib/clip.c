@@ -4,7 +4,7 @@
  * Convert a Yori string containing HTML into a Utf-8 formatted text stream for
  * use in the clipboard.
  *
- * Copyright (c) 2015-2018 Malcolm J. Smith
+ * Copyright (c) 2015-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -235,8 +235,11 @@ YoriLibPasteText(
     StringLength = _tcslen(pMem);
 
     if (StringLength >= Buffer->LengthAllocated) {
-        YoriLibFreeStringContents(Buffer);
-        YoriLibAllocateString(Buffer, StringLength + 1);
+        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, StringLength + 1)) {
+            GlobalUnlock(hMem);
+            DllUser32.pCloseClipboard();
+            return FALSE;
+        }
     }
     memcpy(Buffer->StartOfString, pMem, (StringLength + 1) * sizeof(WCHAR));
     Buffer->LengthInChars = StringLength;
@@ -497,5 +500,127 @@ YoriLibCopyTextRtfAndHtml(
 #if defined(_MSC_VER) && (_MSC_VER >= 1500) && (_MSC_VER <= 1600)
 #pragma warning(pop)
 #endif
+
+/**
+ Returns TRUE to indicate the system clipboard is available.  The clipboard is
+ not available on Nano Server where user32.dll is not present.
+
+ @return TRUE if the system clipboard is available, FALSE if it is not.
+ */
+BOOLEAN
+YoriLibIsSystemClipboardAvailable(VOID)
+{
+    YoriLibLoadUser32Functions();
+
+    if (DllUser32.pOpenClipboard == NULL ||
+        DllUser32.pEmptyClipboard == NULL ||
+        DllUser32.pGetClipboardData == NULL ||
+        DllUser32.pSetClipboardData == NULL ||
+        DllUser32.pCloseClipboard == NULL) {
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ A process wide buffer to use as a clipboard in the event that the system
+ clipboard is not available.  Note this is one buffer so it can only
+ describe on format, being unicode text.
+ */
+YORI_STRING YoriLibProcessClipboard;
+
+/**
+ Empty the process clipboard.  This is used on process termination to free
+ memory since the process clipboard is inaccessible after process termination
+ anyway.
+ */
+VOID
+YoriLibEmptyProcessClipboard(VOID)
+{
+    YoriLibFreeStringContents(&YoriLibProcessClipboard);
+}
+
+/**
+ Copy a Yori string into the clipboard in text format only.  If the system
+ clipboard is not available (on Nano) use a process-global buffer to act
+ as a clipboard.
+
+ @param Buffer The string to populate into the clipboard.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibCopyTextWithProcessFallback(
+    __in PYORI_STRING Buffer
+    )
+{
+    if (YoriLibIsSystemClipboardAvailable()) {
+        return YoriLibCopyText(Buffer);
+    }
+
+    if (Buffer->LengthInChars > YoriLibProcessClipboard.LengthAllocated) {
+        if (!YoriLibReallocateStringWithoutPreservingContents(&YoriLibProcessClipboard, Buffer->LengthInChars)) {
+            return FALSE;
+        }
+    }
+
+    memcpy(YoriLibProcessClipboard.StartOfString, Buffer->StartOfString, Buffer->LengthInChars * sizeof(TCHAR));
+    YoriLibProcessClipboard.LengthInChars = Buffer->LengthInChars;
+    return TRUE;
+}
+
+/**
+ Retrieve any text from the clipboard and output it into a Yori string.  If
+ the system clipboard is not available (on Nano) use a process-global buffer
+ to act as a clipboard.
+
+ @param Buffer The string to populate with the contents of the clipboard.
+        If the string does not contain a large enough buffer to contain the
+        clipboard contents, it is reallocated.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibPasteTextWithProcessFallback(
+    __inout PYORI_STRING Buffer
+    )
+{
+    if (YoriLibIsSystemClipboardAvailable()) {
+        return YoriLibPasteText(Buffer);
+    }
+
+    if (YoriLibProcessClipboard.LengthInChars + 1 > Buffer->LengthAllocated) {
+        if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, YoriLibProcessClipboard.LengthInChars + 1)) {
+            return FALSE;
+        }
+    }
+
+    memcpy(Buffer->StartOfString, YoriLibProcessClipboard.StartOfString, YoriLibProcessClipboard.LengthInChars * sizeof(TCHAR));
+
+
+    Buffer->LengthInChars = YoriLibProcessClipboard.LengthInChars;
+    Buffer->StartOfString[Buffer->LengthInChars] = '\0';
+    
+    //
+    //  Truncate any newlines which are not normally intended when pasting
+    //  into the shell
+    //
+
+    while(Buffer->LengthInChars > 0) {
+        TCHAR TestChar = Buffer->StartOfString[Buffer->LengthInChars - 1];
+        if (TestChar == '\r' || TestChar == '\n') {
+            Buffer->StartOfString[Buffer->LengthInChars - 1] = '\0';
+            Buffer->LengthInChars--;
+        } else {
+            break;
+        }
+    }
+
+    return TRUE;
+}
 
 // vim:sw=4:ts=4:et:

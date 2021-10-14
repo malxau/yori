@@ -2018,7 +2018,7 @@ YoriShProcessShiftEnhancedKeyDown(
     if (KeyCode == VK_INSERT) {
         YORI_STRING ClipboardData;
         YoriLibInitEmptyString(&ClipboardData);
-        if (YoriLibPasteText(&ClipboardData)) {
+        if (YoriLibPasteTextWithProcessFallback(&ClipboardData)) {
             if (ClipboardData.LengthInChars > 0) {
                 YoriShAddYoriStringToInput(Buffer, &ClipboardData);
             }
@@ -2303,7 +2303,7 @@ YoriShProcessKeyDown(
         } else if (KeyCode == 'V') {
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
-            if (YoriLibPasteText(&ClipboardData)) {
+            if (YoriLibPasteTextWithProcessFallback(&ClipboardData)) {
                 if (ClipboardData.LengthInChars > 0) {
                     YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                 }
@@ -2665,7 +2665,7 @@ YoriShProcessMouseButtonDown(
         } else {
             YORI_STRING ClipboardData;
             YoriLibInitEmptyString(&ClipboardData);
-            if (YoriLibPasteText(&ClipboardData)) {
+            if (YoriLibPasteTextWithProcessFallback(&ClipboardData)) {
                 if (ClipboardData.LengthInChars > 0) {
                     YoriShAddYoriStringToInput(Buffer, &ClipboardData);
                     BufferChanged = TRUE;

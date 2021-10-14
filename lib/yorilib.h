@@ -538,6 +538,24 @@ YoriLibCopyTextRtfAndHtml(
     __in PYORI_STRING HtmlVersion
     );
 
+BOOLEAN
+YoriLibIsSystemClipboardAvailable(VOID);
+
+__success(return)
+BOOL
+YoriLibCopyTextWithProcessFallback(
+    __in PYORI_STRING Buffer
+    );
+
+__success(return)
+BOOL
+YoriLibPasteTextWithProcessFallback(
+    __inout PYORI_STRING Buffer
+    );
+
+VOID
+YoriLibEmptyProcessClipboard(VOID);
+
 // *** CMDLINE.C ***
 
 BOOL

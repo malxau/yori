@@ -1385,93 +1385,106 @@ YoriLibCopySelectionIfPresent(
         return FALSE;
     }
 
-    if (!YoriLibGenerateVtStringFromConsoleBuffers(&VtText, StartPoint, TextToCopy.StartOfString, Attributes.AttributeArray)) {
+    //
+    //  If the system clipboard is not available and clipboard support is
+    //  emulated within the process, only plain text is supported.  If the
+    //  system clipboard is available, build RTF and HTML forms.
+    //
+
+    if (!YoriLibIsSystemClipboardAvailable()) {
+        if (YoriLibCopyTextWithProcessFallback(&TextToCopy)) {
+            YoriLibFreeStringContents(&TextToCopy);
+            return TRUE;
+        }
+    } else {
+        if (!YoriLibGenerateVtStringFromConsoleBuffers(&VtText, StartPoint, TextToCopy.StartOfString, Attributes.AttributeArray)) {
+            YoriLibFree(Attributes.AttributeArray);
+            YoriLibFreeStringContents(&TextToCopy);
+            return FALSE;
+        }
+    
         YoriLibFree(Attributes.AttributeArray);
-        YoriLibFreeStringContents(&TextToCopy);
-        return FALSE;
-    }
-
-    YoriLibFree(Attributes.AttributeArray);
-
-    //
-    //  In the second pass, copy all of the text, truncating trailing spaces.
-    //  This version will be used to construct the plain text form.
-    //
-
-    TextWritePoint = TextToCopy.StartOfString;
-    for (LineIndex = Selection->CurrentlySelected.Top; LineIndex <= Selection->CurrentlySelected.Bottom; LineIndex++) {
-        StartPoint.X = Selection->CurrentlySelected.Left;
-        StartPoint.Y = LineIndex;
-
-        ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
-        while (CharsWritten > 0) {
-            if (TextWritePoint[CharsWritten - 1] != ' ') {
-                break;
+    
+        //
+        //  In the second pass, copy all of the text, truncating trailing spaces.
+        //  This version will be used to construct the plain text form.
+        //
+    
+        TextWritePoint = TextToCopy.StartOfString;
+        for (LineIndex = Selection->CurrentlySelected.Top; LineIndex <= Selection->CurrentlySelected.Bottom; LineIndex++) {
+            StartPoint.X = Selection->CurrentlySelected.Left;
+            StartPoint.Y = LineIndex;
+    
+            ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
+            while (CharsWritten > 0) {
+                if (TextWritePoint[CharsWritten - 1] != ' ') {
+                    break;
+                }
+                CharsWritten--;
             }
-            CharsWritten--;
+            TextWritePoint += CharsWritten;
+    
+            TextWritePoint[0] = '\r';
+            TextWritePoint++;
+            TextWritePoint[0] = '\n';
+            TextWritePoint++;
         }
-        TextWritePoint += CharsWritten;
-
-        TextWritePoint[0] = '\r';
-        TextWritePoint++;
-        TextWritePoint[0] = '\n';
-        TextWritePoint++;
-    }
-
-    TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
-
-    //
-    //  Remove the final CRLF
-    //
-
-    if (TextToCopy.LengthInChars >= 2) {
-        TextToCopy.LengthInChars -= 2;
-    }
-
-    //
-    //  Convert the VT100 form into HTML and RTF, and free it
-    //
-
-    if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
-        ScreenInfoEx.cbSize = sizeof(ScreenInfoEx);
-        if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfoEx)) {
-            ColorTableToUse = (PDWORD)&ScreenInfoEx.ColorTable;
+    
+        TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
+    
+        //
+        //  Remove the final CRLF
+        //
+    
+        if (TextToCopy.LengthInChars >= 2) {
+            TextToCopy.LengthInChars -= 2;
         }
-    }
-
-    YoriLibInitEmptyString(&HtmlText);
-    if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, ColorTableToUse, 4)) {
+    
+        //
+        //  Convert the VT100 form into HTML and RTF, and free it
+        //
+    
+        if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
+            ScreenInfoEx.cbSize = sizeof(ScreenInfoEx);
+            if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfoEx)) {
+                ColorTableToUse = (PDWORD)&ScreenInfoEx.ColorTable;
+            }
+        }
+    
+        YoriLibInitEmptyString(&HtmlText);
+        if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, ColorTableToUse, 4)) {
+            YoriLibFreeStringContents(&VtText);
+            YoriLibFreeStringContents(&TextToCopy);
+            YoriLibFreeStringContents(&HtmlText);
+            return FALSE;
+        }
+    
+        YoriLibInitEmptyString(&RtfText);
+        if (!YoriLibRtfConvertToRtfFromVt(&VtText, &RtfText, ColorTableToUse)) {
+            YoriLibFreeStringContents(&VtText);
+            YoriLibFreeStringContents(&TextToCopy);
+            YoriLibFreeStringContents(&HtmlText);
+            YoriLibFreeStringContents(&RtfText);
+            return FALSE;
+        }
+    
         YoriLibFreeStringContents(&VtText);
-        YoriLibFreeStringContents(&TextToCopy);
-        YoriLibFreeStringContents(&HtmlText);
-        return FALSE;
-    }
-
-    YoriLibInitEmptyString(&RtfText);
-    if (!YoriLibRtfConvertToRtfFromVt(&VtText, &RtfText, ColorTableToUse)) {
-        YoriLibFreeStringContents(&VtText);
-        YoriLibFreeStringContents(&TextToCopy);
+    
+        //
+        //  Copy HTML, RTF and plain text forms to the clipboard
+        //
+    
+        if (YoriLibCopyTextRtfAndHtml(&TextToCopy, &RtfText, &HtmlText)) {
+            YoriLibFreeStringContents(&TextToCopy);
+            YoriLibFreeStringContents(&HtmlText);
+            YoriLibFreeStringContents(&RtfText);
+    
+            return TRUE;
+        }
+    
         YoriLibFreeStringContents(&HtmlText);
         YoriLibFreeStringContents(&RtfText);
-        return FALSE;
     }
-
-    YoriLibFreeStringContents(&VtText);
-
-    //
-    //  Copy HTML, RTF and plain text forms to the clipboard
-    //
-
-    if (YoriLibCopyTextRtfAndHtml(&TextToCopy, &RtfText, &HtmlText)) {
-        YoriLibFreeStringContents(&TextToCopy);
-        YoriLibFreeStringContents(&HtmlText);
-        YoriLibFreeStringContents(&RtfText);
-
-        return TRUE;
-    }
-
-    YoriLibFreeStringContents(&HtmlText);
-    YoriLibFreeStringContents(&RtfText);
     YoriLibFreeStringContents(&TextToCopy);
     return FALSE;
 }

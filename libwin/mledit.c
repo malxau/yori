@@ -3683,7 +3683,7 @@ YoriWinMultilineEditCutSelectedText(
         return FALSE;
     }
 
-    if (!YoriLibCopyText(&Text)) {
+    if (!YoriLibCopyTextWithProcessFallback(&Text)) {
         YoriLibFreeStringContents(&Text);
         return FALSE;
     }
@@ -3719,7 +3719,7 @@ YoriWinMultilineEditCopySelectedText(
         return FALSE;
     }
 
-    if (!YoriLibCopyText(&Text)) {
+    if (!YoriLibCopyTextWithProcessFallback(&Text)) {
         YoriLibFreeStringContents(&Text);
         return FALSE;
     }
@@ -3753,7 +3753,7 @@ YoriWinMultilineEditPasteText(
         YoriWinMultilineEditDeleteSelection(CtrlHandle);
     }
 
-    if (!YoriLibPasteText(&Text)) {
+    if (!YoriLibPasteTextWithProcessFallback(&Text)) {
         return FALSE;
     }
     if (!YoriWinMultilineEditInsertTextAtCursor(CtrlHandle, &Text)) {
