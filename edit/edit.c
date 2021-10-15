@@ -3,7 +3,7 @@
  *
  * Yori shell text editor
  *
- * Copyright (c) 2020 Malcolm J. Smith
+ * Copyright (c) 2020-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -751,22 +751,31 @@ EditNewButtonClicked(
  */
 DWORD
 EditPopulateEncodingArray(
-    __out_ecount(5) PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues,
+    __out_ecount(6) PYORI_DLG_FILE_CUSTOM_VALUE EncodingValues,
     __in BOOLEAN EncodingsForOpen
     )
 {
     DWORD EncodingIndex;
 
     EncodingIndex = 0;
-    if (YoriLibIsUtf8Supported()) {
-        if (EncodingsForOpen) {
+    if (EncodingsForOpen) {
+        if (YoriLibIsUtf8Supported()) {
             YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8/16 based on BOM"));
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8"));
         }
-        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ANSI"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ASCII"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16"));
+    } else {
+        if (YoriLibIsUtf8Supported()) {
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8"));
+            YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-8 with BOM"));
+        }
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ANSI"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ASCII"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16"));
+        YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16 with BOM"));
     }
-    YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ANSI"));
-    YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("ASCII"));
-    YoriLibConstantString(&EncodingValues[EncodingIndex++].ValueText, _T("UTF-16"));
 
     return EncodingIndex;
 }
@@ -782,47 +791,85 @@ EditPopulateEncodingArray(
         can include those that involve detection.  If FALSE, this is for a
         save operation, and cannot be heuristically detected.
 
+ @param HasBom If TRUE, a BOM should be written for this encoding.  This is
+        not meaningful on open, where the line read code will swallow any
+        BOM silently.
+
  @return the CP_ encoding value to use.  Can return -1 on failure, but this
          implies the supplied index is not valid.
  */
 DWORD
 EditEncodingFromArrayIndex(
     __in DWORD EncodingIndex,
-    __in BOOLEAN EncodingsForOpen
+    __in BOOLEAN EncodingsForOpen,
+    __out PBOOLEAN HasBom
     )
 {
     DWORD Index;
     DWORD Encoding;
 
+    *HasBom = FALSE;
     Index = EncodingIndex;
-    if (YoriLibIsUtf8Supported()) {
-        if (EncodingsForOpen) {
-            if (Index == 0) {
-                return CP_UTF8_OR_16;
-            } else if (Index == 1) {
-                return CP_UTF8;
-            }
-            Index--;
-        } else {
-            if (Index == 0) {
-                return CP_UTF8;
-            }
-        }
-        Index--;
-    }
-
     Encoding = (DWORD)-1;
+    if (EncodingsForOpen) {
+        if (YoriLibIsUtf8Supported()) {
+            switch(Index) {
+                case 0:
+                    Encoding = CP_UTF8_OR_16;
+                    break;
+                case 1:
+                    Encoding = CP_UTF8;
+                    break;
+            }
+            if (Encoding != -1) {
+                return Encoding;
+            }
+            Index = Index - 2;
+        }
 
-    switch(Index) {
-        case 0:
-            Encoding = CP_ACP;
-            break;
-        case 1:
-            Encoding = CP_OEMCP;
-            break;
-        case 2:
-            Encoding = CP_UTF16;
-            break;
+        switch(Index) {
+            case 0:
+                Encoding = CP_ACP;
+                break;
+            case 1:
+                Encoding = CP_OEMCP;
+                break;
+            case 2:
+                Encoding = CP_UTF16;
+                break;
+        }
+    } else {
+        if (YoriLibIsUtf8Supported()) {
+            switch(Index) {
+                case 0:
+                    Encoding = CP_UTF8;
+                    break;
+                case 1:
+                    *HasBom = TRUE;
+                    Encoding = CP_UTF8;
+                    break;
+            }
+            if (Encoding != -1) {
+                return Encoding;
+            }
+            Index = Index - 2;
+        }
+
+        switch(Index) {
+            case 0:
+                Encoding = CP_ACP;
+                break;
+            case 1:
+                Encoding = CP_OEMCP;
+                break;
+            case 2:
+                Encoding = CP_UTF16;
+                break;
+            case 3:
+                *HasBom = TRUE;
+                Encoding = CP_UTF16;
+                break;
+        }
     }
 
     return Encoding;
@@ -842,10 +889,11 @@ EditOpenButtonClicked(
     YORI_STRING Text;
     YORI_STRING FullName;
     PEDIT_CONTEXT EditContext;
-    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[5];
+    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[6];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[1];
     DWORD Encoding;
     DWORD EncodingCount;
+    BOOLEAN HasBom;
 
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
@@ -878,7 +926,7 @@ EditOpenButtonClicked(
         return;
     }
 
-    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, TRUE);
+    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, TRUE, &HasBom);
     if (Encoding != -1) {
         EditContext->Encoding = Encoding;
     }
@@ -971,11 +1019,12 @@ EditSaveAsButtonClicked(
     YORI_STRING Text;
     YORI_STRING FullName;
     PEDIT_CONTEXT EditContext;
-    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[5];
+    YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[6];
     YORI_DLG_FILE_CUSTOM_VALUE LineEndingValues[3];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[2];
     DWORD Encoding;
     DWORD EncodingCount;
+    BOOLEAN HasBom;
 
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
@@ -1024,7 +1073,7 @@ EditSaveAsButtonClicked(
         return;
     }
 
-    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, FALSE);
+    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, FALSE, &HasBom);
 
     //
     //  Can't autodetect how to save, only how to open.
@@ -1033,6 +1082,7 @@ EditSaveAsButtonClicked(
     ASSERT(Encoding != CP_UTF8_OR_16);
     if (Encoding != -1) {
         EditContext->Encoding = Encoding;
+        EditContext->WriteBom = HasBom;
     }
 
     switch(CustomOptionArray[1].SelectedValue) {
