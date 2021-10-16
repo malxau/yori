@@ -876,6 +876,60 @@ EditEncodingFromArrayIndex(
 }
 
 /**
+ Given an encoding and BOM setting, determine which array index should be
+ used.  This is only meaningful for the save array, since it exists to
+ preserve the current format, but open does not yet know what the format will
+ be so must select a default value.
+
+ @param Encoding The encoding of the current text.
+
+ @param HasBom TRUE if a BOM was encountered reading the current text, FALSE
+        if not.
+
+ @return The index into the array of Save As encodings.  If an unrecognized
+         value is found, zero is used to select the default encoding.
+ */
+DWORD
+EditArrayIndexFromEncoding(
+    __in DWORD Encoding,
+    __in BOOLEAN HasBom
+    )
+{
+    DWORD Index = 0;
+    DWORD Offset = 0;
+
+    if (YoriLibIsUtf8Supported()) {
+        if (Encoding == CP_UTF8) {
+            if (HasBom) {
+                Index = 1;
+            } else {
+                Index = 0;
+            }
+        }
+
+        Offset = 2;
+    }
+
+    switch(Encoding) {
+        case CP_ACP:
+            Index = 0 + Offset;
+            break;
+        case CP_OEMCP:
+            Index = 1 + Offset;
+            break;
+        case CP_UTF16:
+            if (HasBom) {
+                Index = 3 + Offset;
+            } else {
+                Index = 2 + Offset;
+            }
+            break;
+    }
+
+    return Index;
+}
+
+/**
  A callback invoked when the open menu item is invoked.
 
  @param Ctrl Pointer to the menu bar control.
@@ -1039,7 +1093,7 @@ EditSaveAsButtonClicked(
     YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Encoding:"));
     CustomOptionArray[0].ValueCount = EncodingCount;
     CustomOptionArray[0].Values = EncodingValues;
-    CustomOptionArray[0].SelectedValue = 0;
+    CustomOptionArray[0].SelectedValue = EditArrayIndexFromEncoding(EditContext->Encoding, EditContext->WriteBom);
 
     YoriLibConstantString(&CustomOptionArray[1].Description, _T("&Line ending:"));
     CustomOptionArray[1].ValueCount = sizeof(LineEndingValues)/sizeof(LineEndingValues[1]);
