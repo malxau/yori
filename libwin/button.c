@@ -51,6 +51,11 @@ typedef struct _YORI_WIN_CTRL_BUTTON {
     PYORI_WIN_NOTIFY ClickCallback;
 
     /**
+     The color to display text in when the button has focus or is pressed.
+     */
+    WORD SelectedTextAttributes;
+
+    /**
      TRUE if the button is "pressed" as in the mouse is pressed on the
      button.  FALSE if the display is regular.
      */
@@ -119,13 +124,7 @@ YoriWinButtonPaint(
 
     TextAttributes = WindowAttributes;
     if (Button->HasFocus || Button->PressedAppearance) {
-        PYORI_WIN_WINDOW TopLevelWindow;
-        PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
-
-        TopLevelWindow = YoriWinGetTopLevelWindow(&Button->Ctrl);
-        WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
-
-        TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorControlSelected);
+        TextAttributes = Button->SelectedTextAttributes;
     }
 
     YoriWinLabelSetTextAttributes(Button->Label, TextAttributes);
@@ -301,6 +300,9 @@ YoriWinButtonCreate(
 {
     PYORI_WIN_CTRL_BUTTON Button;
     PYORI_WIN_WINDOW Parent;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+
 
     Parent = (PYORI_WIN_WINDOW)ParentHandle;
 
@@ -333,6 +335,11 @@ YoriWinButtonCreate(
         YoriLibDereference(Button);
         return NULL;
     }
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+    Button->SelectedTextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorControlSelected);
 
     //
     //  Once the label has parsed what the accelerator char is, steal it so

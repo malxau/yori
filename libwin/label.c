@@ -93,6 +93,11 @@ typedef struct _YORI_WIN_CTRL_LABEL {
     WORD TextAttributes;
 
     /**
+     The attributes to display the accelerator character in.
+     */
+    WORD AcceleratorTextAttributes;
+
+    /**
      TRUE if the label should display the accelerator character, FALSE if it
      should not.  This becomes TRUE when the user presses the Alt key.
      */
@@ -642,13 +647,8 @@ YoriWinLabelPaint(
                     !AcceleratorPreviouslyFound &&
                     OffsetToAcceleratorInDisplay == CharIndex) {
 
-                    PYORI_WIN_WINDOW TopLevelWindow;
-                    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+                    CharAttributes = Label->AcceleratorTextAttributes;
 
-                    TopLevelWindow = YoriWinGetTopLevelWindow(&Label->Ctrl);
-                    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
-
-                    CharAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorAcceleratorDefault);
                 } else {
                     CharAttributes = TextAttributes;
                 }
@@ -841,6 +841,8 @@ YoriWinLabelCreate(
 {
     PYORI_WIN_CTRL_LABEL Label;
     PYORI_WIN_CTRL Parent;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Parent = (PYORI_WIN_CTRL)ParentHandle;
 
@@ -878,6 +880,11 @@ YoriWinLabelCreate(
     }
 
     Label->TextAttributes = Label->Ctrl.DefaultAttributes;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(&Label->Ctrl);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+    Label->AcceleratorTextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorAcceleratorDefault);
 
     if (Parent->Parent != NULL) {
         Label->Ctrl.RelativeToParentClient = FALSE;

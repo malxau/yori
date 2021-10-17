@@ -74,6 +74,11 @@ typedef struct _YORI_WIN_CTRL_LIST {
     WORD HorizontalItemWidth;
 
     /**
+     The color attributes to display the active item in.
+     */
+    WORD ActiveAttributes;
+
+    /**
      Set to TRUE if any option is activated.  FALSE if no item has been
      activated.
      */
@@ -184,13 +189,7 @@ YoriWinListPaintVerticalList(
         if (List->ItemActive &&
             RowIndex + List->FirstDisplayedOption == List->ActiveOption) {
 
-            PYORI_WIN_WINDOW TopLevelWindow;
-            PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
-
-            TopLevelWindow = YoriWinGetTopLevelWindow(&List->Ctrl);
-            WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
-
-            Attributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorListActive);
+            Attributes = List->ActiveAttributes;
         }
         if (List->MultiSelect) {
             CharsToDisplay = (WORD)(ClientSize.X - 2);
@@ -1164,6 +1163,8 @@ YoriWinListCreate(
     PYORI_WIN_WINDOW Parent;
     SMALL_RECT ScrollBarRect;
     WORD WindowAttributes;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Parent = (PYORI_WIN_WINDOW)ParentHandle;
 
@@ -1181,6 +1182,11 @@ YoriWinListCreate(
         YoriLibDereference(List);
         return FALSE;
     }
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+    List->ActiveAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorListActive);
 
     WindowAttributes = List->Ctrl.DefaultAttributes;
 

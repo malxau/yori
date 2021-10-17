@@ -242,6 +242,11 @@ typedef struct _YORI_WIN_CTRL_EDIT {
     WORD TextAttributes;
 
     /**
+     The attributes to display selected text in.
+     */
+    WORD SelectedTextAttributes;
+
+    /**
      If TRUE, new characters are inserted at the cursor position.  If FALSE,
      new characters overwrite existing characters.
      */
@@ -391,21 +396,14 @@ YoriWinEditPaint(
     WORD CellIndex;
     WORD CharIndex;
     WORD DisplayCursorOffset;
-    WORD SelectedAttributes;
     COORD ClientSize;
     YORI_STRING DisplayLine;
     BOOLEAN SelectionActive;
-    PYORI_WIN_WINDOW TopLevelWindow;
-    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
     TCHAR Char;
 
     YoriWinGetControlClientSize(&Edit->Ctrl, &ClientSize);
     WinAttributes = Edit->Ctrl.DefaultAttributes;
     TextAttributes = Edit->TextAttributes;
-
-    TopLevelWindow = YoriWinGetTopLevelWindow(&Edit->Ctrl);
-    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
-    SelectedAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorEditSelectedText);
 
     YoriLibInitEmptyString(&DisplayLine);
 
@@ -455,7 +453,7 @@ YoriWinEditPaint(
             if (CharIndex + Edit->DisplayOffset >= Edit->Selection.FirstCharOffset &&
                 CharIndex + Edit->DisplayOffset < Edit->Selection.LastCharOffset) {
 
-                TextAttributes = SelectedAttributes;
+                TextAttributes = Edit->SelectedTextAttributes;
             }
         }
         Char = DisplayLine.StartOfString[CharIndex];
@@ -1860,18 +1858,22 @@ YoriWinEditPasteText(
 //
 
 /**
- Set the text attributes within the edit to a value and repaint the control.
- Note this refers to the attributes of the text within the edit, not the
- entire edit area.
+ Set the color attributes within the edit control to a value and repaint the
+ control.  Note this refers to the attributes of the text within the edit, not
+ the entire edit area.
 
  @param CtrlHandle Pointer to a edit control.
 
  @param TextAttributes The new attributes to use.
+
+ @param SelectedTextAttributes Specifies the foreground and background color
+        to use for selected text within the edit control.
  */
 VOID
-YoriWinEditSetTextAttributes(
+YoriWinEditSetColor(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in WORD TextAttributes
+    __in WORD TextAttributes,
+    __in WORD SelectedTextAttributes
     )
 {
     PYORI_WIN_CTRL_EDIT Edit;
@@ -1879,6 +1881,7 @@ YoriWinEditSetTextAttributes(
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Edit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_EDIT, Ctrl);
     Edit->TextAttributes = TextAttributes;
+    Edit->SelectedTextAttributes = SelectedTextAttributes;
     YoriWinEditPaint(Edit);
 }
 
@@ -2592,6 +2595,8 @@ YoriWinEditCreate(
     PYORI_WIN_CTRL_EDIT Edit;
     PYORI_WIN_CTRL Parent;
     WORD Height;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Height = (WORD)(Size->Bottom - Size->Top + 1);
     if (Height != 3 && Height != 1) {
@@ -2638,6 +2643,10 @@ YoriWinEditCreate(
 
     Edit->TextAttributes = Edit->Ctrl.DefaultAttributes;
     Edit->InsertMode = TRUE;
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+    Edit->SelectedTextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorEditSelectedText);
 
     if (Parent->Parent != NULL) {
         Edit->Ctrl.RelativeToParentClient = FALSE;

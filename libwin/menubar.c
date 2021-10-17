@@ -616,6 +616,23 @@ typedef struct _YORI_WIN_CTRL_MENU_POPUP {
     DWORD ActiveItemIndex;
 
     /**
+     The color attributes to use to display a selected menu item.
+     */
+    WORD SelectedTextAttributes;
+
+    /**
+     The color attributes to use to display the keyboard accelerator of a menu
+     item.
+     */
+    WORD AcceleratorAttributes;
+
+    /**
+     The color attributes to use to display the keyboard accelerator of a
+     selected menu item.
+     */
+    WORD SelectedAcceleratorAttributes;
+
+    /**
      TRUE if the menu popup should highlight a specific menu item because
      it is active.  FALSE if the menu popup contains no active menu item.
      */
@@ -675,7 +692,7 @@ YoriWinMenuPopupPaint(
         if (MenuPopup->ActiveMenuItem &&
             Index == MenuPopup->ActiveItemIndex) {
 
-            ItemAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelected);
+            ItemAttributes = MenuPopup->SelectedTextAttributes;
         } else if (Item->Flags & YORI_WIN_MENU_ENTRY_DISABLED) {
             ItemAttributes = (WORD)((ItemAttributes & 0xF0) | FOREGROUND_INTENSITY);
         }
@@ -703,9 +720,9 @@ YoriWinMenuPopupPaint(
                     if (MenuPopup->ActiveMenuItem &&
                         Index == MenuPopup->ActiveItemIndex) {
 
-                        CharAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelectedAccelerator);
+                        CharAttributes = MenuPopup->SelectedAcceleratorAttributes;
                     } else {
-                        CharAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuAccelerator);
+                        CharAttributes = MenuPopup->AcceleratorAttributes;
                     }
                 }
                 YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), (WORD)(Index + 1), Item->DisplayCaption.StartOfString[CharIndex], CharAttributes);
@@ -1038,6 +1055,7 @@ YoriWinMenuPopupCreate(
 {
     PYORI_WIN_CTRL_MENU_POPUP MenuPopup;
     PYORI_WIN_CTRL Parent;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     UNREFERENCED_PARAMETER(Style);
 
@@ -1057,6 +1075,12 @@ YoriWinMenuPopupCreate(
         YoriLibDereference(MenuPopup);
         return NULL;
     }
+
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(Parent));
+
+    MenuPopup->SelectedTextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelected);
+    MenuPopup->SelectedAcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelectedAccelerator);
+    MenuPopup->AcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuAccelerator);
 
     YoriWinMenuPopupSetNextItemActive(MenuPopup);
     YoriWinMenuPopupPaint(MenuPopup);
@@ -1182,6 +1206,28 @@ typedef struct _YORI_WIN_CTRL_MENUBAR {
     YORI_WIN_CTRL_MENU_HOTKEY_ARRAY HotkeyArray;
 
     /**
+     The color attributes to use to display the menu bar.
+     */
+    WORD TextAttributes;
+
+    /**
+     The color attributes to use to display a selected menu item.
+     */
+    WORD SelectedTextAttributes;
+
+    /**
+     The color attributes to use to display the keyboard accelerator of a menu
+     item.
+     */
+    WORD AcceleratorAttributes;
+
+    /**
+     The color attributes to use to display the keyboard accelerator of a
+     selected menu item.
+     */
+    WORD SelectedAcceleratorAttributes;
+
+    /**
      TRUE if the menu should display the accelerator character, FALSE if it
      should not.  This becomes TRUE when the user presses the Alt key.
      */
@@ -1221,7 +1267,7 @@ YoriWinMenuBarPaint(
     TopLevelWindow = YoriWinGetTopLevelWindow(&MenuBar->Ctrl);
     WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
 
-    TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuDefault);
+    TextAttributes = MenuBar->TextAttributes;
 
     YoriWinGetControlClientSize(&MenuBar->Ctrl, &ClientSize);
     for (CellIndex = 0; CellIndex < 1; CellIndex++) {
@@ -1233,7 +1279,7 @@ YoriWinMenuBarPaint(
         ItemAttributes = TextAttributes;
 
         if (MenuBar->ActiveMenuItem && ItemIndex == MenuBar->ActiveItemIndex) {
-            ItemAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelected);
+            ItemAttributes = MenuBar->SelectedTextAttributes;
         }
         YoriWinSetControlClientCell(&MenuBar->Ctrl, CellIndex, 0, ' ', ItemAttributes);
         CellIndex++;
@@ -1243,9 +1289,9 @@ YoriWinMenuBarPaint(
                 CharIndex == MenuBar->Items[ItemIndex].AcceleratorOffset) {
 
                 if (MenuBar->ActiveMenuItem && ItemIndex == MenuBar->ActiveItemIndex) {
-                    AcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelectedAccelerator);
+                    AcceleratorAttributes = MenuBar->SelectedAcceleratorAttributes;
                 } else {
-                    AcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuAccelerator);
+                    AcceleratorAttributes = MenuBar->AcceleratorAttributes;
                 }
 
                 YoriWinSetControlClientCell(&MenuBar->Ctrl, CellIndex, 0, MenuBar->Items[ItemIndex].DisplayCaption.StartOfString[CharIndex], AcceleratorAttributes);
@@ -1803,6 +1849,7 @@ YoriWinMenuBarCreate(
     PYORI_WIN_CTRL Parent;
     SMALL_RECT Size;
     COORD ParentClientSize;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     UNREFERENCED_PARAMETER(Style);
 
@@ -1827,6 +1874,13 @@ YoriWinMenuBarCreate(
         YoriLibDereference(MenuBar);
         return NULL;
     }
+
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(Parent));
+
+    MenuBar->TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuDefault);
+    MenuBar->SelectedTextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelected);
+    MenuBar->SelectedAcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuSelectedAccelerator);
+    MenuBar->AcceleratorAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorMenuAccelerator);
 
     MenuBar->Ctrl.RelativeToParentClient = FALSE;
     MenuBar->Ctrl.FullRect.Top = (SHORT)(MenuBar->Ctrl.FullRect.Top + Parent->ClientRect.Top);

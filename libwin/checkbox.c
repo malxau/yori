@@ -51,6 +51,11 @@ typedef struct _YORI_WIN_CTRL_CHECKBOX {
     PYORI_WIN_NOTIFY ToggleCallback;
 
     /**
+     The color to display text in when the control has focus.
+     */
+    WORD SelectedTextAttributes;
+
+    /**
      TRUE if the checkbox is "pressed" as in the mouse is pressed on the
      checkbox.  FALSE if the display is regular.
      */
@@ -86,13 +91,7 @@ YoriWinCheckboxPaint(
     TextAttributes = Checkbox->Ctrl.DefaultAttributes;
 
     if (Checkbox->HasFocus || Checkbox->PressedAppearance) {
-        PYORI_WIN_WINDOW TopLevelWindow;
-        PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
-
-        TopLevelWindow = YoriWinGetTopLevelWindow(&Checkbox->Ctrl);
-        WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
-
-        TextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorControlSelected);
+        TextAttributes = Checkbox->SelectedTextAttributes;
     }
 
     YoriWinSetControlClientCell(&Checkbox->Ctrl, 0, 0, '[', TextAttributes);
@@ -299,6 +298,8 @@ YoriWinCheckboxCreate(
     PYORI_WIN_CTRL_CHECKBOX Checkbox;
     PYORI_WIN_WINDOW Parent;
     SMALL_RECT LabelRect;
+    PYORI_WIN_WINDOW TopLevelWindow;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     UNREFERENCED_PARAMETER(Style);
 
@@ -330,6 +331,12 @@ YoriWinCheckboxCreate(
         YoriLibDereference(Checkbox);
         return NULL;
     }
+
+
+    TopLevelWindow = YoriWinGetTopLevelWindow(Parent);
+    WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
+
+    Checkbox->SelectedTextAttributes = YoriWinMgrDefaultColorLookup(WinMgrHandle, YoriWinColorControlSelected);
 
     //
     //  Once the label has parsed what the accelerator char is, steal it so
