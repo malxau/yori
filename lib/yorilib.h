@@ -1005,6 +1005,9 @@ BOOL
 YoriLibLoadWinBrandFunctions(VOID);
 
 BOOL
+YoriLibLoadWinHttpFunctions(VOID);
+
+BOOL
 YoriLibLoadWinInetFunctions(VOID);
 
 BOOL

@@ -557,42 +557,6 @@ YoriLibLoadWinBrandFunctions(VOID)
 }
 
 /**
- A structure containing pointers to wininet.dll functions that can be used if
- they are found but programs do not have a hard dependency on.
- */
-YORI_WININET_FUNCTIONS DllWinInet;
-
-/**
- Load pointers to all optional WinInet.dll functions.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-YoriLibLoadWinInetFunctions(VOID)
-{
-
-    if (DllWinInet.hDll != NULL) {
-        return TRUE;
-    }
-
-    DllWinInet.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("WININET.DLL"));
-    if (DllWinInet.hDll == NULL) {
-        return FALSE;
-    }
-
-    DllWinInet.pHttpQueryInfoA = (PHTTP_QUERY_INFOA)GetProcAddress(DllWinInet.hDll, "HttpQueryInfoA");
-    DllWinInet.pHttpQueryInfoW = (PHTTP_QUERY_INFOW)GetProcAddress(DllWinInet.hDll, "HttpQueryInfoW");
-    DllWinInet.pInternetCloseHandle = (PINTERNET_CLOSE_HANDLE)GetProcAddress(DllWinInet.hDll, "InternetCloseHandle");
-    DllWinInet.pInternetOpenA = (PINTERNET_OPENA)GetProcAddress(DllWinInet.hDll, "InternetOpenA");
-    DllWinInet.pInternetOpenW = (PINTERNET_OPENW)GetProcAddress(DllWinInet.hDll, "InternetOpenW");
-    DllWinInet.pInternetOpenUrlA = (PINTERNET_OPEN_URLA)GetProcAddress(DllWinInet.hDll, "InternetOpenUrlA");
-    DllWinInet.pInternetOpenUrlW = (PINTERNET_OPEN_URLW)GetProcAddress(DllWinInet.hDll, "InternetOpenUrlW");
-    DllWinInet.pInternetReadFile = (PINTERNET_READ_FILE)GetProcAddress(DllWinInet.hDll, "InternetReadFile");
-
-    return TRUE;
-}
-
-/**
  A structure containing pointers to wtsapi32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */

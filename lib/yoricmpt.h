@@ -8308,6 +8308,161 @@ typedef struct _YORI_WINBRAND_FUNCTIONS {
 extern YORI_WINBRAND_FUNCTIONS DllWinBrand;
 
 /**
+ A prototype for the WinHttpCloseHandle function.
+ */
+typedef
+BOOL WINAPI
+WIN_HTTP_CLOSE_HANDLE(LPVOID);
+
+/**
+ A prototype for a pointer to the WinHttpCloseHandle function.
+ */
+typedef WIN_HTTP_CLOSE_HANDLE *PWIN_HTTP_CLOSE_HANDLE;
+
+/**
+ A prototype for the WinHttpConnect function.
+ */
+typedef
+LPVOID WINAPI
+WIN_HTTP_CONNECT(LPVOID, LPCWSTR, WORD, DWORD);
+
+/**
+ A prototype for a pointer to the WinHttpConnect function.
+ */
+typedef WIN_HTTP_CONNECT *PWIN_HTTP_CONNECT;
+
+/**
+ A prototype for the WinHttpOpen function.
+ */
+typedef
+LPVOID WINAPI
+WIN_HTTP_OPEN(LPCWSTR, DWORD, LPCWSTR, LPCWSTR, DWORD);
+
+/**
+ A prototype for a pointer to the WinHttpOpen function.
+ */
+typedef WIN_HTTP_OPEN *PWIN_HTTP_OPEN;
+
+/**
+ A prototype for the WinHttpOpenRequest function.
+ */
+typedef
+LPVOID WINAPI
+WIN_HTTP_OPEN_REQUEST(LPVOID, LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR *, DWORD);
+
+/**
+ A prototype for a pointer to the WinHttpOpenRequest function.
+ */
+typedef WIN_HTTP_OPEN_REQUEST *PWIN_HTTP_OPEN_REQUEST;
+
+/**
+ A prototype for the WinHttpQueryHeaders function.
+ */
+typedef
+BOOL WINAPI
+WIN_HTTP_QUERY_HEADERS(LPVOID, DWORD, LPCWSTR, LPVOID, LPDWORD, LPDWORD);
+
+/**
+ A prototype for a pointer to the WinHttpQueryHeaders function.
+ */
+typedef WIN_HTTP_QUERY_HEADERS *PWIN_HTTP_QUERY_HEADERS;
+
+/**
+ A prototype for the WinHttpReadData function.
+ */
+typedef
+BOOL WINAPI
+WIN_HTTP_READ_DATA(LPVOID, LPVOID, DWORD, LPDWORD);
+
+/**
+ A prototype for a pointer to the WinHttpReadData function.
+ */
+typedef WIN_HTTP_READ_DATA *PWIN_HTTP_READ_DATA;
+
+/**
+ A prototype for the WinHttpReceiveResponse function.
+ */
+typedef
+BOOL WINAPI
+WIN_HTTP_RECEIVE_RESPONSE(LPVOID, LPVOID);
+
+/**
+ A prototype for a pointer to the WinHttpReceiveResponse function.
+ */
+typedef WIN_HTTP_RECEIVE_RESPONSE *PWIN_HTTP_RECEIVE_RESPONSE;
+
+/**
+ A prototype for the WinHttpSendRequest function.
+ */
+typedef
+BOOL WINAPI
+WIN_HTTP_SEND_REQUEST(LPVOID, LPCWSTR, DWORD, LPVOID, DWORD, DWORD, DWORD_PTR);
+
+/**
+ A prototype for a pointer to the WinHttpSendRequest function.
+ */
+typedef WIN_HTTP_SEND_REQUEST *PWIN_HTTP_SEND_REQUEST;
+
+/**
+ A structure containing optional function pointers to winhttp.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_WINHTTP_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to WinHttpCloseHandle.
+     */
+    PWIN_HTTP_CLOSE_HANDLE pWinHttpCloseHandle;
+
+    /**
+     If it's available on the current system, a pointer to WinHttpConnect.
+     */
+    PWIN_HTTP_CONNECT pWinHttpConnect;
+
+    /**
+     If it's available on the current system, a pointer to WinHttpOpen.
+     */
+    PWIN_HTTP_OPEN pWinHttpOpen;
+
+    /**
+     If it's available on the current system, a pointer to WinHttpOpenRequest.
+     */
+    PWIN_HTTP_OPEN_REQUEST pWinHttpOpenRequest;
+
+    /**
+     If it's available on the current system, a pointer to
+     WinHttpQueryHeaders.
+     */
+    PWIN_HTTP_QUERY_HEADERS pWinHttpQueryHeaders;
+
+    /**
+     If it's available on the current system, a pointer to
+     WinHttpReadData.
+     */
+    PWIN_HTTP_READ_DATA pWinHttpReadData;
+
+    /**
+     If it's available on the current system, a pointer to
+     WinHttpReceiveResponse.
+     */
+    PWIN_HTTP_RECEIVE_RESPONSE pWinHttpReceiveResponse;
+
+    /**
+     If it's available on the current system, a pointer to WinHttpSendRequest.
+     */
+    PWIN_HTTP_SEND_REQUEST pWinHttpSendRequest;
+
+} YORI_WINHTTP_FUNCTIONS, *PYORI_WINHTTP_FUNCTIONS;
+
+extern YORI_WINHTTP_FUNCTIONS DllWinHttp;
+
+
+/**
  A prototype for the InternetOpenA function.
  */
 typedef

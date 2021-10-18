@@ -44,11 +44,6 @@ typedef struct _YORI_DLL_NAME_MAP {
     LPCSTR FnName;
 } YORI_DLL_NAME_MAP, *PYORI_DLL_NAME_MAP;
 
-HMODULE
-YoriLibLoadLibraryFromSystemDirectory(
-    __in LPCTSTR DllName
-    );
-
 /**
  A structure containing pointers to advapi32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
