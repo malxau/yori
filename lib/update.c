@@ -4,7 +4,7 @@
  * Code to update a file from the internet including the running
  * executable.
  *
- * Copyright (c) 2016 Malcolm J. Smith
+ * Copyright (c) 2016-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -203,7 +203,114 @@ LPCSTR YoriLibMonthNames[] = {
 #define UPDATE_READ_SIZE (1024 * 1024)
 
 /**
- Download a file from the internet and store it in a local location.
+ Construct the HTTP headers to attach to the request.  This code is shared
+ between WinInet and WinHttp.
+
+ @param Url Pointer to the Url to access.
+
+ @param IfModifiedSince Optionally points to a timestamp where only newer
+        resources should be downloaded.
+
+ @param OutputHeader On successful completion, populated with a newly
+        allocated string containing all of the necessary HTTP headers.
+
+ @param HostSubset On successful completion, updated to point to the substring
+        within Url that refers to the host name to access.
+
+ @param ObjectSubset On successful completion, updated to point to the
+        beginning of the Url string containing the object to access.  This is
+        immediately following the host name and continues to the end of the
+        string, so this is null terminated, and no new allocation is needed.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriLibUpdateBuildHttpHeaders(
+    __in LPTSTR Url,
+    __in_opt PSYSTEMTIME IfModifiedSince,
+    __out PYORI_STRING OutputHeader,
+    __out PYORI_STRING HostSubset,
+    __out LPTSTR *ObjectSubset
+    )
+{
+    LPTSTR StartOfHost;
+    LPTSTR EndOfHost;
+    YORI_STRING HostHeader;
+    YORI_STRING IfModifiedSinceHeader;
+    YORI_STRING CombinedHeader;
+
+    //
+    //  Newer versions of Windows will add a Host: header.  Old versions send
+    //  an HTTP 1.1 request without one, which Apache doesn't like.
+    //
+
+    YoriLibInitEmptyString(&HostHeader);
+    YoriLibInitEmptyString(HostSubset);
+    *ObjectSubset = NULL;
+
+    StartOfHost = _tcsstr(Url, _T("://"));
+    if (StartOfHost != NULL) {
+        StartOfHost += 3;
+        EndOfHost = _tcschr(StartOfHost, '/');
+        if (EndOfHost != NULL) {
+            HostSubset->StartOfString = StartOfHost;
+            HostSubset->LengthInChars = (DWORD)(EndOfHost - StartOfHost);
+            *ObjectSubset = EndOfHost;
+            YoriLibYPrintf(&HostHeader, _T("Host: %y\r\n"), HostSubset);
+        } else {
+            return FALSE;
+        }
+    } else {
+        return FALSE;
+    }
+
+    //
+    //  If the caller only wanted to fetch a resource if it's newer than an
+    //  existing file, generate that header now.
+    //
+
+    YoriLibInitEmptyString(&IfModifiedSinceHeader);
+    if (IfModifiedSince != NULL) {
+        YoriLibYPrintf(&IfModifiedSinceHeader,
+                       _T("If-Modified-Since: %hs, %02i %hs %04i %02i:%02i:%02i GMT\r\n"),
+                       YoriLibDayNames[IfModifiedSince->wDayOfWeek],
+                       IfModifiedSince->wDay,
+                       YoriLibMonthNames[IfModifiedSince->wMonth - 1],
+                       IfModifiedSince->wYear,
+                       IfModifiedSince->wHour,
+                       IfModifiedSince->wMinute,
+                       IfModifiedSince->wSecond);
+    }
+
+
+    //
+    //  Merge headers.  If we have only one or the other, this is just a
+    //  reference with no allocation.
+    //
+
+    YoriLibInitEmptyString(&CombinedHeader);
+    if (IfModifiedSinceHeader.LengthInChars > 0 && HostHeader.LengthInChars > 0) {
+        YoriLibYPrintf(&CombinedHeader, _T("%y%y"), &HostHeader, &IfModifiedSinceHeader);
+    } else if (IfModifiedSinceHeader.LengthInChars > 0) {
+        YoriLibCloneString(&CombinedHeader, &IfModifiedSinceHeader);
+    } else if (HostHeader.LengthInChars > 0) {
+        YoriLibCloneString(&CombinedHeader, &HostHeader);
+    }
+
+    //
+    //  Now all the headers are merged, we don't need the component parts.
+    //
+
+    YoriLibFreeStringContents(&HostHeader);
+    YoriLibFreeStringContents(&IfModifiedSinceHeader);
+
+    memcpy(OutputHeader, &CombinedHeader, sizeof(YORI_STRING));
+    return TRUE;
+}
+
+/**
+ Download a file from the internet and store it in a local location using
+ WinInet.dll.  This function is only used once WinInet is loaded.
 
  @param Url The Url to download the file from.
 
@@ -218,7 +325,7 @@ LPCSTR YoriLibMonthNames[] = {
  @return An update error code indicating success or appropriate error.
  */
 YoriLibUpdError
-YoriLibUpdateBinaryFromUrl(
+YoriLibUpdateBinaryFromUrlWinInet(
     __in LPTSTR Url,
     __in_opt LPTSTR TargetName,
     __in LPTSTR Agent,
@@ -237,29 +344,9 @@ YoriLibUpdateBinaryFromUrl(
     BOOL WinInetOnlySupportsAnsi = FALSE;
     DWORD dwError;
     YoriLibUpdError Return = YoriLibUpdErrorSuccess;
-    LPTSTR StartOfHost;
-    LPTSTR EndOfHost;
-    YORI_STRING HostHeader;
-    YORI_STRING IfModifiedSinceHeader;
     YORI_STRING CombinedHeader;
-
-    //
-    //  Dynamically load WinInet.  This means we don't have to resolve
-    //  imports unless we're really using it for something, and we can
-    //  degrade gracefully if it's not there (original 95/NT.)
-    //
-
-    YoriLibLoadWinInetFunctions();
-
-    if (DllWinInet.pInternetOpenW == NULL ||
-        DllWinInet.pInternetOpenUrlW == NULL ||
-        DllWinInet.pHttpQueryInfoW == NULL ||
-        DllWinInet.pInternetReadFile == NULL ||
-        DllWinInet.pInternetCloseHandle == NULL) {
-
-        Return = YoriLibUpdErrorInetInit;
-        goto Exit;
-    }
+    YORI_STRING HostSubset;
+    LPTSTR ObjectName;
 
     //
     //  Open an internet connection with default proxy settings.
@@ -324,65 +411,10 @@ YoriLibUpdateBinaryFromUrl(
         goto Exit;
     }
 
-    //
-    //  Newer versions of Windows will add a Host: header.  Old versions send
-    //  an HTTP 1.1 request without one, which Apache doesn't like.
-    //
-
-    YoriLibInitEmptyString(&HostHeader);
-    StartOfHost = _tcsstr(Url, _T("://"));
-    if (StartOfHost != NULL) {
-        StartOfHost += 3;
-        EndOfHost = _tcschr(StartOfHost, '/');
-        if (EndOfHost != NULL) {
-            YORI_STRING HostName;
-            YoriLibInitEmptyString(&HostName);
-            HostName.StartOfString = StartOfHost;
-            HostName.LengthInChars = (DWORD)(EndOfHost - StartOfHost);
-            YoriLibYPrintf(&HostHeader, _T("Host: %y\r\n"), &HostName);
-        }
+    if (!YoriLibUpdateBuildHttpHeaders(Url, IfModifiedSince, &CombinedHeader, &HostSubset, &ObjectName)) {
+        Return = YoriLibUpdErrorInetInit;
+        goto Exit;
     }
-
-    //
-    //  If the caller only wanted to fetch a resource if it's newer than an
-    //  existing file, generate that header now.
-    //
-
-    YoriLibInitEmptyString(&IfModifiedSinceHeader);
-    if (IfModifiedSince != NULL) {
-        YoriLibYPrintf(&IfModifiedSinceHeader,
-                       _T("If-Modified-Since: %hs, %02i %hs %04i %02i:%02i:%02i GMT\r\n"),
-                       YoriLibDayNames[IfModifiedSince->wDayOfWeek],
-                       IfModifiedSince->wDay,
-                       YoriLibMonthNames[IfModifiedSince->wMonth - 1],
-                       IfModifiedSince->wYear,
-                       IfModifiedSince->wHour,
-                       IfModifiedSince->wMinute,
-                       IfModifiedSince->wSecond);
-    }
-
-
-    //
-    //  Merge headers.  If we have only one or the other, this is just a
-    //  reference with no allocation.
-    //
-
-    YoriLibInitEmptyString(&CombinedHeader);
-    if (IfModifiedSinceHeader.LengthInChars > 0 && HostHeader.LengthInChars > 0) {
-        YoriLibYPrintf(&CombinedHeader, _T("%y%y"), &HostHeader, &IfModifiedSinceHeader);
-    } else if (IfModifiedSinceHeader.LengthInChars > 0) {
-        YoriLibCloneString(&CombinedHeader, &IfModifiedSinceHeader);
-    } else if (HostHeader.LengthInChars > 0) {
-        YoriLibCloneString(&CombinedHeader, &HostHeader);
-    }
-
-    //
-    //  Now all the headers are merged, we don't need the component parts.
-    //
-
-    YoriLibFreeStringContents(&HostHeader);
-    YoriLibFreeStringContents(&IfModifiedSinceHeader);
-
 
     //
     //  Request the desired URL and check the status is HTTP success.
@@ -497,7 +529,7 @@ YoriLibUpdateBinaryFromUrl(
     //  Read from the internet location and save to the temporary file.
     //
 
-    while (DllWinInet.pInternetReadFile(NewBinary, NewBinaryData, 1024 * 1024, &ActualBinarySize)) {
+    while (DllWinInet.pInternetReadFile(NewBinary, NewBinaryData, UPDATE_READ_SIZE, &ActualBinarySize)) {
 
         DWORD DataWritten;
 
@@ -574,6 +606,294 @@ Exit:
     }
 
     return Return;
+}
+
+/**
+ Download a file from the internet and store it in a local location using
+ WinHttp.dll.  This function is only used once WinHttp is loaded.
+
+ @param Url The Url to download the file from.
+
+ @param TargetName If specified, the local location to store the file.
+        If not specified, the current executable name is used.
+
+ @param Agent The user agent to report to the remote web server.
+
+ @param IfModifiedSince If specified, indicates a timestamp where a new
+        object should only be downloaded if it is newer.
+
+ @return An update error code indicating success or appropriate error.
+ */
+YoriLibUpdError
+YoriLibUpdateBinaryFromUrlWinHttp(
+    __in LPTSTR Url,
+    __in_opt LPTSTR TargetName,
+    __in LPTSTR Agent,
+    __in_opt PSYSTEMTIME IfModifiedSince
+    )
+{
+
+
+    PVOID hInternet = NULL;
+    PVOID hConnect = NULL;
+    PVOID hRequest = NULL;
+    YoriLibUpdError Return = YoriLibUpdErrorSuccess;
+    YORI_STRING HostSubset;
+    YORI_STRING CombinedHeader;
+    LPTSTR HostName;
+    LPTSTR ObjectName;
+    DWORD dwError;
+    TCHAR TempName[MAX_PATH];
+    TCHAR TempPath[MAX_PATH];
+    HANDLE hTempFile = INVALID_HANDLE_VALUE;
+    PUCHAR NewBinaryData = NULL;
+    DWORD ActualBinarySize;
+    DWORD ErrorBufferSize = 0;
+    BOOL SuccessfullyComplete = FALSE;
+
+    //
+    //  Open an internet connection with default proxy settings.
+    //
+
+    hInternet = DllWinHttp.pWinHttpOpen(Agent,
+                                        0,
+                                        NULL,
+                                        NULL,
+                                        0);
+
+    if (hInternet == NULL) {
+        Return = YoriLibUpdErrorInetInit;
+        goto Exit;
+    }
+
+    YoriLibInitEmptyString(&CombinedHeader);
+    if (!YoriLibUpdateBuildHttpHeaders(Url, IfModifiedSince, &CombinedHeader, &HostSubset, &ObjectName)) {
+        Return = YoriLibUpdErrorInetInit;
+        goto Exit;
+    }
+
+    HostName = YoriLibCStringFromYoriString(&HostSubset);
+    if (HostName == NULL) {
+        Return = YoriLibUpdErrorInetInit;
+        goto Exit;
+    }
+
+    hConnect = DllWinHttp.pWinHttpConnect(hInternet, HostName, 0, 0);
+    YoriLibDereference(HostName);
+    if (hConnect == NULL) {
+        Return = YoriLibUpdErrorInetInit;
+        goto Exit;
+    }
+
+    hRequest = DllWinHttp.pWinHttpOpenRequest(hConnect, _T("GET"), ObjectName, NULL, NULL, NULL, 0);
+    if (hRequest == NULL) {
+        Return = YoriLibUpdErrorInetInit;
+        goto Exit;
+    }
+
+    if (!DllWinHttp.pWinHttpSendRequest(hRequest, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, NULL, 0, 0, 0)) {
+        Return = YoriLibUpdErrorInetConnect;
+        goto Exit;
+    }
+
+    if (!DllWinHttp.pWinHttpReceiveResponse(hRequest, NULL)) {
+        Return = YoriLibUpdErrorInetConnect;
+        goto Exit;
+    }
+
+    ErrorBufferSize = sizeof(dwError);
+    if (!DllWinHttp.pWinHttpQueryHeaders(hRequest, 0x20000013, NULL, &dwError, &ErrorBufferSize, NULL)) {
+        Return = YoriLibUpdErrorInetConnect;
+        goto Exit;
+    }
+
+    if (dwError != 200) {
+        if (dwError != 304 || IfModifiedSince == NULL) {
+            Return = YoriLibUpdErrorInetConnect;
+        }
+        goto Exit;
+    }
+
+    //
+    //  Create a temporary file to hold the contents.
+    //
+
+    if (GetTempPath(sizeof(TempPath)/sizeof(TempPath[0]), TempPath) == 0) {
+        Return = YoriLibUpdErrorFileWrite;
+        goto Exit;
+    }
+
+    if (GetTempFileName(TempPath, _T("UPD"), 0, TempName) == 0) {
+        Return = YoriLibUpdErrorFileWrite;
+        goto Exit;
+    }
+
+    hTempFile = CreateFile(TempName,
+                           FILE_WRITE_DATA|FILE_READ_DATA,
+                           FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                           NULL,
+                           CREATE_ALWAYS,
+                           0,
+                           NULL);
+
+    if (hTempFile == INVALID_HANDLE_VALUE) {
+        Return = YoriLibUpdErrorFileWrite;
+        goto Exit;
+    }
+
+    NewBinaryData = YoriLibMalloc(UPDATE_READ_SIZE);
+    if (NewBinaryData == NULL) {
+        Return = YoriLibUpdErrorFileWrite;
+        goto Exit;
+    }
+
+    //
+    //  Read from the internet location and save to the temporary file.
+    //
+
+    while (DllWinHttp.pWinHttpReadData(hRequest, NewBinaryData, UPDATE_READ_SIZE, &ActualBinarySize)) {
+
+        DWORD DataWritten;
+
+        if (ActualBinarySize == 0) {
+            SuccessfullyComplete = TRUE;
+            break;
+        }
+
+        if (!WriteFile(hTempFile, NewBinaryData, ActualBinarySize, &DataWritten, NULL) ||
+            DataWritten != ActualBinarySize) {
+
+            Return = YoriLibUpdErrorFileWrite;
+            goto Exit;
+        }
+    }
+
+    //
+    //  The only acceptable reason to fail is all the data has been
+    //  received.
+    //
+
+    if (!SuccessfullyComplete) {
+        Return = YoriLibUpdErrorInetRead;
+        goto Exit;
+    }
+
+    //
+    //  For validation, if the request is to modify the current executable
+    //  check that the result is an executable.
+    //
+
+    if (TargetName == NULL) {
+        SetFilePointer(hTempFile, 0, NULL, FILE_BEGIN);
+        if (!ReadFile(hTempFile, NewBinaryData, 2, &ActualBinarySize, NULL) ||
+            ActualBinarySize != 2 ||
+            NewBinaryData[0] != 'M' ||
+            NewBinaryData[1] != 'Z' ) {
+
+            Return = YoriLibUpdErrorInetContents;
+            goto Exit;
+        }
+    }
+
+    //
+    //  Now update the binary with the local file.
+    //
+
+    CloseHandle(hTempFile);
+    hTempFile = INVALID_HANDLE_VALUE;
+
+    if (!YoriLibUpdateBinaryFromFile(TargetName, TempName)) {
+        Return = YoriLibUpdErrorFileReplace;
+    }
+
+Exit:
+
+    if (NewBinaryData != NULL) {
+        YoriLibFree(NewBinaryData);
+    }
+
+    if (hTempFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hTempFile);
+        DeleteFile(TempName);
+    }
+
+    YoriLibFreeStringContents(&CombinedHeader);
+
+    if (hConnect != NULL) {
+        DllWinHttp.pWinHttpCloseHandle(hConnect);
+    }
+
+    if (hRequest != NULL) {
+        DllWinHttp.pWinHttpCloseHandle(hRequest);
+    }
+
+    if (hInternet != NULL) {
+        DllWinHttp.pWinHttpCloseHandle(hInternet);
+    }
+
+    return Return;
+}
+
+/**
+ Download a file from the internet and store it in a local location.
+
+ @param Url The Url to download the file from.
+
+ @param TargetName If specified, the local location to store the file.
+        If not specified, the current executable name is used.
+
+ @param Agent The user agent to report to the remote web server.
+
+ @param IfModifiedSince If specified, indicates a timestamp where a new
+        object should only be downloaded if it is newer.
+
+ @return An update error code indicating success or appropriate error.
+ */
+YoriLibUpdError
+YoriLibUpdateBinaryFromUrl(
+    __in LPTSTR Url,
+    __in_opt LPTSTR TargetName,
+    __in LPTSTR Agent,
+    __in_opt PSYSTEMTIME IfModifiedSince
+    )
+{
+    //
+    //  Dynamically load WinInet.  This means we don't have to resolve
+    //  imports unless we're really using it for something, and we can
+    //  degrade gracefully if it's not there (original 95/NT.)
+    //
+
+    YoriLibLoadWinInetFunctions();
+
+    if (DllWinInet.pInternetOpenW != NULL &&
+        DllWinInet.pInternetOpenUrlW != NULL &&
+        DllWinInet.pHttpQueryInfoW != NULL &&
+        DllWinInet.pInternetReadFile != NULL &&
+        DllWinInet.pInternetCloseHandle != NULL) {
+
+        return YoriLibUpdateBinaryFromUrlWinInet(Url, TargetName, Agent, IfModifiedSince);
+    }
+
+    //
+    //  If WinInet isn't present, load WinHttp.  This path is taken on
+    //  Nano server.
+    //
+
+    YoriLibLoadWinHttpFunctions();
+
+    if (DllWinHttp.pWinHttpCloseHandle != NULL &&
+        DllWinHttp.pWinHttpConnect != NULL &&
+        DllWinHttp.pWinHttpOpen != NULL &&
+        DllWinHttp.pWinHttpOpenRequest != NULL &&
+        DllWinHttp.pWinHttpQueryHeaders != NULL &&
+        DllWinHttp.pWinHttpReadData != NULL &&
+        DllWinHttp.pWinHttpReceiveResponse != NULL &&
+        DllWinHttp.pWinHttpSendRequest != NULL) {
+
+        return YoriLibUpdateBinaryFromUrlWinHttp(Url, TargetName, Agent, IfModifiedSince);
+    }
+
+    return YoriLibUpdErrorInetInit;
 }
 
 /**
