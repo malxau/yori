@@ -224,6 +224,7 @@ LPCSTR YoriLibMonthNames[] = {
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOLEAN
 YoriLibUpdateBuildHttpHeaders(
     __in LPTSTR Url,
@@ -632,8 +633,6 @@ YoriLibUpdateBinaryFromUrlWinHttp(
     __in_opt PSYSTEMTIME IfModifiedSince
     )
 {
-
-
     PVOID hInternet = NULL;
     PVOID hConnect = NULL;
     PVOID hRequest = NULL;
@@ -650,6 +649,8 @@ YoriLibUpdateBinaryFromUrlWinHttp(
     DWORD ActualBinarySize;
     DWORD ErrorBufferSize = 0;
     BOOL SuccessfullyComplete = FALSE;
+
+    YoriLibInitEmptyString(&CombinedHeader);
 
     //
     //  Open an internet connection with default proxy settings.

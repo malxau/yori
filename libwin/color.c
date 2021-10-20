@@ -98,6 +98,9 @@ YoriWinDefaultColorLookup(
 
     ColorTable = (PUCHAR)ColorTableHandle;
     ASSERT(ColorId < YoriWinColorBeyondMax);
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 33010) // Unchecked lower bound for enum
+#endif
     return ColorTable[ColorId];
 }
 
