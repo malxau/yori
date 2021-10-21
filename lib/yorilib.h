@@ -981,6 +981,9 @@ BOOL
 YoriLibLoadDbgHelpFunctions(VOID);
 
 BOOL
+YoriLibLoadImageHlpFunctions(VOID);
+
+BOOL
 YoriLibLoadOle32Functions(VOID);
 
 BOOL

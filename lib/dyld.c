@@ -265,6 +265,35 @@ YoriLibLoadDbgHelpFunctions(VOID)
 }
 
 /**
+ A structure containing pointers to imagehlp.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_IMAGEHLP_FUNCTIONS DllImageHlp;
+
+/**
+ Load pointers to all optional imagehlp.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadImageHlpFunctions(VOID)
+{
+
+    if (DllImageHlp.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllImageHlp.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("IMAGEHLP.DLL"));
+    if (DllImageHlp.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllImageHlp.pMapFileAndCheckSumW = (PMAP_FILE_AND_CHECKSUMW)GetProcAddress(DllImageHlp.hDll, "MapFileAndCheckSumW");
+
+    return TRUE;
+}
+
+/**
  A structure containing pointers to ole32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */

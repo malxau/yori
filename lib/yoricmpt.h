@@ -7226,6 +7226,37 @@ typedef struct _YORI_DBGHELP_FUNCTIONS {
 extern YORI_DBGHELP_FUNCTIONS DllDbgHelp;
 
 /**
+ A prototype for the MapFileAndCheckSumW function.
+ */
+typedef
+DWORD WINAPI
+MAP_FILE_AND_CHECKSUMW(LPCWSTR, PDWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the MapFileAndCheckSumW function.
+ */
+typedef MAP_FILE_AND_CHECKSUMW *PMAP_FILE_AND_CHECKSUMW;
+
+/**
+ A structure containing optional function pointers to imagehlp.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_IMAGEHLP_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to
+     MapFileAndCheckSumW.
+     */
+    PMAP_FILE_AND_CHECKSUMW pMapFileAndCheckSumW;
+} YORI_IMAGEHLP_FUNCTIONS, *PYORI_IMAGEHLP_FUNCTIONS;
+
+extern YORI_IMAGEHLP_FUNCTIONS DllImageHlp;
+
+/**
  A prototype for the CoCreateInstance function.
  */
 typedef
