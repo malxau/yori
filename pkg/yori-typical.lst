@@ -32,6 +32,7 @@
 ..\mount\ymount.exe|ymount.exe
 ..\nice\nice.exe|nice.exe
 ..\osver\osver.exe|osver.exe
+..\petool\petool.exe|petool.exe
 ..\procinfo\procinfo.exe|procinfo.exe
 ..\ps\yps.exe|yps.exe
 ..\readline\readline.exe|readline.exe

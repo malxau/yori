@@ -120,6 +120,7 @@ DIRS=crt       \
      osver     \
      path      \
      pause     \
+     petool    \
      pkg       \
      pkglib    \
      procinfo  \

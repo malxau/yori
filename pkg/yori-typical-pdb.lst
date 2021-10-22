@@ -32,6 +32,7 @@
 ..\mount\ymount.pdb|ymount.pdb
 ..\nice\nice.pdb|nice.pdb
 ..\osver\osver.pdb|osver.pdb
+..\petool\petool.pdb|petool.pdb
 ..\procinfo\procinfo.pdb|procinfo.pdb
 ..\ps\yps.pdb|yps.pdb
 ..\readline\readline.pdb|readline.pdb

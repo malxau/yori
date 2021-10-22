@@ -49,6 +49,7 @@
 ..\osver\builtins.lib
 ..\path\builtins.lib
 ..\pause\builtins.lib
+..\petool\builtins.lib
 ..\pkglib\yoripkg.lib
 ..\procinfo\builtins.lib
 ..\ps\builtins.lib

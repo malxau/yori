@@ -140,6 +140,7 @@ CHAR strHelpHelpText3[] =
         "OSVER     Outputs the operating system version in a specified format\n"
         "PATH      Converts relative paths into decomposable full paths\n"
         "PAUSE     Prompt the user to press any key before continuing\n"
+        "PETOOL    Manage PE executable files\n"
         "POPD      Pop a previous current directory from the stack (only valid after\n"
         "            PUSHD)\n"
         "PS        Display a list of processes in the system\n"
