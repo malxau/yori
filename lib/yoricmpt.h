@@ -3291,6 +3291,27 @@ typedef struct _GUID {
 #endif
 
 /**
+ A structure containing the core fields of a PE header.
+ */
+typedef struct _YORILIB_PE_HEADERS {
+    /**
+     The signature indicating a PE file.
+     */
+    DWORD Signature;
+
+    /**
+     The base PE header.
+     */
+    IMAGE_FILE_HEADER ImageHeader;
+
+    /**
+     The contents of the PE optional header.  This isn't really optional in
+     NT since it contains core fields needed for NT to run things.
+     */
+    IMAGE_OPTIONAL_HEADER OptionalHeader;
+} YORILIB_PE_HEADERS, *PYORILIB_PE_HEADERS;
+
+/**
  A private definition of CONSOLE_FONT_INFOEX in case the compilation
  environment doesn't provide it.
  */

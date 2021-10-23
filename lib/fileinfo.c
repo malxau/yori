@@ -417,27 +417,6 @@ YoriLibCollectAllocationSize (
 }
 
 /**
- A structure containing the core fields of a PE header.
- */
-typedef struct _YORILIB_PE_HEADERS {
-    /**
-     The signature indicating a PE file.
-     */
-    DWORD Signature;
-
-    /**
-     The base PE header.
-     */
-    IMAGE_FILE_HEADER ImageHeader;
-
-    /**
-     The contents of the PE optional header.  This isn't really optional in
-     NT since it contains core fields needed for NT to run things.
-     */
-    IMAGE_OPTIONAL_HEADER OptionalHeader;
-} YORILIB_PE_HEADERS, *PYORILIB_PE_HEADERS;
-
-/**
  Helper function to load an executable's PE header for parsing.  This is used
  by multiple collection functions whose data comes from a PE header.
 
@@ -487,7 +466,7 @@ YoriLibCapturePeHeaders (
             if (ReadFile(hFileRead, PeHeaders, sizeof(YORILIB_PE_HEADERS), &BytesReturned, NULL) &&
                 BytesReturned == sizeof(YORILIB_PE_HEADERS) &&
                 PeHeaders->Signature == IMAGE_NT_SIGNATURE &&
-                PeHeaders->ImageHeader.SizeOfOptionalHeader >= FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, Subsystem)) {
+                PeHeaders->ImageHeader.SizeOfOptionalHeader >= FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, Subsystem) + sizeof(WORD)) {
 
                 CloseHandle(hFileRead);
                 return TRUE;
