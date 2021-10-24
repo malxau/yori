@@ -299,8 +299,8 @@ YoriShLoadHistoryFromFile(VOID)
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yori: open of %y failed: %s"), &FilePath, ErrText);
             YoriLibFreeWinErrorText(ErrText);
-            YoriLibFreeStringContents(&FilePath);
         }
+        YoriLibFreeStringContents(&FilePath);
         return FALSE;
     }
 
