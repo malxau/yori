@@ -493,6 +493,7 @@ EditSaveFile(
     DWORD LineCount;
     DWORD SavedEncoding;
     DWORD Index;
+    DWORD Attributes;
     PYORI_STRING Line;
     YORI_STRING ParentDirectory;
     YORI_STRING Prefix;
@@ -612,10 +613,28 @@ EditSaveFile(
     }
 
     CloseHandle(TempHandle);
-    if (!MoveFileEx(TempFileName.StartOfString, FileName->StartOfString, MOVEFILE_REPLACE_EXISTING)) {
-        DeleteFile(TempFileName.StartOfString);
-        YoriLibFreeStringContents(&TempFileName);
-        return FALSE;
+
+    //
+    //  If the file exists and ReplaceFile is present, replace it. Without
+    //  ReplaceFile or if the file doesn't exist, rename the temporary file
+    //  into place.
+    //
+
+    Attributes = GetFileAttributes(FileName->StartOfString);
+    if (Attributes != (DWORD)-1 &&
+        DllKernel32.pReplaceFileW != NULL) {
+
+        if (!DllKernel32.pReplaceFileW(FileName->StartOfString, TempFileName.StartOfString, NULL, 0, NULL, NULL)) {
+            DeleteFile(TempFileName.StartOfString);
+            YoriLibFreeStringContents(&TempFileName);
+            return FALSE;
+        }
+    } else {
+        if (!MoveFileEx(TempFileName.StartOfString, FileName->StartOfString, MOVEFILE_REPLACE_EXISTING)) {
+            DeleteFile(TempFileName.StartOfString);
+            YoriLibFreeStringContents(&TempFileName);
+            return FALSE;
+        }
     }
 
     YoriLibFreeStringContents(&TempFileName);

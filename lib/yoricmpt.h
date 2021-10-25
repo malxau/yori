@@ -6111,6 +6111,18 @@ REGISTER_APPLICATION_RESTART(LPCWSTR, DWORD);
 typedef REGISTER_APPLICATION_RESTART *PREGISTER_APPLICATION_RESTART;
 
 /**
+ A prototype for the ReplaceFileW function.
+ */
+typedef
+BOOL WINAPI
+REPLACE_FILEW(LPCWSTR, LPCWSTR, LPCWSTR, DWORD, LPVOID, LPVOID);
+
+/**
+ A prototype for a pointer to the ReplaceFileW function.
+ */
+typedef REPLACE_FILEW *PREPLACE_FILEW;
+
+/**
  A prototype for the RtlCaptureStackBackTrace function.
  */
 typedef
@@ -6416,6 +6428,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to RegisterApplicationRestart.
      */
     PREGISTER_APPLICATION_RESTART pRegisterApplicationRestart;
+
+    /**
+     If it's available on the current system, a pointer to ReplaceFileW.
+     */
+    PREPLACE_FILEW pReplaceFileW;
 
     /**
      If it's available on the current system, a pointer to RtlCaptureStackBackTrace.
