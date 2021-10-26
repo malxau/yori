@@ -3,7 +3,7 @@
  *
  * Yori shell erase files
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,10 +35,11 @@ CHAR strEraseHelpText[] =
         "\n"
         "Delete one or more files.\n"
         "\n"
-        "ERASE [-license] [-b] [-r] [-s] <file> [<file>...]\n"
+        "ERASE [-license] [-b] [-p | -r] [-s] <file> [<file>...]\n"
         "\n"
         "   --             Treat all further arguments as files to delete\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -p             Delete files with POSIX semantics\n"
         "   -r             Send files to the recycle bin\n"
         "   -s             Erase all files matching the pattern in all subdirectories\n";
 
@@ -62,9 +63,14 @@ EraseHelp(VOID)
 typedef struct _ERASE_CONTEXT {
 
     /**
+     TRUE if files should be deleted with POSIX semantics.
+     */
+    BOOLEAN PosixSemantics;
+
+    /**
      TRUE if files should be sent to the recycle bin.
      */
-    BOOL RecycleBin;
+    BOOLEAN RecycleBin;
 
     /**
      The number of files found.
@@ -77,6 +83,31 @@ typedef struct _ERASE_CONTEXT {
     DWORDLONG FilesMarkedForDelete;
 
 } ERASE_CONTEXT, *PERASE_CONTEXT;
+
+/**
+ Delete a file via DeleteFile or via the POSIX delete API depending on which
+ command line arguments were specified.
+
+ @param EraseContext Pointer to the context indicating which delete mode to
+        use.
+
+ @param FileName Pointer to the file name to delete.
+
+ @return TRUE to indicate the file was marked for delete successfully, or
+         FALSE to indicate failure.
+ */
+BOOL
+EraseDeleteFile(
+    __in PERASE_CONTEXT EraseContext,
+    __in PYORI_STRING FileName
+    )
+{
+    if (!EraseContext->PosixSemantics) {
+        return DeleteFile(FileName->StartOfString);
+    }
+
+    return YoriLibPosixDeleteFile(FileName);
+}
 
 /**
  A callback that is invoked when a file is found that matches a search criteria
@@ -130,7 +161,7 @@ EraseFileFoundCallback(
         //  directly.
         //
 
-        if (!FileDeleted && !DeleteFile(FilePath->StartOfString)) {
+        if (!FileDeleted && !EraseDeleteFile(EraseContext, FilePath)) {
             Err = GetLastError();
             if (Err == ERROR_ACCESS_DENIED) {
                 DWORD OldAttributes = GetFileAttributes(FilePath->StartOfString);
@@ -141,7 +172,7 @@ EraseFileFoundCallback(
 
                     Err = NO_ERROR;
 
-                    if (!DeleteFile(FilePath->StartOfString)) {
+                    if (!EraseDeleteFile(EraseContext, FilePath)) {
                         Err = GetLastError();
                     } else {
                         FileDeleted = TRUE;
@@ -276,10 +307,13 @@ ENTRYPOINT(
                 EraseHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+                Context.PosixSemantics = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 Context.RecycleBin = TRUE;
@@ -306,6 +340,13 @@ ENTRYPOINT(
 
     if (StartArg == 0) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("erase: missing argument\n"));
+        return EXIT_FAILURE;
+    }
+
+    if (Context.PosixSemantics &&
+        DllKernel32.pSetFileInformationByHandle == NULL) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("erase: OS support not present\n"));
         return EXIT_FAILURE;
     }
 

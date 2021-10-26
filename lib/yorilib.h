@@ -3814,4 +3814,9 @@ BOOL YoriLibIsStdInConsole(VOID);
 LONGLONG
 YoriLibGetSystemTimeAsInteger(VOID);
 
+BOOL
+YoriLibPosixDeleteFile(
+    __in PYORI_STRING FileName
+    );
+
 // vim:sw=4:ts=4:et:

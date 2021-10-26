@@ -2901,6 +2901,38 @@ typedef struct _FILE_DISPOSITION_INFO {
 
 #endif
 
+#ifndef FILE_DISPOSITION_FLAG_DELETE
+
+/**
+ Indicates that the file should be marked for delete.
+ */
+#define FILE_DISPOSITION_FLAG_DELETE          0x0001
+
+/**
+ Indicates that the file should be deleted with POSIX semantics.
+ */
+#define FILE_DISPOSITION_FLAG_POSIX_SEMANTICS 0x0002
+
+/**
+ A structure to set or clear the delete disposition on a stream or link.
+ */
+typedef struct _FILE_DISPOSITION_INFO_EX {
+
+    /**
+     A combination of FILE_DISPOSITION_FLAG_ values .
+     */
+    DWORD Flags;
+
+} FILE_DISPOSITION_INFO_EX, *PFILE_DISPOSITION_INFO_EX;
+
+/**
+ The identifier of the request type that issues requests with the above
+ structure.
+ */
+#define FileDispositionInfoEx (0x000000015)
+
+#endif
+
 #ifndef STORAGE_INFO_FLAGS_ALIGNED_DEVICE
 
 /**

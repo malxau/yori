@@ -464,4 +464,51 @@ YoriLibGetSystemTimeAsInteger(VOID)
     return ReturnValue.QuadPart;
 }
 
+/**
+ Attempt to delete a file using POSIX semantics.
+
+ @param FileName Pointer to the file name to delete.
+
+ @return TRUE to indicate the file was successfully marked for delete,
+         FALSE if not.
+ */
+BOOL
+YoriLibPosixDeleteFile(
+    __in PYORI_STRING FileName
+    )
+{
+    HANDLE hFile;
+    FILE_DISPOSITION_INFO_EX DispositionInfo;
+
+    ASSERT(YoriLibIsStringNullTerminated(FileName));
+
+    if (DllKernel32.pSetFileInformationByHandle == NULL) {
+        SetLastError(ERROR_PROC_NOT_FOUND);
+        return FALSE;
+    }
+
+    hFile = CreateFile(FileName->StartOfString,
+                       DELETE,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                       NULL,
+                       OPEN_EXISTING,
+                       FILE_FLAG_BACKUP_SEMANTICS,
+                       NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
+
+    DispositionInfo.Flags = FILE_DISPOSITION_FLAG_DELETE | FILE_DISPOSITION_FLAG_POSIX_SEMANTICS;
+    if (!DllKernel32.pSetFileInformationByHandle(hFile, FileDispositionInfoEx, &DispositionInfo, sizeof(DispositionInfo))) {
+        DWORD Err;
+        Err = GetLastError();
+        CloseHandle(hFile);
+        SetLastError(Err);
+        return FALSE;
+    }
+
+    CloseHandle(hFile);
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:
