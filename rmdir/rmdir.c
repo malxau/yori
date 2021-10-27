@@ -3,7 +3,7 @@
  *
  * Yori shell rmdir
  *
- * Copyright (c) 2017-2020 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,6 +40,7 @@ CHAR strRmdirHelpText[] =
         "   -b             Use basic search criteria for directories only\n"
         "   -f             Delete files as well as directories\n"
         "   -l             Delete links without contents\n"
+        "   -p             Delete with POSIX semantics\n"
         "   -r             Send directories to the recycle bin\n"
         "   -s             Remove all contents of each directory\n";
 
@@ -72,6 +73,11 @@ typedef struct _RMDIR_CONTEXT {
      If TRUE, delete files as well as directories.
      */
     BOOLEAN DeleteFiles;
+
+    /**
+     If TRUE, delete with POSIX semantics.
+     */
+    BOOLEAN PosixSemantics;
 
     /**
      The number of directories successfully removed.
@@ -149,7 +155,13 @@ RmdirFileFoundCallback(
     }
 
     if (!FileDeleted) {
-        if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+        if (RmdirContext->PosixSemantics) {
+            if (!YoriLibPosixDeleteFile(FilePath)) {
+                Err = GetLastError();
+            } else if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+                RmdirContext->DirectoriesRemoved++;
+            }
+        } else if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
             if (!DeleteFile(FilePath->StartOfString)) {
                 Err = GetLastError();
             }
@@ -325,7 +337,7 @@ ENTRYPOINT(
                 RmdirHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2020"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -336,6 +348,9 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 DeleteLinks = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+                ArgumentUnderstood = TRUE;
+                RmdirContext.PosixSemantics = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("q")) == 0) {
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
@@ -369,7 +384,17 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+    if (RmdirContext.PosixSemantics &&
+        DllKernel32.pSetFileInformationByHandle == NULL) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("rmdir: OS support not present\n"));
+        return EXIT_FAILURE;
+    }
+
     MatchFlags = YORILIB_FILEENUM_RETURN_DIRECTORIES;
+    if (RmdirContext.DeleteFiles) {
+        MatchFlags |= YORILIB_FILEENUM_RETURN_FILES;
+    }
     if (Recursive) {
         MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RETURN_FILES;
     }
