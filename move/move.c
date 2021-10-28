@@ -35,10 +35,11 @@ CHAR strMoveHelpText[] =
         "\n"
         "Moves or renames one or more files.\n"
         "\n"
-        "MOVE [-license] [-b] [-k] <src>\n"
-        "MOVE [-license] [-b] [-k] <src> [<src> ...] <dest>\n"
+        "MOVE [-license] [-b] [-k] [-p] <src>\n"
+        "MOVE [-license] [-b] [-k] [-p] <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
+        "   -p             Move with POSIX semantics\n"
         "   -k             Keep existing files, do not overwrite\n";
 
 /**
@@ -84,6 +85,12 @@ typedef struct _MOVE_CONTEXT {
      TRUE if existing files should be replaced, FALSE if they should be kept.
      */
     BOOLEAN ReplaceExisting;
+
+    /**
+     TRUE if the move should use POSIX semantics, where in use files are
+     removed from the namespace immediately.
+     */
+    BOOLEAN PosixSemantics;
 
 } MOVE_CONTEXT, *PMOVE_CONTEXT;
 
@@ -169,7 +176,7 @@ MoveFileFoundCallback(
         }
     }
 
-    LastError = YoriLibMoveFile(FilePath, &FullDest, MoveContext->ReplaceExisting);
+    LastError = YoriLibMoveFile(FilePath, &FullDest, MoveContext->ReplaceExisting, MoveContext->PosixSemantics);
     if (LastError != ERROR_SUCCESS) {
         LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("MoveFile failed: %s"), ErrText);
@@ -299,6 +306,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("k")) == 0) {
                 MoveContext.ReplaceExisting = FALSE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
+                MoveContext.PosixSemantics = TRUE;
                 ArgumentUnderstood = TRUE;
             }
         } else {

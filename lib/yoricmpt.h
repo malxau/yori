@@ -2881,6 +2881,18 @@ typedef struct _FILE_STANDARD_INFO {
 #define FileStandardInfo    (0x000000001)
 
 /**
+ The identifier of the request type that renames a file.  This is here
+ because it's already defined when SetFileInformationByHandle is defined,
+ but the structure for it needs to be supplied later.
+ */
+#define FileRenameInfo      (0x000000003)
+
+/**
+ The identifier of the request type that renames a file with extended flags.
+ */
+#define FileRenameInfoEx    (0x000000016)
+
+/**
  A structure to set or clear the delete disposition on a stream or link.
  */
 typedef struct _FILE_DISPOSITION_INFO {
@@ -2932,6 +2944,53 @@ typedef struct _FILE_DISPOSITION_INFO_EX {
 #define FileDispositionInfoEx (0x000000015)
 
 #endif
+
+#ifndef FILE_RENAME_FLAG_REPLACE_IF_EXISTS
+/**
+ A flag to replace an already existing file on superseding rename if the
+ current compilation environment doesn't define it.
+ */
+#define FILE_RENAME_FLAG_REPLACE_IF_EXISTS 0x0001
+#endif
+
+#ifndef FILE_RENAME_FLAG_POSIX_SEMANTICS
+/**
+ A flag to apply POSIX rename semantics by removing existing in use files
+ from the namespace immediately if the current compilation environment doesn't
+ define it.
+ */
+#define FILE_RENAME_FLAG_POSIX_SEMANTICS 0x0002
+#endif
+
+/**
+ An extended rename structure.  This is defined unconditionally with a
+ different name because the SDK version of this structure changes depending
+ on which OS version is being targeted.
+ */
+typedef struct _YORI_FILE_RENAME_INFO {
+
+    /**
+     Flags, combined from FILE_RENAME_FLAG_* above.
+     */
+    DWORD Flags;
+
+    /**
+     Handle to the target directory if performing a relative rename.  The
+     kernel needs to reopen this anyway, so there's not much point using it.
+     */
+    HANDLE RootDirectory;
+
+    /**
+     Filename length in bytes.
+     */
+    DWORD FileNameLength;
+
+    /**
+     Filename string, trailing this structure.  Windows expects this to be
+     NULL terminated despite taking a length value above.
+     */
+    WCHAR FileName[1];
+} YORI_FILE_RENAME_INFO, *PYORI_FILE_RENAME_INFO;
 
 #ifndef STORAGE_INFO_FLAGS_ALIGNED_DEVICE
 

@@ -39,6 +39,10 @@
         existing files are retained and the call fails with last error set
         appropriately.
 
+ @param PosixSemantics If TRUE, the rename should apply POSIX semantics to
+        remove an in use file from the namespace immediately.  If FALSE, Win32
+        semantics are applied.
+
  @return Win32 error code, ERROR_SUCCESS to indicate success, or appropriate
          Win32 error.
  */
@@ -46,7 +50,8 @@ DWORD
 YoriLibMoveFile(
     __in PYORI_STRING Source,
     __in PYORI_STRING FullDest,
-    __in BOOLEAN ReplaceExisting
+    __in BOOLEAN ReplaceExisting,
+    __in BOOLEAN PosixSemantics
     )
 {
     DWORD OsMajor;
@@ -59,6 +64,83 @@ YoriLibMoveFile(
 
     ASSERT(YoriLibIsStringNullTerminated(Source));
     ASSERT(YoriLibIsStringNullTerminated(FullDest));
+
+    if (PosixSemantics) {
+        PYORI_FILE_RENAME_INFO RenameInfo;
+        DWORD RenameInfoSize;
+        HANDLE hFile;
+
+        if (DllKernel32.pSetFileInformationByHandle == NULL) {
+            return ERROR_PROC_NOT_FOUND;
+        }
+
+        hFile = CreateFile(Source->StartOfString,
+                           DELETE,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           NULL,
+                           OPEN_EXISTING,
+                           FILE_FLAG_BACKUP_SEMANTICS,
+                           NULL);
+        if (hFile == INVALID_HANDLE_VALUE) {
+            return GetLastError();
+        }
+
+        //
+        //  The string requires NULL termination and the structure includes
+        //  one character, so allocate the structure plus the length of the
+        //  string.
+        //
+
+        RenameInfoSize = sizeof(YORI_FILE_RENAME_INFO) + FullDest->LengthInChars * sizeof(TCHAR);
+        RenameInfo = YoriLibMalloc(RenameInfoSize);
+        if (RenameInfo == NULL) {
+            CloseHandle(hFile);
+            return ERROR_NOT_ENOUGH_MEMORY;
+        }
+
+        RenameInfo->Flags = FILE_RENAME_FLAG_POSIX_SEMANTICS;
+        if (ReplaceExisting) {
+            RenameInfo->Flags = RenameInfo->Flags | FILE_RENAME_FLAG_REPLACE_IF_EXISTS;
+        }
+
+        RenameInfo->RootDirectory = NULL;
+        RenameInfo->FileNameLength = FullDest->LengthInChars * sizeof(TCHAR);
+        memcpy(RenameInfo->FileName, FullDest->StartOfString, FullDest->LengthInChars * sizeof(TCHAR));
+        RenameInfo->FileName[FullDest->LengthInChars] = '\0';
+
+        Error = ERROR_SUCCESS;
+        if (!DllKernel32.pSetFileInformationByHandle(hFile, FileRenameInfoEx, RenameInfo, RenameInfoSize)) {
+            Error = GetLastError();
+            if (ReplaceExisting && Error == ERROR_ACCESS_DENIED) {
+                Attributes = GetFileAttributes(FullDest->StartOfString);
+                if (Attributes != (DWORD)-1 &&
+                    (Attributes & (FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)) != 0) {
+
+                    NewAttributes = Attributes & ~(FILE_ATTRIBUTE_READONLY | FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM);
+                    if (SetFileAttributes(FullDest->StartOfString, NewAttributes)) {
+                        if (!DllKernel32.pSetFileInformationByHandle(hFile, FileRenameInfoEx, RenameInfo, RenameInfoSize)) {
+                            SetFileAttributes(FullDest->StartOfString, Attributes);
+                        } else {
+                            Error = ERROR_SUCCESS;
+                        }
+                    }
+                }
+            }
+        }
+
+        CloseHandle(hFile);
+        YoriLibFree(RenameInfo);
+
+        //
+        //  If the rename would cross volumes, this must be implemented by
+        //  copy/delete, which SetFileInformationByHandle doesn't implement,
+        //  so give up on POSIX and try boring Win32.
+        //
+
+        if (Error != ERROR_NOT_SAME_DEVICE) {
+            return Error;
+        }
+    }
 
     Flags = MOVEFILE_COPY_ALLOWED;
     if (ReplaceExisting) {
@@ -100,28 +182,20 @@ YoriLibMoveFile(
     //  systems, because that will result in a file with no ACL.  Note this
     //  can fail due to not having access on the file, or a file system
     //  that doesn't support security, or because the file is no longer there,
-    //  so errors here are just ignored.
+    //  so errors here are just ignored.  Nano is missing most of AdvApi32,
+    //  so this code currently doesn't run there.
     //
 
-    if (OsMajor >= 5) {
+    if (OsMajor >= 5 &&
+        DllAdvApi32.pSetNamedSecurityInfoW != NULL &&
+        DllAdvApi32.pInitializeAcl != NULL) {
+
         ACL EmptyAcl;
 
-        //
-        //  This function should exist on NT4+, and callers of this function
-        //  should have attempted to load AdvApi32
-        //
+        memset(&EmptyAcl, 0, sizeof(EmptyAcl));
 
-        ASSERT(DllAdvApi32.pSetNamedSecurityInfoW != NULL &&
-               DllAdvApi32.pInitializeAcl != NULL);
-
-        if (DllAdvApi32.pInitializeAcl != NULL &&
-            DllAdvApi32.pSetNamedSecurityInfoW != NULL) {
-
-            memset(&EmptyAcl, 0, sizeof(EmptyAcl));
-
-            DllAdvApi32.pInitializeAcl(&EmptyAcl, sizeof(EmptyAcl), ACL_REVISION);
-            DllAdvApi32.pSetNamedSecurityInfoW(FullDest->StartOfString, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, &EmptyAcl, NULL);
-        }
+        DllAdvApi32.pInitializeAcl(&EmptyAcl, sizeof(EmptyAcl), ACL_REVISION);
+        DllAdvApi32.pSetNamedSecurityInfoW(FullDest->StartOfString, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, &EmptyAcl, NULL);
     }
 
     return ERROR_SUCCESS;
