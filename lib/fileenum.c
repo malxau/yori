@@ -345,7 +345,21 @@ YoriLibForEachFileEnum(
             hFind = FindFirstFile(ForEachContext->FullPath.StartOfString, &ForEachContext->FileInfo);
         } else {
             if (FinalSlashFound) {
-                ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec.StartOfString[ForEachContext->CharsToFinalSlash]);
+
+                //
+                //  If there's a trailing backslash that's not part of the
+                //  effective root, it was already removed from ParentFullPath
+                //  above, and there's no text following so don't add it back.
+                //  This is only valid because the effective root checks have
+                //  already occurred; we can't generically drop trailing
+                //  slashes from drive roots, for example.
+                //
+
+                if (ForEachContext->CharsToFinalSlash == ForEachContext->EffectiveFileSpec.LengthInChars) {
+                    ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y"), &ForEachContext->ParentFullPath);
+                } else {
+                    ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec.StartOfString[ForEachContext->CharsToFinalSlash]);
+                }
             } else {
                 ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%y"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec);
             }
@@ -493,18 +507,26 @@ YoriLibForEachFileEnum(
                 }
 
                 //
-                //  Report the object to the caller if we've determined that it
-                //  should be reported.
+                //  Report the object to the caller if we've determined that
+                //  it should be reported.
                 //
 
                 if (ReportObject && !RecursePhase) {
 
                     //
-                    //  Convert the found path into a fully qualified path before
-                    //  reporting it.
+                    //  Convert the found path into a fully qualified path
+                    //  before reporting it.  If the path ends in a trailing
+                    //  slash, then the directory component is the full path,
+                    //  so adding back cFileName would be bogus.  In this
+                    //  case, there cannot be a wild specification, so only
+                    //  one or zero objects can ever match.
                     //
 
-                    ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, ForEachContext->FileInfo.cFileName);
+                    if (!FinalSlashFound ||
+                        ForEachContext->CharsToFinalSlash != ForEachContext->EffectiveFileSpec.LengthInChars) {
+
+                        ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, ForEachContext->FileInfo.cFileName);
+                    }
 
                     if (!Callback(&ForEachContext->FullPath, &ForEachContext->FileInfo, Depth, Context)) {
                         Result = FALSE;
