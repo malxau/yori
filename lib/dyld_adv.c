@@ -111,11 +111,6 @@ YoriLibLoadAdvApi32Functions(VOID)
         //  load, so we need to explicitly indicate that we want the advapi32
         //  implementation here.
         //
-        //  (It is amusing that functions for the registry or ACLs are
-        //   considered legacy.  For whatever reason, there's a temptation to
-        //   declare anything that exists as legacy without understanding why
-        //   it's there.)
-        //
 
         if (YoriLibIsNanoServer()) {
             DllAdvApi32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("ADVAPI32LEGACY.DLL"));
@@ -127,6 +122,44 @@ YoriLibLoadAdvApi32Functions(VOID)
 
     for (Count = 0; Count < sizeof(DllAdvApi32Symbols)/sizeof(DllAdvApi32Symbols[0]); Count++) {
         *(DllAdvApi32Symbols[Count].FnPtr) = GetProcAddress(DllAdvApi32.hDll, DllAdvApi32Symbols[Count].FnName);
+    }
+
+    //
+    //  Just to be maximally confusing, Nano had an ApiSet party and decided
+    //  to just move most of AdvApi32's functionality into KernelBase,
+    //  because applications would only ever look for them via ApiSet,
+    //  amirite?  Hack around this crap and load any unresolved functions from
+    //  KernelBase if they are there.
+    //
+
+    if (YoriLibIsNanoServer()) {
+        HINSTANCE hKernelBase;
+        hKernelBase = GetModuleHandle(_T("KERNELBASE"));
+        if (hKernelBase != NULL) {
+            for (Count = 0; Count < sizeof(DllAdvApi32Symbols)/sizeof(DllAdvApi32Symbols[0]); Count++) {
+                if ((*DllAdvApi32Symbols[Count].FnPtr) == NULL) {
+                    *(DllAdvApi32Symbols[Count].FnPtr) = GetProcAddress(hKernelBase, DllAdvApi32Symbols[Count].FnName);
+                }
+            }
+        }
+
+        DllAdvApi32.hDllNtMarta = YoriLibLoadLibraryFromSystemDirectory(_T("NTMARTA.DLL"));
+        if (DllAdvApi32.hDllNtMarta != NULL) {
+            for (Count = 0; Count < sizeof(DllAdvApi32Symbols)/sizeof(DllAdvApi32Symbols[0]); Count++) {
+                if ((*DllAdvApi32Symbols[Count].FnPtr) == NULL) {
+                    *(DllAdvApi32Symbols[Count].FnPtr) = GetProcAddress(DllAdvApi32.hDllNtMarta, DllAdvApi32Symbols[Count].FnName);
+                }
+            }
+        }
+
+        DllAdvApi32.hDllCryptSp = YoriLibLoadLibraryFromSystemDirectory(_T("CRYPTSP.DLL"));
+        if (DllAdvApi32.hDllNtMarta != NULL) {
+            for (Count = 0; Count < sizeof(DllAdvApi32Symbols)/sizeof(DllAdvApi32Symbols[0]); Count++) {
+                if ((*DllAdvApi32Symbols[Count].FnPtr) == NULL) {
+                    *(DllAdvApi32Symbols[Count].FnPtr) = GetProcAddress(DllAdvApi32.hDllCryptSp, DllAdvApi32Symbols[Count].FnName);
+                }
+            }
+        }
     }
 
 

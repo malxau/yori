@@ -6963,6 +6963,18 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
     HINSTANCE hDll;
 
     /**
+     A handle to ntmarta.dll.  This is only used on Nano to resolve
+     SetNamedSecurityInfoW, which is neither in advapi32 nor kernel32.
+     */
+    HINSTANCE hDllNtMarta;
+
+    /**
+     A handle to cryptsp.dll.  This is used on Nano to resolve Crypt*
+     functions, which are neither in advapi32 nor kernel32.
+     */
+    HINSTANCE hDllCryptSp;
+
+    /**
      If it's available on the current system, a pointer to AccessCheck.
      */
     PACCESS_CHECK pAccessCheck;
