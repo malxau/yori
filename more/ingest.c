@@ -3,7 +3,7 @@
  *
  * Yori shell more input strings and record them in memory
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -246,6 +246,10 @@ MoreFileFoundCallback(
     }
 
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+        UCHAR LeadingBytes[3];
+        DWORD SavedEncoding;
+        DWORD BytesRead;
+
         FileHandle = CreateFile(FilePath->StartOfString,
                                 GENERIC_READ,
                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
@@ -262,7 +266,25 @@ MoreFileFoundCallback(
             return TRUE;
         }
 
+        SavedEncoding = YoriLibGetMultibyteInputEncoding();
+
+        //
+        //  If the file starts with a UTF-16 BOM, interpret it as UTF-16.
+        //
+
+        if (ReadFile(FileHandle, LeadingBytes, sizeof(LeadingBytes), &BytesRead, NULL)) {
+            if (BytesRead >= 2 &&
+                LeadingBytes[0] == 0xFF &&
+                LeadingBytes[1] == 0xFE) {
+
+                YoriLibSetMultibyteInputEncoding(CP_UTF16);
+            }
+        }
+        SetFilePointer(FileHandle, 0, NULL, FILE_BEGIN);
+
         MoreProcessStream(FileHandle, MoreContext);
+
+        YoriLibSetMultibyteInputEncoding(SavedEncoding);
 
         CloseHandle(FileHandle);
     }
