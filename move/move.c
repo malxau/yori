@@ -287,6 +287,7 @@ ENTRYPOINT(
     AllocatedDest = FALSE;
     BasicEnumeration = FALSE;
     MoveContext.ReplaceExisting = TRUE;
+    MoveContext.PosixSemantics = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
