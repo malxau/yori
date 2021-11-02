@@ -2389,16 +2389,16 @@ YoriShProcessKeyDown(
     //  The documentation says that left and right specific codes aren't
     //  returned from these APIs, but Nano didn't read that part of the
     //  documentation.  It also sends events with Char of 0 and KeyCode of
-    //  0, which we must ignore.
+    //  0, which we must ignore, but these must be applied over SSH.
     //
 
-    if (KeyCode != 0 &&
-        KeyCode != VK_SHIFT &&
+    if (KeyCode != VK_SHIFT &&
         KeyCode != VK_LSHIFT &&
         KeyCode != VK_RSHIFT &&
         KeyCode != VK_CONTROL &&
         KeyCode != VK_LCONTROL &&
-        KeyCode != VK_RCONTROL) {
+        KeyCode != VK_RCONTROL &&
+        (KeyCode != 0 || !YoriLibIsNanoServer())) {
 
         if (ClearSelection) {
             YoriShClearInputSelections(Buffer);
