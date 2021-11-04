@@ -499,6 +499,7 @@ EditSaveFile(
     YORI_STRING Prefix;
     YORI_STRING TempFileName;
     HANDLE TempHandle;
+    BOOLEAN ReplaceSucceeded;
 
     if (FileName->StartOfString == NULL) {
         return FALSE;
@@ -617,9 +618,12 @@ EditSaveFile(
     //
     //  If the file exists and ReplaceFile is present, replace it. Without
     //  ReplaceFile or if the file doesn't exist, rename the temporary file
-    //  into place.
+    //  into place.  If ReplaceFile fails for whatever reason, fall back to
+    //  rename, which implicitly prioritizes succeeding the save to preserving
+    //  whatever file metadata ReplaceFile is aiming to retain.
     //
 
+    ReplaceSucceeded = FALSE;
     Attributes = GetFileAttributes(FileName->StartOfString);
     if (Attributes != (DWORD)-1 &&
         DllKernel32.pReplaceFileW != NULL) {
@@ -629,7 +633,10 @@ EditSaveFile(
             YoriLibFreeStringContents(&TempFileName);
             return FALSE;
         }
-    } else {
+        ReplaceSucceeded = TRUE;
+    }
+
+    if (!ReplaceSucceeded) {
         if (!MoveFileEx(TempFileName.StartOfString, FileName->StartOfString, MOVEFILE_REPLACE_EXISTING)) {
             DeleteFile(TempFileName.StartOfString);
             YoriLibFreeStringContents(&TempFileName);
