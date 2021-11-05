@@ -310,6 +310,92 @@ YoriLibReadConsoleOutputAttributeForSelection(
     return TRUE;
 }
 
+/**
+ Nano doesn't implement ReadConsoleOutputCharacter, so fall back to
+ ReadConsoleOutput.
+
+ @param Selection Pointer to the selection which may contain a previous
+        allocation for this routine to use, and may be populated with a new
+        allocation for a later call to this routine.
+
+ @param hConsole Handle to the console output.
+
+ @param lpCharacter Pointer to an array of TCHARs that is populated with
+        characters inside this routine.
+
+ @param nLength The number of console cells and characters to populate.
+
+ @param dwReadCoord The console buffer coordinates to start reading
+        characters from.
+
+ @param lpNumberOfCharsRead On successful completion, updated to contain the
+        number of characters successfully read.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibReadConsoleOutputCharacterForSelection(
+    __in PYORILIB_SELECTION Selection,
+    __in HANDLE hConsole,
+    __out_ecount(nLength) LPTSTR lpCharacter,
+    __in DWORD nLength,
+    __in COORD dwReadCoord,
+    __out LPDWORD lpNumberOfCharsRead
+    )
+{
+    PCHAR_INFO CharInfo;
+    SMALL_RECT ReadRegion;
+    COORD dwBufferSize;
+    COORD dwBufferCoord;
+    DWORD dwIndex;
+    DWORD dwAllocSize;
+
+    if (nLength > Selection->TempCharInfoBufferSize) {
+        dwAllocSize = nLength * 2;
+        if (dwAllocSize < 0x100) {
+            dwAllocSize = 0x100;
+        }
+
+        CharInfo = YoriLibMalloc(dwAllocSize * sizeof(CHAR_INFO));
+        if (CharInfo == NULL) {
+            return FALSE;
+        }
+
+        if (Selection->TempCharInfoBuffer != NULL) {
+            YoriLibFree(Selection->TempCharInfoBuffer);
+        }
+
+        Selection->TempCharInfoBuffer = CharInfo;
+        Selection->TempCharInfoBufferSize = dwAllocSize;
+    }
+
+    CharInfo = Selection->TempCharInfoBuffer;
+
+    dwBufferSize.X = (SHORT)nLength;
+    dwBufferSize.Y = 1;
+    dwBufferCoord.X = 0;
+    dwBufferCoord.Y = 0;
+    ReadRegion.Left = dwReadCoord.X;
+    ReadRegion.Top = dwReadCoord.Y;
+    ReadRegion.Right = (SHORT)(dwReadCoord.X + nLength - 1);
+    ReadRegion.Bottom = dwReadCoord.Y;
+
+    if (!ReadConsoleOutput(hConsole, CharInfo, dwBufferSize, dwBufferCoord, &ReadRegion)) {
+        return FALSE;
+    }
+
+    for (dwIndex = 0; dwIndex < nLength; dwIndex++) {
+        lpCharacter[dwIndex] = CharInfo[dwIndex].Char.UnicodeChar;
+    }
+
+    if (lpNumberOfCharsRead != NULL) {
+        *lpNumberOfCharsRead = ReadRegion.Right - ReadRegion.Left + 1;
+    }
+
+    return TRUE;
+}
+
 
 
 /**
@@ -329,7 +415,7 @@ YoriLibGetSelectionColor(
 {
     WORD SelectionColor;
 
-    if (YoriLibIsNanoServer()) {
+    if (!YoriLibDoesSystemSupportBackgroundColors()) {
         SelectionColor = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
     } else {
         SelectionColor = BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
@@ -1354,7 +1440,7 @@ YoriLibCopySelectionIfPresent(
         StartPoint.X = Selection->CurrentlySelected.Left;
         StartPoint.Y = LineIndex;
 
-        ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
+        YoriLibReadConsoleOutputCharacterForSelection(Selection, ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
 
         TextWritePoint += LineLength;
     }
@@ -1363,27 +1449,6 @@ YoriLibCopySelectionIfPresent(
 
     StartPoint.X = (SHORT)(Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1);
     StartPoint.Y = (SHORT)(Selection->CurrentlySelected.Bottom - Selection->CurrentlySelected.Top + 1);
-
-    //
-    //  Combine the captured text with previously saved attributes into a
-    //  VT100 stream.  This will turn into HTML and RTF.
-    //
-
-    YoriLibInitEmptyString(&VtText);
-    ZeroMemory(&Attributes, sizeof(Attributes));
-
-    YoriLibCreateNewAttributeBufferFromPreviousBuffer(Selection,
-                                                      &Selection->PreviousBuffer[Selection->CurrentPreviousIndex],
-                                                      &Selection->CurrentlyDisplayed,
-                                                      &Attributes,
-                                                      &Selection->CurrentlySelected,
-                                                      FALSE,
-                                                      0);
-
-    if (Attributes.AttributeArray == NULL) {
-        YoriLibFreeStringContents(&TextToCopy);
-        return FALSE;
-    }
 
     //
     //  If the system clipboard is not available and clipboard support is
@@ -1397,25 +1462,47 @@ YoriLibCopySelectionIfPresent(
             return TRUE;
         }
     } else {
+
+        //
+        //  Combine the captured text with previously saved attributes into a
+        //  VT100 stream.  This will turn into HTML and RTF.
+        //
+
+        YoriLibInitEmptyString(&VtText);
+        ZeroMemory(&Attributes, sizeof(Attributes));
+
+        YoriLibCreateNewAttributeBufferFromPreviousBuffer(Selection,
+                                                          &Selection->PreviousBuffer[Selection->CurrentPreviousIndex],
+                                                          &Selection->CurrentlyDisplayed,
+                                                          &Attributes,
+                                                          &Selection->CurrentlySelected,
+                                                          FALSE,
+                                                          0);
+
+        if (Attributes.AttributeArray == NULL) {
+            YoriLibFreeStringContents(&TextToCopy);
+            return FALSE;
+        }
+
         if (!YoriLibGenerateVtStringFromConsoleBuffers(&VtText, StartPoint, TextToCopy.StartOfString, Attributes.AttributeArray)) {
             YoriLibFree(Attributes.AttributeArray);
             YoriLibFreeStringContents(&TextToCopy);
             return FALSE;
         }
-    
+
         YoriLibFree(Attributes.AttributeArray);
-    
+
         //
         //  In the second pass, copy all of the text, truncating trailing spaces.
         //  This version will be used to construct the plain text form.
         //
-    
+
         TextWritePoint = TextToCopy.StartOfString;
         for (LineIndex = Selection->CurrentlySelected.Top; LineIndex <= Selection->CurrentlySelected.Bottom; LineIndex++) {
             StartPoint.X = Selection->CurrentlySelected.Left;
             StartPoint.Y = LineIndex;
-    
-            ReadConsoleOutputCharacter(ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
+
+            YoriLibReadConsoleOutputCharacterForSelection(Selection, ConsoleHandle, TextWritePoint, LineLength, StartPoint, &CharsWritten);
             while (CharsWritten > 0) {
                 if (TextWritePoint[CharsWritten - 1] != ' ') {
                     break;
@@ -1423,34 +1510,34 @@ YoriLibCopySelectionIfPresent(
                 CharsWritten--;
             }
             TextWritePoint += CharsWritten;
-    
+
             TextWritePoint[0] = '\r';
             TextWritePoint++;
             TextWritePoint[0] = '\n';
             TextWritePoint++;
         }
-    
+
         TextToCopy.LengthInChars = (DWORD)(TextWritePoint - TextToCopy.StartOfString);
-    
+
         //
         //  Remove the final CRLF
         //
-    
+
         if (TextToCopy.LengthInChars >= 2) {
             TextToCopy.LengthInChars -= 2;
         }
-    
+
         //
         //  Convert the VT100 form into HTML and RTF, and free it
         //
-    
+
         if (DllKernel32.pGetConsoleScreenBufferInfoEx) {
             ScreenInfoEx.cbSize = sizeof(ScreenInfoEx);
             if (DllKernel32.pGetConsoleScreenBufferInfoEx(ConsoleHandle, &ScreenInfoEx)) {
                 ColorTableToUse = (PDWORD)&ScreenInfoEx.ColorTable;
             }
         }
-    
+
         YoriLibInitEmptyString(&HtmlText);
         if (!YoriLibHtmlConvertToHtmlFromVt(&VtText, &HtmlText, ColorTableToUse, 4)) {
             YoriLibFreeStringContents(&VtText);
@@ -1458,7 +1545,7 @@ YoriLibCopySelectionIfPresent(
             YoriLibFreeStringContents(&HtmlText);
             return FALSE;
         }
-    
+
         YoriLibInitEmptyString(&RtfText);
         if (!YoriLibRtfConvertToRtfFromVt(&VtText, &RtfText, ColorTableToUse)) {
             YoriLibFreeStringContents(&VtText);
@@ -1467,21 +1554,21 @@ YoriLibCopySelectionIfPresent(
             YoriLibFreeStringContents(&RtfText);
             return FALSE;
         }
-    
+
         YoriLibFreeStringContents(&VtText);
-    
+
         //
         //  Copy HTML, RTF and plain text forms to the clipboard
         //
-    
+
         if (YoriLibCopyTextRtfAndHtml(&TextToCopy, &RtfText, &HtmlText)) {
             YoriLibFreeStringContents(&TextToCopy);
             YoriLibFreeStringContents(&HtmlText);
             YoriLibFreeStringContents(&RtfText);
-    
+
             return TRUE;
         }
-    
+
         YoriLibFreeStringContents(&HtmlText);
         YoriLibFreeStringContents(&RtfText);
     }
