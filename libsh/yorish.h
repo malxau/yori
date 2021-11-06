@@ -335,6 +335,13 @@ typedef struct _YORI_LIBSH_SINGLE_EXEC_CONTEXT {
      */
     BOOLEAN DebugPumpThreadFinished;
 
+    /**
+     Set to TRUE to indicate that the process should be given a chance to
+     terminate gracefully with GenerateConsoleCtrlEvent.  If FALSE, the only
+     way to end the process is with TerminateProcess.
+     */
+    BOOLEAN TerminateGracefully;
+
 } YORI_LIBSH_SINGLE_EXEC_CONTEXT, *PYORI_LIBSH_SINGLE_EXEC_CONTEXT;
 
 /**

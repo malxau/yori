@@ -692,8 +692,11 @@ YoriShWaitForProcessToTerminate(
         //
 
         if (Result == (WAIT_OBJECT_0 + 1)) {
-            if (ExecContext->dwProcessId != 0) {
+            if (ExecContext->TerminateGracefully && ExecContext->dwProcessId != 0) {
                 GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, ExecContext->dwProcessId);
+                break;
+            } else if (ExecContext->hProcess != NULL) {
+                TerminateProcess(ExecContext->hProcess, 1);
                 break;
             } else {
                 Sleep(50);
@@ -1113,7 +1116,9 @@ YoriShCancelExecPlan(
     while (ExecContext != NULL) {
         if (ExecContext->hProcess != NULL) {
             if (WaitForSingleObject(ExecContext->hProcess, 0) != WAIT_OBJECT_0) {
-                if (ExecContext->dwProcessId != 0) {
+                if (ExecContext->TerminateGracefully &&
+                    ExecContext->dwProcessId != 0) {
+
                     GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, ExecContext->dwProcessId);
                 }
             }

@@ -398,7 +398,17 @@ typedef struct _YORI_LIB_PEB32_NATIVE {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR32 Ignored[3];
+    YORI_LIB_PTR32 Ignored;
+
+    /**
+     The address of the executable module.
+     */
+    YORI_LIB_PTR32 ImageBaseAddress;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored2;
 
     /**
      Pointer to the process parameters.
@@ -408,12 +418,12 @@ typedef struct _YORI_LIB_PEB32_NATIVE {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR32 Ignored2[17];
+    YORI_LIB_PTR32 Ignored3[17];
 
     /**
      Ignored for alignment.
      */
-    DWORD Ignored3[19];
+    DWORD Ignored4[19];
 
     /**
      The major OS version to report to the application.
@@ -450,7 +460,17 @@ typedef struct _YORI_LIB_PEB32_WOW {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR32 Ignored[3];
+    YORI_LIB_PTR32 Ignored;
+
+    /**
+     The address of the executable module.
+     */
+    YORI_LIB_PTR32 ImageBaseAddress;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR32 Ignored2;
 
     /**
      Pointer to the process parameters.
@@ -460,12 +480,12 @@ typedef struct _YORI_LIB_PEB32_WOW {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR32 Ignored2[17];
+    YORI_LIB_PTR32 Ignored3[17];
 
     /**
      Ignored for alignment.
      */
-    DWORD Ignored3[18];
+    DWORD Ignored4[18];
 
     /**
      The major OS version to report to the application.
@@ -721,7 +741,17 @@ typedef struct _YORI_LIB_PEB64 {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR64 Ignored[3];
+    YORI_LIB_PTR64 Ignored;
+
+    /**
+     The address of the executable module.
+     */
+    YORI_LIB_PTR64 ImageBaseAddress;
+
+    /**
+     Ignored for alignment.
+     */
+    YORI_LIB_PTR64 Ignored2;
 
     /**
      Pointer to the process parameters.
@@ -731,12 +761,12 @@ typedef struct _YORI_LIB_PEB64 {
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR64 Ignored2[17];
+    YORI_LIB_PTR64 Ignored3[17];
 
     /**
      Ignored for alignment.
      */
-    DWORD Ignored3[26];
+    DWORD Ignored4[26];
 
     /**
      The major OS version to report to the application.

@@ -1509,6 +1509,7 @@ YoriLibShParseCmdContextToExecContext(
     ExecContext->RunOnSecondConsole = FALSE;
     ExecContext->TaskCompletionDisplayed = FALSE;
     ExecContext->SuppressTaskCompletion = FALSE;
+    ExecContext->TerminateGracefully = FALSE;
     YoriLibInitializeListHead(&ExecContext->DebuggedChildren);
 
     //

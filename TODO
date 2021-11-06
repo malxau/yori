@@ -1,7 +1,5 @@
 v1.6:
  - General MSFIX review
- - Explicit Ctrl+C by detecting console process before launch, if not console
-   process on same console don't use GenerateConsoleCtrlEvent
  - Tab completion on %i
  - "."=="." becomes ".=="."" due to quote parsing which confuses if badly
 

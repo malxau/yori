@@ -3,7 +3,7 @@
  *
  * Yori shell helper routines for executing programs
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -400,6 +400,97 @@ YoriLibShInitializeRedirection(
 }
 
 /**
+ Given a process that has been launched and is currently suspended, examine
+ its in memory state to determine which subsystem the process will operate in.
+
+ @param ProcessHandle Specifies the executing process.
+
+ @param Subsystem On successful completion, indicates the subsystem that was
+        marked in the executable's PE header.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriLibShGetSubsystemFromExecutingImage(
+    __in HANDLE ProcessHandle,
+    __out PWORD Subsystem
+    )
+{
+    PROCESS_BASIC_INFORMATION BasicInfo;
+
+    LONG Status;
+    DWORD dwBytesReturned;
+    SIZE_T BytesReturned;
+    PVOID ImageBaseAddress;
+    BOOL TargetProcess32BitPeb;
+    PVOID PeHeaderPtr;
+
+    //
+    //  Since only one is read at a time, use the same buffer for all.
+    //
+    union {
+        YORI_LIB_PEB32_NATIVE ProcessPeb32;
+        YORI_LIB_PEB64 ProcessPeb64;
+        IMAGE_DOS_HEADER DosHeader;
+        YORILIB_PE_HEADERS PeHeaders;
+    } u;
+
+    if (DllNtDll.pNtQueryInformationProcess == NULL) {
+        return FALSE;
+    }
+
+    TargetProcess32BitPeb = YoriLibDoesProcessHave32BitPeb(ProcessHandle);
+
+    Status = DllNtDll.pNtQueryInformationProcess(ProcessHandle, 0, &BasicInfo, sizeof(BasicInfo), &dwBytesReturned);
+    if (Status != 0) {
+        return FALSE;
+    }
+
+    if (TargetProcess32BitPeb) {
+        if (!ReadProcessMemory(ProcessHandle, BasicInfo.PebBaseAddress, &u.ProcessPeb32, sizeof(u.ProcessPeb32), &BytesReturned)) {
+            return FALSE;
+        }
+
+        ImageBaseAddress = (PVOID)(ULONG_PTR)u.ProcessPeb32.ImageBaseAddress;
+    } else {
+
+        if (!ReadProcessMemory(ProcessHandle, BasicInfo.PebBaseAddress, &u.ProcessPeb64, sizeof(u.ProcessPeb64), &BytesReturned)) {
+            return FALSE;
+        }
+
+        ImageBaseAddress = (PVOID)(ULONG_PTR)u.ProcessPeb64.ImageBaseAddress;
+    }
+
+    if (!ReadProcessMemory(ProcessHandle, ImageBaseAddress, &u.DosHeader, sizeof(u.DosHeader), &BytesReturned)) {
+        return FALSE;
+    }
+
+    if (BytesReturned < sizeof(u.DosHeader) ||
+        u.DosHeader.e_magic != IMAGE_DOS_SIGNATURE ||
+        u.DosHeader.e_lfanew == 0) {
+
+        return FALSE;
+    }
+
+    PeHeaderPtr = YoriLibAddToPointer(ImageBaseAddress, u.DosHeader.e_lfanew);
+
+    if (!ReadProcessMemory(ProcessHandle, PeHeaderPtr, &u.PeHeaders, sizeof(u.PeHeaders), &BytesReturned)) {
+        return FALSE;
+    }
+
+    if (BytesReturned >= sizeof(YORILIB_PE_HEADERS) &&
+        u.PeHeaders.Signature == IMAGE_NT_SIGNATURE &&
+        u.PeHeaders.ImageHeader.SizeOfOptionalHeader >= FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, Subsystem) + sizeof(WORD)) {
+
+        *Subsystem = u.PeHeaders.OptionalHeader.Subsystem;
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  A wrapper around CreateProcess that sets up redirection and launches a
  process.  The point of this function is that it can be called from the
  main thread or from a debugging thread.
@@ -453,7 +544,7 @@ YoriLibShCreateProcess(
         CreationFlags |= DEBUG_PROCESS | DEBUG_ONLY_THIS_PROCESS;
     }
 
-    CreationFlags |= CREATE_NEW_PROCESS_GROUP | CREATE_DEFAULT_ERROR_MODE;
+    CreationFlags |= CREATE_NEW_PROCESS_GROUP | CREATE_DEFAULT_ERROR_MODE | CREATE_SUSPENDED;
 
     LastError = YoriLibShInitializeRedirection(ExecContext, FALSE, &PreviousRedirectContext);
     if (LastError != ERROR_SUCCESS) {
@@ -472,6 +563,27 @@ YoriLibShCreateProcess(
     } else {
         YoriLibShRevertRedirection(&PreviousRedirectContext);
     }
+
+    //
+    //  The nice way to terminate console processes is via
+    //  GenerateConsoleCtrlEvent, which gives the child a chance to exit
+    //  gracefully.  Unfortunately the console misbehaves very badly if this
+    //  is performed on a process that is not a console process.  Default to
+    //  non-graceful termination, and see if we can upgrade to graceful
+    //  termination by verifying that the process is a console process.
+    //
+
+    ExecContext->TerminateGracefully = FALSE;
+    if (!ExecContext->RunOnSecondConsole) {
+        WORD Subsystem;
+        if (YoriLibShGetSubsystemFromExecutingImage(ProcessInfo.hProcess, &Subsystem) &&
+            Subsystem == IMAGE_SUBSYSTEM_WINDOWS_CUI) {
+
+            ExecContext->TerminateGracefully = TRUE;
+        }
+    }
+
+    ResumeThread(ProcessInfo.hThread);
 
     ASSERT(ExecContext->hProcess == NULL);
     ExecContext->hProcess = ProcessInfo.hProcess;
