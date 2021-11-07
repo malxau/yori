@@ -292,6 +292,15 @@ typedef struct _MORE_CONTEXT {
     BOOLEAN SuspendPagination;
 
     /**
+     TRUE if when reading files, this program should continually wait for
+     more data to be added.  This is useful where a file is being extended
+     continually by another program, but it implies that this program cannot
+     move to the next file.  FALSE if this program should read until the end
+     of each file and move to the next.
+     */
+    BOOLEAN WaitForMore;
+
+    /**
      Records the total number of files processed.
      */
     DWORDLONG FilesFound;
@@ -327,7 +336,8 @@ MoreInitContext(
     __in BOOLEAN Recursive,
     __in BOOLEAN BasicEnumeration,
     __in BOOLEAN DebugDisplay,
-    __in BOOLEAN SuspendPagination
+    __in BOOLEAN SuspendPagination,
+    __in BOOLEAN WaitForMore
     );
 
 VOID

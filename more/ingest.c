@@ -27,6 +27,197 @@
 #include "more.h"
 
 /**
+ A context structure to allow a new physical line to share an allocation with
+ previous physical lines.  Each added line can consume from and populate this
+ allocation.
+ */
+typedef struct _MORE_LINE_ALLOC_CONTEXT {
+
+    /**
+     A pointer to a block of memory to allocate from.
+     */
+    PUCHAR Buffer;
+
+    /**
+     The currently used number of bytes in the buffer above.
+     */
+    DWORD BufferOffset;
+
+    /**
+     The number of bytes remaining in the buffer above.
+     */
+    DWORD BytesRemainingInBuffer;
+
+    /**
+     The color that the next physical line should start with.  This is
+     updated to refer to the final color at the end of each line.
+     */
+    WORD PreviousColor;
+} MORE_LINE_ALLOC_CONTEXT, *PMORE_LINE_ALLOC_CONTEXT;
+
+/**
+ Add a new physical line to the allocation.
+
+ @param MoreContext Pointer to the context describing process behavior.
+
+ @param LineString Pointer to a string of text containing the physical line
+        to add.
+
+ @param AllocContext Pointer to the allocation context describing the buffer
+        that can be used for a new physical line.  This may be reallocated
+        within this routine.
+
+ @return TRUE to indicate success, FALSE to indicate failure.  Failure
+         implies allocation failure, suggesting execution cannot continue.
+ */
+BOOL
+MoreAddPhysicalLineToBuffer(
+    __in PMORE_CONTEXT MoreContext,
+    __in PYORI_STRING LineString,
+    __in PMORE_LINE_ALLOC_CONTEXT AllocContext
+    )
+{
+    PMORE_PHYSICAL_LINE NewLine;
+    DWORD TabCount;
+    DWORD CharIndex;
+    DWORD DestIndex;
+    DWORD TabIndex;
+    DWORD Alignment;
+    DWORD BytesRequired;
+
+    //
+    //  Count the number of tabs.  These are replaced at ingestion time, 
+    //  since the width can't change while the program is running and to
+    //  save the complexity of accounting for carryover spaces due to tab
+    //  expansion at end of logical line
+    //
+
+    TabCount = 0;
+    for (CharIndex = 0; CharIndex < LineString->LengthInChars; CharIndex++) {
+        if (LineString->StartOfString[CharIndex] == '\t') {
+            TabCount++;
+        }
+    }
+
+    //
+    //  We need space for the structure, all characters in the source, a NULL,
+    //  and since tabs will be replaced with spaces the number of spaces per
+    //  tab minus one (for the tab character being removed.)
+    //
+
+    BytesRequired = sizeof(MORE_PHYSICAL_LINE) + (LineString->LengthInChars + TabCount * (MoreContext->TabWidth - 1) + 1) * sizeof(TCHAR);
+
+    //
+    //  If we need a buffer, allocate a buffer that typically has space for
+    //  multiple lines
+    //
+
+    if (AllocContext->Buffer == NULL ||
+        BytesRequired > AllocContext->BytesRemainingInBuffer) {
+        if (AllocContext->Buffer != NULL) {
+            YoriLibDereference(AllocContext->Buffer);
+        }
+        AllocContext->BytesRemainingInBuffer = 64 * 1024;
+        if (BytesRequired > AllocContext->BytesRemainingInBuffer) {
+            AllocContext->BytesRemainingInBuffer = BytesRequired;
+        }
+        AllocContext->BufferOffset = 0;
+
+        AllocContext->Buffer = YoriLibReferencedMalloc(AllocContext->BytesRemainingInBuffer);
+        if (AllocContext->Buffer == NULL) {
+            MoreContext->OutOfMemory = TRUE;
+            return FALSE;
+        }
+    }
+
+    //
+    //  Write this line into the current buffer
+    //
+
+    NewLine = (PMORE_PHYSICAL_LINE)YoriLibAddToPointer(AllocContext->Buffer, AllocContext->BufferOffset);
+
+    YoriLibReference(AllocContext->Buffer);
+    NewLine->MemoryToFree = AllocContext->Buffer;
+    NewLine->InitialColor = AllocContext->PreviousColor;
+    NewLine->LineNumber = MoreContext->LineCount + 1;
+    YoriLibReference(AllocContext->Buffer);
+    NewLine->LineContents.MemoryToFree = AllocContext->Buffer;
+    NewLine->LineContents.StartOfString = (LPTSTR)(NewLine + 1);
+
+    for (CharIndex = 0, DestIndex = 0; CharIndex < LineString->LengthInChars; CharIndex++) {
+        //
+        //  If the string is <ESC>[, then treat it as an escape sequence.
+        //  Look for the final letter after any numbers or semicolon.
+        //
+
+        if (LineString->LengthInChars > CharIndex + 2 &&
+            LineString->StartOfString[CharIndex] == 27 &&
+            LineString->StartOfString[CharIndex + 1] == '[') {
+
+            YORI_STRING EscapeSubset;
+            DWORD EndOfEscape;
+
+            YoriLibInitEmptyString(&EscapeSubset);
+            EscapeSubset.StartOfString = &LineString->StartOfString[CharIndex + 2];
+            EscapeSubset.LengthInChars = LineString->LengthInChars - CharIndex - 2;
+            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+
+            //
+            //  Count everything as consuming the source and needing buffer
+            //  space in the destination but consuming no display cells.  This
+            //  may include the final letter, if we found one.
+            //
+
+            if (LineString->LengthInChars > CharIndex + 2 + EndOfEscape) {
+                EscapeSubset.StartOfString -= 2;
+                EscapeSubset.LengthInChars = EndOfEscape + 3;
+                YoriLibVtFinalColorFromSequence(AllocContext->PreviousColor, &EscapeSubset, &AllocContext->PreviousColor);
+            }
+        }
+        if (LineString->StartOfString[CharIndex] == '\t') {
+            for (TabIndex = 0; TabIndex < MoreContext->TabWidth; TabIndex++) {
+                NewLine->LineContents.StartOfString[DestIndex] = ' ';
+                DestIndex++;
+            }
+        } else {
+            NewLine->LineContents.StartOfString[DestIndex] = LineString->StartOfString[CharIndex];
+            DestIndex++;
+        }
+    }
+    NewLine->LineContents.StartOfString[DestIndex] = '\0';
+    NewLine->LineContents.LengthInChars = DestIndex;
+    NewLine->LineContents.LengthAllocated = DestIndex + 1;
+
+    AllocContext->BufferOffset += BytesRequired;
+    AllocContext->BytesRemainingInBuffer -= BytesRequired;
+
+    //
+    //  Align the buffer to 8 bytes.  There's no length checking because
+    //  the allocation is assumed to be aligned to 8 bytes.
+    //
+
+    Alignment = AllocContext->BufferOffset % 8;
+    if (Alignment > 0) {
+        Alignment = 8 - Alignment;
+        AllocContext->BufferOffset += Alignment;
+        AllocContext->BytesRemainingInBuffer -= Alignment;
+    }
+
+    //
+    //  Insert the new line into the list
+    //
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+    MoreContext->LineCount++;
+    YoriLibAppendList(&MoreContext->PhysicalLineList, &NewLine->LineList);
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    SetEvent(MoreContext->PhysicalLineAvailableEvent);
+
+    return TRUE;
+}
+
+/**
  Process a single opened stream, enumerating through all lines and displaying
  the set requested by the user.
 
@@ -45,164 +236,71 @@ MoreProcessStream(
 {
     PVOID LineContext = NULL;
     YORI_STRING LineString;
-    PMORE_PHYSICAL_LINE NewLine;
-    DWORD TabCount;
-    DWORD CharIndex;
-    DWORD DestIndex;
-    DWORD TabIndex;
-    DWORD BytesRequired;
-    PUCHAR Buffer = NULL;
-    DWORD BytesRemainingInBuffer = 0;
-    DWORD BufferOffset = 0;
-    DWORD Alignment;
-    WORD PreviousColor;
+    YORI_LIB_LINE_ENDING LineEnding;
+    BOOL TimeoutReached;
+    MORE_LINE_ALLOC_CONTEXT AllocContext;
+    BOOLEAN Terminate;
 
     YoriLibInitEmptyString(&LineString);
 
     MoreContext->FilesFound++;
-    PreviousColor = MoreContext->InitialColor;
+
+    Terminate = FALSE;
+    AllocContext.Buffer = NULL;
+    AllocContext.BytesRemainingInBuffer = 0;
+    AllocContext.BufferOffset = 0;
+    AllocContext.PreviousColor = MoreContext->InitialColor;
 
     while (TRUE) {
 
-        if (!YoriLibReadLineToString(&LineString, &LineContext, hSource)) {
+        if (!YoriLibReadLineToStringEx(&LineString, &LineContext, !MoreContext->WaitForMore, INFINITE, hSource, &LineEnding, &TimeoutReached)) {
             break;
         }
 
-        //
-        //  Count the number of tabs.  These are replaced at ingestion time, 
-        //  since the width can't change while the program is running and to
-        //  save the complexity of accounting for carryover spaces due to tab
-        //  expansion at end of logical line
-        //
-
-        TabCount = 0;
-        for (CharIndex = 0; CharIndex < LineString.LengthInChars; CharIndex++) {
-            if (LineString.StartOfString[CharIndex] == '\t') {
-                TabCount++;
-            }
+        if (!MoreAddPhysicalLineToBuffer(MoreContext, &LineString, &AllocContext)) {
+            Terminate = TRUE;
+            break;
         }
 
-        //
-        //  We need space for the structure, all characters in the source, a NULL,
-        //  and since tabs will be replaced with spaces the number of spaces per
-        //  tab minus one (for the tab character being removed.)
-        //
+        if (WaitForSingleObject(MoreContext->ShutdownEvent, 0) == WAIT_OBJECT_0) {
+            Terminate = TRUE;
+            break;
+        }
 
-        BytesRequired = sizeof(MORE_PHYSICAL_LINE) + (LineString.LengthInChars + TabCount * (MoreContext->TabWidth - 1) + 1) * sizeof(TCHAR);
+    }
 
-        //
-        //  If we need a buffer, allocate a buffer that typically has space for
-        //  multiple lines
-        //
+    //
+    //  If waiting for more, try to read another line.  If there's not
+    //  enough data for an entire line, sleep for a bit and try again. If
+    //  there is enough for another line, add it.
+    //
 
-        if (Buffer == NULL || BytesRequired > BytesRemainingInBuffer) {
-            if (Buffer != NULL) {
-                YoriLibDereference(Buffer);
+    if (MoreContext->WaitForMore && !Terminate) {
+        while (TRUE) {
+            if (!YoriLibReadLineToStringEx(&LineString, &LineContext, FALSE, INFINITE, hSource, &LineEnding, &TimeoutReached)) {
+                if (WaitForSingleObject(MoreContext->ShutdownEvent, 0) == WAIT_OBJECT_0) {
+                    Terminate = TRUE;
+                    break;
+                }
+
+                Sleep(200);
+                continue;
             }
-            BytesRemainingInBuffer = 64 * 1024;
-            if (BytesRequired > BytesRemainingInBuffer) {
-                BytesRemainingInBuffer = BytesRequired;
-            }
-            BufferOffset = 0;
 
-            Buffer = YoriLibReferencedMalloc(BytesRemainingInBuffer);
-            if (Buffer == NULL) {
-                MoreContext->OutOfMemory = TRUE;
+            if (!MoreAddPhysicalLineToBuffer(MoreContext, &LineString, &AllocContext)) {
+                Terminate = TRUE;
+                break;
+            }
+    
+            if (WaitForSingleObject(MoreContext->ShutdownEvent, 0) == WAIT_OBJECT_0) {
+                Terminate = TRUE;
                 break;
             }
         }
-
-        //
-        //  Write this line into the current buffer
-        //
-
-        NewLine = (PMORE_PHYSICAL_LINE)YoriLibAddToPointer(Buffer, BufferOffset);
-
-        YoriLibReference(Buffer);
-        NewLine->MemoryToFree = Buffer;
-        NewLine->InitialColor = PreviousColor;
-        NewLine->LineNumber = MoreContext->LineCount + 1;
-        YoriLibReference(Buffer);
-        NewLine->LineContents.MemoryToFree = Buffer;
-        NewLine->LineContents.StartOfString = (LPTSTR)(NewLine + 1);
-
-        for (CharIndex = 0, DestIndex = 0; CharIndex < LineString.LengthInChars; CharIndex++) {
-            //
-            //  If the string is <ESC>[, then treat it as an escape sequence.
-            //  Look for the final letter after any numbers or semicolon.
-            //
-
-            if (LineString.LengthInChars > CharIndex + 2 &&
-                LineString.StartOfString[CharIndex] == 27 &&
-                LineString.StartOfString[CharIndex + 1] == '[') {
-
-                YORI_STRING EscapeSubset;
-                DWORD EndOfEscape;
-
-                YoriLibInitEmptyString(&EscapeSubset);
-                EscapeSubset.StartOfString = &LineString.StartOfString[CharIndex + 2];
-                EscapeSubset.LengthInChars = LineString.LengthInChars - CharIndex - 2;
-                EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
-
-                //
-                //  Count everything as consuming the source and needing buffer
-                //  space in the destination but consuming no display cells.  This
-                //  may include the final letter, if we found one.
-                //
-
-                if (LineString.LengthInChars > CharIndex + 2 + EndOfEscape) {
-                    EscapeSubset.StartOfString -= 2;
-                    EscapeSubset.LengthInChars = EndOfEscape + 3;
-                    YoriLibVtFinalColorFromSequence(PreviousColor, &EscapeSubset, &PreviousColor);
-                }
-            }
-            if (LineString.StartOfString[CharIndex] == '\t') {
-                for (TabIndex = 0; TabIndex < MoreContext->TabWidth; TabIndex++) {
-                    NewLine->LineContents.StartOfString[DestIndex] = ' ';
-                    DestIndex++;
-                }
-            } else {
-                NewLine->LineContents.StartOfString[DestIndex] = LineString.StartOfString[CharIndex];
-                DestIndex++;
-            }
-        }
-        NewLine->LineContents.StartOfString[DestIndex] = '\0';
-        NewLine->LineContents.LengthInChars = DestIndex;
-        NewLine->LineContents.LengthAllocated = DestIndex + 1;
-
-        BufferOffset += BytesRequired;
-        BytesRemainingInBuffer -= BytesRequired;
-
-        //
-        //  Align the buffer to 8 bytes.  There's no length checking because
-        //  the allocation is assumed to be aligned to 8 bytes.
-        //
-
-        Alignment = BufferOffset % 8;
-        if (Alignment > 0) {
-            Alignment = 8 - Alignment;
-            BufferOffset += Alignment;
-            BytesRemainingInBuffer -= Alignment;
-        }
-
-        //
-        //  Insert the new line into the list
-        //
-
-        WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
-        MoreContext->LineCount++;
-        YoriLibAppendList(&MoreContext->PhysicalLineList, &NewLine->LineList);
-        ReleaseMutex(MoreContext->PhysicalLineMutex);
-
-        SetEvent(MoreContext->PhysicalLineAvailableEvent);
-
-        if (WaitForSingleObject(MoreContext->ShutdownEvent, 0) == WAIT_OBJECT_0) {
-            break;
-        }
     }
 
-    if (Buffer != NULL) {
-        YoriLibDereference(Buffer);
+    if (AllocContext.Buffer != NULL) {
+        YoriLibDereference(AllocContext.Buffer);
     }
 
     YoriLibLineReadCloseOrCache(LineContext);

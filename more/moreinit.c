@@ -123,6 +123,12 @@ MoreAllocateViewportStructures(
         so the program should just display whatever it has ingested in real
         time until input indicates to pause.
 
+ @param WaitForMore TRUE if when reading files, this program should
+        continually wait for more data to be added.  This is useful where a
+        file is being extended continually by another program, but it implies
+        that this program cannot move to the next file.  FALSE if this program
+        should read until the end of each file and move to the next.
+
  @return TRUE to indicate successful completion, meaning a background thread
          is executing and this should be drained with @ref MoreGracefulExit.
          FALSE to indicate initialization was unsuccessful, and the
@@ -136,7 +142,8 @@ MoreInitContext(
     __in BOOLEAN Recursive,
     __in BOOLEAN BasicEnumeration,
     __in BOOLEAN DebugDisplay,
-    __in BOOLEAN SuspendPagination
+    __in BOOLEAN SuspendPagination,
+    __in BOOLEAN WaitForMore
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
@@ -148,6 +155,7 @@ MoreInitContext(
     MoreContext->BasicEnumeration = BasicEnumeration;
     MoreContext->DebugDisplay = DebugDisplay;
     MoreContext->SuspendPagination = SuspendPagination;
+    MoreContext->WaitForMore = WaitForMore;
     MoreContext->TabWidth = 4;
 
     YoriLibInitializeListHead(&MoreContext->PhysicalLineList);

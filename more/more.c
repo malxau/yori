@@ -3,7 +3,7 @@
  *
  * Yori shell display file contents
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,10 +34,11 @@ CHAR strMoreHelpText[] =
         "\n"
         "Output the contents of one or more files with paging and scrolling.\n"
         "\n"
-        "MORE [-license] [-b] [-dd] [-s] [<file>...]\n"
+        "MORE [-license] [-b] [-dd] [-f] [-s] [<file>...]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -dd            Use the debug display\n"
+        "   -f             Wait for more contents to be added to the file\n"
         "   -l             Display until Ctrl+Q, Scroll Lock, or pause\n"
         "   -s             Process files from all subdirectories\n";
 
@@ -92,6 +93,7 @@ ENTRYPOINT(
     BOOL InitComplete;
     BOOLEAN DebugDisplay = FALSE;
     BOOLEAN SuspendPagination = FALSE;
+    BOOLEAN WaitForMore = FALSE;
     MORE_CONTEXT MoreContext;
     YORI_STRING Arg;
 
@@ -114,6 +116,9 @@ ENTRYPOINT(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("dd")) == 0) {
                 DebugDisplay = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
+                WaitForMore = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 SuspendPagination = TRUE;
@@ -158,9 +163,9 @@ ENTRYPOINT(
     YoriLibCancelEnable();
 
     if (StartArg == 0 || StartArg == ArgC) {
-        InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay, SuspendPagination);
+        InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay, SuspendPagination, WaitForMore);
     } else {
-        InitComplete = MoreInitContext(&MoreContext, ArgC-StartArg, &ArgV[StartArg], Recursive, BasicEnumeration, DebugDisplay, SuspendPagination);
+        InitComplete = MoreInitContext(&MoreContext, ArgC-StartArg, &ArgV[StartArg], Recursive, BasicEnumeration, DebugDisplay, SuspendPagination, WaitForMore);
     }
 
     Result = EXIT_SUCCESS;
