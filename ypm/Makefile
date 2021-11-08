@@ -10,10 +10,26 @@ LINKPDB=/Pdb:ypm.pdb
 !ENDIF
 
 BIN_OBJS=\
+	 download.obj    \
+	 list.obj        \
+	 mirror.obj      \
+	 rsource.obj     \
+	 uninst.obj      \
+	 upgrade.obj     \
 	 ypm.obj         \
+	 ypmcreat.obj    \
+	 ypminst.obj     \
 
 MOD_OBJS=\
+	 download.obj    \
+	 list.obj        \
+	 mirror.obj      \
+	 rsource.obj     \
+	 uninst.obj      \
+	 upgrade.obj     \
 	 mod_ypm.obj     \
+	 ypmcreat.obj    \
+	 ypminst.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
 

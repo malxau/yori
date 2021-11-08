@@ -1,0 +1,25 @@
+
+YORI_CMD_BUILTIN YpmCreateBinaryPackage;
+YORI_CMD_BUILTIN YpmCreateSourcePackage;
+YORI_CMD_BUILTIN YpmDelete;
+YORI_CMD_BUILTIN YpmDownload;
+YORI_CMD_BUILTIN YpmDownloadDaily;
+YORI_CMD_BUILTIN YpmDownloadStable;
+YORI_CMD_BUILTIN YpmInstall;
+YORI_CMD_BUILTIN YpmInstallRemote;
+YORI_CMD_BUILTIN YpmInstallSource;
+YORI_CMD_BUILTIN YpmInstallSymbols;
+YORI_CMD_BUILTIN YpmList;
+YORI_CMD_BUILTIN YpmListVerbose;
+YORI_CMD_BUILTIN YpmMirrorInstall;
+YORI_CMD_BUILTIN YpmMirrorDelete;
+YORI_CMD_BUILTIN YpmMirrorList;
+YORI_CMD_BUILTIN YpmRemoteList;
+YORI_CMD_BUILTIN YpmRemoteSourceAppend;
+YORI_CMD_BUILTIN YpmRemoteSourceInsert;
+YORI_CMD_BUILTIN YpmRemoteSourceDelete;
+YORI_CMD_BUILTIN YpmRemoteSourceList;
+YORI_CMD_BUILTIN YpmUninstallAll;
+YORI_CMD_BUILTIN YpmUpgrade;
+YORI_CMD_BUILTIN YpmUpgradePreferDaily;
+YORI_CMD_BUILTIN YpmUpgradePreferStable;
