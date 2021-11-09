@@ -116,6 +116,9 @@ BOOL
 YoriPkgDisplayAvailableRemotePackages(VOID);
 
 BOOL
+YoriPkgDisplayAvailableRemotePackageNames(VOID);
+
+BOOL
 YoriPkgDisplaySources(VOID);
 
 BOOL

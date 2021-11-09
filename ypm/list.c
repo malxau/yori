@@ -60,7 +60,9 @@ CHAR strYpmRemoteListHelpText[] =
         "List packages for installation from remote servers.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -rl\n";
+        "YPM -rl [-v]\n"
+        "\n"
+        "   -v             Verbosely list all versions and architectures\n";
 
 /**
  Display usage text to the user.
@@ -231,6 +233,9 @@ YpmRemoteList(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
+    BOOL Verbose;
+
+    Verbose = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -245,6 +250,9 @@ YpmRemoteList(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("v")) == 0) {
+                Verbose = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
@@ -261,7 +269,11 @@ YpmRemoteList(
         }
     }
 
-    YoriPkgDisplayAvailableRemotePackages();
+    if (Verbose) {
+        YoriPkgDisplayAvailableRemotePackages();
+    } else {
+        YoriPkgDisplayAvailableRemotePackageNames();
+    }
 
     return EXIT_SUCCESS;
 }

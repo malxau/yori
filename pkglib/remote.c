@@ -774,6 +774,56 @@ YoriPkgDisplayAvailableRemotePackages(VOID)
 }
 
 /**
+ Query all of the known sources for available packages and display unique
+ names only.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgDisplayAvailableRemotePackageNames(VOID)
+{
+    YORI_LIST_ENTRY SourcesList;
+    YORI_LIST_ENTRY PackageList;
+    YORI_LIST_ENTRY DuplicatePackageList;
+    PYORI_LIST_ENTRY PackageEntry;
+    PYORI_LIST_ENTRY NestedPackageEntry;
+    PYORIPKG_REMOTE_PACKAGE Package;
+    PYORIPKG_REMOTE_PACKAGE NestedPackage;
+
+    YoriPkgCollectAllSourcesAndPackages(NULL, NULL, &SourcesList, &PackageList);
+
+    //
+    //  Display the packages we found.
+    //
+
+    YoriLibInitializeListHead(&DuplicatePackageList);
+    PackageEntry = NULL;
+    PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
+    while (PackageEntry != NULL) {
+        Package = CONTAINING_RECORD(PackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
+
+        NestedPackageEntry = NULL;
+        NestedPackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
+        while (NestedPackageEntry != NULL) {
+            NestedPackage = CONTAINING_RECORD(NestedPackageEntry, YORIPKG_REMOTE_PACKAGE, PackageList);
+            NestedPackageEntry = YoriLibGetNextListEntry(&PackageList, NestedPackageEntry);
+            ASSERT(Package != NestedPackage);
+            if (YoriLibCompareStringInsensitive(&Package->PackageName, &NestedPackage->PackageName) == 0) {
+                YoriLibRemoveListItem(&NestedPackage->PackageList);
+                YoriLibAppendList(&DuplicatePackageList, &NestedPackage->PackageList);
+            }
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), &Package->PackageName);
+        PackageEntry = YoriLibGetNextListEntry(&PackageList, PackageEntry);
+    }
+
+    YoriPkgFreeAllSourcesAndPackages(NULL, &DuplicatePackageList);
+    YoriPkgFreeAllSourcesAndPackages(&SourcesList, &PackageList);
+
+    return TRUE;
+}
+
+/**
  Enumerate all packages on a server from its pkglist.ini, download all of the
  packages to a local directory, and generate a pkglist.ini in that directory
  from the contents.
