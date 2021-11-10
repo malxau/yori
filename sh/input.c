@@ -2112,8 +2112,8 @@ YoriShProcessCtrlEnhancedKeyDown(
             HistoryEntry = CONTAINING_RECORD(Buffer->HistoryEntryToUse, YORI_SH_HISTORY_ENTRY, ListEntry);
             YoriShRemoveOneHistoryEntry(HistoryEntry);
 
+            Buffer->HistoryEntryToUse = NewEntry;
             if (NewEntry != NULL) {
-                Buffer->HistoryEntryToUse = NewEntry;
                 HistoryEntry = CONTAINING_RECORD(NewEntry, YORI_SH_HISTORY_ENTRY, ListEntry);
                 YoriShClearInput(Buffer);
                 YoriShAddYoriStringToInput(Buffer, &HistoryEntry->CmdLine);
