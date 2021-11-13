@@ -41,9 +41,12 @@ NOARCHPKGS=out\yori-source-noarch.cab             \
            out\yori-completion-noarch.cab         \
 
 YSETUP=
-!IF "$(ARCH)"=="win32"
 !IF "$(DBGSUFFIX)"==""
-YSETUP=out\win32\ysetup.exe
+!IF "$(ARCH)"=="win32"
+YSETUP=out\$(ARCH)\ysetup.exe
+!ENDIF
+!IF "$(ARCH)"=="mips"
+YSETUP=out\$(ARCH)\ysetup.exe
 !ENDIF
 !ENDIF
 
@@ -101,10 +104,10 @@ out\yori-completion-noarch.cab: out yori-completion.lst @yori-completion.lst
 	@echo $(@F)
 	@ypm -c out\$(@F) yori-completion $(BUILDSTRING) noarch -upgradepath $(UPGRADEPATH)/$(@F) $(UPGRADEALTARG)/$(@F) -sourcepath $(SOURCEPATH)/yori-source-noarch.cab -filelist yori-completion.lst
 
-out\win32\ysetup.exe: out ..\ysetup\ysetup.exe
+out\$(ARCH)\ysetup.exe: out ..\ysetup\ysetup.exe
 	@echo $(@F)
-	@mkdir out\win32
-	@copy ..\ysetup\ysetup.exe out\win32\ysetup.exe
+	@mkdir out\$(ARCH)
+	@copy ..\ysetup\ysetup.exe out\$(ARCH)\ysetup.exe
 
 !ENDIF
 

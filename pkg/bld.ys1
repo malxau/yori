@@ -20,9 +20,11 @@ if intcmp %ERRORLEVEL%==0;set ARCH=ia64
 
 REM
 REM For Win32 builds, use static fdi.lib to support NT 3.1
+REM Not done on x64 or other architectures where cabinet.dll will be present
 REM
 set FDI=0
 if strcmp -i %ARCH%==win32;set FDI=1
+if strcmp -i %ARCH%==mips;set FDI=1
 
 REM 
 REM Set build ID.  For release builds, this needs to be zero.
@@ -62,8 +64,6 @@ popd
 echo *** Building %ARCH% retail
 ymake -f ..\Makefile -m YORI_BUILD_ID=%BLDID% FDI=%FDI% .
 if intcmp %ERRORLEVEL%!=0; goto exit
-
-REM if strcmp %ARCH%==win32;mkdir %OUTDIR%\%ARCH% ^& copy pkg\%ARCH%\bin\ysetup.exe %OUTDIR%\%ARCH% >NUL 2>&1
 
 REM
 REM Generate pkglist.ini so that tools can find packages provided by this
