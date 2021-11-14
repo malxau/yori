@@ -241,13 +241,13 @@ YoriLibAddProgmanItem(
 
     CommandString.LengthInChars = 0;
     if (IconPath != NULL && WorkingDirectory != NULL) {
-        YoriLibYPrintf(&CommandString, _T("[AddItem(%y,%y,%y,%i,-1,-1,%y)]"), ItemPath, ItemName, IconPath, IconIndex, WorkingDirectory);
+        YoriLibYPrintf(&CommandString, _T("[AddItem(\"%y\",%y,\"%y\",%i,-1,-1,\"%y\")]"), ItemPath, ItemName, IconPath, IconIndex, WorkingDirectory);
     } else if (WorkingDirectory != NULL) {
-        YoriLibYPrintf(&CommandString, _T("[AddItem(%y,%y,,,-1,-1,%y)]"), ItemPath, ItemName, WorkingDirectory);
+        YoriLibYPrintf(&CommandString, _T("[AddItem(\"%y\",%y,,,-1,-1,\"%y\")]"), ItemPath, ItemName, WorkingDirectory);
     } else if (IconPath != NULL) {
-        YoriLibYPrintf(&CommandString, _T("[AddItem(%y,%y,%y,%i)]"), ItemPath, ItemName, IconPath, IconIndex);
+        YoriLibYPrintf(&CommandString, _T("[AddItem(\"%y\",%y,\"%y\",%i)]"), ItemPath, ItemName, IconPath, IconIndex);
     } else {
-        YoriLibYPrintf(&CommandString, _T("[AddItem(%y,%y)]"), ItemPath, ItemName);
+        YoriLibYPrintf(&CommandString, _T("[AddItem(\"%y\",%y)]"), ItemPath, ItemName);
     }
 
     if (CommandString.LengthInChars == 0) {
