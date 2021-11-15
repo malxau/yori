@@ -1119,6 +1119,14 @@ SetupUiDialogProc(
                 EnableWindow(GetDlgItem(hDlg, IDC_UNINSTALL), FALSE);
 
                 SetDlgItemText(hDlg, IDC_START_SHORTCUT, _T("Install Program Manager &shortcut"));
+            } else if (!SetupPlatformSupportsShortcuts()) {
+
+                //
+                //  On NT 4 RTM, we can create a start menu shortcut via DDE,
+                //  but not a Desktop shortcut.
+                //
+
+                EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
             }
 
             return TRUE;
