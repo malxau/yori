@@ -316,6 +316,40 @@ HashCleanupContext(
 }
 
 /**
+ A structure that describes a hashing provider and options to use it.  Newer
+ systems include newer providers and capabilities, so this is used to allow
+ the code to work backwards in time until it finds something that works.
+ */
+typedef struct _HASH_ACQUIRE_CONFIG {
+
+    /**
+     The provider name.
+     */
+    LPCTSTR Provider;
+
+    /**
+     The provider type.
+     */
+    DWORD ProviderType;
+
+    /**
+     Options to open the provider with.
+     */
+    DWORD Flags;
+} HASH_ACQUIRE_CONFIG, *PHASH_ACQUIRE_CONFIG;
+
+/**
+ A table of providers, ordered from newest to oldest.  The code will
+ iterate through this table until it finds one that works.
+ */
+CONST HASH_ACQUIRE_CONFIG HashAcquireConfigOptions[] = {
+    {MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT},    // Vista+
+    {MS_ENH_RSA_AES_PROV_XP, PROV_RSA_AES, CRYPT_VERIFYCONTEXT}, // XP SP 3
+    {MS_DEF_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT},           // 2000/NT SP ?
+    {MS_DEF_PROV, PROV_RSA_FULL, 0}                              // NT 4 RTM
+};
+
+/**
  Allocate any internal allocations within the hash context needed for the
  specified hash algorithm.
 
@@ -335,18 +369,52 @@ HashInitializeContext(
     DWORD_PTR hHash;
     DWORD LastError;
     LPTSTR ErrText;
+    DWORD Index;
 
-    if (!DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider, NULL, MS_ENH_RSA_AES_PROV, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
-        if (!DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider, NULL, MS_ENH_RSA_AES_PROV_XP, PROV_RSA_AES, CRYPT_VERIFYCONTEXT)) {
-            if (!DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider, NULL, MS_DEF_PROV, PROV_RSA_FULL, CRYPT_VERIFYCONTEXT)) {
-                LastError = GetLastError();
-                ErrText = YoriLibGetWinErrorText(LastError);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: algorithm provider not functional: %s\n"), ErrText);
-                YoriLibFreeWinErrorText(ErrText);
-                HashCleanupContext(HashContext);
-                return FALSE;
+    LastError = ERROR_SUCCESS;
+
+    //
+    //  Iterate through the supported providers, looking for one that works.
+    //
+
+    for (Index = 0; Index < sizeof(HashAcquireConfigOptions)/sizeof(HashAcquireConfigOptions[0]); Index++) {
+        if (DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider,
+                                              NULL,
+                                              HashAcquireConfigOptions[Index].Provider,
+                                              HashAcquireConfigOptions[Index].ProviderType,
+                                              HashAcquireConfigOptions[Index].Flags)) {
+            LastError = ERROR_SUCCESS;
+            break;
+        } else {
+            LastError = GetLastError();
+
+            //
+            //  NTE_BAD_KEYSET indicates that a keyset may need to be created.
+            //  The documentation suggests code should always handle this,
+            //  although it's less clear on why.  In practice this appears
+            //  necessary on NT 4 RTM (perhaps nothing else has used it first?)
+            //
+            if (LastError != NTE_BAD_KEYSET) {
+                continue;
+            }
+
+            if (DllAdvApi32.pCryptAcquireContextW(&HashContext->Provider,
+                                                  NULL,
+                                                  HashAcquireConfigOptions[Index].Provider,
+                                                  HashAcquireConfigOptions[Index].ProviderType,
+                                                  HashAcquireConfigOptions[Index].Flags | CRYPT_NEWKEYSET)) {
+                LastError = ERROR_SUCCESS;
+                break;
             }
         }
+    }
+
+    if (LastError != ERROR_SUCCESS) {
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("hash: algorithm provider not functional: %s\n"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        HashCleanupContext(HashContext);
+        return FALSE;
     }
 
     if (!DllAdvApi32.pCryptCreateHash(HashContext->Provider, Algorithm, 0, 0, &hHash)) {

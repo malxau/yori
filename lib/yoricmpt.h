@@ -3792,12 +3792,29 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define PROV_RSA_AES 24
 #endif
 
+#ifndef NTE_BAD_KEYSET
+/**
+ A definition for an HRESULT that is communicated via Win32 lasterror (huh?)
+ to indicate the lack of a key store if the compilation environment doesn't
+ define it.
+ */
+#define NTE_BAD_KEYSET 0x80090016
+#endif
+
 #ifndef CRYPT_VERIFYCONTEXT
 /**
  A definition for a flag to tell the provider that no private key material is
  required if it is not defined by the current compilation environment.
  */
 #define CRYPT_VERIFYCONTEXT 0xF0000000
+#endif
+
+#ifndef CRYPT_NEWKEYSET
+/**
+ A definition for a flag to tell the provider to create a new key store if
+ it is not defined by the current compilation environment.
+ */
+#define CRYPT_NEWKEYSET 0x00000008
 #endif
 
 #ifndef HP_HASHVAL
