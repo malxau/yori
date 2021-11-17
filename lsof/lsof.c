@@ -3,7 +3,7 @@
  *
  * Yori determine which processes are keeping files open.
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -160,6 +160,178 @@ LsofFileFoundCallback(
     return TRUE;
 }
 
+/**
+ Display information about handles opened for all processes.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+LsofDumpHandles(VOID)
+{
+    PYORI_SYSTEM_HANDLE_INFORMATION_EX Handles;
+    DWORD_PTR Index;
+    PYORI_SYSTEM_HANDLE_ENTRY_EX ThisHandle;
+    HANDLE LocalProcessHandle;
+    PYORI_OBJECT_NAME_INFORMATION ObjectName;
+    PYORI_OBJECT_TYPE_INFORMATION ObjectType;
+    YORI_STRING ModuleNameString;
+    YORI_STRING ObjectNameString;
+    YORI_STRING ObjectTypeString;
+    DWORD ObjectNameLength;
+    DWORD ObjectTypeLength;
+    DWORD LengthReturned;
+    HANDLE ProcessHandle;
+    DWORD LastPid;
+
+    ProcessHandle = INVALID_HANDLE_VALUE;
+    LastPid = 0;
+
+    YoriLibLoadPsapiFunctions();
+
+    if (!YoriLibGetSystemHandlesList(&Handles)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: Error getting system handle list\n"));
+        return FALSE;
+    }
+
+    ObjectNameLength = 0x10000;
+    ObjectName = YoriLibMalloc(ObjectNameLength);
+    if (ObjectName == NULL) {
+        YoriLibFree(Handles);
+        return FALSE;
+    }
+
+    ObjectTypeLength = 0x1000;
+    ObjectType = YoriLibMalloc(ObjectTypeLength);
+    if (ObjectName == NULL) {
+        YoriLibFree(ObjectName);
+        YoriLibFree(Handles);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&ModuleNameString, 0x8000)) {
+        YoriLibFree(ObjectType);
+        YoriLibFree(ObjectName);
+        YoriLibFree(Handles);
+        return FALSE;
+    }
+
+    for (Index = 0; Index < Handles->NumberOfHandles; Index++) {
+        ThisHandle = &Handles->Handles[Index];
+        if (ProcessHandle == INVALID_HANDLE_VALUE ||
+            LastPid != ThisHandle->ProcessId) {
+
+            if (ProcessHandle != INVALID_HANDLE_VALUE &&
+                ProcessHandle != NULL) {
+
+                CloseHandle(ProcessHandle);
+            }
+
+            //
+            //  This open may fail.  If it does, we can't get information
+            //  about this process, which makes displaying numeric values
+            //  pointless.  Leaving this value as NULL is used to suppress
+            //  processing this process, but when we get to the next
+            //  process (LastPid != ThisHandle->ProcessId), the next
+            //  process will be opened.
+            //
+
+            ProcessHandle = OpenProcess(PROCESS_DUP_HANDLE | PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, (DWORD)ThisHandle->ProcessId);
+            if (ProcessHandle == NULL) {
+                ProcessHandle = OpenProcess(PROCESS_DUP_HANDLE, FALSE, (DWORD)ThisHandle->ProcessId);
+            }
+            LastPid = (DWORD)ThisHandle->ProcessId;
+
+            ModuleNameString.LengthInChars = 0;
+            if (DllPsapi.pGetModuleFileNameExW != NULL &&
+                ProcessHandle != NULL) {
+
+                ModuleNameString.LengthInChars = DllPsapi.pGetModuleFileNameExW(ProcessHandle, NULL, ModuleNameString.StartOfString, ModuleNameString.LengthAllocated);
+            }
+
+            if (ProcessHandle == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Process %i ** NO ACCESS **\n"), LastPid);
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Process %i %y\n"), LastPid, &ModuleNameString);
+            }
+        }
+
+        if (ProcessHandle != NULL) {
+
+            ObjectName->Name.LengthInBytes = 0;
+            ObjectType->TypeName.LengthInBytes = 0;
+
+            //
+            //  Get a local instance of the handle and see what information
+            //  can be extracted from them
+            //
+
+            LocalProcessHandle = INVALID_HANDLE_VALUE;
+            if (DuplicateHandle(ProcessHandle, (HANDLE)ThisHandle->HandleValue, GetCurrentProcess(), &LocalProcessHandle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+                DllNtDll.pNtQueryObject(LocalProcessHandle, 1, ObjectName, ObjectNameLength, &LengthReturned);
+                DllNtDll.pNtQueryObject(LocalProcessHandle, 2, ObjectType, ObjectTypeLength, &LengthReturned);
+            } else {
+                LocalProcessHandle = INVALID_HANDLE_VALUE;
+            }
+
+            //
+            //  Convert any output into strings for display
+            //
+
+            YoriLibInitEmptyString(&ObjectNameString);
+            if (ObjectName->Name.LengthInBytes > 0) {
+                ObjectNameString.LengthInChars = ObjectName->Name.LengthInBytes / sizeof(WCHAR);
+                ObjectNameString.StartOfString = ObjectName->Name.Buffer;
+            }
+            YoriLibInitEmptyString(&ObjectTypeString);
+            if (ObjectType->TypeName.LengthInBytes > 0) {
+                ObjectTypeString.LengthInChars = ObjectType->TypeName.LengthInBytes / sizeof(WCHAR);
+                ObjectTypeString.StartOfString = ObjectType->TypeName.Buffer;
+            }
+
+            //
+            //  Only display files, since that's part of the point of the
+            //  program.
+            //
+
+            if (YoriLibCompareStringWithLiteralInsensitive(&ObjectTypeString, _T("File")) == 0) {
+
+                PYORI_STRING NameToDisplay;
+
+                NameToDisplay = &ObjectNameString;
+
+                //
+                //  If it's possible to get a Win32 path name, display that.
+                //  Otherwise, use what we have.
+                //
+
+                ModuleNameString.LengthInChars = 0;
+                if (DllKernel32.pGetFinalPathNameByHandleW != NULL) {
+
+                    ModuleNameString.LengthInChars = DllKernel32.pGetFinalPathNameByHandleW(LocalProcessHandle, ModuleNameString.StartOfString, ModuleNameString.LengthAllocated, 0);
+
+                    if (ModuleNameString.LengthInChars > 0 &&
+                        ModuleNameString.LengthInChars < ModuleNameString.LengthAllocated) {
+                        NameToDisplay = &ModuleNameString;
+                    }
+                }
+
+
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Handle %lli Object %p  %y\n"), ThisHandle->HandleValue, ThisHandle->Object, NameToDisplay);
+            }
+
+            if (LocalProcessHandle != INVALID_HANDLE_VALUE) {
+                CloseHandle(LocalProcessHandle);
+            }
+        }
+    }
+
+    YoriLibFreeStringContents(&ModuleNameString);
+    YoriLibFree(ObjectType);
+    YoriLibFree(ObjectName);
+    YoriLibFree(Handles);
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the lsof builtin command.
@@ -210,7 +382,7 @@ ENTRYPOINT(
                 LsofHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -234,35 +406,37 @@ ENTRYPOINT(
         }
     }
 
-    if (DllNtDll.pNtQueryInformationFile == NULL ||
-        DllKernel32.pQueryFullProcessImageNameW == NULL) {
-
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: OS support not present\n"));
-        return EXIT_FAILURE;
-    }
-
-    //
-    //  Attempt to enable backup privilege so an administrator can access more
-    //  objects successfully.
-    //
-
-    YoriLibEnableBackupPrivilege();
-
-    LsofContext.BufferLength = 16 * 1024;
-    LsofContext.Buffer = YoriLibMalloc(LsofContext.BufferLength);
-    if (LsofContext.Buffer == NULL) {
-        return EXIT_FAILURE;
-    }
-
-    //
-    //  If no file name is specified, use stdin; otherwise open
-    //  the file and use that
-    //
-
     if (StartArg == 0 || StartArg == ArgC) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: missing argument\n"));
-        return EXIT_FAILURE;
+        if (!LsofDumpHandles()) {
+            return EXIT_FAILURE;
+        }
     } else {
+
+        if (DllNtDll.pNtQueryInformationFile == NULL ||
+            DllKernel32.pQueryFullProcessImageNameW == NULL) {
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: OS support not present\n"));
+            return EXIT_FAILURE;
+        }
+
+        //
+        //  Attempt to enable backup privilege so an administrator can access
+        //  more objects successfully.
+        //
+
+        YoriLibEnableBackupPrivilege();
+
+        LsofContext.BufferLength = 16 * 1024;
+        LsofContext.Buffer = YoriLibMalloc(LsofContext.BufferLength);
+        if (LsofContext.Buffer == NULL) {
+            return EXIT_FAILURE;
+        }
+
+        //
+        //  If no file name is specified, use stdin; otherwise open
+        //  the file and use that
+        //
+
         MatchFlags = YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES;
         if (Recursive) {
             MatchFlags |= YORILIB_FILEENUM_RECURSE_BEFORE_RETURN | YORILIB_FILEENUM_RECURSE_PRESERVE_WILD;
@@ -284,9 +458,9 @@ ENTRYPOINT(
                 }
             }
         }
-    }
 
-    YoriLibFree(LsofContext.Buffer);
+        YoriLibFree(LsofContext.Buffer);
+    }
 
     return EXIT_SUCCESS;
 }

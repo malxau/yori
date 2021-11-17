@@ -6033,6 +6033,18 @@ GET_FILE_INFORMATION_BY_HANDLE_EX(HANDLE, DWORD, PVOID, DWORD);
 typedef GET_FILE_INFORMATION_BY_HANDLE_EX *PGET_FILE_INFORMATION_BY_HANDLE_EX;
 
 /**
+ A prototype for the GetFinalPathNameByHandleW function.
+ */
+typedef
+BOOL WINAPI
+GET_FINAL_PATH_NAME_BY_HANDLEW(HANDLE, LPCWSTR, DWORD, DWORD);
+
+/**
+ Prototype for a pointer to the GetFinalPathNameByHandleW function.
+ */
+typedef GET_FINAL_PATH_NAME_BY_HANDLEW *PGET_FINAL_PATH_NAME_BY_HANDLEW;
+
+/**
  A prototype for the GetLogicalProcessorInformation function.
  */
 typedef
@@ -6476,6 +6488,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetFileInformationByHandleEx.
      */
     PGET_FILE_INFORMATION_BY_HANDLE_EX pGetFileInformationByHandleEx;
+
+    /**
+     If it's available on the current system, a pointer to GetFinalPathNameByHandleW.
+     */
+    PGET_FINAL_PATH_NAME_BY_HANDLEW pGetFinalPathNameByHandleW;
 
     /**
      If it's available on the current system, a pointer to GetLogicalProcessorInformation.
