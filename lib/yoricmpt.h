@@ -2918,11 +2918,6 @@ typedef struct _FILE_STANDARD_INFO {
 #define FileRenameInfo      (0x000000003)
 
 /**
- The identifier of the request type that renames a file with extended flags.
- */
-#define FileRenameInfoEx    (0x000000016)
-
-/**
  A structure to set or clear the delete disposition on a stream or link.
  */
 typedef struct _FILE_DISPOSITION_INFO {
@@ -2972,6 +2967,11 @@ typedef struct _FILE_DISPOSITION_INFO_EX {
  structure.
  */
 #define FileDispositionInfoEx (0x000000015)
+
+/**
+ The identifier of the request type that renames a file with extended flags.
+ */
+#define FileRenameInfoEx      (0x000000016)
 
 #endif
 
