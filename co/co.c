@@ -886,7 +886,7 @@ CoCreateSynchronousMenu(VOID)
 
     if (!YoriWinGetWinMgrDimensions(WinMgr, &WindowSize)) {
         WindowSize.X = 80;
-        WindowSize.X = 25;
+        WindowSize.Y = 25;
     } else {
         WindowSize.X = (SHORT)(WindowSize.X * 9 / 10);
         if (WindowSize.X < 80) {
