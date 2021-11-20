@@ -301,14 +301,14 @@ YoriPkgGetApplicationDirectory(
 __success(return)
 BOOL
 YoriPkgGetPackageIniFile(
-    __in_opt PYORI_STRING InstallDirectory,
+    __in_opt PCYORI_STRING InstallDirectory,
     __out PYORI_STRING IniFileName
     );
 
 __success(return)
 BOOL
 YoriPkgGetPackageInfo(
-    __in PYORI_STRING IniPath,
+    __in PCYORI_STRING IniPath,
     __out PYORI_STRING PackageName,
     __out PYORI_STRING PackageVersion,
     __out PYORI_STRING PackageArch,
@@ -347,7 +347,7 @@ __success(return)
 BOOL
 YoriPkgConvertUserPackagePathToMirroredPath(
     __in PYORI_STRING PackagePath,
-    __in PYORI_STRING IniFilePath,
+    __in PCYORI_STRING IniFilePath,
     __out PYORI_STRING MirroredPath
     );
 
@@ -355,7 +355,7 @@ __success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
-    __in_opt PYORI_STRING IniFilePath,
+    __in_opt PCYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
     __out PBOOL DeleteWhenFinished
     );
@@ -388,7 +388,7 @@ YoriPkgFreeBackupPackage(
 
 VOID
 YoriPkgRollbackPackage(
-    __in PYORI_STRING IniPath,
+    __in PCYORI_STRING IniPath,
     __in PYORIPKG_BACKUP_PACKAGE PackageBackup
     );
 
@@ -396,8 +396,8 @@ __success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgBackupPackage(
     __in PYORI_STRING IniPath,
-    __in PYORI_STRING PackageName,
-    __in_opt PYORI_STRING TargetDirectory,
+    __in PCYORI_STRING PackageName,
+    __in_opt PCYORI_STRING TargetDirectory,
     __out PYORIPKG_BACKUP_PACKAGE * PackageBackup
     );
 
@@ -409,8 +409,8 @@ YoriPkgRemoveSystemReferencesToPackage(
 
 VOID
 YoriPkgRollbackAndFreeBackupPackageList(
-    __in PYORI_STRING IniPath,
-    __in_opt PYORI_STRING NewDirectory,
+    __in PCYORI_STRING IniPath,
+    __in_opt PCYORI_STRING NewDirectory,
     __in PYORI_LIST_ENTRY ListHead
     );
 
@@ -438,7 +438,7 @@ __success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PkgIniFile,
-    __in_opt PYORI_STRING TargetDirectory,
+    __in_opt PCYORI_STRING TargetDirectory,
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
     __in PYORI_STRING PackageUrl,
     __out_opt _On_failure_(_When_(return == ERROR_OLD_WIN_VERSION, _Post_valid_)) PYORI_STRING RedirectToPackageUrl
@@ -467,7 +467,7 @@ YoriPkgCheckIfFileAlreadyExists(
 BOOL
 YoriPkgInstallPendingPackages(
     __in PYORI_STRING PkgIniFile,
-    __in_opt PYORI_STRING TargetDirectory,
+    __in_opt PCYORI_STRING TargetDirectory,
     __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
     );
 
@@ -482,8 +482,8 @@ YoriPkgCheckIfPackageDeleteable(
 DWORD
 YoriPkgDeletePackageInternal(
     __in PYORI_STRING PkgIniFile,
-    __in_opt PYORI_STRING TargetDirectory,
-    __in PYORI_STRING PackageName,
+    __in_opt PCYORI_STRING TargetDirectory,
+    __in PCYORI_STRING PackageName,
     __in BOOLEAN IgnoreFailureOfCurrentExecutable
     );
 

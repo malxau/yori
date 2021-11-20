@@ -46,7 +46,7 @@ TCHAR YoriLibPathPrefixChar;
  */
 BOOL
 YoriLibIsDriveLetterWithColon(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     )
 {
     if (Path->LengthInChars < 2) {
@@ -74,7 +74,7 @@ YoriLibIsDriveLetterWithColon(
  */
 BOOL
 YoriLibIsDriveLetterWithColonAndSlash(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     )
 {
     if (Path->LengthInChars < 3) {
@@ -99,7 +99,7 @@ YoriLibIsDriveLetterWithColonAndSlash(
  */
 BOOL
 YoriLibIsPathPrefixed(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     )
 {
     if (Path->LengthInChars < 4) {
@@ -127,7 +127,7 @@ YoriLibIsPathPrefixed(
  */
 BOOL
 YoriLibIsPrefixedDriveLetterWithColon(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     )
 {
     if (Path->LengthInChars < 6) {
@@ -159,7 +159,7 @@ YoriLibIsPrefixedDriveLetterWithColon(
  */
 BOOL
 YoriLibIsPrefixedDriveLetterWithColonAndSlash(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     )
 {
     if (Path->LengthInChars < 7) {
@@ -193,7 +193,7 @@ YoriLibIsPrefixedDriveLetterWithColonAndSlash(
  */
 BOOL
 YoriLibIsFullPathUnc(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     )
 {
     if (Path->LengthInChars < 8) {
@@ -1715,7 +1715,7 @@ YoriLibExpandHomeDirectories(
  */
 BOOL
 YoriLibIsFileNameDeviceName(
-    __in PYORI_STRING File
+    __in PCYORI_STRING File
     )
 {
     YORI_STRING NameToCheck;
@@ -1781,7 +1781,7 @@ YoriLibIsFileNameDeviceName(
 __success(return)
 BOOL
 YoriLibUserStringToSingleFilePath(
-    __in PYORI_STRING UserString,
+    __in PCYORI_STRING UserString,
     __in BOOL ReturnEscapedPath,
     __out PYORI_STRING FullPath
     )
@@ -1842,7 +1842,7 @@ YoriLibUserStringToSingleFilePath(
 __success(return)
 BOOL
 YoriLibUserStringToSingleFilePathOrDevice(
-    __in PYORI_STRING UserString,
+    __in PCYORI_STRING UserString,
     __in BOOL ReturnEscapedPath,
     __out PYORI_STRING FullPath
     )

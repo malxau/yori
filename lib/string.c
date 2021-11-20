@@ -250,7 +250,7 @@ YoriLibCloneString(
  */
 BOOL
 YoriLibIsStringNullTerminated(
-    __in PYORI_STRING String
+    __in PCYORI_STRING String
     )
 {
     //

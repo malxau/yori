@@ -2070,32 +2070,32 @@ YoriLibGenerateWriteTime(
 
 BOOL
 YoriLibIsPathPrefixed(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     );
 
 BOOL
 YoriLibIsDriveLetterWithColon(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     );
 
 BOOL
 YoriLibIsDriveLetterWithColonAndSlash(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     );
 
 BOOL
 YoriLibIsPrefixedDriveLetterWithColon(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     );
 
 BOOL
 YoriLibIsPrefixedDriveLetterWithColonAndSlash(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     );
 
 BOOL
 YoriLibIsFullPathUnc(
-    __in PYORI_STRING Path
+    __in PCYORI_STRING Path
     );
 
 __success(return)
@@ -2133,13 +2133,13 @@ YoriLibExpandHomeDirectories(
 
 BOOL
 YoriLibIsFileNameDeviceName(
-    __in PYORI_STRING File
+    __in PCYORI_STRING File
     );
 
 __success(return)
 BOOL
 YoriLibUserStringToSingleFilePath(
-    __in PYORI_STRING UserString,
+    __in PCYORI_STRING UserString,
     __in BOOL bReturnEscapedPath,
     __out PYORI_STRING FullPath
     );
@@ -2147,7 +2147,7 @@ YoriLibUserStringToSingleFilePath(
 __success(return)
 BOOL
 YoriLibUserStringToSingleFilePathOrDevice(
-    __in PYORI_STRING UserString,
+    __in PCYORI_STRING UserString,
     __in BOOL bReturnEscapedPath,
     __out PYORI_STRING FullPath
     );
@@ -3141,7 +3141,7 @@ __success(return)
 BOOL
 YoriLibAddEnvironmentComponentToString(
     __inout PYORI_STRING ExistingString,
-    __in PYORI_STRING NewComponent,
+    __in PCYORI_STRING NewComponent,
     __in BOOL InsertAtFront
     );
 
@@ -3482,7 +3482,7 @@ YoriLibCloneString(
 
 BOOL
 YoriLibIsStringNullTerminated(
-    __in PYORI_STRING String
+    __in PCYORI_STRING String
     );
 
 DWORD
@@ -3807,7 +3807,7 @@ YoriLibRenameFileToBackupName(
 
 BOOL
 YoriLibIsPathUrl(
-    __in PYORI_STRING PackagePath
+    __in PCYORI_STRING PackagePath
     );
 
 BOOL YoriLibIsStdInConsole(VOID);

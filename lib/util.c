@@ -391,7 +391,7 @@ YoriLibRenameFileToBackupName(
  */
 BOOL
 YoriLibIsPathUrl(
-    __in PYORI_STRING PackagePath
+    __in PCYORI_STRING PackagePath
     )
 {
     if (YoriLibCompareStringWithLiteralInsensitiveCount(PackagePath, _T("http://"), sizeof("http://") - 1) == 0 ||

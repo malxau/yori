@@ -301,7 +301,7 @@ __success(return)
 BOOL
 YoriLibAddEnvironmentComponentToString(
     __inout PYORI_STRING ExistingString,
-    __in PYORI_STRING NewComponent,
+    __in PCYORI_STRING NewComponent,
     __in BOOL InsertAtFront
     )
 {

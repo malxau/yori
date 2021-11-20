@@ -106,7 +106,7 @@ YoriPkgDeleteRenamedFiles(
  */
 VOID
 YoriPkgRollbackRenamedFiles(
-    __in PYORI_STRING IniPath,
+    __in PCYORI_STRING IniPath,
     __in PYORIPKG_BACKUP_PACKAGE PackageBackup,
     __in BOOL RestoreIni
     )
@@ -164,7 +164,7 @@ YoriPkgRollbackRenamedFiles(
  */
 VOID
 YoriPkgRollbackPackage(
-    __in PYORI_STRING IniPath,
+    __in PCYORI_STRING IniPath,
     __in PYORIPKG_BACKUP_PACKAGE PackageBackup
     )
 {
@@ -269,8 +269,8 @@ __success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgBackupPackage(
     __in PYORI_STRING IniPath,
-    __in PYORI_STRING PackageName,
-    __in_opt PYORI_STRING TargetDirectory,
+    __in PCYORI_STRING PackageName,
+    __in_opt PCYORI_STRING TargetDirectory,
     __out PYORIPKG_BACKUP_PACKAGE * PackageBackup
     )
 {
@@ -434,8 +434,8 @@ YoriPkgRemoveSystemReferencesToPackage(
  */
 VOID
 YoriPkgRollbackAndFreeBackupPackageList(
-    __in PYORI_STRING IniPath,
-    __in_opt PYORI_STRING NewDirectory,
+    __in PCYORI_STRING IniPath,
+    __in_opt PCYORI_STRING NewDirectory,
     __in PYORI_LIST_ENTRY ListHead
     )
 {
@@ -785,7 +785,7 @@ __success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPreparePackageForInstall(
     __in PYORI_STRING PkgIniFile,
-    __in_opt PYORI_STRING TargetDirectory,
+    __in_opt PCYORI_STRING TargetDirectory,
     __inout PYORIPKG_PACKAGES_PENDING_INSTALL PackageList,
     __in PYORI_STRING PackageUrl,
     __out_opt _On_failure_(_When_(return == ERROR_OLD_WIN_VERSION, _Post_valid_)) PYORI_STRING RedirectToPackageUrl

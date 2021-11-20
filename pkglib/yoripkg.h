@@ -62,15 +62,15 @@ YoriPkgCreateSourcePackage(
 
 BOOL
 YoriPkgDeletePackage(
-    __in_opt PYORI_STRING TargetDirectory,
-    __in PYORI_STRING PackageName,
+    __in_opt PCYORI_STRING TargetDirectory,
+    __in PCYORI_STRING PackageName,
     __in BOOL WarnIfNotInstalled
     );
 
 BOOL
 YoriPkgInstallSinglePackage(
     __in PYORI_STRING PackagePath,
-    __in_opt PYORI_STRING TargetDirectory
+    __in_opt PCYORI_STRING TargetDirectory
     );
 
 BOOL
@@ -109,7 +109,7 @@ YoriPkgInstallPseudoPackage(
     __in PYORI_STRING Architecture,
     __in_ecount(FileCount) PYORI_STRING FileArray,
     __in DWORD FileCount,
-    __in_opt PYORI_STRING TargetDirectory
+    __in_opt PCYORI_STRING TargetDirectory
     );
 
 BOOL
@@ -159,10 +159,10 @@ YoriPkgInstallRemotePackages(
 
 DWORD
 YoriPkgGetRemotePackageUrls(
-    __in PYORI_STRING PackageNames,
+    __in PCYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
-    __in_opt PYORI_STRING CustomSource,
-    __in_opt PYORI_STRING NewDirectory,
+    __in_opt PCYORI_STRING CustomSource,
+    __in_opt PCYORI_STRING NewDirectory,
     __deref_out_opt PYORI_STRING * PackageUrls
     );
 
@@ -179,15 +179,15 @@ YoriPkgDownloadRemotePackages(
 
 BOOL
 YoriPkgAppendInstallDirToPath(
-    __in PYORI_STRING TargetDirectory,
+    __in PCYORI_STRING TargetDirectory,
     __in BOOL AppendToUserPath,
     __in BOOL AppendToSystemPath
     );
 
 BOOL
 YoriPkgAddUninstallEntry(
-    __in PYORI_STRING TargetDirectory,
-    __in PYORI_STRING InitialVersion
+    __in PCYORI_STRING TargetDirectory,
+    __in PCYORI_STRING InitialVersion
     );
 
 BOOL

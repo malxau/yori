@@ -119,7 +119,7 @@ typedef struct _YORIPKG_REMOTE_SOURCE {
  */
 PYORIPKG_REMOTE_SOURCE
 YoriPkgAllocateRemoteSource(
-    __in PYORI_STRING RemoteSourceUrl
+    __in PCYORI_STRING RemoteSourceUrl
     )
 {
     PYORIPKG_REMOTE_SOURCE RemoteSource;
@@ -337,7 +337,7 @@ YoriPkgFreeRemotePackage(
  */
 BOOL
 YoriPkgCollectSourcesFromIni(
-    __in PYORI_STRING IniPath,
+    __in PCYORI_STRING IniPath,
     __inout_opt PYORI_LIST_ENTRY SourcesList
     )
 {
@@ -421,7 +421,7 @@ Exit:
  */
 BOOL
 YoriPkgCollectSourcesFromIniWithDefaults(
-    __in PYORI_STRING PackagesIni,
+    __in PCYORI_STRING PackagesIni,
     __inout PYORI_LIST_ENTRY SourcesList,
     __out_opt PBOOLEAN DefaultsUsed
     )
@@ -478,7 +478,7 @@ YoriPkgCollectSourcesFromIniWithDefaults(
 DWORD
 YoriPkgCollectPackagesFromSource(
     __in PYORIPKG_REMOTE_SOURCE Source,
-    __in PYORI_STRING PackagesIni,
+    __in PCYORI_STRING PackagesIni,
     __inout PYORI_LIST_ENTRY PackageList,
     __inout_opt PYORI_LIST_ENTRY SourcesList
     )
@@ -642,8 +642,8 @@ Exit:
 __success(return)
 BOOL
 YoriPkgCollectAllSourcesAndPackages(
-    __in_opt PYORI_STRING CustomSource,
-    __in_opt PYORI_STRING NewDirectory,
+    __in_opt PCYORI_STRING CustomSource,
+    __in_opt PCYORI_STRING NewDirectory,
     __out _Always_(_Post_valid_) PYORI_LIST_ENTRY SourcesList,
     __out _Always_(_Post_valid_) PYORI_LIST_ENTRY PackageList
     )
@@ -985,7 +985,7 @@ YoriPkgDownloadRemotePackages(
 BOOL
 YoriPkgFindRemotePackageMatchingArchitecture(
     __in PYORI_LIST_ENTRY PackageList,
-    __in PYORI_STRING Architecture,
+    __in PCYORI_STRING Architecture,
     __inout PYORI_LIST_ENTRY MatchingPackages
     )
 {
@@ -1037,12 +1037,12 @@ YoriPkgFindRemotePackageMatchingArchitecture(
  */
 DWORD
 YoriPkgFindRemotePackages(
-    __in PYORI_STRING PackageNames,
+    __in PCYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
-    __in_opt PYORI_STRING CustomSource,
-    __in_opt PYORI_STRING NewDirectory,
-    __in_opt PYORI_STRING MatchVersion,
-    __in_opt PYORI_STRING MatchArch,
+    __in_opt PCYORI_STRING CustomSource,
+    __in_opt PCYORI_STRING NewDirectory,
+    __in_opt PCYORI_STRING MatchVersion,
+    __in_opt PCYORI_STRING MatchArch,
     __inout PYORI_LIST_ENTRY PackagesMatchingCriteria
     )
 {
@@ -1053,7 +1053,7 @@ YoriPkgFindRemotePackages(
     PYORI_LIST_ENTRY PackageEntry;
     PYORIPKG_REMOTE_PACKAGE Package;
     DWORD PkgIndex;
-    PYORI_STRING LookingForVersion;
+    PCYORI_STRING LookingForVersion;
     DWORD InstallCount = 0;
     BOOL PkgInstalled;
 
@@ -1358,10 +1358,10 @@ Exit:
  */
 DWORD
 YoriPkgGetRemotePackageUrls(
-    __in PYORI_STRING PackageNames,
+    __in PCYORI_STRING PackageNames,
     __in DWORD PackageNameCount,
-    __in_opt PYORI_STRING CustomSource,
-    __in_opt PYORI_STRING NewDirectory,
+    __in_opt PCYORI_STRING CustomSource,
+    __in_opt PCYORI_STRING NewDirectory,
     __deref_out_opt PYORI_STRING * PackageUrls
     )
 {

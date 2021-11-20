@@ -52,7 +52,7 @@ YoriPkgAppendPath(
     __in HKEY hRootKey,
     __in LPTSTR SubKey,
     __in LPTSTR ValueName,
-    __in PYORI_STRING PathToAdd
+    __in PCYORI_STRING PathToAdd
     )
 {
     HKEY hKey;
@@ -332,7 +332,7 @@ YoriPkgIsFileToBeDeletedOnReboot(
  */
 BOOL
 YoriPkgAppendInstallDirToPath(
-    __in PYORI_STRING TargetDirectory,
+    __in PCYORI_STRING TargetDirectory,
     __in BOOL AppendToUserPath,
     __in BOOL AppendToSystemPath
     )
@@ -429,8 +429,8 @@ YoriPkgRemoveInstallDirFromPath(
  */
 BOOL
 YoriPkgAddUninstallEntry(
-    __in PYORI_STRING TargetDirectory,
-    __in PYORI_STRING InitialVersion
+    __in PCYORI_STRING TargetDirectory,
+    __in PCYORI_STRING InitialVersion
     )
 {
     HKEY hKey;

@@ -321,8 +321,8 @@ YoriPkgDeleteInstalledPackageFile(
 DWORD
 YoriPkgDeletePackageInternal(
     __in PYORI_STRING PkgIniFile,
-    __in_opt PYORI_STRING TargetDirectory,
-    __in PYORI_STRING PackageName,
+    __in_opt PCYORI_STRING TargetDirectory,
+    __in PCYORI_STRING PackageName,
     __in BOOLEAN IgnoreFailureOfCurrentExecutable
     )
 {
@@ -576,7 +576,7 @@ BOOL
 YoriPkgInstallPackage(
     __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages,
     __in PYORIPKG_PACKAGE_PENDING_INSTALL Package,
-    __in_opt PYORI_STRING TargetDirectory
+    __in_opt PCYORI_STRING TargetDirectory
     )
 {
     YORI_STRING PkgInfoFile;
@@ -865,7 +865,7 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
 BOOL
 YoriPkgInstallPendingPackages(
     __in PYORI_STRING PkgIniFile,
-    __in_opt PYORI_STRING TargetDirectory,
+    __in_opt PCYORI_STRING TargetDirectory,
     __in PYORIPKG_PACKAGES_PENDING_INSTALL PendingPackages
     )
 {

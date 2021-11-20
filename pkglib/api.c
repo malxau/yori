@@ -278,7 +278,7 @@ Exit:
 BOOL
 YoriPkgInstallSinglePackage(
     __in PYORI_STRING PackagePath,
-    __in_opt PYORI_STRING TargetDirectory
+    __in_opt PCYORI_STRING TargetDirectory
     )
 {
     YORI_STRING PkgIniFile;
@@ -773,8 +773,8 @@ YoriPkgListInstalledPackages(
  */
 BOOL
 YoriPkgDeletePackage(
-    __in_opt PYORI_STRING TargetDirectory,
-    __in PYORI_STRING PackageName,
+    __in_opt PCYORI_STRING TargetDirectory,
+    __in PCYORI_STRING PackageName,
     __in BOOL WarnIfNotInstalled
     )
 {
@@ -947,7 +947,7 @@ YoriPkgInstallPseudoPackage(
     __in PYORI_STRING Architecture,
     __in_ecount(FileCount) PYORI_STRING FileArray,
     __in DWORD FileCount,
-    __in_opt PYORI_STRING TargetDirectory
+    __in_opt PCYORI_STRING TargetDirectory
     )
 {
     YORI_STRING PkgIniFile;

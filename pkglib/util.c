@@ -108,7 +108,7 @@ YoriPkgGetApplicationDirectory(
 __success(return)
 BOOL
 YoriPkgGetPackageIniFile(
-    __in_opt PYORI_STRING InstallDirectory,
+    __in_opt PCYORI_STRING InstallDirectory,
     __out PYORI_STRING IniFileName
     )
 {
@@ -184,7 +184,7 @@ YoriPkgGetPackageIniFile(
 __success(return)
 BOOL
 YoriPkgGetPackageInfo(
-    __in PYORI_STRING IniPath,
+    __in PCYORI_STRING IniPath,
     __out PYORI_STRING PackageName,
     __out PYORI_STRING PackageVersion,
     __out PYORI_STRING PackageArch,
@@ -815,7 +815,7 @@ __success(return)
 BOOL
 YoriPkgConvertUserPackagePathToMirroredPath(
     __in PYORI_STRING PackagePath,
-    __in PYORI_STRING IniFilePath,
+    __in PCYORI_STRING IniFilePath,
     __out PYORI_STRING MirroredPath
     )
 {
@@ -956,7 +956,7 @@ __success(return == ERROR_SUCCESS)
 DWORD
 YoriPkgPackagePathToLocalPath(
     __in PYORI_STRING PackagePath,
-    __in_opt PYORI_STRING IniFilePath,
+    __in_opt PCYORI_STRING IniFilePath,
     __out PYORI_STRING LocalPath,
     __out PBOOL DeleteWhenFinished
     )
