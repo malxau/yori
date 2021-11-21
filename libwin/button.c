@@ -152,6 +152,7 @@ YoriWinButtonEventHandler(
     )
 {
     PYORI_WIN_CTRL_BUTTON Button;
+    PYORI_WIN_WINDOW_HANDLE TopLevelWindow;
     Button = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_BUTTON, Ctrl);
     switch(Event->EventType) {
         case YoriWinEventKeyDown:
@@ -189,7 +190,16 @@ YoriWinButtonEventHandler(
         case YoriWinEventMouseUpInClient:
         case YoriWinEventMouseUpInNonClient:
             Button->PressedAppearance = FALSE;
+
+            //
+            //  Repaint and force drawing in the release state so the
+            //  callback can display dialogs or other UI without the
+            //  button appearing pressed
+            //
+
             YoriWinButtonPaint(Button);
+            TopLevelWindow = YoriWinGetTopLevelWindow(&Button->Ctrl);
+            YoriWinDisplayWindowContents(TopLevelWindow);
             if (Button->ClickCallback != NULL) {
                 Button->ClickCallback(&Button->Ctrl);
             }
