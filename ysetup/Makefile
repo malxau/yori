@@ -12,14 +12,15 @@ LINKPDB=/Pdb:ysetup.pdb
 !ENDIF
 
 # This currently supports NT 3.5 and up.  For 3.5x it depends on a manually
-# installed WinInet.dll and Cabinet.dll.  Note that 3.5x will launch anything
-# stamped as version 4.0, and stamping it as 4.0 gives a nicer UI on newer
-# systems.
+# installed WinInet.dll.  Note that 3.5x will launch anything stamped as
+# version 4.0, and stamping it as 4.0 gives a nicer UI on newer systems.
 LIBS=$(LIBS) gdi32.lib user32.lib
 LDFLAGS_NT4UP=$(LDFLAGS:3.10=4.0)
 
 OBJS=\
 	 resource.obj    \
+	 gui.obj         \
+	 helper.obj      \
 	 ysetup.obj      \
 
 compile: $(OBJS)
