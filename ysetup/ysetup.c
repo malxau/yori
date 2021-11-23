@@ -38,7 +38,22 @@ CHAR strHelpText[] =
         "\n"
         "Installs a basic Yori system.\n"
         "\n"
-        "YSETUP [-license] [directory]\n";
+        "YSETUP [-license] [-core|-typical|-complete] [-desktop] [-source] [-start]\n"
+        "       [-symbols] [-systempath] [-terminal] [-uninstall] [-userpath]\n"
+        "       [directory]\n"
+        "\n"
+        "   -core          Install minimal components.\n"
+        "   -typical       Install typical components.\n"
+        "   -complete      Install all components.\n"
+        "\n"
+        "   -desktop       Install a desktop shortcut.\n"
+        "   -source        Install source code.\n"
+        "   -start         Install a start menu shortcut.\n"
+        "   -symbols       Install debugging symbols.\n"
+        "   -systempath    Add path to the system path.\n"
+        "   -terminal      Install Windows Terminal profile.\n"
+        "   -uninstall     Install an uninstall entry.\n"
+        "   -userpath      Add path to the user path.\n";
 
 /**
  Display usage text to the user.
@@ -56,51 +71,20 @@ SetupHelp(VOID)
 
 
 /**
- Install the default set of packages to a specified directory.
+ Display installation progress to the console.
 
- @param InstallDirectory Specifies the directory to install to.
+ @param StatusText Pointer to the current status.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @param Context Opaque context pointer, unused in this routine.
  */
-BOOL
-SetupInstallToDirectory(
-    __inout PYORI_STRING InstallDirectory
+VOID
+SetupCliUpdateStatus(
+    __in PCYORI_STRING StatusText,
+    __in_opt PVOID Context
     )
 {
-    YORI_STRING LocalPath;
-    PYORI_STRING CustomSource;
-    YORI_STRING PkgNames[4];
-
-    YoriLibInitEmptyString(&LocalPath);
-    CustomSource = NULL;
-
-    if (SetupFindLocalPkgPath(&LocalPath)) {
-        CustomSource = &LocalPath;
-    } else {
-        YoriLibInitEmptyString(&LocalPath);
-    }
-
-    if (!YoriLibCreateDirectoryAndParents(InstallDirectory)) {
-        DWORD Err = GetLastError();
-        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: Could not create installation directory %y: %s\n"), InstallDirectory, ErrText);
-        YoriLibFreeWinErrorText(ErrText);
-        YoriLibFreeStringContents(&LocalPath);
-        return FALSE;
-    }
-
-    YoriLibConstantString(&PkgNames[0], _T("yori-ypm"));
-    YoriLibConstantString(&PkgNames[1], _T("yori-core"));
-    YoriLibConstantString(&PkgNames[2], _T("yori-typical"));
-    YoriLibConstantString(&PkgNames[3], _T("yori-completion"));
-
-    if (YoriPkgInstallRemotePackages(PkgNames, sizeof(PkgNames)/sizeof(PkgNames[0]), CustomSource, InstallDirectory, NULL, NULL)) {
-        YoriLibFreeStringContents(&LocalPath);
-        return TRUE;
-    }
-
-    YoriLibFreeStringContents(&LocalPath);
-    return FALSE;
+    UNREFERENCED_PARAMETER(Context);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y\n"), StatusText);
 }
 
 /**
@@ -123,9 +107,14 @@ ymain(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
+    YSETUP_INSTALL_TYPE InstallType;
+    DWORD InstallOptions;
     YORI_STRING NewDirectory;
+    BOOL Result;
 
     YoriLibInitEmptyString(&NewDirectory);
+    InstallOptions = 0;
+    InstallType = InstallTypeDefault;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -140,6 +129,39 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2018-2021"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("complete")) == 0) {
+                InstallType = InstallTypeComplete;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("core")) == 0) {
+                InstallType = InstallTypeCore;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desktop")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_DESKTOP_SHORTCUT;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("source")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_SOURCE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("start")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_START_SHORTCUT;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("symbols")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_SYMBOLS;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("systempath")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_SYSTEM_PATH;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("terminal")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_TERMINAL_PROFILE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("typical")) == 0) {
+                InstallType = InstallTypeTypical;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("uninstall")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_UNINSTALL;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("userpath")) == 0) {
+                InstallOptions = InstallOptions | YSETUP_INSTALL_USER_PATH;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
@@ -156,18 +178,54 @@ ymain(
         }
     }
 
+    //
+    //  Initialize COM for the benefit of shell functions
+    //
+
+    YoriLibLoadOle32Functions();
+    if (DllOle32.pCoInitialize != NULL) {
+        DllOle32.pCoInitialize(NULL);
+    }
+
+    //
+    //  Shell is needed for a few different things, like the Browse button,
+    //  or shortcut creation.  Load it now so we can check if it's there
+    //  easily.
+    //
+
+    YoriLibLoadShell32Functions();
+    YoriLibLoadShfolderFunctions();
+    YoriLibLoadCabinetFunctions();
+    YoriLibLoadWinInetFunctions();
+
     if (StartArg > 0) {
-        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &NewDirectory)) {
+        YORI_STRING ErrorText;
+
+        //
+        //  Unlike most code, don't use prefix escapes here, since this path
+        //  can be passed to create shortcuts etc which can't handle them.
+        //
+
+        if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], FALSE, &NewDirectory)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: install failed\n"));
             return EXIT_FAILURE;
         }
 
-        if (!SetupInstallToDirectory(&NewDirectory)) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: install failed\n"));
-            YoriLibFreeStringContents(&NewDirectory);
-            return EXIT_FAILURE;
+        if (InstallType == InstallTypeDefault) {
+            InstallType = InstallTypeTypical;
         }
+
+        YoriLibInitEmptyString(&ErrorText);
+
+        Result = SetupInstallSelectedWithOptions(&NewDirectory, InstallType, InstallOptions, SetupCliUpdateStatus, NULL, &ErrorText);
+        if (Result) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Success: %y\n"), &ErrorText);
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Error: %y\n"), &ErrorText);
+        }
+
         YoriLibFreeStringContents(&NewDirectory);
+        YoriLibFreeStringContents(&ErrorText);
     } else {
         SetupGuiDisplayUi();
     }

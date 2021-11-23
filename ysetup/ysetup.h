@@ -26,6 +26,7 @@ SetupGetDllMissingMessage(VOID);
  The set of installation types supported by this program.
  */
 typedef enum _YSETUP_INSTALL_TYPE {
+    InstallTypeDefault = 0,
     InstallTypeCore = 1,
     InstallTypeTypical = 2,
     InstallTypeComplete = 3
