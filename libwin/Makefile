@@ -16,6 +16,7 @@ OBJS=\
 	 list.obj     \
 	 menubar.obj  \
 	 mledit.obj   \
+	 radio.obj    \
 	 scrolbar.obj \
 	 window.obj   \
 	 winmgr.obj   \

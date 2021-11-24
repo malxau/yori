@@ -322,7 +322,9 @@ typedef enum _YORI_WIN_CHARACTERS {
     YoriWinCharsShadow,
     YoriWinCharsAsciiShadow,
     YoriWinCharsComboDown,
-    YoriWinCharsAsciiComboDown
+    YoriWinCharsAsciiComboDown,
+    YoriWinCharsRadioSelection,
+    YoriWinCharsAsciiRadioSelection
 } YORI_WIN_CHARACTERS;
 
 // ITEMARAY.C

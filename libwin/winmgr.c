@@ -388,6 +388,16 @@ CONST TCHAR YoriWinComboDown[] = { 0x2193 };
  */
 CONST TCHAR YoriWinAsciiComboDown[] = { 'v' };
 
+/**
+ Characters forming a radio selection
+ */
+CONST TCHAR YoriWinRadioSelection[] = { 0x2219 };
+
+/**
+ Characters forming a radio selection using only ASCII characters
+ */
+CONST TCHAR YoriWinAsciiRadioSelection[] = { 'o' };
+
 
 /**
  An array of known characters used for visuals.  This must correspond to the
@@ -408,6 +418,8 @@ LPCTSTR YoriWinCharacterSetChars[] = {
     YoriWinAsciiShadow,
     YoriWinComboDown,
     YoriWinAsciiComboDown,
+    YoriWinRadioSelection,
+    YoriWinAsciiRadioSelection
 };
 
 
@@ -444,6 +456,8 @@ YoriWinGetDrawingCharacters(
             EffectiveCharacterSet = YoriWinCharsAsciiShadow;
         } else if (EffectiveCharacterSet == YoriWinCharsComboDown) {
             EffectiveCharacterSet = YoriWinCharsAsciiComboDown;
+        } else if (EffectiveCharacterSet == YoriWinCharsRadioSelection) {
+            EffectiveCharacterSet = YoriWinCharsAsciiRadioSelection;
         } else {
             EffectiveCharacterSet = YoriWinCharsSingleLineAsciiBorder;
         }

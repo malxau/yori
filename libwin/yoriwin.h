@@ -766,6 +766,34 @@ YoriWinMultilineEditCreate(
     __in DWORD Style
     );
 
+// RADIO.C
+
+BOOLEAN
+YoriWinRadioIsSelected(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+VOID
+YoriWinRadioSelect(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinRadioReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    );
+
+PYORI_WIN_CTRL_HANDLE
+YoriWinRadioCreate(
+    __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
+    __in PSMALL_RECT Size,
+    __in PYORI_STRING Caption,
+    __in_opt PYORI_WIN_CTRL_HANDLE FirstRadioControl,
+    __in DWORD Style,
+    __in_opt PYORI_WIN_NOTIFY ToggleCallback
+    );
+
 // *** WINDOW.C ***
 
 /**
