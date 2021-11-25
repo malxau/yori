@@ -91,10 +91,13 @@ SetupInstallSelectedWithOptions(
     __in YSETUP_INSTALL_TYPE InstallType,
     __in DWORD InstallOptions,
     __in PYSETUP_STATUS_CALLBACK StatusCallback,
-    __in PVOID StatusContext,
+    __in_opt PVOID StatusContext,
     __out _On_failure_(_Post_valid_) PYORI_STRING ErrorText
     );
 
 BOOL
 SetupGuiDisplayUi(VOID);
+
+BOOL
+SetupTuiDisplayUi(VOID);
 

@@ -3,7 +3,7 @@
  *
  * Yori shell bootstrap installer resource definitions
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,6 +24,75 @@
  * THE SOFTWARE.
  */
 
+/**
+ Dialog text for install directory
+ */
+#define YSETUP_DLGTEXT_INSTALLDIR      "&Install directory:"
+
+/**
+ Dialog text for browse
+ */
+#define YSETUP_DLGTEXT_BROWSE          "&Browse..."
+
+/**
+ Dialog text for install core
+ */
+#define YSETUP_DLGTEXT_INSTALLCORE     "Install C&ore"
+
+/**
+ Dialog text for install typical
+ */
+#define YSETUP_DLGTEXT_INSTALLTYPICAL  "Install &Typical"
+
+/**
+ Dialog text for install complete
+ */
+#define YSETUP_DLGTEXT_INSTALLCOMPLETE "Install &Complete"
+
+/**
+ Dialog text for creating a desktop shortcut
+ */
+#define YSETUP_DLGTEXT_DESKTOPSHORTCUT  "Install &Desktop shortcut"
+
+/**
+ Dialog text for creating a start menu shortcut
+ */
+#define YSETUP_DLGTEXT_STARTSHORTCUT    "Install &Start Menu shortcut"
+
+/**
+ Dialog text for creating a windows terminal profile
+ */
+#define YSETUP_DLGTEXT_TERMINALPROFILE  "Install &Windows Terminal profile"
+
+/**
+ Dialog text for updating system path
+ */
+#define YSETUP_DLGTEXT_SYSTEMPATH       "Add Yori to s&ystem path"
+
+/**
+ Dialog text for updating user path
+ */
+#define YSETUP_DLGTEXT_USERPATH         "Add Yori to user &path"
+
+/**
+ Dialog text for installing source code
+ */
+#define YSETUP_DLGTEXT_SOURCE           "Install sou&rce code"
+
+/**
+ Dialog text for installing debugging symbols
+ */
+#define YSETUP_DLGTEXT_SYMBOLS          "Install debugging symbols"
+
+/**
+ Dialog text for installing an uninstall entry
+ */
+#define YSETUP_DLGTEXT_UNINSTALL        "Register &uninstall handler"
+
+/**
+ Dialog text for initial status line
+ */
+#define YSETUP_DLGTEXT_PLEASESELECT     "Please select installation options"
 
 /**
  The identifier for the dialog box.

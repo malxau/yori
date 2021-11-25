@@ -571,10 +571,17 @@ SetupInstallSelectedWithOptions(
     DWORD PkgIndex;
     DWORD PkgUrlCount;
     BOOL Result = FALSE;
+    HANDLE OriginalStdOut;
+    HANDLE OriginalStdErr;
+    HANDLE NulDevice;
 
     YoriLibInitEmptyString(&LocalPath);
     CustomSource = NULL;
     ShortcutCount = 0;
+
+    OriginalStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    OriginalStdErr = GetStdHandle(STD_ERROR_HANDLE);
+    NulDevice = INVALID_HANDLE_VALUE;
 
     //
     //  Truncate trailing seperators
@@ -672,6 +679,19 @@ SetupInstallSelectedWithOptions(
     }
 
     //
+    //  Open the NUL device and redirect stdout/stderr to it.  This is to
+    //  prevent pkglib dumping all over the console.  Ideally pkglib would
+    //  be refactored to return error strings so ypm can display verbose
+    //  information and ysetup can handle it on a per-UI basis.
+    //
+
+    NulDevice = CreateFile(_T("NUL"), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (NulDevice != INVALID_HANDLE_VALUE) {
+        SetStdHandle(STD_OUTPUT_HANDLE, NulDevice);
+        SetStdHandle(STD_ERROR_HANDLE, NulDevice);
+    }
+
+    //
     //  Obtain URLs for the specified packages.
     //
 
@@ -679,7 +699,13 @@ SetupInstallSelectedWithOptions(
         CustomSource = &LocalPath;
     }
     YoriLibConstantString(&StatusText, _T("Obtaining package URLs..."));
+    SetStdHandle(STD_OUTPUT_HANDLE, OriginalStdOut);
+    SetStdHandle(STD_ERROR_HANDLE, OriginalStdErr);
     StatusCallback(&StatusText, StatusContext);
+    if (NulDevice != INVALID_HANDLE_VALUE) {
+        SetStdHandle(STD_OUTPUT_HANDLE, NulDevice);
+        SetStdHandle(STD_ERROR_HANDLE, NulDevice);
+    }
     PkgUrlCount = YoriPkgGetRemotePackageUrls(PkgNames, PkgIndex, CustomSource, InstallDir, &PackageUrls);
 
     if (PkgUrlCount != PkgCount) {
@@ -694,7 +720,13 @@ SetupInstallSelectedWithOptions(
     for (PkgCount = 0; PkgCount < PkgUrlCount; PkgCount++) {
         YoriLibYPrintf(&StatusText, _T("Installing %i of %i: %y"), PkgCount + 1, PkgUrlCount, &PackageUrls[PkgCount]);
         if (StatusText.StartOfString != NULL) {
+            SetStdHandle(STD_OUTPUT_HANDLE, OriginalStdOut);
+            SetStdHandle(STD_ERROR_HANDLE, OriginalStdErr);
             StatusCallback(&StatusText, StatusContext);
+            if (NulDevice != INVALID_HANDLE_VALUE) {
+                SetStdHandle(STD_OUTPUT_HANDLE, NulDevice);
+                SetStdHandle(STD_ERROR_HANDLE, NulDevice);
+            }
         }
         if (!YoriPkgInstallSinglePackage(&PackageUrls[PkgCount], InstallDir)) {
             YoriLibYPrintf(ErrorText, _T("Failed to install %y from %y"), &PkgNames[PkgCount], &PackageUrls[PkgCount]);
@@ -704,7 +736,13 @@ SetupInstallSelectedWithOptions(
 
     YoriLibFreeStringContents(&StatusText);
     YoriLibConstantString(&StatusText, _T("Applying installation options..."));
+    SetStdHandle(STD_OUTPUT_HANDLE, OriginalStdOut);
+    SetStdHandle(STD_ERROR_HANDLE, OriginalStdErr);
     StatusCallback(&StatusText, StatusContext);
+    if (NulDevice != INVALID_HANDLE_VALUE) {
+        SetStdHandle(STD_OUTPUT_HANDLE, NulDevice);
+        SetStdHandle(STD_ERROR_HANDLE, NulDevice);
+    }
 
     //
     //  Create shortcuts if requested
@@ -821,7 +859,13 @@ SetupInstallSelectedWithOptions(
     //
 
     YoriLibConstantString(ErrorText, _T("Installation complete."));
+    SetStdHandle(STD_OUTPUT_HANDLE, OriginalStdOut);
+    SetStdHandle(STD_ERROR_HANDLE, OriginalStdErr);
     StatusCallback(ErrorText, StatusContext);
+    if (NulDevice != INVALID_HANDLE_VALUE) {
+        SetStdHandle(STD_OUTPUT_HANDLE, NulDevice);
+        SetStdHandle(STD_ERROR_HANDLE, NulDevice);
+    }
 
     if ((InstallOptions & YSETUP_INSTALL_UNINSTALL) != 0) {
 
@@ -853,8 +897,12 @@ Exit:
     YoriLibFreeStringContents(&StatusText);
     YoriLibFreeStringContents(&LocalPath);
     YoriLibFree(PkgNames);
+    SetStdHandle(STD_OUTPUT_HANDLE, OriginalStdOut);
+    SetStdHandle(STD_ERROR_HANDLE, OriginalStdErr);
+    if (NulDevice != INVALID_HANDLE_VALUE) {
+        CloseHandle(NulDevice);
+    }
     return Result;
 }
-
 
 // vim:sw=4:ts=4:et:

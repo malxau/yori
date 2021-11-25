@@ -21,11 +21,12 @@ OBJS=\
 	 resource.obj    \
 	 gui.obj         \
 	 helper.obj      \
+	 tui.obj         \
 	 ysetup.obj      \
 
 compile: $(OBJS)
 
-ysetup.exe: $(OBJS) $(YORILIB) $(YORICRT) $(YORIPKG)
+ysetup.exe: $(OBJS) $(YORILIB) $(YORICRT) $(YORIPKG) $(YORIWIN) $(YORIDLG)
 	@echo $@
-	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) $(FDILIB) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIPKG) $(FDILIB) $(YORIWIN) $(YORIDLG) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 

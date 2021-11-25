@@ -79,23 +79,6 @@ SetupGuiInstallSelectedFromDialog(
 
 
     //
-    //  Truncate trailing seperators
-    //
-
-    while (InstallDir.LengthInChars > 0 &&
-           YoriLibIsSep(InstallDir.StartOfString[InstallDir.LengthInChars - 1])) {
-
-        InstallDir.StartOfString[InstallDir.LengthInChars - 1] = '\0';
-        InstallDir.LengthInChars--;
-    }
-
-    if (InstallDir.LengthInChars == 0) {
-        MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
-        YoriLibFreeStringContents(&InstallDir);
-        return FALSE;
-    }
-
-    //
     //  Count the number of packages we want to install
     //
 
@@ -377,25 +360,6 @@ SetupGuiDisplayUi(VOID)
     DWORD OsVerMinor;
     DWORD OsBuildNumber;
 
-    //
-    //  Initialize COM for the benefit of the shell's browse for folder
-    //  dialog
-    //
-
-    YoriLibLoadOle32Functions();
-    if (DllOle32.pCoInitialize != NULL) {
-        DllOle32.pCoInitialize(NULL);
-    }
-
-    //
-    //  Shell is needed for a few different things, like the Browse button,
-    //  or shortcut creation.  Load it now so we can check if it's there
-    //  easily.
-    //
-
-    YoriLibLoadShell32Functions();
-    YoriLibLoadShfolderFunctions();
-
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
         if (ScreenInfo.dwCursorPosition.X == 0 && ScreenInfo.dwCursorPosition.Y == 0) {
             FreeConsole();
@@ -416,10 +380,9 @@ SetupGuiDisplayUi(VOID)
         }
     }
 
-    YoriLibLoadCabinetFunctions();
-    YoriLibLoadWinInetFunctions();
+    if (DllCabinet.pFdiCopy == NULL ||
+        (DllWinInet.hDll == NULL && DllWinHttp.hDll == NULL)) {
 
-    if (DllCabinet.pFdiCopy == NULL || DllWinInet.hDll == NULL) {
         YORI_STRING MessageString;
         LPCSTR DllMissingWarning;
         DllMissingWarning = SetupGetDllMissingMessage();

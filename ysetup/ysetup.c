@@ -38,9 +38,12 @@ CHAR strHelpText[] =
         "\n"
         "Installs a basic Yori system.\n"
         "\n"
-        "YSETUP [-license] [-core|-typical|-complete] [-desktop] [-source] [-start]\n"
-        "       [-symbols] [-systempath] [-terminal] [-uninstall] [-userpath]\n"
-        "       [directory]\n"
+        "YSETUP [-license] [-core|-typical|-complete] [-desktop] [-gui] [-source]\n"
+        "       [-start] [-symbols] [-systempath] [-terminal] [-text] [-uninstall]\n"
+        "       [-userpath] [directory]\n"
+        "\n"
+        "   -gui           Use graphical installer (default)\n"
+        "   -text          Use text installer\n"
         "\n"
         "   -core          Install minimal components.\n"
         "   -typical       Install typical components.\n"
@@ -111,10 +114,17 @@ ymain(
     DWORD InstallOptions;
     YORI_STRING NewDirectory;
     BOOL Result;
+    enum {
+        UiDefault,
+        UiCli,
+        UiTui,
+        UiGui
+    } UiToUse;
 
     YoriLibInitEmptyString(&NewDirectory);
     InstallOptions = 0;
     InstallType = InstallTypeDefault;
+    UiToUse = UiDefault;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -138,6 +148,9 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desktop")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_DESKTOP_SHORTCUT;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("gui")) == 0) {
+                UiToUse = UiGui;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("source")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_SOURCE;
                 ArgumentUnderstood = TRUE;
@@ -152,6 +165,9 @@ ymain(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("terminal")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_TERMINAL_PROFILE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("text")) == 0) {
+                UiToUse = UiTui;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("typical")) == 0) {
                 InstallType = InstallTypeTypical;
@@ -197,8 +213,23 @@ ymain(
     YoriLibLoadShfolderFunctions();
     YoriLibLoadCabinetFunctions();
     YoriLibLoadWinInetFunctions();
+    if (DllWinInet.hDll == NULL) {
+        YoriLibLoadWinHttpFunctions();
+    }
 
-    if (StartArg > 0) {
+    if (UiToUse == UiDefault) {
+        if (StartArg > 0) {
+            UiToUse = UiCli;
+        } else if (YoriLibIsNanoServer()) {
+            UiToUse = UiTui;
+        } else {
+            UiToUse = UiGui;
+        }
+    }
+
+
+
+    if (UiToUse == UiCli) {
         YORI_STRING ErrorText;
 
         //
@@ -226,6 +257,8 @@ ymain(
 
         YoriLibFreeStringContents(&NewDirectory);
         YoriLibFreeStringContents(&ErrorText);
+    } else if (UiToUse == UiTui) {
+        SetupTuiDisplayUi();
     } else {
         SetupGuiDisplayUi();
     }
