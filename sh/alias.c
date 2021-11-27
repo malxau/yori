@@ -209,8 +209,7 @@ YoriShAddAlias(
 
  @param VariableName The name of the variable that requires expansion.
 
- @param CmdContext Pointer to the original CmdContext without the alias
-        present.
+ @param Context Pointer to the original CmdContext without the alias present.
 
  @return The number of characters populated or the number of characters
          required if the buffer is too small.
@@ -219,10 +218,13 @@ DWORD
 YoriShExpandAliasHelper(
     __inout PYORI_STRING OutputString,
     __in PYORI_STRING VariableName,
-    __in PYORI_LIBSH_CMD_CONTEXT CmdContext
+    __in PVOID Context
     )
 {
     DWORD CmdIndex;
+    PYORI_LIBSH_CMD_CONTEXT CmdContext;
+
+    CmdContext = (PYORI_LIBSH_CMD_CONTEXT)Context;
 
     if (VariableName->LengthInChars == 1 && VariableName->StartOfString[0] == '*') {
         YORI_STRING CmdLine;

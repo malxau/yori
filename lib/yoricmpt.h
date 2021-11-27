@@ -61,6 +61,19 @@
 #define COMMON_LVB_UNDERSCORE      0x8000
 #endif
 
+#if defined(__clang__)
+/**
+ A macro that defines interlocked as requiring the volatile keyword for
+ compilers that require it.
+ */
+#define INTERLOCKED_VOLATILE volatile
+#else
+/**
+ A macro that defines interlocked as not requiring the volatile keyword for
+ compilers that do not expect it.
+ */
+#define INTERLOCKED_VOLATILE
+#endif
 
 #ifndef DWORD_PTR
 #ifndef _WIN64
@@ -6901,7 +6914,7 @@ typedef REG_CLOSE_KEY *PREG_CLOSE_KEY;
  */
 typedef
 LONG WINAPI
-REG_CREATE_KEY_EXW(HANDLE, LPCWSTR, DWORD, LPWSTR, DWORD, DWORD, PVOID, PHANDLE, LPDWORD);
+REG_CREATE_KEY_EXW(HKEY, LPCWSTR, DWORD, LPWSTR, DWORD, DWORD, PVOID, PHKEY, LPDWORD);
 
 /**
  A prototype for a pointer to the RegCreateKeyExW function.
@@ -6961,7 +6974,7 @@ typedef REG_ENUM_VALUEW *PREG_ENUM_VALUEW;
  */
 typedef
 LONG WINAPI
-REG_OPEN_KEY_EXW(HANDLE, LPCWSTR, DWORD, DWORD, PHANDLE);
+REG_OPEN_KEY_EXW(HKEY, LPCWSTR, DWORD, DWORD, PHKEY);
 
 /**
  A prototype for a pointer to the RegOpenKeyExW function.

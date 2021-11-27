@@ -2446,7 +2446,7 @@ YoriShProcessKeyUp(
 
     if ((InputRecord->Event.KeyEvent.dwControlKeyState & (RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED)) == 0 &&
         (Buffer->NumericKeyValue != 0 ||
-         InputRecord->Event.KeyEvent.wVirtualKeyCode == VK_MENU && InputRecord->Event.KeyEvent.uChar.UnicodeChar != 0)) {
+         (InputRecord->Event.KeyEvent.wVirtualKeyCode == VK_MENU && InputRecord->Event.KeyEvent.uChar.UnicodeChar != 0))) {
 
         TCHAR HostKeyValue[2];
         DWORD NumericKeyValue;

@@ -500,7 +500,7 @@ CoGetTargetDirectory(
         return FALSE;
     }
 
-    if (FileAttr == -1) {
+    if (FileAttr == (DWORD)-1) {
         DWORD ButtonId;
 
         YoriLibConstantString(&Buttons[0], _T("&Yes"));

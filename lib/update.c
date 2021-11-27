@@ -116,7 +116,7 @@ YoriLibUpdateBinaryFromFile(
     //  Create a temporary name to hold the existing binary.
     //
 
-    if (_tcslen(PathToReplace) + 4 >= sizeof(OldPath) / sizeof(OldPath[0])) {
+    if ((size_t)_tcslen(PathToReplace) + 4 >= (size_t)(sizeof(OldPath) / sizeof(OldPath[0]))) {
         return FALSE;
     }
     YoriLibSPrintfS(OldPath, sizeof(OldPath)/sizeof(OldPath[0]), _T("%s.old"), PathToReplace);

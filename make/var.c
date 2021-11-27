@@ -423,8 +423,8 @@ MakeExpandVariables(
             } else {
 
                 if (ReadIndex + 2 < Line->LengthInChars &&
-                    (VariableName.StartOfString[0] == '$' && VariableName.StartOfString[1] == '@') ||
-                    (VariableName.StartOfString[0] == '*' && VariableName.StartOfString[1] == '*')) {
+                    ((VariableName.StartOfString[0] == '$' && VariableName.StartOfString[1] == '@') ||
+                     (VariableName.StartOfString[0] == '*' && VariableName.StartOfString[1] == '*'))) {
                     VariableName.LengthInChars = 2;
                 } else {
                     VariableName.LengthInChars = 1;
@@ -488,8 +488,8 @@ MakeExpandVariables(
             } else {
 
                 if (ReadIndex + 2 < Line->LengthInChars &&
-                    (VariableName.StartOfString[0] == '$' && VariableName.StartOfString[1] == '@') ||
-                    (VariableName.StartOfString[0] == '*' && VariableName.StartOfString[1] == '*')) {
+                    ((VariableName.StartOfString[0] == '$' && VariableName.StartOfString[1] == '@') ||
+                     (VariableName.StartOfString[0] == '*' && VariableName.StartOfString[1] == '*'))) {
                     VariableName.LengthInChars = 2;
                 } else {
                     VariableName.LengthInChars = 1;

@@ -394,7 +394,7 @@ HashInitializeContext(
             //  although it's less clear on why.  In practice this appears
             //  necessary on NT 4 RTM (perhaps nothing else has used it first?)
             //
-            if (LastError != NTE_BAD_KEYSET) {
+            if (LastError != (DWORD)NTE_BAD_KEYSET) {
                 continue;
             }
 

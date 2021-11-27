@@ -568,7 +568,7 @@ ENTRYPOINT(
             TargetYear = 0;
         }
 
-        if (TargetYear > 0 && TargetYear <= sizeof(CalMonthNames)/sizeof(CalMonthNames[0])) {
+        if (TargetYear > 0 && TargetYear <= (LONGLONG)(sizeof(CalMonthNames)/sizeof(CalMonthNames[0]))) {
             GetLocalTime(&CurrentSysTime);
             CalOutputCalendarForMonth(CurrentSysTime.wYear, (WORD)(TargetYear - 1), &CurrentSysTime);
             return EXIT_SUCCESS;

@@ -54,6 +54,10 @@
 #pragma warning(disable: 4062) // not all enumerators handled in switch statement
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wswitch" // not all enumerators handled in switch statement
+#endif
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1910)
 #pragma warning(disable: 5045) // spectre mitigation 
 #endif

@@ -451,6 +451,10 @@ typedef union _YORI_LIB_FULL_PATH_TYPE {
 #pragma warning(disable: 28159)
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 /**
  This function parses a path name to determine which type of path it is.
  There are four basic types of paths that need to be recognized:

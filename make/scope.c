@@ -119,7 +119,7 @@ MakeReferenceScope(
     __in PMAKE_SCOPE_CONTEXT ScopeContext
     )
 {
-    InterlockedIncrement(&ScopeContext->ReferenceCount);
+    InterlockedIncrement((INTERLOCKED_VOLATILE LONG *)&ScopeContext->ReferenceCount);
 }
 
 /**
@@ -132,7 +132,7 @@ MakeDereferenceScope(
     __in PMAKE_SCOPE_CONTEXT ScopeContext
     )
 {
-    if (InterlockedDecrement(&ScopeContext->ReferenceCount) == 0) {
+    if (InterlockedDecrement((INTERLOCKED_VOLATILE LONG *)&ScopeContext->ReferenceCount) == 0) {
 
 #if MAKE_DEBUG_SCOPE
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Deleting scope %y\n"), &ScopeContext->HashEntry.Key);

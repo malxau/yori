@@ -1548,7 +1548,7 @@ YoriWinMenuBarHotkey(
     //
 
     if (EffectiveCtrlMask & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) {
-        EffectiveCtrlMask = EffectiveCtrlMask & ~(RIGHT_CTRL_PRESSED) | LEFT_CTRL_PRESSED;
+        EffectiveCtrlMask = (EffectiveCtrlMask & ~(RIGHT_CTRL_PRESSED)) | LEFT_CTRL_PRESSED;
     }
 
     for (Index = 0; Index < MenuBar->HotkeyArray.Populated; Index++) {

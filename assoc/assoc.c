@@ -91,7 +91,7 @@ AssocUpdateSingleAssociation(
     )
 {
     DWORD Error;
-    HANDLE ThisKey;
+    HKEY ThisKey;
     DWORD Disposition;
 
     Error = DllAdvApi32.pRegCreateKeyExW(RootKey, Extension->StartOfString, 0, NULL, 0, KEY_SET_VALUE, NULL, &ThisKey, &Disposition);
@@ -146,7 +146,7 @@ AssocUpdateSingleFileType(
     )
 {
     DWORD Error;
-    HANDLE ThisKey;
+    HKEY ThisKey;
     DWORD Disposition;
     YORI_STRING SubKeyName;
 
@@ -208,7 +208,7 @@ AssocDisplaySingleAssociation(
     DWORD Error;
     YORI_STRING KeyValue;
     DWORD KeyValueSize;
-    HANDLE ThisKey;
+    HKEY ThisKey;
     DWORD KeyType;
 
     KeyValueSize = 0;
@@ -285,7 +285,7 @@ AssocDisplaySingleFileType(
     YORI_STRING SubKeyName;
     YORI_STRING KeyValue;
     DWORD KeyValueSize;
-    HANDLE ThisKey;
+    HKEY ThisKey;
     DWORD KeyType;
 
     KeyValueSize = 0;

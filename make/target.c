@@ -47,7 +47,7 @@ MakeDereferenceTarget(
     PYORI_LIST_ENTRY ListEntry;
     PMAKE_CMD_TO_EXEC CmdToExec;
 
-    if (InterlockedDecrement(&Target->ReferenceCount) == 0) {
+    if (InterlockedDecrement((INTERLOCKED_VOLATILE LONG *)&Target->ReferenceCount) == 0) {
 
         YoriLibFreeStringContents(&Target->Recipe);
 
@@ -479,7 +479,7 @@ MakeCreateInferenceRule(
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Inference rule FromDir=%y FromExt=%y ToDir=%y ToExt=%y\n"), &InferenceRule->RelativeSourceDirectory, &InferenceRule->SourceExtension, &InferenceRule->RelativeTargetDirectory, &InferenceRule->TargetExtension);
 #endif
 
-    InterlockedIncrement(&Target->ReferenceCount);
+    InterlockedIncrement((INTERLOCKED_VOLATILE LONG *)&Target->ReferenceCount);
     InferenceRule->Target = Target;
     InferenceRule->ScopeContext = ScopeContext;
     YoriLibInsertList(&ScopeContext->InferenceRuleList, &InferenceRule->ListEntry);
@@ -827,7 +827,7 @@ MakeAssignInferenceRuleToTarget(
     if (Target->InferenceRuleParentTarget == NULL) {
         return FALSE;
     }
-    InterlockedIncrement(&Target->InferenceRuleParentTarget->ReferenceCount);
+    InterlockedIncrement((INTERLOCKED_VOLATILE LONG *)&Target->InferenceRuleParentTarget->ReferenceCount);
     MakeReferenceInferenceRule(InferenceRule);
     Target->InferenceRule = InferenceRule;
 

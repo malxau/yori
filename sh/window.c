@@ -152,7 +152,7 @@ YoriShSetWindowState(
     }
 
     if (YoriShTaskbarList == NULL) {
-        hr = DllOle32.pCoCreateInstance(&CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, &IID_ITaskbarList3, &YoriShTaskbarList);
+        hr = DllOle32.pCoCreateInstance(&CLSID_TaskbarList, NULL, CLSCTX_INPROC_SERVER, &IID_ITaskbarList3, (PVOID *)&YoriShTaskbarList);
         if (!SUCCEEDED(hr)) {
             return FALSE;
         }

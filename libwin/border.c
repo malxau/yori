@@ -46,9 +46,9 @@ YoriWinBorderGetDarkAttributes(
     WORD Forecolor;
     Forecolor = (WORD)(OriginalAttributes & 0x0F);
     if (Forecolor == 0) {
-        return (WORD)(OriginalAttributes & 0xf0 | FOREGROUND_INTENSITY);
+        return (WORD)((OriginalAttributes & 0xf0) | FOREGROUND_INTENSITY);
     }
-    return (WORD)(OriginalAttributes & 0xf0 | FOREGROUND_INTENSITY);
+    return (WORD)((OriginalAttributes & 0xf0) | FOREGROUND_INTENSITY);
 }
 
 /**

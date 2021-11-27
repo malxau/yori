@@ -67,7 +67,7 @@ ClipHelp(VOID)
  strings.  The zero padding helps keep computation sane.
  Dummy because it is only used to count its size, not used as a string.
  */
-static const CHAR DummyHeader[] = 
+const CHAR ClipDummyHeader[] = 
                   "Version:0.9\n"
                   "StartHTML:12345678\n"
                   "EndHTML:12345678\n"
@@ -77,31 +77,31 @@ static const CHAR DummyHeader[] =
 /**
  The length of the header, in bytes.
  */
-#define HTMLCLIP_HDR_SIZE (sizeof(DummyHeader)-1)
+#define HTMLCLIP_HDR_SIZE (sizeof(ClipDummyHeader)-1)
 
 /**
  A string indicating the start of a fragment.
  Dummy because it is only used to count its size, not used as a string.
  */
-static const CHAR DummyFragStart[] = 
+const CHAR ClipDummyFragStart[] = 
                   "<!--StartFragment-->";
 
 /**
  The length of the fragment start string, in bytes.
  */
-#define HTMLCLIP_FRAGSTART_SIZE (sizeof(DummyFragStart)-1)
+#define HTMLCLIP_FRAGSTART_SIZE (sizeof(ClipDummyFragStart)-1)
 
 /**
  A string indicating the end of a fragment.
  Dummy because it is only used to count its size, not used as a string.
  */
-static const CHAR DummyFragEnd[] = 
+const CHAR ClipDummyFragEnd[] = 
                   "<!--EndFragment-->";
 
 /**
  The length of the fragment end string, in bytes.
  */
-#define HTMLCLIP_FRAGEND_SIZE (sizeof(DummyFragEnd)-1)
+#define HTMLCLIP_FRAGEND_SIZE (sizeof(ClipDummyFragEnd)-1)
 
 /**
  The maximum amount of data to buffer from a pipe before acting upon it.  The
@@ -250,7 +250,7 @@ ClipCopyAsHtml(
 
     YoriLibSPrintfA((PCHAR)(pMem + FileSize + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE + 1),
                     "%s",
-                    DummyFragEnd);
+                    ClipDummyFragEnd);
 
     GlobalUnlock(hMem);
 
@@ -666,14 +666,14 @@ ClipExtractHtmlRange(
     for (Index = 0; Index < BufferLength; Index++) {
         if (Buffer[Index] == '\n') {
             if (HeaderValueStart != NULL) {
-                if (strnicmp(HeaderNameStart, "StartHTML", HeaderNameLength) == 0) {
-                    StartOffset = atoi(HeaderValueStart);
+                if (strnicmp((PCHAR)HeaderNameStart, "StartHTML", HeaderNameLength) == 0) {
+                    StartOffset = atoi((PCHAR)HeaderValueStart);
                     if (StartOffset >= BufferLength) {
                         StartOffset = 0;
                     }
                 }
-                if (strnicmp(HeaderNameStart, "EndHTML", HeaderNameLength) == 0) {
-                    EndOffset = atoi(HeaderValueStart);
+                if (strnicmp((PCHAR)HeaderNameStart, "EndHTML", HeaderNameLength) == 0) {
+                    EndOffset = atoi((PCHAR)HeaderValueStart);
                     if (EndOffset > BufferLength) {
                         EndOffset = 0;
                     }

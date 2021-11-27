@@ -36,17 +36,17 @@
  */
 const YORI_LIB_CHAR_TO_DWORD_FLAG
 YoriLibFileAttrPairs[] = {
-    {FILE_ATTRIBUTE_ARCHIVE,           'A'},
-    {FILE_ATTRIBUTE_READONLY,          'R'},
-    {FILE_ATTRIBUTE_HIDDEN,            'H'},
-    {FILE_ATTRIBUTE_SYSTEM,            'S'},
-    {FILE_ATTRIBUTE_DIRECTORY,         'D'},
-    {FILE_ATTRIBUTE_COMPRESSED,        'C'},
-    {FILE_ATTRIBUTE_ENCRYPTED,         'E'},
-    {FILE_ATTRIBUTE_OFFLINE,           'O'},
-    {FILE_ATTRIBUTE_REPARSE_POINT,     'r'},
-    {FILE_ATTRIBUTE_SPARSE_FILE,       's'},
-    {FILE_ATTRIBUTE_INTEGRITY_STREAM,  'I'},
+    {FILE_ATTRIBUTE_ARCHIVE,           'A', 0},
+    {FILE_ATTRIBUTE_READONLY,          'R', 0},
+    {FILE_ATTRIBUTE_HIDDEN,            'H', 0},
+    {FILE_ATTRIBUTE_SYSTEM,            'S', 0},
+    {FILE_ATTRIBUTE_DIRECTORY,         'D', 0},
+    {FILE_ATTRIBUTE_COMPRESSED,        'C', 0},
+    {FILE_ATTRIBUTE_ENCRYPTED,         'E', 0},
+    {FILE_ATTRIBUTE_OFFLINE,           'O', 0},
+    {FILE_ATTRIBUTE_REPARSE_POINT,     'r', 0},
+    {FILE_ATTRIBUTE_SPARSE_FILE,       's', 0},
+    {FILE_ATTRIBUTE_INTEGRITY_STREAM,  'I', 0},
     };
 
 /**
@@ -75,7 +75,7 @@ YoriLibGetFileAttrPairs(
  */
 const YORI_LIB_CHAR_TO_DWORD_FLAG
 YoriLibFileDirectoryPairs[] = {
-    {FILE_ATTRIBUTE_DIRECTORY,         'D'},
+    {FILE_ATTRIBUTE_DIRECTORY,         'D', 0},
     };
 
 /**
@@ -104,13 +104,13 @@ YoriLibGetDirectoryPairs(
  */
 const YORI_LIB_CHAR_TO_DWORD_FLAG
 YoriLibFilePermissionPairs[] = {
-    {FILE_READ_DATA,                   'R'},
-    {FILE_READ_ATTRIBUTES,             'r'},
-    {FILE_WRITE_DATA,                  'W'},
-    {FILE_WRITE_ATTRIBUTES,            'w'},
-    {FILE_APPEND_DATA,                 'A'},
-    {FILE_EXECUTE,                     'X'},
-    {DELETE,                           'D'},
+    {FILE_READ_DATA,                   'R', 0},
+    {FILE_READ_ATTRIBUTES,             'r', 0},
+    {FILE_WRITE_DATA,                  'W', 0},
+    {FILE_WRITE_ATTRIBUTES,            'w', 0},
+    {FILE_APPEND_DATA,                 'A', 0},
+    {FILE_EXECUTE,                     'X', 0},
+    {DELETE,                           'D', 0},
     };
 
 /**
@@ -1241,7 +1241,7 @@ YoriLibCollectFragmentCount (
             //
 
             for (BytesReturned = 0; BytesReturned < u.Extents.ExtentCount; BytesReturned++) {
-                if (u.Extents.Extents[BytesReturned].Lcn.HighPart != (DWORD)-1 &&
+                if (u.Extents.Extents[BytesReturned].Lcn.HighPart != -1 &&
                     u.Extents.Extents[BytesReturned].Lcn.LowPart != (DWORD)-1) {
 
                     if (PriorLcn.QuadPart + PriorRunLength.QuadPart != u.Extents.Extents[BytesReturned].Lcn.QuadPart) {
@@ -3191,7 +3191,7 @@ YoriLibGenerateFileId(
     )
 {
     DWORD CharsConsumed;
-    DWORDLONG FileId;
+    LONGLONG FileId;
 
     if (!YoriLibStringToNumber(String, TRUE, &FileId, &CharsConsumed) ||
         CharsConsumed == 0) {
@@ -3199,7 +3199,7 @@ YoriLibGenerateFileId(
         return FALSE;
     }
 
-    Entry->FileId.QuadPart = FileId;
+    Entry->FileId.QuadPart = (DWORDLONG)FileId;
     return TRUE;
 }
 

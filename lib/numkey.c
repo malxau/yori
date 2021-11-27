@@ -176,7 +176,7 @@ YoriLibTranslateNumericKeyToChar(
 
         if (MultiByteToWideChar(CodePage,
                                 0,
-                                &SmallKeyValue,
+                                (PCHAR)&SmallKeyValue,
                                 1,
                                 HostKeyValue,
                                 1) == 0) {

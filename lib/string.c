@@ -418,7 +418,8 @@ YoriLibStringToNumber(
     __out PDWORD CharsConsumed
     )
 {
-    LONGLONG Result;
+    DWORDLONG Result;
+    LONGLONG SignedResult;
     DWORD Index;
     DWORD Base = 10;
     BOOL Negative = FALSE;
@@ -496,11 +497,13 @@ YoriLibStringToNumber(
     }
 
     if (Negative) {
-        Result = 0 - Result;
+        SignedResult = (LONGLONG)0 - (LONGLONG)Result;
+    } else {
+        SignedResult = (LONGLONG)Result;
     }
 
     *CharsConsumed = Index;
-    *Number = Result;
+    *Number = SignedResult;
     return TRUE;
 }
 

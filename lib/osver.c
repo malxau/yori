@@ -117,6 +117,10 @@ YoriLibGetOsVersionFromPeb(
 #pragma warning(disable: 28159)
 #endif
 
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 /**
  Return Windows version numbers.
 

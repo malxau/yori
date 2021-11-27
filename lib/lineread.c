@@ -273,7 +273,7 @@ YoriLibReadLineAllocateContext(VOID)
         }
 
         if (ReadContext != NULL) {
-            if (YoriLibInterlockedCompareExchangePointer(&YoriLibReadLineCachedContext[ProbeIndex], NULL, ReadContext) == ReadContext) {
+            if (YoriLibInterlockedCompareExchangePointer((volatile PVOID *)&YoriLibReadLineCachedContext[ProbeIndex], NULL, ReadContext) == ReadContext) {
                 return ReadContext;
             }
         }
@@ -317,7 +317,7 @@ YoriLibLineReadCloseOrCache(
         }
 
         if (OldContext == NULL) {
-            if (YoriLibInterlockedCompareExchangePointer(&YoriLibReadLineCachedContext[ProbeIndex], ReadContext, NULL) == NULL) {
+            if (YoriLibInterlockedCompareExchangePointer((volatile PVOID *)&YoriLibReadLineCachedContext[ProbeIndex], ReadContext, NULL) == NULL) {
                 return;
             }
         }
@@ -342,7 +342,7 @@ YoriLibLineReadCleanupCache(VOID)
              ProbeIndex++) {
 
             OldContext = YoriLibReadLineCachedContext[ProbeIndex];
-            if (YoriLibInterlockedCompareExchangePointer(&YoriLibReadLineCachedContext[ProbeIndex], NULL, OldContext) == OldContext) {
+            if (YoriLibInterlockedCompareExchangePointer((volatile PVOID *)&YoriLibReadLineCachedContext[ProbeIndex], NULL, OldContext) == OldContext) {
                 YoriLibLineReadClose(OldContext);
             }
         }
@@ -509,7 +509,7 @@ YoriLibReadLineToStringEx(
 
                         CharsToSkip = 0;
                         if (!BomFound && ReadContext->LinesRead == 0) {
-                            CharsToSkip = YoriLibBytesInBom(ReadContext->PreviousBuffer, CharsToCopy * sizeof(WCHAR));
+                            CharsToSkip = YoriLibBytesInBom((PUCHAR)ReadContext->PreviousBuffer, CharsToCopy * sizeof(WCHAR));
                             if (CharsToSkip > 0) {
                                 BomFound = TRUE;
                                 CharsToSkip = CharsToSkip / sizeof(WCHAR);
@@ -561,7 +561,7 @@ YoriLibReadLineToStringEx(
 
                         CharsToSkip = 0;
                         if (!BomFound && ReadContext->LinesRead == 0) {
-                            CharsToSkip = YoriLibBytesInBom(ReadContext->PreviousBuffer, CharsToCopy);
+                            CharsToSkip = YoriLibBytesInBom((PUCHAR)ReadContext->PreviousBuffer, CharsToCopy);
                             if (CharsToSkip > 0) {
                                 BomFound = TRUE;
                                 CharsToCopy -= CharsToSkip;
@@ -775,7 +775,7 @@ YoriLibReadLineToStringEx(
                     CharsToSkip = 0;
                     CharsToCopy = ReadContext->BytesInBuffer;
                     if (!BomFound && ReadContext->LinesRead == 0) {
-                        CharsToSkip = YoriLibBytesInBom(ReadContext->PreviousBuffer, CharsToCopy);
+                        CharsToSkip = YoriLibBytesInBom((PUCHAR)ReadContext->PreviousBuffer, CharsToCopy);
                         if (CharsToSkip > 0) {
                             BomFound = TRUE;
                             CharsToCopy -= CharsToSkip;

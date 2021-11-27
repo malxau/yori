@@ -166,7 +166,7 @@ typedef struct _YORILIB_ATTRIBUTE_COLOR_STRING {
  The set of compression algorithms known to this program.  The order
  corresponds to sort order.
  */
-enum {
+typedef enum {
     YoriLibCompressionNone = 0,
     YoriLibCompressionWofFileUnknown,
     YoriLibCompressionLznt,

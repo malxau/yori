@@ -186,6 +186,7 @@ LDFLAGS=$(LDFLAGS) -OPT:NOWIN98
 # not fatal, the linker will figure it out in the end.
 #
 MINOS=310
+!IF [$(CC) --version 2>&1 | find "002 :" >NUL]==0 # MSVC or Clang
 !IF [$(CC) 2>&1 | find "x86" >NUL]==0
 !IF [$(CC) 2>&1 | find "80x86" >NUL]==0
 LDFLAGS=$(LDFLAGS) -MACHINE:IX86
@@ -226,6 +227,21 @@ CRTLIB=$(YORICRT) msvcrt.lib
 !ENDIF # AMD64
 !ENDIF # x64
 !ENDIF # x86
+!ELSE  # MSVC/Clang, clang is below
+!IF [$(CC) --version 2>&1 | find "x86-64-windows" >NUL]==0
+LDFLAGS=$(LDFLAGS) -MACHINE:X64
+MINOS=520
+!ELSE
+!IF [$(CC) --version 2>&1 | find "x86-pc-windows" >NUL]==0
+LDFLAGS=$(LDFLAGS) -MACHINE:X86
+!ELSE
+!IF [$(CC) --version 2>&1 | find "aarch64-pc-windows" >NUL]==0
+LDFLAGS=$(LDFLAGS) -MACHINE:ARM64
+MINOS=1000
+!ENDIF # aarch64
+!ENDIF # x86
+!ENDIF # x86-64
+!ENDIF # MSVC/Clang
 
 #
 # Look for the oldest subsystem version the linker is willing to generate

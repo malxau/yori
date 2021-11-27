@@ -435,16 +435,16 @@ YDbgDumpKernel(
 
     Result = TRUE;
     NtStatus = DllNtDll.pNtSystemDebugControl(37, &Ctrl, sizeof(Ctrl), NULL, 0, &BytesWritten);
-    if (NtStatus == 0xc0000120) {
+    if (NtStatus == (LONG)0xc0000120) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: operation cancelled\n"));
         Result = FALSE;
-    } else if (NtStatus == 0xc0000354) {
+    } else if (NtStatus == (LONG)0xc0000354) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: this operation requires debugging enabled with 'bcdedit /debug on' followed by a reboot\n"));
         Result = FALSE;
-    } else if (NtStatus == 0xc0000003) {
+    } else if (NtStatus == (LONG)0xc0000003) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: OS support not present\n"));
         Result = FALSE;
-    } else if (NtStatus == 0xc0000002) {
+    } else if (NtStatus == (LONG)0xc0000002) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ydbg: 64 bit kernel dumps can only be generated from a 64 bit process\n"));
         Result = FALSE;
     } else if (NtStatus != 0) {

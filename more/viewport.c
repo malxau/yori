@@ -1969,10 +1969,10 @@ MoreCopySelectionIfPresent(
     //
 
     if (!Selection->SelectionPreviouslyActive &&
-        Selection->CurrentlyDisplayed.Left != Selection->PreviouslyDisplayed.Left ||
-        Selection->CurrentlyDisplayed.Right != Selection->PreviouslyDisplayed.Right ||
-        Selection->CurrentlyDisplayed.Top != Selection->PreviouslyDisplayed.Top ||
-        Selection->CurrentlyDisplayed.Bottom != Selection->PreviouslyDisplayed.Bottom) {
+        (Selection->CurrentlyDisplayed.Left != Selection->PreviouslyDisplayed.Left ||
+         Selection->CurrentlyDisplayed.Right != Selection->PreviouslyDisplayed.Right ||
+         Selection->CurrentlyDisplayed.Top != Selection->PreviouslyDisplayed.Top ||
+         Selection->CurrentlyDisplayed.Bottom != Selection->PreviouslyDisplayed.Bottom)) {
 
         YoriLibRedrawSelection(Selection);
     }

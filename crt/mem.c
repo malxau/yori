@@ -140,6 +140,9 @@ mini_memmove(void * dest, const void * src, unsigned int len)
 void *
 MCRT_FN
 mini_memset(void * dest, char c, unsigned int len)
+#ifdef __clang__
+__attribute__((no_builtin("memset")))
+#endif
 {
     unsigned int i;
     unsigned int fill;

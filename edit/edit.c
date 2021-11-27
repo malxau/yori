@@ -847,7 +847,7 @@ EditEncodingFromArrayIndex(
                     Encoding = CP_UTF8;
                     break;
             }
-            if (Encoding != -1) {
+            if (Encoding != (DWORD)-1) {
                 return Encoding;
             }
             Index = Index - 2;
@@ -875,7 +875,7 @@ EditEncodingFromArrayIndex(
                     Encoding = CP_UTF8;
                     break;
             }
-            if (Encoding != -1) {
+            if (Encoding != (DWORD)-1) {
                 return Encoding;
             }
             Index = Index - 2;
@@ -1007,7 +1007,7 @@ EditOpenButtonClicked(
     }
 
     Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, TRUE, &HasBom);
-    if (Encoding != -1) {
+    if (Encoding != (DWORD)-1) {
         EditContext->Encoding = Encoding;
     }
 
@@ -1160,7 +1160,7 @@ EditSaveAsButtonClicked(
     //
 
     ASSERT(Encoding != CP_UTF8_OR_16);
-    if (Encoding != -1) {
+    if (Encoding != (DWORD)-1) {
         EditContext->Encoding = Encoding;
         EditContext->WriteBom = HasBom;
     }

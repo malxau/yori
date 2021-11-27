@@ -681,7 +681,7 @@ YoriLibShParseCmdlineToCmdContext(
         return TRUE;
     }
 
-    if (!YoriLibShAllocateArgCount(CmdContext, ArgCount, (RequiredCharCount + ArgCount) * sizeof(TCHAR), &OutputString)) {
+    if (!YoriLibShAllocateArgCount(CmdContext, ArgCount, (RequiredCharCount + ArgCount) * sizeof(TCHAR), (PVOID *)&OutputString)) {
         return FALSE;
     }
 
