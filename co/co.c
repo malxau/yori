@@ -886,7 +886,7 @@ CoCreateSynchronousMenu(VOID)
 
     if (!YoriWinGetWinMgrDimensions(WinMgr, &WindowSize)) {
         WindowSize.X = 80;
-        WindowSize.Y = 25;
+        WindowSize.Y = 24;
     } else {
         WindowSize.X = (SHORT)(WindowSize.X * 9 / 10);
         if (WindowSize.X < 80) {
@@ -894,8 +894,8 @@ CoCreateSynchronousMenu(VOID)
         }
 
         WindowSize.Y = (SHORT)(WindowSize.Y * 4 / 5);
-        if (WindowSize.Y < 25) {
-            WindowSize.Y = 25;
+        if (WindowSize.Y < 24) {
+            WindowSize.Y = 24;
         }
     }
 
@@ -903,6 +903,7 @@ CoCreateSynchronousMenu(VOID)
 
     if (!YoriWinCreateWindow(WinMgr, WindowSize.X, WindowSize.Y, WindowSize.X, WindowSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Title, &Parent)) {
         YoriWinCloseWindowManager(WinMgr);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("co: Could not display window: terminal too small?\n"));
         return FALSE;
     }
 
