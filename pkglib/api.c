@@ -961,6 +961,7 @@ YoriPkgInstallPseudoPackage(
     WritePrivateProfileString(_T("Installed"), Name->StartOfString, Version->StartOfString, PkgIniFile.StartOfString);
     WritePrivateProfileString(Name->StartOfString, _T("Version"), Version->StartOfString, PkgIniFile.StartOfString);
     WritePrivateProfileString(Name->StartOfString, _T("Architecture"), Architecture->StartOfString, PkgIniFile.StartOfString);
+    WritePrivateProfileString(Name->StartOfString, _T("BestEffortDelete"), _T("1"), PkgIniFile.StartOfString);
 
     for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);

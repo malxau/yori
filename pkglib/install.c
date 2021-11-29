@@ -135,6 +135,7 @@ YoriPkgCheckIfPackageDeleteable(
     DWORD FileIndex;
     TCHAR FileIndexString[16];
     BOOL DeleteResult;
+    BOOL BestEffortDelete;
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         return FALSE;
@@ -153,6 +154,8 @@ YoriPkgCheckIfPackageDeleteable(
         AppPath.StartOfString[TargetDirectory->LengthInChars] = '\0';
         AppPath.LengthInChars = TargetDirectory->LengthInChars;
     }
+
+    BestEffortDelete = GetPrivateProfileInt(PackageName->StartOfString, _T("BestEffortDelete"), 0, PkgIniFile->StartOfString);
 
     FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
     if (FileCount == 0) {
@@ -204,7 +207,7 @@ YoriPkgCheckIfPackageDeleteable(
             //  If any file can't be deleted, the package can't be deleted.
             //
 
-            if (!DeleteResult) {
+            if (!DeleteResult && !BestEffortDelete) {
                 YoriLibFreeStringContents(&IniValue);
                 YoriLibFreeStringContents(&AppPath);
                 YoriLibFreeStringContents(&FileToDelete);
@@ -334,6 +337,7 @@ YoriPkgDeletePackageInternal(
     DWORD FileIndex;
     TCHAR FileIndexString[16];
     DWORD DeleteResult;
+    BOOL BestEffortDelete;
 
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         return ERROR_NOT_ENOUGH_MEMORY;
@@ -352,6 +356,8 @@ YoriPkgDeletePackageInternal(
         AppPath.StartOfString[TargetDirectory->LengthInChars] = '\0';
         AppPath.LengthInChars = TargetDirectory->LengthInChars;
     }
+
+    BestEffortDelete = GetPrivateProfileInt(PackageName->StartOfString, _T("BestEffortDelete"), 0, PkgIniFile->StartOfString);
 
     FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
     if (FileCount == 0) {
@@ -402,10 +408,13 @@ YoriPkgDeletePackageInternal(
             //
             //  If delete fails on the first file, don't continue deleting the
             //  package.  If it fails on a later file, the package is already
-            //  inconsistent.
+            //  inconsistent.  If the package is marked as best effort,
+            //  continue even if the first file is missing; this is used for
+            //  packages that prepopulate shortcuts and other things the user
+            //  might change.
             //
 
-            if (DeleteResult != ERROR_SUCCESS && FileIndex == 1) {
+            if (DeleteResult != ERROR_SUCCESS && !BestEffortDelete && FileIndex == 1) {
                 YoriLibFreeStringContents(&IniValue);
                 YoriLibFreeStringContents(&AppPath);
                 YoriLibFreeStringContents(&FileToDelete);
