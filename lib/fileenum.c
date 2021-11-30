@@ -266,18 +266,27 @@ YoriLibForEachFileEnum(
         DirectoryPart.LengthInChars = ForEachContext->CharsToFinalSlash;
 
         //
-        //  Trim trailing slashes, except if the string is just a slash, in
-        //  which case it's meaningful.
+        //  Trim trailing slashes, except if the string is just a slash, or if
+        //  the slash follows a drive letter and colon, in which case it's
+        //  meaningful.
         //
         //  MSFIX This really wants to apply all the EffectiveRoot logic.
         //
 
-        if ((DirectoryPart.LengthInChars > 3 ||
-             !YoriLibIsDriveLetterWithColonAndSlash(&DirectoryPart)) &&
-            DirectoryPart.LengthInChars > 1 &&
+        if (DirectoryPart.LengthInChars > 1 &&
             YoriLibIsSep(DirectoryPart.StartOfString[DirectoryPart.LengthInChars - 1])) {
 
-            DirectoryPart.LengthInChars--;
+            if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(&DirectoryPart)) {
+                if (DirectoryPart.LengthInChars >= sizeof("\\\\?\\c:\\")) {
+                    DirectoryPart.LengthInChars--;
+                }
+            } else if (YoriLibIsDriveLetterWithColonAndSlash(&DirectoryPart)) {
+                if (DirectoryPart.LengthInChars >= sizeof("c:\\")) {
+                    DirectoryPart.LengthInChars--;
+                }
+            } else {
+                DirectoryPart.LengthInChars--;
+            }
         }
 
         if (!YoriLibGetFullPathNameReturnAllocation(&DirectoryPart, TRUE, &ForEachContext->ParentFullPath, NULL)) {
@@ -294,19 +303,6 @@ YoriLibForEachFileEnum(
             YoriLibFree(ForEachContext);
             return FALSE;
         }
-    }
-
-    //
-    //  If the result ends with a \, truncate it since all children we
-    //  report will unconditionally have a \ inserted between their name
-    //  and the parent.  This result will happen with X:\ type paths.
-    //
-
-    if (ForEachContext->ParentFullPath.LengthInChars > 0 &&
-        YoriLibIsSep(ForEachContext->ParentFullPath.StartOfString[ForEachContext->ParentFullPath.LengthInChars - 1])) {
-
-        ForEachContext->ParentFullPath.LengthInChars--;
-        ForEachContext->ParentFullPath.StartOfString[ForEachContext->ParentFullPath.LengthInChars] = '\0';
     }
 
     if (!YoriLibAllocateString(&ForEachContext->FullPath, ForEachContext->ParentFullPath.LengthInChars + 1 + sizeof(ForEachContext->FileInfo.cFileName) / sizeof(TCHAR) + 1)) {
