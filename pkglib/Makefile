@@ -6,6 +6,7 @@ compile: yoripkg.lib
 OBJS=\
 	 api.obj         \
 	 backup.obj      \
+	 config.obj      \
 	 create.obj      \
 	 install.obj     \
 	 reg.obj         \

@@ -49,60 +49,6 @@ CONST CHAR SetupDllMissingWarning2[] = "Ysetup requires WinInet.dll.\n\n"
 
 
 /**
- The first block of text to include in any Windows Terminal profile.
- */
-CONST CHAR SetupTerminalProfilePart1[] = 
-"{\n"
-"  \"profiles\": [\n"
-"    {\n"
-"      \"name\": \"Yori\",\n"
-"      \"commandline\": \"";
-
-/**
- The second block of text to include in any Windows Terminal profile.
- */
-CONST CHAR SetupTerminalProfilePart2[] = 
-"\",\n"
-"      \"icon\": \"";
-
-/**
- The third block of text to include in any Windows Terminal profile.
- */
-CONST CHAR SetupTerminalProfilePart3[] = 
-"\",\n"
-"      \"fontFace\": \"Consolas\",\n"
-"      \"fontSize\": 10,\n"
-"      \"colorScheme\": \"CGA\"\n"
-"    }\n"
-"  ],\n"
-"  \"schemes\": [\n"
-"    {\n"
-"      \"name\": \"CGA\",\n"
-"\n"
-"      \"background\": \"#000000\",\n"
-"      \"foreground\": \"#AAAAAA\",\n"
-"\n"
-"      \"black\": \"#000000\",\n"
-"      \"red\": \"#AA0000\",\n"
-"      \"green\": \"#00AA00\",\n"
-"      \"yellow\": \"#AA5500\",\n"
-"      \"blue\": \"#0000AA\",\n"
-"      \"purple\": \"#AA00AA\",\n"
-"      \"cyan\": \"#00AAAA\",\n"
-"      \"white\": \"#AAAAAA\",\n"
-"      \"brightBlack\": \"#555555\",\n"
-"      \"brightRed\": \"#FF5555\",\n"
-"      \"brightGreen\": \"#55FF55\",\n"
-"      \"brightYellow\": \"#FFFF55\",\n"
-"      \"brightBlue\": \"#5555FF\",\n"
-"      \"brightPurple\": \"#FF55FF\",\n"
-"      \"brightCyan\": \"#55FFFF\",\n"
-"      \"brightWhite\": \"#FFFFFF\"\n"
-"    }\n"
-"  ]\n"
-"}\n";
-
-/**
  A list of subdirectories from the application to check for packages.
  */
 CONST LPTSTR SetupLocalPathsToCheck[] = {
@@ -244,130 +190,6 @@ SetupPlatformSupportsShortcuts(VOID)
         return FALSE;
     }
 
-    return TRUE;
-}
-
-/**
- Create a Windows Terminal fragment file adding a Yori profile.
-
- @param ProfileFileName Pointer to the fully qualified path for the profile
-        fragment JSON file.
-
- @param YoriExeFullPath Pointer to the Yori executable path.
-
- @return TRUE to indicate success, FALSE to indicate failure.
- */
-BOOL
-SetupWriteTerminalProfile(
-    __in PYORI_STRING ProfileFileName,
-    __in PYORI_STRING YoriExeFullPath
-    )
-{
-    HANDLE JsonFile;
-    DWORD Index;
-    YORI_STRING ParentDirectory;
-    DWORD BytesNeeded;
-    DWORD BytesWritten;
-    YORI_STRING EscapedExePath;
-    LPSTR MultibyteEscapedExePath;
-
-    //
-    //  Find the parent directory and attempt to create it.
-    //
-
-    YoriLibInitEmptyString(&ParentDirectory);
-    ParentDirectory.StartOfString = ProfileFileName->StartOfString;
-    ParentDirectory.LengthInChars = ProfileFileName->LengthInChars;
-
-    for (Index = ParentDirectory.LengthInChars;
-         Index > 0;
-         Index--) {
-
-        if (YoriLibIsSep(ParentDirectory.StartOfString[Index - 1])) {
-            ParentDirectory.LengthInChars = Index - 1;
-            ParentDirectory.StartOfString[Index - 1] = '\0';
-            YoriLibCreateDirectoryAndParents(&ParentDirectory);
-            ParentDirectory.StartOfString[Index - 1] = '\\';
-            break;
-        }
-    }
-
-    //
-    //  Create the JSON file.
-    //
-
-    JsonFile = CreateFile(ProfileFileName->StartOfString, GENERIC_WRITE, FILE_SHARE_DELETE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (JsonFile == INVALID_HANDLE_VALUE) {
-        return FALSE;
-    }
-
-    WriteFile(JsonFile, SetupTerminalProfilePart1, sizeof(SetupTerminalProfilePart1) - 1, &BytesWritten, NULL);
-
-    //
-    //  Escape all of the backslashes in the executable path.
-    //
-
-    BytesNeeded = 0;
-    for (Index = 0; Index < YoriExeFullPath->LengthInChars; Index++) {
-        if (YoriExeFullPath->StartOfString[Index] == '\\') {
-            BytesNeeded++;
-        }
-    }
-
-    if (!YoriLibAllocateString(&EscapedExePath, YoriExeFullPath->LengthInChars + BytesNeeded + 1)) {
-        CloseHandle(JsonFile);
-        DeleteFile(ProfileFileName->StartOfString);
-        return FALSE;
-    }
-
-    BytesNeeded = 0;
-    for (Index = 0; Index < YoriExeFullPath->LengthInChars; Index++) {
-        EscapedExePath.StartOfString[Index + BytesNeeded] = YoriExeFullPath->StartOfString[Index];
-        if (YoriExeFullPath->StartOfString[Index] == '\\') {
-            BytesNeeded++;
-            EscapedExePath.StartOfString[Index + BytesNeeded] = YoriExeFullPath->StartOfString[Index];
-        }
-    }
-    EscapedExePath.StartOfString[Index + BytesNeeded] = '\0';
-    EscapedExePath.LengthInChars = YoriExeFullPath->LengthInChars + BytesNeeded;
-
-    //
-    //  Convert that into UTF-8 for the file contents
-    //
-
-    BytesNeeded = YoriLibGetMultibyteOutputSizeNeeded(EscapedExePath.StartOfString, EscapedExePath.LengthInChars);
-    MultibyteEscapedExePath = YoriLibMalloc(BytesNeeded);
-    if (MultibyteEscapedExePath == NULL) {
-        YoriLibFreeStringContents(&EscapedExePath);
-        CloseHandle(JsonFile);
-        DeleteFile(ProfileFileName->StartOfString);
-        return FALSE;
-    }
-
-    //
-    //  Write the path to the executable
-    //
-
-    YoriLibMultibyteOutput(EscapedExePath.StartOfString, EscapedExePath.LengthInChars, MultibyteEscapedExePath, BytesNeeded);
-    WriteFile(JsonFile, MultibyteEscapedExePath, BytesNeeded, &BytesWritten, NULL);
-
-    //
-    //  Munge it into the path to the icon
-    //
-
-    if (BytesNeeded > 3) {
-        MultibyteEscapedExePath[BytesNeeded - 3] = 'i';
-        MultibyteEscapedExePath[BytesNeeded - 2] = 'c';
-        MultibyteEscapedExePath[BytesNeeded - 1] = 'o';
-    }
-    WriteFile(JsonFile, SetupTerminalProfilePart2, sizeof(SetupTerminalProfilePart2) - 1, &BytesWritten, NULL);
-    WriteFile(JsonFile, MultibyteEscapedExePath, BytesNeeded, &BytesWritten, NULL);
-
-    WriteFile(JsonFile, SetupTerminalProfilePart3, sizeof(SetupTerminalProfilePart3) - 1, &BytesWritten, NULL);
-
-    YoriLibFreeStringContents(&EscapedExePath);
-    YoriLibFree(MultibyteEscapedExePath);
-    CloseHandle(JsonFile);
     return TRUE;
 }
 
@@ -814,16 +636,18 @@ SetupInstallSelectedWithOptions(
         if ((InstallOptions & YSETUP_INSTALL_TERMINAL_PROFILE) != 0) {
             YoriLibInitEmptyString(&ShortcutNameFullPath[ShortcutCount]);
 
-            YoriLibConstantString(&RelativeShortcutName, _T("~LocalAppData\\Microsoft\\Windows Terminal\\Fragments\\Yori\\Yori.json"));
-            if (!YoriLibUserStringToSingleFilePath(&RelativeShortcutName, TRUE, &ShortcutNameFullPath[ShortcutCount])) {
+            if (!YoriPkgGetTerminalProfilePath(&ShortcutNameFullPath[ShortcutCount])) {
                 YoriLibFreeStringContents(&YoriExeFullPath);
                 YoriLibConstantString(ErrorText, _T("Installation failed."));
                 goto Exit;
             }
             ShortcutCount++;
 
-            SetupWriteTerminalProfile(&ShortcutNameFullPath[ShortcutCount - 1],
-                                      &YoriExeFullPath);
+            if (!YoriPkgWriteTerminalProfile(&YoriExeFullPath)) {
+                YoriLibFreeStringContents(&YoriExeFullPath);
+                YoriLibConstantString(ErrorText, _T("Failed to create terminal profile."));
+                goto Exit;
+            }
         }
 
         YoriLibConstantString(&YSetupPkgName, _T("ysetup-shortcuts"));

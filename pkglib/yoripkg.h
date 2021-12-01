@@ -193,4 +193,16 @@ YoriPkgAddUninstallEntry(
 BOOL
 YoriPkgUninstallAll(VOID);
 
+__success(return)
+BOOL
+YoriPkgGetTerminalProfilePath(
+    __out PYORI_STRING TerminalProfilePath
+    );
+
+__success(return)
+BOOL
+YoriPkgWriteTerminalProfile(
+    __in_opt PYORI_STRING YoriExeFullPath
+    );
+
 // vim:sw=4:ts=4:et:
