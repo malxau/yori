@@ -1,7 +1,7 @@
 /**
  * @file ypm/ypm.c
  *
- * Yori shell package manager tool
+ * Yori shell package manager list packages
  *
  * Copyright (c) 2018-2021 Malcolm J. Smith
  *

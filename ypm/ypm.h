@@ -1,4 +1,5 @@
 
+YORI_CMD_BUILTIN YpmConfig;
 YORI_CMD_BUILTIN YpmCreateBinaryPackage;
 YORI_CMD_BUILTIN YpmCreateSourcePackage;
 YORI_CMD_BUILTIN YpmDelete;

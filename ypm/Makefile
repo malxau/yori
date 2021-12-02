@@ -17,6 +17,7 @@ BIN_OBJS=\
 	 uninst.obj      \
 	 upgrade.obj     \
 	 ypm.obj         \
+	 ypmconf.obj     \
 	 ypmcreat.obj    \
 	 ypminst.obj     \
 
@@ -28,6 +29,7 @@ MOD_OBJS=\
 	 uninst.obj      \
 	 upgrade.obj     \
 	 mod_ypm.obj     \
+	 ypmconf.obj     \
 	 ypmcreat.obj    \
 	 ypminst.obj     \
 

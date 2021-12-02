@@ -40,77 +40,6 @@ CHAR strYpmHelpText[] =
         "For more information about an option, add -? with the option.\n";
 
 /**
- Help text to display to the user.
- */
-const
-CHAR strYpmHelpText1[] =
-        "\n"
-        "Installs or upgrades packages.\n"
-        "\n"
-        "YPM [-license]\n"
-        "YPM -c <file> <pkgname> <version> <arch> -filelist <file>\n"
-        "       [-minimumosbuild <number>] [-packagepathforolderbuilds <path>]\n"
-        "       [-upgradedaily <path>] [-upgradepath <path>] [-upgradestable <path>]\n"
-        "       [-sourcepath <path>] [-symbolpath <path>] [-replaces <packages>]\n"
-        "YPM -cs <file> <pkgname> <version> -filepath <directory>\n"
-        "YPM -d <pkg>\n"
-        "YPM -download <source> <target>\n"
-        "YPM -download-daily <target>\n"
-        "YPM -download-stable <target>\n"
-        "YPM -i <file>\n"
-        "YPM -l\n"
-        "YPM -lv\n"
-        "YPM -md <source>\n"
-        "YPM -mi <source> <target>\n"
-        "YPM -ml\n"
-        "YPM -ri [-a <arch>] [-v <version>] <pkgname>...\n"
-        "YPM -rl\n"
-        "YPM -rsa <server>\n"
-        "YPM -rsd <server>\n"
-        "YPM -rsi <server>\n"
-        "YPM -rsl\n"
-        "YPM -src [<pkg>]\n"
-        "YPM -sym [<pkg>]\n"
-        "YPM -uninstall\n"
-        "YPM [-a <arch>] -u|-ud|-us [<pkg>]\n";
-
-/**
- More help text to display to the user.
- */
-const
-CHAR strYpmHelpText2[] =
-        "   -a             Specify a CPU architecture to upgrade to\n"
-        "   -c             Create a binary package\n"
-        "   -cs            Create a source package\n"
-        "   -d             Delete an installed package\n"
-        "   -download      Download a directory of packages on a server to a local copy\n"
-        "   -download-daily\n"
-        "                  Download the current testing packages of yori to a local copy\n"
-        "   -download-stable\n"
-        "                  Download the current stable packages of yori to a local copy\n"
-        "   -i             Install a package from a specified file or URL\n"
-        "   -l             List all currently installed packages\n"
-        "   -lv            List all currently installed packages verbosely\n"
-        "   -md            Delete a mirror\n"
-        "   -mi            Install a new mirror\n"
-        "   -ml            List mirrors\n"
-        "   -ri            Install packages from remote servers\n"
-        "   -rl            List available packages on remote servers\n"
-        "   -rsa           Install a new remote server as the last server\n"
-        "   -rsd           Delete a remote server\n"
-        "   -rsi           Install a new remote server as the first server\n"
-        "   -rsl           List remote servers\n"
-        "   -src           Install source for specified package or all packages\n"
-        "   -sym           Install debug symbols for specified package or all packages\n"
-        "   -u             Upgrade a package or all currently installed packages\n"
-        "   -ud            Upgrade a package or all currently installed packages\n"
-        "                  to the latest daily build\n"
-        "   -us            Upgrade a package or all currently installed packages\n"
-        "                  to the latest stable build\n"
-        "   -uninstall     Remove all installed packages from the system\n";
-
-
-/**
  A structure that maps a command line argument to a callback function which
  implements it.
  */
@@ -137,6 +66,7 @@ typedef struct _YPM_OP_MAP {
  */
 CONST YPM_OP_MAP YpmCallbackFunctions[] = {
     {_T("c"),               YpmCreateBinaryPackage, "Create a new installable package"},
+    {_T("config"),          YpmConfig,              "Update system configuration"},
     {_T("cs"),              YpmCreateSourcePackage, "Create a new source package"},
     {_T("d"),               YpmDelete,              "Delete an installed package"},
     {_T("download"),        YpmDownload,            "Download a group of packages for later installation"},
@@ -175,7 +105,6 @@ YpmHelp(VOID)
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strYpmHelpText);
-    // YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n%hs"), strYpmHelpText1, strYpmHelpText2);
 
     for (i = 0; i < sizeof(YpmCallbackFunctions)/sizeof(YpmCallbackFunctions[0]); i++) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("    -%-16s %hs\n"), YpmCallbackFunctions[i].CommandArg, YpmCallbackFunctions[i].HelpText);
