@@ -38,8 +38,10 @@ CHAR strYpmConfigHelpText[] =
         "Update system configuration.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -config [-terminal]\n"
+        "YPM -config [-desktop] [-start] [-terminal]\n"
         "\n"
+        "   -desktop       Create a Desktop shortcut\n"
+        "   -start         Create a Start Menu shortcut\n"
         "   -terminal      Create a Windows Terminal fragment\n";
 
 /**
@@ -76,8 +78,12 @@ YpmConfig(
     DWORD StartArg = 0;
     YORI_STRING Arg;
     BOOLEAN CreateTerminalProfile;
+    BOOLEAN CreateDesktopShortcut;
+    BOOLEAN CreateStartMenuShortcut;
 
     CreateTerminalProfile = FALSE;
+    CreateDesktopShortcut = FALSE;
+    CreateStartMenuShortcut = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -92,6 +98,12 @@ YpmConfig(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YoriLibDisplayMitLicense(_T("2021"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desktop")) == 0) {
+                CreateDesktopShortcut = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("start")) == 0) {
+                CreateStartMenuShortcut = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("terminal")) == 0) {
                 CreateTerminalProfile = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -111,13 +123,27 @@ YpmConfig(
         }
     }
 
-    if (!CreateTerminalProfile) {
+    if (!CreateTerminalProfile && !CreateDesktopShortcut && !CreateStartMenuShortcut) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: missing operation\n"));
         return EXIT_FAILURE;
     }
 
     if (CreateTerminalProfile) {
-        YoriPkgWriteTerminalProfile(NULL);
+        if (!YoriPkgWriteTerminalProfile(NULL)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not create terminal profile\n"));
+        }
+    }
+
+    if (CreateDesktopShortcut) {
+        if (!YoriPkgCreateDesktopShortcut(NULL)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not create desktop shortcut\n"));
+        }
+    }
+
+    if (CreateStartMenuShortcut) {
+        if (!YoriPkgCreateStartMenuShortcut(NULL)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not create start menu shortcut\n"));
+        }
     }
 
     return EXIT_SUCCESS;

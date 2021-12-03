@@ -205,4 +205,16 @@ YoriPkgWriteTerminalProfile(
     __in_opt PYORI_STRING YoriExeFullPath
     );
 
+__success(return)
+BOOL
+YoriPkgCreateDesktopShortcut(
+    __in_opt PYORI_STRING YoriExeFullPath
+    );
+
+__success(return)
+BOOL
+YoriPkgCreateStartMenuShortcut(
+    __in_opt PYORI_STRING YoriExeFullPath
+    );
+
 // vim:sw=4:ts=4:et:

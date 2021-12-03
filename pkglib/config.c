@@ -112,6 +112,34 @@ YoriPkgGetTerminalProfilePath(
     return TRUE;
 }
 
+/**
+ Construct a default path to the Yori.exe executable, assuming it is in the
+ same directory as the running process.
+
+ @param YoriExecutablePath On successful completion, updated within this
+        routine to point to a full path to the Yori.exe executable.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgGetYoriExecutablePath(
+    __out PYORI_STRING YoriExecutablePath
+    )
+{
+    YORI_STRING RelativePath;
+    YORI_STRING LocalExePath;
+
+    YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yori.exe"));
+    YoriLibInitEmptyString(&LocalExePath);
+    if (!YoriLibUserStringToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
+        return FALSE;
+    }
+
+    memcpy(YoriExecutablePath, &LocalExePath, sizeof(YORI_STRING));
+    return TRUE;
+}
+
 
 /**
  Create a Windows Terminal fragment file adding a Yori profile.
@@ -143,15 +171,12 @@ YoriPkgWriteTerminalProfile(
     }
 
     if (YoriExeFullPath == NULL) {
-        YORI_STRING RelativePath;
-        YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yori.exe"));
-        YoriLibInitEmptyString(&LocalExePath);
-        if (!YoriLibUserStringToSingleFilePath(&RelativePath, TRUE, &LocalExePath)) {
+        if (!YoriPkgGetYoriExecutablePath(&LocalExePath)) {
             YoriLibFreeStringContents(&ProfileFileName);
             return FALSE;
         }
     } else {
-        memcpy(&LocalExePath, YoriExeFullPath, sizeof(YORI_STRING));
+        YoriLibCloneString(&LocalExePath, YoriExeFullPath);
     }
 
     //
@@ -261,5 +286,96 @@ YoriPkgWriteTerminalProfile(
     CloseHandle(JsonFile);
     return TRUE;
 }
+
+/**
+ Create a shortcut to a Yori shell.
+
+ @param ShortcutPath Pointer to the path to store the shortcut.  This can
+        include Yori specific path specifiers such as ~Desktop.
+
+ @param YoriExeFullPath Optionally points to a string specifying the shell
+        executable.  If not supplied, Yori.exe within the directory containing
+        the running process is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgCreateAppShortcut(
+    __in PCYORI_STRING ShortcutPath,
+    __in_opt PYORI_STRING YoriExeFullPath
+    )
+{
+    YORI_STRING LocalExePath;
+    YORI_STRING FullShortcutPath;
+    YORI_STRING Description;
+
+    if (YoriExeFullPath == NULL) {
+        if (!YoriPkgGetYoriExecutablePath(&LocalExePath)) {
+            return FALSE;
+        }
+    } else {
+        YoriLibCloneString(&LocalExePath, YoriExeFullPath);
+    }
+
+    if (!YoriLibUserStringToSingleFilePath(ShortcutPath, TRUE, &FullShortcutPath)) {
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
+    YoriLibConstantString(&Description, _T("Yori"));
+
+    if (!YoriLibCreateShortcut(&FullShortcutPath, &LocalExePath, NULL, &Description, NULL, &LocalExePath, 0, 1, (WORD)-1, TRUE, TRUE)) {
+        YoriLibFreeStringContents(&LocalExePath);
+        YoriLibFreeStringContents(&FullShortcutPath);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&LocalExePath);
+    YoriLibFreeStringContents(&FullShortcutPath);
+
+    return TRUE;
+}
+
+/**
+ Create a shortcut to a Yori shell on the user's desktop.
+
+ @param YoriExeFullPath Optionally points to a string specifying the shell
+        executable.  If not supplied, Yori.exe within the directory containing
+        the running process is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgCreateDesktopShortcut(
+    __in_opt PYORI_STRING YoriExeFullPath
+    )
+{
+    YORI_STRING RelativeShortcutPath;
+    YoriLibConstantString(&RelativeShortcutPath, _T("~Desktop\\Yori.lnk"));
+    return YoriPkgCreateAppShortcut(&RelativeShortcutPath, YoriExeFullPath);
+}
+
+/**
+ Create a shortcut to a Yori shell on the user's start menu.
+
+ @param YoriExeFullPath Optionally points to a string specifying the shell
+        executable.  If not supplied, Yori.exe within the directory containing
+        the running process is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgCreateStartMenuShortcut(
+    __in_opt PYORI_STRING YoriExeFullPath
+    )
+{
+    YORI_STRING RelativeShortcutPath;
+    YoriLibConstantString(&RelativeShortcutPath, _T("~Programs\\Yori.lnk"));
+    return YoriPkgCreateAppShortcut(&RelativeShortcutPath, YoriExeFullPath);
+}
+
 
 // vim:sw=4:ts=4:et:
