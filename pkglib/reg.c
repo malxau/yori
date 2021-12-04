@@ -320,7 +320,8 @@ YoriPkgIsFileToBeDeletedOnReboot(
  path.  Note that the system path requires privilege and it is expected that
  this can fail if the currently executing user does not have access to it.
 
- @param TargetDirectory Pointer to the directory to append to a path.
+ @param TargetDirectory Pointer to the directory to append to a path.  If not
+        specified, the directory containing the current executable is used.
 
  @param AppendToUserPath If TRUE, the directory should be appended to the
         user's path environment variable.
@@ -332,24 +333,38 @@ YoriPkgIsFileToBeDeletedOnReboot(
  */
 BOOL
 YoriPkgAppendInstallDirToPath(
-    __in PCYORI_STRING TargetDirectory,
+    __in_opt PCYORI_STRING TargetDirectory,
     __in BOOL AppendToUserPath,
     __in BOOL AppendToSystemPath
     )
 {
     BOOL Result = TRUE;
+    YORI_STRING LocalTargetDirectory;
 
     YoriLibLoadAdvApi32Functions();
     YoriLibLoadUser32Functions();
 
+    if (TargetDirectory == NULL) {
+        YORI_STRING AppDir;
+        YoriLibConstantString(&AppDir, _T("~APPDIR"));
+        if (!YoriLibUserStringToSingleFilePath(&AppDir, FALSE, &LocalTargetDirectory)) {
+            return FALSE;
+        }
+    } else {
+        YoriLibInitEmptyString(&LocalTargetDirectory);
+        LocalTargetDirectory.StartOfString = TargetDirectory->StartOfString;
+        LocalTargetDirectory.LengthInChars = TargetDirectory->LengthInChars;
+        LocalTargetDirectory.LengthAllocated = TargetDirectory->LengthAllocated;
+    }
+
     if (AppendToUserPath) {
-        if (!YoriPkgAppendPath(HKEY_CURRENT_USER, _T("Environment"), _T("Path"), TargetDirectory)) {
+        if (!YoriPkgAppendPath(HKEY_CURRENT_USER, _T("Environment"), _T("Path"), &LocalTargetDirectory)) {
             Result = FALSE;
         }
     }
 
     if (AppendToSystemPath) {
-        if (!YoriPkgAppendPath(HKEY_LOCAL_MACHINE, _T("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"), _T("Path"), TargetDirectory)) {
+        if (!YoriPkgAppendPath(HKEY_LOCAL_MACHINE, _T("SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment"), _T("Path"), &LocalTargetDirectory)) {
             Result = FALSE;
         }
     }
@@ -359,6 +374,8 @@ YoriPkgAppendInstallDirToPath(
         DWORD_PTR NotifyResult;
         DllUser32.pSendMessageTimeoutW(HWND_BROADCAST, WM_WININICHANGE, 0, (LPARAM)_T("Environment"), SMTO_NORMAL, 200, &NotifyResult);
     }
+
+    YoriLibFreeStringContents(&LocalTargetDirectory);
 
     return Result;
 }

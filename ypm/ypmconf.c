@@ -38,11 +38,13 @@ CHAR strYpmConfigHelpText[] =
         "Update system configuration.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -config [-desktop] [-start] [-terminal]\n"
+        "YPM -config [-desktop] [-start] [-systempath] [-terminal] [-userpath]\n"
         "\n"
         "   -desktop       Create a Desktop shortcut\n"
         "   -start         Create a Start Menu shortcut\n"
-        "   -terminal      Create a Windows Terminal fragment\n";
+        "   -systempath    Add to system path\n"
+        "   -terminal      Create a Windows Terminal fragment\n"
+        "   -userpath      Add to user path\n";
 
 /**
  Display usage text to the user.
@@ -80,10 +82,14 @@ YpmConfig(
     BOOLEAN CreateTerminalProfile;
     BOOLEAN CreateDesktopShortcut;
     BOOLEAN CreateStartMenuShortcut;
+    BOOLEAN AppendToUserPath;
+    BOOLEAN AppendToSystemPath;
 
     CreateTerminalProfile = FALSE;
     CreateDesktopShortcut = FALSE;
     CreateStartMenuShortcut = FALSE;
+    AppendToUserPath = FALSE;
+    AppendToSystemPath = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -104,8 +110,14 @@ YpmConfig(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("start")) == 0) {
                 CreateStartMenuShortcut = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("systempath")) == 0) {
+                AppendToSystemPath = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("terminal")) == 0) {
                 CreateTerminalProfile = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("userpath")) == 0) {
+                AppendToUserPath = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
@@ -123,7 +135,12 @@ YpmConfig(
         }
     }
 
-    if (!CreateTerminalProfile && !CreateDesktopShortcut && !CreateStartMenuShortcut) {
+    if (!CreateTerminalProfile &&
+        !CreateDesktopShortcut &&
+        !CreateStartMenuShortcut &&
+        !AppendToUserPath &&
+        !AppendToSystemPath) {
+
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: missing operation\n"));
         return EXIT_FAILURE;
     }
@@ -143,6 +160,12 @@ YpmConfig(
     if (CreateStartMenuShortcut) {
         if (!YoriPkgCreateStartMenuShortcut(NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not create start menu shortcut\n"));
+        }
+    }
+
+    if (AppendToUserPath || AppendToSystemPath) {
+        if (!YoriPkgAppendInstallDirToPath(NULL, AppendToUserPath, AppendToSystemPath)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update path\n"));
         }
     }
 

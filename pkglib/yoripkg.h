@@ -179,7 +179,7 @@ YoriPkgDownloadRemotePackages(
 
 BOOL
 YoriPkgAppendInstallDirToPath(
-    __in PCYORI_STRING TargetDirectory,
+    __in_opt PCYORI_STRING TargetDirectory,
     __in BOOL AppendToUserPath,
     __in BOOL AppendToSystemPath
     );
