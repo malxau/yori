@@ -456,7 +456,8 @@ CoTrimTrailingNewlines(
  Display a dialog to prompt the user for a directory to use as the target of
  a copy or move operation.
 
- @param WinMgr Pointer to the window manager in order to display new windows.
+ @param CoContext Pointer to the program context including its window manager
+        handle and current directory.
 
  @param TargetDirectory On successful completion, updated to point to a newly
         allocated string containing the target directory.
@@ -466,7 +467,7 @@ CoTrimTrailingNewlines(
 __success(return)
 BOOLEAN
 CoGetTargetDirectory(
-    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __in PCO_CONTEXT CoContext,
     __out PYORI_STRING TargetDirectory
     )
 {
@@ -475,11 +476,12 @@ CoGetTargetDirectory(
     YORI_STRING FullDir;
     YORI_STRING Label;
     YORI_STRING Buttons[2];
+    YORI_STRING CurrentDirectory;
     DWORD FileAttr;
 
     YoriLibInitEmptyString(&Directory);
     YoriLibConstantString(&Title, _T("Enter Directory"));
-    if (!YoriDlgDir(WinMgr, &Title, 0, NULL, &Directory)) {
+    if (!YoriDlgDir(CoContext->WinMgr, &Title, 0, NULL, &Directory)) {
         return FALSE;
     }
 
@@ -489,12 +491,37 @@ CoGetTargetDirectory(
         return FALSE;
     }
 
+    //
+    //  Translate the current directory into an escaped full path.  This is
+    //  typically a non-escaped full path.
+    //
+
+    YoriLibInitEmptyString(&CurrentDirectory);
+    if (!YoriLibGetFullPathNameReturnAllocation(&CoContext->CurrentDirectory, TRUE, &CurrentDirectory, NULL)) {
+        YoriLibFreeStringContents(&FullDir);
+        YoriLibFreeStringContents(&Directory);
+        return FALSE;
+    }
+
+    if (YoriLibCompareStringInsensitive(&FullDir, &CurrentDirectory) == 0) {
+        YoriLibConstantString(&Buttons[0], _T("&Ok"));
+        YoriLibConstantString(&Title, _T("Error"));
+        YoriLibConstantString(&Label, _T("Cannot move or copy files to current directory, which would overwrite source files"));
+        YoriDlgMessageBox(CoContext->WinMgr, &Title, &Label, 1, Buttons, 0, 0);
+        YoriLibFreeStringContents(&Directory);
+        YoriLibFreeStringContents(&CurrentDirectory);
+        YoriLibFreeStringContents(&FullDir);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&CurrentDirectory);
+
     FileAttr = GetFileAttributes(FullDir.StartOfString);
     if ((FileAttr & FILE_ATTRIBUTE_DIRECTORY) == 0) {
         YoriLibConstantString(&Buttons[0], _T("&Ok"));
         YoriLibConstantString(&Title, _T("Error"));
         YoriLibConstantString(&Label, _T("Target is not a directory"));
-        YoriDlgMessageBox(WinMgr, &Title, &Label, 1, Buttons, 0, 0);
+        YoriDlgMessageBox(CoContext->WinMgr, &Title, &Label, 1, Buttons, 0, 0);
         YoriLibFreeStringContents(&Directory);
         YoriLibFreeStringContents(&FullDir);
         return FALSE;
@@ -510,7 +537,7 @@ CoGetTargetDirectory(
         YoriLibInitEmptyString(&Label);
         YoriLibYPrintf(&Label, _T("The directory \"%y\" does not exist.  Would you like to create it?"), &Directory);
 
-        ButtonId = YoriDlgMessageBox(WinMgr, &Title, &Label, 2, Buttons, 0, 1);
+        ButtonId = YoriDlgMessageBox(CoContext->WinMgr, &Title, &Label, 2, Buttons, 0, 1);
         YoriLibFreeStringContents(&Label);
 
         if (ButtonId != 1) {
@@ -530,7 +557,7 @@ CoGetTargetDirectory(
                 if (Label.LengthInChars > 0) {
                     YoriLibConstantString(&Buttons[0], _T("&Ok"));
                     YoriLibConstantString(&Title, _T("Error"));
-                    YoriDlgMessageBox(WinMgr, &Title, &Label, 1, Buttons, 0, 0);
+                    YoriDlgMessageBox(CoContext->WinMgr, &Title, &Label, 1, Buttons, 0, 0);
                     YoriLibFreeStringContents(&Label);
                 }
             }
@@ -714,7 +741,7 @@ CoMoveButtonClicked(
         return;
     }
 
-    if (!CoGetTargetDirectory(CoContext.WinMgr, &FullDir)) {
+    if (!CoGetTargetDirectory(&CoContext, &FullDir)) {
         return;
     }
 
@@ -785,7 +812,7 @@ CoCopyButtonClicked(
         return;
     }
 
-    if (!CoGetTargetDirectory(CoContext.WinMgr, &FullDir)) {
+    if (!CoGetTargetDirectory(&CoContext, &FullDir)) {
         return;
     }
 
@@ -818,11 +845,6 @@ CoCopyButtonClicked(
                 }
                 break;
             }
-
-            //
-            // MSFIX: Check if dest is current directory.  If so, refresh list
-            // ListChanged = TRUE;
-            //
         }
     }
 
