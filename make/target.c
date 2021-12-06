@@ -1528,8 +1528,8 @@ MakeGenerateExecScriptForTarget(
     UNREFERENCED_PARAMETER(MakeContext);
 
     //
-    //  MSFIX: NMAKE will use the inference rule if the target's recipe is
-    //  empty and an inference rule exists.  This allows a makefile to specify
+    //  NMAKE will use the inference rule if the target's recipe is empty and
+    //  an inference rule exists.  This allows a makefile to specify
     //  dependencies without recipes and have the inference rules supply
     //  recipes.  Note that a target with no string but has built dependencies
     //  is still successful.

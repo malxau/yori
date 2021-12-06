@@ -418,13 +418,6 @@ YoriWinListClearAllItems(
  Invoked when the user manipulates the scroll bar to indicate that the
  position within the list should be updated.
 
- MSFIX This logic is quite confused because the scroll bar is trying to
- describe the visible region and this function is trying to manipulate the
- selected item because it can't manipulate the visible region.  This leads to
- buggy behavior.  Once the list can describe a visible region outside of the
- selection, this function will need to be redone, hopefully be simpler, and
- more correct.
-
  @param ScrollCtrlHandle Pointer to the scroll bar control.
  */
 VOID

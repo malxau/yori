@@ -2219,9 +2219,8 @@ YoriShCompleteGenerateNewBufferString(
     YoriLibInitEmptyString(&NewString);
 
     //
-    //  MSFIX This isn't updating the referenced memory.  This works because
-    //  we'll free the "correct" one and not the one we just put here, but
-    //  it seems dodgy.
+    //  Note this isn't updating the referenced memory.  This works because
+    //  we'll free the "correct" one and not the one we just put here.
     //
 
     if (Buffer->TabContext.SearchType != YoriTabCompleteSearchHistory) {
@@ -2461,7 +2460,6 @@ YoriShCompleteGenerateNewBufferString(
         YoriLibFreeStringContents(&NewString);
     }
 }
-
 
 
 /**

@@ -483,9 +483,12 @@ YoriWinMenuCopyMultipleItems(
     MaxHotkey = 0;
 
     //
-    //  MSFIX MaxCaption here includes any ampersands that will be
-    //  removed later.  The display allocation doesn't need to
-    //  include these, nor does alignment.
+    //  Note MaxCaption here includes any ampersands that will be removed
+    //  later.  The display allocation doesn't need to include these, nor does
+    //  alignment.  This could be improved but that would require re-scanning
+    //  the string to determine its length every time, which seems wasteful
+    //  if the alternative is a menu one cell wider than it would otherwise
+    //  be.
     //
 
     for (Index = 0; Index < ItemCount; Index++) {
@@ -1682,8 +1685,6 @@ YoriWinMenuBarAppendItems(
         YoriLibDereference(NewItems);
         return FALSE;
     }
-
-    // MSFIX: Blind copy of original items, direct free existing array
 
     if (MenuBar->Items != NULL) {
         YoriLibDereference(MenuBar->Items);

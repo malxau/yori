@@ -5567,9 +5567,6 @@ YoriWinMultilineEditCreate(
         MultilineEdit->ReadOnly = TRUE;
     }
 
-    // MSFIX: Text alignment
-    // MSFIX: Optional border styles
-
     MultilineEdit->Ctrl.ClientRect.Top++;
     MultilineEdit->Ctrl.ClientRect.Left++;
     MultilineEdit->Ctrl.ClientRect.Bottom--;

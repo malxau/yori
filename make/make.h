@@ -403,12 +403,6 @@ typedef struct _MAKE_TARGET_DEPENDENCY {
 
 /**
  A single command to execute as part of building a target.
-
- MSFIX At some future point, certain state changing commands could be
- evaluated by this program internally like cd or set.  In order to implement
- these, each target needs its own notion of current directory or environment.
- CreateProcess allows these to be specified explicitly for any process not
- builtin.
  */
 typedef struct _MAKE_CMD_TO_EXEC {
 

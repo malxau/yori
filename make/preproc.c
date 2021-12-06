@@ -52,6 +52,26 @@ MakeTruncateComments(
 }
 
 /**
+ Return TRUE if a single character is a whitespace character, FALSE if it is
+ not.
+
+ @param Char The character to check.
+ 
+ @return TRUE to indicate a character is whitespace, FALSE if it is not.
+ */
+BOOLEAN
+MakeIsCharWhitespace(
+    __in TCHAR Char
+    )
+{
+    if (Char == ' ' || Char == '\t') {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Remove spaces from the beginning and end of a Yori string.
  Note this implies advancing the StartOfString pointer, so a caller
  cannot assume this pointer is unchanged across the call.
@@ -64,7 +84,7 @@ MakeTrimWhitespace(
     )
 {
     while (String->LengthInChars > 0) {
-        if (String->StartOfString[0] == ' ' || String->StartOfString[0] == '\t') {
+        if (MakeIsCharWhitespace(String->StartOfString[0])) {
             String->StartOfString++;
             String->LengthInChars--;
         } else {
@@ -73,8 +93,7 @@ MakeTrimWhitespace(
     }
 
     while (String->LengthInChars > 0) {
-        if (String->StartOfString[String->LengthInChars - 1] == ' ' ||
-            String->StartOfString[String->LengthInChars - 1] == '\t') {
+        if (MakeIsCharWhitespace(String->StartOfString[String->LengthInChars - 1])) {
             String->LengthInChars--;
         } else {
             break;
@@ -154,8 +173,7 @@ MakeJoinLines(
     if (NewEnd->StartOfString[CharsToCopy - 1] == '\\') {
         CharsToCopy--;
         while (CharsToCopy > 0) {
-            if (NewEnd->StartOfString[CharsToCopy - 1] == ' ' || 
-                NewEnd->StartOfString[CharsToCopy - 1] == '\t') {
+            if (MakeIsCharWhitespace(NewEnd->StartOfString[CharsToCopy - 1])) {
 
                 CharsToCopy--;
             } else {
@@ -229,37 +247,31 @@ MakeDetermineLineType(
 {
     DWORD Index;
     DWORD BraceDepth;
+    DWORD WhitespaceChars;
 
     if (Line->LengthInChars == 0) {
         return MakeLineTypeEmpty;
     }
 
-    //
-    //  MSFIX NMAKE uses '!' at the start of the line to indicate a
-    //  preprocessor command.  Any whitespace means it's not a preprocessor
-    //  command.  And '!' after whitespace in a recipe means the line should
-    //  be executed for each dependent.  This can't be evaluated here because
-    //  whitespace was trimmed prior to calling this function.
-    //
-
     if (Line->StartOfString[0] == '!') {
         return MakeLineTypePreprocessor;
     }
 
-    //
-    //  MSFIX NMAKE requires whitespace before anything to consider it a
-    //  recipe.  This can't be evaluated here because whitespace was trimmed
-    //  prior to calling this function.
-    //
-
     if (ScopeContext->ParserState == MakeParserRecipeActive) {
-        return MakeLineTypeRecipe;
+        if (MakeIsCharWhitespace(Line->StartOfString[0])) {
+            return MakeLineTypeRecipe;
+        }
     } else if (ScopeContext->ParserState == MakeParserInlineFileActive) {
         return MakeLineTypeInlineFile;
     }
 
     BraceDepth = 0;
+    WhitespaceChars = 0;
     for (Index = 0; Index < Line->LengthInChars; Index++) {
+        if (MakeIsCharWhitespace(Line->StartOfString[Index])) {
+            WhitespaceChars++;
+            continue;
+        }
         if (Line->StartOfString[Index] == '[') {
             BraceDepth++;
         } else if (Line->StartOfString[Index] == ']' && BraceDepth > 0) {
@@ -274,6 +286,10 @@ MakeDetermineLineType(
                 return MakeLineTypeRule;
             }
         }
+    }
+
+    if (WhitespaceChars == Line->LengthInChars) {
+        return MakeLineTypeEmpty;
     }
 
     if (YoriLibCompareStringWithLiteralInsensitive(Line, _T("DebugBreak")) == 0) {
@@ -2240,10 +2256,10 @@ MakeAddRule(
     }
 
     //
-    //  MSFIX: If a target is found, discard its recipe and start over?
-    //  NMAKE seems to have some more strange logic in this case.  For
-    //  inference rules it seems fairly important to discard whatever
-    //  already exists.
+    //  If a target is found, NMAKE preserves any existing recipe, to support
+    //  having lines specify dependencies that are different to the ones
+    //  providing recipes.  Here any recipes are effectively concatenated,
+    //  except for inference rules.
     //
 
     if (MakeIsTargetInferenceRule(Line, &FromDir, &FromExt, &ToDir, &ToExt)) {
@@ -2696,7 +2712,6 @@ MakeProcessStream(
         LineToProcess.StartOfString = LineString.StartOfString;
         LineToProcess.LengthInChars = LineString.LengthInChars;
         MakeTruncateComments(&LineToProcess);
-        MakeTrimWhitespace(&LineToProcess);
 
         MoreLinesNeeded = FALSE;
 
@@ -2705,6 +2720,7 @@ MakeProcessStream(
         }
 
         if (JoinedLine.LengthInChars > 0 || MoreLinesNeeded) {
+            MakeTrimWhitespace(&LineToProcess);
             MakeJoinLines(&JoinedLine, &LineToProcess);
             if (MoreLinesNeeded) {
                 continue;
@@ -2714,6 +2730,7 @@ MakeProcessStream(
         }
 
         LineType = MakeDetermineLineType(&LineToProcess, ScopeContext);
+        MakeTrimWhitespace(&LineToProcess);
 
         switch(LineType) {
             case MakeLineTypeEmpty:
