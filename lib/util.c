@@ -511,4 +511,26 @@ YoriLibPosixDeleteFile(
     return TRUE;
 }
 
+/**
+ The 32 bit math assembly routines currently can't support a 64 bit
+ denominator.  Wrapping them in this function ensures that they will not be
+ invoked with a 64 bit denominator.  This function is used as a barrier so
+ that multiple 32 bit divisions can be performed without the compiler upgrding
+ them into fewer 64 bit divisions.
+ 
+ @param Numerator The numerator of the division operation.
+ 
+ @param Denominator The denominator of the division operation.
+
+ @return The result of the division operation.
+ */
+DWORDLONG
+YoriLibDivide32(
+    __in DWORDLONG Numerator,
+    __in DWORD Denominator
+    )
+{
+    return Numerator/Denominator;
+}
+
 // vim:sw=4:ts=4:et:

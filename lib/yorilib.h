@@ -3820,4 +3820,10 @@ YoriLibPosixDeleteFile(
     __in PYORI_STRING FileName
     );
 
+DWORDLONG
+YoriLibDivide32(
+    __in DWORDLONG Numerator,
+    __in DWORD Denominator
+    );
+
 // vim:sw=4:ts=4:et:

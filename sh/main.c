@@ -539,10 +539,10 @@ YoriShDisplayWarnings(VOID)
             liWriteTime.LowPart = WriteTime.dwLowDateTime;
             liWriteTime.HighPart = WriteTime.dwHighDateTime;
 
-            liNow.QuadPart = liNow.QuadPart / (10 * 1000 * 1000);
-            liNow.QuadPart = liNow.QuadPart / (60 * 60 * 24);
-            liWriteTime.QuadPart = liWriteTime.QuadPart / (10 * 1000 * 1000);
-            liWriteTime.QuadPart = liWriteTime.QuadPart / (60 * 60 * 24);
+            liNow.QuadPart = YoriLibDivide32((DWORDLONG)liNow.QuadPart, 10 * 1000 * 1000);
+            liNow.QuadPart = YoriLibDivide32((DWORDLONG)liNow.QuadPart, 60 * 60 * 24);
+            liWriteTime.QuadPart = YoriLibDivide32((DWORDLONG)liWriteTime.QuadPart, 10 * 1000 * 1000);
+            liWriteTime.QuadPart = YoriLibDivide32((DWORDLONG)liWriteTime.QuadPart, 60 * 60 * 24);
 
             if (liNow.QuadPart > liWriteTime.QuadPart &&
                 liWriteTime.QuadPart + YORI_SH_DAYS_BEFORE_WARNING < liNow.QuadPart) {
