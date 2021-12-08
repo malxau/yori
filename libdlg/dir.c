@@ -547,6 +547,7 @@ YoriDlgDirRefreshView(
     )
 {
     YORI_STRING FullDir;
+    YORI_STRING UnescapedPath;
     YORI_STRING SearchString;
     PYORI_WIN_CTRL_HANDLE CurDirLabel;
     PYORI_WIN_CTRL_HANDLE DirList;
@@ -556,7 +557,13 @@ YoriDlgDirRefreshView(
     TCHAR DriveDisplayString[sizeof("[-A-]")];
     UINT DriveProbeResult;
 
-    if (!YoriLibUserStringToSingleFilePath(Directory, FALSE, &FullDir)) {
+    if (!YoriLibUserStringToSingleFilePath(Directory, TRUE, &FullDir)) {
+        return;
+    }
+
+    YoriLibInitEmptyString(&UnescapedPath);
+    if (!YoriLibUnescapePath(&FullDir, &UnescapedPath)) {
+        YoriLibFreeStringContents(&FullDir);
         return;
     }
 
@@ -567,13 +574,8 @@ YoriDlgDirRefreshView(
     ASSERT(DirList != NULL);
     __analysis_assume(DirList != NULL);
 
-    YoriWinLabelSetCaption(CurDirLabel, &FullDir);
-
-    YoriLibFreeStringContents(&FullDir);
-
-    if (!YoriLibUserStringToSingleFilePath(Directory, TRUE, &FullDir)) {
-        return;
-    }
+    YoriWinLabelSetCaption(CurDirLabel, &UnescapedPath);
+    YoriLibFreeStringContents(&UnescapedPath);
 
     State = YoriWinGetControlContext(Dialog);
     YoriLibFreeStringContents(&State->CurrentDirectory);

@@ -1082,6 +1082,42 @@ YoriLibGetFullPathSquashRelativeComponents(
         }
 
         //
+        //  Now that . and .. components are processed, if this is not an
+        //  escaped path, trim any trailing periods or spaces from the
+        //  component.  Currently this loops forward on these characters
+        //  to see if they're followed by a seperator.  This isn't
+        //  computationally ideal, but the risk of long strings of these
+        //  characters not followed by a terminator doesn't seem likely.
+        //
+
+        if (!ReturnEscapedPath) {
+            LPTSTR TestReadChar;
+            TestReadChar = CurrentReadChar;
+            while (*TestReadChar == '.' || *TestReadChar == ' ') {
+                TestReadChar++;
+            }
+            if (TestReadChar > CurrentReadChar &&
+                (*TestReadChar == '\\' || *TestReadChar == '\0')) {
+
+                //
+                //  If the whole component was truncated, remove the
+                //  previous seperator.
+                //
+
+                if (PreviousWasSeperator && CurrentWriteChar > EffectiveRoot) {
+                    CurrentWriteChar--;
+                    PreviousWasSeperator = FALSE;
+                }
+
+                CurrentReadChar = TestReadChar;
+
+                if (*TestReadChar == '\0') {
+                    break;
+                }
+            }
+        }
+
+        //
         //  Note if this is a seperator or not.  If it's the final char and
         //  a seperator, drop it
         //
