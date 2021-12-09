@@ -220,7 +220,7 @@ ymain(
     if (UiToUse == UiDefault) {
         if (StartArg > 0) {
             UiToUse = UiCli;
-        } else if (YoriLibIsNanoServer()) {
+        } else if (YoriLibIsNanoServer() || YoriLibIsRunningUnderSsh()) {
             UiToUse = UiTui;
         } else {
             UiToUse = UiGui;
