@@ -889,7 +889,7 @@ MakeBuildKeyForCacheCmd(
     Substring.LengthAllocated = Key->LengthAllocated;
     YoriLibHexBufferToString((PUCHAR)&EnvHash, sizeof(EnvHash), &Substring);
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
 
     //
     //  "Potential" mismatch between sizeof and countof.  I meant sizeof.
@@ -910,7 +910,7 @@ MakeBuildKeyForCacheCmd(
     memcpy(Substring.StartOfString, Cmd->StartOfString, Cmd->LengthInChars * sizeof(TCHAR));
     Key->LengthInChars = (sizeof(EnvHash) + sizeof(VarHash)) * 2 + Cmd->LengthInChars;
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#if defined(_MSC_VER) && (_MSC_VER >= 1500)
 #pragma warning(pop)
 #endif
 

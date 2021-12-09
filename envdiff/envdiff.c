@@ -237,6 +237,9 @@ EnvDiffOutputDifference(
     } else if (ChangeType == EnvDiffChangeModify) {
         DWORD MatchOffset;
 
+        __analysis_assume(NewValue != NULL);
+        __analysis_assume(BaseValue != NULL);
+
         //
         //  Check if the original value is contained within the new value, and
         //  if so, output the update referring to the original value.
