@@ -48,6 +48,9 @@ YSETUP=out\$(ARCH)\ysetup.exe
 !IF "$(ARCH)"=="mips"
 YSETUP=out\$(ARCH)\ysetup.exe
 !ENDIF
+!IF "$(ARCH)"=="amd64"
+YSETUP=out\$(ARCH)\ysetup.exe
+!ENDIF
 !ENDIF
 
 all: $(ARCHPKGS) $(NOARCHPKGS) $(YSETUP)
