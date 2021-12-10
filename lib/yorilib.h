@@ -2655,6 +2655,9 @@ YoriLibIsNanoServer(VOID);
 BOOLEAN
 YoriLibDoesSystemSupportBackgroundColors(VOID);
 
+VOID
+YoriLibResetSystemBackgroundColorSupport(VOID);
+
 // *** PRIV.C ***
 
 BOOL

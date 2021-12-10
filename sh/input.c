@@ -1595,6 +1595,7 @@ YoriShConfigureInputSettings(VOID)
         YoriShGlobal.MouseoverEnabled = TRUE;
         YoriShGlobal.CompletionTrailingSlash = FALSE;
         YoriShGlobal.CompletionListAll = FALSE;
+        YoriLibResetSystemBackgroundColorSupport();
 
         //
         //  Check the environment to see if the user wants to override the

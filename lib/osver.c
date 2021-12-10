@@ -566,6 +566,7 @@ YoriLibDoesSystemSupportBackgroundColors(VOID)
     if (!YoriLibBackgroundColorSupportDetermined) {
         LONGLONG Enabled;
 
+        YoriLibBackgroundColorSupported = FALSE;
         if (!YoriLibGetEnvironmentVariableAsNumber(_T("YORIBACKGROUND"), &Enabled)) {
             Enabled = 0;
         }
@@ -577,6 +578,16 @@ YoriLibDoesSystemSupportBackgroundColors(VOID)
     }
 
     return YoriLibBackgroundColorSupported;
+}
+
+/**
+ Indicate that the system doesn't know whether to support background colors
+ or not, and support should be re-queried on next use.
+ */
+VOID
+YoriLibResetSystemBackgroundColorSupport(VOID)
+{
+    YoriLibBackgroundColorSupportDetermined = FALSE;
 }
 
 // vim:sw=4:ts=4:et:

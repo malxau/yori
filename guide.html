@@ -39,6 +39,7 @@ h1 {
         <LI><A HREF="#environment">Environment variables</A>
         <OL TYPE="a">
             <LI><A HREF="#env_yoriautorestart">YORIAUTORESTART</A></LI>
+            <LI><A HREF="#env_yoribackground">YORIBACKGROUND</A></LI>
             <LI><A HREF="#env_yoricdpath">YORICDPATH</A></LI>
             <LI><A HREF="#env_yoricolorappend">YORICOLORAPPEND</A></LI>
             <LI><A HREF="#env_yoricolormetadata">YORICOLORMETADATA</A></LI>
@@ -202,6 +203,11 @@ h1 {
         <H3>YORIAUTORESTART</H3>
 
         <P>When set to 1, Yori will periodically save the state of the shell and the window so that if Yori crashes or Windows Update restarts the system the state will be automatically restored.  The default is off.  Optionally the 1 can be followed by a comma and the number of lines of screen buffer to record.  Saving a smaller amount of screen buffer can improve performance of the save operation.</P>
+
+        <A NAME=env_yoribackground></A>
+        <H3>YORIBACKGROUND</H3>
+
+        <P>When set to 1, Yori will attempt to use background colors on Nano server.  Nano Server 2016 has a bug that prevents background colors from working correctly, so setting this indicates a patched kernel with the bug fixed.  Background colors are displayed on non-Nano servers regardless of this value.</P>
 
         <A NAME=env_yoricdpath></A>
         <H3>YORICDPATH</H3>
