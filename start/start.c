@@ -3,7 +3,7 @@
  *
  * Yori shell start process via shell tool
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2021 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +35,9 @@ CHAR strStartHelpText[] =
         "\n"
         "Ask the shell to open a file.\n"
         "\n"
-        "START [-license] [-s:b|-s:h|-s:m] <file>\n"
+        "START [-license] [-e] [-s:b|-s:h|-s:m] <file>\n"
         "\n"
+        "   -e             Start elevated\n"
         "   -s:b           Start in the background\n"
         "   -s:h           Start hidden\n"
         "   -s:m           Start minimized\n";
@@ -64,19 +65,35 @@ StartHelp(VOID)
 
  @param ShowState The state of the window for the new program.
 
+ @param Elevate TRUE to indicate the program should prompt for elevation.
+
  @return TRUE to indicate success, FALSE on failure.
  */
 BOOL
 StartShellExecute(
     __in DWORD ArgC,
     __in YORI_STRING ArgV[],
-    __in INT ShowState
+    __in INT ShowState,
+    __in BOOL Elevate
     )
 {
     YORI_STRING Args;
     HINSTANCE hInst;
     LPTSTR ErrText = NULL;
     BOOL AllocatedError = FALSE;
+    YORI_SHELLEXECUTEINFO sei;
+    DWORD LastError;
+
+    ZeroMemory(&sei, sizeof(sei));
+    sei.cbSize = sizeof(sei);
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS | 
+                SEE_MASK_FLAG_NO_UI |
+                SEE_MASK_NOZONECHECKS |
+                SEE_MASK_UNICODE |
+                SEE_MASK_NO_CONSOLE;
+
+    ASSERT(YoriLibIsStringNullTerminated(&ArgV[0]));
+    sei.lpFile = ArgV[0].StartOfString;
 
     YoriLibInitEmptyString(&Args);
     if (ArgC > 1) {
@@ -86,13 +103,44 @@ StartShellExecute(
         ASSERT(YoriLibIsStringNullTerminated(&Args));
     }
 
+    sei.lpParameters = Args.StartOfString;
+    sei.nShow = ShowState;
+
     YoriLibLoadShell32Functions();
     if (DllShell32.pShellExecuteW == NULL) {
         return FALSE;
     }
 
-    ASSERT(YoriLibIsStringNullTerminated(&ArgV[0]));
-    hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, Args.StartOfString, NULL, ShowState);
+    if (Elevate && DllShell32.pShellExecuteExW == NULL) {
+        return FALSE;
+    }
+
+    LastError = ERROR_SUCCESS;
+
+    if (DllShell32.pShellExecuteExW != NULL) {
+        if (Elevate) {
+            sei.lpVerb = _T("runas");
+        }
+
+        if (!DllShell32.pShellExecuteExW(&sei)) {
+            LastError = GetLastError();
+        } else {
+            YoriLibFreeStringContents(&Args);
+            return TRUE;
+        }
+    }
+
+    if (LastError != ERROR_SUCCESS &&
+        (Elevate || LastError != ERROR_CALL_NOT_IMPLEMENTED)) {
+
+        YoriLibFreeStringContents(&Args);
+        ErrText = YoriLibGetWinErrorText(LastError);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("start: execution failed: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+        return FALSE;
+    }
+
+    hInst = DllShell32.pShellExecuteW(NULL, NULL, sei.lpFile, sei.lpParameters, NULL, sei.nShow);
 
     YoriLibFreeStringContents(&Args);
     if ((DWORD_PTR)hInst >= 32) {
@@ -168,6 +216,7 @@ ENTRYPOINT(
     INT ShowState;
     YORI_STRING FoundExecutable;
     BOOL PrependYori = FALSE;
+    BOOL Elevate = FALSE;
     BOOL Result;
 
     ShowState = SW_SHOWNORMAL;
@@ -183,8 +232,11 @@ ENTRYPOINT(
                 StartHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2021"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("e")) == 0) {
+                Elevate = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s:b")) == 0) {
                 ShowState = SW_SHOWNOACTIVATE;
                 ArgumentUnderstood = TRUE;
@@ -276,11 +328,11 @@ ENTRYPOINT(
             ArgArray[Index + 2].MemoryToFree = NULL;
         }
 
-        Result = StartShellExecute(ArgCount + 2, ArgArray, ShowState);
+        Result = StartShellExecute(ArgCount + 2, ArgArray, ShowState, Elevate);
         YoriLibFreeStringContents(&ArgArray[0]);
         YoriLibFree(ArgArray);
     } else {
-        Result = StartShellExecute(ArgC - StartArg, &ArgV[StartArg], ShowState);
+        Result = StartShellExecute(ArgC - StartArg, &ArgV[StartArg], ShowState, Elevate);
     }
 
     if (Result) {
