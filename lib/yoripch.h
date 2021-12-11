@@ -70,6 +70,11 @@
 #pragma warning(disable: 4255) // no function prototype given.  8.1 and earlier SDKs exhibit this.
 #endif
 
+/**
+ Indicate support for compiling for ARM32 if an SDK is available.
+ */
+#define _ARM_WINAPI_PARTITION_DESKTOP_SDK_AVAILABLE 1
+
 #include <windows.h>
 
 #if defined(_MSC_VER) && (_MSC_VER >= 1200)
