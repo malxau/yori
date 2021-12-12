@@ -5175,6 +5175,7 @@ YoriWinMultilineEditEventHandler(
 
                 if (!YoriWinMultilineEditProcessPossiblyEnhancedKey(MultilineEdit, Event)) {
                     if (Event->KeyDown.Char != '\0' &&
+                        Event->KeyDown.Char != '\x1b' &&
                         Event->KeyDown.Char != '\n') {
 
                         if (!MultilineEdit->ReadOnly) {

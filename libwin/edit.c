@@ -2373,6 +2373,7 @@ YoriWinEditEventHandler(
                     if (Event->KeyDown.Char != '\0' &&
                         Event->KeyDown.Char != '\r' &&
                         Event->KeyDown.Char != '\n' &&
+                        Event->KeyDown.Char != '\x1b' &&
                         Event->KeyDown.Char != '\t') {
 
                         if (!Edit->ReadOnly) {
