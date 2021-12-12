@@ -2658,6 +2658,9 @@ YoriLibDoesSystemSupportBackgroundColors(VOID);
 VOID
 YoriLibResetSystemBackgroundColorSupport(VOID);
 
+BOOLEAN
+YoriLibIsRunningUnderSsh(VOID);
+
 // *** PRIV.C ***
 
 BOOL

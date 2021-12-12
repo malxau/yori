@@ -54,6 +54,17 @@ BOOLEAN YoriLibBackgroundColorSupportDetermined;
  */
 BOOLEAN YoriLibBackgroundColorSupported;
 
+/**
+ TRUE if the process is running under SSH.  Only meaningful if
+ YoriLibRunningUnderSshDetermined is TRUE.
+ */
+BOOLEAN YoriLibRunningUnderSsh;
+
+/**
+ TRUE if whether the process is running under SSH has been determined.
+ */
+BOOLEAN YoriLibRunningUnderSshDetermined;
+
 #if _WIN64
 /**
  On 64 bit builds, the current process PEB is 64 bit.
@@ -588,6 +599,29 @@ VOID
 YoriLibResetSystemBackgroundColorSupport(VOID)
 {
     YoriLibBackgroundColorSupportDetermined = FALSE;
+}
+
+/**
+ Return TRUE if the program is running under an SSH connection.  Typically
+ this should be transparent, but SSH isn't always full Win32 fidelity.
+
+ @return TRUE if the process is being operated through an SSH connection,
+         FALSE if not.
+ */
+BOOLEAN
+YoriLibIsRunningUnderSsh(VOID)
+{
+    if (!YoriLibRunningUnderSshDetermined) {
+        DWORD VarLength;
+
+        VarLength = GetEnvironmentVariable(_T("SSH_CLIENT"), NULL, 0);
+        if (VarLength > 0) {
+            YoriLibRunningUnderSsh = TRUE;
+        }
+
+        YoriLibRunningUnderSshDetermined = TRUE;
+    }
+    return YoriLibRunningUnderSsh;
 }
 
 // vim:sw=4:ts=4:et:

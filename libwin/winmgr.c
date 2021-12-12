@@ -294,6 +294,22 @@ YoriWinOpenWindowManager(
 }
 
 /**
+ Return TRUE if the system is incapable of processing a key press of an Alt
+ key (with no additional key.)  If the system cannot handle this key event,
+ keyboard accelerators are always displayed.  If the system can handle this
+ event, they are not displayed until the Alt key is pressed.
+ */
+BOOLEAN
+YoriWinMgrAlwaysDisplayAccelerators(VOID)
+{
+    if (YoriLibIsRunningUnderSsh() || YoriLibIsNanoServer()) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Change if the window manager should use 7 bit characters or extended
  characters to display visual elements.
 

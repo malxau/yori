@@ -1585,7 +1585,7 @@ YoriWinSetInitialFocus(
     //  Just force accelerators to always be displayed, old skool.
     //
 
-    if (!Window->AcceleratorsDisplayed && YoriLibIsNanoServer()) {
+    if (!Window->AcceleratorsDisplayed && YoriWinMgrAlwaysDisplayAccelerators()) {
         ZeroMemory(&Event, sizeof(Event));
         Event.EventType = YoriWinEventDisplayAccelerators;
         YoriWinNotifyAllControls(&Window->Ctrl, &Event);
@@ -2165,7 +2165,7 @@ YoriWinNotifyEvent(
                 }
             } else {
                 if (Event->KeyDown.Char) {
-                    if (Window->AcceleratorsDisplayed && !YoriLibIsNanoServer()) {
+                    if (Window->AcceleratorsDisplayed && !YoriWinMgrAlwaysDisplayAccelerators()) {
                         ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
                         CtrlEvent.EventType = YoriWinEventHideAccelerators;
                         YoriWinNotifyAllControls(&Window->Ctrl, &CtrlEvent);
@@ -2181,7 +2181,7 @@ YoriWinNotifyEvent(
         } else if (Event->EventType == YoriWinEventKeyUp) {
             if (Event->KeyDown.VirtualKeyCode == VK_MENU &&
                 Window->AcceleratorsDisplayed &&
-                !YoriLibIsNanoServer()) {
+                !YoriWinMgrAlwaysDisplayAccelerators()) {
 
                 ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
                 CtrlEvent.EventType = YoriWinEventHideAccelerators;

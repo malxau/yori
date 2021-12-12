@@ -821,6 +821,9 @@ YoriWinWindowFromTopLevelListEntry(
 
 // WINMGR.C
 
+BOOLEAN
+YoriWinMgrAlwaysDisplayAccelerators(VOID);
+
 LPCTSTR
 YoriWinGetDrawingCharacters(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
