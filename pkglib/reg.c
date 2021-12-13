@@ -609,4 +609,357 @@ Exit:
     return FALSE;
 }
 
+/**
+ Attempt to gain access to a system registry key.  This is because some keys
+ are restricted to TrustedInstaller inappropriately - they contain
+ configuration that users are expected to change, but are ACL'd to prevent
+ Administrators changing them.  This code automates changing ownership and ACL
+ to allow Administrators to modify the values.
+
+ @param KeyRoot A handle to a registry key, typically one of the well known
+        root keys.
+
+ @param KeyName Pointer to a NULL-terminated string specifying the name of the
+        key whose ACL should be adjusted.
+
+ @return TRUE if adjustment was successful, FALSE on failure.
+ */
+BOOL
+YoriPkgGetAccessToRegistryKey(
+    __in HKEY KeyRoot,
+    __in PCYORI_STRING KeyName
+    )
+{
+    BOOL TakeOwnershipPrivilegeEnabled;
+    HKEY hKey;
+    DWORD Err;
+    DWORD Disposition;
+    DWORD BytesRequired;
+    PSID AdministratorSid;
+    PSID UsersSid;
+    PACL NewAcl;
+    SECURITY_DESCRIPTOR NewDescriptor;
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+
+    if (DllAdvApi32.pAddAccessAllowedAce == NULL ||
+        DllAdvApi32.pAllocateAndInitializeSid == NULL ||
+        DllAdvApi32.pFreeSid == NULL ||
+        DllAdvApi32.pInitializeAcl == NULL ||
+        DllAdvApi32.pInitializeSecurityDescriptor == NULL ||
+        DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegCreateKeyExW == NULL ||
+        DllAdvApi32.pRegSetKeySecurity == NULL ||
+        DllAdvApi32.pSetSecurityDescriptorDacl == NULL ||
+        DllAdvApi32.pSetSecurityDescriptorOwner == NULL) {
+
+        return FALSE;
+    }
+
+    ASSERT(YoriLibIsStringNullTerminated(KeyName));
+    AdministratorSid = NULL;
+    UsersSid = NULL;
+    hKey = NULL;
+    NewAcl = NULL;
+
+    TakeOwnershipPrivilegeEnabled = YoriLibEnableTakeOwnershipPrivilege();
+
+    //
+    //  Get a SID for the Administrators group, which can be used as an owner
+    //  or ACE.  Since the key being manipulated is system wide, any
+    //  modification should be to include some administrative rights,
+    //  otherwise this code would allow a later unprivileged user to modify
+    //  login settings.
+    //
+
+    if (!DllAdvApi32.pAllocateAndInitializeSid(&NtAuthority,
+                                               2,
+                                               SECURITY_BUILTIN_DOMAIN_RID,
+                                               DOMAIN_ALIAS_RID_ADMINS,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               &AdministratorSid)) {
+        Err = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
+
+    if (!DllAdvApi32.pAllocateAndInitializeSid(&NtAuthority,
+                                               2,
+                                               SECURITY_BUILTIN_DOMAIN_RID,
+                                               DOMAIN_ALIAS_RID_USERS,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               0,
+                                               &UsersSid)) {
+        Err = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
+
+    Err = DllAdvApi32.pRegCreateKeyExW(KeyRoot,
+                                       KeyName->StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       WRITE_OWNER,
+                                       NULL,
+                                       &hKey,
+                                       &Disposition);
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    //
+    //  Set owner to Administrators (as opposed to TrustedInstaller.)
+    //
+
+    if (!DllAdvApi32.pInitializeSecurityDescriptor(&NewDescriptor, SECURITY_DESCRIPTOR_REVISION)) {
+        Err = GetLastError();
+        goto Exit;
+    }
+
+    if (!DllAdvApi32.pSetSecurityDescriptorOwner(&NewDescriptor, AdministratorSid, FALSE)) {
+        Err = GetLastError();
+        goto Exit;
+    }
+
+    Err = DllAdvApi32.pRegSetKeySecurity(hKey, OWNER_SECURITY_INFORMATION, &NewDescriptor);
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    //
+    //  Close and reopen, this time with WRITE_DAC.  The ownership change
+    //  should ensure that this succeeds if the calling process is part of
+    //  the Administrators group.
+    //
+
+    DllAdvApi32.pRegCloseKey(hKey);
+    hKey = NULL;
+
+    Err = DllAdvApi32.pRegCreateKeyExW(KeyRoot,
+                                       KeyName->StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       WRITE_DAC,
+                                       NULL,
+                                       &hKey,
+                                       &Disposition);
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    //
+    //  Now adjust the ACL.  This code uses two ACEs, full access for
+    //  Administrators and read only access for Users.  This is minimal but
+    //  typically appropriate for any kind of system key.
+    //
+
+    BytesRequired = sizeof(ACL) + 2 * (sizeof(ACCESS_ALLOWED_ACE) - sizeof(DWORD)) +
+                    DllAdvApi32.pGetLengthSid(AdministratorSid) +
+                    DllAdvApi32.pGetLengthSid(UsersSid);
+
+    NewAcl = YoriLibMalloc(BytesRequired);
+    if (NewAcl == NULL) {
+        Err = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
+
+    if (!DllAdvApi32.pInitializeAcl(NewAcl, BytesRequired, ACL_REVISION)) {
+        Err = GetLastError();
+        goto Exit;
+    }
+
+    if (!DllAdvApi32.pAddAccessAllowedAce(NewAcl, ACL_REVISION, KEY_ALL_ACCESS, AdministratorSid)) {
+        Err = GetLastError();
+        goto Exit;
+    }
+
+    if (!DllAdvApi32.pAddAccessAllowedAce(NewAcl, ACL_REVISION, KEY_READ, UsersSid)) {
+        Err = GetLastError();
+        goto Exit;
+    }
+
+    if (!DllAdvApi32.pInitializeSecurityDescriptor(&NewDescriptor, SECURITY_DESCRIPTOR_REVISION)) {
+        Err = GetLastError();
+        goto Exit;
+    }
+
+    if (!DllAdvApi32.pSetSecurityDescriptorDacl(&NewDescriptor, TRUE, NewAcl, FALSE)) {
+        Err = GetLastError();
+        goto Exit;
+    }
+
+    Err = DllAdvApi32.pRegSetKeySecurity(hKey, DACL_SECURITY_INFORMATION, &NewDescriptor);
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+Exit:
+
+    if (hKey != NULL) {
+        DllAdvApi32.pRegCloseKey(hKey);
+    }
+
+    if (NewAcl != NULL) {
+        YoriLibFree(NewAcl);
+    }
+
+    if (AdministratorSid != NULL) {
+        DllAdvApi32.pFreeSid(AdministratorSid);
+    }
+
+    if (UsersSid != NULL) {
+        DllAdvApi32.pFreeSid(UsersSid);
+    }
+
+    if (Err == ERROR_SUCCESS) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ Set the logon shell to a new path, specifying the location of the entry
+ in the registry.
+
+ @param KeyName Pointer to the registry key to update.
+
+ @param ValueName Pointer to the registry value to update.
+
+ @param NewShellFullPath Pointer to the new login shell.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgUpdateWinlogonShell(
+    __in PCYORI_STRING KeyName,
+    __in PCYORI_STRING ValueName,
+    __in PCYORI_STRING NewShellFullPath
+    )
+{
+    HKEY hKey;
+    DWORD Err;
+    DWORD Disposition;
+
+    ASSERT(YoriLibIsStringNullTerminated(KeyName));
+    ASSERT(YoriLibIsStringNullTerminated(ValueName));
+    ASSERT(YoriLibIsStringNullTerminated(NewShellFullPath));
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegCreateKeyExW == NULL ||
+        DllAdvApi32.pRegSetValueExW == NULL) {
+
+        return FALSE;
+    }
+
+    Err = DllAdvApi32.pRegCreateKeyExW(HKEY_LOCAL_MACHINE,
+                                       KeyName->StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       KEY_QUERY_VALUE | KEY_SET_VALUE,
+                                       NULL,
+                                       &hKey,
+                                       &Disposition);
+
+    //
+    //  If we don't have access to change things in the key, try to
+    //  obtain access, and retry.
+    //
+
+    if (Err == ERROR_ACCESS_DENIED) {
+        YoriPkgGetAccessToRegistryKey(HKEY_LOCAL_MACHINE, KeyName);
+
+        Err = DllAdvApi32.pRegCreateKeyExW(HKEY_LOCAL_MACHINE,
+                                           KeyName->StartOfString,
+                                           0,
+                                           NULL,
+                                           0,
+                                           KEY_QUERY_VALUE | KEY_SET_VALUE,
+                                           NULL,
+                                           &hKey,
+                                           &Disposition);
+    }
+
+    if (Err != ERROR_SUCCESS) {
+        return FALSE;
+    }
+
+    Err = DllAdvApi32.pRegSetValueExW(hKey, ValueName->StartOfString, 0, REG_SZ, (LPBYTE)NewShellFullPath->StartOfString, (NewShellFullPath->LengthInChars + 1) * sizeof(TCHAR));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+Exit:
+
+    DllAdvApi32.pRegCloseKey(hKey);
+
+    if (Err == ERROR_SUCCESS) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ Set the logon shell to a new path.  This involves detecting Server Core or a
+ full GUI server based on it, and in that case, updating the AvailableShells
+ key.  If a different edition, update the regular Shell value.
+
+ @param NewShellFullPath Pointer to the new login shell.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgUpdateLogonShell(
+    __in PYORI_STRING NewShellFullPath
+    )
+{
+    YORI_STRING KeyName;
+    YORI_STRING ValueName;
+    DWORD Err;
+    HKEY hKey;
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegOpenKeyExW == NULL) {
+
+        return FALSE;
+    }
+
+    //
+    //  Check if we're running on a system with Server Core shell support,
+    //  where multiple shells are listed in ranked order.  If so, insert
+    //  the new entry under that key.  If not, use the one-and-only shell
+    //  key instead.
+    //
+
+    YoriLibConstantString(&KeyName, _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\AlternateShells\\AvailableShells"));
+    YoriLibConstantString(&ValueName, _T("98052"));
+
+    Err = DllAdvApi32.pRegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                                     KeyName.StartOfString,
+                                     0,
+                                     KEY_QUERY_VALUE,
+                                     &hKey);
+
+    if (Err == ERROR_SUCCESS) {
+        DllAdvApi32.pRegCloseKey(hKey);
+    } else {
+        YoriLibConstantString(&KeyName, _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"));
+        YoriLibConstantString(&ValueName, _T("Shell"));
+
+    }
+    return YoriPkgUpdateWinlogonShell(&KeyName, &ValueName, NewShellFullPath);
+}
+
 // vim:sw=4:ts=4:et:

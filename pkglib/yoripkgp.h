@@ -502,4 +502,9 @@ YoriPkgIsFileToBeDeletedOnReboot(
 BOOL
 YoriPkgRemoveUninstallEntry(VOID);
 
+BOOL
+YoriPkgUpdateLogonShell(
+    __in PYORI_STRING NewShellFullPath
+    );
+
 // vim:sw=4:ts=4:et:

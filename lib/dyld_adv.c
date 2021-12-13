@@ -55,6 +55,7 @@ YORI_ADVAPI32_FUNCTIONS DllAdvApi32;
  */
 CONST YORI_DLL_NAME_MAP DllAdvApi32Symbols[] = {
     {(FARPROC *)&DllAdvApi32.pAccessCheck, "AccessCheck"},
+    {(FARPROC *)&DllAdvApi32.pAddAccessAllowedAce, "AddAccessAllowedAce"},
     {(FARPROC *)&DllAdvApi32.pAdjustTokenPrivileges, "AdjustTokenPrivileges"},
     {(FARPROC *)&DllAdvApi32.pAllocateAndInitializeSid, "AllocateAndInitializeSid"},
     {(FARPROC *)&DllAdvApi32.pCheckTokenMembership, "CheckTokenMembership"},
@@ -66,9 +67,11 @@ CONST YORI_DLL_NAME_MAP DllAdvApi32Symbols[] = {
     {(FARPROC *)&DllAdvApi32.pCryptReleaseContext, "CryptReleaseContext"},
     {(FARPROC *)&DllAdvApi32.pFreeSid, "FreeSid"},
     {(FARPROC *)&DllAdvApi32.pGetFileSecurityW, "GetFileSecurityW"},
+    {(FARPROC *)&DllAdvApi32.pGetLengthSid, "GetLengthSid"},
     {(FARPROC *)&DllAdvApi32.pGetSecurityDescriptorOwner, "GetSecurityDescriptorOwner"},
     {(FARPROC *)&DllAdvApi32.pImpersonateSelf, "ImpersonateSelf"},
     {(FARPROC *)&DllAdvApi32.pInitializeAcl, "InitializeAcl"},
+    {(FARPROC *)&DllAdvApi32.pInitializeSecurityDescriptor, "InitializeSecurityDescriptor"},
     {(FARPROC *)&DllAdvApi32.pInitiateShutdownW, "InitiateShutdownW"},
     {(FARPROC *)&DllAdvApi32.pLookupAccountNameW, "LookupAccountNameW"},
     {(FARPROC *)&DllAdvApi32.pLookupAccountSidW, "LookupAccountSidW"},
@@ -81,11 +84,15 @@ CONST YORI_DLL_NAME_MAP DllAdvApi32Symbols[] = {
     {(FARPROC *)&DllAdvApi32.pRegDeleteValueW, "RegDeleteValueW"},
     {(FARPROC *)&DllAdvApi32.pRegEnumKeyExW, "RegEnumKeyExW"},
     {(FARPROC *)&DllAdvApi32.pRegEnumValueW, "RegEnumValueW"},
+    {(FARPROC *)&DllAdvApi32.pRegGetKeySecurity, "RegGetKeySecurity"},
     {(FARPROC *)&DllAdvApi32.pRegOpenKeyExW, "RegOpenKeyExW"},
     {(FARPROC *)&DllAdvApi32.pRegQueryValueExW, "RegQueryValueExW"},
+    {(FARPROC *)&DllAdvApi32.pRegSetKeySecurity, "RegSetKeySecurity"},
     {(FARPROC *)&DllAdvApi32.pRegSetValueExW, "RegSetValueExW"},
     {(FARPROC *)&DllAdvApi32.pRevertToSelf, "RevertToSelf"},
-    {(FARPROC *)&DllAdvApi32.pSetNamedSecurityInfoW, "SetNamedSecurityInfoW"}
+    {(FARPROC *)&DllAdvApi32.pSetNamedSecurityInfoW, "SetNamedSecurityInfoW"},
+    {(FARPROC *)&DllAdvApi32.pSetSecurityDescriptorDacl, "SetSecurityDescriptorDacl"},
+    {(FARPROC *)&DllAdvApi32.pSetSecurityDescriptorOwner, "SetSecurityDescriptorOwner"}
 };
 
 /**

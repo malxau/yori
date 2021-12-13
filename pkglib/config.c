@@ -377,5 +377,47 @@ YoriPkgCreateStartMenuShortcut(
     return YoriPkgCreateAppShortcut(&RelativeShortcutPath, YoriExeFullPath);
 }
 
+/**
+ Update the login shell to execute the specified program.  If the program
+ is not specified, Yori.exe from the directory containing the current
+ process is used.
+
+ @param YoriExeFullPath Pointer to the program to use as a login shell.  If
+        not specified, Yori.exe from the directory containing the current
+        process is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgInstallYoriAsLoginShell(
+    __in_opt PYORI_STRING YoriExeFullPath
+    )
+{
+    YORI_STRING LocalExePath;
+    DWORD Attributes;
+
+    if (YoriExeFullPath == NULL) {
+        if (!YoriPkgGetYoriExecutablePath(&LocalExePath)) {
+            return FALSE;
+        }
+    } else {
+        YoriLibCloneString(&LocalExePath, YoriExeFullPath);
+    }
+
+    Attributes = GetFileAttributes(LocalExePath.StartOfString);
+    if (Attributes == (DWORD)-1) {
+        return FALSE;
+    }
+
+    if (!YoriPkgUpdateLogonShell(&LocalExePath)) {
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&LocalExePath);
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:

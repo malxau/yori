@@ -2669,6 +2669,9 @@ YoriLibEnableBackupPrivilege(VOID);
 BOOL
 YoriLibEnableDebugPrivilege(VOID);
 
+BOOL
+YoriLibEnableTakeOwnershipPrivilege(VOID);
+
 // *** PROCESS.C ***
 
 __success(return)

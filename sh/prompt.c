@@ -45,13 +45,9 @@ BOOL YoriShPromptAdminPresent;
 BOOL
 YoriShPromptIsAdmin(VOID)
 {
-    YORI_STRING AdminName;
-
     if (YoriShPromptAdminDetermined) {
         return YoriShPromptAdminPresent;
     }
-
-    YoriLibConstantString(&AdminName, _T("Administrators"));
 
     if (!YoriLibIsCurrentUserInWellKnownGroup(DOMAIN_ALIAS_RID_ADMINS, &YoriShPromptAdminPresent)) {
         YoriShPromptAdminPresent = FALSE;

@@ -38,9 +38,10 @@ CHAR strYpmConfigHelpText[] =
         "Update system configuration.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -config [-desktop] [-start] [-systempath] [-terminal] [-userpath]\n"
+        "YPM -config [-desktop] [-loginshell] [-start] [-systempath] [-terminal] [-userpath]\n"
         "\n"
         "   -desktop       Create a Desktop shortcut\n"
+        "   -loginshell    Make Yori the program to run on login\n"
         "   -start         Create a Start Menu shortcut\n"
         "   -systempath    Add to system path\n"
         "   -terminal      Create a Windows Terminal fragment\n"
@@ -84,12 +85,14 @@ YpmConfig(
     BOOLEAN CreateStartMenuShortcut;
     BOOLEAN AppendToUserPath;
     BOOLEAN AppendToSystemPath;
+    BOOLEAN LoginShell;
 
     CreateTerminalProfile = FALSE;
     CreateDesktopShortcut = FALSE;
     CreateStartMenuShortcut = FALSE;
     AppendToUserPath = FALSE;
     AppendToSystemPath = FALSE;
+    LoginShell = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -106,6 +109,9 @@ YpmConfig(
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desktop")) == 0) {
                 CreateDesktopShortcut = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("loginshell")) == 0) {
+                LoginShell = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("start")) == 0) {
                 CreateStartMenuShortcut = TRUE;
@@ -139,7 +145,8 @@ YpmConfig(
         !CreateDesktopShortcut &&
         !CreateStartMenuShortcut &&
         !AppendToUserPath &&
-        !AppendToSystemPath) {
+        !AppendToSystemPath &&
+        !LoginShell) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: missing operation\n"));
         return EXIT_FAILURE;
@@ -166,6 +173,12 @@ YpmConfig(
     if (AppendToUserPath || AppendToSystemPath) {
         if (!YoriPkgAppendInstallDirToPath(NULL, AppendToUserPath, AppendToSystemPath)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update path\n"));
+        }
+    }
+
+    if (LoginShell) {
+        if (!YoriPkgInstallYoriAsLoginShell(NULL)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update login shell. Are you running as an elevated Administrator?\n"));
         }
     }
 

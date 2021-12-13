@@ -6658,6 +6658,18 @@ ACCESS_CHECK(PSECURITY_DESCRIPTOR, HANDLE, DWORD, PGENERIC_MAPPING, PPRIVILEGE_S
 typedef ACCESS_CHECK *PACCESS_CHECK;
 
 /**
+ A prototype for the AddAccessAllowedAce function.
+ */
+typedef
+BOOL WINAPI
+ADD_ACCESS_ALLOWED_ACE(PACL, DWORD, DWORD, PSID);
+
+/**
+ A prototype for a pointer to the AddAccessAllowedAce function.
+ */
+typedef ADD_ACCESS_ALLOWED_ACE *PADD_ACCESS_ALLOWED_ACE;
+
+/**
  A prototype for the AdjustTokenPrivileges function.
  */
 typedef
@@ -6790,6 +6802,18 @@ GET_FILE_SECURITYW(LPCWSTR, SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, DWORD, L
 typedef GET_FILE_SECURITYW *PGET_FILE_SECURITYW;
 
 /**
+ A prototype for the GetLengthSid function.
+ */
+typedef
+DWORD WINAPI
+GET_LENGTH_SID(PSID);
+
+/**
+ Prototype for a pointer to the GetLengthSid function.
+ */
+typedef GET_LENGTH_SID *PGET_LENGTH_SID;
+
+/**
  A prototype for the GetSecurityDescriptorOwner function.
  */
 typedef
@@ -6824,6 +6848,18 @@ INITIALIZE_ACL(PACL, DWORD, DWORD);
  A prototype for a pointer to the InitializeAcl function.
  */
 typedef INITIALIZE_ACL *PINITIALIZE_ACL;
+
+/**
+ A prototype for the InitializeSecurityDescriptor function.
+ */
+typedef
+BOOL WINAPI
+INITIALIZE_SECURITY_DESCRIPTOR(PSECURITY_DESCRIPTOR, DWORD);
+
+/**
+ A prototype for a pointer to the InitializeSecurityDescriptor function.
+ */
+typedef INITIALIZE_SECURITY_DESCRIPTOR *PINITIALIZE_SECURITY_DESCRIPTOR;
 
 /**
  A prototype for the InitiateShutdownW function.
@@ -6970,6 +7006,18 @@ REG_ENUM_VALUEW(HANDLE, DWORD, LPWSTR, LPDWORD, LPDWORD, LPDWORD, LPBYTE, LPDWOR
 typedef REG_ENUM_VALUEW *PREG_ENUM_VALUEW;
 
 /**
+ A prototype for the RegGetKeySecurity function.
+ */
+typedef
+LONG WINAPI
+REG_GET_KEY_SECURITY(HKEY, SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, LPDWORD);
+
+/**
+ A prototype for a pointer to the RegGetKeySecurity function.
+ */
+typedef REG_GET_KEY_SECURITY *PREG_GET_KEY_SECURITY;
+
+/**
  A prototype for the RegOpenKeyExW function.
  */
 typedef
@@ -6992,6 +7040,18 @@ REG_QUERY_VALUE_EXW(HANDLE, LPCWSTR, LPDWORD, LPDWORD, LPBYTE, LPDWORD);
  A prototype for a pointer to the RegQueryValueExW function.
  */
 typedef REG_QUERY_VALUE_EXW *PREG_QUERY_VALUE_EXW;
+
+/**
+ A prototype for the RegSetKeySecurity function.
+ */
+typedef
+LONG WINAPI
+REG_SET_KEY_SECURITY(HKEY, SECURITY_INFORMATION, PSECURITY_DESCRIPTOR);
+
+/**
+ A prototype for a pointer to the RegSetKeySecurity function.
+ */
+typedef REG_SET_KEY_SECURITY *PREG_SET_KEY_SECURITY;
 
 /**
  A prototype for the RegSetValueExW function.
@@ -7030,6 +7090,30 @@ SET_NAMED_SECURITY_INFOW(LPWSTR, DWORD, SECURITY_INFORMATION, PSID, PSID, PACL, 
 typedef SET_NAMED_SECURITY_INFOW *PSET_NAMED_SECURITY_INFOW;
 
 /**
+ A prototype for the SetSecurityDescriptorDacl function.
+ */
+typedef
+BOOL WINAPI
+SET_SECURITY_DESCRIPTOR_DACL(PSECURITY_DESCRIPTOR, BOOL, PACL, BOOL);
+
+/**
+ A prototype for a pointer to the SetSecurityDescriptorDacl function.
+ */
+typedef SET_SECURITY_DESCRIPTOR_DACL *PSET_SECURITY_DESCRIPTOR_DACL;
+
+/**
+ A prototype for the SetSecurityDescriptorOwner function.
+ */
+typedef
+BOOL WINAPI
+SET_SECURITY_DESCRIPTOR_OWNER(PSECURITY_DESCRIPTOR, PSID, BOOL);
+
+/**
+ A prototype for a pointer to the SetSecurityDescriptorOwner function.
+ */
+typedef SET_SECURITY_DESCRIPTOR_OWNER *PSET_SECURITY_DESCRIPTOR_OWNER;
+
+/**
  A structure containing optional function pointers to advapi32.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -7055,6 +7139,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to AccessCheck.
      */
     PACCESS_CHECK pAccessCheck;
+
+    /**
+     If it's available on the current system, a pointer to AddAccessAllowedAce.
+     */
+    PADD_ACCESS_ALLOWED_ACE pAddAccessAllowedAce;
 
     /**
      If it's available on the current system, a pointer to AdjustTokenPrivileges.
@@ -7112,6 +7201,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
     PGET_FILE_SECURITYW pGetFileSecurityW;
 
     /**
+     If it's available on the current system, a pointer to GetLengthSid.
+     */
+    PGET_LENGTH_SID pGetLengthSid;
+
+    /**
      If it's available on the current system, a pointer to GetSecurityDescriptorOwner.
      */
     PGET_SECURITY_DESCRIPTOR_OWNER pGetSecurityDescriptorOwner;
@@ -7125,6 +7219,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to InitializeAcl.
      */
     PINITIALIZE_ACL pInitializeAcl;
+
+    /**
+     If it's available on the current system, a pointer to InitializeSecurityDescriptor.
+     */
+    PINITIALIZE_SECURITY_DESCRIPTOR pInitializeSecurityDescriptor;
 
     /**
      If it's available on the current system, a pointer to InitiateShutdownW.
@@ -7187,6 +7286,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
     PREG_ENUM_VALUEW pRegEnumValueW;
 
     /**
+     If it's available on the current system, a pointer to RegGetKeySecurity.
+     */
+    PREG_GET_KEY_SECURITY pRegGetKeySecurity;
+
+    /**
      If it's available on the current system, a pointer to RegOpenKeyExW.
      */
     PREG_OPEN_KEY_EXW pRegOpenKeyExW;
@@ -7195,6 +7299,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to RegQueryValueExW.
      */
     PREG_QUERY_VALUE_EXW pRegQueryValueExW;
+
+    /**
+     If it's available on the current system, a pointer to RegSetKeySecurity.
+     */
+    PREG_SET_KEY_SECURITY pRegSetKeySecurity;
 
     /**
      If it's available on the current system, a pointer to RegSetValueExW.
@@ -7210,6 +7319,18 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to SetNamedSecurityInfoW.
      */
     PSET_NAMED_SECURITY_INFOW pSetNamedSecurityInfoW;
+    /**
+     *
+     If it's available on the current system, a pointer to
+     SetSecurityDescriptorDacl.
+     */
+    PSET_SECURITY_DESCRIPTOR_DACL pSetSecurityDescriptorDacl;
+
+    /**
+     If it's available on the current system, a pointer to
+     SetSecurityDescriptorOwner.
+     */
+    PSET_SECURITY_DESCRIPTOR_OWNER pSetSecurityDescriptorOwner;
 
 } YORI_ADVAPI32_FUNCTIONS, *PYORI_ADVAPI32_FUNCTIONS;
 
