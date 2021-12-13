@@ -1809,6 +1809,121 @@ MoreRegenerateViewport(
 }
 
 /**
+ Display the buffer including and following a specified line.  If there's
+ not enough buffer to fill the viewport, use earlier lines.  If there's still
+ not enough lines, don't do anything, since everything is already displayed.
+
+ This is used to display search matches - they must be on the screen, but the
+ screen should still be full.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @param FirstPhysicalLine Pointer to the first physical line to ensure is
+        visible on the regenerated display.
+ */
+VOID
+MoreGenerateEntireViewportWithStartingLine(
+    __inout PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_PHYSICAL_LINE FirstPhysicalLine
+    )
+{
+    DWORD LinesReturned;
+    DWORD LinesRemaining;
+    DWORD CappedLinesToMove;
+    BOOL Success;
+    MORE_LOGICAL_LINE CurrentLogicalLine;
+    MORE_LOGICAL_LINE PreviousLogicalLine;
+    PMORE_LOGICAL_LINE LineToFollow;
+    DWORD Index;
+
+    ZeroMemory(&CurrentLogicalLine, sizeof(CurrentLogicalLine));
+    ZeroMemory(&PreviousLogicalLine, sizeof(PreviousLogicalLine));
+    CurrentLogicalLine.PhysicalLine = FirstPhysicalLine;
+    CappedLinesToMove = MoreContext->ViewportHeight;
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+
+    LineToFollow = NULL;
+    if (FirstPhysicalLine != NULL) {
+        if (MoreGetPreviousLogicalLines(MoreContext, &CurrentLogicalLine, 1, &PreviousLogicalLine, &LinesReturned) && LinesReturned > 0) {
+            LineToFollow = &PreviousLogicalLine;
+        }
+    }
+
+    Success = MoreGetNextLogicalLines(MoreContext, LineToFollow, TRUE, CappedLinesToMove, MoreContext->StagingViewportLines, &LinesReturned);
+
+    if (LineToFollow != NULL) {
+        YoriLibFreeStringContents(&LineToFollow->Line);
+    }
+
+    if (Success) {
+
+        //
+        //  If reading forward didn't provide enough lines, start reading
+        //  backwards
+        //
+
+        LinesRemaining = MoreContext->LinesInViewport - LinesReturned;
+        if (LinesRemaining > 0) {
+            for (Index = LinesReturned; Index > 0; Index--) {
+                MoreMoveLogicalLine(&MoreContext->StagingViewportLines[LinesRemaining + Index - 1],
+                                    &MoreContext->StagingViewportLines[Index - 1]);
+            }
+            if (LinesReturned > 0) {
+                LineToFollow = &MoreContext->StagingViewportLines[LinesRemaining];
+            } else {
+                LineToFollow = NULL;
+            }
+            Success = MoreGetPreviousLogicalLines(MoreContext, LineToFollow, LinesRemaining, MoreContext->StagingViewportLines, &LinesReturned);
+
+            //
+            //  If there's still not enough lines, don't display anything
+            //
+
+            if (!Success || LinesReturned < LinesRemaining) {
+                for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
+                    YoriLibFreeStringContents(&MoreContext->StagingViewportLines[Index].Line);
+                }
+                LinesReturned = 0;
+                Success = FALSE;
+            } else {
+                LinesReturned = MoreContext->LinesInViewport;
+            }
+        }
+    }
+
+    //
+    //  If the contents of the viewport aren't changing (the top line is the
+    //  same), throw it away without displaying anything.
+    //
+
+    if (Success && MoreContext->LinesInViewport > 0 && LinesReturned > 0) {
+        if (MoreContext->DisplayViewportLines[0].PhysicalLine ==
+            MoreContext->StagingViewportLines[0].PhysicalLine &&
+
+            MoreContext->DisplayViewportLines[0].LogicalLineIndex ==
+            MoreContext->StagingViewportLines[0].LogicalLineIndex) {
+
+            for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
+                YoriLibFreeStringContents(&MoreContext->StagingViewportLines[Index].Line);
+            }
+            LinesReturned = 0;
+            Success = FALSE;
+        }
+    }
+
+    ASSERT(!Success || LinesReturned <= CappedLinesToMove);
+
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    if (!Success || LinesReturned == 0) {
+        return;
+    }
+
+    MoreDisplayNewLinesInViewport(MoreContext, MoreContext->StagingViewportLines, LinesReturned);
+}
+
+/**
  Find the next search match, meaning any match after the top logical line,
  and advance the viewport to it.  If no further match is found, no update is
  made.
@@ -1840,7 +1955,7 @@ MoreMoveViewportToNextSearchMatch(
         YoriLibRedrawSelection(&MoreContext->Selection);
     }
 
-    MoreRegenerateViewport(MoreContext, NextMatch);
+    MoreGenerateEntireViewportWithStartingLine(MoreContext, NextMatch);
 }
 
 /**
