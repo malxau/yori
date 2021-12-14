@@ -493,5 +493,53 @@ YoriPkgInstallYuiAsLoginShell(
     return TRUE;
 }
 
+/**
+ Update the OpenSSH shell to execute the specified program.  If the program
+ is not specified, Yori.exe from the directory containing the current
+ process is used.
+
+ @param YoriExeFullPath Pointer to the program to use as a login shell.  If
+        not specified, Yori.exe from the directory containing the current
+        process is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgInstallYoriAsOpenSSHShell(
+    __in_opt PYORI_STRING YoriExeFullPath
+    )
+{
+    YORI_STRING LocalExePath;
+    YORI_STRING KeyName;
+    YORI_STRING ValueName;
+    DWORD Attributes;
+
+    if (YoriExeFullPath == NULL) {
+        if (!YoriPkgGetYoriExecutablePath(&LocalExePath)) {
+            return FALSE;
+        }
+    } else {
+        YoriLibCloneString(&LocalExePath, YoriExeFullPath);
+    }
+
+    Attributes = GetFileAttributes(LocalExePath.StartOfString);
+    if (Attributes == (DWORD)-1) {
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
+    YoriLibConstantString(&KeyName, _T("SOFTWARE\\OpenSSH"));
+    YoriLibConstantString(&ValueName, _T("DefaultShell"));
+
+    if (!YoriPkgUpdateRegistryShell(&KeyName, &ValueName, &LocalExePath)) {
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&LocalExePath);
+    return TRUE;
+}
+
 
 // vim:sw=4:ts=4:et:

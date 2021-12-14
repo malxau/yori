@@ -838,7 +838,7 @@ Exit:
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriPkgUpdateWinlogonShell(
+YoriPkgUpdateRegistryShell(
     __in PCYORI_STRING KeyName,
     __in PCYORI_STRING ValueName,
     __in PCYORI_STRING NewShellFullPath
@@ -959,7 +959,7 @@ YoriPkgUpdateLogonShell(
         YoriLibConstantString(&ValueName, _T("Shell"));
 
     }
-    return YoriPkgUpdateWinlogonShell(&KeyName, &ValueName, NewShellFullPath);
+    return YoriPkgUpdateRegistryShell(&KeyName, &ValueName, NewShellFullPath);
 }
 
 // vim:sw=4:ts=4:et:

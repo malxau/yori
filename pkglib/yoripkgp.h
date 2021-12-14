@@ -503,6 +503,13 @@ BOOL
 YoriPkgRemoveUninstallEntry(VOID);
 
 BOOL
+YoriPkgUpdateRegistryShell(
+    __in PCYORI_STRING KeyName,
+    __in PCYORI_STRING ValueName,
+    __in PCYORI_STRING NewShellFullPath
+    );
+
+BOOL
 YoriPkgUpdateLogonShell(
     __in PYORI_STRING NewShellFullPath
     );

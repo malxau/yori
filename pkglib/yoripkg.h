@@ -229,4 +229,10 @@ YoriPkgInstallYuiAsLoginShell(
     __in_opt PYORI_STRING YoriExeFullPath
     );
 
+__success(return)
+BOOL
+YoriPkgInstallYoriAsOpenSSHShell(
+    __in_opt PYORI_STRING YoriExeFullPath
+    );
+
 // vim:sw=4:ts=4:et:

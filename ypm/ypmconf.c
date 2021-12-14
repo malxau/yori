@@ -38,11 +38,12 @@ CHAR strYpmConfigHelpText[] =
         "Update system configuration.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -config [-desktop] [-loginshell] [-start] [-systempath] [-terminal]\n"
+        "YPM -config [-desktop] [-loginshell] [-ssh] [-start] [-systempath] [-terminal]\n"
         "            [-userpath] [-yui]\n"
         "\n"
         "   -desktop       Create a Desktop shortcut\n"
         "   -loginshell    Make Yori the program to run on login\n"
+        "   -ssh           Make Yori the program to run on OpenSSH connections\n"
         "   -start         Create a Start Menu shortcut\n"
         "   -systempath    Add to system path\n"
         "   -terminal      Create a Windows Terminal fragment\n"
@@ -88,6 +89,7 @@ YpmConfig(
     BOOLEAN AppendToUserPath;
     BOOLEAN AppendToSystemPath;
     BOOLEAN LoginShell;
+    BOOLEAN SshShell;
     BOOLEAN YuiShell;
     BOOLEAN Failure;
 
@@ -96,6 +98,7 @@ YpmConfig(
     CreateStartMenuShortcut = FALSE;
     AppendToUserPath = FALSE;
     AppendToSystemPath = FALSE;
+    SshShell = FALSE;
     LoginShell = FALSE;
     YuiShell = FALSE;
 
@@ -119,6 +122,9 @@ YpmConfig(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("loginshell")) == 0) {
                 LoginShell = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ssh")) == 0) {
+                SshShell = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("start")) == 0) {
                 CreateStartMenuShortcut = TRUE;
@@ -157,6 +163,7 @@ YpmConfig(
         !AppendToUserPath &&
         !AppendToSystemPath &&
         !LoginShell &&
+        !SshShell &&
         !YuiShell) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: missing operation\n"));
@@ -209,6 +216,13 @@ YpmConfig(
             Failure = TRUE;
         } else if (!YoriPkgInstallYuiAsLoginShell(NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update login shell. Are you running as an elevated Administrator?\n  Is yui installed?\n"));
+            Failure = TRUE;
+        }
+    }
+
+    if (SshShell) {
+        if (!YoriPkgInstallYoriAsOpenSSHShell(NULL)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update OpenSSH shell. Are you running as an elevated Administrator?\n"));
             Failure = TRUE;
         }
     }
