@@ -113,8 +113,9 @@ YoriPkgGetTerminalProfilePath(
 }
 
 /**
- Construct a default path to the Yori.exe executable, assuming it is in the
- same directory as the running process.
+ Construct a default path to the Yori.exe executable.  This firstly checks
+ the YORISPEC environment variable, and if that's not found, assume it is in
+ the same directory as the running process.
 
  @param YoriExecutablePath On successful completion, updated within this
         routine to point to a full path to the Yori.exe executable.
@@ -130,7 +131,37 @@ YoriPkgGetYoriExecutablePath(
     YORI_STRING RelativePath;
     YORI_STRING LocalExePath;
 
-    YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yori.exe"));
+    YoriLibInitEmptyString(&LocalExePath);
+    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &LocalExePath)) {
+        YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yori.exe"));
+        if (!YoriLibUserStringToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
+            return FALSE;
+        }
+    }
+
+    memcpy(YoriExecutablePath, &LocalExePath, sizeof(YORI_STRING));
+    return TRUE;
+}
+
+/**
+ Construct a default path to the Yui.exe executable, assuming it is in the
+ same directory as the running process.
+
+ @param YoriExecutablePath On successful completion, updated within this
+        routine to point to a full path to the Yori.exe executable.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgGetYuiExecutablePath(
+    __out PYORI_STRING YoriExecutablePath
+    )
+{
+    YORI_STRING RelativePath;
+    YORI_STRING LocalExePath;
+
+    YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yui.exe"));
     YoriLibInitEmptyString(&LocalExePath);
     if (!YoriLibUserStringToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
         return FALSE;
@@ -139,7 +170,6 @@ YoriPkgGetYoriExecutablePath(
     memcpy(YoriExecutablePath, &LocalExePath, sizeof(YORI_STRING));
     return TRUE;
 }
-
 
 /**
  Create a Windows Terminal fragment file adding a Yori profile.
@@ -407,6 +437,50 @@ YoriPkgInstallYoriAsLoginShell(
 
     Attributes = GetFileAttributes(LocalExePath.StartOfString);
     if (Attributes == (DWORD)-1) {
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
+    if (!YoriPkgUpdateLogonShell(&LocalExePath)) {
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&LocalExePath);
+    return TRUE;
+}
+
+/**
+ Update the login shell to execute the specified program.  If the program
+ is not specified, Yui.exe from the directory containing the current
+ process is used.
+
+ @param YuiExeFullPath Pointer to the program to use as a login shell.  If
+        not specified, Yui.exe from the directory containing the current
+        process is used.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgInstallYuiAsLoginShell(
+    __in_opt PYORI_STRING YuiExeFullPath
+    )
+{
+    YORI_STRING LocalExePath;
+    DWORD Attributes;
+
+    if (YuiExeFullPath == NULL) {
+        if (!YoriPkgGetYuiExecutablePath(&LocalExePath)) {
+            return FALSE;
+        }
+    } else {
+        YoriLibCloneString(&LocalExePath, YuiExeFullPath);
+    }
+
+    Attributes = GetFileAttributes(LocalExePath.StartOfString);
+    if (Attributes == (DWORD)-1) {
+        YoriLibFreeStringContents(&LocalExePath);
         return FALSE;
     }
 

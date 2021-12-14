@@ -38,14 +38,16 @@ CHAR strYpmConfigHelpText[] =
         "Update system configuration.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -config [-desktop] [-loginshell] [-start] [-systempath] [-terminal] [-userpath]\n"
+        "YPM -config [-desktop] [-loginshell] [-start] [-systempath] [-terminal]\n"
+        "            [-userpath] [-yui]\n"
         "\n"
         "   -desktop       Create a Desktop shortcut\n"
         "   -loginshell    Make Yori the program to run on login\n"
         "   -start         Create a Start Menu shortcut\n"
         "   -systempath    Add to system path\n"
         "   -terminal      Create a Windows Terminal fragment\n"
-        "   -userpath      Add to user path\n";
+        "   -userpath      Add to user path\n"
+        "   -yui           Make Yui the program to run on login\n";
 
 /**
  Display usage text to the user.
@@ -86,6 +88,8 @@ YpmConfig(
     BOOLEAN AppendToUserPath;
     BOOLEAN AppendToSystemPath;
     BOOLEAN LoginShell;
+    BOOLEAN YuiShell;
+    BOOLEAN Failure;
 
     CreateTerminalProfile = FALSE;
     CreateDesktopShortcut = FALSE;
@@ -93,6 +97,9 @@ YpmConfig(
     AppendToUserPath = FALSE;
     AppendToSystemPath = FALSE;
     LoginShell = FALSE;
+    YuiShell = FALSE;
+
+    Failure = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -125,6 +132,9 @@ YpmConfig(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("userpath")) == 0) {
                 AppendToUserPath = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("yui")) == 0) {
+                YuiShell = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartArg = i + 1;
@@ -146,40 +156,65 @@ YpmConfig(
         !CreateStartMenuShortcut &&
         !AppendToUserPath &&
         !AppendToSystemPath &&
-        !LoginShell) {
+        !LoginShell &&
+        !YuiShell) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: missing operation\n"));
+        return EXIT_FAILURE;
+    }
+
+    if (LoginShell && YuiShell) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: cannot set login shell to yui and yori simultaneously\n"));
         return EXIT_FAILURE;
     }
 
     if (CreateTerminalProfile) {
         if (!YoriPkgWriteTerminalProfile(NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not create terminal profile\n"));
+            Failure = TRUE;
         }
     }
 
     if (CreateDesktopShortcut) {
         if (!YoriPkgCreateDesktopShortcut(NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not create desktop shortcut\n"));
+            Failure = TRUE;
         }
     }
 
     if (CreateStartMenuShortcut) {
         if (!YoriPkgCreateStartMenuShortcut(NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not create start menu shortcut\n"));
+            Failure = TRUE;
         }
     }
 
     if (AppendToUserPath || AppendToSystemPath) {
         if (!YoriPkgAppendInstallDirToPath(NULL, AppendToUserPath, AppendToSystemPath)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update path\n"));
+            Failure = TRUE;
         }
     }
 
     if (LoginShell) {
         if (!YoriPkgInstallYoriAsLoginShell(NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update login shell. Are you running as an elevated Administrator?\n"));
+            Failure = TRUE;
         }
+    }
+
+    if (YuiShell) {
+        if (YoriLibIsNanoServer()) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: cannot install a graphical shell on a text mode operating system\n"));
+            Failure = TRUE;
+        } else if (!YoriPkgInstallYuiAsLoginShell(NULL)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update login shell. Are you running as an elevated Administrator?\n  Is yui installed?\n"));
+            Failure = TRUE;
+        }
+    }
+
+    if (Failure) {
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;
