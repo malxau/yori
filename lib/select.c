@@ -1604,7 +1604,7 @@ YoriLibGetSelectionDoubleClickBreakChars(
         //  0x00BB is double angle quotation mark, used in elevated prompts
         //
 
-        YoriLibConstantString(BreakChars, _T(" '[]<>|\x2500\x2502\x252c\x2534\x00BB"));
+        YoriLibConstantString(BreakChars, _T(" \t'[]<>|\x2500\x2502\x252c\x2534\x00BB"));
         return TRUE;
     }
 
