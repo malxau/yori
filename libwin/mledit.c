@@ -4564,6 +4564,99 @@ YoriWinMultilineEditNotifyMouseWheel(
 }
 
 /**
+ Handle a double-click within a multi line edit control.  This is supposed to
+ select a "word" which is delimited by a user controllable set of characters.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param ViewportX The horizontal position in the control relative to its
+        client area.
+
+ @param ViewportY The vertial position in the control relative to its
+        client area.
+ */
+VOID
+YoriWinMultilineEditNotifyDoubleClick(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD ViewportX,
+    __in DWORD ViewportY
+    )
+{
+    DWORD NewCursorLine;
+    DWORD NewCursorChar;
+    PYORI_STRING Line;
+    YORI_STRING BreakChars;
+
+    //
+    //  Translate the viewport location into a buffer location.
+    //
+
+    if (YoriWinMultilineEditTranslateViewportCoordinatesToCursorCoordinates(MultilineEdit, ViewportX, ViewportY, &NewCursorLine, &NewCursorChar)) {
+        DWORD BeginRangeOffset;
+        DWORD EndRangeOffset;
+
+        //
+        //  If it's beyond the number of lines populated, there's nothing to
+        //  select.
+        //
+
+        if (NewCursorLine >= MultilineEdit->LinesPopulated) {
+            return;
+        }
+
+        //
+        //  If it's beyond the end of the line, there's nothing to select.
+        //
+
+        Line = &MultilineEdit->LineArray[NewCursorLine];
+        if (NewCursorChar >= Line->LengthInChars) {
+            return;
+        }
+
+        //
+        //  Determine which characters delimit words.
+        //
+
+        if (!YoriLibGetSelectionDoubleClickBreakChars(&BreakChars)) {
+            return;
+        }
+
+        //
+        //  Search left looking for a delimiter or the start of the string.
+        //
+
+        BeginRangeOffset = NewCursorChar;
+        if (YoriLibFindLeftMostCharacter(&BreakChars, Line->StartOfString[BeginRangeOffset]) == NULL) {
+            while (BeginRangeOffset > 0 &&
+                   YoriLibFindLeftMostCharacter(&BreakChars, Line->StartOfString[BeginRangeOffset - 1]) == NULL) {
+                BeginRangeOffset--;
+            }
+        }
+
+        //
+        //  Search right looking for a delimiter or the end of the string.
+        //
+
+        EndRangeOffset = NewCursorChar;
+        while (EndRangeOffset < Line->LengthInChars &&
+               YoriLibFindLeftMostCharacter(&BreakChars, Line->StartOfString[EndRangeOffset]) == NULL) {
+            EndRangeOffset++;
+        }
+
+        YoriLibFreeStringContents(&BreakChars);
+
+        //
+        //  If any range was found (ie., the user didn't click on a word
+        //  delimiter) select the range.
+        //
+
+        if (EndRangeOffset > BeginRangeOffset) {
+            YoriWinMultilineEditSetSelectionRange(&MultilineEdit->Ctrl, NewCursorLine, BeginRangeOffset, NewCursorLine, EndRangeOffset);
+        }
+    }
+}
+
+/**
  Adjust the viewport and selection to reflect the mouse being dragged,
  potentially outside the control's client area while the button is held down,
  thereby extending the selection.
@@ -5314,6 +5407,9 @@ YoriWinMultilineEditEventHandler(
                     return FALSE;
                 }
             }
+            break;
+        case YoriWinEventMouseDoubleClickInClient:
+            YoriWinMultilineEditNotifyDoubleClick(MultilineEdit, Event->MouseDown.Location.X, Event->MouseDown.Location.Y);
             break;
         case YoriWinEventMouseDownInClient:
             {
