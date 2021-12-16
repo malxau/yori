@@ -2152,6 +2152,82 @@ YoriWinEditDelete(
 }
 
 /**
+ Handle a double-click within an edit control.  This is supposed to select a
+ "word" which is delimited by a user controllable set of characters.
+
+ @param Edit Pointer to the edit control.
+
+ @param ViewportX The horizontal position in the control relative to its
+        client area.
+ */
+VOID
+YoriWinEditNotifyDoubleClick(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in DWORD ViewportX
+    )
+{
+    DWORD NewCursorChar;
+    YORI_STRING BreakChars;
+    DWORD BeginRangeOffset;
+    DWORD EndRangeOffset;
+
+    //
+    //  Translate the viewport location into a buffer location.
+    //
+
+    NewCursorChar = Edit->DisplayOffset + ViewportX;
+
+    //
+    //  If it's beyond the end of the line, there's nothing to select.
+    //
+
+    if (NewCursorChar >= Edit->Text.LengthInChars) {
+        return;
+    }
+
+    //
+    //  Determine which characters delimit words.
+    //
+
+    if (!YoriLibGetSelectionDoubleClickBreakChars(&BreakChars)) {
+        return;
+    }
+
+    //
+    //  Search left looking for a delimiter or the start of the string.
+    //
+
+    BeginRangeOffset = NewCursorChar;
+    if (YoriLibFindLeftMostCharacter(&BreakChars, Edit->Text.StartOfString[BeginRangeOffset]) == NULL) {
+        while (BeginRangeOffset > 0 &&
+               YoriLibFindLeftMostCharacter(&BreakChars, Edit->Text.StartOfString[BeginRangeOffset - 1]) == NULL) {
+            BeginRangeOffset--;
+        }
+    }
+
+    //
+    //  Search right looking for a delimiter or the end of the string.
+    //
+
+    EndRangeOffset = NewCursorChar;
+    while (EndRangeOffset < Edit->Text.LengthInChars &&
+           YoriLibFindLeftMostCharacter(&BreakChars, Edit->Text.StartOfString[EndRangeOffset]) == NULL) {
+        EndRangeOffset++;
+    }
+
+    YoriLibFreeStringContents(&BreakChars);
+
+    //
+    //  If any range was found (ie., the user didn't click on a word
+    //  delimiter) select the range.
+    //
+
+    if (EndRangeOffset > BeginRangeOffset) {
+        YoriWinEditSetSelectionRange(&Edit->Ctrl, BeginRangeOffset, EndRangeOffset);
+    }
+}
+
+/**
  Adjust the viewport and selection to reflect the mouse being dragged,
  potentially outside the control's client area while the button is held down,
  thereby extending the selection.
@@ -2454,6 +2530,9 @@ YoriWinEditEventHandler(
 
             break;
 
+        case YoriWinEventMouseDoubleClickInClient:
+            YoriWinEditNotifyDoubleClick(Edit, Event->MouseDown.Location.X);
+            break;
         case YoriWinEventMouseDownInClient:
             {
                 DWORD ClickOffset;
