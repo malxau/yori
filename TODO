@@ -1,17 +1,32 @@
-v1.6:
+v1.8:
  - General MSFIX review
- - Tab completion on %i
  - "."=="." becomes ".=="."" due to quote parsing which confuses if badly
 
-To consider:
+v1.x, maybe:
  - Use CopyFileEx when compressing to eliminate CreateFile?
  - Colorize help and error text
  - Ctrl+R
  - Edit horizontal scroll bar
  - More select should use logical line coordinates rather than conhost
    buffer coordinates to allow selection beyond screen size
+ - Tab completion on %i
  - Attempt to use dbghelp stack formatting again.  Seems useful for ydbg
    to be able to output the stack of exceptions etc.
+ - Environment variable editor UI
+ - Mini-http client to complete the NT 3.1 story and allow NT 3.5x and 4
+   RTM to install without redistributables?
+ - Ymake support for CFG="multi part"
+ - Better support for console settings in scut, inc. palette
+ - Live console settings changes?
+ - Registry console settings changes?
+ - Refactor libwin to have each window maintain a buffer and a winmgr that
+   can compose these to a display. Only winmgr needs to remember original
+   background
+ - Support move and resize of windows
+ - Minimize/maximize/close
+ - Regedit patterned on file open dialog (list boxes)
+ - TreeView
+ - Multi-column list
 
 v2.0:
  - Port pcre
@@ -22,4 +37,5 @@ v2.0:
  - Man or something like it
  - Edit line wrap
  - Edit hex editing
+ - PWB
  - Round braces in command parser, including if
