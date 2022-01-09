@@ -18,8 +18,9 @@ To install on older versions:
 
 | Release | Considerations |
 |---------|----------------|
+| Nano Server | Use the native [AMD64 installer](<http://www.malsmith.net/download/?obj=yori/latest-stable/amd64/ysetup.exe>). |
 | 95, 98 or Me | These releases are not supported and extensive changes would be required to execute on them. |
-| NT 4 with IE 3 | Installer cannot create shortcuts, they must be created manually |
-| NT 4 with IE 2 | Install the [wintdist.exe](<http://www.malsmith.net/download/?obj=yori/latest-redist/wintdist.exe>) redistributable which contains the IE 3 wininet.dll before running the installer.  The installer cannot create shortcuts. |
-| NT 3.5x | Install the [wint351.exe](<http://www.malsmith.net/download/?obj=yori/latest-redist/wint351.exe>) redistributable which contains the IE 3 wininet.dll before running the installer.  The installer cannot create program manager groups or items. |
+| NT 4 for MIPS | Ensure IE 3 is installed, and use the [MIPS installer](<http://www.malsmith.net/download/?obj=yori/latest-stable/mips/ysetup.exe>) . |
+| NT 4 with IE 2 | Install the [wintdist.exe](<http://www.malsmith.net/download/?obj=yori/latest-redist/wintdist.exe>) redistributable which contains the IE 3 wininet.dll before running the installer. |
+| NT 3.5x | Install the [wint351.exe](<http://www.malsmith.net/download/?obj=yori/latest-redist/wint351.exe>) redistributable which contains the IE 3 wininet.dll before running the installer. |
 | NT 3.1 | No installer exists.  Files must be copies to the machine manually. |
