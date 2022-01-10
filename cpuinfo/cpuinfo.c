@@ -3,7 +3,7 @@
  *
  * Yori shell display cpu topology information
  *
- * Copyright (c) 2019-2021 Malcolm J. Smith
+ * Copyright (c) 2019-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -47,9 +47,11 @@ CHAR strCpuInfoHelpText[] =
         "\n"
         "Format specifiers are:\n"
         "   $CORECOUNT$            The number of processor cores\n"
+        "   $EFFICIENCYCORECOUNT$  The number of low power processor cores\n"
         "   $GROUPCOUNT$           The number of processor groups\n"
         "   $LOGICALCOUNT$         The number of logical processors\n"
         "   $NUMANODECOUNT$        The number of NUMA nodes\n"
+        "   $PERFORMANCECORECOUNT$ The number of high performance processor cores\n"
         "   $UTILIZATION$          The current CPU utilization\n";
 
 /**
@@ -144,6 +146,18 @@ typedef struct _CPUINFO_CONTEXT {
      The total number of processor cores discovered in the above information.
      */
     LARGE_INTEGER CoreCount;
+
+    /**
+     The total number of low power processor cores discovered in the above
+     information.
+     */
+    LARGE_INTEGER EfficiencyCoreCount;
+
+    /**
+     The total number of high performance processor cores discovered in the
+     above information.
+     */
+    LARGE_INTEGER PerformanceCoreCount;
 
     /**
      The total number of logical processors discovered in the above
@@ -391,12 +405,16 @@ CpuInfoExpandVariables(
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("CORECOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->CoreCount, 10, OutputBuffer);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("EFFICIENCYCORECOUNT")) == 0) {
+        return CpuInfoOutputLargeInteger(CpuInfoContext->EfficiencyCoreCount, 10, OutputBuffer);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("GROUPCOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->GroupCount, 10, OutputBuffer);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("LOGICALCOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->LogicalProcessorCount, 10, OutputBuffer);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("NUMANODECOUNT")) == 0) {
         return CpuInfoOutputLargeInteger(CpuInfoContext->NumaNodeCount, 10, OutputBuffer);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("PERFORMANCECORECOUNT")) == 0) {
+        return CpuInfoOutputLargeInteger(CpuInfoContext->PerformanceCoreCount, 10, OutputBuffer);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("UTILIZATION")) == 0) {
         if (!CpuInfoContext->UtilizationLoaded) {
             CpuInfoLoadProcessorUtilization(CpuInfoContext);
@@ -462,6 +480,11 @@ CpuInfoCountSummaries(
                     }
                 }
             }
+            if (Entry->u.Processor.EfficiencyClass == 0) {
+                CpuInfoContext->EfficiencyCoreCount.QuadPart++;
+            } else {
+                CpuInfoContext->PerformanceCoreCount.QuadPart++;
+            }
         } else if (Entry->Relationship == YoriProcessorRelationNumaNode) {
             CpuInfoContext->NumaNodeCount.QuadPart++;
         } else if (Entry->Relationship == YoriProcessorRelationGroup) {
@@ -473,6 +496,17 @@ CpuInfoCountSummaries(
             break;
         }
         Entry = YoriLibAddToPointer(CpuInfoContext->ProcInfo, CurrentOffset);
+    }
+
+    //
+    //  On homogenous systems, all cores will report efficiency class zero,
+    //  which is the most efficient class.  For human compatibility,
+    //  report these as performance cores instead.
+    //
+
+    if (CpuInfoContext->PerformanceCoreCount.QuadPart == 0) {
+        CpuInfoContext->PerformanceCoreCount.QuadPart = CpuInfoContext->EfficiencyCoreCount.QuadPart;
+        CpuInfoContext->EfficiencyCoreCount.QuadPart = 0;
     }
 
     return TRUE;
@@ -526,6 +560,15 @@ CpuInfoDisplayCores(
     DWORD CurrentOffset = 0;
     DWORD CoreIndex = 0;
     DWORD GroupIndex;
+    BOOLEAN DisplayPerformanceLabel;
+
+    DisplayPerformanceLabel = FALSE;
+
+    if (CpuInfoContext->PerformanceCoreCount.QuadPart != 0 && 
+        CpuInfoContext->EfficiencyCoreCount.QuadPart != 0) {
+
+        DisplayPerformanceLabel = TRUE;
+    }
 
     Entry = CpuInfoContext->ProcInfo;
 
@@ -535,7 +578,17 @@ CpuInfoDisplayCores(
             if (CoreIndex > 0) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
             }
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Core %i\n"), CoreIndex);
+
+            if (DisplayPerformanceLabel) {
+                if (Entry->u.Processor.EfficiencyClass) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Core %i (performance)\n"), CoreIndex);
+                } else {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Core %i (efficiency)\n"), CoreIndex);
+                }
+            } else {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Core %i\n"), CoreIndex);
+            }
+
             CoreIndex++;
             for (GroupIndex = 0; GroupIndex < Entry->u.Processor.GroupCount; GroupIndex++) {
                 CpuInfoDisplayProcessorMask(Entry->u.Processor.GroupMask[GroupIndex].Group, Entry->u.Processor.GroupMask[GroupIndex].Mask);
@@ -891,6 +944,7 @@ CpuInfoLoadAndUpconvertProcessorInfo(
             NewEntry->Relationship = YoriProcessorRelationProcessorCore;
             NewEntry->SizeInBytes = sizeof(YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX);
             NewEntry->u.Processor.Flags = Entry->u.ProcessorCore.Flags;
+            NewEntry->u.Processor.EfficiencyClass = 0;
             NewEntry->u.Processor.GroupCount = 1;
             NewEntry->u.Processor.GroupMask[0].Mask = Entry->ProcessorMask;
             ProcessorsFound |= Entry->ProcessorMask;
@@ -909,6 +963,7 @@ CpuInfoLoadAndUpconvertProcessorInfo(
             NewEntry->Relationship = YoriProcessorRelationProcessorPackage;
             NewEntry->SizeInBytes = sizeof(YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX);
             NewEntry->u.Processor.Flags = Entry->u.ProcessorCore.Flags;
+            NewEntry->u.Processor.EfficiencyClass = 0;
             NewEntry->u.Processor.GroupCount = 1;
             NewEntry->u.Processor.GroupMask[0].Mask = Entry->ProcessorMask;
         }
@@ -986,6 +1041,8 @@ ENTRYPOINT(
     YORI_STRING AllocatedFormatString;
     LPTSTR DefaultFormatString = _T("Utilization: $UTILIZATION$\n")
                                  _T("Core count: $CORECOUNT$\n")
+                                 _T("Performance core count: $PERFORMANCECORECOUNT$\n")
+                                 _T("Efficiency core count: $EFFICIENCYCORECOUNT$\n")
                                  _T("Group count: $GROUPCOUNT$\n")
                                  _T("Logical processors: $LOGICALCOUNT$\n")
                                  _T("Numa nodes: $NUMANODECOUNT$\n");
@@ -1004,7 +1061,7 @@ ENTRYPOINT(
                 CpuInfoHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019-2021"));
+                YoriLibDisplayMitLicense(_T("2019-2022"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 DisplayCores = TRUE;
