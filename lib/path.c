@@ -28,6 +28,71 @@
 #include "yorilib.h"
 
 /**
+ Wrapper around FindNextFile that only returns non-directory file results.
+
+ @param Name A handle opened with FindFirstNonDirectoryFile.
+
+ @param FindData The output buffer for find results.
+
+ @return Whether the operation was successful.
+ */
+BOOL
+FindNextNonDirectoryFile(
+    __in HANDLE Handle,
+    __out LPWIN32_FIND_DATA FindData
+    )
+{
+    for (;;) {
+        if (!FindNextFile(Handle, FindData)) {
+            return FALSE;
+        }
+
+        if ((FindData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) {
+            return TRUE;
+        }
+    }
+}
+
+/**
+ Wrapper around FindFirstFile that only returns non-directory file results.
+
+ @param Name The file name to search for.
+
+ @param FindData The output buffer for find results.
+
+ @return On successful completion, a handle to close with FindClose. Otherwise,
+         INVALID_HANDLE_VALUE.
+ */
+HANDLE
+FindFirstNonDirectoryFile(
+    __in LPCTSTR Name,
+    __out LPWIN32_FIND_DATA FindData
+    )
+{
+    HANDLE Handle;
+
+    Handle = FindFirstFile(Name, FindData);
+    if (Handle != INVALID_HANDLE_VALUE) {
+        if ((FindData->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
+            if (!FindNextNonDirectoryFile(Handle, FindData)) {
+                DWORD Error;
+
+                Error = GetLastError();
+                CloseHandle(Handle);
+                Handle = INVALID_HANDLE_VALUE;
+                if (Error == ERROR_NO_MORE_FILES) {
+                    Error = ERROR_FILE_NOT_FOUND;
+                }
+
+                SetLastError(Error);
+            }
+        }
+    }
+
+    return Handle;
+}
+
+/**
  Searches an environment variable with semicolon delimited elements for a file
  name match.
 
@@ -83,7 +148,7 @@ YoriLibSearchEnv(
     //  Check the current directory first
     //
 
-    hFind = FindFirstFile(FileName->StartOfString, &FindData);
+    hFind = FindFirstNonDirectoryFile(FileName->StartOfString, &FindData);
 
     if (hFind != INVALID_HANDLE_VALUE) {
         FindClose(hFind);
@@ -136,7 +201,7 @@ YoriLibSearchEnv(
             YoriLibSPrintf(ScratchArea->StartOfString + componentlen + 1, _T("%y"), FileName);
             ScratchArea->LengthInChars = componentlen + 1 + FileName->LengthInChars;
 
-            hFind = FindFirstFile(ScratchArea->StartOfString, &FindData);
+            hFind = FindFirstNonDirectoryFile(ScratchArea->StartOfString, &FindData);
 
             if (hFind != INVALID_HANDLE_VALUE) {
                 FindClose(hFind);
@@ -553,7 +618,7 @@ YoriLibLocateFileExtensionsInOnePath(
     //  Search the directory for all files with this prefix.
     //
 
-    hFind = FindFirstFile(SearchName.StartOfString, &FindData);
+    hFind = FindFirstNonDirectoryFile(SearchName.StartOfString, &FindData);
     if (hFind == INVALID_HANDLE_VALUE) {
         return TRUE;
     }
@@ -622,7 +687,7 @@ YoriLibLocateFileExtensionsInOnePath(
             }
         }
 
-    } while(FindNextFile(hFind, &FindData));
+    } while(FindNextNonDirectoryFile(hFind, &FindData));
 
     FindClose(hFind);
 
@@ -1026,7 +1091,7 @@ YoriLibLocateExecutableInPath(
         YORI_STRING SearchDirectory;
         YORI_STRING FoundFile;
 
-        hFind = FindFirstFile(SearchFor->StartOfString, &FindData);
+        hFind = FindFirstNonDirectoryFile(SearchFor->StartOfString, &FindData);
 
         if (hFind != INVALID_HANDLE_VALUE) {
 
