@@ -30,7 +30,7 @@
 /**
  Wrapper around FindNextFile that only returns non-directory file results.
 
- @param Name A handle opened with FindFirstNonDirectoryFile.
+ @param Handle A handle opened with FindFirstNonDirectoryFile.
 
  @param FindData The output buffer for find results.
 
