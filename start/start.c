@@ -86,11 +86,9 @@ StartShellExecute(
 
     ZeroMemory(&sei, sizeof(sei));
     sei.cbSize = sizeof(sei);
-    sei.fMask = SEE_MASK_NOCLOSEPROCESS | 
-                SEE_MASK_FLAG_NO_UI |
+    sei.fMask = SEE_MASK_FLAG_NO_UI |
                 SEE_MASK_NOZONECHECKS |
-                SEE_MASK_UNICODE |
-                SEE_MASK_NO_CONSOLE;
+                SEE_MASK_UNICODE;
 
     ASSERT(YoriLibIsStringNullTerminated(&ArgV[0]));
     sei.lpFile = ArgV[0].StartOfString;
