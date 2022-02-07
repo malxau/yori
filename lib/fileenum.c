@@ -128,6 +128,7 @@ YoriLibForEachFileEnum(
     BOOLEAN Result;
     BOOLEAN RecursePhase;
     BOOLEAN IsLink;
+    BOOLEAN TrailingSlashInParentComponent;
     PYORILIB_FOREACHFILE_CONTEXT ForEachContext = NULL;
 
     Result = TRUE;
@@ -294,7 +295,6 @@ YoriLibForEachFileEnum(
             YoriLibFree(ForEachContext);
             return FALSE;
         }
-
     } else {
         YORI_STRING ThisDir;
         YoriLibConstantString(&ThisDir, _T("."));
@@ -303,6 +303,22 @@ YoriLibForEachFileEnum(
             YoriLibFree(ForEachContext);
             return FALSE;
         }
+    }
+
+    //
+    //  Check if there's still a trailing slash.  The logic above was
+    //  checking for these to ensure the correct path was used to expand
+    //  to a full path; having done that, we still have drive roots which
+    //  include a trailing slash and regular directories which don't, so
+    //  we want to determine whether to append an extra backslash when
+    //  building full paths.
+    //
+
+    TrailingSlashInParentComponent = FALSE;
+    if (ForEachContext->ParentFullPath.LengthInChars > 0 &&
+        YoriLibIsSep(ForEachContext->ParentFullPath.StartOfString[ForEachContext->ParentFullPath.LengthInChars - 1])) {
+
+        TrailingSlashInParentComponent = TRUE;
     }
 
     if (!YoriLibAllocateString(&ForEachContext->FullPath, ForEachContext->ParentFullPath.LengthInChars + 1 + sizeof(ForEachContext->FileInfo.cFileName) / sizeof(TCHAR) + 1)) {
@@ -353,6 +369,8 @@ YoriLibForEachFileEnum(
 
                 if (ForEachContext->CharsToFinalSlash == ForEachContext->EffectiveFileSpec.LengthInChars) {
                     ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y"), &ForEachContext->ParentFullPath);
+                } else if (TrailingSlashInParentComponent) {
+                    ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y%s"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec.StartOfString[ForEachContext->CharsToFinalSlash]);
                 } else {
                     ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec.StartOfString[ForEachContext->CharsToFinalSlash]);
                 }
@@ -521,7 +539,11 @@ YoriLibForEachFileEnum(
                     if (!FinalSlashFound ||
                         ForEachContext->CharsToFinalSlash != ForEachContext->EffectiveFileSpec.LengthInChars) {
 
-                        ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, ForEachContext->FileInfo.cFileName);
+                        if (TrailingSlashInParentComponent) {
+                            ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y%s"), &ForEachContext->ParentFullPath, ForEachContext->FileInfo.cFileName);
+                        } else {
+                            ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, ForEachContext->FileInfo.cFileName);
+                        }
                     }
 
                     if (!Callback(&ForEachContext->FullPath, &ForEachContext->FileInfo, Depth, Context)) {
