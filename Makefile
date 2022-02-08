@@ -142,6 +142,7 @@ DIRS=crt       \
      sync      \
      tail      \
      tee       \
+     test      \
      timethis  \
      title     \
      touch     \
