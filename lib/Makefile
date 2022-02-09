@@ -47,6 +47,7 @@ OBJS=\
 	 progman.obj  \
 	 recycle.obj  \
 	 scut.obj     \
+	 scheme.obj   \
 	 select.obj   \
 	 string.obj   \
 	 strmenum.obj \

@@ -3194,6 +3194,47 @@ YoriLibRemoveEnvironmentComponent(
     __in PYORI_STRING ComponentToRemove
     );
 
+// *** SCHEME.C ***
+
+__success(return)
+BOOL
+YoriLibLoadColorTableFromScheme(
+    __in PCYORI_STRING IniFileName,
+    __out_ecount(16) COLORREF *ColorTable
+    );
+
+__success(return)
+BOOL
+YoriLibLoadWindowColorFromScheme(
+    __in PCYORI_STRING IniFileName,
+    __out PUCHAR WindowColor
+    );
+
+__success(return)
+BOOL
+YoriLibLoadPopupColorFromScheme(
+    __in PCYORI_STRING IniFileName,
+    __out PUCHAR WindowColor
+    );
+
+BOOL
+YoriLibSaveColorTableToScheme(
+    __in PCYORI_STRING IniFileName,
+    __in COLORREF *ColorTable
+    );
+
+BOOL
+YoriLibSaveWindowColorToScheme(
+    __in PCYORI_STRING IniFileName,
+    __in UCHAR WindowColor
+    );
+
+BOOL
+YoriLibSavePopupColorToScheme(
+    __in PCYORI_STRING IniFileName,
+    __in UCHAR WindowColor
+    );
+
 // *** SCUT.C ***
 
 __success(return)
