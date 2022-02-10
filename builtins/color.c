@@ -1,9 +1,9 @@
 /**
  * @file builtins/color.c
  *
- * Yori shell display command line output
+ * Yori shell change console colors
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -37,9 +37,13 @@ CHAR strColorHelpText[] =
         "Change the active color or all characters on the console.\n"
         "\n"
         "COLOR [-d] [-f] [-license] <color>\n"
+        "COLOR -l <file>\n"
+        "COLOR -s <file>\n"
         "\n"
         "   -d             Change the default color for the shell\n"
-        "   -f             Change all characters on the console\n";
+        "   -f             Change all characters on the console\n"
+        "   -l             Load colors from a color scheme file\n"
+        "   -s             Save colors to a color scheme file\n";
 
 /**
  Display usage text to the user.
@@ -54,6 +58,145 @@ ColorHelp(VOID)
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strColorHelpText);
     return TRUE;
 }
+
+/**
+ Load colors from a color scheme file.
+
+ @param FileName Pointer to the scheme file name.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+ColorLoadScheme(
+    __in PCYORI_STRING FileName
+    )
+{
+    YORI_STRING FullFileName;
+    YORI_CONSOLE_SCREEN_BUFFER_INFOEX BufferInfoEx;
+    UCHAR Color;
+
+    YoriLibInitEmptyString(&FullFileName);
+    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+        return FALSE;
+    }
+
+    if (DllKernel32.pGetConsoleScreenBufferInfoEx == NULL ||
+        DllKernel32.pSetConsoleScreenBufferInfoEx == NULL) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: OS support not present\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    BufferInfoEx.cbSize = sizeof(BufferInfoEx);
+    if (!DllKernel32.pGetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &BufferInfoEx)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: GetConsoleScreenBufferEx failed\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    if (!YoriLibLoadColorTableFromScheme(&FullFileName, BufferInfoEx.ColorTable)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: cannot load scheme\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    if (!YoriLibLoadWindowColorFromScheme(&FullFileName, &Color)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: cannot load scheme\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    BufferInfoEx.wAttributes = Color;
+
+    if (!YoriLibLoadPopupColorFromScheme(&FullFileName, &Color)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: cannot load scheme\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&FullFileName);
+
+    BufferInfoEx.wPopupAttributes = Color;
+
+    BufferInfoEx.srWindow.Bottom++;
+    BufferInfoEx.srWindow.Right++;
+
+    if (!DllKernel32.pSetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &BufferInfoEx)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: SetConsoleScreenBufferEx failed\n"));
+        return FALSE;
+    }
+
+    YoriCallSetDefaultColor(BufferInfoEx.wAttributes);
+
+    return TRUE;
+}
+
+/**
+ Save colors to a color scheme file.
+
+ @param FileName Pointer to the scheme file name.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+ColorSaveScheme(
+    __in PCYORI_STRING FileName
+    )
+{
+    YORI_STRING FullFileName;
+    YORI_CONSOLE_SCREEN_BUFFER_INFOEX BufferInfoEx;
+
+    YoriLibInitEmptyString(&FullFileName);
+    if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
+        return FALSE;
+    }
+
+    if (DllKernel32.pGetConsoleScreenBufferInfoEx == NULL) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: OS support not present\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    BufferInfoEx.cbSize = sizeof(BufferInfoEx);
+    if (!DllKernel32.pGetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &BufferInfoEx)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: GetConsoleScreenBufferEx failed\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    if (!YoriLibSaveColorTableToScheme(&FullFileName, BufferInfoEx.ColorTable)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: cannot save scheme\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    if (!YoriLibSavePopupColorToScheme(&FullFileName, (UCHAR)BufferInfoEx.wPopupAttributes)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: cannot save scheme\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    if (!YoriLibSaveWindowColorToScheme(&FullFileName, (UCHAR)BufferInfoEx.wAttributes)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("color: cannot save scheme\n"));
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&FullFileName);
+
+    return TRUE;
+}
+
+/**
+ A set of operations supported by this program.
+ */
+typedef enum _COLOR_OP {
+    ColorOpSetColor = 0,
+    ColorOpLoadScheme = 1,
+    ColorOpSaveScheme = 2
+} COLOR_OP;
 
 /**
  The main entrypoint for the color cmdlet.
@@ -81,14 +224,18 @@ YoriCmd_COLOR(
     DWORD i;
     DWORD StartArg;
     YORI_STRING Arg;
+    PYORI_STRING SchemeFile;
     YORILIB_COLOR_ATTRIBUTES Attributes;
+    COLOR_OP Op;
 
     YoriLibLoadNtDllFunctions();
     YoriLibLoadKernel32Functions();
 
+    SchemeFile = NULL;
     Default = FALSE;
     Fullscreen = FALSE;
     StartArg = 0;
+    Op = ColorOpSetColor;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -101,7 +248,7 @@ YoriCmd_COLOR(
                 ColorHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2018"));
+                YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 Default = TRUE;
@@ -109,6 +256,20 @@ YoriCmd_COLOR(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 Fullscreen = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                if (i + 1 < ArgC) {
+                    SchemeFile = &ArgV[i + 1];
+                    Op = ColorOpLoadScheme;
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                if (i + 1 < ArgC) {
+                    SchemeFile = &ArgV[i + 1];
+                    Op = ColorOpSaveScheme;
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             }
         } else {
             StartArg = i;
@@ -119,6 +280,18 @@ YoriCmd_COLOR(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (Op == ColorOpLoadScheme) {
+        if (!ColorLoadScheme(SchemeFile)) {
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
+    } else if (Op == ColorOpSaveScheme) {
+        if (!ColorSaveScheme(SchemeFile)) {
+            return EXIT_FAILURE;
+        }
+        return EXIT_SUCCESS;
     }
 
     if (StartArg == 0) {
