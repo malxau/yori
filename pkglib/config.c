@@ -541,5 +541,53 @@ YoriPkgInstallYoriAsOpenSSHShell(
     return TRUE;
 }
 
+/**
+ Load colors from a scheme file and set them as default in the user's
+ registry.
+
+ @param SchemeFile Pointer to the scheme file.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgSetSchemeAsDefault(
+    __in PCYORI_STRING SchemeFile
+    )
+{
+    YORI_CONSOLE_SCREEN_BUFFER_INFOEX BufferInfoEx;
+    YORI_STRING FullFileName;
+    UCHAR Color;
+
+    YoriLibInitEmptyString(&FullFileName);
+    if (!YoriLibUserStringToSingleFilePath(SchemeFile, TRUE, &FullFileName)) {
+        return FALSE;
+    }
+
+    if (!YoriLibLoadColorTableFromScheme(&FullFileName, BufferInfoEx.ColorTable)) {
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    if (!YoriLibLoadWindowColorFromScheme(&FullFileName, &Color)) {
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    BufferInfoEx.wAttributes = Color;
+
+    if (!YoriLibLoadPopupColorFromScheme(&FullFileName, &Color)) {
+        YoriLibFreeStringContents(&FullFileName);
+        return FALSE;
+    }
+
+    BufferInfoEx.wPopupAttributes = Color;
+    YoriLibFreeStringContents(&FullFileName);
+
+    return YoriPkgSetConsoleDefaults(BufferInfoEx.ColorTable, (UCHAR)BufferInfoEx.wAttributes, (UCHAR)BufferInfoEx.wPopupAttributes);
+}
+
+
+
 
 // vim:sw=4:ts=4:et:

@@ -962,4 +962,95 @@ YoriPkgUpdateLogonShell(
     return YoriPkgUpdateRegistryShell(&KeyName, &ValueName, NewShellFullPath);
 }
 
+/**
+ Set default settings for the console in the user's registry.
+
+ @param ColorTable Pointer to an array of the RGB values for the base 16
+        colors.
+
+ @param WindowColor Specifies the default window color.
+
+ @param PopupColor Specifies the popup color.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgSetConsoleDefaults(
+    __in_ecount(16) COLORREF* ColorTable,
+    __in UCHAR WindowColor,
+    __in UCHAR PopupColor
+    )
+{
+    YORI_STRING KeyName;
+    TCHAR ValueNameBuffer[16];
+    YORI_STRING ValueName;
+    DWORD Err;
+    DWORD Index;
+    DWORD Temp;
+    HKEY hKey;
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegOpenKeyExW == NULL) {
+
+        return FALSE;
+    }
+
+    //
+    //  Check if we're running on a system with Server Core shell support,
+    //  where multiple shells are listed in ranked order.  If so, insert
+    //  the new entry under that key.  If not, use the one-and-only shell
+    //  key instead.
+    //
+
+    YoriLibConstantString(&KeyName, _T("Console"));
+
+    Err = DllAdvApi32.pRegOpenKeyExW(HKEY_CURRENT_USER,
+                                     KeyName.StartOfString,
+                                     0,
+                                     KEY_SET_VALUE,
+                                     &hKey);
+
+    if (Err != ERROR_SUCCESS) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&ValueName);
+    ValueName.StartOfString = ValueNameBuffer;
+    ValueName.LengthAllocated = sizeof(ValueNameBuffer)/sizeof(ValueNameBuffer[0]);
+
+    for (Index = 0; Index < 16; Index++) {
+        ValueName.LengthInChars = YoriLibSPrintfS(ValueName.StartOfString, ValueName.LengthAllocated, _T("ColorTable%02i"), Index);
+        Err = DllAdvApi32.pRegSetValueExW(hKey, ValueName.StartOfString, 0, REG_DWORD, (LPBYTE)&ColorTable[Index], sizeof(DWORD));
+        if (Err != ERROR_SUCCESS) {
+            break;
+        }
+    }
+
+    if (Err != ERROR_SUCCESS) {
+        DllAdvApi32.pRegCloseKey(hKey);
+        return FALSE;
+    }
+
+    Temp = WindowColor;
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("ScreenColors"), 0, REG_DWORD, (LPBYTE)&Temp, sizeof(DWORD));
+
+    if (Err != ERROR_SUCCESS) {
+        DllAdvApi32.pRegCloseKey(hKey);
+        return FALSE;
+    }
+
+    Temp = PopupColor;
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("PopupColors"), 0, REG_DWORD, (LPBYTE)&Temp, sizeof(DWORD));
+
+    if (Err != ERROR_SUCCESS) {
+        DllAdvApi32.pRegCloseKey(hKey);
+        return FALSE;
+    }
+
+    DllAdvApi32.pRegCloseKey(hKey);
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:

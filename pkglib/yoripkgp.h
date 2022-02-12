@@ -514,4 +514,12 @@ YoriPkgUpdateLogonShell(
     __in PYORI_STRING NewShellFullPath
     );
 
+BOOL
+YoriPkgSetConsoleDefaults(
+    __in_ecount(16) COLORREF* ColorTable,
+    __in UCHAR WindowColor,
+    __in UCHAR PopupColor
+    );
+
+
 // vim:sw=4:ts=4:et:

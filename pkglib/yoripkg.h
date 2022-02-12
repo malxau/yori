@@ -235,4 +235,10 @@ YoriPkgInstallYoriAsOpenSSHShell(
     __in_opt PYORI_STRING YoriExeFullPath
     );
 
+__success(return)
+BOOL
+YoriPkgSetSchemeAsDefault(
+    __in PCYORI_STRING SchemeFile
+    );
+
 // vim:sw=4:ts=4:et:
