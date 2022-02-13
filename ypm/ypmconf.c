@@ -38,11 +38,13 @@ CHAR strYpmConfigHelpText[] =
         "Update system configuration.\n"
         "\n"
         "YPM [-license]\n"
-        "YPM -config [-consoledefaultscheme <file>] [-desktop] [-loginshell] [-ssh]\n"
-        "            [-start] [-systempath] [-terminal] [-userpath] [-yui]\n"
+        "YPM -config [-consoledefaultscheme <file> | -consolescheme <title> <file>]\n"
+        "            [-desktop] [-loginshell] [-ssh] [-start] [-systempath] [-terminal]\n"
+        "            [-userpath] [-yui]\n"
         "\n"
         "   -consoledefaultscheme\n"
         "                  Set default console color scheme\n"
+        "   -consolescheme Set console color scheme for program or title\n"
         "   -desktop       Create a Desktop shortcut\n"
         "   -loginshell    Make Yori the program to run on login\n"
         "   -ssh           Make Yori the program to run on OpenSSH connections\n"
@@ -86,7 +88,9 @@ YpmConfig(
     DWORD StartArg = 0;
     YORI_STRING Arg;
     PYORI_STRING FileName;
+    PYORI_STRING WindowTitle;
     BOOLEAN ConsoleDefaultScheme;
+    BOOLEAN ConsoleScheme;
     BOOLEAN CreateTerminalProfile;
     BOOLEAN CreateDesktopShortcut;
     BOOLEAN CreateStartMenuShortcut;
@@ -98,6 +102,7 @@ YpmConfig(
     BOOLEAN Failure;
 
     ConsoleDefaultScheme = FALSE;
+    ConsoleScheme = FALSE;
     CreateTerminalProfile = FALSE;
     CreateDesktopShortcut = FALSE;
     CreateStartMenuShortcut = FALSE;
@@ -107,6 +112,7 @@ YpmConfig(
     LoginShell = FALSE;
     YuiShell = FALSE;
     FileName = NULL;
+    WindowTitle = NULL;
 
     Failure = FALSE;
 
@@ -124,8 +130,17 @@ YpmConfig(
                 YoriLibDisplayMitLicense(_T("2021-2022"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("consoledefaultscheme")) == 0) {
-                if (i + 1 < ArgC) {
+                if (i + 1 < ArgC && !ConsoleScheme && !ConsoleDefaultScheme) {
                     ConsoleDefaultScheme = TRUE;
+                    i++;
+                    FileName = &ArgV[i];
+                    ArgumentUnderstood = TRUE;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("consolescheme")) == 0) {
+                if (i + 2 < ArgC && !ConsoleScheme && !ConsoleDefaultScheme) {
+                    ConsoleScheme = TRUE;
+                    i++;
+                    WindowTitle = &ArgV[i];
                     i++;
                     FileName = &ArgV[i];
                     ArgumentUnderstood = TRUE;
@@ -171,6 +186,7 @@ YpmConfig(
     }
 
     if (!ConsoleDefaultScheme &&
+        !ConsoleScheme &&
         !CreateTerminalProfile &&
         !CreateDesktopShortcut &&
         !CreateStartMenuShortcut &&
@@ -190,8 +206,15 @@ YpmConfig(
     }
 
     if (ConsoleDefaultScheme) {
-        if (!YoriPkgSetSchemeAsDefault(FileName)) {
+        if (!YoriPkgSetSchemeAsDefault(FileName, NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not set default scheme\n"));
+            Failure = TRUE;
+        }
+    }
+
+    if (ConsoleScheme) {
+        if (!YoriPkgSetSchemeAsDefault(FileName, WindowTitle)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not set console scheme\n"));
             Failure = TRUE;
         }
     }

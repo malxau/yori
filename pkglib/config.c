@@ -547,12 +547,17 @@ YoriPkgInstallYoriAsOpenSSHShell(
 
  @param SchemeFile Pointer to the scheme file.
 
+ @param ConsoleTitle Pointer to the console title to apply settings to.
+        If not specified, global values are changed which apply to any
+        unknown title.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriPkgSetSchemeAsDefault(
-    __in PCYORI_STRING SchemeFile
+    __in PCYORI_STRING SchemeFile,
+    __in_opt PCYORI_STRING ConsoleTitle
     )
 {
     YORI_CONSOLE_SCREEN_BUFFER_INFOEX BufferInfoEx;
@@ -584,7 +589,7 @@ YoriPkgSetSchemeAsDefault(
     BufferInfoEx.wPopupAttributes = Color;
     YoriLibFreeStringContents(&FullFileName);
 
-    return YoriPkgSetConsoleDefaults(BufferInfoEx.ColorTable, (UCHAR)BufferInfoEx.wAttributes, (UCHAR)BufferInfoEx.wPopupAttributes);
+    return YoriPkgSetConsoleDefaults(ConsoleTitle, BufferInfoEx.ColorTable, (UCHAR)BufferInfoEx.wAttributes, (UCHAR)BufferInfoEx.wPopupAttributes);
 }
 
 

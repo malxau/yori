@@ -238,7 +238,8 @@ YoriPkgInstallYoriAsOpenSSHShell(
 __success(return)
 BOOL
 YoriPkgSetSchemeAsDefault(
-    __in PCYORI_STRING SchemeFile
+    __in PCYORI_STRING SchemeFile,
+    __in_opt PCYORI_STRING ConsoleTitle
     );
 
 // vim:sw=4:ts=4:et:

@@ -963,7 +963,11 @@ YoriPkgUpdateLogonShell(
 }
 
 /**
- Set default settings for the console in the user's registry.
+ Set settings for the console in the user's registry.
+
+ @param ConsoleTitle Optionally points to a string containing the console
+        title to apply these settings to.  If not specified, the global
+        default console values are changed.
 
  @param ColorTable Pointer to an array of the RGB values for the base 16
         colors.
@@ -976,6 +980,7 @@ YoriPkgUpdateLogonShell(
  */
 BOOL
 YoriPkgSetConsoleDefaults(
+    __in_opt PCYORI_STRING ConsoleTitle,
     __in_ecount(16) COLORREF* ColorTable,
     __in UCHAR WindowColor,
     __in UCHAR PopupColor
@@ -987,7 +992,9 @@ YoriPkgSetConsoleDefaults(
     DWORD Err;
     DWORD Index;
     DWORD Temp;
+    TCHAR Char;
     HKEY hKey;
+    DWORD Disp;
 
     YoriLibLoadAdvApi32Functions();
 
@@ -998,20 +1005,44 @@ YoriPkgSetConsoleDefaults(
     }
 
     //
-    //  Check if we're running on a system with Server Core shell support,
-    //  where multiple shells are listed in ranked order.  If so, insert
-    //  the new entry under that key.  If not, use the one-and-only shell
-    //  key instead.
+    //  Construct the registry key which is either "Console" (for user
+    //  default) or "Console\Title" (for a specific program.)  The default
+    //  title is just the path to the program, although that can't be
+    //  described in the registry since it contains path seperators; the
+    //  registry format substitutes underscores for path seperators.
     //
 
-    YoriLibConstantString(&KeyName, _T("Console"));
+    if (ConsoleTitle != NULL && ConsoleTitle->LengthInChars != 0) {
+        YoriLibInitEmptyString(&KeyName);
+        if (!YoriLibAllocateString(&KeyName, sizeof("Console\\") + ConsoleTitle->LengthInChars)) {
+            return FALSE;
+        }
+        KeyName.LengthInChars = YoriLibSPrintfS(KeyName.StartOfString, KeyName.LengthAllocated, _T("Console\\"));
+        for (Index = 0; Index < ConsoleTitle->LengthInChars; Index++) {
+            Char = ConsoleTitle->StartOfString[Index];
+            if (Char == '\\') {
+                Char = '_';
+            }
+            KeyName.StartOfString[KeyName.LengthInChars + Index] = Char;
+        }
 
-    Err = DllAdvApi32.pRegOpenKeyExW(HKEY_CURRENT_USER,
-                                     KeyName.StartOfString,
-                                     0,
-                                     KEY_SET_VALUE,
-                                     &hKey);
+        KeyName.LengthInChars = KeyName.LengthInChars + Index;
+        KeyName.StartOfString[KeyName.LengthInChars] = '\0';
+    } else {
+        YoriLibConstantString(&KeyName, _T("Console"));
+    }
 
+    Err = DllAdvApi32.pRegCreateKeyExW(HKEY_CURRENT_USER,
+                                       KeyName.StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       KEY_SET_VALUE,
+                                       NULL,
+                                       &hKey,
+                                       &Disp);
+
+    YoriLibFreeStringContents(&KeyName);
     if (Err != ERROR_SUCCESS) {
         return FALSE;
     }
@@ -1043,6 +1074,22 @@ YoriPkgSetConsoleDefaults(
 
     Temp = PopupColor;
     Err = DllAdvApi32.pRegSetValueExW(hKey, _T("PopupColors"), 0, REG_DWORD, (LPBYTE)&Temp, sizeof(DWORD));
+
+    if (Err != ERROR_SUCCESS) {
+        DllAdvApi32.pRegCloseKey(hKey);
+        return FALSE;
+    }
+
+    Temp = ColorTable[WindowColor & 0x0F];
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("DefaultForeground"), 0, REG_DWORD, (LPBYTE)&Temp, sizeof(DWORD));
+
+    if (Err != ERROR_SUCCESS) {
+        DllAdvApi32.pRegCloseKey(hKey);
+        return FALSE;
+    }
+
+    Temp = ColorTable[(WindowColor & 0xF0) >> 4];
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("DefaultBackground"), 0, REG_DWORD, (LPBYTE)&Temp, sizeof(DWORD));
 
     if (Err != ERROR_SUCCESS) {
         DllAdvApi32.pRegCloseKey(hKey);

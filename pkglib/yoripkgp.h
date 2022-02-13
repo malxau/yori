@@ -516,6 +516,7 @@ YoriPkgUpdateLogonShell(
 
 BOOL
 YoriPkgSetConsoleDefaults(
+    __in_opt PCYORI_STRING ConsoleTitle,
     __in_ecount(16) COLORREF* ColorTable,
     __in UCHAR WindowColor,
     __in UCHAR PopupColor
