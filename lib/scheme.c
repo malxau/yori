@@ -207,7 +207,7 @@ YoriLibLoadColorFromSchemeString(
         StringValue.StartOfString = StringValue.StartOfString + Dark.LengthInChars;
         StringValue.LengthInChars = StringValue.LengthInChars - Dark.LengthInChars;
     } else if (YoriLibCompareStringInsensitiveCount(&StringValue, &Bright, Bright.LengthInChars) == 0) {
-        Color = Color | FOREGROUND_INTENSITY;
+        Color = (UCHAR)(Color | FOREGROUND_INTENSITY);
         StringValue.StartOfString = StringValue.StartOfString + Bright.LengthInChars;
         StringValue.LengthInChars = StringValue.LengthInChars - Bright.LengthInChars;
     } else {
@@ -223,7 +223,7 @@ YoriLibLoadColorFromSchemeString(
 
     for (Index = 0; Index < sizeof(YoriLibSchemeColorNames)/sizeof(YoriLibSchemeColorNames[0]); Index++) {
         if (YoriLibCompareStringWithLiteralInsensitive(&StringValue, YoriLibSchemeColorNames[Index]) == 0) {
-            Color = Color + Index;
+            Color = (UCHAR)(Color + Index);
             break;
         }
     }
@@ -277,7 +277,7 @@ YoriLibLoadSectionColorFromScheme(
         return FALSE;
     }
 
-    *WindowColor = ((Background << 4) | Foreground);
+    *WindowColor = (UCHAR)((Background << 4) | Foreground);
     return TRUE;
 }
 
@@ -384,18 +384,18 @@ YoriLibSaveSectionColorToScheme(
     UCHAR Color;
     UCHAR Component;
 
-    Component = WindowColor & 0xF;
+    Component = (UCHAR)(WindowColor & 0xF);
 
-    Intensity = Component >> 3;
-    Color = Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    Intensity = (UCHAR)(Component >> 3);
+    Color = (UCHAR)(Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE));
 
     YoriLibSPrintf(Value, _T("%s_%s"), YoriLibSchemeColorPrefixes[Intensity], YoriLibSchemeColorNames[Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)]);
     WritePrivateProfileString(SectionName, _T("Foreground"), Value, IniFileName->StartOfString);
 
-    Component = (WindowColor & 0xF0) >> 4;
+    Component = (UCHAR)((WindowColor & 0xF0) >> 4);
 
-    Intensity = Component >> 3;
-    Color = Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    Intensity = (UCHAR)(Component >> 3);
+    Color = (UCHAR)(Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE));
 
     YoriLibSPrintf(Value, _T("%s_%s"), YoriLibSchemeColorPrefixes[Intensity], YoriLibSchemeColorNames[Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)]);
     WritePrivateProfileString(SectionName, _T("Background"), Value, IniFileName->StartOfString);
