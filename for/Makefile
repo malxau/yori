@@ -30,6 +30,6 @@ builtins.lib: $(MOD_OBJS)
 	@echo $@
 	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 
-for.com: $(MOD_OBJS) $(YORIVER)
+for.com: $(MOD_OBJS) $(YORILIB) $(YORICRT) $(YORISH) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:for.def -out:$@
