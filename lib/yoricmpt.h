@@ -5211,6 +5211,127 @@ struct IShellLinkDataListVtbl {
 };
 
 /**
+ A structure defining extra information which can be attached to a
+ shortcut to configure console state.
+ */
+typedef struct _ISHELLLINKDATALIST_CONSOLE_PROPS {
+
+    /**
+     The size of this structure.
+     */
+    DWORD dwSize;
+
+    /**
+     The signature for this type of structure.
+     */
+    DWORD dwSignature;
+
+    /**
+     The default window color, in Win32 format.
+     */
+    WORD  WindowColor;
+
+    /**
+     The popup color, in Win32 format.
+     */
+    WORD  PopupColor;
+
+    /**
+     The dimensions of the screen buffer.
+     */
+    COORD ScreenBufferSize;
+
+    /**
+     The dimensions of the window.
+     */
+    COORD WindowSize;
+
+    /**
+     The position of the window on the screen.  Not meaningful if
+     AutoPosition is TRUE.
+     */
+    COORD WindowPosition;
+
+    /**
+     The number of the font.
+     */
+    DWORD FontNumber;
+
+    /**
+     No idea.  Seriously.
+     */
+    DWORD InputBufferSize;
+
+    /**
+     The size of each cell, not really a classic font size.
+     */
+    COORD FontSize;
+
+    /**
+     The font family.
+     */
+    DWORD FontFamily;
+
+    /**
+     Font weight, 400 = Normal, 700 = Bold, etc.
+     */
+    DWORD FontWeight;
+
+    /**
+     The name of the font.
+     */
+    WCHAR FaceName[LF_FACESIZE];
+
+    /**
+     The size of the cursor, in percent.
+     */
+    DWORD CursorSize;
+
+    /**
+     TRUE if the console should open in a full screen, FALSE if it should
+     open in a window.
+     */
+    BOOL  FullScreen;
+
+    /**
+     TRUE if QuickEdit should be enabled, FALSE if it should be disabled.
+     */
+    BOOL  QuickEdit;
+
+    /**
+     TRUE if Insert should be enabled, FALSE if it should be disabled.
+     */
+    BOOL  InsertMode;
+
+    /**
+     TRUE if the window should be automatically positioned.  If FALSE, the
+     position is specified in WindowPosition above.
+     */
+    BOOL  AutoPosition;
+
+    /**
+     The number of lines in each history buffer.
+     */
+    DWORD HistoryBufferSize;
+
+    /**
+     The number of history buffers.
+     */
+    DWORD NumberOfHistoryBuffers;
+
+    /**
+     If TRUE, repeated identical commands should be removed from history.
+     If FALSE, identical items are recorded.
+     */
+    BOOL  RemoveHistoryDuplicates;
+
+    /**
+     A table of Win32 colors to their RGB representation.
+     */
+    COLORREF ColorTable[16];
+} ISHELLLINKDATALIST_CONSOLE_PROPS, *PISHELLLINKDATALIST_CONSOLE_PROPS;
+
+/**
  The signature for console properties within a ShellLinkDataList.
  */
 #define ISHELLLINKDATALIST_CONSOLE_PROPS_SIG (0xA0000002)

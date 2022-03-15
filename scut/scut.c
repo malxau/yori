@@ -3,7 +3,7 @@
  *
  * A command line tool to manipulate shortcuts
  *
- * Copyright (c) 2004-2019 Malcolm Smith
+ * Copyright (c) 2004-2022 Malcolm Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -91,6 +91,31 @@ ScutHelp(VOID)
 }
 
 /**
+ Context passed to each variable expansion.
+ */
+typedef struct _SCUT_EXPAND_CONTEXT {
+
+    /**
+     Pointer to the shortcut.
+     */
+    IShellLinkW *ShellLink;
+
+    /**
+     Optionally points to extra console properties.  May be NULL if the
+     shortcut doesn't specify console properties.
+     */
+    PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProperties;
+} SCUT_EXPAND_CONTEXT, *PSCUT_EXPAND_CONTEXT;
+
+/**
+ Invert the byte order of a color so it will be displayed in RGB order.
+ */
+#define SCUT_INVERT_COLOR_BYTES(C) \
+    (((C) & 0xFF0000) >> 16) |     \
+    (((C) & 0x00FF00))       |     \
+    (((C) & 0x0000FF) << 16)
+
+/**
  A callback function to expand any known variables found when parsing the
  format string.
 
@@ -114,63 +139,317 @@ ScutExpandVariables(
     __in PVOID Context
     )
 {
-    TCHAR szTemp[MAX_PATH];
+    TCHAR szDisplay[MAX_PATH];
     DWORD CharsNeeded;
-    int   wTemp = 0;
+    DWORD dwDisplay = 0;
+    int iTemp;
     BOOL  Numeric = FALSE;
-    IShellLinkW * scut = (IShellLinkW *)Context;
+    DWORD HexDigits = 0;
+    PSCUT_EXPAND_CONTEXT ExpandContext;
+    IShellLinkW * scut;
+    PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps;
+
+    ExpandContext = (PSCUT_EXPAND_CONTEXT)Context;
+    scut = ExpandContext->ShellLink;
+    ConsoleProps = ExpandContext->ConsoleProperties;
 
     if (YoriLibCompareStringWithLiteral(VariableName, _T("TARGET")) == 0) {
-        if (scut->Vtbl->GetPath(scut, szTemp, MAX_PATH, NULL, 0) != NOERROR) {
+        if (scut->Vtbl->GetPath(scut, szDisplay, MAX_PATH, NULL, 0) != NOERROR) {
             return 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ARGS")) == 0) {
-        if (scut->Vtbl->GetArguments(scut, szTemp, MAX_PATH) != NOERROR) {
+        if (scut->Vtbl->GetArguments(scut, szDisplay, MAX_PATH) != NOERROR) {
             return 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WORKINGDIR")) == 0) {
-        if (scut->Vtbl->GetWorkingDirectory(scut, szTemp, MAX_PATH) != NOERROR) {
+        if (scut->Vtbl->GetWorkingDirectory(scut, szDisplay, MAX_PATH) != NOERROR) {
             return 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("DESCRIPTION")) == 0) {
-        if (scut->Vtbl->GetDescription(scut, szTemp, MAX_PATH) != NOERROR) {
+        if (scut->Vtbl->GetDescription(scut, szDisplay, MAX_PATH) != NOERROR) {
             return 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ICONPATH")) == 0) {
-        if (scut->Vtbl->GetIconLocation(scut, szTemp, MAX_PATH, &wTemp) != NOERROR) {
+
+        if (scut->Vtbl->GetIconLocation(scut, szDisplay, MAX_PATH, &iTemp) != NOERROR) {
             return 0;
         }
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("ICONINDEX")) == 0) {
-        if (scut->Vtbl->GetIconLocation(scut, szTemp, MAX_PATH, &wTemp) != NOERROR) {
+        if (scut->Vtbl->GetIconLocation(scut, szDisplay, MAX_PATH, &iTemp) != NOERROR) {
             return 0;
         }
+        dwDisplay = iTemp;
         Numeric = TRUE;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SHOW")) == 0) {
-        if (scut->Vtbl->GetShowCmd(scut, &wTemp) != NOERROR) {
+        if (scut->Vtbl->GetShowCmd(scut, &iTemp) != NOERROR) {
             return 0;
         }
+        dwDisplay = iTemp;
         Numeric = TRUE;
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HOTKEY")) == 0) {
         USHORT ShortTemp;
         if (scut->Vtbl->GetHotkey(scut, &ShortTemp) != NOERROR) {
             return 0;
         }
-        wTemp = ShortTemp;
+        dwDisplay = ShortTemp;
         Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WINDOWCOLOR")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->WindowColor;
+        HexDigits = 2;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("POPUPCOLOR")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->PopupColor;
+        HexDigits = 2;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SCREENBUFFERSIZE_X")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->ScreenBufferSize.X;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("SCREENBUFFERSIZE_Y")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->ScreenBufferSize.Y;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WINDOWSIZE_X")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->WindowSize.X;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WINDOWSIZE_Y")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->WindowSize.Y;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WINDOWPOSITION_X")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->WindowPosition.X;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("WINDOWPOSITION_Y")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->WindowPosition.Y;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FONTNUMBER")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->FontNumber;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("INPUTBUFFERSIZE")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->InputBufferSize;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FONTSIZE_X")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->FontSize.X;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FONTSIZE_Y")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->FontSize.Y;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FONTFAMILY")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->FontFamily;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FONTWEIGHT")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->FontWeight;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FONT")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        YoriLibSPrintfS(szDisplay, sizeof(szDisplay)/sizeof(szDisplay[0]), _T("%s"), ConsoleProps->FaceName);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("CURSORSIZE")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->CursorSize;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("FULLSCREEN")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->FullScreen;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("QUICKEDIT")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->QuickEdit;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("INSERT")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->InsertMode;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AUTOPOSITION")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->AutoPosition;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HISTORYBUFFERSIZE")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->HistoryBufferSize;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HISTORYBUFFERCOUNT")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->NumberOfHistoryBuffers;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("HISTORYBUFFERCOUNT")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->NumberOfHistoryBuffers;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("NOHISTORYDUPLICATES")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = ConsoleProps->RemoveHistoryDuplicates;
+        Numeric = TRUE;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_BLACK")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[0]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_BLUE")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_BLUE]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_GREEN")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_GREEN]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_CYAN")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_BLUE|FOREGROUND_GREEN]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_RED")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_RED]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_MAGENTA")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_RED|FOREGROUND_BLUE]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_BROWN")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_RED|FOREGROUND_GREEN]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_GRAY")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_DARKGRAY")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_LIGHTBLUE")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY|FOREGROUND_BLUE]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_LIGHTGREEN")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY|FOREGROUND_GREEN]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_LIGHTCYAN")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY|FOREGROUND_GREEN|FOREGROUND_BLUE]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_LIGHTRED")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY|FOREGROUND_RED]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_LIGHTMAGENTA")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY|FOREGROUND_RED|FOREGROUND_BLUE]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_YELLOW")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY|FOREGROUND_RED|FOREGROUND_GREEN]);
+        HexDigits = 6;
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("COLOR_WHITE")) == 0) {
+        if (ConsoleProps == NULL) {
+            return 0;
+        }
+        dwDisplay = SCUT_INVERT_COLOR_BYTES(ConsoleProps->ColorTable[FOREGROUND_INTENSITY|FOREGROUND_RED|FOREGROUND_GREEN|FOREGROUND_BLUE]);
+        HexDigits = 6;
     } else {
         return 0;
     }
 
-    if (Numeric) {
-        CharsNeeded = YoriLibSPrintf(szTemp, _T("%i"), wTemp);
+    if (HexDigits == 6) {
+        CharsNeeded = YoriLibSPrintf(szDisplay, _T("%06x"), dwDisplay);
+    } else if (HexDigits == 2) {
+        CharsNeeded = YoriLibSPrintf(szDisplay, _T("%02x"), dwDisplay);
+    } else if (Numeric) {
+        CharsNeeded = YoriLibSPrintf(szDisplay, _T("%i"), dwDisplay);
     } else {
-        CharsNeeded = _tcslen(szTemp);
+        CharsNeeded = _tcslen(szDisplay);
     }
     if (OutputString->LengthAllocated < CharsNeeded) {
         return CharsNeeded;
     }
 
-    memcpy(OutputString->StartOfString, szTemp, CharsNeeded * sizeof(TCHAR));
+    memcpy(OutputString->StartOfString, szDisplay, CharsNeeded * sizeof(TCHAR));
     OutputString->LengthInChars = CharsNeeded;
     return CharsNeeded;
 }
@@ -220,25 +499,64 @@ ENTRYPOINT(
     LONGLONG llTemp;
     DWORD   CharsConsumed;
     DWORD   ExitCode;
-    LPTSTR FormatString = _T("Target:          $TARGET$\n")
-                          _T("Arguments:       $ARGS$\n")
-                          _T("Working dir:     $WORKINGDIR$\n")
-                          _T("Description:     $DESCRIPTION$\n")
-                          _T("Icon Path:       $ICONPATH$\n")
-                          _T("Icon Index:      $ICONINDEX$\n")
-                          _T("Show State:      $SHOW$\n")
-                          _T("Hotkey:          $HOTKEY$\n");
+    LPTSTR DefaultFormatString = _T("Target:                $TARGET$\n")
+                                 _T("Arguments:             $ARGS$\n")
+                                 _T("Working dir:           $WORKINGDIR$\n")
+                                 _T("Description:           $DESCRIPTION$\n")
+                                 _T("Icon Path:             $ICONPATH$\n")
+                                 _T("Icon Index:            $ICONINDEX$\n")
+                                 _T("Show State:            $SHOW$\n")
+                                 _T("Hotkey:                $HOTKEY$\n");
+
+    LPTSTR ConsoleFormatString = _T("Window Color:          $WINDOWCOLOR$\n")
+                                 _T("Popup Color:           $POPUPCOLOR$\n")
+                                 _T("Buffer Size:           $SCREENBUFFERSIZE_X$x$SCREENBUFFERSIZE_Y$\n")
+                                 _T("Window Size:           $WINDOWSIZE_X$x$WINDOWSIZE_Y$\n")
+                                 _T("Window Position:       $WINDOWPOSITION_X$x$WINDOWPOSITION_Y$\n")
+                                 _T("Font Number:           $FONTNUMBER$\n")
+                                 _T("Input Buffer Size:     $INPUTBUFFERSIZE$\n")
+                                 _T("Font Size:             $FONTSIZE_X$x$FONTSIZE_Y$\n")
+                                 _T("Font Family:           $FONTFAMILY$\n")
+                                 _T("Font Weight:           $FONTWEIGHT$\n")
+                                 _T("Font:                  $FONT$\n")
+                                 _T("Cursor Size:           $CURSORSIZE$\n")
+                                 _T("Full Screen:           $FULLSCREEN$\n")
+                                 _T("QuickEdit:             $QUICKEDIT$\n")
+                                 _T("Insert:                $INSERT$\n")
+                                 _T("Auto Position:         $AUTOPOSITION$\n")
+                                 _T("History Buffer Size:   $HISTORYBUFFERSIZE$\n")
+                                 _T("History Buffer Count:  $HISTORYBUFFERCOUNT$\n")
+                                 _T("No History Duplicates: $NOHISTORYDUPLICATES$\n");
+
+    LPTSTR ConsoleFormatString2= _T("Window Color:          $WINDOWCOLOR$\n")
+                                 _T("Color Black:           $COLOR_BLACK$\n")
+                                 _T("Color Blue:            $COLOR_BLUE$\n")
+                                 _T("Color Green:           $COLOR_GREEN$\n")
+                                 _T("Color Cyan:            $COLOR_CYAN$\n")
+                                 _T("Color Red:             $COLOR_RED$\n")
+                                 _T("Color Magenta:         $COLOR_MAGENTA$\n")
+                                 _T("Color Brown:           $COLOR_BROWN$\n")
+                                 _T("Color Gray:            $COLOR_GRAY$\n")
+                                 _T("Color Dark Gray:       $COLOR_DARKGRAY$\n")
+                                 _T("Color Light Blue:      $COLOR_LIGHTBLUE$\n")
+                                 _T("Color Light Green:     $COLOR_LIGHTGREEN$\n")
+                                 _T("Color Light Cyan:      $COLOR_LIGHTCYAN$\n")
+                                 _T("Color Light Red:       $COLOR_LIGHTRED$\n")
+                                 _T("Color Light Magenta:   $COLOR_LIGHTMAGENTA$\n")
+                                 _T("Color Yellow:          $COLOR_YELLOW$\n")
+                                 _T("Color White:           $COLOR_WHITE$\n");
 
     HRESULT hRes;
     BOOL    ArgumentUnderstood;
     BOOL    DeleteConsoleSettings = FALSE;
     DWORD   i;
-    YORI_STRING YsFormatString;
+    YORI_STRING FormatString;
+    PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps = NULL;
 
     YoriLibInitEmptyString(&szFile);
     YoriLibInitEmptyString(&szIcon);
     YoriLibInitEmptyString(&szWorkingDir);
-    YoriLibInitEmptyString(&YsFormatString);
+    YoriLibInitEmptyString(&FormatString);
 
     ExitCode = EXIT_FAILURE;
 
@@ -254,7 +572,7 @@ ENTRYPOINT(
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2004-2019"));
+                YoriLibDisplayMitLicense(_T("2004-2022"));
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("create")) == 0) {
@@ -312,9 +630,9 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (i + 1 < ArgC) {
-                    YsFormatString.StartOfString = ArgV[i + 1].StartOfString;
-                    YsFormatString.LengthInChars = ArgV[i + 1].LengthInChars;
-                    YsFormatString.LengthAllocated = ArgV[i + 1].LengthAllocated;
+                    FormatString.StartOfString = ArgV[i + 1].StartOfString;
+                    FormatString.LengthInChars = ArgV[i + 1].LengthInChars;
+                    FormatString.LengthAllocated = ArgV[i + 1].LengthAllocated;
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
@@ -388,10 +706,6 @@ ENTRYPOINT(
         goto Exit;
     }
 
-    if (op == ScutOperationDump && YsFormatString.StartOfString == NULL) {
-        YoriLibConstantString(&YsFormatString, FormatString);
-    }
-
     YoriLibLoadOle32Functions();
     if (DllOle32.pCoCreateInstance == NULL || DllOle32.pCoInitialize == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("COM not found\n"));
@@ -444,16 +758,54 @@ ENTRYPOINT(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Load failure: %x\n"), hRes);
             goto Exit;
         }
+
+        if (ShortcutDataList != NULL) {
+            hRes = ShortcutDataList->Vtbl->CopyDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG, &ConsoleProps);
+        }
+
     }
 
     if (op == ScutOperationDump) {
         YORI_STRING DisplayString;
+        SCUT_EXPAND_CONTEXT ExpandContext;
+
+        if (FormatString.StartOfString == NULL) {
+            YoriLibConstantString(&FormatString, DefaultFormatString);
+        }
+
         YoriLibInitEmptyString(&DisplayString);
-        YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ScutExpandVariables, scut, &DisplayString);
+        ExpandContext.ShellLink = scut;
+        ExpandContext.ConsoleProperties = ConsoleProps;
+        YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
+
         if (DisplayString.StartOfString != NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
             YoriLibFreeStringContents(&DisplayString);
             ExitCode = EXIT_SUCCESS;
+        }
+
+        if (FormatString.StartOfString == DefaultFormatString &&
+            ConsoleProps != NULL) {
+
+            YoriLibConstantString(&FormatString, ConsoleFormatString);
+            DisplayString.LengthInChars = 0;
+            YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
+
+            if (DisplayString.StartOfString != NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                YoriLibFreeStringContents(&DisplayString);
+                ExitCode = EXIT_SUCCESS;
+            }
+
+            YoriLibConstantString(&FormatString, ConsoleFormatString2);
+            DisplayString.LengthInChars = 0;
+            YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
+
+            if (DisplayString.StartOfString != NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                YoriLibFreeStringContents(&DisplayString);
+                ExitCode = EXIT_SUCCESS;
+            }
         }
         goto Exit;
     }
@@ -567,6 +919,10 @@ ENTRYPOINT(
     ExitCode = EXIT_SUCCESS;
 
 Exit:
+
+    if (ConsoleProps != NULL) {
+        LocalFree(ConsoleProps);
+    }
 
     YoriLibFreeStringContents(&szFile);
     YoriLibFreeStringContents(&szIcon);
