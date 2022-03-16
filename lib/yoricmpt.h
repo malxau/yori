@@ -3709,6 +3709,14 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define ICON_BIG 1
 #endif
 
+#ifndef MONO_FONT
+/**
+ A definition for a monospaced font if it is not defined by the current
+ compilation environment.
+ */
+#define MONO_FONT 8
+#endif
+
 #ifndef MS_DEF_PROV
 /**
  A definition for the base crypto provider if it is not defined by the current

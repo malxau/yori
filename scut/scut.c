@@ -70,9 +70,10 @@ CHAR strScutHelpText[] =
         "\n"
         "SCUT -license\n"
         "SCUT -create|-modify <filename> [-target target] [-args args]\n"
-        "     [-desc description] [-deleteconsolesettings] [-hotkey hotkey]\n"
-        "     [-iconpath filename [-iconindex index]] [-show showcmd]\n"
-        "     [-workingdir workingdir]\n"
+        "     [-bold] [-buffersize X*Y] [-desc description] [-deleteconsolesettings]\n"
+        "     [-font name] [-fontsize size] [-hotkey hotkey]\n"
+        "     [-iconpath filename [-iconindex index]] [-nonbold] [-scheme file]\n"
+        "     [-show showcmd] [-windowsize X*Y] [-workingdir workingdir]\n"
         "SCUT -exec <filename> [-target target] [-args args] [-show showcmd]\n"
         "     [-workingdir workingdir]\n"
         "SCUT [-f fmt] -dump <filename>\n";
@@ -88,6 +89,198 @@ ScutHelp(VOID)
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
 #endif
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strScutHelpText);
+}
+
+/**
+ Generate the default console properties for a shortcut based on the user's
+ defaults.  This is required because if a shortcut contains any console
+ setting, it must have all of them, so if scut is asked to modify something
+ it needs to approximately guess all of the rest.
+
+ @return Pointer to the console properties, allocated in this routine.  The
+         caller is expected to free these with @ref YoriLibDereference .
+ */
+PISHELLLINKDATALIST_CONSOLE_PROPS
+ScutAllocateDefaultConsoleProperties(VOID)
+{
+    PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps;
+    YORI_STRING KeyName;
+    TCHAR ValueNameBuffer[16];
+    TCHAR FontNameBuffer[LF_FACESIZE];
+    YORI_STRING ValueName;
+    DWORD Err;
+    DWORD Index;
+    DWORD Temp;
+    HKEY hKey;
+    DWORD Disp;
+    DWORD ValueType;
+    DWORD ValueSize;
+
+    YoriLibLoadAdvApi32Functions();
+
+    ConsoleProps = YoriLibReferencedMalloc(sizeof(ISHELLLINKDATALIST_CONSOLE_PROPS));
+    if (ConsoleProps == NULL) {
+        return NULL;
+    }
+
+    //
+    //  Start with hardcoded defaults that seem to match system behavior
+    //
+
+    ConsoleProps->dwSize = sizeof(ISHELLLINKDATALIST_CONSOLE_PROPS);
+    ConsoleProps->dwSignature = ISHELLLINKDATALIST_CONSOLE_PROPS_SIG;
+    ConsoleProps->WindowColor = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+    ConsoleProps->PopupColor = BACKGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_BLUE;
+    ConsoleProps->ScreenBufferSize.X = 80;
+    ConsoleProps->ScreenBufferSize.Y = 500;
+    ConsoleProps->WindowSize.X = 80;
+    ConsoleProps->WindowSize.Y = 25;
+    ConsoleProps->WindowPosition.X = 0;
+    ConsoleProps->WindowPosition.Y = 0;
+    ConsoleProps->FontNumber = 0;
+    ConsoleProps->InputBufferSize = 0;
+    ConsoleProps->FontSize.X = 8;
+    ConsoleProps->FontSize.Y = 12;
+    ConsoleProps->FontFamily = FF_MODERN;
+    ConsoleProps->FontWeight = FW_NORMAL;
+    _tcscpy(ConsoleProps->FaceName, _T("Terminal"));
+    ConsoleProps->CursorSize = 25;
+    ConsoleProps->FullScreen = FALSE;
+    ConsoleProps->QuickEdit = TRUE;
+    ConsoleProps->InsertMode = TRUE;
+    ConsoleProps->AutoPosition = TRUE;
+    ConsoleProps->HistoryBufferSize = 50;
+    ConsoleProps->NumberOfHistoryBuffers = 4;
+    ConsoleProps->RemoveHistoryDuplicates = FALSE;
+    ConsoleProps->ColorTable[0] =  RGB(0x00, 0x00, 0x00);
+    ConsoleProps->ColorTable[1] =  RGB(0x00, 0x00, 0x80);
+    ConsoleProps->ColorTable[2] =  RGB(0x00, 0x80, 0x00);
+    ConsoleProps->ColorTable[3] =  RGB(0x00, 0x80, 0x80);
+    ConsoleProps->ColorTable[4] =  RGB(0x80, 0x00, 0x00);
+    ConsoleProps->ColorTable[5] =  RGB(0x80, 0x00, 0x80);
+    ConsoleProps->ColorTable[6] =  RGB(0x80, 0x80, 0x00);
+    ConsoleProps->ColorTable[7] =  RGB(0xC0, 0xC0, 0xC0);
+    ConsoleProps->ColorTable[8] =  RGB(0x80, 0x80, 0x80);
+    ConsoleProps->ColorTable[9] =  RGB(0x00, 0x00, 0xFF);
+    ConsoleProps->ColorTable[10] = RGB(0x00, 0xFF, 0x00);
+    ConsoleProps->ColorTable[11] = RGB(0x00, 0xFF, 0xFF);
+    ConsoleProps->ColorTable[12] = RGB(0xFF, 0x00, 0x00);
+    ConsoleProps->ColorTable[13] = RGB(0xFF, 0x00, 0xFF);
+    ConsoleProps->ColorTable[14] = RGB(0xFF, 0xFF, 0x00);
+    ConsoleProps->ColorTable[15] = RGB(0xFF, 0xFF, 0xFF);
+
+    //
+    //  If the registry contains default values, use those instead.  Since
+    //  the registry may not have entries for everything, proceed to the
+    //  next setting no value or an invalid value is found.
+    //
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegOpenKeyExW == NULL) {
+
+        return ConsoleProps;
+    }
+
+    YoriLibConstantString(&KeyName, _T("Console"));
+
+    Err = DllAdvApi32.pRegCreateKeyExW(HKEY_CURRENT_USER,
+                                       KeyName.StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       KEY_QUERY_VALUE,
+                                       NULL,
+                                       &hKey,
+                                       &Disp);
+
+    if (Err != ERROR_SUCCESS) {
+        return ConsoleProps;
+    }
+
+    YoriLibInitEmptyString(&ValueName);
+    ValueName.StartOfString = ValueNameBuffer;
+    ValueName.LengthAllocated = sizeof(ValueNameBuffer)/sizeof(ValueNameBuffer[0]);
+
+    for (Index = 0; Index < 16; Index++) {
+        ValueName.LengthInChars = YoriLibSPrintfS(ValueName.StartOfString, ValueName.LengthAllocated, _T("ColorTable%02i"), Index);
+        ValueSize = sizeof(Temp);
+        Err = DllAdvApi32.pRegQueryValueExW(hKey, ValueName.StartOfString, 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+        if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+            ConsoleProps->ColorTable[Index] = Temp;
+        }
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("CursorSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->CursorSize = Temp;
+    }
+
+    ValueSize = sizeof(FontNameBuffer);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FaceName"), 0, &ValueType, (LPBYTE)FontNameBuffer, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_SZ && ValueSize <= sizeof(FontNameBuffer)) {
+        memcpy(ConsoleProps->FaceName, FontNameBuffer, ValueSize);
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FontFamily"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->FontFamily = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FontSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->FontSize.X = LOWORD(Temp);
+        ConsoleProps->FontSize.Y = HIWORD(Temp);
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FontWeight"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->FontWeight = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("InsertMode"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->InsertMode = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("PopupColors"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->PopupColor = (WORD)Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("QuickEdit"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->QuickEdit = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("ScreenBufferSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->ScreenBufferSize.X = LOWORD(Temp);
+        ConsoleProps->ScreenBufferSize.Y = HIWORD(Temp);
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("ScreenColors"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->WindowColor = (WORD)Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("WindowSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->WindowSize.X = LOWORD(Temp);
+        ConsoleProps->WindowSize.Y = HIWORD(Temp);
+    }
+
+    DllAdvApi32.pRegCloseKey(hKey);
+    return ConsoleProps;
 }
 
 /**
@@ -454,6 +647,129 @@ ScutExpandVariables(
     return CharsNeeded;
 }
 
+/**
+ Convert an argument string in the form of (X)x(Y) into a COORD structure.
+ For example, the string might be "80x25" or "100*4000".
+
+ @param String Pointer to the input string.
+
+ @param Coord On successful completion, updated to contain the numeric form
+        of the user specified coordinate.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+ScutStringToCoord(
+    __in PCYORI_STRING String,
+    __out PCOORD Coord
+    )
+{
+    LONGLONG llTemp;
+    DWORD CharsConsumed;
+    YORI_STRING Substring;
+    SHORT LocalCoordX;
+
+    if (!YoriLibStringToNumber(String, TRUE, &llTemp, &CharsConsumed) || CharsConsumed == 0) {
+        return FALSE;
+    }
+
+    if (llTemp > MAXSHORT) {
+        return FALSE;
+    }
+
+    LocalCoordX = (SHORT)llTemp;
+
+    YoriLibInitEmptyString(&Substring);
+    Substring.StartOfString = &String->StartOfString[CharsConsumed];
+    Substring.LengthInChars = String->LengthInChars - CharsConsumed;
+
+    if (Substring.LengthInChars == 0) {
+        return FALSE;
+    }
+
+    if (Substring.StartOfString[0] != 'x' && Substring.StartOfString[0] != '*') {
+        return FALSE;
+    }
+
+    Substring.StartOfString = Substring.StartOfString + 1;
+    Substring.LengthInChars = Substring.LengthInChars - 1;
+
+    if (Substring.LengthInChars == 0) {
+        return FALSE;
+    }
+
+    if (!YoriLibStringToNumber(&Substring, TRUE, &llTemp, &CharsConsumed) || CharsConsumed == 0) {
+        return FALSE;
+    }
+
+    if (llTemp > MAXSHORT) {
+        return FALSE;
+    }
+
+    Coord->X = LocalCoordX;
+    Coord->Y = (SHORT)llTemp;
+    return TRUE;
+}
+
+/**
+ The default format string to use when displaying shortcut properties.
+ */
+LPCTSTR ScutDefaultFormatString = _T("Target:                $TARGET$\n")
+                                  _T("Arguments:             $ARGS$\n")
+                                  _T("Working dir:           $WORKINGDIR$\n")
+                                  _T("Description:           $DESCRIPTION$\n")
+                                  _T("Icon Path:             $ICONPATH$\n")
+                                  _T("Icon Index:            $ICONINDEX$\n")
+                                  _T("Show State:            $SHOW$\n")
+                                  _T("Hotkey:                $HOTKEY$\n");
+
+/**
+ If the default format string is used, an extra default string for console
+ properties.  This is only displayed if console properties are present.
+ */
+LPCTSTR ScutConsoleFormatString = _T("Window Color:          $WINDOWCOLOR$\n")
+                                  _T("Popup Color:           $POPUPCOLOR$\n")
+                                  _T("Buffer Size:           $SCREENBUFFERSIZE_X$x$SCREENBUFFERSIZE_Y$\n")
+                                  _T("Window Size:           $WINDOWSIZE_X$x$WINDOWSIZE_Y$\n")
+                                  _T("Window Position:       $WINDOWPOSITION_X$x$WINDOWPOSITION_Y$\n")
+                                  _T("Font Number:           $FONTNUMBER$\n")
+                                  _T("Input Buffer Size:     $INPUTBUFFERSIZE$\n")
+                                  _T("Font Size:             $FONTSIZE_X$x$FONTSIZE_Y$\n")
+                                  _T("Font Family:           $FONTFAMILY$\n")
+                                  _T("Font Weight:           $FONTWEIGHT$\n")
+                                  _T("Font:                  $FONT$\n")
+                                  _T("Cursor Size:           $CURSORSIZE$\n")
+                                  _T("Full Screen:           $FULLSCREEN$\n")
+                                  _T("QuickEdit:             $QUICKEDIT$\n")
+                                  _T("Insert:                $INSERT$\n")
+                                  _T("Auto Position:         $AUTOPOSITION$\n")
+                                  _T("History Buffer Size:   $HISTORYBUFFERSIZE$\n")
+                                  _T("History Buffer Count:  $HISTORYBUFFERCOUNT$\n")
+                                  _T("No History Duplicates: $NOHISTORYDUPLICATES$\n");
+
+/**
+ If the default format string is used, an extra default string for console
+ properties.  This is only displayed if console properties are present.
+ */
+LPCTSTR ScutConsoleFormatString2 = _T("Color Black:           $COLOR_BLACK$\n")
+                                   _T("Color Blue:            $COLOR_BLUE$\n")
+                                   _T("Color Green:           $COLOR_GREEN$\n")
+                                   _T("Color Cyan:            $COLOR_CYAN$\n")
+                                   _T("Color Red:             $COLOR_RED$\n")
+                                   _T("Color Magenta:         $COLOR_MAGENTA$\n")
+                                   _T("Color Brown:           $COLOR_BROWN$\n")
+                                   _T("Color Gray:            $COLOR_GRAY$\n")
+                                   _T("Color Dark Gray:       $COLOR_DARKGRAY$\n")
+                                   _T("Color Light Blue:      $COLOR_LIGHTBLUE$\n")
+                                   _T("Color Light Green:     $COLOR_LIGHTGREEN$\n")
+                                   _T("Color Light Cyan:      $COLOR_LIGHTCYAN$\n")
+                                   _T("Color Light Red:       $COLOR_LIGHTRED$\n")
+                                   _T("Color Light Magenta:   $COLOR_LIGHTMAGENTA$\n")
+                                   _T("Color Yellow:          $COLOR_YELLOW$\n")
+                                   _T("Color White:           $COLOR_WHITE$\n");
+
+
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the scut builtin command.
@@ -481,70 +797,30 @@ ENTRYPOINT(
     __in YORI_STRING ArgV[]
     )
 {
-    ScutOperations op     = ScutOperationUnknown;
+    ScutOperations op       = ScutOperationUnknown;
     YORI_STRING szFile;
 
-    TCHAR * szArgs        = NULL;
-    TCHAR * szDesc        = NULL;
-    WORD    wHotkey       = (WORD)-1;
+    TCHAR * szArgs          = NULL;
+    TCHAR * szDesc          = NULL;
+    TCHAR * szFont          = NULL;
+    WORD    wFontWeight     = 0;
+    WORD    wHotkey         = (WORD)-1;
     YORI_STRING szIcon;
-    WORD    wIcon         = 0;
-    WORD    wShow         = (WORD)-1;
-    TCHAR * szTarget      = NULL;
+    WORD    wIcon           = 0;
+    WORD    wShow           = (WORD)-1;
+    TCHAR * szTarget        = NULL;
     YORI_STRING szWorkingDir;
-    IShellLinkW *scut     = NULL;
+    YORI_STRING szSchemeFile;
+    IShellLinkW *scut       = NULL;
     IPersistFile *savedfile = NULL;
     IShellLinkDataList *ShortcutDataList = NULL;
     YORI_STRING Arg;
     LONGLONG llTemp;
     DWORD   CharsConsumed;
     DWORD   ExitCode;
-    LPTSTR DefaultFormatString = _T("Target:                $TARGET$\n")
-                                 _T("Arguments:             $ARGS$\n")
-                                 _T("Working dir:           $WORKINGDIR$\n")
-                                 _T("Description:           $DESCRIPTION$\n")
-                                 _T("Icon Path:             $ICONPATH$\n")
-                                 _T("Icon Index:            $ICONINDEX$\n")
-                                 _T("Show State:            $SHOW$\n")
-                                 _T("Hotkey:                $HOTKEY$\n");
-
-    LPTSTR ConsoleFormatString = _T("Window Color:          $WINDOWCOLOR$\n")
-                                 _T("Popup Color:           $POPUPCOLOR$\n")
-                                 _T("Buffer Size:           $SCREENBUFFERSIZE_X$x$SCREENBUFFERSIZE_Y$\n")
-                                 _T("Window Size:           $WINDOWSIZE_X$x$WINDOWSIZE_Y$\n")
-                                 _T("Window Position:       $WINDOWPOSITION_X$x$WINDOWPOSITION_Y$\n")
-                                 _T("Font Number:           $FONTNUMBER$\n")
-                                 _T("Input Buffer Size:     $INPUTBUFFERSIZE$\n")
-                                 _T("Font Size:             $FONTSIZE_X$x$FONTSIZE_Y$\n")
-                                 _T("Font Family:           $FONTFAMILY$\n")
-                                 _T("Font Weight:           $FONTWEIGHT$\n")
-                                 _T("Font:                  $FONT$\n")
-                                 _T("Cursor Size:           $CURSORSIZE$\n")
-                                 _T("Full Screen:           $FULLSCREEN$\n")
-                                 _T("QuickEdit:             $QUICKEDIT$\n")
-                                 _T("Insert:                $INSERT$\n")
-                                 _T("Auto Position:         $AUTOPOSITION$\n")
-                                 _T("History Buffer Size:   $HISTORYBUFFERSIZE$\n")
-                                 _T("History Buffer Count:  $HISTORYBUFFERCOUNT$\n")
-                                 _T("No History Duplicates: $NOHISTORYDUPLICATES$\n");
-
-    LPTSTR ConsoleFormatString2= _T("Window Color:          $WINDOWCOLOR$\n")
-                                 _T("Color Black:           $COLOR_BLACK$\n")
-                                 _T("Color Blue:            $COLOR_BLUE$\n")
-                                 _T("Color Green:           $COLOR_GREEN$\n")
-                                 _T("Color Cyan:            $COLOR_CYAN$\n")
-                                 _T("Color Red:             $COLOR_RED$\n")
-                                 _T("Color Magenta:         $COLOR_MAGENTA$\n")
-                                 _T("Color Brown:           $COLOR_BROWN$\n")
-                                 _T("Color Gray:            $COLOR_GRAY$\n")
-                                 _T("Color Dark Gray:       $COLOR_DARKGRAY$\n")
-                                 _T("Color Light Blue:      $COLOR_LIGHTBLUE$\n")
-                                 _T("Color Light Green:     $COLOR_LIGHTGREEN$\n")
-                                 _T("Color Light Cyan:      $COLOR_LIGHTCYAN$\n")
-                                 _T("Color Light Red:       $COLOR_LIGHTRED$\n")
-                                 _T("Color Light Magenta:   $COLOR_LIGHTMAGENTA$\n")
-                                 _T("Color Yellow:          $COLOR_YELLOW$\n")
-                                 _T("Color White:           $COLOR_WHITE$\n");
+    COORD   BufferSize;
+    COORD   WindowSize;
+    COORD   FontSize;
 
     HRESULT hRes;
     BOOL    ArgumentUnderstood;
@@ -552,11 +828,20 @@ ENTRYPOINT(
     DWORD   i;
     YORI_STRING FormatString;
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps = NULL;
+    BOOLEAN FreeConsolePropsWithLocalFree = FALSE;
+    BOOLEAN FreeConsolePropsWithDereference = FALSE;
 
     YoriLibInitEmptyString(&szFile);
     YoriLibInitEmptyString(&szIcon);
     YoriLibInitEmptyString(&szWorkingDir);
+    YoriLibInitEmptyString(&szSchemeFile);
     YoriLibInitEmptyString(&FormatString);
+    BufferSize.X = 0;
+    BufferSize.Y = 0;
+    FontSize.X = 0;
+    FontSize.Y = 0;
+    WindowSize.X = 0;
+    WindowSize.Y = 0;
 
     ExitCode = EXIT_FAILURE;
 
@@ -617,6 +902,16 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("bold")) == 0) {
+                wFontWeight = FW_BOLD;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("buffersize")) == 0) {
+                if (i + 1 < ArgC) {
+                    if (ScutStringToCoord(&ArgV[i + 1], &BufferSize)) {
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("desc")) == 0) {
                 if (i + 1 < ArgC) {
                     szDesc = ArgV[i + 1].StartOfString;
@@ -635,6 +930,26 @@ ENTRYPOINT(
                     FormatString.LengthAllocated = ArgV[i + 1].LengthAllocated;
                     ArgumentUnderstood = TRUE;
                     i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("font")) == 0) {
+                if (i + 1 < ArgC) {
+                    szFont = ArgV[i + 1].StartOfString;
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("fontsize")) == 0) {
+                if (i + 1 < ArgC) {
+                    llTemp = 0;
+                    if (ScutStringToCoord(&ArgV[i + 1], &FontSize)) {
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    } else if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) &&
+                               CharsConsumed > 0) {
+                        FontSize.X = 0;
+                        FontSize.Y = (WORD)llTemp;
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("hotkey")) == 0) {
                 if (i + 1 < ArgC) {
@@ -667,6 +982,18 @@ ENTRYPOINT(
                         i++;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("nonbold")) == 0) {
+                wFontWeight = FW_NORMAL;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("scheme")) == 0) {
+                if (i + 1 < ArgC) {
+                    YoriLibFreeStringContents(&szSchemeFile);
+                    if (!YoriLibUserStringToSingleFilePath(&ArgV[i + 1], FALSE, &szSchemeFile)) {
+                        YoriLibInitEmptyString(&szSchemeFile);
+                    }
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("show")) == 0) {
                 if (i + 1 < ArgC) {
                     llTemp = 0;
@@ -683,6 +1010,13 @@ ENTRYPOINT(
                     szTarget = ArgV[i + 1].StartOfString;
                     ArgumentUnderstood = TRUE;
                     i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("windowsize")) == 0) {
+                if (i + 1 < ArgC) {
+                    if (ScutStringToCoord(&ArgV[i + 1], &WindowSize)) {
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("workingdir")) == 0) {
                 if (i + 1 < ArgC) {
@@ -761,8 +1095,11 @@ ENTRYPOINT(
 
         if (ShortcutDataList != NULL) {
             hRes = ShortcutDataList->Vtbl->CopyDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG, &ConsoleProps);
+            if (SUCCEEDED(hRes)) {
+                ASSERT(ConsoleProps != NULL);
+                FreeConsolePropsWithLocalFree = TRUE;
+            }
         }
-
     }
 
     if (op == ScutOperationDump) {
@@ -770,7 +1107,7 @@ ENTRYPOINT(
         SCUT_EXPAND_CONTEXT ExpandContext;
 
         if (FormatString.StartOfString == NULL) {
-            YoriLibConstantString(&FormatString, DefaultFormatString);
+            YoriLibConstantString(&FormatString, ScutDefaultFormatString);
         }
 
         YoriLibInitEmptyString(&DisplayString);
@@ -784,10 +1121,10 @@ ENTRYPOINT(
             ExitCode = EXIT_SUCCESS;
         }
 
-        if (FormatString.StartOfString == DefaultFormatString &&
+        if (FormatString.StartOfString == ScutDefaultFormatString &&
             ConsoleProps != NULL) {
 
-            YoriLibConstantString(&FormatString, ConsoleFormatString);
+            YoriLibConstantString(&FormatString, ScutConsoleFormatString);
             DisplayString.LengthInChars = 0;
             YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
 
@@ -797,7 +1134,7 @@ ENTRYPOINT(
                 ExitCode = EXIT_SUCCESS;
             }
 
-            YoriLibConstantString(&FormatString, ConsoleFormatString2);
+            YoriLibConstantString(&FormatString, ScutConsoleFormatString2);
             DisplayString.LengthInChars = 0;
             YoriLibExpandCommandVariables(&FormatString, '$', FALSE, ScutExpandVariables, &ExpandContext, &DisplayString);
 
@@ -859,7 +1196,87 @@ ENTRYPOINT(
         }
     }
 
-    if (op == ScutOperationModify && DeleteConsoleSettings && ShortcutDataList != NULL) {
+    if ((op == ScutOperationModify ||
+         op == ScutOperationCreate) &&
+        !DeleteConsoleSettings &&
+        ShortcutDataList != NULL &&
+        (szSchemeFile.StartOfString != NULL ||
+         szFont != NULL ||
+         wFontWeight != 0 ||
+         BufferSize.X != 0 ||
+         BufferSize.Y != 0 ||
+         FontSize.X != 0 ||
+         FontSize.Y != 0 ||
+         WindowSize.X != 0 ||
+         WindowSize.Y != 0)) {
+
+        UCHAR Color;
+
+        if (ConsoleProps == NULL) {
+            ConsoleProps = ScutAllocateDefaultConsoleProperties();
+            if (ConsoleProps == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ScutAllocateDefaultConsoleProperties failure\n"));
+                goto Exit;
+            }
+            FreeConsolePropsWithDereference = TRUE;
+        }
+
+        if (szFont != NULL) {
+            DWORD CharsCopied;
+            DWORD FaceNameSizeInChars;
+
+            FaceNameSizeInChars = sizeof(ConsoleProps->FaceName)/sizeof(ConsoleProps->FaceName[0]);
+
+            CharsCopied = YoriLibSPrintfS(ConsoleProps->FaceName, FaceNameSizeInChars, _T("%s"), szFont);
+            ConsoleProps->FaceName[FaceNameSizeInChars - 1] = '\0';
+
+            //
+            //  I'm not really sure why font family is even recorded.
+            //  Console fonts have to be monospaced.
+            //
+
+            ConsoleProps->FontFamily = FF_MODERN | MONO_FONT;
+        }
+
+        if (wFontWeight != 0) {
+            ConsoleProps->FontWeight = wFontWeight;
+        }
+
+        if (szSchemeFile.StartOfString != NULL) {
+            YoriLibLoadColorTableFromScheme(&szSchemeFile, ConsoleProps->ColorTable);
+            YoriLibLoadWindowColorFromScheme(&szSchemeFile, &Color);
+            ConsoleProps->WindowColor = Color;
+            YoriLibLoadPopupColorFromScheme(&szSchemeFile, &Color);
+            ConsoleProps->PopupColor = Color;
+        }
+
+        if (BufferSize.X != 0 || BufferSize.Y != 0) {
+            ConsoleProps->ScreenBufferSize.X = BufferSize.X;
+            ConsoleProps->ScreenBufferSize.Y = BufferSize.Y;
+        }
+
+        if (FontSize.X != 0 || FontSize.Y != 0) {
+            ConsoleProps->FontSize.X = FontSize.X;
+            ConsoleProps->FontSize.Y = FontSize.Y;
+        }
+
+        if (WindowSize.X != 0 || WindowSize.Y != 0) {
+            ConsoleProps->WindowSize.X = WindowSize.X;
+            ConsoleProps->WindowSize.Y = WindowSize.Y;
+        }
+
+        ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
+        hRes = ShortcutDataList->Vtbl->AddDataBlock(ShortcutDataList, ConsoleProps);
+        if (!SUCCEEDED(hRes)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("AddDataBlock failure: %x\n"), hRes);
+            goto Exit;
+        }
+    }
+
+    if (op == ScutOperationModify &&
+        DeleteConsoleSettings &&
+        ShortcutDataList != NULL) {
+
         if (ShortcutDataList == NULL) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("scut: OS support not present\n"));
             goto Exit;
@@ -920,13 +1337,26 @@ ENTRYPOINT(
 
 Exit:
 
-    if (ConsoleProps != NULL) {
+    if (FreeConsolePropsWithLocalFree) {
+        ASSERT(ConsoleProps != NULL);
         LocalFree(ConsoleProps);
+    } else if (FreeConsolePropsWithDereference) {
+        ASSERT(ConsoleProps != NULL);
+        YoriLibDereference(ConsoleProps);
+    }
+
+    if (ShortcutDataList != NULL) {
+        ShortcutDataList->Vtbl->Release(ShortcutDataList);
+    }
+
+    if (scut != NULL) {
+        scut->Vtbl->Release(scut);
     }
 
     YoriLibFreeStringContents(&szFile);
     YoriLibFreeStringContents(&szIcon);
     YoriLibFreeStringContents(&szWorkingDir);
+    YoriLibFreeStringContents(&szSchemeFile);
 
     return ExitCode;
 }

@@ -3543,7 +3543,7 @@ YoriLibDecimalStringToInt(
 __success(return)
 BOOL
 YoriLibStringToNumberSpecifyBase(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in DWORD Base,
     __in BOOL IgnoreSeperators,
     __out PLONGLONG Number,
@@ -3553,7 +3553,7 @@ YoriLibStringToNumberSpecifyBase(
 __success(return)
 BOOL
 YoriLibStringToNumber(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __in BOOL IgnoreSeperators,
     __out PLONGLONG Number,
     __out PDWORD CharsConsumed
@@ -3728,7 +3728,7 @@ YoriLibHexBufferToString(
 
 LARGE_INTEGER
 YoriLibStringToFileSize(
-    __in PYORI_STRING String
+    __in PCYORI_STRING String
     );
 
 __success(return)
@@ -3741,7 +3741,7 @@ YoriLibFileSizeToString(
 __success(return)
 BOOL
 YoriLibStringToDate(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __out LPSYSTEMTIME Date,
     __out_opt PDWORD CharsConsumed
     );
@@ -3749,14 +3749,14 @@ YoriLibStringToDate(
 __success(return)
 BOOL
 YoriLibStringToTime(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __out LPSYSTEMTIME Date
     );
 
 __success(return)
 BOOL
 YoriLibStringToDateTime(
-    __in PYORI_STRING String,
+    __in PCYORI_STRING String,
     __out LPSYSTEMTIME Date
     );
 

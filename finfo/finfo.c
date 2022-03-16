@@ -1465,7 +1465,7 @@ FInfoFileFoundCallback(
 /**
  A default format string to use if the user didn't specify one.
  */
-TCHAR DefaultFormatString[] = 
+TCHAR FInfoDefaultFormatString[] = 
     _T("NAME:             $NAME$\n")
     _T("ACCESSDATE:       $ACCESSDATE_YEAR$/$ACCESSDATE_MON$/$ACCESSDATE_DAY$\n")
     _T("ACCESSTIME:       $ACCESSTIME_HOUR$:$ACCESSTIME_MIN$:$ACCESSTIME_SEC$\n")
@@ -1527,7 +1527,7 @@ ENTRYPOINT(
     YORI_STRING Arg;
 
     ZeroMemory(&FInfoContext, sizeof(FInfoContext));
-    YoriLibConstantString(&FInfoContext.FormatString, DefaultFormatString);
+    YoriLibConstantString(&FInfoContext.FormatString, FInfoDefaultFormatString);
 
     for (i = 1; i < ArgC; i++) {
 
