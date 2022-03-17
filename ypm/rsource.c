@@ -159,14 +159,7 @@ YpmRemoteSourceAppend(
     YORI_STRING Arg;
     PYORI_STRING SourcePath = NULL;
 
-    if (ArgC < 2) {
-        YpmRemoteSourceAppendHelp();
-        return EXIT_FAILURE;
-    }
-
-    SourcePath = &ArgV[1];
-
-    for (i = 2; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -195,6 +188,13 @@ YpmRemoteSourceAppend(
         }
     }
 
+    if (StartArg == 0 || StartArg >= ArgC) {
+        YpmRemoteSourceAppendHelp();
+        return EXIT_FAILURE;
+    }
+
+    SourcePath = &ArgV[StartArg];
+
     YoriPkgAddNewSource(SourcePath, FALSE);
 
     return EXIT_SUCCESS;
@@ -221,14 +221,7 @@ YpmRemoteSourceInsert(
     YORI_STRING Arg;
     PYORI_STRING SourcePath = NULL;
 
-    if (ArgC < 2) {
-        YpmRemoteSourceInsertHelp();
-        return EXIT_FAILURE;
-    }
-
-    SourcePath = &ArgV[1];
-
-    for (i = 2; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -257,6 +250,13 @@ YpmRemoteSourceInsert(
         }
     }
 
+    if (StartArg == 0 || StartArg >= ArgC) {
+        YpmRemoteSourceInsertHelp();
+        return EXIT_FAILURE;
+    }
+
+    SourcePath = &ArgV[StartArg];
+
     YoriPkgAddNewSource(SourcePath, TRUE);
 
     return EXIT_SUCCESS;
@@ -283,14 +283,7 @@ YpmRemoteSourceDelete(
     YORI_STRING Arg;
     PYORI_STRING SourcePath = NULL;
 
-    if (ArgC < 2) {
-        YpmRemoteSourceDeleteHelp();
-        return EXIT_FAILURE;
-    }
-
-    SourcePath = &ArgV[1];
-
-    for (i = 2; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -318,6 +311,13 @@ YpmRemoteSourceDelete(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
     }
+
+    if (ArgC == 0 || StartArg >= ArgC) {
+        YpmRemoteSourceDeleteHelp();
+        return EXIT_FAILURE;
+    }
+
+    SourcePath = &ArgV[StartArg];
 
     YoriPkgDeleteSource(SourcePath);
 

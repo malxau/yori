@@ -133,15 +133,7 @@ YpmDownload(
     PYORI_STRING SourcePath = NULL;
     PYORI_STRING FilePath = NULL;
 
-    if (ArgC < 3) {
-        YpmDownloadHelp();
-        return EXIT_FAILURE;
-    }
-
-    SourcePath = &ArgV[1];
-    FilePath = &ArgV[2];
-
-    for (i = 3; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -170,6 +162,14 @@ YpmDownload(
         }
     }
 
+    if (StartArg == 0 || StartArg + 1 >= ArgC) {
+        YpmDownloadHelp();
+        return EXIT_FAILURE;
+    }
+
+    SourcePath = &ArgV[StartArg];
+    FilePath = &ArgV[StartArg + 1];
+
     YoriPkgDownloadRemotePackages(SourcePath, FilePath);
 
     return EXIT_SUCCESS;
@@ -197,16 +197,9 @@ YpmDownloadDaily(
     YORI_STRING SourcePath;
     PYORI_STRING FilePath = NULL;
 
-    if (ArgC < 2) {
-        YpmDownloadDailyHelp();
-        return EXIT_FAILURE;
-    }
-
-    FilePath = &ArgV[1];
     YoriLibConstantString(&SourcePath, _T("http://www.malsmith.net/download/?obj=yori/latest-daily/"));
 
-
-    for (i = 2; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -235,6 +228,13 @@ YpmDownloadDaily(
         }
     }
 
+    if (StartArg == 0 || StartArg >= ArgC) {
+        YpmDownloadDailyHelp();
+        return EXIT_FAILURE;
+    }
+
+    FilePath = &ArgV[StartArg];
+
     YoriPkgDownloadRemotePackages(&SourcePath, FilePath);
 
     return EXIT_SUCCESS;
@@ -262,15 +262,9 @@ YpmDownloadStable(
     YORI_STRING SourcePath;
     PYORI_STRING FilePath = NULL;
 
-    if (ArgC < 2) {
-        YpmDownloadStableHelp();
-        return EXIT_FAILURE;
-    }
-
-    FilePath = &ArgV[1];
     YoriLibConstantString(&SourcePath, _T("http://www.malsmith.net/download/?obj=yori/latest-stable/"));
 
-    for (i = 2; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -298,6 +292,13 @@ YpmDownloadStable(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
     }
+
+    if (StartArg == 0 || StartArg >= ArgC) {
+        YpmDownloadStableHelp();
+        return EXIT_FAILURE;
+    }
+
+    FilePath = &ArgV[StartArg];
 
     YoriPkgDownloadRemotePackages(&SourcePath, FilePath);
 

@@ -132,15 +132,7 @@ YpmMirrorInstall(
     PYORI_STRING MirrorSource = NULL;
     PYORI_STRING MirrorTarget = NULL;
 
-    if (ArgC < 3) {
-        YpmMirrorInstallHelp();
-        return EXIT_FAILURE;
-    }
-
-    MirrorSource = &ArgV[1];
-    MirrorTarget = &ArgV[2];
-
-    for (i = 3; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -169,6 +161,14 @@ YpmMirrorInstall(
         }
     }
 
+    if (StartArg == 0 || StartArg + 1 >= ArgC) {
+        YpmMirrorInstallHelp();
+        return EXIT_FAILURE;
+    }
+
+    MirrorSource = &ArgV[StartArg];
+    MirrorTarget = &ArgV[StartArg + 1];
+
     YoriPkgAddNewMirror(MirrorSource, MirrorTarget, TRUE);
 
     return EXIT_SUCCESS;
@@ -195,14 +195,7 @@ YpmMirrorDelete(
     YORI_STRING Arg;
     PYORI_STRING MirrorSource = NULL;
 
-    if (ArgC < 2) {
-        YpmMirrorDeleteHelp();
-        return EXIT_FAILURE;
-    }
-
-    MirrorSource = &ArgV[1];
-
-    for (i = 2; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -230,6 +223,13 @@ YpmMirrorDelete(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
     }
+
+    if (StartArg == 0 || StartArg >= ArgC) {
+        YpmMirrorDeleteHelp();
+        return EXIT_FAILURE;
+    }
+
+    MirrorSource = &ArgV[StartArg];
 
     YoriPkgDeleteMirror(MirrorSource);
 

@@ -137,17 +137,7 @@ YpmCreateBinaryPackage(
     PYORI_STRING PackagePathForOlderBuilds = NULL;
     DWORD ReplaceCount = 0;
 
-    if (ArgC < 5) {
-        YpmCreateBinaryHelp();
-        return EXIT_FAILURE;
-    }
-
-    NewFileName = &ArgV[1];
-    NewName = &ArgV[2];
-    NewVersion = &ArgV[3];
-    NewArch = &ArgV[4];
-
-    for (i = 5; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -255,6 +245,16 @@ YpmCreateBinaryPackage(
         }
     }
 
+    if (StartArg == 0 || StartArg + 3 >= ArgC) {
+        YpmCreateBinaryHelp();
+        return EXIT_FAILURE;
+    }
+
+    NewFileName = &ArgV[StartArg];
+    NewName = &ArgV[StartArg + 1];
+    NewVersion = &ArgV[StartArg + 2];
+    NewArch = &ArgV[StartArg + 3];
+
     ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL && NewArch != NULL);
     if (FileList == NULL) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm: missing file list\n"));
@@ -305,16 +305,7 @@ YpmCreateSourcePackage(
     PYORI_STRING NewName = NULL;
     PYORI_STRING FilePath = NULL;
 
-    if (ArgC < 4) {
-        YpmCreateSourceHelp();
-        return EXIT_FAILURE;
-    }
-
-    NewFileName = &ArgV[1];
-    NewName = &ArgV[2];
-    NewVersion = &ArgV[3];
-
-    for (i = 4; i < ArgC; i++) {
+    for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
         ASSERT(YoriLibIsStringNullTerminated(&ArgV[i]));
@@ -348,6 +339,15 @@ YpmCreateSourcePackage(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
     }
+
+    if (StartArg == 0 || StartArg + 2 >= ArgC) {
+        YpmCreateSourceHelp();
+        return EXIT_FAILURE;
+    }
+
+    NewFileName = &ArgV[StartArg];
+    NewName = &ArgV[StartArg + 1];
+    NewVersion = &ArgV[StartArg + 2];
 
     ASSERT(NewFileName != NULL && NewName != NULL && NewVersion != NULL);
     if (FilePath == NULL) {
