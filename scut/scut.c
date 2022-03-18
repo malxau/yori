@@ -658,6 +658,7 @@ ScutExpandVariables(
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
+__success(return)
 BOOL
 ScutStringToCoord(
     __in PCYORI_STRING String,
