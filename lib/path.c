@@ -78,7 +78,7 @@ FindFirstNonDirectoryFile(
                 DWORD Error;
 
                 Error = GetLastError();
-                CloseHandle(Handle);
+                FindClose(Handle);
                 Handle = INVALID_HANDLE_VALUE;
                 if (Error == ERROR_NO_MORE_FILES) {
                     Error = ERROR_FILE_NOT_FOUND;
