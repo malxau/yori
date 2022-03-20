@@ -199,6 +199,8 @@ ENTRYPOINT(
     DWORD CharsConsumed;
     MAKE_PRIORITY Priority;
     BOOLEAN ExplicitTargetFound;
+    DWORD PerformanceProcessors;
+    DWORD EfficiencyProcessors;
 
     FileName = NULL;
     RootTarget = NULL;
@@ -360,8 +362,7 @@ ENTRYPOINT(
 
     //
     //  If -j isn't specified, attempt to set the number of jobs based on the
-    //  environment variable.  If that's not available, set a default number
-    //  of jobs to execute as the number of logical processors plus one.
+    //  environment variable.
     //
 
     if (MakeContext.NumberProcesses == 0) {
@@ -375,20 +376,11 @@ ENTRYPOINT(
         }
     }
 
-    if (MakeContext.NumberProcesses == 0) {
-        SYSTEM_INFO SysInfo;
-        GetSystemInfo(&SysInfo);
-        MakeContext.NumberProcesses = SysInfo.dwNumberOfProcessors + 1;
-    }
-
     //
-    //  WaitForMultipleObjects has a limit of 64 things to wait for, so this
-    //  program can't currently have more than 64 children.
+    //  Very low priority means low page and IO priority.  This support was
+    //  added in Vista.  If running on an older release, interpret very low
+    //  and low as the same thing.
     //
-
-    if (MakeContext.NumberProcesses > 64) {
-        MakeContext.NumberProcesses = 64;
-    }
 
     if (Priority == MakePriorityVeryLow) {
         DWORD MajorVersion;
@@ -404,8 +396,46 @@ ENTRYPOINT(
         }
     }
 
+    YoriLibQueryCpuCount(&PerformanceProcessors, &EfficiencyProcessors);
+
     if (Priority == MakePriorityLow) {
-        SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+
+        //
+        //  When both performance and efficiency processors are present,
+        //  Windows might decide to interpret "low priority" as "only run
+        //  on efficiency cores" which is generally not a good idea for
+        //  a build system.  In this case we (arbitrarily) pick a heuristic
+        //  for low priority as leaving one processor unused to improve
+        //  responsiveness a little.
+        //
+
+        if (PerformanceProcessors > 0 && EfficiencyProcessors > 0) {
+            if (MakeContext.NumberProcesses == 0) {
+                MakeContext.NumberProcesses = PerformanceProcessors + EfficiencyProcessors - 1;
+            }
+        } else {
+            SetPriorityClass(GetCurrentProcess(), IDLE_PRIORITY_CLASS);
+        }
+    }
+
+    //
+    //  If no number of child processes has been determined yet, use the total
+    //  number of processors plus one.
+    //
+
+    if (MakeContext.NumberProcesses == 0) {
+        MakeContext.NumberProcesses = PerformanceProcessors + EfficiencyProcessors + 1;
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Using %i child processes\n"), MakeContext.NumberProcesses);
+
+    //
+    //  WaitForMultipleObjects has a limit of 64 things to wait for, so this
+    //  program can't currently have more than 64 children.
+    //
+
+    if (MakeContext.NumberProcesses > 64) {
+        MakeContext.NumberProcesses = 64;
     }
 
     //

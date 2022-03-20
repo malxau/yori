@@ -732,6 +732,14 @@ YoriLibGetMetadataColor(
     __out PYORILIB_COLOR_ATTRIBUTES Color
     );
 
+// *** CPUINFO.C ***
+
+VOID
+YoriLibQueryCpuCount(
+    __out PDWORD PerformanceLogicalProcessors,
+    __out PDWORD EfficiencyLogicalProcessors
+    );
+
 // *** CSHOT.C ***
 
 BOOL
