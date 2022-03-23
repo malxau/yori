@@ -427,8 +427,6 @@ ENTRYPOINT(
         MakeContext.NumberProcesses = PerformanceProcessors + EfficiencyProcessors + 1;
     }
 
-    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Using %i child processes\n"), MakeContext.NumberProcesses);
-
     //
     //  WaitForMultipleObjects has a limit of 64 things to wait for, so this
     //  program can't currently have more than 64 children.
