@@ -3,7 +3,7 @@
  *
  * Yori shell display operating system version
  *
- * Copyright (c) 2017-2021 Malcolm J. Smith
+ * Copyright (c) 2017-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,10 @@ CHAR strOsVerHelpText[] =
         "\n"
         "Outputs the operating system version in a specified format.\n"
         "\n"
-        "OSVER [-license] [<fmt>]\n"
+        "OSVER [-license] [-l] [-s criteria] [<fmt>]\n"
+        "\n"
+        "   -l             List all known operating system builds\n"
+        "   -s             Search for build names containing string or build number\n"
         "\n"
         "Format specifiers are:\n"
         "   $arch$         The processor architecture\n"
@@ -225,6 +228,65 @@ OSVER_ARCHITECTURE OsVerArchitecture[] = {
 };
 
 /**
+ Display a list of build strings that match a specified criteria.
+
+ @param MatchString Pointer to a string to match against.  Note this can be
+        NULL to match everything.
+ 
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+OsVerDisplayMatchingBuilds(
+    __in PYORI_STRING MatchString
+    )
+{
+    LONGLONG llTemp;
+    YORI_STRING DisplayString;
+    DWORD CharsConsumed;
+    DWORD CharsNeeded;
+    DWORD Index;
+
+    //
+    //  If the argument is a number, look up a string by build number.
+    //
+
+    if (MatchString != NULL &&
+        YoriLibStringToNumber(MatchString, TRUE, &llTemp, &CharsConsumed) &&
+        CharsConsumed > 0) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%lli: %hs\n"), llTemp, OsVerGetBuildDescriptionString((DWORD)llTemp));
+    }
+
+    //
+    //  Look for a substring match, even if the argument is numeric.
+    //
+    CharsNeeded = 0;
+    for (Index = 0; Index < sizeof(OsVerBuildDescriptions)/sizeof(OsVerBuildDescriptions[0]); Index++) {
+        CharsConsumed = strlen(OsVerBuildDescriptions[Index].BuildDescription);
+        if (CharsConsumed > CharsNeeded) {
+            CharsNeeded = CharsConsumed;
+        }
+    }
+
+    if (!YoriLibAllocateString(&DisplayString, CharsNeeded + 1)) {
+        return FALSE;
+    }
+
+    for (Index = 0; Index < sizeof(OsVerBuildDescriptions)/sizeof(OsVerBuildDescriptions[0]); Index++) {
+        DisplayString.LengthInChars = YoriLibSPrintf(DisplayString.StartOfString, _T("%hs"), OsVerBuildDescriptions[Index].BuildDescription);
+
+        if (MatchString == NULL ||
+            YoriLibFindFirstMatchingSubstringInsensitive(&DisplayString, 1, MatchString, NULL) != NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%i: %y\n"), OsVerBuildDescriptions[Index].BuildNumber, &DisplayString);
+        }
+    }
+
+    YoriLibFreeStringContents(&DisplayString);
+
+    return TRUE;
+}
+
+/**
  Return a pointer to a constant string describing the processor architecture.
  Note this will always return a string, even if the string indicates it is an
  unknown architecture.
@@ -407,10 +469,13 @@ ENTRYPOINT(
     DWORD i;
     YORI_STRING Arg;
     YORI_STRING YsFormatString;
+    PYORI_STRING SearchString;
     DWORD StartArg = 0;
+    BOOLEAN ListAllBuilds = FALSE;
 
     ZeroMemory(&VersionResult, sizeof(VersionResult));
     YoriLibInitEmptyString(&YsFormatString);
+    SearchString = NULL;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -423,8 +488,17 @@ ENTRYPOINT(
                 OsVerHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2021"));
+                YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                ListAllBuilds = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                if (i + 1 < ArgC) {
+                    SearchString = &ArgV[i + 1];
+                    i++;
+                    ArgumentUnderstood = TRUE;
+                }
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -435,6 +509,20 @@ ENTRYPOINT(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (ListAllBuilds) {
+        if (!OsVerDisplayMatchingBuilds(NULL)) {
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
+    } else if (SearchString != NULL) {
+        if (!OsVerDisplayMatchingBuilds(SearchString)) {
+            return EXIT_FAILURE;
+        }
+
+        return EXIT_SUCCESS;
     }
 
     if (StartArg == 0) {
