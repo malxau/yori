@@ -34,11 +34,6 @@ YORI_CMD_BUILTIN YoriCmd_ALIAS;
 /**
  Declaration for the builtin command.
  */
-YORI_CMD_BUILTIN YoriCmd_BUILTIN;
-
-/**
- Declaration for the builtin command.
- */
 YORI_CMD_BUILTIN YoriCmd_CHDIR;
 
 /**
@@ -162,7 +157,6 @@ YORI_CMD_BUILTIN YoriCmd_Z;
 CONST YORI_SH_BUILTIN_NAME_MAPPING
 YoriShBuiltins[] = {
                     {_T("ALIAS"),     YoriCmd_ALIAS},
-                    {_T("BUILTIN"),   YoriCmd_BUILTIN},
                     {_T("CHDIR"),     YoriCmd_CHDIR},
                     {_T("COLOR"),     YoriCmd_COLOR},
                     {_T("DIRENV"),    YoriCmd_DIRENV},

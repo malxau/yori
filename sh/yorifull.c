@@ -44,11 +44,6 @@ YORI_CMD_BUILTIN YoriCmd_YATTRIB;
 /**
  Declaration for the builtin command.
  */
-YORI_CMD_BUILTIN YoriCmd_BUILTIN;
-
-/**
- Declaration for the builtin command.
- */
 YORI_CMD_BUILTIN YoriCmd_CAB;
 
 /**
@@ -542,7 +537,6 @@ YORI_CMD_BUILTIN YoriCmd_Z;
 CONST YORI_SH_BUILTIN_NAME_MAPPING
 YoriShBuiltins[] = {
                     {_T("ALIAS"),     YoriCmd_ALIAS},
-                    {_T("BUILTIN"),   YoriCmd_BUILTIN},
                     {_T("CAB"),       YoriCmd_CAB},
                     {_T("CAL"),       YoriCmd_YCAL},
                     {_T("CHDIR"),     YoriCmd_CHDIR},
@@ -550,6 +544,7 @@ YoriShBuiltins[] = {
                     {_T("CSHOT"),     YoriCmd_CSHOT},
                     {_T("CVTVT"),     YoriCmd_CVTVT},
                     {_T("DIRENV"),    YoriCmd_DIRENV},
+                    {_T("ECHO"),      YoriCmd_YECHO},
                     {_T("ENVDIFF"),   YoriCmd_ENVDIFF},
                     {_T("EXIT"),      YoriCmd_EXIT},
                     {_T("FALSE"),     YoriCmd_FALSE},
@@ -613,7 +608,6 @@ YoriShBuiltins[] = {
                     {_T("YDIR"),      YoriCmd_YDIR},
                     {_T("YDIRCASE"),  YoriCmd_YDIRCASE},
                     {_T("YDU"),       YoriCmd_YDU},
-                    {_T("YECHO"),     YoriCmd_YECHO},
                     {_T("YEDIT"),     YoriCmd_YEDIT},
                     {_T("YENV"),      YoriCmd_YENV},
                     {_T("YERASE"),    YoriCmd_YERASE},
@@ -671,7 +665,6 @@ YoriShDefaultAliasEntries[] = {
     {_T("dircase"),  _T("ydircase $*$")},
     {_T("dos2unix"), _T("iconv -u $*$")},
     {_T("du"),       _T("ydu $*$")},
-    {_T("echo"),     _T("yecho $*$")},
     {_T("edit"),     _T("yedit $*$")},
     {_T("env"),      _T("yenv $*$")},
     {_T("erase"),    _T("yerase $*$")},

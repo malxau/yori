@@ -1244,6 +1244,17 @@ YoriShExecExecPlan(
 
         if (YoriLibIsPathUrl(&ExecContext->CmdToExec.ArgV[0])) {
             YoriShGlobal.ErrorLevel = YoriShExecuteSingleProgram(ExecContext);
+        } else if (ExecContext->CmdToExec.ArgC >= 2 &&
+                   YoriLibCompareStringWithLiteralInsensitive(&ExecContext->CmdToExec.ArgV[0], _T("BUILTIN")) == 0) {
+
+            PYORI_STRING ArgV;
+            ArgV = ExecContext->CmdToExec.ArgV;
+            ExecContext->CmdToExec.ArgV = &ExecContext->CmdToExec.ArgV[1];
+            ExecContext->CmdToExec.ArgContexts = &ExecContext->CmdToExec.ArgContexts[1];
+            ExecContext->CmdToExec.ArgC--;
+            YoriLibFreeStringContents(ArgV);
+
+            YoriShGlobal.ErrorLevel = YoriShBuiltIn(ExecContext);
         } else {
             if (!YoriShResolveCommandToExecutable(&ExecContext->CmdToExec, &ExecutableFound)) {
                 break;

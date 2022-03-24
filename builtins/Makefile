@@ -3,7 +3,6 @@
 .SUFFIXES: .com .obj .lib
 
 MODULES =  alias.com     \
-           builtin.com   \
            chdir.com     \
            color.com     \
            direnv.com    \
@@ -24,7 +23,6 @@ MODULES =  alias.com     \
            z.com         \
 
 BUILTINS = alias.obj     \
-           builtin.obj   \
            chdir.obj     \
            color.obj     \
            direnv.obj    \
