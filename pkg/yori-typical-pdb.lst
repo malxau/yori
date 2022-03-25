@@ -5,6 +5,7 @@
 ..\clip\yclip.pdb|yclip.pdb
 ..\co\yco.pdb|yco.pdb
 ..\compact\ycompact.pdb|ycompact.pdb
+..\contool\contool.pdb|contool.pdb
 ..\cpuinfo\ycpuinfo.pdb|ycpuinfo.pdb
 ..\cshot\cshot.pdb|cshot.pdb
 ..\cvtvt\cvtvt.pdb|cvtvt.pdb

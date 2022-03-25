@@ -5,6 +5,7 @@
 ..\clip\yclip.exe|yclip.exe
 ..\co\yco.exe|yco.exe
 ..\compact\ycompact.exe|ycompact.exe
+..\contool\contool.exe|contool.exe
 ..\cpuinfo\ycpuinfo.exe|ycpuinfo.exe
 ..\cshot\cshot.exe|cshot.exe
 ..\cvtvt\cvtvt.exe|cvtvt.exe

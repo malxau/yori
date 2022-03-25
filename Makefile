@@ -77,6 +77,7 @@ DIRS=crt       \
      cls       \
      co        \
      compact   \
+     contool   \
      copy      \
      cpuinfo   \
      cshot     \

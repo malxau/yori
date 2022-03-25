@@ -89,6 +89,11 @@ YORI_CMD_BUILTIN YoriCmd_YCOMPACT;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_CONTOOL;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YCOPY;
 
 /**
@@ -541,6 +546,7 @@ YoriShBuiltins[] = {
                     {_T("CAL"),       YoriCmd_YCAL},
                     {_T("CHDIR"),     YoriCmd_CHDIR},
                     {_T("COLOR"),     YoriCmd_COLOR},
+                    {_T("CONTOOL"),   YoriCmd_CONTOOL},
                     {_T("CSHOT"),     YoriCmd_CSHOT},
                     {_T("CVTVT"),     YoriCmd_CVTVT},
                     {_T("DIRENV"),    YoriCmd_DIRENV},

@@ -7,6 +7,7 @@
 ..\cls\builtins.lib
 ..\co\builtins.lib
 ..\compact\builtins.lib
+..\contool\builtins.lib
 ..\copy\builtins.lib
 ..\cpuinfo\builtins.lib
 ..\cshot\builtins.lib
