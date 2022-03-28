@@ -38,7 +38,14 @@ CHAR strConToolHelpText[] =
         "CONTOOL [-license] [-f <fmt>]\n"
         "\n"
         "Format specifiers are:\n"
-        ;
+        "   $buffer_x$           The width of the scrollback buffer in cells\n"
+        "   $buffer_y$           The height of the scrollback buffer in cells\n"
+        "   $font$               The console font name\n"
+        "   $font_weight$        Font weight (400 = normal, 700 = bold)\n"
+        "   $font_x$             The width of each cell\n"
+        "   $font_y$             The height of each cell\n"
+        "   $window_x$           The width of the window in cells\n"
+        "   $window_y$           The height of the window in cells\n" ;
 
 /**
  Display usage text to the user.
@@ -75,6 +82,7 @@ typedef struct _CONTOOL_RESULT {
         DWORD All;
         struct {
             BOOLEAN ScreenBufferInfo:1;
+            BOOLEAN FontInfo:1;
         };
     } Have;
 
@@ -83,6 +91,11 @@ typedef struct _CONTOOL_RESULT {
      active color.
      */
     CONSOLE_SCREEN_BUFFER_INFO ScreenBufferInfo;
+
+    /**
+     Properties including font and size.
+     */
+    YORI_CONSOLE_FONT_INFOEX FontInfo;
 
 } CONTOOL_RESULT, *PCONTOOL_RESULT;
 
@@ -122,6 +135,25 @@ ConToolExpandVariables(
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->ScreenBufferInfo.dwSize.Y);
 
+    } else if (ConToolContext->Have.FontInfo &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("font")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%s"), ConToolContext->FontInfo.FaceName);
+
+    } else if (ConToolContext->Have.FontInfo &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("font_weight")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FontInfo.FontWeight);
+
+    } else if (ConToolContext->Have.FontInfo &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("font_x")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FontInfo.dwFontSize.X);
+
+    } else if (ConToolContext->Have.FontInfo &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("font_y")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FontInfo.dwFontSize.Y);
     } else if (ConToolContext->Have.ScreenBufferInfo &&
                YoriLibCompareStringWithLiteral(VariableName, _T("window_x")) == 0) {
 
@@ -145,6 +177,14 @@ ConToolExpandVariables(
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.dwSize.X);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("buffer_y")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.dwSize.Y);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%s"), ConToolContext->FontInfo.FaceName);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font_weight")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.FontWeight);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font_x")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.dwFontSize.X);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font_y")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.dwFontSize.Y);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("window_x")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.srWindow.Right - ConToolContext->ScreenBufferInfo.srWindow.Left + 1);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("window_y")) == 0) {
@@ -238,6 +278,16 @@ ENTRYPOINT(
         ConToolResult.Have.ScreenBufferInfo = TRUE;
     }
 
+    if (DllKernel32.pGetCurrentConsoleFontEx != NULL) {
+        ZeroMemory(&ConToolResult.FontInfo, sizeof(ConToolResult.FontInfo));
+        ConToolResult.FontInfo.cbSize = sizeof(ConToolResult.FontInfo);
+        if (DllKernel32.pGetCurrentConsoleFontEx(hConsole, FALSE, &ConToolResult.FontInfo)) {
+            ConToolResult.Have.FontInfo = TRUE;
+        }
+    }
+
+    CloseHandle(hConsole);
+
     YoriLibInitEmptyString(&DisplayString);
 
     //
@@ -260,6 +310,20 @@ ENTRYPOINT(
                           _T("Buffer height:        $buffer_y$\n")
                           _T("Window width:         $window_x$\n")
                           _T("Window height:        $window_y$\n");
+            YoriLibConstantString(&YsFormatString, FormatString);
+            YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
+            if (DisplayString.StartOfString != NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+            }
+        }
+
+        if (ConToolResult.Have.FontInfo) {
+
+            LPTSTR FormatString = 
+                          _T("Font width:           $font_x$\n")
+                          _T("Font height:          $font_y$\n")
+                          _T("Font name:            $font$\n")
+                          _T("Font weight:          $font_weight$\n");
             YoriLibConstantString(&YsFormatString, FormatString);
             YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
             if (DisplayString.StartOfString != NULL) {
