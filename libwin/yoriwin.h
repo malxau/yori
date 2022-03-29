@@ -871,7 +871,7 @@ YoriWinCreateWindowEx(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PSMALL_RECT WindowRect,
     __in DWORD Style,
-    __in_opt PYORI_STRING Title,
+    __in_opt PCYORI_STRING Title,
     __out PYORI_WIN_WINDOW_HANDLE *OutWindow
     );
 
@@ -884,7 +884,7 @@ YoriWinCreateWindow(
     __in WORD DesiredWidth,
     __in WORD DesiredHeight,
     __in DWORD Style,
-    __in_opt PYORI_STRING Title,
+    __in_opt PCYORI_STRING Title,
     __out PYORI_WIN_WINDOW_HANDLE *OutWindow
     );
 
@@ -965,6 +965,12 @@ YoriWinGetWinMgrInitialCursorLocation(
 
 VOID
 YoriWinCloseWindowManager(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle
+    );
+
+__success(return)
+BOOLEAN
+YoriWinMgrProcessAllEvents(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle
     );
 

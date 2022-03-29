@@ -1,0 +1,10 @@
+Have history, co process window manager resize.  It looks like this is
+basically mandatory if only to set a minimum size.
+
+Support for user controlled move
+
+Support for user controlled resize
+
+Maximize, close buttons
+
+Minimize button, defining icon form

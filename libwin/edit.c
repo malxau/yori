@@ -1901,7 +1901,7 @@ YoriWinEditSetCursorVisible(
     __in BOOLEAN Visible
     )
 {
-    WORD Percent;
+    UCHAR Percent;
     if (Edit->InsertMode) {
         Percent = 20;
     } else {

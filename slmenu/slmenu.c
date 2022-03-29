@@ -401,7 +401,7 @@ SlmenuCreateMultilineMenu(
         return FALSE;
     }
 
-    WindowHeight = (WORD)(DisplayLineCount + 9);
+    WindowHeight = (WORD)(DisplayLineCount + 8);
 
     if (!YoriWinCreateWindow(WinMgr, 30, WindowHeight, 60, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
         YoriWinCloseWindowManager(WinMgr);

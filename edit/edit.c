@@ -2469,7 +2469,15 @@ EditPopulateMenuBar(
 /**
  A callback that is invoked when the window manager is being resized.  This
  typically means the user resized the window.  Since the purpose of edit is
- to fully occupy the window space, this implies the 
+ to fully occupy the window space, this implies the main window needs to be
+ repositioned and/or resized, and the controls within it need to be
+ repositioned and/or resized to full the window.
+
+ @param WindowHandle Handle to the main window.
+
+ @param OldPosition The old dimensions of the window manager.
+
+ @param NewPosition The new dimensions of the window manager.
  */
 VOID
 EditResizeWindowManager(

@@ -97,7 +97,7 @@ YoriDlgFindText(
     PYORI_WIN_CTRL_HANDLE Edit;
     DWORD_PTR Result;
 
-    if (!YoriWinCreateWindow(WinMgrHandle, 50, 14, 70, 14, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
+    if (!YoriWinCreateWindow(WinMgrHandle, 50, 13, 70, 13, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
         return FALSE;
     }
 

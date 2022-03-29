@@ -76,7 +76,7 @@ YoriDlgReplaceCancelButtonClicked(
 /**
  The smallest possible replace dialog box in characters.
  */
-#define YORI_DLG_REPLACE_SMALL_HEIGHT (11)
+#define YORI_DLG_REPLACE_SMALL_HEIGHT (10)
 
 /**
  The medium replace dialog box in characters.
@@ -118,7 +118,6 @@ YoriDlgReplaceGetDialogHeight(
     //   - One line for checkbox
     //   - Three lines for push buttons
     //   - One line for bottom border
-    //   - One line for shadow
     //
 
     WindowHeight = YORI_DLG_REPLACE_SMALL_HEIGHT;

@@ -128,32 +128,32 @@ EditAboutDialog(
     }
 
     //
-    //  Vertically, the window has 9 lines of overhead (title bar, padding
+    //  Vertically, the window has 8 lines of overhead (title bar, padding
     //  above text, padding between texts, padding below text, three lines of
-    //  buttons, border, and shadow.)
+    //  buttons and border.)
     //
 
-    if (CenteredLabelLinesRequired + LeftLabelLinesRequired + 9 > (WORD)WindowSize.Y &&
-        WindowSize.Y > 9) {
+    if (CenteredLabelLinesRequired + LeftLabelLinesRequired + 8 > (WORD)WindowSize.Y &&
+        WindowSize.Y > 8) {
 
         if (CenteredLabelLinesRequired > 0) {
             LeftLabelLinesRequired = 0;
             LeftLabelWidthRequired = 0;
         } else {
-            LeftLabelLinesRequired = WindowSize.Y - 8;
+            LeftLabelLinesRequired = WindowSize.Y - 7;
         }
     }
 
     if (LeftLabelWidthRequired > CenteredLabelWidthRequired) {
-        WindowWidth = (WORD)(LeftLabelWidthRequired + 6);
+        WindowWidth = (WORD)(LeftLabelWidthRequired + 4);
     } else {
-        WindowWidth = (WORD)(CenteredLabelWidthRequired + 6);
+        WindowWidth = (WORD)(CenteredLabelWidthRequired + 4);
     }
 
     if (LeftLabelLinesRequired > 0 && CenteredLabelLinesRequired > 0) {
-        WindowHeight = (WORD)(CenteredLabelLinesRequired + LeftLabelLinesRequired + 9);
-    } else {
         WindowHeight = (WORD)(CenteredLabelLinesRequired + LeftLabelLinesRequired + 8);
+    } else {
+        WindowHeight = (WORD)(CenteredLabelLinesRequired + LeftLabelLinesRequired + 7);
     }
 
     if (!YoriWinCreateWindow(WinMgrHandle, WindowWidth, WindowHeight, WindowWidth, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {

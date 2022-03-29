@@ -691,13 +691,13 @@ YoriDlgDir(
         }
     }
 
-    if ((WORD)WinMgrSize.Y < 14 + OptionCount) {
-        WinMgrSize.Y = (SHORT)(14 + OptionCount);
+    if ((WORD)WinMgrSize.Y < 13 + OptionCount) {
+        WinMgrSize.Y = (SHORT)(13 + OptionCount);
     }
 
     YoriLibInitEmptyString(&State.CurrentDirectory);
     YoriLibInitEmptyString(&State.FileToReturn);
-    if (!YoriWinCreateWindow(WinMgrHandle, 50, (WORD)(14 + OptionCount), WinMgrSize.X, WinMgrSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
+    if (!YoriWinCreateWindow(WinMgrHandle, 50, (WORD)(13 + OptionCount), WinMgrSize.X, WinMgrSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
         return FALSE;
     }
 

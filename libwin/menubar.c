@@ -1383,13 +1383,8 @@ YoriWinMenuBarOpenMenu(
     ChildRect.Left = (SHORT)(ScreenCoord.X + HorizontalOffset);
     ChildRect.Top = (SHORT)(ScreenCoord.Y + 1);
 
-    //
-    //  The extra space added here is for the window shadow.  Ideally this
-    //  could also be queried to avoid the hardcoded value.
-    //
-
-    ChildRect.Right = (SHORT)(ChildRect.Left + ClientSize.X + 2 - 1);
-    ChildRect.Bottom = (SHORT)(ChildRect.Top + ClientSize.Y + 1 - 1);
+    ChildRect.Right = (SHORT)(ChildRect.Left + ClientSize.X - 1);
+    ChildRect.Bottom = (SHORT)(ChildRect.Top + ClientSize.Y - 1);
 
     if (!YoriWinCreateWindowEx(WinMgrHandle, &ChildRect, YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT, NULL, &PopupWindow)) {
         return FALSE;
@@ -1406,8 +1401,15 @@ YoriWinMenuBarOpenMenu(
         return FALSE;
     }
 
+    //
+    //  While the popup is displayed, it should get all mouse events, to
+    //  ensure the user can click outside to deactivate
+    //
+
+    YoriWinMgrLockMouseExclusively(WinMgrHandle, PopupWindow);
     YoriWinSetCustomNotification(PopupWindow, YoriWinEventMouseDownOutsideWindow, YoriWinMenuPopupChildEvent);
     YoriWinProcessInputForWindow(PopupWindow, &ChildResult);
+    YoriWinMgrUnlockMouseExclusively(WinMgrHandle, PopupWindow);
 
     YoriWinDestroyWindow(PopupWindow);
 
@@ -1436,13 +1438,7 @@ YoriWinMenuBarExecuteTopMenu(
     )
 {
     YORI_WIN_MENU_OUTCOME Outcome;
-    PYORI_WIN_CTRL PriorFocusCtrl;
-    PYORI_WIN_WINDOW ParentWindow;
     DWORD DisplayIndex;
-
-    ParentWindow = YoriWinGetTopLevelWindow(&MenuBar->Ctrl);
-    PriorFocusCtrl = YoriWinGetFocus(ParentWindow);
-    YoriWinSetFocus(ParentWindow, NULL);
 
     DisplayIndex = Index;
 
@@ -1476,13 +1472,11 @@ YoriWinMenuBarExecuteTopMenu(
                 if (Outcome.Execute.Callback != NULL) {
                     Outcome.Execute.Callback(&MenuBar->Ctrl);
                 }
-                YoriWinSetFocus(ParentWindow, PriorFocusCtrl);
                 return TRUE;
             }
         }
     }
 
-    YoriWinSetFocus(ParentWindow, PriorFocusCtrl);
     return FALSE;
 }
 

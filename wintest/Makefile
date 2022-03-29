@@ -1,0 +1,17 @@
+
+BINARIES=wintest.exe
+
+!INCLUDE "..\config\common.mk"
+
+!IF $(PDB)==1
+LINKPDB=/Pdb:wintest.pdb
+!ENDIF
+
+BIN_OBJS=\
+	 wintest.obj         \
+
+compile: $(BIN_OBJS)
+
+wintest.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIWIN) $(YORIVER)
+	@echo $@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIWIN) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@

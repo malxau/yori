@@ -245,9 +245,11 @@ YoriWinComboDisplayPullDown(
     YoriWinSetCustomNotification(ComboChildWindow, YoriWinEventMouseDownInClient, YoriWinComboChildEvent);
     YoriWinSetCustomNotification(ComboChildWindow, YoriWinEventMouseDownOutsideWindow, YoriWinComboChildEvent);
     ChildResult = 0;
+    YoriWinMgrLockMouseExclusively(WinMgrHandle, ComboChildWindow);
     if (!YoriWinProcessInputForWindow(ComboChildWindow, &ChildResult)) {
         ChildResult = 0;
     }
+    YoriWinMgrUnlockMouseExclusively(WinMgrHandle, ComboChildWindow);
 
     YoriWinDestroyWindow(ComboChildWindow);
 

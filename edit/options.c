@@ -94,7 +94,7 @@ EditOpts(
 
     YoriLibConstantString(&Caption, _T("Options"));
 
-    if (!YoriWinCreateWindow(WinMgrHandle, 40, 11, 40, 11, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Caption, &Parent)) {
+    if (!YoriWinCreateWindow(WinMgrHandle, 38, 10, 38, 10, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Caption, &Parent)) {
         return FALSE;
     }
 

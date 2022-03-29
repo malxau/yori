@@ -102,28 +102,27 @@ YoriDlgMessageBox(
     }
 
     //
-    //  The window decoration will take six characters (two border, two
-    //  shadow, two padding between label text and window.)  We take a
-    //  few extra characters off just for visual reasons.
+    //  The window decoration will take six characters (two border and two
+    //  two padding between label text and window.)  We take a few extra
+    //  characters off just for visual reasons.
     //
 
-    DisplayLength = WindowSize.X - 10;
+    DisplayLength = WindowSize.X - 8;
     LabelLinesRequired = YoriWinLabelCountLinesRequiredForText(Text, DisplayLength, &LabelWidthRequired);
 
     //
-    //  Vertically, the window has 8 lines of overhead (title bar, padding
-    //  above text, padding below text, three lines of buttons, border, and
-    //  shadow.)
+    //  Vertically, the window has 7 lines of overhead (title bar, padding
+    //  above text, padding below text, three lines of buttons and border.)
     //
 
-    if (LabelLinesRequired + 8 > (WORD)WindowSize.Y &&
-        WindowSize.Y > 8) {
+    if (LabelLinesRequired + 7 > (WORD)WindowSize.Y &&
+        WindowSize.Y > 7) {
 
-        LabelLinesRequired = WindowSize.Y - 8;
+        LabelLinesRequired = WindowSize.Y - 7;
     }
 
-    WindowWidth = (WORD)(LabelWidthRequired + 6);
-    WindowHeight = (WORD)(LabelLinesRequired + 8);
+    WindowWidth = (WORD)(LabelWidthRequired + 4);
+    WindowHeight = (WORD)(LabelLinesRequired + 7);
 
     if (!YoriWinCreateWindow(WinMgrHandle, WindowWidth, WindowHeight, WindowWidth, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
         return FALSE;

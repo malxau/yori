@@ -302,8 +302,8 @@ YoriWinGetControlClientSize(
 BOOLEAN
 YoriWinSetControlCursorState(
     __in PYORI_WIN_CTRL Ctrl,
-    __in BOOL Visible,
-    __in DWORD SizePercentage
+    __in BOOLEAN Visible,
+    __in UCHAR SizePercentage
     )
 {
     if (Ctrl->Parent != NULL) {
@@ -801,6 +801,8 @@ YoriWinTranslateCtrlCoordinatesToScreenCoordinates(
  if the coordinates are in the nonclient area; or can return no coordinates
  and indicate that the coordinates are not within the window.
 
+ @param WinMgrHandle Pointer to the window manager.
+
  @param Ctrl Pointer to a control which is a toplevel window.
 
  @param ScreenCoord Specifies screen buffer coordinates.
@@ -818,6 +820,7 @@ YoriWinTranslateCtrlCoordinatesToScreenCoordinates(
  */
 VOID
 YoriWinTranslateScreenCoordinatesToWindow(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_WIN_CTRL Ctrl,
     __in COORD ScreenCoord,
     __out PBOOLEAN InWindowRange,
@@ -825,23 +828,37 @@ YoriWinTranslateScreenCoordinatesToWindow(
     __out PCOORD CtrlCoord
     )
 {
+    SMALL_RECT WinMgrLocation;
+    COORD WinMgrCoord;
+
+    YoriWinGetWinMgrLocation(WinMgrHandle, &WinMgrLocation);
+
     *InWindowRange = FALSE;
     *InWindowClientRange = FALSE;
 
-    if (YoriWinCoordInSmallRect(&ScreenCoord, &Ctrl->FullRect)) {
+    if (!YoriWinCoordInSmallRect(&ScreenCoord, &WinMgrLocation)) {
+        CtrlCoord->X = 0;
+        CtrlCoord->Y = 0;
+        return;
+    }
+
+    WinMgrCoord.X = (SHORT)(ScreenCoord.X - WinMgrLocation.Left);
+    WinMgrCoord.Y = (SHORT)(ScreenCoord.Y - WinMgrLocation.Top);
+
+    if (YoriWinCoordInSmallRect(&WinMgrCoord, &Ctrl->FullRect)) {
         SMALL_RECT ClientArea;
         ClientArea.Left = (SHORT)(Ctrl->FullRect.Left + Ctrl->ClientRect.Left);
         ClientArea.Top = (SHORT)(Ctrl->FullRect.Top + Ctrl->ClientRect.Top);
         ClientArea.Right = (SHORT)(Ctrl->FullRect.Left + Ctrl->ClientRect.Right);
         ClientArea.Bottom = (SHORT)(Ctrl->FullRect.Top + Ctrl->ClientRect.Bottom);
         *InWindowRange = TRUE;
-        if (YoriWinCoordInSmallRect(&ScreenCoord, &ClientArea)) {
+        if (YoriWinCoordInSmallRect(&WinMgrCoord, &ClientArea)) {
             *InWindowClientRange = TRUE;
-            CtrlCoord->X = (SHORT)(ScreenCoord.X - ClientArea.Left);
-            CtrlCoord->Y = (SHORT)(ScreenCoord.Y - ClientArea.Top);
+            CtrlCoord->X = (SHORT)(WinMgrCoord.X - ClientArea.Left);
+            CtrlCoord->Y = (SHORT)(WinMgrCoord.Y - ClientArea.Top);
         } else {
-            CtrlCoord->X = (SHORT)(ScreenCoord.X - Ctrl->FullRect.Left);
-            CtrlCoord->Y = (SHORT)(ScreenCoord.Y - Ctrl->FullRect.Top);
+            CtrlCoord->X = (SHORT)(WinMgrCoord.X - Ctrl->FullRect.Left);
+            CtrlCoord->Y = (SHORT)(WinMgrCoord.Y - Ctrl->FullRect.Top);
         }
     } else {
         CtrlCoord->X = 0;
