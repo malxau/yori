@@ -16,12 +16,6 @@ v1.x, maybe:
  - Mini-http client to complete the NT 3.1 story and allow NT 3.5x and 4
    RTM to install without redistributables?
  - Ymake support for CFG="multi part"
- - Better support for console settings in scut, inc. palette
- - Live console settings changes?
- - Registry console settings changes?
- - Refactor libwin to have each window maintain a buffer and a winmgr that
-   can compose these to a display. Only winmgr needs to remember original
-   background
  - Support move and resize of windows
  - Minimize/maximize/close
  - Regedit patterned on file open dialog (list boxes)
