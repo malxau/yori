@@ -165,6 +165,7 @@ TestEnumRoot(VOID)
 {
     TEST_ENUM_CONTEXT TestContext;
     DWORDLONG OldFilesFound;
+    YORI_STRING OldCurrentDirectory;
 
     TestContext.Failed = FALSE;
     TestContext.FilesFound = 0;
@@ -225,6 +226,41 @@ TestEnumRoot(VOID)
     }
 
     OldFilesFound = TestContext.FilesFound;
+
+    //
+    //  Look for a single object depending on the current directory
+    //
+
+    if (!YoriLibGetCurrentDirectory(&OldCurrentDirectory)) {
+        return FALSE;
+    }
+
+    if (!SetCurrentDirectory(_T("C:\\"))) {
+        return FALSE;
+    }
+
+    YoriLibConstantString(&TestContext.FileSpec, _T("Windows"));
+    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
+        return FALSE;
+    }
+
+    if (TestContext.FilesFound == OldFilesFound) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile found no files looking for %y\n"), __FILE__, __LINE__, &TestContext.FileSpec);
+        return FALSE;
+    }
+
+    if (TestContext.Failed) {
+        return FALSE;
+    }
+
+    OldFilesFound = TestContext.FilesFound;
+
+    if (!SetCurrentDirectory(OldCurrentDirectory.StartOfString)) {
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&OldCurrentDirectory);
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
     if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {

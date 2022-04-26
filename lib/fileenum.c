@@ -375,7 +375,11 @@ YoriLibForEachFileEnum(
                     ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%s"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec.StartOfString[ForEachContext->CharsToFinalSlash]);
                 }
             } else {
-                ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%y"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec);
+                if (TrailingSlashInParentComponent) {
+                    ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y%y"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec);
+                } else {
+                    ForEachContext->FullPath.LengthInChars = YoriLibSPrintfS(ForEachContext->FullPath.StartOfString, ForEachContext->FullPath.LengthAllocated, _T("%y\\%y"), &ForEachContext->ParentFullPath, &ForEachContext->EffectiveFileSpec);
+                }
             }
             hFind = FindFirstFile(ForEachContext->FullPath.StartOfString, &ForEachContext->FileInfo);
 
