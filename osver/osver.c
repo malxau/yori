@@ -237,7 +237,7 @@ OSVER_ARCHITECTURE OsVerArchitecture[] = {
  */
 BOOLEAN
 OsVerDisplayMatchingBuilds(
-    __in PYORI_STRING MatchString
+    __in_opt PYORI_STRING MatchString
     )
 {
     LONGLONG llTemp;
