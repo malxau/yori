@@ -1133,7 +1133,7 @@ SdirDisplayVersion(
     if (Buffer) {
         YoriLibSPrintfS(Str,
                     sizeof(Str)/sizeof(Str[0]),
-                    _T(" %02i.%02i.%05i.%05i %c%c"),
+                    _T(" %03i.%03i.%05i.%05i %c%c"),
                     (int)(Entry->FileVersion.HighPart >> 16),
                     (int)(Entry->FileVersion.HighPart & 0xffff),
                     (int)(Entry->FileVersion.LowPart >> 16),
@@ -1141,9 +1141,9 @@ SdirDisplayVersion(
                     Entry->FileVersionFlags & VS_FF_DEBUG ? 'D' : '-',
                     Entry->FileVersionFlags & VS_FF_PRERELEASE ? 'P' : '-');
 
-        SdirPasteStr(Buffer, Str, Attributes, 21);
+        SdirPasteStr(Buffer, Str, Attributes, 23);
     }
-    return 21;
+    return 23;
 }
 
 /**
