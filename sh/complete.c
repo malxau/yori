@@ -102,6 +102,67 @@ YoriShRemoveMatchFromTabContext(
 }
 
 /**
+ Compare two Yori strings as file names, which implies case insensitively.
+ This routine is a custom version of YoriLibCompareStringInsensitive which
+ handles seperator characters specifically to ensure they are logically
+ before alphanumeric characters, so a shorter path with a seperator is
+ ordered before a longer path.
+
+ @param Str1 The first (Yori) string to compare.
+
+ @param Str2 The second (NULL terminated) string to compare.
+
+ @return Zero for equality; -1 if the first is less than the second; 1 if
+         the first is greater than the second.
+ */
+int
+YoriLibComplateCompareFilePath(
+    __in PCYORI_STRING Str1,
+    __in PCYORI_STRING Str2
+    )
+{
+    DWORD Index = 0;
+    TCHAR Char1;
+    TCHAR Char2;
+
+    while(TRUE) {
+
+        if (Index == Str1->LengthInChars) {
+            if (Index == Str2->LengthInChars) {
+                return 0;
+            } else {
+                return -1;
+            }
+        } else if (Index == Str2->LengthInChars) {
+            return 1;
+        }
+
+        Char1 = Str1->StartOfString[Index];
+        Char2 = Str2->StartOfString[Index];
+
+        if (YoriLibIsSep(Char1)) {
+            if (!YoriLibIsSep(Char2)) {
+                return -1;
+            }
+        } else if (YoriLibIsSep(Char2)) {
+            return 1;
+        }
+
+        Char1 = YoriLibUpcaseChar(Char1);
+        Char2 = YoriLibUpcaseChar(Char2);
+
+        if (Char1 < Char2) {
+            return -1;
+        } else if (Char1 > Char2) {
+            return 1;
+        }
+
+        Index++;
+    }
+    return 0;
+}
+
+/**
  Populates the list of matches for a command history tab completion.  This
  function searches the history for matching commands in MRU order and
  populates the list with the result.
@@ -900,7 +961,7 @@ YoriShFileTabCompletionCallback(
                 break;
             }
             Existing = CONTAINING_RECORD(ListEntry, YORI_SH_TAB_COMPLETE_MATCH, ListEntry);
-            CompareResult = YoriLibCompareStringInsensitive(&Match->Value, &Existing->Value);
+            CompareResult = YoriLibComplateCompareFilePath(&Match->Value, &Existing->Value);
             if (CompareResult > 0) {
                 YoriShAddMatchToTabContext(FileCompleteContext->TabContext, ListEntry, Match);
                 break;
