@@ -92,6 +92,49 @@ typedef struct _YORILIB_FOREACHFILE_CONTEXT {
 } YORILIB_FOREACHFILE_CONTEXT, *PYORILIB_FOREACHFILE_CONTEXT;
 
 /**
+ If a string contains a directory that ends with a seperator, and it's not
+ referring to a drive root, remove the seperator.
+
+ This can be thought of as a mini version of @ref YoriLibFindEffectiveRoot .
+ Unlike that function, this one has to run on purely relative paths that
+ haven't been converted to their full form, where seperators could go
+ either way, where relative components are still present.  Also, it doesn't
+ need to deal with UNC paths because a share and a root are equivalent;
+ there's no concept of "current directory on UNC share" which is the meaning
+ if a trailing seperator is removed from a drive.
+
+ @param String The string to inspect and potentially trim if a trailing
+        seperator is present.
+ */
+VOID
+YoriLibTruncateTrailingSeperatorIfBenign(
+    __inout PYORI_STRING String
+    )
+{
+    //
+    //  Trim trailing slashes, except if the string is just a slash, or if
+    //  the slash follows a drive letter and colon, in which case it's
+    //  meaningful.
+    //
+
+    if (String->LengthInChars > 1 &&
+        YoriLibIsSep(String->StartOfString[String->LengthInChars - 1])) {
+
+        if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(String)) {
+            if (String->LengthInChars >= sizeof("\\\\?\\c:\\")) {
+                String->LengthInChars--;
+            }
+        } else if (YoriLibIsDriveLetterWithColonAndSlash(String)) {
+            if (String->LengthInChars >= sizeof("c:\\")) {
+                String->LengthInChars--;
+            }
+        } else {
+            String->LengthInChars--;
+        }
+    }
+}
+
+/**
  Call a callback for every file matching a specified file pattern.
 
  @param FileSpec The pattern to match against.
@@ -200,7 +243,12 @@ YoriLibForEachFileEnum(
                     return FALSE;
                 }
 
-                NewFileSpec.LengthInChars = YoriLibSPrintf(NewFileSpec.StartOfString, _T("%y\\*"), &ForEachContext->EffectiveFileSpec);
+                if (ForEachContext->EffectiveFileSpec.LengthInChars > 0 &&
+                    YoriLibIsSep(ForEachContext->EffectiveFileSpec.StartOfString[ForEachContext->EffectiveFileSpec.LengthInChars - 1])) {
+                    NewFileSpec.LengthInChars = YoriLibSPrintf(NewFileSpec.StartOfString, _T("%y*"), &ForEachContext->EffectiveFileSpec);
+                } else {
+                    NewFileSpec.LengthInChars = YoriLibSPrintf(NewFileSpec.StartOfString, _T("%y\\*"), &ForEachContext->EffectiveFileSpec);
+                }
                 memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
             }
         } else if ((MatchFlags & (YORILIB_FILEENUM_RECURSE_AFTER_RETURN | YORILIB_FILEENUM_RECURSE_BEFORE_RETURN)) != 0 ||
@@ -214,6 +262,9 @@ YoriLibForEachFileEnum(
                     YoriLibFree(ForEachContext);
                     return FALSE;
                 }
+
+                YoriLibTruncateTrailingSeperatorIfBenign(&NewFileSpec);
+                NewFileSpec.StartOfString[NewFileSpec.LengthInChars] = '\0';
 
                 memcpy(&ForEachContext->EffectiveFileSpec, &NewFileSpec, sizeof(YORI_STRING));
             }
@@ -266,29 +317,7 @@ YoriLibForEachFileEnum(
         DirectoryPart.StartOfString = ForEachContext->EffectiveFileSpec.StartOfString;
         DirectoryPart.LengthInChars = ForEachContext->CharsToFinalSlash;
 
-        //
-        //  Trim trailing slashes, except if the string is just a slash, or if
-        //  the slash follows a drive letter and colon, in which case it's
-        //  meaningful.
-        //
-        //  MSFIX This really wants to apply all the EffectiveRoot logic.
-        //
-
-        if (DirectoryPart.LengthInChars > 1 &&
-            YoriLibIsSep(DirectoryPart.StartOfString[DirectoryPart.LengthInChars - 1])) {
-
-            if (YoriLibIsPrefixedDriveLetterWithColonAndSlash(&DirectoryPart)) {
-                if (DirectoryPart.LengthInChars >= sizeof("\\\\?\\c:\\")) {
-                    DirectoryPart.LengthInChars--;
-                }
-            } else if (YoriLibIsDriveLetterWithColonAndSlash(&DirectoryPart)) {
-                if (DirectoryPart.LengthInChars >= sizeof("c:\\")) {
-                    DirectoryPart.LengthInChars--;
-                }
-            } else {
-                DirectoryPart.LengthInChars--;
-            }
-        }
+        YoriLibTruncateTrailingSeperatorIfBenign(&DirectoryPart);
 
         if (!YoriLibGetFullPathNameReturnAllocation(&DirectoryPart, TRUE, &ForEachContext->ParentFullPath, NULL)) {
             YoriLibFreeStringContents(&ForEachContext->EffectiveFileSpec);
