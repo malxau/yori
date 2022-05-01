@@ -1734,7 +1734,7 @@ YoriShResolveTabCompletionActionForExecutable(
     //  isn't one, perform a default action.
     //
 
-    if (!YoriLibPathLocateUnknownExtensionUnknownLocation(&FilePartOnly, &YoriCompletePathVariable, NULL, NULL, &FoundCompletionScript)) {
+    if (!YoriLibPathLocateUnknownExtensionUnknownLocation(&FilePartOnly, &YoriCompletePathVariable, FALSE, NULL, NULL, &FoundCompletionScript)) {
         YoriLibFreeStringContents(&FoundCompletionScript);
         YoriLibFreeStringContents(&YoriCompletePathVariable);
 

@@ -740,6 +740,12 @@ YoriLibLocateFileExtensionsInOnePath(
 
  @param PathVariable The contents of the environment variable to search through.
 
+ @param SearchCurrentDirectory If TRUE, look in the current directory before
+        searching through PathVariable.  This is typical behavior when
+        searching %PATH%.  For other scenarios, including tab completion,
+        executables in the current directory should not be interpreted as
+        completion scripts.
+
  @param MatchAllCallback Optional callback to be invoked on every single match.
         If not specified, this function returns the first match.
 
@@ -759,6 +765,7 @@ BOOL
 YoriLibPathLocateUnknownExtensionUnknownLocation(
     __in PYORI_STRING SearchFor,
     __in PYORI_STRING PathVariable,
+    __in BOOLEAN SearchCurrentDirectory,
     __in_opt PYORI_LIB_PATH_MATCH_FN MatchAllCallback,
     __in_opt PVOID MatchAllContext,
     __inout PYORI_STRING FoundPath
@@ -787,22 +794,25 @@ YoriLibPathLocateUnknownExtensionUnknownLocation(
     //
 
     YoriLibInitEmptyString(&ScratchArea);
-    YoriLibConstantString(&SearchPath, _T("."));
     FoundPath->StartOfString[0] = '\0';
     FoundPath->LengthInChars = 0;
 
-    if (!YoriLibLocateFileExtensionsInOnePath(SearchFor,
-                                              &SearchPath,
-                                              &ScratchArea,
-                                              PathExtComponents,
-                                              PathExtCount,
-                                              MatchAllCallback,
-                                              MatchAllContext,
-                                              FoundPath,
-                                              FALSE)) {
-        YoriLibFreeStringContents(&ScratchArea);
-        YoriLibPathFreePathExtComponents(PathExtComponents, PathExtCount);
-        return FALSE;
+    if (SearchCurrentDirectory) {
+        YoriLibConstantString(&SearchPath, _T("."));
+
+        if (!YoriLibLocateFileExtensionsInOnePath(SearchFor,
+                                                  &SearchPath,
+                                                  &ScratchArea,
+                                                  PathExtComponents,
+                                                  PathExtCount,
+                                                  MatchAllCallback,
+                                                  MatchAllContext,
+                                                  FoundPath,
+                                                  FALSE)) {
+            YoriLibFreeStringContents(&ScratchArea);
+            YoriLibPathFreePathExtComponents(PathExtComponents, PathExtCount);
+            return FALSE;
+        }
     }
 
     //
@@ -1171,7 +1181,7 @@ YoriLibLocateExecutableInPath(
     PathData.LengthInChars = GetEnvironmentVariable(_T("PATH"), PathData.StartOfString, PathData.LengthAllocated);
 
     if (SearchPath && SearchPathExt) {
-        if (!YoriLibPathLocateUnknownExtensionUnknownLocation(SearchFor, &PathData, MatchAllCallback, MatchAllContext, &FoundPath)) {
+        if (!YoriLibPathLocateUnknownExtensionUnknownLocation(SearchFor, &PathData, TRUE, MatchAllCallback, MatchAllContext, &FoundPath)) {
             YoriLibFreeStringContents(&FoundPath);
             YoriLibFreeStringContents(&PathData);
             return FALSE;
@@ -1185,7 +1195,7 @@ YoriLibLocateExecutableInPath(
         }
 
         if (MatchAllCallback != NULL || FoundPath.StartOfString[0] == '\0') {
-            if (!YoriLibPathLocateUnknownExtensionUnknownLocation(SearchFor, &PathData, MatchAllCallback, MatchAllContext, &FoundPath)) {
+            if (!YoriLibPathLocateUnknownExtensionUnknownLocation(SearchFor, &PathData, TRUE, MatchAllCallback, MatchAllContext, &FoundPath)) {
                 YoriLibFreeStringContents(&FoundPath);
                 YoriLibFreeStringContents(&PathData);
                 return FALSE;
