@@ -256,6 +256,17 @@ ENTRYPOINT(
         goto Cleanup;
     }
 
+    //
+    //  Truncate trailing slashes if present so they can be added back
+    //  unconditionally
+    //
+
+    if (MakeContext.TempPath.LengthInChars > 0 &&
+        YoriLibIsSep(MakeContext.TempPath.StartOfString[MakeContext.TempPath.LengthInChars - 1])) {
+
+        MakeContext.TempPath.LengthInChars--;
+    }
+
     MakeContext.Scopes = YoriLibAllocateHashTable(1000);
     if (MakeContext.Scopes == NULL) {
         Result = EXIT_FAILURE;
