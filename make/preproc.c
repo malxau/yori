@@ -282,7 +282,6 @@ MakeDetermineLineType(
             if (Line->StartOfString[Index] == '=') {
                 return MakeLineTypeSetVariable;
             } else if (Line->StartOfString[Index] == ':') {
-                ASSERT(ScopeContext->ParserState == MakeParserDefault);
                 return MakeLineTypeRule;
             }
         }
