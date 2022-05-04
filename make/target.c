@@ -132,7 +132,10 @@ MakeDeleteAllTargets(
     while (ListEntry != NULL) {
         Target = CONTAINING_RECORD(ListEntry, MAKE_TARGET, ListEntry);
 #if MAKE_DEBUG_TARGETS
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Deleting target: %y (probed %i exists %i timestamp %llx)\n"), &Target->HashEntry.Key, Target->FileProbed, Target->FileExists, Target->ModifiedTime.QuadPart);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                      _T("Deleting target: %y (probed %i exists %i timestamp %llx)\n"),
+                      &Target->HashEntry.Key, Target->FileProbed,
+                      Target->FileExists, Target->ModifiedTime.QuadPart);
 #endif
 
         ListEntry = YoriLibGetNextListEntry(&Target->ParentDependents, NULL);
@@ -173,9 +176,15 @@ MakeProbeTargetFile(
         return;
     }
 
+    ASSERT(!Target->FileExists);
+
     //
     //  Check if the object already exists, and if so, when it was last
-    //  modified.
+    //  modified.  Normally this would only need FILE_READ_ATTRIBUTES,
+    //  but some redirectors need FILE_LIST_DIRECTORY aka FILE_READ_DATA
+    //  ot they'll fail operations like GetFileInformationByHandle.
+    //  For ymake, being able to open files for read seems like it should
+    //  always be possible.
     //
     //  MSFIX In the longer run, one thing to consider would be using the
     //  USN value rather than timestamps.  These will be updated for any
@@ -185,10 +194,18 @@ MakeProbeTargetFile(
     //
 
     ASSERT(YoriLibIsStringNullTerminated(&Target->HashEntry.Key));
-    FileHandle = CreateFile(Target->HashEntry.Key.StartOfString, FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    FileHandle = CreateFile(Target->HashEntry.Key.StartOfString,
+                            FILE_READ_ATTRIBUTES | FILE_READ_DATA,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_FLAG_BACKUP_SEMANTICS,
+                            NULL);
     if (FileHandle != INVALID_HANDLE_VALUE) {
+
         if (GetFileInformationByHandle(FileHandle, &FileInfo)) {
             Target->FileExists = TRUE;
+
             if (FileInfo.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                 Target->ModifiedTime.LowPart = 0;
                 Target->ModifiedTime.HighPart = 0;
