@@ -231,7 +231,21 @@ SetupGuiDialogProc(
             hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1));
             SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
             SendMessage(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-            GetWindowRect(GetDesktopWindow(), &rcDesktop);
+
+            //
+            //  Get the primary monitor's display size.  This is reduced by
+            //  the size of the taskbar on systems which have one.  If not,
+            //  use the entire desktop.
+            //
+
+            if (!SystemParametersInfo(SPI_GETWORKAREA, 0, &rcDesktop, 0)) {
+                GetWindowRect(GetDesktopWindow(), &rcDesktop);
+            }
+
+            //
+            //  Center the dialog on the display
+            //
+
             GetWindowRect(hDlg, &rcDlg);
 
             rcNew.left = ((rcDesktop.right - rcDesktop.left) - (rcDlg.right - rcDlg.left)) / 2;

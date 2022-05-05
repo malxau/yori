@@ -2009,6 +2009,14 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
 #define EWX_POWEROFF 0x00000008
 #endif
 
+#ifndef SPI_GETWORKAREA
+/**
+ Value to SystemParametersInfo to query the size of the primary screen,
+ reduced by any task bar area.
+ */
+#define SPI_GETWORKAREA (48)
+#endif
+
 #ifndef FSCTL_SET_REPARSE_POINT
 
 /**
