@@ -207,6 +207,13 @@ YoriPkgWriteTerminalProfile(
 
 __success(return)
 BOOL
+YoriPkgCreateAppShortcut(
+    __in PCYORI_STRING ShortcutPath,
+    __in_opt PYORI_STRING YoriExeFullPath
+    );
+
+__success(return)
+BOOL
 YoriPkgCreateDesktopShortcut(
     __in_opt PYORI_STRING YoriExeFullPath
     );

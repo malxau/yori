@@ -84,6 +84,29 @@ CONST CHAR YoriPkgTerminalProfilePart3[] =
 "}\n";
 
 /**
+ A color table to use when creating shortcuts.  This table is the CGA table,
+ the same one used for Windows Terminal above.
+ */
+CONST COLORREF YoriPkgCgaColorTable[] = {
+    RGB(0x00, 0x00, 0x00),
+    RGB(0x00, 0x00, 0xAA),
+    RGB(0x00, 0xAA, 0x00),
+    RGB(0x00, 0xAA, 0xAA),
+    RGB(0xAA, 0x00, 0x00),
+    RGB(0xAA, 0x00, 0xAA),
+    RGB(0xAA, 0x55, 0x00),
+    RGB(0xAA, 0xAA, 0xAA),
+    RGB(0x55, 0x55, 0x55),
+    RGB(0x55, 0x55, 0xFF),
+    RGB(0x55, 0xFF, 0x55),
+    RGB(0x55, 0xFF, 0xFF),
+    RGB(0xFF, 0x55, 0x55),
+    RGB(0xFF, 0x55, 0xFF),
+    RGB(0xFF, 0xFF, 0x55),
+    RGB(0xFF, 0xFF, 0xFF)
+};
+
+/**
  On successful completion, returns the path to the current user's Windows
  Terminal fragment file.
 
@@ -339,6 +362,7 @@ YoriPkgCreateAppShortcut(
     YORI_STRING LocalExePath;
     YORI_STRING FullShortcutPath;
     YORI_STRING Description;
+    PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps;
 
     if (YoriExeFullPath == NULL) {
         if (!YoriPkgGetYoriExecutablePath(&LocalExePath)) {
@@ -353,14 +377,26 @@ YoriPkgCreateAppShortcut(
         return FALSE;
     }
 
+    ConsoleProps = YoriLibAllocateDefaultConsoleProperties();
+    if (ConsoleProps == NULL) {
+        YoriLibFreeStringContents(&FullShortcutPath);
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
+    memcpy(ConsoleProps->ColorTable, YoriPkgCgaColorTable, sizeof(YoriPkgCgaColorTable));
+    ConsoleProps->WindowColor = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+
     YoriLibConstantString(&Description, _T("Yori"));
 
-    if (!YoriLibCreateShortcut(&FullShortcutPath, &LocalExePath, NULL, &Description, NULL, &LocalExePath, 0, 1, (WORD)-1, TRUE, TRUE)) {
+    if (!YoriLibCreateShortcut(&FullShortcutPath, &LocalExePath, NULL, &Description, NULL, &LocalExePath, ConsoleProps, 0, 1, (WORD)-1, TRUE, TRUE)) {
+        YoriLibDereference(ConsoleProps);
         YoriLibFreeStringContents(&LocalExePath);
         YoriLibFreeStringContents(&FullShortcutPath);
         return FALSE;
     }
 
+    YoriLibDereference(ConsoleProps);
     YoriLibFreeStringContents(&LocalExePath);
     YoriLibFreeStringContents(&FullShortcutPath);
 

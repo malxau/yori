@@ -598,7 +598,7 @@ SetupInstallSelectedWithOptions(
                 goto Exit;
             }
             ShortcutCount++;
-            if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, &YoriExeFullPath, 0, 1, (WORD)-1, TRUE, TRUE)) {
+            if (!YoriPkgCreateAppShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath)) {
                 YoriLibFreeStringContents(&YoriExeFullPath);
                 YoriLibConstantString(ErrorText, _T("Failed to create desktop shortcut."));
                 goto Exit;
@@ -618,7 +618,7 @@ SetupInstallSelectedWithOptions(
                     goto Exit;
                 }
                 ShortcutCount++;
-                if (!YoriLibCreateShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath, NULL, &Description, NULL, &YoriExeFullPath, 0, 1, (WORD)-1, TRUE, TRUE)) {
+                if (!YoriPkgCreateAppShortcut(&ShortcutNameFullPath[ShortcutCount - 1], &YoriExeFullPath)) {
                     YoriLibFreeStringContents(&YoriExeFullPath);
                     YoriLibConstantString(ErrorText, _T("Failed to create start menu shortcut."));
                     goto Exit;

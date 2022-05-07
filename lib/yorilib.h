@@ -3255,6 +3255,7 @@ YoriLibCreateShortcut(
     __in_opt PYORI_STRING Description,
     __in_opt PYORI_STRING WorkingDir,
     __in_opt PYORI_STRING IconPath,
+    __in_opt PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps,
     __in DWORD IconIndex,
     __in DWORD ShowState,
     __in WORD Hotkey,
@@ -3267,6 +3268,9 @@ BOOL
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName
     );
+
+PISHELLLINKDATALIST_CONSOLE_PROPS
+YoriLibAllocateDefaultConsoleProperties(VOID);
 
 // *** SELECT.C ***
 

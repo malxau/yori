@@ -68,6 +68,10 @@ const GUID IID_IShellLinkDataList = { 0x45e2b4ae, 0xb1c3, 0x11d0, { 0xb9, 0x2f, 
  @param IconPath If specified, the path to the binary containing the icon for
         the shortcut.
 
+ @param ConsoleProps If specified, the block of console attributes to attach
+        to the shortcut.  Note this is only available on NT 4 with the shell
+        update installed or above.
+
  @param IconIndex The index of the icon within any executable or DLL used as
         the source of the icon.  This is ignored unless IconPath is specified.
 
@@ -96,6 +100,7 @@ YoriLibCreateShortcut(
     __in_opt PYORI_STRING Description,
     __in_opt PYORI_STRING WorkingDir,
     __in_opt PYORI_STRING IconPath,
+    __in_opt PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps,
     __in DWORD IconIndex,
     __in DWORD ShowState,
     __in WORD Hotkey,
@@ -103,8 +108,9 @@ YoriLibCreateShortcut(
     __in BOOL CreateNewIfNeeded
     )
 {
-    IShellLinkW *scut = NULL;
-    IPersistFile *savedfile = NULL;
+    IShellLinkW *Scut = NULL;
+    IPersistFile *ScutFile = NULL;
+    IShellLinkDataList *ShortcutDataList = NULL;
     BOOL Result = FALSE;
     HRESULT hRes;
 
@@ -125,66 +131,80 @@ YoriLibCreateShortcut(
         return FALSE;
     }
 
-    hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&scut);
+    hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&Scut);
     if (!SUCCEEDED(hRes)) {
         return FALSE;
     }
 
-    hRes = scut->Vtbl->QueryInterface(scut, &IID_IPersistFile, (void **)&savedfile);
+    hRes = Scut->Vtbl->QueryInterface(Scut, &IID_IPersistFile, (void **)&ScutFile);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
 
+    //
+    //  This doesn't exist on original NT4.  Don't explode if it's
+    //  missing.
+    //
+
+    Scut->Vtbl->QueryInterface(Scut, &IID_IShellLinkDataList, (void **)&ShortcutDataList);
+
     if (MergeWithExisting) {
-        hRes = savedfile->Vtbl->Load(savedfile, ShortcutFileName->StartOfString, TRUE);
+        hRes = ScutFile->Vtbl->Load(ScutFile, ShortcutFileName->StartOfString, TRUE);
         if (!CreateNewIfNeeded && !SUCCEEDED(hRes)) {
             goto Exit;
         }
     }
 
     if (Target != NULL) {
-        if (scut->Vtbl->SetPath(scut, Target->StartOfString) != NOERROR) {
+        if (Scut->Vtbl->SetPath(Scut, Target->StartOfString) != NOERROR) {
             goto Exit;
         }
     }
 
     if (Arguments != NULL) {
-        if (scut->Vtbl->SetArguments(scut, Arguments->StartOfString) != NOERROR) {
+        if (Scut->Vtbl->SetArguments(Scut, Arguments->StartOfString) != NOERROR) {
             goto Exit;
         }
     }
 
     if (Description != NULL) {
-        if (scut->Vtbl->SetDescription(scut, Description->StartOfString) != NOERROR) {
+        if (Scut->Vtbl->SetDescription(Scut, Description->StartOfString) != NOERROR) {
             goto Exit;
         }
     }
 
     if (Hotkey != (WORD)-1) {
-        if (scut->Vtbl->SetHotkey(scut, Hotkey) != NOERROR) {
+        if (Scut->Vtbl->SetHotkey(Scut, Hotkey) != NOERROR) {
             goto Exit;
         }
     }
 
     if (IconPath != NULL) {
-        if (scut->Vtbl->SetIconLocation(scut, IconPath->StartOfString, IconIndex) != NOERROR) {
+        if (Scut->Vtbl->SetIconLocation(Scut, IconPath->StartOfString, IconIndex) != NOERROR) {
             goto Exit;
         }
     }
 
     if (ShowState != (WORD)-1) {
-        if (scut->Vtbl->SetShowCmd(scut, ShowState) != NOERROR) {
+        if (Scut->Vtbl->SetShowCmd(Scut, ShowState) != NOERROR) {
             goto Exit;
         }
     }
 
     if (WorkingDir != NULL) {
-        if (scut->Vtbl->SetWorkingDirectory(scut, WorkingDir->StartOfString) != NOERROR) {
+        if (Scut->Vtbl->SetWorkingDirectory(Scut, WorkingDir->StartOfString) != NOERROR) {
             goto Exit;
         }
     }
 
-    hRes = savedfile->Vtbl->Save(savedfile, ShortcutFileName->StartOfString, TRUE);
+    if (ConsoleProps != NULL && ShortcutDataList != NULL) {
+        ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
+        if (ShortcutDataList->Vtbl->AddDataBlock(ShortcutDataList, ConsoleProps) != NOERROR) {
+            goto Exit;
+        }
+    }
+
+    hRes = ScutFile->Vtbl->Save(ScutFile, ShortcutFileName->StartOfString, TRUE);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
@@ -193,12 +213,16 @@ YoriLibCreateShortcut(
 
 Exit:
 
-    if (scut != NULL) {
-        scut->Vtbl->Release(scut);
+    if (ShortcutDataList != NULL) {
+        ShortcutDataList->Vtbl->Release(ShortcutDataList);
     }
 
-    if (savedfile != NULL) {
-        savedfile->Vtbl->Release(savedfile);
+    if (Scut != NULL) {
+        Scut->Vtbl->Release(Scut);
+    }
+
+    if (ScutFile != NULL) {
+        ScutFile->Vtbl->Release(ScutFile);
     }
 
     return Result;
@@ -225,8 +249,8 @@ YoriLibExecuteShortcut(
     YORI_STRING ExpandedWorkingDirectory;
     INT nShow;
     HINSTANCE hApp;
-    IShellLinkW *scut = NULL;
-    IPersistFile *savedfile = NULL;
+    IShellLinkW *Scut = NULL;
+    IPersistFile *ScutFile = NULL;
     BOOL Result = FALSE;
     HRESULT hRes;
     DWORD SizeNeeded;
@@ -250,7 +274,7 @@ YoriLibExecuteShortcut(
         return FALSE;
     }
 
-    hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&scut);
+    hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&Scut);
     if (!SUCCEEDED(hRes)) {
         return FALSE;
     }
@@ -262,12 +286,12 @@ YoriLibExecuteShortcut(
     YoriLibInitEmptyString(&ExpandedArguments);
     YoriLibInitEmptyString(&ExpandedWorkingDirectory);
 
-    hRes = scut->Vtbl->QueryInterface(scut, &IID_IPersistFile, (void **)&savedfile);
+    hRes = Scut->Vtbl->QueryInterface(Scut, &IID_IPersistFile, (void **)&ScutFile);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
 
-    hRes = savedfile->Vtbl->Load(savedfile, ShortcutFileName->StartOfString, 0);
+    hRes = ScutFile->Vtbl->Load(ScutFile, ShortcutFileName->StartOfString, 0);
     if (!SUCCEEDED(hRes)) {
         goto Exit;
     }
@@ -291,7 +315,7 @@ YoriLibExecuteShortcut(
         if (!YoriLibAllocateString(&WorkingDirectory, SizeNeeded)) {
             goto Exit;
         }
-        hRes = scut->Vtbl->GetWorkingDirectory(scut,
+        hRes = Scut->Vtbl->GetWorkingDirectory(Scut,
                                                WorkingDirectory.StartOfString,
                                                WorkingDirectory.LengthAllocated);
     }
@@ -307,7 +331,7 @@ YoriLibExecuteShortcut(
         if (!YoriLibAllocateString(&Arguments, SizeNeeded)) {
             goto Exit;
         }
-        hRes = scut->Vtbl->GetArguments(scut,
+        hRes = Scut->Vtbl->GetArguments(Scut,
                                         Arguments.StartOfString,
                                         Arguments.LengthAllocated);
     }
@@ -323,14 +347,14 @@ YoriLibExecuteShortcut(
         if (!YoriLibAllocateString(&FileTarget, SizeNeeded)) {
             goto Exit;
         }
-        hRes = scut->Vtbl->GetPath(scut,
+        hRes = Scut->Vtbl->GetPath(Scut,
                                    FileTarget.StartOfString,
                                    FileTarget.LengthAllocated,
                                    NULL,
                                    0);
     }
 
-    if (scut->Vtbl->GetShowCmd(scut, &nShow) != NOERROR) {
+    if (Scut->Vtbl->GetShowCmd(Scut, &nShow) != NOERROR) {
         goto Exit;
     }
 
@@ -466,17 +490,210 @@ Exit:
     YoriLibFreeStringContents(&ExpandedWorkingDirectory);
     YoriLibFreeStringContents(&ExpandedArguments);
 
-    if (savedfile != NULL) {
-        savedfile->Vtbl->Release(savedfile);
-        savedfile = NULL;
+    if (ScutFile != NULL) {
+        ScutFile->Vtbl->Release(ScutFile);
+        ScutFile = NULL;
     }
 
-    if (scut != NULL) {
-        scut->Vtbl->Release(scut);
-        scut = NULL;
+    if (Scut != NULL) {
+        Scut->Vtbl->Release(Scut);
+        Scut = NULL;
     }
 
     return Result;
+}
+
+/**
+ Generate the default console properties for a shortcut based on the user's
+ defaults.  This is required because if a shortcut contains any console
+ setting, it must have all of them, so if Scut is asked to modify something
+ it needs to approximately guess all of the rest.
+
+ @return Pointer to the console properties, allocated in this routine.  The
+         caller is expected to free these with @ref YoriLibDereference .
+ */
+PISHELLLINKDATALIST_CONSOLE_PROPS
+YoriLibAllocateDefaultConsoleProperties(VOID)
+{
+    PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps;
+    YORI_STRING KeyName;
+    TCHAR ValueNameBuffer[16];
+    TCHAR FontNameBuffer[LF_FACESIZE];
+    YORI_STRING ValueName;
+    DWORD Err;
+    DWORD Index;
+    DWORD Temp;
+    HKEY hKey;
+    DWORD Disp;
+    DWORD ValueType;
+    DWORD ValueSize;
+
+    YoriLibLoadAdvApi32Functions();
+
+    ConsoleProps = YoriLibReferencedMalloc(sizeof(ISHELLLINKDATALIST_CONSOLE_PROPS));
+    if (ConsoleProps == NULL) {
+        return NULL;
+    }
+
+    //
+    //  Start with hardcoded defaults that seem to match system behavior
+    //
+
+    ConsoleProps->dwSize = sizeof(ISHELLLINKDATALIST_CONSOLE_PROPS);
+    ConsoleProps->dwSignature = ISHELLLINKDATALIST_CONSOLE_PROPS_SIG;
+    ConsoleProps->WindowColor = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE;
+    ConsoleProps->PopupColor = BACKGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE | FOREGROUND_RED | FOREGROUND_BLUE;
+    ConsoleProps->ScreenBufferSize.X = 80;
+    ConsoleProps->ScreenBufferSize.Y = 500;
+    ConsoleProps->WindowSize.X = 80;
+    ConsoleProps->WindowSize.Y = 25;
+    ConsoleProps->WindowPosition.X = 0;
+    ConsoleProps->WindowPosition.Y = 0;
+    ConsoleProps->FontNumber = 0;
+    ConsoleProps->InputBufferSize = 0;
+    ConsoleProps->FontSize.X = 8;
+    ConsoleProps->FontSize.Y = 12;
+    ConsoleProps->FontFamily = FF_MODERN;
+    ConsoleProps->FontWeight = FW_NORMAL;
+    _tcscpy(ConsoleProps->FaceName, _T("Terminal"));
+    ConsoleProps->CursorSize = 25;
+    ConsoleProps->FullScreen = FALSE;
+    ConsoleProps->QuickEdit = TRUE;
+    ConsoleProps->InsertMode = TRUE;
+    ConsoleProps->AutoPosition = TRUE;
+    ConsoleProps->HistoryBufferSize = 50;
+    ConsoleProps->NumberOfHistoryBuffers = 4;
+    ConsoleProps->RemoveHistoryDuplicates = FALSE;
+    ConsoleProps->ColorTable[0] =  RGB(0x00, 0x00, 0x00);
+    ConsoleProps->ColorTable[1] =  RGB(0x00, 0x00, 0x80);
+    ConsoleProps->ColorTable[2] =  RGB(0x00, 0x80, 0x00);
+    ConsoleProps->ColorTable[3] =  RGB(0x00, 0x80, 0x80);
+    ConsoleProps->ColorTable[4] =  RGB(0x80, 0x00, 0x00);
+    ConsoleProps->ColorTable[5] =  RGB(0x80, 0x00, 0x80);
+    ConsoleProps->ColorTable[6] =  RGB(0x80, 0x80, 0x00);
+    ConsoleProps->ColorTable[7] =  RGB(0xC0, 0xC0, 0xC0);
+    ConsoleProps->ColorTable[8] =  RGB(0x80, 0x80, 0x80);
+    ConsoleProps->ColorTable[9] =  RGB(0x00, 0x00, 0xFF);
+    ConsoleProps->ColorTable[10] = RGB(0x00, 0xFF, 0x00);
+    ConsoleProps->ColorTable[11] = RGB(0x00, 0xFF, 0xFF);
+    ConsoleProps->ColorTable[12] = RGB(0xFF, 0x00, 0x00);
+    ConsoleProps->ColorTable[13] = RGB(0xFF, 0x00, 0xFF);
+    ConsoleProps->ColorTable[14] = RGB(0xFF, 0xFF, 0x00);
+    ConsoleProps->ColorTable[15] = RGB(0xFF, 0xFF, 0xFF);
+
+    //
+    //  If the registry contains default values, use those instead.  Since
+    //  the registry may not have entries for everything, proceed to the
+    //  next setting no value or an invalid value is found.
+    //
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL ||
+        DllAdvApi32.pRegCreateKeyExW == NULL) {
+
+        return ConsoleProps;
+    }
+
+    YoriLibConstantString(&KeyName, _T("Console"));
+
+    Err = DllAdvApi32.pRegCreateKeyExW(HKEY_CURRENT_USER,
+                                       KeyName.StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       KEY_QUERY_VALUE,
+                                       NULL,
+                                       &hKey,
+                                       &Disp);
+
+    if (Err != ERROR_SUCCESS) {
+        return ConsoleProps;
+    }
+
+    YoriLibInitEmptyString(&ValueName);
+    ValueName.StartOfString = ValueNameBuffer;
+    ValueName.LengthAllocated = sizeof(ValueNameBuffer)/sizeof(ValueNameBuffer[0]);
+
+    for (Index = 0; Index < 16; Index++) {
+        ValueName.LengthInChars = YoriLibSPrintfS(ValueName.StartOfString, ValueName.LengthAllocated, _T("ColorTable%02i"), Index);
+        ValueSize = sizeof(Temp);
+        Err = DllAdvApi32.pRegQueryValueExW(hKey, ValueName.StartOfString, 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+        if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+            ConsoleProps->ColorTable[Index] = Temp;
+        }
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("CursorSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->CursorSize = Temp;
+    }
+
+    ValueSize = sizeof(FontNameBuffer);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FaceName"), 0, &ValueType, (LPBYTE)FontNameBuffer, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_SZ && ValueSize <= sizeof(FontNameBuffer)) {
+        memcpy(ConsoleProps->FaceName, FontNameBuffer, ValueSize);
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FontFamily"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->FontFamily = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FontSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->FontSize.X = LOWORD(Temp);
+        ConsoleProps->FontSize.Y = HIWORD(Temp);
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("FontWeight"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->FontWeight = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("InsertMode"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->InsertMode = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("PopupColors"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->PopupColor = (WORD)Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("QuickEdit"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->QuickEdit = Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("ScreenBufferSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->ScreenBufferSize.X = LOWORD(Temp);
+        ConsoleProps->ScreenBufferSize.Y = HIWORD(Temp);
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("ScreenColors"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->WindowColor = (WORD)Temp;
+    }
+
+    ValueSize = sizeof(Temp);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("WindowSize"), 0, &ValueType, (LPBYTE)&Temp, &ValueSize);
+    if (Err == ERROR_SUCCESS && ValueType == REG_DWORD && ValueSize == sizeof(Temp)) {
+        ConsoleProps->WindowSize.X = LOWORD(Temp);
+        ConsoleProps->WindowSize.Y = HIWORD(Temp);
+    }
+
+    DllAdvApi32.pRegCloseKey(hKey);
+    return ConsoleProps;
 }
 
 // vim:sw=4:ts=4:et:
