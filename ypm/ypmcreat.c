@@ -235,9 +235,19 @@ YpmCreateBinaryPackage(
                 break;
             }
         } else {
-            ArgumentUnderstood = TRUE;
-            StartArg = i;
-            break;
+
+            //
+            //  Historically these commands used un-named arguments at the
+            //  beginning, which is not how StartArg would normally work.
+            //  Here this is special cased to allow these to be anywhere.
+            //  Note the lack of 'break' in the below.
+            //
+
+            if (StartArg == 0 && i + 3 < ArgC) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i;
+                i = i + 3;
+            }
         }
 
         if (!ArgumentUnderstood) {
@@ -330,9 +340,18 @@ YpmCreateSourcePackage(
                 break;
             }
         } else {
-            ArgumentUnderstood = TRUE;
-            StartArg = i;
-            break;
+            //
+            //  Historically these commands used un-named arguments at the
+            //  beginning, which is not how StartArg would normally work.
+            //  Here this is special cased to allow these to be anywhere.
+            //  Note the lack of 'break' in the below.
+            //
+
+            if (StartArg == 0 && i + 2 < ArgC) {
+                ArgumentUnderstood = TRUE;
+                StartArg = i;
+                i = i + 2;
+            }
         }
 
         if (!ArgumentUnderstood) {
