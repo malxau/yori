@@ -910,14 +910,34 @@ YoriLibUpdateFindDataFromFileInformation (
 
     if (hFile != INVALID_HANDLE_VALUE) {
 
-        GetFileInformationByHandle(hFile, &FileInfo);
+        //
+        //  Redirectors appear to be able to fail this call if the file wasn't
+        //  opened with FILE_READ_DATA, which we can't reliably do.  Fall back
+        //  to getting this information very inefficiently, on the expectation
+        //  that this case is rare.
+        //
 
-        FindData->dwFileAttributes = FileInfo.dwFileAttributes;
-        FindData->ftCreationTime = FileInfo.ftCreationTime;
-        FindData->ftLastAccessTime = FileInfo.ftLastAccessTime;
-        FindData->ftLastWriteTime = FileInfo.ftLastWriteTime;
-        FindData->nFileSizeHigh = FileInfo.nFileSizeHigh;
-        FindData->nFileSizeLow  = FileInfo.nFileSizeLow;
+        if (GetFileInformationByHandle(hFile, &FileInfo)) {
+            FindData->dwFileAttributes = FileInfo.dwFileAttributes;
+            FindData->ftCreationTime = FileInfo.ftCreationTime;
+            FindData->ftLastAccessTime = FileInfo.ftLastAccessTime;
+            FindData->ftLastWriteTime = FileInfo.ftLastWriteTime;
+            FindData->nFileSizeHigh = FileInfo.nFileSizeHigh;
+            FindData->nFileSizeLow  = FileInfo.nFileSizeLow;
+        } else {
+            FindData->dwFileAttributes = GetFileAttributes(FullPath);
+            if (FindData->dwFileAttributes == (DWORD)-1) {
+                CloseHandle(hFile);
+                return FALSE;
+            }
+
+            if (!GetFileTime(hFile, &FindData->ftCreationTime, &FindData->ftLastAccessTime, &FindData->ftLastWriteTime)) {
+                CloseHandle(hFile);
+                return FALSE;
+            }
+
+            FindData->nFileSizeLow = GetFileSize(hFile, &FindData->nFileSizeHigh);
+        }
 
         CloseHandle(hFile);
 
