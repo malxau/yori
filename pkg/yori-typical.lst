@@ -53,4 +53,6 @@
 ..\wininfo\wininfo.exe|wininfo.exe
 ..\winpos\winpos.exe|winpos.exe
 ..\ydbg\ydbg.exe|ydbg.exe
+..\schemes\cga.ini|schemes\cga.ini
+..\schemes\nt.ini|schemes\nt.ini
 ..\sh\YoriInit.d\Typical.ys1|YoriInit.d\Typical.ys1
