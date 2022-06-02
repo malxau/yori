@@ -3911,6 +3911,13 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #endif
 
 /**
+ Indicates a file name is UTF8 encoded.  If not, it's ambiguous, but is
+ interpreted as the active code page.  This program UTF8 encodes anything
+ that can't be expressed in 7 bits.
+ */
+#define YORI_CAB_NAME_IS_UTF (0x80)
+
+/**
  A prototype for FDICreate's allocation callback.
  */
 typedef
