@@ -1455,7 +1455,11 @@ FInfoFileFoundCallback(
     YoriLibInitEmptyString(&DisplayString);
     YoriLibExpandCommandVariables(&FInfoContext->FormatString, '$', TRUE, FInfoExpandVariables, FInfoContext, &DisplayString);
     if (DisplayString.StartOfString != NULL) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+        if (FInfoContext->FilesFound > 1) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n%y"), &DisplayString);
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+        }
         YoriLibFreeStringContents(&DisplayString);
     }
 
