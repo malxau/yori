@@ -3,7 +3,7 @@
  *
  * Yori create files or update timestamps
  *
- * Copyright (c) 2018 Malcolm J. Smith
+ * Copyright (c) 2018-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,7 +35,7 @@ CHAR strTouchHelpText[] =
         "\n"
         "Create files or update timestamps.\n"
         "\n"
-        "TOUCH [-license] [-a] [-b] [-c] [-e] [-f size] [-s] [-t <date and time>]\n"
+        "TOUCH [-license] [-a] [-b] [-c] [-e] [-f size] [-h] [-s] [-t <date and time>]\n"
         "      [-w] <file>...\n"
         "\n"
         "   -a             Update last access time\n"
@@ -43,6 +43,7 @@ CHAR strTouchHelpText[] =
         "   -c             Update create time\n"
         "   -e             Only update existing files\n"
         "   -f             Create new file with specified file size\n"
+        "   -h             Operate on links as opposed to link targets\n"
         "   -s             Process files from all subdirectories\n"
         "   -t             Specify the timestamp to set\n"
         "   -w             Update write time\n";
@@ -96,7 +97,12 @@ typedef struct _TOUCH_CONTEXT {
      If TRUE, only existing files should be modified, and no new files should
      be created.
      */
-    BOOL ExistingOnly;
+    BOOLEAN ExistingOnly;
+
+    /**
+     If TRUE, changes should be applied to links as opposed to link targets.
+     */
+    BOOLEAN NoFollowLinks;
 
 } TOUCH_CONTEXT, *PTOUCH_CONTEXT;
 
@@ -126,6 +132,7 @@ TouchFileFoundCallback(
 {
     HANDLE FileHandle;
     DWORD DesiredAccess;
+    DWORD OpenFlags;
     PTOUCH_CONTEXT TouchContext = (PTOUCH_CONTEXT)Context;
 
     UNREFERENCED_PARAMETER(Depth);
@@ -138,12 +145,17 @@ TouchFileFoundCallback(
         DesiredAccess |= GENERIC_WRITE;
     }
 
+    OpenFlags = FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS;
+    if (TouchContext->NoFollowLinks) {
+        OpenFlags = OpenFlags | FILE_FLAG_OPEN_REPARSE_POINT;
+    }
+
     FileHandle = CreateFile(FilePath->StartOfString,
                             DesiredAccess,
                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                             NULL,
                             TouchContext->ExistingOnly?OPEN_EXISTING:OPEN_ALWAYS,
-                            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+                            OpenFlags,
                             NULL);
 
     if (FileHandle == NULL || FileHandle == INVALID_HANDLE_VALUE) {
@@ -247,7 +259,7 @@ ENTRYPOINT(
                 TouchHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018"));
+                YoriLibDisplayMitLicense(_T("2018-2022"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 UpdateLastAccess = TRUE;
@@ -267,6 +279,9 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("h")) == 0) {
+                TouchContext.NoFollowLinks = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 Recursive = TRUE;
                 ArgumentUnderstood = TRUE;
