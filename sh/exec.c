@@ -784,6 +784,23 @@ YoriShWaitForProcessToTerminate(
                 } else {
 
                     //
+                    //  Attempt to promote the process to a job so it's
+                    //  possible to wait on later.  Note this only works
+                    //  because job wait is totally different code so
+                    //  this doesn't need to consider that the process
+                    //  might already be in a job.
+                    //
+
+                    if (!ExecContext->CaptureEnvironmentOnExit &&
+                        ExecContext->hProcess != NULL) {
+
+                        if (YoriShCreateNewJob(ExecContext, ExecContext->hProcess, ExecContext->dwProcessId)) {
+                            ExecContext->dwProcessId = 0;
+                            ExecContext->hProcess = NULL;
+                        }
+                    }
+
+                    //
                     //  If a process is being moved to the background, don't
                     //  suck back any environment later when it completes.
                     //  Note this is a race condition, since that logic
