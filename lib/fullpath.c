@@ -1760,15 +1760,32 @@ YoriLibIsFileNameDeviceName(
 {
     YORI_STRING NameToCheck;
     DWORD Offset;
+    BOOLEAN Prefixed;
 
     YoriLibInitEmptyString(&NameToCheck);
     Offset = 0;
+    Prefixed = FALSE;
     if (YoriLibIsPathPrefixed(File)) {
         Offset = sizeof("\\\\.\\") - 1;
+        Prefixed = TRUE;
     }
 
     NameToCheck.StartOfString = &File->StartOfString[Offset];
     NameToCheck.LengthInChars = File->LengthInChars - Offset;
+
+
+    //
+    //  If it's \\.\x: treat it as a device.  Note this cannot have any
+    //  trailing characters, or it'd be a file.
+    //
+
+    if (Prefixed && 
+        NameToCheck.LengthInChars == 2) {
+
+        if (YoriLibIsDriveLetterWithColon(&NameToCheck)) {
+            return TRUE;
+        }
+    }
 
     if (NameToCheck.LengthInChars < 3 || NameToCheck.LengthInChars > 4) {
         return FALSE;
@@ -1889,14 +1906,18 @@ YoriLibUserStringToSingleFilePathOrDevice(
 {
     if (YoriLibIsFileNameDeviceName(UserString)) {
         DWORD CharsNeeded;
+        BOOL Prefixed;
+
         CharsNeeded = UserString->LengthInChars + 1;
-        if (ReturnEscapedPath) {
+        Prefixed = YoriLibIsPathPrefixed(UserString);
+
+        if (!Prefixed && ReturnEscapedPath) {
             CharsNeeded += sizeof("\\\\.\\") - 1;
         }
         if (!YoriLibAllocateString(FullPath, CharsNeeded)) {
             return FALSE;
         }
-        if (ReturnEscapedPath) {
+        if (!Prefixed && ReturnEscapedPath) {
             FullPath->LengthInChars = YoriLibSPrintf(FullPath->StartOfString, _T("\\\\.\\%y"), UserString);
         } else {
             FullPath->LengthInChars = YoriLibSPrintf(FullPath->StartOfString, _T("%y"), UserString);
