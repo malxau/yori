@@ -51,14 +51,15 @@ CHAR strCopyHelpText[] =
         "\n"
         "Copies one or more files.\n"
         "\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-nt|-p] [-s] [-t] [-v] [-x exclude]\n"
-        "      <src>\n"
-        "COPY [-license] [-b] [-c:algorithm] [-l] [-n|-nt|-p] [-s] [-t] [-v] [-x exclude]\n"
-        "      <src> [<src> ...] <dest>\n"
+        "COPY [-license] [-b] [-c:algorithm] [-ds size] [-l] [-n|-nt|-p] [-s] [-t] [-v]\n"
+        "      [-x exclude] <src>\n"
+        "COPY [-license] [-b] [-c:algorithm] [-ds size] [-l] [-n|-nt|-p] [-s] [-t] [-v]\n"
+        "      [-x exclude] <src> [<src> ...] <dest>\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
         "   -c             Compress targets with specified algorithm.  Options are:\n"
         "                    lzx, ntfs, xp4k, xp8k, xp16k\n"
+        "   -ds            The size of the device, ignored for files\n"
         "   -l             Copy links as links rather than contents\n"
         "   -n             Copy new or files whose size have changed only\n"
         "   -nt            Copy new or files whose size or timestamps have changed only\n"
@@ -118,6 +119,12 @@ typedef struct _COPY_CONTEXT {
      State related to background compression of files after copy.
      */
     YORILIB_COMPRESS_CONTEXT CompressContext;
+
+    /**
+     The number of bytes to copy when copying to or from a device.  Zero
+     means copy until the end of the device.
+     */
+    LARGE_INTEGER DeviceSize;
 
     /**
      The file system attributes of the destination.  Used to determine if
@@ -566,6 +573,8 @@ CopyAsLink(
  should not be used for files since it makes no attempt to preserve any kind
  of file metadata, but for devices file metadata is meaningless anyway.
 
+ @param CopyContext Pointer to the copy context, specifying device size.
+
  @param SourceFile Pointer to the source file/device name.
 
  @param DestFile Pointer to the destination file/device name.
@@ -574,6 +583,7 @@ CopyAsLink(
  */
 BOOL
 CopyAsDumbDataMove(
+    __in PCOPY_CONTEXT CopyContext,
     __in PYORI_STRING SourceFile,
     __in PYORI_STRING DestFile
     )
@@ -581,10 +591,13 @@ CopyAsDumbDataMove(
     PVOID Buffer;
     DWORD BytesCopied;
     DWORD BufferSize;
+    DWORD SectorSize;
     HANDLE SourceHandle;
     HANDLE DestHandle;
     DWORD LastError;
     LPTSTR ErrText;
+    DISK_GEOMETRY DiskGeometry;
+    LONGLONG TotalBytesCopied;
 
     SourceHandle = CreateFile(SourceFile->StartOfString,
                               GENERIC_READ,
@@ -630,6 +643,11 @@ CopyAsDumbDataMove(
         return FALSE;
     }
 
+    SectorSize = 0;
+    if (DeviceIoControl(DestHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &DiskGeometry, sizeof(DiskGeometry), &BytesCopied, NULL)) {
+        SectorSize = DiskGeometry.BytesPerSector;
+    }
+
     BufferSize = 64 * 1024;
     Buffer = YoriLibMalloc(BufferSize);
     if (Buffer == NULL) {
@@ -638,9 +656,43 @@ CopyAsDumbDataMove(
         return FALSE;
     }
 
+    if (SectorSize > BufferSize) {
+        SectorSize = BufferSize;
+    }
+
+    TotalBytesCopied = 0;
+
     while (ReadFile(SourceHandle, Buffer, BufferSize, &BytesCopied, NULL)) {
         if (BytesCopied == 0) {
             break;
+        }
+
+        if (CopyContext->DeviceSize.QuadPart != 0 &&
+            (TotalBytesCopied + BytesCopied) > CopyContext->DeviceSize.QuadPart) {
+
+            BytesCopied = (DWORD)(CopyContext->DeviceSize.QuadPart - TotalBytesCopied);
+
+        }
+
+        //
+        //  If the destination has a sector size requirement, round up to the
+        //  next whole sector
+        //
+
+        if (SectorSize != 0 &&
+            (BytesCopied % SectorSize) != 0) {
+
+            DWORD SectorOffset;
+            DWORD SectorRemaining;
+            DWORD BufferOffset;
+
+            SectorOffset = BytesCopied % SectorSize;
+            SectorRemaining = SectorSize - SectorOffset;
+
+            BufferOffset = (BytesCopied / SectorSize) * SectorSize + SectorOffset;
+
+            ZeroMemory(YoriLibAddToPointer(Buffer, BufferOffset), SectorRemaining);
+            BytesCopied = BytesCopied + SectorRemaining;
         }
 
         if (!WriteFile(DestHandle, Buffer, BytesCopied, &BytesCopied, NULL)) {
@@ -652,6 +704,13 @@ CopyAsDumbDataMove(
             CloseHandle(SourceHandle);
             CloseHandle(DestHandle);
             return FALSE;
+        }
+
+        TotalBytesCopied = TotalBytesCopied + BytesCopied;
+        if (CopyContext->DeviceSize.QuadPart != 0 &&
+            TotalBytesCopied >= CopyContext->DeviceSize.QuadPart) {
+
+            break;
         }
     }
 
@@ -821,7 +880,7 @@ CopyFileFoundCallback(
                 }
             }
         } else if (CopyContext->DestinationIsDevice || YoriLibIsFileNameDeviceName(FilePath)) {
-            CopyAsDumbDataMove(FilePath, &FullDest);
+            CopyAsDumbDataMove(CopyContext, FilePath, &FullDest);
         } else {
             LastError = YoriLibCopyFile(FilePath, &FullDest);
             if (LastError != ERROR_SUCCESS) {
@@ -834,7 +893,7 @@ CopyFileFoundCallback(
                 //
 
                 if (LastError == ERROR_INVALID_PARAMETER) {
-                    CopyAsDumbDataMove(FilePath, &FullDest);
+                    CopyAsDumbDataMove(CopyContext, FilePath, &FullDest);
                 } else {
                     LPTSTR ErrText = YoriLibGetWinErrorText(LastError);
                     if (SourceNameToDisplay != &HumanSourcePath) {
@@ -1000,6 +1059,12 @@ ENTRYPOINT(
                 CompressionAlgorithm.WofAlgorithm = FILE_PROVIDER_COMPRESSION_XPRESS16K;
                 CopyContext.CompressDest = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ds")) == 0) {
+                if (i + 1 < ArgC) {
+                    CopyContext.DeviceSize = YoriLibStringToFileSize(&ArgV[i + 1]);
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("c:lzx")) == 0) {
 
                 CompressionAlgorithm.EntireAlgorithm = 0;
