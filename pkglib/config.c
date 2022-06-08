@@ -153,9 +153,18 @@ YoriPkgGetYoriExecutablePath(
 {
     YORI_STRING RelativePath;
     YORI_STRING LocalExePath;
+    BOOLEAN UseAppDir;
 
     YoriLibInitEmptyString(&LocalExePath);
+    UseAppDir = FALSE;
     if (!YoriLibAllocateAndGetEnvironmentVariable(_T("YORISPEC"), &LocalExePath)) {
+        UseAppDir = TRUE;
+    } else if (LocalExePath.LengthInChars == 0) {
+        YoriLibFreeStringContents(&LocalExePath);
+        UseAppDir = TRUE;
+    }
+
+    if (UseAppDir) {
         YoriLibConstantString(&RelativePath, _T("~APPDIR\\Yori.exe"));
         if (!YoriLibUserStringToSingleFilePath(&RelativePath, FALSE, &LocalExePath)) {
             return FALSE;
