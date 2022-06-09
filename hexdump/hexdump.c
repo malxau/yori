@@ -1807,7 +1807,7 @@ ENTRYPOINT(
             if (HexDumpContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserStringToSingleFilePathOrDevice(&ArgV[i], TRUE, &FullPath)) {
                     if (BinaryEncode) {
                         HexDumpBinaryFileFoundCallback(&FullPath, NULL, 0, &HexDumpContext);
                     } else if (Reverse) {
