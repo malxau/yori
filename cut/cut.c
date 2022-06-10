@@ -3,7 +3,7 @@
  *
  * Yori shell filter within a line of output
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,10 +38,11 @@ CHAR strCutHelpText[] =
         "CUT [-license] [-b] [-s] [-f n] [-d <delimiter chars>] [-o n] [-l n] [file]\n"
         "\n"
         "   -b             Use basic search criteria for files only\n"
-        "   -o             The offset in bytes to cut from the line or field\n"
-        "   -l             The length in bytes to cut from the line or field\n"
-        "   -f n           The field number to cut\n"
         "   -d             The set of characters which delimit fields, default comma\n"
+        "   -f n           The field number to cut\n"
+        "   -l             The length in bytes to cut from the line or field\n"
+        "   -o             The offset in bytes to cut from the line or field\n"
+        "   -r             Operate on raw file offsets, not lines\n"
         "   -s             Match files from all subdirectories\n"
         ;
 
@@ -77,6 +78,12 @@ typedef struct _CUT_CONTEXT {
     BOOLEAN Recursive;
 
     /**
+     TRUE if offsets and lengths refer to offsets in the file.  If FALSE,
+     offsets refer to a range within each line.
+     */
+    BOOLEAN RawFile;
+
+    /**
      For a field delimited stream, contains the NULL terminated string
      indicating one or more characters to interpret as delimiters.
      */
@@ -99,12 +106,12 @@ typedef struct _CUT_CONTEXT {
     /**
      Indicates the offset of the line or field, in bytes, that is of interest.
      */
-    DWORD DesiredOffset;
+    DWORDLONG DesiredOffset;
 
     /**
      Indicates the length of the range that is of interest.
      */
-    DWORD DesiredLength;
+    DWORDLONG DesiredLength;
 
     /**
      Counts the number of files encountered as files are processed.
@@ -120,8 +127,8 @@ typedef struct _CUT_CONTEXT {
 } CUT_CONTEXT, *PCUT_CONTEXT;
 
 /**
- Process an incoming stream from a single handle, applying the user requested
- actions.
+ Process an incoming stream from a single handle in line mode, applying the
+ user requested actions.
 
  @param hSource The source handle containing data to process.
 
@@ -130,7 +137,7 @@ typedef struct _CUT_CONTEXT {
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-CutFilterHandle(
+CutProcessHandleLines(
     __in HANDLE hSource,
     __in PCUT_CONTEXT CutContext
     )
@@ -138,6 +145,17 @@ CutFilterHandle(
     YORI_STRING MatchingSubset;
     PVOID LineContext = NULL;
     YORI_STRING LineString;
+    DWORD DesiredOffset;
+    DWORD DesiredLength;
+
+    //
+    //  Truncate the desired offset and length to 32 bits.  The line
+    //  processing code isn't expecting a 4Gb line, and it seems
+    //  unrealistic that anyone would actually want to support one.
+    //  
+
+    DesiredOffset = (DWORD)CutContext->DesiredOffset;
+    DesiredLength = (DWORD)CutContext->DesiredLength;
 
     YoriLibInitEmptyString(&LineString);
 
@@ -170,14 +188,14 @@ CutFilterHandle(
                 }
             }
         }
-        if (MatchingSubset.LengthInChars > CutContext->DesiredOffset) {
-            MatchingSubset.StartOfString = &MatchingSubset.StartOfString[CutContext->DesiredOffset];
-            MatchingSubset.LengthInChars = MatchingSubset.LengthInChars - CutContext->DesiredOffset;
+        if (MatchingSubset.LengthInChars > DesiredOffset) {
+            MatchingSubset.StartOfString = &MatchingSubset.StartOfString[DesiredOffset];
+            MatchingSubset.LengthInChars = MatchingSubset.LengthInChars - DesiredOffset;
 
-            if (CutContext->DesiredLength != 0 &&
-                MatchingSubset.LengthInChars > CutContext->DesiredLength) {
+            if (DesiredLength != 0 &&
+                MatchingSubset.LengthInChars > DesiredLength) {
 
-                MatchingSubset.LengthInChars = CutContext->DesiredLength;
+                MatchingSubset.LengthInChars = DesiredLength;
             }
         } else {
             MatchingSubset.LengthInChars = 0;
@@ -192,6 +210,159 @@ CutFilterHandle(
     YoriLibFreeStringContents(&LineString);
 
     return TRUE;
+}
+
+/**
+ Process an incoming stream in raw file mode, applying the user requested
+ actions.
+
+ @param hSource The source handle containing data to process.
+
+ @param CutContext The context that describes the actions to perform.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+CutProcessStreamOffset(
+    __in HANDLE hSource,
+    __in PCUT_CONTEXT CutContext
+    )
+{
+    PUCHAR Buffer;
+    DWORD BufferSize;
+    DWORD BufferDisplayOffset;
+    DWORD BytesReturned;
+    DWORD BytesWritten;
+    DWORD LengthToDisplay;
+    DWORD FileType;
+    LARGE_INTEGER StreamOffset;
+
+    BufferSize = 64 * 1024;
+    Buffer = YoriLibMalloc(BufferSize);
+    if (Buffer == NULL) {
+        return FALSE;
+    }
+
+    //
+    //  If it's a file, start at the offset requested by the user.  If it's
+    //  not a file (it's a pipe), the only way to move forward is by
+    //  reading.
+    //
+
+    FileType = GetFileType(hSource);
+
+    StreamOffset.QuadPart = 0;
+    if (FileType != FILE_TYPE_PIPE) {
+        StreamOffset.QuadPart = CutContext->DesiredOffset;
+
+        if (!SetFilePointer(hSource, StreamOffset.LowPart, &StreamOffset.HighPart, FILE_BEGIN)) {
+            StreamOffset.QuadPart = 0;
+        }
+    }
+
+    while (TRUE) {
+
+        //
+        //  Read a block of data.  On a pipe, this will block.
+        //
+
+        BytesReturned = 0;
+        if (!ReadFile(hSource, Buffer, BufferSize, &BytesReturned, NULL)) {
+            BytesReturned = 0;
+        }
+
+        //
+        //  If we don't have data despite blocking, the operation is complete.
+        //
+
+        if (BytesReturned == 0) {
+            break;
+        }
+
+        //
+        //  If we haven't reached the starting point to display, loop back
+        //  and read more.
+        //
+
+        if ((DWORDLONG)StreamOffset.QuadPart + BytesReturned <= CutContext->DesiredOffset) {
+            StreamOffset.QuadPart += BytesReturned;
+            continue;
+        }
+
+        LengthToDisplay = BytesReturned;
+
+        //
+        //  If the starting point to display is partway through the buffer,
+        //  find the offset within the buffer to start displaying and cap
+        //  the number of characters to display.
+        //
+
+        BufferDisplayOffset = 0;
+        if ((DWORDLONG)StreamOffset.QuadPart < CutContext->DesiredOffset) {
+            BufferDisplayOffset = (DWORD)(CutContext->DesiredOffset - StreamOffset.QuadPart);
+            LengthToDisplay -= BufferDisplayOffset;
+        }
+
+        ASSERT(BufferDisplayOffset + LengthToDisplay == BytesReturned);
+
+        //
+        //  If the number of bytes that the user requested to display is
+        //  longer than the amount we have, cap the amount to display to
+        //  what the user requested.
+        //
+
+        if (CutContext->DesiredLength != 0) {
+            if ((DWORDLONG)StreamOffset.QuadPart + BufferDisplayOffset + LengthToDisplay >= CutContext->DesiredOffset + CutContext->DesiredLength) {
+                LengthToDisplay = (DWORD)(CutContext->DesiredOffset + CutContext->DesiredLength - StreamOffset.QuadPart - BufferDisplayOffset);
+            }
+        }
+
+        //
+        //  Display the buffer at the display offset for the length to
+        //  display.
+        //
+
+        if (LengthToDisplay > 0) {
+            if (!WriteFile(GetStdHandle(STD_OUTPUT_HANDLE), &Buffer[BufferDisplayOffset], LengthToDisplay, &BytesWritten, NULL)) {
+                break;
+            }
+        }
+
+        StreamOffset.QuadPart += BufferDisplayOffset + BytesReturned;
+
+        if (CutContext->DesiredLength != 0 &&
+            (DWORDLONG)StreamOffset.QuadPart >= CutContext->DesiredOffset + CutContext->DesiredLength) {
+
+            break;
+        }
+    }
+
+    YoriLibFree(Buffer);
+
+    return TRUE;
+}
+
+/**
+ Process an incoming stream from a single handle, applying the user requested
+ actions.
+
+ @param hSource The source handle containing data to process.
+
+ @param CutContext The context that describes the actions to perform.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+CutFilterHandle(
+    __in HANDLE hSource,
+    __in PCUT_CONTEXT CutContext
+    )
+{
+    if (CutContext->RawFile) {
+        return CutProcessStreamOffset(hSource, CutContext);
+    } else {
+        return CutProcessHandleLines(hSource, CutContext);
+    }
 }
 
 /**
@@ -306,7 +477,7 @@ CutFileEnumerateErrorCallback(
         } else {
             DirName.LengthInChars = UnescapedFilePath.LengthInChars;
         }
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Enumerate of %y failed: %s"), &DirName, ErrText);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Enumerate of %y failed: %s"), &DirName, ErrText);
         YoriLibFreeWinErrorText(ErrText);
     }
     YoriLibFreeStringContents(&UnescapedFilePath);
@@ -364,7 +535,7 @@ ENTRYPOINT(
                 CutHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -372,7 +543,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("o")) == 0) {
                 if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
-                        CutContext.DesiredOffset = (DWORD)Temp;
+                        CutContext.DesiredOffset = Temp;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
@@ -380,7 +551,7 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
                 if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
-                        CutContext.DesiredLength = (DWORD)Temp;
+                        CutContext.DesiredLength = Temp;
                         ArgumentUnderstood = TRUE;
                         i++;
                     }
@@ -388,18 +559,33 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
                     if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &Temp, &CharsConsumed)) {
-                        CutContext.FieldDelimited = TRUE;
-                        CutContext.FieldOfInterest = (DWORD)Temp;
-                        ArgumentUnderstood = TRUE;
-                        i++;
+                        if (CutContext.RawFile) {
+                            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Field delimiting incompatible with raw file\n"));
+                        } else {
+                            CutContext.FieldDelimited = TRUE;
+                            CutContext.FieldOfInterest = (DWORD)Temp;
+                            ArgumentUnderstood = TRUE;
+                            i++;
+                        }
                     }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
                 if (ArgC > i + 1) {
-                    CutContext.FieldDelimited = TRUE;
-                    CutContext.FieldSeperator = ArgV[i + 1].StartOfString;
+                    if (CutContext.RawFile) {
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Field delimiting incompatible with raw file\n"));
+                    } else {
+                        CutContext.FieldDelimited = TRUE;
+                        CutContext.FieldSeperator = ArgV[i + 1].StartOfString;
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                if (CutContext.FieldDelimited) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Field delimiting incompatible with raw file\n"));
+                } else {
+                    CutContext.RawFile = TRUE;
                     ArgumentUnderstood = TRUE;
-                    i++;
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 CutContext.Recursive = TRUE;
@@ -415,7 +601,7 @@ ENTRYPOINT(
         }
 
         if (!ArgumentUnderstood) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
     }
 
@@ -438,7 +624,7 @@ ENTRYPOINT(
 
     if (StartArg == 0 || StartArg == ArgC) {
         if (YoriLibIsStdInConsole()) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("No file or pipe for input\n"));
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: No file or pipe for input\n"));
             return EXIT_FAILURE;
         }
         hSource = GetStdHandle(STD_INPUT_HANDLE);
@@ -467,12 +653,12 @@ ENTRYPOINT(
             if (CutContext.FilesFoundThisArg == 0) {
                 YORI_STRING FullPath;
                 YoriLibInitEmptyString(&FullPath);
-                if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
+                if (YoriLibUserStringToSingleFilePathOrDevice(&ArgV[i], TRUE, &FullPath)) {
                     CutFileFoundCallback(&FullPath, NULL, 0, &CutContext);
                     YoriLibFreeStringContents(&FullPath);
                 }
                 if (CutContext.SavedErrorThisArg != ERROR_SUCCESS) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("cut: File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
         }
