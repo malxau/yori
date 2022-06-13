@@ -52,6 +52,7 @@
 #pragma warning(disable: 4820) // implicit padding added in structure
 #pragma warning(disable: 4061) // not all enumerators handled in switch statement
 #pragma warning(disable: 4062) // not all enumerators handled in switch statement
+#pragma warning(disable: 4191) // casting to function ptr of different type (GetProcAddress)
 #endif
 
 #if defined(__clang__)
