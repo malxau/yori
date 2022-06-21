@@ -1892,7 +1892,8 @@ YoriShPerformArgumentTabCompletion(
         return;
     }
 
-    if (CurrentExecContextArg < CurrentExecContext->CmdToExec.ArgC &&
+    if (CurrentExecContext != NULL &&
+        CurrentExecContextArg < CurrentExecContext->CmdToExec.ArgC &&
         CurrentExecContext->CmdToExec.ArgContexts[CurrentExecContextArg].QuoteTerminated) {
         DWORD TrailingSlashCount;
         PYORI_STRING Arg;
@@ -1932,7 +1933,20 @@ YoriShPerformArgumentTabCompletion(
 
     ASSERT(TabContext->SearchStringOffset < TabContext->SearchString.LengthInChars);
 
-    if (!ActiveExecContextArg) {
+    if (CurrentExecContext == NULL) {
+
+        //
+        //  The active argument isn't part of a command (it's a seperator
+        //  between commands.)  Don't attempt any completion here.  It would
+        //  be valid to treat this as the beginning of a new command, although
+        //  doing so implies performing executable completion on every
+        //  executable in the system.
+        //
+
+        YoriLibShFreeExecPlan(&ExecPlan);
+        return;
+
+    } else if (!ActiveExecContextArg) {
 
         //
         //  The active argument isn't for the receiving program.  Default to
