@@ -435,7 +435,7 @@ ENTRYPOINT(
     StartArg += 2;
 
 #if YORI_BUILTIN
-    YoriLibCancelEnable();
+    YoriLibCancelEnable(FALSE);
 #endif
 
     //

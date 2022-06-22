@@ -27,21 +27,147 @@
 #include "yoripch.h"
 #include "yorilib.h"
 
-/**
- Event to be signalled when Ctrl+C is pressed.
- */
-HANDLE g_CancelEvent;
+#if DBG
 
 /**
- TRUE if the system is currently configured to handle Ctrl+C input.
+ Set to nonzero to enable cancel debugging
  */
-BOOL g_CancelHandlerSet;
+#define YORI_CANCEL_DBG 1
 
 /**
- TRUE if the system should perform no processing in response to
- Ctrl+C input.
+ The number of stack frames to capture for debugging.
  */
-BOOL g_CancelIgnore;
+#define YORI_CANCEL_DBG_STACK_FRAMES (10)
+
+#endif
+
+/**
+ A structure containing process global state for cancel support.
+ */
+typedef struct _YORI_LIB_CANCEL_STATE {
+
+    /**
+     Event to be signalled when Ctrl+C is pressed.
+     */
+    HANDLE Event;
+
+    /**
+     TRUE if the system is currently configured to handle Ctrl+C input.
+     */
+    BOOLEAN HandlerSet;
+
+    /**
+     TRUE if the system should perform no processing in response to
+     Ctrl+C input.
+     */
+    BOOLEAN Ignore;
+
+    /**
+     TRUE to indicate SetConsoleCtrlHandler has been invoked with NULL/TRUE
+     to ignore handling by this and child processes.  FALSE to indicate it
+     has been called with NULL/FALSE to resume handling by this and child
+     processes.
+     */
+    BOOLEAN InheritedIgnore;
+
+    /**
+     TRUE to indicate that input has PROCESSED_INPUT set so that Ctrl+C will
+     be processed as a signal.
+     */
+    BOOLEAN ProcessedInput;
+
+#if YORI_CANCEL_DBG
+    /**
+     A stack of when the Ignore value was changed.
+     */
+    PVOID DbgIgnoreStack[YORI_CANCEL_DBG_STACK_FRAMES];
+
+    /**
+     A stack of when the handler was last invoked.
+     */
+    PVOID DbgHandlerInvokedStack[YORI_CANCEL_DBG_STACK_FRAMES];
+
+    /**
+     A stack of when the InheritedIgnore value was changed.
+     */
+    PVOID DbgInheritedStateStack[YORI_CANCEL_DBG_STACK_FRAMES];
+
+    /**
+     A stack of when the console input mode value was changed, including
+     setting ProcessedInput.
+     */
+    PVOID DbgConsoleInputModeStack[YORI_CANCEL_DBG_STACK_FRAMES];
+#endif
+
+} YORI_LIB_CANCEL_STATE;
+
+/**
+ Process global state for cancel support.
+ */
+YORI_LIB_CANCEL_STATE g_YoriLibCancel;
+
+/**
+ Set the console attribute indicating that Ctrl+C signals should be ignored by
+ this and child processes.
+ */
+VOID
+YoriLibCancelInheritedIgnore(VOID)
+{
+    g_YoriLibCancel.InheritedIgnore = TRUE;
+#if YORI_CANCEL_DBG
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_CANCEL_DBG_STACK_FRAMES, g_YoriLibCancel.DbgInheritedStateStack, NULL);
+    }
+#endif
+    SetConsoleCtrlHandler(NULL, TRUE);
+}
+
+/**
+ Set the console attribute indicating that Ctrl+C signals should be processed
+ by this and child processes.
+ */
+VOID
+YoriLibCancelInheritedProcess(VOID)
+{
+    g_YoriLibCancel.InheritedIgnore = FALSE;
+#if YORI_CANCEL_DBG
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_CANCEL_DBG_STACK_FRAMES, g_YoriLibCancel.DbgInheritedStateStack, NULL);
+    }
+#endif
+    SetConsoleCtrlHandler(NULL, FALSE);
+}
+
+/**
+ Set the input console mode, while capturing the intention to facilitate
+ debugging.
+
+ @param Handle Handle to a console input device.
+
+ @param ConsoleMode The mode to set on a console input handle.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibSetInputConsoleMode(
+    __in HANDLE Handle,
+    __in DWORD ConsoleMode
+    )
+{
+    if (ConsoleMode & ENABLE_PROCESSED_INPUT) {
+        g_YoriLibCancel.ProcessedInput = TRUE;
+    } else {
+        g_YoriLibCancel.ProcessedInput = FALSE;
+    }
+
+#if YORI_CANCEL_DBG
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_CANCEL_DBG_STACK_FRAMES, g_YoriLibCancel.DbgConsoleInputModeStack, NULL);
+    }
+#endif
+
+    return SetConsoleMode(Handle, ConsoleMode);
+}
 
 /**
  Indicate that the operation should be cancelled.
@@ -49,8 +175,8 @@ BOOL g_CancelIgnore;
 VOID
 YoriLibCancelSet(VOID)
 {
-    if (!g_CancelIgnore && g_CancelEvent != NULL) {
-        SetEvent(g_CancelEvent);
+    if (!g_YoriLibCancel.Ignore && g_YoriLibCancel.Event != NULL) {
+        SetEvent(g_YoriLibCancel.Event);
     }
 }
 
@@ -68,9 +194,15 @@ YoriLibCtrlCHandler(
     __in DWORD CtrlType
     )
 {
-    ASSERT(g_CancelEvent != NULL);
-    ASSERT(g_CancelHandlerSet);
+    ASSERT(g_YoriLibCancel.Event != NULL);
+    ASSERT(g_YoriLibCancel.HandlerSet);
     YoriLibCancelSet();
+
+#if YORI_CANCEL_DBG
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_CANCEL_DBG_STACK_FRAMES, g_YoriLibCancel.DbgHandlerInvokedStack, NULL);
+    }
+#endif
 
     if (CtrlType == CTRL_CLOSE_EVENT ||
         CtrlType == CTRL_LOGOFF_EVENT ||
@@ -96,22 +228,30 @@ YoriLibCtrlCHandler(
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
-YoriLibCancelEnable(VOID)
+YoriLibCancelEnable(
+    __in BOOLEAN Ignore
+    )
 {
-    if (g_CancelEvent == NULL) {
-        g_CancelEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-        if (g_CancelEvent == NULL) {
+    if (g_YoriLibCancel.Event == NULL) {
+        g_YoriLibCancel.Event = CreateEvent(NULL, TRUE, FALSE, NULL);
+        if (g_YoriLibCancel.Event == NULL) {
             return FALSE;
         }
     }
 
-    g_CancelIgnore = FALSE;
-    SetConsoleCtrlHandler(NULL, FALSE);
-    if (!g_CancelHandlerSet) {
-        g_CancelHandlerSet = TRUE;
+#if YORI_CANCEL_DBG
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_CANCEL_DBG_STACK_FRAMES, g_YoriLibCancel.DbgIgnoreStack, NULL);
+    }
+#endif
+
+    g_YoriLibCancel.Ignore = Ignore;
+    YoriLibCancelInheritedProcess();
+    if (!g_YoriLibCancel.HandlerSet) {
+        g_YoriLibCancel.HandlerSet = TRUE;
         SetConsoleCtrlHandler(YoriLibCtrlCHandler, TRUE);
     }
-    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+    YoriLibSetInputConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
     return TRUE;
 }
 
@@ -124,10 +264,10 @@ YoriLibCancelEnable(VOID)
 BOOL
 YoriLibCancelDisable(VOID)
 {
-    ASSERT(g_CancelHandlerSet);
+    ASSERT(g_YoriLibCancel.HandlerSet);
     SetConsoleCtrlHandler(YoriLibCtrlCHandler, FALSE);
-    SetConsoleCtrlHandler(NULL, TRUE);
-    g_CancelHandlerSet = FALSE;
+    YoriLibCancelInheritedIgnore();
+    g_YoriLibCancel.HandlerSet = FALSE;
     return TRUE;
 }
 
@@ -139,8 +279,13 @@ YoriLibCancelDisable(VOID)
 BOOL
 YoriLibCancelIgnore(VOID)
 {
-    ASSERT(g_CancelHandlerSet);
-    g_CancelIgnore = TRUE;
+    ASSERT(g_YoriLibCancel.HandlerSet);
+#if YORI_CANCEL_DBG
+    if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
+        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_CANCEL_DBG_STACK_FRAMES, g_YoriLibCancel.DbgIgnoreStack, NULL);
+    }
+#endif
+    g_YoriLibCancel.Ignore = TRUE;
     return TRUE;
 }
 
@@ -151,11 +296,11 @@ YoriLibCancelIgnore(VOID)
 BOOL
 YoriLibIsOperationCancelled(VOID)
 {
-    if (g_CancelEvent == NULL) {
+    if (g_YoriLibCancel.Event == NULL) {
         return FALSE;
     }
 
-    if (WaitForSingleObject(g_CancelEvent, 0) == WAIT_OBJECT_0) {
+    if (WaitForSingleObject(g_YoriLibCancel.Event, 0) == WAIT_OBJECT_0) {
         return TRUE;
     }
 
@@ -168,8 +313,8 @@ YoriLibIsOperationCancelled(VOID)
 VOID
 YoriLibCancelReset(VOID)
 {
-    if (g_CancelEvent) {
-        ResetEvent(g_CancelEvent);
+    if (g_YoriLibCancel.Event) {
+        ResetEvent(g_YoriLibCancel.Event);
     }
 }
 
@@ -179,7 +324,7 @@ YoriLibCancelReset(VOID)
 HANDLE
 YoriLibCancelGetEvent(VOID)
 {
-    return g_CancelEvent;
+    return g_YoriLibCancel.Event;
 }
 
 // vim:sw=4:ts=4:et:

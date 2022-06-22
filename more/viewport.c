@@ -3200,7 +3200,7 @@ MoreViewportDisplay(
         InputFlags = ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT;
     }
 
-    SetConsoleMode(InHandle, InputFlags);
+    YoriLibSetInputConsoleMode(InHandle, InputFlags);
 
     if (YoriLibIsNanoServer()) {
 

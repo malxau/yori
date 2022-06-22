@@ -89,6 +89,9 @@ typedef struct _YORI_SPECIAL_HEAP_HEADER {
  */
 #define PAGE_SIZE (0x1000)
 
+/**
+ A structure containing process global state for the special heap allocator.
+ */
 typedef struct _YORI_SPECIAL_HEAP_GLOBAL {
 
     /**
@@ -126,6 +129,9 @@ typedef struct _YORI_SPECIAL_HEAP_GLOBAL {
 
 } YORI_SPECIAL_HEAP_GLOBAL, PYORI_SPECIAL_HEAP_GLOBAL;
 
+/**
+ Process global state for the special heap allocator.
+ */
 YORI_SPECIAL_HEAP_GLOBAL YoriLibSpecialHeap;
 
 #endif

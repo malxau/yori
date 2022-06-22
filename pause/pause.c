@@ -106,7 +106,7 @@ ENTRYPOINT(
     }
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Press any key to continue...\n"));
-    if (!SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), 0)) {
+    if (!YoriLibSetInputConsoleMode(GetStdHandle(STD_INPUT_HANDLE), 0)) {
         if (!ReadFile(GetStdHandle(STD_INPUT_HANDLE), &Char, 1, &BytesRead, NULL)) {
             return EXIT_FAILURE;
         }

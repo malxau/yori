@@ -83,7 +83,7 @@ CvtvtInputPumpThread(
 
     hInput = GetStdHandle(STD_INPUT_HANDLE);
 
-    SetConsoleMode(hInput, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
+    YoriLibSetInputConsoleMode(hInput, ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT);
 
     while (ReadFile(hInput, StupidBuffer, sizeof(StupidBuffer), &BytesRead, NULL)) {
         if (!WriteFile(hOutput, StupidBuffer, BytesRead, &BytesWritten, NULL)) {

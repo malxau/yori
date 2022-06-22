@@ -68,7 +68,7 @@ YoriLibShRevertRedirection(
 {
     YORI_LIBSH_PREVIOUS_REDIRECT_CONTEXT CurrentRedirectContext;
 
-    SetConsoleCtrlHandler(NULL, TRUE);
+    YoriLibCancelInheritedIgnore();
 
     YoriLibShCaptureRedirectContext(&CurrentRedirectContext);
 
@@ -142,8 +142,8 @@ YoriLibShInitializeRedirection(
     //
 
     if (!PrepareForBuiltIn) {
-        SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
-        SetConsoleCtrlHandler(NULL, FALSE);
+        YoriLibSetInputConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+        YoriLibCancelInheritedProcess();
     }
 
     Error = ERROR_SUCCESS;

@@ -288,7 +288,7 @@ ENTRYPOINT(
 
 
 #if YORI_BUILTIN
-    YoriLibCancelEnable();
+    YoriLibCancelEnable(FALSE);
 #endif
 
     if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &i)) {

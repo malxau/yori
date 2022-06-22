@@ -624,7 +624,7 @@ YoriShConfigureMouseForPrompt(
     //  this has the effect of turning off console's quickedit.
     //
 
-    SetConsoleMode(ConsoleInputHandle, ConsoleMode | ENABLE_EXTENDED_FLAGS);
+    YoriLibSetInputConsoleMode(ConsoleInputHandle, ConsoleMode | ENABLE_EXTENDED_FLAGS);
     return TRUE;
 }
 
@@ -654,7 +654,7 @@ YoriShConfigureMouseForPrograms(
     //  QuickEdit.
     //
 
-    SetConsoleMode(ConsoleInputHandle, ConsoleMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS);
+    YoriLibSetInputConsoleMode(ConsoleInputHandle, ConsoleMode | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS);
     return TRUE;
 }
 
@@ -1773,7 +1773,7 @@ YoriShConfigureConsoleForInput(
     } else {
         SetConsoleMode(Buffer->ConsoleOutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT);
     }
-    SetConsoleMode(Buffer->ConsoleInputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
+    YoriLibSetInputConsoleMode(Buffer->ConsoleInputHandle, ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT);
     YoriShConfigureInputSettings();
     YoriShConfigureMouseForPrompt(Buffer->ConsoleInputHandle);
     SetConsoleCtrlHandler(YoriShAppCloseCtrlHandler, TRUE);
@@ -3188,7 +3188,7 @@ YoriShGetExpression(
         return YoriShGetExpressionFromConsole(InputHandle, OutputHandle, Expression);
     }
 
-    SetConsoleMode(InputHandle, ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_ECHO_INPUT);
+    YoriLibSetInputConsoleMode(InputHandle, ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT | ENABLE_ECHO_INPUT);
     SetConsoleMode(OutputHandle, ENABLE_PROCESSED_OUTPUT | ENABLE_WRAP_AT_EOL_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
 
     if (!YoriLibReadLineToString(Expression, &YoriShGetExpressionLineContext, InputHandle)) {

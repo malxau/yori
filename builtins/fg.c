@@ -136,7 +136,7 @@ YoriCmd_FG(
             return EXIT_FAILURE;
         }
 
-        YoriLibCancelEnable();
+        YoriLibCancelEnable(FALSE);
         YoriLibInitEmptyString(&Line);
 
         while (TRUE) {

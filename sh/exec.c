@@ -620,8 +620,7 @@ YoriShWaitForProcessToTerminate(
 
         ThreadContext.InitializedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
         if (ThreadContext.InitializedEvent == NULL) {
-            YoriLibCancelEnable();
-            YoriLibCancelIgnore();
+            YoriLibCancelEnable(TRUE);
             return;
         }
 
@@ -631,8 +630,7 @@ YoriShWaitForProcessToTerminate(
         if (ExecContext->hDebuggerThread == NULL) {
             YoriLibShDereferenceExecContext(ExecContext, TRUE);
             CloseHandle(ThreadContext.InitializedEvent);
-            YoriLibCancelEnable();
-            YoriLibCancelIgnore();
+            YoriLibCancelEnable(TRUE);
             return;
         }
 
@@ -645,7 +643,7 @@ YoriShWaitForProcessToTerminate(
         WaitOn[0] = ExecContext->hProcess;
     }
 
-    YoriLibCancelEnable();
+    YoriLibCancelEnable(FALSE);
     WaitOn[1] = YoriLibCancelGetEvent();
     WaitOn[2] = GetStdHandle(STD_INPUT_HANDLE);
 

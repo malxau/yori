@@ -337,7 +337,7 @@ ENTRYPOINT(
     }
 
 #if YORI_BUILTIN
-    YoriLibCancelEnable();
+    YoriLibCancelEnable(FALSE);
 #endif
 
     MatchFlags = YORILIB_FILEENUM_RETURN_DIRECTORIES;

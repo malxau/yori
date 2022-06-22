@@ -422,7 +422,7 @@ YDbgDumpKernel(
         return FALSE;
     }
 
-    YoriLibCancelEnable();
+    YoriLibCancelEnable(FALSE);
 
     Ctrl.Version = 1;
     Ctrl.File = FileHandle;

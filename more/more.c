@@ -160,7 +160,7 @@ ENTRYPOINT(
     //  exit.  This is needed for both builtin and non-builtin forms.
     //
 
-    YoriLibCancelEnable();
+    YoriLibCancelEnable(FALSE);
 
     if (StartArg == 0 || StartArg == ArgC) {
         InitComplete = MoreInitContext(&MoreContext, 0, NULL, Recursive, BasicEnumeration, DebugDisplay, SuspendPagination, WaitForMore);

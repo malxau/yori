@@ -129,7 +129,7 @@ ENTRYPOINT(
 
     CurrentMode |= ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_PROCESSED_INPUT;
 
-    SetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), CurrentMode);
+    YoriLibSetInputConsoleMode(GetStdHandle(STD_INPUT_HANDLE), CurrentMode);
 
     if (!YoriLibAllocateString(&InputString, 4096)) {
         return EXIT_FAILURE;

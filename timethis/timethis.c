@@ -422,7 +422,7 @@ ENTRYPOINT(
         HANDLE HandleArray[2];
         DWORD WaitResult;
 
-        YoriLibCancelEnable();
+        YoriLibCancelEnable(FALSE);
         HandleArray[1] = YoriLibCancelGetEvent();
         HandleArray[0] = ProcessInfo.hProcess;
 

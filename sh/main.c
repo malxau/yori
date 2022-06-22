@@ -261,8 +261,7 @@ YoriShInit(VOID)
         YoriLibAddEnvironmentComponent(_T("PATHEXT"), &NewExt, TRUE);
     }
 
-    YoriLibCancelEnable();
-    YoriLibCancelIgnore();
+    YoriLibCancelEnable(TRUE);
 
     //
     //  Register any builtin aliases, including drive letter colon commands.
@@ -722,8 +721,7 @@ YoriShPreCommand(
     HANDLE ConsoleHandle;
 
     YoriShCleanupRestartSaveThreadIfCompleted();
-    YoriLibCancelEnable();
-    YoriLibCancelIgnore();
+    YoriLibCancelEnable(TRUE);
     YoriLibCancelReset();
 
 

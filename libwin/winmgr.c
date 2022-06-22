@@ -640,8 +640,8 @@ YoriWinOpenWindowManager(
     //  already clear.
     //
 
-    SetConsoleMode(WinMgr->hConIn, ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
-    SetConsoleMode(WinMgr->hConIn, ENABLE_MOUSE_INPUT);
+    YoriLibSetInputConsoleMode(WinMgr->hConIn, ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS);
+    YoriLibSetInputConsoleMode(WinMgr->hConIn, ENABLE_MOUSE_INPUT);
 
     WinMgr->UseAsciiDrawing = FALSE;
     if (YoriLibIsNanoServer()) {

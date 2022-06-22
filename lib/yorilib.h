@@ -492,7 +492,9 @@ VOID
 YoriLibCancelSet(VOID);
 
 BOOL
-YoriLibCancelEnable(VOID);
+YoriLibCancelEnable(
+    __in BOOLEAN Ignore
+    );
 
 BOOL
 YoriLibCancelDisable(VOID);
@@ -508,6 +510,18 @@ YoriLibCancelReset(VOID);
 
 HANDLE
 YoriLibCancelGetEvent(VOID);
+
+VOID
+YoriLibCancelInheritedIgnore(VOID);
+
+VOID
+YoriLibCancelInheritedProcess(VOID);
+
+BOOL
+YoriLibSetInputConsoleMode(
+    __in HANDLE Handle,
+    __in DWORD ConsoleMode
+    );
 
 // *** CLIP.C ***
 
