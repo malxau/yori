@@ -69,11 +69,12 @@ CHAR strScutHelpText[] =
         "Create, modify, display or execute Window shortcuts.\n"
         "\n"
         "SCUT -license\n"
-        "SCUT -create|-modify <filename> [-target target] [-args args]\n"
+        "SCUT -create|-modify <filename> [-target target] [-args args] [-autoposition]\n"
         "     [-bold] [-buffersize X*Y] [-desc description] [-deleteconsolesettings]\n"
         "     [-font name] [-fontsize size] [-hotkey hotkey]\n"
         "     [-iconpath filename [-iconindex index]] [-nonbold] [-scheme file]\n"
-        "     [-show showcmd] [-windowsize X*Y] [-workingdir workingdir]\n"
+        "     [-show showcmd] [-windowposition X*Y] [-windowsize X*Y]\n"
+        "     [-workingdir workingdir]\n"
         "SCUT -exec <filename> [-target target] [-args args] [-show showcmd]\n"
         "     [-workingdir workingdir]\n"
         "SCUT [-f fmt] -dump <filename>\n";
@@ -629,6 +630,7 @@ ENTRYPOINT(
     DWORD   ExitCode;
     COORD   BufferSize;
     COORD   WindowSize;
+    COORD   WindowPosition;
     COORD   FontSize;
 
     HRESULT hRes;
@@ -639,6 +641,8 @@ ENTRYPOINT(
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps = NULL;
     BOOLEAN FreeConsolePropsWithLocalFree = FALSE;
     BOOLEAN FreeConsolePropsWithDereference = FALSE;
+    BOOLEAN AutoPositionSet = FALSE;
+    BOOLEAN AutoPosition = FALSE;
 
     YoriLibInitEmptyString(&szFile);
     YoriLibInitEmptyString(&szIcon);
@@ -649,6 +653,8 @@ ENTRYPOINT(
     BufferSize.Y = 0;
     FontSize.X = 0;
     FontSize.Y = 0;
+    WindowPosition.X = 0;
+    WindowPosition.Y = 0;
     WindowSize.X = 0;
     WindowSize.Y = 0;
 
@@ -711,6 +717,10 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("autoposition")) == 0) {
+                AutoPosition = TRUE;
+                AutoPositionSet = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("bold")) == 0) {
                 wFontWeight = FW_BOLD;
                 ArgumentUnderstood = TRUE;
@@ -819,6 +829,15 @@ ENTRYPOINT(
                     szTarget = ArgV[i + 1].StartOfString;
                     ArgumentUnderstood = TRUE;
                     i++;
+                }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("windowposition")) == 0) {
+                if (i + 1 < ArgC) {
+                    if (ScutStringToCoord(&ArgV[i + 1], &WindowPosition)) {
+                        AutoPosition = FALSE;
+                        AutoPositionSet = TRUE;
+                        ArgumentUnderstood = TRUE;
+                        i++;
+                    }
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("windowsize")) == 0) {
                 if (i + 1 < ArgC) {
@@ -1016,6 +1035,9 @@ ENTRYPOINT(
          BufferSize.Y != 0 ||
          FontSize.X != 0 ||
          FontSize.Y != 0 ||
+         AutoPositionSet ||
+         WindowPosition.X != 0 ||
+         WindowPosition.Y != 0 ||
          WindowSize.X != 0 ||
          WindowSize.Y != 0)) {
 
@@ -1072,6 +1094,14 @@ ENTRYPOINT(
         if (WindowSize.X != 0 || WindowSize.Y != 0) {
             ConsoleProps->WindowSize.X = WindowSize.X;
             ConsoleProps->WindowSize.Y = WindowSize.Y;
+        }
+
+        if (AutoPositionSet) {
+            ConsoleProps->AutoPosition = AutoPosition;
+            if (AutoPosition == FALSE) {
+                ConsoleProps->WindowPosition.X = WindowPosition.X;
+                ConsoleProps->WindowPosition.Y = WindowPosition.Y;
+            }
         }
 
         ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
