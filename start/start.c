@@ -57,6 +57,70 @@ StartHelp(VOID)
 }
 
 /**
+ Try to launch a single program via CreateProcess.  This branch is only used
+ on OS editions that do not support ShellExecute.
+
+ @param ArgC Count of arguments.
+
+ @param ArgV Array of arguments.
+
+ @param ShowState The state of the window for the new program.
+
+ @return TRUE to indicate success, FALSE on failure.
+ */
+BOOL
+StartCreateProcess(
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[],
+    __in INT ShowState
+    )
+{
+    PROCESS_INFORMATION ProcessInfo;
+    STARTUPINFO StartupInfo;
+    YORI_STRING CmdLine;
+    DWORD CreationFlags;
+
+    YoriLibInitEmptyString(&CmdLine);
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgC, ArgV, TRUE, TRUE, &CmdLine)) {
+        return FALSE;
+    }
+    ASSERT(YoriLibIsStringNullTerminated(&CmdLine));
+
+    ZeroMemory(&ProcessInfo, sizeof(ProcessInfo));
+    ZeroMemory(&StartupInfo, sizeof(StartupInfo));
+
+    StartupInfo.cb = sizeof(StartupInfo);
+    StartupInfo.dwFlags = STARTF_USESHOWWINDOW;
+    StartupInfo.wShowWindow = (WORD)ShowState;
+
+    CreationFlags = CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP | CREATE_DEFAULT_ERROR_MODE;
+
+    if (!CreateProcess(NULL, CmdLine.StartOfString, NULL, NULL, TRUE, CreationFlags, NULL, NULL, &StartupInfo, &ProcessInfo)) {
+        DWORD Err = GetLastError();
+        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        if (ErrText != NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("start: execution failed: %s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+
+        }
+        YoriLibFreeStringContents(&CmdLine);
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&CmdLine);
+
+    if (ProcessInfo.hThread != NULL) {
+        CloseHandle(ProcessInfo.hThread);
+    }
+
+    if (ProcessInfo.hProcess != NULL) {
+        CloseHandle(ProcessInfo.hProcess);
+    }
+
+    return TRUE;
+}
+
+/**
  Try to launch a single program via ShellExecute rather than CreateProcess.
 
  @param ArgC Count of arguments.
@@ -103,15 +167,6 @@ StartShellExecute(
 
     sei.lpParameters = Args.StartOfString;
     sei.nShow = ShowState;
-
-    YoriLibLoadShell32Functions();
-    if (DllShell32.pShellExecuteW == NULL) {
-        return FALSE;
-    }
-
-    if (Elevate && DllShell32.pShellExecuteExW == NULL) {
-        return FALSE;
-    }
 
     LastError = ERROR_SUCCESS;
 
@@ -177,6 +232,40 @@ StartShellExecute(
     }
 
     return FALSE;
+}
+
+/**
+ Try to launch a single program using the best available API.
+
+ @param ArgC Count of arguments.
+
+ @param ArgV Array of arguments.
+
+ @param ShowState The state of the window for the new program.
+
+ @param Elevate TRUE to indicate the program should prompt for elevation.
+
+ @return TRUE to indicate success, FALSE on failure.
+ */
+BOOL
+StartExecute(
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[],
+    __in INT ShowState,
+    __in BOOL Elevate
+    )
+{
+    YoriLibLoadShell32Functions();
+
+    if (Elevate && DllShell32.pShellExecuteExW == NULL) {
+        return FALSE;
+    }
+
+    if (DllShell32.pShellExecuteW != NULL) {
+        return StartShellExecute(ArgC, ArgV, ShowState, Elevate);
+    }
+
+    return StartCreateProcess(ArgC, ArgV, ShowState);
 }
 
 #ifdef YORI_BUILTIN
@@ -326,11 +415,11 @@ ENTRYPOINT(
             ArgArray[Index + 2].MemoryToFree = NULL;
         }
 
-        Result = StartShellExecute(ArgCount + 2, ArgArray, ShowState, Elevate);
+        Result = StartExecute(ArgCount + 2, ArgArray, ShowState, Elevate);
         YoriLibFreeStringContents(&ArgArray[0]);
         YoriLibFree(ArgArray);
     } else {
-        Result = StartShellExecute(ArgC - StartArg, &ArgV[StartArg], ShowState, Elevate);
+        Result = StartExecute(ArgC - StartArg, &ArgV[StartArg], ShowState, Elevate);
     }
 
     if (Result) {
