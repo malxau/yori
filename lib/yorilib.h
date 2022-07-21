@@ -2692,6 +2692,9 @@ BOOL
 YoriLibEnableDebugPrivilege(VOID);
 
 BOOL
+YoriLibEnableSystemTimePrivilege(VOID);
+
+BOOL
 YoriLibEnableTakeOwnershipPrivilege(VOID);
 
 // *** PROCESS.C ***

@@ -1,9 +1,9 @@
 /**
  * @file date/date.c
  *
- * Yori shell display command line output
+ * Yori shell display or update system date and time
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -35,8 +35,9 @@ CHAR strDateHelpText[] =
         "\n"
         "Outputs the system date and time in a specified format.\n"
         "\n"
-        "DATE [-license] [-t] [-u] [<fmt>]\n"
+        "DATE [-license] [-u] [[-s <date>] | [-t] [<fmt>]]\n"
         "\n"
+        "   -s             Set the system clock to the specified value\n"
         "   -t             Include time in output when format not specified\n"
         "   -u             Display UTC rather than local time\n"
         "\n"
@@ -242,6 +243,131 @@ DateExpandVariables(
     return CharsNeeded;
 }
 
+/**
+ Attempt to update the system time.  This requires the user to have the
+ system time privilege, so by default is limited to Administrators.
+
+ @param UseUtc If true, interpret the NewDate string as a UTC time.  If false,
+        interpret it as relative to the current time zone.
+
+ @param NewDate Pointer to a string containing the new date.  This can be a
+        string of consecutive digits, or can seperate fields with /, :, or -
+        characters.  This code doesn't care about which seperator is between
+        which field.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+DateSetDate(
+    __in BOOLEAN UseUtc,
+    __in PYORI_STRING NewDate
+    )
+{
+    SYSTEMTIME NewSystemTime;
+    DWORD Index;
+    TCHAR Char;
+    PWORD Field;
+    DWORD CharsThisField;
+    DWORD MaxCharsThisField;
+    DWORD Err;
+    BOOLEAN NextField;
+
+    ZeroMemory(&NewSystemTime, sizeof(NewSystemTime));
+
+    Field = &NewSystemTime.wYear;
+    CharsThisField = 0;
+    MaxCharsThisField = 4;
+    NextField = FALSE;
+    Err = ERROR_SUCCESS;
+
+    for (Index = 0; Index < NewDate->LengthInChars; Index++) {
+
+        //
+        //  Count the current digit, or move to the next field on a
+        //  seperator
+        //
+
+        Char = NewDate->StartOfString[Index];
+        if (Char >= '0' && Char <= '9') {
+            *Field = (*Field) * 10 + Char - '0';
+            CharsThisField++;
+        } else if (Char == '/' || Char == '-' || Char == ':') {
+            NextField = TRUE;
+        } else {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Character not understood: %c\n"), Char);
+            return FALSE;
+        }
+
+        //
+        //  If the number of digits in this field has been reached, check
+        //  if the next character is numeric and if so, automatically move
+        //  to the next field
+        //
+
+        if (CharsThisField >= MaxCharsThisField && !NextField) {
+            if (Index + 1 < NewDate->LengthInChars) {
+                Char = NewDate->StartOfString[Index + 1] ;
+                if (Char >= '0' && Char <= '9') {
+                    NextField = TRUE;
+                }
+            }
+        }
+
+        //
+        //  If moving to the next field, do so
+        //
+
+        if (NextField) {
+            if (Field == &NewSystemTime.wYear) {
+                Field = &NewSystemTime.wMonth;
+                MaxCharsThisField = 2;
+            } else if (Field == &NewSystemTime.wMonth) {
+                Field = &NewSystemTime.wDay;
+                MaxCharsThisField = 2;
+            } else if (Field == &NewSystemTime.wDay) {
+                Field = &NewSystemTime.wHour;
+                MaxCharsThisField = 2;
+            } else if (Field == &NewSystemTime.wHour) {
+                Field = &NewSystemTime.wMinute;
+                MaxCharsThisField = 2;
+            } else if (Field == &NewSystemTime.wMinute) {
+                Field = &NewSystemTime.wSecond;
+                MaxCharsThisField = 2;
+            } else if (Field == &NewSystemTime.wSecond) {
+                Field = &NewSystemTime.wMilliseconds;
+                MaxCharsThisField = 4;
+            }
+
+            NextField = FALSE;
+            CharsThisField = 0;
+        }
+    }
+
+    YoriLibEnableSystemTimePrivilege();
+
+    if (UseUtc) {
+        if (!SetSystemTime(&NewSystemTime)) {
+            Err = GetLastError();
+        }
+    } else {
+        if (!SetLocalTime(&NewSystemTime)) {
+            Err = GetLastError();
+        }
+    }
+
+    if (Err != ERROR_SUCCESS) {
+        LPTSTR ErrText = YoriLibGetWinErrorText(Err);
+        if (ErrText != NULL) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("date: modification failed: %s"), ErrText);
+            YoriLibFreeWinErrorText(ErrText);
+        }
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the date builtin command.
@@ -270,9 +396,10 @@ ENTRYPOINT(
     __in YORI_STRING ArgV[]
     )
 {
-    BOOL ArgumentUnderstood;
-    BOOL UseUtc;
-    BOOL DisplayTime;
+    BOOLEAN ArgumentUnderstood;
+    BOOLEAN UseUtc;
+    BOOLEAN DisplayTime;
+    BOOLEAN SetDate;
     YORI_STRING DisplayString;
     LPTSTR DefaultDateFormatString = _T("$YEAR$$MON$$DAY$");
     LPTSTR DefaultTimeFormatString = _T("$YEAR$/$MON$/$DAY$ $HOUR$:$MIN$:$SEC$");
@@ -280,11 +407,14 @@ ENTRYPOINT(
     DWORD StartArg;
     DWORD i;
     YORI_STRING Arg;
+    PYORI_STRING NewDate;
     DATE_CONTEXT DateContext;
 
     StartArg = 0;
     UseUtc = FALSE;
     DisplayTime = FALSE;
+    SetDate = FALSE;
+    NewDate = NULL;
     YoriLibInitEmptyString(&AllocatedFormatString);
 
     for (i = 1; i < ArgC; i++) {
@@ -299,8 +429,15 @@ ENTRYPOINT(
                 DateHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2019"));
+                YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                if (i + 1 < ArgC) {
+                    NewDate = &ArgV[i + 1];
+                    i++;
+                    SetDate = TRUE;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("t")) == 0) {
                 DisplayTime = TRUE;
                 ArgumentUnderstood = TRUE;
@@ -316,6 +453,13 @@ ENTRYPOINT(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (SetDate) {
+        if (DateSetDate(UseUtc, NewDate)) {
+            return EXIT_SUCCESS;
+        }
+        return EXIT_FAILURE;
     }
 
     if (StartArg > 0) {

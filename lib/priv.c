@@ -109,6 +109,18 @@ YoriLibEnableDebugPrivilege(VOID)
 }
 
 /**
+ Attempt to enable system time privilege to allow Administrators to change the
+ system clock.
+
+ @return TRUE to indicate that the privilege enablement was successful.
+ */
+BOOL
+YoriLibEnableSystemTimePrivilege(VOID)
+{
+    return YoriLibEnableNamedPrivilege(SE_SYSTEMTIME_NAME);
+}
+
+/**
  Attempt to enable take ownership privilege to allow Administrators update
  system registry keys.
 
