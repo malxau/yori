@@ -1193,47 +1193,6 @@ YuiMenuReloadIfChanged(
 }
 
 /**
- If the privilege for shutting down the system is available to the process,
- enable it.
-
- @return TRUE to indicate the privilege was enabled, FALSE if it was not.
- */
-BOOL
-YuiMenuEnableShutdownPrivilege(VOID)
-{
-    TOKEN_PRIVILEGES TokenPrivileges;
-    LUID ShutdownLuid;
-    HANDLE TokenHandle;
-
-    YoriLibLoadAdvApi32Functions();
-    if (DllAdvApi32.pLookupPrivilegeValueW == NULL ||
-        DllAdvApi32.pOpenProcessToken == NULL ||
-        DllAdvApi32.pAdjustTokenPrivileges == NULL) {
-
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_SHUTDOWN_NAME, &ShutdownLuid)) {
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &TokenHandle)) {
-        return FALSE;
-    }
-
-    TokenPrivileges.PrivilegeCount = 1;
-    TokenPrivileges.Privileges[0].Luid = ShutdownLuid;
-    TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    if (!DllAdvApi32.pAdjustTokenPrivileges(TokenHandle, FALSE, &TokenPrivileges, 0, NULL, 0)) {
-        CloseHandle(TokenHandle);
-        return FALSE;
-    }
-    CloseHandle(TokenHandle);
-
-    return TRUE;
-}
-
-/**
  A structure defining state for the run browse (file open) dialog box.
  */
 typedef struct _OPENFILENAMEW {
@@ -1524,7 +1483,7 @@ YuiMenuExecuteById(
             break;
         case YUI_MENU_REBOOT:
             if (DllUser32.pExitWindowsEx != NULL) {
-                YuiMenuEnableShutdownPrivilege();
+                YoriLibEnableShutdownPrivilege();
                 DllUser32.pExitWindowsEx(EWX_REBOOT, 0);
             }
             break;
@@ -1533,7 +1492,7 @@ YuiMenuExecuteById(
                 DWORD OsMajor;
                 DWORD OsMinor;
                 DWORD BuildNumber;
-                YuiMenuEnableShutdownPrivilege();
+                YoriLibEnableShutdownPrivilege();
                 YoriLibGetOsVersion(&OsMajor, &OsMinor, &BuildNumber);
 
                 //

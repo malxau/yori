@@ -2692,6 +2692,15 @@ BOOL
 YoriLibEnableDebugPrivilege(VOID);
 
 BOOL
+YoriLibEnableManageVolumePrivilege(VOID);
+
+BOOL
+YoriLibEnableShutdownPrivilege(VOID);
+
+BOOL
+YoriLibEnableSymbolicLinkPrivilege(VOID);
+
+BOOL
 YoriLibEnableSystemTimePrivilege(VOID);
 
 BOOL

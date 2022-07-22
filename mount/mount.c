@@ -172,9 +172,6 @@ MountMountVhd(
     DWORD Length;
     DWORD AccessRequested;
     YORI_STRING FullFileName;
-    TOKEN_PRIVILEGES TokenPrivileges;
-    LUID ManageVolumeLuid;
-    HANDLE TokenHandle;
     YORI_STRING DiskPhysicalPath;
     LPTSTR ErrText;
 
@@ -183,36 +180,18 @@ MountMountVhd(
 
     if (DllVirtDisk.pAttachVirtualDisk == NULL ||
         DllVirtDisk.pGetVirtualDiskPhysicalPath == NULL ||
-        DllVirtDisk.pOpenVirtualDisk == NULL ||
-        DllAdvApi32.pLookupPrivilegeValueW == NULL ||
-        DllAdvApi32.pOpenProcessToken == NULL ||
-        DllAdvApi32.pAdjustTokenPrivileges == NULL) {
+        DllVirtDisk.pOpenVirtualDisk == NULL) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mount: OS support not present\n"));
         return FALSE;
     }
 
+    if (!YoriLibEnableManageVolumePrivilege()) {
+        return FALSE;
+    }
+
     YoriLibInitEmptyString(&FullFileName);
     if (!YoriLibUserStringToSingleFilePath(FileName, TRUE, &FullFileName)) {
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_MANAGE_VOLUME_NAME, &ManageVolumeLuid)) {
-        YoriLibFreeStringContents(&FullFileName);
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &TokenHandle)) {
-        YoriLibFreeStringContents(&FullFileName);
-        return FALSE;
-    }
-
-    TokenPrivileges.PrivilegeCount = 1;
-    TokenPrivileges.Privileges[0].Luid = ManageVolumeLuid;
-    TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    if (!DllAdvApi32.pAdjustTokenPrivileges(TokenHandle, FALSE, &TokenPrivileges, 0, NULL, 0)) {
-        CloseHandle(TokenHandle);
-        YoriLibFreeStringContents(&FullFileName);
         return FALSE;
     }
 

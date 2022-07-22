@@ -27,22 +27,6 @@
 #include <yoripch.h>
 #include <yorilib.h>
 
-#ifndef SE_CREATE_SYMBOLIC_LINK_NAME
-/**
- If the compilation environment hasn't defined it, define the privilege
- for creating symbolic links.
- */
-#define SE_CREATE_SYMBOLIC_LINK_NAME _T("SeCreateSymbolicLinkPrivilege")
-#endif
-
-#ifndef FILE_FLAG_OPEN_NO_RECALL
-/**
- If the compilation environment hasn't defined it, define the flag for not
- recalling objects from slow storage.
- */
-#define FILE_FLAG_OPEN_NO_RECALL 0x100000
-#endif
-
 /**
  Help text to display to the user.
  */
@@ -931,47 +915,6 @@ CopyFileFoundCallback(
 }
 
 /**
- If the privilege for creating symbolic links is available to the process,
- enable it.
-
- @return TRUE to indicate the privilege was enabled, FALSE if it was not.
- */
-BOOL
-CopyEnableSymlinkPrivilege(VOID)
-{
-    TOKEN_PRIVILEGES TokenPrivileges;
-    LUID SymlinkLuid;
-    HANDLE TokenHandle;
-
-    YoriLibLoadAdvApi32Functions();
-    if (DllAdvApi32.pLookupPrivilegeValueW == NULL ||
-        DllAdvApi32.pOpenProcessToken == NULL ||
-        DllAdvApi32.pAdjustTokenPrivileges == NULL) {
-
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_CREATE_SYMBOLIC_LINK_NAME, &SymlinkLuid)) {
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &TokenHandle)) {
-        return FALSE;
-    }
-
-    TokenPrivileges.PrivilegeCount = 1;
-    TokenPrivileges.Privileges[0].Luid = SymlinkLuid;
-    TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    if (!DllAdvApi32.pAdjustTokenPrivileges(TokenHandle, FALSE, &TokenPrivileges, 0, NULL, 0)) {
-        CloseHandle(TokenHandle);
-        return FALSE;
-    }
-    CloseHandle(TokenHandle);
-
-    return TRUE;
-}
-
-/**
  Free the structures allocated within a copy context.  The structure itself
  is on the stack and is not freed.  This will wait for any outstanding
  compression work to complete.
@@ -1166,7 +1109,7 @@ ENTRYPOINT(
     ASSERT(YoriLibIsStringNullTerminated(&CopyContext.Dest));
 
     if (CopyContext.CopyAsLinks) {
-        if (!CopyEnableSymlinkPrivilege()) {
+        if (!YoriLibEnableSymbolicLinkPrivilege()) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: warning: could not enable symlink privilege\n"));
         }
     }

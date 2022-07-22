@@ -159,6 +159,14 @@ typedef _Return_type_success_(return >= 0) long HRESULT;
 #define SE_MANAGE_VOLUME_NAME             _T("SeManageVolumePrivilege")
 #endif
 
+#ifndef SE_CREATE_SYMBOLIC_LINK_NAME
+/**
+ If the compilation environment hasn't defined it, define the privilege
+ for creating symbolic links.
+ */
+#define SE_CREATE_SYMBOLIC_LINK_NAME      _T("SeCreateSymbolicLinkPrivilege")
+#endif
+
 /**
  Definition of an IO_STATUS_BLOCK for compilation environments that don't
  define it.

@@ -59,47 +59,6 @@ ShutdownHelp(VOID)
 }
 
 /**
- If the privilege for shutting down the system is available to the process,
- enable it.
-
- @return TRUE to indicate the privilege was enabled, FALSE if it was not.
- */
-BOOL
-ShutdownEnableShutdownPrivilege(VOID)
-{
-    TOKEN_PRIVILEGES TokenPrivileges;
-    LUID ShutdownLuid;
-    HANDLE TokenHandle;
-
-    YoriLibLoadAdvApi32Functions();
-    if (DllAdvApi32.pLookupPrivilegeValueW == NULL ||
-        DllAdvApi32.pOpenProcessToken == NULL ||
-        DllAdvApi32.pAdjustTokenPrivileges == NULL) {
-
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pLookupPrivilegeValueW(NULL, SE_SHUTDOWN_NAME, &ShutdownLuid)) {
-        return FALSE;
-    }
-
-    if (!DllAdvApi32.pOpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES, &TokenHandle)) {
-        return FALSE;
-    }
-
-    TokenPrivileges.PrivilegeCount = 1;
-    TokenPrivileges.Privileges[0].Luid = ShutdownLuid;
-    TokenPrivileges.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
-    if (!DllAdvApi32.pAdjustTokenPrivileges(TokenHandle, FALSE, &TokenPrivileges, 0, NULL, 0)) {
-        CloseHandle(TokenHandle);
-        return FALSE;
-    }
-    CloseHandle(TokenHandle);
-
-    return TRUE;
-}
-
-/**
  The set of operations supported by this command.
  */
 typedef enum _SHUTDN_OP {
@@ -201,7 +160,7 @@ ENTRYPOINT(
     YoriLibLoadAdvApi32Functions();
     YoriLibLoadUser32Functions();
 
-    ShutdownEnableShutdownPrivilege();
+    YoriLibEnableShutdownPrivilege();
 
     Result = TRUE;
 

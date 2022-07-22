@@ -109,6 +109,41 @@ YoriLibEnableDebugPrivilege(VOID)
 }
 
 /**
+ Attempt to enable manage volume privilege to mount VHD files.
+
+ @return TRUE to indicate that the privilege enablement was successful.
+ */
+BOOL
+YoriLibEnableManageVolumePrivilege(VOID)
+{
+    return YoriLibEnableNamedPrivilege(SE_MANAGE_VOLUME_NAME);
+}
+
+
+/**
+ Attempt to enable shutdown privilege to the system to shut down.
+
+ @return TRUE to indicate that the privilege enablement was successful.
+ */
+BOOL
+YoriLibEnableShutdownPrivilege(VOID)
+{
+    return YoriLibEnableNamedPrivilege(SE_SHUTDOWN_NAME);
+}
+
+/**
+ Attempt to enable symbolic link privilege to allow creation of symbolic
+ links.
+
+ @return TRUE to indicate that the privilege enablement was successful.
+ */
+BOOL
+YoriLibEnableSymbolicLinkPrivilege(VOID)
+{
+    return YoriLibEnableNamedPrivilege(SE_CREATE_SYMBOLIC_LINK_NAME);
+}
+
+/**
  Attempt to enable system time privilege to allow Administrators to change the
  system clock.
 
