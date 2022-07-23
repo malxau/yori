@@ -3,7 +3,7 @@
  *
  * Yori shell copy files
  *
- * Copyright (c) 2017-2021 Malcolm J. Smith
+ * Copyright (c) 2017-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -287,14 +287,11 @@ CopyBuildDestinationPath(
         }
         YoriLibFreeStringContents(&DestWithFile);
     } else {
-        if (!YoriLibGetFullPathNameReturnAllocation(&CopyContext->Dest, TRUE, FullDest, NULL)) {
-            return FALSE;
-        }
         if (CopyContext->FilesCopied > 0) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Attempting to copy multiple files over a single file (%s)\n"), FullDest->StartOfString);
-            YoriLibFreeStringContents(FullDest);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Attempting to copy multiple files over a single file (%y)\n"), &CopyContext->Dest);
             return FALSE;
         }
+        YoriLibCloneString(FullDest, &CopyContext->Dest);
     }
     return TRUE;
 }
@@ -785,6 +782,8 @@ CopyFileFoundCallback(
     DWORD Index;
     DWORD LastError;
 
+    CopyContext->FilesFoundThisArg++;
+
     ASSERT(YoriLibIsStringNullTerminated(FilePath));
 
     YoriLibInitEmptyString(&FullDest);
@@ -814,7 +813,6 @@ CopyFileFoundCallback(
     //
 
     if (CopyShouldExclude(CopyContext, &RelativePathFromSource, FileInfo)) {
-        CopyContext->FilesFoundThisArg++;
 
         if (CopyContext->Verbose) {
             if (YoriLibUnescapePath(FilePath, &HumanSourcePath)) {
@@ -828,8 +826,22 @@ CopyFileFoundCallback(
     }
 
     if (!CopyBuildDestinationPath(CopyContext, &RelativePathFromSource, &FullDest)) {
-        CopyContext->FilesFoundThisArg++;
         return FALSE;
+    }
+
+    //
+    //  This cannot detect all cases where two paths might refer to the same
+    //  file, but it can improve the experience if a user fails to specify
+    //  a destination (implying a relative path to a file in the current
+    //  directory should be copied to the current directory.)  It can't even
+    //  check for case insensitivity given NTFS can support case sensitive
+    //  paths.
+    //
+
+    if (YoriLibCompareString(&FullDest, FilePath) == 0) {
+        YoriLibFreeStringContents(&FullDest);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Cannot copy file over itself: %y\n"), FilePath);
+        return TRUE;
     }
 
     DestNameToDisplay = &FullDest;
@@ -906,7 +918,6 @@ CopyFileFoundCallback(
         CopyTimestamps(FileInfo, &FullDest);
     }
 
-    CopyContext->FilesFoundThisArg++;
     CopyContext->FilesCopied++;
     YoriLibFreeStringContents(&FullDest);
     YoriLibFreeStringContents(&HumanSourcePath);
@@ -992,7 +1003,7 @@ ENTRYPOINT(
                 CopyHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2021"));
+                YoriLibDisplayMitLicense(_T("2017-2022"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
                 BasicEnumeration = TRUE;
@@ -1093,7 +1104,13 @@ ENTRYPOINT(
         CopyFreeCopyContext(&CopyContext);
         return EXIT_FAILURE;
     } else if (FileCount == 1) {
-        YoriLibConstantString(&CopyContext.Dest, _T("."));
+        YORI_STRING RelativeCurrentDirectory;
+        YoriLibConstantString(&RelativeCurrentDirectory, _T("."));
+        if (!YoriLibUserStringToSingleFilePathOrDevice(&RelativeCurrentDirectory, TRUE, &CopyContext.Dest)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &RelativeCurrentDirectory);
+            CopyFreeCopyContext(&CopyContext);
+            return EXIT_FAILURE;
+        }
     } else {
         if (!YoriLibUserStringToSingleFilePathOrDevice(&ArgV[LastFileArg], TRUE, &CopyContext.Dest)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("copy: could not resolve %y\n"), &ArgV[LastFileArg]);
