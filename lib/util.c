@@ -515,8 +515,8 @@ YoriLibPosixDeleteFile(
  The 32 bit math assembly routines currently can't support a 64 bit
  denominator.  Wrapping them in this function ensures that they will not be
  invoked with a 64 bit denominator.  This function is used as a barrier so
- that multiple 32 bit divisions can be performed without the compiler upgrding
- them into fewer 64 bit divisions.
+ that multiple 32 bit divisions can be performed without the compiler
+ upgrading them into fewer 64 bit divisions.
  
  @param Numerator The numerator of the division operation.
  
@@ -531,6 +531,32 @@ YoriLibDivide32(
     )
 {
     return Numerator/Denominator;
+}
+
+/**
+ Return TRUE to indicate that a character can be printed as a character.
+ Return FALSE to indicate that a character is a control character that will
+ modify terminal behavior.
+
+ @param Char The character to test.
+
+ @return TRUE if the character can be printed as a character, FALSE if it can
+         not.
+ */
+BOOLEAN
+YoriLibIsCharPrintable(
+    __in WCHAR Char
+    )
+{
+    if (Char == 0x00 ||
+        (Char >= 0x07 && Char <= 0x0F) ||
+        Char == 0x1B ||
+        (Char >= 0x7F && Char <= 0x9F)) {
+
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 // vim:sw=4:ts=4:et:

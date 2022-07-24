@@ -1,9 +1,9 @@
 /**
  * @file charmap/charmap.c
  *
- * Yori shell display command line output
+ * Yori shell display characters from the character map
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -164,12 +164,7 @@ CharMapDisplay(
     ColumnIndex = 0;
     for (i = 0; i < CharCount; i++) {
         CharToDisplay = WideChars.StartOfString[i];
-        if (CharToDisplay == '\r' ||
-            CharToDisplay == '\n' ||
-            CharToDisplay == '\t' ||
-            CharToDisplay == '\b' ||
-            CharToDisplay == '\a') {
-
+        if (!YoriLibIsCharPrintable(CharToDisplay)) {
             CharToDisplay = ' ';
         }
 

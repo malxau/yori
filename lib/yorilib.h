@@ -3915,4 +3915,9 @@ YoriLibDivide32(
     __in DWORD Denominator
     );
 
+BOOLEAN
+YoriLibIsCharPrintable(
+    __in WCHAR Char
+    );
+
 // vim:sw=4:ts=4:et:
