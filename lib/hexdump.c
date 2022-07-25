@@ -620,7 +620,7 @@ YoriLibHexDump(
                 for (WordIndex = 0; WordIndex < YORI_LIB_HEXDUMP_BYTES_PER_LINE; WordIndex++) {
                     if (WordIndex < BytesToDisplay) {
                         CharToDisplay = Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE + WordIndex];
-                        if (CharToDisplay < 32) {
+                        if (!YoriLibIsCharPrintable(CharToDisplay)) {
                             CharToDisplay = '.';
                         }
                     } else {
@@ -641,7 +641,7 @@ YoriLibHexDump(
                         Low = Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE + WordIndex * sizeof(TCHAR)];
                         High = Buffer[LineIndex * YORI_LIB_HEXDUMP_BYTES_PER_LINE + WordIndex * sizeof(TCHAR) + 1];
                         TCharToDisplay = (TCHAR)((High << 8) + Low);
-                        if (TCharToDisplay < 32) {
+                        if (!YoriLibIsCharPrintable(TCharToDisplay)) {
                             TCharToDisplay = '.';
                         }
                     } else {
