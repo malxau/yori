@@ -1787,6 +1787,17 @@ YoriLibIsFileNameDeviceName(
         }
     }
 
+    //
+    //  Check for a physical drive name.  Note this also checks that the
+    //  prefix is a dot.
+    //
+
+    if (Prefixed) {
+        if (YoriLibCompareStringWithLiteralInsensitiveCount(File, _T("\\\\.\\PHYSICALDRIVE"), sizeof("\\\\.\\PHYSICALDRIVE") - 1) == 0) {
+            return TRUE;
+        }
+    }
+
     if (NameToCheck.LengthInChars < 3 || NameToCheck.LengthInChars > 4) {
         return FALSE;
     }
@@ -1814,6 +1825,7 @@ YoriLibIsFileNameDeviceName(
 
         return TRUE;
     }
+
 
     return FALSE;
 }
