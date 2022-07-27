@@ -559,4 +559,29 @@ YoriLibIsCharPrintable(
     return TRUE;
 }
 
+/**
+ Query the sector size that applies to a given handle.  If zero is returned,
+ the device does not impose sector alignment requirements.
+
+ @param FileHandle The file handle to query.
+
+ @return The logical sector size, or zero.
+ */
+DWORD
+YoriLibGetHandleSectorSize(
+    __in HANDLE FileHandle
+    )
+{
+    DWORD SectorSize;
+    DISK_GEOMETRY DiskGeometry;
+    DWORD BytesCopied;
+
+    SectorSize = 0;
+    if (DeviceIoControl(FileHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &DiskGeometry, sizeof(DiskGeometry), &BytesCopied, NULL)) {
+        SectorSize = DiskGeometry.BytesPerSector;
+    }
+
+    return SectorSize;
+}
+
 // vim:sw=4:ts=4:et:

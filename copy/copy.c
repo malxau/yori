@@ -577,7 +577,6 @@ CopyAsDumbDataMove(
     HANDLE DestHandle;
     DWORD LastError;
     LPTSTR ErrText;
-    DISK_GEOMETRY DiskGeometry;
     LONGLONG TotalBytesCopied;
 
     SourceHandle = CreateFile(SourceFile->StartOfString,
@@ -624,10 +623,7 @@ CopyAsDumbDataMove(
         return FALSE;
     }
 
-    SectorSize = 0;
-    if (DeviceIoControl(DestHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &DiskGeometry, sizeof(DiskGeometry), &BytesCopied, NULL)) {
-        SectorSize = DiskGeometry.BytesPerSector;
-    }
+    SectorSize = YoriLibGetHandleSectorSize(DestHandle);
 
     BufferSize = 64 * 1024;
     Buffer = YoriLibMalloc(BufferSize);

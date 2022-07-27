@@ -3920,4 +3920,9 @@ YoriLibIsCharPrintable(
     __in WCHAR Char
     );
 
+DWORD
+YoriLibGetHandleSectorSize(
+    __in HANDLE FileHandle
+    );
+
 // vim:sw=4:ts=4:et:
