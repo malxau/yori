@@ -924,6 +924,7 @@ HexDumpProcessStream(
     DWORD LengthToDisplay;
     DWORD DisplayFlags;
     DWORD FileType;
+    DWORD SectorSize;
     LARGE_INTEGER StreamOffset;
     BOOLEAN LimitDisplayToEvenLine;
 
@@ -936,6 +937,7 @@ HexDumpProcessStream(
         return FALSE;
     }
     DisplayFlags = 0;
+    SectorSize = 0;
     if (!HexDumpContext->HideOffset) {
         DisplayFlags |= YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET;
     }
@@ -960,7 +962,12 @@ HexDumpProcessStream(
 
     StreamOffset.QuadPart = 0;
     if (FileType != FILE_TYPE_PIPE) {
+        SectorSize = YoriLibGetHandleSectorSize(hSource);
         StreamOffset.QuadPart = HexDumpContext->OffsetToDisplay;
+
+        if (SectorSize != 0) {
+            StreamOffset.LowPart = StreamOffset.LowPart & (~(SectorSize - 1));
+        }
 
         if (!SetFilePointer(hSource, StreamOffset.LowPart, &StreamOffset.HighPart, FILE_BEGIN)) {
             StreamOffset.QuadPart = 0;
