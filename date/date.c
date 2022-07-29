@@ -289,7 +289,7 @@ DateSetDate(
 
         Char = NewDate->StartOfString[Index];
         if (Char >= '0' && Char <= '9') {
-            *Field = (*Field) * 10 + Char - '0';
+            *Field = (WORD)((*Field) * 10 + Char - '0');
             CharsThisField++;
         } else if (Char == '/' || Char == '-' || Char == ':') {
             NextField = TRUE;

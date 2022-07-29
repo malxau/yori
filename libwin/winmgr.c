@@ -1793,7 +1793,7 @@ YoriWinMgrRefreshWindowRegion(
     )
 {
     YORI_WIN_SHADOW_TYPE LocalShadowType;
-    PSMALL_RECT WindowRect;
+    PCSMALL_RECT WindowRect;
     SMALL_RECT RefreshRect;
     PYORI_WIN_WINDOW_MANAGER WinMgr;
 
