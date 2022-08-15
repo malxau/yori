@@ -100,20 +100,13 @@ YORI_LIST_ENTRY JobList;
 
  @param ExecContext The process that is currently executing in the background.
 
- @param hProcess A handle to the process.  If this call succeeds, the handle
-        is retained internally and should not be closed.
-
- @param dwProcessId The ID of the process.
-
  @return TRUE to indicate a job was successfully allocated, FALSE if it was
          not.
  */
 __success(return)
 BOOL
 YoriShCreateNewJob(
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in HANDLE hProcess,
-    __in DWORD dwProcessId
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     )
 {
     PYORI_JOB ThisJob;
@@ -135,8 +128,8 @@ YoriShCreateNewJob(
     }
 
     ThisJob->JobId = ++YoriShGlobal.PreviousJobId;
-    ThisJob->hProcess = hProcess;
-    ThisJob->dwProcessId = dwProcessId;
+    ThisJob->hProcess = ExecContext->hProcess;
+    ThisJob->dwProcessId = ExecContext->dwProcessId;
 
     if (ExecContext->StdOutType == StdOutTypeBuffer &&
         ExecContext->StdOut.Buffer.ProcessBuffers != NULL) {
@@ -300,7 +293,8 @@ YoriShGetNextJobId(
 }
 
 /**
- Waits until the specified job ID is no longer active.
+ Waits until the specified job ID is no longer active, or until the user
+ cancels or breaks out of the wait.
 
  @param JobId The ID to wait for.
  */
@@ -309,6 +303,8 @@ YoriShJobWait(
     __in DWORD JobId
     )
 {
+    YORI_SH_WAIT_INPUT_CONTEXT WaitContext;
+    YORI_SH_WAIT_OUTCOME Outcome;
     PYORI_JOB ThisJob;
     PYORI_LIST_ENTRY ListEntry;
 
@@ -317,13 +313,87 @@ YoriShJobWait(
     }
 
     ListEntry = YoriLibGetNextListEntry(&JobList, NULL);
+    ThisJob = NULL;
     while (ListEntry != NULL) {
         ThisJob = CONTAINING_RECORD(ListEntry, YORI_JOB, ListEntry);
         ListEntry = YoriLibGetNextListEntry(&JobList, ListEntry);
         if (ThisJob->JobId == JobId) {
-            WaitForSingleObject(ThisJob->hProcess, INFINITE);
+            break;
+        } else {
+            ThisJob = NULL;
         }
     }
+
+    if (ThisJob == NULL || ThisJob->hProcess == NULL) {
+        return;
+    }
+
+    YoriShInitializeWaitContext(&WaitContext, ThisJob->hProcess);
+
+    while (TRUE) {
+        Outcome = YoriShWaitForProcessOrInput(&WaitContext);
+
+        if (Outcome == YoriShWaitOutcomeProcessExit) {
+
+            //
+            //  Once the process has completed, if it's outputting to
+            //  buffers, wait for the buffers to contain final data.
+            //
+            //  MSFIX Bring this back
+            //
+
+            /*
+            if (ExecContext->StdOutType == StdOutTypeBuffer &&
+                ExecContext->StdOut.Buffer.ProcessBuffers != NULL)  {
+
+                YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdOut.Buffer.ProcessBuffers);
+            }
+
+            if (ExecContext->StdErrType == StdErrTypeBuffer &&
+                ExecContext->StdErr.Buffer.ProcessBuffers != NULL) {
+
+                YoriLibShWaitForProcessBufferToFinalize(ExecContext->StdErr.Buffer.ProcessBuffers);
+            }
+            */
+            break;
+        }
+
+        //
+        //  If the user has hit Ctrl+C or Ctrl+Break, request the process
+        //  to clean up gracefully and unwind.  Later on we'll try to kill
+        //  all processes in the exec plan, so we don't need to try too hard
+        //  at this point.
+        //
+
+        if (Outcome == YoriShWaitOutcomeCancel) {
+
+            //
+            //  MSFIX Bring back TerminateGracefully
+            //
+
+            /*
+            if (ExecContext->TerminateGracefully && ExecContext->dwProcessId != 0) {
+                GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, ExecContext->dwProcessId);
+                break;
+            } else if (ExecContext->hProcess != NULL) {
+                TerminateProcess(ExecContext->hProcess, 1);
+                break;
+            } else {
+                Sleep(50);
+            }
+            */
+            TerminateProcess(ThisJob->hProcess, 1);
+            break;
+        }
+
+        if (Outcome == YoriShWaitOutcomeBackground) {
+
+            break;
+        }
+
+    }
+
+    YoriShCleanupWaitContext(&WaitContext);
 }
 
 /**
@@ -538,5 +608,6 @@ YoriShGetJobInformation(
 
     return FALSE;
 }
+
 
 // vim:sw=4:ts=4:et:

@@ -352,9 +352,7 @@ YoriShCleanupInputContext(VOID);
 __success(return)
 BOOL
 YoriShCreateNewJob(
-    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext,
-    __in HANDLE hProcess,
-    __in DWORD dwProcessId
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 __success(return)
@@ -456,6 +454,29 @@ YoriShLoadSavedRestartState(
 VOID
 YoriShDiscardSavedRestartState(
     __in_opt PYORI_STRING ProcessId
+    );
+
+// *** WAIT.C ***
+
+VOID
+YoriShInitializeWaitContext(
+    __out PYORI_SH_WAIT_INPUT_CONTEXT WaitContext,
+    __in HANDLE WaitHandle
+    );
+
+VOID
+YoriShCleanupWaitContext(
+    __in PYORI_SH_WAIT_INPUT_CONTEXT WaitContext
+    );
+
+YORI_SH_WAIT_OUTCOME
+YoriShWaitForProcessOrInput(
+    __inout PYORI_SH_WAIT_INPUT_CONTEXT WaitContext
+    );
+
+VOID
+YoriShWaitForProcessToTerminate(
+    __in PYORI_LIBSH_SINGLE_EXEC_CONTEXT ExecContext
     );
 
 // *** WINDOW.C ***

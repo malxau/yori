@@ -355,6 +355,64 @@ typedef struct _YORI_SH_DEFAULT_ALIAS_ENTRY {
 extern CONST YORI_SH_DEFAULT_ALIAS_ENTRY YoriShDefaultAliasEntries[];
 
 /**
+ Context to pass between process wait operations.  Waiting is frequently
+ iterative, since it can be interrupted by console input, then has to
+ re-wait, and only after repeated input is the final outcome determined.
+ This structure keeps track of state across these mini-waits to establish
+ the outcome.
+ */
+typedef struct _YORI_SH_WAIT_INPUT_CONTEXT {
+
+    /**
+     An array of wait objects.  The first object is a process handle or debug
+     thread.  The second is a cancel event.  The third is the console input
+     handle.
+     */
+    HANDLE WaitOn[3];
+
+    /**
+     An allocation containing an array of console input records.  The array is
+     sized by RecordsAllocated below.  This allocation is reused across each
+     mini-wait to capture the current input events.
+     */
+    PINPUT_RECORD InputRecords;
+
+    /**
+     The size of the InputRecords array above.
+     */
+    DWORD RecordsAllocated;
+
+    /**
+     The number of Ctrl+B keypresses that have been observed.  If three are
+     observed in successive mini-waits, meaning it has not been consumed by
+     a console application, the key is acted upon.
+     */
+    DWORD CtrlBCount;
+
+    /**
+     The number of events indicating that the window has lost input focus.
+     */
+    DWORD LoseFocusCount;
+
+    /**
+     The amount of milliseconds to wait on the next mini-wait.  THis can be
+     INFINITE.
+     */
+    DWORD Delay;
+} YORI_SH_WAIT_INPUT_CONTEXT, *PYORI_SH_WAIT_INPUT_CONTEXT;
+
+/**
+ The reason that a wait exited.  Depending on the reason, another wait
+ might be issued.
+ */
+typedef enum _YORI_SH_WAIT_OUTCOME {
+    YoriShWaitOutcomeProcessExit = 0,
+    YoriShWaitOutcomeCancel = 1,
+    YoriShWaitOutcomeBackground = 2,
+    YoriShWaitOutcomeLoseFocus = 3
+} YORI_SH_WAIT_OUTCOME;
+
+/**
  A structure containing state that is global across the Yori shell process.
  */
 typedef struct _YORI_SH_GLOBALS {

@@ -29,6 +29,7 @@ OBJS=\
 	parse.obj        \
 	prompt.obj       \
 	restart.obj      \
+	wait.obj         \
 	window.obj       \
 	yori.obj         \
 
