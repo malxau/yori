@@ -155,6 +155,167 @@ typedef enum _MAKE_PRIORITY {
 } MAKE_PRIORITY;
 
 
+/**
+ Given an array of arguments and a starting index, look for a variable=value
+ pair.  The value component may be quoted and may span later arguments.  If
+ that happens, allocate a value that contains the data from many arguments,
+ and return in EndIndex the argument that this routine ended parsing on.
+
+ @param ArgC The number of arguments.
+
+ @param ArgV An array of arguments.
+
+ @param StartIndex The index into the arguments, must be less than ArgC.
+
+ @param VariableName On successful completion, populated with a substring
+        containing the variable name.
+
+ @param Value On successful completion, populated with a string containing
+        the value component.  This may be a substring or may be a new
+        allocation.
+
+ @param EndIndex On successful completion, updated to contain the argument
+        containing the end of the value, which may be the one containing the
+        final quote.
+
+ @return TRUE to indicate the argument contains of a variable=value pair
+         which was successfully parsed.  FALSE indicates that the argument
+         is not a variable=value pair, or an allocation failure was
+         encountered.
+ */
+BOOLEAN
+MakeBuildVariableValueString(
+    __in DWORD ArgC,
+    __in YORI_STRING ArgV[],
+    __in DWORD StartIndex,
+    __out PYORI_STRING VariableName,
+    __out_opt PYORI_STRING Value,
+    __out PDWORD EndIndex
+    )
+{
+    PYORI_STRING ThisArg;
+    LPTSTR Equals;
+    YORI_STRING LocalValue;
+    DWORD EndArgIndex;
+
+    //
+    //  Check if this argument is a variable=value pair
+    //
+
+    ThisArg = &ArgV[StartIndex];
+    Equals = YoriLibFindLeftMostCharacter(ThisArg, '=');
+    if (Equals == NULL) {
+        return FALSE;
+    }
+
+    //
+    //  Construct the variable and value components assuming it's all in one
+    //  argument (which it normally is)
+    //
+
+    YoriLibInitEmptyString(VariableName);
+    YoriLibInitEmptyString(&LocalValue);
+    VariableName->StartOfString = ThisArg->StartOfString;
+    VariableName->LengthInChars = (DWORD)(Equals - VariableName->StartOfString);
+
+    LocalValue.StartOfString = Equals + 1;
+    LocalValue.LengthInChars = ThisArg->LengthInChars - VariableName->LengthInChars - 1;
+    EndArgIndex = StartIndex;
+
+    //
+    //  Check if the value part starts with a quote.  If it does, we may need
+    //  to stitch multiple arguments together and return the value.  This also
+    //  indicates a need to allocate and double buffer
+    //
+
+    if (LocalValue.LengthInChars > 0 &&
+        LocalValue.StartOfString[0] == '"') {
+
+        YORI_STRING Substring;
+        LPTSTR EndQuote;
+
+        YoriLibInitEmptyString(&Substring);
+        Substring.StartOfString = LocalValue.StartOfString + 1;
+        Substring.LengthInChars = LocalValue.LengthInChars - 1;
+
+        //
+        //  Look for the end quote.  If it's in this arg, just get the
+        //  substring.
+        //
+
+        EndQuote = YoriLibFindLeftMostCharacter(&Substring, '"');
+        if (EndQuote != NULL) {
+            LocalValue.StartOfString = Substring.StartOfString;
+            LocalValue.LengthInChars = (DWORD)(EndQuote - LocalValue.StartOfString);
+        } else {
+            DWORD ArgIndex;
+            DWORD CharsNeeded;
+
+            //
+            //  Loop through the arguments looking for one with a quote.
+            //  If we find one, concatenate a string from after the first
+            //  quote, through all intermediate arguments, to the final
+            //  quote.
+            //
+
+            EndArgIndex = StartIndex + 1;
+            while (EndQuote == NULL && EndArgIndex < ArgC) {
+                ThisArg = &ArgV[EndArgIndex];
+                EndQuote = YoriLibFindLeftMostCharacter(ThisArg, '"');
+                if (EndQuote == NULL) {
+                    EndArgIndex++;
+                    continue;
+                }
+
+                CharsNeeded = Substring.LengthInChars + 1;
+                for (ArgIndex = StartIndex + 1; ArgIndex < EndArgIndex; ArgIndex++) {
+                    CharsNeeded = CharsNeeded + ArgV[ArgIndex].LengthInChars + 1;
+                }
+                CharsNeeded = CharsNeeded + (DWORD)(EndQuote - ThisArg->StartOfString) + 1;
+
+                if (Value != NULL) {
+
+                    if (!YoriLibAllocateString(&LocalValue, CharsNeeded)) {
+                        return FALSE;
+                    }
+
+                    memcpy(LocalValue.StartOfString, Substring.StartOfString, Substring.LengthInChars * sizeof(TCHAR));
+                    LocalValue.LengthInChars = Substring.LengthInChars;
+                    LocalValue.StartOfString[LocalValue.LengthInChars] = ' ';
+                    LocalValue.LengthInChars = LocalValue.LengthInChars + 1;
+                    for (ArgIndex = StartIndex + 1; ArgIndex < EndArgIndex; ArgIndex++) {
+                        memcpy(&LocalValue.StartOfString[LocalValue.LengthInChars], ArgV[ArgIndex].StartOfString, ArgV[ArgIndex].LengthInChars * sizeof(TCHAR));
+                        LocalValue.LengthInChars = LocalValue.LengthInChars + ArgV[ArgIndex].LengthInChars;
+                        LocalValue.StartOfString[LocalValue.LengthInChars] = ' ';
+                        LocalValue.LengthInChars = LocalValue.LengthInChars + 1;
+                    }
+
+                    Substring.StartOfString = ThisArg->StartOfString;
+                    Substring.LengthInChars = (DWORD)(EndQuote - ThisArg->StartOfString);
+
+                    memcpy(&LocalValue.StartOfString[LocalValue.LengthInChars], Substring.StartOfString, Substring.LengthInChars * sizeof(TCHAR));
+                    LocalValue.LengthInChars = LocalValue.LengthInChars + Substring.LengthInChars;
+                    LocalValue.StartOfString[LocalValue.LengthInChars] = '\0';
+                }
+
+            }
+        }
+    }
+
+    //
+    //  Return the string which might be a substring or a compound allocation.
+    //  Also return the argument that this routine parsed up to.
+    //
+
+    if (Value != NULL) {
+        memcpy(Value, &LocalValue, sizeof(YORI_STRING));
+    }
+    *EndIndex = EndArgIndex;
+
+    return TRUE;
+}
+
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the ymake builtin command.
@@ -525,8 +686,6 @@ ENTRYPOINT(
     //
 
     for (i = 1; i < ArgC; i++) {
-        PYORI_STRING ThisArg;
-        LPTSTR Equals;
 
         if (i < StartArg && YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
@@ -537,21 +696,14 @@ ENTRYPOINT(
             }
         } else {
 
-            ThisArg = &ArgV[i];
+            YORI_STRING VariableName;
+            YORI_STRING Value;
 
-            Equals = YoriLibFindLeftMostCharacter(ThisArg, '=');
-            if (Equals != NULL) {
-                YORI_STRING VariableName;
-                YORI_STRING Value;
-
-                YoriLibInitEmptyString(&VariableName);
-                YoriLibInitEmptyString(&Value);
-                VariableName.StartOfString = ThisArg->StartOfString;
-                VariableName.LengthInChars = (DWORD)(Equals - VariableName.StartOfString);
-                Value.StartOfString = Equals + 1;
-                Value.LengthInChars = ThisArg->LengthInChars - VariableName.LengthInChars - 1;
+            if (MakeBuildVariableValueString(ArgC, ArgV, i, &VariableName, &Value, &i)) {
 
                 MakeSetVariable(MakeContext.RootScope, &VariableName, &Value, TRUE, MakeVariablePrecedenceCommandLine);
+
+                YoriLibFreeStringContents(&Value);
             }
         }
     }
@@ -607,8 +759,6 @@ ENTRYPOINT(
     //
 
     for (i = 1; i < ArgC; i++) {
-        PYORI_STRING ThisArg;
-        LPTSTR Equals;
 
         if (i < StartArg && YoriLibIsCommandLineOption(&ArgV[i], &Arg)) {
             for (j = 0; j < sizeof(MakeArgsWithParameter)/sizeof(MakeArgsWithParameter[0]); j++) {
@@ -619,10 +769,12 @@ ENTRYPOINT(
             }
         } else {
 
-            ThisArg = &ArgV[i];
+            PYORI_STRING ThisArg;
+            YORI_STRING VariableName;
 
-            Equals = YoriLibFindLeftMostCharacter(ThisArg, '=');
-            if (Equals == NULL) {
+            if (!MakeBuildVariableValueString(ArgC, ArgV, i, &VariableName, NULL, &i)) {
+                ThisArg = &ArgV[i];
+
                 if (!MakeMarkCommandLineTargetForBuild(&MakeContext, ThisArg)) {
                     YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not determine how to build target %y\n"), ThisArg);
                     Result = EXIT_FAILURE;
