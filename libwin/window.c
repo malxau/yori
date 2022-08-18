@@ -702,6 +702,17 @@ YoriWinDestroyWindow(
 {
     PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
 
+    //
+    //  Normally a window would be removed from the Z-order when it is
+    //  closed, but if it hasn't finished being created, it might be
+    //  in the list as part of destroy.
+    //
+
+    if (Window->ZOrderWindowListEntry.Next != NULL) {
+        YoriWinMgrPopWindowZOrder(Window->WinMgrHandle, Window);
+        Window->ZOrderWindowListEntry.Next = NULL;
+    }
+
     Window->Destroying = TRUE;
 
     if (Window->Contents != NULL) {
@@ -743,6 +754,7 @@ YoriWinCloseWindow(
 
     if (Window->ZOrderWindowListEntry.Next != NULL) {
         YoriWinMgrPopWindowZOrder(Window->WinMgrHandle, Window);
+        Window->ZOrderWindowListEntry.Next = NULL;
     }
 }
 
