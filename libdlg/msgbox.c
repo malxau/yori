@@ -121,26 +121,6 @@ YoriDlgMessageBox(
         LabelLinesRequired = WindowSize.Y - 7;
     }
 
-    WindowWidth = (WORD)(LabelWidthRequired + 4);
-    WindowHeight = (WORD)(LabelLinesRequired + 7);
-
-    if (!YoriWinCreateWindow(WinMgrHandle, WindowWidth, WindowHeight, WindowWidth, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
-        return FALSE;
-    }
-
-    YoriWinGetClientSize(Parent, &WindowSize);
-
-    TextArea.Left = 1;
-    TextArea.Top = 1;
-    TextArea.Right = (WORD)(WindowSize.X - 2);
-    TextArea.Bottom = (SHORT)(TextArea.Top + LabelLinesRequired - 1);
-
-    Ctrl = YoriWinLabelCreate(Parent, &TextArea, Text, YORI_WIN_LABEL_STYLE_CENTER | YORI_WIN_LABEL_NO_ACCELERATOR);
-    if (Ctrl == NULL) {
-        YoriWinDestroyWindow(Parent);
-        return FALSE;
-    }
-
     //
     //  Count the number of characters in the buttons.
     //
@@ -163,6 +143,39 @@ YoriDlgMessageBox(
     //
 
     TotalButtonWidth += 5 * NumButtons - 1;
+
+    //
+    //  Make the window wide enough for the label text or the buttons,
+    //  whichever is wider
+    //
+
+    if (TotalButtonWidth > LabelWidthRequired) {
+        WindowWidth = (WORD)(TotalButtonWidth + 4);
+    } else {
+        WindowWidth = (WORD)(LabelWidthRequired + 4);
+    }
+    WindowHeight = (WORD)(LabelLinesRequired + 7);
+
+    if (!YoriWinCreateWindow(WinMgrHandle, WindowWidth, WindowHeight, WindowWidth, WindowHeight, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
+        return FALSE;
+    }
+
+    YoriWinGetClientSize(Parent, &WindowSize);
+
+    TextArea.Left = 1;
+    TextArea.Top = 1;
+    TextArea.Right = (WORD)(WindowSize.X - 2);
+    TextArea.Bottom = (SHORT)(TextArea.Top + LabelLinesRequired - 1);
+
+    Ctrl = YoriWinLabelCreate(Parent, &TextArea, Text, YORI_WIN_LABEL_STYLE_CENTER | YORI_WIN_LABEL_NO_ACCELERATOR);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Parent);
+        return FALSE;
+    }
+
+    //
+    //  Center the buttons within their width
+    //
 
     ButtonArea.Top = (SHORT)(TextArea.Bottom + 2);
     ButtonArea.Bottom = (SHORT)(ButtonArea.Top + 2);
