@@ -200,7 +200,7 @@ __success(return)
 BOOLEAN
 YoriWinItemArrayAddItems(
     __inout PYORI_WIN_ITEM_ARRAY ItemArray,
-    __in PYORI_STRING NewItems,
+    __in PCYORI_STRING NewItems,
     __in DWORD NumNewItems
     )
 {

@@ -455,7 +455,7 @@ YoriWinLabelCountLinesRequired(
  */
 VOID
 YoriWinLabelParseAccelerator(
-    __in PYORI_STRING RawString,
+    __in PCYORI_STRING RawString,
     __inout_opt PYORI_STRING ParsedString,
     __out_opt TCHAR* AcceleratorChar,
     __out_opt PDWORD HighlightOffset,
@@ -708,7 +708,7 @@ YoriWinLabelSetTextAttributes(
 BOOLEAN
 YoriWinLabelSetCaption(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_STRING Caption
+    __in PCYORI_STRING Caption
     )
 {
     PYORI_WIN_CTRL_LABEL Label;

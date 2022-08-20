@@ -904,7 +904,7 @@ __success(return)
 BOOLEAN
 YoriWinListAddItems(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_STRING ListOptions,
+    __in PCYORI_STRING ListOptions,
     __in DWORD NumberOptions
     )
 {
