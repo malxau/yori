@@ -183,6 +183,7 @@ typedef enum _MAKE_PRIORITY {
          is not a variable=value pair, or an allocation failure was
          encountered.
  */
+__success(return)
 BOOLEAN
 MakeBuildVariableValueString(
     __in DWORD ArgC,
