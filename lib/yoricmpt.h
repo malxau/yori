@@ -7182,6 +7182,18 @@ REG_OPEN_KEY_EXW(HKEY, LPCWSTR, DWORD, DWORD, PHKEY);
 typedef REG_OPEN_KEY_EXW *PREG_OPEN_KEY_EXW;
 
 /**
+ A prototype for the RegQueryInfoKeyW function.
+ */
+typedef
+LONG WINAPI
+REG_QUERY_INFO_KEYW(HANDLE, LPCWSTR, LPDWORD, LPDWORD, LPDWORD, LPDWORD, LPDWORD, LPDWORD, LPDWORD, LPDWORD, LPDWORD, PFILETIME);
+
+/**
+ A prototype for a pointer to the RegQueryInfoKeyW function.
+ */
+typedef REG_QUERY_INFO_KEYW *PREG_QUERY_INFO_KEYW;
+
+/**
  A prototype for the RegQueryValueExW function.
  */
 typedef
@@ -7446,6 +7458,11 @@ typedef struct _YORI_ADVAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to RegOpenKeyExW.
      */
     PREG_OPEN_KEY_EXW pRegOpenKeyExW;
+
+    /**
+     If it's available on the current system, a pointer to RegQueryInfoKeyW.
+     */
+    PREG_QUERY_INFO_KEYW pRegQueryInfoKeyW;
 
     /**
      If it's available on the current system, a pointer to RegQueryValueExW.

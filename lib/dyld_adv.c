@@ -86,6 +86,7 @@ CONST YORI_DLL_NAME_MAP DllAdvApi32Symbols[] = {
     {(FARPROC *)&DllAdvApi32.pRegEnumValueW, "RegEnumValueW"},
     {(FARPROC *)&DllAdvApi32.pRegGetKeySecurity, "RegGetKeySecurity"},
     {(FARPROC *)&DllAdvApi32.pRegOpenKeyExW, "RegOpenKeyExW"},
+    {(FARPROC *)&DllAdvApi32.pRegQueryInfoKeyW, "RegQueryInfoKeyW"},
     {(FARPROC *)&DllAdvApi32.pRegQueryValueExW, "RegQueryValueExW"},
     {(FARPROC *)&DllAdvApi32.pRegSetKeySecurity, "RegSetKeySecurity"},
     {(FARPROC *)&DllAdvApi32.pRegSetValueExW, "RegSetValueExW"},
