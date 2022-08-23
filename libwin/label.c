@@ -241,11 +241,11 @@ YoriWinLabelGetNextDisplayLine(
         //  processing from there.
         //
 
-        if (PotentialBreakOffset > ClientWidth) {
+        if (PotentialBreakOffset >= ClientWidth) {
             if (!YoriWinLabelIsCharSoftBreakChar(TestChar) ||
                 !YoriWinLabelShouldSwallowBreakChar(TestChar)) {
 
-                MaxLengthOfLine = PotentialBreakOffset - 1;
+                MaxLengthOfLine = PotentialBreakOffset;
                 SoftTruncationRequired = TRUE;
                 break;
             }
@@ -271,6 +271,11 @@ YoriWinLabelGetNextDisplayLine(
         }
     }
 
+    if (SoftTruncationRequired && !BreakCharFound) {
+        PotentialBreakOffset = MaxLengthOfLine;
+        BreakCharFound = TRUE;
+    }
+
     // 
     //  Display the string after removing the break char
     //
@@ -278,6 +283,8 @@ YoriWinLabelGetNextDisplayLine(
     if (BreakCharFound) {
         CharsToDisplayThisLine = PotentialBreakOffset;
     }
+
+    ASSERT(CharsToDisplayThisLine <= ClientWidth);
 
     //
     //  Consume all following break chars (these aren't displayed
