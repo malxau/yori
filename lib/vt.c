@@ -1162,13 +1162,21 @@ YoriLibOutputInternal(
     __in va_list marker
     )
 {
+#ifdef __WATCOMC__
+    va_list savedmarker;
+#else
     va_list savedmarker = marker;
+#endif
     int len;
     TCHAR stack_buf[64];
     TCHAR * buf;
     YORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks;
     DWORD CurrentMode;
     BOOL Result;
+
+#ifdef __WATCOMC__
+    savedmarker[0] = marker[0];
+#endif
 
     //
     //  Check if we're writing to a console supporting color or a file

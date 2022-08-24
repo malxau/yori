@@ -39,6 +39,11 @@
 #include "yoripch.h"
 #include "yorilib.h"
 
+#ifdef __WATCOMC__
+#pragma disable_message(201)
+#pragma disable_message(302)
+#endif
+
 #include "printf.inc"
 
 /**

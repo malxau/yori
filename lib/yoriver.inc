@@ -1,3 +1,5 @@
+#include <windows.h>
+
 #define VS_VERSION_INFO 1
 
 VS_VERSION_INFO VERSIONINFO
