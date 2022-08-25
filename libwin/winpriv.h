@@ -807,12 +807,6 @@ YoriWinLoseWindowFocus(
     );
 
 VOID
-YoriWinSetFocus(
-    __in PYORI_WIN_WINDOW Window,
-    __in_opt PYORI_WIN_CTRL Ctrl
-    );
-
-VOID
 YoriWinSetFocusToNextCtrl(
     __in PYORI_WIN_WINDOW Window
     );

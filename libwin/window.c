@@ -199,6 +199,16 @@ typedef struct _YORI_WIN_WINDOW {
     BOOLEAN EnableNonAltAccelerators;
 
     /**
+     TRUE if the window has been notified that it is topmost.  When this
+     occurs the window notifies whichever control has focus that it has
+     focus.  The active control with focus can change on this window but
+     it will not be notified until both the window and control have focus.
+     FALSE if another window has focus, which can also mean this window 
+     has not started processing input events.
+     */
+    BOOLEAN HasFocus;
+
+    /**
      If TRUE, the window is not visible on the screen and display updates
      should be buffered without being displayed.  If FALSE, the window is
      visible and the display will be updated on request.
@@ -1420,26 +1430,33 @@ YoriWinGetFocus(
  Sets a specific control to be the control that currently receives keyboard
  input.
 
- @param Window Pointer to the window whose control in focus should change.
+ @param WindowHandle Pointer to the window whose control in focus should
+        change.
 
- @param Ctrl Pointer to the control which should receive keyboard input.
+ @param CtrlHandle Pointer to the control which should receive keyboard input.
  */
 VOID
 YoriWinSetFocus(
-    __in PYORI_WIN_WINDOW Window,
-    __in_opt PYORI_WIN_CTRL Ctrl
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
+    __in_opt PYORI_WIN_CTRL_HANDLE CtrlHandle
     )
 {
+    PYORI_WIN_WINDOW Window;
+    PYORI_WIN_CTRL Ctrl;
     YORI_WIN_EVENT Event;
     BOOLEAN Terminate = FALSE;
     PYORI_WIN_CTRL OldCtrl;
+
+    Window = (PYORI_WIN_WINDOW)WindowHandle;
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
 
     ASSERT(Ctrl == NULL || Ctrl->CanReceiveFocus);
 
     OldCtrl = Window->KeyboardFocusCtrl;
     Window->KeyboardFocusCtrl = NULL;
 
-    if (OldCtrl != NULL &&
+    if (Window->HasFocus &&
+        OldCtrl != NULL &&
         OldCtrl->NotifyEventFn != NULL) {
 
         ZeroMemory(&Event, sizeof(Event));
@@ -1451,13 +1468,20 @@ YoriWinSetFocus(
         }
     }
 
+    //
+    //  The focus control was reset above.  If it's non-NULL here that
+    //  implies that the LoseFocus notification set focus to something,
+    //  so any further processing here should stop.
+    //
+
     if (Window->KeyboardFocusCtrl != NULL) {
         return;
     }
 
     Window->KeyboardFocusCtrl = Ctrl;
 
-    if (Ctrl != NULL &&
+    if (Window->HasFocus &&
+        Ctrl != NULL &&
         Ctrl->NotifyEventFn != NULL) {
 
         ZeroMemory(&Event, sizeof(Event));
@@ -1500,6 +1524,7 @@ YoriWinSetWindowFocus(
         Window->AcceleratorsDisplayed = TRUE;
     }
 
+    Window->HasFocus = TRUE;
     Ctrl = Window->KeyboardFocusCtrl;
 
     if (Ctrl != NULL &&
@@ -1538,6 +1563,7 @@ YoriWinLoseWindowFocus(
     PYORI_WIN_WINDOW Window = (PYORI_WIN_WINDOW)WindowHandle;
 
     Ctrl = Window->KeyboardFocusCtrl;
+    Window->HasFocus = FALSE;
 
     if (Ctrl != NULL &&
         Ctrl->NotifyEventFn != NULL) {

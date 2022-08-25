@@ -824,6 +824,12 @@ YoriWinDisplayWindowContents(
     __in PYORI_WIN_WINDOW_HANDLE Window
     );
 
+VOID
+YoriWinSetFocus(
+    __in PYORI_WIN_WINDOW_HANDLE Window,
+    __in_opt PYORI_WIN_CTRL_HANDLE Ctrl
+    );
+
 BOOLEAN
 YoriWinSetWindowManagerResizeNotifyCallback(
     __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
