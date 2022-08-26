@@ -722,15 +722,15 @@ CONST TCHAR YoriWinSingleLineAsciiBorder[] = { '+', '-', '+', '|', '|', '+', '-'
 CONST TCHAR YoriWinDoubleLineAsciiBorder[] = { '+', '=', '+', '|', '|', '+', '=', '+' };
 
 /**
- Characters forming a menu, left T, horizontal line, right T, check
+ Characters forming a menu, left T, horizontal line, right T, check, expand
  */
-CONST TCHAR YoriWinMenu[] =  { 0x251c, 0x2500, 0x2524, 0x221a };
+CONST TCHAR YoriWinMenu[] =  { 0x251c, 0x2500, 0x2524, 0x221a, '>' };
 
 /**
- Characters forming a menu, left T, horizontal line, right T, check,
+ Characters forming a menu, left T, horizontal line, right T, check, expand
  using only ASCII characters
  */
-CONST TCHAR YoriWinAsciiMenu[] =  { '+', '-', '+', '*' };
+CONST TCHAR YoriWinAsciiMenu[] =  { '+', '-', '+', '*', '>' };
 
 /**
  Characters forming a scroll bar, in order of appearance
@@ -1921,7 +1921,9 @@ YoriWinMgrPushWindowZOrder(
 }
 
 /**
- Remove a window from the top of the visual display.
+ Remove a window from the Z-order.  This may or may not be on top of the
+ visual display, although its removal implies it can no longer be
+ composed into the display.
 
  @param WinMgrHandle The window manager.
 
@@ -1934,14 +1936,15 @@ YoriWinMgrPopWindowZOrder(
     )
 {
     PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
-    PYORI_LIST_ENTRY TopListEntry;
     PYORI_LIST_ENTRY ZOrderWindowListEntry;
+    PYORI_WIN_CTRL WindowCtrl;
 
-    TopListEntry = YoriLibGetNextListEntry(&WinMgr->ZOrderList, NULL);
+    WindowCtrl = YoriWinGetCtrlFromWindow(WindowHandle);
+
     ZOrderWindowListEntry = YoriWinZOrderListEntryFromWindow(WindowHandle);
     YoriLibRemoveListItem(ZOrderWindowListEntry);
 
-    if (WinMgr->FocusWindow == YoriWinGetCtrlFromWindow(WindowHandle)) {
+    if (WinMgr->FocusWindow == WindowCtrl) {
         WinMgr->FocusWindow = NULL;
     }
 
@@ -2636,12 +2639,15 @@ YoriWinMgrProcessMouseEvent(
                         //  enabled window.
                         //
 
-                        if (YoriWinIsWindowClosing(YoriWinGetWindowFromWindowCtrl(MouseButtonOwningWindow))) {
-                            PYORI_WIN_CTRL TopNonClosingWindow = YoriWinMgrTopMostWindow(WinMgr, FALSE);
+                        if (YoriWinIsWindowClosing(YoriWinGetWindowFromWindowCtrl(MouseButtonOwningWindow)) &&
+                            WinMgr->MouseOwnedExclusively) {
+
                             BOOLEAN SubInWindowRange;
                             BOOLEAN SubInWindowClientRange;
 
-                            YoriWinTranslateScreenCoordinatesToWindow(WinMgr, TopNonClosingWindow, InputRecord->Event.MouseEvent.dwMousePosition, &SubInWindowRange, &SubInWindowClientRange, &Event.MouseDown.Location);
+                            MouseOverWindow = YoriWinMgrGetWindowAtPosition(WinMgr, Location);
+
+                            YoriWinTranslateScreenCoordinatesToWindow(WinMgr, MouseOverWindow, InputRecord->Event.MouseEvent.dwMousePosition, &SubInWindowRange, &SubInWindowClientRange, &Event.MouseDown.Location);
 
                             if (SubInWindowClientRange) {
                                 Event.EventType = YoriWinEventMouseDownInClient;
@@ -2649,7 +2655,7 @@ YoriWinMgrProcessMouseEvent(
                                 Event.EventType = YoriWinEventMouseDownInNonClient;
                             }
 
-                            YoriWinPostEvent(TopNonClosingWindow, &Event);
+                            YoriWinPostEvent(MouseOverWindow, &Event);
                         }
                     }
                 }

@@ -3,7 +3,7 @@
  *
  * Yori window menubar control
  *
- * Copyright (c) 2019-2020 Malcolm J. Smith
+ * Copyright (c) 2019-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -643,6 +643,16 @@ typedef struct _YORI_WIN_CTRL_MENU_POPUP {
 
 } YORI_WIN_CTRL_MENU_POPUP, *PYORI_WIN_CTRL_MENU_POPUP;
 
+BOOLEAN
+YoriWinMenuPopupWindowCreate(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PSMALL_RECT WindowRect,
+    __in BOOLEAN Shadow,
+    __in_ecount(ChildItemCount) PYORI_WIN_CTRL_MENU_ENTRY ChildItems,
+    __in DWORD ChildItemCount,
+    __in PYORI_WIN_MENU_OUTCOME Outcome
+    );
+
 /**
  Return relevant key combinations that would affect the operation of the
  menu.  As in, ignore num lock and the rest.
@@ -677,6 +687,7 @@ YoriWinMenuPopupPaint(
     WORD TextAttributes;
     WORD ItemAttributes;
     WORD CharAttributes;
+    WORD RenderLine;
     PYORI_WIN_CTRL_MENU_ENTRY Item;
     COORD ClientSize;
     CONST TCHAR* Chars;
@@ -700,20 +711,38 @@ YoriWinMenuPopupPaint(
             ItemAttributes = (WORD)((ItemAttributes & 0xF0) | FOREGROUND_INTENSITY);
         }
 
+        //
+        //  Since the first line of the menu bar is a border, the first item
+        //  starts from the following line.
+        //
+
+        RenderLine = (WORD)(Index + 1);
+
         if (Item->Flags & YORI_WIN_MENU_ENTRY_SEPERATOR) {
-            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 0, (WORD)(Index + 1), Chars[0], ItemAttributes);
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 0, RenderLine, Chars[0], ItemAttributes);
             for (CharIndex = 1; (SHORT)CharIndex < ClientSize.X - 1; CharIndex++) {
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), (WORD)(Index + 1), Chars[1], ItemAttributes);
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), RenderLine, Chars[1], ItemAttributes);
             }
-            YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), (WORD)(Index + 1), Chars[2], ItemAttributes);
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex), RenderLine, Chars[2], ItemAttributes);
         } else {
-            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 1, (WORD)(Index + 1), ' ', ItemAttributes);
+
+            //
+            //  Add spaces and possibly a check mark to the left of the entry
+            //
+
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 1, RenderLine, ' ', ItemAttributes);
             if (Item->Flags & YORI_WIN_MENU_ENTRY_CHECKED) {
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, (WORD)(Index + 1), Chars[3], ItemAttributes);
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, RenderLine, Chars[3], ItemAttributes);
             } else {
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, (WORD)(Index + 1), ' ', ItemAttributes);
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, 2, RenderLine, ' ', ItemAttributes);
             }
-            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 3, (WORD)(Index + 1), ' ', ItemAttributes);
+            YoriWinSetControlClientCell(&MenuPopup->Ctrl, 3, RenderLine, ' ', ItemAttributes);
+
+            //
+            //  Copy the display string to the display.  Note this includes
+            //  any hot key string.
+            //
+
             for (CharIndex = 0; CharIndex < Item->DisplayCaption.LengthInChars; CharIndex++) {
                 CharAttributes = ItemAttributes;
                 if ((Item->Flags & YORI_WIN_MENU_ENTRY_DISABLED) == 0 &&
@@ -728,11 +757,25 @@ YoriWinMenuPopupPaint(
                         CharAttributes = MenuPopup->AcceleratorAttributes;
                     }
                 }
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), (WORD)(Index + 1), Item->DisplayCaption.StartOfString[CharIndex], CharAttributes);
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), RenderLine, Item->DisplayCaption.StartOfString[CharIndex], CharAttributes);
             }
 
-            for (; (SHORT)CharIndex < ClientSize.X - 5; CharIndex++) {
-                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), (WORD)(Index + 1), ' ', ItemAttributes);
+            //
+            //  Pad any trailing area beyond display string with spaces
+            //
+
+            for (; (SHORT)CharIndex < ClientSize.X - 6; CharIndex++) {
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), RenderLine, ' ', ItemAttributes);
+            }
+
+            //
+            //  If it has submenu entries, display the right arrow
+            //
+
+            if (Item->ChildItems != NULL) {
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), RenderLine, Chars[4], ItemAttributes);
+            } else {
+                YoriWinSetControlClientCell(&MenuPopup->Ctrl, (WORD)(CharIndex + 4), RenderLine, ' ', ItemAttributes);
             }
         }
 
@@ -912,6 +955,13 @@ YoriWinMenuPopupSetActiveItem(
     MenuPopup->ActiveItemIndex = ProbeIndex;
 }
 
+VOID
+YoriWinMenuGetPopupSizeNeededForItems(
+    __in PYORI_WIN_CTRL_MENU_ENTRY Items,
+    __in DWORD ItemCount,
+    __out PCOORD SizeNeeded
+    );
+
 /**
  Set the action to perform when the popup menu is closed, and initiate
  closure of the popup menu.
@@ -927,8 +977,76 @@ YoriWinMenuPopupInvokeItem(
     )
 {
     PYORI_WIN_WINDOW Window;
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
     Window = YoriWinGetTopLevelWindow(&MenuPopup->Ctrl);
+
+    if (MenuPopup->Items[Index].ChildItems != NULL) {
+        PYORI_WIN_CTRL_MENU_ENTRY ChildItems;
+        DWORD ChildItemCount;
+        COORD ClientSize;
+        SMALL_RECT ChildRect;
+        COORD CtrlCoord;
+        COORD ScreenCoord;
+        COORD WindowSize;
+        COORD WinMgrSize;
+        BOOLEAN Shadow;
+
+        WinMgrHandle = YoriWinGetWindowManagerHandle(Window);
+
+        ChildItems = MenuPopup->Items[Index].ChildItems;
+        ChildItemCount = MenuPopup->Items[Index].ChildItemCount;
+
+        YoriWinMenuGetPopupSizeNeededForItems(ChildItems, ChildItemCount, &ClientSize);
+        YoriWinGetWindowSize(Window, &WindowSize);
+
+        CtrlCoord.X = 0;
+        CtrlCoord.Y = (SHORT)(Index + 1);
+        YoriWinTranslateCtrlCoordinatesToScreenCoordinates(YoriWinGetCtrlFromWindow(Window), FALSE, CtrlCoord, &ScreenCoord);
+
+        ChildRect.Left = (SHORT)(ScreenCoord.X + WindowSize.X);
+        ChildRect.Top = (SHORT)(ScreenCoord.Y - 1);
+
+        ChildRect.Right = (SHORT)(ChildRect.Left + ClientSize.X - 1);
+        ChildRect.Bottom = (SHORT)(ChildRect.Top + ClientSize.Y - 1);
+
+        YoriWinGetWinMgrDimensions(WinMgrHandle, &WinMgrSize);
+
+        Shadow = TRUE;
+
+        if (ChildRect.Right >= WinMgrSize.X) {
+            ChildRect.Left = (SHORT)(ScreenCoord.X - ClientSize.X);
+            ChildRect.Right = (SHORT)(ChildRect.Left + ClientSize.X - 1);
+            Shadow = FALSE;
+        }
+
+        YoriWinMgrUnlockMouseExclusively(WinMgrHandle, Window);
+        YoriWinMenuPopupWindowCreate(WinMgrHandle, &ChildRect, Shadow, ChildItems, ChildItemCount, MenuPopup->Outcome);
+
+        YoriWinMgrLockMouseExclusively(WinMgrHandle, Window);
+
+        //
+        //  The user can execute something from the child menu, causing this
+        //  level to terminate; or, navigate right beyond the child, which
+        //  implies navigating right beyond this menu too; or, cancel the
+        //  menu which cancels this one.
+        //
+        //  The user can also navigate left, which means the current menu
+        //  remains active.
+        //
+        //  MSFIX If the user clicks outside of the child, this will generate
+        //  a Cancel, including if they click on the parent menu.  Perhaps
+        //  this window needs to see if it has an outstanding mouse click
+        //  event in this case before terminating?
+        //
+
+        if (MenuPopup->Outcome->Outcome == YoriWinMenuOutcomeExecute ||
+            MenuPopup->Outcome->Outcome == YoriWinMenuOutcomeMenuRight ||
+            MenuPopup->Outcome->Outcome == YoriWinMenuOutcomeCancel) {
+
+            YoriWinCloseWindow(Window, 1);
+        }
+    }
 
     if (MenuPopup->Items[Index].NotifyCallback != NULL) {
         MenuPopup->Outcome->Outcome = YoriWinMenuOutcomeExecute;
@@ -976,9 +1094,13 @@ YoriWinMenuPopupEventHandler(
                 MenuPopup->Outcome->Outcome = YoriWinMenuOutcomeMenuLeft;
                 YoriWinCloseWindow(Window, 1);
             } else if (Event->KeyDown.VirtualKeyCode == VK_RIGHT) {
-                Window = YoriWinGetTopLevelWindow(Ctrl);
-                MenuPopup->Outcome->Outcome = YoriWinMenuOutcomeMenuRight;
-                YoriWinCloseWindow(Window, 1);
+                if (MenuPopup->ActiveMenuItem && MenuPopup->Items[MenuPopup->ActiveItemIndex].ChildItems != NULL) {
+                    YoriWinMenuPopupInvokeItem(MenuPopup, MenuPopup->ActiveItemIndex);
+                } else {
+                    Window = YoriWinGetTopLevelWindow(Ctrl);
+                    MenuPopup->Outcome->Outcome = YoriWinMenuOutcomeMenuRight;
+                    YoriWinCloseWindow(Window, 1);
+                }
             } else if (Event->KeyDown.VirtualKeyCode == VK_RETURN) {
                 if (MenuPopup->ActiveMenuItem) {
                     YoriWinMenuPopupInvokeItem(MenuPopup, MenuPopup->ActiveItemIndex);
@@ -1172,6 +1294,76 @@ YoriWinMenuPopupChildEvent(
     return FALSE;
 }
 
+/**
+ Create a window to host a pop up menu.  This can be invoked either from the
+ menu bar or from a different pop up menu to create a submenu.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param WindowRect The location within the window manager to place the window.
+
+ @param Shadow TRUE if a shadow should be used, FALSE if not.  This is used to
+        allow a popup menu to appear on the left of its parent without having
+        a shadow that obscures its parent.
+
+ @param ChildItems Pointer to an array of items to populate within the popup
+        menu.
+
+ @param ChildItemCount The number of items within ChildItems.
+
+ @param Outcome On successful completion, populated with the resulting action
+        to perform.
+
+ @return TRUE to indicate the popup was successfully created, FALSE if it was
+         not.
+ */
+BOOLEAN
+YoriWinMenuPopupWindowCreate(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PSMALL_RECT WindowRect,
+    __in BOOLEAN Shadow,
+    __in_ecount(ChildItemCount) PYORI_WIN_CTRL_MENU_ENTRY ChildItems,
+    __in DWORD ChildItemCount,
+    __in PYORI_WIN_MENU_OUTCOME Outcome
+    )
+{
+    PYORI_WIN_CTRL MenuPopup;
+    COORD ClientSize;
+    SMALL_RECT MenuPopupRect;
+    DWORD_PTR ChildResult;
+    PYORI_WIN_WINDOW_HANDLE PopupWindow;
+
+    if (!YoriWinCreateWindowEx(WinMgrHandle, WindowRect, Shadow?YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT:0, NULL, &PopupWindow)) {
+        return FALSE;
+    }
+
+    YoriWinGetControlClientSize(YoriWinGetCtrlFromWindow(PopupWindow), &ClientSize);
+    MenuPopupRect.Left = 0;
+    MenuPopupRect.Top = 0;
+    MenuPopupRect.Right = (SHORT)(ClientSize.X - 1);
+    MenuPopupRect.Bottom = (SHORT)(ClientSize.Y - 1);
+    MenuPopup = YoriWinMenuPopupCreate(PopupWindow, &MenuPopupRect, ChildItems, ChildItemCount, Outcome, 0);
+    if (MenuPopup == NULL) {
+        YoriWinDestroyWindow(PopupWindow);
+        return FALSE;
+    }
+
+    //
+    //  While the popup is displayed, it should get all mouse events, to
+    //  ensure the user can click outside to deactivate
+    //
+
+    YoriWinMgrLockMouseExclusively(WinMgrHandle, PopupWindow);
+    YoriWinSetCustomNotification(PopupWindow, YoriWinEventMouseDownOutsideWindow, YoriWinMenuPopupChildEvent);
+    YoriWinProcessInputForWindow(PopupWindow, &ChildResult);
+    YoriWinMgrUnlockMouseExclusively(WinMgrHandle, PopupWindow);
+
+    YoriWinDestroyWindow(PopupWindow);
+
+    return TRUE;
+}
+
+
 // ==================================================================
 // Menubar control
 // ==================================================================
@@ -1341,16 +1533,13 @@ YoriWinMenuBarOpenMenu(
     COORD ScreenCoord;
     PYORI_WIN_WINDOW TopLevelWindow;
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
-    PYORI_WIN_WINDOW_HANDLE PopupWindow;
-    PYORI_WIN_CTRL MenuPopup;
     SMALL_RECT ChildRect;
-    SMALL_RECT MenuPopupRect;
-    DWORD_PTR ChildResult;
     PYORI_WIN_CTRL_MENU_ENTRY ChildItems;
     DWORD ChildItemCount;
     WORD HorizontalOffset;
     DWORD Index;
     COORD ClientSize;
+    COORD WinMgrSize;
 
     Ctrl = &MenuBar->Ctrl;
     TopLevelWindow = YoriWinGetTopLevelWindow(Ctrl);
@@ -1375,9 +1564,8 @@ YoriWinMenuBarOpenMenu(
     }
 
     // 
-    //  MSFIX: Check if the popup doesn't fit on the screen and move it left
-    //  if necessary.  If it doesn't fit vertically, do we need some fancy
-    //  scroll thing?
+    //  MSFIX: If it doesn't fit vertically, do we need some fancy scroll
+    //  thing?
     //
 
     ChildRect.Left = (SHORT)(ScreenCoord.X + HorizontalOffset);
@@ -1386,32 +1574,16 @@ YoriWinMenuBarOpenMenu(
     ChildRect.Right = (SHORT)(ChildRect.Left + ClientSize.X - 1);
     ChildRect.Bottom = (SHORT)(ChildRect.Top + ClientSize.Y - 1);
 
-    if (!YoriWinCreateWindowEx(WinMgrHandle, &ChildRect, YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT, NULL, &PopupWindow)) {
-        return FALSE;
+    YoriWinGetWinMgrDimensions(WinMgrHandle, &WinMgrSize);
+
+    if (ChildRect.Right >= WinMgrSize.X) {
+        ChildRect.Left = (SHORT)(ChildRect.Left - (WinMgrSize.X - ChildRect.Right + 1));
+        ChildRect.Right = (SHORT)(ChildRect.Left + ClientSize.X - 1);
     }
 
-    YoriWinGetControlClientSize(YoriWinGetCtrlFromWindow(PopupWindow), &ClientSize);
-    MenuPopupRect.Left = 0;
-    MenuPopupRect.Top = 0;
-    MenuPopupRect.Right = (SHORT)(ClientSize.X - 1);
-    MenuPopupRect.Bottom = (SHORT)(ClientSize.Y - 1);
-    MenuPopup = YoriWinMenuPopupCreate(PopupWindow, &MenuPopupRect, ChildItems, ChildItemCount, Outcome, 0);
-    if (MenuPopup == NULL) {
-        YoriWinDestroyWindow(PopupWindow);
+    if (!YoriWinMenuPopupWindowCreate(WinMgrHandle, &ChildRect, TRUE, ChildItems, ChildItemCount, Outcome)) {
         return FALSE;
     }
-
-    //
-    //  While the popup is displayed, it should get all mouse events, to
-    //  ensure the user can click outside to deactivate
-    //
-
-    YoriWinMgrLockMouseExclusively(WinMgrHandle, PopupWindow);
-    YoriWinSetCustomNotification(PopupWindow, YoriWinEventMouseDownOutsideWindow, YoriWinMenuPopupChildEvent);
-    YoriWinProcessInputForWindow(PopupWindow, &ChildResult);
-    YoriWinMgrUnlockMouseExclusively(WinMgrHandle, PopupWindow);
-
-    YoriWinDestroyWindow(PopupWindow);
 
     MenuBar->ActiveMenuItem = FALSE;
 

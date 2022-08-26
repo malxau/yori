@@ -114,6 +114,7 @@ YoriWinDestroyControl(
     )
 {
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle = NULL;
+    PYORI_WIN_EVENT PostedEvent;
 
     //
     //  Notify all controls that the parent is going away in case they
@@ -135,6 +136,10 @@ YoriWinDestroyControl(
             YoriWinRemoveControlFromWindow(Window, Ctrl);
         }
         YoriLibRemoveListItem(&Ctrl->ParentControlList);
+    }
+
+    while ((PostedEvent = YoriWinGetNextPostedEvent(Ctrl)) != NULL) {
+        YoriWinFreePostedEvent(PostedEvent);
     }
 
     if (WinMgrHandle != NULL) {
