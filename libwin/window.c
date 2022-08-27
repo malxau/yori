@@ -2172,7 +2172,8 @@ YoriWinNotifyEvent(
         if (Event->EventType == YoriWinEventKeyDown &&
             ((EffectiveCtrlMask & ~(SHIFT_PRESSED)) != 0 ||
              (Event->KeyDown.VirtualKeyCode >= VK_F1 &&
-              Event->KeyDown.VirtualKeyCode <= VK_F12))) {
+              Event->KeyDown.VirtualKeyCode <= VK_F12) ||
+             Event->KeyDown.VirtualKeyCode == VK_DELETE)) {
 
             ZeroMemory(&CtrlEvent, sizeof(CtrlEvent));
             CtrlEvent.EventType = YoriWinEventHotKeyDown;
