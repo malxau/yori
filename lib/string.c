@@ -1843,5 +1843,151 @@ YoriLibStringToDateTime(
     return TRUE;
 }
 
+/**
+ Swap the contents of two strings.  This leaves the string data in its
+ current location and is only updating the pointers and lengths within the
+ string structures.
+
+ @param Str1 Pointer to the first string.
+
+ @param Str2 Pointer to the second string.
+ */
+VOID
+YoriLibSwapStrings(
+    __inout PYORI_STRING Str1,
+    __inout PYORI_STRING Str2
+    )
+{
+    YORI_STRING SwapString;
+
+    memcpy(&SwapString, Str2, sizeof(YORI_STRING));
+    memcpy(Str2, Str1, sizeof(YORI_STRING));
+    memcpy(Str1, &SwapString, sizeof(YORI_STRING));
+}
+
+/**
+ Sort an array of strings.  This is currently implemented using a handrolled
+ quicksort.
+
+ @param StringArray Pointer to an array of strings.
+
+ @param Count The number of elements in the array.
+ */
+VOID
+YoriLibSortStringArray(
+    __in_ecount(Count) PYORI_STRING StringArray,
+    __in DWORD Count
+    )
+{
+    DWORD FirstOffset;
+    DWORD Index;
+
+    if (Count <= 1) {
+        return;
+    }
+
+    while (TRUE) {
+        DWORD BreakPoint;
+        DWORD LastOffset;
+        YORI_STRING MidPoint;
+        volatile DWORD LastSwapFirst;
+        volatile DWORD LastSwapLast;
+
+        BreakPoint = Count / 2;
+        memcpy(&MidPoint, &StringArray[BreakPoint], sizeof(YORI_STRING));
+    
+        FirstOffset = 0;
+        LastOffset = Count - 1;
+    
+        //
+        //  Scan from the beginning looking for an item that should be sorted
+        //  after the midpoint.
+        //
+    
+        for (FirstOffset = 0; FirstOffset < LastOffset; FirstOffset++) {
+            if (YoriLibCompareStringInsensitive(&StringArray[FirstOffset],&MidPoint) >= 0) {
+                for (; LastOffset > FirstOffset; LastOffset--) {
+                    if (YoriLibCompareStringInsensitive(&StringArray[LastOffset],&MidPoint) < 0) {
+                        LastSwapFirst = FirstOffset;
+                        LastSwapLast = LastOffset;
+                        YoriLibSwapStrings(&StringArray[FirstOffset], &StringArray[LastOffset]);
+                        LastOffset--;
+                        break;
+                    }
+                }
+                if (LastOffset <= FirstOffset) {
+                    break;
+                }
+            }
+        }
+
+        ASSERT(FirstOffset == LastOffset);
+        FirstOffset = LastOffset;
+        if (YoriLibCompareStringInsensitive(&StringArray[FirstOffset], &MidPoint) < 0) {
+            FirstOffset++;
+        }
+
+        //
+        //  If no copies occurred, check if everything in the list is
+        //  sorted.
+        //
+
+        if (FirstOffset == 0 || FirstOffset == Count) {
+            for (Index = 0; Index < Count - 1; Index++) {
+                if (YoriLibCompareStringInsensitive(&StringArray[Index], &StringArray[Index + 1]) > 0) {
+                    break;
+                }
+            }
+            if (Index == Count - 1) {
+                return;
+            }
+
+            //
+            //  Nothing was copied and it's not because it's identical.  This
+            //  implies a very bad choice of midpoint that belongs either at
+            //  the beginning or the end (so nothing could move past it.)
+            //  Move it around and repeat the process (which will get a new
+            //  midpoint.)
+            //
+    
+            if (FirstOffset == 0) {
+                ASSERT(YoriLibCompareStringInsensitive(&StringArray[0], &MidPoint) > 0);
+
+                if (YoriLibCompareStringInsensitive(&StringArray[0], &MidPoint) > 0) {
+                    YoriLibSwapStrings(&StringArray[0], &StringArray[BreakPoint]);
+                }
+            } else {
+                ASSERT(YoriLibCompareStringInsensitive(&MidPoint, &StringArray[Count - 1]) > 0);
+                YoriLibSwapStrings(&StringArray[Count - 1], &StringArray[BreakPoint]);
+            }
+        } else {
+            break;
+        }
+    }
+
+    //
+    //  If there are two sets (FirstOffset is not at either end), recurse.
+    //
+
+    if (FirstOffset && (Count - FirstOffset)) {
+        if (FirstOffset > 0) {
+            YoriLibSortStringArray(StringArray, FirstOffset);
+        }
+        if ((Count - FirstOffset) > 0) {
+            YoriLibSortStringArray(&StringArray[FirstOffset], Count - FirstOffset);
+        }
+    }
+
+    //
+    //  Check that it's now sorted
+    //
+    for (Index = 0; Index < Count - 1; Index++) {
+        if (YoriLibCompareStringInsensitive(&StringArray[Index], &StringArray[Index + 1]) > 0) {
+            break;
+        }
+    }
+    ASSERT (Index == Count - 1);
+}
+
 
 // vim:sw=4:ts=4:et:

@@ -3799,6 +3799,12 @@ YoriLibStringToDateTime(
     __out LPSYSTEMTIME Date
     );
 
+VOID
+YoriLibSortStringArray(
+    __in_ecount(Count) PYORI_STRING StringArray,
+    __in DWORD Count
+    );
+
 #undef  _tcscpy
 /**
  A null terminated strcpy function defined in terms of printf.
