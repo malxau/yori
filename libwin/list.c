@@ -539,6 +539,74 @@ YoriWinListGetItemSelectedByMouseLocation(
     return FALSE;
 }
 
+/**
+ Given a user pressed character, look for an item in the list that starts with
+ the character.  This might get smarter for consecutive characters someday.
+
+ @param List Pointer to the list control.
+
+ @param Char The character that was pressed.
+
+ @return TRUE to indicate the selection has changed and paint is needed;
+         FALSE if no match was found.
+ */
+BOOLEAN
+YoriWinListFindItemByChar(
+    __in PYORI_WIN_CTRL_LIST List,
+    __in TCHAR Char
+    )
+{
+    DWORD Index;
+    PYORI_WIN_ITEM_ENTRY Element;
+    TCHAR UpcaseChar;
+
+    UpcaseChar = YoriLibUpcaseChar(Char);
+
+    //
+    //  If nothing is selected, search from the top.  If something is
+    //  selected, start from one after that, and wrap from the top if
+    //  nothing is found.
+    //
+
+    if (!List->ItemActive) {
+
+        for (Index = 0; Index < List->ItemArray.Count; Index++) {
+            Element = &List->ItemArray.Items[Index];
+            if (Element->String.LengthInChars > 0 &&
+                UpcaseChar == YoriLibUpcaseChar(Element->String.StartOfString[0])) {
+
+                List->ItemActive = TRUE;
+                List->ActiveOption = Index;
+                return TRUE;
+            }
+        }
+
+    } else {
+
+        for (Index = List->ActiveOption + 1; Index < List->ItemArray.Count; Index++) {
+            Element = &List->ItemArray.Items[Index];
+            if (Element->String.LengthInChars > 0 &&
+                UpcaseChar == YoriLibUpcaseChar(Element->String.StartOfString[0])) {
+
+                List->ActiveOption = Index;
+                return TRUE;
+            }
+        }
+
+        for (Index = 0; Index <= List->ActiveOption; Index++) {
+            Element = &List->ItemArray.Items[Index];
+            if (Element->String.LengthInChars > 0 &&
+                UpcaseChar == YoriLibUpcaseChar(Element->String.StartOfString[0])) {
+
+                List->ActiveOption = Index;
+                return TRUE;
+            }
+        }
+    }
+
+    return FALSE;
+}
+
 
 /**
  Process input events for a list control.
@@ -652,6 +720,18 @@ YoriWinListEventHandler(
                         List->SelectionChangeCallback(&List->Ctrl);
                     }
                     YoriWinListPaint(List);
+                } else if ((Event->KeyDown.Char >= 'A' && Event->KeyDown.Char <= 'Z') ||
+                           (Event->KeyDown.Char >= 'a' && Event->KeyDown.Char <= 'z') ||
+                           (Event->KeyDown.Char >= '0' && Event->KeyDown.Char <= '9')) {
+
+                    if (YoriWinListFindItemByChar(List, Event->KeyDown.Char)) {
+                        YoriWinListEnsureActiveItemVisible(List);
+                        if (List->SelectionChangeCallback) {
+                            List->SelectionChangeCallback(&List->Ctrl);
+                        }
+                        YoriWinListPaint(List);
+                    }
+
                 } else if (Event->KeyDown.Char == ' ' &&
                            List->ItemActive &&
                            List->MultiSelect) {
