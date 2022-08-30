@@ -9,12 +9,10 @@ LINKPDB=/Pdb:yedit.pdb
 
 BIN_OBJS=\
 	 edit.obj         \
-	 about.obj        \
 	 options.obj      \
 
 MOD_OBJS=\
 	 mod_edit.obj     \
-	 about.obj        \
 	 options.obj      \
 
 compile: $(BIN_OBJS) builtins.lib

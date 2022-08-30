@@ -2185,14 +2185,14 @@ EditAboutButtonClicked(
     YoriLibConstantString(&ButtonTexts[0], _T("&Ok"));
     YoriLibConstantString(&ButtonTexts[1], _T("&View License..."));
 
-    ButtonClicked = EditAboutDialog(YoriWinGetWindowManagerHandle(Parent),
-                                    &Title,
-                                    &CenteredText,
-                                    &LeftText,
-                                    2,
-                                    ButtonTexts,
-                                    0,
-                                    0);
+    ButtonClicked = YoriDlgAbout(YoriWinGetWindowManagerHandle(Parent),
+                                 &Title,
+                                 &CenteredText,
+                                 &LeftText,
+                                 2,
+                                 ButtonTexts,
+                                 0,
+                                 0);
 
     YoriLibFreeStringContents(&Text);
 
@@ -2217,14 +2217,14 @@ EditAboutButtonClicked(
                 }
             }
 
-            EditAboutDialog(YoriWinGetWindowManagerHandle(Parent),
-                            &Title,
-                            &CenteredText,
-                            &Text,
-                            1,
-                            ButtonTexts,
-                            0,
-                            0);
+            YoriDlgAbout(YoriWinGetWindowManagerHandle(Parent),
+                         &Title,
+                         &CenteredText,
+                         &Text,
+                         1,
+                         ButtonTexts,
+                         0,
+                         0);
             YoriLibFreeStringContents(&Text);
         }
     }

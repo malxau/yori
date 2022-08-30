@@ -1,7 +1,7 @@
 /**
- * @file edit/about.c
+ * @file libdlg/about.c
  *
- * Edit about dialog
+ * Yori shell about dialog
  *
  * Copyright (c) 2019-2020 Malcolm J. Smith
  *
@@ -34,7 +34,7 @@
  @param Ctrl Pointer to the button that was clicked.
  */
 VOID
-EditAboutDlgButtonClicked(
+YoriDlgAboutDlgButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
@@ -46,7 +46,7 @@ EditAboutDlgButtonClicked(
 }
 
 /**
- Display a dialog box to display edit about information.
+ Display a dialog box to display TUI app about information.
 
  @param WinMgrHandle Pointer to the window manager.
 
@@ -73,7 +73,7 @@ EditAboutDlgButtonClicked(
  */
 __success(return)
 DWORD
-EditAboutDialog(
+YoriDlgAbout(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
     __in PYORI_STRING CenteredText,
@@ -100,8 +100,6 @@ EditAboutDialog(
     WORD WindowHeight;
     DWORD_PTR Result;
     PYORI_WIN_CTRL_HANDLE Ctrl;
-
-    UNREFERENCED_PARAMETER(LeftText);
 
     if (!YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize)) {
         return 0;
@@ -237,7 +235,7 @@ EditAboutDialog(
             Style |= YORI_WIN_BUTTON_STYLE_CANCEL;
         }
 
-        Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &ButtonTexts[Index], Style, EditAboutDlgButtonClicked);
+        Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &ButtonTexts[Index], Style, YoriDlgAboutDlgButtonClicked);
         if (Ctrl == NULL) {
             YoriWinDestroyWindow(Parent);
             return FALSE;
