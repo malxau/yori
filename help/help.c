@@ -188,6 +188,7 @@ CHAR strHelpHelpText4[] =
         "WINPOS    Set window size or position\n"
         "YCHARMAP  Display the character map\n"
         "YDBG      Debug processes\n"
+        "YREGEDIT  Registry editor\n"
         "YORI      Launch the Yori shell\n"
         "YPM       Install, uninstall, or update software packages\n"
         "YS        Executes a Yori script\n"

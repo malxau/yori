@@ -1994,6 +1994,13 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
     } u;
 } YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, *PYORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX;
 
+#ifndef REG_QWORD
+/**
+ A define for REG_QWORD, if not provided by the compilation environment.
+ */
+#define REG_QWORD (11)
+#endif
+
 #ifndef PROCESS_MODE_BACKGROUND_BEGIN
 /**
  Define the value for low CPU, disk and memory priority for compilation

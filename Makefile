@@ -127,6 +127,7 @@ DIRS=crt       \
      procinfo  \
      ps        \
      readline  \
+     regedit   \
      repl      \
      rmdir     \
      scut      \

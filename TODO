@@ -18,7 +18,6 @@ v1.x, maybe:
  - Ymake support for CFG="multi part"
  - Support move and resize of windows
  - Minimize/maximize/close
- - Regedit patterned on file open dialog (list boxes)
  - TreeView
  - Multi-column list
 

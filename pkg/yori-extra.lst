@@ -3,6 +3,7 @@
 ..\for\yfor.exe|yfor.exe
 ..\intcmp\yintcmp.exe|yintcmp.exe
 ..\make\ymake.exe|ymake.exe
+..\regedit\yregedit.exe|yregedit.exe
 ..\shutdn\yshutdn.exe|yshutdn.exe
 ..\strcmp\ystrcmp.exe|ystrcmp.exe
 ..\stride\ystride.exe|ystride.exe

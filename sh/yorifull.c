@@ -364,6 +364,11 @@ YORI_CMD_BUILTIN YoriCmd_READLINE;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YREGEDIT;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_REM;
 
 /**
@@ -633,6 +638,7 @@ YoriShBuiltins[] = {
                     {_T("YPAUSE"),    YoriCmd_YPAUSE},
                     {_T("YPM"),       YoriCmd_YPM},
                     {_T("YPS"),       YoriCmd_YPS},
+                    {_T("YREGEDIT"),  YoriCmd_YREGEDIT},
                     {_T("YRMDIR"),    YoriCmd_YRMDIR},
                     {_T("YS"),        YoriCmd_YS},
                     {_T("YSHUTDN"),   YoriCmd_YSHUTDN},

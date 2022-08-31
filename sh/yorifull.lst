@@ -55,6 +55,7 @@
 ..\procinfo\builtins.lib
 ..\ps\builtins.lib
 ..\readline\builtins.lib
+..\regedit\builtins.lib
 ..\repl\builtins.lib
 ..\rmdir\builtins.lib
 ..\scut\builtins.lib
