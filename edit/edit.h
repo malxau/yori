@@ -32,17 +32,4 @@ EditOpts(
     __out PDWORD NewTabWidth
     );
 
-__success(return)
-DWORD
-EditAboutDialog(
-    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
-    __in PYORI_STRING Title,
-    __in PYORI_STRING CenteredText,
-    __in PYORI_STRING LeftText,
-    __in DWORD NumButtons,
-    __in PYORI_STRING ButtonTexts,
-    __in DWORD DefaultIndex,
-    __in DWORD CancelIndex
-    );
-
 // vim:sw=4:ts=4:et:
