@@ -1116,7 +1116,7 @@ YoriWinListReposition(
         BorderRect.Left = 0;
         BorderRect.Top = 0;
         BorderRect.Right = (SHORT)(List->Ctrl.FullRect.Right - List->Ctrl.FullRect.Left);
-        BorderRect.Bottom = (SHORT)(List->Ctrl.FullRect.Bottom - List->Ctrl.FullRect.Top - 1);
+        BorderRect.Bottom = (SHORT)(List->Ctrl.FullRect.Bottom - List->Ctrl.FullRect.Top);
 
         YoriWinDrawBorderOnControl(&List->Ctrl, &BorderRect, WindowAttributes, YORI_WIN_BORDER_TYPE_SUNKEN);
     }
