@@ -943,6 +943,14 @@ RegeditNewKeyButtonClicked(
     YoriLibInitEmptyString(&Value);
     RegeditContext = YoriWinGetControlContext(Parent);
 
+    //
+    //  Can't create a key without a hive
+    //
+
+    if (RegeditContext->TreeDepth == 0) {
+        return;
+    }
+
     Err = DllAdvApi32.pRegOpenKeyExW(RegeditContext->ActiveRootKey, RegeditContext->Subkey.StartOfString, 0, KEY_READ | KEY_CREATE_SUB_KEY, &Key);
     if (Err != ERROR_SUCCESS) {
         RegeditDisplayWin32Error(Parent, Err);
@@ -1013,6 +1021,14 @@ RegeditNewStringWithType(
     YoriLibInitEmptyString(&ValueName);
     YoriLibInitEmptyString(&Value);
     RegeditContext = YoriWinGetControlContext(Parent);
+
+    //
+    //  Can't create a value without a hive
+    //
+
+    if (RegeditContext->TreeDepth == 0) {
+        return;
+    }
 
     Err = DllAdvApi32.pRegOpenKeyExW(RegeditContext->ActiveRootKey, RegeditContext->Subkey.StartOfString, 0, KEY_READ | KEY_SET_VALUE, &Key);
     if (Err != ERROR_SUCCESS) {
@@ -1093,6 +1109,14 @@ RegeditNewDWORDButtonClicked(
     YoriLibInitEmptyString(&ValueName);
     RegeditContext = YoriWinGetControlContext(Parent);
 
+    //
+    //  Can't create a value without a hive
+    //
+
+    if (RegeditContext->TreeDepth == 0) {
+        return;
+    }
+
     Err = DllAdvApi32.pRegOpenKeyExW(RegeditContext->ActiveRootKey, RegeditContext->Subkey.StartOfString, 0, KEY_READ | KEY_SET_VALUE, &Key);
     if (Err != ERROR_SUCCESS) {
         RegeditDisplayWin32Error(Parent, Err);
@@ -1144,6 +1168,14 @@ RegeditNewQWORDButtonClicked(
     YoriLibInitEmptyString(&ValueName);
     RegeditContext = YoriWinGetControlContext(Parent);
 
+    //
+    //  Can't create a value without a hive
+    //
+
+    if (RegeditContext->TreeDepth == 0) {
+        return;
+    }
+
     Err = DllAdvApi32.pRegOpenKeyExW(RegeditContext->ActiveRootKey, RegeditContext->Subkey.StartOfString, 0, KEY_READ | KEY_SET_VALUE, &Key);
     if (Err != ERROR_SUCCESS) {
         RegeditDisplayWin32Error(Parent, Err);
@@ -1190,6 +1222,14 @@ RegeditDeleteButtonClicked(
 
     Parent = YoriWinGetControlParent(Ctrl);
     RegeditContext = YoriWinGetControlContext(Parent);
+
+    //
+    //  Can't create a value without a hive
+    //
+
+    if (RegeditContext->TreeDepth == 0) {
+        return;
+    }
 
     KeyList = YoriWinFindControlById(Parent, RegeditControlKeyList);
     ASSERT(KeyList != NULL);
@@ -1509,6 +1549,157 @@ RegeditPopulateMenuBar(
 }
 
 /**
+ The minimum width in characters where regedit can hope to function.
+ */
+#define REGEDIT_MINIMUM_WIDTH (60)
+
+/**
+ The minimum height in characters where regedit can hope to function.
+ */
+#define REGEDIT_MINIMUM_HEIGHT (20)
+
+/**
+ A callback that is invoked when the window manager is being resized.  This
+ typically means the user resized the window.  Since the purpose of regedit
+ is to fully occupy the window space, this implies the main window needs to
+ be repositioned and/or resized, and the controls within it need to be
+ repositioned and/or resized to full the window.
+
+ @param WindowHandle Handle to the main window.
+
+ @param OldPosition The old dimensions of the window manager.
+
+ @param NewPosition The new dimensions of the window manager.
+ */
+VOID
+RegeditResizeWindowManager(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
+    __in PSMALL_RECT OldPosition,
+    __in PSMALL_RECT NewPosition
+    )
+{
+    PREGEDIT_CONTEXT RegeditContext;
+    PYORI_WIN_CTRL_HANDLE WindowCtrl;
+    PYORI_WIN_CTRL_HANDLE Ctrl;
+    SMALL_RECT Area;
+    COORD NewSize;
+
+    UNREFERENCED_PARAMETER(OldPosition);
+
+    WindowCtrl = YoriWinGetCtrlFromWindow(WindowHandle);
+    RegeditContext = YoriWinGetControlContext(WindowCtrl);
+
+    NewSize.X = (SHORT)(NewPosition->Right - NewPosition->Left + 1);
+    NewSize.Y = (SHORT)(NewPosition->Bottom - NewPosition->Top + 1);
+
+    if (NewSize.X < REGEDIT_MINIMUM_WIDTH || NewSize.Y < REGEDIT_MINIMUM_HEIGHT) {
+        return;
+    }
+
+    //
+    //  Resize the main window, including capturing its new background
+    //
+
+    if (!YoriWinWindowReposition(WindowHandle, NewPosition)) {
+        return;
+    }
+
+    //
+    //  Reposition and resize child controls on the main window, causing them
+    //  to redraw themselves
+    //
+
+    Area.Left = 0;
+    Area.Top = 0;
+    Area.Right = (SHORT)(NewSize.X - 1);
+    Area.Bottom = 0;
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlMenuBar);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinMenuBarReposition(Ctrl, &Area);
+
+    YoriWinGetClientSize(WindowHandle, &NewSize);
+
+    Area.Left = 1;
+    Area.Top = 1;
+    Area.Right = (WORD)(NewSize.X - 2);
+    Area.Bottom = 1;
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlKeyName);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinLabelReposition(Ctrl, &Area);
+
+    Area.Top = 2;
+    Area.Bottom = Area.Top;
+    Area.Left = 3;
+    Area.Right = (WORD)(Area.Left + sizeof("Keys:") - 1);
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlKeyCaption);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinLabelReposition(Ctrl, &Area);
+
+    Area.Top = 3;
+    Area.Left = 1;
+    Area.Bottom = (WORD)(NewSize.Y - 4);
+    Area.Right = (WORD)(NewSize.X / 2 - 1);
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlKeyList);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinListReposition(Ctrl, &Area);
+
+    Area.Top = (WORD)(Area.Top - 1);
+    Area.Left = (WORD)(Area.Right + 4);
+    Area.Right = (WORD)(Area.Left + sizeof("Values:") - 1);
+    Area.Bottom = Area.Top;
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlValueCaption);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinLabelReposition(Ctrl, &Area);
+
+    Area.Top = (WORD)(Area.Bottom + 1);
+    Area.Left = (WORD)(Area.Left - 2);
+    Area.Bottom = (WORD)(NewSize.Y - 4);
+    Area.Right = (WORD)(NewSize.X - 2);
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlValueList);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinListReposition(Ctrl, &Area);
+
+    Area.Top = (WORD)(NewSize.Y - 3);
+    Area.Bottom = (SHORT)(Area.Top + 2);
+    Area.Left = (WORD)(1);
+    Area.Right = (WORD)(Area.Left + 1 + sizeof("Close") - 1 + 2);
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlCloseButton);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinButtonReposition(Ctrl, &Area);
+
+    Area.Left = (WORD)(Area.Right + 2);
+    Area.Right = (WORD)(Area.Left + 1 + sizeof("Go") - 1 + 2);
+
+    Ctrl = YoriWinFindControlById(WindowCtrl, RegeditControlGoButton);
+    ASSERT(Ctrl != NULL);
+    __analysis_assume(Ctrl != NULL);
+
+    YoriWinButtonReposition(Ctrl, &Area);
+}
+
+
+/**
  Display a registry editor window.
 
  @param RegeditContext Pointer to the global registry editor context.
@@ -1557,11 +1748,12 @@ RegeditCreateMainWindow(
         return FALSE;
     }
 
-    RegeditPopulateMenuBar(RegeditContext, Parent);
-
     YoriWinSetControlContext(Parent, RegeditContext);
-    YoriWinGetClientSize(Parent, &WindowSize);
 
+    Ctrl = RegeditPopulateMenuBar(RegeditContext, Parent);
+    YoriWinSetControlId(Ctrl, RegeditControlMenuBar);
+
+    YoriWinGetClientSize(Parent, &WindowSize);
 
     Area.Left = 1;
     Area.Top = 1;
@@ -1581,7 +1773,7 @@ RegeditCreateMainWindow(
 
     YoriLibConstantString(&Caption, _T("&Keys:"));
 
-    Area.Top = (WORD)(Area.Bottom + 1);
+    Area.Top = 2;
     Area.Bottom = Area.Top;
     Area.Left = 3;
     Area.Right = (WORD)(Area.Left + Caption.LengthInChars - 1);
@@ -1593,7 +1785,9 @@ RegeditCreateMainWindow(
         return FALSE;
     }
 
-    Area.Top = (WORD)(Area.Bottom + 1);
+    YoriWinSetControlId(Ctrl, RegeditControlKeyCaption);
+
+    Area.Top = 3;
     Area.Left = 1;
     Area.Bottom = (WORD)(WindowSize.Y - 4);
     Area.Right = (WORD)(WindowSize.X / 2 - 1);
@@ -1621,6 +1815,8 @@ RegeditCreateMainWindow(
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+
+    YoriWinSetControlId(Ctrl, RegeditControlValueCaption);
 
     Area.Top = (WORD)(Area.Bottom + 1);
     Area.Left = (WORD)(Area.Left - 2);
@@ -1654,6 +1850,8 @@ RegeditCreateMainWindow(
         return FALSE;
     }
 
+    YoriWinSetControlId(Ctrl, RegeditControlCloseButton);
+
     YoriLibConstantString(&Caption, _T("&Go"));
 
     Area.Left = (WORD)(Area.Right + 2);
@@ -1665,6 +1863,10 @@ RegeditCreateMainWindow(
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+
+    YoriWinSetControlId(Ctrl, RegeditControlGoButton);
+
+    YoriWinSetWindowManagerResizeNotifyCallback(Parent, RegeditResizeWindowManager);
 
     Result = FALSE;
     if (!YoriWinProcessInputForWindow(Parent, &Result)) {

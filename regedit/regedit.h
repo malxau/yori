@@ -30,7 +30,12 @@
 typedef enum _REGEDIT_CONTROLS {
     RegeditControlKeyName = 1,
     RegeditControlKeyList = 2,
-    RegeditControlValueList = 3
+    RegeditControlValueList = 3,
+    RegeditControlMenuBar = 4,
+    RegeditControlCloseButton = 5,
+    RegeditControlGoButton = 6,
+    RegeditControlKeyCaption = 7,
+    RegeditControlValueCaption = 8,
 } REGEDIT_CONTROLS;
 
 
