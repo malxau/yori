@@ -31,6 +31,13 @@
 #include "regedit.h"
 
 /**
+ A set of well known control IDs so the dialog can manipulate its elements.
+ */
+typedef enum _REGEDIT_NUMEDIT_CONTROLS {
+    RegeditNumeditControlValue = 1,
+} REGEDIT_NUMEDIT_CONTROLS;
+
+/**
  Callback invoked when the ok button is clicked.  This closes the dialog
  while indicating that changes should be applied.
 
@@ -42,8 +49,39 @@ RegeditNumEditOkButtonClicked(
     )
 {
     PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE ValueEdit;
+    YORI_STRING ValueText;
+    LONGLONG NewNumberValue;
+    DWORD CharsConsumed;
+
     Parent = YoriWinGetControlParent(Ctrl);
-    YoriWinCloseWindow(Parent, TRUE);
+    ValueEdit = YoriWinFindControlById(Parent, RegeditNumeditControlValue);
+    ASSERT(ValueEdit != NULL);
+    __analysis_assume(ValueEdit != NULL);
+
+    YoriLibInitEmptyString(&ValueText);
+
+    if (!YoriWinEditGetText(ValueEdit, &ValueText) ||
+        !YoriLibStringToNumber(&ValueText, TRUE, &NewNumberValue, &CharsConsumed) ||
+        CharsConsumed == 0) {
+
+        PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+        YORI_STRING ButtonText[1];
+        YORI_STRING Text;
+        YORI_STRING Caption;
+
+        YoriLibFreeStringContents(&ValueText);
+
+        WinMgr = YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent));
+
+        YoriLibConstantString(&Caption, _T("Error"));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+        YoriLibConstantString(&Text, _T("Value is not numeric."));
+        YoriDlgMessageBox(WinMgr, &Caption, &Text, 1, ButtonText, 0, 0);
+    } else {
+        YoriLibFreeStringContents(&ValueText);
+        YoriWinCloseWindow(Parent, TRUE);
+    }
 }
 
 /**
@@ -186,6 +224,7 @@ RegeditEditNumericValue(
         YoriWinDestroyWindow(Parent);
         return FALSE;
     }
+    YoriWinSetControlId(ValueEdit, RegeditNumeditControlValue);
     if (ValueNameReadOnly) {
         YoriWinSetFocus(Parent, ValueEdit);
     }
