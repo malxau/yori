@@ -35,34 +35,79 @@
  */
 typedef enum _REGEDIT_NUMEDIT_CONTROLS {
     RegeditNumeditControlValue = 1,
+    RegeditNumeditControlHexadecimal = 2,
+    RegeditNumeditControlDecimal = 3
 } REGEDIT_NUMEDIT_CONTROLS;
 
 /**
- Callback invoked when the ok button is clicked.  This closes the dialog
- while indicating that changes should be applied.
-
- @param Ctrl Pointer to the cancel button control.
+ Context structure attached to the numeric edit dialog.
  */
-VOID
-RegeditNumEditOkButtonClicked(
-    __in PYORI_WIN_CTRL_HANDLE Ctrl
+typedef struct _REGEDIT_NUMEDIT_CONTEXT {
+
+    /**
+     Records the current number base used to display the number value.
+     This is stored because when the user selects a radio button, the new
+     number base is determined, but the old number base cannot be determined
+     from the radio button state, so is saved here.
+     */
+    DWORD CurrentBase;
+} REGEDIT_NUMEDIT_CONTEXT, *PREGEDIT_NUMEDIT_CONTEXT;
+
+/**
+ Query the numeric value from the dialog.
+
+ @param Parent Pointer to the control describing the dialog.
+
+ @param ForceBase If zero, the number base for the current edit control is
+        determined from the current state of the radio buttons.  If nonzero,
+        this parameter indicates how to interpret the edit control.
+
+ @param NumberValue On successful completion, updated to indicate the current
+        numeric value in the edit control.
+
+ @param Base If specified, on successful completion, updated to contain the
+        number base of the edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.  On failure,
+         this function displays the message box indicating the value is not
+         numeric.
+ */
+BOOLEAN
+RegeditNumEditGetNumberFromDialog(
+    __in PYORI_WIN_CTRL_HANDLE Parent,
+    __in DWORD ForceBase,
+    __out PLONGLONG NumberValue,
+    __out_opt PDWORD Base
     )
 {
-    PYORI_WIN_CTRL_HANDLE Parent;
     PYORI_WIN_CTRL_HANDLE ValueEdit;
+    PYORI_WIN_CTRL_HANDLE Radio;
     YORI_STRING ValueText;
     LONGLONG NewNumberValue;
     DWORD CharsConsumed;
+    DWORD NewBase;
 
-    Parent = YoriWinGetControlParent(Ctrl);
     ValueEdit = YoriWinFindControlById(Parent, RegeditNumeditControlValue);
     ASSERT(ValueEdit != NULL);
     __analysis_assume(ValueEdit != NULL);
 
     YoriLibInitEmptyString(&ValueText);
 
+    if (ForceBase != 0) {
+        NewBase = ForceBase;
+    } else {
+        Radio = YoriWinFindControlById(Parent, RegeditNumeditControlHexadecimal);
+        ASSERT(Radio != NULL);
+        __analysis_assume(Radio != NULL);
+
+        NewBase = 10;
+        if (YoriWinRadioIsSelected(Radio)) {
+            NewBase = 16;
+        }
+    }
+
     if (!YoriWinEditGetText(ValueEdit, &ValueText) ||
-        !YoriLibStringToNumber(&ValueText, TRUE, &NewNumberValue, &CharsConsumed) ||
+        !YoriLibStringToNumberSpecifyBase(&ValueText, NewBase, TRUE, &NewNumberValue, &CharsConsumed) ||
         CharsConsumed == 0) {
 
         PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
@@ -78,8 +123,41 @@ RegeditNumEditOkButtonClicked(
         YoriLibConstantString(&ButtonText[0], _T("&Ok"));
         YoriLibConstantString(&Text, _T("Value is not numeric."));
         YoriDlgMessageBox(WinMgr, &Caption, &Text, 1, ButtonText, 0, 0);
-    } else {
-        YoriLibFreeStringContents(&ValueText);
+
+        return FALSE;
+    }
+
+    YoriLibFreeStringContents(&ValueText);
+    *NumberValue = NewNumberValue;
+    if (Base != NULL) {
+        *Base = NewBase;
+    }
+    return TRUE;
+}
+
+
+/**
+ Callback invoked when the ok button is clicked.  This closes the dialog
+ while indicating that changes should be applied.
+
+ @param Ctrl Pointer to the cancel button control.
+ */
+VOID
+RegeditNumEditOkButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    LONGLONG NewNumberValue;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+
+    //
+    //  Query the value and throw it away.  This is just to generate a dialog
+    //  if it's not numeric
+    //
+
+    if (RegeditNumEditGetNumberFromDialog(Parent, 0, &NewNumberValue, NULL)) {
         YoriWinCloseWindow(Parent, TRUE);
     }
 }
@@ -98,6 +176,75 @@ RegeditNumEditCancelButtonClicked(
     PYORI_WIN_CTRL_HANDLE Parent;
     Parent = YoriWinGetControlParent(Ctrl);
     YoriWinCloseWindow(Parent, FALSE);
+}
+
+/**
+ Update the edit control to be expressed in a new number base.
+
+ @param Ctrl Pointer to the control describing the numeric edit dialog.
+
+ @param NewBase Specifies the new number base to use to populate the edit
+        control.
+ */
+VOID
+RegeditNumEditChangeNumberBase(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl,
+    __in DWORD NewBase
+    )
+{
+    PREGEDIT_NUMEDIT_CONTEXT RegeditNumeditContext;
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE ValueEdit;
+    YORI_STRING Value;
+    LONGLONG NumberValue;
+    DWORD Base;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    RegeditNumeditContext = YoriWinGetControlContext(Parent);
+
+    if (RegeditNumeditContext->CurrentBase == NewBase) {
+        return;
+    }
+
+    ValueEdit = YoriWinFindControlById(Parent, RegeditNumeditControlValue);
+    ASSERT(ValueEdit != NULL);
+    __analysis_assume(ValueEdit != NULL);
+
+    if (RegeditNumEditGetNumberFromDialog(Parent, RegeditNumeditContext->CurrentBase, &NumberValue, &Base)) {
+        YoriLibInitEmptyString(&Value);
+        if (YoriLibNumberToString(&Value, NumberValue, NewBase, 0, ' ')) {
+            if (YoriWinEditSetText(ValueEdit, &Value)) {
+                RegeditNumeditContext->CurrentBase = NewBase;
+            }
+        }
+        YoriLibFreeStringContents(&Value);
+    }
+}
+
+/**
+ Callback invoked when the decimal radio button is clicked.
+
+ @param Ctrl Pointer to the radio control.
+ */
+VOID
+RegeditNumEditDecimalRadioClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    RegeditNumEditChangeNumberBase(Ctrl, 10);
+}
+
+/**
+ Callback invoked when the hexadecimal radio button is clicked.
+
+ @param Ctrl Pointer to the radio control.
+ */
+VOID
+RegeditNumEditHexadecimalRadioClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    RegeditNumEditChangeNumberBase(Ctrl, 16);
 }
 
 /**
@@ -136,6 +283,7 @@ RegeditEditNumericValue(
     __in BOOLEAN ValueReadOnly
     )
 {
+    REGEDIT_NUMEDIT_CONTEXT RegeditNumeditContext;
     PYORI_WIN_WINDOW_HANDLE Parent;
     COORD WindowSize;
     SMALL_RECT Area;
@@ -150,7 +298,6 @@ RegeditEditNumericValue(
     DWORD ButtonWidth;
 
     UNREFERENCED_PARAMETER(RegeditContext);
-    UNREFERENCED_PARAMETER(Value);
 
     if (!YoriWinGetWinMgrDimensions(WinMgr, &WinMgrSize)) {
         return FALSE;
@@ -162,7 +309,7 @@ RegeditEditNumericValue(
     }
 
     WindowSize.X = (WORD)(WinMgrSize.X - 10);
-    WindowSize.Y = 11;
+    WindowSize.Y = 12;
 
     YoriLibConstantString(&Caption, _T("Edit Numeric Value"));
 
@@ -170,6 +317,8 @@ RegeditEditNumericValue(
         return FALSE;
     }
 
+    RegeditNumeditContext.CurrentBase = 10;
+    YoriWinSetControlContext(Parent, &RegeditNumeditContext);
     YoriWinGetClientSize(Parent, &WindowSize);
 
     YoriLibConstantString(&Caption, _T("&Name:"));
@@ -231,6 +380,39 @@ RegeditEditNumericValue(
     YoriWinEditSetSelectionRange(ValueEdit, 0, NewValue.LengthInChars);
     YoriLibFreeStringContents(&NewValue);
 
+    ButtonWidth = 4 + sizeof("Hexadecimal") + 4 + sizeof("Decimal");
+
+    YoriLibConstantString(&Caption, _T("&Hexadecimal"));
+
+    Area.Top = (WORD)(Area.Bottom + 1);
+    Area.Bottom = Area.Top;
+    Area.Left = (WORD)((WindowSize.X - ButtonWidth) / 2);
+    Area.Right = (WORD)(Area.Left + 4 + Caption.LengthInChars - 1);
+
+    Ctrl = YoriWinRadioCreate(Parent, &Area, &Caption, NULL, 0, RegeditNumEditHexadecimalRadioClicked);
+    if (Ctrl == NULL) {
+        YoriLibFreeStringContents(&NewValue);
+        YoriWinDestroyWindow(Parent);
+        return FALSE;
+    }
+
+    YoriWinSetControlId(Ctrl, RegeditNumeditControlHexadecimal);
+
+    YoriLibConstantString(&Caption, _T("&Decimal"));
+
+    Area.Left = (WORD)(Area.Right + 3);
+    Area.Right = (WORD)(Area.Left + 4 + Caption.LengthInChars - 1);
+
+    Ctrl = YoriWinRadioCreate(Parent, &Area, &Caption, Ctrl, 0, RegeditNumEditDecimalRadioClicked);
+    if (Ctrl == NULL) {
+        YoriLibFreeStringContents(&NewValue);
+        YoriWinDestroyWindow(Parent);
+        return FALSE;
+    }
+
+    YoriWinSetControlId(Ctrl, RegeditNumeditControlDecimal);
+    YoriWinRadioSelect(Ctrl);
+
     ButtonWidth = 8;
 
     YoriLibConstantString(&Caption, _T("&Ok"));
@@ -263,7 +445,6 @@ RegeditEditNumericValue(
     }
 
     if (Result) {
-        DWORD CharsConsumed;
         YORI_STRING NewValueName;
 
         YoriLibInitEmptyString(&NewValueName);
@@ -275,28 +456,14 @@ RegeditEditNumericValue(
         }
 
         if (Result) {
-            YoriLibInitEmptyString(&NewValue);
-            if (YoriWinEditGetText(ValueEdit, &NewValue) &&
-                YoriLibStringToNumber(&NewValue, TRUE, &NewNumberValue, &CharsConsumed) &&
-                CharsConsumed > 0) {
-    
+            if (RegeditNumEditGetNumberFromDialog(Parent, 0, &NewNumberValue, NULL)) {
                 *Value = (DWORDLONG)NewNumberValue;
                 if (!ValueNameReadOnly) {
                     YoriLibFreeStringContents(ValueName);
                     YoriLibCloneString(ValueName, &NewValueName);
                     YoriLibFreeStringContents(&NewValueName);
                 }
-            } else {
-                YORI_STRING ButtonText[1];
-                YORI_STRING Text;
-                Result = FALSE;
-                YoriLibFreeStringContents(&NewValueName);
-                YoriLibConstantString(&Caption, _T("Error"));
-                YoriLibConstantString(&ButtonText[0], _T("&Ok"));
-                YoriLibConstantString(&Text, _T("Value is not numeric."));
-                YoriDlgMessageBox(WinMgr, &Caption, &Text, 1, ButtonText, 0, 0);
             }
-            YoriLibFreeStringContents(&NewValue);
         }
     }
 
