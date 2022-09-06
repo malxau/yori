@@ -1300,7 +1300,7 @@ RegeditAboutButtonClicked(
     YoriLibYPrintf(&Text,
                    _T("Regedit %i.%02i\n")
 #if YORI_BUILD_ID
-                   _T("  Build %i\n")
+                   _T("Build %i\n")
 #endif
                    _T("%hs"),
                    YORI_VER_MAJOR,

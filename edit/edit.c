@@ -2138,7 +2138,7 @@ EditAboutButtonClicked(
     YoriLibYPrintf(&Text,
                    _T("Edit %i.%02i\n")
 #if YORI_BUILD_ID
-                   _T("  Build %i\n")
+                   _T("Build %i\n")
 #endif
                    _T("%hs"),
 
