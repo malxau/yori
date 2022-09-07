@@ -69,6 +69,22 @@ typedef struct _REGEDIT_CONTEXT {
     REGEDIT_CONTROLS MostRecentListSelectedControl;
 
     /**
+     Index of the edit menu.  This is used to enable and disable menu items
+     based on the state of the application.
+     */
+    DWORD EditMenuIndex;
+
+    /**
+     The index of the new menu item.
+     */
+    DWORD NewMenuIndex;
+
+    /**
+     The index of the delete menu item.
+     */
+    DWORD DeleteMenuIndex;
+
+    /**
      TRUE to use only 7 bit ASCII characters for visual display.
      */
     BOOLEAN UseAsciiDrawing;

@@ -921,6 +921,40 @@ RegeditExitButtonClicked(
 }
 
 /**
+ Callback invoked when the edit menu item is clicked.
+
+ @param Ctrl Pointer to the menu control.
+ */
+VOID
+RegeditEditButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE EditMenu;
+    PYORI_WIN_CTRL_HANDLE NewMenu;
+    PYORI_WIN_CTRL_HANDLE DeleteItem;
+
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PREGEDIT_CONTEXT RegeditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    RegeditContext = YoriWinGetControlContext(Parent);
+
+    EditMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, RegeditContext->EditMenuIndex);
+    NewMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, RegeditContext->NewMenuIndex);
+    DeleteItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, EditMenu, RegeditContext->DeleteMenuIndex);
+
+    if (RegeditContext->TreeDepth == 0) {
+        YoriWinMenuBarDisableMenuItem(NewMenu);
+        YoriWinMenuBarDisableMenuItem(DeleteItem);
+    } else {
+        YoriWinMenuBarEnableMenuItem(NewMenu);
+        YoriWinMenuBarEnableMenuItem(DeleteItem);
+    }
+
+}
+
+/**
  Invoked when the new key menu item is clicked.
 
  @param Ctrl Pointer to the menu control.
@@ -1458,8 +1492,6 @@ RegeditPopulateMenuBar(
     PYORI_WIN_CTRL_HANDLE Ctrl;
     DWORD MenuIndex;
 
-    UNREFERENCED_PARAMETER(RegeditContext);
-
     ZeroMemory(&NewMenuEntries, sizeof(NewMenuEntries));
     MenuIndex = 0;
     YoriLibConstantString(&NewMenuEntries[MenuIndex].Caption, _T("&Key"));
@@ -1490,6 +1522,7 @@ RegeditPopulateMenuBar(
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&New"));
     EditMenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(NewMenuEntries)/sizeof(NewMenuEntries[0]);
     EditMenuEntries[MenuIndex].ChildMenu.Items = NewMenuEntries;
+    RegeditContext->NewMenuIndex = MenuIndex;
 
     MenuIndex++;
     EditMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
@@ -1497,6 +1530,7 @@ RegeditPopulateMenuBar(
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Delete"));
     EditMenuEntries[MenuIndex].NotifyCallback = RegeditDeleteButtonClicked;
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Del"));
+    RegeditContext->DeleteMenuIndex = MenuIndex;
 
     ZeroMemory(&ViewMenuEntries, sizeof(ViewMenuEntries));
     MenuIndex = 0;
@@ -1521,8 +1555,10 @@ RegeditPopulateMenuBar(
 
     MenuIndex++;
     YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Edit"));
+    MenuEntries[MenuIndex].NotifyCallback = RegeditEditButtonClicked;
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(EditMenuEntries)/sizeof(EditMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = EditMenuEntries;
+    RegeditContext->EditMenuIndex = MenuIndex;
 
     MenuIndex++;
     YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&View"));
