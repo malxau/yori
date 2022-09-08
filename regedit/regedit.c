@@ -1258,7 +1258,7 @@ RegeditDeleteButtonClicked(
     RegeditContext = YoriWinGetControlContext(Parent);
 
     //
-    //  Can't create a value without a hive
+    //  Can't delete a value without a hive
     //
 
     if (RegeditContext->TreeDepth == 0) {
@@ -1286,6 +1286,50 @@ RegeditDeleteButtonClicked(
         }
     }
 }
+
+/**
+ Callback invoked when the copy key menu item is clicked.
+
+ @param Ctrl Pointer to the menu control.
+ */
+VOID
+RegeditCopyKeyButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PREGEDIT_CONTEXT RegeditContext;
+    PCYORI_STRING RootString;
+    YORI_STRING String;
+    DWORD Index;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    RegeditContext = YoriWinGetControlContext(Parent);
+
+    if (RegeditContext->TreeDepth > 0) {
+
+        RootString = NULL;
+        for (Index = 0; Index < sizeof(RegeditRootKeys)/sizeof(RegeditRootKeys[0]); Index++) {
+            if (RegeditContext->ActiveRootKey == RegeditRootKeys[Index].KeyHandle) {
+                RootString = &RegeditRootKeys[Index].KeyName;
+            }
+        }
+
+        ASSERT(RootString != NULL);
+
+        if (YoriLibAllocateString(&String, RootString->LengthInChars + 1 + RegeditContext->Subkey.LengthInChars + 1)) {
+            if (RegeditContext->TreeDepth == 1) {
+                YoriLibYPrintf(&String, _T("%y"), RootString);
+            } else {
+                YoriLibYPrintf(&String, _T("%y\\%y"), RootString, &RegeditContext->Subkey);
+            }
+
+            YoriLibCopyTextWithProcessFallback(&String);
+            YoriLibFreeStringContents(&String);
+        }
+    }
+}
+
 
 /**
  Callback invoked when the refresh menu item is clicked.
@@ -1483,7 +1527,7 @@ RegeditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[1];
-    YORI_WIN_MENU_ENTRY EditMenuEntries[3];
+    YORI_WIN_MENU_ENTRY EditMenuEntries[5];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[1];
     YORI_WIN_MENU_ENTRY NewMenuEntries[6];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
@@ -1531,6 +1575,14 @@ RegeditPopulateMenuBar(
     EditMenuEntries[MenuIndex].NotifyCallback = RegeditDeleteButtonClicked;
     YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Del"));
     RegeditContext->DeleteMenuIndex = MenuIndex;
+
+    MenuIndex++;
+    EditMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+    MenuIndex++;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Caption, _T("&Copy Key Name"));
+    EditMenuEntries[MenuIndex].NotifyCallback = RegeditCopyKeyButtonClicked;
+    YoriLibConstantString(&EditMenuEntries[MenuIndex].Hotkey, _T("Ctrl+C"));
+    RegeditContext->CopyKeyMenuIndex = MenuIndex;
 
     ZeroMemory(&ViewMenuEntries, sizeof(ViewMenuEntries));
     MenuIndex = 0;

@@ -85,6 +85,11 @@ typedef struct _REGEDIT_CONTEXT {
     DWORD DeleteMenuIndex;
 
     /**
+     The index of the copy key menu item.
+     */
+    DWORD CopyKeyMenuIndex;
+
+    /**
      TRUE to use only 7 bit ASCII characters for visual display.
      */
     BOOLEAN UseAsciiDrawing;
