@@ -311,7 +311,12 @@ RegeditEditNumericValue(
     WindowSize.X = (WORD)(WinMgrSize.X - 10);
     WindowSize.Y = 12;
 
-    YoriLibConstantString(&Caption, _T("Edit Numeric Value"));
+    if (ValueReadOnly) {
+        YoriLibConstantString(&Caption, _T("View Numeric Value"));
+        WindowSize.Y = (WORD)(WindowSize.Y + 3);
+    } else {
+        YoriLibConstantString(&Caption, _T("Edit Numeric Value"));
+    }
 
     if (!YoriWinCreateWindow(WinMgr, WindowSize.X, WindowSize.Y, WindowSize.X, WindowSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT, &Caption, &Parent)) {
         return FALSE;
@@ -321,12 +326,37 @@ RegeditEditNumericValue(
     YoriWinSetControlContext(Parent, &RegeditNumeditContext);
     YoriWinGetClientSize(Parent, &WindowSize);
 
+    Area.Top = 0;
+    Area.Left = 1;
+
+    if (ValueReadOnly) {
+        Area.Left = 1;
+        Area.Top = 1;
+        Area.Right = (WORD)(WindowSize.X - 2);
+        Area.Bottom = Area.Top;
+
+        YoriLibConstantString(&Caption, _T("You do not have access to change this value."));
+
+        Ctrl = YoriWinLabelCreate(Parent, &Area, &Caption, 0);
+        if (Ctrl == NULL) {
+            YoriWinDestroyWindow(Parent);
+            return FALSE;
+        }
+
+        //
+        //  The label below is one row below the top of the edit control
+        //  that follows, so it needs to be two rows below this label.
+        //
+
+        Area.Top = (WORD)(Area.Top + 2);
+    }
+
     YoriLibConstantString(&Caption, _T("&Name:"));
 
     Area.Left = 1;
-    Area.Top = 1;
+    Area.Top = (WORD)(Area.Top + 1);
     Area.Right = (WORD)(Area.Left + Caption.LengthInChars + 1);
-    Area.Bottom = 1;
+    Area.Bottom = Area.Top;
 
     Ctrl = YoriWinLabelCreate(Parent, &Area, &Caption, 0);
     if (Ctrl == NULL) {
