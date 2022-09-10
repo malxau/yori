@@ -5591,6 +5591,32 @@ YoriWinMultilineEditReposition(
     return TRUE;
 }
 
+/**
+ Change the read only state of an existing multiline edit control.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param NewReadOnlyState TRUE to indicate the multiline edit control should be
+        read only, FALSE if it should be writable.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinMultilineEditSetReadOnly(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN NewReadOnlyState
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    MultilineEdit->ReadOnly = NewReadOnlyState;
+
+    return TRUE;
+}
+
 
 /**
  Create a multiline edit control and add it to a window.  This is destroyed

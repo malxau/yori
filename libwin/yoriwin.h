@@ -758,6 +758,12 @@ YoriWinMultilineEditReposition(
     __in PSMALL_RECT CtrlRect
     );
 
+BOOLEAN
+YoriWinMultilineEditSetReadOnly(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN NewReadOnlyState
+    );
+
 PYORI_WIN_CTRL_HANDLE
 YoriWinMultilineEditCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
