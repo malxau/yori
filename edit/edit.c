@@ -3,7 +3,7 @@
  *
  * Yori shell text editor
  *
- * Copyright (c) 2020-2021 Malcolm J. Smith
+ * Copyright (c) 2020-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,17 +38,18 @@ CHAR strEditHelpText[] =
         "\n"
         "Displays editor.\n"
         "\n"
-        "EDIT [-license] [-a] [-e encoding] [-m]\n"
+        "EDIT [-license] [-a] [-e encoding] [-m] [-r] [filename]\n"
         "\n"
         "   -a             Use ASCII characters for drawing\n"
         "   -e <encoding>  Specifies the character encoding to use\n"
-        "   -m             Use modern keyboard navigation instead of Edit compatible\n";
+        "   -m             Use modern keyboard navigation instead of Edit compatible\n"
+        "   -r             Open file as read only\n";
 
 /**
  The copyright year string to display with license text.
  */
 const
-TCHAR strCopyrightYear[] = _T("2020-2021");
+TCHAR strCopyrightYear[] = _T("2020-2022");
 
 /**
  Display usage text to the user.
@@ -179,6 +180,12 @@ typedef struct _EDIT_CONTEXT {
      TRUE to use only 7 bit ASCII characters for visual display.
      */
     BOOLEAN UseAsciiDrawing;
+
+    /**
+     TRUE if the current file is opened read only, FALSE if it is opened for
+     editing.
+     */
+    BOOLEAN ReadOnly;
 
 } EDIT_CONTEXT, *PEDIT_CONTEXT;
 
@@ -969,8 +976,9 @@ EditOpenButtonClicked(
     YORI_STRING Text;
     YORI_STRING FullName;
     PEDIT_CONTEXT EditContext;
+    YORI_DLG_FILE_CUSTOM_VALUE ReadOnlyValues[2];
     YORI_DLG_FILE_CUSTOM_VALUE EncodingValues[6];
-    YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[1];
+    YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[2];
     DWORD Encoding;
     DWORD EncodingCount;
     BOOLEAN HasBom;
@@ -981,10 +989,22 @@ EditOpenButtonClicked(
 
     EncodingCount = EditPopulateEncodingArray(EncodingValues, TRUE);
 
-    YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Encoding:"));
-    CustomOptionArray[0].ValueCount = EncodingCount;
-    CustomOptionArray[0].Values = EncodingValues;
-    CustomOptionArray[0].SelectedValue = 0;
+    YoriLibConstantString(&ReadOnlyValues[0].ValueText, _T("Open for editing"));
+    YoriLibConstantString(&ReadOnlyValues[1].ValueText, _T("Open read only"));
+
+    YoriLibConstantString(&CustomOptionArray[0].Description, _T("&Read Only:"));
+    CustomOptionArray[0].ValueCount = 2;
+    CustomOptionArray[0].Values = ReadOnlyValues;
+    if (EditContext->ReadOnly) {
+        CustomOptionArray[0].SelectedValue = 1;
+    } else {
+        CustomOptionArray[0].SelectedValue = 0;
+    }
+
+    YoriLibConstantString(&CustomOptionArray[1].Description, _T("&Encoding:"));
+    CustomOptionArray[1].ValueCount = EncodingCount;
+    CustomOptionArray[1].Values = EncodingValues;
+    CustomOptionArray[1].SelectedValue = 0;
 
     YoriLibConstantString(&Title, _T("Open"));
     YoriLibInitEmptyString(&Text);
@@ -1006,7 +1026,7 @@ EditOpenButtonClicked(
         return;
     }
 
-    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[0].SelectedValue, TRUE, &HasBom);
+    Encoding = EditEncodingFromArrayIndex(CustomOptionArray[1].SelectedValue, TRUE, &HasBom);
     if (Encoding != (DWORD)-1) {
         EditContext->Encoding = Encoding;
     }
@@ -1035,6 +1055,14 @@ EditOpenButtonClicked(
     memcpy(&EditContext->OpenFileName, &FullName, sizeof(YORI_STRING));
     EditUpdateOpenedFileCaption(EditContext);
     YoriWinMultilineEditSetModifyState(EditContext->MultilineEdit, FALSE);
+
+    if (CustomOptionArray[0].SelectedValue != 0) {
+        EditContext->ReadOnly = TRUE;
+    } else {
+        EditContext->ReadOnly = FALSE;
+    }
+
+    YoriWinMultilineEditSetReadOnly(EditContext->MultilineEdit, EditContext->ReadOnly);
 }
 
 VOID
@@ -2644,6 +2672,7 @@ EditCreateMainWindow(
     if (EditContext->OpenFileName.StartOfString != NULL) {
         EditLoadFile(EditContext, &EditContext->OpenFileName);
         EditUpdateOpenedFileCaption(EditContext);
+        YoriWinMultilineEditSetReadOnly(EditContext->MultilineEdit, EditContext->ReadOnly);
     }
 
     YoriWinSetControlContext(Parent, EditContext);
@@ -2755,6 +2784,9 @@ ENTRYPOINT(
                 }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
                 GlobalEditContext.TraditionalNavigation = FALSE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
+                GlobalEditContext.ReadOnly = TRUE;
                 ArgumentUnderstood = TRUE;
             }
         } else {
