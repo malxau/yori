@@ -334,6 +334,38 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
      */
     YORI_WIN_MULTILINE_EDIT_SELECT Selection;
 
+    /**
+     If TRUE, the previous edit has started a new line which has auto indent
+     applied.  When this occurs, backspace should remove an entire indent,
+     not just a character.  Any modification or cursor movement should set
+     this to FALSE, with the frustrating exception of backspace itself,
+     which leaves this mode in effect.
+     */
+    BOOLEAN AutoIndentApplied;
+
+    /**
+     When AutoIndentApplied is TRUE, specifies the line used to supply the
+     auto indent.  When backspace is pressed, earlier lines are examined to
+     find the previous indent.
+     */
+    DWORD AutoIndentSourceLine;
+
+    /**
+     When AutoIndentApplied is TRUE, specifies the number of characters to
+     obtain from the AutoIndentSourceLine.  This can be less than the total
+     number of indentation characters if the lines contain different
+     white space characters (eg. if the first line contains a space and tab,
+     and a later line contains two spaces, the first space is considered a
+     match but the tab is not.
+     */
+    DWORD AutoIndentSourceLength;
+
+    /**
+     When AutoIndentApplied is TRUE, specifies the line that has an auto
+     indent applied.  This is used to detect cursor movement away from the
+     line and reset auto indent state.
+     */
+    DWORD AutoIndentAppliedLine;
 
     /**
      Records the last observed mouse location when a mouse selection is
@@ -424,6 +456,12 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
      change in response to left and right keys.
      */
     BOOLEAN TraditionalEditNavigation;
+
+    /**
+     TRUE if new lines should start with leading whitespace characters from
+     previous lines.  FALSE if new lines should start at offset zero.
+     */
+    BOOLEAN AutoIndent;
 
 } YORI_WIN_CTRL_MULTILINE_EDIT, *PYORI_WIN_CTRL_MULTILINE_EDIT;
 
@@ -1090,6 +1128,14 @@ YoriWinMultilineEditSetCursorLocationInternal(
         return;
     }
 
+    if (MultilineEdit->AutoIndentApplied) {
+        if (NewCursorLine != MultilineEdit->AutoIndentAppliedLine ||
+            NewCursorOffset != MultilineEdit->AutoIndentSourceLength) {
+
+            MultilineEdit->AutoIndentApplied = FALSE;
+        }
+    }
+
     ASSERT(NewCursorLine == 0 || NewCursorLine < MultilineEdit->LinesPopulated);
 
     if (MultilineEdit->CursorMoveCallback != NULL) {
@@ -1645,6 +1691,7 @@ __success(return)
 BOOLEAN
 YoriWinMultilineEditDeleteTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in BOOLEAN ProcessingBackspace,
     __in BOOLEAN ProcessingUndo,
     __in DWORD FirstLine,
     __in DWORD FirstCharOffset,
@@ -1801,7 +1848,7 @@ YoriWinMultilineEditApplyUndoRecord(
     Success = FALSE;
     switch(Undo->Op) {
         case YoriWinMultilineEditUndoInsertText:
-            Success = YoriWinMultilineEditDeleteTextRange(MultilineEdit, TRUE, Undo->u.InsertText.FirstLineToDelete, Undo->u.InsertText.FirstCharOffsetToDelete, Undo->u.InsertText.LastLineToDelete, Undo->u.InsertText.LastCharOffsetToDelete);
+            Success = YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, TRUE, Undo->u.InsertText.FirstLineToDelete, Undo->u.InsertText.FirstCharOffsetToDelete, Undo->u.InsertText.LastLineToDelete, Undo->u.InsertText.LastCharOffsetToDelete);
             if (Success) {
                 YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, Undo->u.InsertText.FirstCharOffsetToDelete, Undo->u.InsertText.FirstLineToDelete);
             }
@@ -1815,7 +1862,7 @@ YoriWinMultilineEditApplyUndoRecord(
         case YoriWinMultilineEditUndoOverwriteText:
             NewLastLine = 0;
             NewLastCharOffset = 0;
-            Success = YoriWinMultilineEditDeleteTextRange(MultilineEdit, TRUE, Undo->u.OverwriteText.FirstLineToDelete, Undo->u.OverwriteText.FirstCharOffsetToDelete, Undo->u.OverwriteText.LastLineToDelete, Undo->u.OverwriteText.LastCharOffsetToDelete);
+            Success = YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, TRUE, Undo->u.OverwriteText.FirstLineToDelete, Undo->u.OverwriteText.FirstCharOffsetToDelete, Undo->u.OverwriteText.LastLineToDelete, Undo->u.OverwriteText.LastCharOffsetToDelete);
             if (Success) {
                 Success = YoriWinMultilineEditInsertTextRange(MultilineEdit, TRUE, Undo->u.OverwriteText.FirstLine, Undo->u.OverwriteText.FirstCharOffset, &Undo->u.OverwriteText.Text, &NewLastLine, &NewLastCharOffset);
             }
@@ -2112,6 +2159,96 @@ YoriWinMultilineEditGetTextRangeLength(
 }
 
 /**
+ Count the leading whitespace characters in a line and return a substring
+ that can be used to apply an indentation to a later line.
+
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        contents of the buffer.
+
+ @param LineIndex Specifies the line that contains the indentation string
+        to return.
+
+ @param Indent On successful completion, updated to point to the substring
+        within the line that consists of initial white space characters.
+ */
+VOID
+YoriWinMultilineEditGetIndentationOnLine(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD LineIndex,
+    __out PYORI_STRING Indent
+    )
+{
+    PYORI_STRING Line;
+    DWORD Index;
+
+    YoriLibInitEmptyString(Indent);
+    Line = &MultilineEdit->LineArray[LineIndex];
+    Indent->StartOfString = Line->StartOfString;
+    for (Index = 0; Index < Line->LengthInChars; Index++) {
+        if (Line->StartOfString[Index] != ' ' &&
+            Line->StartOfString[Index] != '\t') {
+
+            break;
+        }
+    }
+    Indent->LengthInChars = Index;
+}
+
+/**
+ When an auto indent has been applied to a line and the backspace key is
+ pressed, search backwards through previous lines to find one that contains
+ less indentation than the current match, and return that line index along
+ with the new indentation to apply.
+
+ @param MultilineEdit Pointer to the multiline edit control containing the
+        contents of the buffer.
+
+ @param NewLine On successful completion, updated to indicate the line
+        index containing the new indentation.
+
+ @param NewIndent On successful completion, updated to point to a substring
+        within the NewLine buffer containing the new indentation to apply.
+        This should be a subset of the current indentation, up to zero
+        characters.
+ */
+VOID
+YoriWinMultilineEditFindPreviousIndentLine(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __out PDWORD NewLine,
+    __out PYORI_STRING NewIndent
+    )
+{
+    DWORD ProbeLine;
+    YORI_STRING ProbeIndent;
+    YORI_STRING CurrentIndent;
+    DWORD MatchingLength;
+
+    ASSERT(MultilineEdit->AutoIndentApplied);
+    YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, MultilineEdit->AutoIndentSourceLine, &CurrentIndent);
+    ASSERT(MultilineEdit->AutoIndentSourceLength <= CurrentIndent.LengthInChars);
+    CurrentIndent.LengthInChars = MultilineEdit->AutoIndentSourceLength;
+
+    //
+    //  Count backwards from one prior to the current auto indent line up
+    //  to the first
+    //
+
+    for (ProbeLine = MultilineEdit->AutoIndentSourceLine; ProbeLine > 0; ProbeLine--) {
+        YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, ProbeLine - 1, &ProbeIndent);
+        MatchingLength = YoriLibCountStringMatchingChars(&CurrentIndent, &ProbeIndent);
+        if (MatchingLength < CurrentIndent.LengthInChars) {
+            *NewLine = ProbeLine - 1;
+            ProbeIndent.LengthInChars = MatchingLength;
+            memcpy(NewIndent, &ProbeIndent, sizeof(YORI_STRING));
+            return;
+        }
+    }
+
+    *NewLine = 0;
+    YoriLibInitEmptyString(NewIndent);
+}
+
+/**
  Build a single continuous string covering the specified range in a multiline
  edit control and store it in a preallocated allocation.
 
@@ -2244,6 +2381,13 @@ YoriWinMultilineEditGetTextRange(
  @param MultilineEdit Pointer to the multiline edit control containing the
         contents of the buffer.
 
+ @param ProcessingBackspace If TRUE, this delete is a response to the
+        backspace key, which means any auto indent that has previously
+        been applied should remain in effect.  Backspace processing should
+        clear this explicitly if the indentation has been reduced to zero.
+        If FALSE, this routine is considered a buffer modification that
+        invalidates auto indent.
+
  @param ProcessingUndo If TRUE, this delete is being invoked by undo and
         should not try to create or maintain an undo entry.
 
@@ -2265,6 +2409,7 @@ __success(return)
 BOOLEAN
 YoriWinMultilineEditDeleteTextRange(
     __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in BOOLEAN ProcessingBackspace,
     __in BOOLEAN ProcessingUndo,
     __in DWORD FirstLine,
     __in DWORD FirstCharOffset,
@@ -2281,6 +2426,10 @@ YoriWinMultilineEditDeleteTextRange(
     DWORD LineIndexToDelete;
     PYORI_STRING Line;
     PYORI_STRING FinalLine;
+
+    if (!ProcessingBackspace) {
+        MultilineEdit->AutoIndentApplied = FALSE;
+    }
 
     if (!ProcessingUndo) {
         BOOLEAN RangeBeforeExistingRange;
@@ -2601,7 +2750,8 @@ YoriWinMultilineEditInsertLines(
 
 /**
  Insert a block of text, which may contain newlines, into the control at the
- specified position.
+ specified position.  Currently, this happens in three scenarios: user input,
+ clipboard paste, or undo.
 
  @param MultilineEdit Pointer to the multiline edit control.
 
@@ -2647,8 +2797,11 @@ YoriWinMultilineEditInsertTextRange(
     DWORD LocalLastLine;
     DWORD LocalLastCharOffset;
     YORI_STRING TrailingPortionOfFirstLine;
+    YORI_STRING AutoIndentLeadingString;
     PYORI_STRING Line;
     BOOLEAN TerminateLine;
+
+    YoriLibInitEmptyString(&AutoIndentLeadingString);
 
     //
     //  Count the number of lines in the input text.  This may be zero.
@@ -2656,6 +2809,21 @@ YoriWinMultilineEditInsertTextRange(
 
     YoriWinMultilineEditCalculateEndingPointOfText(FirstLine, FirstCharOffset, Text, &LocalLastLine, &LocalLastCharOffset);
     LineCount = LocalLastLine - FirstLine;
+
+    //
+    //  If auto indent is in effect, and the text ends on the beginning of
+    //  a subsequent line, calculate any indentation prefix.
+    //
+
+    if (LineCount > 0 &&
+        LocalLastCharOffset == 0 &&
+        MultilineEdit->AutoIndent &&
+        !ProcessingUndo &&
+        FirstLine < MultilineEdit->LinesPopulated) {
+
+        YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, FirstLine, &AutoIndentLeadingString);
+        LocalLastCharOffset = AutoIndentLeadingString.LengthInChars;
+    }
 
     //
     //  If new lines are being added, check if the line array is large
@@ -2686,6 +2854,8 @@ YoriWinMultilineEditInsertTextRange(
             TrailingPortionOfFirstLine.LengthInChars = Line->LengthInChars - FirstCharOffset;
         }
     }
+
+    MultilineEdit->AutoIndentApplied = FALSE;
 
     //
     //  Go through each line.  For all lines except the first, construct the
@@ -2731,7 +2901,7 @@ YoriWinMultilineEditInsertTextRange(
                 ASSERT(Line->LengthInChars == 0);
                 CharsNeeded = CharsThisLine;
                 if (LineIndex == LineCount) {
-                    CharsNeeded += TrailingPortionOfFirstLine.LengthInChars;
+                    CharsNeeded += AutoIndentLeadingString.LengthInChars + TrailingPortionOfFirstLine.LengthInChars;
                 }
                 if (Line->LengthAllocated < CharsNeeded) {
                     YoriLibFreeStringContents(Line);
@@ -2740,12 +2910,38 @@ YoriWinMultilineEditInsertTextRange(
                     }
                 }
 
+                //
+                //  On the final line, apply any auto indent if needed.  Auto
+                //  indent wouldn't make sense if new data is arriving.
+                //
+
+                Line->LengthInChars = 0;
+                if (LineIndex == LineCount) {
+                    if (AutoIndentLeadingString.LengthInChars > 0) {
+
+                        ASSERT(CharsThisLine == 0);
+
+                        memcpy(Line->StartOfString,
+                               AutoIndentLeadingString.StartOfString,
+                               AutoIndentLeadingString.LengthInChars * sizeof(TCHAR));
+                        Line->LengthInChars = AutoIndentLeadingString.LengthInChars;
+                        MultilineEdit->AutoIndentApplied = TRUE;
+                        MultilineEdit->AutoIndentSourceLine = FirstLine;
+                        MultilineEdit->AutoIndentSourceLength = AutoIndentLeadingString.LengthInChars;
+                        MultilineEdit->AutoIndentAppliedLine = LocalLastLine;
+                    }
+                }
+
+                //
+                //  Add the new text to the beginning of the line
+                //
+
                 if (CharsThisLine > 0) {
-                    memcpy(Line->StartOfString,
+                    memcpy(&Line->StartOfString[Line->LengthInChars],
                            &Text->StartOfString[Index - CharsThisLine],
                            CharsThisLine * sizeof(TCHAR));
                 }
-                Line->LengthInChars = CharsThisLine;
+                Line->LengthInChars = Line->LengthInChars + CharsThisLine;
 
                 //
                 //  On the final line, copy the final portion currently in the
@@ -2755,9 +2951,9 @@ YoriWinMultilineEditInsertTextRange(
                 //
 
                 if (LineIndex == LineCount) {
-                    CharsLastLine = CharsThisLine;
+                    CharsLastLine = AutoIndentLeadingString.LengthInChars + CharsThisLine;
                     if (TrailingPortionOfFirstLine.LengthInChars > 0) {
-                        memcpy(&Line->StartOfString[CharsThisLine],
+                        memcpy(&Line->StartOfString[CharsThisLine + AutoIndentLeadingString.LengthInChars],
                                TrailingPortionOfFirstLine.StartOfString,
                                TrailingPortionOfFirstLine.LengthInChars * sizeof(TCHAR));
                         Line->LengthInChars += TrailingPortionOfFirstLine.LengthInChars;
@@ -2900,6 +3096,8 @@ YoriWinMultilineEditOverwriteTextRange(
     PYORI_STRING Line;
     BOOLEAN TerminateLine;
     BOOLEAN MoveTrailingTextToNextLine;
+
+    MultilineEdit->AutoIndentApplied = FALSE;
 
     if (!ProcessingUndo) {
         BOOLEAN RangeBeforeExistingRange;
@@ -3205,7 +3403,7 @@ YoriWinMultilineEditDeleteSelection(
     LastLine = Selection->LastLine;
     LastCharOffset = Selection->LastCharOffset;
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
         return FALSE;
     }
 
@@ -4231,6 +4429,31 @@ YoriWinMultilineEditSetTraditionalNavigation(
 }
 
 /**
+ Enable or disable auto indent.  If a new line is created when auto indent
+ is enabled, the line is initialized with the leading white space from the
+ previous line.  If auto indent is disabled, a new line is initialized with
+ no leading white space.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param AutoIndentEnabled TRUE to enable auto indent behavior; FALSE to
+        disable auto indent behavior.
+ */
+VOID
+YoriWinMultilineEditSetAutoIndent(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN AutoIndentEnabled
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    MultilineEdit->AutoIndent = AutoIndentEnabled;
+}
+
+/**
  Returns TRUE if the multiline edit control has been modified by the user
  since the last time @ref YoriWinMultilineEditSetModifyState indicated that
  no user modification has occurred.
@@ -4327,12 +4550,30 @@ YoriWinMultilineEditBackspace(
     LastLine = MultilineEdit->CursorLine;
     LastCharOffset = MultilineEdit->CursorOffset;
 
-    //
-    //  If we're at the beginning of the line, we may need to merge lines.
-    //  If it's the first line, we're finished.
-    //
+    if (MultilineEdit->AutoIndentApplied) {
+        YORI_STRING NewIndent;
+        DWORD NewIndentSourceLine;
 
-    if (LastCharOffset == 0) {
+        ASSERT(LastCharOffset > 0);
+        YoriWinMultilineEditFindPreviousIndentLine(MultilineEdit, &NewIndentSourceLine, &NewIndent);
+
+        FirstLine = LastLine;
+        FirstCharOffset = NewIndent.LengthInChars;
+
+        if (NewIndent.LengthInChars == 0) {
+            MultilineEdit->AutoIndentApplied = FALSE;
+        } else {
+            MultilineEdit->AutoIndentSourceLine = NewIndentSourceLine;
+            MultilineEdit->AutoIndentSourceLength = NewIndent.LengthInChars;
+        }
+
+    } else if (LastCharOffset == 0) {
+
+        //
+        //  If we're at the beginning of the line, we may need to merge lines.
+        //  If it's the first line, we're finished.
+        //
+
         if (MultilineEdit->CursorLine == 0) {
             return FALSE;
         }
@@ -4344,7 +4585,7 @@ YoriWinMultilineEditBackspace(
         FirstCharOffset = LastCharOffset - 1;
     }
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, TRUE, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
         return FALSE;
     }
 
@@ -4392,7 +4633,7 @@ YoriWinMultilineEditDelete(
         LastCharOffset = FirstCharOffset + 1;
     }
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FALSE, FirstLine, FirstCharOffset, LastLine, LastCharOffset)) {
         return FALSE;
     }
 
@@ -4418,7 +4659,7 @@ YoriWinMultilineEditDeleteLine(
         return FALSE;
     }
 
-    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, MultilineEdit->CursorLine, 0, MultilineEdit->CursorLine + 1, 0)) {
+    if (!YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FALSE, MultilineEdit->CursorLine, 0, MultilineEdit->CursorLine + 1, 0)) {
         return FALSE;
     }
 
