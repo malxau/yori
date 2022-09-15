@@ -38,10 +38,11 @@ CHAR strEditHelpText[] =
         "\n"
         "Displays editor.\n"
         "\n"
-        "EDIT [-license] [-a] [-e encoding] [-m] [-r] [filename]\n"
+        "EDIT [-license] [-a] [-e encoding] [-i] [-m] [-r] [filename]\n"
         "\n"
         "   -a             Use ASCII characters for drawing\n"
         "   -e <encoding>  Specifies the character encoding to use\n"
+        "   -i             Disable auto indent\n"
         "   -m             Use modern keyboard navigation instead of Edit compatible\n"
         "   -r             Open file as read only\n";
 
@@ -158,6 +159,11 @@ typedef struct _EDIT_CONTEXT {
     DWORD OptionsTraditionalMenuIndex;
 
     /**
+     The index of the auto indent item in the options menu.
+     */
+    DWORD OptionsAutoIndentMenuIndex;
+
+    /**
      TRUE if a BOM should be written to the output stream, FALSE if not.
      */
     BOOLEAN WriteBom;
@@ -167,6 +173,13 @@ typedef struct _EDIT_CONTEXT {
      insensitive.
      */
     BOOLEAN SearchMatchCase;
+
+    /**
+     TRUE to enable auto indent, where a new line after a line containing
+     white space starts with the same leading white space.  FALSE if a new
+     line should start at the beginning of the line.
+     */
+    BOOLEAN AutoIndent;
 
     /**
      TRUE to enable traditional MS-DOS edit navigation, where the cursor can
@@ -2139,6 +2152,37 @@ EditTraditionalNavigationOptionsButtonClicked(
     YoriWinMultilineEditSetTraditionalNavigation(EditContext->MultilineEdit, EditContext->TraditionalNavigation);
 }
 
+/**
+ A callback invoked when the auto indent options menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+EditAutoIndentOptionsButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE OptionsMenu;
+    PYORI_WIN_CTRL_HANDLE AutoIndentMenuItem;
+
+    PEDIT_CONTEXT EditContext;
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+
+    OptionsMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->OptionsMenuIndex);
+    AutoIndentMenuItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, OptionsMenu, EditContext->OptionsAutoIndentMenuIndex);
+
+
+    if (EditContext->AutoIndent) {
+        EditContext->AutoIndent = FALSE;
+        YoriWinMenuBarUncheckMenuItem(AutoIndentMenuItem);
+    } else {
+        EditContext->AutoIndent = TRUE;
+        YoriWinMenuBarCheckMenuItem(AutoIndentMenuItem);
+    }
+    YoriWinMultilineEditSetAutoIndent(EditContext->MultilineEdit, EditContext->AutoIndent);
+}
 
 /**
  A callback invoked when the about menu item is invoked.
@@ -2318,7 +2362,7 @@ EditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
     YORI_WIN_MENU_ENTRY EditMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
-    YORI_WIN_MENU_ENTRY OptionsMenuEntries[2];
+    YORI_WIN_MENU_ENTRY OptionsMenuEntries[3];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
@@ -2434,6 +2478,14 @@ EditPopulateMenuBar(
     YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Traditional navigation"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditTraditionalNavigationOptionsButtonClicked;
     EditContext->OptionsTraditionalMenuIndex = MenuIndex;
+
+    MenuIndex++;
+    if (EditContext->AutoIndent) {
+        OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
+    }
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Auto indent"));
+    OptionsMenuEntries[MenuIndex].NotifyCallback = EditAutoIndentOptionsButtonClicked;
+    EditContext->OptionsAutoIndentMenuIndex = MenuIndex;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
     MenuIndex = 0;
@@ -2637,6 +2689,7 @@ EditCreateMainWindow(
         return FALSE;
     }
 
+    YoriWinMultilineEditSetAutoIndent(MultilineEdit, EditContext->AutoIndent);
     YoriWinMultilineEditSetTraditionalNavigation(MultilineEdit, EditContext->TraditionalNavigation);
 
     Rect.Top = (SHORT)(Rect.Bottom + 1);
@@ -2755,6 +2808,7 @@ ENTRYPOINT(
     }
 
     GlobalEditContext.TraditionalNavigation = TRUE;
+    GlobalEditContext.AutoIndent = TRUE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -2782,6 +2836,9 @@ ENTRYPOINT(
                         i++;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+                GlobalEditContext.AutoIndent = FALSE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
                 GlobalEditContext.TraditionalNavigation = FALSE;
                 ArgumentUnderstood = TRUE;
