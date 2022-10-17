@@ -10,9 +10,10 @@ LINKPDB=/Pdb:yoritest.pdb
 BIN_OBJS=\
 	 test.obj         \
 	 fileenum.obj     \
+	 parse.obj        \
 
 compile: $(BIN_OBJS)
 
-yoritest.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
+yoritest.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORISH) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@

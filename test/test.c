@@ -77,8 +77,13 @@ typedef struct _TEST_VARIATION {
  A list of test variations to execute.
  */
 TEST_VARIATION TestVariations[] = {
-    {TestEnumRoot,    _T("EnumRoot")},
-    {TestEnumWindows, _T("EnumWindows")},
+    {TestEnumRoot,                         _T("EnumRoot")},
+    {TestEnumWindows,                      _T("EnumWindows")},
+    {TestParseTwoArgCmd,                   _T("ParseTwoArgCmd")},
+    {TestParseOneArgContainingQuotesCmd,   _T("ParseOneArgContainingQuotesCmd")},
+    {TestParseOneArgWithStartingQuotesCmd, _T("ParseOneArgWithStartingQuotesCmd")},
+    {TestParseOneArgEnclosedInQuotesCmd,   _T("ParseOneArgEnclosedInQuotesCmd")},
+    {TestParseRedirectWithEndingQuoteCmd,  _T("ParseRedirectWithEndingQuoteCmd")},
 };
 
 

@@ -46,4 +46,32 @@ YORI_TEST_FN TestEnumRoot;
  */
 YORI_TEST_FN TestEnumWindows;
 
+/**
+ A test variation to parse a command with two space delimited arguments.
+ */
+YORI_TEST_FN TestParseTwoArgCmd;
+
+/**
+ A test variation to parse a command with one argument containing quotes and
+ a space embedded partway.
+ */
+YORI_TEST_FN TestParseOneArgContainingQuotesCmd;
+
+/**
+ A test variation to parse a command that starts with a quote that ends
+ partway through an argument.
+ */
+YORI_TEST_FN TestParseOneArgWithStartingQuotesCmd;
+
+/**
+ A test variation to parse a command that starts and ends with a quote.
+ */
+YORI_TEST_FN TestParseOneArgEnclosedInQuotesCmd;
+
+/**
+ A test variation to parse a command that contains a quote and ends with a
+ quote.
+ */
+YORI_TEST_FN TestParseRedirectWithEndingQuoteCmd;
+
 // vim:sw=4:ts=4:et:
