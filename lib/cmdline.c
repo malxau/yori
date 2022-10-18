@@ -415,7 +415,7 @@ YoriLibExpandCommandVariables(
  */
 PYORI_STRING
 YoriLibCmdlineToArgcArgv(
-    __in LPTSTR CmdLine,
+    __in LPCTSTR CmdLine,
     __in DWORD MaxArgs,
     __in BOOLEAN ApplyCaretAsEscape,
     __out PDWORD argc
@@ -424,11 +424,11 @@ YoriLibCmdlineToArgcArgv(
     DWORD ArgCount = 0;
     DWORD CharCount = 0;
     DWORD SlashCount;
-    TCHAR BreakChar = ' ';
-    TCHAR * c;
+    TCHAR CONST * c;
     PYORI_STRING ArgvArray;
     LPTSTR ReturnStrings;
     BOOLEAN EndArg;
+    BOOLEAN QuoteOpen;
 
     //
     //  Consume all spaces.  After this, we're either at
@@ -438,10 +438,9 @@ YoriLibCmdlineToArgcArgv(
 
     c = CmdLine;
     while (*c == ' ') c++;
-    if (*c == '"') {
-        BreakChar = '"';
-        c++;
-    }
+
+    QuoteOpen = FALSE;
+
 
     while (*c != '\0') {
         EndArg = FALSE;
@@ -466,18 +465,20 @@ YoriLibCmdlineToArgcArgv(
                 CharCount += SlashCount / 2;
                 c += SlashCount;
             }
-        } else if (*c == BreakChar) {
+        } else if (*c == '"') {
+            QuoteOpen = (BOOLEAN)(!QuoteOpen);
+            c++;
+            if (ArgCount < MaxArgs && *c == '\0') {
+                ArgCount++;
+            }
+            continue;
+        } else if (!QuoteOpen && *c == ' ') {
             EndArg = TRUE;
         }
 
         if (ArgCount + 1 < MaxArgs && EndArg) {
-            BreakChar = ' ';
             c++;
-            while (*c == BreakChar) c++;
-            if (*c == '"') {
-                BreakChar = '"';
-                c++;
-            }
+            while (*c == ' ') c++;
             ArgCount++;
         } else {
             CharCount++;
@@ -524,11 +525,7 @@ YoriLibCmdlineToArgcArgv(
 
     c = CmdLine;
     while (*c == ' ') c++;
-    BreakChar = ' ';
-    if (*c == '"') {
-        BreakChar = '"';
-        c++;
-    }
+    QuoteOpen = FALSE;
 
     while (*c != '\0') {
         EndArg = FALSE;
@@ -559,7 +556,15 @@ YoriLibCmdlineToArgcArgv(
                 }
                 c++;
             }
-        } else if (*c == BreakChar) {
+        } else if (*c == '"') {
+            QuoteOpen = (BOOLEAN)(!QuoteOpen);
+            c++;
+            if (*c == '\0') {
+                *ReturnStrings = '\0';
+                ArgvArray[ArgCount].LengthAllocated = ArgvArray[ArgCount].LengthInChars + 1;
+            }
+            continue;
+        } else if (!QuoteOpen && *c == ' ') {
             EndArg = TRUE;
         }
 
@@ -568,13 +573,8 @@ YoriLibCmdlineToArgcArgv(
             ReturnStrings++;
             ArgvArray[ArgCount].LengthAllocated = ArgvArray[ArgCount].LengthInChars + 1;
 
-            BreakChar = ' ';
             c++;
-            while (*c == BreakChar) c++;
-            if (*c == '"') {
-                BreakChar = '"';
-                c++;
-            }
+            while (*c == ' ') c++;
             if (*c != '\0') {
                 ArgCount++;
                 YoriLibInitEmptyString(&ArgvArray[ArgCount]);
