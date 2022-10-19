@@ -9,6 +9,7 @@ LINKPDB=/Pdb:yoritest.pdb
 
 BIN_OBJS=\
 	 test.obj         \
+	 argcargv.obj     \
 	 fileenum.obj     \
 	 parse.obj        \
 

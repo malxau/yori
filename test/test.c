@@ -84,6 +84,12 @@ TEST_VARIATION TestVariations[] = {
     {TestParseOneArgWithStartingQuotesCmd, _T("ParseOneArgWithStartingQuotesCmd")},
     {TestParseOneArgEnclosedInQuotesCmd,   _T("ParseOneArgEnclosedInQuotesCmd")},
     {TestParseRedirectWithEndingQuoteCmd,  _T("ParseRedirectWithEndingQuoteCmd")},
+    {TestArgTwoArgCmd,                     _T("ArgTwoArgCmd")},
+    {TestArgOneArgContainingQuotesCmd,     _T("ArgOneArgContainingQuotesCmd")},
+    {TestArgOneArgWithStartingQuotesCmd,   _T("ArgOneArgWithStartingQuotesCmd")},
+    {TestArgOneArgEnclosedInQuotesCmd,     _T("ArgOneArgEnclosedInQuotesCmd")},
+    {TestArgRedirectWithEndingQuoteCmd,    _T("ArgRedirectWithEndingQuoteCmd")},
+    {TestArgBackslashEscapeCmd,            _T("ArgBackslashEscapeCmd")},
 };
 
 
