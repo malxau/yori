@@ -346,8 +346,10 @@ MakeProcessIf(
     WIN32_FIND_DATA FindData;
     BOOLEAN Found;
     BOOLEAN ConditionTrue;
+    BOOLEAN Insensitive;
 
     Not = FALSE;
+    Insensitive = FALSE;
 
     for (Index = 1; Index < ArgC; Index++) {
         if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("NOT")) == 0) {
@@ -359,7 +361,55 @@ MakeProcessIf(
         } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("EXIST")) == 0 &&
                    Index + 1 < ArgC) {
             break;
+        } else if (YoriLibCompareStringWithLiteralInsensitive(&ArgV[Index], _T("/I")) == 0) {
+            Insensitive = TRUE;
         } else {
+            YORI_STRING EqualsOperator;
+            YORI_STRING FirstPart;
+            YORI_STRING SecondPart;
+            PYORI_STRING MatchingOperator;
+            DWORD OperatorIndex;
+
+            //
+            //  Perform simple string comparison.  If the strings indicate the
+            //  rest of the expression shouldn't be invoked, we don't need to
+            //  spawn CMD.
+            //
+
+            YoriLibConstantString(&EqualsOperator, _T("=="));
+            MatchingOperator = YoriLibFindFirstMatchingSubstring(&ArgV[Index], 1, &EqualsOperator, &OperatorIndex);
+
+            ConditionTrue = FALSE;
+
+            if (MatchingOperator != NULL) {
+                YoriLibInitEmptyString(&FirstPart);
+                FirstPart.StartOfString = ArgV[Index].StartOfString;
+                FirstPart.LengthInChars = OperatorIndex;
+
+                YoriLibInitEmptyString(&SecondPart);
+                SecondPart.StartOfString = ArgV[Index].StartOfString + OperatorIndex + MatchingOperator->LengthInChars;
+                SecondPart.LengthInChars = ArgV[Index].LengthInChars - OperatorIndex - MatchingOperator->LengthInChars;
+
+                if (Insensitive) {
+                    if (YoriLibCompareStringInsensitive(&FirstPart, &SecondPart) == 0) {
+                        ConditionTrue = TRUE;
+                    }
+                } else {
+                    if (YoriLibCompareString(&FirstPart, &SecondPart) == 0) {
+                        ConditionTrue = TRUE;
+                    }
+                }
+
+                if (Not) {
+                    ConditionTrue = (BOOLEAN)(!ConditionTrue);
+                }
+
+                if (!ConditionTrue) {
+                    YoriLibFreeStringContents(CmdToExec);
+                    return TRUE;
+                }
+            }
+
             return FALSE;
         }
     }
