@@ -478,7 +478,7 @@ YoriShLoadSavedRestartState(
         return FALSE;
     }
 
-    ScreenBufferInfo.srWindow.Bottom = (USHORT)(ScreenBufferInfo.dwMaximumWindowSize.Y - 1);
+    ScreenBufferInfo.srWindow.Bottom = (USHORT)(ScreenBufferInfo.dwMaximumWindowSize.Y);
     ScreenBufferInfo.srWindow.Right = (USHORT)(ScreenBufferInfo.dwMaximumWindowSize.X);
 
     ScreenBufferInfo.wAttributes = (USHORT)GetPrivateProfileInt(_T("Window"), _T("DefaultColor"), 0, RestartFileName.StartOfString);
@@ -655,6 +655,7 @@ YoriShLoadSavedRestartState(
                         ThisEntry.LengthInChars = ValueLength;
 
                         YoriShAddToHistory(&ThisEntry, FALSE);
+                        YoriLibFreeStringContents(&ThisEntry);
                     }
                 }
             }
