@@ -248,6 +248,13 @@
 #define _Always_(x)
 #endif
 
+#ifndef _Field_size_
+/**
+ SAL annotation to indicate the size of a field within a structure.
+ */
+#define _Field_size_(x)
+#endif
+
 #ifndef _Interlocked_operand_
 /**
  SAL annotation to indicate a function implements an interlock.

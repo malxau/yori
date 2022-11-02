@@ -72,6 +72,7 @@ typedef struct _REGEDIT_NUMEDIT_CONTEXT {
          this function displays the message box indicating the value is not
          numeric.
  */
+__success(return)
 BOOLEAN
 RegeditNumEditGetNumberFromDialog(
     __in PYORI_WIN_CTRL_HANDLE Parent,

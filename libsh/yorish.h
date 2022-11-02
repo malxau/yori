@@ -62,12 +62,14 @@ typedef struct _YORI_LIBSH_CMD_CONTEXT {
      An array of pointers to each argument.  Each of these arguments has been
      referenced and should be dereferenced when no longer needed.
      */
+    _Field_size_(ArgC)
     PYORI_STRING ArgV;
 
     /**
      An array of information about each argument, including the object that
      was referenced for each.
      */
+    _Field_size_(ArgC)
     PYORI_LIBSH_ARG_CONTEXT ArgContexts;
 
     /**

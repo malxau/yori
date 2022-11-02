@@ -384,7 +384,7 @@ YoriLibParseMoveToNextArgumentInitialScan(
     __inout PDWORD ArgOffsetPtr,
     __inout PBOOLEAN PreviousCharWasQuote,
     __out PBOOLEAN QuoteTerminated,
-    __out PDWORD FirstQuoteEndOffsetPtr
+    __inout PDWORD FirstQuoteEndOffsetPtr
     )
 {
     DWORD ArgCount;
@@ -942,6 +942,8 @@ YoriLibShParseCmdlineToCmdContext(
     if (!YoriLibShAllocateArgCount(CmdContext, ArgCount, (RequiredCharCount + ArgCount) * sizeof(TCHAR), (PVOID *)&OutputString)) {
         return FALSE;
     }
+
+    __analysis_assume(CmdContext->MemoryToFree != NULL);
 
     ArgCount = 0;
     QuoteOpen = FALSE;
