@@ -50,7 +50,7 @@ CHAR strEditHelpText[] =
  The copyright year string to display with license text.
  */
 const
-TCHAR strCopyrightYear[] = _T("2020-2022");
+TCHAR strEditCopyrightYear[] = _T("2020-2022");
 
 /**
  Display usage text to the user.
@@ -2269,7 +2269,7 @@ EditAboutButtonClicked(
     YoriLibFreeStringContents(&Text);
 
     if (ButtonClicked == 2) {
-        if (YoriLibMitLicenseText(strCopyrightYear, &Text)) {
+        if (YoriLibMitLicenseText(strEditCopyrightYear, &Text)) {
 
             YoriLibInitEmptyString(&CenteredText);
             YoriLibConstantString(&Title, _T("License"));
@@ -2821,7 +2821,7 @@ ENTRYPOINT(
                 EditHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(strCopyrightYear);
+                YoriLibDisplayMitLicense(strEditCopyrightYear);
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 GlobalEditContext.UseAsciiDrawing = TRUE;
