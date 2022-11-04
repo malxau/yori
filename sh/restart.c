@@ -75,7 +75,8 @@ YoriShSaveRestartStateWorker(
 
     if (DllKernel32.pRegisterApplicationRestart == NULL ||
         DllKernel32.pGetConsoleScreenBufferInfoEx == NULL ||
-        DllKernel32.pGetCurrentConsoleFontEx == NULL) {
+        DllKernel32.pGetCurrentConsoleFontEx == NULL ||
+        DllKernel32.pGetConsoleWindow == NULL) {
 
         return 0;
     }
@@ -88,6 +89,8 @@ YoriShSaveRestartStateWorker(
     if (Count == 0) {
         return 0;
     }
+
+    YoriLibLoadUser32Functions();
 
     if (!YoriLibAllocateString(&RestartFileName, Count)) {
         YoriLibFreeStringContents(&RestartFileName);
@@ -133,7 +136,7 @@ YoriShSaveRestartStateWorker(
     YoriLibFreeStringContents(&RestartFileName);
 
     //
-    //  Query window dimensions and state, and save it.
+    //  Query console window size and state, and save it.
     //
 
     ZeroMemory(&ScreenBufferInfo, sizeof(ScreenBufferInfo));
@@ -175,6 +178,23 @@ YoriShSaveRestartStateWorker(
         YoriLibSPrintf(ColorName, _T("Color%i"), Count);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.ColorTable[Count]);
         WritePrivateProfileString(_T("Window"), ColorName, WriteBuffer.StartOfString, RestartFileName.StartOfString);
+    }
+
+    //
+    //  Query window position and save it.  Note this is not trying to save
+    //  the window size (in GUI terms) since the window size can be determined
+    //  by font and console size instead.
+    //
+
+    if (DllUser32.pGetWindowRect != NULL) {
+        RECT WindowRect;
+
+        if (DllUser32.pGetWindowRect(DllKernel32.pGetConsoleWindow(), &WindowRect)) {
+            YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), WindowRect.left);
+            WritePrivateProfileString(_T("Window"), _T("WindowLeft"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+            YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), WindowRect.top);
+            WritePrivateProfileString(_T("Window"), _T("WindowTop"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        }
     }
 
     //
@@ -440,9 +460,17 @@ YoriShLoadSavedRestartState(
     YORI_CONSOLE_SCREEN_BUFFER_INFOEX ScreenBufferInfo;
     DWORD Count;
     YORI_CONSOLE_FONT_INFOEX FontInfo;
+    HWND ConsoleWindow;
+    INT WindowLeft;
+    INT WindowTop;
+
+    YoriLibLoadUser32Functions();
 
     if (DllKernel32.pSetConsoleScreenBufferInfoEx == NULL ||
-        DllKernel32.pSetCurrentConsoleFontEx == NULL) {
+        DllKernel32.pSetCurrentConsoleFontEx == NULL ||
+        DllKernel32.pGetConsoleWindow == NULL ||
+        DllUser32.pGetWindowRect == NULL ||
+        DllUser32.pSetWindowPos == NULL) {
 
         return FALSE;
     }
@@ -492,7 +520,6 @@ YoriShLoadSavedRestartState(
 
     YoriLibVtSetDefaultColor(ScreenBufferInfo.wAttributes);
 
-
     //
     //  Apparently GetConsoleTitle can't tell us how much memory it needs, but
     //  it needs less than 64Kb
@@ -521,6 +548,20 @@ YoriShLoadSavedRestartState(
     }
 
     DllKernel32.pSetConsoleScreenBufferInfoEx(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenBufferInfo);
+
+    //
+    //  Read and set window position
+    //
+
+    ConsoleWindow = DllKernel32.pGetConsoleWindow();
+    WindowLeft = GetPrivateProfileInt(_T("Window"), _T("WindowLeft"), INT_MAX, RestartFileName.StartOfString);
+    WindowTop = GetPrivateProfileInt(_T("Window"), _T("WindowTop"), INT_MAX, RestartFileName.StartOfString);
+
+    if (WindowLeft != INT_MAX &&
+        WindowTop != INT_MAX) {
+
+        DllUser32.pSetWindowPos(ConsoleWindow, NULL, WindowLeft, WindowTop, 0, 0, SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOZORDER);
+    }
 
     //
     //  Read and populate the window title
@@ -698,6 +739,12 @@ YoriShLoadSavedRestartState(
 
     YoriLibFreeStringContents(&ReadBuffer);
     YoriLibFreeStringContents(&RestartFileName);
+
+    //
+    //  Reload any state next time it's requested.
+    //
+
+    YoriShGlobal.EnvironmentGeneration++;
 
     return TRUE;
 }

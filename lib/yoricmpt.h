@@ -8383,6 +8383,18 @@ SET_FOREGROUND_WINDOW(HWND);
 typedef SET_FOREGROUND_WINDOW *PSET_FOREGROUND_WINDOW;
 
 /**
+ A prototype for the SetWindowPos function.
+ */
+typedef
+BOOL WINAPI
+SET_WINDOW_POS(HWND, HWND, INT, INT, INT, INT, UINT);
+
+/**
+ A prototype for a pointer to the SetWindowPos function.
+ */
+typedef SET_WINDOW_POS *PSET_WINDOW_POS;
+
+/**
  A prototype for the SetWindowTextW function.
  */
 typedef
@@ -8567,6 +8579,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to SetForegroundWindow.
      */
     PSET_FOREGROUND_WINDOW pSetForegroundWindow;
+
+    /**
+     If it's available on the current system, a pointer to SetWindowPos.
+     */
+    PSET_WINDOW_POS pSetWindowPos;
 
     /**
      If it's available on the current system, a pointer to SetWindowTextW.
