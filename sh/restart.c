@@ -32,6 +32,12 @@
  */
 BOOL YoriShProcessRegisteredForRestart = FALSE;
 
+/**
+ The time that YoriShCleanupStaleRestartStates was last run.  This is used
+ to avoid scanning the temp directory too aggressively.
+ */
+LONGLONG YoriShLastRestartCleanupScan;
+
 #if defined(_MSC_VER) && (_MSC_VER == 1500)
 #pragma warning(push)
 #pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
@@ -41,6 +47,180 @@ BOOL YoriShProcessRegisteredForRestart = FALSE;
 #if defined(_MSC_VER) && (_MSC_VER == 1500)
 #pragma warning(pop)
 #endif
+
+/**
+ Scan restart files in the temp directory and delete any that haven't been
+ written in a long time and there are no active processes with a matching
+ PID.
+
+ Note that this function is called when saving a restart file, which happens
+ after the process has been running for tens of seconds.  The assumption is
+ that if the machine did recently restart and the user was logged on, if
+ this process is running, so are other restarted processes.
+ */
+VOID
+YoriShCleanupStaleRestartStates(VOID)
+{
+    YORI_STRING RestartFileName;
+    HANDLE FindHandle;
+    WIN32_FIND_DATA FindData;
+    LONGLONG LongProcessId;
+    DWORD FileNameBufferLength;
+    DWORD ProcessId;
+    DWORD Index;
+    DWORD CharsConsumed;
+    DWORD Err;
+    LONGLONG CurrentTime;
+    LARGE_INTEGER FileTime;
+    LONGLONG TimeDelta;
+    YORI_STRING FileName;
+    YORI_STRING PidString;
+    HANDLE ProcessHandle;
+    BOOLEAN ProcessIsRunning;
+    BOOLEAN FileTimeExpired;
+
+    //
+    //  Check for OS restart support.  Don't scan if the OS couldn't support
+    //  the feature (we should never have created these files.)
+    //
+
+    if (DllKernel32.pRegisterApplicationRestart == NULL ||
+        DllKernel32.pGetConsoleScreenBufferInfoEx == NULL ||
+        DllKernel32.pGetCurrentConsoleFontEx == NULL) {
+
+        return;
+    }
+
+    //
+    //  If this scan has run in the last hour, don't run it again.
+    //
+
+    CurrentTime = YoriLibGetSystemTimeAsInteger();
+    TimeDelta = 10 * 1000 * 1000 * 60;
+    TimeDelta = TimeDelta * 60;
+    if (YoriShLastRestartCleanupScan + TimeDelta > CurrentTime) {
+        return;
+    }
+
+
+    //
+    //  Allocate a path to the temp directory with enough space to refer to
+    //  any restart file containing a process ID
+    //
+
+    YoriLibInitEmptyString(&RestartFileName);
+    FileNameBufferLength = sizeof("\\yori-restart-.ini") + 2 * sizeof(DWORD);
+    if (!YoriLibGetTempPath(&RestartFileName, FileNameBufferLength)) {
+        return;
+    }
+    ASSERT(RestartFileName.LengthInChars > 0 &&
+           YoriLibIsSep(RestartFileName.StartOfString[RestartFileName.LengthInChars - 1]));
+
+    //
+    //  Look for any existing restart file in the directory
+    //
+
+    YoriLibSPrintf(RestartFileName.StartOfString + RestartFileName.LengthInChars,
+                   _T("\\yori-restart-*"));
+
+    FindHandle = FindFirstFile(RestartFileName.StartOfString, &FindData);
+    if (FindHandle == INVALID_HANDLE_VALUE) {
+        YoriLibFreeStringContents(&RestartFileName);
+        return;
+    }
+
+    YoriLibInitEmptyString(&FileName);
+    YoriLibInitEmptyString(&PidString);
+
+    while (TRUE) {
+
+        FileName.StartOfString = FindData.cFileName;
+        FileName.LengthInChars = _tcslen(FileName.StartOfString);
+
+        //
+        //  Check if the file has not been written in a long time.  The code
+        //  below currently checks for one day.
+        //
+
+        FileTimeExpired = FALSE;
+
+        FileTime.HighPart = FindData.ftLastWriteTime.dwHighDateTime;
+        FileTime.LowPart = FindData.ftLastWriteTime.dwLowDateTime;
+
+        TimeDelta = 10 * 1000 * 1000 * 60;
+        TimeDelta = TimeDelta * 60 * 24;
+
+        if (FileTime.QuadPart + TimeDelta < CurrentTime) {
+            FileTimeExpired = TRUE;
+        }
+
+        //
+        //  Check if the file name matches.  FindFirstFile takes a search
+        //  criteria but this is to validate that the file name in this
+        //  buffer matches what we asked for.  Extract the PID, and see if
+        //  it can be opened.  If the open fails with invalid parameter,
+        //  interpret that as meaning that the process is not running.
+        //
+        //  Note that the restart files are in the user's temp directory,
+        //  so ordinarily these processes would run in the same security
+        //  domain.
+        //
+
+        ProcessId = 0;
+        ProcessIsRunning = TRUE;
+        if (FileTimeExpired &&
+            YoriLibCompareStringWithLiteralInsensitiveCount(&FileName, _T("yori-restart-"), sizeof("yori-restart-") - 1) == 0) {
+
+            //
+            //  Find the process ID in the file name.
+            //
+
+            PidString.StartOfString = FileName.StartOfString + sizeof("yori-restart-") - 1;
+            PidString.LengthInChars = FileName.LengthInChars - sizeof("yori-restart-") + 1;
+
+            for (Index = 0; Index < PidString.LengthInChars; Index++) {
+                if (PidString.StartOfString[Index] == '.') {
+                    PidString.LengthInChars = Index;
+                    break;
+                }
+            }
+
+            if (YoriLibStringToNumberSpecifyBase(&PidString, 16, FALSE, &LongProcessId, &CharsConsumed) &&
+                CharsConsumed > 0) {
+
+                ProcessId = (DWORD)LongProcessId;
+
+                ProcessHandle = OpenProcess(SYNCHRONIZE, FALSE, ProcessId);
+                if (ProcessHandle == NULL) {
+                    Err = GetLastError();
+                    if (Err == ERROR_INVALID_PARAMETER) {
+                        ProcessIsRunning = FALSE;
+                    }
+                } else {
+                    CloseHandle(ProcessHandle);
+                }
+            }
+        }
+
+        if (FileTimeExpired && !ProcessIsRunning) {
+            if (FileName.LengthInChars + 1 < FileNameBufferLength) {
+                YoriLibSPrintf(RestartFileName.StartOfString + RestartFileName.LengthInChars,
+                               _T("%y"), &FileName);
+                DeleteFile(RestartFileName.StartOfString);
+            }
+        }
+
+        if (!FindNextFile(FindHandle, &FindData)) {
+            break;
+        }
+    }
+
+    FindClose(FindHandle);
+    YoriLibFreeStringContents(&RestartFileName);
+
+    YoriShLastRestartCleanupScan = CurrentTime;
+}
+
 
 /**
  Try to save the current state of the process so that it can be recovered
@@ -390,6 +570,8 @@ YoriShSaveRestartStateWorker(
 
     YoriLibFreeStringContents(&RestartFileName);
     YoriLibFreeStringContents(&WriteBuffer);
+
+    YoriShCleanupStaleRestartStates();
 
     return 0;
 }
