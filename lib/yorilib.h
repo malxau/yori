@@ -2330,6 +2330,17 @@ YoriLibHexDiff(
     __in DWORD DumpFlags
     );
 
+VOID
+YoriLibHexLineToString(
+    __in CONST UCHAR * Buffer,
+    __in LONGLONG StartOfBufferOffset,
+    __in DWORD BufferLength,
+    __in DWORD BytesPerWord,
+    __in DWORD DumpFlags,
+    __in BOOLEAN MoreFollowing,
+    __inout PYORI_STRING LineBuffer
+    );
+
 // *** ICONV.C ***
 
 #ifndef CP_UTF8_OR_16

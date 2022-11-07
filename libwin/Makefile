@@ -11,6 +11,7 @@ OBJS=\
 	 combo.obj    \
 	 ctrl.obj     \
 	 edit.obj     \
+	 hexedit.obj  \
 	 itemaray.obj \
 	 label.obj    \
 	 list.obj     \

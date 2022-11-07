@@ -237,7 +237,7 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
     /**
      Optional pointer to a callback to invoke when the cursor moves.
      */
-    PYORI_WIN_NOTIFY_CURSOR_MOVE CursorMoveCallback;
+    PYORI_WIN_NOTIFY_MULTILINE_EDIT_CURSOR_MOVE CursorMoveCallback;
 
     /**
      The caption to display above the edit control.
@@ -4491,7 +4491,7 @@ YoriWinMultilineEditGetModifyState(
 BOOLEAN
 YoriWinMultilineEditSetCursorMoveNotifyCallback(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_WIN_NOTIFY_CURSOR_MOVE NotifyCallback
+    __in PYORI_WIN_NOTIFY_MULTILINE_EDIT_CURSOR_MOVE NotifyCallback
     )
 {
     PYORI_WIN_CTRL Ctrl;

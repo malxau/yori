@@ -1646,6 +1646,19 @@ YoriWinMenuBarExecuteTopMenu(
                 }
                 return TRUE;
             }
+        } else {
+
+            //
+            //  Currently, this code doesn't attempt to support empty top
+            //  level menus.  Doing this properly implies leaving the top
+            //  level item selected but still handling left and right
+            //  navigation.  That would normally be done in 
+            //  YoriWinMenuPopupEventHandler, although if no child menu
+            //  window is created, there'd be nothing to catch it.
+            //
+
+            ASSERT(MenuBar->Items[DisplayIndex].ChildItemCount > 0);
+            break;
         }
     }
 

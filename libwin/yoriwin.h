@@ -259,6 +259,122 @@ YoriWinEditCreate(
     __in DWORD Style
     );
 
+// HEXEDIT.C
+
+/**
+ A function prototype that can be invoked to deliver notification events
+ when the cursor is moved.
+ */
+typedef VOID YORI_WIN_NOTIFY_HEX_EDIT_CURSOR_MOVE(PYORI_WIN_CTRL_HANDLE, DWORDLONG, DWORD);
+
+/**
+ A pointer to a function that can be invoked to deliver notification events
+ when the cursor is moved.
+ */
+typedef YORI_WIN_NOTIFY_HEX_EDIT_CURSOR_MOVE *PYORI_WIN_NOTIFY_HEX_EDIT_CURSOR_MOVE;
+
+/**
+ The hex edit should display a vertical scroll bar.
+ */
+#define YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR    (0x0001)
+
+/**
+ The hex edit should be read only.
+ */
+#define YORI_WIN_HEX_EDIT_STYLE_READ_ONLY     (0x0002)
+
+/**
+ The hex edit should contain 32 bit offset values.
+ */
+#define YORI_WIN_HEX_EDIT_STYLE_OFFSET        (0x0004)
+
+/**
+ The hex edit should contain 64 bit offset values.
+ */
+#define YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET  (0x0008)
+
+BOOLEAN
+YoriWinHexEditClear(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+DWORD
+YoriWinHexEditGetBytesPerWord(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinHexEditGetDataNoCopy(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PUCHAR *Buffer,
+    __out PDWORDLONG BufferLength
+    );
+
+BOOLEAN
+YoriWinHexEditGetModifyState(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinHexEditReposition(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PSMALL_RECT CtrlRect
+    );
+
+BOOLEAN
+YoriWinHexEditSetBytesPerWord(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORD BytesPerWord
+    );
+
+BOOLEAN
+YoriWinHexEditSetCaption(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_STRING Caption
+    );
+
+VOID
+YoriWinHexEditSetColor(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in WORD Attributes,
+    __in WORD SelectedAttributes
+    );
+
+BOOLEAN
+YoriWinHexEditSetCursorMoveNotifyCallback(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PYORI_WIN_NOTIFY_HEX_EDIT_CURSOR_MOVE NotifyCallback
+    );
+
+BOOLEAN
+YoriWinHexEditSetDataNoCopy(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in PUCHAR NewBuffer,
+    __in DWORDLONG NewBufferAllocated,
+    __in DWORDLONG NewBufferValid
+    );
+
+BOOLEAN
+YoriWinHexEditSetModifyState(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN ModifyState
+    );
+
+BOOLEAN
+YoriWinHexEditSetReadOnly(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN NewReadOnlyState
+    );
+
+PYORI_WIN_CTRL_HANDLE
+YoriWinHexEditCreate(
+    __in PYORI_WIN_WINDOW_HANDLE ParentHandle,
+    __in_opt PYORI_STRING Caption,
+    __in PSMALL_RECT Size,
+    __in DWORD BytesPerWord,
+    __in DWORD Style
+    );
+
 // LABEL.C
 
 /**
@@ -437,7 +553,7 @@ YoriWinListSetSelectionNotifyCallback(
     );
 
 
-// *** MENUBAR.C ***
+// MENUBAR.C
 
 
 /**
@@ -549,19 +665,19 @@ YoriWinMenuBarReposition(
     __in PSMALL_RECT CtrlRect
     );
 
-// *** MLEDIT.C ***
+// MLEDIT.C
 
 /**
  A function prototype that can be invoked to deliver notification events
  when the cursor is moved.
  */
-typedef VOID YORI_WIN_NOTIFY_CURSOR_MOVE(PYORI_WIN_CTRL_HANDLE, DWORD, DWORD);
+typedef VOID YORI_WIN_NOTIFY_MULTILINE_EDIT_CURSOR_MOVE(PYORI_WIN_CTRL_HANDLE, DWORD, DWORD);
 
 /**
  A pointer to a function that can be invoked to deliver notification events
  when the cursor is moved.
  */
-typedef YORI_WIN_NOTIFY_CURSOR_MOVE *PYORI_WIN_NOTIFY_CURSOR_MOVE;
+typedef YORI_WIN_NOTIFY_MULTILINE_EDIT_CURSOR_MOVE *PYORI_WIN_NOTIFY_MULTILINE_EDIT_CURSOR_MOVE;
 
 /**
  The multiline edit should display a vertical scroll bar.
@@ -735,7 +851,7 @@ YoriWinMultilineEditGetModifyState(
 BOOLEAN
 YoriWinMultilineEditSetCursorMoveNotifyCallback(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __in PYORI_WIN_NOTIFY_CURSOR_MOVE NotifyCallback
+    __in PYORI_WIN_NOTIFY_MULTILINE_EDIT_CURSOR_MOVE NotifyCallback
     );
 
 BOOLEAN
@@ -806,7 +922,7 @@ YoriWinRadioCreate(
     __in_opt PYORI_WIN_NOTIFY ToggleCallback
     );
 
-// *** WINDOW.C ***
+// WINDOW.C
 
 /**
  A function prototype that can be invoked to deliver notification events
@@ -945,7 +1061,7 @@ YoriWinProcessInputForWindow(
     __out_opt PDWORD_PTR Result
     );
 
-// *** WINMGR.C ***
+// WINMGR.C
 
 __success(return)
 BOOLEAN
