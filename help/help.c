@@ -83,11 +83,6 @@ CHAR strHelpHelpText1[] =
         "DIRCASE   Update case sensitivity behavior for a directory\n"
         "DIRENV    Apply environment changes from per-directory scripts\n"
         "DOS2UNIX  Convert line endings to UNIX (LF) form\n"
-        "DU        Display disk space used within a directory tree\n"
-        "ECHO      Outputs text\n"
-        "EDIT      Open a file for editing\n"
-        "ENV       Set environment variables and launch a program\n"
-        "ENVDIFF   Compare the environment to another environment\n"
         ;
 
 /**
@@ -95,6 +90,11 @@ CHAR strHelpHelpText1[] =
  */
 const
 CHAR strHelpHelpText2[] =
+        "DU        Display disk space used within a directory tree\n"
+        "ECHO      Outputs text\n"
+        "EDIT      Open a file for editing\n"
+        "ENV       Set environment variables and launch a program\n"
+        "ENVDIFF   Compare the environment to another environment\n"
         "ENDLOCAL  Pop a previous saved environment from the stack (only valid after\n"
         "            SETLOCAL)\n"
         "ERASE     Delete one or more files\n"
@@ -113,6 +113,14 @@ CHAR strHelpHelpText2[] =
         "HASH      Calculates the hash of a file or set of files\n"
         "HELP      Displays this help text\n"
         "HEXDUMP   Display a stream of data as hex\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpHelpText3[] =
+        "HEXEDIT   Edit files as hex\n"
         "HILITE    Output the contents of one or more files with highlight on lines\n"
         "            matching specified criteria\n"
         "ICONV     Convert the character encoding of one or more files\n"
@@ -123,13 +131,6 @@ CHAR strHelpHelpText2[] =
         "JOB       Displays or updates background job status\n"
         "KILL      Terminate one or more processes\n"
         "LINES     Count the number of lines in one or more files\n"
-        ;
-
-/**
- More text to display to the user about Yori and its tools.
- */
-const
-CHAR strHelpHelpText3[] =
         "LSOF      Display which processes have a file in use\n"
         "MEM       Display memory usage information\n"
         "MKDIR     Creates directories\n"
@@ -141,6 +142,13 @@ CHAR strHelpHelpText3[] =
         "OSVER     Outputs the operating system version in a specified format\n"
         "PATH      Converts relative paths into decomposable full paths\n"
         "PAUSE     Prompt the user to press any key before continuing\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpHelpText4[] =
         "PETOOL    Manage PE executable files\n"
         "POPD      Pop a previous current directory from the stack (only valid after\n"
         "            PUSHD)\n"
@@ -156,13 +164,6 @@ CHAR strHelpHelpText3[] =
         "SETLOCAL  Push the current directory and environment onto a saved stack\n"
         "SETVER    Lie about Windows version and launch a program\n"
         "SHIFT     Shift command arguments left by one (only valid in scripts)\n"
-        ;
-
-/**
- More text to display to the user about Yori and its tools.
- */
-const
-CHAR strHelpHelpText4[] =
         "SHUTDN    Shutdown, reboot or logoff the system\n"
         "SLEEP     Waits for a specified number of seconds\n"
         "SLMENU    Display a menu of items from input and output the user selection\n"
@@ -172,6 +173,13 @@ CHAR strHelpHelpText4[] =
         "STRCMP    Compare two strings\n"
         "STRIDE    Output lines periodically from input stream\n"
         "SYNC      Flush a file, directory or volume\n"
+        ;
+
+/**
+ More text to display to the user about Yori and its tools.
+ */
+const
+CHAR strHelpHelpText5[] =
         "TAIL      Output the final lines of one or more files\n"
         "TEE       Output the contents of standard input to standard output and a file\n"
         "TIMETHIS  Time how long a program takes to execute\n"
@@ -203,7 +211,8 @@ HelpText(VOID)
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText1);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText2);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText3);
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpHelpText4);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strHelpHelpText4);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs\n"), strHelpHelpText5);
     return TRUE;
 }
 

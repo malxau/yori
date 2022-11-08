@@ -13,6 +13,7 @@ builtin alias -s env=yenv $*$
 builtin alias -s err=yerr $*$
 builtin alias -s hash=yhash $*$
 builtin alias -s help=yhelp $*$
+builtin alias -s hexedit=yhexedit $*$
 builtin alias -s htmlclip=yclip -h $*$
 builtin alias -s kill=ykill $*$
 builtin alias -s md5sum=yhash -a md5 $*$

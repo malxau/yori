@@ -32,6 +32,7 @@
 ..\hash\builtins.lib
 ..\help\builtins.lib
 ..\hexdump\builtins.lib
+..\hexedit\builtins.lib
 ..\hilite\builtins.lib
 ..\iconv\builtins.lib
 ..\initool\builtins.lib

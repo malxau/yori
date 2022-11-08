@@ -239,6 +239,11 @@ YORI_CMD_BUILTIN YoriCmd_HEXDUMP;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YHEXEDIT;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_HILITE;
 
 /**
@@ -627,6 +632,7 @@ YoriShBuiltins[] = {
                     {_T("YGET"),      YoriCmd_YGET},
                     {_T("YHASH"),     YoriCmd_YHASH},
                     {_T("YHELP"),     YoriCmd_YHELP},
+                    {_T("YHEXEDIT"),  YoriCmd_YHEXEDIT},
                     {_T("YKILL"),     YoriCmd_YKILL},
                     {_T("YMEM"),      YoriCmd_YMEM},
                     {_T("YMKDIR"),    YoriCmd_YMKDIR},
@@ -686,6 +692,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("hash"),     _T("yhash $*$")},
     {_T("head"),     _T("ytype -h $*$")},
     {_T("help"),     _T("yhelp $*$")},
+    {_T("hexedit"),  _T("yhexedit $*$")},
     {_T("htmlclip"), _T("yclip -h $*$")},
     {_T("kill"),     _T("ykill $*$")},
     {_T("md"),       _T("ymkdir $*$")},

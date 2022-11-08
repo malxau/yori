@@ -22,6 +22,7 @@
 ..\hash\yhash.exe|yhash.exe
 ..\help\yhelp.exe|yhelp.exe
 ..\hexdump\hexdump.exe|hexdump.exe
+..\hexedit\yhexedit.exe|yhexedit.exe
 ..\hilite\hilite.exe|hilite.exe
 ..\iconv\iconv.exe|iconv.exe
 ..\initool\initool.exe|initool.exe

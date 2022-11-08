@@ -103,6 +103,7 @@ DIRS=crt       \
      hash      \
      help      \
      hexdump   \
+     hexedit   \
      hilite    \
      iconv     \
      initool   \
