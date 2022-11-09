@@ -356,7 +356,7 @@ RegeditEditNumericValue(
 
     Area.Left = 1;
     Area.Top = (WORD)(Area.Top + 1);
-    Area.Right = (WORD)(Area.Left + Caption.LengthInChars + 1);
+    Area.Right = (WORD)(Area.Left + Caption.LengthInChars);
     Area.Bottom = Area.Top;
 
     Ctrl = YoriWinLabelCreate(Parent, &Area, &Caption, 0);
@@ -380,7 +380,7 @@ RegeditEditNumericValue(
 
     Area.Left = 1;
     Area.Top = (WORD)(Area.Bottom + 2);
-    Area.Right = (WORD)(Area.Left + Caption.LengthInChars);
+    Area.Right = (WORD)(Area.Left + Caption.LengthInChars - 1);
     Area.Bottom = Area.Top;
 
     Ctrl = YoriWinLabelCreate(Parent, &Area, &Caption, 0);

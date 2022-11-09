@@ -98,6 +98,18 @@ typedef struct _REGEDIT_CONTEXT {
 
 __success(return)
 BOOLEAN
+RegeditEditBinaryValue(
+    __in PREGEDIT_CONTEXT RegeditContext,
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
+    __inout PYORI_STRING ValueName,
+    __in BOOLEAN ValueNameReadOnly,
+    __inout PUCHAR *Value,
+    __inout PDWORD ValueLength,
+    __in BOOLEAN ValueReadOnly
+    );
+
+__success(return)
+BOOLEAN
 RegeditEditNumericValue(
     __in PREGEDIT_CONTEXT RegeditContext,
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,

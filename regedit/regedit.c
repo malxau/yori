@@ -652,13 +652,11 @@ RegeditEditSelectedValue(
 
         if (DataType != REG_DWORD &&
             DataType != REG_QWORD &&
+            DataType != REG_BINARY &&
             DataType != REG_SZ &&
             DataType != REG_EXPAND_SZ) {
 
             switch(DataType) {
-                case REG_BINARY:
-                    YoriLibConstantString(&Title, _T("REG_BINARY data type not supported"));
-                    break;
                 case REG_DWORD_BIG_ENDIAN:
                     YoriLibConstantString(&Title, _T("REG_DWORD_BIG_ENDIAN data type not supported"));
                     break;
@@ -762,14 +760,44 @@ RegeditEditSelectedValue(
                         RegeditDisplayWin32Error(Parent, Err);
                     }
                 }
+            } else if (DataType == REG_BINARY) {
+                PUCHAR Data;
+                Data = (PUCHAR)Value.StartOfString;
+                if (RegeditEditBinaryValue(RegeditContext,
+                                           YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
+                                           &ValueName,
+                                           TRUE,
+                                           &Data,
+                                           &DataSize,
+                                           ReadOnly)) {
+
+                    //
+                    //  The pointer may or may not have been modified, but
+                    //  the new one has a reference and the old one doesn't,
+                    //  so set the string to point to the referenced memory.
+                    //
+
+                    Value.MemoryToFree =
+                    Value.StartOfString = (LPTSTR)Data;
+
+                    Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, DataType, (LPBYTE)Data, DataSize);
+                    if (Err != ERROR_SUCCESS) {
+                        RegeditDisplayWin32Error(Parent, Err);
+                    }
+                }
             }
-            // MSFIX binary data, multi string
+            // MSFIX multi string
             break;
         }
 
         YoriLibFreeStringContents(&Value);
 
-        if (!YoriLibAllocateString(&Value, DataSize / sizeof(TCHAR))) {
+        //
+        //  Allocate buffer, rounding up to the next TCHAR, since the values
+        //  here may be byte aligned
+        //
+
+        if (!YoriLibAllocateString(&Value, (DataSize + sizeof(TCHAR) - 1) / sizeof(TCHAR))) {
             DllAdvApi32.pRegCloseKey(Key);
             YoriLibFreeStringContents(&ValueName);
             return;
@@ -1239,6 +1267,69 @@ RegeditNewQWORDButtonClicked(
 }
 
 /**
+ Callback invoked when the new binary menu item is clicked.
+
+ @param Ctrl Pointer to the menu control.
+ */
+VOID
+RegeditNewBinaryButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PREGEDIT_CONTEXT RegeditContext;
+    YORI_STRING ValueName;
+    PUCHAR Value;
+    DWORD ValueLength;
+    DWORD Err;
+    HKEY Key;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    YoriLibInitEmptyString(&ValueName);
+    RegeditContext = YoriWinGetControlContext(Parent);
+
+    //
+    //  Can't create a value without a hive
+    //
+
+    if (RegeditContext->TreeDepth == 0) {
+        return;
+    }
+
+    Err = DllAdvApi32.pRegOpenKeyExW(RegeditContext->ActiveRootKey, RegeditContext->Subkey.StartOfString, 0, KEY_READ | KEY_SET_VALUE, &Key);
+    if (Err != ERROR_SUCCESS) {
+        RegeditDisplayWin32Error(Parent, Err);
+        return;
+    }
+
+    Value = NULL;
+    ValueLength = 0;
+
+    if (RegeditEditBinaryValue(RegeditContext,
+                               YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
+                               &ValueName,
+                               FALSE,
+                               &Value,
+                               &ValueLength,
+                               FALSE)) {
+
+        Err = DllAdvApi32.pRegSetValueExW(Key, ValueName.StartOfString, 0, REG_BINARY, (LPBYTE)Value, ValueLength);
+        if (Err != ERROR_SUCCESS) {
+            RegeditDisplayWin32Error(Parent, Err);
+        }
+
+        YoriLibFreeStringContents(&ValueName);
+        if (Value != NULL) {
+            YoriLibDereference(Value);
+        }
+    }
+
+    DllAdvApi32.pRegCloseKey(Key);
+
+    RegeditRefreshView(RegeditContext, Parent);
+}
+
+/**
  Callback invoked when the delete menu item is clicked.
 
  @param Ctrl Pointer to the menu control.
@@ -1529,7 +1620,7 @@ RegeditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY FileMenuEntries[1];
     YORI_WIN_MENU_ENTRY EditMenuEntries[5];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[1];
-    YORI_WIN_MENU_ENTRY NewMenuEntries[6];
+    YORI_WIN_MENU_ENTRY NewMenuEntries[7];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[4];
     YORI_WIN_MENU MenuBarItems;
@@ -1554,6 +1645,9 @@ RegeditPopulateMenuBar(
     MenuIndex++;
     YoriLibConstantString(&NewMenuEntries[MenuIndex].Caption, _T("Expandable string Value"));
     NewMenuEntries[MenuIndex].NotifyCallback = RegeditNewExpandableStringButtonClicked;
+    MenuIndex++;
+    YoriLibConstantString(&NewMenuEntries[MenuIndex].Caption, _T("&Binary Value"));
+    NewMenuEntries[MenuIndex].NotifyCallback = RegeditNewBinaryButtonClicked;
     // MSFIX multi string
 
     ZeroMemory(&FileMenuEntries, sizeof(FileMenuEntries));

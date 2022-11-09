@@ -8,6 +8,7 @@ LINKPDB=/Pdb:yregedit.pdb
 !ENDIF
 
 BIN_OBJS=\
+	 binedit.obj         \
 	 numedit.obj         \
 	 regedit.obj         \
 	 stredit.obj         \
@@ -15,6 +16,7 @@ BIN_OBJS=\
 
 MOD_OBJS=\
 	 mod_regedit.obj     \
+	 binedit.obj         \
 	 numedit.obj         \
 	 stredit.obj         \
 

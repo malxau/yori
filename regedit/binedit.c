@@ -1,7 +1,7 @@
 /**
- * @file regedit/stredit.c
+ * @file regedit/binedit.c
  *
- * Yori shell registry editor create or edit string values
+ * Yori shell registry editor create or edit binary values
  *
  * Copyright (c) 2019-2022 Malcolm J. Smith
  *
@@ -37,7 +37,7 @@
  @param Ctrl Pointer to the cancel button control.
  */
 VOID
-RegeditStrEditOkButtonClicked(
+RegeditBinEditOkButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
@@ -53,7 +53,7 @@ RegeditStrEditOkButtonClicked(
  @param Ctrl Pointer to the cancel button control.
  */
 VOID
-RegeditStrEditCancelButtonClicked(
+RegeditBinEditCancelButtonClicked(
     __in PYORI_WIN_CTRL_HANDLE Ctrl
     )
 {
@@ -78,8 +78,14 @@ RegeditStrEditCancelButtonClicked(
         occurs when editing an existing value.  If FALSE, the value can be
         changed, which happens when a new value is created.
 
- @param Value On input, contains the current string value.  On output,
-        updated to contain the new value.
+ @param Value On input, points to a referenced buffer containing the current
+        binary value.  On output, points to a referenced buffer containing
+        the new value.  This may be the same as the input buffer (ie., the
+        input buffer can be changed within this function, or the buffer can
+        be reallocated within this function.)
+
+ @param ValueLength On input, points to the number of bytes in Value.  On
+        output, updated to contain the new number of bytes in Value.
 
  @param ValueReadOnly If TRUE, the value cannot be changed.  This occurs when
         the caller does not have permission to modify the registry key but
@@ -91,12 +97,13 @@ RegeditStrEditCancelButtonClicked(
  */
 __success(return)
 BOOLEAN
-RegeditEditStringValue(
+RegeditEditBinaryValue(
     __in PREGEDIT_CONTEXT RegeditContext,
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr,
     __inout PYORI_STRING ValueName,
     __in BOOLEAN ValueNameReadOnly,
-    __inout PYORI_STRING Value,
+    __inout PUCHAR *Value,
+    __inout PDWORD ValueLength,
     __in BOOLEAN ValueReadOnly
     )
 {
@@ -110,6 +117,7 @@ RegeditEditStringValue(
     DWORD_PTR Result;
     COORD WinMgrSize;
     DWORD ButtonWidth;
+    DWORD Style;
 
     UNREFERENCED_PARAMETER(RegeditContext);
 
@@ -122,14 +130,17 @@ RegeditEditStringValue(
         return FALSE;
     }
 
-    WindowSize.X = (WORD)(WinMgrSize.X - 10);
-    WindowSize.Y = 11;
+    WindowSize.X = (WORD)(WinMgrSize.X - 4);
+    WindowSize.Y = (WORD)(15);
+    if (WinMgrSize.Y * 2 / 3 > WindowSize.Y) {
+        WindowSize.Y = (WORD)(WinMgrSize.Y * 2 / 3);
+    }
 
     if (ValueReadOnly) {
-        YoriLibConstantString(&Caption, _T("View String Value"));
+        YoriLibConstantString(&Caption, _T("View Binary Value"));
         WindowSize.Y = (WORD)(WindowSize.Y + 3);
     } else {
-        YoriLibConstantString(&Caption, _T("Edit String Value"));
+        YoriLibConstantString(&Caption, _T("Edit Binary Value"));
     }
 
     if (!YoriWinCreateWindow(WinMgr, WindowSize.X, WindowSize.Y, WindowSize.X, WindowSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_TRANSPARENT, &Caption, &Parent)) {
@@ -202,12 +213,15 @@ RegeditEditStringValue(
 
     YoriLibConstantString(&Caption, _T(""));
 
-    Area.Left = (WORD)(Area.Right + 1);
+    Area.Left = 1;
     Area.Right = (WORD)(WindowSize.X - 2);
-    Area.Top = (WORD)(Area.Bottom - 1);
-    Area.Bottom = (WORD)(Area.Top + 2);
+    Area.Top = (WORD)(Area.Bottom + 1);
+    Area.Bottom = (WORD)(WindowSize.Y - 4);
 
-    ValueEdit = YoriWinEditCreate(Parent, &Area, Value, ValueReadOnly?YORI_WIN_EDIT_STYLE_READ_ONLY:0);
+    Style = ValueReadOnly?YORI_WIN_HEX_EDIT_STYLE_READ_ONLY:0;
+    Style = Style | YORI_WIN_HEX_EDIT_STYLE_OFFSET;
+
+    ValueEdit = YoriWinHexEditCreate(Parent, NULL, &Area, 1, Style);
     if (ValueEdit == NULL) {
         YoriWinDestroyWindow(Parent);
         return FALSE;
@@ -215,7 +229,17 @@ RegeditEditStringValue(
     if (ValueNameReadOnly) {
         YoriWinSetFocus(Parent, ValueEdit);
     }
-    YoriWinEditSetSelectionRange(ValueEdit, 0, Value->LengthInChars);
+
+    if (Value != NULL && *Value != NULL && *ValueLength != 0) {
+        DWORDLONG LongValueLength;
+
+        LongValueLength = *ValueLength;
+
+        if (!YoriWinHexEditSetDataNoCopy(ValueEdit, *Value, LongValueLength, LongValueLength)) {
+            YoriWinDestroyWindow(Parent);
+            return FALSE;
+        }
+    }
 
     ButtonWidth = 8;
 
@@ -226,7 +250,7 @@ RegeditEditStringValue(
     Area.Bottom = (WORD)(Area.Top + 2);
     Area.Right = (WORD)(Area.Left + 1 + ButtonWidth);
 
-    Ctrl = YoriWinButtonCreate(Parent, &Area, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT | YORI_WIN_BUTTON_STYLE_CANCEL, RegeditStrEditOkButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &Area, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT | YORI_WIN_BUTTON_STYLE_CANCEL, RegeditBinEditOkButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         return FALSE;
@@ -237,7 +261,7 @@ RegeditEditStringValue(
     Area.Left = (WORD)(Area.Right + 2);
     Area.Right = (WORD)(Area.Left + 1 + ButtonWidth);
 
-    Ctrl = YoriWinButtonCreate(Parent, &Area, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, RegeditStrEditCancelButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &Area, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, RegeditBinEditCancelButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         return FALSE;
@@ -249,11 +273,14 @@ RegeditEditStringValue(
     }
 
     if (Result) {
-        YORI_STRING NewValue;
+        PUCHAR NewValue;
+        DWORDLONG NewValueLength;
+
         YORI_STRING NewValueName;
 
         YoriLibInitEmptyString(&NewValueName);
-        YoriLibInitEmptyString(&NewValue);
+        NewValue = NULL;
+        NewValueLength = 0;
 
         if (!ValueNameReadOnly) {
             if (!YoriWinEditGetText(ValueNameEdit, &NewValueName)) {
@@ -261,10 +288,12 @@ RegeditEditStringValue(
             }
         }
 
-        if (Result && YoriWinEditGetText(ValueEdit, &NewValue)) {
-            YoriLibFreeStringContents(Value);
-            YoriLibCloneString(Value, &NewValue);
-            YoriLibFreeStringContents(&NewValue);
+        if (Result && YoriWinHexEditGetDataNoCopy(ValueEdit, &NewValue, &NewValueLength)) {
+            if (*Value != NULL) {
+                YoriLibDereference(*Value);
+            }
+            *Value = NewValue;
+            *ValueLength = (DWORD)NewValueLength;
             if (!ValueNameReadOnly) {
                 YoriLibFreeStringContents(ValueName);
                 YoriLibCloneString(ValueName, &NewValueName);
