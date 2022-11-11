@@ -350,9 +350,22 @@ DateSetDate(
             Err = GetLastError();
         }
     } else {
+
+        //
+        //  MSDN comments that doing this has to internally convert time to
+        //  UTC (based on previous timezone or daylight savings setting), so
+        //  it needs to be called twice to ensure that the new timezone state
+        //  is applied.  I'm not sure quite how this works because SYSTEMTIME
+        //  doesn't specify any timezone information - presumably the first
+        //  call disables daylight savings unconditionally.
+        //
+
         if (!SetLocalTime(&NewSystemTime)) {
             Err = GetLastError();
+        } else if (!SetLocalTime(&NewSystemTime)) {
+            Err = GetLastError();
         }
+
     }
 
     if (Err != ERROR_SUCCESS) {
