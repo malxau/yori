@@ -287,7 +287,12 @@ YoriLibFindEffectiveRootInternal(
 
         } else {
 
-            ASSERT(Path->LengthInChars >= sizeof("\\\\?\\C:") - 1);
+            //
+            //  If a path has a prefix, it needs to have characters for one,
+            //  and those are four characters in length.
+            //
+
+            ASSERT(Path->LengthInChars >= 4);
 
             Substring.StartOfString = &Path->StartOfString[4];
             Substring.LengthInChars = Path->LengthInChars - 4;
