@@ -2713,7 +2713,7 @@ YoriWinEditCreate(
     memcpy(Edit->Text.StartOfString, InitialText->StartOfString, InitialText->LengthInChars * sizeof(TCHAR));
     Edit->Text.LengthInChars = InitialText->LengthInChars;
     Edit->Text.StartOfString[Edit->Text.LengthInChars] = '\0';
-
+    Edit->CursorOffset = Edit->Text.LengthInChars;
     Edit->Ctrl.NotifyEventFn = YoriWinEditEventHandler;
     if (!YoriWinCreateControl(Parent, Size, TRUE, &Edit->Ctrl)) {
         YoriLibFreeStringContents(&Edit->Text);
@@ -2743,6 +2743,7 @@ YoriWinEditCreate(
     }
 
     YoriWinEditPaintNonClient(Edit);
+    YoriWinEditEnsureCursorVisible(Edit);
     YoriWinEditPaint(Edit);
 
     return &Edit->Ctrl;
