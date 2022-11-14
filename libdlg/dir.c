@@ -40,8 +40,8 @@ typedef enum _YORI_DLG_DIR_CONTROLS {
 } YORI_DLG_DIR_CONTROLS;
 
 /**
- State specific to a file dialog that is in operation.  Currently this is
- process global (can we really nest open dialogs anyway?)  But this should
+ State specific to a directory dialog that is in operation.  Currently this
+ is process global (can we really nest open dialogs anyway?)  But this should
  be moved to a per-window allocation.
  */
 typedef struct _YORI_DLG_DIR_STATE {
@@ -396,40 +396,6 @@ YoriDlgDirCancelButtonClicked(
 }
 
 /**
- A callback invoked when the selection within the file list changes.
-
- @param Ctrl Pointer to the list whose selection changed.
- */
-VOID
-YoriDlgDirFileSelectionChanged(
-    __in PYORI_WIN_CTRL_HANDLE Ctrl
-    )
-{
-    DWORD ActiveOption;
-    YORI_STRING String;
-    PYORI_WIN_CTRL_HANDLE Parent;
-    PYORI_WIN_CTRL_HANDLE EditCtrl;
-
-    if (!YoriWinListGetActiveOption(Ctrl, &ActiveOption)) {
-        return;
-    }
-
-    Parent = YoriWinGetControlParent(Ctrl);
-    YoriLibInitEmptyString(&String);
-    if (!YoriWinListGetItemText(Ctrl, ActiveOption, &String)) {
-        return;
-    }
-
-    EditCtrl = YoriWinFindControlById(Parent, YoriDlgDirControlFileText);
-    ASSERT(EditCtrl != NULL);
-    __analysis_assume(EditCtrl != NULL);
-
-    YoriWinEditSetText(EditCtrl, &String);
-    YoriWinEditSetSelectionRange(EditCtrl, 0, String.LengthInChars);
-    YoriLibFreeStringContents(&String);
-}
-
-/**
  A callback invoked when the selection within the directory list changes.
 
  @param Ctrl Pointer to the list whose selection changed.
@@ -614,7 +580,9 @@ YoriDlgDirRefreshView(
 
     for (DriveProbeString[0] = 'A'; DriveProbeString[0] <= 'Z'; DriveProbeString[0]++) {
         DriveProbeResult = GetDriveType(DriveProbeString);
-        if (DriveProbeResult != 0 && DriveProbeResult != 1) {
+        if (DriveProbeResult != DRIVE_UNKNOWN &&
+            DriveProbeResult != DRIVE_NO_ROOT_DIR) {
+
             DriveDisplayString[2] = DriveProbeString[0];
             YoriWinListAddItems(DirList, &DriveDisplay, 1);
         }

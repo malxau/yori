@@ -696,7 +696,9 @@ YoriDlgFileRefreshView(
 
     for (DriveProbeString[0] = 'A'; DriveProbeString[0] <= 'Z'; DriveProbeString[0]++) {
         DriveProbeResult = GetDriveType(DriveProbeString);
-        if (DriveProbeResult != 0 && DriveProbeResult != 1) {
+        if (DriveProbeResult != DRIVE_UNKNOWN &&
+            DriveProbeResult != DRIVE_NO_ROOT_DIR) {
+
             DriveDisplayString[2] = DriveProbeString[0];
             YoriWinListAddItems(DirList, &DriveDisplay, 1);
         }
