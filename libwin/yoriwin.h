@@ -4,7 +4,7 @@
  * Header for control and window toolkit routines that may be of value from
  * the shell as well as external tools.
  *
- * Copyright (c) 2019-2020 Malcolm J. Smith
+ * Copyright (c) 2019-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -209,6 +209,11 @@ YoriWinSetControlContext(
  label, but it can still do navigation, and get focus, etc.
  */
 #define YORI_WIN_EDIT_STYLE_READ_ONLY       (0x0004)
+
+/**
+ The edit should only accept numeric input.
+ */
+#define YORI_WIN_EDIT_STYLE_NUMERIC         (0x0008)
 
 BOOLEAN
 YoriWinEditSelectionActive(

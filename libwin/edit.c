@@ -270,6 +270,11 @@ typedef struct _YORI_WIN_CTRL_EDIT {
      */
     BOOLEAN MouseButtonDown;
 
+    /**
+     TRUE if only numeric input should be allowed.
+     */
+    BOOLEAN NumericOnly;
+
 } YORI_WIN_CTRL_EDIT, *PYORI_WIN_CTRL_EDIT;
 
 //
@@ -1256,6 +1261,133 @@ YoriWinEditGetTextRange(
 }
 
 /**
+ Check if a numeric edit would still be numeric after a specified
+ modification.
+
+ @param Edit Pointer to the edit control.
+
+ @param FirstCharOffset Specifies the offset where text will be modified.
+
+ @param LastCharToDelete If nonzero, specifies a range that should be deleted.
+        FirstCharOffset is the first char to remove, LastCharToDelete is one
+        passed the last character to remove.
+
+ @param Text Pointer to text to overwrite or insert.  Only meaningful if
+        LastCharToDelete is zero, and required to be present when
+        LastCharToDelete is zero.
+
+ @param Text A block of text to insert or overwrite.
+
+ @param InsertMode If TRUE, text should be inserted; if FALSE, text should be
+        overwritten.  Ignored if LastCharToDelete is nonzero.
+
+ @return TRUE if the modification leaves the edit as a numeric value, FALSE
+         if it does not.
+ */
+BOOLEAN
+YoriWinEditIsValidNumericInput(
+    __in PYORI_WIN_CTRL_EDIT Edit,
+    __in DWORD FirstCharOffset,
+    __in DWORD LastCharToDelete,
+    __in_opt PYORI_STRING Text,
+    __in BOOLEAN InsertMode
+    )
+{
+    YORI_STRING TempString;
+    TCHAR StringBuffer[32];
+    LONGLONG llTemp;
+    DWORD CharsConsumed;
+    DWORD LengthNeeded;
+
+    //
+    //  Either we're removing a range of text (LastCharToDelete says which)
+    //  or we're adding text (Text says which.)
+    //
+
+    ASSERT(LastCharToDelete != 0 || Text != NULL);
+
+    //
+    //  To validate the 0x/0n type prefixes, just pass the string to the
+    //  number converter and see if it works.  This is feasible-ish because
+    //  numbers have to be small.  Here we use a stack buffer and summarily
+    //  reject anything that wouldn't fit as non-numeric (since we can't
+    //  convert it to an integer anyway.)
+    //
+    //  First, calculate and validate the buffer length.
+    //
+
+    if (LastCharToDelete != 0) {
+        LengthNeeded = Edit->Text.LengthInChars - (LastCharToDelete - FirstCharOffset);
+    } else if (InsertMode) {
+        LengthNeeded = Edit->Text.LengthInChars + Text->LengthInChars;
+    } else {
+        LengthNeeded = Edit->Text.LengthInChars;
+        if (FirstCharOffset + Text->LengthInChars > LengthNeeded) {
+            LengthNeeded = FirstCharOffset + Text->LengthInChars;
+        }
+    }
+
+    if (LengthNeeded > sizeof(StringBuffer)/sizeof(StringBuffer[0])) {
+        return FALSE;
+    }
+
+    ASSERT(FirstCharOffset <= Edit->Text.LengthInChars);
+
+    //
+    //  Construct a stack buffer containing the merged text.
+    //
+
+    if (LastCharToDelete != 0) {
+        ASSERT(LastCharToDelete <= Edit->Text.LengthInChars);
+        if (FirstCharOffset > 0 &&
+            Edit->Text.LengthInChars > 0) {
+
+            memcpy(StringBuffer, Edit->Text.StartOfString, FirstCharOffset * sizeof(TCHAR));
+        }
+
+        if (Edit->Text.LengthInChars > LastCharToDelete) {
+            memcpy(&StringBuffer[FirstCharOffset], &Edit->Text.StartOfString[LastCharToDelete], (Edit->Text.LengthInChars - LastCharToDelete) * sizeof(TCHAR));
+        }
+    } else if (InsertMode) {
+        ASSERT(Text->LengthInChars > 0);
+
+        if (FirstCharOffset > 0 &&
+            Edit->Text.LengthInChars > 0) {
+
+            memcpy(StringBuffer, Edit->Text.StartOfString, FirstCharOffset * sizeof(TCHAR));
+        }
+
+        memcpy(&StringBuffer[FirstCharOffset], Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
+
+        if (FirstCharOffset < Edit->Text.LengthInChars) {
+            memcpy(&StringBuffer[FirstCharOffset + Text->LengthInChars], &Edit->Text.StartOfString[FirstCharOffset], (Edit->Text.LengthInChars - FirstCharOffset) * sizeof(TCHAR));
+        }
+    } else {
+        ASSERT(Text->LengthInChars > 0);
+        memcpy(StringBuffer, Edit->Text.StartOfString, Edit->Text.LengthInChars * sizeof(TCHAR));
+        memcpy(&StringBuffer[FirstCharOffset], Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
+    }
+
+    YoriLibInitEmptyString(&TempString);
+    TempString.StartOfString = StringBuffer;
+    TempString.LengthInChars = LengthNeeded;
+
+    //
+    //  See if the string can be perfectly converted to a number with no
+    //  leftover chars.
+    //
+
+    if (!YoriLibStringToNumber(&TempString, FALSE, &llTemp, &CharsConsumed) ||
+        CharsConsumed < LengthNeeded) {
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
+/**
  Delete a range of text from an edit control.
 
  @param Edit Pointer to the edit control.
@@ -1286,6 +1418,13 @@ YoriWinEditDeleteTextRange(
 
     if (FirstCharOffset >= LastCharOffset) {
         return TRUE;
+    }
+
+    if (Edit->NumericOnly &&
+        !YoriWinEditIsValidNumericInput(Edit, FirstCharOffset, LastCharOffset, NULL, FALSE)) {
+
+        ASSERT(!ProcessingUndo);
+        return FALSE;
     }
 
     if (!ProcessingUndo) {
@@ -1357,6 +1496,14 @@ YoriWinEditInsertTextRange(
         return TRUE;
     }
 
+    if (Edit->NumericOnly &&
+        !YoriWinEditIsValidNumericInput(Edit, FirstCharOffset, 0, Text, TRUE)) {
+
+        ASSERT(!ProcessingUndo);
+
+        return FALSE;
+    }
+
     ASSERT(FirstCharOffset <= Edit->Text.LengthInChars);
 
     LengthNeeded = Edit->Text.LengthInChars + Text->LengthInChars;
@@ -1425,6 +1572,14 @@ YoriWinEditOverwriteTextRange(
 
     if (Text->LengthInChars == 0) {
         return TRUE;
+    }
+
+    if (Edit->NumericOnly &&
+        !YoriWinEditIsValidNumericInput(Edit, FirstCharOffset, 0, Text, FALSE)) {
+
+        ASSERT(!ProcessingUndo);
+
+        return FALSE;
     }
 
     if (!ProcessingUndo) {
@@ -2703,6 +2858,10 @@ YoriWinEditCreate(
 
     if (Style & YORI_WIN_EDIT_STYLE_READ_ONLY) {
         Edit->ReadOnly = TRUE;
+    }
+
+    if (Style & YORI_WIN_EDIT_STYLE_NUMERIC) {
+        Edit->NumericOnly = TRUE;
     }
 
     if (!YoriLibAllocateString(&Edit->Text, InitialText->LengthInChars + 1)) {
