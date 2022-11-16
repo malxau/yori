@@ -688,20 +688,36 @@ YoriLibShParseCmdlineToCmdContext(
 
         //
         //  If it's an escape char, consume two characters as literal until
-        //  we hit the end of the string.
+        //  we hit the end of the string.  If the end of the string ends the
+        //  argument and the argument is quoted, drop the escape so as to not
+        //  escape the end quote.
         //
 
         if (YoriLibIsEscapeChar(Char.StartOfString[0])) {
+
             Char.StartOfString++;
             Char.LengthInChars--;
-            RequiredCharCount++;
-            ArgOffset++;
 
-            if (Char.LengthInChars > 0) {
-                Char.StartOfString++;
-                Char.LengthInChars--;
+            if (Char.LengthInChars > 0 || !QuoteTerminated) {
+
+                PreviousCharWasQuote = FALSE;
                 RequiredCharCount++;
                 ArgOffset++;
+
+                if (Char.LengthInChars > 0) {
+                    Char.StartOfString++;
+                    Char.LengthInChars--;
+                    RequiredCharCount++;
+                    ArgOffset++;
+                }
+            }
+
+            if (!CurrentArgFound &&
+                (Char.StartOfString - CmdLine->StartOfString >= (LONG)CurrentOffset)) {
+
+                CurrentArgFound = TRUE;
+                CmdContext->CurrentArg = ArgCount;
+                CmdContext->CurrentArgOffset = ArgOffset;
             }
 
             if (Char.LengthInChars == 0) {
@@ -714,6 +730,8 @@ YoriLibShParseCmdlineToCmdContext(
         if (Char.StartOfString[0] == '\\') {
 
             DWORD CharsToOutput;
+
+            PreviousCharWasQuote = FALSE;
 
             YoriLibShCountCharsAtBackslash(&Char,
                                            QuoteOpen,
@@ -980,19 +998,27 @@ YoriLibShParseCmdlineToCmdContext(
 
         //
         //  If it's an escape char, consume two characters as literal until
-        //  we hit the end of the string.
+        //  we hit the end of the string.  If the end of the string ends the
+        //  argument and the argument is quoted, drop the escape so as to not
+        //  escape the end quote.
         //
 
         if (YoriLibIsEscapeChar(Char.StartOfString[0])) {
-            *OutputString = Char.StartOfString[0];
-            Char.StartOfString++;
-            Char.LengthInChars--;
-            OutputString++;
-            if (Char.LengthInChars > 0) {
+            if (Char.LengthInChars == 1 && CmdContext->ArgContexts[ArgCount].QuoteTerminated) {
+                Char.StartOfString++;
+                Char.LengthInChars--;
+            } else {
+                PreviousCharWasQuote = FALSE;
                 *OutputString = Char.StartOfString[0];
                 Char.StartOfString++;
                 Char.LengthInChars--;
                 OutputString++;
+                if (Char.LengthInChars > 0) {
+                    *OutputString = Char.StartOfString[0];
+                    Char.StartOfString++;
+                    Char.LengthInChars--;
+                    OutputString++;
+                }
             }
             continue;
         }
@@ -1000,6 +1026,8 @@ YoriLibShParseCmdlineToCmdContext(
         if (Char.StartOfString[0] == '\\') {
 
             DWORD CharsToOutput;
+
+            PreviousCharWasQuote = FALSE;
 
             YoriLibShCountCharsAtBackslash(&Char,
                                            QuoteOpen,

@@ -69,6 +69,24 @@ YORI_TEST_FN TestParseOneArgWithStartingQuotesCmd;
 YORI_TEST_FN TestParseOneArgEnclosedInQuotesCmd;
 
 /**
+ A test variation to parse a command that starts with a quote that ends
+ partway through an argument ending with backslashes.
+ */
+YORI_TEST_FN TestParseOneArgWithStartingQuotesEndingSlashCmd;
+
+/**
+ A test variation to parse a command that starts with a quote that ends
+ partway through an argument ending with carets.
+ */
+YORI_TEST_FN TestParseOneArgWithStartingQuotesEndingCaretCmd;
+
+/**
+ A test variation to parse a command that starts and ends with a quote that
+ contains quotes in the middle.
+ */
+YORI_TEST_FN TestParseOneArgContainingAndEnclosedInQuotesCmd;
+
+/**
  A test variation to parse a command that contains a quote and ends with a
  quote.
  */

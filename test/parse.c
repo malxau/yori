@@ -149,6 +149,57 @@ TestParseOneArgContainingQuotesCmd(VOID)
 }
 
 /**
+ A test variation to parse a command that starts and ends with a quote.
+ */
+BOOLEAN
+TestParseOneArgEnclosedInQuotesCmd(VOID)
+{
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
+    YORI_STRING InputString;
+
+    YoriLibConstantString(&InputString, _T("\"foo\""));
+    if (!YoriLibShParseCmdlineToCmdContext(&InputString, InputString.LengthInChars, &CmdContext)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        return FALSE;
+    }
+
+    if (CmdContext.ArgC != 1) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo")) != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.CurrentArg != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.CurrentArgOffset != 4) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 4\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    YoriLibShFreeCmdContext(&CmdContext);
+
+    return TRUE;
+}
+
+
+/**
  A test variation to parse a command that starts with a quote that ends
  partway through an argument.
  */
@@ -204,10 +255,135 @@ TestParseOneArgWithStartingQuotesCmd(VOID)
 }
 
 /**
- A test variation to parse a command that starts and ends with a quote.
+ A test variation to parse a command that starts with a quote that ends
+ partway through an argument, where the argument only contains backslashes
+ afterwards.
  */
 BOOLEAN
-TestParseOneArgEnclosedInQuotesCmd(VOID)
+TestParseOneArgWithStartingQuotesEndingSlashCmd(VOID)
+{
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
+    YORI_STRING InputString;
+
+    //
+    //  A command starting with quotes that end partway through
+    //
+
+    YoriLibConstantString(&InputString, _T("\"Program Files\"\\"));
+    if (!YoriLibShParseCmdlineToCmdContext(&InputString, 15, &CmdContext)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        return FALSE;
+    }
+
+    if (CmdContext.ArgC != 1) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    //
+    //  Because the parser is moving the quote to the end of the argument,
+    //  it also needs to escape all of the backslashes (which are about to
+    //  escape the quote.)
+    //
+
+    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files\\\\")) != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\\\\\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.CurrentArg != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.CurrentArgOffset != 13) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    YoriLibShFreeCmdContext(&CmdContext);
+
+    return TRUE;
+}
+
+/**
+ A test variation to parse a command that starts with a quote that ends
+ partway through an argument, where the argument only contains carets
+ afterwards.
+ */
+BOOLEAN
+TestParseOneArgWithStartingQuotesEndingCaretCmd(VOID)
+{
+    YORI_LIBSH_CMD_CONTEXT CmdContext;
+    YORI_STRING InputString;
+
+    //
+    //  A command starting with quotes that end partway through
+    //
+
+    YoriLibConstantString(&InputString, _T("\"Program Files\"^"));
+    if (!YoriLibShParseCmdlineToCmdContext(&InputString, 15, &CmdContext)) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        return FALSE;
+    }
+
+    if (CmdContext.ArgC != 1) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    //
+    //  Because the parser is moving the quote to the end of the argument,
+    //  it also needs to remove the caret (which would escape the quote.)
+    //
+
+    if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files")) != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.CurrentArg != 0) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    if (CmdContext.CurrentArgOffset != 14) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibShFreeCmdContext(&CmdContext);
+        return FALSE;
+    }
+
+    YoriLibShFreeCmdContext(&CmdContext);
+
+    return TRUE;
+}
+
+
+/**
+ A test variation to parse a command that starts and ends with a quote that
+ contains quotes in the middle.
+ */
+BOOLEAN
+TestParseOneArgContainingAndEnclosedInQuotesCmd(VOID)
 {
     YORI_LIBSH_CMD_CONTEXT CmdContext;
     YORI_STRING InputString;
