@@ -3,6 +3,7 @@ ANALYZE=0
 ARCH=win32
 DEBUG=0
 FDI=0
+KERNELBASE=0
 PDB=1
 YORI_BUILD_ID=0
 
@@ -38,7 +39,7 @@ BINDIR=..\$(BINDIR_ROOT)
 SYMDIR=..\$(SYMDIR_ROOT)
 MODDIR=..\$(MODDIR_ROOT)
 
-BUILD=$(MAKE) -nologo ANALYZE=$(ANALYZE) DEBUG=$(DEBUG) FDI=$(FDI) PDB=$(PDB) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=$(BINDIR) SYMDIR=$(SYMDIR) MODDIR=$(MODDIR)
+BUILD=$(MAKE) -nologo ANALYZE=$(ANALYZE) DEBUG=$(DEBUG) FDI=$(FDI) KERNELBASE=$(KERNELBASE) PDB=$(PDB) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=$(BINDIR) SYMDIR=$(SYMDIR) MODDIR=$(MODDIR)
 
 CURRENTTIME=REM
 !IFNDEF _YMAKE_VER
@@ -208,8 +209,15 @@ distclean: clean
 	@$(FOR_ST) /D %%i in (pkg\*) do @if exist %%i $(RMDIR) /s/q %%i
 	@$(FOR_ST) %%i in (beta doc bin sym) do @if exist %%i $(RMDIR) /s/q %%i
 
-help:
-	@echo "ANALYZE=[0|1] - If set, will perform static analysis during compilation"
-	@echo "DEBUG=[0|1] - If set, will compile debug build without optimization and with instrumentation"
-	@echo "PDB=[0|1] - If set, will generate debug symbols"
+buildhelp:
+	@echo "ANALYZE=[0|1]    - If set, will perform static analysis during compilation"
+	@echo "DEBUG=[0|1]      - If set, will compile debug build without optimization"
+	@echo "                   and with instrumentation"
+	@echo "FDI=[0|1]        - If set, will link against the static fdi.lib so"
+	@echo "                   decompression is possible without cabinet.dll.  fdi.lib"
+	@echo "                   is not in every compiler or SDK."
+	@echo "KERNELBASE=[0|1] - If set, will link against kernelbase rather than"
+	@echo "                   kernel32 to run on very minimal Windows editions.  This"
+	@echo "                   requires a hand-built kernelbase.lib."
+	@echo "PDB=[0|1]        - If set, will generate debug symbols"
 

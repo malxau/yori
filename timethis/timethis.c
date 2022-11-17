@@ -426,7 +426,7 @@ ENTRYPOINT(
         HandleArray[1] = YoriLibCancelGetEvent();
         HandleArray[0] = ProcessInfo.hProcess;
 
-        WaitResult = WaitForMultipleObjects(2, HandleArray, FALSE, INFINITE);
+        WaitResult = WaitForMultipleObjectsEx(2, HandleArray, FALSE, INFINITE, FALSE);
 
         //
         //  If cancelled, abort

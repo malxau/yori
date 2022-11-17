@@ -4,7 +4,7 @@ Yori is a CMD replacement shell that supports backquotes, job control, and impro
 
 ## Build
 
-Compiling currently requires Visual C++, version 2 or newer.  To compile, run NMAKE.  Once compiled, YMAKE.EXE allows for more efficient subsequent compilation, using all cores in the machine.
+Compiling currently requires Visual C++, version 2 or newer.  To compile, run NMAKE.  Once compiled, YMAKE.EXE allows for more efficient subsequent compilation, using all cores in the machine.  For build options, run "NMAKE buildhelp".
 
 ## License
 

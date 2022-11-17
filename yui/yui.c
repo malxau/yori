@@ -376,7 +376,7 @@ YuiCreateWindow(
     GetClientRect(Context->hWnd, &ClientRect);
 
     hDC = GetWindowDC(Context->hWnd);
-    Context->hFont = CreateFont(-MulDiv(8, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+    Context->hFont = CreateFont(-YoriLibMulDiv(8, GetDeviceCaps(hDC, LOGPIXELSY), 72),
                                 0,
                                 0,
                                 0,

@@ -143,7 +143,7 @@ ForWaitForProcessToComplete(
     DWORD Index;
     DWORD Count;
 
-    Result = WaitForMultipleObjects(ExecContext->CurrentConcurrentCount, ExecContext->HandleArray, FALSE, INFINITE);
+    Result = WaitForMultipleObjectsEx(ExecContext->CurrentConcurrentCount, ExecContext->HandleArray, FALSE, INFINITE, FALSE);
 
     ASSERT(Result < (WAIT_OBJECT_0 + ExecContext->CurrentConcurrentCount));
 

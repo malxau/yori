@@ -158,7 +158,7 @@ ClipCopyAsHtml(
         return FALSE;
     }
 
-    pMem = GlobalLock(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
     if (pMem == NULL) {
         GlobalFree(hMem);
         return FALSE;
@@ -252,7 +252,7 @@ ClipCopyAsHtml(
                     "%s",
                     ClipDummyFragEnd);
 
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
 
     //
     //  Send the buffer to the clipboard.
@@ -375,7 +375,7 @@ ClipCopyAsRtf(
         return FALSE;
     }
 
-    pMem = GlobalLock(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
     if (pMem == NULL) {
         GlobalFree(hMem);
         YoriLibFree(AnsiBuffer);
@@ -397,7 +397,7 @@ ClipCopyAsRtf(
     }
 
     pMem[AllocSize] = '\0';
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
 
     YoriLibFree(AnsiBuffer);
 
@@ -529,7 +529,7 @@ ClipCopyAsText(
         return FALSE;
     }
 
-    pMem = GlobalLock(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
     if (pMem == NULL) {
         GlobalFree(hMem);
         YoriLibFree(AnsiBuffer);
@@ -548,7 +548,7 @@ ClipCopyAsText(
     YoriLibMultibyteInput(AnsiBuffer, CurrentOffset, pMem, AllocSize);
 
     pMem[AllocSize] = '\0';
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
 
     YoriLibFree(AnsiBuffer);
 
@@ -771,8 +771,8 @@ ClipPasteSpecifiedFormat(
     }
 
     CurrentOffset = 0;
-    BufferSize = (DWORD)GlobalSize(hMem);
-    pMem = GlobalLock(hMem);
+    BufferSize = (DWORD)DllKernel32.pGlobalSize(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
     if (pMem == NULL) {
         Err = GetLastError();
         if (Err != ERROR_SUCCESS) {
@@ -793,7 +793,7 @@ ClipPasteSpecifiedFormat(
     } else {
         YoriLibOutputToDevice(hFile, 0, _T("%hs"), pMem);
     }
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
 
     DllUser32.pCloseClipboard();
     return TRUE;
@@ -837,14 +837,14 @@ ClipPreserveText(VOID)
     }
 
     CurrentOffset = 0;
-    BufferSize = (DWORD)GlobalSize(hMem);
-    pMem = GlobalLock(hMem);
+    BufferSize = (DWORD)DllKernel32.pGlobalSize(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
 
     if (!DllUser32.pEmptyClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not empty clipboard: %s\n"), ErrText);
-        GlobalUnlock(hMem);
+        DllKernel32.pGlobalUnlock(hMem);
         DllUser32.pCloseClipboard();
         return FALSE;
     }
@@ -853,12 +853,12 @@ ClipPreserveText(VOID)
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not set clipboard data: %s\n"), ErrText);
-        GlobalUnlock(hMem);
+        DllKernel32.pGlobalUnlock(hMem);
         DllUser32.pCloseClipboard();
         return FALSE;
     }
 
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
 
     DllUser32.pCloseClipboard();
     return TRUE;
@@ -1189,7 +1189,10 @@ ENTRYPOINT(
 
     YoriLibLoadUser32Functions();
     Result = EXIT_SUCCESS;
-    if (DllUser32.pCloseClipboard == NULL ||
+    if (DllKernel32.pGlobalLock == NULL ||
+        DllKernel32.pGlobalSize == NULL ||
+        DllKernel32.pGlobalUnlock == NULL ||
+        DllUser32.pCloseClipboard == NULL ||
         DllUser32.pEmptyClipboard == NULL ||
         DllUser32.pEnumClipboardFormats == NULL ||
         DllUser32.pGetClipboardData == NULL ||

@@ -646,7 +646,7 @@ YoriLibReadLineToStringEx(
                 HandleArray[0] = FileHandle;
             }
 
-            WaitResult = WaitForMultipleObjects(HandleCount, HandleArray, FALSE, INFINITE);
+            WaitResult = WaitForMultipleObjectsEx(HandleCount, HandleArray, FALSE, INFINITE, FALSE);
             if (WaitResult == WAIT_OBJECT_0 && HandleCount > 1) {
                 TerminateProcessing = TRUE;
                 break;

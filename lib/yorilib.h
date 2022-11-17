@@ -3942,4 +3942,27 @@ YoriLibGetHandleSectorSize(
     __in HANDLE FileHandle
     );
 
+INT
+YoriLibMulDiv(
+    __in INT Number,
+    __in INT Numerator,
+    __in INT Denominator
+    );
+
+__success(return)
+BOOL
+YoriLibFileTimeToDosDateTime(
+    __in CONST FILETIME *FileTime,
+    __out LPWORD FatDate,
+    __out LPWORD FatTime
+    );
+
+__success(return)
+BOOL
+YoriLibDosDateTimeToFileTime(
+    __in WORD FatDate,
+    __in WORD FatTime,
+    __out LPFILETIME FileTime
+    );
+
 // vim:sw=4:ts=4:et:

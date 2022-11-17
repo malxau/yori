@@ -113,6 +113,10 @@ YoriPkgCreateBinaryPackage(
 
     PVOID CabHandle;
 
+    if (DllKernel32.pWritePrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     __analysis_assume(ReplaceCount == 0 || Replaces != NULL);
 
     //
@@ -143,33 +147,33 @@ YoriPkgCreateBinaryPackage(
     TempFile.LengthInChars = _tcslen(TempFile.StartOfString);
     YoriLibFreeStringContents(&TempPath);
 
-    WritePrivateProfileString(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
-    WritePrivateProfileString(_T("Package"), _T("Architecture"), Architecture->StartOfString, TempFile.StartOfString);
-    WritePrivateProfileString(_T("Package"), _T("Version"), Version->StartOfString, TempFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Architecture"), Architecture->StartOfString, TempFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Version"), Version->StartOfString, TempFile.StartOfString);
     if (MinimumOSBuild != NULL) {
-        WritePrivateProfileString(_T("Package"), _T("MinimumOSBuild"), MinimumOSBuild->StartOfString, TempFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("MinimumOSBuild"), MinimumOSBuild->StartOfString, TempFile.StartOfString);
         if (PackagePathForOlderBuilds != NULL) {
-            WritePrivateProfileString(_T("Package"), _T("PackagePathForOlderBuilds"), PackagePathForOlderBuilds->StartOfString, TempFile.StartOfString);
+            DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("PackagePathForOlderBuilds"), PackagePathForOlderBuilds->StartOfString, TempFile.StartOfString);
         }
     }
     if (UpgradePath != NULL) {
-        WritePrivateProfileString(_T("Package"), _T("UpgradePath"), UpgradePath->StartOfString, TempFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("UpgradePath"), UpgradePath->StartOfString, TempFile.StartOfString);
     }
     if (SourcePath != NULL) {
-        WritePrivateProfileString(_T("Package"), _T("SourcePath"), SourcePath->StartOfString, TempFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("SourcePath"), SourcePath->StartOfString, TempFile.StartOfString);
     }
     if (SymbolPath != NULL) {
-        WritePrivateProfileString(_T("Package"), _T("SymbolPath"), SymbolPath->StartOfString, TempFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("SymbolPath"), SymbolPath->StartOfString, TempFile.StartOfString);
     }
     if (UpgradeToStablePath != NULL) {
-        WritePrivateProfileString(_T("Package"), _T("UpgradeToStablePath"), UpgradeToStablePath->StartOfString, TempFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("UpgradeToStablePath"), UpgradeToStablePath->StartOfString, TempFile.StartOfString);
     }
     if (UpgradeToDailyPath != NULL) {
-        WritePrivateProfileString(_T("Package"), _T("UpgradeToDailyPath"), UpgradeToDailyPath->StartOfString, TempFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("UpgradeToDailyPath"), UpgradeToDailyPath->StartOfString, TempFile.StartOfString);
     }
 
     for (Count = 0; Count < ReplaceCount; Count++) {
-        WritePrivateProfileString(_T("Replaces"), Replaces[Count].StartOfString, _T("1"), TempFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Replaces"), Replaces[Count].StartOfString, _T("1"), TempFile.StartOfString);
     }
 
     if (!YoriLibUserStringToSingleFilePath(FileListFile, TRUE, &FullFileListFile)) {
@@ -613,9 +617,9 @@ YoriPkgCreateSourcePackage(
     TempFile.LengthInChars = _tcslen(TempFile.StartOfString);
     YoriLibFreeStringContents(&TempPath);
 
-    WritePrivateProfileString(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
-    WritePrivateProfileString(_T("Package"), _T("Version"), Version->StartOfString, TempFile.StartOfString);
-    WritePrivateProfileString(_T("Package"), _T("Architecture"), _T("noarch"), TempFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Name"), PackageName->StartOfString, TempFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Version"), Version->StartOfString, TempFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Package"), _T("Architecture"), _T("noarch"), TempFile.StartOfString);
 
     if (!YoriLibCreateCab(FileName, &CreateSourceContext.CabHandle)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YoriLibCreateCab failure\n"));

@@ -584,4 +584,117 @@ YoriLibGetHandleSectorSize(
     return SectorSize;
 }
 
+/**
+ Multiply a 32 bit number by a 32 bit number and divide by a 32 bit number.
+ Since we have a 64 bit math library, this can be implemented fairly simply.
+ Note that on x86 the assembly routines are limited to 32 bit denominators,
+ which works fine for this.
+
+ @param Number One of the numbers to multiply.
+
+ @param Numerator The second number to multiply.
+
+ @param Denominator The number to divide by.
+
+ @return The result.
+ */
+INT
+YoriLibMulDiv(
+    __in INT Number,
+    __in INT Numerator,
+    __in INT Denominator
+    )
+{
+    LONGLONG LongNumber;
+
+    LongNumber = Number;
+    LongNumber = LongNumber * Numerator;
+    LongNumber = LongNumber / Denominator;
+
+    return (INT)LongNumber;
+}
+
+/**
+ Calculate the FAT timestamp values from a FILETIME structure.
+
+ @param FileTime Pointer to the FILETIME structure.
+
+ @param FatDate On successful completion, the FAT date value.
+
+ @param FatTime On successful completion, the FAT time value.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibFileTimeToDosDateTime(
+    __in CONST FILETIME *FileTime,
+    __out LPWORD FatDate,
+    __out LPWORD FatTime
+    )
+{
+    SYSTEMTIME SystemTime;
+    FILETIME LocalFileTime;
+    WORD LocalFatDate;
+    WORD LocalFatTime;
+
+    FileTimeToLocalFileTime(FileTime, &LocalFileTime);
+    FileTimeToSystemTime(&LocalFileTime, &SystemTime);
+
+    if (SystemTime.wYear < 1980 || SystemTime.wYear > (1980 + 127)) {
+        return FALSE;
+    }
+
+    LocalFatDate = (WORD)((SystemTime.wDay & 0x1F) | ((SystemTime.wMonth & 0xF) << 5) | (((SystemTime.wYear - 1980) & 0x7F) << 9));
+    LocalFatTime = (WORD)(((SystemTime.wSecond >> 1) & 0x1F) | ((SystemTime.wMinute & 0x3F) << 5) | ((SystemTime.wHour & 0x1F) << 11));
+
+    *FatDate = LocalFatDate;
+    *FatTime = LocalFatTime;
+
+    return TRUE;
+}
+
+/**
+ Calculate the FILETIME structure from FAT timestamp values.
+
+ @param FatDate The FAT date value.
+
+ @param FatTime The FAT time value.
+
+ @param FileTime On successful completion, updated to contain the FILETIME
+        value.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibDosDateTimeToFileTime(
+    __in WORD FatDate,
+    __in WORD FatTime,
+    __out LPFILETIME FileTime
+    )
+{
+    SYSTEMTIME SystemTime;
+
+    ZeroMemory(&SystemTime, sizeof(SystemTime));
+    SystemTime.wSecond = (WORD)((FatTime & 0x1F) << 1);
+    SystemTime.wMinute = (WORD)((FatTime >> 5) & 0x3F);
+    SystemTime.wHour = (WORD)((FatTime >> 11) & 0x1F);
+    SystemTime.wDay = (WORD)((FatDate & 0x1F));
+    SystemTime.wMonth = (WORD)((FatDate >> 5) & 0xF);
+    SystemTime.wYear = (WORD)(((FatDate >> 9) & 0x7F) + 1980);
+
+    //
+    //  For some strange reason, the OS version of this function doesn't do
+    //  timezone adjustment, so this doesn't either
+    //
+
+    if (!SystemTimeToFileTime(&SystemTime, FileTime)) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
 // vim:sw=4:ts=4:et:

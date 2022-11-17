@@ -137,6 +137,12 @@ YoriPkgCheckIfPackageDeleteable(
     BOOL DeleteResult;
     BOOL BestEffortDelete;
 
+    if (DllKernel32.pGetPrivateProfileIntW == NULL ||
+        DllKernel32.pGetPrivateProfileStringW == NULL) {
+
+        return FALSE;
+    }
+
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         return FALSE;
     }
@@ -155,9 +161,9 @@ YoriPkgCheckIfPackageDeleteable(
         AppPath.LengthInChars = TargetDirectory->LengthInChars;
     }
 
-    BestEffortDelete = GetPrivateProfileInt(PackageName->StartOfString, _T("BestEffortDelete"), 0, PkgIniFile->StartOfString);
+    BestEffortDelete = DllKernel32.pGetPrivateProfileIntW(PackageName->StartOfString, _T("BestEffortDelete"), 0, PkgIniFile->StartOfString);
 
-    FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
+    FileCount = DllKernel32.pGetPrivateProfileIntW(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
     if (FileCount == 0) {
         YoriLibFreeStringContents(&AppPath);
         YoriLibFreeStringContents(&IniValue);
@@ -174,7 +180,7 @@ YoriPkgCheckIfPackageDeleteable(
     for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
-        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
+        IniValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
         if (IniValue.LengthInChars > 0) {
             if (!YoriLibIsPathPrefixed(&IniValue)) {
                 YoriLibYPrintf(&FileToDelete, _T("%y\\%y"), &AppPath, &IniValue);
@@ -339,6 +345,13 @@ YoriPkgDeletePackageInternal(
     DWORD DeleteResult;
     BOOL BestEffortDelete;
 
+    if (DllKernel32.pGetPrivateProfileIntW == NULL ||
+        DllKernel32.pGetPrivateProfileStringW == NULL ||
+        DllKernel32.pWritePrivateProfileStringW == NULL) {
+
+        return ERROR_PROC_NOT_FOUND;
+    }
+
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         return ERROR_NOT_ENOUGH_MEMORY;
     }
@@ -357,9 +370,9 @@ YoriPkgDeletePackageInternal(
         AppPath.LengthInChars = TargetDirectory->LengthInChars;
     }
 
-    BestEffortDelete = GetPrivateProfileInt(PackageName->StartOfString, _T("BestEffortDelete"), 0, PkgIniFile->StartOfString);
+    BestEffortDelete = DllKernel32.pGetPrivateProfileIntW(PackageName->StartOfString, _T("BestEffortDelete"), 0, PkgIniFile->StartOfString);
 
-    FileCount = GetPrivateProfileInt(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
+    FileCount = DllKernel32.pGetPrivateProfileIntW(PackageName->StartOfString, _T("FileCount"), 0, PkgIniFile->StartOfString);
     if (FileCount == 0) {
         YoriLibFreeStringContents(&AppPath);
         YoriLibFreeStringContents(&IniValue);
@@ -376,7 +389,7 @@ YoriPkgDeletePackageInternal(
     for (FileIndex = 1; FileIndex <= FileCount; FileIndex++) {
         YoriLibSPrintf(FileIndexString, _T("File%i"), FileIndex);
 
-        IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
+        IniValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, FileIndexString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
         if (IniValue.LengthInChars > 0) {
             if (!YoriLibIsPathPrefixed(&IniValue)) {
                 YoriLibYPrintf(&FileToDelete, _T("%y\\%y"), &AppPath, &IniValue);
@@ -422,20 +435,20 @@ YoriPkgDeletePackageInternal(
             }
         }
 
-        WritePrivateProfileString(PackageName->StartOfString, FileIndexString, NULL, PkgIniFile->StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, FileIndexString, NULL, PkgIniFile->StartOfString);
     }
 
-    WritePrivateProfileString(PackageName->StartOfString, _T("FileCount"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("Architecture"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("UpgradePath"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("SourcePath"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("SymbolPath"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("UpgradeToDailyPath"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("UpgradeToStablePath"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(PackageName->StartOfString, _T("Version"), NULL, PkgIniFile->StartOfString);
-    WritePrivateProfileString(_T("Installed"), PackageName->StartOfString, NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("FileCount"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("Architecture"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("UpgradePath"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("SourcePath"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("SymbolPath"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("UpgradeToDailyPath"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("UpgradeToStablePath"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, _T("Version"), NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Installed"), PackageName->StartOfString, NULL, PkgIniFile->StartOfString);
 
-    WritePrivateProfileString(PackageName->StartOfString, NULL, NULL, PkgIniFile->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(PackageName->StartOfString, NULL, NULL, PkgIniFile->StartOfString);
 
     YoriLibFreeStringContents(&IniValue);
     YoriLibFreeStringContents(&AppPath);
@@ -511,6 +524,8 @@ YoriPkgInstallPackageFileCallback(
     PYORIPKG_INSTALL_PKG_CONTEXT InstallContext = (PYORIPKG_INSTALL_PKG_CONTEXT)Context;
     TCHAR FileIndexString[16];
 
+    ASSERT(DllKernel32.pWritePrivateProfileStringW != NULL);
+
     if (InstallContext->ConflictingFileFound) {
         return FALSE;
     }
@@ -530,7 +545,7 @@ YoriPkgInstallPackageFileCallback(
     InstallContext->NumberFiles++;
     YoriLibSPrintf(FileIndexString, _T("File%i"), InstallContext->NumberFiles);
 
-    WritePrivateProfileString(InstallContext->PackageName->StartOfString, FileIndexString, RelativePath->StartOfString, InstallContext->IniFileName->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(InstallContext->PackageName->StartOfString, FileIndexString, RelativePath->StartOfString, InstallContext->IniFileName->StartOfString);
     return TRUE;
 }
 
@@ -606,6 +621,12 @@ YoriPkgInstallPackage(
     YoriLibInitEmptyString(&FullTargetDirectory);
     YoriLibInitEmptyString(&PkgIniFile);
 
+    if (DllKernel32.pGetPrivateProfileStringW == NULL ||
+        DllKernel32.pWritePrivateProfileStringW == NULL) {
+
+        goto Exit;
+    }
+
     //
     //  Create path to system packages.ini
     //
@@ -642,7 +663,7 @@ YoriPkgInstallPackage(
             goto Exit;
         }
 
-        PkgToDelete.LengthInChars = GetPrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, _T(""), PkgToDelete.StartOfString, PkgToDelete.LengthAllocated, PkgIniFile.StartOfString);
+        PkgToDelete.LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Installed"), Package->PackageName.StartOfString, _T(""), PkgToDelete.StartOfString, PkgToDelete.LengthAllocated, PkgIniFile.StartOfString);
 
         //
         //  If the version being installed is already there, we're done.
@@ -669,9 +690,9 @@ YoriPkgInstallPackage(
     //  upgrade will detect a new version and will retry.
     //
 
-    WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, _T("0"), PkgIniFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Installed"), Package->PackageName.StartOfString, _T("0"), PkgIniFile.StartOfString);
     if (Package->UpgradePath.LengthInChars > 0) {
-        WritePrivateProfileString(Package->PackageName.StartOfString, _T("UpgradePath"), Package->UpgradePath.StartOfString, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("UpgradePath"), Package->UpgradePath.StartOfString, PkgIniFile.StartOfString);
     }
 
     if (YoriLibGetWofVersionAvailable(&FullTargetDirectory)) {
@@ -702,7 +723,7 @@ YoriPkgInstallPackage(
         //  Mark the package as not requiring upgrade
         //
 
-        WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
 
         //
         //  Remove any trailing newlines in the returned error string
@@ -729,34 +750,34 @@ YoriPkgInstallPackage(
     }
 
     if (InstallContext.ConflictingFileFound) {
-        WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Installed"), Package->PackageName.StartOfString, NULL, PkgIniFile.StartOfString);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Install aborted due to file conflict\n"));
         goto Exit;
     }
 
-    WritePrivateProfileString(Package->PackageName.StartOfString, _T("Version"), Package->Version.StartOfString, PkgIniFile.StartOfString);
-    WritePrivateProfileString(Package->PackageName.StartOfString, _T("Architecture"), Package->Architecture.StartOfString, PkgIniFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("Version"), Package->Version.StartOfString, PkgIniFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("Architecture"), Package->Architecture.StartOfString, PkgIniFile.StartOfString);
     if (Package->UpgradePath.LengthInChars > 0) {
-        WritePrivateProfileString(Package->PackageName.StartOfString, _T("UpgradePath"), Package->UpgradePath.StartOfString, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("UpgradePath"), Package->UpgradePath.StartOfString, PkgIniFile.StartOfString);
     }
     if (Package->SourcePath.LengthInChars > 0) {
-        WritePrivateProfileString(Package->PackageName.StartOfString, _T("SourcePath"), Package->SourcePath.StartOfString, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("SourcePath"), Package->SourcePath.StartOfString, PkgIniFile.StartOfString);
     }
     if (Package->SymbolPath.LengthInChars > 0) {
-        WritePrivateProfileString(Package->PackageName.StartOfString, _T("SymbolPath"), Package->SymbolPath.StartOfString, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("SymbolPath"), Package->SymbolPath.StartOfString, PkgIniFile.StartOfString);
     }
     if (Package->UpgradeToDailyPath.LengthInChars > 0) {
-        WritePrivateProfileString(Package->PackageName.StartOfString, _T("UpgradeToDailyPath"), Package->UpgradeToDailyPath.StartOfString, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("UpgradeToDailyPath"), Package->UpgradeToDailyPath.StartOfString, PkgIniFile.StartOfString);
     }
 
     if (Package->UpgradeToStablePath.LengthInChars > 0) {
-        WritePrivateProfileString(Package->PackageName.StartOfString, _T("UpgradeToStablePath"), Package->UpgradeToStablePath.StartOfString, PkgIniFile.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("UpgradeToStablePath"), Package->UpgradeToStablePath.StartOfString, PkgIniFile.StartOfString);
     }
 
     YoriLibSPrintf(FileIndexString, _T("%i"), InstallContext.NumberFiles);
 
-    WritePrivateProfileString(Package->PackageName.StartOfString, _T("FileCount"), FileIndexString, PkgIniFile.StartOfString);
-    WritePrivateProfileString(_T("Installed"), Package->PackageName.StartOfString, Package->Version.StartOfString, PkgIniFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("FileCount"), FileIndexString, PkgIniFile.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Installed"), Package->PackageName.StartOfString, Package->Version.StartOfString, PkgIniFile.StartOfString);
 
     Result = TRUE;
 
@@ -803,11 +824,15 @@ YoriPkgBuildUpgradeLocationForNewArchitecture(
     YORI_STRING IniValue;
     YORI_STRING ExistingArchAndExtension;
 
+    if (DllKernel32.pGetPrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         return FALSE;
     }
 
-    IniValue.LengthInChars = GetPrivateProfileString(PackageName->StartOfString, _T("Architecture"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
+    IniValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("Architecture"), _T(""), IniValue.StartOfString, IniValue.LengthAllocated, PkgIniFile->StartOfString);
     if (IniValue.LengthInChars == 0) {
         YoriLibFreeStringContents(&IniValue);
         return FALSE;

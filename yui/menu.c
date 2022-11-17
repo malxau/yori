@@ -1171,10 +1171,11 @@ YuiMenuReloadIfChanged(
     FoundChange = FALSE;
     HandleCount = sizeof(YuiContext->StartChangeNotifications)/sizeof(YuiContext->StartChangeNotifications[0]);
     while(TRUE) {
-        WaitStatus = WaitForMultipleObjects(HandleCount,
-                                            YuiContext->StartChangeNotifications,
-                                            FALSE,
-                                            0);
+        WaitStatus = WaitForMultipleObjectsEx(HandleCount,
+                                              YuiContext->StartChangeNotifications,
+                                              FALSE,
+                                              0,
+                                              FALSE);
         if (WaitStatus == WAIT_TIMEOUT) {
             if (!FoundChange) {
                 return TRUE;

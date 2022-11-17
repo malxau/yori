@@ -140,7 +140,7 @@ YoriLibUpdateBinaryFromFile(
     //
 
     if (!MoveFileEx(NewPath, PathToReplace, MOVEFILE_COPY_ALLOWED)) {
-        MoveFile(OldPath, PathToReplace);
+        MoveFileEx(OldPath, PathToReplace, MOVEFILE_COPY_ALLOWED);
         return FALSE;
     }
 

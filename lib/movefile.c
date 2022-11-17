@@ -221,12 +221,26 @@ YoriLibCopyFile(
     DWORD Error;
     DWORD Attributes;
     DWORD NewAttributes;
+    BOOL Result;
+    BOOL Cancelled;
 
     ASSERT(YoriLibIsStringNullTerminated(SourceFile));
     ASSERT(YoriLibIsStringNullTerminated(DestFile));
 
+    if (DllKernel32.pCopyFileW == NULL &&
+        DllKernel32.pCopyFileExW == NULL) {
+
+        return ERROR_PROC_NOT_FOUND;
+    }
+
     Error = ERROR_SUCCESS;
-    if (!CopyFile(SourceFile->StartOfString, DestFile->StartOfString, FALSE)) {
+    if (DllKernel32.pCopyFileW != NULL) {
+        Result = DllKernel32.pCopyFileW(SourceFile->StartOfString, DestFile->StartOfString, FALSE);
+    } else {
+        Cancelled = FALSE;
+        Result = DllKernel32.pCopyFileExW(SourceFile->StartOfString, DestFile->StartOfString, NULL, NULL, &Cancelled, 0);
+    }
+    if (!Result) {
         Error = GetLastError();
         if (Error == ERROR_ACCESS_DENIED) {
             Attributes = GetFileAttributes(DestFile->StartOfString);
@@ -238,7 +252,14 @@ YoriLibCopyFile(
                     return Error;
                 }
 
-                if (!CopyFile(SourceFile->StartOfString, DestFile->StartOfString, FALSE)) {
+                if (DllKernel32.pCopyFileW != NULL) {
+                    Result = DllKernel32.pCopyFileW(SourceFile->StartOfString, DestFile->StartOfString, FALSE);
+                } else {
+                    Cancelled = FALSE;
+                    Result = DllKernel32.pCopyFileExW(SourceFile->StartOfString, DestFile->StartOfString, NULL, NULL, &Cancelled, 0);
+                }
+
+                if (!Result) {
                     SetFileAttributes(DestFile->StartOfString, Attributes);
                     return Error;
                 }

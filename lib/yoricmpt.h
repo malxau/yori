@@ -5964,6 +5964,32 @@ ASSIGN_PROCESS_TO_JOB_OBJECT(HANDLE, HANDLE);
 typedef ASSIGN_PROCESS_TO_JOB_OBJECT *PASSIGN_PROCESS_TO_JOB_OBJECT;
 
 /**
+ A prototype for the CopyFileExW function.
+ */
+typedef
+BOOL
+WINAPI
+COPY_FILE_EXW(LPCWSTR, LPCWSTR, PVOID, PVOID, LPBOOL, DWORD);
+
+/**
+ A prototype for a pointer to the CopyFileExW function.
+ */
+typedef COPY_FILE_EXW *PCOPY_FILE_EXW;
+
+/**
+ A prototype for the CopyFileW function.
+ */
+typedef
+BOOL
+WINAPI
+COPY_FILEW(LPCWSTR, LPCWSTR, BOOL);
+
+/**
+ A prototype for a pointer to the CopyFileW function.
+ */
+typedef COPY_FILEW *PCOPY_FILEW;
+
+/**
  A prototype for the CreateHardLinkW function.
  */
 typedef
@@ -6253,6 +6279,30 @@ GET_NATIVE_SYSTEM_INFO(PVOID);
 typedef GET_NATIVE_SYSTEM_INFO *PGET_NATIVE_SYSTEM_INFO;
 
 /**
+ A prototype for the GetPrivateProfileIntW function.
+ */
+typedef
+DWORD WINAPI
+GET_PRIVATE_PROFILE_INTW(LPCWSTR, LPCWSTR, INT, LPCWSTR);
+
+/**
+ A prototype for a pointer to the GetPrivateProfileIntW function.
+ */
+typedef GET_PRIVATE_PROFILE_INTW *PGET_PRIVATE_PROFILE_INTW;
+
+/**
+ A prototype for the GetPrivateProfileSectionW function.
+ */
+typedef
+DWORD WINAPI
+GET_PRIVATE_PROFILE_SECTIONW(LPCWSTR, LPWSTR, DWORD, LPCWSTR);
+
+/**
+ A prototype for a pointer to the GetPrivateProfileSectionW function.
+ */
+typedef GET_PRIVATE_PROFILE_SECTIONW *PGET_PRIVATE_PROFILE_SECTIONW;
+
+/**
  A prototype for the GetPrivateProfileSectionNamesW function.
  */
 typedef
@@ -6263,6 +6313,18 @@ GET_PRIVATE_PROFILE_SECTION_NAMESW(LPWSTR, DWORD, LPCWSTR);
  A prototype for a pointer to the GetPrivateProfileSectionNamesW function.
  */
 typedef GET_PRIVATE_PROFILE_SECTION_NAMESW *PGET_PRIVATE_PROFILE_SECTION_NAMESW;
+
+/**
+ A prototype for the GetPrivateProfileStringW function.
+ */
+typedef
+DWORD WINAPI
+GET_PRIVATE_PROFILE_STRINGW(LPCWSTR, LPCWSTR, LPCWSTR, LPWSTR, DWORD, LPCWSTR);
+
+/**
+ A prototype for a pointer to the GetPrivateProfileStringW function.
+ */
+typedef GET_PRIVATE_PROFILE_STRINGW *PGET_PRIVATE_PROFILE_STRINGW;
 
 /**
  A prototype for the GetProcessIoCounters function.
@@ -6337,6 +6399,30 @@ GET_VOLUME_PATH_NAMEW(LPCWSTR, LPWSTR, DWORD);
 typedef GET_VOLUME_PATH_NAMEW *PGET_VOLUME_PATH_NAMEW;
 
 /**
+ A prototype for the GlobalLock function.
+ */
+typedef
+LPVOID WINAPI
+GLOBAL_LOCK(HGLOBAL);
+
+/**
+ A prototype for a pointer to the GlobalLock function.
+ */
+typedef GLOBAL_LOCK *PGLOBAL_LOCK;
+
+/**
+ A prototype for the GlobalMemoryStatus function.
+ */
+typedef
+BOOL WINAPI
+GLOBAL_MEMORY_STATUS(LPMEMORYSTATUS);
+
+/**
+ A prototype for a pointer to the GlobalMemoryStatus function.
+ */
+typedef GLOBAL_MEMORY_STATUS *PGLOBAL_MEMORY_STATUS;
+
+/**
  A prototype for the GlobalMemoryStatusEx function.
  */
 typedef
@@ -6347,6 +6433,30 @@ GLOBAL_MEMORY_STATUS_EX(PYORI_MEMORYSTATUSEX);
  A prototype for a pointer to the GlobalMemoryStatusEx function.
  */
 typedef GLOBAL_MEMORY_STATUS_EX *PGLOBAL_MEMORY_STATUS_EX;
+
+/**
+ A prototype for the GlobalSize function.
+ */
+typedef
+SIZE_T WINAPI
+GLOBAL_SIZE(HGLOBAL);
+
+/**
+ A prototype for a pointer to the GlobalSize function.
+ */
+typedef GLOBAL_SIZE *PGLOBAL_SIZE;
+
+/**
+ A prototype for the GlobalUnlock function.
+ */
+typedef
+BOOL WINAPI
+GLOBAL_UNLOCK(HGLOBAL);
+
+/**
+ A prototype for a pointer to the GlobalUnlock function.
+ */
+typedef GLOBAL_UNLOCK *PGLOBAL_UNLOCK;
 
 /**
  A prototype for the InterlockedCompareExchange function.
@@ -6383,6 +6493,30 @@ IS_WOW64_PROCESS2(HANDLE, PWORD, PWORD);
  A prototype for a pointer to the IsWow64Process2 function.
  */
 typedef IS_WOW64_PROCESS2 *PIS_WOW64_PROCESS2;
+
+/**
+ A prototype for the LoadLibraryW function.
+ */
+typedef
+HINSTANCE WINAPI
+LOAD_LIBRARYW(LPCWSTR);
+
+/**
+ A prototype for a pointer to the LoadLibraryW function.
+ */
+typedef LOAD_LIBRARYW *PLOAD_LIBRARYW;
+
+/**
+ A prototype for the LoadLibraryExW function.
+ */
+typedef
+HINSTANCE WINAPI
+LOAD_LIBRARY_EXW(LPCWSTR, HANDLE, DWORD);
+
+/**
+ A prototype for a pointer to the LoadLibraryExW function.
+ */
+typedef LOAD_LIBRARY_EXW *PLOAD_LIBRARY_EXW;
 
 /**
  A prototype for the OpenThread function.
@@ -6505,6 +6639,18 @@ SET_INFORMATION_JOB_OBJECT(HANDLE, DWORD, PVOID, DWORD);
 typedef SET_INFORMATION_JOB_OBJECT *PSET_INFORMATION_JOB_OBJECT;
 
 /**
+ A prototype for the WritePrivateProfileStringW function.
+ */
+typedef
+BOOL WINAPI
+WRITE_PRIVATE_PROFILE_STRINGW(LPCWSTR, LPCWSTR, LPCWSTR, LPCWSTR);
+
+/**
+ A prototype for a pointer to the WritePrivateProfileStringW function.
+ */
+typedef WRITE_PRIVATE_PROFILE_STRINGW *PWRITE_PRIVATE_PROFILE_STRINGW;
+
+/**
  A prototype for the Wow64DisableWow64FsRedirection function.
  */
 typedef
@@ -6549,7 +6695,17 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
     /**
      A handle to the Dll module.
      */
-    HINSTANCE hDll;
+    HINSTANCE hDllKernelBase;
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDllKernel32;
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDllKernel32Legacy;
 
     /**
      If it's available on the current system, a pointer to AddConsoleAliasW.
@@ -6560,6 +6716,16 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to AssignProcessToJobObject.
      */
     PASSIGN_PROCESS_TO_JOB_OBJECT pAssignProcessToJobObject;
+
+    /**
+     If it's available on the current system, a pointer to CopyFileExW.
+     */
+    PCOPY_FILE_EXW pCopyFileExW;
+
+    /**
+     If it's available on the current system, a pointer to CopyFileW.
+     */
+    PCOPY_FILEW pCopyFileW;
 
     /**
      If it's available on the current system, a pointer to CreateHardLinkW.
@@ -6682,9 +6848,24 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
     PGET_NATIVE_SYSTEM_INFO pGetNativeSystemInfo;
 
     /**
+     If it's available on the current system, a pointer to GetPrivateProfileIntW.
+     */
+    PGET_PRIVATE_PROFILE_INTW pGetPrivateProfileIntW;
+
+    /**
+     If it's available on the current system, a pointer to GetPrivateProfileSectionW.
+     */
+    PGET_PRIVATE_PROFILE_SECTIONW pGetPrivateProfileSectionW;
+
+    /**
      If it's available on the current system, a pointer to GetPrivateProfileSectionNamesW.
      */
     PGET_PRIVATE_PROFILE_SECTION_NAMESW pGetPrivateProfileSectionNamesW;
+
+    /**
+     If it's available on the current system, a pointer to GetPrivateProfileStringW.
+     */
+    PGET_PRIVATE_PROFILE_STRINGW pGetPrivateProfileStringW;
 
     /**
      If it's available on the current system, a pointer to GetProcessIoCounters.
@@ -6717,9 +6898,29 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
     PGET_VOLUME_PATH_NAMEW pGetVolumePathNameW;
 
     /**
+     If it's available on the current system, a pointer to GlobalLock.
+     */
+    PGLOBAL_LOCK pGlobalLock;
+
+    /**
+     If it's available on the current system, a pointer to GlobalMemoryStatus.
+     */
+    PGLOBAL_MEMORY_STATUS pGlobalMemoryStatus;
+
+    /**
      If it's available on the current system, a pointer to GlobalMemoryStatusEx.
      */
     PGLOBAL_MEMORY_STATUS_EX pGlobalMemoryStatusEx;
+
+    /**
+     If it's available on the current system, a pointer to GlobalSize.
+     */
+    PGLOBAL_SIZE pGlobalSize;
+
+    /**
+     If it's available on the current system, a pointer to GlobalUnlock.
+     */
+    PGLOBAL_UNLOCK pGlobalUnlock;
 
     /**
      If it's available on the current system, a pointer to InterlockedCompareExchange.
@@ -6735,6 +6936,16 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to IsWow64Process2.
      */
     PIS_WOW64_PROCESS2 pIsWow64Process2;
+
+    /**
+     If it's available on the current system, a pointer to LoadLibraryW.
+     */
+    PLOAD_LIBRARYW pLoadLibraryW;
+
+    /**
+     If it's available on the current system, a pointer to LoadLibraryExW.
+     */
+    PLOAD_LIBRARY_EXW pLoadLibraryExW;
 
     /**
      If it's available on the current system, a pointer to OpenThread.
@@ -6785,6 +6996,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to SetInformationJobObject.
      */
     PSET_INFORMATION_JOB_OBJECT pSetInformationJobObject;
+
+    /**
+     If it's available on the current system, a pointer to WritePrivateProfileStringW.
+     */
+    PWRITE_PRIVATE_PROFILE_STRINGW pWritePrivateProfileStringW;
 
     /**
      If it's available on the current system, a pointer to Wow64DisableWow64FsRedirection.

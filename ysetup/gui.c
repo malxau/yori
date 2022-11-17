@@ -312,7 +312,7 @@ SetupGuiDialogProc(
                 };
 
                 hDC = GetWindowDC(hDlg);
-                hFont = CreateFont(-MulDiv(8, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+                hFont = CreateFont(-YoriLibMulDiv(8, GetDeviceCaps(hDC, LOGPIXELSY), 72),
                                    0,
                                    0,
                                    0,

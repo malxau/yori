@@ -76,7 +76,13 @@ YoriLibLoadLibraryFromSystemDirectory(
 
     FullPath.LengthInChars += YoriLibSPrintf(&FullPath.StartOfString[FullPath.LengthInChars], _T("\\%y"), &YsDllName);
 
-    DllModule = LoadLibrary(FullPath.StartOfString);
+
+    DllModule = NULL;
+    if (DllKernel32.pLoadLibraryW != NULL) {
+        DllModule = DllKernel32.pLoadLibraryW(FullPath.StartOfString);
+    } else if (DllKernel32.pLoadLibraryExW != NULL) {
+        DllModule = DllKernel32.pLoadLibraryExW(FullPath.StartOfString, NULL, 0);
+    }
 
     YoriLibFreeStringContents(&FullPath);
     return DllModule;
@@ -129,6 +135,8 @@ YORI_KERNEL32_FUNCTIONS DllKernel32;
 CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pAddConsoleAliasW, "AddConsoleAliasW"},
     {(FARPROC *)&DllKernel32.pAssignProcessToJobObject, "AssignProcessToJobObject"},
+    {(FARPROC *)&DllKernel32.pCopyFileW, "CopyFileW"},
+    {(FARPROC *)&DllKernel32.pCopyFileExW, "CopyFileExW"},
     {(FARPROC *)&DllKernel32.pCreateHardLinkW, "CreateHardLinkW"},
     {(FARPROC *)&DllKernel32.pCreateJobObjectW, "CreateJobObjectW"},
     {(FARPROC *)&DllKernel32.pCreateSymbolicLinkW, "CreateSymbolicLinkW"},
@@ -153,17 +161,26 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pGetLogicalProcessorInformation, "GetLogicalProcessorInformation"},
     {(FARPROC *)&DllKernel32.pGetLogicalProcessorInformationEx, "GetLogicalProcessorInformationEx"},
     {(FARPROC *)&DllKernel32.pGetNativeSystemInfo, "GetNativeSystemInfo"},
+    {(FARPROC *)&DllKernel32.pGetPrivateProfileIntW, "GetPrivateProfileIntW"},
+    {(FARPROC *)&DllKernel32.pGetPrivateProfileSectionW, "GetPrivateProfileSectionW"},
     {(FARPROC *)&DllKernel32.pGetPrivateProfileSectionNamesW, "GetPrivateProfileSectionNamesW"},
+    {(FARPROC *)&DllKernel32.pGetPrivateProfileStringW, "GetPrivateProfileStringW"},
     {(FARPROC *)&DllKernel32.pGetProcessIoCounters, "GetProcessIoCounters"},
     {(FARPROC *)&DllKernel32.pGetProductInfo, "GetProductInfo"},
     {(FARPROC *)&DllKernel32.pGetTickCount64, "GetTickCount64"},
     {(FARPROC *)&DllKernel32.pGetVersionExW, "GetVersionExW"},
     {(FARPROC *)&DllKernel32.pGetVolumePathNamesForVolumeNameW, "GetVolumePathNamesForVolumeNameW"},
     {(FARPROC *)&DllKernel32.pGetVolumePathNameW, "GetVolumePathNameW"},
+    {(FARPROC *)&DllKernel32.pGlobalLock, "GlobalLock"},
+    {(FARPROC *)&DllKernel32.pGlobalMemoryStatus, "GlobalMemoryStatus"},
     {(FARPROC *)&DllKernel32.pGlobalMemoryStatusEx, "GlobalMemoryStatusEx"},
+    {(FARPROC *)&DllKernel32.pGlobalSize, "GlobalSize"},
+    {(FARPROC *)&DllKernel32.pGlobalUnlock, "GlobalUnlock"},
     {(FARPROC *)&DllKernel32.pInterlockedCompareExchange, "InterlockedCompareExchange"},
     {(FARPROC *)&DllKernel32.pIsWow64Process, "IsWow64Process"},
     {(FARPROC *)&DllKernel32.pIsWow64Process2, "IsWow64Process2"},
+    {(FARPROC *)&DllKernel32.pLoadLibraryW, "LoadLibraryW"},
+    {(FARPROC *)&DllKernel32.pLoadLibraryExW, "LoadLibraryExW"},
     {(FARPROC *)&DllKernel32.pOpenThread, "OpenThread"},
     {(FARPROC *)&DllKernel32.pQueryFullProcessImageNameW, "QueryFullProcessImageNameW"},
     {(FARPROC *)&DllKernel32.pQueryInformationJobObject, "QueryInformationJobObject"},
@@ -174,10 +191,31 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pSetCurrentConsoleFontEx, "SetCurrentConsoleFontEx"},
     {(FARPROC *)&DllKernel32.pSetFileInformationByHandle, "SetFileInformationByHandle"},
     {(FARPROC *)&DllKernel32.pSetInformationJobObject, "SetInformationJobObject"},
+    {(FARPROC *)&DllKernel32.pWritePrivateProfileStringW, "WritePrivateProfileStringW"},
     {(FARPROC *)&DllKernel32.pWow64DisableWow64FsRedirection, "Wow64DisableWow64FsRedirection"},
     {(FARPROC *)&DllKernel32.pWow64GetThreadContext, "Wow64GetThreadContext"},
     {(FARPROC *)&DllKernel32.pWow64SetThreadContext, "Wow64SetThreadContext"},
 };
+
+/**
+ Try to resolve function pointers for kernel32 functions which could be in
+ the specified DLL module.
+
+ @param hDll The DLL to load functions from.
+ */
+VOID
+YoriLibLoadKernel32FunctionsFromDll(
+    __in HMODULE hDll
+    )
+{
+    DWORD Count;
+
+    for (Count = 0; Count < sizeof(DllKernel32Symbols)/sizeof(DllKernel32Symbols[0]); Count++) {
+        if (*(DllKernel32Symbols[Count].FnPtr) == NULL) {
+            *(DllKernel32Symbols[Count].FnPtr) = GetProcAddress(hDll, DllKernel32Symbols[Count].FnName);
+        }
+    }
+}
 
 
 /**
@@ -190,19 +228,40 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
 BOOL
 YoriLibLoadKernel32Functions(VOID)
 {
-    DWORD Count;
-    if (DllKernel32.hDll != NULL) {
+    if (DllKernel32.hDllKernelBase != NULL ||
+        DllKernel32.hDllKernel32 != NULL) {
         return TRUE;
     }
 
-    DllKernel32.hDll = GetModuleHandle(_T("KERNEL32"));
-    if (DllKernel32.hDll == NULL) {
-        return FALSE;
+    //
+    //  Try to resolve everything that can be resolved against kernelbase
+    //  directly.
+    //
+
+    DllKernel32.hDllKernelBase = GetModuleHandle(_T("KERNELBASE"));
+    if (DllKernel32.hDllKernelBase != NULL) {
+        YoriLibLoadKernel32FunctionsFromDll(DllKernel32.hDllKernelBase);
     }
 
-    for (Count = 0; Count < sizeof(DllKernel32Symbols)/sizeof(DllKernel32Symbols[0]); Count++) {
-        *(DllKernel32Symbols[Count].FnPtr) = GetProcAddress(DllKernel32.hDll, DllKernel32Symbols[Count].FnName);
+    //
+    //  On a kernelbase only build, kernel32 is not part of the import table.
+    //  Nonetheless on mainstream editions it gets mapped into the process
+    //  automatically, so GetModuleHandle succeeds.
+    //
+    //  On editions without kernel32, hopefully this will fail, and it'll
+    //  be forced to load and probe the legacy DLL instead.
+    //
+
+    DllKernel32.hDllKernel32 = GetModuleHandle(_T("KERNEL32"));
+    if (DllKernel32.hDllKernel32 != NULL) {
+        YoriLibLoadKernel32FunctionsFromDll(DllKernel32.hDllKernel32);
+    } else {
+        DllKernel32.hDllKernel32Legacy = YoriLibLoadLibraryFromSystemDirectory(_T("KERNEL32LEGACY.DLL"));
+        if (DllKernel32.hDllKernel32Legacy != NULL) {
+            YoriLibLoadKernel32FunctionsFromDll(DllKernel32.hDllKernel32Legacy);
+        }
     }
+
 
     return TRUE;
 }

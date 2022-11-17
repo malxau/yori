@@ -1162,7 +1162,7 @@ YoriLibCabFciGetOpenInfo(
         NewAttributes = (WORD)(NewAttributes | YORI_CAB_NAME_IS_UTF);
     }
     *Attributes = NewAttributes;
-    FileTimeToDosDateTime(&FileInfo.ftLastWriteTime, Date, Time);
+    YoriLibFileTimeToDosDateTime(&FileInfo.ftLastWriteTime, Date, Time);
 
     return Handle;
 }
@@ -1238,7 +1238,7 @@ YoriLibCabNotify(
             //  Convert the DOS time into a local time zone relative NT time
             //
 
-            DosDateTimeToFileTime(Notification->TinyDate, Notification->TinyTime, &TimeToSet);
+            YoriLibDosDateTimeToFileTime(Notification->TinyDate, Notification->TinyTime, &TimeToSet);
 
             //
             //  Apply the time zone bias adjustment to the NT time

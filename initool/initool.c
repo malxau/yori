@@ -82,11 +82,15 @@ IniToolDeleteFromIniFile(
 {
     YORI_STRING RealFileName;
 
+    if (DllKernel32.pWritePrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
 
-    if (!WritePrivateProfileString(Section->StartOfString, (Key != NULL)?Key->StartOfString:NULL, NULL, RealFileName.StartOfString)) {
+    if (!DllKernel32.pWritePrivateProfileStringW(Section->StartOfString, (Key != NULL)?Key->StartOfString:NULL, NULL, RealFileName.StartOfString)) {
         YoriLibFreeStringContents(&RealFileName);
         return FALSE;
     }
@@ -114,6 +118,10 @@ IniToolListSectionFromIniFile(
     YORI_STRING Value;
     LPTSTR ThisVar;
 
+    if (DllKernel32.pGetPrivateProfileSectionW == NULL) {
+        return FALSE;
+    }
+
     if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
@@ -123,7 +131,7 @@ IniToolListSectionFromIniFile(
         return FALSE;
     }
 
-    Value.LengthInChars = GetPrivateProfileSection(Section->StartOfString, Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    Value.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(Section->StartOfString, Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
     ThisVar = Value.StartOfString;
     while (*ThisVar != '\0') {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%s\n"), ThisVar);
@@ -201,6 +209,10 @@ IniToolReadFromIniFile(
     YORI_STRING RealFileName;
     YORI_STRING Value;
 
+    if (DllKernel32.pGetPrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
@@ -210,7 +222,7 @@ IniToolReadFromIniFile(
         return FALSE;
     }
 
-    Value.LengthInChars = GetPrivateProfileString(Section->StartOfString, Key->StartOfString, _T(""), Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
+    Value.LengthInChars = DllKernel32.pGetPrivateProfileStringW(Section->StartOfString, Key->StartOfString, _T(""), Value.StartOfString, Value.LengthAllocated, RealFileName.StartOfString);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &Value);
 
     YoriLibFreeStringContents(&RealFileName);
@@ -241,11 +253,15 @@ IniToolWriteToIniFile(
 {
     YORI_STRING RealFileName;
 
+    if (DllKernel32.pWritePrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     if (!YoriLibUserStringToSingleFilePath(UserFileName, FALSE, &RealFileName)) {
         return FALSE;
     }
 
-    if (!WritePrivateProfileString(Section->StartOfString, Key->StartOfString, Value->StartOfString, RealFileName.StartOfString)) {
+    if (!DllKernel32.pWritePrivateProfileStringW(Section->StartOfString, Key->StartOfString, Value->StartOfString, RealFileName.StartOfString)) {
         YoriLibFreeStringContents(&RealFileName);
         return FALSE;
     }

@@ -512,6 +512,8 @@ ENTRYPOINT(
                                  _T("Commit Limit: $COMMITLIMIT$\n")
                                  _T("Available Commit: $AVAILABLECOMMIT$\n");
 
+    ZeroMemory(&MemContext, sizeof(MemContext));
+
     for (i = 1; i < ArgC; i++) {
 
         ArgumentUnderstood = FALSE;
@@ -555,7 +557,7 @@ ENTRYPOINT(
         MemDisplayProcessMemoryUsage(GroupProcesses);
     }
 
-    if (DllKernel32.pGlobalMemoryStatusEx) {
+    if (DllKernel32.pGlobalMemoryStatusEx != NULL) {
         YORI_MEMORYSTATUSEX MemStatusEx;
         MemStatusEx.dwLength = sizeof(MemStatusEx);
         if (!DllKernel32.pGlobalMemoryStatusEx(&MemStatusEx)) {
@@ -573,17 +575,9 @@ ENTRYPOINT(
         MemContext.AvailableCommit.QuadPart = MemStatusEx.ullAvailPageFile;
         MemContext.TotalVirtual.QuadPart = MemStatusEx.ullTotalVirtual;
         MemContext.AvailableVirtual.QuadPart = MemStatusEx.ullAvailVirtual;
-    } else {
+    } else if (DllKernel32.pGlobalMemoryStatus != NULL) {
         MEMORYSTATUS MemStatus;
-        //
-        //  Warning about using a deprecated function and how we should use
-        //  GlobalMemoryStatusEx instead.  The analyzer isn't smart enough to
-        //  notice that when it's available, that's what we do.
-        //
-#if defined(_MSC_VER) && (_MSC_VER >= 1700)
-#pragma warning(suppress: 28159)
-#endif
-        GlobalMemoryStatus(&MemStatus);
+        DllKernel32.pGlobalMemoryStatus(&MemStatus);
         MemContext.TotalPhysical.QuadPart = MemStatus.dwTotalPhys;
         MemContext.AvailablePhysical.QuadPart = MemStatus.dwAvailPhys;
         MemContext.TotalCommit.QuadPart = MemStatus.dwTotalPageFile;

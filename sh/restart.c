@@ -256,7 +256,8 @@ YoriShSaveRestartStateWorker(
     if (DllKernel32.pRegisterApplicationRestart == NULL ||
         DllKernel32.pGetConsoleScreenBufferInfoEx == NULL ||
         DllKernel32.pGetCurrentConsoleFontEx == NULL ||
-        DllKernel32.pGetConsoleWindow == NULL) {
+        DllKernel32.pGetConsoleWindow == NULL ||
+        DllKernel32.pWritePrivateProfileStringW == NULL) {
 
         return 0;
     }
@@ -340,24 +341,24 @@ YoriShSaveRestartStateWorker(
     }
 
     YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.dwSize.X);
-    WritePrivateProfileString(_T("Window"), _T("BufferWidth"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("BufferWidth"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
     YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.dwSize.Y);
-    WritePrivateProfileString(_T("Window"), _T("BufferHeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("BufferHeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
     YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.srWindow.Right - ScreenBufferInfo.srWindow.Left + 1);
-    WritePrivateProfileString(_T("Window"), _T("WindowWidth"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("WindowWidth"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
     YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.srWindow.Bottom - ScreenBufferInfo.srWindow.Top + 1);
-    WritePrivateProfileString(_T("Window"), _T("WindowHeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("WindowHeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
 
     YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), YoriLibVtGetDefaultColor());
-    WritePrivateProfileString(_T("Window"), _T("DefaultColor"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("DefaultColor"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
     YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.wPopupAttributes);
-    WritePrivateProfileString(_T("Window"), _T("PopupColor"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("PopupColor"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
 
     for (Count = 0; Count < sizeof(ScreenBufferInfo.ColorTable)/sizeof(ScreenBufferInfo.ColorTable[0]); Count++) {
         TCHAR ColorName[32];
         YoriLibSPrintf(ColorName, _T("Color%i"), Count);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), ScreenBufferInfo.ColorTable[Count]);
-        WritePrivateProfileString(_T("Window"), ColorName, WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), ColorName, WriteBuffer.StartOfString, RestartFileName.StartOfString);
     }
 
     //
@@ -371,9 +372,9 @@ YoriShSaveRestartStateWorker(
 
         if (DllUser32.pGetWindowRect(DllKernel32.pGetConsoleWindow(), &WindowRect)) {
             YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), WindowRect.left);
-            WritePrivateProfileString(_T("Window"), _T("WindowLeft"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+            DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("WindowLeft"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
             YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), WindowRect.top);
-            WritePrivateProfileString(_T("Window"), _T("WindowTop"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+            DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("WindowTop"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
         }
     }
 
@@ -383,7 +384,7 @@ YoriShSaveRestartStateWorker(
 
     WriteBuffer.LengthInChars = GetConsoleTitle(WriteBuffer.StartOfString, 4095);
     if (WriteBuffer.LengthInChars > 0) {
-        WritePrivateProfileString(_T("Window"), _T("Title"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("Title"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
     } else {
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Error getting window title: %i\n"), GetLastError());
     }
@@ -396,16 +397,16 @@ YoriShSaveRestartStateWorker(
     FontInfo.cbSize = sizeof(FontInfo);
     if (DllKernel32.pGetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo)) {
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.nFont);
-        WritePrivateProfileString(_T("Window"), _T("FontIndex"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("FontIndex"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.dwFontSize.X);
-        WritePrivateProfileString(_T("Window"), _T("FontWidth"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("FontWidth"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.dwFontSize.Y);
-        WritePrivateProfileString(_T("Window"), _T("FontHeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("FontHeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.FontFamily);
-        WritePrivateProfileString(_T("Window"), _T("FontFamily"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("FontFamily"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
         YoriLibSPrintf(WriteBuffer.StartOfString, _T("%i"), FontInfo.FontWeight);
-        WritePrivateProfileString(_T("Window"), _T("FontWeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
-        WritePrivateProfileString(_T("Window"), _T("FontName"), FontInfo.FaceName, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("FontWeight"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("FontName"), FontInfo.FaceName, RestartFileName.StartOfString);
     }
 
     //
@@ -414,7 +415,7 @@ YoriShSaveRestartStateWorker(
 
     WriteBuffer.LengthInChars = GetCurrentDirectory(WriteBuffer.LengthAllocated, WriteBuffer.StartOfString);
     if (WriteBuffer.LengthInChars > 0 && WriteBuffer.LengthInChars < WriteBuffer.LengthAllocated) {
-        WritePrivateProfileString(_T("Window"), _T("CurrentDirectory"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("CurrentDirectory"), WriteBuffer.StartOfString, RestartFileName.StartOfString);
     }
 
     //
@@ -437,7 +438,7 @@ YoriShSaveRestartStateWorker(
                     ThisValue[0] = '\0';
                     ThisValue++;
 
-                    WritePrivateProfileString(_T("Environment"), ThisVar, ThisValue, RestartFileName.StartOfString);
+                    DllKernel32.pWritePrivateProfileStringW(_T("Environment"), ThisVar, ThisValue, RestartFileName.StartOfString);
 
                     ThisValue--;
                     ThisValue[0] = '=';
@@ -468,7 +469,7 @@ YoriShSaveRestartStateWorker(
                 ThisValue[0] = '\0';
                 ThisValue++;
 
-                WritePrivateProfileString(_T("CurrentDirectories"), ThisVar, ThisValue, RestartFileName.StartOfString);
+                DllKernel32.pWritePrivateProfileStringW(_T("CurrentDirectories"), ThisVar, ThisValue, RestartFileName.StartOfString);
 
                 ThisValue--;
                 ThisValue[0] = '=';
@@ -498,7 +499,7 @@ YoriShSaveRestartStateWorker(
                     ThisValue[0] = '\0';
                     ThisValue++;
 
-                    WritePrivateProfileString(_T("Aliases"), ThisVar, ThisValue, RestartFileName.StartOfString);
+                    DllKernel32.pWritePrivateProfileStringW(_T("Aliases"), ThisVar, ThisValue, RestartFileName.StartOfString);
                 }
             }
         }
@@ -518,7 +519,7 @@ YoriShSaveRestartStateWorker(
         Count = 1;
         while (*ThisValue != '\0') {
             YoriLibSPrintf(WriteBuffer.StartOfString, _T("%03i"), Count);
-            WritePrivateProfileString(_T("History"), WriteBuffer.StartOfString, ThisValue, RestartFileName.StartOfString);
+            DllKernel32.pWritePrivateProfileStringW(_T("History"), WriteBuffer.StartOfString, ThisValue, RestartFileName.StartOfString);
             ThisValue += _tcslen(ThisValue) + 1;
             Count++;
         }
@@ -550,7 +551,7 @@ YoriShSaveRestartStateWorker(
 
         if (hBufferFile != INVALID_HANDLE_VALUE) {
             YoriLibRewriteConsoleContents(hBufferFile, LineCount, 0);
-            WritePrivateProfileString(_T("Window"), _T("Contents"), RestartBufferFileName.StartOfString, RestartFileName.StartOfString);
+            DllKernel32.pWritePrivateProfileStringW(_T("Window"), _T("Contents"), RestartBufferFileName.StartOfString, RestartFileName.StartOfString);
             CloseHandle(hBufferFile);
         }
 
@@ -651,6 +652,9 @@ YoriShLoadSavedRestartState(
     if (DllKernel32.pSetConsoleScreenBufferInfoEx == NULL ||
         DllKernel32.pSetCurrentConsoleFontEx == NULL ||
         DllKernel32.pGetConsoleWindow == NULL ||
+        DllKernel32.pGetPrivateProfileIntW == NULL ||
+        DllKernel32.pGetPrivateProfileSectionW == NULL ||
+        DllKernel32.pGetPrivateProfileStringW == NULL ||
         DllUser32.pGetWindowRect == NULL ||
         DllUser32.pSetWindowPos == NULL) {
 
@@ -672,16 +676,16 @@ YoriShLoadSavedRestartState(
     //  Read and populate window settings
     //
 
-    ScreenBufferInfo.dwSize.X = (USHORT)GetPrivateProfileInt(_T("Window"), _T("BufferWidth"), 0, RestartFileName.StartOfString);
-    ScreenBufferInfo.dwSize.Y = (USHORT)GetPrivateProfileInt(_T("Window"), _T("BufferHeight"), 0, RestartFileName.StartOfString);
+    ScreenBufferInfo.dwSize.X = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("BufferWidth"), 0, RestartFileName.StartOfString);
+    ScreenBufferInfo.dwSize.Y = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("BufferHeight"), 0, RestartFileName.StartOfString);
 
     if (ScreenBufferInfo.dwSize.X == 0 || ScreenBufferInfo.dwSize.Y == 0) {
         YoriLibFreeStringContents(&RestartFileName);
         return FALSE;
     }
 
-    ScreenBufferInfo.dwMaximumWindowSize.X = (USHORT)GetPrivateProfileInt(_T("Window"), _T("WindowWidth"), 0, RestartFileName.StartOfString);
-    ScreenBufferInfo.dwMaximumWindowSize.Y = (USHORT)GetPrivateProfileInt(_T("Window"), _T("WindowHeight"), 0, RestartFileName.StartOfString);
+    ScreenBufferInfo.dwMaximumWindowSize.X = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("WindowWidth"), 0, RestartFileName.StartOfString);
+    ScreenBufferInfo.dwMaximumWindowSize.Y = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("WindowHeight"), 0, RestartFileName.StartOfString);
 
     if (ScreenBufferInfo.dwMaximumWindowSize.X == 0 || ScreenBufferInfo.dwMaximumWindowSize.Y == 0) {
         YoriLibFreeStringContents(&RestartFileName);
@@ -691,13 +695,13 @@ YoriShLoadSavedRestartState(
     ScreenBufferInfo.srWindow.Bottom = (USHORT)(ScreenBufferInfo.dwMaximumWindowSize.Y);
     ScreenBufferInfo.srWindow.Right = (USHORT)(ScreenBufferInfo.dwMaximumWindowSize.X);
 
-    ScreenBufferInfo.wAttributes = (USHORT)GetPrivateProfileInt(_T("Window"), _T("DefaultColor"), 0, RestartFileName.StartOfString);
-    ScreenBufferInfo.wPopupAttributes = (USHORT)GetPrivateProfileInt(_T("Window"), _T("PopupColor"), 0, RestartFileName.StartOfString);
+    ScreenBufferInfo.wAttributes = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("DefaultColor"), 0, RestartFileName.StartOfString);
+    ScreenBufferInfo.wPopupAttributes = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("PopupColor"), 0, RestartFileName.StartOfString);
 
     for (Count = 0; Count < sizeof(ScreenBufferInfo.ColorTable)/sizeof(ScreenBufferInfo.ColorTable[0]); Count++) {
         TCHAR ColorName[32];
         YoriLibSPrintf(ColorName, _T("Color%i"), Count);
-        ScreenBufferInfo.ColorTable[Count] = GetPrivateProfileInt(_T("Window"), ColorName, 0, RestartFileName.StartOfString);
+        ScreenBufferInfo.ColorTable[Count] = DllKernel32.pGetPrivateProfileIntW(_T("Window"), ColorName, 0, RestartFileName.StartOfString);
     }
 
     YoriLibVtSetDefaultColor(ScreenBufferInfo.wAttributes);
@@ -718,12 +722,12 @@ YoriShLoadSavedRestartState(
 
     ZeroMemory(&FontInfo, sizeof(FontInfo));
     FontInfo.cbSize = sizeof(FontInfo);
-    FontInfo.nFont = GetPrivateProfileInt(_T("Window"), _T("FontIndex"), 0, RestartFileName.StartOfString);
-    FontInfo.dwFontSize.X = (USHORT)GetPrivateProfileInt(_T("Window"), _T("FontWidth"), 0, RestartFileName.StartOfString);
-    FontInfo.dwFontSize.Y = (USHORT)GetPrivateProfileInt(_T("Window"), _T("FontHeight"), 0, RestartFileName.StartOfString);
-    FontInfo.FontFamily = GetPrivateProfileInt(_T("Window"), _T("FontFamily"), 0, RestartFileName.StartOfString);
-    FontInfo.FontWeight = GetPrivateProfileInt(_T("Window"), _T("FontWeight"), 0, RestartFileName.StartOfString);
-    GetPrivateProfileString(_T("Window"), _T("FontName"), _T(""), FontInfo.FaceName, sizeof(FontInfo.FaceName)/sizeof(FontInfo.FaceName[0]), RestartFileName.StartOfString);
+    FontInfo.nFont = DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontIndex"), 0, RestartFileName.StartOfString);
+    FontInfo.dwFontSize.X = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontWidth"), 0, RestartFileName.StartOfString);
+    FontInfo.dwFontSize.Y = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontHeight"), 0, RestartFileName.StartOfString);
+    FontInfo.FontFamily = DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontFamily"), 0, RestartFileName.StartOfString);
+    FontInfo.FontWeight = DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontWeight"), 0, RestartFileName.StartOfString);
+    DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("FontName"), _T(""), FontInfo.FaceName, sizeof(FontInfo.FaceName)/sizeof(FontInfo.FaceName[0]), RestartFileName.StartOfString);
 
     if (FontInfo.dwFontSize.X > 0 && FontInfo.dwFontSize.Y > 0 && FontInfo.FontWeight > 0) {
         DllKernel32.pSetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo);
@@ -736,8 +740,8 @@ YoriShLoadSavedRestartState(
     //
 
     ConsoleWindow = DllKernel32.pGetConsoleWindow();
-    WindowLeft = GetPrivateProfileInt(_T("Window"), _T("WindowLeft"), INT_MAX, RestartFileName.StartOfString);
-    WindowTop = GetPrivateProfileInt(_T("Window"), _T("WindowTop"), INT_MAX, RestartFileName.StartOfString);
+    WindowLeft = DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("WindowLeft"), INT_MAX, RestartFileName.StartOfString);
+    WindowTop = DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("WindowTop"), INT_MAX, RestartFileName.StartOfString);
 
     if (WindowLeft != INT_MAX &&
         WindowTop != INT_MAX) {
@@ -749,14 +753,14 @@ YoriShLoadSavedRestartState(
     //  Read and populate the window title
     //
 
-    GetPrivateProfileString(_T("Window"), _T("Title"), _T("Yori"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("Title"), _T("Yori"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
     SetConsoleTitle(ReadBuffer.StartOfString);
 
     //
     //  Read and populate the current directory
     //
 
-    ReadBuffer.LengthInChars = GetPrivateProfileString(_T("Window"), _T("CurrentDirectory"), _T(""), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("CurrentDirectory"), _T(""), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
     if (ReadBuffer.LengthInChars > 0) {
         YoriLibSetCurrentDirectory(&ReadBuffer);
     }
@@ -765,7 +769,7 @@ YoriShLoadSavedRestartState(
     //  Populate the environment.
     //
 
-    ReadBuffer.LengthInChars = GetPrivateProfileSection(_T("Environment"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("Environment"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -792,7 +796,7 @@ YoriShLoadSavedRestartState(
     //  Populate current directories.
     //
 
-    ReadBuffer.LengthInChars = GetPrivateProfileSection(_T("CurrentDirectories"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("CurrentDirectories"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -825,7 +829,7 @@ YoriShLoadSavedRestartState(
     //  Populate aliases
     //
 
-    ReadBuffer.LengthInChars = GetPrivateProfileSection(_T("Aliases"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("Aliases"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -852,7 +856,7 @@ YoriShLoadSavedRestartState(
     //  Populate history
     //
 
-    ReadBuffer.LengthInChars = GetPrivateProfileSection(_T("History"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("History"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -889,7 +893,7 @@ YoriShLoadSavedRestartState(
     //  Populate window contents
     //
 
-    ReadBuffer.LengthInChars = GetPrivateProfileString(_T("Window"), _T("Contents"), _T(""), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("Contents"), _T(""), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         HANDLE hBufferFile;

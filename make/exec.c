@@ -1065,7 +1065,7 @@ MakeExecuteRequiredTargets(
             }
 
             if (Index == NumberActiveProcesses) {
-                Index = WaitForMultipleObjects(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE);
+                Index = WaitForMultipleObjectsEx(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE, FALSE);
                 Index = Index - WAIT_OBJECT_0;
             }
 
@@ -1154,7 +1154,7 @@ Drain:
         }
 
         if (Index == NumberActiveProcesses) {
-            Index = WaitForMultipleObjects(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE);
+            Index = WaitForMultipleObjectsEx(NumberActiveProcesses, ProcessHandleArray, FALSE, INFINITE, FALSE);
             Index = Index - WAIT_OBJECT_0;
 
             MakeProcessCompletion(MakeContext, &ChildRecipeArray[Index]);

@@ -3275,7 +3275,7 @@ MoreViewportDisplay(
             }
         }
 
-        WaitObject = WaitForMultipleObjects(HandleCountToWait, ObjectsToWaitFor, FALSE, Timeout);
+        WaitObject = WaitForMultipleObjectsEx(HandleCountToWait, ObjectsToWaitFor, FALSE, Timeout, FALSE);
 
         //
         //  If the ingest thread has died due to failure, we have incomplete

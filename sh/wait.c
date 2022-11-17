@@ -642,11 +642,11 @@ YoriShWaitForProcessOrInput(
     while (TRUE) {
 
         if (YoriShGlobal.ImplicitSynchronousTaskActive) {
-            Result = WaitForMultipleObjects(2, WaitContext->WaitOn, FALSE, WaitContext->Delay);
+            Result = WaitForMultipleObjectsEx(2, WaitContext->WaitOn, FALSE, WaitContext->Delay, FALSE);
         } else if (WaitContext->Delay == INFINITE) {
-            Result = WaitForMultipleObjects(3, WaitContext->WaitOn, FALSE, WaitContext->Delay);
+            Result = WaitForMultipleObjectsEx(3, WaitContext->WaitOn, FALSE, WaitContext->Delay, FALSE);
         } else {
-            Result = WaitForMultipleObjects(2, WaitContext->WaitOn, FALSE, WaitContext->Delay);
+            Result = WaitForMultipleObjectsEx(2, WaitContext->WaitOn, FALSE, WaitContext->Delay, FALSE);
         }
         if (Result == WAIT_OBJECT_0) {
             return YoriShWaitOutcomeProcessExit;

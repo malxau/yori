@@ -9,9 +9,9 @@
 !ENDIF
 YORI_BUILD_ID=0
 
-UNICODE=1
 DEBUG=0
 ANALYZE=0
+KERNELBASE=0
 
 !IFNDEF FDI
 FDI=0
@@ -59,18 +59,14 @@ MAKE=nmake.exe -nologo
 CFLAGS_NOUNICODE=-nologo -W4 -WX -I. -I..\lib -I..\crt -I..\libwin -I..\libdlg -I..\libsh -DYORI_VER_MAJOR=$(YORI_VER_MAJOR) -DYORI_VER_MINOR=$(YORI_VER_MINOR) -DYORI_BUILD_ID=$(YORI_BUILD_ID)
 LDFLAGS=-OPT:REF
 LIBFLAGS=
-LIBS=kernel32.lib
 
-#
-# Set the correct entrypoint depending on whether we're
-# ANSI or Unicode.
-#
-
-!IF $(UNICODE)==1
-ENTRY=wmainCRTStartup
+!IF $(KERNELBASE)==1
+LIBS=kernelbase.lib
 !ELSE
-ENTRY=mainCRTStartup
+LIBS=kernel32.lib
 !ENDIF
+
+ENTRY=wmainCRTStartup
 YENTRY=ymainCRTStartup
 
 !IF $(ANALYZE)==1
@@ -157,14 +153,10 @@ CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Gs9999
 !ENDIF # PROBECOMPILER
 
 #
-# Craft the "real" CFLAGS which are typically Unicode.  Non-unicode
-# is needed to build parts of the CRT.
+# Craft the "real" CFLAGS which are Unicode.  Non-unicode is needed to build
+# parts of the CRT.
 #
-!IF $(UNICODE)==1
 CFLAGS=$(CFLAGS_NOUNICODE) -DUNICODE -D_UNICODE
-!ELSE
-CFLAGS=$(CFLAGS_NOUNICODE)
-!ENDIF
 
 !IF $(PROBELINKER)==1
 

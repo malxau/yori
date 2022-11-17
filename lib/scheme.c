@@ -155,10 +155,14 @@ YoriLibLoadColorTableFromScheme(
     TCHAR Value[64];
     COLORREF Color;
 
+    if (DllKernel32.pGetPrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     for (PrefixIndex = 0; PrefixIndex < sizeof(YoriLibSchemeColorPrefixes)/sizeof(YoriLibSchemeColorPrefixes[0]); PrefixIndex++) {
         for (ColorIndex = 0; ColorIndex < sizeof(YoriLibSchemeColorNames)/sizeof(YoriLibSchemeColorNames[0]); ColorIndex++) {
             YoriLibSPrintf(ValueName, _T("%s_%s"), YoriLibSchemeColorPrefixes[PrefixIndex], YoriLibSchemeColorNames[ColorIndex]);
-            GetPrivateProfileString(_T("Table"), ValueName, _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
+            DllKernel32.pGetPrivateProfileStringW(_T("Table"), ValueName, _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
 
             if (!YoriLibParseSchemeColorString(Value, &Color)) {
                 return FALSE;
@@ -262,16 +266,20 @@ YoriLibLoadSectionColorFromScheme(
     UCHAR Foreground;
     UCHAR Background;
 
+    if (DllKernel32.pGetPrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     StringValue.StartOfString = Value;
     StringValue.LengthAllocated = sizeof(Value)/sizeof(Value[0]);
 
-    StringValue.LengthInChars = GetPrivateProfileString(SectionName, _T("Foreground"), _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
+    StringValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(SectionName, _T("Foreground"), _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
 
     if (!YoriLibLoadColorFromSchemeString(&StringValue, &Foreground)) {
         return FALSE;
     }
 
-    StringValue.LengthInChars = GetPrivateProfileString(SectionName, _T("Background"), _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
+    StringValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(SectionName, _T("Background"), _T(""), Value, sizeof(Value)/sizeof(Value[0]), IniFileName->StartOfString);
 
     if (!YoriLibLoadColorFromSchemeString(&StringValue, &Background)) {
         return FALSE;
@@ -346,13 +354,17 @@ YoriLibSaveColorTableToScheme(
     TCHAR Value[64];
     COLORREF Color;
 
+    if (DllKernel32.pWritePrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     for (PrefixIndex = 0; PrefixIndex < sizeof(YoriLibSchemeColorPrefixes)/sizeof(YoriLibSchemeColorPrefixes[0]); PrefixIndex++) {
         for (ColorIndex = 0; ColorIndex < sizeof(YoriLibSchemeColorNames)/sizeof(YoriLibSchemeColorNames[0]); ColorIndex++) {
             YoriLibSPrintf(ValueName, _T("%s_%s"), YoriLibSchemeColorPrefixes[PrefixIndex], YoriLibSchemeColorNames[ColorIndex]);
             Index = PrefixIndex * sizeof(YoriLibSchemeColorNames)/sizeof(YoriLibSchemeColorNames[0]) + ColorIndex;
             Color = ColorTable[Index];
             YoriLibSPrintf(Value, _T("%i, %i, %i"), GetRValue(Color), GetGValue(Color), GetBValue(Color));
-            WritePrivateProfileString(_T("Table"), ValueName, Value, IniFileName->StartOfString);
+            DllKernel32.pWritePrivateProfileStringW(_T("Table"), ValueName, Value, IniFileName->StartOfString);
         }
     }
 
@@ -384,13 +396,17 @@ YoriLibSaveSectionColorToScheme(
     UCHAR Color;
     UCHAR Component;
 
+    if (DllKernel32.pWritePrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     Component = (UCHAR)(WindowColor & 0xF);
 
     Intensity = (UCHAR)(Component >> 3);
     Color = (UCHAR)(Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE));
 
     YoriLibSPrintf(Value, _T("%s_%s"), YoriLibSchemeColorPrefixes[Intensity], YoriLibSchemeColorNames[Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)]);
-    WritePrivateProfileString(SectionName, _T("Foreground"), Value, IniFileName->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(SectionName, _T("Foreground"), Value, IniFileName->StartOfString);
 
     Component = (UCHAR)((WindowColor & 0xF0) >> 4);
 
@@ -398,7 +414,7 @@ YoriLibSaveSectionColorToScheme(
     Color = (UCHAR)(Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE));
 
     YoriLibSPrintf(Value, _T("%s_%s"), YoriLibSchemeColorPrefixes[Intensity], YoriLibSchemeColorNames[Component & (FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)]);
-    WritePrivateProfileString(SectionName, _T("Background"), Value, IniFileName->StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(SectionName, _T("Background"), Value, IniFileName->StartOfString);
 
     return TRUE;
 }

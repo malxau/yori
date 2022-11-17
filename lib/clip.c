@@ -113,6 +113,12 @@ YoriLibBuildHtmlClipboardBuffer(
     DWORD WinMinorVer;
     DWORD BuildNumber;
 
+    if (DllKernel32.pGlobalLock == NULL ||
+        DllKernel32.pGlobalUnlock == NULL) {
+
+        return FALSE;
+    }
+
     YoriLibGetOsVersion(&WinMajorVer, &WinMinorVer, &BuildNumber);
 
     if (WinMajorVer < 4) {
@@ -137,7 +143,7 @@ YoriLibBuildHtmlClipboardBuffer(
         return FALSE;
     }
 
-    pMem = GlobalLock(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
     if (pMem == NULL) {
         GlobalFree(hMem);
         return FALSE;
@@ -166,7 +172,7 @@ YoriLibBuildHtmlClipboardBuffer(
 
     Return = WideCharToMultiByte(EncodingToUse, 0, TextToCopy->StartOfString, TextToCopy->LengthInChars, (LPSTR)(pMem + HTMLCLIP_HDR_SIZE + HTMLCLIP_FRAGSTART_SIZE), UserBytes, NULL, NULL);
     if (Return == 0) {
-        GlobalUnlock(hMem);
+        DllKernel32.pGlobalUnlock(hMem);
         GlobalFree(hMem);
         return FALSE;
     }
@@ -179,7 +185,7 @@ YoriLibBuildHtmlClipboardBuffer(
                     "%s",
                     YoriLibClipDummyFragEnd);
 
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
 
     *HandleForClipboard = hMem;
 
@@ -207,9 +213,12 @@ YoriLibPasteText(
 
     YoriLibLoadUser32Functions();
 
-    if (DllUser32.pOpenClipboard == NULL ||
+    if (DllKernel32.pGlobalLock == NULL ||
+        DllKernel32.pGlobalUnlock == NULL ||
+        DllUser32.pOpenClipboard == NULL ||
         DllUser32.pGetClipboardData == NULL ||
         DllUser32.pCloseClipboard == NULL) {
+
         return FALSE;
     }
 
@@ -227,7 +236,7 @@ YoriLibPasteText(
         return FALSE;
     }
 
-    pMem = GlobalLock(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
     if (pMem == NULL) {
         DllUser32.pCloseClipboard();
         return FALSE;
@@ -236,14 +245,14 @@ YoriLibPasteText(
 
     if (StringLength >= Buffer->LengthAllocated) {
         if (!YoriLibReallocateStringWithoutPreservingContents(Buffer, StringLength + 1)) {
-            GlobalUnlock(hMem);
+            DllKernel32.pGlobalUnlock(hMem);
             DllUser32.pCloseClipboard();
             return FALSE;
         }
     }
     memcpy(Buffer->StartOfString, pMem, (StringLength + 1) * sizeof(WCHAR));
     Buffer->LengthInChars = StringLength;
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
 
     //
     //  Truncate any newlines which are not normally intended when pasting
@@ -283,7 +292,9 @@ YoriLibCopyText(
 
     YoriLibLoadUser32Functions();
 
-    if (DllUser32.pOpenClipboard == NULL ||
+    if (DllKernel32.pGlobalLock == NULL ||
+        DllKernel32.pGlobalUnlock == NULL ||
+        DllUser32.pOpenClipboard == NULL ||
         DllUser32.pEmptyClipboard == NULL ||
         DllUser32.pSetClipboardData == NULL ||
         DllUser32.pCloseClipboard == NULL) {
@@ -306,7 +317,7 @@ YoriLibCopyText(
         return FALSE;
     }
 
-    pMem = GlobalLock(hMem);
+    pMem = DllKernel32.pGlobalLock(hMem);
     if (pMem == NULL) {
         GlobalFree(hMem);
         DllUser32.pCloseClipboard();
@@ -315,7 +326,7 @@ YoriLibCopyText(
 
     memcpy(pMem, Buffer->StartOfString, Buffer->LengthInChars * sizeof(TCHAR));
     pMem[Buffer->LengthInChars] = '\0';
-    GlobalUnlock(hMem);
+    DllKernel32.pGlobalUnlock(hMem);
     pMem = NULL;
 
     hClip = DllUser32.pSetClipboardData(CF_UNICODETEXT, hMem);
@@ -362,7 +373,9 @@ YoriLibCopyTextRtfAndHtml(
 
     YoriLibLoadUser32Functions();
 
-    if (DllUser32.pOpenClipboard == NULL ||
+    if (DllKernel32.pGlobalLock == NULL ||
+        DllKernel32.pGlobalUnlock == NULL ||
+        DllUser32.pOpenClipboard == NULL ||
         DllUser32.pEmptyClipboard == NULL ||
         DllUser32.pRegisterClipboardFormatW == NULL ||
         DllUser32.pSetClipboardData == NULL ||
@@ -389,7 +402,7 @@ YoriLibCopyTextRtfAndHtml(
         return FALSE;
     }
 
-    pWideMem = GlobalLock(hText);
+    pWideMem = DllKernel32.pGlobalLock(hText);
     if (pWideMem == NULL) {
         GlobalFree(hText);
         DllUser32.pCloseClipboard();
@@ -398,7 +411,7 @@ YoriLibCopyTextRtfAndHtml(
 
     memcpy(pWideMem, TextVersion->StartOfString, TextVersion->LengthInChars * sizeof(TCHAR));
     pWideMem[TextVersion->LengthInChars] = '\0';
-    GlobalUnlock(hText);
+    DllKernel32.pGlobalUnlock(hText);
     pWideMem = NULL;
 
     //
@@ -415,7 +428,7 @@ YoriLibCopyTextRtfAndHtml(
         return FALSE;
     }
 
-    pNarrowMem = GlobalLock(hRtf);
+    pNarrowMem = DllKernel32.pGlobalLock(hRtf);
     if (pNarrowMem == NULL) {
         GlobalFree(hText);
         GlobalFree(hRtf);
@@ -428,7 +441,7 @@ YoriLibCopyTextRtfAndHtml(
     }
     pNarrowMem[RtfVersion->LengthInChars] = '\0';
 
-    GlobalUnlock(hRtf);
+    DllKernel32.pGlobalUnlock(hRtf);
     pNarrowMem = NULL;
 
     //

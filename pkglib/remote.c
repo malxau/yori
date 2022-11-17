@@ -353,6 +353,10 @@ YoriPkgCollectSourcesFromIni(
     YoriLibInitEmptyString(&IniValue);
     YoriLibInitEmptyString(&IniKey);
 
+    if (DllKernel32.pGetPrivateProfileStringW == NULL) {
+        goto Exit;
+    }
+
     if (!YoriLibAllocateString(&IniValue, YORIPKG_MAX_FIELD_LENGTH)) {
         goto Exit;
     }
@@ -365,7 +369,7 @@ YoriPkgCollectSourcesFromIni(
         Index = 1;
         while (TRUE) {
             IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
-            IniValue.LengthInChars = GetPrivateProfileString(_T("Sources"), IniKey.StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, IniPath->StartOfString);
+            IniValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Sources"), IniKey.StartOfString, _T(""), IniValue.StartOfString, IniValue.LengthAllocated, IniPath->StartOfString);
             if (IniValue.LengthInChars == 0) {
                 break;
             }
@@ -508,6 +512,13 @@ YoriPkgCollectPackagesFromSource(
     YoriLibInitEmptyString(&MinimumOSBuild);
     YoriLibInitEmptyString(&PackagePathForOlderBuilds);
 
+    if (DllKernel32.pGetPrivateProfileSectionW == NULL) {
+        Result = FALSE;
+        YoriLibInitEmptyString(&LocalPath);
+        DeleteWhenFinished = FALSE;
+        goto Exit;
+    }
+
     Result = YoriPkgPackagePathToLocalPath(&Source->SourcePkgList, PackagesIni, &LocalPath, &DeleteWhenFinished);
     if (Result != ERROR_SUCCESS) {
         YoriLibInitEmptyString(&LocalPath);
@@ -534,7 +545,8 @@ YoriPkgCollectPackagesFromSource(
     YoriLibCloneString(&PackagePathForOlderBuilds, &MinimumOSBuild);
     PackagePathForOlderBuilds.StartOfString += YORIPKG_MAX_SECTION_LENGTH;
 
-    ProvidesSection.LengthInChars = GetPrivateProfileSection(_T("Provides"),
+    ProvidesSection.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(
+                                                             _T("Provides"),
                                                              ProvidesSection.StartOfString,
                                                              ProvidesSection.LengthAllocated,
                                                              LocalPath.StartOfString);
@@ -556,22 +568,24 @@ YoriPkgCollectPackagesFromSource(
 
         PkgNameOnly.StartOfString[PkgNameOnly.LengthInChars] = '\0';
 
-        PkgVersion.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString,
-                                                           _T("Version"),
-                                                           _T(""),
-                                                           PkgVersion.StartOfString,
-                                                           PkgVersion.LengthAllocated,
-                                                           LocalPath.StartOfString);
+        PkgVersion.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
+                                                    PkgNameOnly.StartOfString,
+                                                    _T("Version"),
+                                                    _T(""),
+                                                    PkgVersion.StartOfString,
+                                                    PkgVersion.LengthAllocated,
+                                                    LocalPath.StartOfString);
 
         if (PkgVersion.LengthInChars > 0) {
             for (ArchIndex = 0; ArchIndex < sizeof(KnownArchitectures)/sizeof(KnownArchitectures[0]); ArchIndex++) {
                 YoriLibConstantString(&Architecture, KnownArchitectures[ArchIndex]);
-                IniValue.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString,
-                                                                 Architecture.StartOfString,
-                                                                 _T(""),
-                                                                 IniValue.StartOfString,
-                                                                 IniValue.LengthAllocated,
-                                                                 LocalPath.StartOfString);
+                IniValue.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
+                                                          PkgNameOnly.StartOfString,
+                                                          Architecture.StartOfString,
+                                                          _T(""),
+                                                          IniValue.StartOfString,
+                                                          IniValue.LengthAllocated,
+                                                          LocalPath.StartOfString);
                 if (IniValue.LengthInChars > 0) {
                     PYORIPKG_REMOTE_PACKAGE Package;
 
@@ -579,10 +593,22 @@ YoriPkgCollectPackagesFromSource(
 
                     YoriLibSPrintf(IniKey, _T("%y.minimumosbuild"), &Architecture);
 
-                    MinimumOSBuild.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, IniKey, _T(""), MinimumOSBuild.StartOfString, MinimumOSBuild.LengthAllocated, LocalPath.StartOfString);
+                    MinimumOSBuild.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
+                                                                    PkgNameOnly.StartOfString,
+                                                                    IniKey,
+                                                                    _T(""),
+                                                                    MinimumOSBuild.StartOfString,
+                                                                    MinimumOSBuild.LengthAllocated,
+                                                                    LocalPath.StartOfString);
                     if (MinimumOSBuild.LengthInChars > 0) {
                         YoriLibSPrintf(IniKey, _T("%y.packagepathforolderbuilds"), &Architecture);
-                        PackagePathForOlderBuilds.LengthInChars = GetPrivateProfileString(PkgNameOnly.StartOfString, IniKey, _T(""), PackagePathForOlderBuilds.StartOfString, PackagePathForOlderBuilds.LengthAllocated, LocalPath.StartOfString);
+                        PackagePathForOlderBuilds.LengthInChars = DllKernel32.pGetPrivateProfileStringW(
+                                PkgNameOnly.StartOfString,
+                                IniKey,
+                                _T(""),
+                                PackagePathForOlderBuilds.StartOfString,
+                                PackagePathForOlderBuilds.LengthAllocated,
+                                LocalPath.StartOfString);
                     }
 
                     Package = YoriPkgAllocateRemotePackage(&PkgNameOnly,
@@ -852,6 +878,10 @@ YoriPkgDownloadRemotePackages(
     DWORD Err;
     BOOL DeleteWhenFinished;
 
+    if (DllKernel32.pWritePrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     YoriPkgCollectAllSourcesAndPackages(Source, NULL, &SourcesList, &PackageList);
 
     YoriLibInitEmptyString(&PackagesIni);
@@ -906,9 +936,7 @@ YoriPkgDownloadRemotePackages(
                             DeleteFile(TempLocalPath.StartOfString);
                         }
                     } else {
-                        if (!CopyFile(TempLocalPath.StartOfString, FullFinalName.StartOfString, FALSE)) {
-                            Err = GetLastError();
-                        }
+                        Err = YoriLibCopyFile(&TempLocalPath, &FullFinalName);
                     }
                 }
 
@@ -923,15 +951,15 @@ YoriPkgDownloadRemotePackages(
 
             if (Err == ERROR_SUCCESS) {
                 YORI_STRING TempKeyString;
-                WritePrivateProfileString(_T("Provides"), Package->PackageName.StartOfString, Package->Version.StartOfString, PackagesIni.StartOfString);
-                WritePrivateProfileString(Package->PackageName.StartOfString, _T("Version"), Package->Version.StartOfString, PackagesIni.StartOfString);
-                WritePrivateProfileString(Package->PackageName.StartOfString, Package->Architecture.StartOfString, FinalFileName.StartOfString, PackagesIni.StartOfString);
+                DllKernel32.pWritePrivateProfileStringW(_T("Provides"), Package->PackageName.StartOfString, Package->Version.StartOfString, PackagesIni.StartOfString);
+                DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, _T("Version"), Package->Version.StartOfString, PackagesIni.StartOfString);
+                DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, Package->Architecture.StartOfString, FinalFileName.StartOfString, PackagesIni.StartOfString);
 
                 if (Package->MinimumOSBuild.LengthInChars != 0) {
                     YoriLibInitEmptyString(&TempKeyString);
                     YoriLibYPrintf(&TempKeyString, _T("%y.minimumosbuild"), &Package->Architecture);
                     if (TempKeyString.LengthInChars > 0) {
-                        WritePrivateProfileString(Package->PackageName.StartOfString, TempKeyString.StartOfString, Package->MinimumOSBuild.StartOfString, PackagesIni.StartOfString);
+                        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, TempKeyString.StartOfString, Package->MinimumOSBuild.StartOfString, PackagesIni.StartOfString);
                         YoriLibFreeStringContents(&TempKeyString);
                     }
 
@@ -941,7 +969,7 @@ YoriPkgDownloadRemotePackages(
                     YoriLibInitEmptyString(&TempKeyString);
                     YoriLibYPrintf(&TempKeyString, _T("%y.packagepathforolderbuilds"), &Package->Architecture);
                     if (TempKeyString.LengthInChars > 0) {
-                        WritePrivateProfileString(Package->PackageName.StartOfString, TempKeyString.StartOfString, Package->PackagePathForOlderBuilds.StartOfString, PackagesIni.StartOfString);
+                        DllKernel32.pWritePrivateProfileStringW(Package->PackageName.StartOfString, TempKeyString.StartOfString, Package->PackagePathForOlderBuilds.StartOfString, PackagesIni.StartOfString);
                         YoriLibFreeStringContents(&TempKeyString);
                     }
 
@@ -1734,6 +1762,10 @@ YoriPkgAddNewSource(
 
     YoriLibInitializeListHead(&SourcesList);
 
+    if (DllKernel32.pWritePrivateProfileStringW == NULL) {
+        return FALSE;
+    }
+
     if (!YoriPkgGetPackageIniFile(NULL, &PackagesIni)) {
         return FALSE;
     }
@@ -1778,7 +1810,7 @@ YoriPkgAddNewSource(
         YoriLibFreeStringContents(&PackagesIni);
         return FALSE;
     }
-    WritePrivateProfileString(_T("Sources"), NULL, NULL, PackagesIni.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Sources"), NULL, NULL, PackagesIni.StartOfString);
     SourceEntry = NULL;
     Index = 1;
     SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
@@ -1786,7 +1818,7 @@ YoriPkgAddNewSource(
         Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
         SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
         IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
-        WritePrivateProfileString(_T("Sources"), IniKey.StartOfString, Source->SourceRootUrl.StartOfString, PackagesIni.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Sources"), IniKey.StartOfString, Source->SourceRootUrl.StartOfString, PackagesIni.StartOfString);
         Index++;
     }
 
@@ -1852,7 +1884,7 @@ YoriPkgDeleteSource(
         YoriLibFreeStringContents(&PackagesIni);
         return FALSE;
     }
-    WritePrivateProfileString(_T("Sources"), NULL, NULL, PackagesIni.StartOfString);
+    DllKernel32.pWritePrivateProfileStringW(_T("Sources"), NULL, NULL, PackagesIni.StartOfString);
     SourceEntry = NULL;
     Index = 1;
     SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
@@ -1860,7 +1892,7 @@ YoriPkgDeleteSource(
         Source = CONTAINING_RECORD(SourceEntry, YORIPKG_REMOTE_SOURCE, SourceList);
         SourceEntry = YoriLibGetNextListEntry(&SourcesList, SourceEntry);
         IniKey.LengthInChars = YoriLibSPrintf(IniKey.StartOfString, _T("Source%i"), Index);
-        WritePrivateProfileString(_T("Sources"), IniKey.StartOfString, Source->SourceRootUrl.StartOfString, PackagesIni.StartOfString);
+        DllKernel32.pWritePrivateProfileStringW(_T("Sources"), IniKey.StartOfString, Source->SourceRootUrl.StartOfString, PackagesIni.StartOfString);
         Index++;
     }
 

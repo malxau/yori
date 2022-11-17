@@ -138,7 +138,7 @@ YoriLibShLoadDll(
 
     OldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
 
-    FoundEntry->ModuleHandle = LoadLibrary(DllName);
+    FoundEntry->ModuleHandle = LoadLibraryEx(DllName, NULL, 0);
     if (FoundEntry->ModuleHandle == NULL) {
         SetErrorMode(OldErrorMode);
         YoriLibFree(FoundEntry);

@@ -558,6 +558,11 @@ YoriLibIsNanoServer(VOID)
         return TRUE;
     }
 
+    if (DllKernel32.hDllKernel32Legacy != NULL) {
+
+        return TRUE;
+    }
+
     return FALSE;
 }
 
