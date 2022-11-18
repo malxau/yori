@@ -112,10 +112,14 @@ YoriLibLoadNtDllFunctions(VOID)
     if (DllNtDll.hDll == NULL) {
         return FALSE;
     }
+    DllNtDll.pNtOpenDirectoryObject = (PNT_OPEN_DIRECTORY_OBJECT)GetProcAddress(DllNtDll.hDll, "NtOpenDirectoryObject");
+    DllNtDll.pNtOpenSymbolicLinkObject = (PNT_OPEN_SYMBOLIC_LINK_OBJECT)GetProcAddress(DllNtDll.hDll, "NtOpenSymbolicLinkObject");
+    DllNtDll.pNtQueryDirectoryObject = (PNT_QUERY_DIRECTORY_OBJECT)GetProcAddress(DllNtDll.hDll, "NtQueryDirectoryObject");
     DllNtDll.pNtQueryInformationFile = (PNT_QUERY_INFORMATION_FILE)GetProcAddress(DllNtDll.hDll, "NtQueryInformationFile");
     DllNtDll.pNtQueryInformationProcess = (PNT_QUERY_INFORMATION_PROCESS)GetProcAddress(DllNtDll.hDll, "NtQueryInformationProcess");
     DllNtDll.pNtQueryInformationThread = (PNT_QUERY_INFORMATION_THREAD)GetProcAddress(DllNtDll.hDll, "NtQueryInformationThread");
     DllNtDll.pNtQueryObject = (PNT_QUERY_OBJECT)GetProcAddress(DllNtDll.hDll, "NtQueryObject");
+    DllNtDll.pNtQuerySymbolicLinkObject = (PNT_QUERY_SYMBOLIC_LINK_OBJECT)GetProcAddress(DllNtDll.hDll, "NtQuerySymbolicLinkObject");
     DllNtDll.pNtQuerySystemInformation = (PNT_QUERY_SYSTEM_INFORMATION)GetProcAddress(DllNtDll.hDll, "NtQuerySystemInformation");
     DllNtDll.pNtSetInformationFile = (PNT_SET_INFORMATION_FILE)GetProcAddress(DllNtDll.hDll, "NtSetInformationFile");
     DllNtDll.pNtSystemDebugControl = (PNT_SYSTEM_DEBUG_CONTROL)GetProcAddress(DllNtDll.hDll, "NtSystemDebugControl");

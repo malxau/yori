@@ -211,6 +211,52 @@ typedef struct _YORI_UNICODE_STRING {
 
 } YORI_UNICODE_STRING, *PYORI_UNICODE_STRING;
 
+/**
+ An NT OBJECT_ATTRIBUTES structure.
+ */
+typedef struct _YORI_OBJECT_ATTRIBUTES {
+
+    /**
+     The length of this structure, in bytes.
+     */
+    DWORD Length;
+
+    /**
+     A handle to an object.  If non-NULL, Name is relative to this object;
+     if NULL, Name is fully specified.
+     */
+    HANDLE RootDirectory;
+
+    /**
+     The name of the object.
+     */
+    PYORI_UNICODE_STRING Name;
+
+    /**
+     Attributes.
+     */
+    DWORD Attributes;
+
+    /**
+     Security descriptor.
+     */
+    PVOID SecurityDescriptor;
+
+    /**
+     Security QOS.
+     */
+    PVOID SecurityQOS;
+
+    /**
+     NOTE This is not part of the original structure.
+
+     Physical storage for the name.  This happens because the rest of
+     Yori wants to think in YORI_STRINGs which are similar but not
+     identical, and Name needs to point to a UNICODE_STRING.
+     */
+    YORI_UNICODE_STRING NameStorage;
+
+} YORI_OBJECT_ATTRIBUTES, *PYORI_OBJECT_ATTRIBUTES;
 
 /**
  Definition of the information class to enumerate process IDs using a file
@@ -2115,7 +2161,7 @@ typedef struct _YORI_REPARSE_DATA_BUFFER {
              The length of the name to display.  This is in bytes.
              */
             WORD DisplayNameLengthInBytes;
-            
+
             /**
              Flags, unused in this application.
              */
@@ -5781,6 +5827,42 @@ typedef struct _RESIZE_VIRTUAL_DISK_PARAMETERS {
 #define WTS_CURRENT_SESSION ((DWORD)-1)
 
 /**
+ A prototype for the NtOpenDirectoryObject function.
+ */
+typedef
+LONG WINAPI
+NT_OPEN_DIRECTORY_OBJECT(PHANDLE, DWORD, PYORI_OBJECT_ATTRIBUTES);
+
+/**
+ A prototype for a pointer to the NtOpenDirectoryObject function.
+ */
+typedef NT_OPEN_DIRECTORY_OBJECT *PNT_OPEN_DIRECTORY_OBJECT;
+
+/**
+ A prototype for the NtOpenSymbolicLinkObject function.
+ */
+typedef
+LONG WINAPI
+NT_OPEN_SYMBOLIC_LINK_OBJECT(PHANDLE, DWORD, PYORI_OBJECT_ATTRIBUTES);
+
+/**
+ A prototype for a pointer to the NtOpenSymbolicLinkObject function.
+ */
+typedef NT_OPEN_SYMBOLIC_LINK_OBJECT *PNT_OPEN_SYMBOLIC_LINK_OBJECT;
+
+/**
+ A prototype for the NtQueryDirectoryObject function.
+ */
+typedef
+LONG WINAPI
+NT_QUERY_DIRECTORY_OBJECT(HANDLE, PVOID, DWORD, BOOLEAN, BOOLEAN, PDWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the NtQueryDirectoryObject function.
+ */
+typedef NT_QUERY_DIRECTORY_OBJECT *PNT_QUERY_DIRECTORY_OBJECT;
+
+/**
  A prototype for the NtQueryInformationFile function.
  */
 typedef
@@ -5827,6 +5909,18 @@ NT_QUERY_OBJECT(HANDLE, DWORD, PVOID, DWORD, PDWORD);
  A prototype for a pointer to the NtQueryObject function.
  */
 typedef NT_QUERY_OBJECT *PNT_QUERY_OBJECT;
+
+/**
+ A prototype for the NtQuerySymbolicLinkObject function.
+ */
+typedef
+LONG WINAPI
+NT_QUERY_SYMBOLIC_LINK_OBJECT(HANDLE, PYORI_UNICODE_STRING, PDWORD);
+
+/**
+ A prototype for a pointer to the NtQuerySymbolicLinkObject function.
+ */
+typedef NT_QUERY_SYMBOLIC_LINK_OBJECT *PNT_QUERY_SYMBOLIC_LINK_OBJECT;
 
 /**
  A prototype for the NtQuerySystemInformation function.
@@ -5889,6 +5983,24 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
 
     /**
      If it's available on the current system, a pointer to
+     NtOpenDirectoryObject.
+     */
+    PNT_OPEN_DIRECTORY_OBJECT pNtOpenDirectoryObject;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtOpenSymbolicLinkObject.
+     */
+    PNT_OPEN_SYMBOLIC_LINK_OBJECT pNtOpenSymbolicLinkObject;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtQueryDirectoryObject.
+     */
+    PNT_QUERY_DIRECTORY_OBJECT pNtQueryDirectoryObject;
+
+    /**
+     If it's available on the current system, a pointer to
      NtQueryInformationFile.
      */
     PNT_QUERY_INFORMATION_FILE pNtQueryInformationFile;
@@ -5910,6 +6022,12 @@ typedef struct _YORI_NTDLL_FUNCTIONS {
      NtQueryObject.
      */
     PNT_QUERY_OBJECT pNtQueryObject;
+
+    /**
+     If it's available on the current system, a pointer to
+     NtQuerySymbolicLinkObject.
+     */
+    PNT_QUERY_SYMBOLIC_LINK_OBJECT pNtQuerySymbolicLinkObject;
 
     /**
      If it's available on the current system, a pointer to
