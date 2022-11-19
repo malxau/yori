@@ -2652,6 +2652,50 @@ YoriLibTranslateNumericKeyToChar(
     __out PTCHAR Char
     );
 
+// *** OBENUM.C ***
+
+/**
+ A definition for a callback function to invoke for each object enumerated in
+ an object manager directory.
+ */
+typedef BOOL YORILIB_OBJECT_ENUM_FN(PCYORI_STRING FullName, PCYORI_STRING NameOnly, PYORI_STRING Type, PVOID Context);
+
+/**
+ A pointer to a callback function to invoke for each object enumerated in an
+ object manager directory.
+ */
+typedef YORILIB_OBJECT_ENUM_FN *PYORILIB_OBJECT_ENUM_FN;
+
+/**
+ A definition for a callback function to invoke if any errors are encountered
+ when enumerating an object manager directory.
+ */
+typedef BOOL YORILIB_OBJECT_ENUM_ERROR_FN(PCYORI_STRING FullName, LONG NtStatus, PVOID Context);
+
+/**
+ A pointer to a callback function to invoke if any errors are encountered
+ when enumerating an object manager directory.
+ */
+typedef YORILIB_OBJECT_ENUM_ERROR_FN *PYORILIB_OBJECT_ENUM_ERROR_FN;
+
+VOID
+YoriLibInitializeObjectAttributes(
+    __out PYORI_OBJECT_ATTRIBUTES ObjectAttributes,
+    __in_opt HANDLE RootDirectory,
+    __in_opt PCYORI_STRING Name,
+    __in DWORD Attributes
+    );
+
+__success(return)
+BOOL
+YoriLibForEachObjectEnum(
+    __in PCYORI_STRING DirectoryName,
+    __in DWORD MatchFlags,
+    __in PYORILIB_OBJECT_ENUM_FN Callback,
+    __in_opt PYORILIB_OBJECT_ENUM_ERROR_FN ErrorCallback,
+    __in_opt PVOID Context
+    );
+
 // *** OSVER.C ***
 
 VOID

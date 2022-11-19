@@ -39,6 +39,7 @@ OBJS=\
 	 malloc.obj   \
 	 movefile.obj \
 	 numkey.obj   \
+	 obenum.obj   \
 	 osver.obj    \
 	 path.obj     \
 	 printf.obj   \

@@ -167,6 +167,38 @@ typedef _Return_type_success_(return >= 0) long HRESULT;
 #define SE_CREATE_SYMBOLIC_LINK_NAME      _T("SeCreateSymbolicLinkPrivilege")
 #endif
 
+#ifndef DIRECTORY_QUERY
+/**
+ The security flag indicating a request to open an object manager directory
+ for enumeration.
+ */
+#define DIRECTORY_QUERY (0x0001)
+#endif
+
+#ifndef STATUS_MORE_ENTRIES
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating more entries should be enumerated.
+ */
+#define STATUS_MORE_ENTRIES ((LONG)0x00000105)
+#endif
+
+#ifndef STATUS_NO_MORE_ENTRIES
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating no more entries should be enumerated.
+ */
+#define STATUS_NO_MORE_ENTRIES ((LONG)0x8000001A)
+#endif
+
+#ifndef STATUS_INSUFFICIENT_RESOURCES
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating an out of memory condition.
+ */
+#define STATUS_INSUFFICIENT_RESOURCES ((LONG)0xC000009A)
+#endif
+
 /**
  Definition of an IO_STATUS_BLOCK for compilation environments that don't
  define it.
