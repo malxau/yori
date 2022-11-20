@@ -120,6 +120,7 @@ DIRS=crt       \
      mount     \
      move      \
      nice      \
+     objdir    \
      osver     \
      path      \
      pause     \

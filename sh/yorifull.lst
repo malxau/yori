@@ -48,6 +48,7 @@
 ..\mount\builtins.lib
 ..\move\builtins.lib
 ..\nice\builtins.lib
+..\objdir\builtins.lib
 ..\osver\builtins.lib
 ..\path\builtins.lib
 ..\pause\builtins.lib

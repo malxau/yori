@@ -139,6 +139,7 @@ CHAR strHelpHelpText3[] =
         "MOUNT     Mounts or unmounts an ISO image\n"
         "MOVE      Moves or renames one or more files\n"
         "NICE      Runs a child program at low priority\n"
+        "OBJDIR    Enumerate object manager directories\n"
         "OSVER     Outputs the operating system version in a specified format\n"
         "PATH      Converts relative paths into decomposable full paths\n"
         "PAUSE     Prompt the user to press any key before continuing\n"

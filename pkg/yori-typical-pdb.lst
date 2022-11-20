@@ -33,6 +33,7 @@
 ..\more\ymore.pdb|ymore.pdb
 ..\mount\ymount.pdb|ymount.pdb
 ..\nice\nice.pdb|nice.pdb
+..\objdir\yobjdir.pdb|yobjdir.pdb
 ..\osver\osver.pdb|osver.pdb
 ..\petool\petool.pdb|petool.pdb
 ..\procinfo\procinfo.pdb|procinfo.pdb

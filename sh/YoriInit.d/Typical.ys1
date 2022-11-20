@@ -20,6 +20,7 @@ builtin alias -s md5sum=yhash -a md5 $*$
 builtin alias -s mem=ymem $*$
 builtin alias -s more=ymore $*$
 builtin alias -s mount=ymount $*$
+builtin alias -s objdir=yobjdir $*$
 builtin alias -s paste=yclip -p $*$
 builtin alias -s path=ypath $*$
 builtin alias -s ps=yps $*$

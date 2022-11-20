@@ -33,6 +33,7 @@
 ..\more\ymore.exe|ymore.exe
 ..\mount\ymount.exe|ymount.exe
 ..\nice\nice.exe|nice.exe
+..\objdir\yobjdir.exe|yobjdir.exe
 ..\osver\osver.exe|osver.exe
 ..\petool\petool.exe|petool.exe
 ..\procinfo\procinfo.exe|procinfo.exe

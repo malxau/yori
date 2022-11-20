@@ -329,6 +329,11 @@ YORI_CMD_BUILTIN YoriCmd_NICE;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YOBJDIR;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_OSVER;
 
 /**
@@ -640,6 +645,7 @@ YoriShBuiltins[] = {
                     {_T("YMORE"),     YoriCmd_YMORE},
                     {_T("YMOUNT"),    YoriCmd_YMOUNT},
                     {_T("YMOVE"),     YoriCmd_YMOVE},
+                    {_T("YOBJDIR"),   YoriCmd_YOBJDIR},
                     {_T("YPATH"),     YoriCmd_YPATH},
                     {_T("YPAUSE"),    YoriCmd_YPAUSE},
                     {_T("YPM"),       YoriCmd_YPM},
@@ -703,6 +709,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("more"),     _T("ymore $*$")},
     {_T("mount"),    _T("ymount $*$")},
     {_T("move"),     _T("ymove $*$")},
+    {_T("objdir"),   _T("yobjdir $*$")},
     {_T("paste"),    _T("yclip -p $*$")},
     {_T("path"),     _T("ypath $*$")},
     {_T("pause"),    _T("ypause $*$")},
