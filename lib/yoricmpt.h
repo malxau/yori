@@ -191,6 +191,38 @@ typedef _Return_type_success_(return >= 0) long HRESULT;
 #define STATUS_NO_MORE_ENTRIES ((LONG)0x8000001A)
 #endif
 
+#ifndef STATUS_NOT_IMPLEMENTED
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating a call is not implemented.
+ */
+#define STATUS_NOT_IMPLEMENTED ((LONG)0xC0000002)
+#endif
+
+#ifndef STATUS_INVALID_INFO_CLASS
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating an unknown information class.
+ */
+#define STATUS_INVALID_INFO_CLASS ((LONG)0xC0000003)
+#endif
+
+#ifndef STATUS_INFO_LENGTH_MISMATCH
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating an incorrect buffer size for an information class.
+ */
+#define STATUS_INFO_LENGTH_MISMATCH ((LONG)0xC0000004)
+#endif
+
+#ifndef STATUS_DELETE_PENDING
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating a file will be deleted on final handle close.
+ */
+#define STATUS_DELETE_PENDING ((LONG)0xC0000056)
+#endif
+
 #ifndef STATUS_INSUFFICIENT_RESOURCES
 /**
  If not defined by the current compilation environment, the NTSTATUS code
@@ -198,6 +230,23 @@ typedef _Return_type_success_(return >= 0) long HRESULT;
  */
 #define STATUS_INSUFFICIENT_RESOURCES ((LONG)0xC000009A)
 #endif
+
+#ifndef STATUS_CANCELLED
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating an operation was cancelled.
+ */
+#define STATUS_CANCELLED ((LONG)0xC0000120)
+#endif
+
+#ifndef STATUS_DEBUGGER_INACTIVE
+/**
+ If not defined by the current compilation environment, the NTSTATUS code
+ indicating a debugger is not currently operational.
+ */
+#define STATUS_DEBUGGER_INACTIVE ((LONG)0xC0000354)
+#endif
+
 
 /**
  Definition of an IO_STATUS_BLOCK for compilation environments that don't

@@ -127,7 +127,7 @@ LsofFileFoundCallback(
         DWORD LastError = GetLastError();
         if (LastError == ERROR_ACCESS_DENIED &&
             DllNtDll.pRtlGetLastNtStatus != NULL &&
-            DllNtDll.pRtlGetLastNtStatus() == (LONG)0xC0000056) {
+            DllNtDll.pRtlGetLastNtStatus() == STATUS_DELETE_PENDING) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("lsof: open of %y failed: the file is delete pending\n"), FilePath);
         } else {
             LPTSTR ErrText = YoriLibGetWinErrorText(LastError);

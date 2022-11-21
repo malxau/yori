@@ -73,7 +73,7 @@ YoriLibGetSystemProcessList(
         }
 
         Status = DllNtDll.pNtQuerySystemInformation(SystemProcessInformation, LocalProcessInfo, BytesAllocated, &BytesReturned);
-    } while (Status == (LONG)0xc0000004);
+    } while (Status == STATUS_INFO_LENGTH_MISMATCH);
 
 
     if (Status != 0) {
@@ -136,7 +136,7 @@ YoriLibGetSystemHandlesList(
         }
 
         Status = DllNtDll.pNtQuerySystemInformation(SystemExtendedHandleInformation, LocalHandlesInfo, BytesAllocated, &BytesReturned);
-    } while (Status == (LONG)0xc0000004);
+    } while (Status == STATUS_INFO_LENGTH_MISMATCH);
 
 
     if (Status != 0) {
