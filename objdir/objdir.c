@@ -88,41 +88,6 @@ typedef struct _OBJDIR_CONTEXT {
 } OBJDIR_CONTEXT, *POBJDIR_CONTEXT;
 
 /**
- This function right aligns a Yori string by moving characters in place
- to ensure the total length of the string equals the specified alignment.
-
- @param String Pointer to the string to align.
-
- @param Align The number of characters that the string should contain.  If
-        it currently has less than this number, spaces are inserted at the
-        beginning of the string.
- */
-VOID
-ObjDirRightAlignString(
-    __in PYORI_STRING String,
-    __in DWORD Align
-    )
-{
-    DWORD Index;
-    DWORD Delta;
-    if (String->LengthInChars >= Align) {
-        return;
-    }
-    ASSERT(String->LengthAllocated >= Align);
-    if (String->LengthAllocated < Align) {
-        return;
-    }
-    Delta = Align - String->LengthInChars;
-    for (Index = Align - 1; Index >= Delta; Index--) {
-        String->StartOfString[Index] = String->StartOfString[Index - Delta];
-    }
-    for (Index = 0; Index < Delta; Index++) {
-        String->StartOfString[Index] = ' ';
-    }
-    String->LengthInChars = Align;
-}
-
-/**
  The number of characters to use to display the size of objects in the
  directory.
  */
@@ -173,13 +138,13 @@ ObjDirOutputEndOfDirectorySummary(
 
     YoriLibNumberToString(&CountString, ObjDirContext->ObjectsFound, 10, 3, ',');
 
-    ObjDirRightAlignString(&CountString, OBJDIR_COUNT_FIELD_SIZE);
+    YoriLibRightAlignString(&CountString, OBJDIR_COUNT_FIELD_SIZE);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y Object(s)\n"), &CountString);
 
     YoriLibNumberToString(&CountString, ObjDirContext->DirsFound, 10, 3, ',');
 
-    ObjDirRightAlignString(&CountString, OBJDIR_COUNT_FIELD_SIZE);
+    YoriLibRightAlignString(&CountString, OBJDIR_COUNT_FIELD_SIZE);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y Dir(s)\n"), &CountString);
 

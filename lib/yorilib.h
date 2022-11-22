@@ -3678,6 +3678,12 @@ YoriLibUpcaseChar(
     __in TCHAR c
     );
 
+VOID
+YoriLibRightAlignString(
+    __in PYORI_STRING String,
+    __in DWORD Align
+    );
+
 int
 YoriLibCompareStringWithLiteral(
     __in PCYORI_STRING Str1,

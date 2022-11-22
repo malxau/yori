@@ -235,41 +235,6 @@ typedef struct _DIR_CONTEXT {
 } DIR_CONTEXT, *PDIR_CONTEXT;
 
 /**
- This function right aligns a Yori string by moving characters in place
- to ensure the total length of the string equals the specified alignment.
-
- @param String Pointer to the string to align.
-
- @param Align The number of characters that the string should contain.  If
-        it currently has less than this number, spaces are inserted at the
-        beginning of the string.
- */
-VOID
-DirRightAlignString(
-    __in PYORI_STRING String,
-    __in DWORD Align
-    )
-{
-    DWORD Index;
-    DWORD Delta;
-    if (String->LengthInChars >= Align) {
-        return;
-    }
-    ASSERT(String->LengthAllocated >= Align);
-    if (String->LengthAllocated < Align) {
-        return;
-    }
-    Delta = Align - String->LengthInChars;
-    for (Index = Align - 1; Index >= Delta; Index--) {
-        String->StartOfString[Index] = String->StartOfString[Index - Delta];
-    }
-    for (Index = 0; Index < Delta; Index++) {
-        String->StartOfString[Index] = ' ';
-    }
-    String->LengthInChars = Align;
-}
-
-/**
  The number of characters to use to display the date of objects in the
  directory.
  */
@@ -377,8 +342,8 @@ DirOutputEndOfDirectorySummary(
     YoriLibNumberToString(&CountString, DirContext->FilesFoundInThisDir, 10, 3, ',');
     YoriLibNumberToString(&SizeString, DirContext->FileSizeInThisDir, 10, 3, ',');
 
-    DirRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
-    DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
+    YoriLibRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
+    YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y File(s) %y bytes\n"), &CountString, &SizeString);
 
@@ -389,8 +354,8 @@ DirOutputEndOfDirectorySummary(
     YoriLibNumberToString(&CountString, DirContext->DirsFoundInThisDir, 10, 3, ',');
     YoriLibNumberToString(&SizeString, FreeSpace.QuadPart, 10, 3, ',');
 
-    DirRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
-    DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
+    YoriLibRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
+    YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y Dir(s)  %y bytes free\n"), &CountString, &SizeString);
 
@@ -433,15 +398,15 @@ DirOutputEndOfRecursiveSummary(
     YoriLibNumberToString(&CountString, DirContext->FilesFound, 10, 3, ',');
     YoriLibNumberToString(&SizeString, DirContext->TotalFileSize, 10, 3, ',');
 
-    DirRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
-    DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
+    YoriLibRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
+    YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
 
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n     Total Files Listed:\n"));
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y File(s) %y bytes\n"), &CountString, &SizeString);
 
     YoriLibNumberToString(&CountString, DirContext->DirsFound, 10, 3, ',');
 
-    DirRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
+    YoriLibRightAlignString(&CountString, DIR_COUNT_FIELD_SIZE);
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y Dir(s)\n"), &CountString);
 
     YoriLibFreeStringContents(&CountString);
@@ -796,7 +761,7 @@ DirFileFoundCallback(
                 DirContext->TotalFileSize += FileSize.QuadPart;
                 YoriLibNumberToString(&SizeString, FileSize.QuadPart, 10, 3, ',');
                 if (SizeString.LengthInChars < DIR_SIZE_FIELD_SIZE) {
-                    DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
+                    YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
                 }
                 DirContext->FilesFoundInThisDir++;
             }
@@ -914,7 +879,7 @@ DirFileFoundCallback(
                         }
                         YoriLibNumberToString(&SizeString, FindStreamData.StreamSize.QuadPart, 10, 3, ',');
                         if (SizeString.LengthInChars < DIR_SIZE_FIELD_SIZE) {
-                            DirRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
+                            YoriLibRightAlignString(&SizeString, DIR_SIZE_FIELD_SIZE);
                         }
                         if (DirContext->DisplayShortNames) {
                             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%18s%y %13s%y%s%s%s\n"), _T(""), &SizeString, _T(""), &VtAttribute, FileInfo->cFileName, FindStreamData.cStreamName, VtReset);
