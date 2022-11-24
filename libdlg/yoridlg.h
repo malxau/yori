@@ -78,6 +78,18 @@ YoriDlgAbout(
 
 __success(return)
 BOOLEAN
+YoriDlgDevice(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_STRING Title,
+    __in DWORD OptionCount,
+    __in_opt PYORI_DLG_FILE_CUSTOM_OPTION Options,
+    __inout PYORI_STRING Text,
+    __out PDWORDLONG DeviceOffset,
+    __out PDWORDLONG DeviceLength
+    );
+
+__success(return)
+BOOLEAN
 YoriDlgDir(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,

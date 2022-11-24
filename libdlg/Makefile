@@ -5,6 +5,7 @@ compile: yoridlg.lib
 
 OBJS=\
 	 about.obj    \
+	 device.obj      \
 	 dir.obj      \
 	 file.obj     \
 	 find.obj     \
