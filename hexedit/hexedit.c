@@ -94,6 +94,16 @@ typedef struct _HEXEDIT_CONTEXT {
     YORI_STRING OpenFileName;
 
     /**
+     The offset within the file corresponding to the currently edited data.
+     */
+    DWORDLONG DataOffset;
+
+    /**
+     The length of the range of the currently edited data.
+     */
+    DWORDLONG DataLength;
+
+    /**
      The string that was most recently searched for.
      */
     YORI_STRING SearchString;
@@ -195,52 +205,94 @@ HexEditUpdateOpenedFileCaption(
 
  @param FileName Pointer to the name of the file to open.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @param DataOffset Specifies the offset within the file to load the data.
+
+ @param DataLength Specifies the number of bytes of data to load.  If zero,
+        the entire file or device contents are loaded.
+
+ @return Win32 error code, including ERROR_SUCCESS to indicate success.
  */
-BOOLEAN
+DWORD
 HexEditLoadFile(
     __in PHEXEDIT_CONTEXT HexEditContext,
-    __in PYORI_STRING FileName
+    __in PYORI_STRING FileName,
+    __in DWORDLONG DataOffset,
+    __in DWORDLONG DataLength
     )
 {
     HANDLE hFile;
     LARGE_INTEGER FileSize;
+    LARGE_INTEGER FileOffset;
     PUCHAR Buffer;
     DWORD BytesRead;
+    DWORD Err;
 
     if (FileName->StartOfString == NULL) {
-        return FALSE;
+        return ERROR_INVALID_NAME;
     }
 
     ASSERT(YoriLibIsStringNullTerminated(FileName));
 
     hFile = CreateFile(FileName->StartOfString, FILE_READ_DATA | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
-        return FALSE;
+        return GetLastError();
     }
 
-    FileSize.LowPart = GetFileSize(hFile, &FileSize.HighPart);
-    if (FileSize.LowPart == INVALID_FILE_SIZE && GetLastError() != NO_ERROR) {
+    // 
+    //  MSFIX This doesn't make any sense for a device.  We could detect the
+    //  error and try IOCTL_DISK_GET_LENGTH_INFO, although for a device we
+    //  probably should receive the size to access.
+    //
+
+    if (DataLength == 0) {
+        Err = YoriLibGetFileOrDeviceSize(hFile, &FileSize.QuadPart);
+        if (Err != ERROR_SUCCESS) {
+            CloseHandle(hFile);
+            return Err;
+        }
+    } else {
+        FileSize.QuadPart = DataLength;
+    }
+
+    if (FileSize.HighPart != 0) {
         CloseHandle(hFile);
-        return FALSE;
+        return ERROR_READ_FAULT;
+    }
+
+    FileOffset.QuadPart = DataOffset;
+    if (FileOffset.QuadPart != 0) {
+        if (!SetFilePointer(hFile, FileOffset.LowPart, &FileOffset.HighPart, FILE_BEGIN)) {
+            Err = GetLastError();
+            CloseHandle(hFile);
+            return Err;
+        }
     }
 
     Buffer = YoriLibReferencedMalloc(FileSize.LowPart);
     if (Buffer == NULL) {
         CloseHandle(hFile);
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
 
     if (!ReadFile(hFile, Buffer, FileSize.LowPart, &BytesRead, NULL)) {
+        Err = GetLastError();
         YoriLibDereference(Buffer);
         CloseHandle(hFile);
-        return FALSE;
+        return Err;
     }
 
-    if (BytesRead != FileSize.LowPart) {
+    //
+    //  If the call requested us to automatically detect the length, tolerate
+    //  it being a little smaller than we expect.  This happens when the
+    //  partition layer passes IOCTLs to the disk, sigh.
+    //
+
+    if (BytesRead > FileSize.LowPart ||
+        (DataLength != 0 && BytesRead != FileSize.LowPart)) {
+
         YoriLibDereference(Buffer);
         CloseHandle(hFile);
-        return FALSE;
+        return ERROR_INVALID_DATA;
     }
 
     CloseHandle(hFile);
@@ -249,11 +301,14 @@ HexEditLoadFile(
 
     if (!YoriWinHexEditSetDataNoCopy(HexEditContext->HexEdit, Buffer, FileSize.LowPart, BytesRead)) {
         YoriLibDereference(Buffer);
-        return FALSE;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
     YoriLibDereference(Buffer);
 
-    return TRUE;
+    HexEditContext->DataOffset = DataOffset;
+    HexEditContext->DataLength = DataLength;
+
+    return ERROR_SUCCESS;
 }
 
 /**
@@ -263,12 +318,21 @@ HexEditLoadFile(
 
  @param FileName Pointer to the name of the file to save.
 
+ @param DataOffset Specifies the offset within the file to store the data.
+
+ @param DataLength Specifies the number of bytes of data to store.  If this
+        differs from the current buffer, the save operation is failed.  If
+        this is zero, the number of bytes is undefined, and any value in the
+        hex edit control buffer can be used.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
 HexEditSaveFile(
     __in PHEXEDIT_CONTEXT HexEditContext,
-    __in PYORI_STRING FileName
+    __in PYORI_STRING FileName,
+    __in DWORDLONG DataOffset,
+    __in DWORDLONG DataLength
     )
 {
     DWORD Index;
@@ -316,7 +380,25 @@ HexEditSaveFile(
 
     YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
 
+    if (DataLength != 0 &&
+        DataLength != BufferLength) {
+
+        // MSFIX Display warning
+    }
+
+    if (DataOffset != 0) {
+        LARGE_INTEGER FileOffset;
+        FileOffset.QuadPart = HexEditContext->DataOffset;
+        if (!SetFilePointer(TempHandle, FileOffset.LowPart, &FileOffset.HighPart, FILE_BEGIN)) {
+            CloseHandle(TempHandle);
+            DeleteFile(TempFileName.StartOfString);
+            YoriLibFreeStringContents(&TempFileName);
+            return FALSE;
+        }
+    }
+
     if (Buffer != NULL) {
+
         //
         //  MSFIX This is truncating to 4Gb but is probably limited much lower
         //
@@ -493,25 +575,30 @@ HexEditNewButtonClicked(
 }
 
 /**
- A callback invoked when the open menu item is invoked.
+ Display an open dialog.  The open may be for files or devices.
 
- @param Ctrl Pointer to the menu bar control.
+ @param Parent Handle to the main window.
+
+ @param HexEditContext Pointer to the hexedit context.
+
+ @param OpenDevice If TRUE, the open device dialog should be displayed.
+        If FALSE, the open file dialog should be displayed.
  */
 VOID
-HexEditOpenButtonClicked(
-    __in PYORI_WIN_CTRL_HANDLE Ctrl
+HexEditOpenDialog(
+    __in PYORI_WIN_CTRL_HANDLE Parent,
+    __in PHEXEDIT_CONTEXT HexEditContext,
+    __in BOOLEAN OpenDevice
     )
 {
     YORI_STRING Title;
     YORI_STRING Text;
     YORI_STRING FullName;
-    PHEXEDIT_CONTEXT HexEditContext;
     YORI_DLG_FILE_CUSTOM_VALUE ReadOnlyValues[2];
     YORI_DLG_FILE_CUSTOM_OPTION CustomOptionArray[1];
-
-    PYORI_WIN_CTRL_HANDLE Parent;
-    Parent = YoriWinGetControlParent(Ctrl);
-    HexEditContext = YoriWinGetControlContext(Parent);
+    DWORD Err;
+    DWORDLONG DeviceOffset;
+    DWORDLONG DeviceLength;
 
     YoriLibConstantString(&ReadOnlyValues[0].ValueText, _T("Open for editing"));
     YoriLibConstantString(&ReadOnlyValues[1].ValueText, _T("Open read only"));
@@ -528,11 +615,25 @@ HexEditOpenButtonClicked(
     YoriLibConstantString(&Title, _T("Open"));
     YoriLibInitEmptyString(&Text);
 
-    YoriDlgFile(YoriWinGetWindowManagerHandle(Parent),
-                &Title,
-                sizeof(CustomOptionArray)/sizeof(CustomOptionArray[0]),
-                CustomOptionArray,
-                &Text);
+    DeviceOffset = 0;
+    DeviceLength = 0;
+
+    if (OpenDevice) {
+        YoriDlgDevice(YoriWinGetWindowManagerHandle(Parent),
+                      &Title,
+                      sizeof(CustomOptionArray)/sizeof(CustomOptionArray[0]),
+                      CustomOptionArray,
+                      &Text,
+                      &DeviceOffset,
+                      &DeviceLength);
+
+    } else {
+        YoriDlgFile(YoriWinGetWindowManagerHandle(Parent),
+                    &Title,
+                    sizeof(CustomOptionArray)/sizeof(CustomOptionArray[0]),
+                    CustomOptionArray,
+                    &Text);
+    }
 
     if (Text.LengthInChars == 0) {
         YoriLibFreeStringContents(&Text);
@@ -546,11 +647,17 @@ HexEditOpenButtonClicked(
     }
 
     YoriLibFreeStringContents(&Text);
-    if (!HexEditLoadFile(HexEditContext, &FullName)) {
+    Err = HexEditLoadFile(HexEditContext, &FullName, DeviceOffset, DeviceLength);
+    if (Err != ERROR_SUCCESS) {
         YORI_STRING DialogText;
         YORI_STRING ButtonText;
+        LPTSTR ErrText;
 
-        YoriLibConstantString(&DialogText, _T("Could not open file"));
+        ErrText = YoriLibGetWinErrorText(Err);
+        YoriLibInitEmptyString(&DialogText);
+        YoriLibYPrintf(&DialogText, _T("Could not open file: %s"), ErrText);
+        YoriLibFreeWinErrorText(ErrText);
+
         YoriLibConstantString(&ButtonText, _T("Ok"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
@@ -561,6 +668,7 @@ HexEditOpenButtonClicked(
                           0,
                           0);
 
+        YoriLibFreeStringContents(&DialogText);
         YoriLibFreeStringContents(&FullName);
         return;
     }
@@ -577,6 +685,44 @@ HexEditOpenButtonClicked(
     }
 
     YoriWinHexEditSetReadOnly(HexEditContext->HexEdit, HexEditContext->ReadOnly);
+}
+
+/**
+ A callback invoked when the open menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditOpenButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    HexEditOpenDialog(Parent, HexEditContext, FALSE);
+}
+
+/**
+ A callback invoked when the open menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditOpenDeviceButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    HexEditOpenDialog(Parent, HexEditContext, TRUE);
 }
 
 VOID
@@ -611,7 +757,7 @@ HexEditSaveButtonClicked(
     YoriLibConstantString(&Title, _T("Save"));
     YoriLibConstantString(&ButtonText, _T("Ok"));
 
-    if (!HexEditSaveFile(HexEditContext, &HexEditContext->OpenFileName)) {
+    if (!HexEditSaveFile(HexEditContext, &HexEditContext->OpenFileName, HexEditContext->DataOffset, HexEditContext->DataLength)) {
         YoriLibConstantString(&Text, _T("Could not open file for writing"));
 
         YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
@@ -667,7 +813,7 @@ HexEditSaveAsButtonClicked(
     }
 
     YoriLibFreeStringContents(&Text);
-    if (!HexEditSaveFile(HexEditContext, &FullName)) {
+    if (!HexEditSaveFile(HexEditContext, &FullName, 0, 0)) {
         YORI_STRING ButtonText;
 
         YoriLibFreeStringContents(&FullName);
@@ -688,6 +834,8 @@ HexEditSaveAsButtonClicked(
     memcpy(&HexEditContext->OpenFileName, &FullName, sizeof(YORI_STRING));
     HexEditUpdateOpenedFileCaption(HexEditContext);
     YoriWinHexEditSetModifyState(HexEditContext->HexEdit, FALSE);
+    HexEditContext->DataOffset = 0;
+    HexEditContext->DataLength = 0;
 }
 
 /**
@@ -969,7 +1117,7 @@ HexEditPopulateMenuBar(
     __in PYORI_WIN_WINDOW_HANDLE Parent
     )
 {
-    YORI_WIN_MENU_ENTRY FileMenuEntries[6];
+    YORI_WIN_MENU_ENTRY FileMenuEntries[7];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[4];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[3];
@@ -990,6 +1138,11 @@ HexEditPopulateMenuBar(
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&Open..."));
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+O"));
     FileMenuEntries[MenuIndex].NotifyCallback = HexEditOpenButtonClicked;
+    MenuIndex++;
+
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("Open &Device..."));
+    YoriLibConstantString(&FileMenuEntries[MenuIndex].Hotkey, _T("Ctrl+D"));
+    FileMenuEntries[MenuIndex].NotifyCallback = HexEditOpenDeviceButtonClicked;
     MenuIndex++;
 
     YoriLibConstantString(&FileMenuEntries[MenuIndex].Caption, _T("&Save"));
@@ -1251,7 +1404,7 @@ HexEditCreateMainWindow(
     YoriWinSetWindowManagerResizeNotifyCallback(Parent, HexEditResizeWindowManager);
 
     if (HexEditContext->OpenFileName.StartOfString != NULL) {
-        HexEditLoadFile(HexEditContext, &HexEditContext->OpenFileName);
+        HexEditLoadFile(HexEditContext, &HexEditContext->OpenFileName, 0, 0);
         HexEditUpdateOpenedFileCaption(HexEditContext);
         YoriWinHexEditSetReadOnly(HexEditContext->HexEdit, HexEditContext->ReadOnly);
     }
