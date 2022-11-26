@@ -2159,6 +2159,13 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
 #define SPI_GETWORKAREA (48)
 #endif
 
+#ifndef IOCTL_DISK_GET_LENGTH_INFO
+/**
+ The IOCTL code to query a volume or disk length, if it's not already defined.
+ */
+#define IOCTL_DISK_GET_LENGTH_INFO CTL_CODE(IOCTL_DISK_BASE, 23, METHOD_BUFFERED, FILE_READ_ACCESS)
+#endif
+
 #ifndef FSCTL_SET_REPARSE_POINT
 
 /**

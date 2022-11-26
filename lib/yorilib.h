@@ -3992,6 +3992,13 @@ YoriLibGetHandleSectorSize(
     __in HANDLE FileHandle
     );
 
+__success(return == ERROR_SUCCESS)
+DWORD
+YoriLibGetFileOrDeviceSize(
+    __in HANDLE FileHandle,
+    __out PDWORDLONG FileSizePtr
+    );
+
 INT
 YoriLibMulDiv(
     __in INT Number,

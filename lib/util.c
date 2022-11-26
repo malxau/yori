@@ -585,6 +585,60 @@ YoriLibGetHandleSectorSize(
 }
 
 /**
+ Query a file or device length.  These use different APIs so this function
+ tries a few to see if any work.
+
+ @param FileHandle A handle to a file or device.
+
+ @param FileSizePtr On successful completion, updated to point to the file
+        or device size in bytes.
+
+ @return ERROR_SUCCESS to indicate success, or alternative Win32 code to
+         indicate failure.
+ */
+__success(return == ERROR_SUCCESS)
+DWORD
+YoriLibGetFileOrDeviceSize(
+    __in HANDLE FileHandle,
+    __out PDWORDLONG FileSizePtr
+    )
+{
+    LARGE_INTEGER FileSize;
+    DISK_GEOMETRY DiskGeometry;
+    DWORD BytesReturned;
+    DWORD Err;
+
+    Err = ERROR_SUCCESS;
+    FileSize.LowPart = GetFileSize(FileHandle, &FileSize.HighPart);
+    if (FileSize.LowPart == INVALID_FILE_SIZE) {
+        Err = GetLastError();
+    }
+
+    if (Err == ERROR_SUCCESS) {
+        *FileSizePtr = FileSize.QuadPart;
+        return Err;
+    }
+
+    if (Err != ERROR_INVALID_PARAMETER) {
+        return Err;
+    }
+
+    if (DeviceIoControl(FileHandle, IOCTL_DISK_GET_LENGTH_INFO, NULL, 0, &FileSize, sizeof(FileSize), &BytesReturned, NULL)) {
+        *FileSizePtr = FileSize.QuadPart;
+        return ERROR_SUCCESS;
+    }
+
+    if (DeviceIoControl(FileHandle, IOCTL_DISK_GET_DRIVE_GEOMETRY, NULL, 0, &DiskGeometry, sizeof(DiskGeometry), &BytesReturned, NULL)) {
+        FileSize.QuadPart = DiskGeometry.Cylinders.QuadPart;
+        FileSize.QuadPart = FileSize.QuadPart * DiskGeometry.TracksPerCylinder * DiskGeometry.SectorsPerTrack * DiskGeometry.BytesPerSector;
+        *FileSizePtr = FileSize.QuadPart;
+        return ERROR_SUCCESS;
+    }
+
+    return GetLastError();
+}
+
+/**
  Multiply a 32 bit number by a 32 bit number and divide by a 32 bit number.
  Since we have a 64 bit math library, this can be implemented fairly simply.
  Note that on x86 the assembly routines are limited to 32 bit denominators,
