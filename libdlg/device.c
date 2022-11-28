@@ -41,6 +41,22 @@ typedef enum _YORI_DLG_DEV_CONTROLS {
 } YORI_DLG_DEV_CONTROLS;
 
 /**
+ An entry to insert into the dialog describing a known device.
+ */
+typedef struct _YORI_DLG_DEV_KNOWN_DEVICE {
+    /**
+     The list entry for this device.  Paired with
+     @ref YORI_DLG_DEV_STATE::DeviceEntryList .
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     A string to display for this device.
+     */
+    YORI_STRING DisplayName;
+} YORI_DLG_DEV_KNOWN_DEVICE, *PYORI_DLG_DEV_KNOWN_DEVICE;
+
+/**
  State specific to a device dialog that is in operation.  Currently this is
  process global (can we really nest open dialogs anyway?)  But this should
  be moved to a per-window allocation.
@@ -64,6 +80,16 @@ typedef struct _YORI_DLG_DEV_STATE {
      device has.
      */
     DWORDLONG LengthToReturn;
+
+    /**
+     A sorted list of entries to insert into the list of known devices.
+     */
+    YORI_LIST_ENTRY DeviceEntryList;
+
+    /**
+     The number of entries in DeviceEntryList.
+     */
+    DWORD DeviceEntryCount;
 
 } YORI_DLG_DEV_STATE, *PYORI_DLG_DEV_STATE;
 
@@ -265,7 +291,7 @@ YoriDlgDevDeviceSelectionChanged(
 
  @param ObjectType Pointer to the type of the object.
 
- @param Context Pointer to the device list control.
+ @param Context Pointer to the dialog state.
 
  @return TRUE to indicate enumeration should continue, FALSE to indicate
          enumeration should terminate immediately.
@@ -281,8 +307,8 @@ YoriDlgDevObjectFoundCallback(
 
     BOOLEAN IsLink;
     BOOLEAN IncludeObject;
-    PYORI_WIN_CTRL_HANDLE DeviceList;
     YORI_STRING MatchArray[3];
+    PYORI_DLG_DEV_STATE State;
 
     UNREFERENCED_PARAMETER(FullPath);
 
@@ -318,10 +344,28 @@ YoriDlgDevObjectFoundCallback(
         }
     }
 
-    DeviceList = (PYORI_WIN_CTRL_HANDLE)Context;
+    State = (PYORI_WIN_CTRL_HANDLE)Context;
 
     if (IncludeObject) {
-        YoriWinListAddItems(DeviceList, NameOnly, 1);
+        PYORI_DLG_DEV_KNOWN_DEVICE NewDevice;
+
+        NewDevice = YoriLibReferencedMalloc(sizeof(YORI_DLG_DEV_KNOWN_DEVICE) + (NameOnly->LengthInChars + 1) * sizeof(TCHAR));
+        if (NewDevice == NULL) {
+            return TRUE;
+        }
+
+        YoriLibInitEmptyString(&NewDevice->DisplayName);
+        NewDevice->DisplayName.MemoryToFree = NewDevice;
+        YoriLibReference(NewDevice);
+        NewDevice->DisplayName.StartOfString = (LPTSTR)(NewDevice + 1);
+        memcpy(NewDevice->DisplayName.StartOfString, NameOnly->StartOfString, NameOnly->LengthInChars * sizeof(TCHAR));
+        NewDevice->DisplayName.LengthInChars = NameOnly->LengthInChars;
+        NewDevice->DisplayName.LengthAllocated = NameOnly->LengthInChars + 1;
+        NewDevice->DisplayName.StartOfString[NewDevice->DisplayName.LengthInChars] = '\0';
+
+        YoriLibAppendList(&State->DeviceEntryList, &NewDevice->ListEntry);
+        State->DeviceEntryCount++;
+
     }
 
     return TRUE;
@@ -336,7 +380,7 @@ YoriDlgDevObjectFoundCallback(
 
  @param NtStatus Indicates the status code of the enumeration error.
 
- @param Context Pointer to the device list.
+ @param Context Pointer to the dialog state.
 
  @return TRUE to indicate enumeration should continue as much as possible,
          FALSE to terminate immediately.
@@ -353,6 +397,34 @@ YoriDlgDevObjectErrorCallback(
     UNREFERENCED_PARAMETER(Context);
 
     return TRUE;
+}
+
+/**
+ Remove all entries from the known device list.
+
+ @param State Pointer to the dialog state, containing the known device list.
+ */
+VOID
+YoriDlgDevClearDeviceList(
+    __in PYORI_DLG_DEV_STATE State
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_DLG_DEV_KNOWN_DEVICE Device;
+
+    while (TRUE) {
+        ListEntry = YoriLibGetNextListEntry(&State->DeviceEntryList, NULL);
+        if (ListEntry == NULL) {
+            break;
+        }
+
+        Device = CONTAINING_RECORD(ListEntry, YORI_DLG_DEV_KNOWN_DEVICE, ListEntry);
+        YoriLibRemoveListItem(&Device->ListEntry);
+        YoriLibFreeStringContents(&Device->DisplayName);
+        YoriLibDereference(Device);
+    }
+
+    State->DeviceEntryCount = 0;
 }
 
 /**
@@ -377,8 +449,45 @@ YoriDlgDevRefreshView(
     State = YoriWinGetControlContext(Dialog);
 
     YoriWinListClearAllItems(DeviceList);
+    YoriDlgDevClearDeviceList(State);
+
     YoriLibConstantString(&SearchPath, _T("\\Global??"));
-    YoriLibForEachObjectEnum(&SearchPath, 0, YoriDlgDevObjectFoundCallback, YoriDlgDevObjectErrorCallback, DeviceList);
+    YoriLibForEachObjectEnum(&SearchPath, 0, YoriDlgDevObjectFoundCallback, YoriDlgDevObjectErrorCallback, State);
+
+    if (State->DeviceEntryCount > 0) {
+        PYORI_STRING DeviceArray;
+        PYORI_LIST_ENTRY ListEntry;
+        DWORD Index;
+        PYORI_DLG_DEV_KNOWN_DEVICE Device;
+
+        DeviceArray = YoriLibMalloc(sizeof(YORI_STRING) * State->DeviceEntryCount);
+        if (DeviceArray == NULL) {
+            return;
+        }
+
+        ListEntry = NULL;
+        Index = 0;
+        while (TRUE) {
+            ListEntry = YoriLibGetNextListEntry(&State->DeviceEntryList, ListEntry);
+            if (ListEntry == NULL) {
+                break;
+            }
+
+            Device = CONTAINING_RECORD(ListEntry, YORI_DLG_DEV_KNOWN_DEVICE, ListEntry);
+
+            YoriLibInitEmptyString(&DeviceArray[Index]);
+            DeviceArray[Index].StartOfString = Device->DisplayName.StartOfString;
+            DeviceArray[Index].LengthInChars = Device->DisplayName.LengthInChars;
+            Index++;
+        }
+
+        ASSERT(Index == State->DeviceEntryCount);
+        YoriLibSortStringArray(DeviceArray, Index);
+
+        YoriWinListAddItems(DeviceList, DeviceArray, Index);
+
+        YoriLibFree(DeviceArray);
+    }
 }
 
 /**
@@ -460,6 +569,8 @@ YoriDlgDevice(
         WinMgrSize.Y = (SHORT)(13 + OptionCount);
     }
 
+    YoriLibInitializeListHead(&State.DeviceEntryList);
+    State.DeviceEntryCount = 0;
     YoriLibInitEmptyString(&State.FileToReturn);
     if (!YoriWinCreateWindow(WinMgrHandle, 50, (WORD)(13 + OptionCount), WinMgrSize.X, WinMgrSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
         return FALSE;
@@ -654,6 +765,8 @@ YoriDlgDevice(
     if (!YoriWinProcessInputForWindow(Parent, &Result)) {
         Result = FALSE;
     }
+
+    YoriDlgDevClearDeviceList(&State);
 
     if (Result) {
         *DeviceOffset = State.OffsetToReturn;
