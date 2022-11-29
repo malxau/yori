@@ -21,9 +21,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-which.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+which.exe: $(BIN_OBJS) $(YORILIBS)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) -version:$(YORI_BIN_VER_MAJOR).$(YORI_BIN_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_which.obj: which.c
 	@echo $@

@@ -15,9 +15,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-ysponge.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORIVER)
+ysponge.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_sponge.obj: sponge.c
 	@echo $@

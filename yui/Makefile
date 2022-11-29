@@ -11,7 +11,7 @@ LINKPDB_YUISHOOK=/Pdb:yuishook.pdb
 !ENDIF
 
 LDFLAGS_NT4UP=$(LDFLAGS:3.10=4.0)
-LIBS=$(LIBS) user32.lib gdi32.lib comdlg32.lib
+EXTERNLIBS=$(EXTERNLIBS) user32.lib gdi32.lib comdlg32.lib
 
 BIN_OBJS=\
 	 menu.obj        \
@@ -24,11 +24,11 @@ YUISHOOK_OBJS=\
 
 compile: $(BIN_OBJS) $(YUISHOOK_OBJS)
 
-yui.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT)
+yui.exe: $(BIN_OBJS) $(YORILIBS)
 	@echo $@
-	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 yuishook.dll: $(YUISHOOK_OBJS) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -dll -def:yuishook.def $(YUISHOOK_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB_YUISHOOK) -out:$@
+	@$(LINK) $(LDFLAGS) -dll -def:yuishook.def $(YUISHOOK_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB_YUISHOOK) -out:$@
 

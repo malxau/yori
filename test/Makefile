@@ -15,6 +15,6 @@ BIN_OBJS=\
 
 compile: $(BIN_OBJS)
 
-yoritest.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORISH) $(YORIVER)
+yoritest.exe: $(BIN_OBJS) $(YORILIBS) $(YORISH) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@

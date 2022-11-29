@@ -18,9 +18,9 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-yfor.exe: $(BIN_OBJS) $(YORILIB) $(YORICRT) $(YORISH) $(YORIVER)
+yfor.exe: $(BIN_OBJS) $(YORILIBS) $(YORISH) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
+	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
 mod_for.obj: for.c
 	@echo $@
@@ -30,6 +30,6 @@ builtins.lib: $(MOD_OBJS)
 	@echo $@
 	@$(LIB32) $(LIBFLAGS) $(MOD_OBJS) -out:$@
 
-for.com: $(MOD_OBJS) $(YORILIB) $(YORICRT) $(YORISH) $(YORIVER)
+for.com: $(MOD_OBJS) $(YORILIBS) $(YORISH) $(YORIVER)
 	@echo $@
-	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll $(LIBS) $(CRTLIB) $(YORILIB) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:for.def -out:$@
+	@$(LINK) $(LDFLAGS) $(MOD_OBJS) -dll $(YORILIBS) $(EXTERNLIBS) $(YORISH) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) -def:for.def -out:$@
