@@ -1289,7 +1289,7 @@ YoriWinEditIsValidNumericInput(
     __in PYORI_WIN_CTRL_EDIT Edit,
     __in DWORD FirstCharOffset,
     __in DWORD LastCharToDelete,
-    __in_opt PYORI_STRING Text,
+    __in_opt _When_(LastCharToDelete == 0, __in) PYORI_STRING Text,
     __in BOOLEAN InsertMode
     )
 {
@@ -1416,9 +1416,17 @@ YoriWinEditDeleteTextRange(
     DWORD CharsToDelete;
     PYORI_STRING Line;
 
-    if (FirstCharOffset >= LastCharOffset) {
+    //
+    //  The second condition can't happen given the first, but it's made
+    //  explicit to help the analyzer realize why we don't need a text buffer
+    //  to delete characters below.
+    //
+
+    if (FirstCharOffset >= LastCharOffset || LastCharOffset == 0) {
         return TRUE;
     }
+
+    __analysis_assume(LastCharOffset > 0);
 
     if (Edit->NumericOnly &&
         !YoriWinEditIsValidNumericInput(Edit, FirstCharOffset, LastCharOffset, NULL, FALSE)) {

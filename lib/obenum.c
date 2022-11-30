@@ -146,6 +146,13 @@ YoriLibForEachObjectEnum(
         return FALSE;
     }
 
+    //
+    //  This is really because the API is lacking annotations.  If we got
+    //  here, it succeeded.
+    //
+
+    __analysis_assume(DirHandle != NULL);
+
     BufferSize = 64 * 1024;
     Buffer = YoriLibMalloc(BufferSize);
     if (Buffer == NULL) {
@@ -153,6 +160,7 @@ YoriLibForEachObjectEnum(
         if (ErrorCallback != NULL) {
             ErrorCallback(DirectoryName, STATUS_INSUFFICIENT_RESOURCES, Context);
         }
+        return FALSE;
     }
 
     EnumContext = 0;
