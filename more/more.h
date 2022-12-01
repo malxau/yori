@@ -28,6 +28,14 @@
 #include <yorilib.h>
 
 /**
+ The maximum number of concurrent searches.  It's convenient to define this
+ because there is an array of this size indicating the number of user
+ configurable colors, with different arrays for strings to search for and
+ settings for each.  These all need to correspond to each other.
+ */
+#define MORE_MAX_SEARCHES 10
+
+/**
  Data describing a physical line.  A physical line is a line of text from the
  data source, which may take more characters than fit on a viewport line.
  */
@@ -120,6 +128,21 @@ typedef struct _MORE_LOGICAL_LINE {
      */
     YORI_STRING Line;
 } MORE_LOGICAL_LINE, *PMORE_LOGICAL_LINE;
+
+/**
+ Additional information about each search string.  This is seperated from the
+ search strings to allow the search strings to be passed as-is when searching
+ on each line.  Information about the string can be looked up after matches
+ are located.
+ */
+typedef struct _MORE_SEARCH_CONTEXT {
+
+    /**
+     The color index for the search match.
+     */
+    UCHAR ColorIndex;
+
+} MORE_SEARCH_CONTEXT, *PMORE_SEARCH_CONTEXT;
 
 /**
  Context passed to the callback which is invoked for each file found.
@@ -217,37 +240,54 @@ typedef struct _MORE_CONTEXT {
     WORD InitialColor;
 
     /**
-     The color to use to highlight search terms.
-     */
-    WORD SearchColor;
-
-    /**
      Pointer to an array of length InputSourceCount for file specifications
      to process.
      */
     PYORI_STRING InputSources;
 
     /**
-     TRUE if we are in search mode, meaning that keystrokes will be applied
-     to the SearchString below.  FALSE if keystrokes imply navigation.
+     An array of strings to search for.  These are compacted so the existence
+     of one empty string implies no further strings following.  This means
+     there is no correlation between an entry in this array and the color for
+     that entry.
      */
-    BOOL SearchMode;
+    YORI_STRING SearchStrings[MORE_MAX_SEARCHES];
 
     /**
-     TRUE if the status line needs to be redrawn as a result of a search
-     string change.
+     An array of additional information about each search string above.  This
+     array currently contains information about the color to use for the
+     search match.
      */
-    BOOL SearchDirty;
+    MORE_SEARCH_CONTEXT SearchContext[MORE_MAX_SEARCHES];
 
     /**
-     A string describing any text to search for.
+     An array of colors to use to display search matches.
      */
-    YORI_STRING SearchString;
+    UCHAR SearchColors[MORE_MAX_SEARCHES];
+
+    /**
+     Indicates the current color that the user is manipulating.  This can
+     be 0-8, where the user switches them with Ctrl+1 - Ctrl+9.
+     */
+    UCHAR SearchColorIndex;
 
     /**
      Handle to the thread that is adding to the physical line array.
      */
     HANDLE IngestThread;
+
+    /**
+     TRUE if we are in search mode, meaning that keystrokes will be applied
+     to the active SearchString.  The active SearchString is identified by
+     SearchColorIndex.  FALSE if keystrokes imply navigation.
+     */
+    BOOLEAN SearchUiActive;
+
+    /**
+     TRUE if the status line needs to be redrawn as a result of a search
+     string change.
+     */
+    BOOLEAN SearchDirty;
 
     /**
      TRUE if the display implies that text at the last cell in a line auto

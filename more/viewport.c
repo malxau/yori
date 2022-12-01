@@ -3,7 +3,7 @@
  *
  * Yori shell more console display
  *
- * Copyright (c) 2017-2019 Malcolm J. Smith
+ * Copyright (c) 2017-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -85,6 +85,201 @@ typedef struct _MORE_LINE_END_CONTEXT {
 } MORE_LINE_END_CONTEXT, *PMORE_LINE_END_CONTEXT;
 
 /**
+ Check if any search string exists.  Because these need to be stored in a
+ compacted form, if the first search string is populated, one exists; if not,
+ none exist.
+
+ @param MoreContext Pointer to the more context, indicating the search
+        strings.
+
+ @return TRUE if any search is active, FALSE if it is not.
+ */
+BOOLEAN
+MoreIsAnySearchActive(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    //
+    //  Because search strings need to be kept packed so there's a single
+    //  array of search strings to apply to lines, if the first one has
+    //  a search string, a search is active.
+    //
+
+    if (MoreContext->SearchStrings[0].LengthInChars > 0) {
+        ASSERT(MoreContext->SearchContext[0].ColorIndex != (UCHAR)-1);
+        return TRUE;
+    }
+
+    ASSERT(MoreContext->SearchContext[0].ColorIndex == (UCHAR)-1);
+    return FALSE;
+}
+
+/**
+ Find the next search match within a physical line.
+
+ @param MoreContext Pointer to the context indicating the strings to search
+        for.
+
+ @param StringToSearch Pointer to the string to search within, which is
+        typically a physical line or subset of one.
+
+ @param MatchOffset Optionally points to a value to update on successful
+        completion indicating the offset within StringToSearch where a match
+        was found.
+
+ @param MatchIndex Optionally points to a value to update on successful
+        completion indicating which matching string was located.
+
+ @return TRUE to indicate a search match was found, FALSE if it was not.
+ */
+__success(return)
+BOOLEAN
+MoreFindNextSearchMatch(
+    __in PMORE_CONTEXT MoreContext,
+    __in PCYORI_STRING StringToSearch,
+    __out_opt PDWORD MatchOffset,
+    __out_opt PUCHAR MatchIndex
+    )
+{
+    PYORI_STRING Found;
+    UCHAR Index;
+    UCHAR CountFound;
+
+    for (CountFound = 0; CountFound < MORE_MAX_SEARCHES; CountFound++) {
+        if (MoreContext->SearchContext[CountFound].ColorIndex == (UCHAR)-1) {
+            break;
+        }
+    }
+
+    Found = YoriLibFindFirstMatchingSubstringInsensitive(StringToSearch, CountFound, MoreContext->SearchStrings, MatchOffset);
+    if (Found != NULL) {
+        if (MatchIndex != NULL) {
+
+            for (Index = 0; Index < CountFound; Index++) {
+                if (Found == &MoreContext->SearchStrings[Index]) {
+                    *MatchIndex = Index;
+                    break;
+                }
+            }
+
+            //
+            //  Found has to be one of the input strings, but the analyzer
+            //  doesn't know that, so give it a nudge
+            //
+
+
+            __analysis_assume(Index < CountFound);
+        }
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ Find a search index for a specified color index.  The user indicates the
+ color index to apply via Ctrl+n key combinations.  That means when the user
+ specifies a new color index, we have to find a compacted slot to use for the
+ string for that color.  This function looks up an existing entry for the
+ specified color, or can allocate a new slot if none are in use.  The caller
+ is expected to set the color in the SearchContext if it updates the
+ allocated string, which records its color assignment; this is done to ensure
+ that a string doesn't need to be re-freed if the string is not updated.
+
+ @param MoreContext Pointer to the more context specifying the search strings
+        and colors.
+
+ @param ColorIndex Specifies the color to look up.
+
+ @return An index within the compacted array of search strings to use for
+         this color.  One is guaranteed to exist since we have as many slots
+         as colors.
+ */
+UCHAR
+MoreSearchIndexForColorIndex(
+    __in PMORE_CONTEXT MoreContext,
+    __in UCHAR ColorIndex
+    )
+{
+    UCHAR Index;
+
+    for (Index = 0; Index < MORE_MAX_SEARCHES; Index++) {
+        if (MoreContext->SearchContext[Index].ColorIndex == ColorIndex ||
+            MoreContext->SearchContext[Index].ColorIndex == (UCHAR)-1) {
+
+            return Index;
+        }
+    }
+
+    //
+    //  There are as many slots for concurrent searches as colors.  There
+    //  should either be an entry for each color or an empty slot to use
+    //  for one.
+    //
+
+    ASSERT(FALSE);
+    return 0;
+}
+
+/**
+ Free a search entry corresponding to a specific index.  All of the active
+ search terms need to be next to each other to be efficient, so this means
+ moving any later entries that are in use into the position that was
+ occupied by the entry being freed.
+
+ @param MoreContext Pointer to the more context including search strings and
+        settings.
+
+ @param SearchIndex The index of the entry to free.
+ */
+VOID
+MoreSearchIndexFree(
+    __in PMORE_CONTEXT MoreContext,
+    __in UCHAR SearchIndex
+    )
+{
+    UCHAR Index;
+
+    //
+    //  If it's already free, we're done
+    //
+
+    if (MoreContext->SearchContext[SearchIndex].ColorIndex == (UCHAR)-1) {
+        return;
+    }
+
+    //
+    //  Free the string allocation
+    //
+
+    YoriLibFreeStringContents(&MoreContext->SearchStrings[SearchIndex]);
+
+    //
+    //  Compact any later search strings by moving them down into the newly
+    //  emptied slot
+    //
+
+    Index = SearchIndex;
+    while (Index + 1 < MORE_MAX_SEARCHES &&
+           MoreContext->SearchContext[Index + 1].ColorIndex != (UCHAR)-1) {
+
+        memcpy(&MoreContext->SearchStrings[Index],
+               &MoreContext->SearchStrings[Index + 1],
+               sizeof(YORI_STRING));
+        MoreContext->SearchContext[Index].ColorIndex = MoreContext->SearchContext[Index + 1].ColorIndex;
+        Index++;
+    }
+
+    //
+    //  Empty the new final slot (which may be the one we just freed above.)
+    //
+
+    YoriLibInitEmptyString(&MoreContext->SearchStrings[Index]);
+    MoreContext->SearchContext[Index].ColorIndex = (UCHAR)-1;
+}
+
+/**
  Return the number of characters within a subset of a physical line which
  will form a logical line.  Conceptually this represents either the minimum
  of the length of the string or the viewport width.  In practice it can be
@@ -147,7 +342,9 @@ MoreGetLogicalLineLength(
     TCHAR MatchEscapeCharsBuf[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
     DWORD MatchOffset;
     DWORD MatchLength;
-    BOOL MatchFound;
+    BOOLEAN MatchFound;
+    WORD SearchColor;
+    UCHAR MatchIndex;
 
     CharsInOutputBuffer = 0;
     CellsDisplayed = 0;
@@ -157,6 +354,8 @@ MoreGetLogicalLineLength(
         LineEndContext->RequiresGeneration = FALSE;
     }
 
+    SearchColor = 0;
+
     MatchOffset = 0;
     MatchLength = 0;
     YoriLibInitEmptyString(&MatchEscapeChars);
@@ -165,10 +364,8 @@ MoreGetLogicalLineLength(
     if (CharactersRemainingInMatch > 0) {
         MatchFound = TRUE;
         MatchLength = CharactersRemainingInMatch;
-    } else if (MoreContext->SearchString.LengthInChars > 0) {
-        MatchFound = TRUE;
     } else {
-        MatchFound = FALSE;
+        MatchFound = MoreIsAnySearchActive(MoreContext);
     }
 
     for (SourceIndex = 0; SourceIndex < PhysicalLineSubset->LengthInChars; ) {
@@ -183,15 +380,15 @@ MoreGetLogicalLineLength(
             SourceIndex >= MatchOffset + MatchLength) {
 
             YORI_STRING StringForNextMatch;
+
             YoriLibInitEmptyString(&StringForNextMatch);
             StringForNextMatch.StartOfString = &PhysicalLineSubset->StartOfString[SourceIndex];
             StringForNextMatch.LengthInChars = PhysicalLineSubset->LengthInChars - SourceIndex;
-            if (YoriLibFindFirstMatchingSubstringInsensitive(&StringForNextMatch, 1, &MoreContext->SearchString, &MatchOffset)) {
-                MatchFound = TRUE;
-                MatchLength = MoreContext->SearchString.LengthInChars;
+            MatchFound = MoreFindNextSearchMatch(MoreContext, &StringForNextMatch, &MatchOffset, &MatchIndex);
+            if (MatchFound) {
+                MatchLength = MoreContext->SearchStrings[MatchIndex].LengthInChars;
+                SearchColor = MoreContext->SearchColors[MoreContext->SearchContext[MatchIndex].ColorIndex];
                 MatchOffset += SourceIndex;
-            } else {
-                MatchFound = FALSE;
             }
         }
 
@@ -235,9 +432,9 @@ MoreGetLogicalLineLength(
                     if (LineEndContext != NULL) {
                         LineEndContext->RequiresGeneration = TRUE;
                     }
-                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, MoreContext->SearchColor);
+                    YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, SearchColor);
                     CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
-                    CurrentColor = MoreContext->SearchColor;
+                    CurrentColor = SearchColor;
                 }
             }
             CharsInOutputBuffer++;
@@ -434,6 +631,8 @@ MoreCopyRangeIntoLogicalLine(
         DWORD MatchLength;
         BOOL MatchFound;
         WORD CurrentUserColor = LogicalLine->InitialUserColor;
+        WORD SearchColor;
+        UCHAR MatchIndex;
 
         YoriLibInitEmptyString(&PhysicalLineSubset);
         PhysicalLineSubset.StartOfString = &LogicalLine->PhysicalLine->LineContents.StartOfString[LogicalLine->PhysicalLineCharacterOffset]; 
@@ -446,6 +645,7 @@ MoreCopyRangeIntoLogicalLine(
 
         CharsInOutputBuffer = 0;
 
+        SearchColor = 0;
         MatchOffset = 0;
         MatchLength = 0;
         YoriLibInitEmptyString(&MatchEscapeChars);
@@ -454,10 +654,8 @@ MoreCopyRangeIntoLogicalLine(
         if (LogicalLine->CharactersRemainingInMatch > 0) {
             MatchFound = TRUE;
             MatchLength = LogicalLine->CharactersRemainingInMatch;
-        } else if (MoreContext->SearchString.LengthInChars > 0) {
-            MatchFound = TRUE;
         } else {
-            MatchFound = FALSE;
+            MatchFound = MoreIsAnySearchActive(MoreContext);
         }
 
         for (SourceIndex = 0; SourceIndex < PhysicalLineSubset.LengthInChars; ) {
@@ -472,15 +670,15 @@ MoreCopyRangeIntoLogicalLine(
                 SourceIndex == MatchOffset + MatchLength) {
 
                 YORI_STRING StringForNextMatch;
+
                 YoriLibInitEmptyString(&StringForNextMatch);
                 StringForNextMatch.StartOfString = &PhysicalLineSubset.StartOfString[SourceIndex];
                 StringForNextMatch.LengthInChars = LogicalLine->PhysicalLine->LineContents.LengthInChars - LogicalLine->PhysicalLineCharacterOffset - SourceIndex;
-                if (YoriLibFindFirstMatchingSubstringInsensitive(&StringForNextMatch, 1, &MoreContext->SearchString, &MatchOffset)) {
-                    MatchFound = TRUE;
-                    MatchLength = MoreContext->SearchString.LengthInChars;
+                MatchFound = MoreFindNextSearchMatch(MoreContext, &StringForNextMatch, &MatchOffset, &MatchIndex);
+                if (MatchFound) {
+                    MatchLength = MoreContext->SearchStrings[MatchIndex].LengthInChars;
+                    SearchColor = MoreContext->SearchColors[MoreContext->SearchContext[MatchIndex].ColorIndex];
                     MatchOffset += SourceIndex;
-                } else {
-                    MatchFound = FALSE;
                 }
             }
 
@@ -521,7 +719,7 @@ MoreCopyRangeIntoLogicalLine(
 
                 if (MatchFound) {
                     if (MatchOffset == SourceIndex) {
-                        YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, MoreContext->SearchColor);
+                        YoriLibVtStringForTextAttribute(&MatchEscapeChars, 0, SearchColor);
                         memcpy(&LogicalLine->Line.StartOfString[CharsInOutputBuffer], MatchEscapeChars.StartOfString, MatchEscapeChars.LengthInChars * sizeof(TCHAR));
                         CharsInOutputBuffer += MatchEscapeChars.LengthInChars;
                     }
@@ -921,6 +1119,7 @@ MoreFindNextLineWithSearchMatch(
 {
     PMORE_PHYSICAL_LINE SearchLine;
     PYORI_LIST_ENTRY ListEntry;
+    PYORI_STRING SearchString;
     DWORD MatchOffset;
 
     if (PreviousMatchLine == NULL) {
@@ -930,6 +1129,17 @@ MoreFindNextLineWithSearchMatch(
         SearchLine = PreviousMatchLine->PhysicalLine;
         ListEntry = &SearchLine->LineList;
     }
+
+    //
+    //  MSFIX Might want to have four routines:
+    //  - Find next of the currently entered term
+    //  - Find previous of the currently entered term
+    //  - Find next of any term (what this currently does)
+    //  - Find previous of any term
+    //
+
+    SearchString = &MoreContext->SearchStrings[MoreContext->SearchColorIndex];
+    ASSERT(SearchString->LengthInChars > 0);
 
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
@@ -941,7 +1151,7 @@ MoreFindNextLineWithSearchMatch(
         }
 
         SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
-        if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, &MoreContext->SearchString, &MatchOffset)) {
+        if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
             ReleaseMutex(MoreContext->PhysicalLineMutex);
             return SearchLine;
         }
@@ -1003,6 +1213,8 @@ MoreDrawStatusLine(
     BOOL ThreadActive;
     LPTSTR StringToDisplay;
     YORI_STRING LineToDisplay;
+    PYORI_STRING SearchString;
+    UCHAR SearchIndex;
 
     //
     //  If the screen isn't full, there's no point displaying status
@@ -1046,8 +1258,15 @@ MoreDrawStatusLine(
         StringToDisplay = _T("More");
     }
 
+    //
+    //  MSFIX We need to highlight all matching search terms
+    //
+
+    SearchIndex = MoreSearchIndexForColorIndex(MoreContext, MoreContext->SearchColorIndex);
+    SearchString = &MoreContext->SearchStrings[SearchIndex];
+
     YoriLibInitEmptyString(&LineToDisplay);
-    if (MoreContext->SearchString.LengthInChars > 0 || MoreContext->SearchMode) {
+    if (SearchString->LengthInChars > 0 || MoreContext->SearchUiActive) {
         YoriLibYPrintf(&LineToDisplay,
                       _T(" --- %s --- (%lli-%lli of %lli, %i%%) Search: %y"),
                       StringToDisplay,
@@ -1055,7 +1274,7 @@ MoreDrawStatusLine(
                       LastViewportLine,
                       TotalLines,
                       (DWORD)(LastViewportLine * 100 / TotalLines),
-                      &MoreContext->SearchString);
+                      SearchString);
     } else {
         YoriLibYPrintf(&LineToDisplay,
                       _T(" --- %s --- (%lli-%lli of %lli, %i%%)"),
@@ -2458,6 +2677,8 @@ MoreProcessKeyDown(
     WORD KeyCode;
     WORD ScanCode;
     BOOL ClearSelection = FALSE;
+    PYORI_STRING SearchString;
+    UCHAR SearchIndex;
 
     *Terminate = FALSE;
 
@@ -2466,41 +2687,48 @@ MoreProcessKeyDown(
     KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
     ScanCode = InputRecord->Event.KeyEvent.wVirtualScanCode;
 
+    SearchIndex = MoreSearchIndexForColorIndex(MoreContext, MoreContext->SearchColorIndex);
+
+    SearchString = &MoreContext->SearchStrings[SearchIndex];
+
     if (CtrlMask == 0 || CtrlMask == SHIFT_PRESSED) {
         ClearSelection = TRUE;
-        if (MoreContext->SearchMode) {
+        if (MoreContext->SearchUiActive) {
             if (Char == 27) {
-                MoreContext->SearchMode = FALSE;
-                YoriLibFreeStringContents(&MoreContext->SearchString);
+                MoreContext->SearchUiActive = FALSE;
+                YoriLibFreeStringContents(SearchString);
+                MoreSearchIndexFree(MoreContext, SearchIndex);
                 MoreContext->SearchDirty = TRUE;
             } else if (Char == '\b') {
-                if (InputRecord->Event.KeyEvent.wRepeatCount > MoreContext->SearchString.LengthInChars) {
-                    MoreContext->SearchString.LengthInChars = 0;
+                if (InputRecord->Event.KeyEvent.wRepeatCount >= SearchString->LengthInChars) {
+                    SearchString->LengthInChars = 0;
+                    MoreSearchIndexFree(MoreContext, SearchIndex);
                 } else {
-                    MoreContext->SearchString.LengthInChars = MoreContext->SearchString.LengthInChars - InputRecord->Event.KeyEvent.wRepeatCount;
+                    SearchString->LengthInChars = SearchString->LengthInChars - InputRecord->Event.KeyEvent.wRepeatCount;
                 }
                 MoreContext->SearchDirty = TRUE;
             } else if (Char == '\r') {
                 if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
                     MoreCopySelectionIfPresent(MoreContext);
-                } else {
+                } else if (SearchString->LengthInChars > 0) {
                     MoreMoveViewportToNextSearchMatch(MoreContext);
                 }
             } else if (Char != '\0' && Char != '\n') {
-                if (MoreContext->SearchString.LengthAllocated < MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
+                if (SearchString->LengthAllocated < SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
                     DWORD NewAllocSize;
-                    NewAllocSize = MoreContext->SearchString.LengthAllocated + 4096;
-                    if (NewAllocSize < MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
-                        NewAllocSize = MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1;
+                    NewAllocSize = SearchString->LengthAllocated + 4096;
+                    if (NewAllocSize < SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
+                        NewAllocSize = SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1;
                     }
-                    YoriLibReallocateString(&MoreContext->SearchString, NewAllocSize);
+                    YoriLibReallocateString(SearchString, NewAllocSize);
                 }
-                if (MoreContext->SearchString.LengthAllocated >= MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
+                if (SearchString->LengthAllocated >= SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
                     DWORD Count;
                     for (Count = 0; Count < InputRecord->Event.KeyEvent.wRepeatCount; Count++) {
-                        MoreContext->SearchString.StartOfString[MoreContext->SearchString.LengthInChars + Count] = Char;
+                        SearchString->StartOfString[SearchString->LengthInChars + Count] = Char;
                     }
-                    MoreContext->SearchString.LengthInChars = MoreContext->SearchString.LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount;
+                    SearchString->LengthInChars = SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount;
+                    MoreContext->SearchContext[SearchIndex].ColorIndex = MoreContext->SearchColorIndex;
                     MoreContext->SearchDirty = TRUE;
                 }
             }
@@ -2517,7 +2745,7 @@ MoreProcessKeyDown(
             } else if (Char == '\r') {
                 MoreCopySelectionIfPresent(MoreContext);
             } else if (Char == '/') {
-                MoreContext->SearchMode = TRUE;
+                MoreContext->SearchUiActive = TRUE;
                 MoreContext->SearchDirty = TRUE;
                 *RedrawStatus = TRUE;
             } else if (KeyCode == VK_SCROLL) {
@@ -2542,6 +2770,7 @@ MoreProcessKeyDown(
         MoreProcessEnhancedCtrlKeyDown(MoreContext, InputRecord);
     } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
                CtrlMask == LEFT_CTRL_PRESSED) {
+        // MSFIX Support paste, particularly for search mode
         if (KeyCode == 'C') {
             *Terminate = TRUE;
         } else if (KeyCode == 'Q') {
@@ -2549,6 +2778,9 @@ MoreProcessKeyDown(
         } else if (KeyCode == 'S') {
             MoreContext->SuspendPagination = FALSE;
             *RedrawStatus = TRUE;
+        } else if (KeyCode >= '1' && KeyCode <= '9') {
+            MoreContext->SearchColorIndex = (UCHAR)(KeyCode - '1');
+            MoreContext->SearchDirty = TRUE;
         } else if (Char == '\0') {
             MoreProcessEnhancedCtrlKeyDown(MoreContext, InputRecord);
         }

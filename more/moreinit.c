@@ -3,7 +3,7 @@
  *
  * Yori shell more initialization
  *
- * Copyright (c) 2017-2018 Malcolm J. Smith
+ * Copyright (c) 2017-2022 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -147,7 +147,17 @@ MoreInitContext(
     )
 {
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    DWORD Index;
     DWORD ThreadId;
+    UCHAR Color;
+    UCHAR SearchColors[5] = {
+        FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY,
+        FOREGROUND_GREEN | FOREGROUND_INTENSITY,
+        FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY,
+        FOREGROUND_RED | FOREGROUND_BLUE | FOREGROUND_INTENSITY,
+        FOREGROUND_RED | FOREGROUND_INTENSITY
+    };
+
 
     ZeroMemory(MoreContext, sizeof(MORE_CONTEXT));
 
@@ -185,7 +195,19 @@ MoreInitContext(
 
     YoriLibVtSetDefaultColor(ScreenInfo.wAttributes);
     MoreContext->InitialColor = YoriLibVtGetDefaultColor();
-    MoreContext->SearchColor = YoriLibGetSelectionColor(GetStdHandle(STD_OUTPUT_HANDLE));
+
+    for (Index = 0; Index < MORE_MAX_SEARCHES; Index++) {
+        YoriLibInitEmptyString(&MoreContext->SearchStrings[Index]);
+        MoreContext->SearchContext[Index].ColorIndex = (UCHAR)-1;
+        if (Index < sizeof(SearchColors)/sizeof(SearchColors[0])) {
+            Color = (UCHAR)(((MoreContext->InitialColor & 0xF0) >> 4) | (SearchColors[Index] << 4));
+        } else {
+            Color = (UCHAR)((MoreContext->InitialColor & 0xF0) | SearchColors[Index % 5]);
+        }
+        MoreContext->SearchColors[Index] = Color;
+    }
+
+    MoreContext->SearchColorIndex = 0;
 
     MoreGetViewportDimensions(&ScreenInfo, &MoreContext->ViewportWidth, &MoreContext->ViewportHeight);
 
@@ -216,6 +238,8 @@ MoreCleanupContext(
     __inout PMORE_CONTEXT MoreContext
     )
 {
+    DWORD Index;
+
     if (MoreContext->DisplayViewportLines != NULL) {
         YoriLibFree(MoreContext->DisplayViewportLines);
         MoreContext->DisplayViewportLines = NULL;
@@ -246,7 +270,12 @@ MoreCleanupContext(
         MoreContext->IngestThread = NULL;
     }
 
-    YoriLibFreeStringContents(&MoreContext->SearchString);
+    for (Index = 0; Index < MORE_MAX_SEARCHES; Index++) {
+        YoriLibFreeStringContents(&MoreContext->SearchStrings[Index]);
+        MoreContext->SearchContext[Index].ColorIndex = (UCHAR)-1;
+    }
+
+    MoreContext->SearchColorIndex = 0;
 }
 
 /**
