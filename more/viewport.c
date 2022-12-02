@@ -115,6 +115,29 @@ MoreIsAnySearchActive(
 }
 
 /**
+ Return the number of active search strings.
+
+ @param MoreContext Pointer to the more context containing the search strings.
+
+ @return The number of active search strings.
+ */
+UCHAR
+MoreSearchCountActive(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    UCHAR CountFound;
+
+    for (CountFound = 0; CountFound < MORE_MAX_SEARCHES; CountFound++) {
+        if (MoreContext->SearchContext[CountFound].ColorIndex == (UCHAR)-1) {
+            break;
+        }
+    }
+
+    return CountFound;
+}
+
+/**
  Find the next search match within a physical line.
 
  @param MoreContext Pointer to the context indicating the strings to search
@@ -145,11 +168,7 @@ MoreFindNextSearchMatch(
     UCHAR Index;
     UCHAR CountFound;
 
-    for (CountFound = 0; CountFound < MORE_MAX_SEARCHES; CountFound++) {
-        if (MoreContext->SearchContext[CountFound].ColorIndex == (UCHAR)-1) {
-            break;
-        }
-    }
+    CountFound = MoreSearchCountActive(MoreContext);
 
     Found = YoriLibFindFirstMatchingSubstringInsensitive(StringToSearch, CountFound, MoreContext->SearchStrings, MatchOffset);
     if (Found != NULL) {
@@ -277,6 +296,60 @@ MoreSearchIndexFree(
 
     YoriLibInitEmptyString(&MoreContext->SearchStrings[Index]);
     MoreContext->SearchContext[Index].ColorIndex = (UCHAR)-1;
+}
+
+/**
+ Truncate a string such that it contains the specified number of visible
+ characters, ie., so that it fits in a defined space.  This is frustratingly
+ forked from the main section of code which also has to consider highlighting
+ search terms.
+
+ @param String Pointer to the string.
+
+ @param VisibleChars Specifies the number of characters that should be
+        displayed.
+ */
+VOID
+MoreTruncateStringToVisibleChars(
+    __in PYORI_STRING String,
+    __in DWORD VisibleChars
+    )
+{
+    YORI_STRING EscapeSubset;
+    DWORD EndOfEscape;
+    DWORD VisibleCharsFound;
+    DWORD Index;
+
+    VisibleCharsFound = 0;
+
+    for (Index = 0; Index < String->LengthInChars; Index++) {
+
+        //
+        //  If the string is <ESC>[, then treat it as an escape sequence.
+        //  Look for the final letter after any numbers or semicolon.
+        //
+
+        if (String->LengthInChars > Index + 2 &&
+            String->StartOfString[Index] == 27 &&
+            String->StartOfString[Index + 1] == '[') {
+
+            YoriLibInitEmptyString(&EscapeSubset);
+            EscapeSubset.StartOfString = &String->StartOfString[Index + 2];
+            EscapeSubset.LengthInChars = String->LengthInChars - Index - 2;
+            EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
+            //
+            //  Note the trailing char is a letter.  This points index to that
+            //  char.
+            //
+
+            Index = Index + 2 + EndOfEscape;
+        } else if (VisibleCharsFound < VisibleChars) {
+            VisibleCharsFound++;
+        } else {
+            String->LengthInChars = Index;
+            break;
+        }
+    }
 }
 
 /**
@@ -1215,6 +1288,7 @@ MoreDrawStatusLine(
     YORI_STRING LineToDisplay;
     PYORI_STRING SearchString;
     UCHAR SearchIndex;
+    DWORD InvisibleChars;
 
     //
     //  If the screen isn't full, there's no point displaying status
@@ -1230,6 +1304,10 @@ MoreDrawStatusLine(
     FirstViewportLine = MoreContext->DisplayViewportLines[0].PhysicalLine->LineNumber;
     LastViewportLine = MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1].PhysicalLine->LineNumber;
 
+    //
+    //  Capture statistics
+    //
+
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
     ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, NULL);
     LastPhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
@@ -1243,6 +1321,10 @@ MoreDrawStatusLine(
     } else {
         PageFull = FALSE;
     }
+
+    //
+    //  Check ingest status
+    //
 
     if (WaitForSingleObject(MoreContext->IngestThread, 0) == WAIT_OBJECT_0) {
         ThreadActive = FALSE;
@@ -1258,31 +1340,142 @@ MoreDrawStatusLine(
         StringToDisplay = _T("More");
     }
 
-    //
-    //  MSFIX We need to highlight all matching search terms
-    //
-
-    SearchIndex = MoreSearchIndexForColorIndex(MoreContext, MoreContext->SearchColorIndex);
-    SearchString = &MoreContext->SearchStrings[SearchIndex];
-
     YoriLibInitEmptyString(&LineToDisplay);
-    if (SearchString->LengthInChars > 0 || MoreContext->SearchUiActive) {
+    InvisibleChars = 0;
+
+    //
+    //  If the user is actively entering a search term, display only that one.
+    //  If not, display as much as we can fit.
+    //
+
+    if (MoreContext->SearchUiActive) {
+        YORI_STRING SearchColorString;
+        TCHAR SearchColorBuffer[YORI_MAX_INTERNAL_VT_ESCAPE_CHARS];
+
+        SearchIndex = MoreSearchIndexForColorIndex(MoreContext, MoreContext->SearchColorIndex);
+        SearchString = &MoreContext->SearchStrings[SearchIndex];
+
+        YoriLibInitEmptyString(&SearchColorString);
+        SearchColorString.StartOfString = SearchColorBuffer;
+        SearchColorString.LengthAllocated = sizeof(SearchColorBuffer)/sizeof(SearchColorBuffer[0]);
+
+        YoriLibVtStringForTextAttribute(&SearchColorString, 0, MoreContext->SearchColors[MoreContext->SearchColorIndex]);
+
+        InvisibleChars = SearchColorString.LengthInChars;
+
         YoriLibYPrintf(&LineToDisplay,
-                      _T(" --- %s --- (%lli-%lli of %lli, %i%%) Search: %y"),
+                      _T(" --- %s --- (%lli-%lli of %lli, %i%%) %ySearch: %y"),
                       StringToDisplay,
                       FirstViewportLine,
                       LastViewportLine,
                       TotalLines,
                       (DWORD)(LastViewportLine * 100 / TotalLines),
+                      &SearchColorString,
                       SearchString);
     } else {
-        YoriLibYPrintf(&LineToDisplay,
-                      _T(" --- %s --- (%lli-%lli of %lli, %i%%)"),
-                      StringToDisplay,
-                      FirstViewportLine,
-                      LastViewportLine,
-                      TotalLines,
-                      (DWORD)(LastViewportLine * 100 / TotalLines));
+        UCHAR SearchCount;
+        DWORD CharsNeeded;
+        DWORD TotalSearchChars;
+        DWORD SearchChars;
+        DWORD Index;
+        YORI_STRING Remaining;
+        YORI_STRING SearchSubstring;
+
+        SearchCount = MoreSearchCountActive(MoreContext);
+
+        //
+        //  We expect to fill the viewport width, but each search needs to
+        //  change color and revert.  Note this isn't really a worst case
+        //  allocation - it's possible that the viewport is too small to
+        //  contain even the fixed portion and it will be reallocated anyway.
+        //
+
+        CharsNeeded = MoreContext->ViewportWidth + SearchCount * (YORI_MAX_INTERNAL_VT_ESCAPE_CHARS + 4);
+
+        if (YoriLibAllocateString(&LineToDisplay, CharsNeeded)) {
+            YoriLibYPrintf(&LineToDisplay,
+                          _T(" --- %s --- (%lli-%lli of %lli, %i%%)"),
+                          StringToDisplay,
+                          FirstViewportLine,
+                          LastViewportLine,
+                          TotalLines,
+                          (DWORD)(LastViewportLine * 100 / TotalLines));
+
+
+            //
+            //  If searches are active, see how much space we can devote to
+            //  each term.
+            //
+
+            TotalSearchChars = 0;
+            SearchChars = 0;
+            if (SearchCount > 0 &&
+                LineToDisplay.LengthAllocated >= CharsNeeded &&
+                LineToDisplay.LengthInChars < MoreContext->ViewportWidth) {
+
+                TotalSearchChars = MoreContext->ViewportWidth - LineToDisplay.LengthInChars;
+                SearchChars = TotalSearchChars / SearchCount;
+            }
+
+            //
+            //  If we can display more than three per term, which really means
+            //  one space plus three actual chars per term, loop through the
+            //  terms to add them.
+            //
+
+            if (SearchChars > 3) {
+                YoriLibInitEmptyString(&Remaining);
+                YoriLibInitEmptyString(&SearchSubstring);
+                Remaining.LengthAllocated = LineToDisplay.LengthAllocated - LineToDisplay.LengthInChars;
+                Remaining.StartOfString = &LineToDisplay.StartOfString[LineToDisplay.LengthInChars];
+                for (Index = 0; Index < SearchCount; Index++) {
+
+                    //
+                    //  Add a space to seperate components.
+                    //
+
+                    Remaining.StartOfString[0] = ' ';
+                    Remaining.StartOfString = Remaining.StartOfString + 1;
+                    Remaining.LengthAllocated = Remaining.LengthAllocated - 1;
+                    LineToDisplay.LengthInChars = LineToDisplay.LengthInChars + 1;
+
+                    //
+                    //  Switch to the color used for the search term.
+                    //
+
+                    YoriLibVtStringForTextAttribute(&Remaining, 0, MoreContext->SearchColors[MoreContext->SearchContext[Index].ColorIndex]);
+                    Remaining.StartOfString = Remaining.StartOfString + Remaining.LengthInChars;
+                    Remaining.LengthAllocated = Remaining.LengthAllocated - Remaining.LengthInChars;
+                    InvisibleChars = InvisibleChars + Remaining.LengthInChars;
+                    LineToDisplay.LengthInChars = LineToDisplay.LengthInChars + Remaining.LengthInChars;
+                    Remaining.LengthInChars = 0;
+
+                    //
+                    //  Take the search term, and truncate it as needed to
+                    //  fit.
+                    //
+
+                    SearchSubstring.StartOfString = MoreContext->SearchStrings[Index].StartOfString;
+                    SearchSubstring.LengthInChars = MoreContext->SearchStrings[Index].LengthInChars;
+                    if (SearchSubstring.LengthInChars >= SearchChars) {
+                        SearchSubstring.LengthInChars = SearchChars - 1;
+                    }
+
+                    //
+                    //  Add the search term and reset the color.
+                    //
+
+                    Remaining.LengthInChars = YoriLibSPrintfS(Remaining.StartOfString, Remaining.LengthAllocated, _T("%y\x1b[0m"), &SearchSubstring);
+
+                    Remaining.StartOfString = Remaining.StartOfString + Remaining.LengthInChars;
+                    Remaining.LengthAllocated = Remaining.LengthAllocated - Remaining.LengthInChars;
+                    LineToDisplay.LengthInChars = LineToDisplay.LengthInChars + Remaining.LengthInChars;
+                    Remaining.LengthInChars = 0;
+                    InvisibleChars = InvisibleChars + 4;
+
+                }
+            }
+        }
     }
 
     //
@@ -1291,14 +1484,13 @@ MoreDrawStatusLine(
     //  it has been truncated
     //
 
-    if (MoreContext->ViewportWidth > 0) {
-        if (LineToDisplay.LengthInChars > MoreContext->ViewportWidth - 1) {
-            LineToDisplay.LengthInChars = MoreContext->ViewportWidth - 1;
-            if (LineToDisplay.LengthInChars > 5) {
-                LineToDisplay.StartOfString[LineToDisplay.LengthInChars - 1] = '.';
-                LineToDisplay.StartOfString[LineToDisplay.LengthInChars - 2] = '.';
-                LineToDisplay.StartOfString[LineToDisplay.LengthInChars - 3] = '.';
-            }
+    if (MoreContext->ViewportWidth > 5) {
+        if (LineToDisplay.LengthInChars > MoreContext->ViewportWidth + InvisibleChars - 1) {
+            MoreTruncateStringToVisibleChars(&LineToDisplay, MoreContext->ViewportWidth - 3);
+            LineToDisplay.StartOfString[LineToDisplay.LengthInChars] = '.';
+            LineToDisplay.StartOfString[LineToDisplay.LengthInChars + 1] = '.';
+            LineToDisplay.StartOfString[LineToDisplay.LengthInChars + 2] = '.';
+            LineToDisplay.LengthInChars = LineToDisplay.LengthInChars + 3;
         }
     }
 
@@ -2710,8 +2902,9 @@ MoreProcessKeyDown(
             } else if (Char == '\r') {
                 if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
                     MoreCopySelectionIfPresent(MoreContext);
-                } else if (SearchString->LengthInChars > 0) {
-                    MoreMoveViewportToNextSearchMatch(MoreContext);
+                } else if (MoreContext->SearchUiActive) {
+                    MoreContext->SearchUiActive = FALSE;
+                    MoreContext->SearchDirty = TRUE;
                 }
             } else if (Char != '\0' && Char != '\n') {
                 if (SearchString->LengthAllocated < SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
