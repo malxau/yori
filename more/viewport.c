@@ -2772,6 +2772,60 @@ MoreAreMoreLinesAvailable(
 }
 
 /**
+ Append a string to the current search string.  This is often just appending
+ a single character in response to a key press, but may append a buffer from
+ the clipboard.
+
+ @param MoreContext Pointer to the more context.
+
+ @param String The string to append.
+
+ @param RepeatCount The number of times to append the string.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+MoreAppendToSearchString(
+    __in PMORE_CONTEXT MoreContext,
+    __in PYORI_STRING String,
+    __in DWORD RepeatCount
+    )
+{
+    DWORD SearchIndex;
+    DWORD LengthRequired;
+    PYORI_STRING SearchString;
+    DWORD Count;
+
+    SearchIndex = MoreSearchIndexForColorIndex(MoreContext, MoreContext->SearchColorIndex);
+    SearchString = &MoreContext->SearchStrings[SearchIndex];
+
+    LengthRequired = SearchString->LengthInChars + String->LengthInChars * RepeatCount + 1;
+
+
+    if (SearchString->LengthAllocated < LengthRequired) {
+        DWORD NewAllocSize;
+        NewAllocSize = SearchString->LengthAllocated + 4096;
+        if (NewAllocSize < LengthRequired) {
+            NewAllocSize = LengthRequired;
+        }
+        if (!YoriLibReallocateString(SearchString, NewAllocSize)) {
+            return FALSE;
+        }
+    }
+
+    for (Count = 0; Count < RepeatCount; Count++) {
+        memcpy(&SearchString->StartOfString[SearchString->LengthInChars],
+               String->StartOfString,
+               String->LengthInChars * sizeof(TCHAR));
+
+        SearchString->LengthInChars = SearchString->LengthInChars + String->LengthInChars;
+    }
+    MoreContext->SearchContext[SearchIndex].ColorIndex = MoreContext->SearchColorIndex;
+    MoreContext->SearchDirty = TRUE;
+    return TRUE;
+}
+
+/**
  Process a key that is typically an enhanced key, including arrows, insert,
  delete, home, end, etc.  The "normal" placement of these keys is as enhanced,
  but the original XT keys are the ones on the number pad when num lock is off,
@@ -2870,6 +2924,7 @@ MoreProcessKeyDown(
     WORD ScanCode;
     BOOL ClearSelection = FALSE;
     PYORI_STRING SearchString;
+    YORI_STRING NewString;
     UCHAR SearchIndex;
 
     *Terminate = FALSE;
@@ -2907,23 +2962,11 @@ MoreProcessKeyDown(
                     MoreContext->SearchDirty = TRUE;
                 }
             } else if (Char != '\0' && Char != '\n') {
-                if (SearchString->LengthAllocated < SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
-                    DWORD NewAllocSize;
-                    NewAllocSize = SearchString->LengthAllocated + 4096;
-                    if (NewAllocSize < SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
-                        NewAllocSize = SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1;
-                    }
-                    YoriLibReallocateString(SearchString, NewAllocSize);
-                }
-                if (SearchString->LengthAllocated >= SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount + 1) {
-                    DWORD Count;
-                    for (Count = 0; Count < InputRecord->Event.KeyEvent.wRepeatCount; Count++) {
-                        SearchString->StartOfString[SearchString->LengthInChars + Count] = Char;
-                    }
-                    SearchString->LengthInChars = SearchString->LengthInChars + InputRecord->Event.KeyEvent.wRepeatCount;
-                    MoreContext->SearchContext[SearchIndex].ColorIndex = MoreContext->SearchColorIndex;
-                    MoreContext->SearchDirty = TRUE;
-                }
+                YoriLibInitEmptyString(&NewString);
+                NewString.StartOfString = &Char;
+                NewString.LengthInChars = 1;
+
+                MoreAppendToSearchString(MoreContext, &NewString, InputRecord->Event.KeyEvent.wRepeatCount);
             }
         } else {
             if (Char == 'q' || Char == 'Q' || Char == 27) {
@@ -2963,14 +3006,26 @@ MoreProcessKeyDown(
         MoreProcessEnhancedCtrlKeyDown(MoreContext, InputRecord);
     } else if (CtrlMask == RIGHT_CTRL_PRESSED ||
                CtrlMask == LEFT_CTRL_PRESSED) {
-        // MSFIX Support paste, particularly for search mode
+
         if (KeyCode == 'C') {
-            *Terminate = TRUE;
+            if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+                MoreCopySelectionIfPresent(MoreContext);
+            } else {
+                *Terminate = TRUE;
+            }
         } else if (KeyCode == 'Q') {
             MoreContext->SuspendPagination = TRUE;
         } else if (KeyCode == 'S') {
             MoreContext->SuspendPagination = FALSE;
             *RedrawStatus = TRUE;
+        } else if (KeyCode == 'V') {
+            if (MoreContext->SearchUiActive) {
+                YoriLibInitEmptyString(&NewString);
+                if (YoriLibPasteText(&NewString)) {
+                    MoreAppendToSearchString(MoreContext, &NewString, InputRecord->Event.KeyEvent.wRepeatCount);
+                    YoriLibFreeStringContents(&NewString);
+                }
+            }
         } else if (KeyCode >= '1' && KeyCode <= '9') {
             MoreContext->SearchColorIndex = (UCHAR)(KeyCode - '1');
             MoreContext->SearchDirty = TRUE;
@@ -3316,6 +3371,14 @@ MoreProcessMouseButtonDown(
             BufferChanged = MoreCopySelectionIfPresent(MoreContext);
             if (BufferChanged) {
                 YoriLibClearSelection(&MoreContext->Selection);
+            }
+        } else if (MoreContext->SearchUiActive) {
+            YORI_STRING NewString;
+            YoriLibInitEmptyString(&NewString);
+            if (YoriLibPasteText(&NewString)) {
+                MoreAppendToSearchString(MoreContext, &NewString, 1);
+                YoriLibFreeStringContents(&NewString);
+                BufferChanged = TRUE;
             }
         }
     }
@@ -3816,6 +3879,10 @@ MoreViewportDisplay(
                         }
 
                         if (ReDisplayRequired) {
+                            if (MoreContext->SearchDirty) {
+                                MoreDisplayChangedLinesInViewport(MoreContext);
+                                RedrawStatus = TRUE;
+                            }
                             if (RedrawStatus) {
                                 MoreClearStatusLine(MoreContext);
                                 YoriLibRedrawSelection(&MoreContext->Selection);
