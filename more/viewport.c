@@ -1173,7 +1173,7 @@ MoreGetNextLogicalLines(
 
 /**
  Find the next physical line that contains a match for the current search
- string.
+ string, or for any search string.
 
  @param MoreContext Pointer to the more context, containing all physical
         lines.
@@ -1181,13 +1181,17 @@ MoreGetNextLogicalLines(
  @param PreviousMatchLine Pointer to the logical line which is the most
         recent line to not look for matches within.
 
+ @param MatchAny If TRUE, match against any search string.  If FALSE, match
+        against the current search string only.
+
  @return Pointer to the next physical line containing a match, or NULL
          if no further physical lines contain a match.
  */
 PMORE_PHYSICAL_LINE
 MoreFindNextLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
-    __in_opt PMORE_LOGICAL_LINE PreviousMatchLine
+    __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
+    __in BOOLEAN MatchAny
     )
 {
     PMORE_PHYSICAL_LINE SearchLine;
@@ -1203,14 +1207,6 @@ MoreFindNextLineWithSearchMatch(
         ListEntry = &SearchLine->LineList;
     }
 
-    //
-    //  MSFIX Might want to have four routines:
-    //  - Find next of the currently entered term
-    //  - Find previous of the currently entered term
-    //  - Find next of any term (what this currently does)
-    //  - Find previous of any term
-    //
-
     SearchString = &MoreContext->SearchStrings[MoreContext->SearchColorIndex];
     ASSERT(SearchString->LengthInChars > 0);
 
@@ -1224,9 +1220,79 @@ MoreFindNextLineWithSearchMatch(
         }
 
         SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
-        if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
+        if (MatchAny) {
+            if (MoreFindNextSearchMatch(MoreContext, &SearchLine->LineContents, NULL, NULL)) {
+                ReleaseMutex(MoreContext->PhysicalLineMutex);
+                return SearchLine;
+            }
+        } else {
+            if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
+                ReleaseMutex(MoreContext->PhysicalLineMutex);
+                return SearchLine;
+            }
+        }
+    }
+}
+
+/**
+ Find the previous physical line that contains a match for the current search
+ string, or for any search string.
+
+ @param MoreContext Pointer to the more context, containing all physical
+        lines.
+
+ @param PreviousMatchLine Pointer to the logical line which is the most
+        recent line to not look for matches within.
+
+ @param MatchAny If TRUE, match against any search string.  If FALSE, match
+        against the current search string only.
+
+ @return Pointer to the next physical line containing a match, or NULL
+         if no further physical lines contain a match.
+ */
+PMORE_PHYSICAL_LINE
+MoreFindPreviousLineWithSearchMatch(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
+    __in BOOLEAN MatchAny
+    )
+{
+    PMORE_PHYSICAL_LINE SearchLine;
+    PYORI_LIST_ENTRY ListEntry;
+    PYORI_STRING SearchString;
+    DWORD MatchOffset;
+
+    if (PreviousMatchLine == NULL) {
+        SearchLine = NULL;
+        ListEntry = NULL;
+    } else {
+        SearchLine = PreviousMatchLine->PhysicalLine;
+        ListEntry = &SearchLine->LineList;
+    }
+
+    SearchString = &MoreContext->SearchStrings[MoreContext->SearchColorIndex];
+    ASSERT(SearchString->LengthInChars > 0);
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+
+    while (TRUE) {
+        ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, ListEntry);
+        if (ListEntry == NULL) {
             ReleaseMutex(MoreContext->PhysicalLineMutex);
-            return SearchLine;
+            return NULL;
+        }
+
+        SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
+        if (MatchAny) {
+            if (MoreFindNextSearchMatch(MoreContext, &SearchLine->LineContents, NULL, NULL)) {
+                ReleaseMutex(MoreContext->PhysicalLineMutex);
+                return SearchLine;
+            }
+        } else {
+            if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
+                ReleaseMutex(MoreContext->PhysicalLineMutex);
+                return SearchLine;
+            }
         }
     }
 }
@@ -2355,7 +2421,42 @@ MoreMoveViewportToNextSearchMatch(
         LineToFollow = &MoreContext->DisplayViewportLines[0];
     }
 
-    NextMatch = MoreFindNextLineWithSearchMatch(MoreContext, LineToFollow);
+    NextMatch = MoreFindNextLineWithSearchMatch(MoreContext, LineToFollow, TRUE);
+    if (NextMatch == NULL) {
+        return;
+    }
+
+    MoreContext->LinesInPage = 0;
+    if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
+        YoriLibClearSelection(&MoreContext->Selection);
+        YoriLibRedrawSelection(&MoreContext->Selection);
+    }
+
+    MoreGenerateEntireViewportWithStartingLine(MoreContext, NextMatch);
+}
+
+/**
+ Find the previous search match, meaning any match before the top logical line,
+ and move the viewport to it.  If no further match is found, no update is
+ made.
+
+ @param MoreContext Pointer to the more context to search for a match and use
+        for the source of any display refresh.
+ */
+VOID
+MoreMoveViewportToPreviousSearchMatch(
+    __inout PMORE_CONTEXT MoreContext
+    )
+{
+    PMORE_PHYSICAL_LINE NextMatch;
+    PMORE_LOGICAL_LINE LineToFollow;
+
+    LineToFollow = NULL;
+    if (MoreContext->LinesInViewport > 0) {
+        LineToFollow = &MoreContext->DisplayViewportLines[0];
+    }
+
+    NextMatch = MoreFindPreviousLineWithSearchMatch(MoreContext, LineToFollow, TRUE);
     if (NextMatch == NULL) {
         return;
     }
@@ -2863,6 +2964,10 @@ MoreProcessEnhancedKeyDown(
         MoreMoveViewportToTop(MoreContext);
     } else if (KeyCode == VK_END) {
         MoreMoveViewportToBottom(MoreContext);
+    } else if (KeyCode == VK_F3) {
+        MoreMoveViewportToNextSearchMatch(MoreContext);
+    } else if (KeyCode == VK_F4) {
+        MoreMoveViewportToPreviousSearchMatch(MoreContext);
     }
 }
 
@@ -2894,6 +2999,29 @@ MoreProcessEnhancedCtrlKeyDown(
     }
 }
 
+/**
+ Process a key that is typically an enhanced key with Shift held, including
+ function keys.  These may be reported as enhanced or not. This function is
+ invoked to handle either case.
+
+ @param MoreContext Pointer to the context describing the data to display.
+
+ @param InputRecord Pointer to the structure describing the key that was
+        pressed.
+ */
+VOID
+MoreProcessEnhancedShiftKeyDown(
+    __inout PMORE_CONTEXT MoreContext,
+    __in PINPUT_RECORD InputRecord
+    )
+{
+    WORD KeyCode;
+    KeyCode = InputRecord->Event.KeyEvent.wVirtualKeyCode;
+
+    if (KeyCode == VK_F3) {
+        MoreMoveViewportToPreviousSearchMatch(MoreContext);
+    }
+}
 
 /**
  Perform the requested action when the user presses a key.
@@ -2967,6 +3095,8 @@ MoreProcessKeyDown(
                 NewString.LengthInChars = 1;
 
                 MoreAppendToSearchString(MoreContext, &NewString, InputRecord->Event.KeyEvent.wRepeatCount);
+            } else if (Char == '\0') {
+                MoreProcessEnhancedKeyDown(MoreContext, InputRecord);
             }
         } else {
             if (Char == 'q' || Char == 'Q' || Char == 27) {
@@ -3001,6 +3131,9 @@ MoreProcessKeyDown(
     } else if (CtrlMask == ENHANCED_KEY) {
         ClearSelection = TRUE;
         MoreProcessEnhancedKeyDown(MoreContext, InputRecord);
+    } else if (CtrlMask == (ENHANCED_KEY | SHIFT_PRESSED)) {
+        ClearSelection = TRUE;
+        MoreProcessEnhancedShiftKeyDown(MoreContext, InputRecord);
     } else if (CtrlMask == (ENHANCED_KEY | LEFT_CTRL_PRESSED) ||
                CtrlMask == (ENHANCED_KEY | RIGHT_CTRL_PRESSED)) {
         MoreProcessEnhancedCtrlKeyDown(MoreContext, InputRecord);
