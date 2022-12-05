@@ -1184,6 +1184,18 @@ MoreGetNextLogicalLines(
  @param MatchAny If TRUE, match against any search string.  If FALSE, match
         against the current search string only.
 
+ @param MaxLogicalLinesMoved Specifies the maximum number of logical lines
+        to count.  This value is a performance optimization - searching
+        physical lines is much cheaper than parsing them into logical lines,
+        so there's no point doing this unless the caller wants to know the
+        result.  Currently the caller only cares if the logical lines are
+        less than the viewport (so advance a specified number of lines); if
+        it's larger than the viewport, render everything from scratch.
+
+ @param LogicalLinesMoved On successful completion, updated to indicate
+        the number of logical lines that were processed before finding a
+        match.  This value is limited to MaxLogicalLinesMoved above.
+
  @return Pointer to the next physical line containing a match, or NULL
          if no further physical lines contain a match.
  */
@@ -1191,13 +1203,28 @@ PMORE_PHYSICAL_LINE
 MoreFindNextLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
-    __in BOOLEAN MatchAny
+    __in BOOLEAN MatchAny,
+    __in DWORD MaxLogicalLinesMoved,
+    __out_opt PDWORD LogicalLinesMoved
     )
 {
     PMORE_PHYSICAL_LINE SearchLine;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_STRING SearchString;
     DWORD MatchOffset;
+    DWORD Count;
+    DWORD LogicalLinesThisPhysicalLine;
+
+    Count = 0;
+
+    //
+    //  MSFIX Although the function signature takes a logical line, this
+    //  function looks for a match on the next physical line.  This means
+    //  that a match on a later logical line on the same physical line
+    //  will not be found.  With the current function signature, there
+    //  would be no way to return a new logical line on the same physical
+    //  line; perhaps this should return a logical line?
+    //
 
     if (PreviousMatchLine == NULL) {
         SearchLine = NULL;
@@ -1205,11 +1232,19 @@ MoreFindNextLineWithSearchMatch(
     } else {
         SearchLine = PreviousMatchLine->PhysicalLine;
         ListEntry = &SearchLine->LineList;
+
+        if (LogicalLinesMoved != NULL) {
+            LogicalLinesThisPhysicalLine = MoreCountLogicalLinesOnPhysicalLine(MoreContext, SearchLine);
+            ASSERT(LogicalLinesThisPhysicalLine >= PreviousMatchLine->LogicalLineIndex + 1);
+            Count = LogicalLinesThisPhysicalLine - PreviousMatchLine->LogicalLineIndex;
+        }
     }
+
 
     SearchString = &MoreContext->SearchStrings[MoreContext->SearchColorIndex];
     ASSERT(SearchString->LengthInChars > 0);
 
+    SearchLine = NULL;
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
     while (TRUE) {
@@ -1222,16 +1257,30 @@ MoreFindNextLineWithSearchMatch(
         SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
         if (MatchAny) {
             if (MoreFindNextSearchMatch(MoreContext, &SearchLine->LineContents, NULL, NULL)) {
-                ReleaseMutex(MoreContext->PhysicalLineMutex);
-                return SearchLine;
+                break;
             }
         } else {
             if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
-                ReleaseMutex(MoreContext->PhysicalLineMutex);
-                return SearchLine;
+                break;
             }
         }
+
+        if (LogicalLinesMoved != NULL && Count < MaxLogicalLinesMoved) {
+            LogicalLinesThisPhysicalLine = MoreCountLogicalLinesOnPhysicalLine(MoreContext, SearchLine);
+            Count = Count + LogicalLinesThisPhysicalLine;
+        }
     }
+
+    if (LogicalLinesMoved != NULL) {
+        if (Count > MaxLogicalLinesMoved) {
+            *LogicalLinesMoved = MaxLogicalLinesMoved;
+        } else {
+            *LogicalLinesMoved = Count;
+        }
+    }
+
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+    return SearchLine;
 }
 
 /**
@@ -1247,6 +1296,18 @@ MoreFindNextLineWithSearchMatch(
  @param MatchAny If TRUE, match against any search string.  If FALSE, match
         against the current search string only.
 
+ @param MaxLogicalLinesMoved Specifies the maximum number of logical lines
+        to count.  This value is a performance optimization - searching
+        physical lines is much cheaper than parsing them into logical lines,
+        so there's no point doing this unless the caller wants to know the
+        result.  Currently the caller only cares if the logical lines are
+        less than the viewport (so advance a specified number of lines); if
+        it's larger than the viewport, render everything from scratch.
+
+ @param LogicalLinesMoved On successful completion, updated to indicate
+        the number of logical lines that were processed before finding a
+        match.  This value is limited to MaxLogicalLinesMoved above.
+
  @return Pointer to the next physical line containing a match, or NULL
          if no further physical lines contain a match.
  */
@@ -1254,13 +1315,19 @@ PMORE_PHYSICAL_LINE
 MoreFindPreviousLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
     __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
-    __in BOOLEAN MatchAny
+    __in BOOLEAN MatchAny,
+    __in DWORD MaxLogicalLinesMoved,
+    __out_opt PDWORD LogicalLinesMoved
     )
 {
     PMORE_PHYSICAL_LINE SearchLine;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_STRING SearchString;
     DWORD MatchOffset;
+    DWORD Count;
+    DWORD LogicalLinesThisPhysicalLine;
+
+    Count = 0;
 
     if (PreviousMatchLine == NULL) {
         SearchLine = NULL;
@@ -1268,6 +1335,10 @@ MoreFindPreviousLineWithSearchMatch(
     } else {
         SearchLine = PreviousMatchLine->PhysicalLine;
         ListEntry = &SearchLine->LineList;
+
+        if (LogicalLinesMoved != NULL) {
+            Count = PreviousMatchLine->LogicalLineIndex + 1;
+        }
     }
 
     SearchString = &MoreContext->SearchStrings[MoreContext->SearchColorIndex];
@@ -1285,16 +1356,30 @@ MoreFindPreviousLineWithSearchMatch(
         SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
         if (MatchAny) {
             if (MoreFindNextSearchMatch(MoreContext, &SearchLine->LineContents, NULL, NULL)) {
-                ReleaseMutex(MoreContext->PhysicalLineMutex);
-                return SearchLine;
+                break;
             }
         } else {
             if (YoriLibFindFirstMatchingSubstringInsensitive(&SearchLine->LineContents, 1, SearchString, &MatchOffset)) {
-                ReleaseMutex(MoreContext->PhysicalLineMutex);
-                return SearchLine;
+                break;
             }
         }
+
+        if (LogicalLinesMoved != NULL && Count < MaxLogicalLinesMoved) {
+            LogicalLinesThisPhysicalLine = MoreCountLogicalLinesOnPhysicalLine(MoreContext, SearchLine);
+            Count = Count + LogicalLinesThisPhysicalLine;
+        }
     }
+
+    if (LogicalLinesMoved != NULL) {
+        if (Count > MaxLogicalLinesMoved) {
+            *LogicalLinesMoved = MaxLogicalLinesMoved;
+        } else {
+            *LogicalLinesMoved = Count;
+        }
+    }
+
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+    return SearchLine;
 }
 
 /**
@@ -2415,24 +2500,29 @@ MoreMoveViewportToNextSearchMatch(
 {
     PMORE_PHYSICAL_LINE NextMatch;
     PMORE_LOGICAL_LINE LineToFollow;
+    DWORD LinesMoved;
 
     LineToFollow = NULL;
     if (MoreContext->LinesInViewport > 0) {
         LineToFollow = &MoreContext->DisplayViewportLines[0];
     }
 
-    NextMatch = MoreFindNextLineWithSearchMatch(MoreContext, LineToFollow, TRUE);
+    NextMatch = MoreFindNextLineWithSearchMatch(MoreContext, LineToFollow, TRUE, MoreContext->ViewportHeight, &LinesMoved);
     if (NextMatch == NULL) {
         return;
     }
 
-    MoreContext->LinesInPage = 0;
     if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
         YoriLibClearSelection(&MoreContext->Selection);
         YoriLibRedrawSelection(&MoreContext->Selection);
     }
 
-    MoreGenerateEntireViewportWithStartingLine(MoreContext, NextMatch);
+    if (LinesMoved >= MoreContext->ViewportHeight) {
+        MoreContext->LinesInPage = 0;
+        MoreGenerateEntireViewportWithStartingLine(MoreContext, NextMatch);
+    } else {
+        MoreMoveViewportDown(MoreContext, LinesMoved);
+    }
 }
 
 /**
@@ -2450,24 +2540,29 @@ MoreMoveViewportToPreviousSearchMatch(
 {
     PMORE_PHYSICAL_LINE NextMatch;
     PMORE_LOGICAL_LINE LineToFollow;
+    DWORD LinesMoved;
 
     LineToFollow = NULL;
     if (MoreContext->LinesInViewport > 0) {
         LineToFollow = &MoreContext->DisplayViewportLines[0];
     }
 
-    NextMatch = MoreFindPreviousLineWithSearchMatch(MoreContext, LineToFollow, TRUE);
+    NextMatch = MoreFindPreviousLineWithSearchMatch(MoreContext, LineToFollow, TRUE, MoreContext->ViewportHeight, &LinesMoved);
     if (NextMatch == NULL) {
         return;
     }
 
-    MoreContext->LinesInPage = 0;
     if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
         YoriLibClearSelection(&MoreContext->Selection);
         YoriLibRedrawSelection(&MoreContext->Selection);
     }
 
-    MoreGenerateEntireViewportWithStartingLine(MoreContext, NextMatch);
+    if (LinesMoved >= MoreContext->ViewportHeight) {
+        MoreContext->LinesInPage = 0;
+        MoreGenerateEntireViewportWithStartingLine(MoreContext, NextMatch);
+    } else {
+        MoreMoveViewportUp(MoreContext, LinesMoved);
+    }
 }
 
 /**
