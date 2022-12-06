@@ -130,6 +130,64 @@ typedef struct _MORE_LOGICAL_LINE {
 } MORE_LOGICAL_LINE, *PMORE_LOGICAL_LINE;
 
 /**
+ A structure to describe the state of parsing after a single logical line
+ has been processed.
+ */
+typedef struct _MORE_LINE_END_CONTEXT {
+
+    /**
+     Indicates the color that is being displayed at the end of one logical
+     line.  Conceptually the next logical line starts with this color.
+     */
+    WORD FinalDisplayColor;
+
+    /**
+     Indicates the color that is specified by the inbound text stream at the
+     end of a logical line.  Typically this is the same as the display color
+     above, but can be different if the display color is being overwridden
+     by this program via a search.
+     */
+    WORD FinalUserColor;
+
+    /**
+     Set to TRUE to indicate that once this line is displayed an explicit
+     newline character should be written.  This allows a logical line to be
+     generated referring only to characters within a physical line (no
+     reallocation or double buffering) but still terminate the line before
+     starting the next line.  This is typically FALSE because a logical line
+     has written to the edge of the console window so that processing is
+     resuming on the next console line without a newline present.
+     */
+    BOOLEAN ExplicitNewlineRequired;
+
+    /**
+     Set to TRUE to indicate the logical line needs to be parsed character
+     by character because the contents of the logical line are not merely
+     a subset of characters from a physical line.  FALSE if the line is
+     just part of a physical line allocation.  Currently this is only used
+     when a search is present so that the logical line contains extra
+     escape sequences that the physical line does not.
+     */
+    BOOLEAN RequiresGeneration;
+
+    /**
+     Specifies the number of characters needed to describe the logical line
+     contents.  When RequiresGeneration is TRUE this number may not match
+     the number of characters needing to be consumed from the physical line.
+     */
+    DWORD CharactersNeededInAllocation;
+
+    /**
+     Indicates the number of characters remaining in a search match.  This is
+     nonzero if a match is found that is partially on one logical line and
+     partially on a following logical line.  In that case, the second logical
+     line contains a highlighted region that is for fewer characters than the
+     match string, does not match the match string, etc.
+     */
+    DWORD CharactersRemainingInMatch;
+} MORE_LINE_END_CONTEXT, *PMORE_LINE_END_CONTEXT;
+
+/**
  Additional information about each search string.  This is seperated from the
  search strings to allow the search strings to be passed as-is when searching
  on each line.  Information about the string can be looked up after matches
@@ -398,6 +456,91 @@ MoreIngestThread(
 BOOL
 MoreViewportDisplay(
     __inout PMORE_CONTEXT MoreContext
+    );
+
+UCHAR
+MoreSearchIndexForColorIndex(
+    __in PMORE_CONTEXT MoreContext,
+    __in UCHAR ColorIndex
+    );
+
+UCHAR
+MoreSearchCountActive(
+    __in PMORE_CONTEXT MoreContext
+    );
+
+VOID
+MoreSearchIndexFree(
+    __in PMORE_CONTEXT MoreContext,
+    __in UCHAR SearchIndex
+    );
+
+VOID
+MoreTruncateStringToVisibleChars(
+    __in PYORI_STRING String,
+    __in DWORD VisibleChars
+    );
+
+VOID
+MoreMoveLogicalLine(
+    __inout PMORE_LOGICAL_LINE Dest,
+    __in PMORE_LOGICAL_LINE Src
+    );
+
+VOID
+MoreCloneLogicalLine(
+    __inout PMORE_LOGICAL_LINE Dest,
+    __in PMORE_LOGICAL_LINE Src
+    );
+
+DWORD
+MoreGetLogicalLineLength(
+    __in PMORE_CONTEXT MoreContext,
+    __in PYORI_STRING PhysicalLineSubset,
+    __in DWORD MaximumVisibleCharacters,
+    __in WORD InitialDisplayColor,
+    __in WORD InitialUserColor,
+    __in DWORD CharactersRemainingInMatch,
+    __out_opt PMORE_LINE_END_CONTEXT LineEndContext
+    );
+
+__success(return)
+DWORD
+MoreGetNextLogicalLines(
+    __inout PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_LOGICAL_LINE CurrentLine,
+    __in BOOL StartFromNextLine,
+    __in DWORD LinesToOutput,
+    __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
+    __out PDWORD NumberLinesGenerated
+    );
+
+__success(return)
+BOOL
+MoreGetPreviousLogicalLines(
+    __inout PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_LOGICAL_LINE CurrentLine,
+    __in DWORD LinesToOutput,
+    __out_ecount(*NumberLinesGenerated) PMORE_LOGICAL_LINE OutputLines,
+    __out PDWORD NumberLinesGenerated
+    );
+
+PMORE_PHYSICAL_LINE
+MoreFindNextLineWithSearchMatch(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
+    __in BOOLEAN MatchAny,
+    __in DWORD MaxLogicalLinesMoved,
+    __out_opt PDWORD LogicalLinesMoved
+    );
+
+PMORE_PHYSICAL_LINE
+MoreFindPreviousLineWithSearchMatch(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_LOGICAL_LINE PreviousMatchLine,
+    __in BOOLEAN MatchAny,
+    __in DWORD MaxLogicalLinesMoved,
+    __out_opt PDWORD LogicalLinesMoved
     );
 
 // vim:sw=4:ts=4:et:

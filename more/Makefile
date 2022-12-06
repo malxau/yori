@@ -11,12 +11,14 @@ BIN_OBJS=\
 	 ingest.obj       \
 	 moreinit.obj     \
 	 more.obj         \
+	 lines.obj        \
 	 viewport.obj     \
 
 MOD_OBJS=\
 	 ingest.obj       \
 	 moreinit.obj     \
 	 mod_more.obj     \
+	 lines.obj        \
 	 viewport.obj     \
 
 compile: $(BIN_OBJS) builtins.lib
