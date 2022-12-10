@@ -1141,6 +1141,7 @@ MoreGetNextLogicalLines(
  @return Pointer to the next physical line containing a match, or NULL
          if no further physical lines contain a match.
  */
+__success(return != NULL)
 PMORE_PHYSICAL_LINE
 MoreFindNextLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
@@ -1253,6 +1254,7 @@ MoreFindNextLineWithSearchMatch(
  @return Pointer to the next physical line containing a match, or NULL
          if no further physical lines contain a match.
  */
+__success(return != NULL)
 PMORE_PHYSICAL_LINE
 MoreFindPreviousLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,

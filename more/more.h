@@ -525,6 +525,7 @@ MoreGetPreviousLogicalLines(
     __out PDWORD NumberLinesGenerated
     );
 
+__success(return != NULL)
 PMORE_PHYSICAL_LINE
 MoreFindNextLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
@@ -534,6 +535,7 @@ MoreFindNextLineWithSearchMatch(
     __out_opt PDWORD LogicalLinesMoved
     );
 
+__success(return != NULL)
 PMORE_PHYSICAL_LINE
 MoreFindPreviousLineWithSearchMatch(
     __in PMORE_CONTEXT MoreContext,
