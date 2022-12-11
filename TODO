@@ -1,6 +1,5 @@
-v1.8:
+v1.9:
  - General MSFIX review
- - "."=="." becomes ".=="."" due to quote parsing which confuses if badly
 
 v1.x, maybe:
  - Use CopyFileEx when compressing to eliminate CreateFile?
@@ -15,7 +14,6 @@ v1.x, maybe:
  - Environment variable editor UI
  - Mini-http client to complete the NT 3.1 story and allow NT 3.5x and 4
    RTM to install without redistributables?
- - Ymake support for CFG="multi part"
  - Support move and resize of windows
  - Minimize/maximize/close
  - TreeView
@@ -29,6 +27,5 @@ v2.0:
  - Markdown formatter/parser
  - Man or something like it
  - Edit line wrap
- - Edit hex editing
  - PWB
  - Round braces in command parser, including if
