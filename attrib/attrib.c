@@ -214,7 +214,7 @@ AttribFileFoundCallback(
     if (ExistingAttributes == (DWORD)-1) {
         LastError = GetLastError();
         ErrText = YoriLibGetWinErrorText(LastError);
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("attrib: query of attributes failed: %y %s\n"), FilePath, ErrText);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("attrib: query of attributes failed: %y %s"), FilePath, ErrText);
         YoriLibFreeWinErrorText(ErrText);
         return TRUE;
     }
@@ -249,7 +249,7 @@ AttribFileFoundCallback(
             if (!SetFileAttributes(FilePath->StartOfString, NewAttributes)) {
                 LastError = GetLastError();
                 ErrText = YoriLibGetWinErrorText(LastError);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("attrib: modification of attributes failed: %y %s\n"), FilePath, ErrText);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("attrib: modification of attributes failed: %y %s"), FilePath, ErrText);
                 YoriLibFreeWinErrorText(ErrText);
                 return TRUE;
             } else if (AttribContext->Verbose) {
@@ -262,6 +262,7 @@ AttribFileFoundCallback(
         }
     }
 
+    AttribContext->SavedErrorThisArg = ERROR_SUCCESS;
     AttribContext->FilesFound++;
 
     return TRUE;
@@ -305,7 +306,7 @@ AttribFileEnumerateErrorCallback(
         UnescapedFilePath.LengthInChars = AttribContext->UnescapedPath.LengthInChars;
     }
 
-    if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND) {
+    if (ErrorCode == ERROR_FILE_NOT_FOUND || ErrorCode == ERROR_PATH_NOT_FOUND || ErrorCode == ERROR_INVALID_NAME) {
         AttribContext->SavedErrorThisArg = ErrorCode;
         Result = TRUE;
     } else {
@@ -550,10 +551,6 @@ ENTRYPOINT(
                 if (YoriLibUserStringToSingleFilePath(&ArgV[i], TRUE, &FullPath)) {
                     AttribFileFoundCallback(&FullPath, NULL, 0, &AttribContext);
                     YoriLibFreeStringContents(&FullPath);
-                }
-
-                if (AttribContext.SavedErrorThisArg != ERROR_SUCCESS) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("File or directory not found: %y\n"), &ArgV[i]);
                 }
             }
 
