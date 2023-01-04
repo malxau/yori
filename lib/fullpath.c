@@ -1245,34 +1245,37 @@ YoriLibGetFullPathNameReturnAllocation(
         PathType.Flags.AbsoluteWithoutDrive) {
 
         YORI_STRING CurrentDirectory;
+        DWORD CurrentDirectoryLength;
+
+        CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
+        if (!YoriLibAllocateString(&CurrentDirectory, CurrentDirectoryLength)) {
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            return FALSE;
+        }
+
+        Result = GetCurrentDirectory(CurrentDirectory.LengthAllocated, CurrentDirectory.StartOfString);
+        if (Result == 0 || Result >= CurrentDirectory.LengthAllocated) {
+            YoriLibFreeStringContents(&CurrentDirectory);
+            return FALSE;
+        }
+
+        CurrentDirectory.LengthInChars = Result;
 
         //
-        //  If it's drive relative, get the current directory of the requested
-        //  drive.  The only documented way to do this is to call
-        //  GetFullPathName itself, which looks a little goofy given where
-        //  we are.
+        //  If it's drive relative, and it's relative to a different drive,
+        //  get the current directory of the requested drive.
         //
 
         if (PathType.Flags.DriveRelativePath) {
-            if (!YoriLibGetCurrentDirectoryOnDrive(FileName->StartOfString[0], &CurrentDirectory)) {
-                SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-                return FALSE;
-            }
-        } else {
-            DWORD CurrentDirectoryLength;
-            CurrentDirectoryLength = GetCurrentDirectory(0, NULL);
-            if (!YoriLibAllocateString(&CurrentDirectory, CurrentDirectoryLength)) {
-                SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-                return FALSE;
-            }
+            if (CurrentDirectory.LengthInChars == 0 ||
+                YoriLibUpcaseChar(CurrentDirectory.StartOfString[0]) != YoriLibUpcaseChar(FileName->StartOfString[0])) {
 
-            Result = GetCurrentDirectory(CurrentDirectory.LengthAllocated, CurrentDirectory.StartOfString);
-            if (Result == 0 || Result >= CurrentDirectory.LengthAllocated) {
                 YoriLibFreeStringContents(&CurrentDirectory);
-                return FALSE;
+                if (!YoriLibGetCurrentDirectoryOnDrive(FileName->StartOfString[0], &CurrentDirectory)) {
+                    SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+                    return FALSE;
+                }
             }
-
-            CurrentDirectory.LengthInChars = Result;
         }
 
         Result = YoriLibFullPathMergeRootWithRelative(&CurrentDirectory,
