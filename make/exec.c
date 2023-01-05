@@ -716,6 +716,30 @@ MakeLaunchNextCmd(
 }
 
 /**
+ Indicate that an entire recipe has completed.  This may have succeeded, or
+ may have failed partway.  This function needs to clean up regardless.
+
+ @param MakeContext Pointer to the make context.
+
+ @param ChildRecipe Pointer to the recipe to clean up for reuse.
+ */
+VOID
+MakeRecipeCompletion(
+    __in PMAKE_CONTEXT MakeContext,
+    __inout PMAKE_CHILD_RECIPE ChildRecipe
+    )
+{
+    UNREFERENCED_PARAMETER(MakeContext);
+
+    //
+    //  This recipe structure should not have child processes executing.
+    //
+
+    ASSERT(!ChildRecipe->CmdContextPresent);
+    YoriLibFreeStringContents(&ChildRecipe->CurrentDirectory);
+}
+
+/**
  Launch the recipe for the next ready target.
 
  @param MakeContext Pointer to the context.
@@ -734,6 +758,7 @@ MakeLaunchNextTarget(
 {
     PMAKE_TARGET Target;
     PYORI_LIST_ENTRY ListEntry;
+    BOOLEAN Result;
 
     //
     //  This recipe structure should be available for use.
@@ -784,31 +809,11 @@ MakeLaunchNextTarget(
 
     ASSERT(YoriLibIsStringNullTerminated(&ChildRecipe->CurrentDirectory));
 
-    return MakeLaunchNextCmd(MakeContext, ChildRecipe);
-}
-
-/**
- Indicate that an entire recipe has completed.  This may have succeeded, or
- may have failed partway.  This function needs to clean up regardless.
-
- @param MakeContext Pointer to the make context.
-
- @param ChildRecipe Pointer to the recipe to clean up for reuse.
- */
-VOID
-MakeRecipeCompletion(
-    __in PMAKE_CONTEXT MakeContext,
-    __inout PMAKE_CHILD_RECIPE ChildRecipe
-    )
-{
-    UNREFERENCED_PARAMETER(MakeContext);
-
-    //
-    //  This recipe structure should not have child processes executing.
-    //
-
-    ASSERT(!ChildRecipe->CmdContextPresent);
-    YoriLibFreeStringContents(&ChildRecipe->CurrentDirectory);
+    Result = MakeLaunchNextCmd(MakeContext, ChildRecipe);
+    if (!Result) {
+        MakeRecipeCompletion(MakeContext, ChildRecipe);
+    }
+    return Result;
 }
 
 /**
