@@ -29,7 +29,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-MAKE_LIBS=$(YORILIBS) $(YORISH) $(YORIVER) ..\echo\builtins.lib ..\mkdir\builtins.lib ..\rmdir\builtins.lib
+MAKE_LIBS=$(YORILIBS) $(YORISH) $(YORIVER) ..\builtins\builtins.lib ..\echo\builtins.lib ..\mkdir\builtins.lib ..\rmdir\builtins.lib
 
 ymake.exe: $(BIN_OBJS) $(MAKE_LIBS)
 	@echo $@

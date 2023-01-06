@@ -122,6 +122,11 @@ typedef struct _MAKE_BUILTIN_NAME_MAPPING {
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_REM;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_YECHO;
 
 /**
@@ -141,6 +146,7 @@ CONST MAKE_BUILTIN_NAME_MAPPING
 MakeBuiltinCmds[] = {
     {_T("ECHO"),      YoriCmd_YECHO},
     {_T("MKDIR"),     YoriCmd_YMKDIR},
+    {_T("REM"),       YoriCmd_REM},
     {_T("RMDIR"),     YoriCmd_YRMDIR},
     {NULL,            NULL}
 };
