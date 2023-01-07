@@ -2507,12 +2507,12 @@ YoriWinMultilineEditDeleteTextRange(
 
     //
     //  If the first part of the first line and the last part of the last
-    //  line (the unselected regions of each) don't fit in the final line's
+    //  line (the unselected regions of each) don't fit in the first line's
     //  allocation, reallocate it.
     //
 
     if (FinalLine != NULL &&
-        FirstCharOffset + CharsToCopy > FinalLine->LengthAllocated) {
+        FirstCharOffset + CharsToCopy > Line->LengthAllocated) {
 
         YORI_STRING NewLine;
         DWORD CharsFromFirstLine;
