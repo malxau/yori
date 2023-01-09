@@ -392,6 +392,139 @@ YoriLibExpandCommandVariables(
 }
 
 /**
+ Take an array of arguments, which may contain an equals sign somewhere in the
+ middle.  Convert these into a variable name (left of equals) and value (right
+ of equals.)  Quotes are preserved in the value component, but not in the
+ variable component.
+
+ @param ArgC The number of arguments.
+
+ @param ArgV An array of arguments.
+
+ @param Variable On successful completion, updated to contain a variable name.
+        This string is allocated within this routine and should be freed with
+        @ref YoriLibFreeStringContents .
+
+ @param ValueSpecified On successful completion, set to TRUE to indicate that
+        an equals was encountered, so a value is present, even if it may be
+        empty.  If FALSE, no equals was encountered.
+
+ @param Value On successful completion, updated to contain a value.  This
+        string is allocated within this routine and should be freed with
+        @ref YoriLibFreeStringContents .
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriLibArgArrayToVariableValue(
+    __in DWORD ArgC,
+    __in PYORI_STRING ArgV,
+    __out PYORI_STRING Variable,
+    __out PBOOLEAN ValueSpecified,
+    __out PYORI_STRING Value
+    )
+{
+    DWORD ArgWithEquals;
+    DWORD EqualsOffset;
+    LPTSTR Equals;
+    YORI_STRING SavedArg;
+    DWORD i;
+
+    Equals = NULL;
+    ArgWithEquals = 0;
+    EqualsOffset = 0;
+
+    for (i = 0; i < ArgC; i++) {
+        Equals = YoriLibFindLeftMostCharacter(&ArgV[i], '=');
+        if (Equals != NULL) {
+            ArgWithEquals = i;
+            EqualsOffset = (DWORD)(Equals - ArgV[i].StartOfString);
+            break;
+        }
+    }
+
+    YoriLibInitEmptyString(Variable);
+    *ValueSpecified = FALSE;
+    YoriLibInitEmptyString(Value);
+
+    //
+    //  If there's no equals, treat everything as the variable component.
+    //
+
+    if (Equals == NULL) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC, ArgV, FALSE, FALSE, Variable)) {
+            return FALSE;
+        }
+
+        return TRUE;
+    }
+
+    *ValueSpecified = TRUE;
+
+    //
+    //  What follows interprets the single ArgV array as two arrays, with one
+    //  component being shared across both (different substrings on different
+    //  sides of the equals sign.)  Currently this works by manipulating that
+    //  component (changing the input array.)  In order to not confuse the
+    //  caller, save and restore the component being modified.
+    //
+
+    YoriLibInitEmptyString(&SavedArg);
+    SavedArg.StartOfString = ArgV[ArgWithEquals].StartOfString;
+    SavedArg.LengthInChars = ArgV[ArgWithEquals].LengthInChars;
+
+    //
+    //  Truncate the arg containing the equals, and build a string for it.
+    //  This is the variable name.  Note quotes are not inserted here.
+    //
+
+    ArgV[ArgWithEquals].LengthInChars = EqualsOffset;
+    if (!YoriLibBuildCmdlineFromArgcArgv(ArgWithEquals + 1, ArgV, FALSE, FALSE, Variable)) {
+        return FALSE;
+    }
+
+    //
+    //  If there's anything left after the equals sign, start from that
+    //  argument, after the equals; if not, start from the next one.
+    //  If starting from the next, indicate there's nothing to restore
+    //  from the one we just skipped over.
+    //
+
+    if (SavedArg.LengthInChars - EqualsOffset - 1 > 0) {
+        ArgV[ArgWithEquals].StartOfString = ArgV[ArgWithEquals].StartOfString + EqualsOffset + 1;
+        ArgV[ArgWithEquals].LengthInChars = SavedArg.LengthInChars - EqualsOffset - 1;
+    } else {
+        ArgV[ArgWithEquals].LengthInChars = SavedArg.LengthInChars;
+        ArgWithEquals++;
+
+        SavedArg.StartOfString = NULL;
+    }
+
+    //
+    //  If there are any arguments, construct the value string.
+    //
+
+    if (ArgC - ArgWithEquals > 0) {
+        if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - ArgWithEquals, &ArgV[ArgWithEquals], TRUE, FALSE, Value)) {
+            YoriLibFreeStringContents(Variable);
+            return FALSE;
+        }
+    }
+
+    //
+    //  If there's something to restore, go restore it.
+    //
+
+    if (SavedArg.StartOfString != NULL) {
+        ArgV[ArgWithEquals].StartOfString = SavedArg.StartOfString;
+        ArgV[ArgWithEquals].LengthInChars = SavedArg.LengthInChars;
+    }
+
+    return TRUE;
+}
+
+/**
  Parses a NULL terminated command line string into an argument count and array
  of YORI_STRINGs corresponding to arguments.
 

@@ -590,6 +590,16 @@ YoriLibCheckIfArgNeedsQuotes(
     );
 
 __success(return)
+BOOLEAN
+YoriLibArgArrayToVariableValue(
+    __in DWORD ArgC,
+    __in PYORI_STRING ArgV,
+    __out PYORI_STRING Variable,
+    __out PBOOLEAN ValueSpecified,
+    __out PYORI_STRING Value
+    );
+
+__success(return)
 BOOL
 YoriLibBuildCmdlineFromArgcArgv(
     __in DWORD ArgC,
