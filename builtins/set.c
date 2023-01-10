@@ -189,34 +189,16 @@ YoriCmd_SET(
         YoriLibFreeStringContents(&EnvironmentStrings);
     } else {
         YORI_STRING Value;
-        YORI_STRING CmdLine;
         YORI_STRING Variable;
+        BOOLEAN ValueSpecified;
 
-        if (!YoriLibBuildCmdlineFromArgcArgv(EscapedArgC - StartArg, &EscapedArgV[StartArg], FALSE, FALSE, &CmdLine)) {
+        if (!YoriLibArgArrayToVariableValue(EscapedArgC - StartArg, &EscapedArgV[StartArg], &Variable, &ValueSpecified, &Value)) {
             return EXIT_FAILURE;
-        }
-
-        memcpy(&Variable, &CmdLine, sizeof(YORI_STRING));
-
-        //
-        //  At this point escapes are still present but it's never valid to
-        //  have an '=' in a variable name, escape or not.
-        //
-
-        YoriLibInitEmptyString(&Value);
-        Value.StartOfString = YoriLibFindLeftMostCharacter(&Variable, '=');
-        if (Value.StartOfString) {
-            Value.StartOfString[0] = '\0';
-            Value.StartOfString++;
-            Variable.LengthAllocated = (DWORD)(Value.StartOfString - CmdLine.StartOfString);
-            Variable.LengthInChars = Variable.LengthAllocated - 1;
-            Value.LengthInChars = CmdLine.LengthInChars - Variable.LengthAllocated;
-            Value.LengthAllocated = CmdLine.LengthAllocated - Variable.LengthAllocated;
         }
 
         SetRemoveEscapes(&Variable);
 
-        if (Value.StartOfString != NULL) {
+        if (ValueSpecified) {
 
             //
             //  Scan through the value looking for any unexpanded environment
@@ -224,12 +206,12 @@ YoriCmd_SET(
             //
 
             YoriLibBuiltinRemoveEmptyVariables(&Value);
-            Value.StartOfString[Value.LengthInChars] = '\0';
 
             if (Value.LengthInChars == 0) {
                 YoriCallSetEnvironmentVariable(&Variable, NULL);
             } else {
                 YORI_STRING CombinedValue;
+                Value.StartOfString[Value.LengthInChars] = '\0';
                 SetRemoveEscapes(&Value);
                 if (IncludeComponent) {
                     if (YoriLibAddEnvironmentComponentReturnString(&Variable, &Value, TRUE, &CombinedValue)) {
@@ -259,7 +241,8 @@ YoriCmd_SET(
             LPTSTR ThisVar;
 
             if (!YoriLibGetEnvironmentStrings(&EnvironmentStrings)) {
-                YoriLibFreeStringContents(&CmdLine);
+                YoriLibFreeStringContents(&Variable);
+                YoriLibFreeStringContents(&Value);
                 return EXIT_FAILURE;
             }
             ThisVar = EnvironmentStrings.StartOfString;
@@ -272,7 +255,8 @@ YoriCmd_SET(
             }
             YoriLibFreeStringContents(&EnvironmentStrings);
         }
-        YoriLibFreeStringContents(&CmdLine);
+        YoriLibFreeStringContents(&Variable);
+        YoriLibFreeStringContents(&Value);
     }
     return EXIT_SUCCESS;
 }
