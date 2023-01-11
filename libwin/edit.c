@@ -1276,8 +1276,6 @@ YoriWinEditGetTextRange(
         LastCharToDelete is zero, and required to be present when
         LastCharToDelete is zero.
 
- @param Text A block of text to insert or overwrite.
-
  @param InsertMode If TRUE, text should be inserted; if FALSE, text should be
         overwritten.  Ignored if LastCharToDelete is nonzero.
 
