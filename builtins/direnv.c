@@ -335,6 +335,7 @@ DirenvUninstallApplyHook(VOID)
             YoriCallSetEnvironmentVariable(&YoriPostcmdName, &YoriPostcmd);
         }
     }
+    YoriLibFreeStringContents(&YoriPostcmd);
     return TRUE;
 }
 
