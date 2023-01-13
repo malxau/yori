@@ -207,6 +207,11 @@ MACHINE=IA64
 MINOS=520
 ARCH=ia64
 !ELSE
+!IF [$(CC) 2>&1 | find "IA-64" >NUL]==0
+MACHINE=IA64
+MINOS=520
+ARCH=ia64
+!ELSE
 !IF [$(CC) 2>&1 | find "ARM" >NUL]==0
 MACHINE=ARM
 # Add back msvcrt to provide 64 bit math assembly
@@ -221,6 +226,7 @@ EXTERNLIBS=$(EXTERNLIBS) msvcrt.lib
 ARCH=mips
 !ENDIF # MIPS
 !ENDIF # ARM (32)
+!ENDIF # IA-64
 !ENDIF # Itanium
 !ENDIF # ARM64
 !ENDIF # AMD64
