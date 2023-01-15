@@ -142,7 +142,7 @@ YoriLibShInitializeRedirection(
     //
 
     if (!PrepareForBuiltIn) {
-        YoriLibSetInputConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+        YoriLibSetInputConsoleModeWithoutExtended(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
         YoriLibCancelInheritedProcess();
     }
 

@@ -523,6 +523,12 @@ YoriLibSetInputConsoleMode(
     __in DWORD ConsoleMode
     );
 
+BOOL
+YoriLibSetInputConsoleModeWithoutExtended(
+    __in HANDLE Handle,
+    __in DWORD ConsoleMode
+    );
+
 // *** CLIP.C ***
 
 __success(return)

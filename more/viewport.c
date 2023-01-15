@@ -2556,11 +2556,11 @@ MoreViewportDisplay(
 
     if (YoriLibIsYoriQuickEditEnabled()) {
         InputFlags = ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT | ENABLE_EXTENDED_FLAGS;
+        YoriLibSetInputConsoleMode(InHandle, InputFlags);
     } else {
         InputFlags = ENABLE_MOUSE_INPUT | ENABLE_WINDOW_INPUT;
+        YoriLibSetInputConsoleModeWithoutExtended(InHandle, InputFlags);
     }
-
-    YoriLibSetInputConsoleMode(InHandle, InputFlags);
 
     if (YoriLibIsNanoServer()) {
 

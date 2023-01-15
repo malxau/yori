@@ -139,6 +139,12 @@ YoriLibCancelInheritedProcess(VOID)
 }
 
 /**
+ The set of console input flags that can be changed without
+ ENABLE_EXTENDED_FLAGS.
+ */
+#define YORI_LIB_STANDARD_INPUT_MODES (ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT | ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT)
+
+/**
  Set the input console mode, while capturing the intention to facilitate
  debugging.
 
@@ -154,6 +160,8 @@ YoriLibSetInputConsoleMode(
     __in DWORD ConsoleMode
     )
 {
+    BOOL Result;
+
     if (ConsoleMode & ENABLE_PROCESSED_INPUT) {
         g_YoriLibCancel.ProcessedInput = TRUE;
     } else {
@@ -166,7 +174,70 @@ YoriLibSetInputConsoleMode(
     }
 #endif
 
-    return SetConsoleMode(Handle, ConsoleMode);
+    Result = SetConsoleMode(Handle, ConsoleMode);
+
+    //
+    //  If the call failed with ERROR_INVALID_PARAMETER and extended flags
+    //  are set, remove them and try again.  This happens because older
+    //  systems do not support these flags.
+    //
+
+    if (!Result && (ConsoleMode & ~(YORI_LIB_STANDARD_INPUT_MODES))) {
+        DWORD Err;
+        DWORD NewMode;
+        Err = GetLastError();
+        if (Err == ERROR_INVALID_PARAMETER) {
+            NewMode = ConsoleMode & YORI_LIB_STANDARD_INPUT_MODES;
+            Result = SetConsoleMode(Handle, NewMode);
+        }
+    }
+
+    return Result;
+}
+
+/**
+ SetConsoleMode is documented to be callable without ENABLE_EXTENDED_FLAGS,
+ which leaves the previous extended flags in place.  Unfortunately it also
+ means that later calls to GetConsoleMode won't return those flags.  This
+ function attempts to implement what the documentation says it should do:
+ set the modes that affect application behavior while leaving user
+ preferences in tact.
+
+ @param Handle Handle to a console input device.
+
+ @param ConsoleMode The mode to set on a console input handle.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibSetInputConsoleModeWithoutExtended(
+    __in HANDLE Handle,
+    __in DWORD ConsoleMode
+    )
+{
+    DWORD NewConsoleMode;
+
+    ASSERT((ConsoleMode & ~(YORI_LIB_STANDARD_INPUT_MODES)) == 0);
+
+    //
+    //  Query all of the extended flags from the console.  This allows the
+    //  call to SetConsoleMode to retain extended flags, so their existence
+    //  is not lost.
+    //
+
+    if (!GetConsoleMode(Handle, &NewConsoleMode)) {
+        return FALSE;
+    }
+
+    //
+    //  Remove all of the standard flags, and add the standard flags from
+    //  the caller
+    //
+
+    NewConsoleMode = (NewConsoleMode & ~(YORI_LIB_STANDARD_INPUT_MODES)) |
+                     (ConsoleMode & YORI_LIB_STANDARD_INPUT_MODES);
+
+    return YoriLibSetInputConsoleMode(Handle, NewConsoleMode);
 }
 
 /**
@@ -251,7 +322,8 @@ YoriLibCancelEnable(
         g_YoriLibCancel.HandlerSet = TRUE;
         SetConsoleCtrlHandler(YoriLibCtrlCHandler, TRUE);
     }
-    YoriLibSetInputConsoleMode(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+
+    YoriLibSetInputConsoleModeWithoutExtended(GetStdHandle(STD_INPUT_HANDLE), ENABLE_PROCESSED_INPUT | ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
     return TRUE;
 }
 
