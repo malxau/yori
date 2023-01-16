@@ -172,23 +172,11 @@ typedef struct _YORI_WIN_WINDOW_MANAGER {
     CHAR_INFO RepeatingCell;
 
     /**
-     TRUE if some region of the display buffer has been regenerated and needs
-     to be pushed to the console.  When this occurs, DirtyRect below indicates
-     the range.  Contents in the Contents buffer above have been updated.
-     */
-    BOOLEAN DisplayDirty;
-
-    /**
      If DirtyRect above is TRUE, this contains the region of the Contents
      buffer which needs to be displayed.  If DisplayDirty above is FALSE,
      the values in DirtyRect are not meaningful.
      */
     SMALL_RECT DirtyRect;
-
-    /**
-     TRUE to indicate that the cursor should be redisplayed unconditionally.
-     */
-    BOOLEAN UpdateCursor;
 
     /**
      The current state of the cursor on the display.  If the active window
@@ -227,6 +215,11 @@ typedef struct _YORI_WIN_WINDOW_MANAGER {
     PYORI_WIN_CTRL MouseButtonOwningWindow;
 
     /**
+     The console input mode when the window manager was first opened.
+     */
+    DWORD SavedConsoleInputMode;
+
+    /**
      Set to TRUE to indicate all mouse press events should be sent to one
      specific window (MouseButtonOwningWindow) regardless of the mouse
      location.  When FALSE, the mouse press events should be sent to
@@ -235,12 +228,30 @@ typedef struct _YORI_WIN_WINDOW_MANAGER {
     BOOLEAN MouseOwnedExclusively;
 
     /**
+     TRUE to indicate that the cursor should be redisplayed unconditionally.
+     */
+    BOOLEAN UpdateCursor;
+
+    /**
+     TRUE if some region of the display buffer has been regenerated and needs
+     to be pushed to the console.  When this occurs, DirtyRect below indicates
+     the range.  Contents in the Contents buffer above have been updated.
+     */
+    BOOLEAN DisplayDirty;
+
+    /**
      Set to TRUE if the console is a v2 console.  These appear to have fixed
      bugs relating to the coordinates of mouse wheel events.  As of this
      writing, mouse wheel is only supported here on v2 - supporting on v1
      would require some manual fudging of coordinates.
      */
     BOOLEAN IsConhostv2;
+
+    /**
+     Set to TRUE to indicate SavedConsoleInputMode contains a value that
+     should be restored when the window manager exits.
+     */
+    BOOLEAN HaveSavedInputMode;
 
     /**
      Set to TRUE to indicate that SavedCursorInfo is valid and should be
@@ -473,6 +484,10 @@ YoriWinCloseWindowManager(
         SetConsoleCursorInfo(WinMgr->hConOut, &WinMgr->SavedCursorInfo);
     }
 
+    if (WinMgr->HaveSavedInputMode) {
+        YoriLibSetInputConsoleMode(WinMgr->hConIn, WinMgr->SavedConsoleInputMode);
+    }
+
     if (WinMgr->hConOriginal != NULL) {
         SetConsoleActiveScreenBuffer(WinMgr->hConOriginal);
         CloseHandle(WinMgr->hConOriginal);
@@ -572,6 +587,17 @@ YoriWinOpenWindowManager(
         }
 
         SetConsoleActiveScreenBuffer(WinMgr->hConOut);
+    }
+
+    //
+    //  Query the console input flags.  Unfortunately restoring these on exit
+    //  is best effort because this query may not return extended flags.
+    //  Since this program clears extended flags anyway, restoring this can't
+    //  be any more harmful than not restoring them.
+    //
+
+    if (GetConsoleMode(WinMgr->hConIn, &WinMgr->SavedConsoleInputMode)) {
+        WinMgr->HaveSavedInputMode = TRUE;
     }
 
     if (GetConsoleCursorInfo(WinMgr->hConOut, &WinMgr->SavedCursorInfo)) {
