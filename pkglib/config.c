@@ -370,7 +370,9 @@ YoriPkgCreateAppShortcut(
 {
     YORI_STRING LocalExePath;
     YORI_STRING FullShortcutPath;
+    YORI_STRING WorkingDir;
     YORI_STRING Description;
+    YORI_STRING HomeDir;
     PISHELLLINKDATALIST_CONSOLE_PROPS ConsoleProps;
 
     if (YoriExeFullPath == NULL) {
@@ -386,8 +388,16 @@ YoriPkgCreateAppShortcut(
         return FALSE;
     }
 
+    YoriLibConstantString(&HomeDir, _T("~"));
+    if (!YoriLibUserStringToSingleFilePath(&HomeDir, FALSE, &WorkingDir)) {
+        YoriLibFreeStringContents(&FullShortcutPath);
+        YoriLibFreeStringContents(&LocalExePath);
+        return FALSE;
+    }
+
     ConsoleProps = YoriLibAllocateDefaultConsoleProperties();
     if (ConsoleProps == NULL) {
+        YoriLibFreeStringContents(&WorkingDir);
         YoriLibFreeStringContents(&FullShortcutPath);
         YoriLibFreeStringContents(&LocalExePath);
         return FALSE;
@@ -398,14 +408,16 @@ YoriPkgCreateAppShortcut(
 
     YoriLibConstantString(&Description, _T("Yori"));
 
-    if (!YoriLibCreateShortcut(&FullShortcutPath, &LocalExePath, NULL, &Description, NULL, &LocalExePath, ConsoleProps, 0, 1, (WORD)-1, TRUE, TRUE)) {
+    if (!YoriLibCreateShortcut(&FullShortcutPath, &LocalExePath, NULL, &Description, &WorkingDir, &LocalExePath, ConsoleProps, 0, 1, (WORD)-1, TRUE, TRUE)) {
         YoriLibDereference(ConsoleProps);
+        YoriLibFreeStringContents(&WorkingDir);
         YoriLibFreeStringContents(&LocalExePath);
         YoriLibFreeStringContents(&FullShortcutPath);
         return FALSE;
     }
 
     YoriLibDereference(ConsoleProps);
+    YoriLibFreeStringContents(&WorkingDir);
     YoriLibFreeStringContents(&LocalExePath);
     YoriLibFreeStringContents(&FullShortcutPath);
 
