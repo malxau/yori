@@ -1,7 +1,7 @@
 /**
  * @file sync/sync.c
  *
- * Yori create files or update timestamps
+ * Yori flush files, directories or volumes to disk.
  *
  * Copyright (c) 2018 Malcolm J. Smith
  *
