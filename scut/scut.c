@@ -3,7 +3,7 @@
  *
  * A command line tool to manipulate shortcuts
  *
- * Copyright (c) 2004-2022 Malcolm Smith
+ * Copyright (c) 2004-2023 Malcolm Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -643,6 +643,8 @@ ENTRYPOINT(
     BOOLEAN FreeConsolePropsWithDereference = FALSE;
     BOOLEAN AutoPositionSet = FALSE;
     BOOLEAN AutoPosition = FALSE;
+    BOOLEAN FullScreen = FALSE;
+    BOOLEAN FullScreenSet = FALSE;
 
     YoriLibInitEmptyString(&szFile);
     YoriLibInitEmptyString(&szIcon);
@@ -672,7 +674,7 @@ ENTRYPOINT(
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2004-2022"));
+                YoriLibDisplayMitLicense(_T("2004-2023"));
                 ExitCode = EXIT_SUCCESS;
                 goto Exit;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("create")) == 0) {
@@ -770,6 +772,10 @@ ENTRYPOINT(
                         i++;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("fullscreen")) == 0) {
+                FullScreen = TRUE;
+                FullScreenSet = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("hotkey")) == 0) {
                 if (i + 1 < ArgC) {
                     llTemp = 0;
@@ -830,6 +836,10 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("windowed")) == 0) {
+                FullScreen = FALSE;
+                FullScreenSet = TRUE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("windowposition")) == 0) {
                 if (i + 1 < ArgC) {
                     if (ScutStringToCoord(&ArgV[i + 1], &WindowPosition)) {
@@ -1036,6 +1046,7 @@ ENTRYPOINT(
          FontSize.X != 0 ||
          FontSize.Y != 0 ||
          AutoPositionSet ||
+         FullScreenSet ||
          WindowPosition.X != 0 ||
          WindowPosition.Y != 0 ||
          WindowSize.X != 0 ||
@@ -1102,6 +1113,10 @@ ENTRYPOINT(
                 ConsoleProps->WindowPosition.X = WindowPosition.X;
                 ConsoleProps->WindowPosition.Y = WindowPosition.Y;
             }
+        }
+
+        if (FullScreenSet) {
+            ConsoleProps->FullScreen = FullScreen;
         }
 
         ShortcutDataList->Vtbl->RemoveDataBlock(ShortcutDataList, ISHELLLINKDATALIST_CONSOLE_PROPS_SIG);
