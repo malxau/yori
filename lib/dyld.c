@@ -191,6 +191,7 @@ CONST YORI_DLL_NAME_MAP DllKernel32Symbols[] = {
     {(FARPROC *)&DllKernel32.pRegisterApplicationRestart, "RegisterApplicationRestart"},
     {(FARPROC *)&DllKernel32.pReplaceFileW, "ReplaceFileW"},
     {(FARPROC *)&DllKernel32.pRtlCaptureStackBackTrace, "RtlCaptureStackBackTrace"},
+    {(FARPROC *)&DllKernel32.pSetConsoleDisplayMode, "SetConsoleDisplayMode"},
     {(FARPROC *)&DllKernel32.pSetConsoleScreenBufferInfoEx, "SetConsoleScreenBufferInfoEx"},
     {(FARPROC *)&DllKernel32.pSetCurrentConsoleFontEx, "SetCurrentConsoleFontEx"},
     {(FARPROC *)&DllKernel32.pSetFileInformationByHandle, "SetFileInformationByHandle"},

@@ -3602,6 +3602,22 @@ typedef struct _YORILIB_PE_HEADERS {
     IMAGE_OPTIONAL_HEADER OptionalHeader;
 } YORILIB_PE_HEADERS, *PYORILIB_PE_HEADERS;
 
+#ifndef CONSOLE_FULLSCREEN_MODE
+/**
+ A private definition of CONSOLE_FULLSCREEN_MODE in case the compilation
+ environment doesn't provide it.
+ */
+#define CONSOLE_FULLSCREEN_MODE 1
+#endif
+
+#ifndef CONSOLE_WINDOWED_MODE
+/**
+ A private definition of CONSOLE_WINDOWED_MODE in case the compilation
+ environment doesn't provide it.
+ */
+#define CONSOLE_WINDOWED_MODE 2
+#endif
+
 /**
  A private definition of CONSOLE_FONT_INFOEX in case the compilation
  environment doesn't provide it.
@@ -6797,6 +6813,18 @@ RTL_CAPTURE_STACK_BACK_TRACE(DWORD, DWORD, PVOID *, PDWORD);
 typedef RTL_CAPTURE_STACK_BACK_TRACE *PRTL_CAPTURE_STACK_BACK_TRACE;
 
 /**
+ A prototype for the SetConsoleDisplayMode function.
+ */
+typedef
+BOOL WINAPI
+SET_CONSOLE_DISPLAY_MODE(HANDLE, DWORD, PCOORD);
+
+/**
+ A prototype for a pointer to the the SetConsoleDisplayMode function.
+ */
+typedef SET_CONSOLE_DISPLAY_MODE *PSET_CONSOLE_DISPLAY_MODE;
+
+/**
  A prototype for the SetConsoleScreenBufferEx function.
  */
 typedef
@@ -7182,6 +7210,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to RtlCaptureStackBackTrace.
      */
     PRTL_CAPTURE_STACK_BACK_TRACE pRtlCaptureStackBackTrace;
+
+    /**
+     If it's available on the current system, a pointer to SetConsoleDisplayMode.
+     */
+    PSET_CONSOLE_DISPLAY_MODE pSetConsoleDisplayMode;
 
     /**
      If it's available on the current system, a pointer to SetConsoleScreenBufferInfoEx.
