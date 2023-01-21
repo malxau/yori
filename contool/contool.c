@@ -1,9 +1,9 @@
 /**
  * @file contool/contool.c
  *
- * Yori shell display console properties
+ * Yori shell configure console or display console properties
  *
- * Copyright (c) 2017-2022 Malcolm J. Smith
+ * Copyright (c) 2017-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,9 +33,12 @@
 const
 CHAR strConToolHelpText[] =
         "\n"
-        "Outputs console information in a specified format.\n"
+        "Configures console properties or outputs console information in a specified format.\n"
         "\n"
-        "CONTOOL [-license] [-f <fmt>]\n"
+        "CONTOOL [-license] [-fullscreen|-window] [-f <fmt>]\n"
+        "\n"
+        "   -fullscreen    Switch to full screen\n"
+        "   -window        Switch to a console window\n"
         "\n"
         "Format specifiers are:\n"
         "   $buffer_x$           The width of the scrollback buffer in cells\n"
@@ -68,12 +71,13 @@ ConToolHelp(VOID)
 typedef struct _CONTOOL_RESULT {
 
     /**
-     Set to TRUE if a variable was specified that could not be expanded.
-     This indicates either a caller error in asking for an unknown variable,
-     or asking for a variable which wasn't available.  When this occurs,
-     the process exits with a failure code.
+     Set to TRUE if a variable was specified that could not be expanded or
+     if a modification operation failed.  This may indicate either a caller
+     error in asking for an unknown variable, or asking for a variable which
+     wasn't available.  When this occurs, the process exits with a failure
+     code.
      */
-    BOOL VariableExpansionFailure;
+    BOOL Failure;
 
     /**
      Flags indicating which data has been collected.
@@ -165,7 +169,7 @@ ConToolExpandVariables(
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->ScreenBufferInfo.srWindow.Bottom - ConToolContext->ScreenBufferInfo.srWindow.Top + 1);
 
     } else {
-        ConToolContext->VariableExpansionFailure = TRUE;
+        ConToolContext->Failure = TRUE;
         return 0;
     }
 
@@ -231,6 +235,13 @@ ENTRYPOINT(
     DWORD i;
     YORI_STRING Arg;
     HANDLE hConsole;
+    BOOLEAN Fullscreen;
+    BOOLEAN FullscreenSet;
+    DWORD LastError;
+    LPTSTR ErrText;
+
+    Fullscreen = FALSE;
+    FullscreenSet = FALSE;
 
     YoriLibInitEmptyString(&YsFormatString);
 
@@ -245,7 +256,7 @@ ENTRYPOINT(
                 ConToolHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2022"));
+                YoriLibDisplayMitLicense(_T("2017-2023"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("f")) == 0) {
                 if (ArgC > i + 1) {
@@ -255,6 +266,14 @@ ENTRYPOINT(
                     ArgumentUnderstood = TRUE;
                     i++;
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("fullscreen")) == 0) {
+                Fullscreen = TRUE;
+                FullscreenSet = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("window")) == 0) {
+                Fullscreen = FALSE;
+                FullscreenSet = TRUE;
+                ArgumentUnderstood = TRUE;
             }
         } else {
             ArgumentUnderstood = TRUE;
@@ -274,67 +293,91 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    if (GetConsoleScreenBufferInfo(hConsole, &ConToolResult.ScreenBufferInfo)) {
-        ConToolResult.Have.ScreenBufferInfo = TRUE;
-    }
+    if (FullscreenSet) {
 
-    if (DllKernel32.pGetCurrentConsoleFontEx != NULL) {
-        ZeroMemory(&ConToolResult.FontInfo, sizeof(ConToolResult.FontInfo));
-        ConToolResult.FontInfo.cbSize = sizeof(ConToolResult.FontInfo);
-        if (DllKernel32.pGetCurrentConsoleFontEx(hConsole, FALSE, &ConToolResult.FontInfo)) {
-            ConToolResult.Have.FontInfo = TRUE;
+        if (DllKernel32.pSetConsoleDisplayMode != NULL) {
+            DWORD DisplayMode;
+            COORD NewSize;
+
+            if (Fullscreen) {
+                DisplayMode = CONSOLE_FULLSCREEN_MODE;
+            } else {
+                DisplayMode = CONSOLE_WINDOWED_MODE;
+            }
+
+            if (!DllKernel32.pSetConsoleDisplayMode(hConsole, DisplayMode, &NewSize)) {
+                LastError = GetLastError();
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Changing console display mode failed: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                ConToolResult.Failure = TRUE;
+            }
         }
-    }
-
-    CloseHandle(hConsole);
-
-    YoriLibInitEmptyString(&DisplayString);
-
-    //
-    //  If the user specified a string, use it.  If not, fall back to a
-    //  series of defaults depending on the information we have collected.
-    //
-
-    if (YsFormatString.StartOfString != NULL) {
-        YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
-        if (DisplayString.StartOfString != NULL) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
-            YoriLibFreeStringContents(&DisplayString);
-        }
+        CloseHandle(hConsole);
     } else {
 
-        if (ConToolResult.Have.ScreenBufferInfo) {
-
-            LPTSTR FormatString = 
-                          _T("Buffer width:         $buffer_x$\n")
-                          _T("Buffer height:        $buffer_y$\n")
-                          _T("Window width:         $window_x$\n")
-                          _T("Window height:        $window_y$\n");
-            YoriLibConstantString(&YsFormatString, FormatString);
+        if (GetConsoleScreenBufferInfo(hConsole, &ConToolResult.ScreenBufferInfo)) {
+            ConToolResult.Have.ScreenBufferInfo = TRUE;
+        }
+    
+        if (DllKernel32.pGetCurrentConsoleFontEx != NULL) {
+            ZeroMemory(&ConToolResult.FontInfo, sizeof(ConToolResult.FontInfo));
+            ConToolResult.FontInfo.cbSize = sizeof(ConToolResult.FontInfo);
+            if (DllKernel32.pGetCurrentConsoleFontEx(hConsole, FALSE, &ConToolResult.FontInfo)) {
+                ConToolResult.Have.FontInfo = TRUE;
+            }
+        }
+    
+        CloseHandle(hConsole);
+    
+        YoriLibInitEmptyString(&DisplayString);
+    
+        //
+        //  If the user specified a string, use it.  If not, fall back to a
+        //  series of defaults depending on the information we have collected.
+        //
+    
+        if (YsFormatString.StartOfString != NULL) {
             YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
             if (DisplayString.StartOfString != NULL) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                YoriLibFreeStringContents(&DisplayString);
             }
-        }
-
-        if (ConToolResult.Have.FontInfo) {
-
-            LPTSTR FormatString = 
-                          _T("Font width:           $font_x$\n")
-                          _T("Font height:          $font_y$\n")
-                          _T("Font name:            $font$\n")
-                          _T("Font weight:          $font_weight$\n");
-            YoriLibConstantString(&YsFormatString, FormatString);
-            YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
-            if (DisplayString.StartOfString != NULL) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+        } else {
+    
+            if (ConToolResult.Have.ScreenBufferInfo) {
+    
+                LPTSTR FormatString = 
+                              _T("Buffer width:         $buffer_x$\n")
+                              _T("Buffer height:        $buffer_y$\n")
+                              _T("Window width:         $window_x$\n")
+                              _T("Window height:        $window_y$\n");
+                YoriLibConstantString(&YsFormatString, FormatString);
+                YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
+                if (DisplayString.StartOfString != NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                }
             }
+    
+            if (ConToolResult.Have.FontInfo) {
+    
+                LPTSTR FormatString = 
+                              _T("Font width:           $font_x$\n")
+                              _T("Font height:          $font_y$\n")
+                              _T("Font name:            $font$\n")
+                              _T("Font weight:          $font_weight$\n");
+                YoriLibConstantString(&YsFormatString, FormatString);
+                YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
+                if (DisplayString.StartOfString != NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                }
+            }
+    
+            YoriLibFreeStringContents(&DisplayString);
         }
-
-        YoriLibFreeStringContents(&DisplayString);
     }
-
-    if (ConToolResult.VariableExpansionFailure) {
+    
+    if (ConToolResult.Failure) {
         return EXIT_FAILURE;
     } else {
         return EXIT_SUCCESS;
