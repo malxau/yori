@@ -3602,6 +3602,14 @@ typedef struct _YORILIB_PE_HEADERS {
     IMAGE_OPTIONAL_HEADER OptionalHeader;
 } YORILIB_PE_HEADERS, *PYORILIB_PE_HEADERS;
 
+#ifndef CONSOLE_FULLSCREEN
+/**
+ A private definition of CONSOLE_FULLSCREEN in case the compilation
+ environment doesn't provide it.
+ */
+#define CONSOLE_FULLSCREEN 1
+#endif
+
 #ifndef CONSOLE_FULLSCREEN_MODE
 /**
  A private definition of CONSOLE_FULLSCREEN_MODE in case the compilation
@@ -6357,6 +6365,18 @@ GET_CONSOLE_ALIASESW(LPTSTR, DWORD, LPTSTR);
 typedef GET_CONSOLE_ALIASESW *PGET_CONSOLE_ALIASESW;
 
 /**
+ A prototype for the GetConsoleDisplayMode function.
+ */
+typedef
+BOOL WINAPI
+GET_CONSOLE_DISPLAY_MODE(LPDWORD);
+
+/**
+ A prototype for a pointer to the GetConsoleDisplayMode function.
+ */
+typedef GET_CONSOLE_DISPLAY_MODE *PGET_CONSOLE_DISPLAY_MODE;
+
+/**
  A prototype for the GetConsoleProcessList function.
  */
 typedef
@@ -7025,6 +7045,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetConsoleAliasesW.
      */
     PGET_CONSOLE_ALIASESW pGetConsoleAliasesW;
+
+    /**
+     If it's available on the current system, a pointer to GetConsoleDisplayMode.
+     */
+    PGET_CONSOLE_DISPLAY_MODE pGetConsoleDisplayMode;
 
     /**
      If it's available on the current system, a pointer to GetConsoleProcessList.
