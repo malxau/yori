@@ -77,7 +77,8 @@ typedef struct _CONTOOL_RESULT {
      wasn't available.  When this occurs, the process exits with a failure
      code.
      */
-    BOOL Failure;
+    BOOLEAN Failure;
+
 
     /**
      Flags indicating which data has been collected.
@@ -87,8 +88,14 @@ typedef struct _CONTOOL_RESULT {
         struct {
             BOOLEAN ScreenBufferInfo:1;
             BOOLEAN FontInfo:1;
+            BOOLEAN FullScreenInfo:1;
         };
     } Have;
+
+    /**
+     TRUE if the console is in full screen mode.
+     */
+    BOOLEAN FullScreen;
 
     /**
      Properties including window size, buffer size, cursor position, and
@@ -158,6 +165,12 @@ ConToolExpandVariables(
                YoriLibCompareStringWithLiteral(VariableName, _T("font_y")) == 0) {
 
         CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FontInfo.dwFontSize.Y);
+
+    } else if (ConToolContext->Have.FullScreenInfo &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("fullscreen")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), ConToolContext->FullScreen?1:0);
+
     } else if (ConToolContext->Have.ScreenBufferInfo &&
                YoriLibCompareStringWithLiteral(VariableName, _T("window_x")) == 0) {
 
@@ -189,6 +202,8 @@ ConToolExpandVariables(
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.dwFontSize.X);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("font_y")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FontInfo.dwFontSize.Y);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("fullscreen")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->FullScreen?1:0);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("window_x")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), ConToolContext->ScreenBufferInfo.srWindow.Right - ConToolContext->ScreenBufferInfo.srWindow.Left + 1);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("window_y")) == 0) {
@@ -319,6 +334,16 @@ ENTRYPOINT(
         if (GetConsoleScreenBufferInfo(hConsole, &ConToolResult.ScreenBufferInfo)) {
             ConToolResult.Have.ScreenBufferInfo = TRUE;
         }
+
+        if (DllKernel32.pGetConsoleDisplayMode != NULL) {
+            DWORD ConsoleDisplayMode;
+            if (DllKernel32.pGetConsoleDisplayMode(&ConsoleDisplayMode)) {
+                if (ConsoleDisplayMode & CONSOLE_FULLSCREEN) {
+                    ConToolResult.FullScreen = TRUE;
+                }
+                ConToolResult.Have.FullScreenInfo = TRUE;
+            }
+        }
     
         if (DllKernel32.pGetCurrentConsoleFontEx != NULL) {
             ZeroMemory(&ConToolResult.FontInfo, sizeof(ConToolResult.FontInfo));
@@ -366,6 +391,16 @@ ENTRYPOINT(
                               _T("Font height:          $font_y$\n")
                               _T("Font name:            $font$\n")
                               _T("Font weight:          $font_weight$\n");
+                YoriLibConstantString(&YsFormatString, FormatString);
+                YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
+                if (DisplayString.StartOfString != NULL) {
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
+                }
+            }
+
+            if (ConToolResult.Have.FullScreenInfo) {
+                LPTSTR FormatString = 
+                              _T("Full screen:          $fullscreen$\n");
                 YoriLibConstantString(&YsFormatString, FormatString);
                 YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
                 if (DisplayString.StartOfString != NULL) {
