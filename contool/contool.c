@@ -313,6 +313,7 @@ ENTRYPOINT(
         if (DllKernel32.pSetConsoleDisplayMode != NULL) {
             DWORD DisplayMode;
             COORD NewSize;
+            BOOLEAN Failed;
 
             if (Fullscreen) {
                 DisplayMode = CONSOLE_FULLSCREEN_MODE;
@@ -320,12 +321,32 @@ ENTRYPOINT(
                 DisplayMode = CONSOLE_WINDOWED_MODE;
             }
 
+            Failed = FALSE;
             if (!DllKernel32.pSetConsoleDisplayMode(hConsole, DisplayMode, &NewSize)) {
                 LastError = GetLastError();
-                ErrText = YoriLibGetWinErrorText(LastError);
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Changing console display mode failed: %s"), ErrText);
-                YoriLibFreeWinErrorText(ErrText);
-                ConToolResult.Failure = TRUE;
+                Failed = TRUE;
+
+                //
+                //  This API was only implemented as 32 bit for a long time.
+                //  Try to invoke the driver directly if it fails to bypass
+                //  this API restriction.
+                //
+
+                if (LastError == ERROR_CALL_NOT_IMPLEMENTED)  {
+                    if (YoriLibSetConsoleDisplayMode(hConsole, DisplayMode, &NewSize)) {
+                        Failed = FALSE;
+                    } else {
+                        LastError = GetLastError();
+                    }
+
+                }
+
+                if (Failed) {
+                    ErrText = YoriLibGetWinErrorText(LastError);
+                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Changing console display mode failed: %s"), ErrText);
+                    YoriLibFreeWinErrorText(ErrText);
+                    ConToolResult.Failure = TRUE;
+                }
             }
         }
         CloseHandle(hConsole);

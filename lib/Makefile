@@ -11,6 +11,7 @@ OBJS=\
 	 clip.obj     \
 	 cmdline.obj  \
 	 color.obj    \
+	 condrv.obj   \
 	 cpuinfo.obj  \
 	 cshot.obj    \
 	 curdir.obj   \

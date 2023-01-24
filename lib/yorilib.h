@@ -762,6 +762,15 @@ YoriLibGetMetadataColor(
     __out PYORILIB_COLOR_ATTRIBUTES Color
     );
 
+// *** CONDRV.C ***
+
+BOOL
+YoriLibSetConsoleDisplayMode(
+    __in HANDLE hConsoleOutput,
+    __in DWORD dwFlags,
+    __out PCOORD lpNewScreenBufferDimensions
+    );
+
 // *** CPUINFO.C ***
 
 VOID

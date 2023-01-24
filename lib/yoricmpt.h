@@ -470,12 +470,22 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS32 {
     /**
      Ignored for alignment.
      */
-    DWORD Ignored1[4];
+    DWORD Ignored1[3];
+
+    /**
+     Console flags.
+     */
+    DWORD ConsoleFlags;
+
+    /**
+     Handle to the console driver.
+     */
+    HANDLE ConsoleHandle;
 
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR32 Ignored2[5];
+    YORI_LIB_PTR32 Ignored2[4];
 
     /**
      The number of bytes in the CurrentDirectory.
@@ -804,12 +814,22 @@ typedef struct _YORI_LIB_PROCESS_PARAMETERS64 {
     /**
      Ignored for alignment.
      */
-    DWORD Ignored1[4];
+    DWORD Ignored1[3];
+
+    /**
+     Console flags.
+     */
+    DWORD ConsoleFlags;
+
+    /**
+     Handle to the console driver.
+     */
+    HANDLE ConsoleHandle;
 
     /**
      Ignored for alignment.
      */
-    YORI_LIB_PTR64 Ignored2[5];
+    YORI_LIB_PTR64 Ignored2[4];
 
     /**
      The number of bytes in the CurrentDirectory.
@@ -936,6 +956,18 @@ typedef struct _YORI_LIB_PEB64 {
      */
     WORD OSCSDVersion;
 } YORI_LIB_PEB64, *PYORI_LIB_PEB64;
+
+#if _WIN64
+/**
+ On 64 bit builds, the current process PEB is 64 bit.
+ */
+#define PYORI_LIB_PEB_NATIVE PYORI_LIB_PEB64
+#else
+/**
+ On 32 bit builds, the current process PEB is 32 bit.
+ */
+#define PYORI_LIB_PEB_NATIVE PYORI_LIB_PEB32_NATIVE
+#endif
 
 /**
  Definition of the system process information enumeration class for
