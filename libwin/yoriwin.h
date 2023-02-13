@@ -371,6 +371,14 @@ YoriWinHexEditSetReadOnly(
     __in BOOLEAN NewReadOnlyState
     );
 
+BOOLEAN
+YoriWinHexEditSetCursorLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN AsChar,
+    __in DWORDLONG BufferOffset,
+    __in DWORD BitShift
+    );
+
 PYORI_WIN_CTRL_HANDLE
 YoriWinHexEditCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,

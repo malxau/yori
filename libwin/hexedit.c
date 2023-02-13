@@ -3295,6 +3295,46 @@ YoriWinHexEditSetReadOnly(
 }
 
 /**
+ Set the cursor to a specific point, expressed in terms of a buffer offset
+ and bit shift.  Bit shift is only meaningful when the cell type refers to
+ hex digit, so a cursor has multiple positions per buffer offset.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param AsChar If TRUE, the cursor should be set to the character
+        representation of the offset.  If FALSE, the cursor is set to the
+        hex representation of the offset.
+
+ @param BufferOffset Specifies the offset within the buffer.
+
+ @param BitShift Specifies the bits within the buffer offset.
+
+ @return TRUE to indicate the cursor was moved, FALSE if it did not.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditSetCursorLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN AsChar,
+    __in DWORDLONG BufferOffset,
+    __in DWORD BitShift
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    CellType = YoriWinHexEditCellTypeHexDigit;
+    if (AsChar) {
+        CellType = YoriWinHexEditCellTypeCharValue;
+    }
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, CellType, BufferOffset, BitShift);
+}
+
+/**
  Create a hex edit control and add it to a window.  This is destroyed
  when the window is destroyed.
 

@@ -3,7 +3,7 @@
  *
  * Yori shell hex editor
  *
- * Copyright (c) 2020-2022 Malcolm J. Smith
+ * Copyright (c) 2020-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -46,7 +46,7 @@ CHAR strHexEditHelpText[] =
  The copyright year string to display with license text.
  */
 const
-TCHAR strHexEditCopyrightYear[] = _T("2020-2022");
+TCHAR strHexEditCopyrightYear[] = _T("2020-2023");
 
 /**
  Display usage text to the user.
@@ -862,6 +862,51 @@ HexEditExitButtonClicked(
 }
 
 /**
+ A callback invoked when the go to menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditGoToButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    YORI_STRING Title;
+    YORI_STRING Text;
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+    LONGLONG NewOffset;
+    DWORD CharsConsumed;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    YoriLibConstantString(&Title, _T("Go to"));
+    YoriLibInitEmptyString(&Text);
+
+    YoriDlgInput(YoriWinGetWindowManagerHandle(Parent),
+                 &Title,
+                 &Text);
+
+    if (Text.LengthInChars == 0) {
+        YoriLibFreeStringContents(&Text);
+        return;
+    }
+
+    if (YoriLibStringToNumber(&Text, FALSE, &NewOffset, &CharsConsumed) &&
+        CharsConsumed > 0) {
+
+        if (NewOffset < 0) {
+            NewOffset = 0;
+        }
+
+        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, NewOffset, 0);
+    }
+
+    YoriLibFreeStringContents(&Text);
+}
+
+/**
  A callback invoked when the view bytes button is clicked.
 
  @param Ctrl Pointer to the button that was clicked.
@@ -1118,9 +1163,10 @@ HexEditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[7];
+    YORI_WIN_MENU_ENTRY SearchMenuEntries[1];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[4];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
-    YORI_WIN_MENU_ENTRY MenuEntries[3];
+    YORI_WIN_MENU_ENTRY MenuEntries[4];
     YORI_WIN_MENU MenuBarItems;
     PYORI_WIN_CTRL_HANDLE Ctrl;
     DWORD MenuIndex;
@@ -1163,6 +1209,12 @@ HexEditPopulateMenuBar(
 
     FileMenuCount = MenuIndex;
 
+    ZeroMemory(&SearchMenuEntries, sizeof(SearchMenuEntries));
+    MenuIndex = 0;
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Go to..."));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+G"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = HexEditGoToButtonClicked;
+
     ZeroMemory(&ViewMenuEntries, sizeof(ViewMenuEntries));
     MenuIndex = 0;
     YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&Bytes"));
@@ -1196,6 +1248,11 @@ HexEditPopulateMenuBar(
     YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&File"));
     MenuEntries[MenuIndex].ChildMenu.ItemCount = FileMenuCount;
     MenuEntries[MenuIndex].ChildMenu.Items = FileMenuEntries;
+    MenuIndex++;
+
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Search"));
+    MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(SearchMenuEntries)/sizeof(SearchMenuEntries[0]);
+    MenuEntries[MenuIndex].ChildMenu.Items = SearchMenuEntries;
     MenuIndex++;
 
     YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&View"));
