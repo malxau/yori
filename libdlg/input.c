@@ -65,6 +65,9 @@ YoriDlgInputCancelButtonClicked(
 
  @param Title The string to display in the title of the dialog.
 
+ @param RequireNumeric If TRUE, the string must be a valid number.  If FALSE,
+        the string can be anything.
+
  @param Text On input, specifies an initialized string.  On output, populated
         with the contents of the text that the user entered.
 
@@ -76,6 +79,7 @@ BOOLEAN
 YoriDlgInput(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
+    __in BOOLEAN RequireNumeric,
     __inout PYORI_STRING Text
     )
 {
@@ -87,6 +91,7 @@ YoriDlgInput(
     WORD ButtonWidth;
     PYORI_WIN_CTRL_HANDLE Ctrl;
     PYORI_WIN_CTRL_HANDLE Edit;
+    DWORD Style;
     DWORD_PTR Result;
 
     if (!YoriWinCreateWindow(WinMgrHandle, 50, 10, 70, 10, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, Title, &Parent)) {
@@ -101,8 +106,12 @@ YoriDlgInput(
     EditArea.Bottom = 3;
 
     YoriLibConstantString(&Caption, _T(""));
+    Style = 0;
+    if (RequireNumeric) {
+        Style = Style | YORI_WIN_EDIT_STYLE_NUMERIC;
+    }
 
-    Edit = YoriWinEditCreate(Parent, &EditArea, &Caption, 0);
+    Edit = YoriWinEditCreate(Parent, &EditArea, &Caption, Style);
     if (Edit == NULL) {
         YoriWinDestroyWindow(Parent);
         return FALSE;

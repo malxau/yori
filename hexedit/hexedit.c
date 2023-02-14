@@ -886,6 +886,7 @@ HexEditGoToButtonClicked(
 
     YoriDlgInput(YoriWinGetWindowManagerHandle(Parent),
                  &Title,
+                 TRUE,
                  &Text);
 
     if (Text.LengthInChars == 0) {

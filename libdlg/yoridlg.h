@@ -123,6 +123,7 @@ BOOLEAN
 YoriDlgInput(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
+    __in BOOLEAN RequireNumeric,
     __inout PYORI_STRING Text
     );
 

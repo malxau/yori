@@ -1023,6 +1023,7 @@ RegeditNewKeyButtonClicked(
 
     if (YoriDlgInput(YoriWinGetWindowManagerHandle(YoriWinGetWindowFromWindowCtrl(Parent)),
                      &Title,
+                     FALSE,
                      &Value)) {
 
         ASSERT(YoriLibIsStringNullTerminated(&Value));
