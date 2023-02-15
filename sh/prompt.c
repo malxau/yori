@@ -127,14 +127,10 @@ YoriShExpandPrompt(
         }
     } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("P")) == 0) {
         YORI_STRING CurrentDirectory;
-        /*
-        CurrentDirectory = &YoriShGlobal.CurrentDirectoryBuffers[YoriShGlobal.ActiveCurrentDirectory];
-        */
         YoriLibGetCurrentDirectoryForDisplay(&CurrentDirectory);
         CharsNeeded = CurrentDirectory.LengthInChars;
-        if (OutputString->LengthAllocated > CharsNeeded) {
+        if (OutputString->LengthAllocated >= CharsNeeded) {
             memcpy(OutputString->StartOfString, CurrentDirectory.StartOfString, CharsNeeded * sizeof(TCHAR));
-            OutputString->StartOfString[CharsNeeded] = '\0';
         }
         YoriLibFreeStringContents(&CurrentDirectory);
     } else if (YoriLibCompareStringWithLiteralInsensitive(VariableName, _T("PID")) == 0) {
