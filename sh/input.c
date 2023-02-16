@@ -601,6 +601,8 @@ YoriShEnsureStringHasEnoughCharacters(
  allow Yori to process mouse input so it can use its internal QuickEdit
  support.
 
+ @param ConsoleInputHandle Handle to the console input.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -618,12 +620,15 @@ YoriShConfigureMouseForPrompt(
         return FALSE;
     }
 
+
     //
-    //  Set the same input settings as the base settings, but clear the
-    //  extended settings.  We have no way to query these (sigh) but
-    //  this has the effect of turning off console's quickedit.
+    //  Set the same input settings as the base settings, but clear QuickEdit.
+    //  Note that if ENABLE_EXTENDED_FLAGS was not set from the query, this
+    //  may clear all extended flags, which is an unfortunate casualty.
+    //  If it is set, we can be more surgical.
     //
 
+    ConsoleMode = ConsoleMode & ~(ENABLE_QUICK_EDIT_MODE);
     YoriLibSetInputConsoleMode(ConsoleInputHandle, ConsoleMode | ENABLE_EXTENDED_FLAGS);
     return TRUE;
 }
@@ -631,6 +636,8 @@ YoriShConfigureMouseForPrompt(
 /**
  When YORIQUICKEDIT is set, enable the console's QuickEdit capabilities to
  allow QuickEdit to be used with external programs.
+
+ @param ConsoleInputHandle Handle to the console input.
 
  @return TRUE to indicate success, FALSE to indicate failure.
  */
