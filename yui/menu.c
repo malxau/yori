@@ -504,13 +504,18 @@ YuiFindMenuCommandToExecute(
     )
 {
     PDWORD ItemToFind;
+    BOOLEAN Elevated;
 
     ItemToFind = (PDWORD)Context;
     if (*ItemToFind != Item->MenuId) {
         return TRUE;
     }
 
-    YoriLibExecuteShortcut(&Item->FilePath);
+    Elevated = FALSE;
+    if (GetKeyState(VK_SHIFT) < 0) {
+        Elevated = TRUE;
+    }
+    YoriLibExecuteShortcut(&Item->FilePath, Elevated);
     return FALSE;
 }
 

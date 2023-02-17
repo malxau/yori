@@ -233,12 +233,16 @@ Exit:
 
  @param ShortcutFileName Pointer to the shortcut file to execute.
 
+ @param Elevate TRUE if the program should be run as an Administrator;
+        FALSE to run in current user context.
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
 BOOL
 YoriLibExecuteShortcut(
-    __in PYORI_STRING ShortcutFileName
+    __in PYORI_STRING ShortcutFileName,
+    __in BOOLEAN Elevate
     )
 {
     YORI_STRING FileTarget;
@@ -260,7 +264,7 @@ YoriLibExecuteShortcut(
 
     YoriLibLoadShell32Functions();
 
-    if (DllShell32.pShellExecuteW == NULL) {
+    if (Elevate && DllShell32.pShellExecuteExW == NULL) {
         return FALSE;
     }
 
@@ -401,84 +405,111 @@ YoriLibExecuteShortcut(
     YoriLibTrimNullTerminators(&ExpandedArguments);
     YoriLibTrimNullTerminators(&ExpandedWorkingDirectory);
 
-    Extension = YoriLibFindRightMostCharacter(&ExpandedFileTarget, '.');
-    if (Extension != NULL) {
-        YORI_STRING YsExt;
-        YoriLibInitEmptyString(&YsExt);
-        YsExt.StartOfString = Extension;
-        YsExt.LengthInChars = ExpandedFileTarget.LengthInChars - (DWORD)(Extension - ExpandedFileTarget.StartOfString);
+    if (!Elevate) {
+        Extension = YoriLibFindRightMostCharacter(&ExpandedFileTarget, '.');
+        if (Extension != NULL) {
+            YORI_STRING YsExt;
+            YoriLibInitEmptyString(&YsExt);
+            YsExt.StartOfString = Extension;
+            YsExt.LengthInChars = ExpandedFileTarget.LengthInChars - (DWORD)(Extension - ExpandedFileTarget.StartOfString);
 
-        if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) == 0 ||
-            YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
+            if (YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".exe")) == 0 ||
+                YoriLibCompareStringWithLiteralInsensitive(&YsExt, _T(".com")) == 0) {
 
-            STARTUPINFO si;
-            PROCESS_INFORMATION pi;
-            YORI_STRING CmdLine;
-            YORI_STRING UnescapedPath;
-            DWORD CharsNeeded;
-            BOOLEAN HasWhiteSpace;
+                STARTUPINFO si;
+                PROCESS_INFORMATION pi;
+                YORI_STRING CmdLine;
+                YORI_STRING UnescapedPath;
+                DWORD CharsNeeded;
+                BOOLEAN HasWhiteSpace;
 
-            YoriLibInitEmptyString(&UnescapedPath);
-            if (!YoriLibUnescapePath(ShortcutFileName, &UnescapedPath)) {
-                UnescapedPath.StartOfString = ShortcutFileName->StartOfString;
-            }
+                YoriLibInitEmptyString(&UnescapedPath);
+                if (!YoriLibUnescapePath(ShortcutFileName, &UnescapedPath)) {
+                    UnescapedPath.StartOfString = ShortcutFileName->StartOfString;
+                }
 
-            ZeroMemory(&si, sizeof(si));
-            si.cb = sizeof(si);
+                ZeroMemory(&si, sizeof(si));
+                si.cb = sizeof(si);
 
-            si.dwFlags = STARTF_TITLEISLINKNAME;
-            si.lpTitle = UnescapedPath.StartOfString;
+                si.dwFlags = STARTF_TITLEISLINKNAME;
+                si.lpTitle = UnescapedPath.StartOfString;
 
-            HasWhiteSpace = YoriLibCheckIfArgNeedsQuotes(&ExpandedFileTarget);
-            CharsNeeded = ExpandedFileTarget.LengthInChars + 1 + ExpandedArguments.LengthInChars + 1;
-            if (HasWhiteSpace) {
-                CharsNeeded += 2;
-            }
+                HasWhiteSpace = YoriLibCheckIfArgNeedsQuotes(&ExpandedFileTarget);
+                CharsNeeded = ExpandedFileTarget.LengthInChars + 1 + ExpandedArguments.LengthInChars + 1;
+                if (HasWhiteSpace) {
+                    CharsNeeded += 2;
+                }
 
-            if (!YoriLibAllocateString(&CmdLine, CharsNeeded)) {
+                if (!YoriLibAllocateString(&CmdLine, CharsNeeded)) {
+                    YoriLibFreeStringContents(&UnescapedPath);
+                    goto Exit;
+                }
+
+                if (HasWhiteSpace) {
+                    CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("\"%y\" %y"), &ExpandedFileTarget, &ExpandedArguments);
+                } else {
+                    CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("%y %y"), &ExpandedFileTarget, &ExpandedArguments);
+                }
+
+                Result = CreateProcess(NULL,
+                                       CmdLine.StartOfString,
+                                       NULL,
+                                       NULL,
+                                       FALSE,
+                                       CREATE_NEW_PROCESS_GROUP | CREATE_NEW_CONSOLE | CREATE_DEFAULT_ERROR_MODE,
+                                       NULL,
+                                       ExpandedWorkingDirectory.StartOfString,
+                                       &si,
+                                       &pi);
+
+                if (Result) {
+                    CloseHandle(pi.hProcess);
+                    CloseHandle(pi.hThread);
+                }
+
+                YoriLibFreeStringContents(&CmdLine);
                 YoriLibFreeStringContents(&UnescapedPath);
-                goto Exit;
             }
-
-            if (HasWhiteSpace) {
-                CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("\"%y\" %y"), &ExpandedFileTarget, &ExpandedArguments);
-            } else {
-                CmdLine.LengthInChars = YoriLibSPrintf(CmdLine.StartOfString, _T("%y %y"), &ExpandedFileTarget, &ExpandedArguments);
-            }
-
-            Result = CreateProcess(NULL,
-                                   CmdLine.StartOfString,
-                                   NULL,
-                                   NULL,
-                                   FALSE,
-                                   CREATE_NEW_PROCESS_GROUP | CREATE_NEW_CONSOLE | CREATE_DEFAULT_ERROR_MODE,
-                                   NULL,
-                                   ExpandedWorkingDirectory.StartOfString,
-                                   &si,
-                                   &pi);
-
-            if (Result) {
-                CloseHandle(pi.hProcess);
-                CloseHandle(pi.hThread);
-            }
-
-            YoriLibFreeStringContents(&CmdLine);
-            YoriLibFreeStringContents(&UnescapedPath);
         }
     }
 
     if (!Result) {
-        hApp = DllShell32.pShellExecuteW(NULL,
-                                         NULL,
-                                         ExpandedFileTarget.StartOfString,
-                                         ExpandedArguments.StartOfString,
-                                         ExpandedWorkingDirectory.StartOfString,
-                                         nShow);
-        if ((ULONG_PTR)hApp <= 32) {
-            goto Exit;
-        }
+        YORI_SHELLEXECUTEINFO sei;
 
-        Result = TRUE;
+        ZeroMemory(&sei, sizeof(sei));
+        sei.cbSize = sizeof(sei);
+        sei.fMask = SEE_MASK_FLAG_NO_UI |
+                    SEE_MASK_NOZONECHECKS |
+                    SEE_MASK_UNICODE;
+
+        sei.lpFile = ExpandedFileTarget.StartOfString;
+        sei.lpParameters = ExpandedArguments.StartOfString;
+        sei.lpDirectory = ExpandedWorkingDirectory.StartOfString;
+        sei.nShow = nShow;
+
+        if (DllShell32.pShellExecuteExW != NULL) {
+            if (Elevate) {
+                sei.lpVerb = _T("runas");
+            }
+
+            if (!DllShell32.pShellExecuteExW(&sei)) {
+                goto Exit;
+            }
+
+            Result = TRUE;
+        } else if (DllShell32.pShellExecuteW != NULL) {
+            hApp = DllShell32.pShellExecuteW(NULL,
+                                             NULL,
+                                             sei.lpFile,
+                                             sei.lpParameters,
+                                             sei.lpDirectory,
+                                             sei.nShow);
+            if ((ULONG_PTR)hApp <= 32) {
+                goto Exit;
+            }
+
+            Result = TRUE;
+        }
     }
 
 Exit:

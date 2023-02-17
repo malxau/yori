@@ -3372,7 +3372,8 @@ YoriLibCreateShortcut(
 __success(return)
 BOOL
 YoriLibExecuteShortcut(
-    __in PYORI_STRING ShortcutFileName
+    __in PYORI_STRING ShortcutFileName,
+    __in BOOLEAN Elevate
     );
 
 PISHELLLINKDATALIST_CONSOLE_PROPS
