@@ -910,6 +910,136 @@ Exit:
 }
 
 /**
+ Save the current logon shell in the registry into a new value so it can
+ be restored later.
+
+ @param KeyName Pointer to the registry key to update.
+
+ @param MasterValueName Pointer to the registry value to backup.
+
+ @param BackupValueName Pointer to the registry value to save the previous
+        contents to.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgBackupRegistryShell(
+    __in PCYORI_STRING KeyName,
+    __in PCYORI_STRING MasterValueName,
+    __in PCYORI_STRING BackupValueName
+    )
+{
+    HKEY hKey;
+    DWORD Err;
+    DWORD Disposition;
+    YORI_STRING ExistingValue;
+    DWORD LengthRequired;
+
+    ASSERT(YoriLibIsStringNullTerminated(KeyName));
+    ASSERT(YoriLibIsStringNullTerminated(MasterValueName));
+    ASSERT(YoriLibIsStringNullTerminated(BackupValueName));
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegCreateKeyExW == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL ||
+        DllAdvApi32.pRegSetValueExW == NULL) {
+
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&ExistingValue);
+
+    Err = DllAdvApi32.pRegCreateKeyExW(HKEY_LOCAL_MACHINE,
+                                       KeyName->StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       KEY_QUERY_VALUE | KEY_SET_VALUE,
+                                       NULL,
+                                       &hKey,
+                                       &Disposition);
+
+    //
+    //  If we don't have access to change things in the key, try to
+    //  obtain access, and retry.
+    //
+
+    if (Err == ERROR_ACCESS_DENIED) {
+        YoriPkgGetAccessToRegistryKey(HKEY_LOCAL_MACHINE, KeyName);
+
+        Err = DllAdvApi32.pRegCreateKeyExW(HKEY_LOCAL_MACHINE,
+                                           KeyName->StartOfString,
+                                           0,
+                                           NULL,
+                                           0,
+                                           KEY_QUERY_VALUE | KEY_SET_VALUE,
+                                           NULL,
+                                           &hKey,
+                                           &Disposition);
+    }
+
+    if (Err != ERROR_SUCCESS) {
+        return FALSE;
+    }
+
+
+    //
+    //  First, query the backup value.  If it exists, return success.
+    //  This is an intentional policy choice: the goal of this code is
+    //  to allow a system to be restored to a pre-Yori configuration,
+    //  not to restore it to a previous modification.
+    //
+
+    LengthRequired = 0;
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, BackupValueName->StartOfString, NULL, NULL, NULL, &LengthRequired);
+    if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
+        DllAdvApi32.pRegCloseKey(hKey);
+        return TRUE;
+    }
+
+    //
+    //  Now query the master value, so it can be written into the backup
+    //  value.
+    //
+
+    LengthRequired = 0;
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, MasterValueName->StartOfString, NULL, NULL, NULL, &LengthRequired);
+    if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
+        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+            goto Exit;
+        }
+
+        Err = DllAdvApi32.pRegQueryValueExW(hKey, MasterValueName->StartOfString, NULL, NULL, (LPBYTE)ExistingValue.StartOfString, &LengthRequired);
+        if (Err != ERROR_SUCCESS) {
+            goto Exit;
+        }
+
+        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+    }
+
+    //
+    //  Save the master value into the backup value.
+    //
+
+    Err = DllAdvApi32.pRegSetValueExW(hKey, BackupValueName->StartOfString, 0, REG_SZ, (LPBYTE)ExistingValue.StartOfString, (ExistingValue.LengthInChars + 1) * sizeof(TCHAR));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+Exit:
+
+    YoriLibFreeStringContents(&ExistingValue);
+    DllAdvApi32.pRegCloseKey(hKey);
+
+    if (Err == ERROR_SUCCESS) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
  Set the logon shell to a new path.  This involves detecting Server Core or a
  full GUI server based on it, and in that case, updating the AvailableShells
  key.  If a different edition, update the regular Shell value.
@@ -925,6 +1055,7 @@ YoriPkgUpdateLogonShell(
 {
     YORI_STRING KeyName;
     YORI_STRING ValueName;
+    YORI_STRING BackupValueName;
     DWORD Err;
     HKEY hKey;
 
@@ -957,6 +1088,10 @@ YoriPkgUpdateLogonShell(
     } else {
         YoriLibConstantString(&KeyName, _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"));
         YoriLibConstantString(&ValueName, _T("Shell"));
+        YoriLibConstantString(&BackupValueName, _T("YoriBackupShell"));
+        if (!YoriPkgBackupRegistryShell(&KeyName, &ValueName, &BackupValueName)) {
+            return FALSE;
+        }
 
     }
     return YoriPkgUpdateRegistryShell(&KeyName, &ValueName, NewShellFullPath);
