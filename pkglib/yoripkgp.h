@@ -515,6 +515,11 @@ YoriPkgUpdateLogonShell(
     );
 
 BOOL
+YoriPkgRestoreRegistryLoginShell(
+    VOID
+    );
+
+BOOL
 YoriPkgSetConsoleDefaults(
     __in_opt PCYORI_STRING ConsoleTitle,
     __in_ecount(16) COLORREF* ColorTable,

@@ -3,7 +3,7 @@
  *
  * Yori shell package manager configuration module
  *
- * Copyright (c) 2021-2022 Malcolm J. Smith
+ * Copyright (c) 2021-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -39,14 +39,15 @@ CHAR strYpmConfigHelpText[] =
         "\n"
         "YPM [-license]\n"
         "YPM -config [-consoledefaultscheme <file> | -consolescheme <title> <file>]\n"
-        "            [-desktop] [-loginshell] [-ssh] [-start] [-systempath] [-terminal]\n"
-        "            [-userpath] [-yui]\n"
+        "            [-desktop] [-loginshell] [-restoreshell] [-ssh] [-start]\n"
+        "            [-systempath] [-terminal] [-userpath] [-yui]\n"
         "\n"
         "   -consoledefaultscheme\n"
         "                  Set default console color scheme\n"
         "   -consolescheme Set console color scheme for program or title\n"
         "   -desktop       Create a Desktop shortcut\n"
         "   -loginshell    Make Yori the program to run on login\n"
+        "   -restoreshell  Restore the default window login program\n"
         "   -ssh           Make Yori the program to run on OpenSSH connections\n"
         "   -start         Create a Start Menu shortcut\n"
         "   -systempath    Add to system path\n"
@@ -97,6 +98,7 @@ YpmConfig(
     BOOLEAN AppendToUserPath;
     BOOLEAN AppendToSystemPath;
     BOOLEAN LoginShell;
+    BOOLEAN RestoreShell;
     BOOLEAN SshShell;
     BOOLEAN YuiShell;
     BOOLEAN Failure;
@@ -110,6 +112,7 @@ YpmConfig(
     AppendToSystemPath = FALSE;
     SshShell = FALSE;
     LoginShell = FALSE;
+    RestoreShell = FALSE;
     YuiShell = FALSE;
     FileName = NULL;
     WindowTitle = NULL;
@@ -127,7 +130,7 @@ YpmConfig(
                 YpmConfigHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2021-2022"));
+                YoriLibDisplayMitLicense(_T("2021-2023"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("consoledefaultscheme")) == 0) {
                 if (i + 1 < ArgC && !ConsoleScheme && !ConsoleDefaultScheme) {
@@ -150,6 +153,9 @@ YpmConfig(
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("loginshell")) == 0) {
                 LoginShell = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("restoreshell")) == 0) {
+                RestoreShell = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("ssh")) == 0) {
                 SshShell = TRUE;
@@ -193,6 +199,7 @@ YpmConfig(
         !AppendToUserPath &&
         !AppendToSystemPath &&
         !LoginShell &&
+        !RestoreShell &&
         !SshShell &&
         !YuiShell) {
 
@@ -200,8 +207,11 @@ YpmConfig(
         return EXIT_FAILURE;
     }
 
-    if (LoginShell && YuiShell) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: cannot set login shell to yui and yori simultaneously\n"));
+    if ((LoginShell && (RestoreShell || YuiShell)) ||
+        (RestoreShell && (LoginShell || YuiShell)) ||
+        (YuiShell && (LoginShell || RestoreShell))) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: cannot set login shell to different programs simultaneously\n"));
         return EXIT_FAILURE;
     }
 
@@ -260,6 +270,13 @@ YpmConfig(
             Failure = TRUE;
         } else if (!YoriPkgInstallYuiAsLoginShell(NULL)) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update login shell. Are you running as an elevated Administrator?\n  Is yui installed?\n"));
+            Failure = TRUE;
+        }
+    }
+
+    if (RestoreShell) {
+        if (!YoriPkgRestoreLoginShell()) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ypm config: could not update login shell. Are you running as an elevated Administrator?\n"));
             Failure = TRUE;
         }
     }

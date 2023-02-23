@@ -984,7 +984,6 @@ YoriPkgBackupRegistryShell(
         return FALSE;
     }
 
-
     //
     //  First, query the backup value.  If it exists, return success.
     //  This is an intentional policy choice: the goal of this code is
@@ -1024,6 +1023,123 @@ YoriPkgBackupRegistryShell(
     //
 
     Err = DllAdvApi32.pRegSetValueExW(hKey, BackupValueName->StartOfString, 0, REG_SZ, (LPBYTE)ExistingValue.StartOfString, (ExistingValue.LengthInChars + 1) * sizeof(TCHAR));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+Exit:
+
+    YoriLibFreeStringContents(&ExistingValue);
+    DllAdvApi32.pRegCloseKey(hKey);
+
+    if (Err == ERROR_SUCCESS) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ Restore the saved logon shell from the registry.
+
+ @param KeyName Pointer to the registry key to update.
+
+ @param MasterValueName Pointer to the registry value to restore to.
+
+ @param BackupValueName Pointer to the registry value to restore the previous
+        contents from.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriPkgRestoreRegistryBackupShell(
+    __in PCYORI_STRING KeyName,
+    __in PCYORI_STRING MasterValueName,
+    __in PCYORI_STRING BackupValueName
+    )
+{
+    HKEY hKey;
+    DWORD Err;
+    DWORD Disposition;
+    YORI_STRING ExistingValue;
+    DWORD LengthRequired;
+
+    ASSERT(YoriLibIsStringNullTerminated(KeyName));
+    ASSERT(YoriLibIsStringNullTerminated(MasterValueName));
+    ASSERT(YoriLibIsStringNullTerminated(BackupValueName));
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegCreateKeyExW == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL ||
+        DllAdvApi32.pRegSetValueExW == NULL) {
+
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&ExistingValue);
+
+    Err = DllAdvApi32.pRegCreateKeyExW(HKEY_LOCAL_MACHINE,
+                                       KeyName->StartOfString,
+                                       0,
+                                       NULL,
+                                       0,
+                                       KEY_QUERY_VALUE | KEY_SET_VALUE,
+                                       NULL,
+                                       &hKey,
+                                       &Disposition);
+
+    //
+    //  If we don't have access to change things in the key, try to
+    //  obtain access, and retry.
+    //
+
+    if (Err == ERROR_ACCESS_DENIED) {
+        YoriPkgGetAccessToRegistryKey(HKEY_LOCAL_MACHINE, KeyName);
+
+        Err = DllAdvApi32.pRegCreateKeyExW(HKEY_LOCAL_MACHINE,
+                                           KeyName->StartOfString,
+                                           0,
+                                           NULL,
+                                           0,
+                                           KEY_QUERY_VALUE | KEY_SET_VALUE,
+                                           NULL,
+                                           &hKey,
+                                           &Disposition);
+    }
+
+    if (Err != ERROR_SUCCESS) {
+        return FALSE;
+    }
+
+    //
+    //  First, query the backup value.  If it doesn't exist, we can't restore
+    //  it.
+    //
+
+    LengthRequired = 0;
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, BackupValueName->StartOfString, NULL, NULL, NULL, &LengthRequired);
+    if ((Err != ERROR_SUCCESS && Err != ERROR_MORE_DATA) || LengthRequired == 0) {
+        DllAdvApi32.pRegCloseKey(hKey);
+        return FALSE;
+    }
+
+    if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+        goto Exit;
+    }
+
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, BackupValueName->StartOfString, NULL, NULL, (LPBYTE)ExistingValue.StartOfString, &LengthRequired);
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+
+    //
+    //  Restore the backup value into the master value.
+    //
+
+    Err = DllAdvApi32.pRegSetValueExW(hKey, MasterValueName->StartOfString, 0, REG_SZ, (LPBYTE)ExistingValue.StartOfString, (ExistingValue.LengthInChars + 1) * sizeof(TCHAR));
     if (Err != ERROR_SUCCESS) {
         goto Exit;
     }
@@ -1095,6 +1211,72 @@ YoriPkgUpdateLogonShell(
 
     }
     return YoriPkgUpdateRegistryShell(&KeyName, &ValueName, NewShellFullPath);
+}
+
+/**
+ Update the login shell to be the default Windows program.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgRestoreRegistryLoginShell(
+    VOID
+    )
+{
+    YORI_STRING KeyName;
+    YORI_STRING ValueName;
+    YORI_STRING BackupValueName;
+    YORI_STRING DefaultShellName;
+    DWORD Err;
+    HKEY hKey;
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegDeleteValueW == NULL ||
+        DllAdvApi32.pRegOpenKeyExW == NULL) {
+
+        return FALSE;
+    }
+
+    //
+    //  Check if we're running on a system with Server Core shell support,
+    //  where multiple shells are listed in ranked order.  If so, delete
+    //  our entry under that key.  If not, use the one-and-only shell
+    //  key instead.
+    //
+
+    YoriLibConstantString(&KeyName, _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\AlternateShells\\AvailableShells"));
+    YoriLibConstantString(&ValueName, _T("98052"));
+
+    Err = DllAdvApi32.pRegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                                     KeyName.StartOfString,
+                                     0,
+                                     KEY_QUERY_VALUE,
+                                     &hKey);
+    if (Err == ERROR_SUCCESS) {
+        Err = DllAdvApi32.pRegDeleteKeyW(hKey, ValueName.StartOfString);
+        DllAdvApi32.pRegCloseKey(hKey);
+        return TRUE;
+    } else {
+        YoriLibConstantString(&KeyName, _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"));
+        YoriLibConstantString(&ValueName, _T("Shell"));
+        YoriLibConstantString(&BackupValueName, _T("YoriBackupShell"));
+        if (YoriPkgRestoreRegistryBackupShell(&KeyName, &ValueName, &BackupValueName)) {
+            return TRUE;
+        }
+    }
+
+    //
+    //  If we can't restore the backup, it probably means it doesn't exist.
+    //  Reset the system to a hardcoded default.  This code should probably
+    //  be deleted at some point in the future, once enough clients have
+    //  code that took backup values in the first place.
+    //
+
+    YoriLibConstantString(&DefaultShellName, _T("explorer.exe"));
+    return YoriPkgUpdateRegistryShell(&KeyName, &ValueName, &DefaultShellName);
 }
 
 /**

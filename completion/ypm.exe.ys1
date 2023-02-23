@@ -7,4 +7,4 @@ goto :eof
 
 :arg
 set FIRSTCHAR=
-echo -- /insensitivelist -c /c -config /config -consoledefaultscheme /consoledefaultscheme -consolescheme /consolescheme -cs /cs -d /d -desktop /desktop -download /download -download-daily /download-daily -download-stable /download-stable -i /i -l /l -loginshell /loginshell -lv /lv -md /md -mi /mi -ml /ml -ri /ri -rl /rl -rsa /rsa -rsd /rsd -rsi /rsi -rsl /rsl -src /src -ssh /ssh -start /start -sym /sym -systempath /systempath -terminal /terminal -u /u -ud /ud -uninstall /uninstall -us /us -userpath /userpath -yui /yui
+echo -- /insensitivelist -c /c -config /config -consoledefaultscheme /consoledefaultscheme -consolescheme /consolescheme -cs /cs -d /d -desktop /desktop -download /download -download-daily /download-daily -download-stable /download-stable -i /i -l /l -loginshell /loginshell -lv /lv -md /md -mi /mi -ml /ml -ri /ri -rl /rl -restoreshell /restoreshell -rsa /rsa -rsd /rsd -rsi /rsi -rsl /rsl -src /src -ssh /ssh -start /start -sym /sym -systempath /systempath -terminal /terminal -u /u -ud /ud -uninstall /uninstall -us /us -userpath /userpath -yui /yui

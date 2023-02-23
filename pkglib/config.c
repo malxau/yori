@@ -551,6 +551,20 @@ YoriPkgInstallYuiAsLoginShell(
 }
 
 /**
+ Update the login shell to be the default Windows program.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriPkgRestoreLoginShell(
+    VOID
+    )
+{
+    return YoriPkgRestoreRegistryLoginShell();
+}
+
+/**
  Update the OpenSSH shell to execute the specified program.  If the program
  is not specified, Yori.exe from the directory containing the current
  process is used.

@@ -238,6 +238,12 @@ YoriPkgInstallYuiAsLoginShell(
 
 __success(return)
 BOOL
+YoriPkgRestoreLoginShell(
+    VOID
+    );
+
+__success(return)
+BOOL
 YoriPkgInstallYoriAsOpenSSHShell(
     __in_opt PYORI_STRING YoriExeFullPath
     );
