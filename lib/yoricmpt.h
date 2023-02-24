@@ -3890,6 +3890,14 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define LOCALE_RETURN_NUMBER (0x20000000)
 #endif
 
+#ifndef SPI_SETWORKAREA
+/**
+ A definition for SPI_SETWORKAREA if it is not defined by the current
+ compilation environment.
+ */
+#define SPI_SETWORKAREA 47
+#endif
+
 #ifndef HSHELL_RUDEAPPACTIVATED
 /**
  A definition for HSHELL_RUDEAPPACTIVATED if it is not defined by the current

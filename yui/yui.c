@@ -58,10 +58,42 @@ YuiHelp(VOID)
 YUI_ENUM_CONTEXT YuiContext;
 
 /**
- The height of the taskbar, in pixels.
+ The base height of the taskbar, in pixels.
  */
-#define YUI_TASKBAR_HEIGHT (28)
+#define YUI_BASE_TASKBAR_HEIGHT (28)
 
+/**
+ Query the taskbar height for this system.  The taskbar is generally 28 pixels
+ but can scale upwards slightly on larger displays.
+
+ @param ScreenWidth The width of the screen, in pixels.
+
+ @param ScreenHeight The height of the screen, in pixels.
+
+ @return The height of the taskbar, in pixels.
+ */
+DWORD
+YuiGetTaskbarHeight(
+    __in DWORD ScreenWidth,
+    __in DWORD ScreenHeight
+    )
+{
+    DWORD TaskbarHeight;
+
+    UNREFERENCED_PARAMETER(ScreenWidth);
+
+    TaskbarHeight = YUI_BASE_TASKBAR_HEIGHT;
+
+    //
+    //  Give 1% of any vertical pixels above 800
+    //
+
+    if (ScreenHeight > 800) {
+        TaskbarHeight = TaskbarHeight + (ScreenHeight - 800) / 100;
+    }
+
+    return TaskbarHeight;
+}
 
 /**
  Indicates that the screen resolution has changed and the taskbar needs to be
@@ -84,12 +116,22 @@ YuiNotifyResolutionChange(
 {
     YORI_APPBARDATA AppBar;
     RECT ClientRect;
+    RECT NewWorkArea;
+    RECT OldWorkArea;
+    DWORD TaskbarHeight;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
     }
 
     YuiContext.DisplayResolutionChangeInProgress = TRUE;
+
+    TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
+
+    NewWorkArea.left = 0;
+    NewWorkArea.right = ScreenWidth - 1;
+    NewWorkArea.top = 0;
+    NewWorkArea.bottom = ScreenHeight - TaskbarHeight - 1;
 
     if (DllShell32.pSHAppBarMessage != NULL) {
 
@@ -98,7 +140,7 @@ YuiNotifyResolutionChange(
         AppBar.uCallbackMessage = WM_USER;
         AppBar.uEdge = 3;
         AppBar.rc.left = 0;
-        AppBar.rc.top = ScreenHeight - YUI_TASKBAR_HEIGHT;
+        AppBar.rc.top = ScreenHeight - TaskbarHeight;
         AppBar.rc.bottom = ScreenHeight;
         AppBar.rc.right = ScreenWidth;
         AppBar.lParam = TRUE;
@@ -109,9 +151,14 @@ YuiNotifyResolutionChange(
         // Query (request) position
         DllShell32.pSHAppBarMessage(2, &AppBar);
 
-        if (AppBar.rc.bottom - AppBar.rc.top < YUI_TASKBAR_HEIGHT) {
-            AppBar.rc.top = AppBar.rc.bottom - YUI_TASKBAR_HEIGHT;
+        if (AppBar.rc.bottom - AppBar.rc.top < (INT)TaskbarHeight) {
+            AppBar.rc.top = AppBar.rc.bottom - TaskbarHeight;
         }
+
+        NewWorkArea.left = AppBar.rc.left;
+        NewWorkArea.right = AppBar.rc.right;
+        NewWorkArea.top = 0;
+        NewWorkArea.bottom = AppBar.rc.top;
 
         MoveWindow(hWnd,
                    AppBar.rc.left,
@@ -125,13 +172,28 @@ YuiNotifyResolutionChange(
 
         // Activate
         DllShell32.pSHAppBarMessage(6, &AppBar);
+
     } else {
         MoveWindow(hWnd,
                    0,
-                   ScreenHeight - YUI_TASKBAR_HEIGHT,
+                   ScreenHeight - TaskbarHeight,
                    ScreenWidth,
-                   YUI_TASKBAR_HEIGHT,
+                   TaskbarHeight,
                    TRUE);
+    }
+
+
+    //
+    //  When explorer is running, this seems to happen automatically.
+    //  That's desirable because it knows about all the other AppBars.
+    //  If it hasn't already happened, set the work area to something
+    //  that excludes this taskbar.
+    //
+
+    if (SystemParametersInfo(SPI_GETWORKAREA, 0, &OldWorkArea, 0)) {
+        if (OldWorkArea.bottom > NewWorkArea.bottom) {
+            SystemParametersInfo(SPI_SETWORKAREA, 0, &NewWorkArea, 0);
+        }
     }
 
     GetClientRect(hWnd, &ClientRect);
@@ -319,7 +381,6 @@ BOOL WINAPI YUISHOOK_REGISTER_SHELL_HOOK_WINDOW(HWND);
  */
 typedef YUISHOOK_REGISTER_SHELL_HOOK_WINDOW *PYUISHOOK_REGISTER_SHELL_HOOK_WINDOW;
 
-
 /**
  Create the taskbar window, start button, and other assorted global elements,
  including populating the start menu and task bar with current state.
@@ -339,6 +400,7 @@ YuiCreateWindow(
     RECT ClientRect;
     DWORD ScreenHeight;
     DWORD ScreenWidth;
+    DWORD TaskbarHeight;
 
     wc.style = 0;
     wc.lpfnWndProc = YuiWindowProc;
@@ -358,14 +420,16 @@ YuiCreateWindow(
     ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
     ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
 
+    TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
+
     Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
                                    _T("YuiWnd"),
                                    _T("Yui"),
                                    WS_POPUP | WS_DLGFRAME | WS_CLIPCHILDREN,
                                    0,
-                                   ScreenHeight - YUI_TASKBAR_HEIGHT,
+                                   ScreenHeight - TaskbarHeight,
                                    ScreenWidth,
-                                   YUI_TASKBAR_HEIGHT,
+                                   TaskbarHeight,
                                    NULL, NULL, NULL, 0);
     if (Context->hWnd == NULL) {
         return FALSE;
