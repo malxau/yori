@@ -28,7 +28,7 @@ yui.exe: $(BIN_OBJS) $(YORILIBS)
 	@echo $@
 	@$(LINK) $(LDFLAGS_NT4UP) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 
-yuishook.dll: $(YUISHOOK_OBJS) $(YORIVER)
+yuishook.dll: $(YUISHOOK_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -dll -def:yuishook.def $(YUISHOOK_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB_YUISHOOK) -out:$@
 
