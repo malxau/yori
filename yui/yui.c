@@ -214,64 +214,6 @@ YuiNotifyResolutionChange(
     return TRUE;
 }
 
-
-/**
- Server core systems do not accurately indicate changes including toplevel
- window creation, deletion, or activation.  On these systems Yui is forced
- to inefficiently poll.  Since the registration for notification succeeds,
- the only way to know whether polling is necessary is to inspect the
- product SKU and based on the result, infer whether the notification system
- is buggy or not.
-
- @return TRUE to indicate that the current system is a server core like
-         system, and FALSE if it appears to be a full UI system.
- */
-BOOL
-YuiIsServerCore(VOID)
-{
-    DWORD ProductType;
-
-    //
-    //  If the API that indicates whether server core is present is not
-    //  present, that implies we're not running on server core.
-    //
-    if (DllKernel32.pGetProductInfo == NULL) {
-        return FALSE;
-    }
-
-    if (!DllKernel32.pGetProductInfo(6, 1, 0, 0, &ProductType)) {
-        return FALSE;
-    }
-
-    switch(ProductType) {
-        case PRODUCT_DATACENTER_SERVER_CORE:
-        case PRODUCT_STANDARD_SERVER_CORE:
-        case PRODUCT_ENTERPRISE_SERVER_CORE:
-        case PRODUCT_WEB_SERVER_CORE:
-        case PRODUCT_DATACENTER_SERVER_CORE_V:
-        case PRODUCT_STANDARD_SERVER_CORE_V:
-        case PRODUCT_ENTERPRISE_SERVER_CORE_V:
-        case PRODUCT_HYPERV:
-        case PRODUCT_STORAGE_EXPRESS_SERVER_CORE:
-        case PRODUCT_STORAGE_STANDARD_SERVER_CORE:
-        case PRODUCT_STORAGE_WORKGROUP_SERVER_CORE:
-        case PRODUCT_STORAGE_ENTERPRISE_SERVER_CORE:
-        case PRODUCT_STANDARD_SERVER_SOLUTIONS_CORE:
-        case PRODUCT_SOLUTION_EMBEDDEDSERVER_CORE:
-        case PRODUCT_SMALLBUSINESS_SERVER_PREMIUM_CORE:
-        case PRODUCT_DATACENTER_A_SERVER_CORE:
-        case PRODUCT_STANDARD_A_SERVER_CORE:
-        case PRODUCT_DATACENTER_WS_SERVER_CORE:
-        case PRODUCT_STANDARD_WS_SERVER_CORE:
-        case PRODUCT_DATACENTER_EVALUATION_SERVER_CORE:
-        case PRODUCT_STANDARD_EVALUATION_SERVER_CORE:
-        case PRODUCT_AZURE_SERVER_CORE:
-            return TRUE;
-    }
-
-    return FALSE;
-}
-
 /**
  Display the start menu and perform any action requested.
 
@@ -525,10 +467,17 @@ YuiCreateWindow(
     //
     //  Check if we're running on a platform that doesn't support
     //  notifications and we need to poll instead.
+    //  As of this writing, notifications only seem to work when explorer
+    //  is present, which is perplexing - the whole reason for notifications
+    //  is to enable explorer to work, not the other way around.  This
+    //  check tests for explorer by seeing if a progman window is present in
+    //  the session.
     //
 
     if (Context->TaskbarRefreshFrequency == 0 &&
-        (DllUser32.pRegisterShellHookWindow == NULL || YuiIsServerCore())) {
+        (DllUser32.pRegisterShellHookWindow == NULL ||
+         DllUser32.pGetProgmanWindow == NULL ||
+         DllUser32.pGetProgmanWindow() == NULL)) {
 
         Context->TaskbarRefreshFrequency = 250;
     }
