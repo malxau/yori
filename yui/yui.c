@@ -269,6 +269,35 @@ YuiWindowProc(
                 }
             }
             break;
+        case WM_LBUTTONDOWN:
+            {
+                short XPos;
+                RECT WindowRect;
+
+                //
+                //  Get the signed horizontal position.  Note that because
+                //  nonclient clicks are translated to client area, these
+                //  values can be negative.
+                //
+
+                XPos = (short)(LOWORD(lParam));
+                if (GetWindowRect(YuiContext.hWndStart, &WindowRect) &&
+                    XPos <= WindowRect.right) {
+
+                    YuiDisplayMenu();
+                }
+            }
+            break;
+        case WM_NCHITTEST:
+
+            //
+            //  Indicate that mouse clicks outside the client area should be
+            //  treated as part of the client area.  This window doesn't have
+            //  moving or sizing controls, so there's nothing else to do.
+            //
+
+            return HTCLIENT;
+            break;
         case WM_TIMER:
             switch(wParam) {
                 case YUI_WINDOW_POLL_TIMER:
