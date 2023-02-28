@@ -1,10 +1,10 @@
 
-BINARIES=lsof.exe
+BINARIES=ylsof.exe
 
 !INCLUDE "..\config\common.mk"
 
 !IF $(PDB)==1
-LINKPDB=/Pdb:lsof.pdb
+LINKPDB=/Pdb:ylsof.pdb
 !ENDIF
 
 BIN_OBJS=\
@@ -15,7 +15,7 @@ MOD_OBJS=\
 
 compile: $(BIN_OBJS) builtins.lib
 
-lsof.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
+ylsof.exe: $(BIN_OBJS) $(YORILIBS) $(YORIVER)
 	@echo $@
 	@$(LINK) $(LDFLAGS) -entry:$(YENTRY) $(BIN_OBJS) $(YORILIBS) $(EXTERNLIBS) $(YORIVER) -version:$(YORI_VER_MAJOR).$(YORI_VER_MINOR) $(LINKPDB) -out:$@
 

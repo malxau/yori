@@ -28,7 +28,7 @@
 ..\initool\initool.exe|initool.exe
 ..\kill\ykill.exe|ykill.exe
 ..\lines\lines.exe|lines.exe
-..\lsof\lsof.exe|lsof.exe
+..\lsof\ylsof.exe|ylsof.exe
 ..\mem\ymem.exe|ymem.exe
 ..\more\ymore.exe|ymore.exe
 ..\mount\ymount.exe|ymount.exe

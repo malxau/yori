@@ -289,7 +289,7 @@ YORI_CMD_BUILTIN YoriCmd_LINES;
 /**
  Declaration for the builtin command.
  */
-YORI_CMD_BUILTIN YoriCmd_LSOF;
+YORI_CMD_BUILTIN YoriCmd_YLSOF;
 
 /**
  Declaration for the builtin command.
@@ -583,7 +583,6 @@ YoriShBuiltins[] = {
                     {_T("INTCMP"),    YoriCmd_INTCMP},
                     {_T("JOB"),       YoriCmd_JOB},
                     {_T("LINES"),     YoriCmd_LINES},
-                    {_T("LSOF"),      YoriCmd_LSOF},
                     {_T("NICE"),      YoriCmd_NICE},
                     {_T("OSVER"),     YoriCmd_OSVER},
                     {_T("PETOOL"),    YoriCmd_PETOOL},
@@ -639,6 +638,7 @@ YoriShBuiltins[] = {
                     {_T("YHELP"),     YoriCmd_YHELP},
                     {_T("YHEXEDIT"),  YoriCmd_YHEXEDIT},
                     {_T("YKILL"),     YoriCmd_YKILL},
+                    {_T("YLSOF"),     YoriCmd_YLSOF},
                     {_T("YMEM"),      YoriCmd_YMEM},
                     {_T("YMKDIR"),    YoriCmd_YMKDIR},
                     {_T("YMKLINK"),   YoriCmd_YMKLINK},
@@ -701,6 +701,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("hexedit"),  _T("yhexedit $*$")},
     {_T("htmlclip"), _T("yclip -h $*$")},
     {_T("kill"),     _T("ykill $*$")},
+    {_T("lsof"),     _T("ylsof $*$")},
     {_T("md"),       _T("ymkdir $*$")},
     {_T("md5sum"),   _T("yhash -a md5 $*$")},
     {_T("mem"),      _T("ymem $*$")},

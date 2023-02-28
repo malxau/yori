@@ -28,7 +28,7 @@
 ..\initool\initool.pdb|initool.pdb
 ..\kill\ykill.pdb|ykill.pdb
 ..\lines\lines.pdb|lines.pdb
-..\lsof\lsof.pdb|lsof.pdb
+..\lsof\ylsof.pdb|ylsof.pdb
 ..\mem\ymem.pdb|ymem.pdb
 ..\more\ymore.pdb|ymore.pdb
 ..\mount\ymount.pdb|ymount.pdb

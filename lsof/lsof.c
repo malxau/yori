@@ -336,7 +336,7 @@ LsofDumpHandles(VOID)
 /**
  The main entrypoint for the lsof builtin command.
  */
-#define ENTRYPOINT YoriCmd_LSOF
+#define ENTRYPOINT YoriCmd_YLSOF
 #else
 /**
  The main entrypoint for the lsof standalone application.
