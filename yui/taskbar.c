@@ -3,7 +3,7 @@
  *
  * Yori shell populate taskbar with windows and allow selection
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -188,11 +188,11 @@ YuiTaskbarCalculateButtonWidth(
     TotalWidthForButtons = TaskbarWindowClient.right - YuiContext->LeftmostTaskbarOffset - YuiContext->RightmostTaskbarOffset - 1;
 
     if (YuiContext->TaskbarButtonCount == 0) {
-        WidthPerButton = 180;
+        WidthPerButton = YuiContext->MaximumTaskbarButtonWidth;
     } else {
         WidthPerButton = TotalWidthForButtons / YuiContext->TaskbarButtonCount;
-        if (WidthPerButton > 180) {
-            WidthPerButton = 180;
+        if (WidthPerButton > YuiContext->MaximumTaskbarButtonWidth) {
+            WidthPerButton = YuiContext->MaximumTaskbarButtonWidth;
         }
     }
 

@@ -355,6 +355,13 @@ typedef struct _YUI_ENUM_CONTEXT {
     DWORD NextTaskbarId;
 
     /**
+     The maximum width for a taskbar button in pixels.  This scales up a
+     little with monitor size.  Taskbar buttons can always be less than
+     this value once the bar becomes full.
+     */
+    DWORD MaximumTaskbarButtonWidth;
+
+    /**
      A timer frequency of how often to poll for window changes to refresh
      the taskbar.  Generally notifications are used instead and this value
      is zero.  A nonzero value implies the user forced a value.
@@ -380,12 +387,12 @@ typedef struct _YUI_ENUM_CONTEXT {
 /**
  The number of pixels to include in the start button.
  */
-#define YUI_START_BUTTON_WIDTH (50)
+#define YUI_START_BUTTON_WIDTH (55)
 
 /**
  The number of pixels to include in the clock.
  */
-#define YUI_CLOCK_WIDTH (60)
+#define YUI_CLOCK_WIDTH (75)
 
 /**
  The control identifier for the start button.

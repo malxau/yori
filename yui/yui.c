@@ -3,7 +3,7 @@
  *
  * Yori shell display lightweight graphical UI
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -63,6 +63,11 @@ YUI_ENUM_CONTEXT YuiContext;
 #define YUI_BASE_TASKBAR_HEIGHT (28)
 
 /**
+ The base width of each taskbar button, in pixels.
+ */
+#define YUI_BASE_TASKBAR_BUTTON_WIDTH (190)
+
+/**
  Query the taskbar height for this system.  The taskbar is generally 28 pixels
  but can scale upwards slightly on larger displays.
 
@@ -96,6 +101,40 @@ YuiGetTaskbarHeight(
 }
 
 /**
+ Query the maximum taskbar button width for this system.  The taskbar
+ generally uses 180 pixel buttons but can scale upwards slightly on larger
+ displays.
+
+ @param ScreenWidth The width of the screen, in pixels.
+
+ @param ScreenHeight The height of the screen, in pixels.
+
+ @return The maximum width of a taskbar button, in pixels.
+ */
+DWORD
+YuiGetTaskbarMaximumButtonWidth(
+    __in DWORD ScreenWidth,
+    __in DWORD ScreenHeight
+    )
+{
+    DWORD TaskbarButtonWidth;
+
+    UNREFERENCED_PARAMETER(ScreenHeight);
+
+    TaskbarButtonWidth = YUI_BASE_TASKBAR_BUTTON_WIDTH;
+
+    //
+    //  Give 5% of any horizontal pixels above 1200
+    //
+
+    if (ScreenWidth > 1200) {
+        TaskbarButtonWidth = TaskbarButtonWidth + (ScreenWidth - 1200) / 20;
+    }
+
+    return TaskbarButtonWidth;
+}
+
+/**
  Indicates that the screen resolution has changed and the taskbar needs to be
  repositioned accordingly.
 
@@ -125,6 +164,8 @@ YuiNotifyResolutionChange(
     }
 
     YuiContext.DisplayResolutionChangeInProgress = TRUE;
+
+    YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(ScreenWidth, ScreenHeight);
 
     TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
 
@@ -677,7 +718,7 @@ ymain(
                 YuiHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2023"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
                 if (ArgC > i + 1) {
