@@ -134,6 +134,49 @@ YuiTaskbarAllocateAndAddButton(
 }
 
 /**
+ Create a button window for the specified button.
+
+ @param YuiContext Pointer to the Yui context.
+
+ @param ThisButton Pointer to the button structure indicating its text,
+        location, and control ID.
+
+ @param TaskbarHwnd The taskbar window (parent.)
+
+ @param Height Height of the new button, in pixels.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YuiTaskbarCreateButtonControl(
+    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_TASKBAR_BUTTON ThisButton,
+    __in HWND TaskbarHwnd,
+    __in WORD Height
+    )
+{
+    ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
+                                          ThisButton->ButtonText.StartOfString,
+                                          BS_PUSHBUTTON | BS_LEFT | WS_VISIBLE | WS_CHILD,
+                                          ThisButton->LeftOffset,
+                                          1,
+                                          (WORD)(ThisButton->RightOffset - ThisButton->LeftOffset),
+                                          Height,
+                                          TaskbarHwnd,
+                                          (HMENU)(DWORD_PTR)ThisButton->ControlId,
+                                          NULL,
+                                          NULL);
+
+    if (ThisButton->hWndButton == NULL) {
+        return FALSE;
+    }
+    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+
+    return TRUE;
+}
+
+
+/**
  A callback function that is invoked when initially populating the taskbar
  for every window found currently in existence.
 
@@ -239,18 +282,7 @@ YuiTaskbarPopulateWindows(
         ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
         ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1),
         ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
-        ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
-                                              ThisButton->ButtonText.StartOfString,
-                                              BS_PUSHBUTTON | BS_LEFT | WS_VISIBLE | WS_CHILD,
-                                              ThisButton->LeftOffset,
-                                              1,
-                                              WidthPerButton - 2,
-                                              TaskbarWindowClient.bottom - 2,
-                                              TaskbarHwnd,
-                                              (HMENU)(DWORD_PTR)ThisButton->ControlId,
-                                              NULL,
-                                              NULL);
-        SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+        YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
         if (ThisButton->hWndToActivate == ActiveWindow) {
             SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
             ThisButton->WindowActive = TRUE;
@@ -357,19 +389,11 @@ YuiTaskbarNotifyNewWindow(
                        TRUE);
         } else {
             ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
-
-            ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
-                                                  ThisButton->ButtonText.StartOfString,
-                                                  BS_PUSHBUTTON | BS_LEFT | WS_VISIBLE | WS_CHILD,
-                                                  ThisButton->LeftOffset,
-                                                  1,
-                                                  WidthPerButton - 2,
-                                                  TaskbarWindowClient.bottom - 2,
-                                                  TaskbarHwnd,
-                                                  (HMENU)(DWORD_PTR)ThisButton->ControlId,
-                                                  NULL,
-                                                  NULL);
-            SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+            YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
+            if (ThisButton->hWndToActivate == GetForegroundWindow()) {
+                SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
+                ThisButton->WindowActive = TRUE;
+            }
         }
 
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -529,6 +553,18 @@ YuiTaskbarNotifyTitleChange(
             }
             break;
         }
+        ThisButton = NULL;
+    }
+
+    //
+    //  If no button is found, check if one should be created.  This can
+    //  happen if the title was initially empty and changes to contain a
+    //  string.  Once a window ever contained a string, it is retained
+    //  even if the title is removed.
+    //
+
+    if (ThisButton == NULL) {
+        YuiTaskbarNotifyNewWindow(YuiContext, hWnd);
     }
 }
 
