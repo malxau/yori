@@ -1556,6 +1556,8 @@ YuiMenuDisplayAndExecute(
 
     GetWindowRect(hWnd, &WindowRect);
 
+    SetForegroundWindow(hWnd);
+
     MenuId = TrackPopupMenu(YuiContext->StartMenu,
                             TPM_NONOTIFY | TPM_RETURNCMD | TPM_BOTTOMALIGN,
                             0,
@@ -1563,6 +1565,9 @@ YuiMenuDisplayAndExecute(
                             0,
                             hWnd,
                             NULL);
+
+    PostMessage(hWnd, WM_NULL, 0, 0);
+
     if (MenuId > 0) {
         YuiMenuExecuteById(YuiContext, MenuId);
     }
