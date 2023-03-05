@@ -586,7 +586,7 @@ YuiCreateWindow(
     Context->hWndClock = CreateWindowEx(WS_EX_STATICEDGE,
                                         _T("STATIC"),
                                         _T(""),
-                                        SS_CENTER | SS_SUNKEN | WS_VISIBLE | WS_CHILD,
+                                        SS_CENTER | SS_SUNKEN | SS_CENTERIMAGE | WS_VISIBLE | WS_CHILD,
                                         ClientRect.right - YUI_CLOCK_WIDTH - 1,
                                         1,
                                         YUI_CLOCK_WIDTH,

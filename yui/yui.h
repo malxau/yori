@@ -56,6 +56,14 @@
 #define HSHELL_WINDOWACTIVATED 4
 #endif
 
+#ifndef SS_CENTERIMAGE
+/**
+ If not defined by the compilation environment, the flag indicating a static
+ control should be vertically centered.
+ */
+#define SS_CENTERIMAGE 0x200
+#endif
+
 #ifndef SS_SUNKEN
 /**
  If not defined by the compilation environment, the flag indicating a static
