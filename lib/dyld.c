@@ -531,6 +531,7 @@ YoriLibLoadUser32Functions(VOID)
     DllUser32.pGetDesktopWindow = (PGET_DESKTOP_WINDOW)GetProcAddress(DllUser32.hDll, "GetDesktopWindow");
     DllUser32.pGetKeyboardLayout = (PGET_KEYBOARD_LAYOUT)GetProcAddress(DllUser32.hDll, "GetKeyboardLayout");
     DllUser32.pGetProgmanWindow = (PGET_PROGMAN_WINDOW)GetProcAddress(DllUser32.hDll, "GetProgmanWindow");
+    DllUser32.pGetTaskmanWindow = (PGET_TASKMAN_WINDOW)GetProcAddress(DllUser32.hDll, "GetTaskmanWindow");
     DllUser32.pGetWindowRect = (PGET_WINDOW_RECT)GetProcAddress(DllUser32.hDll, "GetWindowRect");
     DllUser32.pLockWorkStation = (PLOCK_WORKSTATION)GetProcAddress(DllUser32.hDll, "LockWorkStation");
     DllUser32.pMoveWindow = (PMOVE_WINDOW)GetProcAddress(DllUser32.hDll, "MoveWindow");
@@ -540,6 +541,7 @@ YoriLibLoadUser32Functions(VOID)
     DllUser32.pSendMessageTimeoutW = (PSEND_MESSAGE_TIMEOUTW)GetProcAddress(DllUser32.hDll, "SendMessageTimeoutW");
     DllUser32.pSetClipboardData = (PSET_CLIPBOARD_DATA)GetProcAddress(DllUser32.hDll, "SetClipboardData");
     DllUser32.pSetForegroundWindow = (PSET_FOREGROUND_WINDOW)GetProcAddress(DllUser32.hDll, "SetForegroundWindow");
+    DllUser32.pSetTaskmanWindow = (PSET_TASKMAN_WINDOW)GetProcAddress(DllUser32.hDll, "SetTaskmanWindow");
     DllUser32.pSetWindowPos = (PSET_WINDOW_POS)GetProcAddress(DllUser32.hDll, "SetWindowPos");
     DllUser32.pSetWindowTextW = (PSET_WINDOW_TEXTW)GetProcAddress(DllUser32.hDll, "SetWindowTextW");
     DllUser32.pShowWindow = (PSHOW_WINDOW)GetProcAddress(DllUser32.hDll, "ShowWindow");

@@ -8807,6 +8807,18 @@ GET_PROGMAN_WINDOW(VOID);
 typedef GET_PROGMAN_WINDOW *PGET_PROGMAN_WINDOW;
 
 /**
+ A prototype for the GetTaskmanWindow function.
+ */
+typedef
+HWND WINAPI
+GET_TASKMAN_WINDOW(VOID);
+
+/**
+ A prototype for a pointer to the GetTaskmanWindow function.
+ */
+typedef GET_TASKMAN_WINDOW *PGET_TASKMAN_WINDOW;
+
+/**
  A prototype for the GetWindowRect function.
  */
 typedef
@@ -8913,6 +8925,18 @@ SET_FOREGROUND_WINDOW(HWND);
  A prototype for a pointer to the SetForegroundWindow function.
  */
 typedef SET_FOREGROUND_WINDOW *PSET_FOREGROUND_WINDOW;
+
+/**
+ A prototype for the SetTaskmanWindow function.
+ */
+typedef
+BOOL WINAPI
+SET_TASKMAN_WINDOW(HWND);
+
+/**
+ A prototype for a pointer to the SetTaskmanWindow function.
+ */
+typedef SET_TASKMAN_WINDOW *PSET_TASKMAN_WINDOW;
 
 /**
  A prototype for the SetWindowPos function.
@@ -9073,6 +9097,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
     PGET_PROGMAN_WINDOW pGetProgmanWindow;
 
     /**
+     If it's available on the current system, a pointer to GetTaskmanWindow.
+     */
+    PGET_TASKMAN_WINDOW pGetTaskmanWindow;
+
+    /**
      If it's available on the current system, a pointer to GetWindowRect.
      */
     PGET_WINDOW_RECT pGetWindowRect;
@@ -9116,6 +9145,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to SetForegroundWindow.
      */
     PSET_FOREGROUND_WINDOW pSetForegroundWindow;
+
+    /**
+     If it's available on the current system, a pointer to SetTaskmanWindow.
+     */
+    PSET_TASKMAN_WINDOW pSetTaskmanWindow;
 
     /**
      If it's available on the current system, a pointer to SetWindowPos.
