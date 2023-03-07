@@ -278,6 +278,12 @@ typedef struct _YUI_ENUM_CONTEXT {
     DWORD NextMenuIdentifier;
 
     /**
+     The minimized window metrics to restore on exit.  Only meaningful if
+     cbSize is nonzero.
+     */
+    MINIMIZEDMETRICS SavedMinimizedMetrics;
+
+    /**
      The window handle for the taskbar.
      */
     HWND hWnd;
@@ -377,18 +383,24 @@ typedef struct _YUI_ENUM_CONTEXT {
     DWORD TaskbarRefreshFrequency;
 
     /**
+     Set to TRUE if this instance of Yui is the master login shell for the
+     session.  Set to FALSE if another shell is detected.
+     */
+    BOOLEAN LoginShell;
+
+    /**
      Set to TRUE if a display resolution change message is being processed.
      This happens because moving an app bar triggers a display resolution
      change, and we don't want to recurse infinitely.
      */
-    BOOL DisplayResolutionChangeInProgress;
+    BOOLEAN DisplayResolutionChangeInProgress;
 
     /**
      Set to TRUE if a menu is being displayed.  Opening a dialog under the
      menu can cause a start click to be re-posted, so this is used to
      prevent recursing indefinitely.
      */
-    BOOL MenuActive;
+    BOOLEAN MenuActive;
 
 } YUI_ENUM_CONTEXT, *PYUI_ENUM_CONTEXT;
 

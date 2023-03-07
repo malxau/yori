@@ -1100,7 +1100,11 @@ YuiMenuPopulate(
     AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_RUN, _T("Run..."));
     AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_EXIT, _T("Exit"));
+    if (YuiContext->LoginShell) {
+        AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_LOGOFF, _T("Log off"));
+    } else {
+        AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_EXIT, _T("Exit"));
+    }
     AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
 
     YuiContext->ShutdownMenu = CreatePopupMenu();
@@ -1109,7 +1113,11 @@ YuiMenuPopulate(
     }
     AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_DISCONNECT, _T("Disconnect"));
     AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_LOCK, _T("Lock"));
-    AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_LOGOFF, _T("Log off"));
+    if (YuiContext->LoginShell) {
+        AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_EXIT, _T("Exit"));
+    } else {
+        AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_LOGOFF, _T("Log off"));
+    }
     AppendMenu(YuiContext->ShutdownMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_REBOOT, _T("Reboot"));
     AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_SHUTDOWN, _T("Shut down"));

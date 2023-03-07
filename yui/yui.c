@@ -483,6 +483,10 @@ YuiCleanupGlobalState(VOID)
         DeleteObject(YuiContext.hFont);
         YuiContext.hFont = NULL;
     }
+
+    if (YuiContext.SavedMinimizedMetrics.cbSize != 0) {
+        SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(MINIMIZEDMETRICS), &YuiContext.SavedMinimizedMetrics, 0);
+    }
 }
 
 
@@ -519,6 +523,20 @@ YuiCreateWindow(
     DWORD ScreenHeight;
     DWORD ScreenWidth;
     DWORD TaskbarHeight;
+    MINIMIZEDMETRICS MinimizedMetrics;
+
+    //
+    //  Explorer or other shells will register as a magic "Taskman" window.
+    //  If this isn't set for the session, assume we must be the main shell.
+    //
+
+    if (DllUser32.pGetTaskmanWindow != NULL &&
+        DllUser32.pGetTaskmanWindow() == NULL) {
+
+        Context->LoginShell = TRUE;
+    }
+
+    YuiMenuPopulate(Context);
 
     wc.style = 0;
     wc.lpfnWndProc = YuiWindowProc;
@@ -550,6 +568,40 @@ YuiCreateWindow(
                                    NULL, NULL, NULL, 0);
     if (Context->hWnd == NULL) {
         return FALSE;
+    }
+
+    //
+    //  Mark minimized windows as invisible.  The taskbar should still have
+    //  them.  Save the previous state to restore on exit, and if nothing
+    //  changes here, restore nothing on exit.
+    //
+    //  This is required for notification about window state changes.
+    //
+
+    Context->SavedMinimizedMetrics.cbSize = sizeof(MinimizedMetrics);
+    if (SystemParametersInfo(SPI_GETMINIMIZEDMETRICS, sizeof(MINIMIZEDMETRICS), &Context->SavedMinimizedMetrics, 0)) {
+        MinimizedMetrics.cbSize = sizeof(MinimizedMetrics);
+        MinimizedMetrics.iWidth = Context->SavedMinimizedMetrics.iWidth;
+        MinimizedMetrics.iHorzGap = 0;
+        MinimizedMetrics.iVertGap = 0;
+        MinimizedMetrics.iArrange = ARW_HIDE;
+
+        if (MinimizedMetrics.iArrange != Context->SavedMinimizedMetrics.iArrange) {
+            SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(MINIMIZEDMETRICS), &MinimizedMetrics, 0);
+        } else {
+            Context->SavedMinimizedMetrics.cbSize = 0;
+        }
+    } else {
+        Context->SavedMinimizedMetrics.cbSize = 0;
+    }
+
+    //
+    //  Register as the Task Manager window.  This is required for
+    //  notification about window state changes.
+    //
+
+    if (DllUser32.pSetTaskmanWindow != NULL) {
+        DllUser32.pSetTaskmanWindow(Context->hWnd);
     }
 
     YuiNotifyResolutionChange(Context->hWnd, ScreenWidth, ScreenHeight);
@@ -609,23 +661,15 @@ YuiCreateWindow(
     Context->LeftmostTaskbarOffset = 1 + YUI_START_BUTTON_WIDTH + 1;
     Context->RightmostTaskbarOffset = 1 + YUI_CLOCK_WIDTH + 1;
 
-
     YuiTaskbarPopulateWindows(Context, Context->hWnd);
 
     //
     //  Check if we're running on a platform that doesn't support
     //  notifications and we need to poll instead.
-    //  As of this writing, notifications only seem to work when explorer
-    //  is present, which is perplexing - the whole reason for notifications
-    //  is to enable explorer to work, not the other way around.  This
-    //  check tests for explorer by seeing if a progman window is present in
-    //  the session.
     //
 
     if (Context->TaskbarRefreshFrequency == 0 &&
-        (DllUser32.pRegisterShellHookWindow == NULL ||
-         DllUser32.pGetProgmanWindow == NULL ||
-         DllUser32.pGetProgmanWindow() == NULL)) {
+        (DllUser32.pRegisterShellHookWindow == NULL)) {
 
         Context->TaskbarRefreshFrequency = 250;
     }
@@ -757,7 +801,6 @@ ymain(
         }
     }
 
-    YuiMenuPopulate(&YuiContext);
     if (!YuiCreateWindow(&YuiContext)) {
         return EXIT_FAILURE;
     }
