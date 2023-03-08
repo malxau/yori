@@ -530,7 +530,6 @@ YoriLibLoadUser32Functions(VOID)
     DllUser32.pGetClientRect = (PGET_CLIENT_RECT)GetProcAddress(DllUser32.hDll, "GetClientRect");
     DllUser32.pGetDesktopWindow = (PGET_DESKTOP_WINDOW)GetProcAddress(DllUser32.hDll, "GetDesktopWindow");
     DllUser32.pGetKeyboardLayout = (PGET_KEYBOARD_LAYOUT)GetProcAddress(DllUser32.hDll, "GetKeyboardLayout");
-    DllUser32.pGetProgmanWindow = (PGET_PROGMAN_WINDOW)GetProcAddress(DllUser32.hDll, "GetProgmanWindow");
     DllUser32.pGetTaskmanWindow = (PGET_TASKMAN_WINDOW)GetProcAddress(DllUser32.hDll, "GetTaskmanWindow");
     DllUser32.pGetWindowRect = (PGET_WINDOW_RECT)GetProcAddress(DllUser32.hDll, "GetWindowRect");
     DllUser32.pLockWorkStation = (PLOCK_WORKSTATION)GetProcAddress(DllUser32.hDll, "LockWorkStation");

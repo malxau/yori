@@ -489,21 +489,6 @@ YuiCleanupGlobalState(VOID)
     }
 }
 
-
-/**
- A function signature for the YuiShook.dll version of RegisterShellHookWindow,
- which can be used if RegisterShellHookWindow is not present.
- */
-typedef
-BOOL WINAPI YUISHOOK_REGISTER_SHELL_HOOK_WINDOW(HWND);
-
-/**
- A pointer to a function for the YuiShook.dll version of
- RegisterShellHookWindow, which can be used if RegisterShellHookWindow is not
- present.
- */
-typedef YUISHOOK_REGISTER_SHELL_HOOK_WINDOW *PYUISHOOK_REGISTER_SHELL_HOOK_WINDOW;
-
 /**
  Create the taskbar window, start button, and other assorted global elements,
  including populating the start menu and task bar with current state.
@@ -697,28 +682,6 @@ YuiCreateWindow(
     }
 
     ShowWindow(Context->hWnd, SW_SHOW);
-
-    /*
-    {
-        HMODULE Helper;
-        Context->ShellHookMsg = RegisterWindowMessage(_T("SHELLHOOK"));
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ShellHookMsg %08x\n"), Context->ShellHookMsg);
-        Helper = LoadLibrary(_T("YUISHOOK.DLL"));
-        if (Helper != NULL) {
-            PYUISHOOK_REGISTER_SHELL_HOOK_WINDOW pYuiShookRegisterShellHookWindow;
-            pYuiShookRegisterShellHookWindow = (PYUISHOOK_REGISTER_SHELL_HOOK_WINDOW)GetProcAddress(Helper, "YuiShookRegisterShellHookWindow");
-            if (pYuiShookRegisterShellHookWindow != NULL) {
-                if (!pYuiShookRegisterShellHookWindow(Context->hWnd)) {
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RegisterShellHookWindow failed %i\n"), GetLastError());
-                }
-            } else {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("RegisterShellHookWindow not exported %i\n"), GetLastError());
-            }
-        } else {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("YuiShook.dll not loaded %i\n"), GetLastError());
-        }
-    }
-    */
 
     return TRUE;
 }
