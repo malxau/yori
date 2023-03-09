@@ -219,19 +219,33 @@ typedef struct _YUI_TASKBAR_BUTTON {
     /**
      The identifier of the button control.
      */
-    DWORD ControlId;
+    WORD ControlId;
+
+    /**
+     The left offset of the button, in pixels, relative to the client area.
+     This is used to detect clicks that are in the parent window outside of
+     the button area.
+     */
+    WORD LeftOffset;
+
+    /**
+     The right offset of the button, in pixels, relative to the client area.
+     This is used to detect clicks that are in the parent window outside of
+     the button area.
+     */
+    WORD RightOffset;
 
     /**
      TRUE if the button is the currently selected button, indicating the
      taskbar believes this window to be active.
      */
-    BOOL WindowActive;
+    BOOLEAN WindowActive;
 
     /**
      TRUE if this entry has been located when syncing the current set of
      windows with the current set of taskbar buttons.
      */
-    BOOL AssociatedWindowFound;
+    BOOLEAN AssociatedWindowFound;
 
     /**
      The text to display on the taskbar button.
@@ -347,6 +361,20 @@ typedef struct _YUI_ENUM_CONTEXT {
     TCHAR ClockDisplayedValueBuffer[16];
 
     /**
+     The left offset of the start button, in pixels, relative to the client
+     area.  This is used to detect clicks that are in the parent window
+     outside of the button area.
+     */
+    WORD StartLeftOffset;
+
+    /**
+     The right offset of the start button, in pixels, relative to the client
+     area.  This is used to detect clicks that are in the parent window
+     outside of the button area.
+     */
+    WORD StartRightOffset;
+
+    /**
      The number of buttons currently displayed in the task bar.
      */
     DWORD TaskbarButtonCount;
@@ -366,14 +394,14 @@ typedef struct _YUI_ENUM_CONTEXT {
     /**
      The next control ID to allocate for the next taskbar button.
      */
-    DWORD NextTaskbarId;
+    WORD NextTaskbarId;
 
     /**
      The maximum width for a taskbar button in pixels.  This scales up a
      little with monitor size.  Taskbar buttons can always be less than
      this value once the bar becomes full.
      */
-    DWORD MaximumTaskbarButtonWidth;
+    WORD MaximumTaskbarButtonWidth;
 
     /**
      A timer frequency of how often to poll for window changes to refresh
@@ -491,6 +519,12 @@ VOID
 YuiTaskbarNotifyTitleChange(
     __in PYUI_ENUM_CONTEXT YuiContext,
     __in HWND hWnd
+    );
+
+WORD
+YuiTaskbarFindByOffset(
+    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in SHORT XPos
     );
 
 VOID

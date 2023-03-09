@@ -111,7 +111,7 @@ YuiGetTaskbarHeight(
 
  @return The maximum width of a taskbar button, in pixels.
  */
-DWORD
+WORD
 YuiGetTaskbarMaximumButtonWidth(
     __in DWORD ScreenWidth,
     __in DWORD ScreenHeight
@@ -131,7 +131,7 @@ YuiGetTaskbarMaximumButtonWidth(
         TaskbarButtonWidth = TaskbarButtonWidth + (ScreenWidth - 1200) / 20;
     }
 
-    return TaskbarButtonWidth;
+    return (WORD)TaskbarButtonWidth;
 }
 
 /**
@@ -334,11 +334,11 @@ YuiWindowProc(
     __in LPARAM lParam
     )
 {
+    WORD CtrlId;
 
     switch(uMsg) {
         case WM_COMMAND:
             {
-                WORD CtrlId;
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiDisplayMenu();
@@ -351,7 +351,6 @@ YuiWindowProc(
         case WM_LBUTTONDOWN:
             {
                 short XPos;
-                RECT WindowRect;
 
                 //
                 //  Get the signed horizontal position.  Note that because
@@ -360,10 +359,13 @@ YuiWindowProc(
                 //
 
                 XPos = (short)(LOWORD(lParam));
-                if (GetWindowRect(YuiContext.hWndStart, &WindowRect) &&
-                    XPos <= WindowRect.right) {
-
+                if (XPos <= YuiContext.StartRightOffset) {
                     YuiDisplayMenu();
+                } else {
+                    CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
+                    if (CtrlId >= YUI_FIRST_TASKBAR_BUTTON) {
+                        YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                    }
                 }
             }
             break;
@@ -614,6 +616,9 @@ YuiCreateWindow(
         return FALSE;
     }
 
+    Context->StartLeftOffset = 1;
+    Context->StartRightOffset = Context->StartLeftOffset + YUI_START_BUTTON_WIDTH;
+
     SendMessage(Context->hWndStart, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
 
     YoriLibInitEmptyString(&Context->ClockDisplayedValue);
@@ -668,7 +673,6 @@ YuiCreateWindow(
         if (!DllUser32.pRegisterShellHookWindow(Context->hWnd)) {
             Context->TaskbarRefreshFrequency = 250;
         }
-
     }
 
     //

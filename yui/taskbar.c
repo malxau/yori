@@ -80,7 +80,7 @@ YuiTaskbarIncludeWindow(
 
  @return The identifier for the button control.
  */
-DWORD
+WORD
 YuiTaskbarGetNewCtrlId(
     __in PYUI_ENUM_CONTEXT YuiContext
     )
@@ -237,10 +237,12 @@ YuiTaskbarPopulateWindows(
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
 
         ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
+        ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1),
+        ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
         ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
                                               ThisButton->ButtonText.StartOfString,
                                               BS_PUSHBUTTON | BS_LEFT | WS_VISIBLE | WS_CHILD,
-                                              YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1,
+                                              ThisButton->LeftOffset,
                                               1,
                                               WidthPerButton - 2,
                                               TaskbarWindowClient.bottom - 2,
@@ -292,8 +294,10 @@ YuiTaskbarNotifyResolutionChange(
 
         if (ThisButton->hWndButton != NULL) {
             SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
+            ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
+            ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
             MoveWindow(ThisButton->hWndButton,
-                       YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1,
+                       ThisButton->LeftOffset,
                        1,
                        WidthPerButton - 2,
                        TaskbarWindowClient.bottom - 2,
@@ -341,10 +345,12 @@ YuiTaskbarNotifyNewWindow(
     ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+        ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
+        ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
 
         if (ThisButton->hWndButton != NULL) {
             MoveWindow(ThisButton->hWndButton,
-                       YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1,
+                       ThisButton->LeftOffset,
                        1,
                        WidthPerButton - 2,
                        TaskbarWindowClient.bottom - 2,
@@ -355,7 +361,7 @@ YuiTaskbarNotifyNewWindow(
             ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
                                                   ThisButton->ButtonText.StartOfString,
                                                   BS_PUSHBUTTON | BS_LEFT | WS_VISIBLE | WS_CHILD,
-                                                  YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1,
+                                                  ThisButton->LeftOffset,
                                                   1,
                                                   WidthPerButton - 2,
                                                   TaskbarWindowClient.bottom - 2,
@@ -428,10 +434,12 @@ YuiTaskbarNotifyDestroyWindow(
     ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+        ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
+        ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
 
         if (ThisButton->hWndButton != NULL) {
             MoveWindow(ThisButton->hWndButton,
-                       YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1,
+                       ThisButton->LeftOffset,
                        1,
                        WidthPerButton - 2,
                        TaskbarWindowClient.bottom - 2,
@@ -758,6 +766,39 @@ YuiTaskbarUpdateClock(
         SetWindowText(YuiContext->hWndClock, DisplayTime.StartOfString);
     }
     YoriLibFreeStringContents(&DisplayTime);
+}
+
+/**
+ Find a taskbar button based on the horizontal coordinate relative to the
+ client area.  This is used to activate buttons if the user clicks outside
+ of the button area.
+
+ @param YuiContext Pointer to the application context.
+
+ @param XPos The horizontal coordinate, relative to the client area.
+
+ */
+WORD
+YuiTaskbarFindByOffset(
+    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in SHORT XPos
+    )
+{
+    PYUI_TASKBAR_BUTTON ThisButton;
+    PYORI_LIST_ENTRY ListEntry;
+
+    ListEntry = NULL;
+    ThisButton = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    while (ListEntry != NULL) {
+        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+        if (XPos >= ThisButton->LeftOffset && XPos <= ThisButton->RightOffset) {
+            return ThisButton->ControlId;
+        }
+        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+        ThisButton = NULL;
+    }
+    return 0;
 }
 
 // vim:sw=4:ts=4:et:
