@@ -29,6 +29,55 @@
 #include "yui.h"
 
 /**
+ The window procedure that handles system push buttons.
+ */
+WNDPROC DefaultButtonWndProc;
+
+/**
+ A custom window procedure used by buttons on the taskbar.  This is a form of
+ subclass that enables us to filter the messages processed by the regular
+ button implementation.
+
+ @param hWnd Window handle to the button.
+
+ @param uMsg The message identifier.
+
+ @param wParam The first parameter associated with the window message.
+
+ @param lParam The second parameter associated with the window message.
+
+ @return A value which depends on the type of message being processed.
+ */
+LRESULT CALLBACK
+YuiTaskbarButtonWndProc(
+    __in HWND hWnd,
+    __in UINT uMsg,
+    __in WPARAM wParam,
+    __in LPARAM lParam
+    )
+{
+    switch(uMsg) {
+        case WM_NCHITTEST:
+
+            //
+            //  Indicate the entire button is not a hit target.  The taskbar
+            //  has code to detect presses beneath the button area so will
+            //  catch this and handle it.  The reason for not having the
+            //  button handle it is this will cause the button to "click",
+            //  and when the window activates the buttons state is changed
+            //  explicitly, resulting in "flashing" behavior as it's rendered
+            //  twice.  By doing this, the button state changes when the
+            //  window is activated.
+            //
+
+            return HTTRANSPARENT;
+    }
+
+    return CallWindowProc(DefaultButtonWndProc, hWnd, uMsg, wParam, lParam);
+}
+
+
+/**
  Return TRUE if this window should be included in the taskbar window list.
 
  @param hWnd The Window to check for taskbar inclusion.
@@ -170,6 +219,11 @@ YuiTaskbarCreateButtonControl(
     if (ThisButton->hWndButton == NULL) {
         return FALSE;
     }
+
+    if (DefaultButtonWndProc == NULL) {
+        DefaultButtonWndProc = (WNDPROC)GetWindowLongPtr(ThisButton->hWndButton, GWLP_WNDPROC);
+    }
+    SetWindowLongPtr(ThisButton->hWndButton, GWLP_WNDPROC, (LONG_PTR)YuiTaskbarButtonWndProc);
     SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
 
     return TRUE;
@@ -748,7 +802,17 @@ YuiTaskbarSwitchToTask(
             }
             SetForegroundWindow(ThisButton->hWndToActivate);
             SetFocus(ThisButton->hWndToActivate);
-            YuiTaskbarNotifyActivateWindow(YuiContext, ThisButton->hWndToActivate);
+
+            //
+            //  If the taskbar is polling, force an update now without
+            //  waiting for the poll.  If it's driven by events, don't
+            //  update now, and handle it as part of the window activation
+            //  notification (so it's only repainted once.)
+            //
+
+            if (YuiContext->TaskbarRefreshFrequency != 0) {
+                YuiTaskbarNotifyActivateWindow(YuiContext, ThisButton->hWndToActivate);
+            }
             break;
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
