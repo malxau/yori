@@ -1578,6 +1578,8 @@ YuiMenuDisplayAndExecute(
 
     if (MenuId > 0) {
         YuiMenuExecuteById(YuiContext, MenuId);
+    } else {
+        YuiTaskbarSwitchToActiveTask(YuiContext);
     }
 
     return TRUE;

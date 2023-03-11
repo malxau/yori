@@ -776,6 +776,37 @@ YuiTaskbarFreeButtons(
 }
 
 /**
+ Switch to the application described by a taskbar button.
+
+ @param YuiContext Pointer to the application context.
+
+ @param ThisButton Pointer to the taskbar button description.
+ */
+VOID
+YuiTaskbarSwitchToButton(
+    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_TASKBAR_BUTTON ThisButton
+    )
+{
+    if (IsIconic(ThisButton->hWndToActivate)) {
+        ShowWindow(ThisButton->hWndToActivate, SW_RESTORE);
+    }
+    SetForegroundWindow(ThisButton->hWndToActivate);
+    SetFocus(ThisButton->hWndToActivate);
+
+    //
+    //  If the taskbar is polling, force an update now without
+    //  waiting for the poll.  If it's driven by events, don't
+    //  update now, and handle it as part of the window activation
+    //  notification (so it's only repainted once.)
+    //
+
+    if (YuiContext->TaskbarRefreshFrequency != 0) {
+        YuiTaskbarNotifyActivateWindow(YuiContext, ThisButton->hWndToActivate);
+    }
+}
+
+/**
  Switch to the window associated with the specified control identifier.
 
  @param YuiContext Pointer to the application context.
@@ -797,22 +828,33 @@ YuiTaskbarSwitchToTask(
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (ThisButton->ControlId == CtrlId) {
-            if (IsIconic(ThisButton->hWndToActivate)) {
-                ShowWindow(ThisButton->hWndToActivate, SW_RESTORE);
-            }
-            SetForegroundWindow(ThisButton->hWndToActivate);
-            SetFocus(ThisButton->hWndToActivate);
+            YuiTaskbarSwitchToButton(YuiContext, ThisButton);
+            break;
+        }
+        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    }
+}
 
-            //
-            //  If the taskbar is polling, force an update now without
-            //  waiting for the poll.  If it's driven by events, don't
-            //  update now, and handle it as part of the window activation
-            //  notification (so it's only repainted once.)
-            //
+/**
+ If a taskbar button is currently pressed, switch to that window.  This is
+ used after an action which would leave the taskbar with input focus.
 
-            if (YuiContext->TaskbarRefreshFrequency != 0) {
-                YuiTaskbarNotifyActivateWindow(YuiContext, ThisButton->hWndToActivate);
-            }
+ @param YuiContext Pointer to the application context.
+ */
+VOID
+YuiTaskbarSwitchToActiveTask(
+    __in PYUI_ENUM_CONTEXT YuiContext
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYUI_TASKBAR_BUTTON ThisButton;
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    while (ListEntry != NULL) {
+        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+        if (ThisButton->WindowActive) {
+            YuiTaskbarSwitchToButton(YuiContext, ThisButton);
             break;
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);

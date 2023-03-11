@@ -493,6 +493,11 @@ YuiTaskbarSwitchToTask(
     );
 
 VOID
+YuiTaskbarSwitchToActiveTask(
+    __in PYUI_ENUM_CONTEXT YuiContext
+    );
+
+VOID
 YuiTaskbarNotifyResolutionChange(
     __in PYUI_ENUM_CONTEXT YuiContext
     );

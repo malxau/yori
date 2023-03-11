@@ -365,6 +365,8 @@ YuiWindowProc(
                     CtrlId = YuiTaskbarFindByOffset(&YuiContext, XPos);
                     if (CtrlId >= YUI_FIRST_TASKBAR_BUTTON) {
                         YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
+                    } else {
+                        YuiTaskbarSwitchToActiveTask(&YuiContext);
                     }
                 }
             }
