@@ -94,6 +94,11 @@ typedef DWORD_PTR *PDWORD_PTR;
  */
 typedef ULONG ULONG_PTR;
 
+/**
+ Definition for pointer size integer for compilers that don't contain it.
+ */
+typedef LONG LONG_PTR;
+
 #endif
 #endif
 
@@ -2168,29 +2173,6 @@ typedef struct _YORI_SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX {
 #define PROCESS_MODE_BACKGROUND_BEGIN 0x00100000
 #endif
 
-#ifndef STARTF_TITLEISLINKNAME
-/**
- Indicate that the title field in STARTUPINFO is really a shortcut name so the
- console can populate console properties from it.
- */
-#define STARTF_TITLEISLINKNAME 0x800
-#endif
-
-#ifndef EWX_POWEROFF
-/**
- Flag to tell the system to power off after shutdown.
- */
-#define EWX_POWEROFF 0x00000008
-#endif
-
-#ifndef SPI_GETWORKAREA
-/**
- Value to SystemParametersInfo to query the size of the primary screen,
- reduced by any task bar area.
- */
-#define SPI_GETWORKAREA (48)
-#endif
-
 #ifndef IOCTL_DISK_GET_LENGTH_INFO
 /**
  The IOCTL code to query a volume or disk length, if it's not already defined.
@@ -3890,6 +3872,70 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define LOCALE_RETURN_NUMBER (0x20000000)
 #endif
 
+#ifndef GetClassLongPtr
+/**
+ If not defined by the compilation environment, GetClassLongPtr must refer
+ to GetClassLong (no 64 bit support.)
+ */
+#define GetClassLongPtr GetClassLong
+#endif
+
+#ifndef GetWindowLongPtr
+/**
+ If not defined by the compilation environment, GetWindowLongPtr must refer
+ to GetWindowLong (no 64 bit support.)
+ */
+#define GetWindowLongPtr GetWindowLong
+#endif
+
+#ifndef SetWindowLongPtr
+/**
+ If not defined by the compilation environment, SetWindowLongPtr must refer
+ to SetWindowLong (no 64 bit support.)
+ */
+#define SetWindowLongPtr SetWindowLong
+#endif
+
+#ifndef GCLP_HICONSM
+/**
+ If not defined by the compilation environment, the slot indicating the
+ small icon associated with a window class.
+ */
+#define GCLP_HICONSM (-34)
+#endif
+
+#ifndef GWLP_WNDPROC
+/**
+ If not defined by the compilation environment, the slot indicating the
+ window procedure on a window.
+ */
+#define GWLP_WNDPROC (-4)
+#endif
+
+#ifndef SPI_GETMINIMIZEDMETRICS
+/**
+ If not defined by the compilation environment, the parameter indicating how
+ to display minimized windows.
+ */
+#define SPI_GETMINIMIZEDMETRICS 0x2b
+#endif
+
+#ifndef SPI_SETMINIMIZEDMETRICS
+/**
+ If not defined by the compilation environment, the parameter indicating how
+ to display minimized windows.
+ */
+#define SPI_SETMINIMIZEDMETRICS 0x2c
+#endif
+
+#ifndef SPI_GETWORKAREA
+/**
+ Value to SystemParametersInfo to query the size of the primary screen,
+ reduced by any task bar area.
+ */
+#define SPI_GETWORKAREA (48)
+#endif
+
 #ifndef SPI_SETWORKAREA
 /**
  A definition for SPI_SETWORKAREA if it is not defined by the current
@@ -3898,12 +3944,92 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define SPI_SETWORKAREA 47
 #endif
 
+#ifndef SM_CXSMICON
+/**
+ If not defined by the compilation environment, the metric indicating the
+ width of a small icon.
+ */
+#define SM_CXSMICON 49
+#endif
+
+#ifndef SM_CYSMICON
+/**
+ If not defined by the compilation environment, the metric indicating the
+ height of a small icon.
+ */
+#define SM_CYSMICON 50
+#endif
+
+#ifndef HSHELL_REDRAW
+/**
+ If not defined by the compilation environment, the flag indicating a top
+ level window title has changed.
+ */
+#define HSHELL_REDRAW 6
+#endif
+
+#ifndef HSHELL_WINDOWACTIVATED
+/**
+ If not defined by the compilation environment, the flag indicating the active
+ top level window has changed.
+ */
+#define HSHELL_WINDOWACTIVATED 4
+#endif
+
 #ifndef HSHELL_RUDEAPPACTIVATED
 /**
  A definition for HSHELL_RUDEAPPACTIVATED if it is not defined by the current
  compilation environment.
  */
 #define HSHELL_RUDEAPPACTIVATED (0x8000 | HSHELL_WINDOWACTIVATED)
+#endif
+
+#ifndef ARW_HIDE
+/**
+ If not defined by the compilation environment, the flag that minimized
+ windows should be hidden.
+ */
+#define ARW_HIDE 0x8
+#endif
+
+/**
+ If not defined by the compilation environment, a structure definint how
+ minimized windows should behave.
+ */
+typedef struct _YORI_MINIMIZEDMETRICS {
+
+    /**
+     The size of this structure, in bytes.
+     */
+    DWORD cbSize;
+
+    /**
+     Width of minimized windows, in pixels.
+     */
+    INT iWidth;
+
+    /**
+     Horizontal space between minimized windows, in pixels.
+     */
+    INT iHorizontalGap;
+
+    /**
+     Vertical space between minimized windows, in pixels.
+     */
+    INT iVerticalGap;
+
+    /**
+     Vertical space between minimized windows, in pixels.
+     */
+    INT iArrange;
+} YORI_MINIMIZEDMETRICS, *PYORI_MINIMIZEDMETRICS;
+
+#ifndef WM_DISPLAYCHANGE
+/**
+ If not defined by the compilation environment, the message indicating that
+ the screen resolution has changed.
+ */
+#define WM_DISPLAYCHANGE 0x007e
 #endif
 
 #ifndef WM_SETICON
@@ -3937,6 +4063,135 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
  */
 #define MONO_FONT 8
 #endif
+
+#ifndef STARTF_TITLEISLINKNAME
+/**
+ Indicate that the title field in STARTUPINFO is really a shortcut name so the
+ console can populate console properties from it.
+ */
+#define STARTF_TITLEISLINKNAME 0x800
+#endif
+
+#ifndef EWX_POWEROFF
+/**
+ Flag to tell the system to power off after shutdown.
+ */
+#define EWX_POWEROFF 0x00000008
+#endif
+
+#ifndef DFC_BUTTON
+/**
+ If not defined by the compilation environment, the index indicating a push
+ button control..
+ */
+#define DFC_BUTTON 0x4
+#endif
+
+#ifndef DFCS_BUTTONPUSH
+/**
+ If not defined by the compilation environment, the style indicating a push
+ button.
+ */
+#define DFCS_BUTTONPUSH 0x10
+#endif
+
+#ifndef DFCS_PUSHED
+/**
+ If not defined by the compilation environment, the style indicating a push
+ button that is currently "pushed".
+ */
+#define DFCS_PUSHED 0x200
+#endif
+
+#ifndef DI_NORMAL
+/**
+ If not defined by the compilation environment, the style indicating a regular
+ icon draw.
+ */
+#define DI_NORMAL 0x3
+#endif
+
+#ifndef DT_END_ELLIPSIS
+/**
+ If not defined by the compilation environment, the style indicating text
+ that doesn't fit in its bounding rectangle should display an ellipsis.
+ */
+#define DT_END_ELLIPSIS 0x8000
+#endif
+
+#ifndef WS_EX_TOOLWINDOW
+/**
+ If not defined by the compilation environment, a flag indicating a window is
+ a helper window that should not be included in the taskbar.
+ */
+#define WS_EX_TOOLWINDOW 0x0080
+#endif
+
+#ifndef WS_EX_STATICEDGE
+/**
+ If not defined by the compilation environment, a flag indicating a window 
+ should have a 3D border indicating it does not accept user input.
+ */
+#define WS_EX_STATICEDGE 0x20000
+#endif
+
+#ifndef BS_LEFT
+/**
+ If not defined by the compilation environment, the flag indicating button
+ text should be left aligned.
+ */
+#define BS_LEFT 0x100
+#endif
+
+#ifndef BS_CENTER
+/**
+ If not defined by the compilation environment, the flag indicating button
+ text should be centered.
+ */
+#define BS_CENTER 0x300
+#endif
+
+#ifndef SS_CENTERIMAGE
+/**
+ If not defined by the compilation environment, the flag indicating a static
+ control should be vertically centered.
+ */
+#define SS_CENTERIMAGE 0x200
+#endif
+
+#ifndef SS_SUNKEN
+/**
+ If not defined by the compilation environment, the flag indicating a static
+ control should have a sunken appearance.
+ */
+#define SS_SUNKEN 0x1000
+#endif
+
+#ifndef TPM_BOTTOMALIGN
+/**
+ If not defined by the compilation environment, the flag indicating a popup
+ menu should be bottom aligned.
+ */
+#define TPM_BOTTOMALIGN 0x0020
+#endif
+
+#ifndef TPM_NONOTIFY
+/**
+ If not defined by the compilation environment, the flag indicating a popup
+ menu should not generate notification messages.
+ */
+#define TPM_NONOTIFY    0x0080
+#endif
+
+#ifndef TPM_RETURNCMD
+/**
+ If not defined by the compilation environment, the flag indicating a popup
+ menu should indicate the selected option as a return value.
+ */
+#define TPM_RETURNCMD   0x0100
+#endif
+
+
 
 #ifndef MS_DEF_PROV
 /**
@@ -8687,6 +8942,30 @@ DDE_UNINITIALIZE(DWORD);
 typedef DDE_UNINITIALIZE *PDDE_UNINITIALIZE;
 
 /**
+ A prototype for the DrawFrameControl function.
+ */
+typedef
+BOOL WINAPI
+DRAW_FRAME_CONTROL(HDC, LPRECT, DWORD, DWORD);
+
+/**
+ A prototype for a pointer to the DrawFrameControl function.
+ */
+typedef DRAW_FRAME_CONTROL *PDRAW_FRAME_CONTROL;
+
+/**
+ A prototype for the DrawIconEx function.
+ */
+typedef
+BOOL WINAPI
+DRAW_ICON_EX(HDC, INT, INT, HICON, INT, INT, DWORD, HBRUSH, DWORD);
+
+/**
+ A prototype for a pointer to the DrawIconEx function.
+ */
+typedef DRAW_ICON_EX *PDRAW_ICON_EX;
+
+/**
  A prototype for the EmptyClipboard function.
  */
 typedef
@@ -9033,6 +9312,16 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to DdeUninitialize.
      */
     PDDE_UNINITIALIZE pDdeUninitialize;
+
+    /**
+     If it's available on the current system, a pointer to DrawFrameControl.
+     */
+    PDRAW_FRAME_CONTROL pDrawFrameControl;
+
+    /**
+     If it's available on the current system, a pointer to DrawIconEx.
+     */
+    PDRAW_ICON_EX pDrawIconEx;
 
     /**
      If it's available on the current system, a pointer to EmptyClipboard.

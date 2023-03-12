@@ -521,6 +521,8 @@ YoriLibLoadUser32Functions(VOID)
     DllUser32.pDdeFreeStringHandle = (PDDE_FREE_STRING_HANDLE)GetProcAddress(DllUser32.hDll, "DdeFreeStringHandle");
     DllUser32.pDdeInitializeW = (PDDE_INITIALIZEW)GetProcAddress(DllUser32.hDll, "DdeInitializeW");
     DllUser32.pDdeUninitialize = (PDDE_UNINITIALIZE)GetProcAddress(DllUser32.hDll, "DdeUninitialize");
+    DllUser32.pDrawFrameControl = (PDRAW_FRAME_CONTROL)GetProcAddress(DllUser32.hDll, "DrawFrameControl");
+    DllUser32.pDrawIconEx = (PDRAW_ICON_EX)GetProcAddress(DllUser32.hDll, "DrawIconEx");
     DllUser32.pEmptyClipboard = (PEMPTY_CLIPBOARD)GetProcAddress(DllUser32.hDll, "EmptyClipboard");
     DllUser32.pEnumClipboardFormats = (PENUM_CLIPBOARD_FORMATS)GetProcAddress(DllUser32.hDll, "EnumClipboardFormats");
     DllUser32.pExitWindowsEx = (PEXIT_WINDOWS_EX)GetProcAddress(DllUser32.hDll, "ExitWindowsEx");
