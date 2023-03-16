@@ -205,8 +205,8 @@ YuiTaskbarCreateButtonControl(
     )
 {
     ThisButton->hWndButton = CreateWindow(_T("BUTTON"),
-                                          ThisButton->ButtonText.StartOfString,
-                                          BS_PUSHBUTTON | BS_LEFT | WS_VISIBLE | WS_CHILD,
+                                          _T(""),
+                                          BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                                           ThisButton->LeftOffset,
                                           1,
                                           (WORD)(ThisButton->RightOffset - ThisButton->LeftOffset),
@@ -338,14 +338,43 @@ YuiTaskbarPopulateWindows(
         ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
         YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
         if (ThisButton->hWndToActivate == ActiveWindow) {
-            SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
             ThisButton->WindowActive = TRUE;
+            SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
         Index++;
     }
 
     return TRUE;
+}
+
+/**
+ Find a button structure from a specified control ID.
+
+ @param YuiContext Pointer to the application context.
+
+ @param CtrlId The control ID to find.
+ */
+PYUI_TASKBAR_BUTTON
+YuiTaskbarFindButtonFromCtrlId(
+    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in DWORD CtrlId
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYUI_TASKBAR_BUTTON ThisButton;
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    while (ListEntry != NULL) {
+        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+        if (ThisButton->ControlId == CtrlId) {
+            return ThisButton;
+        }
+        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    }
+
+    return NULL;
 }
 
 /**
@@ -445,8 +474,8 @@ YuiTaskbarNotifyNewWindow(
             ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
             YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
             if (ThisButton->hWndToActivate == GetForegroundWindow()) {
-                SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
                 ThisButton->WindowActive = TRUE;
+                SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
             }
         }
 
@@ -556,13 +585,13 @@ YuiTaskbarNotifyActivateWindow(
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (ThisButton->hWndToActivate == hWnd) {
             if (!ThisButton->WindowActive) {
-                SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
                 ThisButton->WindowActive = TRUE;
+                SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
             }
         } else {
             if (ThisButton->WindowActive) {
-                SendMessage(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
                 ThisButton->WindowActive = FALSE;
+                SendMessage(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
             }
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -603,7 +632,7 @@ YuiTaskbarNotifyTitleChange(
                 NewTitle.LengthInChars = GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
                 YoriLibFreeStringContents(&ThisButton->ButtonText);
                 memcpy(&ThisButton->ButtonText, &NewTitle, sizeof(YORI_STRING));
-                SetWindowText(ThisButton->hWndButton, ThisButton->ButtonText.StartOfString);
+                // SetWindowText(ThisButton->hWndButton, ThisButton->ButtonText.StartOfString);
             }
             break;
         }
@@ -820,18 +849,11 @@ YuiTaskbarSwitchToTask(
     __in DWORD CtrlId
     )
 {
-    PYORI_LIST_ENTRY ListEntry;
     PYUI_TASKBAR_BUTTON ThisButton;
 
-    ListEntry = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        if (ThisButton->ControlId == CtrlId) {
-            YuiTaskbarSwitchToButton(YuiContext, ThisButton);
-            break;
-        }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    if (ThisButton != NULL) {
+        YuiTaskbarSwitchToButton(YuiContext, ThisButton);
     }
 }
 
@@ -859,6 +881,35 @@ YuiTaskbarSwitchToActiveTask(
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
     }
+}
+
+/**
+ Draw a taskbar button.
+
+ @param YuiContext Pointer to the application context.
+
+ @param CtrlId The identifier of the button that should be redrawn.
+
+ @param DrawItemStruct Pointer to a structure describing the button to
+        redraw, including its bounds and device context.
+ */
+VOID
+YuiTaskbarDrawButton(
+    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in DWORD CtrlId,
+    __in PDRAWITEMSTRUCT DrawItemStruct
+    )
+{
+    PYUI_TASKBAR_BUTTON ThisButton;
+    HICON Icon;
+
+    ThisButton = YuiTaskbarFindButtonFromCtrlId(YuiContext, CtrlId);
+    if (ThisButton == NULL) {
+        return;
+    }
+
+    Icon = (HICON)GetClassLongPtr(ThisButton->hWndToActivate, GCLP_HICONSM);
+    YuiDrawButton(DrawItemStruct, ThisButton->WindowActive, Icon, &ThisButton->ButtonText);
 }
 
 /**

@@ -3,7 +3,7 @@
  *
  * Yori shell display lightweight graphical UI master header
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,103 +23,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-#ifndef BS_LEFT
-/**
- If not defined by the compilation environment, the flag indicating button
- text should be left aligned.
- */
-#define BS_LEFT 0x100
-#endif
-
-#ifndef BS_CENTER
-/**
- If not defined by the compilation environment, the flag indicating button
- text should be centered.
- */
-#define BS_CENTER 0x300
-#endif
-
-#ifndef HSHELL_REDRAW
-/**
- If not defined by the compilation environment, the flag indicating a top
- level window title has changed.
- */
-#define HSHELL_REDRAW 6
-#endif
-
-#ifndef HSHELL_WINDOWACTIVATED
-/**
- If not defined by the compilation environment, the flag indicating the active
- top level window has changed.
- */
-#define HSHELL_WINDOWACTIVATED 4
-#endif
-
-#ifndef SS_CENTERIMAGE
-/**
- If not defined by the compilation environment, the flag indicating a static
- control should be vertically centered.
- */
-#define SS_CENTERIMAGE 0x200
-#endif
-
-#ifndef SS_SUNKEN
-/**
- If not defined by the compilation environment, the flag indicating a static
- control should have a sunken appearance.
- */
-#define SS_SUNKEN 0x1000
-#endif
-
-#ifndef TPM_BOTTOMALIGN
-/**
- If not defined by the compilation environment, the flag indicating a popup
- menu should be bottom aligned.
- */
-#define TPM_BOTTOMALIGN 0x0020
-#endif
-
-#ifndef TPM_NONOTIFY
-/**
- If not defined by the compilation environment, the flag indicating a popup
- menu should not generate notification messages.
- */
-#define TPM_NONOTIFY    0x0080
-#endif
-
-#ifndef TPM_RETURNCMD
-/**
- If not defined by the compilation environment, the flag indicating a popup
- menu should indicate the selected option as a return value.
- */
-#define TPM_RETURNCMD   0x0100
-#endif
-
-#ifndef WM_DISPLAYCHANGE
-/**
- If not defined by the compilation environment, the message indicating that
- the screen resolution has changed.
- */
-#define WM_DISPLAYCHANGE 0x007e
-#endif
-
-#ifndef WS_EX_TOOLWINDOW
-/**
- If not defined by the compilation environment, a flag indicating a window is
- a helper window that should not be included in the taskbar.
- */
-#define WS_EX_TOOLWINDOW 0x0080
-#endif
-
-#ifndef WS_EX_STATICEDGE
-/**
- If not defined by the compilation environment, a flag indicating a window 
- should have a 3D border indicating it does not accept user input.
- */
-#define WS_EX_STATICEDGE 0x20000
-#endif
-
 
 /**
  A structure describing a directory within the start menu.
@@ -295,7 +198,7 @@ typedef struct _YUI_ENUM_CONTEXT {
      The minimized window metrics to restore on exit.  Only meaningful if
      cbSize is nonzero.
      */
-    MINIMIZEDMETRICS SavedMinimizedMetrics;
+    YORI_MINIMIZEDMETRICS SavedMinimizedMetrics;
 
     /**
      The window handle for the taskbar.
@@ -480,6 +383,14 @@ YuiMenuFreeAll(
     __in PYUI_ENUM_CONTEXT YuiContext
     );
 
+VOID
+YuiDrawButton(
+    __in PDRAWITEMSTRUCT DrawItemStruct,
+    __in BOOLEAN Pushed,
+    __in_opt HICON Icon,
+    __in PYORI_STRING Text
+    );
+
 BOOL
 YuiTaskbarPopulateWindows(
     __in PYUI_ENUM_CONTEXT YuiContext,
@@ -530,6 +441,13 @@ WORD
 YuiTaskbarFindByOffset(
     __in PYUI_ENUM_CONTEXT YuiContext,
     __in SHORT XPos
+    );
+
+VOID
+YuiTaskbarDrawButton(
+    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in DWORD CtrlId,
+    __in PDRAWITEMSTRUCT DrawItemStruct
     );
 
 VOID

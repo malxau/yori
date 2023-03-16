@@ -60,7 +60,7 @@ YUI_ENUM_CONTEXT YuiContext;
 /**
  The base height of the taskbar, in pixels.
  */
-#define YUI_BASE_TASKBAR_HEIGHT (28)
+#define YUI_BASE_TASKBAR_HEIGHT (32)
 
 /**
  The base width of each taskbar button, in pixels.
@@ -68,7 +68,7 @@ YUI_ENUM_CONTEXT YuiContext;
 #define YUI_BASE_TASKBAR_BUTTON_WIDTH (190)
 
 /**
- Query the taskbar height for this system.  The taskbar is generally 28 pixels
+ Query the taskbar height for this system.  The taskbar is generally 32 pixels
  but can scale upwards slightly on larger displays.
 
  @param ScreenWidth The width of the screen, in pixels.
@@ -90,11 +90,11 @@ YuiGetTaskbarHeight(
     TaskbarHeight = YUI_BASE_TASKBAR_HEIGHT;
 
     //
-    //  Give 1% of any vertical pixels above 800
+    //  Give 1% of any vertical pixels above 1200
     //
 
-    if (ScreenHeight > 800) {
-        TaskbarHeight = TaskbarHeight + (ScreenHeight - 800) / 100;
+    if (ScreenHeight > 1200) {
+        TaskbarHeight = TaskbarHeight + (ScreenHeight - 1200) / 100;
     }
 
     return TaskbarHeight;
@@ -172,7 +172,7 @@ YuiNotifyResolutionChange(
 
     TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
 
-    FontSize = 8;
+    FontSize = 9;
     FontSize = FontSize + (TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3;
 
     hDC = GetWindowDC(hWnd);
@@ -397,6 +397,17 @@ YuiWindowProc(
         case WM_DISPLAYCHANGE:
             YuiNotifyResolutionChange(YuiContext.hWnd, LOWORD(lParam), HIWORD(lParam));
             break;
+        case WM_DRAWITEM:
+            {
+                PDRAWITEMSTRUCT DrawItemStruct;
+
+                DrawItemStruct = (PDRAWITEMSTRUCT)lParam;
+
+                CtrlId = LOWORD(wParam);
+                ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
+                YuiTaskbarDrawButton(&YuiContext, CtrlId, DrawItemStruct);
+            }
+            break;
         default:
             if (uMsg == YuiContext.ShellHookMsg) {
                 switch(wParam) {
@@ -489,7 +500,7 @@ YuiCleanupGlobalState(VOID)
     }
 
     if (YuiContext.SavedMinimizedMetrics.cbSize != 0) {
-        SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(MINIMIZEDMETRICS), &YuiContext.SavedMinimizedMetrics, 0);
+        SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(YORI_MINIMIZEDMETRICS), &YuiContext.SavedMinimizedMetrics, 0);
     }
 }
 
@@ -512,7 +523,7 @@ YuiCreateWindow(
     DWORD ScreenHeight;
     DWORD ScreenWidth;
     DWORD TaskbarHeight;
-    MINIMIZEDMETRICS MinimizedMetrics;
+    YORI_MINIMIZEDMETRICS MinimizedMetrics;
 
     //
     //  Explorer or other shells will register as a magic "Taskman" window.
@@ -568,15 +579,15 @@ YuiCreateWindow(
     //
 
     Context->SavedMinimizedMetrics.cbSize = sizeof(MinimizedMetrics);
-    if (SystemParametersInfo(SPI_GETMINIMIZEDMETRICS, sizeof(MINIMIZEDMETRICS), &Context->SavedMinimizedMetrics, 0)) {
+    if (SystemParametersInfo(SPI_GETMINIMIZEDMETRICS, sizeof(YORI_MINIMIZEDMETRICS), &Context->SavedMinimizedMetrics, 0)) {
         MinimizedMetrics.cbSize = sizeof(MinimizedMetrics);
         MinimizedMetrics.iWidth = Context->SavedMinimizedMetrics.iWidth;
-        MinimizedMetrics.iHorzGap = 0;
-        MinimizedMetrics.iVertGap = 0;
+        MinimizedMetrics.iHorizontalGap = 0;
+        MinimizedMetrics.iVerticalGap = 0;
         MinimizedMetrics.iArrange = ARW_HIDE;
 
         if (MinimizedMetrics.iArrange != Context->SavedMinimizedMetrics.iArrange) {
-            SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(MINIMIZEDMETRICS), &MinimizedMetrics, 0);
+            SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(YORI_MINIMIZEDMETRICS), &MinimizedMetrics, 0);
         } else {
             Context->SavedMinimizedMetrics.cbSize = 0;
         }
@@ -619,7 +630,7 @@ YuiCreateWindow(
     }
 
     Context->StartLeftOffset = 1;
-    Context->StartRightOffset = Context->StartLeftOffset + YUI_START_BUTTON_WIDTH;
+    Context->StartRightOffset = (WORD)(Context->StartLeftOffset + YUI_START_BUTTON_WIDTH);
 
     SendMessage(Context->hWndStart, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
 
@@ -762,6 +773,12 @@ ymain(
         if (!ArgumentUnderstood) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
+    }
+
+    if (DllUser32.pDrawFrameControl == NULL ||
+        DllUser32.pDrawIconEx == NULL) {
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yui: OS support not present\n"));
     }
 
     if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {

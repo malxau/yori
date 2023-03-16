@@ -13,6 +13,7 @@ LDFLAGS_NT4UP=$(LDFLAGS:3.10=4.0)
 EXTERNLIBS=$(EXTERNLIBS) user32.lib gdi32.lib comdlg32.lib
 
 BIN_OBJS=\
+	 draw.obj        \
 	 menu.obj        \
 	 resource.obj    \
 	 taskbar.obj     \
