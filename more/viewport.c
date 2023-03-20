@@ -27,6 +27,43 @@
 #include "more.h"
 
 /**
+ Clear the screen.  This program generally does not do this; normally text
+ flows downwards, causing the display to scroll, so history of the file is
+ preserved within the terminal.  This function is useful when displaying
+ text that can't possibly be sequentially meaningful; as of this writing,
+ it's used when changing filter criteria to display a subset of lines.
+
+ @param MoreContext Pointer to the more context.
+ */
+VOID
+MoreClearScreen(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+    HANDLE StdOutHandle;
+    COORD ClearPosition;
+    DWORD NumberWritten;
+    DWORD CellsToWrite;
+
+    UNREFERENCED_PARAMETER(MoreContext);
+
+    StdOutHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    GetConsoleScreenBufferInfo(StdOutHandle, &ScreenInfo);
+
+    ClearPosition.X = 0;
+    ClearPosition.Y = ScreenInfo.srWindow.Top;
+
+    CellsToWrite = ScreenInfo.dwSize.X;
+    CellsToWrite = CellsToWrite * (ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1);
+
+    FillConsoleOutputCharacter(StdOutHandle, ' ', CellsToWrite, ClearPosition, &NumberWritten);
+    FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), CellsToWrite, ClearPosition, &NumberWritten);
+
+    SetConsoleCursorPosition(StdOutHandle, ClearPosition);
+}
+
+/**
  Clear any previously drawn status line.
 
  @param MoreContext Pointer to the current data, including physical lines and
@@ -75,8 +112,7 @@ MoreDrawStatusLine(
     DWORDLONG FirstViewportLine;
     DWORDLONG LastViewportLine;
     DWORDLONG TotalLines;
-    PYORI_LIST_ENTRY ListEntry;
-    PMORE_PHYSICAL_LINE LastPhysicalLine;
+    DWORDLONG TotalFilteredLines;
     BOOL PageFull;
     BOOL ThreadActive;
     LPTSTR StringToDisplay;
@@ -84,30 +120,54 @@ MoreDrawStatusLine(
     PYORI_STRING SearchString;
     UCHAR SearchIndex;
     DWORD InvisibleChars;
+    DWORD Percent;
 
     //
     //  If the screen isn't full, there's no point displaying status
     //
 
-    if (MoreContext->LinesInViewport < MoreContext->ViewportHeight ||
-        MoreContext->SuspendPagination) {
+    if (!MoreContext->FilterToSearch &&
+        (MoreContext->LinesInViewport < MoreContext->ViewportHeight ||
+         MoreContext->SuspendPagination)) {
+
+        MoreContext->SearchDirty = FALSE;
+
         return;
     }
 
     YoriLibVtSetConsoleTextAttribute(YORI_LIB_OUTPUT_STDOUT, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
-    FirstViewportLine = MoreContext->DisplayViewportLines[0].PhysicalLine->LineNumber;
-    LastViewportLine = MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1].PhysicalLine->LineNumber;
-
     //
     //  Capture statistics
     //
 
+    Percent = 0;
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
-    ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, NULL);
-    LastPhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
-    TotalLines = LastPhysicalLine->LineNumber;
-    MoreContext->TotalLinesInViewportStatus = TotalLines;
+
+    TotalLines = MoreContext->LineCount;
+    TotalFilteredLines = MoreContext->FilteredLineCount;
+    MoreContext->TotalLinesInViewportStatus = TotalFilteredLines;
+
+    if (MoreContext->FilterToSearch) {
+        if (MoreContext->LinesInViewport > 0) {
+            FirstViewportLine = MoreContext->DisplayViewportLines[0].PhysicalLine->FilteredLineNumber;
+            LastViewportLine = MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1].PhysicalLine->FilteredLineNumber;
+            ASSERT(TotalFilteredLines > 0);
+            Percent = (DWORD)(LastViewportLine * 100 / TotalFilteredLines);
+        } else {
+            FirstViewportLine = 0;
+            LastViewportLine = 0;
+            Percent = 0;
+        }
+    } else {
+        ASSERT(MoreContext->LinesInViewport > 0);
+        FirstViewportLine = MoreContext->DisplayViewportLines[0].PhysicalLine->LineNumber;
+        LastViewportLine = MoreContext->DisplayViewportLines[MoreContext->LinesInViewport - 1].PhysicalLine->LineNumber;
+        Percent = (DWORD)(LastViewportLine * 100 / TotalLines);
+        ASSERT(TotalFilteredLines == TotalLines);
+        TotalFilteredLines = TotalLines;
+    }
+
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 
     ASSERT(MoreContext->LinesInPage <= MoreContext->LinesInViewport);
@@ -127,7 +187,7 @@ MoreDrawStatusLine(
         ThreadActive = TRUE;
     }
 
-    if (!ThreadActive && TotalLines == LastViewportLine) {
+    if (!ThreadActive && TotalFilteredLines == LastViewportLine) {
         StringToDisplay = _T("End");
     } else if (!PageFull) {
         StringToDisplay = _T("Awaiting data");
@@ -159,12 +219,13 @@ MoreDrawStatusLine(
         InvisibleChars = SearchColorString.LengthInChars;
 
         YoriLibYPrintf(&LineToDisplay,
-                      _T(" --- %s --- (%lli-%lli of %lli, %i%%) %ySearch: %y"),
+                      _T(" --- %s --- (%lli-%lli of %lli, %i%%)%s %ySearch: %y"),
                       StringToDisplay,
                       FirstViewportLine,
                       LastViewportLine,
-                      TotalLines,
-                      (DWORD)(LastViewportLine * 100 / TotalLines),
+                      TotalFilteredLines,
+                      Percent,
+                      (MoreContext->FilterToSearch?_T(" (filtered)"):_T("")),
                       &SearchColorString,
                       SearchString);
     } else {
@@ -189,12 +250,13 @@ MoreDrawStatusLine(
 
         if (YoriLibAllocateString(&LineToDisplay, CharsNeeded)) {
             YoriLibYPrintf(&LineToDisplay,
-                          _T(" --- %s --- (%lli-%lli of %lli, %i%%)"),
+                          _T(" --- %s --- (%lli-%lli of %lli, %i%%)%s"),
                           StringToDisplay,
                           FirstViewportLine,
                           LastViewportLine,
-                          TotalLines,
-                          (DWORD)(LastViewportLine * 100 / TotalLines));
+                          TotalFilteredLines,
+                          Percent,
+                          (MoreContext->FilterToSearch?_T(" (filtered)"):_T("")));
 
 
             //
@@ -464,6 +526,7 @@ MoreDisplayChangedLinesInViewport(
 {
     DWORD Index;
     DWORD ChangedLineCount = 0;
+    DWORD NumberNewLines;
     DWORD NumberWritten;
     CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
     HANDLE StdOutHandle;
@@ -481,18 +544,22 @@ MoreDisplayChangedLinesInViewport(
                                  FALSE,
                                  MoreContext->LinesInViewport,
                                  MoreContext->StagingViewportLines,
-                                 &NumberWritten)) {
+                                 &NumberNewLines)) {
 
         return 0;
     }
 
     //
-    //  The data shouldn't already be in the viewport if it's unavailable.
+    //  Normally, the data shouldn't already be in the viewport if it's
+    //  unavailable.  Previously available data can become unavailable when
+    //  filtering to a search selection, since we might be viewing less data
+    //  than before.
     //
 
-    ASSERT(NumberWritten == MoreContext->LinesInViewport);
+    ASSERT(NumberNewLines == MoreContext->LinesInViewport || 
+           (MoreContext->FilterToSearch && NumberNewLines <= MoreContext->LinesInViewport));
 
-    for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
+    for (Index = 0; Index < NumberNewLines; Index++) {
 
         if (YoriLibCompareString(&MoreContext->DisplayViewportLines[Index].Line, &MoreContext->StagingViewportLines[Index].Line) != 0) {
 
@@ -522,6 +589,13 @@ MoreDisplayChangedLinesInViewport(
     for (Index = 0; Index < MoreContext->LinesInViewport; Index++) {
         YoriLibFreeStringContents(&MoreContext->StagingViewportLines[Index].Line);
     }
+
+    //
+    //  MSFIX Do we need to free DisplayViewportLines after this? Do we need
+    //  to clear these screen regions?
+    //
+
+    MoreContext->LinesInViewport = NumberNewLines;
 
     //
     //  Restore the cursor to the bottom of the viewport
@@ -1068,9 +1142,15 @@ MoreGenerateEntireViewportWithStartingLine(
         //  If reading forward didn't provide enough lines, start reading
         //  backwards
         //
+        //  MSFIX Since this routine just grabbed the mutex, it's always
+        //  possible that it found more lines than any previous render did -
+        //  it's not valid to make this assumption anywhere.  How can these
+        //  bugs be found?
+        //
 
-        LinesRemaining = MoreContext->LinesInViewport - LinesReturned;
-        if (LinesRemaining > 0) {
+        if (MoreContext->LinesInViewport > LinesReturned) {
+            LinesRemaining = MoreContext->LinesInViewport - LinesReturned;
+
             for (Index = LinesReturned; Index > 0; Index--) {
                 MoreMoveLogicalLine(&MoreContext->StagingViewportLines[LinesRemaining + Index - 1],
                                     &MoreContext->StagingViewportLines[Index - 1]);
@@ -1624,6 +1704,40 @@ MoreAreMoreLinesAvailable(
 }
 
 /**
+ Apply search changes that could affect the set of lines being filtered.
+ This applies the new filter, then displays the new set of lines in the
+ viewport, and indicates that the status line needs to be redrawn.
+
+ @param MoreContext Pointer to the more context.
+ */
+VOID
+MoreRefreshFilteredLinesDisplay(
+    __in PMORE_CONTEXT MoreContext
+    )
+{
+    PMORE_PHYSICAL_LINE NewStart;
+    if (MoreContext->LinesInViewport > 0) {
+        NewStart = MoreUpdateFilteredLines(MoreContext, MoreContext->DisplayViewportLines[0].PhysicalLine);
+    } else {
+        NewStart = MoreUpdateFilteredLines(MoreContext, NULL);
+    }
+
+    //
+    //  A lot of code here isn't robust to LinesInViewport going backwards,
+    //  which is easy to do when filtering.  Clearing the screen here solves
+    //  this problem, is visually sane, but relies on the assumption that the
+    //  user can't be manipulating which lines get displayed and still expect
+    //  a complete history of lines in their Terminal scrollback buffer.
+    //
+
+    MoreClearScreen(MoreContext);
+    MoreContext->LinesInViewport = 0;
+    MoreContext->LinesInPage = 0;
+    MoreContext->SearchDirty = TRUE;
+    MoreGenerateEntireViewportWithStartingLine(MoreContext, NewStart);
+}
+
+/**
  Append a string to the current search string.  This is often just appending
  a single character in response to a key press, but may append a buffer from
  the clipboard.
@@ -1824,11 +1938,17 @@ MoreProcessKeyDown(
                 MoreContext->SearchUiActive = FALSE;
                 YoriLibFreeStringContents(SearchString);
                 MoreSearchIndexFree(MoreContext, SearchIndex);
+                if (MoreContext->FilterToSearch) {
+                    MoreRefreshFilteredLinesDisplay(MoreContext);
+                }
                 MoreContext->SearchDirty = TRUE;
             } else if (Char == '\b') {
                 if (InputRecord->Event.KeyEvent.wRepeatCount >= SearchString->LengthInChars) {
                     SearchString->LengthInChars = 0;
                     MoreSearchIndexFree(MoreContext, SearchIndex);
+                    if (MoreContext->FilterToSearch) {
+                        MoreRefreshFilteredLinesDisplay(MoreContext);
+                    }
                 } else {
                     SearchString->LengthInChars = SearchString->LengthInChars - InputRecord->Event.KeyEvent.wRepeatCount;
                 }
@@ -1837,6 +1957,9 @@ MoreProcessKeyDown(
                 if (YoriLibIsSelectionActive(&MoreContext->Selection)) {
                     MoreCopySelectionIfPresent(MoreContext);
                 } else if (MoreContext->SearchUiActive) {
+                    if (MoreContext->FilterToSearch) {
+                        MoreRefreshFilteredLinesDisplay(MoreContext);
+                    }
                     MoreContext->SearchUiActive = FALSE;
                     MoreContext->SearchDirty = TRUE;
                 }
@@ -1859,6 +1982,13 @@ MoreProcessKeyDown(
                     YoriLibRedrawSelection(&MoreContext->Selection);
                 }
                 MoreMoveViewportDown(MoreContext, MoreContext->ViewportHeight);
+            } else if (Char == 'F' || Char == 'f') {
+                if (MoreContext->FilterToSearch) {
+                    MoreContext->FilterToSearch = FALSE;
+                } else {
+                    MoreContext->FilterToSearch = TRUE;
+                }
+                MoreRefreshFilteredLinesDisplay(MoreContext);
             } else if (Char == '\r') {
                 MoreCopySelectionIfPresent(MoreContext);
             } else if (Char == '/') {
@@ -1897,6 +2027,13 @@ MoreProcessKeyDown(
             } else {
                 *Terminate = TRUE;
             }
+        } else if (KeyCode == 'F') {
+            if (MoreContext->FilterToSearch) {
+                MoreContext->FilterToSearch = FALSE;
+            } else {
+                MoreContext->FilterToSearch = TRUE;
+            }
+            MoreRefreshFilteredLinesDisplay(MoreContext);
         } else if (KeyCode == 'Q') {
             MoreContext->SuspendPagination = TRUE;
         } else if (KeyCode == 'S') {
@@ -1911,6 +2048,7 @@ MoreProcessKeyDown(
                 }
             }
         } else if (KeyCode >= '1' && KeyCode <= '9') {
+            MoreContext->SearchUiActive = TRUE;
             MoreContext->SearchColorIndex = (UCHAR)(KeyCode - '1');
             MoreContext->SearchDirty = TRUE;
         } else if (Char == '\0') {
@@ -2091,7 +2229,7 @@ MoreCheckForStatusLineChange(
     __inout PMORE_CONTEXT MoreContext
     )
 {
-    if (MoreContext->TotalLinesInViewportStatus != MoreContext->LineCount || MoreContext->SearchDirty) {
+    if (MoreContext->TotalLinesInViewportStatus != MoreContext->FilteredLineCount || MoreContext->SearchDirty) {
         MoreClearStatusLine(MoreContext);
         MoreDrawStatusLine(MoreContext);
     }

@@ -295,6 +295,187 @@ MoreTruncateStringToVisibleChars(
 }
 
 /**
+ Return the next filtered physical line.  This refers to a physical line that
+ matches the search criteria when filtering is enabled.  If filtering is not
+ in effect, this is the same as getting the next physical line.
+
+ @param MoreContext Pointer to the more context.
+
+ @param PreviousLine Optionally points to a previous physical line, where this
+        function should return the next line.  If not specified, the first
+        filtered physical line is returned.
+
+ @return Pointer to the next physical line, or NULL if no more physical lines
+         are present.
+ */
+PMORE_PHYSICAL_LINE
+MoreGetNextFilteredPhysicalLine(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_PHYSICAL_LINE PreviousLine
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PMORE_PHYSICAL_LINE ThisLine;
+
+    if (PreviousLine != NULL) {
+        ListEntry = YoriLibGetNextListEntry(&MoreContext->FilteredPhysicalLineList, &PreviousLine->FilteredLineList);
+    } else {
+        ListEntry = YoriLibGetNextListEntry(&MoreContext->FilteredPhysicalLineList, NULL);
+    }
+
+    if (ListEntry == NULL) {
+        return NULL;
+    }
+
+    ThisLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, FilteredLineList);
+
+    //
+    //  Check that the list is sorted
+    //
+
+    ASSERT(PreviousLine == NULL || ThisLine->FilteredLineNumber == PreviousLine->FilteredLineNumber + 1);
+    ASSERT(PreviousLine == NULL || ThisLine->LineNumber > PreviousLine->LineNumber);
+
+    return ThisLine;
+}
+
+/**
+ Return the previous filtered physical line.  This refers to a physical line
+ that matches the search criteria when filtering is enabled.  If filtering is
+ not in effect, this is the same as getting the previous physical line.
+
+ @param MoreContext Pointer to the more context.
+
+ @param NextLine Optionally points to a next physical line, where this
+        function should return the previous line.  If not specified, the
+        final filtered physical line is returned.
+
+ @return Pointer to the previous physical line, or NULL if no more physical
+         lines are present.
+ */
+PMORE_PHYSICAL_LINE
+MoreGetPreviousFilteredPhysicalLine(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_PHYSICAL_LINE NextLine
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PMORE_PHYSICAL_LINE ThisLine;
+
+    if (NextLine != NULL) {
+        ListEntry = YoriLibGetPreviousListEntry(&MoreContext->FilteredPhysicalLineList, &NextLine->FilteredLineList);
+    } else {
+        ListEntry = YoriLibGetPreviousListEntry(&MoreContext->FilteredPhysicalLineList, NULL);
+    }
+
+    if (ListEntry == NULL) {
+        return NULL;
+    }
+
+    ThisLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, FilteredLineList);
+
+    //
+    //  Check that the list is sorted
+    //
+
+    ASSERT(NextLine == NULL || ThisLine->FilteredLineNumber + 1 == NextLine->FilteredLineNumber);
+    ASSERT(NextLine == NULL || ThisLine->LineNumber < NextLine->LineNumber);
+    return ThisLine;
+}
+
+/**
+ Apply a new search criteria to update the set of filtered lines.
+
+ MSFIX This routine wants to be much smarter.  Ideally it would initiate an
+ asynchronous process that gets synchronized when next/previous lines are
+ needed.  This would allow the display to rapidly update while the number of
+ filtered lines is updated in the background (refreshing the status line.)
+
+ @param MoreContext Pointer to the more context, indicating the current search
+        terms.
+
+ @param PreviousStartPoint Optionally points to a physical line which is
+        currently displayed.  If specified, this function attempts to return
+        a "good" physical line to display once the new filter has been
+        applied.
+
+ @return Pointer to a physical line which should be used to display after the
+         filter has been updated.
+ */
+PMORE_PHYSICAL_LINE
+MoreUpdateFilteredLines(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_PHYSICAL_LINE PreviousStartPoint
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PMORE_PHYSICAL_LINE PreviousFilteredLine;
+    PMORE_PHYSICAL_LINE ThisLine;
+    BOOLEAN MatchFound;
+    DWORDLONG FilteredLineNumber;
+    DWORDLONG PreviousStartLineNumber;
+    PMORE_PHYSICAL_LINE NewStartPoint;
+
+    PreviousStartLineNumber = 0;
+    NewStartPoint = NULL;
+    if (PreviousStartPoint != NULL) {
+        PreviousStartLineNumber = PreviousStartPoint->LineNumber;
+    }
+
+    WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
+
+    PreviousFilteredLine = NULL;
+    FilteredLineNumber = 0;
+    ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
+
+    while (ListEntry != NULL) {
+
+        ThisLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
+        if (MoreContext->FilterToSearch) {
+            MatchFound = MoreFindNextSearchMatch(MoreContext, &ThisLine->LineContents, NULL, NULL);
+        } else {
+            MatchFound = TRUE;
+        }
+
+        if (!MatchFound) {
+            if (ThisLine->FilteredLineList.Next != NULL) {
+                ASSERT(MoreContext->FilteredLineCount > 0);
+                MoreContext->FilteredLineCount--;
+                YoriLibRemoveListItem(&ThisLine->FilteredLineList);
+                ThisLine->FilteredLineList.Next = NULL;
+            }
+        } else {
+            if (ThisLine->FilteredLineList.Next == NULL) {
+                if (PreviousFilteredLine != NULL) {
+                    ASSERT(ThisLine->LineNumber > PreviousFilteredLine->LineNumber);
+                    YoriLibInsertList(&PreviousFilteredLine->FilteredLineList, &ThisLine->FilteredLineList);
+                } else {
+                    YoriLibInsertList(&MoreContext->FilteredPhysicalLineList, &ThisLine->FilteredLineList);
+                }
+                MoreContext->FilteredLineCount++;
+                ASSERT(MoreContext->FilteredLineCount <= MoreContext->LineCount);
+            }
+            FilteredLineNumber++;
+            ThisLine->FilteredLineNumber = FilteredLineNumber;
+            PreviousFilteredLine = ThisLine;
+            if (NewStartPoint == NULL && ThisLine->LineNumber >= PreviousStartLineNumber) {
+                NewStartPoint = ThisLine;
+            }
+        }
+
+
+        ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, &ThisLine->LineList);
+    }
+
+    ASSERT(MoreContext->FilteredLineCount == FilteredLineNumber);
+
+    ReleaseMutex(MoreContext->PhysicalLineMutex);
+
+    return NewStartPoint;
+}
+
+
+/**
  Return the number of characters within a subset of a physical line which
  will form a logical line.  Conceptually this represents either the minimum
  of the length of the string or the viewport width.  In practice it can be
@@ -934,19 +1115,17 @@ MoreGetPreviousLogicalLines(
 
     while(Result && LinesRemaining > 0) {
         PMORE_PHYSICAL_LINE PreviousPhysicalLine;
-        PYORI_LIST_ENTRY ListEntry;
         DWORD LogicalLineCount;
 
         if (CurrentInputLine != NULL) {
-            ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, &CurrentInputLine->PhysicalLine->LineList);
+            PreviousPhysicalLine = MoreGetPreviousFilteredPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
         } else {
-            ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, NULL);
+            PreviousPhysicalLine = MoreGetPreviousFilteredPhysicalLine(MoreContext, NULL);
         }
-        if (ListEntry == NULL) {
+        if (PreviousPhysicalLine == NULL) {
             break;
         }
 
-        PreviousPhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
         LogicalLineCount = MoreCountLogicalLinesOnPhysicalLine(MoreContext, PreviousPhysicalLine);
 
         if (LogicalLineCount > LinesRemaining) {
@@ -1068,21 +1247,19 @@ MoreGetNextLogicalLines(
 
     while(Result && LinesRemaining > 0) {
         PMORE_PHYSICAL_LINE NextPhysicalLine;
-        PYORI_LIST_ENTRY ListEntry;
 
         if (CurrentInputLine != NULL) {
             ASSERT(CurrentInputLine->PhysicalLine != NULL);
             __analysis_assume(CurrentInputLine->PhysicalLine != NULL);
-            ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, &CurrentInputLine->PhysicalLine->LineList);
+            NextPhysicalLine = MoreGetNextFilteredPhysicalLine(MoreContext, CurrentInputLine->PhysicalLine);
         } else {
-            ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
+            NextPhysicalLine = MoreGetNextFilteredPhysicalLine(MoreContext, NULL);
         }
 
-        if (ListEntry == NULL) {
+        if (NextPhysicalLine == NULL) {
             break;
         }
 
-        NextPhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
         LogicalLineCount = MoreCountLogicalLinesOnPhysicalLine(MoreContext, NextPhysicalLine);
 
         LineIndexToCopy = 0;
@@ -1152,7 +1329,6 @@ MoreFindNextLineWithSearchMatch(
     )
 {
     PMORE_PHYSICAL_LINE SearchLine;
-    PYORI_LIST_ENTRY ListEntry;
     PYORI_STRING SearchString;
     DWORD MatchOffset;
     DWORD Count;
@@ -1171,10 +1347,8 @@ MoreFindNextLineWithSearchMatch(
 
     if (PreviousMatchLine == NULL) {
         SearchLine = NULL;
-        ListEntry = NULL;
     } else {
         SearchLine = PreviousMatchLine->PhysicalLine;
-        ListEntry = &SearchLine->LineList;
 
         if (LogicalLinesMoved != NULL) {
             LogicalLinesThisPhysicalLine = MoreCountLogicalLinesOnPhysicalLine(MoreContext, SearchLine);
@@ -1187,17 +1361,14 @@ MoreFindNextLineWithSearchMatch(
     SearchString = &MoreContext->SearchStrings[MoreContext->SearchColorIndex];
     ASSERT(SearchString->LengthInChars > 0);
 
-    SearchLine = NULL;
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
     while (TRUE) {
-        ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, ListEntry);
-        if (ListEntry == NULL) {
-            ReleaseMutex(MoreContext->PhysicalLineMutex);
-            return NULL;
+        SearchLine = MoreGetNextFilteredPhysicalLine(MoreContext, SearchLine);
+        if (SearchLine == NULL) {
+            break;
         }
 
-        SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
         if (MatchAny) {
             if (MoreFindNextSearchMatch(MoreContext, &SearchLine->LineContents, NULL, NULL)) {
                 break;
@@ -1265,7 +1436,6 @@ MoreFindPreviousLineWithSearchMatch(
     )
 {
     PMORE_PHYSICAL_LINE SearchLine;
-    PYORI_LIST_ENTRY ListEntry;
     PYORI_STRING SearchString;
     DWORD MatchOffset;
     DWORD Count;
@@ -1275,10 +1445,8 @@ MoreFindPreviousLineWithSearchMatch(
 
     if (PreviousMatchLine == NULL) {
         SearchLine = NULL;
-        ListEntry = NULL;
     } else {
         SearchLine = PreviousMatchLine->PhysicalLine;
-        ListEntry = &SearchLine->LineList;
 
         if (LogicalLinesMoved != NULL) {
             Count = PreviousMatchLine->LogicalLineIndex + 1;
@@ -1291,13 +1459,11 @@ MoreFindPreviousLineWithSearchMatch(
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
 
     while (TRUE) {
-        ListEntry = YoriLibGetPreviousListEntry(&MoreContext->PhysicalLineList, ListEntry);
-        if (ListEntry == NULL) {
-            ReleaseMutex(MoreContext->PhysicalLineMutex);
-            return NULL;
+        SearchLine = MoreGetPreviousFilteredPhysicalLine(MoreContext, SearchLine);
+        if (SearchLine == NULL) {
+            break;
         }
 
-        SearchLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
         if (MatchAny) {
             if (MoreFindNextSearchMatch(MoreContext, &SearchLine->LineContents, NULL, NULL)) {
                 break;
@@ -1325,5 +1491,6 @@ MoreFindPreviousLineWithSearchMatch(
     ReleaseMutex(MoreContext->PhysicalLineMutex);
     return SearchLine;
 }
+
 
 // vim:sw=4:ts=4:et:

@@ -169,6 +169,7 @@ MoreInitContext(
     MoreContext->TabWidth = 4;
 
     YoriLibInitializeListHead(&MoreContext->PhysicalLineList);
+    YoriLibInitializeListHead(&MoreContext->FilteredPhysicalLineList);
     MoreContext->PhysicalLineMutex = CreateMutex(NULL, FALSE, NULL);
     if (MoreContext->PhysicalLineMutex == NULL) {
         return FALSE;
@@ -240,6 +241,9 @@ MoreCleanupContext(
 {
     DWORD Index;
 
+    ASSERT(YoriLibIsListEmpty(&MoreContext->PhysicalLineList));
+    ASSERT(YoriLibIsListEmpty(&MoreContext->FilteredPhysicalLineList));
+
     if (MoreContext->DisplayViewportLines != NULL) {
         YoriLibFree(MoreContext->DisplayViewportLines);
         MoreContext->DisplayViewportLines = NULL;
@@ -300,6 +304,14 @@ MoreGracefulExit(
     for (Index = 0; Index < MoreContext->ViewportHeight; Index++) {
         YoriLibFreeStringContents(&MoreContext->DisplayViewportLines[Index].Line);
     }
+
+    ListEntry = YoriLibGetNextListEntry(&MoreContext->FilteredPhysicalLineList, NULL);
+    while (ListEntry != NULL) {
+        PhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);
+        YoriLibRemoveListItem(ListEntry);
+        ListEntry = YoriLibGetNextListEntry(&MoreContext->FilteredPhysicalLineList, NULL);
+    }
+
     ListEntry = YoriLibGetNextListEntry(&MoreContext->PhysicalLineList, NULL);
     while (ListEntry != NULL) {
         PhysicalLine = CONTAINING_RECORD(ListEntry, MORE_PHYSICAL_LINE, LineList);

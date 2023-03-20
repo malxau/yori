@@ -48,6 +48,13 @@ typedef struct _MORE_PHYSICAL_LINE {
     YORI_LIST_ENTRY LineList;
 
     /**
+     A list of physical lines matching the current search criteria.  Paired
+     with MORE_CONTEXT::FilteredPhysicalLineList and synchronized with
+     MORE_CONTEXT::PhysicalLineMutex .
+     */
+    YORI_LIST_ENTRY FilteredLineList;
+
+    /**
      Pointer to the referenced allocation that contains this physical line.
      */
     PVOID MemoryToFree;
@@ -59,9 +66,16 @@ typedef struct _MORE_PHYSICAL_LINE {
 
     /**
      The number of this physical line within the input stream.  The first
-     line is zero.
+     line is one.
      */
     DWORDLONG LineNumber;
+
+    /**
+     The number of this physical line within the set of lines which match the
+     filter criteria.  If filtering is not enabled, this is the same as
+     LineNumber, above.
+     */
+    DWORDLONG FilteredLineNumber;
 
     /**
      The contents of the physical line.
@@ -213,6 +227,11 @@ typedef struct _MORE_CONTEXT {
     YORI_LIST_ENTRY PhysicalLineList;
 
     /**
+     A linked list of physical lines matching the current search criteria.
+     */
+    YORI_LIST_ENTRY FilteredPhysicalLineList;
+
+    /**
      Synchronization around PhysicalLineList.
      */
     HANDLE PhysicalLineMutex;
@@ -348,6 +367,13 @@ typedef struct _MORE_CONTEXT {
     BOOLEAN SearchDirty;
 
     /**
+     TRUE if lines should only be displayed that match the search criteria.
+     FALSE if all line should be displayed, while highlighting search
+     criteria matches.
+     */
+    BOOLEAN FilterToSearch;
+
+    /**
      TRUE if the display implies that text at the last cell in a line auto
      wraps to the next line.  This behavior is generally undesirable on NT,
      because it updates the attributes of the new line to match the final
@@ -407,6 +433,12 @@ typedef struct _MORE_CONTEXT {
      Records the total number of lines processed.
      */
     DWORDLONG LineCount;
+
+    /**
+     Records the total number of lines matching the current filter criteria.
+     If no filter is in effect, this should be the same as LineCount.
+     */
+    DWORDLONG FilteredLineCount;
 
 } MORE_CONTEXT, *PMORE_CONTEXT;
 
@@ -473,6 +505,15 @@ VOID
 MoreSearchIndexFree(
     __in PMORE_CONTEXT MoreContext,
     __in UCHAR SearchIndex
+    );
+
+__success(return)
+BOOLEAN
+MoreFindNextSearchMatch(
+    __in PMORE_CONTEXT MoreContext,
+    __in PCYORI_STRING StringToSearch,
+    __out_opt PDWORD MatchOffset,
+    __out_opt PUCHAR MatchIndex
     );
 
 VOID
@@ -543,6 +584,12 @@ MoreFindPreviousLineWithSearchMatch(
     __in BOOLEAN MatchAny,
     __in DWORD MaxLogicalLinesMoved,
     __out_opt PDWORD LogicalLinesMoved
+    );
+
+PMORE_PHYSICAL_LINE
+MoreUpdateFilteredLines(
+    __in PMORE_CONTEXT MoreContext,
+    __in_opt PMORE_PHYSICAL_LINE PreviousStartPoint
     );
 
 // vim:sw=4:ts=4:et:

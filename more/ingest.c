@@ -137,9 +137,12 @@ MoreAddPhysicalLineToBuffer(
     NewLine = (PMORE_PHYSICAL_LINE)YoriLibAddToPointer(AllocContext->Buffer, AllocContext->BufferOffset);
 
     YoriLibReference(AllocContext->Buffer);
+    NewLine->FilteredLineList.Next = NULL;
+    NewLine->FilteredLineList.Prev = NULL;
     NewLine->MemoryToFree = AllocContext->Buffer;
     NewLine->InitialColor = AllocContext->PreviousColor;
     NewLine->LineNumber = MoreContext->LineCount + 1;
+    NewLine->FilteredLineNumber = NewLine->LineNumber;
     YoriLibReference(AllocContext->Buffer);
     NewLine->LineContents.MemoryToFree = AllocContext->Buffer;
     NewLine->LineContents.StartOfString = (LPTSTR)(NewLine + 1);
@@ -163,9 +166,8 @@ MoreAddPhysicalLineToBuffer(
             EndOfEscape = YoriLibCountStringContainingChars(&EscapeSubset, _T("0123456789;"));
 
             //
-            //  Count everything as consuming the source and needing buffer
-            //  space in the destination but consuming no display cells.  This
-            //  may include the final letter, if we found one.
+            //  Look for color changes so any later line can be marked as
+            //  starting with this color.
             //
 
             if (LineString->LengthInChars > CharIndex + 2 + EndOfEscape) {
@@ -210,6 +212,13 @@ MoreAddPhysicalLineToBuffer(
     WaitForSingleObject(MoreContext->PhysicalLineMutex, INFINITE);
     MoreContext->LineCount++;
     YoriLibAppendList(&MoreContext->PhysicalLineList, &NewLine->LineList);
+    if (!MoreContext->FilterToSearch ||
+        MoreFindNextSearchMatch(MoreContext, &NewLine->LineContents, NULL, NULL)) {
+
+        YoriLibAppendList(&MoreContext->FilteredPhysicalLineList, &NewLine->FilteredLineList);
+        MoreContext->FilteredLineCount++;
+        NewLine->FilteredLineNumber = MoreContext->FilteredLineCount;
+    }
     ReleaseMutex(MoreContext->PhysicalLineMutex);
 
     SetEvent(MoreContext->PhysicalLineAvailableEvent);
