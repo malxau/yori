@@ -158,6 +158,9 @@ YuiNotifyResolutionChange(
     RECT NewWorkArea;
     RECT OldWorkArea;
     DWORD TaskbarHeight;
+    DWORD FontSize;
+    HDC hDC;
+    HFONT hFont;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
@@ -168,6 +171,41 @@ YuiNotifyResolutionChange(
     YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(ScreenWidth, ScreenHeight);
 
     TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
+
+    FontSize = 8;
+    FontSize = FontSize + (TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3;
+
+    hDC = GetWindowDC(hWnd);
+    hFont = CreateFont(-YoriLibMulDiv(FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+                       0,
+                       0,
+                       0,
+                       FW_NORMAL,
+                       FALSE,
+                       FALSE,
+                       FALSE,
+                       DEFAULT_CHARSET,
+                       OUT_DEFAULT_PRECIS,
+                       CLIP_DEFAULT_PRECIS,
+                       DEFAULT_QUALITY,
+                       FF_DONTCARE,
+                       _T("Tahoma"));
+    ReleaseDC(hWnd, hDC);
+
+    if (hFont != NULL) {
+        if (YuiContext.hFont != NULL) {
+            DeleteObject(YuiContext.hFont);
+        }
+        YuiContext.hFont = hFont;
+
+        if (YuiContext.hWndStart != NULL) {
+            SendMessage(YuiContext.hWndStart, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
+        }
+
+        if (YuiContext.hWndClock != NULL) {
+            SendMessage(YuiContext.hWndClock, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
+        }
+    }
 
     NewWorkArea.left = 0;
     NewWorkArea.right = ScreenWidth - 1;
@@ -380,6 +418,75 @@ YuiWindowProc(
 }
 
 /**
+ Close any windows, timers, and other system resources.  In particular, note
+ this tells explorer that the app bar is no longer present, which is something
+ explorer really wants to be told because it has no process destruction
+ notification.
+ */ 
+VOID
+YuiCleanupGlobalState(VOID)
+{
+    DWORD Count;
+    YuiMenuFreeAll(&YuiContext);
+    YuiTaskbarFreeButtons(&YuiContext);
+
+    for (Count = 0; Count < sizeof(YuiContext.StartChangeNotifications)/sizeof(YuiContext.StartChangeNotifications[0]); Count++) {
+        if (YuiContext.StartChangeNotifications[Count] != NULL) {
+            FindCloseChangeNotification(YuiContext.StartChangeNotifications[Count]);
+            YuiContext.StartChangeNotifications[Count] = NULL;
+        }
+    }
+
+    if (YuiContext.ClockTimerId != 0) {
+        KillTimer(YuiContext.hWnd, YUI_CLOCK_TIMER);
+        YuiContext.ClockTimerId = 0;
+    }
+
+    if (YuiContext.SyncTimerId != 0) {
+        KillTimer(YuiContext.hWnd, YUI_WINDOW_POLL_TIMER);
+        YuiContext.SyncTimerId = 0;
+    }
+
+    if (YuiContext.hWndClock != NULL) {
+        DestroyWindow(YuiContext.hWndClock);
+        YuiContext.hWndClock = NULL;
+    }
+
+    if (YuiContext.hWndStart != NULL) {
+        DestroyWindow(YuiContext.hWndStart);
+        YuiContext.hWndStart = NULL;
+    }
+
+    if (DllShell32.pSHAppBarMessage != NULL && YuiContext.hWnd != NULL) {
+        YORI_APPBARDATA AppBar;
+
+        AppBar.cbSize = sizeof(AppBar);
+        AppBar.hWnd = YuiContext.hWnd;
+        AppBar.uCallbackMessage = WM_USER;
+        AppBar.uEdge = 3;
+        AppBar.rc.left = 0;
+        AppBar.rc.top = 0;
+        AppBar.rc.bottom = 0;
+        AppBar.rc.right = 0;
+        AppBar.lParam = TRUE;
+
+        // Remove
+        DllShell32.pSHAppBarMessage(1, &AppBar);
+    }
+
+    if (YuiContext.hWnd != NULL) {
+        DestroyWindow(YuiContext.hWnd);
+        YuiContext.hWnd = NULL;
+    }
+
+    if (YuiContext.hFont) {
+        DeleteObject(YuiContext.hFont);
+        YuiContext.hFont = NULL;
+    }
+}
+
+
+/**
  A function signature for the YuiShook.dll version of RegisterShellHookWindow,
  which can be used if RegisterShellHookWindow is not present.
  */
@@ -408,7 +515,6 @@ YuiCreateWindow(
 {
     WNDCLASS wc;
     BOOL Result;
-    HDC hDC;
     RECT ClientRect;
     DWORD ScreenHeight;
     DWORD ScreenWidth;
@@ -427,7 +533,6 @@ YuiCreateWindow(
 
     Result = RegisterClass(&wc);
     ASSERT(Result);
-
 
     ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
     ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -448,31 +553,12 @@ YuiCreateWindow(
     }
 
     YuiNotifyResolutionChange(Context->hWnd, ScreenWidth, ScreenHeight);
-
-    GetClientRect(Context->hWnd, &ClientRect);
-
-    hDC = GetWindowDC(Context->hWnd);
-    Context->hFont = CreateFont(-YoriLibMulDiv(8, GetDeviceCaps(hDC, LOGPIXELSY), 72),
-                                0,
-                                0,
-                                0,
-                                FW_NORMAL,
-                                FALSE,
-                                FALSE,
-                                FALSE,
-                                DEFAULT_CHARSET,
-                                OUT_DEFAULT_PRECIS,
-                                CLIP_DEFAULT_PRECIS,
-                                DEFAULT_QUALITY,
-                                FF_DONTCARE,
-                                _T("Tahoma"));
-    ReleaseDC(Context->hWnd, hDC);
-
     if (Context->hFont == NULL) {
-        DestroyWindow(Context->hWnd);
-        Context->hWnd = NULL;
+        YuiCleanupGlobalState();
         return FALSE;
     }
+
+    GetClientRect(Context->hWnd, &ClientRect);
 
     Context->hWndStart = CreateWindow(_T("BUTTON"),
                                       _T("Start"),
@@ -487,10 +573,7 @@ YuiCreateWindow(
                                       NULL);
 
     if (Context->hWndStart == NULL) {
-        DeleteObject(Context->hFont);
-        Context->hFont = NULL;
-        DestroyWindow(Context->hWnd);
-        Context->hWnd = NULL;
+        YuiCleanupGlobalState();
         return FALSE;
     }
 
@@ -514,12 +597,7 @@ YuiCreateWindow(
                                         NULL);
 
     if (Context->hWndClock == NULL) {
-        DestroyWindow(Context->hWndStart);
-        Context->hWndStart = NULL;
-        DeleteObject(Context->hFont);
-        Context->hFont = NULL;
-        DestroyWindow(Context->hWnd);
-        Context->hWnd = NULL;
+        YuiCleanupGlobalState();
         return FALSE;
     }
 
@@ -600,75 +678,6 @@ YuiCreateWindow(
 
     return TRUE;
 }
-
-/**
- Close any windows, timers, and other system resources.  In particular, note
- this tells explorer that the app bar is no longer present, which is something
- explorer really wants to be told because it has no process destruction
- notification.
- */ 
-VOID
-YuiCleanupGlobalState(VOID)
-{
-    DWORD Count;
-    YuiMenuFreeAll(&YuiContext);
-    YuiTaskbarFreeButtons(&YuiContext);
-
-    for (Count = 0; Count < sizeof(YuiContext.StartChangeNotifications)/sizeof(YuiContext.StartChangeNotifications[0]); Count++) {
-        if (YuiContext.StartChangeNotifications[Count] != NULL) {
-            FindCloseChangeNotification(YuiContext.StartChangeNotifications[Count]);
-            YuiContext.StartChangeNotifications[Count] = NULL;
-        }
-    }
-
-    if (YuiContext.ClockTimerId != 0) {
-        KillTimer(YuiContext.hWnd, YUI_CLOCK_TIMER);
-        YuiContext.ClockTimerId = 0;
-    }
-
-    if (YuiContext.SyncTimerId != 0) {
-        KillTimer(YuiContext.hWnd, YUI_WINDOW_POLL_TIMER);
-        YuiContext.SyncTimerId = 0;
-    }
-
-    if (YuiContext.hWndClock != NULL) {
-        DestroyWindow(YuiContext.hWndClock);
-        YuiContext.hWndClock = NULL;
-    }
-
-    if (YuiContext.hWndStart != NULL) {
-        DestroyWindow(YuiContext.hWndStart);
-        YuiContext.hWndStart = NULL;
-    }
-
-    if (DllShell32.pSHAppBarMessage != NULL && YuiContext.hWnd != NULL) {
-        YORI_APPBARDATA AppBar;
-
-        AppBar.cbSize = sizeof(AppBar);
-        AppBar.hWnd = YuiContext.hWnd;
-        AppBar.uCallbackMessage = WM_USER;
-        AppBar.uEdge = 3;
-        AppBar.rc.left = 0;
-        AppBar.rc.top = 0;
-        AppBar.rc.bottom = 0;
-        AppBar.rc.right = 0;
-        AppBar.lParam = TRUE;
-
-        // Remove
-        DllShell32.pSHAppBarMessage(1, &AppBar);
-    }
-
-    if (YuiContext.hWnd != NULL) {
-        DestroyWindow(YuiContext.hWnd);
-        YuiContext.hWnd = NULL;
-    }
-
-    if (YuiContext.hFont) {
-        DeleteObject(YuiContext.hFont);
-        YuiContext.hFont = NULL;
-    }
-}
-
 
 
 /**

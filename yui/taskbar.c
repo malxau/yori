@@ -291,6 +291,7 @@ YuiTaskbarNotifyResolutionChange(
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
 
         if (ThisButton->hWndButton != NULL) {
+            SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
             MoveWindow(ThisButton->hWndButton,
                        YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1,
                        1,
