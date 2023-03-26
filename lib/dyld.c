@@ -546,6 +546,7 @@ YoriLibLoadUser32Functions(VOID)
     DllUser32.pSetWindowPos = (PSET_WINDOW_POS)GetProcAddress(DllUser32.hDll, "SetWindowPos");
     DllUser32.pSetWindowTextW = (PSET_WINDOW_TEXTW)GetProcAddress(DllUser32.hDll, "SetWindowTextW");
     DllUser32.pShowWindow = (PSHOW_WINDOW)GetProcAddress(DllUser32.hDll, "ShowWindow");
+    DllUser32.pShowWindowAsync = (PSHOW_WINDOW_ASYNC)GetProcAddress(DllUser32.hDll, "ShowWindowAsync");
     DllUser32.pTileWindows = (PTILE_WINDOWS)GetProcAddress(DllUser32.hDll, "TileWindows");
 
     return TRUE;

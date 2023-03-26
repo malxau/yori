@@ -4192,7 +4192,6 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #endif
 
 
-
 #ifndef MS_DEF_PROV
 /**
  A definition for the base crypto provider if it is not defined by the current
@@ -9242,6 +9241,18 @@ SHOW_WINDOW(HWND, INT);
 typedef SHOW_WINDOW *PSHOW_WINDOW;
 
 /**
+ A prototype for the ShowWindowAsync function.
+ */
+typedef
+BOOL WINAPI
+SHOW_WINDOW_ASYNC(HWND, INT);
+
+/**
+ A prototype for a pointer to the ShowWindowAsync function.
+ */
+typedef SHOW_WINDOW_ASYNC *PSHOW_WINDOW_ASYNC;
+
+/**
  A prototype for the TileWindows function.
  */
 typedef
@@ -9437,6 +9448,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to ShowWindow.
      */
     PSHOW_WINDOW pShowWindow;
+
+    /**
+     If it's available on the current system, a pointer to ShowWindowAsync.
+     */
+    PSHOW_WINDOW_ASYNC pShowWindowAsync;
 
     /**
      If it's available on the current system, a pointer to TileWindows.
