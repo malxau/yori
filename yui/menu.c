@@ -1562,9 +1562,9 @@ YuiMenuDisplayAndExecute(
 
     YuiMenuReloadIfChanged(YuiContext);
 
-    GetWindowRect(hWnd, &WindowRect);
+    DllUser32.pGetWindowRect(hWnd, &WindowRect);
 
-    SetForegroundWindow(hWnd);
+    DllUser32.pSetForegroundWindow(hWnd);
 
     MenuId = TrackPopupMenu(YuiContext->StartMenu,
                             TPM_NONOTIFY | TPM_RETURNCMD | TPM_BOTTOMALIGN,

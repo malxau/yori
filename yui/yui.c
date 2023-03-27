@@ -239,12 +239,12 @@ YuiNotifyResolutionChange(
         NewWorkArea.top = 0;
         NewWorkArea.bottom = AppBar.rc.top;
 
-        MoveWindow(hWnd,
-                   AppBar.rc.left,
-                   AppBar.rc.top,
-                   AppBar.rc.right - AppBar.rc.left,
-                   AppBar.rc.bottom - AppBar.rc.top,
-                   TRUE);
+        DllUser32.pMoveWindow(hWnd,
+                              AppBar.rc.left,
+                              AppBar.rc.top,
+                              AppBar.rc.right - AppBar.rc.left,
+                              AppBar.rc.bottom - AppBar.rc.top,
+                              TRUE);
 
         // Set position
         DllShell32.pSHAppBarMessage(3, &AppBar);
@@ -253,12 +253,12 @@ YuiNotifyResolutionChange(
         DllShell32.pSHAppBarMessage(6, &AppBar);
 
     } else {
-        MoveWindow(hWnd,
-                   0,
-                   ScreenHeight - TaskbarHeight,
-                   ScreenWidth,
-                   TaskbarHeight,
-                   TRUE);
+        DllUser32.pMoveWindow(hWnd,
+                              0,
+                              ScreenHeight - TaskbarHeight,
+                              ScreenWidth,
+                              TaskbarHeight,
+                              TRUE);
     }
 
 
@@ -275,15 +275,15 @@ YuiNotifyResolutionChange(
         }
     }
 
-    GetClientRect(hWnd, &ClientRect);
+    DllUser32.pGetClientRect(hWnd, &ClientRect);
 
     if (YuiContext.hWndClock != NULL) {
-        MoveWindow(YuiContext.hWndClock,
-                   ClientRect.right - YUI_CLOCK_WIDTH - 1,
-                   1,
-                   YUI_CLOCK_WIDTH,
-                   ClientRect.bottom - 2,
-                   TRUE);
+        DllUser32.pMoveWindow(YuiContext.hWndClock,
+                              ClientRect.right - YUI_CLOCK_WIDTH - 1,
+                              1,
+                              YUI_CLOCK_WIDTH,
+                              ClientRect.bottom - 2,
+                              TRUE);
     }
 
     YuiTaskbarNotifyResolutionChange(&YuiContext);
@@ -610,7 +610,7 @@ YuiCreateWindow(
         return FALSE;
     }
 
-    GetClientRect(Context->hWnd, &ClientRect);
+    DllUser32.pGetClientRect(Context->hWnd, &ClientRect);
 
     Context->hWndStart = CreateWindow(_T("BUTTON"),
                                       _T("Start"),
@@ -698,7 +698,7 @@ YuiCreateWindow(
         Context->SyncTimerId = SetTimer(Context->hWnd, YUI_WINDOW_POLL_TIMER, Context->TaskbarRefreshFrequency, NULL);
     }
 
-    ShowWindow(Context->hWnd, SW_SHOW);
+    DllUser32.pShowWindow(Context->hWnd, SW_SHOW);
 
     return TRUE;
 }
@@ -776,7 +776,13 @@ ymain(
     }
 
     if (DllUser32.pDrawFrameControl == NULL ||
-        DllUser32.pDrawIconEx == NULL) {
+        DllUser32.pDrawIconEx == NULL ||
+        DllUser32.pGetClientRect == NULL ||
+        DllUser32.pGetWindowRect == NULL ||
+        DllUser32.pMoveWindow == NULL ||
+        DllUser32.pSetForegroundWindow == NULL ||
+        DllUser32.pSetWindowTextW == NULL ||
+        DllUser32.pShowWindow == NULL) {
 
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yui: OS support not present\n"));
     }

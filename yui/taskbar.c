@@ -281,7 +281,7 @@ YuiTaskbarCalculateButtonWidth(
     DWORD TotalWidthForButtons;
     DWORD WidthPerButton;
 
-    GetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
     TotalWidthForButtons = TaskbarWindowClient.right - YuiContext->LeftmostTaskbarOffset - YuiContext->RightmostTaskbarOffset - 1;
 
     if (YuiContext->TaskbarButtonCount == 0) {
@@ -323,7 +323,7 @@ YuiTaskbarPopulateWindows(
 
     WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
 
-    GetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
 
     ListEntry = NULL;
     Index = 0;
@@ -399,7 +399,7 @@ YuiTaskbarNotifyResolutionChange(
 
     TaskbarHwnd = YuiContext->hWnd;
     WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
-    GetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
 
     ListEntry = NULL;
     Index = 0;
@@ -411,12 +411,12 @@ YuiTaskbarNotifyResolutionChange(
             SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
             ThisButton->LeftOffset = (WORD)(YuiContext->LeftmostTaskbarOffset + Index * WidthPerButton + 1);
             ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
-            MoveWindow(ThisButton->hWndButton,
-                       ThisButton->LeftOffset,
-                       1,
-                       WidthPerButton - 2,
-                       TaskbarWindowClient.bottom - 2,
-                       TRUE);
+            DllUser32.pMoveWindow(ThisButton->hWndButton,
+                                  ThisButton->LeftOffset,
+                                  1,
+                                  WidthPerButton - 2,
+                                  TaskbarWindowClient.bottom - 2,
+                                  TRUE);
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
         Index++;
@@ -453,7 +453,7 @@ YuiTaskbarNotifyNewWindow(
 
     TaskbarHwnd = YuiContext->hWnd;
     WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
-    GetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
 
     ListEntry = NULL;
     Index = 0;
@@ -464,12 +464,12 @@ YuiTaskbarNotifyNewWindow(
         ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
 
         if (ThisButton->hWndButton != NULL) {
-            MoveWindow(ThisButton->hWndButton,
-                       ThisButton->LeftOffset,
-                       1,
-                       WidthPerButton - 2,
-                       TaskbarWindowClient.bottom - 2,
-                       TRUE);
+            DllUser32.pMoveWindow(ThisButton->hWndButton,
+                                  ThisButton->LeftOffset,
+                                  1,
+                                  WidthPerButton - 2,
+                                  TaskbarWindowClient.bottom - 2,
+                                  TRUE);
         } else {
             ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
             YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
@@ -534,7 +534,7 @@ YuiTaskbarNotifyDestroyWindow(
 
     TaskbarHwnd = YuiContext->hWnd;
     WidthPerButton = YuiTaskbarCalculateButtonWidth(YuiContext, TaskbarHwnd);
-    GetClientRect(TaskbarHwnd, &TaskbarWindowClient);
+    DllUser32.pGetClientRect(TaskbarHwnd, &TaskbarWindowClient);
 
     ListEntry = NULL;
     Index = 0;
@@ -545,12 +545,12 @@ YuiTaskbarNotifyDestroyWindow(
         ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2);
 
         if (ThisButton->hWndButton != NULL) {
-            MoveWindow(ThisButton->hWndButton,
-                       ThisButton->LeftOffset,
-                       1,
-                       WidthPerButton - 2,
-                       TaskbarWindowClient.bottom - 2,
-                       TRUE);
+            DllUser32.pMoveWindow(ThisButton->hWndButton,
+                                  ThisButton->LeftOffset,
+                                  1,
+                                  WidthPerButton - 2,
+                                  TaskbarWindowClient.bottom - 2,
+                                  TRUE);
         }
 
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -632,7 +632,6 @@ YuiTaskbarNotifyTitleChange(
                 NewTitle.LengthInChars = GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
                 YoriLibFreeStringContents(&ThisButton->ButtonText);
                 memcpy(&ThisButton->ButtonText, &NewTitle, sizeof(YORI_STRING));
-                // SetWindowText(ThisButton->hWndButton, ThisButton->ButtonText.StartOfString);
             }
             break;
         }
@@ -818,9 +817,13 @@ YuiTaskbarSwitchToButton(
     )
 {
     if (IsIconic(ThisButton->hWndToActivate)) {
-        ShowWindow(ThisButton->hWndToActivate, SW_RESTORE);
+        if (DllUser32.pShowWindowAsync != NULL) {
+            DllUser32.pShowWindowAsync(ThisButton->hWndToActivate, SW_RESTORE);
+        } else {
+            DllUser32.pShowWindow(ThisButton->hWndToActivate, SW_RESTORE);
+        }
     }
-    SetForegroundWindow(ThisButton->hWndToActivate);
+    DllUser32.pSetForegroundWindow(ThisButton->hWndToActivate);
     SetFocus(ThisButton->hWndToActivate);
 
     //
@@ -956,7 +959,7 @@ YuiTaskbarUpdateClock(
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
 #pragma warning(suppress: 6054)
 #endif
-        SetWindowText(YuiContext->hWndClock, DisplayTime.StartOfString);
+        DllUser32.pSetWindowTextW(YuiContext->hWndClock, DisplayTime.StartOfString);
     }
     YoriLibFreeStringContents(&DisplayTime);
 }
