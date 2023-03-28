@@ -22,6 +22,7 @@ OBJS=\
 	 dyld_adv.obj \
 	 dyld_cab.obj \
 	 dyld_net.obj \
+	 dyld_usr.obj \
 	 env.obj      \
 	 ep_yori.obj  \
 	 filecomp.obj \
