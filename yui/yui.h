@@ -201,6 +201,11 @@ typedef struct _YUI_ENUM_CONTEXT {
     YORI_MINIMIZEDMETRICS SavedMinimizedMetrics;
 
     /**
+     Handle to an icon to display on the start button.
+     */
+    HICON StartIcon;
+
+    /**
      The window handle for the taskbar.
      */
     HWND hWnd;
@@ -338,7 +343,7 @@ typedef struct _YUI_ENUM_CONTEXT {
 /**
  The number of pixels to include in the start button.
  */
-#define YUI_START_BUTTON_WIDTH (55)
+#define YUI_START_BUTTON_WIDTH (70)
 
 /**
  The number of pixels to include in the clock.
@@ -388,7 +393,8 @@ YuiDrawButton(
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in_opt HICON Icon,
-    __in PYORI_STRING Text
+    __in PYORI_STRING Text,
+    __in BOOLEAN CenterText
     );
 
 BOOL

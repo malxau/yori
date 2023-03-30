@@ -40,13 +40,17 @@
  @param Icon Optionally specifies an icon handle to display in the button.
 
  @param Text Pointer to the button text.
+
+ @param CenterText TRUE if the text should be centered within the button.
+        FALSE if it should be left aligned.
  */
 VOID
 YuiDrawButton(
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
     __in_opt HICON Icon,
-    __in PYORI_STRING Text
+    __in PYORI_STRING Text,
+    __in BOOLEAN CenterText
     )
 {
     DWORD Flags;
@@ -124,7 +128,11 @@ YuiDrawButton(
         TextRect.bottom - TextRect.top > 6) {
 
         TextRect.left = TextRect.left + IconWidth;
-        DrawText(DrawItemStruct->hDC, Text->StartOfString, Text->LengthInChars, &TextRect, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+        Flags = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
+        if (CenterText) {
+            Flags = Flags | DT_CENTER;
+        }
+        DrawText(DrawItemStruct->hDC, Text->StartOfString, Text->LengthInChars, &TextRect, Flags);
     }
 }
 

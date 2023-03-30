@@ -1,7 +1,7 @@
 /**
  * @file yui/resource.h
  *
- * Yori shell bootstrap installer resource definitions
+ * Yori shell user interface resource definitions
  *
  * Copyright (c) 2019 Malcolm J. Smith
  *
@@ -24,6 +24,10 @@
  * THE SOFTWARE.
  */
 
+/**
+ The identifier for start button icon.
+ */
+#define STARTICON 2
 
 /**
  The identifier for the dialog box.

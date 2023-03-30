@@ -3,6 +3,7 @@
 #include "resource.h"
 
 1                       ICON    DISCARDABLE     "..\\lib\\yori.ico"
+STARTICON               ICON    DISCARDABLE     "start.ico"
 
 #define YORI_CUSTOM_MANIFEST 1
 #include "../lib/yoriver.inc"

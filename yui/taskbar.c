@@ -912,7 +912,7 @@ YuiTaskbarDrawButton(
     }
 
     Icon = (HICON)GetClassLongPtr(ThisButton->hWndToActivate, GCLP_HICONSM);
-    YuiDrawButton(DrawItemStruct, ThisButton->WindowActive, Icon, &ThisButton->ButtonText);
+    YuiDrawButton(DrawItemStruct, ThisButton->WindowActive, Icon, &ThisButton->ButtonText, FALSE);
 }
 
 /**

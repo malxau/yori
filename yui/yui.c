@@ -27,6 +27,7 @@
 #include <yoripch.h>
 #include <yorilib.h>
 #include "yui.h"
+#include "resource.h"
 
 /**
  Help text to display to the user.
@@ -132,6 +133,22 @@ YuiGetTaskbarMaximumButtonWidth(
     }
 
     return (WORD)TaskbarButtonWidth;
+}
+
+/**
+ Draw the start button, including icon and text.
+
+ @param DrawItemStruct Pointer to a structure describing the button to
+        redraw, including its bounds and device context.
+ */
+VOID
+YuiStartDrawButton(
+    __in PDRAWITEMSTRUCT DrawItemStruct
+    )
+{
+    YORI_STRING Text;
+    YoriLibConstantString(&Text, _T("Start"));
+    YuiDrawButton(DrawItemStruct, YuiContext.MenuActive, YuiContext.StartIcon, &Text, TRUE);
 }
 
 /**
@@ -307,8 +324,10 @@ YuiDisplayMenu(VOID)
     YuiContext.MenuActive = TRUE;
     SendMessage(YuiContext.hWndStart, BM_SETSTATE, TRUE, 0);
     YuiMenuDisplayAndExecute(&YuiContext, YuiContext.hWnd);
-    SendMessage(YuiContext.hWndStart, BM_SETSTATE, FALSE, 0);
-    YuiContext.MenuActive = FALSE;
+    if (YuiContext.MenuActive) {
+        YuiContext.MenuActive = FALSE;
+        SendMessage(YuiContext.hWndStart, BM_SETSTATE, FALSE, 0);
+    }
     return TRUE;
 }
 
@@ -404,8 +423,12 @@ YuiWindowProc(
                 DrawItemStruct = (PDRAWITEMSTRUCT)lParam;
 
                 CtrlId = LOWORD(wParam);
-                ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
-                YuiTaskbarDrawButton(&YuiContext, CtrlId, DrawItemStruct);
+                if (CtrlId == YUI_START_BUTTON) {
+                    YuiStartDrawButton(DrawItemStruct);
+                } else {
+                    ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
+                    YuiTaskbarDrawButton(&YuiContext, CtrlId, DrawItemStruct);
+                }
             }
             break;
         default:
@@ -499,6 +522,11 @@ YuiCleanupGlobalState(VOID)
         YuiContext.hFont = NULL;
     }
 
+    if (YuiContext.StartIcon) {
+        DestroyIcon(YuiContext.StartIcon);
+        YuiContext.StartIcon = NULL;
+    }
+
     if (YuiContext.SavedMinimizedMetrics.cbSize != 0) {
         SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(YORI_MINIMIZEDMETRICS), &YuiContext.SavedMinimizedMetrics, 0);
     }
@@ -556,6 +584,7 @@ YuiCreateWindow(
     ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
 
     TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
+    Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
 
     Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
                                    _T("YuiWnd"),
@@ -614,7 +643,7 @@ YuiCreateWindow(
 
     Context->hWndStart = CreateWindow(_T("BUTTON"),
                                       _T("Start"),
-                                      BS_PUSHBUTTON | BS_CENTER | WS_VISIBLE | WS_CHILD,
+                                      BS_PUSHBUTTON | WS_VISIBLE | WS_CHILD | BS_OWNERDRAW,
                                       1,
                                       1,
                                       YUI_START_BUTTON_WIDTH,

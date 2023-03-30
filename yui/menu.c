@@ -1576,6 +1576,17 @@ YuiMenuDisplayAndExecute(
 
     PostMessage(hWnd, WM_NULL, 0, 0);
 
+    //
+    //  If the start button is pressed, un-press it before starting new
+    //  work.  The window manager will recursively un-press it if focus moves,
+    //  and we need to make sure it's redrawn.
+    //
+
+    if (YuiContext->MenuActive) {
+        YuiContext->MenuActive = FALSE;
+        SendMessage(YuiContext->hWndStart, BM_SETSTATE, FALSE, 0);
+    }
+
     if (MenuId > 0) {
         YuiMenuExecuteById(YuiContext, MenuId);
     } else {
