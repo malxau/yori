@@ -339,6 +339,7 @@ YuiTaskbarPopulateWindows(
         YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
         if (ThisButton->hWndToActivate == ActiveWindow) {
             ThisButton->WindowActive = TRUE;
+            SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
             SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -475,6 +476,7 @@ YuiTaskbarNotifyNewWindow(
             YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
             if (ThisButton->hWndToActivate == GetForegroundWindow()) {
                 ThisButton->WindowActive = TRUE;
+                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
                 SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
             }
         }
@@ -586,11 +588,13 @@ YuiTaskbarNotifyActivateWindow(
         if (ThisButton->hWndToActivate == hWnd) {
             if (!ThisButton->WindowActive) {
                 ThisButton->WindowActive = TRUE;
+                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
                 SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
             }
         } else {
             if (ThisButton->WindowActive) {
                 ThisButton->WindowActive = FALSE;
+                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(FALSE, 0));
                 SendMessage(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
             }
         }

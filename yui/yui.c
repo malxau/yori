@@ -178,6 +178,7 @@ YuiNotifyResolutionChange(
     DWORD FontSize;
     HDC hDC;
     HFONT hFont;
+    HFONT hBoldFont;
 
     if (YuiContext.DisplayResolutionChangeInProgress) {
         return TRUE;
@@ -207,6 +208,21 @@ YuiNotifyResolutionChange(
                        DEFAULT_QUALITY,
                        FF_DONTCARE,
                        _T("Tahoma"));
+
+    hBoldFont = CreateFont(-YoriLibMulDiv(FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
+                           0,
+                           0,
+                           0,
+                           FW_BOLD,
+                           FALSE,
+                           FALSE,
+                           FALSE,
+                           DEFAULT_CHARSET,
+                           OUT_DEFAULT_PRECIS,
+                           CLIP_DEFAULT_PRECIS,
+                           DEFAULT_QUALITY,
+                           FF_DONTCARE,
+                           _T("Tahoma"));
     ReleaseDC(hWnd, hDC);
 
     if (hFont != NULL) {
@@ -215,12 +231,19 @@ YuiNotifyResolutionChange(
         }
         YuiContext.hFont = hFont;
 
-        if (YuiContext.hWndStart != NULL) {
-            SendMessage(YuiContext.hWndStart, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
-        }
-
         if (YuiContext.hWndClock != NULL) {
             SendMessage(YuiContext.hWndClock, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
+        }
+    }
+
+    if (hBoldFont != NULL) {
+        if (YuiContext.hBoldFont != NULL) {
+            DeleteObject(YuiContext.hBoldFont);
+        }
+        YuiContext.hBoldFont = hBoldFont;
+
+        if (YuiContext.hWndStart != NULL) {
+            SendMessage(YuiContext.hWndStart, WM_SETFONT, (WPARAM)YuiContext.hBoldFont, MAKELPARAM(TRUE, 0));
         }
     }
 
@@ -522,6 +545,11 @@ YuiCleanupGlobalState(VOID)
         YuiContext.hFont = NULL;
     }
 
+    if (YuiContext.hBoldFont) {
+        DeleteObject(YuiContext.hBoldFont);
+        YuiContext.hBoldFont = NULL;
+    }
+
     if (YuiContext.StartIcon) {
         DestroyIcon(YuiContext.StartIcon);
         YuiContext.StartIcon = NULL;
@@ -634,7 +662,7 @@ YuiCreateWindow(
     }
 
     YuiNotifyResolutionChange(Context->hWnd, ScreenWidth, ScreenHeight);
-    if (Context->hFont == NULL) {
+    if (Context->hFont == NULL || Context->hBoldFont == NULL) {
         YuiCleanupGlobalState();
         return FALSE;
     }
@@ -661,7 +689,7 @@ YuiCreateWindow(
     Context->StartLeftOffset = 1;
     Context->StartRightOffset = (WORD)(Context->StartLeftOffset + YUI_START_BUTTON_WIDTH);
 
-    SendMessage(Context->hWndStart, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
+    SendMessage(Context->hWndStart, WM_SETFONT, (WPARAM)Context->hBoldFont, MAKELPARAM(TRUE, 0));
 
     YoriLibInitEmptyString(&Context->ClockDisplayedValue);
     Context->ClockDisplayedValue.StartOfString = Context->ClockDisplayedValueBuffer;

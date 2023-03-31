@@ -232,6 +232,11 @@ typedef struct _YUI_ENUM_CONTEXT {
     HFONT hFont;
 
     /**
+     A handle to a bold font used to display buttons on the task bar.
+     */
+    HFONT hBoldFont;
+
+    /**
      The top level menu handle for the start menu.
      */
     HMENU StartMenu;
@@ -343,7 +348,7 @@ typedef struct _YUI_ENUM_CONTEXT {
 /**
  The number of pixels to include in the start button.
  */
-#define YUI_START_BUTTON_WIDTH (70)
+#define YUI_START_BUTTON_WIDTH (75)
 
 /**
  The number of pixels to include in the clock.
