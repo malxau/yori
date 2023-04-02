@@ -435,7 +435,7 @@ YuiPopulateMenuOnDirectory(
     __in PVOID Context
     )
 {
-    PYUI_ENUM_CONTEXT EnumContext;
+    PYUI_CONTEXT EnumContext;
     PYORI_LIST_ENTRY ListEntry;
     PYORI_LIST_ENTRY NextEntry;
     PYUI_MENU_DIRECTORY ExistingDir;
@@ -443,7 +443,7 @@ YuiPopulateMenuOnDirectory(
 
     ListEntry = NULL;
     NextEntry = NULL;
-    EnumContext = (PYUI_ENUM_CONTEXT)Context;
+    EnumContext = (PYUI_CONTEXT)Context;
 
     //
     //  Normal directories create their menus here.  The programs directly
@@ -715,7 +715,7 @@ YuiFileFoundCallback(
     __in PVOID Context
     )
 {
-    PYUI_ENUM_CONTEXT YuiContext = (PYUI_ENUM_CONTEXT)Context;
+    PYUI_CONTEXT YuiContext = (PYUI_CONTEXT)Context;
     PYUI_MENU_DIRECTORY Parent;
     YORI_STRING FriendlyName;
     PYUI_MENU_FILE NewFile;
@@ -910,7 +910,7 @@ YuiFileEnumerateErrorCallback(
  */
 BOOL
 YuiMenuPopulate(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     YORI_STRING EnumDir;
@@ -1134,7 +1134,7 @@ YuiMenuPopulate(
  */
 VOID
 YuiMenuFreeAll(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     YuiForEachFileOrDirectoryDepthFirst(&YuiContext->ProgramsDirectory,
@@ -1174,7 +1174,7 @@ YuiMenuFreeAll(
  */
 BOOL
 YuiMenuReloadIfChanged(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     DWORD WaitStatus;
@@ -1383,7 +1383,7 @@ YuiMenuRunBrowse(
  Context that is preserved from when the run dialog is initialized so long
  as it remains active.  Currently this just points to the global context.
  */
-PYUI_ENUM_CONTEXT RunDlgContext;
+PYUI_CONTEXT RunDlgContext;
 
 /**
  A callback function which processes notifications about actions that the user
@@ -1411,7 +1411,7 @@ RunDialogProc(
 
     switch (uMsg) {
         case WM_INITDIALOG:
-            RunDlgContext = (PYUI_ENUM_CONTEXT)lParam;
+            RunDlgContext = (PYUI_CONTEXT)lParam;
             return TRUE;
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
@@ -1454,7 +1454,7 @@ RunDialogProc(
  */
 BOOL
 YuiMenuRun(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     DialogBoxParam(NULL, MAKEINTRESOURCE(RUNDIALOG), YuiContext->hWnd, (DLGPROC)RunDialogProc, (DWORD_PTR)YuiContext);
@@ -1472,7 +1472,7 @@ YuiMenuRun(
  */
 BOOL
 YuiMenuExecuteById(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in DWORD MenuId
     )
 {
@@ -1553,7 +1553,7 @@ YuiMenuExecuteById(
  */
 BOOL
 YuiMenuDisplayAndExecute(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     )
 {

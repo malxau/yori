@@ -131,7 +131,7 @@ YuiTaskbarIncludeWindow(
  */
 WORD
 YuiTaskbarGetNewCtrlId(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     YuiContext->NextTaskbarId++;
@@ -150,7 +150,7 @@ YuiTaskbarGetNewCtrlId(
  */
 BOOL
 YuiTaskbarAllocateAndAddButton(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     )
 {
@@ -198,7 +198,7 @@ YuiTaskbarAllocateAndAddButton(
  */
 BOOL
 YuiTaskbarCreateButtonControl(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in PYUI_TASKBAR_BUTTON ThisButton,
     __in HWND TaskbarHwnd,
     __in WORD Height
@@ -246,9 +246,9 @@ YuiTaskbarWindowCallback(
     __in LPARAM lParam
     )
 {
-    PYUI_ENUM_CONTEXT YuiContext;
+    PYUI_CONTEXT YuiContext;
 
-    YuiContext = (PYUI_ENUM_CONTEXT)lParam;
+    YuiContext = (PYUI_CONTEXT)lParam;
 
     if (!YuiTaskbarIncludeWindow(hWnd)) {
         return TRUE;
@@ -273,7 +273,7 @@ YuiTaskbarWindowCallback(
  */
 DWORD
 YuiTaskbarCalculateButtonWidth(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND TaskbarHwnd
     )
 {
@@ -308,7 +308,7 @@ YuiTaskbarCalculateButtonWidth(
  */
 BOOL
 YuiTaskbarPopulateWindows(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND TaskbarHwnd
     )
 {
@@ -358,7 +358,7 @@ YuiTaskbarPopulateWindows(
  */
 PYUI_TASKBAR_BUTTON
 YuiTaskbarFindButtonFromCtrlId(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in DWORD CtrlId
     )
 {
@@ -388,7 +388,7 @@ YuiTaskbarFindButtonFromCtrlId(
  */
 VOID
 YuiTaskbarNotifyResolutionChange(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
@@ -433,7 +433,7 @@ YuiTaskbarNotifyResolutionChange(
  */
 VOID
 YuiTaskbarNotifyNewWindow(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     )
 {
@@ -495,7 +495,7 @@ YuiTaskbarNotifyNewWindow(
  */
 VOID
 YuiTaskbarNotifyDestroyWindow(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     )
 {
@@ -569,7 +569,7 @@ YuiTaskbarNotifyDestroyWindow(
  */
 VOID
 YuiTaskbarNotifyActivateWindow(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     )
 {
@@ -612,7 +612,7 @@ YuiTaskbarNotifyActivateWindow(
  */
 VOID
 YuiTaskbarNotifyTitleChange(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     )
 {
@@ -670,11 +670,11 @@ YuiTaskbarSyncWindowCallback(
     __in LPARAM lParam
     )
 {
-    PYUI_ENUM_CONTEXT YuiContext;
+    PYUI_CONTEXT YuiContext;
     PYUI_TASKBAR_BUTTON ThisButton;
     PYORI_LIST_ENTRY ListEntry;
 
-    YuiContext = (PYUI_ENUM_CONTEXT)lParam;
+    YuiContext = (PYUI_CONTEXT)lParam;
 
     if (!YuiTaskbarIncludeWindow(hWnd)) {
         return TRUE;
@@ -724,7 +724,7 @@ YuiTaskbarSyncWindowCallback(
  */
 VOID
 YuiTaskbarSyncWithCurrent(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
@@ -784,7 +784,7 @@ YuiTaskbarSyncWithCurrent(
  */
 VOID
 YuiTaskbarFreeButtons(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     PYORI_LIST_ENTRY ListEntry;
@@ -816,7 +816,7 @@ YuiTaskbarFreeButtons(
  */
 VOID
 YuiTaskbarSwitchToButton(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in PYUI_TASKBAR_BUTTON ThisButton
     )
 {
@@ -852,7 +852,7 @@ YuiTaskbarSwitchToButton(
  */
 VOID
 YuiTaskbarSwitchToTask(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in DWORD CtrlId
     )
 {
@@ -872,7 +872,7 @@ YuiTaskbarSwitchToTask(
  */
 VOID
 YuiTaskbarSwitchToActiveTask(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     PYORI_LIST_ENTRY ListEntry;
@@ -902,7 +902,7 @@ YuiTaskbarSwitchToActiveTask(
  */
 VOID
 YuiTaskbarDrawButton(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in DWORD CtrlId,
     __in PDRAWITEMSTRUCT DrawItemStruct
     )
@@ -926,7 +926,7 @@ YuiTaskbarDrawButton(
  */
 VOID
 YuiTaskbarUpdateClock(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     )
 {
     SYSTEMTIME CurrentLocalTime;
@@ -980,7 +980,7 @@ YuiTaskbarUpdateClock(
  */
 WORD
 YuiTaskbarFindByOffset(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in SHORT XPos
     )
 {

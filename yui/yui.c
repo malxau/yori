@@ -56,7 +56,7 @@ YuiHelp(VOID)
 /**
  The global application context.
  */
-YUI_ENUM_CONTEXT YuiContext;
+YUI_CONTEXT YuiContext;
 
 /**
  The base height of the taskbar, in pixels.
@@ -570,7 +570,7 @@ YuiCleanupGlobalState(VOID)
  */
 BOOL
 YuiCreateWindow(
-    __in PYUI_ENUM_CONTEXT Context
+    __in PYUI_CONTEXT Context
     )
 {
     WNDCLASS wc;

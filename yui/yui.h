@@ -105,7 +105,7 @@ typedef struct _YUI_TASKBAR_BUTTON {
 
     /**
      The entry for this taskbar button within the list of taskbar buttons.
-     Paired with @ref YUI_ENUM_CONTEXT::TaskbarButtons .
+     Paired with @ref YUI_CONTEXT::TaskbarButtons .
      */
     YORI_LIST_ENTRY ListEntry;
 
@@ -159,7 +159,7 @@ typedef struct _YUI_TASKBAR_BUTTON {
 /**
  Context passed to the callback which is invoked for each file found.
  */
-typedef struct _YUI_ENUM_CONTEXT {
+typedef struct _YUI_CONTEXT {
 
     /**
      The directory object corresponding to the top level start menu directory.
@@ -343,7 +343,7 @@ typedef struct _YUI_ENUM_CONTEXT {
      */
     BOOLEAN MenuActive;
 
-} YUI_ENUM_CONTEXT, *PYUI_ENUM_CONTEXT;
+} YUI_CONTEXT, *PYUI_CONTEXT;
 
 /**
  The number of pixels to include in the start button.
@@ -379,18 +379,18 @@ typedef struct _YUI_ENUM_CONTEXT {
 
 BOOL
 YuiMenuPopulate(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     );
 
 BOOL
 YuiMenuDisplayAndExecute(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     );
 
 VOID
 YuiMenuFreeAll(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     );
 
 VOID
@@ -404,76 +404,76 @@ YuiDrawButton(
 
 BOOL
 YuiTaskbarPopulateWindows(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND TaskbarHwnd
     );
 
 VOID
 YuiTaskbarSwitchToTask(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in DWORD CtrlId
     );
 
 VOID
 YuiTaskbarSwitchToActiveTask(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     );
 
 VOID
 YuiTaskbarNotifyResolutionChange(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     );
 
 VOID
 YuiTaskbarNotifyNewWindow(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     );
 
 VOID
 YuiTaskbarNotifyDestroyWindow(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     );
 
 VOID
 YuiTaskbarNotifyActivateWindow(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     );
 
 VOID
 YuiTaskbarNotifyTitleChange(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     );
 
 WORD
 YuiTaskbarFindByOffset(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in SHORT XPos
     );
 
 VOID
 YuiTaskbarDrawButton(
-    __in PYUI_ENUM_CONTEXT YuiContext,
+    __in PYUI_CONTEXT YuiContext,
     __in DWORD CtrlId,
     __in PDRAWITEMSTRUCT DrawItemStruct
     );
 
 VOID
 YuiTaskbarFreeButtons(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     );
 
 VOID
 YuiTaskbarSyncWithCurrent(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     );
 
 VOID
 YuiTaskbarUpdateClock(
-    __in PYUI_ENUM_CONTEXT YuiContext
+    __in PYUI_CONTEXT YuiContext
     );
 
 // vim:sw=4:ts=4:et:
