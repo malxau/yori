@@ -5605,7 +5605,7 @@ YoriWinMultilineEditEventHandler(
                 MultilineEdit->NumericKeyValue = 0;
                 MultilineEdit->NumericKeyType = YoriLibNumericKeyAscii;
 
-                YoriWinMultilineEditAddChar(MultilineEdit, Event->KeyDown.Char);
+                YoriWinMultilineEditAddChar(MultilineEdit, Char);
                 YoriWinMultilineEditEnsureCursorVisible(MultilineEdit);
                 YoriWinMultilineEditPaint(MultilineEdit);
             }
