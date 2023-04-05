@@ -148,7 +148,7 @@ YuiStartDrawButton(
 {
     YORI_STRING Text;
     YoriLibConstantString(&Text, _T("Start"));
-    YuiDrawButton(DrawItemStruct, YuiContext.MenuActive, YuiContext.StartIcon, &Text, TRUE);
+    YuiDrawButton(DrawItemStruct, YuiContext.MenuActive, FALSE, YuiContext.StartIcon, &Text, TRUE);
 }
 
 /**
@@ -469,6 +469,9 @@ YuiWindowProc(
                         break;
                     case HSHELL_REDRAW:
                         YuiTaskbarNotifyTitleChange(&YuiContext, (HWND)lParam);
+                        break;
+                    case HSHELL_FLASH:
+                        YuiTaskbarNotifyFlash(&YuiContext, (HWND)lParam);
                         break;
                     default:
                         break;

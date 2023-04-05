@@ -175,6 +175,7 @@ YuiTaskbarAllocateAndAddButton(
     NewButton->hWndButton = NULL;
     NewButton->WindowActive = FALSE;
     NewButton->AssociatedWindowFound = TRUE;
+    NewButton->Flashing = FALSE;
 
     YoriLibAppendList(&YuiContext->TaskbarButtons, &NewButton->ListEntry);
     YuiContext->TaskbarButtonCount++;
@@ -260,6 +261,45 @@ YuiTaskbarWindowCallback(
 }
 
 /**
+ Mark the button as hosting the active window.  This updates internal state,
+ sets the font, and updates button to the pressed appearance.
+
+ @param YuiContext Pointer to the application context.
+
+ @param ThisButton Pointer to the button to mark as active.
+ */
+VOID
+YuiTaskbarMarkButtonActive(
+    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_TASKBAR_BUTTON ThisButton
+    )
+{
+    ThisButton->Flashing = FALSE;
+    ThisButton->WindowActive = TRUE;
+    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
+    SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
+}
+
+/**
+ Mark the button as not hosting the active window.  This updates internal
+ state, sets the font, and updates button to the raised appearance.
+
+ @param YuiContext Pointer to the application context.
+
+ @param ThisButton Pointer to the button to mark as inactive.
+ */
+VOID
+YuiTaskbarMarkButtonInactive(
+    __in PYUI_CONTEXT YuiContext,
+    __in PYUI_TASKBAR_BUTTON ThisButton
+    )
+{
+    ThisButton->WindowActive = FALSE;
+    SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(FALSE, 0));
+    SendMessage(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
+}
+
+/**
  Calculate the width for every taskbar button.  Each button has the same
  width.  The width is going to be the size of the taskbar divided by the
  number of buttons, with a maximum size per button to prevent a single
@@ -338,9 +378,7 @@ YuiTaskbarPopulateWindows(
         ThisButton->RightOffset = (WORD)(ThisButton->LeftOffset + WidthPerButton - 2),
         YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
         if (ThisButton->hWndToActivate == ActiveWindow) {
-            ThisButton->WindowActive = TRUE;
-            SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
-            SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
+            YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
         Index++;
@@ -370,6 +408,35 @@ YuiTaskbarFindButtonFromCtrlId(
     while (ListEntry != NULL) {
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (ThisButton->ControlId == CtrlId) {
+            return ThisButton;
+        }
+        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    }
+
+    return NULL;
+}
+
+/**
+ Find a button structure from a specified application window.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWndToActivate The application window to find the button for.
+ */
+PYUI_TASKBAR_BUTTON
+YuiTaskbarFindButtonFromHwndToActivate(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWndToActivate
+    )
+{
+    PYORI_LIST_ENTRY ListEntry;
+    PYUI_TASKBAR_BUTTON ThisButton;
+
+    ListEntry = NULL;
+    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
+    while (ListEntry != NULL) {
+        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
+        if (ThisButton->hWndToActivate == hWndToActivate) {
             return ThisButton;
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -475,9 +542,7 @@ YuiTaskbarNotifyNewWindow(
             ThisButton->ControlId = YuiTaskbarGetNewCtrlId(YuiContext);
             YuiTaskbarCreateButtonControl(YuiContext, ThisButton, TaskbarHwnd, (WORD)(TaskbarWindowClient.bottom - 2));
             if (ThisButton->hWndToActivate == GetForegroundWindow()) {
-                ThisButton->WindowActive = TRUE;
-                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
-                SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
+                YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
             }
         }
 
@@ -510,18 +575,7 @@ YuiTaskbarNotifyDestroyWindow(
         return;
     }
 
-    ListEntry = NULL;
-    ThisButton = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        if (ThisButton->hWndToActivate == hWnd) {
-            break;
-        }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-        ThisButton = NULL;
-    }
-
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
     if (ThisButton == NULL) {
         return;
     }
@@ -587,15 +641,11 @@ YuiTaskbarNotifyActivateWindow(
         ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
         if (ThisButton->hWndToActivate == hWnd) {
             if (!ThisButton->WindowActive) {
-                ThisButton->WindowActive = TRUE;
-                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hBoldFont, MAKELPARAM(FALSE, 0));
-                SendMessage(ThisButton->hWndButton, BM_SETSTATE, TRUE, 0);
+                YuiTaskbarMarkButtonActive(YuiContext, ThisButton);
             }
         } else {
             if (ThisButton->WindowActive) {
-                ThisButton->WindowActive = FALSE;
-                SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(FALSE, 0));
-                SendMessage(ThisButton->hWndButton, BM_SETSTATE, FALSE, 0);
+                YuiTaskbarMarkButtonInactive(YuiContext, ThisButton);
             }
         }
         ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -617,40 +667,64 @@ YuiTaskbarNotifyTitleChange(
     )
 {
     PYUI_TASKBAR_BUTTON ThisButton;
-    PYORI_LIST_ENTRY ListEntry;
 
     if (hWnd == NULL) {
         return;
     }
 
-    ListEntry = NULL;
-    ThisButton = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-        if (ThisButton->hWndToActivate == hWnd) {
-            YORI_STRING NewTitle;
-            YoriLibInitEmptyString(&NewTitle);
-            if (YoriLibAllocateString(&NewTitle, GetWindowTextLength(hWnd) + 1)) {
-                NewTitle.LengthInChars = GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
-                YoriLibFreeStringContents(&ThisButton->ButtonText);
-                memcpy(&ThisButton->ButtonText, &NewTitle, sizeof(YORI_STRING));
-            }
-            break;
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    if (ThisButton == NULL) {
+
+        //
+        //  If no button is found, check if one should be created.  This can
+        //  happen if the title was initially empty and changes to contain a
+        //  string.  Once a window ever contained a string, it is retained
+        //  even if the title is removed.
+        //
+
+        YuiTaskbarNotifyNewWindow(YuiContext, hWnd);
+    } else {
+        YORI_STRING NewTitle;
+        YoriLibInitEmptyString(&NewTitle);
+        if (YoriLibAllocateString(&NewTitle, GetWindowTextLength(hWnd) + 1)) {
+            NewTitle.LengthInChars = GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
+            YoriLibFreeStringContents(&ThisButton->ButtonText);
+            memcpy(&ThisButton->ButtonText, &NewTitle, sizeof(YORI_STRING));
         }
-        ThisButton = NULL;
+    }
+}
+
+/**
+ A function invoked to indicate that a window is flashing.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWnd The window which is flashing.
+ */
+VOID
+YuiTaskbarNotifyFlash(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    )
+{
+    PYUI_TASKBAR_BUTTON ThisButton;
+
+    if (hWnd == NULL) {
+        return;
+    }
+
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    if (ThisButton == NULL) {
+        return;
     }
 
     //
-    //  If no button is found, check if one should be created.  This can
-    //  happen if the title was initially empty and changes to contain a
-    //  string.  Once a window ever contained a string, it is retained
-    //  even if the title is removed.
+    //  If it's not active and not flashing, mark it as flashing and redraw.
     //
 
-    if (ThisButton == NULL) {
-        YuiTaskbarNotifyNewWindow(YuiContext, hWnd);
+    if (!ThisButton->WindowActive && !ThisButton->Flashing) {
+        ThisButton->Flashing = TRUE;
+        RedrawWindow(ThisButton->hWndButton, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
     }
 }
 
@@ -672,7 +746,6 @@ YuiTaskbarSyncWindowCallback(
 {
     PYUI_CONTEXT YuiContext;
     PYUI_TASKBAR_BUTTON ThisButton;
-    PYORI_LIST_ENTRY ListEntry;
 
     YuiContext = (PYUI_CONTEXT)lParam;
 
@@ -680,36 +753,20 @@ YuiTaskbarSyncWindowCallback(
         return TRUE;
     }
 
-    //
-    //  Enumerate the set of buttons and check if the window that's been found
-    //  already has a button.  If so, mark it as found and returned.
-    //
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    if (ThisButton == NULL) {
 
-    ListEntry = NULL;
-    ThisButton = NULL;
-    ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-    while (ListEntry != NULL) {
-        ThisButton = CONTAINING_RECORD(ListEntry, YUI_TASKBAR_BUTTON, ListEntry);
-        if (ThisButton->hWndToActivate == hWnd) {
-            ThisButton->AssociatedWindowFound = TRUE;
-            if ((DWORD)GetWindowTextLength(ThisButton->hWndToActivate) != ThisButton->ButtonText.LengthInChars) {
-                YuiTaskbarNotifyTitleChange(YuiContext, hWnd);
-            }
-            break;
+        // 
+        //  If it doesn't have a button, go ahead and create a new one.
+        //
+
+        YuiTaskbarNotifyNewWindow(YuiContext, hWnd);
+    } else {
+        ThisButton->AssociatedWindowFound = TRUE;
+        if ((DWORD)GetWindowTextLength(ThisButton->hWndToActivate) != ThisButton->ButtonText.LengthInChars) {
+            YuiTaskbarNotifyTitleChange(YuiContext, hWnd);
         }
-        ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
-        ThisButton = NULL;
     }
-
-    if (ThisButton != NULL) {
-        return TRUE;
-    }
-
-    // 
-    //  If it doesn't have a button, go ahead and create a new one.
-    //
-
-    YuiTaskbarNotifyNewWindow(YuiContext, hWnd);
 
     return TRUE;
 }
@@ -916,7 +973,7 @@ YuiTaskbarDrawButton(
     }
 
     Icon = (HICON)GetClassLongPtr(ThisButton->hWndToActivate, GCLP_HICONSM);
-    YuiDrawButton(DrawItemStruct, ThisButton->WindowActive, Icon, &ThisButton->ButtonText, FALSE);
+    YuiDrawButton(DrawItemStruct, ThisButton->WindowActive, ThisButton->Flashing, Icon, &ThisButton->ButtonText, FALSE);
 }
 
 /**

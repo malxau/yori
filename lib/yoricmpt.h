@@ -3984,6 +3984,14 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define HSHELL_RUDEAPPACTIVATED (0x8000 | HSHELL_WINDOWACTIVATED)
 #endif
 
+#ifndef HSHELL_FLASH
+/**
+ A definition for HSHELL_FLASH if it is not defined by the current compilation
+ environment.
+ */
+#define HSHELL_FLASH (0x8000 | HSHELL_REDRAW)
+#endif
+
 #ifndef ARW_HIDE
 /**
  If not defined by the compilation environment, the flag that minimized

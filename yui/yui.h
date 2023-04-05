@@ -151,6 +151,12 @@ typedef struct _YUI_TASKBAR_BUTTON {
     BOOLEAN AssociatedWindowFound;
 
     /**
+     TRUE if the associated window is requesting attention.  This will be
+     cleared as soon as the window is activated, via any mechanism.
+     */
+    BOOLEAN Flashing;
+
+    /**
      The text to display on the taskbar button.
      */
     YORI_STRING ButtonText;
@@ -397,6 +403,7 @@ VOID
 YuiDrawButton(
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
+    __in BOOLEAN Flashing,
     __in_opt HICON Icon,
     __in PYORI_STRING Text,
     __in BOOLEAN CenterText
@@ -444,6 +451,12 @@ YuiTaskbarNotifyActivateWindow(
 
 VOID
 YuiTaskbarNotifyTitleChange(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    );
+
+VOID
+YuiTaskbarNotifyFlash(
     __in PYUI_CONTEXT YuiContext,
     __in HWND hWnd
     );

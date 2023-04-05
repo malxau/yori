@@ -29,6 +29,15 @@
 #include "yui.h"
 
 /**
+ Return the color used to display a flashing window in the taskbar.
+ */
+COLORREF
+YuiGetWindowFlashColor(VOID)
+{
+    return RGB(255, 224, 64);
+}
+
+/**
  Draw an owner draw button.
 
  @param DrawItemStruct Pointer to a structure describing the button to
@@ -36,6 +45,9 @@
 
  @param Pushed TRUE if the button should have a pushed appearance, FALSE if
         it should have a raised appearance.
+
+ @param Flashing TRUE if the button should have a colored background to
+        indicate to the user it is requesting attention.
 
  @param Icon Optionally specifies an icon handle to display in the button.
 
@@ -48,6 +60,7 @@ VOID
 YuiDrawButton(
     __in PDRAWITEMSTRUCT DrawItemStruct,
     __in BOOLEAN Pushed,
+    __in BOOLEAN Flashing,
     __in_opt HICON Icon,
     __in PYORI_STRING Text,
     __in BOOLEAN CenterText
@@ -85,7 +98,7 @@ YuiDrawButton(
         return;
     }
 
-    TextRect.left = DrawItemStruct->rcItem.left + 5;
+    TextRect.left = DrawItemStruct->rcItem.left + 3;
     TextRect.right = DrawItemStruct->rcItem.right - 5;
     TextRect.top = DrawItemStruct->rcItem.top + 1;
     TextRect.bottom = DrawItemStruct->rcItem.bottom - 1;
@@ -95,6 +108,15 @@ YuiDrawButton(
     } else {
         TextRect.bottom = TextRect.bottom - 2;
     }
+
+    if (Flashing) {
+        HBRUSH Brush;
+        Brush = CreateSolidBrush(YuiGetWindowFlashColor());
+        FillRect(DrawItemStruct->hDC, &TextRect, Brush);
+        DeleteObject(Brush);
+    }
+
+    TextRect.left = TextRect.left + 2;
 
     //
     //  If an icon is associated with the window, render it.  If the button
@@ -131,6 +153,9 @@ YuiDrawButton(
         Flags = DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS;
         if (CenterText) {
             Flags = Flags | DT_CENTER;
+        }
+        if (Flashing) {
+            SetBkColor(DrawItemStruct->hDC, YuiGetWindowFlashColor());
         }
         DrawText(DrawItemStruct->hDC, Text->StartOfString, Text->LengthInChars, &TextRect, Flags);
     }
