@@ -64,108 +64,118 @@ STARTCMD="
 CURRENTTIME=echo. & echo For: $(FOR) & ydate $$HOUR$$:$$MIN$$:$$SEC$$ & echo.
 !ENDIF
 
+
+# SHDIRS really needs everything else to be compiled first but takes the
+# longest to link.  It's split out to hint to YMAKE to start this first.
 SHDIRS=sh       \
 
-DIRS=crt        \
-     lib        \
-     libwin     \
-     libdlg     \
-     libsh      \
-	 kernelbase \
-     builtins   \
-     assoc      \
-     attrib     \
-     cab        \
-     cal        \
-     charmap    \
-     clip       \
-     clmp       \
-     cls        \
-     co         \
-     compact    \
-     contool    \
-     copy       \
-     cpuinfo    \
-     cshot      \
-     cut        \
-     cvtvt      \
-     date       \
-     df         \
-     dir        \
-     dircase    \
-     du         \
-     echo       \
-     edit       \
-     env        \
-     envdiff    \
-     erase      \
-     err        \
-     expr       \
-     finfo      \
-     for        \
-     fscmp      \
-     get        \
-     grpcmp     \
-     hash       \
-     help       \
-     hexdump    \
-     hexedit    \
-     hilite     \
-     iconv      \
-     initool    \
-     intcmp     \
-     kill       \
-     lines      \
-     lsof       \
-     make       \
-     mem        \
-     mkdir      \
-     mklink     \
-     more       \
-     mount      \
-     move       \
-     nice       \
-     objdir     \
-     osver      \
-     path       \
-     pause      \
-     petool     \
-     pkg        \
-     pkglib     \
-     procinfo   \
-     ps         \
-     readline   \
-     regedit    \
-     repl       \
-     rmdir      \
-     scut       \
-     sdir       \
-     setver     \
-     shutdn     \
-     sleep      \
-     slmenu     \
-     split      \
-     sponge     \
-     start      \
-     strcmp     \
-     stride     \
-     sync       \
-     tail       \
-     tee        \
-     test       \
-     timethis   \
-     title      \
-     touch      \
-     type       \
-     vhdtool    \
-     vol        \
-     which      \
-     wininfo    \
-     winpos     \
-     ydbg       \
-     ypm        \
-     ysetup     \
-     yui        \
+# Old versions of NMAKE have a limit on the line length they can process.  The
+# line is after substituting these variables to make a for loop.  Break the
+# directories in half so that NMAKE can have one half at a time.  YMAKE gets
+# both grouped together.
+
+DIRS1=crt        \
+      lib        \
+      libwin     \
+      libdlg     \
+      libsh      \
+      kernelbase \
+      builtins   \
+      assoc      \
+      attrib     \
+      cab        \
+      cal        \
+      charmap    \
+      clip       \
+      clmp       \
+      cls        \
+      co         \
+      compact    \
+      contool    \
+      copy       \
+      cpuinfo    \
+      cshot      \
+      cut        \
+      cvtvt      \
+      date       \
+      df         \
+      dir        \
+      dircase    \
+      du         \
+      echo       \
+      edit       \
+      env        \
+      envdiff    \
+      erase      \
+      err        \
+      expr       \
+      finfo      \
+      for        \
+      fscmp      \
+      get        \
+      grpcmp     \
+      hash       \
+      help       \
+      hexdump    \
+      hexedit    \
+      hilite     \
+
+
+DIRS2=iconv      \
+      initool    \
+      intcmp     \
+      kill       \
+      lines      \
+      lsof       \
+      make       \
+      mem        \
+      mkdir      \
+      mklink     \
+      more       \
+      mount      \
+      move       \
+      nice       \
+      objdir     \
+      osver      \
+      path       \
+      pause      \
+      petool     \
+      pkg        \
+      pkglib     \
+      procinfo   \
+      ps         \
+      readline   \
+      regedit    \
+      repl       \
+      rmdir      \
+      scut       \
+      sdir       \
+      setver     \
+      shutdn     \
+      sleep      \
+      slmenu     \
+      split      \
+      sponge     \
+      start      \
+      strcmp     \
+      stride     \
+      sync       \
+      tail       \
+      tee        \
+      test       \
+      timethis   \
+      title      \
+      touch      \
+      type       \
+      vhdtool    \
+      vol        \
+      which      \
+      wininfo    \
+      winpos     \
+      ydbg       \
+      ypm        \
+      ysetup     \
+      yui        \
 
 !IFDEF _YMAKE_VER
 $(BINDIR_ROOT):
@@ -180,19 +190,22 @@ $(SYMDIR_ROOT):
 $(MODDIR_ROOT):
 	@-$(MKDIR) $(MODDIR_ROOT) 
 
-all.real[dirs target=install]: $(DIRS) $(SHDIRS)
+all.real[dirs target=install]: $(SHDIRS) $(DIRS1) $(DIRS2)
 
 compile:
 
-link[dirs target=link]: $(DIRS) $(SHDIRS)
+link[dirs target=link]: $(SHDIRS) $(DIRS1) $(DIRS2)
 !ELSE
 all.real: writeconfigcache
 	@$(CURRENTTIME)
 	@$(FOR) %%i in ($(BINDIR_ROOT) $(SYMDIR_ROOT) $(MODDIR_ROOT) $(BINDIR_ROOT)\YoriInit.d) do $(STARTCMD)@if not exist %%i $(MKDIR) %%i$(STARTCMD)
-	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Compiling %%i & cd %%i & $(BUILD) compile READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
-	@$(FOR) %%i in ($(DIRS)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) link READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
-	@$(FOR) %%i in ($(SHDIRS)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) link READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
-	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Installing %%i & cd %%i & $(BUILD) install READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(SHDIRS) $(DIRS1)) do $(STARTCMD)@if exist %%i echo *** Compiling %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) compile & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(DIRS2)) do $(STARTCMD)@if exist %%i echo *** Compiling %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) compile & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(DIRS1)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) link & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(DIRS2)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) link & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(SHDIRS)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) link & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(SHDIRS) $(DIRS1)) do $(STARTCMD)@if exist %%i echo *** Installing %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) install & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(DIRS2)) do $(STARTCMD)@if exist %%i echo *** Installing %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) install & cd ..$(STARTCMD)
 	@$(CURRENTTIME)
 !ENDIF
 
@@ -202,10 +215,11 @@ beta: all.real
 	@move $(SYMDIR_ROOT) beta\$(ARCH)\sym
 
 !IFDEF _YMAKE_VER
-clean[dirs target=clean]: $(DIRS) $(SHDIRS)
+clean[dirs target=clean]: $(SHDIRS) $(DIRS1) $(DIRS2)
 !ELSE
 clean: writeconfigcache
-	@$(FOR) %%i in ($(SHDIRS) $(DIRS)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) clean READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(SHDIRS) $(DIRS1)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) clean READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
+	@$(FOR) %%i in ($(DIRS2)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) clean READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@if exist *~ erase *~
 	@$(FOR_ST) /D %%i in ($(MODDIR_ROOT) $(BINDIR_ROOT) $(SYMDIR_ROOT)) do @if exist %%i $(RMDIR) /s/q %%i
 	@if exist $(WRITECONFIGCACHEFILE) erase $(WRITECONFIGCACHEFILE)
