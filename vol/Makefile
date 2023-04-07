@@ -3,9 +3,7 @@ BINARIES=yvol.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yvol.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 vol.obj        \

@@ -3,9 +3,7 @@ BINARIES=repl.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:repl.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 repl.obj         \

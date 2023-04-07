@@ -3,9 +3,7 @@ BINARIES=yshutdn.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yshutdn.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 shutdn.obj         \

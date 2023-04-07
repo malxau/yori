@@ -3,9 +3,7 @@ BINARIES=ysponge.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ysponge.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 sponge.obj         \

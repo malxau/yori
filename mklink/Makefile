@@ -3,9 +3,7 @@ BINARIES=ymklink.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ymklink.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 mklink.obj         \

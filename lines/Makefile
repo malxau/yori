@@ -3,9 +3,7 @@ BINARIES=lines.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:lines.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 lines.obj         \

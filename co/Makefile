@@ -3,9 +3,7 @@ BINARIES=yco.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yco.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 co.obj         \

@@ -3,9 +3,7 @@ BINARIES=yedit.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yedit.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 edit.obj         \

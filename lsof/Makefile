@@ -3,9 +3,7 @@ BINARIES=ylsof.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ylsof.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 lsof.obj         \

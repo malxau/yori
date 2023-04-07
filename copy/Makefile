@@ -3,9 +3,7 @@ BINARIES=ycopy.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ycopy.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 copy.obj         \

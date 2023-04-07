@@ -3,9 +3,7 @@ BINARIES=yregedit.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yregedit.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 binedit.obj         \

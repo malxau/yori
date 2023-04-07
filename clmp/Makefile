@@ -3,9 +3,7 @@ BINARIES=clmp.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:clmp.pdb
-!ENDIF
 
 OBJS=\
 	 clmp.obj        \

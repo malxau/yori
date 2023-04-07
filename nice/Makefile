@@ -3,9 +3,7 @@ BINARIES=nice.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:nice.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 nice.obj         \

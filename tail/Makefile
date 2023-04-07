@@ -3,9 +3,7 @@ BINARIES=tail.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:tail.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 tail.obj         \

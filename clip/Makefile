@@ -3,9 +3,7 @@ BINARIES=yclip.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yclip.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 clip.obj        \

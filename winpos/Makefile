@@ -3,9 +3,7 @@ BINARIES=winpos.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:winpos.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 winpos.obj         \

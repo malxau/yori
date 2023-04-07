@@ -3,9 +3,7 @@ BINARIES=ystart.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ystart.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 start.obj         \

@@ -3,9 +3,7 @@ BINARIES=ystride.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ystride.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 stride.obj         \

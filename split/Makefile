@@ -3,9 +3,7 @@ BINARIES=ysplit.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ysplit.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 split.obj         \

@@ -3,9 +3,7 @@ BINARIES=yrmdir.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yrmdir.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 rmdir.obj        \

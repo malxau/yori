@@ -3,9 +3,7 @@ BINARIES=ymore.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ymore.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 ingest.obj       \

@@ -3,9 +3,7 @@ BINARIES=cshot.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:cshot.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 cshot.obj        \

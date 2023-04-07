@@ -3,9 +3,7 @@ BINARIES=yenv.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yenv.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 env.obj         \

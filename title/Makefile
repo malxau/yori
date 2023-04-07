@@ -3,9 +3,7 @@ BINARIES=ytitle.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ytitle.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 title.obj         \

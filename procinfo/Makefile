@@ -3,9 +3,7 @@ BINARIES=procinfo.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:procinfo.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 procinfo.obj         \

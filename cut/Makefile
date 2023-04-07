@@ -3,9 +3,7 @@ BINARIES=ycut.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ycut.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 cut.obj         \

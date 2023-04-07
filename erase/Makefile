@@ -3,9 +3,7 @@ BINARIES=yerase.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yerase.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 erase.obj        \

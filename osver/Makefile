@@ -3,9 +3,7 @@ BINARIES=osver.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:osver.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 osver.obj        \

@@ -6,14 +6,9 @@ INITFILES=YoriInit.d\*
 YORI_BIN_VER_MAJOR=$(YORI_VER_MAJOR)
 YORI_BIN_VER_MINOR=$(YORI_VER_MINOR)
 
-YORIMINPDB=
-YORISTDPDB=
-
-!IF $(PDB)==1
 MIN_PDB=/Pdb:yorimin.pdb
 STD_PDB=/Pdb:yori.pdb
 FULL_PDB=/Pdb:oneyori.pdb
-!ENDIF
 
 OBJS=\
 	alias.obj        \

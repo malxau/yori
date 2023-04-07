@@ -3,9 +3,7 @@ BINARIES=readline.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:readline.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 readline.obj         \

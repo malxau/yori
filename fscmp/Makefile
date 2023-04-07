@@ -3,9 +3,7 @@ BINARIES=fscmp.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:fscmp.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 fscmp.obj        \

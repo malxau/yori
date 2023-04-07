@@ -3,9 +3,7 @@ BINARIES=envdiff.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:envdiff.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 envdiff.obj        \

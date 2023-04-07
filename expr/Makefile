@@ -3,9 +3,7 @@ BINARIES=yexpr.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yexpr.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 expr.obj         \

@@ -7,9 +7,7 @@ YORI_BIN_VER_MINOR=$(YORI_VER_MINOR)
 
 CFLAGS=$(CFLAGS) -I..\pkglib
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ysetup.pdb
-!ENDIF
 
 # This currently supports NT 3.5 and up.  For 3.5x it depends on a manually
 # installed WinInet.dll.  Note that 3.5x will launch anything stamped as

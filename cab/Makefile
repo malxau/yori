@@ -3,9 +3,7 @@ BINARIES=cab.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:cab.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 cab.obj         \

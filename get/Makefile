@@ -3,9 +3,7 @@ BINARIES=yget.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yget.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 get.obj         \

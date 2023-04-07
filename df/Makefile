@@ -3,9 +3,7 @@ BINARIES=ydf.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ydf.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 df.obj         \

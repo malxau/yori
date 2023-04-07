@@ -3,9 +3,7 @@ BINARIES=yhelp.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yhelp.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 help.obj         \

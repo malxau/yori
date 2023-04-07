@@ -3,9 +3,7 @@ BINARIES=ymount.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ymount.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 mount.obj         \

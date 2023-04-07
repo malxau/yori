@@ -3,9 +3,7 @@ BINARIES=iconv.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:iconv.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 iconv.obj         \

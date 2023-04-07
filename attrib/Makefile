@@ -3,9 +3,7 @@ BINARIES=yattrib.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yattrib.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 attrib.obj         \

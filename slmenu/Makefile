@@ -3,9 +3,7 @@ BINARIES=slmenu.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:slmenu.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 slmenu.obj         \

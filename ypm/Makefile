@@ -5,9 +5,7 @@ BINARIES=ypm.exe
 
 CFLAGS=$(CFLAGS) -I..\pkglib
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ypm.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 download.obj    \

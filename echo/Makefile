@@ -3,9 +3,7 @@ BINARIES=yecho.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yecho.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 echo.obj         \

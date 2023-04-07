@@ -3,9 +3,7 @@ BINARIES=ycpuinfo.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ycpuinfo.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 cpuinfo.obj         \

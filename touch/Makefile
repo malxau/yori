@@ -3,9 +3,7 @@ BINARIES=touch.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:touch.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 touch.obj         \

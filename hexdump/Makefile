@@ -3,9 +3,7 @@ BINARIES=hexdump.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:hexdump.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 hexdump.obj         \

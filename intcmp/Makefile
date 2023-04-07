@@ -3,9 +3,7 @@ BINARIES=yintcmp.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yintcmp.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 intcmp.obj        \

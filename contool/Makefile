@@ -3,9 +3,7 @@ BINARIES=contool.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:contool.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 contool.obj        \

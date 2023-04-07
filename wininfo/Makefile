@@ -3,9 +3,7 @@ BINARIES=wininfo.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:wininfo.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 wininfo.obj         \

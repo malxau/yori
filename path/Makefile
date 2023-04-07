@@ -3,9 +3,7 @@ BINARIES=ypath.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ypath.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 path.obj        \

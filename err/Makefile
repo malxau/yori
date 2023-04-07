@@ -3,9 +3,7 @@ BINARIES=yerr.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yerr.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 err.obj         \

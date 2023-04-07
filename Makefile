@@ -4,7 +4,6 @@ ARCH=win32
 DEBUG=0
 FDI=0
 KERNELBASE=0
-PDB=1
 YORI_BUILD_ID=0
 
 !IF [$(CC) -? 2>&1 | findstr /C:"x64" >NUL 2>&1]==0
@@ -43,7 +42,7 @@ BINDIR=..\$(BINDIR_ROOT)
 SYMDIR=..\$(SYMDIR_ROOT)
 MODDIR=..\$(MODDIR_ROOT)
 
-BUILD=$(MAKE) -nologo ANALYZE=$(ANALYZE) DEBUG=$(DEBUG) FDI=$(FDI) KERNELBASE=$(KERNELBASE) PDB=$(PDB) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=$(BINDIR) SYMDIR=$(SYMDIR) MODDIR=$(MODDIR)
+BUILD=$(MAKE) -nologo ANALYZE=$(ANALYZE) DEBUG=$(DEBUG) FDI=$(FDI) KERNELBASE=$(KERNELBASE) YORI_BUILD_ID=$(YORI_BUILD_ID) BINDIR=$(BINDIR) SYMDIR=$(SYMDIR) MODDIR=$(MODDIR)
 
 CURRENTTIME=REM
 !IFNDEF _YMAKE_VER
@@ -239,5 +238,3 @@ buildhelp:
 	@echo "KERNELBASE=[0|1] - If set, will link against kernelbase rather than"
 	@echo "                   kernel32 to run on very minimal Windows editions.  This"
 	@echo "                   requires a hand-built kernelbase.lib."
-	@echo "PDB=[0|1]        - If set, will generate debug symbols"
-

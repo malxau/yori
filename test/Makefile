@@ -3,9 +3,7 @@ BINARIES=yoritest.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:yoritest.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 test.obj         \

@@ -3,9 +3,7 @@ BINARIES=grpcmp.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:grpcmp.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 grpcmp.obj        \

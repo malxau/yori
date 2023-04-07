@@ -3,9 +3,7 @@ BINARIES=sdir.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:sdir.pdb
-!ENDIF
 
 BIN_OBJS=\
 		 callbacks.obj \

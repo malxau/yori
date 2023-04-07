@@ -3,9 +3,7 @@ BINARIES=petool.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:petool.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 petool.obj         \

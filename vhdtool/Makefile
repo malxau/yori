@@ -3,9 +3,7 @@ BINARIES=vhdtool.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:vhdtool.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 vhdtool.obj         \

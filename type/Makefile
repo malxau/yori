@@ -3,9 +3,7 @@ BINARIES=ytype.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ytype.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 type.obj         \

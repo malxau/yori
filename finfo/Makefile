@@ -3,9 +3,7 @@ BINARIES=finfo.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:finfo.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 finfo.obj         \

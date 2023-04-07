@@ -3,9 +3,7 @@ BINARIES=ymove.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ymove.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 move.obj         \

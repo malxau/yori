@@ -3,9 +3,7 @@ BINARIES=wintest.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:wintest.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 wintest.obj         \

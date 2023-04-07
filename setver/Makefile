@@ -3,9 +3,7 @@ BINARIES=setver.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:setver.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 setver.obj         \

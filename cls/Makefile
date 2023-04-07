@@ -3,9 +3,7 @@ BINARIES=ycls.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ycls.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 cls.obj         \

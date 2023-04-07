@@ -3,9 +3,7 @@ BINARIES=ymkdir.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ymkdir.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 mkdir.obj        \

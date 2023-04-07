@@ -3,9 +3,7 @@ BINARIES=ymem.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ymem.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 mem.obj         \

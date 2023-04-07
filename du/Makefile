@@ -3,9 +3,7 @@ BINARIES=ydu.exe
 
 !INCLUDE "..\config\common.mk"
 
-!IF $(PDB)==1
 LINKPDB=/Pdb:ydu.pdb
-!ENDIF
 
 BIN_OBJS=\
 	 du.obj         \
