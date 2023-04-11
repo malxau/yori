@@ -190,7 +190,7 @@ YoriLibMallocSpecialHeap(
     PYORI_SPECIAL_HEAP_HEADER Commit;
     DWORD StackSize;
     DWORD OldAccess;
-#if defined(_M_MRX000) || defined(_M_ARM64)
+#if defined(_M_MRX000) || defined(_M_ARM64) || defined(_M_ALPHA) || defined(_M_PPC)
     DWORD Alignment = sizeof(DWORD);
 #else
     DWORD Alignment = sizeof(UCHAR);
