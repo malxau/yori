@@ -224,6 +224,13 @@ MACHINE=MIPS
 # Add back msvcrt to provide 64 bit math assembly
 EXTERNLIBS=$(EXTERNLIBS) msvcrt.lib
 ARCH=mips
+!ELSE
+!IF [$(CC) 2>&1 | find "PowerPC" >NUL]==0
+MACHINE=PPC
+# Add back msvcrt to provide 64 bit math assembly
+EXTERNLIBS=$(EXTERNLIBS) msvcrt.lib
+ARCH=ppc
+!ENDIF # PPC
 !ENDIF # MIPS
 !ENDIF # ARM (32)
 !ENDIF # IA-64

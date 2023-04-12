@@ -24,6 +24,10 @@ ARCH=ia64
 !ELSE
 !IF [$(CC) -? 2>&1 | findstr /C:"MIPS" >NUL 2>&1]==0
 ARCH=mips
+!ELSE
+!IF [$(CC) -? 2>&1 | findstr /C:"PowerPC" >NUL 2>&1]==0
+ARCH=ppc
+!ENDIF # PPC
 !ENDIF # MIPS
 !ENDIF # Itanium
 !ENDIF # ARM (32)
