@@ -249,6 +249,12 @@ SdirDisplayArch (
             case IMAGE_FILE_MACHINE_R4000:
                 StrFixed = _T("mips ");
                 break;
+            case IMAGE_FILE_MACHINE_POWERPC:
+                StrFixed = _T("ppc  ");
+                break;
+            case IMAGE_FILE_MACHINE_ALPHA:
+                StrFixed = _T("alpha");
+                break;
             case IMAGE_FILE_MACHINE_IA64:
                 StrFixed = _T("ia64 ");
                 break;
