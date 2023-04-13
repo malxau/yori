@@ -15,16 +15,21 @@ cl /? 2>&1 | findstr /C:"for ARM64" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=arm64
 cl /? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=mips
+cl /? 2>&1 | findstr /C:"for PowerPC" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=ppc
 cl /? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=ia64
 
 REM
 REM For Win32 builds, use static fdi.lib to support NT 3.1
+REM For RISC builds, use static fdi.lib because no cabinet.dll exists
 REM Not done on x64 or other architectures where cabinet.dll will be present
 REM
+
 set FDI=0
 if strcmp -i %ARCH%==win32;set FDI=1
 if strcmp -i %ARCH%==mips;set FDI=1
+if strcmp -i %ARCH%==ppc;set FDI=1
 
 REM 
 REM Set build ID.  For release builds, this needs to be zero.

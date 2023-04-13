@@ -6,6 +6,11 @@
 DAILYPATH=http://www.malsmith.net/download/?obj=yori/latest-daily
 STABLEPATH=http://www.malsmith.net/download/?obj=yori/latest-stable
 
+!IF "$(ARCH)"=="ppc"
+DAILYPATH=http://www.malsmith.net/download/?obj=yori/latest-ppc-daily
+STABLEPATH=http://www.malsmith.net/download/?obj=yori/latest-ppc-stable
+!ENDIF
+
 !IF $(YORI_BUILD_ID)==0
 BUILDSTRING=$(YORI_VER_MAJOR).$(YORI_VER_MINOR)
 UPGRADEPATH=$(STABLEPATH)
@@ -46,6 +51,9 @@ YSETUP=
 YSETUP=out\$(ARCH)\ysetup.exe
 !ENDIF
 !IF "$(ARCH)"=="mips"
+YSETUP=out\$(ARCH)\ysetup.exe
+!ENDIF
+!IF "$(ARCH)"=="ppc"
 YSETUP=out\$(ARCH)\ysetup.exe
 !ENDIF
 !IF "$(ARCH)"=="amd64"
