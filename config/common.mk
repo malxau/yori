@@ -220,6 +220,13 @@ MACHINE=PPC
 # Add back msvcrt to provide 64 bit math assembly
 EXTERNLIBS=$(EXTERNLIBS) msvcrt.lib
 ARCH=ppc
+!ELSE
+!IF [$(CC) 2>&1 | find "Alpha" >NUL]==0
+MACHINE=ALPHA
+# Add back msvcrt to provide 64 bit math assembly
+EXTERNLIBS=$(EXTERNLIBS) msvcrt.lib
+ARCH=axp
+!ENDIF # AXP
 !ENDIF # PPC
 !ENDIF # MIPS
 !ENDIF # ARM (32)
