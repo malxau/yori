@@ -18,6 +18,7 @@ BIGMATH_OBJS=bigdiv.obj  \
 			 bigrem.obj  \
 			 bigshl.obj  \
 			 bigshr.obj  \
+			 cmpxchg.obj
 
 ML=ml.exe
 

@@ -193,17 +193,26 @@ YoriLibBytesInBom(
  */
 PYORI_LIB_LINE_READ_CONTEXT YoriLibReadLineCachedContext[YORI_LIB_READ_LINE_CACHE_ENTRIES];
 
-#if defined(_MSC_VER) && defined(_M_IX86) && (_MSC_VER >= 1010) && (_M_IX86 >= 400)
-LONG _InterlockedCompareExchange(__inout _Interlocked_operand_ LONG volatile *, __in LONG, __in LONG);
-#pragma intrinsic(_InterlockedCompareExchange)
+#if defined(_M_IX86) && (_M_IX86 >= 400)
+/**
+ Newer compilers provide an intrinsic, but the situation is awful, so this
+ links to an assembly routine instead.
+
+ Visual C++ 2.0-4.0 do not support the intrinsic.
+ Visual C++ 4.1-4.2 generate a "lock mov" and a non-lock "cmpxchg", which
+     causes programs to hit an illegal instruction fault.
+ Visual C++ 5.0 appears to not emit the actual cmpxchg instruction.
+ Visual C++ 6.0 works.
+ */
+LONG lock_cmpxchg(__inout _Interlocked_operand_ LONG volatile *, __in LONG, __in LONG);
 #endif
 
 /**
  Return TRUE if InterlockedCompareExchangePointer is available.  This exists
- on all 64 bit systems, and on 32 bit x86 it requires a 486 or newer.  If
- targeting a 486 or above with Visual C++ 4.1 or newer, use the intrinsic;
- because this is an instruction it can run on older versions of NT.
- Otherwise, fallback to using the export, requiring NT 4 or above.
+ on all 64 bit systems, and on 32 bit x86 it requires a 486 or newer.  The
+ implementation is provided as assembly due to incomplete and buggy
+ implementations of a compiler intrinsic on older compilers.  If compiled
+ for 386 or RISC, fallback to using the export, requiring NT 4 or above.
 
  @return TRUE if the system supports an implementation of
          InterlockedCompareExchangePointer, or FALSE if it does not.
@@ -213,7 +222,7 @@ YoriLibIsInterlockedCompareExchangePointerAvailable(VOID)
 {
 #if defined(_WIN64)
     return TRUE;
-#elif defined(_MSC_VER) && defined(_M_IX86) && (_MSC_VER >= 1010) && (_M_IX86 >= 400)
+#elif defined(_M_IX86) && (_M_IX86 >= 400)
     return TRUE;
 #else
     if (DllKernel32.pInterlockedCompareExchange) {
@@ -223,6 +232,7 @@ YoriLibIsInterlockedCompareExchangePointerAvailable(VOID)
 #endif
 }
 
+#if defined(_WIN64) || !defined(_M_IX86) || (_M_IX86 < 400)
 /**
  Perform an InterlockedCompareExchange of pointer size.  This function assumes
  the caller has firstly called
@@ -242,12 +252,20 @@ YoriLibInterlockedCompareExchangePointer(volatile PVOID * Dest, PVOID Exchange, 
 {
 #if defined(_WIN64)
     return InterlockedCompareExchangePointer(Dest, Exchange, Comperand);
-#elif defined(_MSC_VER) && defined(_M_IX86) && (_MSC_VER >= 1010) && (_M_IX86 >= 400)
-    return (PVOID)(_InterlockedCompareExchange((volatile LONG *)Dest, (LONG)Exchange, (LONG)Comperand));
 #else
     return (PVOID)(DllKernel32.pInterlockedCompareExchange((volatile LONG *)Dest, (LONG)Exchange, (LONG)Comperand));
 #endif
 }
+
+#else
+
+/**
+ Since this is a 32 bit system, the pointer function is the same as the 32 bit
+ integer function.  Cast the types in both directions to keep C happy.
+ */
+#define YoriLibInterlockedCompareExchangePointer(a, b, c) (PVOID)lock_cmpxchg((volatile LONG *)a, (LONG)b, (LONG)c)
+
+#endif
 
 /**
  Allocate a line read context, which may be from a previously saved cache
