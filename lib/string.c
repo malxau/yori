@@ -1920,6 +1920,8 @@ YoriLibSortStringArray(
         return;
     }
 
+    FirstOffset = 0;
+
     while (TRUE) {
         DWORD BreakPoint;
         DWORD LastOffset;
