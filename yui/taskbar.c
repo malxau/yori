@@ -690,6 +690,7 @@ YuiTaskbarNotifyTitleChange(
             NewTitle.LengthInChars = GetWindowText(hWnd, NewTitle.StartOfString, NewTitle.LengthAllocated);
             YoriLibFreeStringContents(&ThisButton->ButtonText);
             memcpy(&ThisButton->ButtonText, &NewTitle, sizeof(YORI_STRING));
+            RedrawWindow(ThisButton->hWndButton, NULL, NULL, RDW_ERASE | RDW_INVALIDATE);
         }
     }
 }
