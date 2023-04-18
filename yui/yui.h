@@ -207,6 +207,12 @@ typedef struct _YUI_CONTEXT {
     YORI_MINIMIZEDMETRICS SavedMinimizedMetrics;
 
     /**
+     The default window procedure for a push button.  Stored here so we can
+     override it and call it recursively.
+     */
+    WNDPROC DefaultButtonWndProc;
+
+    /**
      Handle to an icon to display on the start button.
      */
     HICON StartIcon;
@@ -382,6 +388,9 @@ typedef struct _YUI_CONTEXT {
  The timer identifier of the timer that updates the clock in the task bar.
  */
 #define YUI_CLOCK_TIMER (2)
+
+WNDPROC
+YuiGetDefaultButtonWndProc(VOID);
 
 BOOL
 YuiMenuPopulate(

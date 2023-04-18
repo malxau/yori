@@ -29,11 +29,6 @@
 #include "yui.h"
 
 /**
- The window procedure that handles system push buttons.
- */
-WNDPROC DefaultButtonWndProc;
-
-/**
  A custom window procedure used by buttons on the taskbar.  This is a form of
  subclass that enables us to filter the messages processed by the regular
  button implementation.
@@ -71,9 +66,20 @@ YuiTaskbarButtonWndProc(
             //
 
             return HTTRANSPARENT;
+
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+
+            //
+            //  Focus changes normally repaint controls because they do
+            //  dotted lines around text.  This control won't do that, so
+            //  swallow the message to avoid a flash.
+            //
+
+            return 0;
     }
 
-    return CallWindowProc(DefaultButtonWndProc, hWnd, uMsg, wParam, lParam);
+    return CallWindowProc(YuiGetDefaultButtonWndProc(), hWnd, uMsg, wParam, lParam);
 }
 
 
@@ -221,9 +227,6 @@ YuiTaskbarCreateButtonControl(
         return FALSE;
     }
 
-    if (DefaultButtonWndProc == NULL) {
-        DefaultButtonWndProc = (WNDPROC)GetWindowLongPtr(ThisButton->hWndButton, GWLP_WNDPROC);
-    }
     SetWindowLongPtr(ThisButton->hWndButton, GWLP_WNDPROC, (LONG_PTR)YuiTaskbarButtonWndProc);
     SendMessage(ThisButton->hWndButton, WM_SETFONT, (WPARAM)YuiContext->hFont, MAKELPARAM(TRUE, 0));
 

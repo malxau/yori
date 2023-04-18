@@ -59,6 +59,15 @@ YuiHelp(VOID)
 YUI_CONTEXT YuiContext;
 
 /**
+ Return the default window procedure for a push button.
+ */
+WNDPROC
+YuiGetDefaultButtonWndProc(VOID)
+{
+    return YuiContext.DefaultButtonWndProc;
+}
+
+/**
  The base height of the taskbar, in pixels.
  */
 #define YUI_BASE_TASKBAR_HEIGHT (32)
@@ -149,6 +158,60 @@ YuiStartDrawButton(
     YORI_STRING Text;
     YoriLibConstantString(&Text, _T("Start"));
     YuiDrawButton(DrawItemStruct, YuiContext.MenuActive, FALSE, YuiContext.StartIcon, &Text, TRUE);
+}
+
+/**
+ A custom window procedure used by the start button.  This is a form of
+ subclass that enables us to filter the messages processed by the regular
+ button implementation.
+
+ @param hWnd Window handle to the button.
+
+ @param uMsg The message identifier.
+
+ @param wParam The first parameter associated with the window message.
+
+ @param lParam The second parameter associated with the window message.
+
+ @return A value which depends on the type of message being processed.
+ */
+LRESULT CALLBACK
+YuiStartButtonWndProc(
+    __in HWND hWnd,
+    __in UINT uMsg,
+    __in WPARAM wParam,
+    __in LPARAM lParam
+    )
+{
+    switch(uMsg) {
+        case WM_NCHITTEST:
+
+            //
+            //  Indicate the entire button is not a hit target.  The taskbar
+            //  has code to detect presses beneath the button area so will
+            //  catch this and handle it.  The reason for not having the
+            //  button handle it is this will cause the button to "click",
+            //  and when the window activates the buttons state is changed
+            //  explicitly, resulting in "flashing" behavior as it's rendered
+            //  twice.  By doing this, the button state changes when the
+            //  window is activated.
+            //
+
+            return HTTRANSPARENT;
+
+        case WM_SETFOCUS:
+        case WM_KILLFOCUS:
+
+            //
+            //  Focus changes normally repaint controls because they do
+            //  dotted lines around text.  This control won't do that, so
+            //  swallow the message to avoid a flash.
+            //
+
+            return 0;
+    }
+
+    return CallWindowProc(YuiGetDefaultButtonWndProc(), hWnd, uMsg, wParam, lParam);
 }
 
 /**
@@ -691,6 +754,14 @@ YuiCreateWindow(
 
     Context->StartLeftOffset = 1;
     Context->StartRightOffset = (WORD)(Context->StartLeftOffset + YUI_START_BUTTON_WIDTH);
+    if (Context->DefaultButtonWndProc == NULL) {
+        Context->DefaultButtonWndProc = (WNDPROC)GetWindowLongPtr(Context->hWndStart, GWLP_WNDPROC);
+        if (Context->DefaultButtonWndProc == NULL) {
+            YuiCleanupGlobalState();
+            return FALSE;
+        }
+    }
+    SetWindowLongPtr(Context->hWndStart, GWLP_WNDPROC, (LONG_PTR)YuiStartButtonWndProc);
 
     SendMessage(Context->hWndStart, WM_SETFONT, (WPARAM)Context->hBoldFont, MAKELPARAM(TRUE, 0));
 
