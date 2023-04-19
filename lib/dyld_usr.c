@@ -85,6 +85,7 @@ CONST YORI_DLL_NAME_MAP DllUser32Symbols[] = {
     {(FARPROC *)&DllUser32.pSendMessageTimeoutW, "SendMessageTimeoutW"},
     {(FARPROC *)&DllUser32.pSetClipboardData, "SetClipboardData"},
     {(FARPROC *)&DllUser32.pSetForegroundWindow, "SetForegroundWindow"},
+    {(FARPROC *)&DllUser32.pSetShellWindow, "SetShellWindow"},
     {(FARPROC *)&DllUser32.pSetTaskmanWindow, "SetTaskmanWindow"},
     {(FARPROC *)&DllUser32.pSetWindowPos, "SetWindowPos"},
     {(FARPROC *)&DllUser32.pSetWindowTextW, "SetWindowTextW"},

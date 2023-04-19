@@ -9201,6 +9201,18 @@ SET_FOREGROUND_WINDOW(HWND);
 typedef SET_FOREGROUND_WINDOW *PSET_FOREGROUND_WINDOW;
 
 /**
+ A prototype for the SetShellWindow function.
+ */
+typedef
+BOOL WINAPI
+SET_SHELL_WINDOW(HWND);
+
+/**
+ A prototype for a pointer to the SetShellWindow function.
+ */
+typedef SET_SHELL_WINDOW *PSET_SHELL_WINDOW;
+
+/**
  A prototype for the SetTaskmanWindow function.
  */
 typedef
@@ -9436,6 +9448,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to SetForegroundWindow.
      */
     PSET_FOREGROUND_WINDOW pSetForegroundWindow;
+
+    /**
+     If it's available on the current system, a pointer to SetShellWindow.
+     */
+    PSET_SHELL_WINDOW pSetShellWindow;
 
     /**
      If it's available on the current system, a pointer to SetTaskmanWindow.
