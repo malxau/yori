@@ -378,6 +378,15 @@ YuiNotifyResolutionChange(
         }
     }
 
+    if (YuiContext.hWndDesktop != NULL) {
+        DllUser32.pMoveWindow(YuiContext.hWndDesktop,
+                              NewWorkArea.left,
+                              NewWorkArea.top,
+                              NewWorkArea.right - NewWorkArea.left,
+                              NewWorkArea.bottom - NewWorkArea.top,
+                              TRUE);
+    }
+
     DllUser32.pGetClientRect(hWnd, &ClientRect);
 
     if (YuiContext.hWndClock != NULL) {
@@ -418,6 +427,31 @@ YuiDisplayMenu(VOID)
 }
 
 /**
+ The main window procedure which processes messages sent to the desktop
+ window.
+
+ @param hwnd The window handle.
+
+ @param uMsg The message identifier.
+
+ @param wParam The first parameter associated with the window message.
+
+ @param lParam The second parameter associated with the window message.
+
+ @return A value which depends on the type of message being processed.
+ */
+LRESULT CALLBACK
+YuiDesktopWindowProc(
+    __in HWND hwnd,
+    __in UINT uMsg,
+    __in WPARAM wParam,
+    __in LPARAM lParam
+    )
+{
+    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+/**
  The main window procedure which processes messages sent to the taskbar
  window.
 
@@ -432,7 +466,7 @@ YuiDisplayMenu(VOID)
  @return A value which depends on the type of message being processed.
  */
 LRESULT CALLBACK
-YuiWindowProc(
+YuiTaskbarWindowProc(
     __in HWND hwnd,
     __in UINT uMsg,
     __in WPARAM wParam,
@@ -584,6 +618,11 @@ YuiCleanupGlobalState(VOID)
         YuiContext.hWndStart = NULL;
     }
 
+    if (YuiContext.hWndDesktop != NULL) {
+        DestroyWindow(YuiContext.hWndDesktop);
+        YuiContext.hWndDesktop = NULL;
+    }
+
     if (DllShell32.pSHAppBarMessage != NULL && YuiContext.hWnd != NULL) {
         YORI_APPBARDATA AppBar;
 
@@ -661,7 +700,7 @@ YuiCreateWindow(
     YuiMenuPopulate(Context);
 
     wc.style = 0;
-    wc.lpfnWndProc = YuiWindowProc;
+    wc.lpfnWndProc = YuiTaskbarWindowProc;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = NULL;
@@ -672,7 +711,24 @@ YuiCreateWindow(
     wc.lpszClassName = _T("YuiWnd");
 
     Result = RegisterClass(&wc);
-    ASSERT(Result);
+    if (!Result) {
+        return FALSE;
+    }
+
+    //
+    //  If the OS would benefit from a shell desktop window, register a
+    //  class for one.
+    //
+
+    if (Context->LoginShell && DllUser32.pSetShellWindow != NULL) {
+        wc.lpfnWndProc = YuiDesktopWindowProc;
+        wc.hbrBackground = CreateSolidBrush(GetSysColor(COLOR_BACKGROUND));
+        wc.lpszClassName = _T("YuiDesktop");
+        Result = RegisterClass(&wc);
+        if (!Result) {
+            return FALSE;
+        }
+    }
 
     ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
     ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
@@ -680,7 +736,7 @@ YuiCreateWindow(
     TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
     Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
 
-    Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
+    Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
                                    _T("YuiWnd"),
                                    _T("Yui"),
                                    WS_POPUP | WS_DLGFRAME | WS_CLIPCHILDREN,
@@ -725,6 +781,38 @@ YuiCreateWindow(
 
     if (DllUser32.pSetTaskmanWindow != NULL) {
         DllUser32.pSetTaskmanWindow(Context->hWnd);
+    }
+
+    //
+    //  If this is the first shell instance, and the OS supports shell
+    //  desktop windows, create a desktop.  If the OS doesn't support
+    //  shell desktop windows, it really doesn't need one - the user32
+    //  desktop should display the background correctly.
+    //
+
+    if (Context->LoginShell && DllUser32.pSetShellWindow != NULL) {
+
+        Context->hWndDesktop = CreateWindowEx(WS_EX_NOACTIVATE,
+                                              _T("YuiDesktop"),
+                                              _T(""),
+                                              WS_POPUP | WS_VISIBLE,
+                                              0,
+                                              0,
+                                              ScreenWidth,
+                                              ScreenHeight - TaskbarHeight,
+                                              NULL, NULL, NULL, 0);
+
+        if (Context->hWndDesktop == NULL) {
+            YuiCleanupGlobalState();
+            return FALSE;
+        }
+
+        //
+        //  This tells the window manager to render the desktop underneath
+        //  every other window.
+        //
+
+        DllUser32.pSetShellWindow(Context->hWndDesktop);
     }
 
     YuiNotifyResolutionChange(Context->hWnd, ScreenWidth, ScreenHeight);

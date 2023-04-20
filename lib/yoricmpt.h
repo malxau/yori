@@ -4143,6 +4143,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define WS_EX_STATICEDGE 0x20000
 #endif
 
+#ifndef WS_EX_NOACTIVATE
+/**
+ If not defined by the compilation environment, a flag indicating a window 
+ should not receive input focus.
+ */
+#define WS_EX_NOACTIVATE 0x8000000
+#endif
+
 #ifndef BS_LEFT
 /**
  If not defined by the compilation environment, the flag indicating button

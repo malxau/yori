@@ -223,6 +223,14 @@ typedef struct _YUI_CONTEXT {
     HWND hWnd;
 
     /**
+     The window handle for the "Desktop."  This isn't really a desktop in the
+     user32 sense; it's a window created by this application for the purpose
+     of rendering a background color.  Newer versions of Windows won't do this
+     automatically on the real desktop.
+     */
+    HWND hWndDesktop;
+
+    /**
      The window handle for the start button.
      */
     HWND hWndStart;
