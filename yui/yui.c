@@ -45,11 +45,47 @@ CHAR strYuiHelpText[] =
 BOOL
 YuiHelp(VOID)
 {
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Yui %i.%02i\n"), YORI_VER_MAJOR, YORI_VER_MINOR);
+    YORI_STRING Text;
+
+    YoriLibInitEmptyString(&Text);
+    YoriLibYPrintf(&Text,
+                  _T("Yui %i.%02i\n")
 #if YORI_BUILD_ID
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  Build %i\n"), YORI_BUILD_ID);
+                  _T("  Build %i\n")
 #endif
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%hs"), strYuiHelpText);
+                  _T("%hs"),
+                  YORI_VER_MAJOR,
+                  YORI_VER_MINOR,
+#if YORI_BUILD_ID
+                  YORI_BUILD_ID,
+#endif
+                  strYuiHelpText);
+
+    if (Text.StartOfString != NULL) {
+        MessageBox(NULL, Text.StartOfString, _T("yui"), MB_ICONINFORMATION);
+        YoriLibFreeStringContents(&Text);
+    }
+
+    return TRUE;
+}
+
+/**
+ Display license text to the user.
+
+ @param CopyrightYear Pointer to the current copyright year range as text.
+ */
+BOOL
+YuiDisplayMitLicense(
+    __in LPCTSTR CopyrightYear
+    )
+{
+    YORI_STRING Text;
+    YoriLibInitEmptyString(&Text);
+    if (YoriLibMitLicenseText(CopyrightYear, &Text)) {
+        MessageBox(NULL, Text.StartOfString, _T("yui"), MB_ICONINFORMATION);
+        YoriLibFreeStringContents(&Text);
+    }
+
     return TRUE;
 }
 
@@ -942,7 +978,6 @@ ymain(
     DWORD i;
     DWORD StartArg = 0;
     YORI_STRING Arg;
-    CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
 
     ZeroMemory(&YuiContext, sizeof(YuiContext));
     YoriLibInitializeListHead(&YuiContext.ProgramsDirectory.ListEntry);
@@ -970,7 +1005,7 @@ ymain(
                 YuiHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019-2023"));
+                YuiDisplayMitLicense(_T("2019-2023"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
                 if (ArgC > i + 1) {
@@ -990,7 +1025,13 @@ ymain(
         }
 
         if (!ArgumentUnderstood) {
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
+            YORI_STRING Err;
+            YoriLibInitEmptyString(&Err);
+            YoriLibYPrintf(&Err, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
+            if (Err.StartOfString != NULL) {
+                MessageBox(NULL, Err.StartOfString, _T("yui"), MB_ICONSTOP);
+                YoriLibFreeStringContents(&Err);
+            }
         }
     }
 
@@ -1003,13 +1044,8 @@ ymain(
         DllUser32.pSetWindowTextW == NULL ||
         DllUser32.pShowWindow == NULL) {
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("yui: OS support not present\n"));
-    }
-
-    if (GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &ScreenInfo)) {
-        if (ScreenInfo.dwCursorPosition.X == 0 && ScreenInfo.dwCursorPosition.Y == 0) {
-            FreeConsole();
-        }
+        MessageBox(NULL, _T("yui: OS support not present"), _T("yui"), MB_ICONSTOP);
+        return EXIT_FAILURE;
     }
 
     if (!YuiCreateWindow(&YuiContext)) {
