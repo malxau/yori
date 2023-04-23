@@ -17,6 +17,8 @@ cl /? 2>&1 | findstr /C:"for MIPS" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=mips
 cl /? 2>&1 | findstr /C:"for PowerPC" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=ppc
+cl /? 2>&1 | findstr /C:"for Alpha" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=axp
 cl /? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=ia64
 

@@ -498,7 +498,7 @@ YoriPkgCollectPackagesFromSource(
     BOOL DeleteWhenFinished = FALSE;
     LPTSTR ThisLine;
     LPTSTR Equals;
-    LPTSTR KnownArchitectures[] = {_T("noarch"), _T("win32"), _T("mips"), _T("alpha"), _T("ppc"), _T("arm"), _T("ia64"), _T("amd64"), _T("arm64")};
+    LPTSTR KnownArchitectures[] = {_T("noarch"), _T("win32"), _T("mips"), _T("axp"), _T("ppc"), _T("arm"), _T("ia64"), _T("amd64"), _T("arm64")};
 
     // Worst case architecture and worst case key
     TCHAR IniKey[sizeof("noarch.packagepathforolderbuilds")];
@@ -1184,7 +1184,7 @@ YoriPkgFindRemotePackages(
                     ValidArchCount++;
                     break;
                 case YORI_PROCESSOR_ARCHITECTURE_ALPHA:
-                    YoriLibConstantString(&ArchString[ValidArchCount], _T("alpha"));
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("axp"));
                     ValidArchCount++;
                     break;
                 case YORI_PROCESSOR_ARCHITECTURE_PPC:

@@ -16,13 +16,17 @@ pkg/out/**
 pkg/amd64/**
 pkg/arm/**
 pkg/arm64/**
+pkg/axp/**
 pkg/ia64/**
 pkg/mips/**
+pkg/ppc/**
 pkg/win32/**
 pkg/amd64-dbg/**
 pkg/arm-dbg/**
 pkg/arm64-dbg/**
+pkg/axp-dbg/**
 pkg/ia64-dbg/**
 pkg/mips-dbg/**
+pkg/ppc-dbg/**
 pkg/win32-dbg/**
 !crt/i386/*.obj

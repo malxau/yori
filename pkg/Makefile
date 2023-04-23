@@ -56,6 +56,9 @@ YSETUP=out\$(ARCH)\ysetup.exe
 !IF "$(ARCH)"=="ppc"
 YSETUP=out\$(ARCH)\ysetup.exe
 !ENDIF
+!IF "$(ARCH)"=="axp"
+YSETUP=out\$(ARCH)\ysetup.exe
+!ENDIF
 !IF "$(ARCH)"=="amd64"
 YSETUP=out\$(ARCH)\ysetup.exe
 !ENDIF
