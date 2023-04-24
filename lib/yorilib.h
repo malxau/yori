@@ -4048,4 +4048,9 @@ YoriLibDosDateTimeToFileTime(
     __out LPFILETIME FileTime
     );
 
+DWORD
+YoriLibShellExecuteInstanceToError(
+    __in HINSTANCE hInst
+    );
+
 // vim:sw=4:ts=4:et:

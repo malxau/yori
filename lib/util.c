@@ -751,4 +751,42 @@ YoriLibDosDateTimeToFileTime(
 }
 
 
+/**
+ The original ShellExecute predates NT and returns 32 error values, or a
+ greater value to indicate success.  Translate these into their NT
+ counterparts.
+
+ @param hInst Instance returned from ShellExecute.
+
+ @return Win32 error code, including ERROR_SUCCESS to indicate success.
+ */
+DWORD
+YoriLibShellExecuteInstanceToError(
+    __in HINSTANCE hInst
+    )
+{
+    DWORD Err;
+
+    Err = ERROR_SUCCESS;
+    if (hInst < (HINSTANCE)(DWORD_PTR)32) {
+        switch((DWORD_PTR)hInst) {
+            case ERROR_FILE_NOT_FOUND:
+            case ERROR_PATH_NOT_FOUND:
+            case ERROR_ACCESS_DENIED:
+            case ERROR_BAD_FORMAT:
+                Err = (DWORD)(DWORD_PTR)hInst;
+                break;
+            case SE_ERR_SHARE:
+                Err = ERROR_SHARING_VIOLATION;
+                break;
+            default:
+                Err = ERROR_TOO_MANY_OPEN_FILES;
+                break;
+        }
+    }
+
+    return Err;
+}
+
+
 // vim:sw=4:ts=4:et:

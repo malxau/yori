@@ -109,24 +109,7 @@ YoriShExecViaShellExecute(
 
         HINSTANCE hInst;
         hInst = DllShell32.pShellExecuteW(NULL, NULL, sei.lpFile, sei.lpParameters, _T("."), sei.nShow);
-
-        LastError = ERROR_SUCCESS;
-        if (hInst < (HINSTANCE)(DWORD_PTR)32) {
-            switch((DWORD_PTR)hInst) {
-                case ERROR_FILE_NOT_FOUND:
-                case ERROR_PATH_NOT_FOUND:
-                case ERROR_ACCESS_DENIED:
-                case ERROR_BAD_FORMAT:
-                    LastError = (DWORD)(DWORD_PTR)hInst;
-                    break;
-                case SE_ERR_SHARE:
-                    LastError = ERROR_SHARING_VIOLATION;
-                    break;
-                default:
-                    LastError = ERROR_TOO_MANY_OPEN_FILES;
-                    break;
-            }
-        }
+        LastError = YoriLibShellExecuteInstanceToError(hInst);
     }
 
     YoriLibShRevertRedirection(&PreviousRedirectContext);

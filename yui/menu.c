@@ -1361,10 +1361,6 @@ YuiMenuRunBrowse(
 {
     OPENFILENAMEW ofn;
 
-    if (DllShell32.pShellExecuteW == NULL) {
-        return FALSE;
-    }
-
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.StructureSize = sizeof(ofn);
     ofn.hWndParent = hWndParent;
@@ -1412,6 +1408,10 @@ RunDialogProc(
     switch (uMsg) {
         case WM_INITDIALOG:
             RunDlgContext = (PYUI_CONTEXT)lParam;
+            if (DllShell32.pShellExecuteW == NULL) {
+                return FALSE;
+            }
+
             return TRUE;
         case WM_COMMAND:
             switch (LOWORD(wParam)) {
@@ -1426,13 +1426,55 @@ RunDialogProc(
                 case IDC_OK:
                     {
                         DWORD Length;
+                        HINSTANCE hInst;
+                        DWORD Err;
+
+                        EnableWindow(GetDlgItem(hDlg, IDC_OK), FALSE);
+                        EnableWindow(GetDlgItem(hDlg, IDC_CANCEL), FALSE);
+                        EnableWindow(GetDlgItem(hDlg, IDC_RUNCMD), FALSE);
+                        EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
+
                         Length = GetWindowTextLength(GetDlgItem(hDlg, IDC_RUNCMD));
                         if (YoriLibAllocateString(&Cmd, Length + 1)) {
-                            GetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString, Cmd.LengthAllocated);
-                            DllShell32.pShellExecuteW(NULL, NULL, Cmd.StartOfString, NULL, NULL, SW_SHOWNORMAL);
-                            YoriLibFreeStringContents(&Cmd);
+                            PYORI_STRING ArgV;
+                            DWORD Index;
+                            DWORD ArgC;
+                            LPTSTR ArgString;
 
+                            Cmd.LengthInChars = GetDlgItemText(hDlg, IDC_RUNCMD, Cmd.StartOfString, Cmd.LengthAllocated);
+
+                            ArgV = YoriLibCmdlineToArgcArgv(Cmd.StartOfString, 2, FALSE, &ArgC);
+                            if (ArgV != NULL) {
+                                ArgString = NULL;
+                                if (ArgC > 1) {
+                                    ArgString = ArgV[1].StartOfString;
+                                }
+                                hInst = DllShell32.pShellExecuteW(NULL, NULL, ArgV[0].StartOfString, ArgString, NULL, SW_SHOWNORMAL);
+                                Err = YoriLibShellExecuteInstanceToError(hInst);
+                                if (Err != ERROR_SUCCESS) {
+                                    LPTSTR WinErrText;
+                                    YORI_STRING ErrText;
+                                    YoriLibInitEmptyString(&ErrText);
+
+                                    WinErrText = YoriLibGetWinErrorText(Err);
+                                    if (WinErrText != NULL) {
+                                        YoriLibYPrintf(&ErrText, _T("Could not execute \"%y\": %s"), &Cmd, YoriLibGetWinErrorText(Err));
+                                        if (ErrText.StartOfString != NULL) {
+                                            MessageBox(hDlg, ErrText.StartOfString, _T("Yui"), MB_ICONSTOP);
+                                            YoriLibFreeStringContents(&ErrText);
+                                        }
+                                        YoriLibFreeWinErrorText(WinErrText);
+                                    }
+                                }
+
+                                YoriLibFreeStringContents(&Cmd);
+                                for (Index = 0; Index < ArgC; Index++) {
+                                    YoriLibFreeStringContents(&ArgV[Index]);
+                                }
+                                YoriLibDereference(ArgV);
+                            }
                         }
+
                         EndDialog(hDlg, TRUE);
                         return TRUE;
                     }
