@@ -901,12 +901,19 @@ YuiFileEnumerateErrorCallback(
  */
 #define YUI_MENU_RUN                   (20)
 
+/**
+ An identifier for the menu item to refresh the taskbar.
+ */
+#define YUI_MENU_REFRESH               (30)
+
 
 /**
  Enumerate all shortcuts in known folders and populate the start menu with
  shortcut files that have been found.
 
  @param YuiContext Pointer to the application context.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YuiMenuPopulate(
@@ -1092,11 +1099,24 @@ YuiMenuPopulate(
                                         NULL,
                                         YuiPopulateMenuOnDirectory);
 
+#if DBG
+    YuiContext->DebugMenu = CreatePopupMenu();
+    if (YuiContext->DebugMenu == NULL) {
+        return FALSE;
+    }
+
+    AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_REFRESH, _T("Refresh taskbar"));
+#endif
+
     //
     //  Add in all of the predefined menu entries.
     //
 
     AppendMenu(YuiContext->StartMenu, MF_STRING | MF_POPUP, (DWORD_PTR)YuiContext->ProgramsDirectory.MenuHandle, _T("Programs"));
+#if DBG
+    AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
+    AppendMenu(YuiContext->StartMenu, MF_STRING | MF_POPUP, (DWORD_PTR)YuiContext->DebugMenu, _T("Debug"));
+#endif
     AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_RUN, _T("Run..."));
     AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
@@ -1150,6 +1170,11 @@ YuiMenuFreeAll(
     if (YuiContext->ShutdownMenu != NULL) {
         DestroyMenu(YuiContext->ShutdownMenu);
         YuiContext->ShutdownMenu = NULL;
+    }
+
+    if (YuiContext->DebugMenu != NULL) {
+        DestroyMenu(YuiContext->DebugMenu);
+        YuiContext->DebugMenu = NULL;
     }
 
     //
@@ -1566,6 +1591,11 @@ YuiMenuExecuteById(
         case YUI_MENU_RUN:
             YuiMenuRun(YuiContext);
             break;
+#if DBG
+        case YUI_MENU_REFRESH:
+            YuiTaskbarSyncWithCurrent(YuiContext);
+            break;
+#endif
         default:
             ASSERT(MenuId >= YUI_MENU_FIRST_PROGRAM_MENU_ID);
 
@@ -1602,7 +1632,9 @@ YuiMenuDisplayAndExecute(
     RECT WindowRect;
     DWORD MenuId;
 
-    YuiMenuReloadIfChanged(YuiContext);
+    if (!YuiMenuReloadIfChanged(YuiContext)) {
+        return FALSE;
+    }
 
     DllUser32.pGetWindowRect(hWnd, &WindowRect);
 

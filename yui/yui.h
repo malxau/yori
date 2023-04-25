@@ -262,6 +262,11 @@ typedef struct _YUI_CONTEXT {
     HMENU StartMenu;
 
     /**
+     The menu handle for the nested debug menu.
+     */
+    HMENU DebugMenu;
+
+    /**
      The menu handle for the nested shutdown menu.
      */
     HMENU ShutdownMenu;
