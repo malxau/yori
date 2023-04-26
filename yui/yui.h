@@ -368,6 +368,18 @@ typedef struct _YUI_CONTEXT {
      */
     BOOLEAN MenuActive;
 
+    /**
+     Set to TRUE if the program has an active console for the purpose of
+     logging debug messages.  Set to FALSE if one is not active.
+     */
+    BOOLEAN DebugLogEnabled;
+
+    /**
+     Set to TRUE if the check mark is displayed on the debug log menu item.
+     If this does not equal DebugLogEnabled above, the menu is recalculated.
+     */
+    BOOLEAN DebugMenuItemChecked;
+
 } YUI_CONTEXT, *PYUI_CONTEXT;
 
 /**

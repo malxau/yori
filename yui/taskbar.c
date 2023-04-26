@@ -123,6 +123,9 @@ YuiTaskbarIncludeWindow(
     if (WindowTitleLength == 0) {
         return FALSE;
     }
+#if DBG
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("    including window due to style %08x ExStyle %08x\n"), WinStyle, ExStyle);
+#endif
 
     return TRUE;
 }

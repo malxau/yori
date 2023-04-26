@@ -3,7 +3,7 @@
  *
  * Yori shell populate and display the start menu
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,30 @@
 #include <yorilib.h>
 #include "yui.h"
 #include "resource.h"
+
+#if DBG
+/**
+ Turn the console logging window on or off.
+
+ @param YuiContext Pointer to the application context.
+ */
+VOID
+YuiMenuToggleLogging(
+    __inout PYUI_CONTEXT YuiContext
+    )
+{
+    if (YuiContext->DebugLogEnabled) {
+        if (FreeConsole()) {
+            YuiContext->DebugLogEnabled = FALSE;
+        }
+    } else {
+        if (AllocConsole()) {
+            SetConsoleTitle(_T("Yui debug log"));
+            YuiContext->DebugLogEnabled = TRUE;
+        }
+    }
+}
+#endif
 
 /**
  Given a fully qualified directory name, return the substring from the name
@@ -906,6 +930,11 @@ YuiFileEnumerateErrorCallback(
  */
 #define YUI_MENU_REFRESH               (30)
 
+/**
+ An identifier for the menu item to enable or disable logging.
+ */
+#define YUI_MENU_LOGGING               (31)
+
 
 /**
  Enumerate all shortcuts in known folders and populate the start menu with
@@ -1105,7 +1134,10 @@ YuiMenuPopulate(
         return FALSE;
     }
 
+    YuiContext->DebugMenuItemChecked = YuiContext->DebugLogEnabled;
+
     AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_REFRESH, _T("Refresh taskbar"));
+    AppendMenu(YuiContext->DebugMenu, MF_STRING | (YuiContext->DebugMenuItemChecked?MF_CHECKED:0), YUI_MENU_LOGGING, _T("Toggle debug logging"));
 #endif
 
     //
@@ -1207,23 +1239,31 @@ YuiMenuReloadIfChanged(
     BOOLEAN FoundChange;
 
     FoundChange = FALSE;
-    HandleCount = sizeof(YuiContext->StartChangeNotifications)/sizeof(YuiContext->StartChangeNotifications[0]);
-    while(TRUE) {
-        WaitStatus = WaitForMultipleObjectsEx(HandleCount,
-                                              YuiContext->StartChangeNotifications,
-                                              FALSE,
-                                              0,
-                                              FALSE);
-        if (WaitStatus == WAIT_TIMEOUT) {
-            if (!FoundChange) {
-                return TRUE;
-            }
-            break;
-        }
-
+#if DBG
+    if (YuiContext->DebugMenuItemChecked != YuiContext->DebugLogEnabled) {
         FoundChange = TRUE;
-        if (WaitStatus < WAIT_OBJECT_0 + HandleCount) {
-            FindNextChangeNotification(YuiContext->StartChangeNotifications[WaitStatus - WAIT_OBJECT_0]);
+    }
+#endif
+
+    if (!FoundChange) {
+        HandleCount = sizeof(YuiContext->StartChangeNotifications)/sizeof(YuiContext->StartChangeNotifications[0]);
+        while(TRUE) {
+            WaitStatus = WaitForMultipleObjectsEx(HandleCount,
+                                                  YuiContext->StartChangeNotifications,
+                                                  FALSE,
+                                                  0,
+                                                  FALSE);
+            if (WaitStatus == WAIT_TIMEOUT) {
+                if (!FoundChange) {
+                    return TRUE;
+                }
+                break;
+            }
+
+            FoundChange = TRUE;
+            if (WaitStatus < WAIT_OBJECT_0 + HandleCount) {
+                FindNextChangeNotification(YuiContext->StartChangeNotifications[WaitStatus - WAIT_OBJECT_0]);
+            }
         }
     }
 
@@ -1594,6 +1634,9 @@ YuiMenuExecuteById(
 #if DBG
         case YUI_MENU_REFRESH:
             YuiTaskbarSyncWithCurrent(YuiContext);
+            break;
+        case YUI_MENU_LOGGING:
+            YuiMenuToggleLogging(YuiContext);
             break;
 #endif
         default:

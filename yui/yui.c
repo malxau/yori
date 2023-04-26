@@ -462,6 +462,65 @@ YuiDisplayMenu(VOID)
     return TRUE;
 }
 
+#if DBG
+/**
+ Display a debug string corresponding to a shell hook message.
+
+ @param szMessage A constant string for the message name.
+
+ @param wParam The wParam for the message.
+
+ @param lParam The lParam for the message.  If this is known to be an hWnd,
+        the window title is also included.
+ */
+VOID
+YuiPrintShellHookDebugMessage(
+    __in LPCTSTR szMessage,
+    __in WPARAM wParam,
+    __in LPARAM lParam
+    )
+{
+    HWND hWnd;
+    YORI_STRING WindowTitle;
+
+    if (!YuiContext.DebugLogEnabled) {
+        return;
+    }
+
+    hWnd = NULL;
+
+    switch(wParam) {
+        case HSHELL_WINDOWACTIVATED:
+        case HSHELL_RUDEAPPACTIVATED:
+        case HSHELL_WINDOWCREATED:
+        case HSHELL_WINDOWDESTROYED:
+        case HSHELL_REDRAW:
+        case HSHELL_FLASH:
+            hWnd = (HWND)lParam;
+            break;
+    }
+
+    YoriLibInitEmptyString(&WindowTitle);
+
+    if (hWnd != NULL) {
+        DWORD CharsNeeded;
+
+        CharsNeeded = GetWindowTextLength(hWnd);
+        if (YoriLibAllocateString(&WindowTitle, CharsNeeded + 1)) {
+            WindowTitle.LengthInChars = GetWindowText(hWnd, WindowTitle.StartOfString, WindowTitle.LengthAllocated);
+        }
+    }
+
+    if (wParam <= 0xffff && lParam <= 0xffffffff) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-24s %04x %08x %y\n"), szMessage, wParam, lParam, &WindowTitle);
+    } else {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-24s %016llx %016llx %y\n"), szMessage, wParam, lParam, &WindowTitle);
+    }
+
+    YoriLibFreeStringContents(&WindowTitle);
+}
+#endif
+
 /**
  The main window procedure which processes messages sent to the desktop
  window.
@@ -570,6 +629,11 @@ YuiTaskbarWindowProc(
             PostQuitMessage(0);
             return 0;
         case WM_DISPLAYCHANGE:
+#if DBG
+            if (YuiContext.DebugLogEnabled) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Display change          %016llx %016llx\n"), wParam, lParam);
+            }
+#endif
             YuiNotifyResolutionChange(YuiContext.hWnd, LOWORD(lParam), HIWORD(lParam));
             break;
         case WM_DRAWITEM:
@@ -587,26 +651,57 @@ YuiTaskbarWindowProc(
                 }
             }
             break;
+#if DBG
+        case WM_USER:
+            if (YuiContext.DebugLogEnabled) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("AppBar notification     %016llx %016llx\n"), wParam, lParam);
+            }
+            break;
+        case WM_SETTINGCHANGE:
+            if (YuiContext.DebugLogEnabled) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("WM_SETTINGCHANGE        %016llx %016llx\n"), wParam, lParam);
+            }
+            break;
+#endif
+
         default:
             if (uMsg == YuiContext.ShellHookMsg) {
                 switch(wParam) {
                     case HSHELL_WINDOWACTIVATED:
                     case HSHELL_RUDEAPPACTIVATED:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_WINDOWACTIVATED"), wParam, lParam);
+#endif
                         YuiTaskbarNotifyActivateWindow(&YuiContext, (HWND)lParam);
                         break;
                     case HSHELL_WINDOWCREATED:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_WINDOWCREATED"), wParam, lParam);
+#endif
                         YuiTaskbarNotifyNewWindow(&YuiContext, (HWND)lParam);
                         break;
                     case HSHELL_WINDOWDESTROYED:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_WINDOWDESTROYED"), wParam, lParam);
+#endif
                         YuiTaskbarNotifyDestroyWindow(&YuiContext, (HWND)lParam);
                         break;
                     case HSHELL_REDRAW:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_REDRAW"), wParam, lParam);
+#endif
                         YuiTaskbarNotifyTitleChange(&YuiContext, (HWND)lParam);
                         break;
                     case HSHELL_FLASH:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("HSHELL_FLASH"), wParam, lParam);
+#endif
                         YuiTaskbarNotifyFlash(&YuiContext, (HWND)lParam);
                         break;
                     default:
+#if DBG
+                        YuiPrintShellHookDebugMessage(_T("Unhandled HookMsg"), wParam, lParam);
+#endif
                         break;
                 }
             }
