@@ -521,8 +521,11 @@ YuiTaskbarNotifyNewWindow(
         return;
     }
 
-    if (!YuiTaskbarAllocateAndAddButton(YuiContext, hWnd)) {
-        return;
+    ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
+    if (ThisButton == NULL) {
+        if (!YuiTaskbarAllocateAndAddButton(YuiContext, hWnd)) {
+            return;
+        }
     }
 
     TaskbarHwnd = YuiContext->hWnd;
@@ -675,6 +678,16 @@ YuiTaskbarNotifyTitleChange(
     PYUI_TASKBAR_BUTTON ThisButton;
 
     if (hWnd == NULL) {
+        return;
+    }
+
+    //
+    //  If the window has changed in a way that would cause it to be
+    //  ineligible for a taskbar button, remove it.
+    //
+
+    if (!YuiTaskbarIncludeWindow(hWnd)) {
+        YuiTaskbarNotifyDestroyWindow(YuiContext, hWnd);
         return;
     }
 
