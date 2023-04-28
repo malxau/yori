@@ -1053,6 +1053,72 @@ YuiCreateWindow(
     return TRUE;
 }
 
+#if DBG
+/**
+ Launch the current winlogon shell.  This code runs after tearing down all
+ state from this program so that a new shell can be launched that will
+ perceive itself as freshly launched.
+ */
+VOID
+YuiLaunchWinlogonShell(VOID)
+{
+    HKEY hKey;
+    DWORD Err;
+    DWORD LengthRequired;
+    YORI_STRING ExistingValue;
+    YORI_STRING ValueName;
+    YORI_STRING KeyName;
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegOpenKeyExW == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL ||
+        DllShell32.pShellExecuteW == NULL) {
+
+        return;
+    }
+
+    YoriLibConstantString(&KeyName, _T("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon"));
+    YoriLibConstantString(&ValueName, _T("Shell"));
+
+    Err = DllAdvApi32.pRegOpenKeyExW(HKEY_LOCAL_MACHINE,
+                                     KeyName.StartOfString,
+                                     0,
+                                     KEY_QUERY_VALUE,
+                                     &hKey);
+
+    if (Err != ERROR_SUCCESS) {
+        return;
+    }
+
+    LengthRequired = 0;
+    YoriLibInitEmptyString(&ExistingValue);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, ValueName.StartOfString, NULL, NULL, NULL, &LengthRequired);
+    if (Err == ERROR_MORE_DATA || LengthRequired > 0) {
+        if (!YoriLibAllocateString(&ExistingValue, (LengthRequired / sizeof(TCHAR)) + 1)) {
+            DllAdvApi32.pRegCloseKey(hKey);
+            return;
+        }
+
+        Err = DllAdvApi32.pRegQueryValueExW(hKey, ValueName.StartOfString, NULL, NULL, (LPBYTE)ExistingValue.StartOfString, &LengthRequired);
+        if (Err != ERROR_SUCCESS) {
+            YoriLibFreeStringContents(&ExistingValue);
+            DllAdvApi32.pRegCloseKey(hKey);
+            return;
+        }
+
+        ExistingValue.LengthInChars = LengthRequired / sizeof(TCHAR) - 1;
+
+        DllShell32.pShellExecuteW(NULL, NULL, ExistingValue.StartOfString, NULL, NULL, SW_SHOWNORMAL);
+
+        YoriLibFreeStringContents(&ExistingValue);
+    }
+
+    DllAdvApi32.pRegCloseKey(hKey);
+}
+#endif
+
 
 /**
  The main entrypoint for the yui cmdlet.
@@ -1156,6 +1222,12 @@ ymain(
     }
 
     YuiCleanupGlobalState();
+
+#if DBG
+    if (YuiContext.LaunchWinlogonShell) {
+        YuiLaunchWinlogonShell();
+    }
+#endif
 
     return EXIT_SUCCESS;
 }

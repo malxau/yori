@@ -380,6 +380,13 @@ typedef struct _YUI_CONTEXT {
      */
     BOOLEAN DebugMenuItemChecked;
 
+    /**
+     Set to TRUE if on exit Yui should launch the current winlogon shell.
+     This is a debug facility to allow the shell to change without needing
+     to log on and off.
+     */
+    BOOLEAN LaunchWinlogonShell;
+
 } YUI_CONTEXT, *PYUI_CONTEXT;
 
 /**

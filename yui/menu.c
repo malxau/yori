@@ -51,6 +51,21 @@ YuiMenuToggleLogging(
         }
     }
 }
+
+/**
+ Indicate that Yui should launch the current winlogon shell.
+
+ @param YuiContext Pointer to the application context.
+ */
+VOID
+YuiExitAndLaunchWinlogonShell(
+    __inout PYUI_CONTEXT YuiContext
+    )
+{
+    YuiContext->LaunchWinlogonShell = TRUE;
+    PostQuitMessage(0);
+}
+
 #endif
 
 /**
@@ -935,6 +950,11 @@ YuiFileEnumerateErrorCallback(
  */
 #define YUI_MENU_LOGGING               (31)
 
+/**
+ An identifier for the menu item to launch Winlogon shell and exit.
+ */
+#define YUI_MENU_LAUNCHWINLOGONSHELL   (32)
+
 
 /**
  Enumerate all shortcuts in known folders and populate the start menu with
@@ -1138,6 +1158,7 @@ YuiMenuPopulate(
 
     AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_REFRESH, _T("Refresh taskbar"));
     AppendMenu(YuiContext->DebugMenu, MF_STRING | (YuiContext->DebugMenuItemChecked?MF_CHECKED:0), YUI_MENU_LOGGING, _T("Toggle debug logging"));
+    AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_LAUNCHWINLOGONSHELL, _T("Launch winlogon shell and exit"));
 #endif
 
     //
@@ -1637,6 +1658,9 @@ YuiMenuExecuteById(
             break;
         case YUI_MENU_LOGGING:
             YuiMenuToggleLogging(YuiContext);
+            break;
+        case YUI_MENU_LAUNCHWINLOGONSHELL:
+            YuiExitAndLaunchWinlogonShell(YuiContext);
             break;
 #endif
         default:
