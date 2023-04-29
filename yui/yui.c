@@ -256,17 +256,11 @@ YuiStartButtonWndProc(
 
  @param hWnd The taskbar window to reposition.
 
- @param ScreenWidth The new width of the screen.
-
- @param ScreenHeight The new height of the screen.
-
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOL
 YuiNotifyResolutionChange(
-    __in HWND hWnd,
-    __in DWORD ScreenWidth,
-    __in DWORD ScreenHeight
+    __in HWND hWnd
     )
 {
     YORI_APPBARDATA AppBar;
@@ -285,9 +279,9 @@ YuiNotifyResolutionChange(
 
     YuiContext.DisplayResolutionChangeInProgress = TRUE;
 
-    YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(ScreenWidth, ScreenHeight);
+    YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
-    TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
+    TaskbarHeight = YuiGetTaskbarHeight(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
     FontSize = 9;
     FontSize = FontSize + (TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3;
@@ -347,9 +341,9 @@ YuiNotifyResolutionChange(
     }
 
     NewWorkArea.left = 0;
-    NewWorkArea.right = ScreenWidth - 1;
+    NewWorkArea.right = YuiContext.ScreenWidth - 1;
     NewWorkArea.top = 0;
-    NewWorkArea.bottom = ScreenHeight - TaskbarHeight - 1;
+    NewWorkArea.bottom = YuiContext.ScreenHeight - TaskbarHeight - 1;
 
     if (DllShell32.pSHAppBarMessage != NULL) {
 
@@ -358,9 +352,9 @@ YuiNotifyResolutionChange(
         AppBar.uCallbackMessage = WM_USER;
         AppBar.uEdge = 3;
         AppBar.rc.left = 0;
-        AppBar.rc.top = ScreenHeight - TaskbarHeight;
-        AppBar.rc.bottom = ScreenHeight;
-        AppBar.rc.right = ScreenWidth;
+        AppBar.rc.top = YuiContext.ScreenHeight - TaskbarHeight;
+        AppBar.rc.bottom = YuiContext.ScreenHeight;
+        AppBar.rc.right = YuiContext.ScreenWidth;
         AppBar.lParam = TRUE;
 
         // New
@@ -394,8 +388,8 @@ YuiNotifyResolutionChange(
     } else {
         DllUser32.pMoveWindow(hWnd,
                               0,
-                              ScreenHeight - TaskbarHeight,
-                              ScreenWidth,
+                              YuiContext.ScreenHeight - TaskbarHeight,
+                              YuiContext.ScreenWidth,
                               TaskbarHeight,
                               TRUE);
     }
@@ -634,7 +628,9 @@ YuiTaskbarWindowProc(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Display change          %016llx %016llx\n"), wParam, lParam);
             }
 #endif
-            YuiNotifyResolutionChange(YuiContext.hWnd, LOWORD(lParam), HIWORD(lParam));
+            YuiContext.ScreenWidth = LOWORD(lParam);
+            YuiContext.ScreenHeight = HIWORD(lParam);
+            YuiNotifyResolutionChange(YuiContext.hWnd);
             break;
         case WM_DRAWITEM:
             {
@@ -812,8 +808,6 @@ YuiCreateWindow(
     WNDCLASS wc;
     BOOL Result;
     RECT ClientRect;
-    DWORD ScreenHeight;
-    DWORD ScreenWidth;
     DWORD TaskbarHeight;
     YORI_MINIMIZEDMETRICS MinimizedMetrics;
 
@@ -861,10 +855,10 @@ YuiCreateWindow(
         }
     }
 
-    ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
-    ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+    Context->ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+    Context->ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
 
-    TaskbarHeight = YuiGetTaskbarHeight(ScreenWidth, ScreenHeight);
+    TaskbarHeight = YuiGetTaskbarHeight(Context->ScreenWidth, Context->ScreenHeight);
     Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
 
     Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
@@ -872,8 +866,8 @@ YuiCreateWindow(
                                    _T("Yui"),
                                    WS_POPUP | WS_DLGFRAME | WS_CLIPCHILDREN,
                                    0,
-                                   ScreenHeight - TaskbarHeight,
-                                   ScreenWidth,
+                                   Context->ScreenHeight - TaskbarHeight,
+                                   Context->ScreenWidth,
                                    TaskbarHeight,
                                    NULL, NULL, NULL, 0);
     if (Context->hWnd == NULL) {
@@ -929,8 +923,8 @@ YuiCreateWindow(
                                               WS_POPUP | WS_VISIBLE,
                                               0,
                                               0,
-                                              ScreenWidth,
-                                              ScreenHeight - TaskbarHeight,
+                                              Context->ScreenWidth,
+                                              Context->ScreenHeight - TaskbarHeight,
                                               NULL, NULL, NULL, 0);
 
         if (Context->hWndDesktop == NULL) {
@@ -946,7 +940,7 @@ YuiCreateWindow(
         DllUser32.pSetShellWindow(Context->hWndDesktop);
     }
 
-    YuiNotifyResolutionChange(Context->hWnd, ScreenWidth, ScreenHeight);
+    YuiNotifyResolutionChange(Context->hWnd);
     if (Context->hFont == NULL || Context->hBoldFont == NULL) {
         YuiCleanupGlobalState();
         return FALSE;

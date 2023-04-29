@@ -131,6 +131,88 @@ YuiTaskbarIncludeWindow(
 }
 
 /**
+ Check if a window is full screen.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWnd Handle to the window to check.
+
+ @return TRUE if the window appears full screen, FALSE if not.
+ */
+BOOLEAN
+YuiTaskbarFullscreenWindow(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    )
+{
+    RECT WindowRect;
+
+    if (IsIconic(hWnd)) {
+        return FALSE;
+    }
+
+    if (!GetWindowRect(hWnd, &WindowRect)) {
+        return FALSE;
+    }
+
+    //
+    //  This is a bit rubbery.  A window is a full screen window if it
+    //  approximates the screen size.
+    //
+
+    if (WindowRect.left > 2 ||
+        WindowRect.top > 2 ||
+        WindowRect.bottom < (INT)(YuiContext->ScreenHeight - 2) ||
+        WindowRect.right < (INT)(YuiContext->ScreenWidth - 2)) {
+
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Check if the current window is a full screen window.  If so, hide the
+ taskbar.  If the taskbar is currently hidden and the new window is not
+ full screen, un-hide the taskbar.
+
+ @param YuiContext Pointer to the application context.
+
+ @param hWnd Handle to the currently active window.
+ 
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YuiTaskbarUpdateFullscreenStatus(
+    __in PYUI_CONTEXT YuiContext,
+    __in HWND hWnd
+    )
+{
+    BOOLEAN FullscreenWindowActive;
+
+    FullscreenWindowActive = YuiTaskbarFullscreenWindow(YuiContext, hWnd);
+
+    if (YuiContext->FullscreenModeActive) {
+        if (!FullscreenWindowActive) {
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Window %08x not fullscreen, displaying taskbar\n"), hWnd);
+#endif
+            DllUser32.pShowWindow(YuiContext->hWnd, SW_SHOW);
+            YuiContext->FullscreenModeActive = FullscreenWindowActive;
+        }
+    } else if (FullscreenWindowActive) {
+#if DBG
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Window %08x fullscreen, hiding taskbar\n"), hWnd);
+#endif
+        DllUser32.pShowWindow(YuiContext->hWnd, SW_HIDE);
+        YuiContext->FullscreenModeActive = FullscreenWindowActive;
+    }
+
+    return FullscreenWindowActive;
+}
+
+
+/**
  Allocate a unique identifier for a button control that will be displayed
  on the taskbar.
 
@@ -521,6 +603,8 @@ YuiTaskbarNotifyNewWindow(
         return;
     }
 
+    YuiTaskbarUpdateFullscreenStatus(YuiContext, hWnd);
+
     ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
     if (ThisButton == NULL) {
         if (!YuiTaskbarAllocateAndAddButton(YuiContext, hWnd)) {
@@ -643,6 +727,8 @@ YuiTaskbarNotifyActivateWindow(
         return;
     }
 
+    YuiTaskbarUpdateFullscreenStatus(YuiContext, hWnd);
+
     ListEntry = NULL;
     ThisButton = NULL;
     ListEntry = YoriLibGetNextListEntry(&YuiContext->TaskbarButtons, ListEntry);
@@ -690,6 +776,8 @@ YuiTaskbarNotifyTitleChange(
         YuiTaskbarNotifyDestroyWindow(YuiContext, hWnd);
         return;
     }
+
+    YuiTaskbarUpdateFullscreenStatus(YuiContext, hWnd);
 
     ThisButton = YuiTaskbarFindButtonFromHwndToActivate(YuiContext, hWnd);
     if (ThisButton == NULL) {

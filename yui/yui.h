@@ -207,6 +207,16 @@ typedef struct _YUI_CONTEXT {
     YORI_MINIMIZEDMETRICS SavedMinimizedMetrics;
 
     /**
+     The width of the screen, in pixels.
+     */
+    DWORD ScreenWidth;
+
+    /**
+     The height of the screen, in pixels.
+     */
+    DWORD ScreenHeight;
+
+    /**
      The default window procedure for a push button.  Stored here so we can
      override it and call it recursively.
      */
@@ -386,6 +396,12 @@ typedef struct _YUI_CONTEXT {
      to log on and off.
      */
     BOOLEAN LaunchWinlogonShell;
+
+    /**
+     Set to TRUE if a fullscreen window is active, meaning the taskbar is
+     hidden.  Set to FALSE if the taskbar is visible.
+     */
+    BOOLEAN FullscreenModeActive;
 
 } YUI_CONTEXT, *PYUI_CONTEXT;
 
