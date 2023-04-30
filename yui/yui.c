@@ -622,6 +622,16 @@ YuiTaskbarWindowProc(
         case WM_CLOSE:
             PostQuitMessage(0);
             return 0;
+        case WM_HOTKEY:
+#if DBG
+            if (YuiContext.DebugLogEnabled) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("WM_HOTKEY               %016llx %016llx\n"), wParam, lParam);
+            }
+#endif
+            DllUser32.pSetForegroundWindow(hwnd);
+            YuiMenuExecuteById(&YuiContext, (DWORD)wParam);
+            PostMessage(hwnd, WM_NULL, 0, 0);
+            break;
         case WM_DISPLAYCHANGE:
 #if DBG
             if (YuiContext.DebugLogEnabled) {
@@ -723,6 +733,10 @@ YuiCleanupGlobalState(VOID)
             FindCloseChangeNotification(YuiContext.StartChangeNotifications[Count]);
             YuiContext.StartChangeNotifications[Count] = NULL;
         }
+    }
+
+    if (YuiContext.RunHotKeyRegistered) {
+        UnregisterHotKey(YuiContext.hWnd, 1);
     }
 
     if (YuiContext.ClockTimerId != 0) {
@@ -1040,6 +1054,12 @@ YuiCreateWindow(
 
     if (Context->TaskbarRefreshFrequency != 0) {
         Context->SyncTimerId = SetTimer(Context->hWnd, YUI_WINDOW_POLL_TIMER, Context->TaskbarRefreshFrequency, NULL);
+    }
+
+    if (Context->LoginShell) {
+        if (RegisterHotKey(Context->hWnd, YUI_MENU_RUN, MOD_WIN, 'R')) {
+            Context->RunHotKeyRegistered = TRUE;
+        }
     }
 
     DllUser32.pShowWindow(Context->hWnd, SW_SHOW);

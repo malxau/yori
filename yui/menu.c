@@ -900,63 +900,6 @@ YuiFileEnumerateErrorCallback(
 }
 
 /**
- The first identifier for a user program within the start menu.  Other
- programs will have an identifier higher than this one.
- */
-#define YUI_MENU_FIRST_PROGRAM_MENU_ID (100)
-
-/**
- An identifier for the menu item to exit the program.
- */
-#define YUI_MENU_EXIT                  (1)
-
-/**
- An identifier for the menu item to disconnect the session.
- */
-#define YUI_MENU_DISCONNECT            (10)
-
-/**
- An identifier for the menu item to lock the session.
- */
-#define YUI_MENU_LOCK                  (11)
-
-/**
- An identifier for the menu item to log off the session.
- */
-#define YUI_MENU_LOGOFF                (12)
-
-/**
- An identifier for the menu item to reboot the system.
- */
-#define YUI_MENU_REBOOT                (13)
-
-/**
- An identifier for the menu item to shut down the system.
- */
-#define YUI_MENU_SHUTDOWN              (14)
-
-/**
- An identifier for the menu item to run a program.
- */
-#define YUI_MENU_RUN                   (20)
-
-/**
- An identifier for the menu item to refresh the taskbar.
- */
-#define YUI_MENU_REFRESH               (30)
-
-/**
- An identifier for the menu item to enable or disable logging.
- */
-#define YUI_MENU_LOGGING               (31)
-
-/**
- An identifier for the menu item to launch Winlogon shell and exit.
- */
-#define YUI_MENU_LAUNCHWINLOGONSHELL   (32)
-
-
-/**
  Enumerate all shortcuts in known folders and populate the start menu with
  shortcut files that have been found.
 

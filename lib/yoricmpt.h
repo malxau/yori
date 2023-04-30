@@ -4000,6 +4000,14 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define ARW_HIDE 0x8
 #endif
 
+#ifndef MOD_WIN
+/**
+ If not defined by the compilation environment, the flag that indicates a
+ hotkey is a combination including the Windows key.
+ */
+#define MOD_WIN 0x8
+#endif
+
 /**
  If not defined by the compilation environment, a structure definint how
  minimized windows should behave.
