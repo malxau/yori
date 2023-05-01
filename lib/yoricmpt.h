@@ -4048,6 +4048,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define WM_DISPLAYCHANGE 0x007e
 #endif
 
+#ifndef WM_WTSSESSION_CHANGE
+/**
+ If not defined by the compilation environment, the message indicating that
+ the session has changed.
+ */
+#define WM_WTSSESSION_CHANGE 0x02b1
+#endif
+
 #ifndef WM_SETICON
 /**
  A definition for WM_SETICON if it is not defined by the current compilation
@@ -10089,6 +10097,30 @@ WTS_DISCONNECT_SESSION(HANDLE, DWORD, BOOL);
 typedef WTS_DISCONNECT_SESSION *PWTS_DISCONNECT_SESSION;
 
 /**
+ A prototype for the WTSRegisterSessionNotification function.
+ */
+typedef
+BOOL WINAPI
+WTS_REGISTER_SESSION_NOTIFICATION(HWND, DWORD);
+
+/**
+ A prototype for a pointer to the WTSRegisterSessionNotification function.
+ */
+typedef WTS_REGISTER_SESSION_NOTIFICATION *PWTS_REGISTER_SESSION_NOTIFICATION;
+
+/**
+ A prototype for the WTSUnRegisterSessionNotification function.
+ */
+typedef
+BOOL WINAPI
+WTS_UNREGISTER_SESSION_NOTIFICATION(HWND);
+
+/**
+ A prototype for a pointer to the WTSUnRegisterSessionNotification function.
+ */
+typedef WTS_UNREGISTER_SESSION_NOTIFICATION *PWTS_UNREGISTER_SESSION_NOTIFICATION;
+
+/**
  A structure containing optional function pointers to wtsapi32.dll exported
  functions which programs can operate without having hard dependencies on.
  */
@@ -10103,6 +10135,18 @@ typedef struct _YORI_WTSAPI32_FUNCTIONS {
      If it's available on the current system, a pointer to WTSDisconnectSession.
      */
     PWTS_DISCONNECT_SESSION pWTSDisconnectSession;
+
+    /**
+     If it's available on the current system, a pointer to
+     WTSRegisterSessionNotification.
+     */
+    PWTS_REGISTER_SESSION_NOTIFICATION pWTSRegisterSessionNotification;
+
+    /**
+     If it's available on the current system, a pointer to
+     WTSUnRegisterSessionNotification.
+     */
+    PWTS_UNREGISTER_SESSION_NOTIFICATION pWTSUnRegisterSessionNotification;
 
 } YORI_WTSAPI32_FUNCTIONS, *PYORI_WTSAPI32_FUNCTIONS;
 

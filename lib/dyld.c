@@ -619,6 +619,8 @@ YoriLibLoadWtsApi32Functions(VOID)
     }
 
     DllWtsApi32.pWTSDisconnectSession = (PWTS_DISCONNECT_SESSION)GetProcAddress(DllWtsApi32.hDll, "WTSDisconnectSession");
+    DllWtsApi32.pWTSRegisterSessionNotification = (PWTS_REGISTER_SESSION_NOTIFICATION)GetProcAddress(DllWtsApi32.hDll, "WTSRegisterSessionNotification");
+    DllWtsApi32.pWTSUnRegisterSessionNotification = (PWTS_UNREGISTER_SESSION_NOTIFICATION)GetProcAddress(DllWtsApi32.hDll, "WTSUnRegisterSessionNotification");
 
     return TRUE;
 }
