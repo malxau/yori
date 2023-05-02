@@ -251,6 +251,12 @@ typedef struct _YUI_CONTEXT {
     HWND hWndClock;
 
     /**
+     A window handle hidden on program start describing the explorer taskbar.
+     If non-NULL, this can be displayed again on exit.
+     */
+    HWND hWndExplorerTaskbar;
+
+    /**
      The message identifier used to communicate shell hook messages.  This is
      only meaningful when using SetWindowsHookEx to monitor changes.
      */
@@ -409,6 +415,12 @@ typedef struct _YUI_CONTEXT {
      application is handling it.
      */
     BOOLEAN RunHotKeyRegistered;
+
+    /**
+     Set to TRUE if the application has successfully registered for session
+     change notifications (implying it should unregister on exit.)
+     */
+    BOOLEAN RegisteredSessionNotifications;
 
 } YUI_CONTEXT, *PYUI_CONTEXT;
 

@@ -197,6 +197,55 @@ YuiStartDrawButton(
 }
 
 /**
+ If the explorer taskbar is visible, hide it and update the screen work
+ area to indicate that it's not present.
+
+ @param Context Pointer to the application context which contains a handle to
+        the explorer taskbar.
+
+ @return TRUE to indicate an explorer taskbar window was hidden or the work
+         area was changed, FALSE if no state change occurred.
+ */
+BOOLEAN
+YuiHideExplorerTaskbar(
+    __in PYUI_CONTEXT Context
+    )
+{
+    RECT NewWorkArea;
+    RECT OldWorkArea;
+    RECT ExplorerTaskbarRect;
+    BOOLEAN RetVal;
+
+    if (Context->hWndExplorerTaskbar == NULL) {
+        return FALSE;
+    }
+
+    DllUser32.pGetWindowRect(Context->hWndExplorerTaskbar, &ExplorerTaskbarRect);
+
+    RetVal = FALSE;
+
+    if (SystemParametersInfo(SPI_GETWORKAREA, 0, &OldWorkArea, 0)) {
+
+        NewWorkArea.left = OldWorkArea.left;
+        NewWorkArea.right = OldWorkArea.right;
+        NewWorkArea.top = OldWorkArea.top;
+
+        if (OldWorkArea.bottom == ExplorerTaskbarRect.top) {
+            NewWorkArea.bottom = ExplorerTaskbarRect.bottom;
+            SystemParametersInfo(SPI_SETWORKAREA, 0, &NewWorkArea, 0);
+            RetVal = TRUE;
+        }
+    }
+
+    if (IsWindowVisible(Context->hWndExplorerTaskbar)) {
+        DllUser32.pShowWindow(Context->hWndExplorerTaskbar, SW_HIDE);
+        RetVal = TRUE;
+    }
+
+    return RetVal;
+}
+
+/**
  A custom window procedure used by the start button.  This is a form of
  subclass that enables us to filter the messages processed by the regular
  button implementation.
@@ -263,7 +312,6 @@ YuiNotifyResolutionChange(
     __in HWND hWnd
     )
 {
-    YORI_APPBARDATA AppBar;
     RECT ClientRect;
     RECT NewWorkArea;
     RECT OldWorkArea;
@@ -282,6 +330,8 @@ YuiNotifyResolutionChange(
     YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
     TaskbarHeight = YuiGetTaskbarHeight(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
+
+    YuiHideExplorerTaskbar(&YuiContext);
 
     FontSize = 9;
     FontSize = FontSize + (TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3;
@@ -345,61 +395,18 @@ YuiNotifyResolutionChange(
     NewWorkArea.top = 0;
     NewWorkArea.bottom = YuiContext.ScreenHeight - TaskbarHeight - 1;
 
-    if (DllShell32.pSHAppBarMessage != NULL) {
-
-        AppBar.cbSize = sizeof(AppBar);
-        AppBar.hWnd = hWnd;
-        AppBar.uCallbackMessage = WM_USER;
-        AppBar.uEdge = 3;
-        AppBar.rc.left = 0;
-        AppBar.rc.top = YuiContext.ScreenHeight - TaskbarHeight;
-        AppBar.rc.bottom = YuiContext.ScreenHeight;
-        AppBar.rc.right = YuiContext.ScreenWidth;
-        AppBar.lParam = TRUE;
-
-        // New
-        DllShell32.pSHAppBarMessage(0, &AppBar);
-
-        // Query (request) position
-        DllShell32.pSHAppBarMessage(2, &AppBar);
-
-        if (AppBar.rc.bottom - AppBar.rc.top < (INT)TaskbarHeight) {
-            AppBar.rc.top = AppBar.rc.bottom - TaskbarHeight;
-        }
-
-        NewWorkArea.left = AppBar.rc.left;
-        NewWorkArea.right = AppBar.rc.right;
-        NewWorkArea.top = 0;
-        NewWorkArea.bottom = AppBar.rc.top;
-
-        DllUser32.pMoveWindow(hWnd,
-                              AppBar.rc.left,
-                              AppBar.rc.top,
-                              AppBar.rc.right - AppBar.rc.left,
-                              AppBar.rc.bottom - AppBar.rc.top,
-                              TRUE);
-
-        // Set position
-        DllShell32.pSHAppBarMessage(3, &AppBar);
-
-        // Activate
-        DllShell32.pSHAppBarMessage(6, &AppBar);
-
-    } else {
-        DllUser32.pMoveWindow(hWnd,
-                              0,
-                              YuiContext.ScreenHeight - TaskbarHeight,
-                              YuiContext.ScreenWidth,
-                              TaskbarHeight,
-                              TRUE);
-    }
-
+    DllUser32.pMoveWindow(hWnd,
+                          0,
+                          YuiContext.ScreenHeight - TaskbarHeight,
+                          YuiContext.ScreenWidth,
+                          TaskbarHeight,
+                          TRUE);
 
     //
-    //  When explorer is running, this seems to happen automatically.
-    //  That's desirable because it knows about all the other AppBars.
-    //  If it hasn't already happened, set the work area to something
-    //  that excludes this taskbar.
+    //  Ideally this would be done via AppBars.  Unfortunately this code runs
+    //  in two cases: when explorer isn't running (so no AppBar support) and
+    //  where explorer is running (so it's aware of its own AppBar which we
+    //  want to hide.)  So, we do this the hard way.
     //
 
     if (SystemParametersInfo(SPI_GETWORKAREA, 0, &OldWorkArea, 0)) {
@@ -642,6 +649,17 @@ YuiTaskbarWindowProc(
             YuiContext.ScreenHeight = HIWORD(lParam);
             YuiNotifyResolutionChange(YuiContext.hWnd);
             break;
+        case WM_WTSSESSION_CHANGE:
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Session change          %016llx %016llx\n"), wParam, lParam);
+#endif
+            if (YuiHideExplorerTaskbar(&YuiContext)) {
+                YuiContext.ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+                YuiContext.ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+                YuiNotifyResolutionChange(YuiContext.hWnd);
+            }
+            break;
+
         case WM_DRAWITEM:
             {
                 PDRAWITEMSTRUCT DrawItemStruct;
@@ -658,12 +676,7 @@ YuiTaskbarWindowProc(
             }
             break;
 #if DBG
-        case WM_USER:
-            if (YuiContext.DebugLogEnabled) {
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("AppBar notification     %016llx %016llx\n"), wParam, lParam);
-            }
-            break;
-        case WM_SETTINGCHANGE:
+        case WM_WININICHANGE:
             if (YuiContext.DebugLogEnabled) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("WM_SETTINGCHANGE        %016llx %016llx\n"), wParam, lParam);
             }
@@ -716,6 +729,32 @@ YuiTaskbarWindowProc(
 }
 
 /**
+ Find the explorer taskbar.
+
+ @param Context Pointer to the application context to update with a handle
+        to the explore taskbar window so it can be restored on exit.
+
+ @return TRUE to indicate an explorer taskbar window was found, FALSE if it
+         was not.
+ */
+BOOLEAN
+YuiFindExplorerTaskbar(
+    __in PYUI_CONTEXT Context
+    )
+{
+    HWND hWndFound;
+
+    hWndFound = FindWindow(_T("Shell_TrayWnd"), NULL);
+
+    if (hWndFound == NULL) {
+        return FALSE;
+    }
+
+    Context->hWndExplorerTaskbar = hWndFound;
+    return TRUE;
+}
+
+/**
  Close any windows, timers, and other system resources.  In particular, note
  this tells explorer that the app bar is no longer present, which is something
  explorer really wants to be told because it has no process destruction
@@ -733,6 +772,12 @@ YuiCleanupGlobalState(VOID)
             FindCloseChangeNotification(YuiContext.StartChangeNotifications[Count]);
             YuiContext.StartChangeNotifications[Count] = NULL;
         }
+    }
+
+    if (DllWtsApi32.pWTSUnRegisterSessionNotification &&
+        YuiContext.RegisteredSessionNotifications) {
+
+        DllWtsApi32.pWTSUnRegisterSessionNotification(YuiContext.hWnd);
     }
 
     if (YuiContext.RunHotKeyRegistered) {
@@ -764,23 +809,6 @@ YuiCleanupGlobalState(VOID)
         YuiContext.hWndDesktop = NULL;
     }
 
-    if (DllShell32.pSHAppBarMessage != NULL && YuiContext.hWnd != NULL) {
-        YORI_APPBARDATA AppBar;
-
-        AppBar.cbSize = sizeof(AppBar);
-        AppBar.hWnd = YuiContext.hWnd;
-        AppBar.uCallbackMessage = WM_USER;
-        AppBar.uEdge = 3;
-        AppBar.rc.left = 0;
-        AppBar.rc.top = 0;
-        AppBar.rc.bottom = 0;
-        AppBar.rc.right = 0;
-        AppBar.lParam = TRUE;
-
-        // Remove
-        DllShell32.pSHAppBarMessage(1, &AppBar);
-    }
-
     if (YuiContext.hWnd != NULL) {
         DestroyWindow(YuiContext.hWnd);
         YuiContext.hWnd = NULL;
@@ -803,6 +831,11 @@ YuiCleanupGlobalState(VOID)
 
     if (YuiContext.SavedMinimizedMetrics.cbSize != 0) {
         SystemParametersInfo(SPI_SETMINIMIZEDMETRICS, sizeof(YORI_MINIMIZEDMETRICS), &YuiContext.SavedMinimizedMetrics, 0);
+    }
+
+    if (YuiContext.hWndExplorerTaskbar != NULL) {
+        DllUser32.pShowWindow(YuiContext.hWndExplorerTaskbar, SW_SHOW);
+        YuiContext.hWndExplorerTaskbar = NULL;
     }
 }
 
@@ -871,6 +904,12 @@ YuiCreateWindow(
 
     Context->ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
     Context->ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+
+    if (!Context->LoginShell) {
+        if (YuiFindExplorerTaskbar(Context)) {
+            YuiHideExplorerTaskbar(Context);
+        }
+    }
 
     TaskbarHeight = YuiGetTaskbarHeight(Context->ScreenWidth, Context->ScreenHeight);
     Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
@@ -952,6 +991,12 @@ YuiCreateWindow(
         //
 
         DllUser32.pSetShellWindow(Context->hWndDesktop);
+    }
+
+    if (DllWtsApi32.pWTSRegisterSessionNotification) {
+        if (DllWtsApi32.pWTSRegisterSessionNotification(Context->hWnd, 0)) {
+            Context->RegisteredSessionNotifications = TRUE;
+        }
     }
 
     YuiNotifyResolutionChange(Context->hWnd);
@@ -1182,16 +1227,14 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
                 YuiDisplayMitLicense(_T("2019-2023"));
                 return EXIT_SUCCESS;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("p")) == 0) {
-                if (ArgC > i + 1) {
-                    LONGLONG llTemp;
-                    DWORD CharsConsumed;
-                    if (YoriLibStringToNumber(&ArgV[i + 1], TRUE, &llTemp, &CharsConsumed) && CharsConsumed > 0) {
-                        ArgumentUnderstood = TRUE;
-                        YuiContext.TaskbarRefreshFrequency = (DWORD)llTemp;
-                        i++;
-                    }
+#if DBG
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                if (AllocConsole()) {
+                    SetConsoleTitle(_T("Yui debug log"));
+                    YuiContext.DebugLogEnabled = TRUE;
                 }
+                ArgumentUnderstood = TRUE;
+#endif
             }
         } else {
             ArgumentUnderstood = TRUE;

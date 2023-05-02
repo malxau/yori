@@ -99,6 +99,9 @@ YuiTaskbarIncludeWindow(
     DWORD WinStyle;
     DWORD ExStyle;
     DWORD WindowTitleLength;
+    YORI_STRING ClassName;
+    YORI_STRING ExcludePrefix;
+    TCHAR ClassNameBuffer[64];
 
     if (!IsWindowVisible(hWnd)) {
         return FALSE;
@@ -119,10 +122,37 @@ YuiTaskbarIncludeWindow(
         return FALSE;
     }
 
+    //
+    //  If there's no border and no system menu, it doesn't seem like an
+    //  application window.
+    //
+
+    if ((WinStyle & (WS_CAPTION | WS_SYSMENU)) == 0) {
+        return FALSE;
+    }
+
     WindowTitleLength = GetWindowTextLength(hWnd);
     if (WindowTitleLength == 0) {
         return FALSE;
     }
+
+    //
+    //  Explorer creates Windows.Internal.Shell.TabProxyWindow instances.
+    //  They're owned by explorer but seem related to what Edge is doing.
+    //  Drop them.
+    //
+
+    YoriLibInitEmptyString(&ClassName);
+    ClassName.StartOfString = ClassNameBuffer;
+    ClassName.LengthAllocated = sizeof(ClassNameBuffer)/sizeof(ClassNameBuffer[0]);
+
+    ClassName.LengthInChars = GetClassName(hWnd, ClassName.StartOfString, ClassName.LengthAllocated);
+
+    YoriLibConstantString(&ExcludePrefix, _T("Windows.Internal.Shell."));
+    if (YoriLibCompareStringCount(&ExcludePrefix, &ClassName, ExcludePrefix.LengthInChars) == 0) {
+        return FALSE;
+    }
+
 #if DBG
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("    including window due to style %08x ExStyle %08x\n"), WinStyle, ExStyle);
 #endif
@@ -338,6 +368,20 @@ YuiTaskbarWindowCallback(
     PYUI_CONTEXT YuiContext;
 
     YuiContext = (PYUI_CONTEXT)lParam;
+
+#if DBG
+    {
+        DWORD CharsNeeded;
+        YORI_STRING WindowTitle;
+
+        CharsNeeded = GetWindowTextLength(hWnd);
+        if (YoriLibAllocateString(&WindowTitle, CharsNeeded + 1)) {
+            WindowTitle.LengthInChars = GetWindowText(hWnd, WindowTitle.StartOfString, WindowTitle.LengthAllocated);
+        }
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Enumerated window %08x %y\n"), hWnd, &WindowTitle);
+        YoriLibFreeStringContents(&WindowTitle);
+    }
+#endif
 
     if (!YuiTaskbarIncludeWindow(hWnd)) {
         return TRUE;
