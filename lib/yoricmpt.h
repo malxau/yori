@@ -5264,44 +5264,6 @@ typedef struct _YORI_BROWSEINFO {
     INT ImageIndex;
 } YORI_BROWSEINFO, *PYORI_BROWSEINFO;
 
-/**
- A message structure that describes a shell app bar.
- */
-typedef struct _YORI_APPBARDATA {
-
-    /**
-     The number of bytes in this structure.
-     */
-    DWORD cbSize;
-
-    /**
-     The window that is requesting app bar services.
-     */
-    HWND hWnd;
-
-    /**
-     A message to use to indicate back to the application app bar
-     notifications.
-     */
-    UINT uCallbackMessage;
-
-    /**
-     The edge of the screen to attach to.
-     */
-    UINT uEdge;
-
-    /**
-     The window coordinates to use.
-     */
-    RECT rc;
-
-    /**
-     Extra information.
-     */
-    LPARAM lParam;
-} YORI_APPBARDATA, *PYORI_APPBARDATA;
-
-
 #ifndef STDMETHODCALLTYPE
 
 /**
@@ -8674,18 +8636,6 @@ typedef struct _YORI_PSAPI_FUNCTIONS {
 extern YORI_PSAPI_FUNCTIONS DllPsapi;
 
 /**
- A prototype for the SHAppBarMessage function.
- */
-typedef
-DWORD_PTR WINAPI
-SH_APP_BAR_MESSAGE(DWORD, PYORI_APPBARDATA);
-
-/**
- A prototype for a pointer to the SHAppBarMessage function.
- */
-typedef SH_APP_BAR_MESSAGE *PSH_APP_BAR_MESSAGE;
-
-/**
  A prototype for the SHBrowseForFolderW function.
  */
 typedef
@@ -8778,11 +8728,6 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
-
-    /**
-     If it's available on the current system, a pointer to SHAppBarMessage.
-     */
-    PSH_APP_BAR_MESSAGE pSHAppBarMessage;
 
     /**
      If it's available on the current system, a pointer to SHBrowseForFolderW.

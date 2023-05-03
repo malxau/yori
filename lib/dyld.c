@@ -449,7 +449,6 @@ YoriLibLoadShell32Functions(VOID)
         return FALSE;
     }
 
-    DllShell32.pSHAppBarMessage = (PSH_APP_BAR_MESSAGE)GetProcAddress(DllShell32.hDll, "SHAppBarMessage");
     DllShell32.pSHBrowseForFolderW = (PSH_BROWSE_FOR_FOLDERW)GetProcAddress(DllShell32.hDll, "SHBrowseForFolderW");
     DllShell32.pSHFileOperationW = (PSH_FILE_OPERATIONW)GetProcAddress(DllShell32.hDll, "SHFileOperationW");
     DllShell32.pSHGetKnownFolderPath = (PSH_GET_KNOWN_FOLDER_PATH)GetProcAddress(DllShell32.hDll, "SHGetKnownFolderPath");
