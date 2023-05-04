@@ -512,8 +512,19 @@ typedef struct _YUI_CONTEXT {
  */
 #define YUI_MENU_LAUNCHWINLOGONSHELL   (32)
 
+/**
+ An identifier for the menu item to simulate a display change and update
+ taskbar position.
+ */
+#define YUI_MENU_DISPLAYCHANGE         (33)
+
 WNDPROC
 YuiGetDefaultButtonWndProc(VOID);
+
+BOOL
+YuiNotifyResolutionChange(
+    __in HWND hWnd
+    );
 
 BOOL
 YuiMenuPopulate(

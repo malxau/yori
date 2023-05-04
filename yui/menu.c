@@ -1102,6 +1102,7 @@ YuiMenuPopulate(
     AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_REFRESH, _T("Refresh taskbar"));
     AppendMenu(YuiContext->DebugMenu, MF_STRING | (YuiContext->DebugMenuItemChecked?MF_CHECKED:0), YUI_MENU_LOGGING, _T("Toggle debug logging"));
     AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_LAUNCHWINLOGONSHELL, _T("Launch winlogon shell and exit"));
+    AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_DISPLAYCHANGE, _T("Simulate a display change"));
 #endif
 
     //
@@ -1604,6 +1605,9 @@ YuiMenuExecuteById(
             break;
         case YUI_MENU_LAUNCHWINLOGONSHELL:
             YuiExitAndLaunchWinlogonShell(YuiContext);
+            break;
+        case YUI_MENU_DISPLAYCHANGE:
+            YuiNotifyResolutionChange(YuiContext->hWnd);
             break;
 #endif
         default:
