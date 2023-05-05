@@ -39,8 +39,7 @@ HANDLE YoriLibCondrvHandle;
  */
 __success(return)
 BOOL
-YoriLibGetConsoleHandleFromPeb(
-    )
+YoriLibGetConsoleHandleFromPeb(VOID)
 {
     PYORI_LIB_PEB_NATIVE Peb;
     LONG Status;
@@ -206,6 +205,7 @@ typedef struct _YORI_SIMPLE_CONDRV_PACKET {
 
  @return TRUE to indicate success, or FALSE to indicate failure.
  */
+__success(return)
 BOOL
 YoriLibSetConsoleDisplayMode(
     __in HANDLE hConsoleOutput,
@@ -236,6 +236,8 @@ YoriLibSetConsoleDisplayMode(
         if (!YoriLibGetConsoleHandleFromPeb()) {
             return FALSE;
         }
+
+        __analysis_assume(YoriLibCondrvHandle != NULL);
     }
 
     Packet.ConsoleClient = hConsoleOutput;

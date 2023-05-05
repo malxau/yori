@@ -514,6 +514,7 @@ YoriPkgUpdateLogonShell(
     __in PYORI_STRING NewShellFullPath
     );
 
+__success(return)
 BOOL
 YoriPkgRestoreRegistryLoginShell(
     VOID

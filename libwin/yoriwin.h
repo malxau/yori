@@ -371,6 +371,7 @@ YoriWinHexEditSetReadOnly(
     __in BOOLEAN NewReadOnlyState
     );
 
+__success(return)
 BOOLEAN
 YoriWinHexEditSetCursorLocation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,

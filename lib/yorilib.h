@@ -764,6 +764,7 @@ YoriLibGetMetadataColor(
 
 // *** CONDRV.C ***
 
+__success(return)
 BOOL
 YoriLibSetConsoleDisplayMode(
     __in HANDLE hConsoleOutput,
