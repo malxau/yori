@@ -107,7 +107,7 @@ CpuInfoOutputLargeInteger(
 }
 
 /**
- Context about cpuinfoory state that is passed between cpuinfoory query and string
+ Context about cpuinfo state that is passed between query and string
  expansion.
  */
 typedef struct _CPUINFO_CONTEXT {
@@ -386,8 +386,7 @@ CpuInfoLoadProcessorUtilization(
 
  @param VariableName The variable name to expand.
 
- @param Context Pointer to a SYSTEMTIME structure containing the data to
-        populate.
+ @param Context Pointer to a structure containing the data to populate.
  
  @return The number of characters successfully populated, or the number of
          characters required in order to successfully populate, or zero
