@@ -3872,6 +3872,96 @@ typedef struct _YORI_JOB_ASSOCIATE_COMPLETION_PORT {
 #define LOCALE_RETURN_NUMBER (0x20000000)
 #endif
 
+/**
+ Indicates the system is currently running from a battery.
+ */
+#define YORI_POWER_SOURCE_BATTERY    (0x00)
+
+/**
+ Indicates the system is currently running from AC power.
+ */
+#define YORI_POWER_SOURCE_POWERED    (0x01)
+
+/**
+ Indicates the system is running from an unknown power source.
+ */
+#define YORI_POWER_SOURCE_UNKNOWN    (0xFF)
+
+/**
+ Indicates the battery has a large amount of remaining capacity.
+ */
+#define YORI_BATTERY_FLAG_HIGH       (0x01)
+
+/**
+ Indicates the battery has a small amount of remaining capacity.
+ */
+#define YORI_BATTERY_FLAG_LOW        (0x02)
+
+/**
+ Indicates the battery has passed a critical threshold indicating the system
+ needs to save state and shut down.
+ */
+#define YORI_BATTERY_FLAG_CRITICAL   (0x04)
+
+/**
+ Indicates the battery is currently charging.
+ */
+#define YORI_BATTERY_FLAG_CHARGING   (0x08)
+
+/**
+ Indicates no battery has been found.
+ */
+#define YORI_BATTERY_FLAG_NO_BATTERY (0x80)
+
+/**
+ Indicates an unknown battery state.
+ */
+#define YORI_BATTERY_FLAG_UNKNOWN    (0xFF)
+
+/**
+ Indicates an unknown battery state.
+ */
+#define YORI_BATTERY_PERCENT_UNKNOWN (0xFF)
+
+/**
+ A definition for SYSTEM_POWER_STATUS for compilation environments that
+ don't define it.
+ */
+typedef struct _YORI_SYSTEM_POWER_STATUS {
+
+    /**
+     Indicates if the system is running on AC power or not.
+     */
+    UCHAR PowerSource;
+
+    /**
+     Indicates the current battery charge level and charging state.
+     */
+    UCHAR BatteryFlag;
+
+    /**
+     Indicates the percentage of the battery that remains.
+     */
+    UCHAR BatteryLifePercent;
+
+    /**
+     Reserved.
+     */
+    UCHAR Reserved;
+
+    /**
+     Indicates the estimated number of seconds that the system can remain on
+     battery power.
+     */
+    DWORD BatterySecondsRemaining;
+
+    /**
+     Indicates the total number of seconds that the system could remain on
+     battery power if the battery is fully charged.
+     */
+    DWORD BatteryFullSeconds;
+} YORI_SYSTEM_POWER_STATUS, *PYORI_SYSTEM_POWER_STATUS;
+
 #ifndef GetClassLongPtr
 /**
  If not defined by the compilation environment, GetClassLongPtr must refer
@@ -4181,6 +4271,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
  text should be centered.
  */
 #define BS_CENTER 0x300
+#endif
+
+#ifndef SS_NOTIFY
+/**
+ If not defined by the compilation environment, the flag indicating a static
+ control should notify its parent about mouse clicks.
+ */
+#define SS_NOTIFY 0x200
 #endif
 
 #ifndef SS_CENTERIMAGE
@@ -6881,6 +6979,18 @@ GET_PRODUCT_INFO(DWORD, DWORD, DWORD, DWORD, PDWORD);
 typedef GET_PRODUCT_INFO *PGET_PRODUCT_INFO;
 
 /**
+ A prototype for the GetSystemPowerStatus function.
+ */
+typedef
+DWORDLONG WINAPI
+GET_SYSTEM_POWER_STATUS(PYORI_SYSTEM_POWER_STATUS);
+
+/**
+ A prototype for a pointer to the GetSystemPowerStatus function.
+ */
+typedef GET_SYSTEM_POWER_STATUS *PGET_SYSTEM_POWER_STATUS;
+
+/**
  A prototype for the GetTickCount64 function.
  */
 typedef
@@ -7423,6 +7533,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to GetProductInfo.
      */
     PGET_PRODUCT_INFO pGetProductInfo;
+
+    /**
+     If it's available on the current system, a pointer to GetSystemPowerStatus.
+     */
+    PGET_SYSTEM_POWER_STATUS pGetSystemPowerStatus;
 
     /**
      If it's available on the current system, a pointer to GetTickCount64.
