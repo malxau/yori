@@ -86,6 +86,7 @@ DIRS1=crt        \
       builtins   \
       assoc      \
       attrib     \
+      battery    \
       cab        \
       cal        \
       charmap    \

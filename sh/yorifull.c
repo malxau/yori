@@ -44,6 +44,11 @@ YORI_CMD_BUILTIN YoriCmd_YATTRIB;
 /**
  Declaration for the builtin command.
  */
+YORI_CMD_BUILTIN YoriCmd_YBATTERY;
+
+/**
+ Declaration for the builtin command.
+ */
 YORI_CMD_BUILTIN YoriCmd_CAB;
 
 /**
@@ -613,6 +618,7 @@ YoriShBuiltins[] = {
                     {_T("WINPOS"),    YoriCmd_WINPOS},
                     {_T("YASSOC"),    YoriCmd_YASSOC},
                     {_T("YATTRIB"),   YoriCmd_YATTRIB},
+                    {_T("YBATTERY"),  YoriCmd_YBATTERY},
                     {_T("YCAL"),      YoriCmd_YCAL},
                     {_T("YCHARMAP"),  YoriCmd_YCHARMAP},
                     {_T("YCLIP"),     YoriCmd_YCLIP},
@@ -673,6 +679,7 @@ YoriShDefaultAliasEntries[] = {
     {_T("F7"),       _T("history -u")},
     {_T("assoc"),    _T("yassoc $*$")},
     {_T("attrib"),   _T("yattrib $*$")},
+    {_T("battery"),  _T("ybattery $*$")},
     {_T("cal"),      _T("ycal $*$")},
     {_T("cd"),       _T("chdir $*$")},
     {_T("clip"),     _T("yclip $*$")},
