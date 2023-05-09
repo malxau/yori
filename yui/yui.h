@@ -251,6 +251,11 @@ typedef struct _YUI_CONTEXT {
     HWND hWndClock;
 
     /**
+     The window handle for the battery indicator.
+     */
+    HWND hWndBattery;
+
+    /**
      A window handle hidden on program start describing the explorer taskbar.
      If non-NULL, this can be displayed again on exit.
      */
@@ -313,6 +318,17 @@ typedef struct _YUI_CONTEXT {
      The buffer containing the current displayed clock value.
      */
     TCHAR ClockDisplayedValueBuffer[16];
+
+    /**
+     The string containing the current value of the battery display.  It is only
+     updated if the value changes.
+     */
+    YORI_STRING BatteryDisplayedValue;
+
+    /**
+     The buffer containing the current displayed battery value.
+     */
+    TCHAR BatteryDisplayedValueBuffer[16];
 
     /**
      The left offset of the start button, in pixels, relative to the client
@@ -422,6 +438,11 @@ typedef struct _YUI_CONTEXT {
      */
     BOOLEAN RegisteredSessionNotifications;
 
+    /**
+     Set to TRUE if battery status is displayed on the task bar.
+     */
+    BOOLEAN DisplayBattery;
+
 } YUI_CONTEXT, *PYUI_CONTEXT;
 
 /**
@@ -432,12 +453,22 @@ typedef struct _YUI_CONTEXT {
 /**
  The number of pixels to include in the clock.
  */
-#define YUI_CLOCK_WIDTH (75)
+#define YUI_CLOCK_WIDTH (80)
+
+/**
+ The number of pixels to include in the battery indicator.
+ */
+#define YUI_BATTERY_WIDTH (45)
 
 /**
  The control identifier for the start button.
  */
 #define YUI_START_BUTTON (1)
+
+/**
+ The control identifier for the battery display.
+ */
+#define YUI_BATTERY_DISPLAY (2)
 
 /**
  The control identifier for the first taskbar button.  Later taskbar buttons
@@ -634,7 +665,12 @@ YuiTaskbarSyncWithCurrent(
     );
 
 VOID
-YuiTaskbarUpdateClock(
+YuiTaskbarDisplayBatteryInfo(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+VOID
+YuiTaskbarUpdateClockAndBattery(
     __in PYUI_CONTEXT YuiContext
     );
 

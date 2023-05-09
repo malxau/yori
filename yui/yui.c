@@ -374,6 +374,10 @@ YuiNotifyResolutionChange(
         }
         YuiContext.hFont = hFont;
 
+        if (YuiContext.hWndBattery != NULL) {
+            SendMessage(YuiContext.hWndBattery, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
+        }
+
         if (YuiContext.hWndClock != NULL) {
             SendMessage(YuiContext.hWndClock, WM_SETFONT, (WPARAM)YuiContext.hFont, MAKELPARAM(TRUE, 0));
         }
@@ -425,6 +429,15 @@ YuiNotifyResolutionChange(
     }
 
     DllUser32.pGetClientRect(hWnd, &ClientRect);
+
+    if (YuiContext.hWndBattery != NULL) {
+        DllUser32.pMoveWindow(YuiContext.hWndBattery,
+                              ClientRect.right - YUI_CLOCK_WIDTH - 3 - YUI_BATTERY_WIDTH - 1,
+                              1,
+                              YUI_BATTERY_WIDTH,
+                              ClientRect.bottom - 2,
+                              TRUE);
+    }
 
     if (YuiContext.hWndClock != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndClock,
@@ -577,6 +590,8 @@ YuiTaskbarWindowProc(
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiDisplayMenu();
+                } else if (CtrlId == YUI_BATTERY_DISPLAY) {
+                    YuiTaskbarDisplayBatteryInfo(&YuiContext);
                 } else {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
                     YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
@@ -622,7 +637,7 @@ YuiTaskbarWindowProc(
                     YuiTaskbarSyncWithCurrent(&YuiContext);
                     break;
                 case YUI_CLOCK_TIMER:
-                    YuiTaskbarUpdateClock(&YuiContext);
+                    YuiTaskbarUpdateClockAndBattery(&YuiContext);
                     break;
             }
             return 0;
@@ -797,6 +812,11 @@ YuiCleanupGlobalState(VOID)
     if (YuiContext.hWndClock != NULL) {
         DestroyWindow(YuiContext.hWndClock);
         YuiContext.hWndClock = NULL;
+    }
+
+    if (YuiContext.hWndBattery != NULL) {
+        DestroyWindow(YuiContext.hWndBattery);
+        YuiContext.hWndBattery = NULL;
     }
 
     if (YuiContext.hWndStart != NULL) {
@@ -1060,12 +1080,47 @@ YuiCreateWindow(
     }
 
     SendMessage(Context->hWndClock, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
-    YuiTaskbarUpdateClock(Context);
-    Context->ClockTimerId = SetTimer(Context->hWnd, YUI_CLOCK_TIMER, 5000, NULL);
-
 
     Context->LeftmostTaskbarOffset = 1 + YUI_START_BUTTON_WIDTH + 1;
     Context->RightmostTaskbarOffset = 1 + YUI_CLOCK_WIDTH + 1;
+
+    YoriLibInitEmptyString(&Context->BatteryDisplayedValue);
+    Context->BatteryDisplayedValue.StartOfString = Context->BatteryDisplayedValueBuffer;
+    Context->BatteryDisplayedValue.LengthAllocated = sizeof(Context->BatteryDisplayedValueBuffer)/sizeof(Context->BatteryDisplayedValueBuffer[0]);
+
+    if (DllKernel32.pGetSystemPowerStatus != NULL) {
+        YORI_SYSTEM_POWER_STATUS PowerStatus;
+
+        DllKernel32.pGetSystemPowerStatus(&PowerStatus);
+
+        if ((PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
+
+            Context->hWndBattery = CreateWindowEx(WS_EX_STATICEDGE,
+                                                  _T("STATIC"),
+                                                  _T(""),
+                                                  SS_CENTER | SS_SUNKEN | SS_CENTERIMAGE | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
+                                                  ClientRect.right - YUI_CLOCK_WIDTH - 3 - YUI_BATTERY_WIDTH - 1,
+                                                  1,
+                                                  YUI_BATTERY_WIDTH,
+                                                  ClientRect.bottom - 2,
+                                                  Context->hWnd,
+                                                  (HMENU)(DWORD_PTR)YUI_BATTERY_DISPLAY,
+                                                  NULL,
+                                                  NULL);
+
+            if (Context->hWndBattery == NULL) {
+                YuiCleanupGlobalState();
+                return FALSE;
+            }
+
+            SendMessage(Context->hWndBattery, WM_SETFONT, (WPARAM)Context->hFont, MAKELPARAM(TRUE, 0));
+            Context->DisplayBattery = TRUE;
+            Context->RightmostTaskbarOffset = 1 + YUI_CLOCK_WIDTH + 3 + YUI_BATTERY_WIDTH + 1;
+        }
+    }
+
+    YuiTaskbarUpdateClockAndBattery(Context);
+    Context->ClockTimerId = SetTimer(Context->hWnd, YUI_CLOCK_TIMER, 5000, NULL);
 
     YuiTaskbarPopulateWindows(Context, Context->hWnd);
 

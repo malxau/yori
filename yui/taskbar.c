@@ -1129,25 +1129,84 @@ YuiTaskbarDrawButton(
 }
 
 /**
- Update the value displayed in the clock in the task bar.
+ Display additional information about battery state.
 
  @param YuiContext Pointer to the application context.
  */
 VOID
-YuiTaskbarUpdateClock(
+YuiTaskbarDisplayBatteryInfo(
     __in PYUI_CONTEXT YuiContext
     )
 {
-    SYSTEMTIME CurrentLocalTime;
+    YORI_SYSTEM_POWER_STATUS PowerStatus;
+    YORI_STRING Text;
+
+    DllKernel32.pGetSystemPowerStatus(&PowerStatus);
+
+    YoriLibInitEmptyString(&Text);
+
+    if (PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) {
+        YoriLibYPrintf(&Text, _T("No battery found."));
+    } else {
+        YORI_STRING TimeRemaining;
+
+        LPCTSTR FormatString = _T("Battery remaining: %i%%\n")
+                               _T("Power source: %s\n")
+                               _T("Battery state: %s\n")
+                               _T("%y");
+
+        YoriLibInitEmptyString(&TimeRemaining);
+        if (PowerStatus.BatterySecondsRemaining != (DWORD)-1) {
+            YoriLibYPrintf(&TimeRemaining,
+                           _T("Time remaining: %i hours, %i minutes\n"),
+                           PowerStatus.BatterySecondsRemaining / (60 * 60),
+                           (PowerStatus.BatterySecondsRemaining / 60) % 60);
+
+        }
+
+
+        YoriLibYPrintf(&Text,
+                       FormatString,
+                       PowerStatus.BatteryLifePercent, 
+                       (PowerStatus.PowerSource&YORI_POWER_SOURCE_POWERED)?_T("AC power"):_T("Battery"),
+                       (PowerStatus.BatteryFlag&YORI_BATTERY_FLAG_CHARGING)?_T("Charging"):_T("Draining"),
+                       &TimeRemaining);
+
+        YoriLibFreeStringContents(&TimeRemaining);
+    }
+
+    MessageBox(YuiContext->hWnd, Text.StartOfString, _T("Battery"), MB_ICONINFORMATION);
+    YoriLibFreeStringContents(&Text);
+}
+
+/**
+ Update the value displayed in the clock and battery indicators in the
+ taskbar.
+
+ @param YuiContext Pointer to the application context.
+ */
+VOID
+YuiTaskbarUpdateClockAndBattery(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
     YORI_STRING DisplayTime;
     TCHAR DisplayTimeBuffer[16];
+    YORI_STRING BatteryString;
+    TCHAR BatteryStringBuffer[16];
+    SYSTEMTIME CurrentLocalTime;
     WORD DisplayHour;
-
-    GetLocalTime(&CurrentLocalTime);
+    YORI_SYSTEM_POWER_STATUS PowerStatus;
 
     YoriLibInitEmptyString(&DisplayTime);
     DisplayTime.StartOfString = DisplayTimeBuffer;
     DisplayTime.LengthAllocated = sizeof(DisplayTimeBuffer)/sizeof(DisplayTimeBuffer[0]);
+
+    YoriLibInitEmptyString(&BatteryString);
+    BatteryString.StartOfString = BatteryStringBuffer;
+    BatteryString.LengthAllocated = sizeof(BatteryStringBuffer)/sizeof(BatteryStringBuffer[0]);
+
+    GetLocalTime(&CurrentLocalTime);
 
     DisplayHour = (WORD)(CurrentLocalTime.wHour % 12);
     if (DisplayHour == 0) {
@@ -1175,6 +1234,33 @@ YuiTaskbarUpdateClock(
         DllUser32.pSetWindowTextW(YuiContext->hWndClock, DisplayTime.StartOfString);
     }
     YoriLibFreeStringContents(&DisplayTime);
+
+    if (YuiContext->DisplayBattery) {
+        DllKernel32.pGetSystemPowerStatus(&PowerStatus);
+
+        YoriLibYPrintf(&BatteryString, _T("%i%%"), PowerStatus.BatteryLifePercent);
+
+        if (YoriLibCompareString(&BatteryString, &YuiContext->BatteryDisplayedValue) != 0) {
+            if (BatteryString.LengthInChars < YuiContext->BatteryDisplayedValue.LengthAllocated) {
+                memcpy(YuiContext->BatteryDisplayedValue.StartOfString,
+                       BatteryString.StartOfString,
+                       BatteryString.LengthInChars * sizeof(TCHAR));
+
+                YuiContext->BatteryDisplayedValue.LengthInChars = BatteryString.LengthInChars;
+            }
+
+            //
+            //  YoriLibYPrintf will NULL terminate, but that is hard to express
+            //  given that yori strings are not always NULL terminated
+            //
+#if defined(_MSC_VER) && (_MSC_VER >= 1700)
+#pragma warning(suppress: 6054)
+#endif
+            DllUser32.pSetWindowTextW(YuiContext->hWndBattery, BatteryString.StartOfString);
+        }
+
+        YoriLibFreeStringContents(&BatteryString);
+    }
 }
 
 /**
