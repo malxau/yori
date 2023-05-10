@@ -471,6 +471,11 @@ typedef struct _YUI_CONTEXT {
 #define YUI_BATTERY_DISPLAY (2)
 
 /**
+ The control identifier for the clock.
+ */
+#define YUI_CLOCK_DISPLAY (3)
+
+/**
  The control identifier for the first taskbar button.  Later taskbar buttons
  have identifiers higher than this one.
  */
@@ -665,12 +670,17 @@ YuiTaskbarSyncWithCurrent(
     );
 
 VOID
-YuiTaskbarDisplayBatteryInfo(
+YuiClockDisplayInfo(
     __in PYUI_CONTEXT YuiContext
     );
 
 VOID
-YuiTaskbarUpdateClockAndBattery(
+YuiClockDisplayBatteryInfo(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+VOID
+YuiClockUpdate(
     __in PYUI_CONTEXT YuiContext
     );
 

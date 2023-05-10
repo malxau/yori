@@ -590,8 +590,10 @@ YuiTaskbarWindowProc(
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiDisplayMenu();
+                } else if (CtrlId == YUI_CLOCK_DISPLAY) {
+                    YuiClockDisplayInfo(&YuiContext);
                 } else if (CtrlId == YUI_BATTERY_DISPLAY) {
-                    YuiTaskbarDisplayBatteryInfo(&YuiContext);
+                    YuiClockDisplayBatteryInfo(&YuiContext);
                 } else {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
                     YuiTaskbarSwitchToTask(&YuiContext, CtrlId);
@@ -637,7 +639,7 @@ YuiTaskbarWindowProc(
                     YuiTaskbarSyncWithCurrent(&YuiContext);
                     break;
                 case YUI_CLOCK_TIMER:
-                    YuiTaskbarUpdateClockAndBattery(&YuiContext);
+                    YuiClockUpdate(&YuiContext);
                     break;
             }
             return 0;
@@ -1064,13 +1066,13 @@ YuiCreateWindow(
     Context->hWndClock = CreateWindowEx(WS_EX_STATICEDGE,
                                         _T("STATIC"),
                                         _T(""),
-                                        SS_CENTER | SS_SUNKEN | SS_CENTERIMAGE | WS_VISIBLE | WS_CHILD,
+                                        SS_CENTER | SS_SUNKEN | SS_CENTERIMAGE | SS_NOTIFY | WS_VISIBLE | WS_CHILD,
                                         ClientRect.right - YUI_CLOCK_WIDTH - 1,
                                         1,
                                         YUI_CLOCK_WIDTH,
                                         ClientRect.bottom - 2,
                                         Context->hWnd,
-                                        NULL,
+                                        (HMENU)(DWORD_PTR)YUI_CLOCK_DISPLAY,
                                         NULL,
                                         NULL);
 
@@ -1119,7 +1121,7 @@ YuiCreateWindow(
         }
     }
 
-    YuiTaskbarUpdateClockAndBattery(Context);
+    YuiClockUpdate(Context);
     Context->ClockTimerId = SetTimer(Context->hWnd, YUI_CLOCK_TIMER, 5000, NULL);
 
     YuiTaskbarPopulateWindows(Context, Context->hWnd);
