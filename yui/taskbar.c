@@ -153,6 +153,22 @@ YuiTaskbarIncludeWindow(
         return FALSE;
     }
 
+    //
+    //  Office splash screens seem to generate a notification when created but
+    //  not when destroyed.  This seems like it has to be an underlying bug in
+    //  the platform (allowing window styles to change that affect
+    //  notifications without indicating the change) but in the absence of
+    //  notifications, there's not much we can do.
+    //
+    //  The generic fix for this would be a periodic refresh, defeating the
+    //  purpose of notifications.
+    //
+
+    YoriLibConstantString(&ExcludePrefix, _T("MsoSplash"));
+    if (YoriLibCompareString(&ExcludePrefix, &ClassName) == 0) {
+        return FALSE;
+    }
+
 #if DBG
     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("    including window due to style %08x ExStyle %08x\n"), WinStyle, ExStyle);
 #endif
