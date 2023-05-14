@@ -4170,6 +4170,14 @@ typedef struct _YORI_MINIMIZEDMETRICS {
 #define ICON_BIG 1
 #endif
 
+#ifndef IMAGE_ICON
+/**
+ A definition for the icon type in LoadImage if it is not defined by the
+ current compilation environment.
+ */
+#define IMAGE_ICON 1
+#endif
+
 #ifndef MONO_FONT
 /**
  A definition for a monospaced font if it is not defined by the current
@@ -9189,6 +9197,18 @@ GET_WINDOW_RECT(HWND, LPRECT);
 typedef GET_WINDOW_RECT *PGET_WINDOW_RECT;
 
 /**
+ A prototype for the LoadImageW function.
+ */
+typedef
+HICON WINAPI
+LOAD_IMAGEW(HINSTANCE, LPCWSTR, DWORD, INT, INT, DWORD);
+
+/**
+ A prototype for a pointer to the LoadImageW function.
+ */
+typedef LOAD_IMAGEW *PLOAD_IMAGEW;
+
+/**
  A prototype for the LockWorkStation function.
  */
 typedef
@@ -9492,6 +9512,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to GetWindowRect.
      */
     PGET_WINDOW_RECT pGetWindowRect;
+
+    /**
+     If it's available on the current system, a pointer to LoadImageW.
+     */
+    PLOAD_IMAGEW pLoadImageW;
 
     /**
      If it's available on the current system, a pointer to LockWorkStation.

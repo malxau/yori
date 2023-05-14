@@ -77,6 +77,7 @@ CONST YORI_DLL_NAME_MAP DllUser32Symbols[] = {
     {(FARPROC *)&DllUser32.pGetKeyboardLayout, "GetKeyboardLayout"},
     {(FARPROC *)&DllUser32.pGetTaskmanWindow, "GetTaskmanWindow"},
     {(FARPROC *)&DllUser32.pGetWindowRect, "GetWindowRect"},
+    {(FARPROC *)&DllUser32.pLoadImageW, "LoadImageW"},
     {(FARPROC *)&DllUser32.pLockWorkStation, "LockWorkStation"},
     {(FARPROC *)&DllUser32.pMoveWindow, "MoveWindow"},
     {(FARPROC *)&DllUser32.pOpenClipboard, "OpenClipboard"},
