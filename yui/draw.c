@@ -161,4 +161,108 @@ YuiDrawButton(
     }
 }
 
+/**
+ Determint the size of a an owner draw menu item.
+
+ @param YuiContext Pointer to the application context.
+
+ @param Item Pointer to the item to draw.
+
+ @return TRUE to indicate the item was measured.
+ */
+BOOL
+YuiDrawMeasureMenuItem(
+    __in PYUI_CONTEXT YuiContext,
+    __in LPMEASUREITEMSTRUCT Item
+    )
+{
+    PYUI_MENU_OWNERDRAW_ITEM ItemContext;
+
+    ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
+
+    Item->itemWidth = 240;
+    if (ItemContext->TallItem) {
+        Item->itemHeight = YuiContext->TallMenuHeight;
+    } else {
+        Item->itemHeight = YuiContext->ShortMenuHeight;
+    }
+    return TRUE;
+}
+
+/**
+ Draw an owner draw menu item.
+
+ @param YuiContext Pointer to the application context.
+
+ @param Item Pointer to the item to draw.
+
+ @return TRUE to indicate the item was drawn.  On failure there's not much we
+         can do.
+ */
+BOOL
+YuiDrawMenuItem(
+    __in PYUI_CONTEXT YuiContext,
+    __in LPDRAWITEMSTRUCT Item
+    )
+{
+    COLORREF BackColor;
+    COLORREF ForeColor;
+    HBRUSH Brush;
+    RECT TextRect;
+    PYUI_MENU_OWNERDRAW_ITEM ItemContext;
+    DWORD IconPadding;
+
+    ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
+
+    if (Item->itemState & ODS_SELECTED) {
+        BackColor = GetSysColor(COLOR_HIGHLIGHT);
+        ForeColor = GetSysColor(COLOR_HIGHLIGHTTEXT);
+    } else {
+        BackColor = GetSysColor(COLOR_MENU);
+        ForeColor = GetSysColor(COLOR_MENUTEXT);
+    }
+
+    Brush = CreateSolidBrush(BackColor);
+    FillRect(Item->hDC, &Item->rcItem, Brush);
+    DeleteObject(Brush);
+
+    if (ItemContext->Icon != NULL) {
+        DWORD IconLeft;
+        DWORD IconTop;
+        DWORD IconWidth;
+        DWORD IconHeight;
+
+        if (ItemContext->TallItem) {
+            IconPadding = YuiContext->TallIconPadding;
+            IconWidth = YuiContext->TallIconWidth;
+            IconHeight = YuiContext->TallIconHeight;
+        } else {
+            IconPadding = YuiContext->ShortIconPadding;
+            IconWidth = YuiContext->SmallIconWidth;
+            IconHeight = YuiContext->SmallIconHeight;
+        }
+
+        IconTop = Item->rcItem.top + IconPadding;
+        IconLeft = Item->rcItem.left + IconPadding;
+
+        DllUser32.pDrawIconEx(Item->hDC, IconLeft, IconTop, ItemContext->Icon->Icon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
+    }
+
+    if (ItemContext->TallItem) {
+        IconPadding = YuiContext->TallMenuHeight;
+    } else {
+        IconPadding = YuiContext->ShortMenuHeight;
+    }
+
+    TextRect.left = Item->rcItem.left + IconPadding;
+    TextRect.top = Item->rcItem.top;
+    TextRect.right = Item->rcItem.right - 5;
+    TextRect.bottom = Item->rcItem.bottom;
+
+    SetBkColor(Item->hDC, BackColor);
+    SetTextColor(Item->hDC, ForeColor);
+    DrawText(Item->hDC, ItemContext->Text.StartOfString, ItemContext->Text.LengthInChars, &TextRect, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:

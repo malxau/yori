@@ -4,6 +4,12 @@
 
 1                       ICON    DISCARDABLE     "..\\lib\\yori.ico"
 STARTICON               ICON    DISCARDABLE     "start.ico"
+PROGRAMSICON            ICON    DISCARDABLE     "programs.ico"
+DEBUGICON               ICON    DISCARDABLE     "debug.ico"
+RUNICON                 ICON    DISCARDABLE     "run.ico"
+LOGOFFICON              ICON    DISCARDABLE     "logoff.ico"
+EXITICON                ICON    DISCARDABLE     "exit.ico"
+SHUTDOWNICON            ICON    DISCARDABLE     "shutdown.ico"
 
 #define YORI_CUSTOM_MANIFEST 1
 #include "../lib/yoriver.inc"

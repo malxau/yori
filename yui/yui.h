@@ -331,6 +331,46 @@ typedef struct _YUI_CONTEXT {
     TCHAR BatteryDisplayedValueBuffer[16];
 
     /**
+     The number of pixels in height of a small icon.
+     */
+    DWORD SmallIconHeight;
+
+    /**
+     The number of pixels in width of a small icon.
+     */
+    DWORD SmallIconWidth;
+
+    /**
+     The number of pixels in height of a tall icon.
+     */
+    DWORD TallIconHeight;
+
+    /**
+     The number of pixels in width of a tall icon.
+     */
+    DWORD TallIconWidth;
+
+    /**
+     The number of pixels of padding to display around a large icon.
+     */
+    DWORD TallIconPadding;
+
+    /**
+     The number of pixels of padding to display around a small icon.
+     */
+    DWORD ShortIconPadding;
+
+    /**
+     The number of pixels in height of a tall menu entry.
+     */
+    DWORD TallMenuHeight;
+
+    /**
+     The number of pixels in height of a short menu entry.
+     */
+    DWORD ShortMenuHeight;
+
+    /**
      The left offset of the start button, in pixels, relative to the client
      area.  This is used to detect clicks that are in the parent window
      outside of the button area.
@@ -444,6 +484,46 @@ typedef struct _YUI_CONTEXT {
     BOOLEAN DisplayBattery;
 
 } YUI_CONTEXT, *PYUI_CONTEXT;
+
+/**
+ A structure describing an icon that could be shared by multiple menu entries.
+ */
+typedef struct _YUI_MENU_SHARED_ICON {
+
+    /**
+     Handle to the icon to display.
+     */
+    HICON Icon;
+
+    /**
+     Reference count for the icon.
+     */
+    DWORD ReferenceCount;
+} YUI_MENU_SHARED_ICON, *PYUI_MENU_SHARED_ICON;
+
+/**
+ A structure describing a menu entry that needs to be manually drawn.
+ */
+typedef struct _YUI_MENU_OWNERDRAW_ITEM {
+
+    /**
+     Points to an icon to display, or NULL if no icon should be displayed.
+     */
+    PYUI_MENU_SHARED_ICON Icon;
+
+    /**
+     The text to display for the menu item.
+     */
+    YORI_STRING Text;
+
+    /**
+     TRUE if the item is a tall item (meaning, an item that could contain a
+     full size 32x32 icon.)  FALSE if the item is a short item (meaning, an
+     item that could contain a 20x20 small icon.)
+     */
+    BOOLEAN TallItem;
+} YUI_MENU_OWNERDRAW_ITEM, *PYUI_MENU_OWNERDRAW_ITEM;
+
 
 /**
  The number of pixels to include in the start button.
@@ -562,6 +642,35 @@ YuiNotifyResolutionChange(
     __in HWND hWnd
     );
 
+BOOLEAN
+YuiIconCacheInitializeContext(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+VOID
+YuiIconCacheCleanupContext(VOID);
+
+PYUI_MENU_SHARED_ICON
+YuiIconCacheCreateOrReference(
+    __in PYUI_CONTEXT YuiContext,
+    __in_opt PYORI_STRING FileName,
+    __in DWORD IconIndex,
+    __in BOOLEAN LargeIcon
+    );
+
+VOID
+YuiIconCacheDereference(
+    __in PYUI_MENU_SHARED_ICON Icon
+    );
+
+BOOLEAN
+YuiMenuInitializeContext(
+    __in PYUI_CONTEXT YuiContext
+    );
+
+VOID
+YuiMenuCleanupContext(VOID);
+
 BOOL
 YuiMenuPopulate(
     __in PYUI_CONTEXT YuiContext
@@ -592,6 +701,18 @@ YuiDrawButton(
     __in_opt HICON Icon,
     __in PYORI_STRING Text,
     __in BOOLEAN CenterText
+    );
+
+BOOL
+YuiDrawMeasureMenuItem(
+    __in PYUI_CONTEXT YuiContext,
+    __in LPMEASUREITEMSTRUCT Item
+    );
+
+BOOL
+YuiDrawMenuItem(
+    __in PYUI_CONTEXT YuiContext,
+    __in LPDRAWITEMSTRUCT Item
     );
 
 BOOL

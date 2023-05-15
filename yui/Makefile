@@ -13,6 +13,7 @@ EXTERNLIBS=$(EXTERNLIBS) user32.lib gdi32.lib comdlg32.lib
 BIN_OBJS=\
 	 clock.obj       \
 	 draw.obj        \
+	 icons.obj       \
 	 menu.obj        \
 	 resource.obj    \
 	 taskbar.obj     \

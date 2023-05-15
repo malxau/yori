@@ -676,7 +676,8 @@ YuiTaskbarWindowProc(
                 YuiNotifyResolutionChange(YuiContext.hWnd);
             }
             break;
-
+        case WM_MEASUREITEM:
+            return YuiDrawMeasureMenuItem(&YuiContext, (LPMEASUREITEMSTRUCT)lParam);
         case WM_DRAWITEM:
             {
                 PDRAWITEMSTRUCT DrawItemStruct;
@@ -686,9 +687,11 @@ YuiTaskbarWindowProc(
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiStartDrawButton(DrawItemStruct);
-                } else {
+                } else if (CtrlId != 0) {
                     ASSERT(CtrlId >= YUI_FIRST_TASKBAR_BUTTON);
                     YuiTaskbarDrawButton(&YuiContext, CtrlId, DrawItemStruct);
+                } else {
+                    YuiDrawMenuItem(&YuiContext, DrawItemStruct);
                 }
             }
             break;
@@ -783,6 +786,8 @@ YuiCleanupGlobalState(VOID)
     DWORD Count;
     YuiMenuFreeAll(&YuiContext);
     YuiTaskbarFreeButtons(&YuiContext);
+    YuiMenuCleanupContext();
+    YuiIconCacheCleanupContext();
 
     for (Count = 0; Count < sizeof(YuiContext.StartChangeNotifications)/sizeof(YuiContext.StartChangeNotifications[0]); Count++) {
         if (YuiContext.StartChangeNotifications[Count] != NULL) {
@@ -859,6 +864,8 @@ YuiCleanupGlobalState(VOID)
         DllUser32.pShowWindow(YuiContext.hWndExplorerTaskbar, SW_SHOW);
         YuiContext.hWndExplorerTaskbar = NULL;
     }
+
+    YuiMenuCleanupContext();
 }
 
 /**
@@ -890,7 +897,23 @@ YuiCreateWindow(
 
         Context->LoginShell = TRUE;
     }
+    if (!YuiIconCacheInitializeContext(Context)) {
+        return FALSE;
+    }
 
+    Context->SmallIconWidth = GetSystemMetrics(SM_CXSMICON);
+    Context->SmallIconHeight = GetSystemMetrics(SM_CYSMICON);
+    Context->TallIconWidth = GetSystemMetrics(SM_CXICON);
+    Context->TallIconHeight = GetSystemMetrics(SM_CYICON);
+
+    Context->TallIconPadding = 6;
+    Context->ShortIconPadding = 4;
+    Context->TallMenuHeight = Context->TallIconHeight + 2 * Context->TallIconPadding;
+    Context->ShortMenuHeight = Context->SmallIconHeight + 2 * Context->ShortIconPadding;
+
+    if (!YuiMenuInitializeContext(Context)) {
+        return FALSE;
+    }
     YuiMenuPopulate(Context);
 
     wc.style = 0;

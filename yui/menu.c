@@ -29,6 +29,122 @@
 #include "yui.h"
 #include "resource.h"
 
+/**
+ A context structure for the menu module.
+ */
+typedef struct _YUI_MENU_CONTEXT {
+
+    /**
+     Owner draw state for the Programs menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Programs;
+
+#if DBG
+    /**
+     Owner draw state for the Debug menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Debug;
+#endif
+
+    /**
+     Owner draw state for the Run menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Run;
+
+    /**
+     Owner draw state for the Exit menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Exit;
+
+    /**
+     Owner draw state for the Shutdown menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Shutdown;
+} YUI_MENU_CONTEXT, *PYUI_MENU_CONTEXT;
+
+/**
+ Global state for the menu module.
+ */
+YUI_MENU_CONTEXT YuiMenuContext;
+
+/**
+ Cleanup state associated with the menu module.
+ */
+VOID
+YuiMenuCleanupContext(VOID)
+{
+    if (YuiMenuContext.Programs.Icon != NULL) {
+        YuiIconCacheDereference(YuiMenuContext.Programs.Icon);
+        YuiMenuContext.Programs.Icon = NULL;
+    }
+
+#if DBG
+    if (YuiMenuContext.Debug.Icon != NULL) {
+        YuiIconCacheDereference(YuiMenuContext.Debug.Icon);
+        YuiMenuContext.Debug.Icon = NULL;
+    }
+#endif
+
+    if (YuiMenuContext.Run.Icon != NULL) {
+        YuiIconCacheDereference(YuiMenuContext.Run.Icon);
+        YuiMenuContext.Run.Icon = NULL;
+    }
+
+    if (YuiMenuContext.Exit.Icon != NULL) {
+        YuiIconCacheDereference(YuiMenuContext.Exit.Icon);
+        YuiMenuContext.Exit.Icon = NULL;
+    }
+
+    if (YuiMenuContext.Shutdown.Icon != NULL) {
+        YuiIconCacheDereference(YuiMenuContext.Shutdown.Icon);
+        YuiMenuContext.Shutdown.Icon = NULL;
+    }
+}
+
+/**
+ Initialize the menu module.
+
+ @param YuiContext Pointer to the application context.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YuiMenuInitializeContext(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
+    YuiMenuContext.Programs.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, PROGRAMSICON, TRUE);
+    YoriLibConstantString(&YuiMenuContext.Programs.Text, _T("Programs"));
+    YuiMenuContext.Programs.TallItem = TRUE;
+
+#if DBG
+    YuiMenuContext.Debug.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, DEBUGICON, TRUE);
+    YoriLibConstantString(&YuiMenuContext.Debug.Text, _T("Debug"));
+    YuiMenuContext.Debug.TallItem = TRUE;
+#endif
+
+    YuiMenuContext.Run.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, RUNICON, TRUE);
+    YoriLibConstantString(&YuiMenuContext.Run.Text, _T("Run..."));
+    YuiMenuContext.Run.TallItem = TRUE;
+
+    if (YuiContext->LoginShell) {
+        YuiMenuContext.Exit.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, LOGOFFICON, TRUE);
+        YoriLibConstantString(&YuiMenuContext.Exit.Text, _T("Log off"));
+    } else {
+        YuiMenuContext.Exit.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, EXITICON, TRUE);
+        YoriLibConstantString(&YuiMenuContext.Exit.Text, _T("Exit"));
+    }
+    YuiMenuContext.Exit.TallItem = TRUE;
+
+    YuiMenuContext.Shutdown.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, SHUTDOWNICON, TRUE);
+    YoriLibConstantString(&YuiMenuContext.Shutdown.Text, _T("Shutdown"));
+    YuiMenuContext.Shutdown.TallItem = TRUE;
+
+    return TRUE;
+}
+
+
+
 #if DBG
 /**
  Turn the console logging window on or off.
@@ -1109,20 +1225,17 @@ YuiMenuPopulate(
     //  Add in all of the predefined menu entries.
     //
 
-    AppendMenu(YuiContext->StartMenu, MF_STRING | MF_POPUP, (DWORD_PTR)YuiContext->ProgramsDirectory.MenuHandle, _T("Programs"));
+    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->ProgramsDirectory.MenuHandle, (LPCWSTR)&YuiMenuContext.Programs);
 #if DBG
-    AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(YuiContext->StartMenu, MF_STRING | MF_POPUP, (DWORD_PTR)YuiContext->DebugMenu, _T("Debug"));
+    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->DebugMenu, (LPCWSTR)&YuiMenuContext.Debug);
 #endif
-    AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_RUN, _T("Run..."));
+    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW, YUI_MENU_RUN, (LPCWSTR)&YuiMenuContext.Run);
     AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
     if (YuiContext->LoginShell) {
-        AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_LOGOFF, _T("Log off"));
+        AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW, YUI_MENU_LOGOFF, (LPCWSTR)&YuiMenuContext.Exit);
     } else {
-        AppendMenu(YuiContext->StartMenu, MF_STRING, YUI_MENU_EXIT, _T("Exit"));
+        AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW, YUI_MENU_EXIT, (LPCWSTR)&YuiMenuContext.Exit);
     }
-    AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
 
     YuiContext->ShutdownMenu = CreatePopupMenu();
     if (YuiContext->ShutdownMenu == NULL) {
@@ -1138,7 +1251,7 @@ YuiMenuPopulate(
     AppendMenu(YuiContext->ShutdownMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_REBOOT, _T("Reboot"));
     AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_SHUTDOWN, _T("Shut down"));
-    AppendMenu(YuiContext->StartMenu, MF_STRING | MF_POPUP, (DWORD_PTR)YuiContext->ShutdownMenu, _T("Shut down"));
+    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->ShutdownMenu, (LPCWSTR)&YuiMenuContext.Shutdown);
 
     return TRUE;
 }

@@ -25,9 +25,39 @@
  */
 
 /**
- The identifier for start button icon.
+ The identifier for the start button icon.
  */
-#define STARTICON 2
+#define STARTICON    2
+
+/**
+ The identifier for the programs menu icon.
+ */
+#define PROGRAMSICON 3
+
+/**
+ The identifier for the debug menu icon.
+ */
+#define DEBUGICON    4
+
+/**
+ The identifier for the run menu icon.
+ */
+#define RUNICON      5
+
+/**
+ The identifier for the logoff menu icon.
+ */
+#define LOGOFFICON   6
+
+/**
+ The identifier for the exit menu icon.
+ */
+#define EXITICON     7
+
+/**
+ The identifier for the shut down menu icon.
+ */
+#define SHUTDOWNICON 8
 
 /**
  The identifier for the dialog box.
