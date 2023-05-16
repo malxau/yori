@@ -60,6 +60,11 @@
 #define SHUTDOWNICON 8
 
 /**
+ The identifier for the checked icon.
+ */
+#define CHECKEDICON  9
+
+/**
  The identifier for the dialog box.
  */
 #define RUNDIALOG 100

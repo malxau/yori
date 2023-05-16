@@ -30,9 +30,95 @@
 #include "resource.h"
 
 /**
+ A structure describing a directory within the start menu.
+ */
+typedef struct _YUI_MENU_DIRECTORY {
+
+    /**
+     The entry for this directory within the children of its parent.  This is
+     associated with ChildDirectories, below.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     Information about the item to draw in the menu, including its display
+     name and optional icon.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Item;
+
+    /**
+     A list of child directories within this directory.  This is paired with
+     ListEntry above.
+     */
+    YORI_LIST_ENTRY ChildDirectories;
+
+    /**
+     A list of child files (launchable applications) underneath this
+     directory.  This is paired with @ref YUI_MENU_FILE::ListEntry .
+     */
+    YORI_LIST_ENTRY ChildFiles;
+
+    /**
+     A handle to the menu that contains subdirectories and files within this
+     directory.
+     */
+    HMENU MenuHandle;
+
+    /**
+     The depth of this directory.  The root is zero, and all subitems start
+     from 1.
+     */
+    DWORD Depth;
+} YUI_MENU_DIRECTORY, *PYUI_MENU_DIRECTORY;
+
+/**
+ A structure describing a launchable program within the start menu.
+ */
+typedef struct _YUI_MENU_FILE {
+
+    /**
+     The list linkage associating this program with its parent directory.
+     This is paired with @ref YUI_MENU_DIRECTORY::ChildFiles .
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     Information about the item to draw in the menu, including its display
+     name and optional icon.
+     */
+    YUI_MENU_OWNERDRAW_ITEM Item;
+
+    /**
+     A fully qualified path to this file (typically a .lnk file.)
+     */
+    YORI_STRING FilePath;
+
+    /**
+     The depth of this entry.  All objects underneath the root start at 1.
+     */
+    DWORD Depth;
+
+    /**
+     The unique identifier for this menu item.
+     */
+    DWORD MenuId;
+} YUI_MENU_FILE, *PYUI_MENU_FILE;
+
+
+/**
  A context structure for the menu module.
  */
 typedef struct _YUI_MENU_CONTEXT {
+
+    /**
+     The directory object corresponding to the top level start menu directory.
+     */
+    YUI_MENU_DIRECTORY StartDirectory;
+
+    /**
+     The directory object corresponding to the programs directory.
+     */
+    YUI_MENU_DIRECTORY ProgramsDirectory;
 
     /**
      Owner draw state for the Programs menu item.
@@ -44,6 +130,26 @@ typedef struct _YUI_MENU_CONTEXT {
      Owner draw state for the Debug menu item.
      */
     YUI_MENU_OWNERDRAW_ITEM Debug;
+
+    /**
+     Owner draw state for the Debug refresh taskbar menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM DebugRefreshTaskbar;
+
+    /**
+     Owner draw state for the Debug toggle debug logging menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM DebugToggleLogging;
+
+    /**
+     Owner draw state for the Debug launch winlogon shell menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM DebugLaunchWinlogonShell;
+
+    /**
+     Owner draw state for the Debug simulate display change menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM DebugSimulateDisplayChange;
 #endif
 
     /**
@@ -60,6 +166,36 @@ typedef struct _YUI_MENU_CONTEXT {
      Owner draw state for the Shutdown menu item.
      */
     YUI_MENU_OWNERDRAW_ITEM Shutdown;
+
+    /**
+     Owner draw state for the Shutdown Disconnect menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownDisconnect;
+
+    /**
+     Owner draw state for the Shutdown Lock menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownLock;
+
+    /**
+     Owner draw state for the Shutdown Exit menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownExit;
+
+    /**
+     Owner draw state for the Shutdown Log off menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownLogoff;
+
+    /**
+     Owner draw state for the Shutdown Reboot menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownReboot;
+
+    /**
+     Owner draw state for the Shutdown Shut down menu item.
+     */
+    YUI_MENU_OWNERDRAW_ITEM ShutdownShutdown;
 } YUI_MENU_CONTEXT, *PYUI_MENU_CONTEXT;
 
 /**
@@ -68,37 +204,64 @@ typedef struct _YUI_MENU_CONTEXT {
 YUI_MENU_CONTEXT YuiMenuContext;
 
 /**
+ Initialize an empty ownerdraw menu item.
+
+ @param Item Pointer to the item to initialize.
+ */
+VOID
+YuiMenuInitializeItem(
+    __out PYUI_MENU_OWNERDRAW_ITEM Item
+    )
+{
+    Item->Icon = NULL;
+    YoriLibInitEmptyString(&Item->Text);
+    Item->TallItem = FALSE;
+}
+
+/**
+ Cleanup an ownerdraw menu item.
+
+ @param Item Pointer to the item to clean up.
+ */
+VOID
+YuiMenuCleanupItem(
+    __in PYUI_MENU_OWNERDRAW_ITEM Item
+    )
+{
+    if (Item->Icon != NULL) {
+        YuiIconCacheDereference(Item->Icon);
+    }
+    YoriLibFreeStringContents(&Item->Text);
+}
+
+/**
  Cleanup state associated with the menu module.
  */
 VOID
 YuiMenuCleanupContext(VOID)
 {
-    if (YuiMenuContext.Programs.Icon != NULL) {
-        YuiIconCacheDereference(YuiMenuContext.Programs.Icon);
-        YuiMenuContext.Programs.Icon = NULL;
-    }
+    YuiMenuCleanupItem(&YuiMenuContext.Programs);
 
 #if DBG
-    if (YuiMenuContext.Debug.Icon != NULL) {
-        YuiIconCacheDereference(YuiMenuContext.Debug.Icon);
-        YuiMenuContext.Debug.Icon = NULL;
-    }
+    YuiMenuCleanupItem(&YuiMenuContext.Debug);
+    YuiMenuCleanupItem(&YuiMenuContext.DebugRefreshTaskbar);
+    YuiMenuCleanupItem(&YuiMenuContext.DebugToggleLogging);
+    YuiMenuCleanupItem(&YuiMenuContext.DebugLaunchWinlogonShell);
+    YuiMenuCleanupItem(&YuiMenuContext.DebugSimulateDisplayChange);
 #endif
 
-    if (YuiMenuContext.Run.Icon != NULL) {
-        YuiIconCacheDereference(YuiMenuContext.Run.Icon);
-        YuiMenuContext.Run.Icon = NULL;
-    }
+    YuiMenuCleanupItem(&YuiMenuContext.Run);
+    YuiMenuCleanupItem(&YuiMenuContext.Exit);
+    YuiMenuCleanupItem(&YuiMenuContext.Shutdown);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownDisconnect);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownLock);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownExit);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownLogoff);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownReboot);
+    YuiMenuCleanupItem(&YuiMenuContext.ShutdownShutdown);
 
-    if (YuiMenuContext.Exit.Icon != NULL) {
-        YuiIconCacheDereference(YuiMenuContext.Exit.Icon);
-        YuiMenuContext.Exit.Icon = NULL;
-    }
-
-    if (YuiMenuContext.Shutdown.Icon != NULL) {
-        YuiIconCacheDereference(YuiMenuContext.Shutdown.Icon);
-        YuiMenuContext.Shutdown.Icon = NULL;
-    }
+    YuiMenuCleanupItem(&YuiMenuContext.ProgramsDirectory.Item);
+    YuiMenuCleanupItem(&YuiMenuContext.StartDirectory.Item);
 }
 
 /**
@@ -113,6 +276,15 @@ YuiMenuInitializeContext(
     __in PYUI_CONTEXT YuiContext
     )
 {
+    YoriLibInitializeListHead(&YuiMenuContext.ProgramsDirectory.ListEntry);
+    YoriLibInitializeListHead(&YuiMenuContext.ProgramsDirectory.ChildDirectories);
+    YoriLibInitializeListHead(&YuiMenuContext.ProgramsDirectory.ChildFiles);
+    YuiMenuInitializeItem(&YuiMenuContext.ProgramsDirectory.Item);
+    YoriLibInitializeListHead(&YuiMenuContext.StartDirectory.ListEntry);
+    YoriLibInitializeListHead(&YuiMenuContext.StartDirectory.ChildDirectories);
+    YoriLibInitializeListHead(&YuiMenuContext.StartDirectory.ChildFiles);
+    YuiMenuInitializeItem(&YuiMenuContext.StartDirectory.Item);
+
     YuiMenuContext.Programs.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, PROGRAMSICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Programs.Text, _T("Programs"));
     YuiMenuContext.Programs.TallItem = TRUE;
@@ -121,6 +293,17 @@ YuiMenuInitializeContext(
     YuiMenuContext.Debug.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, DEBUGICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Debug.Text, _T("Debug"));
     YuiMenuContext.Debug.TallItem = TRUE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.DebugRefreshTaskbar);
+    YoriLibConstantString(&YuiMenuContext.DebugRefreshTaskbar.Text, _T("Refresh Taskbar"));
+    YuiMenuInitializeItem(&YuiMenuContext.DebugToggleLogging);
+    YoriLibConstantString(&YuiMenuContext.DebugToggleLogging.Text, _T("Debug logging"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.DebugLaunchWinlogonShell);
+    YoriLibConstantString(&YuiMenuContext.DebugLaunchWinlogonShell.Text, _T("Launch Winlogon shell and exit"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.DebugSimulateDisplayChange);
+    YoriLibConstantString(&YuiMenuContext.DebugSimulateDisplayChange.Text, _T("Simulate display change"));
 #endif
 
     YuiMenuContext.Run.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, RUNICON, TRUE);
@@ -136,9 +319,28 @@ YuiMenuInitializeContext(
     }
     YuiMenuContext.Exit.TallItem = TRUE;
 
+    YuiMenuInitializeItem(&YuiMenuContext.Shutdown);
     YuiMenuContext.Shutdown.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, SHUTDOWNICON, TRUE);
     YoriLibConstantString(&YuiMenuContext.Shutdown.Text, _T("Shutdown"));
     YuiMenuContext.Shutdown.TallItem = TRUE;
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownDisconnect);
+    YoriLibConstantString(&YuiMenuContext.ShutdownDisconnect.Text, _T("Disconnect"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownLock);
+    YoriLibConstantString(&YuiMenuContext.ShutdownLock.Text, _T("Lock"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownExit);
+    YoriLibConstantString(&YuiMenuContext.ShutdownExit.Text, _T("Exit"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownLogoff);
+    YoriLibConstantString(&YuiMenuContext.ShutdownLogoff.Text, _T("Log off"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownReboot);
+    YoriLibConstantString(&YuiMenuContext.ShutdownReboot.Text, _T("Reboot"));
+
+    YuiMenuInitializeItem(&YuiMenuContext.ShutdownShutdown);
+    YoriLibConstantString(&YuiMenuContext.ShutdownShutdown.Text, _T("Shut down"));
 
     return TRUE;
 }
@@ -282,14 +484,14 @@ YuiCreateMenuDirectory(
     YoriLibInitializeListHead(&Entry->ListEntry);
     YoriLibInitializeListHead(&Entry->ChildDirectories);
     YoriLibInitializeListHead(&Entry->ChildFiles);
-    YoriLibInitEmptyString(&Entry->DirName);
-    Entry->DirName.StartOfString = (LPTSTR)(Entry + 1);
-    Entry->DirName.LengthAllocated = DirName->LengthInChars + 1;
-    Entry->DirName.LengthInChars = DirName->LengthInChars;
-    Entry->DirName.MemoryToFree = Entry;
+    YuiMenuInitializeItem(&Entry->Item);
+    Entry->Item.Text.StartOfString = (LPTSTR)(Entry + 1);
+    Entry->Item.Text.LengthAllocated = DirName->LengthInChars + 1;
+    Entry->Item.Text.LengthInChars = DirName->LengthInChars;
+    Entry->Item.Text.MemoryToFree = Entry;
 
-    memcpy(Entry->DirName.StartOfString, DirName->StartOfString, DirName->LengthInChars * sizeof(TCHAR));
-    Entry->DirName.StartOfString[Entry->DirName.LengthInChars] = '\0';
+    memcpy(Entry->Item.Text.StartOfString, DirName->StartOfString, DirName->LengthInChars * sizeof(TCHAR));
+    Entry->Item.Text.StartOfString[Entry->Item.Text.LengthInChars] = '\0';
 
     Entry->MenuHandle = NULL;
 
@@ -325,7 +527,7 @@ YuiDeleteMenuDirectory(
     if (Directory != Root) {
         YoriLibRemoveListItem(&Directory->ListEntry);
 
-        YoriLibFreeStringContents(&Directory->DirName);
+        YuiMenuCleanupItem(&Directory->Item);
         YoriLibDereference(Directory);
     }
     return TRUE;
@@ -358,7 +560,7 @@ YuiCreateMenuFile(
 
     YoriLibInitializeListHead(&Entry->ListEntry);
     YoriLibInitEmptyString(&Entry->FilePath);
-    YoriLibInitEmptyString(&Entry->FriendlyName);
+    YuiMenuInitializeItem(&Entry->Item);
 
     Entry->FilePath.StartOfString = (LPTSTR)(Entry + 1);
     Entry->FilePath.LengthAllocated = FilePath->LengthInChars + 1;
@@ -367,12 +569,12 @@ YuiCreateMenuFile(
     memcpy(Entry->FilePath.StartOfString, FilePath->StartOfString, FilePath->LengthInChars * sizeof(TCHAR));
     Entry->FilePath.StartOfString[Entry->FilePath.LengthInChars] = '\0';
 
-    Entry->FriendlyName.StartOfString = Entry->FilePath.StartOfString + Entry->FilePath.LengthAllocated;
-    Entry->FriendlyName.LengthAllocated = FriendlyName->LengthInChars + 1;
-    Entry->FriendlyName.LengthInChars = FriendlyName->LengthInChars;
-    Entry->FriendlyName.MemoryToFree = Entry;
-    memcpy(Entry->FriendlyName.StartOfString, FriendlyName->StartOfString, FriendlyName->LengthInChars * sizeof(TCHAR));
-    Entry->FriendlyName.StartOfString[Entry->FriendlyName.LengthInChars] = '\0';
+    Entry->Item.Text.StartOfString = Entry->FilePath.StartOfString + Entry->FilePath.LengthAllocated;
+    Entry->Item.Text.LengthAllocated = FriendlyName->LengthInChars + 1;
+    Entry->Item.Text.LengthInChars = FriendlyName->LengthInChars;
+    Entry->Item.Text.MemoryToFree = Entry;
+    memcpy(Entry->Item.Text.StartOfString, FriendlyName->StartOfString, FriendlyName->LengthInChars * sizeof(TCHAR));
+    Entry->Item.Text.StartOfString[Entry->Item.Text.LengthInChars] = '\0';
 
     return Entry;
 }
@@ -396,7 +598,7 @@ YuiDeleteMenuFile(
     YoriLibRemoveListItem(&File->ListEntry);
 
     YoriLibFreeStringContents(&File->FilePath);
-    YoriLibFreeStringContents(&File->FriendlyName);
+    YuiMenuCleanupItem(&File->Item);
     YoriLibDereference(File);
     return TRUE;
 }
@@ -429,7 +631,7 @@ YuiDirectoryNodeExists(
     ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildDirectories, ListEntry);
     while (ListEntry != NULL) {
         Existing = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-        CompareResult = YoriLibCompareStringInsensitive(&Existing->DirName, ChildName);
+        CompareResult = YoriLibCompareStringInsensitive(&Existing->Item.Text, ChildName);
         if (CompareResult == 0) {
             return TRUE;
         }
@@ -461,7 +663,7 @@ YuiInsertDirectoryInOrder(
     ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildDirectories, ListEntry);
     while (ListEntry != NULL) {
         Existing = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-        CompareResult = YoriLibCompareStringInsensitive(&Existing->DirName, &Child->DirName);
+        CompareResult = YoriLibCompareStringInsensitive(&Existing->Item.Text, &Child->Item.Text);
         if (CompareResult < 0) {
             break;
         }
@@ -498,7 +700,7 @@ YuiInsertFileInOrder(
     ListEntry = YoriLibGetPreviousListEntry(&Parent->ChildFiles, ListEntry);
     while (ListEntry != NULL) {
         Existing = CONTAINING_RECORD(ListEntry, YUI_MENU_FILE, ListEntry);
-        CompareResult = YoriLibCompareStringInsensitive(&Existing->FriendlyName, &Child->FriendlyName);
+        CompareResult = YoriLibCompareStringInsensitive(&Existing->Item.Text, &Child->Item.Text);
         if (CompareResult < 0) {
             break;
         }
@@ -554,7 +756,7 @@ YuiFindStartingNode(
         ListEntry = YoriLibGetNextListEntry(&Current->ChildDirectories, ListEntry);
         while (ListEntry != NULL) {
             Child = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-            if (YoriLibCompareStringInsensitive(&Child->DirName, &Component) == 0) {
+            if (YoriLibCompareStringInsensitive(&Child->Item.Text, &Component) == 0) {
                 break;
             }
             ListEntry = YoriLibGetNextListEntry(&Current->ChildDirectories, ListEntry);
@@ -620,7 +822,7 @@ YuiPopulateMenuOnDirectory(
     while (ListEntry != NULL) {
         NextEntry = YoriLibGetNextListEntry(&Parent->ChildDirectories, ListEntry);
         ExistingDir = CONTAINING_RECORD(ListEntry, YUI_MENU_DIRECTORY, ListEntry);
-        AppendMenu(Parent->MenuHandle, MF_STRING | MF_POPUP, (DWORD_PTR)ExistingDir->MenuHandle, ExistingDir->DirName.StartOfString);
+        AppendMenu(Parent->MenuHandle, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)ExistingDir->MenuHandle, (LPCTSTR)&ExistingDir->Item);
         ListEntry = NextEntry;
     }
 
@@ -630,7 +832,7 @@ YuiPopulateMenuOnDirectory(
         ExistingFile = CONTAINING_RECORD(ListEntry, YUI_MENU_FILE, ListEntry);
         EnumContext->NextMenuIdentifier++;
         ExistingFile->MenuId = EnumContext->NextMenuIdentifier;
-        AppendMenu(Parent->MenuHandle, MF_STRING, ExistingFile->MenuId, ExistingFile->FriendlyName.StartOfString);
+        AppendMenu(Parent->MenuHandle, MF_OWNERDRAW, ExistingFile->MenuId, (LPCTSTR)&ExistingFile->Item);
         ListEntry = NextEntry;
     }
 
@@ -910,7 +1112,8 @@ YuiFileFoundCallback(
                 NewFile = YuiCreateMenuFile(FilePath, &FriendlyName);
                 if (NewFile != NULL) {
                     NewFile->Depth = Depth + 1;
-                    YuiInsertFileInOrder(&YuiContext->StartDirectory, NewFile);
+                    NewFile->Item.TallItem = TRUE;
+                    YuiInsertFileInOrder(&YuiMenuContext.StartDirectory, NewFile);
                 }
             }
 
@@ -922,7 +1125,7 @@ YuiFileFoundCallback(
     if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0) {
         PYUI_MENU_DIRECTORY NewDir;
 
-        Parent = YuiFindStartingNode(&YuiContext->ProgramsDirectory, FilePath, Depth);
+        Parent = YuiFindStartingNode(&YuiMenuContext.ProgramsDirectory, FilePath, Depth);
 
         if (Parent != NULL &&
             YuiFindDepthComponent(FilePath, &FriendlyName, 0, FALSE)) {
@@ -937,7 +1140,7 @@ YuiFileFoundCallback(
         }
     } else {
 
-        Parent = YuiFindStartingNode(&YuiContext->ProgramsDirectory, FilePath, Depth);
+        Parent = YuiFindStartingNode(&YuiMenuContext.ProgramsDirectory, FilePath, Depth);
 
         YoriLibInitEmptyString(&Ext);
         Ext.StartOfString = YoriLibFindRightMostCharacter(FilePath, '.');
@@ -1191,18 +1394,18 @@ YuiMenuPopulate(
         return FALSE;
     }
 
-    YuiContext->StartDirectory.MenuHandle = YuiContext->StartMenu;
+    YuiMenuContext.StartDirectory.MenuHandle = YuiContext->StartMenu;
 
-    YuiForEachFileOrDirectoryDepthFirst(&YuiContext->StartDirectory,
+    YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.StartDirectory,
                                         YuiContext,
                                         NULL,
                                         YuiPopulateMenuOnDirectory);
 
-    if (!YoriLibIsListEmpty(&YuiContext->StartDirectory.ChildFiles)) {
+    if (!YoriLibIsListEmpty(&YuiMenuContext.StartDirectory.ChildFiles)) {
         AppendMenu(YuiContext->StartMenu, MF_SEPARATOR, 0, NULL);
     }
 
-    YuiForEachFileOrDirectoryDepthFirst(&YuiContext->ProgramsDirectory,
+    YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.ProgramsDirectory,
                                         YuiContext,
                                         NULL,
                                         YuiPopulateMenuOnDirectory);
@@ -1215,17 +1418,17 @@ YuiMenuPopulate(
 
     YuiContext->DebugMenuItemChecked = YuiContext->DebugLogEnabled;
 
-    AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_REFRESH, _T("Refresh taskbar"));
-    AppendMenu(YuiContext->DebugMenu, MF_STRING | (YuiContext->DebugMenuItemChecked?MF_CHECKED:0), YUI_MENU_LOGGING, _T("Toggle debug logging"));
-    AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_LAUNCHWINLOGONSHELL, _T("Launch winlogon shell and exit"));
-    AppendMenu(YuiContext->DebugMenu, MF_STRING, YUI_MENU_DISPLAYCHANGE, _T("Simulate a display change"));
+    AppendMenu(YuiContext->DebugMenu, MF_OWNERDRAW, YUI_MENU_REFRESH, (LPCWSTR)&YuiMenuContext.DebugRefreshTaskbar);
+    AppendMenu(YuiContext->DebugMenu, MF_OWNERDRAW | (YuiContext->DebugMenuItemChecked?MF_CHECKED:0), YUI_MENU_LOGGING, (LPCWSTR)&YuiMenuContext.DebugToggleLogging);
+    AppendMenu(YuiContext->DebugMenu, MF_OWNERDRAW, YUI_MENU_LAUNCHWINLOGONSHELL, (LPCWSTR)&YuiMenuContext.DebugLaunchWinlogonShell);
+    AppendMenu(YuiContext->DebugMenu, MF_OWNERDRAW, YUI_MENU_DISPLAYCHANGE, (LPCWSTR)&YuiMenuContext.DebugSimulateDisplayChange);
 #endif
 
     //
     //  Add in all of the predefined menu entries.
     //
 
-    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->ProgramsDirectory.MenuHandle, (LPCWSTR)&YuiMenuContext.Programs);
+    AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiMenuContext.ProgramsDirectory.MenuHandle, (LPCWSTR)&YuiMenuContext.Programs);
 #if DBG
     AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->DebugMenu, (LPCWSTR)&YuiMenuContext.Debug);
 #endif
@@ -1241,16 +1444,16 @@ YuiMenuPopulate(
     if (YuiContext->ShutdownMenu == NULL) {
         return FALSE;
     }
-    AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_DISCONNECT, _T("Disconnect"));
-    AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_LOCK, _T("Lock"));
+    AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_DISCONNECT, (LPCWSTR)&YuiMenuContext.ShutdownDisconnect);
+    AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_LOCK, (LPCWSTR)&YuiMenuContext.ShutdownLock);
     if (YuiContext->LoginShell) {
-        AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_EXIT, _T("Exit"));
+        AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_EXIT, (LPCWSTR)&YuiMenuContext.ShutdownExit);
     } else {
-        AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_LOGOFF, _T("Log off"));
+        AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_LOGOFF, (LPCWSTR)&YuiMenuContext.ShutdownLogoff);
     }
     AppendMenu(YuiContext->ShutdownMenu, MF_SEPARATOR, 0, NULL);
-    AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_REBOOT, _T("Reboot"));
-    AppendMenu(YuiContext->ShutdownMenu, MF_STRING, YUI_MENU_SHUTDOWN, _T("Shut down"));
+    AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_REBOOT, (LPCWSTR)&YuiMenuContext.ShutdownReboot);
+    AppendMenu(YuiContext->ShutdownMenu, MF_OWNERDRAW, YUI_MENU_SHUTDOWN, (LPCWSTR)&YuiMenuContext.ShutdownShutdown);
     AppendMenu(YuiContext->StartMenu, MF_OWNERDRAW | MF_POPUP, (DWORD_PTR)YuiContext->ShutdownMenu, (LPCWSTR)&YuiMenuContext.Shutdown);
 
     return TRUE;
@@ -1267,13 +1470,13 @@ YuiMenuFreeAll(
     __in PYUI_CONTEXT YuiContext
     )
 {
-    YuiForEachFileOrDirectoryDepthFirst(&YuiContext->ProgramsDirectory,
-                                        &YuiContext->ProgramsDirectory,
+    YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.ProgramsDirectory,
+                                        &YuiMenuContext.ProgramsDirectory,
                                         YuiDeleteMenuFile,
                                         YuiDeleteMenuDirectory);
 
-    YuiForEachFileOrDirectoryDepthFirst(&YuiContext->StartDirectory,
-                                        &YuiContext->StartDirectory,
+    YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.StartDirectory,
+                                        &YuiMenuContext.StartDirectory,
                                         YuiDeleteMenuFile,
                                         YuiDeleteMenuDirectory);
 
@@ -1726,11 +1929,11 @@ YuiMenuExecuteById(
         default:
             ASSERT(MenuId >= YUI_MENU_FIRST_PROGRAM_MENU_ID);
 
-            if (YuiForEachFileOrDirectoryDepthFirst(&YuiContext->StartDirectory,
+            if (YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.StartDirectory,
                                                     &MenuId,
                                                     YuiFindMenuCommandToExecute,
                                                     NULL)) {
-                YuiForEachFileOrDirectoryDepthFirst(&YuiContext->ProgramsDirectory,
+                YuiForEachFileOrDirectoryDepthFirst(&YuiMenuContext.ProgramsDirectory,
                                                     &MenuId,
                                                     YuiFindMenuCommandToExecute,
                                                     NULL);

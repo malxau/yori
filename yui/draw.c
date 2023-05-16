@@ -27,6 +27,7 @@
 #include <yoripch.h>
 #include <yorilib.h>
 #include "yui.h"
+#include "resource.h"
 
 /**
  Return the color used to display a flashing window in the taskbar.
@@ -226,7 +227,7 @@ YuiDrawMenuItem(
     FillRect(Item->hDC, &Item->rcItem, Brush);
     DeleteObject(Brush);
 
-    if (ItemContext->Icon != NULL) {
+    if (ItemContext->Icon != NULL || (Item->itemState & ODS_CHECKED)) {
         DWORD IconLeft;
         DWORD IconTop;
         DWORD IconWidth;
@@ -245,7 +246,28 @@ YuiDrawMenuItem(
         IconTop = Item->rcItem.top + IconPadding;
         IconLeft = Item->rcItem.left + IconPadding;
 
-        DllUser32.pDrawIconEx(Item->hDC, IconLeft, IconTop, ItemContext->Icon->Icon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
+        if (ItemContext->Icon != NULL) {
+            DllUser32.pDrawIconEx(Item->hDC, IconLeft, IconTop, ItemContext->Icon->Icon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
+        } else {
+            HICON CheckIcon;
+
+            //
+            //  Normally it would make sense to keep an icon like this
+            //  always loaded.  As of this writing, the check is only
+            //  used in the debug menu and off by default, so being
+            //  inefficient for this seems acceptable.
+            //
+
+            if (DllUser32.pLoadImageW != NULL) {
+                CheckIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL), MAKEINTRESOURCE(CHECKEDICON), IMAGE_ICON, IconWidth, IconHeight, 0);
+            } else {
+                CheckIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(CHECKEDICON));
+            }
+            if (CheckIcon != NULL) {
+                DllUser32.pDrawIconEx(Item->hDC, IconLeft, IconTop, CheckIcon, IconWidth, IconHeight, 0, NULL, DI_NORMAL);
+                DestroyIcon(CheckIcon);
+            }
+        }
     }
 
     if (ItemContext->TallItem) {

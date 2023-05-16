@@ -10,6 +10,7 @@ RUNICON                 ICON    DISCARDABLE     "run.ico"
 LOGOFFICON              ICON    DISCARDABLE     "logoff.ico"
 EXITICON                ICON    DISCARDABLE     "exit.ico"
 SHUTDOWNICON            ICON    DISCARDABLE     "shutdown.ico"
+CHECKEDICON             ICON    DISCARDABLE     "checked.ico"
 
 #define YORI_CUSTOM_MANIFEST 1
 #include "../lib/yoriver.inc"

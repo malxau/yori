@@ -25,80 +25,6 @@
  */
 
 /**
- A structure describing a directory within the start menu.
- */
-typedef struct _YUI_MENU_DIRECTORY {
-
-    /**
-     The entry for this directory within the children of its parent.  This is
-     associated with ChildDirectories, below.
-     */
-    YORI_LIST_ENTRY ListEntry;
-
-    /**
-     The name of this directory.  This is the final path component only, not
-     a fully qualified path.
-     */
-    YORI_STRING DirName;
-
-    /**
-     A list of child directories within this directory.  This is paired with
-     ListEntry above.
-     */
-    YORI_LIST_ENTRY ChildDirectories;
-
-    /**
-     A list of child files (launchable applications) underneath this
-     directory.  This is paired with @ref YUI_MENU_FILE::ListEntry .
-     */
-    YORI_LIST_ENTRY ChildFiles;
-
-    /**
-     A handle to the menu that contains subdirectories and files within this
-     directory.
-     */
-    HMENU MenuHandle;
-
-    /**
-     The depth of this directory.  The root is zero, and all subitems start
-     from 1.
-     */
-    DWORD Depth;
-} YUI_MENU_DIRECTORY, *PYUI_MENU_DIRECTORY;
-
-/**
- A structure describing a launchable program within the start menu.
- */
-typedef struct _YUI_MENU_FILE {
-
-    /**
-     The list linkage associating this program with its parent directory.
-     This is paired with @ref YUI_MENU_DIRECTORY::ChildFiles .
-     */
-    YORI_LIST_ENTRY ListEntry;
-
-    /**
-     A fully qualified path to this file (typically a .lnk file.)
-     */
-    YORI_STRING FilePath;
-
-    /**
-     The name to display for this file within the start menu.
-     */
-    YORI_STRING FriendlyName;
-
-    /**
-     The depth of this entry.  All objects underneath the root start at 1.
-     */
-    DWORD Depth;
-
-    /**
-     The unique identifier for this menu item.
-     */
-    DWORD MenuId;
-} YUI_MENU_FILE, *PYUI_MENU_FILE;
-
-/**
  In memory state corresponding to a taskbar button.
  */
 typedef struct _YUI_TASKBAR_BUTTON {
@@ -166,16 +92,6 @@ typedef struct _YUI_TASKBAR_BUTTON {
  Context passed to the callback which is invoked for each file found.
  */
 typedef struct _YUI_CONTEXT {
-
-    /**
-     The directory object corresponding to the top level start menu directory.
-     */
-    YUI_MENU_DIRECTORY StartDirectory;
-
-    /**
-     The directory object corresponding to the programs directory.
-     */
-    YUI_MENU_DIRECTORY ProgramsDirectory;
 
     /**
      The directory to filter from enumerate.  This is the "Programs" directory

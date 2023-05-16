@@ -864,8 +864,6 @@ YuiCleanupGlobalState(VOID)
         DllUser32.pShowWindow(YuiContext.hWndExplorerTaskbar, SW_SHOW);
         YuiContext.hWndExplorerTaskbar = NULL;
     }
-
-    YuiMenuCleanupContext();
 }
 
 /**
@@ -1280,14 +1278,6 @@ ymain(
     YORI_STRING Arg;
 
     ZeroMemory(&YuiContext, sizeof(YuiContext));
-    YoriLibInitializeListHead(&YuiContext.ProgramsDirectory.ListEntry);
-    YoriLibInitializeListHead(&YuiContext.ProgramsDirectory.ChildDirectories);
-    YoriLibInitializeListHead(&YuiContext.ProgramsDirectory.ChildFiles);
-    YoriLibInitEmptyString(&YuiContext.ProgramsDirectory.DirName);
-    YoriLibInitializeListHead(&YuiContext.StartDirectory.ListEntry);
-    YoriLibInitializeListHead(&YuiContext.StartDirectory.ChildDirectories);
-    YoriLibInitializeListHead(&YuiContext.StartDirectory.ChildFiles);
-    YoriLibInitEmptyString(&YuiContext.StartDirectory.DirName);
     YoriLibInitializeListHead(&YuiContext.TaskbarButtons);
     YuiContext.TaskbarButtonCount = 0;
 
