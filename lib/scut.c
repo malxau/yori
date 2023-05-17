@@ -229,6 +229,176 @@ Exit:
 }
 
 /**
+ Load the path to an icon resource from a specified shortcut file.
+
+ @param ShortcutFileName Pointer to the shortcut file to resolve.
+
+ @param IconPath On successful completion, populated with a path to a file
+        containing the icon to display.
+
+ @param IconIndex On successful completion, updated to indicate the icon index
+        within the file to display.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOL
+YoriLibLoadShortcutIconPath(
+    __in PYORI_STRING ShortcutFileName,
+    __out PYORI_STRING IconPath,
+    __out PDWORD IconIndex
+    )
+{
+    YORI_STRING IconLocation;
+    YORI_STRING ExpandedLocation;
+    DWORD LocalIconIndex;
+    IShellLinkW *Scut = NULL;
+    IPersistFile *ScutFile = NULL;
+    BOOL Result = FALSE;
+    HRESULT hRes;
+    DWORD SizeNeeded;
+
+    ASSERT(YoriLibIsStringNullTerminated(ShortcutFileName));
+
+    YoriLibLoadShell32Functions();
+    YoriLibLoadOle32Functions();
+    if (DllOle32.pCoCreateInstance == NULL || DllOle32.pCoInitialize == NULL) {
+        return FALSE;
+    }
+
+    hRes = DllOle32.pCoInitialize(NULL);
+    if (!SUCCEEDED(hRes)) {
+        return FALSE;
+    }
+
+    hRes = DllOle32.pCoCreateInstance(&CLSID_ShellLink, NULL, CLSCTX_INPROC_SERVER, &IID_IShellLinkW, (void **)&Scut);
+    if (!SUCCEEDED(hRes)) {
+        return FALSE;
+    }
+
+    YoriLibInitEmptyString(&IconLocation);
+    YoriLibInitEmptyString(&ExpandedLocation);
+    LocalIconIndex = 0;
+
+    hRes = Scut->Vtbl->QueryInterface(Scut, &IID_IPersistFile, (void **)&ScutFile);
+    if (!SUCCEEDED(hRes)) {
+        goto Exit;
+    }
+
+    hRes = ScutFile->Vtbl->Load(ScutFile, ShortcutFileName->StartOfString, 0);
+    if (!SUCCEEDED(hRes)) {
+        goto Exit;
+    }
+
+    //
+    //  The following code approximates how things should work, which is not
+    //  how they actually work.  As far as I can tell, and as far as the
+    //  documentation goes, these APIs don't return any indication of
+    //  required buffer size, and end up truncating the return value instead
+    //  which makes writing accurate code on these APIs basically impossible.
+    //
+
+    hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
+    while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+        SizeNeeded = IconLocation.LengthAllocated * 4;
+        if (SizeNeeded == 0) {
+            SizeNeeded = 1024;
+        }
+        YoriLibFreeStringContents(&IconLocation);
+
+        if (!YoriLibAllocateString(&IconLocation, SizeNeeded)) {
+            goto Exit;
+        }
+        hRes = Scut->Vtbl->GetIconLocation(Scut,
+                                           IconLocation.StartOfString,
+                                           IconLocation.LengthAllocated,
+                                           &LocalIconIndex);
+
+        if (SUCCEEDED(hRes)) {
+            IconLocation.LengthInChars = wcslen(IconLocation.StartOfString);
+        }
+    }
+
+    if (IconLocation.LengthInChars == 0) {
+        LocalIconIndex = 0;
+        hRes = HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER);
+        SizeNeeded = 0;
+        while (hRes == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER)) {
+            if (SizeNeeded == 0) {
+                SizeNeeded = 1024;
+            } else {
+                SizeNeeded = IconLocation.LengthAllocated * 4;
+            }
+            if (IconLocation.LengthAllocated < SizeNeeded) {
+                YoriLibFreeStringContents(&IconLocation);
+
+                if (!YoriLibAllocateString(&IconLocation, SizeNeeded)) {
+                    goto Exit;
+                }
+            }
+            hRes = Scut->Vtbl->GetPath(Scut,
+                                       IconLocation.StartOfString,
+                                       IconLocation.LengthAllocated,
+                                       NULL,
+                                       0);
+
+            if (SUCCEEDED(hRes)) {
+                IconLocation.LengthInChars = wcslen(IconLocation.StartOfString);
+            }
+        }
+    }
+
+    //
+    //  If we still don't have a path, we can't find any icon.
+    //
+
+    if (IconLocation.LengthInChars == 0) {
+        goto Exit;
+    }
+
+    //
+    //  Newer versions of Windows expand the environment variables in the
+    //  shortcut by default.  Older versions require us to do it manually
+    //  here.
+    //
+
+    SizeNeeded = ExpandEnvironmentStrings(IconLocation.StartOfString, NULL, 0);
+    if (SizeNeeded == 0) {
+        goto Exit;
+    }
+
+    if (!YoriLibAllocateString(&ExpandedLocation, SizeNeeded + 1)) {
+        goto Exit;
+    }
+
+    ExpandedLocation.LengthInChars = ExpandEnvironmentStrings(IconLocation.StartOfString, ExpandedLocation.StartOfString, ExpandedLocation.LengthAllocated);
+    YoriLibTrimNullTerminators(&ExpandedLocation);
+
+    memcpy(IconPath, &ExpandedLocation, sizeof(YORI_STRING));
+    YoriLibInitEmptyString(&ExpandedLocation);
+    *IconIndex = LocalIconIndex;
+
+    Result = TRUE;
+
+Exit:
+
+    YoriLibFreeStringContents(&IconLocation);
+    YoriLibFreeStringContents(&ExpandedLocation);
+
+    if (ScutFile != NULL) {
+        ScutFile->Vtbl->Release(ScutFile);
+        ScutFile = NULL;
+    }
+
+    if (Scut != NULL) {
+        Scut->Vtbl->Release(Scut);
+        Scut = NULL;
+    }
+
+    return Result;
+}
+
+/**
  Execute a specified shortcut file.
 
  @param ShortcutFileName Pointer to the shortcut file to execute.
@@ -373,7 +543,7 @@ YoriLibExecuteShortcut(
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&ExpandedFileTarget, SizeNeeded)) {
+    if (!YoriLibAllocateString(&ExpandedFileTarget, SizeNeeded + 1)) {
         goto Exit;
     }
 
@@ -384,7 +554,7 @@ YoriLibExecuteShortcut(
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&ExpandedArguments, SizeNeeded)) {
+    if (!YoriLibAllocateString(&ExpandedArguments, SizeNeeded + 1)) {
         goto Exit;
     }
 
@@ -395,7 +565,7 @@ YoriLibExecuteShortcut(
         goto Exit;
     }
 
-    if (!YoriLibAllocateString(&ExpandedWorkingDirectory, SizeNeeded)) {
+    if (!YoriLibAllocateString(&ExpandedWorkingDirectory, SizeNeeded + 1)) {
         goto Exit;
     }
 

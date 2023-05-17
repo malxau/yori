@@ -3372,6 +3372,14 @@ YoriLibCreateShortcut(
 
 __success(return)
 BOOL
+YoriLibLoadShortcutIconPath(
+    __in PYORI_STRING ShortcutFileName,
+    __out PYORI_STRING IconPath,
+    __out PDWORD IconIndex
+    );
+
+__success(return)
+BOOL
 YoriLibExecuteShortcut(
     __in PYORI_STRING ShortcutFileName,
     __in BOOLEAN Elevate
