@@ -8759,6 +8759,18 @@ typedef struct _YORI_PSAPI_FUNCTIONS {
 extern YORI_PSAPI_FUNCTIONS DllPsapi;
 
 /**
+ A prototype for the ExtractIconExW function.
+ */
+typedef
+DWORD WINAPI
+EXTRACT_ICON_EXW(LPCWSTR, INT, HICON *, HICON *, DWORD);
+
+/**
+ A prototype for a pointer to the ExtractIconExW function.
+ */
+typedef EXTRACT_ICON_EXW *PEXTRACT_ICON_EXW;
+
+/**
  A prototype for the SHBrowseForFolderW function.
  */
 typedef
@@ -8851,6 +8863,11 @@ typedef struct _YORI_SHELL32_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to ExtractIconExW.
+     */
+    PEXTRACT_ICON_EXW pExtractIconExW;
 
     /**
      If it's available on the current system, a pointer to SHBrowseForFolderW.
