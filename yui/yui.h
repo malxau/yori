@@ -407,14 +407,36 @@ typedef struct _YUI_CONTEXT {
 typedef struct _YUI_MENU_SHARED_ICON {
 
     /**
+     The link for the icon in the global icon cache.
+     */
+    YORI_LIST_ENTRY ListEntry;
+
+    /**
+     The file name containing the icon.
+     */
+    YORI_STRING FileName;
+
+    /**
      Handle to the icon to display.
      */
     HICON Icon;
 
     /**
+     The index of the icon within the file.  If FileName is empty, this
+     refers to the resource ID in the running executable.
+     */
+    DWORD IconIndex;
+
+    /**
      Reference count for the icon.
      */
     DWORD ReferenceCount;
+
+    /**
+     TRUE if this entry is for a large icon, FALSE if it is for a small icon.
+     */
+    BOOLEAN LargeIcon;
+
 } YUI_MENU_SHARED_ICON, *PYUI_MENU_SHARED_ICON;
 
 /**
