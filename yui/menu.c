@@ -536,19 +536,28 @@ YuiDeleteMenuDirectory(
 /**
  Allocate and initialize a new file object within the start menu.
 
+ @param YuiContext Pointer to the application context.
+
  @param FilePath Pointer to the full path to a shortcut file for this entry.
 
  @param FriendlyName Pointer to the human readable name for the file.
+
+ @param TallItem TRUE if the item should be a full height item, FALSE if the
+        item should be a short item.  This determines which icon to load.
 
  @return A pointer to the directory object, or NULL on failure.
  */
 PYUI_MENU_FILE
 YuiCreateMenuFile(
+    __in PYUI_CONTEXT YuiContext,
     __in PYORI_STRING FilePath,
-    __in PYORI_STRING FriendlyName
+    __in PYORI_STRING FriendlyName,
+    __in BOOLEAN TallItem
     )
 {
     PYUI_MENU_FILE Entry;
+    YORI_STRING IconPath;
+    DWORD IconIndex;
 
     Entry = YoriLibReferencedMalloc(sizeof(YUI_MENU_FILE) + (FilePath->LengthInChars + 1 + FriendlyName->LengthInChars + 1) * sizeof(TCHAR));
     if (Entry == NULL) {
@@ -569,12 +578,33 @@ YuiCreateMenuFile(
     memcpy(Entry->FilePath.StartOfString, FilePath->StartOfString, FilePath->LengthInChars * sizeof(TCHAR));
     Entry->FilePath.StartOfString[Entry->FilePath.LengthInChars] = '\0';
 
+    Entry->Item.TallItem = TallItem;
     Entry->Item.Text.StartOfString = Entry->FilePath.StartOfString + Entry->FilePath.LengthAllocated;
     Entry->Item.Text.LengthAllocated = FriendlyName->LengthInChars + 1;
     Entry->Item.Text.LengthInChars = FriendlyName->LengthInChars;
     Entry->Item.Text.MemoryToFree = Entry;
     memcpy(Entry->Item.Text.StartOfString, FriendlyName->StartOfString, FriendlyName->LengthInChars * sizeof(TCHAR));
     Entry->Item.Text.StartOfString[Entry->Item.Text.LengthInChars] = '\0';
+
+    if (YoriLibLoadShortcutIconPath(FilePath, &IconPath, &IconIndex)) {
+        YORI_STRING Ext;
+
+        YoriLibInitEmptyString(&Ext);
+
+        Ext.StartOfString = YoriLibFindRightMostCharacter(&IconPath, '.');
+        if (Ext.StartOfString != NULL) {
+            Ext.LengthInChars = IconPath.LengthInChars - (DWORD)(Ext.StartOfString - IconPath.StartOfString);
+        }
+
+        if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".exe")) == 0 ||
+            YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".dll")) == 0 ||
+            YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".ico")) == 0) {
+
+            Entry->Item.Icon = YuiIconCacheCreateOrReference(YuiContext, &IconPath, IconIndex, Entry->Item.TallItem);
+        }
+
+        YoriLibFreeStringContents(&IconPath);
+    }
 
     return Entry;
 }
@@ -1109,10 +1139,9 @@ YuiFileFoundCallback(
             if (YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".lnk")) == 0 &&
                 YuiFindDepthComponent(FilePath, &FriendlyName, 0, TRUE)) {
 
-                NewFile = YuiCreateMenuFile(FilePath, &FriendlyName);
+                NewFile = YuiCreateMenuFile(YuiContext, FilePath, &FriendlyName, TRUE);
                 if (NewFile != NULL) {
                     NewFile->Depth = Depth + 1;
-                    NewFile->Item.TallItem = TRUE;
                     YuiInsertFileInOrder(&YuiMenuContext.StartDirectory, NewFile);
                 }
             }
@@ -1151,7 +1180,7 @@ YuiFileFoundCallback(
         if (Parent != NULL &&
             YoriLibCompareStringWithLiteralInsensitive(&Ext, _T(".lnk")) == 0 &&
             YuiFindDepthComponent(FilePath, &FriendlyName, 0, TRUE)) {
-            NewFile = YuiCreateMenuFile(FilePath, &FriendlyName);
+            NewFile = YuiCreateMenuFile(YuiContext, FilePath, &FriendlyName, FALSE);
             if (NewFile != NULL) {
                 NewFile->Depth = Depth + 1;
                 YuiInsertFileInOrder(Parent, NewFile);
