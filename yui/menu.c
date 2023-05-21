@@ -463,12 +463,15 @@ YuiFindDepthComponent(
 /**
  Allocate and initialize a new directory object within the start menu.
 
+ @param YuiContext Pointer to the application context.
+
  @param DirName Pointer to the human readable name for the directory.
 
  @return A pointer to the directory object, or NULL on failure.
  */
 PYUI_MENU_DIRECTORY
 YuiCreateMenuDirectory(
+    __in PYUI_CONTEXT YuiContext,
     __in PYORI_STRING DirName
     )
 {
@@ -492,6 +495,8 @@ YuiCreateMenuDirectory(
 
     memcpy(Entry->Item.Text.StartOfString, DirName->StartOfString, DirName->LengthInChars * sizeof(TCHAR));
     Entry->Item.Text.StartOfString[Entry->Item.Text.LengthInChars] = '\0';
+
+    Entry->Item.Icon = YuiIconCacheCreateOrReference(YuiContext, NULL, PROGRAMSICON, Entry->Item.TallItem);
 
     Entry->MenuHandle = NULL;
 
@@ -1160,7 +1165,7 @@ YuiFileFoundCallback(
             YuiFindDepthComponent(FilePath, &FriendlyName, 0, FALSE)) {
 
             if (!YuiDirectoryNodeExists(Parent, &FriendlyName)) {
-                NewDir = YuiCreateMenuDirectory(&FriendlyName);
+                NewDir = YuiCreateMenuDirectory(YuiContext, &FriendlyName);
                 if (NewDir != NULL) {
                     NewDir->Depth = Depth + 1;
                     YuiInsertDirectoryInOrder(Parent, NewDir);

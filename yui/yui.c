@@ -955,7 +955,11 @@ YuiCreateWindow(
     }
 
     TaskbarHeight = YuiGetTaskbarHeight(Context->ScreenWidth, Context->ScreenHeight);
-    Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
+    if (DllUser32.pLoadImageW == NULL) {
+        Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
+    } else {
+        Context->StartIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON), IMAGE_ICON, Context->SmallIconWidth, Context->SmallIconHeight, 0);
+    }
 
     Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
                                    _T("YuiWnd"),
