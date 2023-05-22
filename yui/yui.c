@@ -104,6 +104,11 @@ YuiGetDefaultButtonWndProc(VOID)
 }
 
 /**
+ The font name to use in the taskbar and menus.
+ */
+#define YUI_FONT_NAME _T("Tahoma")
+
+/**
  The base height of the taskbar, in pixels.
  */
 #define YUI_BASE_TASKBAR_HEIGHT (32)
@@ -350,7 +355,7 @@ YuiNotifyResolutionChange(
                        CLIP_DEFAULT_PRECIS,
                        DEFAULT_QUALITY,
                        FF_DONTCARE,
-                       _T("Tahoma"));
+                       YUI_FONT_NAME);
 
     hBoldFont = CreateFont(-YoriLibMulDiv(FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
                            0,
@@ -365,7 +370,7 @@ YuiNotifyResolutionChange(
                            CLIP_DEFAULT_PRECIS,
                            DEFAULT_QUALITY,
                            FF_DONTCARE,
-                           _T("Tahoma"));
+                           YUI_FONT_NAME);
     ReleaseDC(hWnd, hDC);
 
     if (hFont != NULL) {

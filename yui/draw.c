@@ -181,12 +181,32 @@ YuiDrawMeasureMenuItem(
 
     ItemContext = (PYUI_MENU_OWNERDRAW_ITEM)Item->itemData;
 
-    Item->itemWidth = 240;
+    //
+    //  The base width is chosen to fit three menus side by side on an 800x600
+    //  display.  Add 5% of any horizontal pixels above 1200 to allow wider
+    //  menu items to display.
+    //
+
+    Item->itemWidth = 245;
+    if (YuiContext->ScreenWidth > 800) {
+        Item->itemWidth = Item->itemWidth + (YuiContext->ScreenWidth - 800) / 20;
+    }
+
     if (ItemContext->TallItem) {
         Item->itemHeight = YuiContext->TallMenuHeight;
     } else {
         Item->itemHeight = YuiContext->ShortMenuHeight;
     }
+
+    //
+    //  The base height is chosen to fit icons cleanly.  Add 1% of space above
+    //  800 pixels just so there's extra room in case the font gets larger.
+    //
+
+    if (YuiContext->ScreenHeight > 800) {
+        Item->itemHeight = Item->itemHeight + (YuiContext->ScreenHeight - 800) / 100;
+    }
+
     return TRUE;
 }
 
@@ -243,7 +263,7 @@ YuiDrawMenuItem(
             IconHeight = YuiContext->SmallIconHeight;
         }
 
-        IconTop = Item->rcItem.top + IconPadding;
+        IconTop = Item->rcItem.top + (Item->rcItem.bottom - Item->rcItem.top - IconHeight) / 2;
         IconLeft = Item->rcItem.left + IconPadding;
 
         if (ItemContext->Icon != NULL) {
@@ -271,18 +291,25 @@ YuiDrawMenuItem(
     }
 
     if (ItemContext->TallItem) {
-        IconPadding = YuiContext->TallMenuHeight;
+        IconPadding = YuiContext->TallIconPadding * 2 + YuiContext->TallIconWidth;
     } else {
-        IconPadding = YuiContext->ShortMenuHeight;
+        IconPadding = YuiContext->ShortIconPadding * 2 + YuiContext->SmallIconWidth;
     }
+
+    //
+    //  Create a rectangle for text after the icon.  Leave some space on the
+    //  right for a menu flyout.  This is done unconditionally just to ensure
+    //  all items have the same text region, flyout or not.
+    //
 
     TextRect.left = Item->rcItem.left + IconPadding;
     TextRect.top = Item->rcItem.top;
-    TextRect.right = Item->rcItem.right - 5;
+    TextRect.right = Item->rcItem.right - 20;
     TextRect.bottom = Item->rcItem.bottom;
 
     SetBkColor(Item->hDC, BackColor);
     SetTextColor(Item->hDC, ForeColor);
+    SelectObject(Item->hDC, YuiContext->hFont);
     DrawText(Item->hDC, ItemContext->Text.StartOfString, ItemContext->Text.LengthInChars, &TextRect, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS);
     return TRUE;
 }
