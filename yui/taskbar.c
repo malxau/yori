@@ -192,26 +192,43 @@ YuiTaskbarFullscreenWindow(
     )
 {
     RECT WindowRect;
+    DWORD RetryCount;
 
-    if (IsIconic(hWnd)) {
-        return FALSE;
-    }
+    for (RetryCount = 0; RetryCount < 2; RetryCount++) {
 
-    if (!GetWindowRect(hWnd, &WindowRect)) {
-        return FALSE;
-    }
+        if (IsIconic(hWnd)) {
+            return FALSE;
+        }
 
-    //
-    //  This is a bit rubbery.  A window is a full screen window if it
-    //  approximates the screen size.
-    //
+        if (!GetWindowRect(hWnd, &WindowRect)) {
+            return FALSE;
+        }
 
-    if (WindowRect.left > 2 ||
-        WindowRect.top > 2 ||
-        WindowRect.bottom < (INT)(YuiContext->ScreenHeight - 2) ||
-        WindowRect.right < (INT)(YuiContext->ScreenWidth - 2)) {
+        //
+        //  This is a bit rubbery.  A window is a full screen window if it
+        //  approximates the screen size.
+        //
 
-        return FALSE;
+        if (WindowRect.left > 2 ||
+            WindowRect.top > 2 ||
+            WindowRect.bottom < (INT)(YuiContext->ScreenHeight - 2) ||
+            WindowRect.right < (INT)(YuiContext->ScreenWidth - 2)) {
+
+            return FALSE;
+        }
+
+        //
+        //  If the window is maximized, it implies that the work area is no
+        //  longer excluding the task bar.  Trigger a display refresh to
+        //  recalculate the work area, and then re-query the current window
+        //  location to see if it's still full screen.
+        //
+
+        if (RetryCount == 1 && IsZoomed(hWnd)) {
+            YuiNotifyResolutionChange(YuiContext->hWnd);
+        } else {
+            break;
+        }
     }
 
     return TRUE;
