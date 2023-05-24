@@ -35,7 +35,7 @@
 COLORREF
 YuiGetWindowFlashColor(VOID)
 {
-    return RGB(255, 160, 32);
+    return RGB(255, 192, 96);
 }
 
 /**
