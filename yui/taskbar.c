@@ -169,10 +169,6 @@ YuiTaskbarIncludeWindow(
         return FALSE;
     }
 
-#if DBG
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("    including window due to style %08x ExStyle %08x\n"), WinStyle, ExStyle);
-#endif
-
     return TRUE;
 }
 
@@ -219,13 +215,16 @@ YuiTaskbarFullscreenWindow(
 
         //
         //  If the window is maximized, it implies that the work area is no
-        //  longer excluding the task bar.  Trigger a display refresh to
+        //  longer excluding the task bar.  Trigger a work area update to 
         //  recalculate the work area, and then re-query the current window
         //  location to see if it's still full screen.
         //
 
         if (RetryCount == 1 && IsZoomed(hWnd)) {
-            YuiNotifyResolutionChange(YuiContext->hWnd);
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Fullscreen window is maximized, resetting work area\n"));
+#endif
+            YuiResetWorkArea(YuiContext, TRUE);
         } else {
             break;
         }

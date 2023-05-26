@@ -133,6 +133,11 @@ typedef struct _YUI_CONTEXT {
     DWORD ScreenHeight;
 
     /**
+     The height of the taskbar, in pixels.
+     */
+    DWORD TaskbarHeight;
+
+    /**
      The default window procedure for a push button.  Stored here so we can
      override it and call it recursively.
      */
@@ -578,6 +583,12 @@ YuiGetDefaultButtonWndProc(VOID);
 BOOL
 YuiNotifyResolutionChange(
     __in HWND hWnd
+    );
+
+BOOLEAN
+YuiResetWorkArea(
+    __in PYUI_CONTEXT Context,
+    __in BOOLEAN Notify
     );
 
 BOOLEAN

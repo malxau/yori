@@ -202,6 +202,59 @@ YuiStartDrawButton(
 }
 
 /**
+ Set the work area to its desired size.  This function assumes that the task
+ bar must be at the bottom of the primary display, and the explorer task bar
+ is not present.
+
+ @param Context Pointer to the global application context.
+
+ @param Notify If TRUE, notify running applications of the work area update.
+        If FALSE, suppress notifications.
+
+ @return TRUE to indicate the work area was updated, FALSE if it was not.
+ */
+BOOLEAN
+YuiResetWorkArea(
+    __in PYUI_CONTEXT Context,
+    __in BOOLEAN Notify
+    )
+{
+    RECT NewWorkArea;
+    RECT OldWorkArea;
+
+    //
+    //  Ideally this would be done via AppBars.  Unfortunately this code runs
+    //  in two cases: when explorer isn't running (so no AppBar support) and
+    //  where explorer is running (so it's aware of its own AppBar which we
+    //  want to hide.)  So, we do this the hard way.
+    //
+
+    if (SystemParametersInfo(SPI_GETWORKAREA, 0, &OldWorkArea, 0)) {
+
+        NewWorkArea.left = OldWorkArea.left;
+        NewWorkArea.right = OldWorkArea.right;
+        NewWorkArea.top = OldWorkArea.top;
+        NewWorkArea.bottom = Context->ScreenHeight - Context->TaskbarHeight - 1;
+
+        if (NewWorkArea.bottom != OldWorkArea.bottom) {
+            DWORD Flags;
+
+            Flags = 0;
+            if (Notify) {
+                Flags = SPIF_SENDWININICHANGE;
+            }
+#if DBG
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Updating work area, OldWorkArea %i,%i-%i,%i, NewWorkArea %i,%i-%i,%i\n"), OldWorkArea.left, OldWorkArea.top, OldWorkArea.right, OldWorkArea.bottom, NewWorkArea.left, NewWorkArea.top, NewWorkArea.right, NewWorkArea.bottom);
+#endif
+            SystemParametersInfo(SPI_SETWORKAREA, 0, &NewWorkArea, Flags);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
  If the explorer taskbar is visible, hide it and update the screen work
  area to indicate that it's not present.
 
@@ -216,8 +269,6 @@ YuiHideExplorerTaskbar(
     __in PYUI_CONTEXT Context
     )
 {
-    RECT NewWorkArea;
-    RECT OldWorkArea;
     RECT ExplorerTaskbarRect;
     BOOLEAN RetVal;
 
@@ -229,17 +280,8 @@ YuiHideExplorerTaskbar(
 
     RetVal = FALSE;
 
-    if (SystemParametersInfo(SPI_GETWORKAREA, 0, &OldWorkArea, 0)) {
-
-        NewWorkArea.left = OldWorkArea.left;
-        NewWorkArea.right = OldWorkArea.right;
-        NewWorkArea.top = OldWorkArea.top;
-
-        if (OldWorkArea.bottom == ExplorerTaskbarRect.top) {
-            NewWorkArea.bottom = ExplorerTaskbarRect.bottom;
-            SystemParametersInfo(SPI_SETWORKAREA, 0, &NewWorkArea, 0);
-            RetVal = TRUE;
-        }
+    if (YuiResetWorkArea(Context, FALSE)) {
+        RetVal = TRUE;
     }
 
     if (IsWindowVisible(Context->hWndExplorerTaskbar)) {
@@ -318,9 +360,6 @@ YuiNotifyResolutionChange(
     )
 {
     RECT ClientRect;
-    RECT NewWorkArea;
-    RECT OldWorkArea;
-    DWORD TaskbarHeight;
     DWORD FontSize;
     HDC hDC;
     HFONT hFont;
@@ -334,12 +373,12 @@ YuiNotifyResolutionChange(
 
     YuiContext.MaximumTaskbarButtonWidth = YuiGetTaskbarMaximumButtonWidth(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
-    TaskbarHeight = YuiGetTaskbarHeight(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
+    YuiContext.TaskbarHeight = YuiGetTaskbarHeight(YuiContext.ScreenWidth, YuiContext.ScreenHeight);
 
     YuiHideExplorerTaskbar(&YuiContext);
 
     FontSize = 9;
-    FontSize = FontSize + (TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3;
+    FontSize = FontSize + (YuiContext.TaskbarHeight - YUI_BASE_TASKBAR_HEIGHT) / 3;
 
     hDC = GetWindowDC(hWnd);
     hFont = CreateFont(-YoriLibMulDiv(FontSize, GetDeviceCaps(hDC, LOGPIXELSY), 72),
@@ -399,37 +438,21 @@ YuiNotifyResolutionChange(
         }
     }
 
-    NewWorkArea.left = 0;
-    NewWorkArea.right = YuiContext.ScreenWidth - 1;
-    NewWorkArea.top = 0;
-    NewWorkArea.bottom = YuiContext.ScreenHeight - TaskbarHeight - 1;
-
     DllUser32.pMoveWindow(hWnd,
                           0,
-                          YuiContext.ScreenHeight - TaskbarHeight,
+                          YuiContext.ScreenHeight - YuiContext.TaskbarHeight,
                           YuiContext.ScreenWidth,
-                          TaskbarHeight,
+                          YuiContext.TaskbarHeight,
                           TRUE);
 
-    //
-    //  Ideally this would be done via AppBars.  Unfortunately this code runs
-    //  in two cases: when explorer isn't running (so no AppBar support) and
-    //  where explorer is running (so it's aware of its own AppBar which we
-    //  want to hide.)  So, we do this the hard way.
-    //
-
-    if (SystemParametersInfo(SPI_GETWORKAREA, 0, &OldWorkArea, 0)) {
-        if (OldWorkArea.bottom > NewWorkArea.bottom) {
-            SystemParametersInfo(SPI_SETWORKAREA, 0, &NewWorkArea, 0);
-        }
-    }
+    YuiResetWorkArea(&YuiContext, TRUE);
 
     if (YuiContext.hWndDesktop != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndDesktop,
-                              NewWorkArea.left,
-                              NewWorkArea.top,
-                              NewWorkArea.right - NewWorkArea.left,
-                              NewWorkArea.bottom - NewWorkArea.top,
+                              0,
+                              0,
+                              YuiContext.ScreenWidth - 1,
+                              YuiContext.ScreenHeight - YuiContext.TaskbarHeight - 1,
                               TRUE);
     }
 
@@ -592,6 +615,14 @@ YuiTaskbarWindowProc(
     switch(uMsg) {
         case WM_COMMAND:
             {
+                //
+                //  Explorer won't allow windows without focus to change the
+                //  work area.  Since this user interaction gives us that
+                //  power, fix things now if needed.
+                //
+
+                YuiResetWorkArea(&YuiContext, FALSE);
+
                 CtrlId = LOWORD(wParam);
                 if (CtrlId == YUI_START_BUTTON) {
                     YuiDisplayMenu();
@@ -608,6 +639,14 @@ YuiTaskbarWindowProc(
         case WM_LBUTTONDOWN:
             {
                 short XPos;
+
+                //
+                //  Explorer won't allow windows without focus to change the
+                //  work area.  Since this user interaction gives us that
+                //  power, fix things now if needed.
+                //
+
+                YuiResetWorkArea(&YuiContext, FALSE);
 
                 //
                 //  Get the signed horizontal position.  Note that because
@@ -705,6 +744,15 @@ YuiTaskbarWindowProc(
             if (YuiContext.DebugLogEnabled) {
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("WM_SETTINGCHANGE        %016llx %016llx\n"), wParam, lParam);
             }
+
+            //
+            //  Ideally we'd detect a work area change and reset here, but
+            //  doing that ends up creating a loop with explorer.  It looks
+            //  like explorer thinks a window that doesn't have input focus
+            //  doesn't get to change this, but a window with input focus
+            //  can.
+            //
+
             break;
 #endif
 
@@ -887,7 +935,6 @@ YuiCreateWindow(
     WNDCLASS wc;
     BOOL Result;
     RECT ClientRect;
-    DWORD TaskbarHeight;
     YORI_MINIMIZEDMETRICS MinimizedMetrics;
 
     //
@@ -959,7 +1006,7 @@ YuiCreateWindow(
         }
     }
 
-    TaskbarHeight = YuiGetTaskbarHeight(Context->ScreenWidth, Context->ScreenHeight);
+    Context->TaskbarHeight = YuiGetTaskbarHeight(Context->ScreenWidth, Context->ScreenHeight);
     if (DllUser32.pLoadImageW == NULL) {
         Context->StartIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON));
     } else {
@@ -971,9 +1018,9 @@ YuiCreateWindow(
                                    _T("Yui"),
                                    WS_POPUP | WS_DLGFRAME | WS_CLIPCHILDREN,
                                    0,
-                                   Context->ScreenHeight - TaskbarHeight,
+                                   Context->ScreenHeight - Context->TaskbarHeight,
                                    Context->ScreenWidth,
-                                   TaskbarHeight,
+                                   Context->TaskbarHeight,
                                    NULL, NULL, NULL, 0);
     if (Context->hWnd == NULL) {
         return FALSE;
@@ -1029,7 +1076,7 @@ YuiCreateWindow(
                                               0,
                                               0,
                                               Context->ScreenWidth,
-                                              Context->ScreenHeight - TaskbarHeight,
+                                              Context->ScreenHeight - Context->TaskbarHeight,
                                               NULL, NULL, NULL, 0);
 
         if (Context->hWndDesktop == NULL) {
