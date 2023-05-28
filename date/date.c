@@ -1,9 +1,9 @@
 /**
  * @file date/date.c
  *
- * Yori shell display or update system date and time
+ * Yori shell display or update date and time
  *
- * Copyright (c) 2017-2022 Malcolm J. Smith
+ * Copyright (c) 2017-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -33,13 +33,14 @@
 const
 CHAR strDateHelpText[] =
         "\n"
-        "Outputs the system date and time in a specified format.\n"
+        "Outputs the date and time in a specified format.\n"
         "\n"
-        "DATE [-license] [-u] [[-s <date>] | [-t] [<fmt>]]\n"
+        "DATE [-license] [-u] [[-s <date>] | [-t] [-i <timestamp>] [<fmt>]]\n"
         "\n"
+        "   -i             Display the time for the specified NT timestamp\n"
         "   -s             Set the system clock to the specified value\n"
         "   -t             Include time in output when format not specified\n"
-        "   -u             Display UTC rather than local time\n"
+        "   -u             Display or set UTC rather than local time\n"
         "\n"
         "Format specifiers are:\n"
         "   $COUNT_MS$     The number of milliseconds since epoch with leading zero\n"
@@ -413,6 +414,7 @@ ENTRYPOINT(
     BOOLEAN UseUtc;
     BOOLEAN DisplayTime;
     BOOLEAN SetDate;
+    BOOLEAN IntegerTimeProvided;
     YORI_STRING DisplayString;
     LPTSTR DefaultDateFormatString = _T("$YEAR$$MON$$DAY$");
     LPTSTR DefaultTimeFormatString = _T("$YEAR$/$MON$/$DAY$ $HOUR$:$MIN$:$SEC$");
@@ -427,6 +429,7 @@ ENTRYPOINT(
     UseUtc = FALSE;
     DisplayTime = FALSE;
     SetDate = FALSE;
+    IntegerTimeProvided = FALSE;
     NewDate = NULL;
     YoriLibInitEmptyString(&AllocatedFormatString);
 
@@ -442,8 +445,24 @@ ENTRYPOINT(
                 DateHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2017-2022"));
+                YoriLibDisplayMitLicense(_T("2017-2023"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
+                DWORD CharsConsumed;
+                LARGE_INTEGER liTemp;
+                if (i + 1 < ArgC &&
+                    YoriLibStringToNumber(&ArgV[i + 1], TRUE, &liTemp.QuadPart, &CharsConsumed) &&
+                    CharsConsumed > 0) {
+                    FILETIME ftTemp;
+
+                    ftTemp.dwLowDateTime = liTemp.LowPart;
+                    ftTemp.dwHighDateTime = liTemp.HighPart;
+                    FileTimeToSystemTime(&ftTemp, &DateContext.Time);
+
+                    i++;
+                    IntegerTimeProvided = TRUE;
+                    ArgumentUnderstood = TRUE;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
                 if (i + 1 < ArgC) {
                     NewDate = &ArgV[i + 1];
@@ -487,25 +506,28 @@ ENTRYPOINT(
         }
     }
 
-    if (UseUtc) {
-        GetSystemTime(&DateContext.Time);
-    } else {
-        GetLocalTime(&DateContext.Time);
-    }
+    if (!IntegerTimeProvided) {
+        if (UseUtc) {
+            GetSystemTime(&DateContext.Time);
+        } else {
+            GetLocalTime(&DateContext.Time);
+        }
 
-    if (DllKernel32.pGetTickCount64 != NULL) {
-        DateContext.Tick.QuadPart = DllKernel32.pGetTickCount64();
-    } else {
-        DateContext.Tick.HighPart = 0;
-        //
-        //  Warning about using a deprecated function and how we should use
-        //  GetTickCount64 instead.  The analyzer isn't smart enough to notice
-        //  that when it's available, that's what we do.
-        //
+        if (DllKernel32.pGetTickCount64 != NULL) {
+            DateContext.Tick.QuadPart = DllKernel32.pGetTickCount64();
+        } else {
+            DateContext.Tick.HighPart = 0;
+
+            //
+            //  Warning about using a deprecated function and how we should
+            //  use GetTickCount64 instead.  The analyzer isn't smart enough
+            //  to notice that when it's available, that's what we do.
+            //
 #if defined(_MSC_VER) && (_MSC_VER >= 1700)
 #pragma warning(suppress: 28159)
 #endif
-        DateContext.Tick.LowPart = GetTickCount();
+            DateContext.Tick.LowPart = GetTickCount();
+        }
     }
 
     YoriLibInitEmptyString(&DisplayString);

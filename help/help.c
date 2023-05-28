@@ -78,7 +78,7 @@ CHAR strHelpHelpText1[] =
         "CSHOT     Captures previous output on the console and outputs it\n"
         "CUT       Outputs a portion of an input buffer of text\n"
         "CVTVT     Converts text with VT100 color escapes into another format\n"
-        "DATE      Outputs the system date and time in a specified format\n"
+        "DATE      Outputs the date and time in a specified format\n"
         "DF        Display disk free space\n"
         "DIR       Enumerate the contents of directories in a traditional way\n"
         "DIRCASE   Update case sensitivity behavior for a directory\n"
