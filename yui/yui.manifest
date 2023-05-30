@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3" manifestVersion="1.0">
-    <assemblyIdentity version="1.0.0.0" processorArchitecture="*" name="net.malsmith.ysetup" type="win32"/>
-    <description>YSetup</description>
+    <assemblyIdentity version="1.0.0.0" processorArchitecture="*" name="net.malsmith.yui" type="win32"/>
+    <description>Yui</description>
     <asmv3:trustInfo>
         <security>
             <requestedPrivileges>
