@@ -6879,6 +6879,18 @@ GET_FINAL_PATH_NAME_BY_HANDLEW(HANDLE, LPCWSTR, DWORD, DWORD);
 typedef GET_FINAL_PATH_NAME_BY_HANDLEW *PGET_FINAL_PATH_NAME_BY_HANDLEW;
 
 /**
+ A prototype for the GetLargestConsoleWindowSize function.
+ */
+typedef
+COORD WINAPI
+GET_LARGEST_CONSOLE_WINDOW_SIZE(HANDLE);
+
+/**
+ A prototype for a pointer to the GetLargestConsoleWindowSize function.
+ */
+typedef GET_LARGEST_CONSOLE_WINDOW_SIZE *PGET_LARGEST_CONSOLE_WINDOW_SIZE;
+
+/**
  A prototype for the GetLogicalProcessorInformation function.
  */
 typedef
@@ -7263,6 +7275,18 @@ SET_CONSOLE_SCREEN_BUFFER_INFO_EX(HANDLE, PYORI_CONSOLE_SCREEN_BUFFER_INFOEX);
 typedef SET_CONSOLE_SCREEN_BUFFER_INFO_EX *PSET_CONSOLE_SCREEN_BUFFER_INFO_EX;
 
 /**
+ A prototype for the SetConsoleScreenBufferSize function.
+ */
+typedef
+BOOL WINAPI
+SET_CONSOLE_SCREEN_BUFFER_SIZE(HANDLE, COORD);
+
+/**
+ A prototype for a pointer to the the SetConsoleScreenBufferSize function.
+ */
+typedef SET_CONSOLE_SCREEN_BUFFER_SIZE *PSET_CONSOLE_SCREEN_BUFFER_SIZE;
+
+/**
  A prototype for the SetCurrentConsoleFontEx function.
  */
 typedef
@@ -7498,6 +7522,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
     PGET_FINAL_PATH_NAME_BY_HANDLEW pGetFinalPathNameByHandleW;
 
     /**
+     If it's available on the current system, a pointer to GetLargestConsoleWindowSize.
+     */
+    PGET_LARGEST_CONSOLE_WINDOW_SIZE pGetLargestConsoleWindowSize;
+
+    /**
      If it's available on the current system, a pointer to GetLogicalProcessorInformation.
      */
     PGET_LOGICAL_PROCESSOR_INFORMATION pGetLogicalProcessorInformation;
@@ -7656,6 +7685,11 @@ typedef struct _YORI_KERNEL32_FUNCTIONS {
      If it's available on the current system, a pointer to SetConsoleScreenBufferInfoEx.
      */
     PSET_CONSOLE_SCREEN_BUFFER_INFO_EX pSetConsoleScreenBufferInfoEx;
+
+    /**
+     If it's available on the current system, a pointer to SetConsoleScreenBufferSize.
+     */
+    PSET_CONSOLE_SCREEN_BUFFER_SIZE pSetConsoleScreenBufferSize;
 
     /**
      If it's available on the current system, a pointer to SetCurrentConsoleFontEx.
