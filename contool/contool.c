@@ -35,9 +35,10 @@ CHAR strConToolHelpText[] =
         "\n"
         "Configures console properties or outputs console information in a specified format.\n"
         "\n"
-        "CONTOOL [-license] [-fullscreen|-window] [-f <fmt>]\n"
+        "CONTOOL [-license] [-fullscreen [-noscroll]|-window] [-f <fmt>]\n"
         "\n"
         "   -fullscreen    Switch to full screen\n"
+        "   -noscroll      Set buffer size to match window size to remove scrollbars\n"
         "   -window        Switch to a console window\n"
         "\n"
         "Format specifiers are:\n"
@@ -214,6 +215,129 @@ ConToolExpandVariables(
     return CharsNeeded;
 }
 
+/**
+ Attempt to set the console to a full screen or windowed state.  This routine
+ handles displaying errors to the user.
+
+ @param hConsole Handle to the console output.
+
+ @param Fullscreen TRUE if the window should become full screen; FALSE if it
+        should become a window.
+
+ @param NoScroll TRUE if scroll bars should be removed when switching to full
+        screen.  This parameter is ignored if the console is becoming a
+        window.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+ConToolSetFullscreen(
+    __in HANDLE hConsole,
+    __in BOOLEAN Fullscreen,
+    __in BOOLEAN NoScroll
+    )
+{
+    DWORD DisplayMode;
+    COORD NewSize;
+    BOOLEAN Failed;
+    DWORD LastError;
+    LPTSTR ErrText;
+    DWORD RetryCount;
+
+    for (RetryCount = 0; RetryCount < 2; RetryCount++) {
+        if (Fullscreen) {
+            DisplayMode = CONSOLE_FULLSCREEN_MODE;
+        } else {
+            DisplayMode = CONSOLE_WINDOWED_MODE;
+        }
+
+        Failed = FALSE;
+        if (!DllKernel32.pSetConsoleDisplayMode(hConsole, DisplayMode, &NewSize)) {
+            LastError = GetLastError();
+            Failed = TRUE;
+
+            //
+            //  This API was only implemented as 32 bit for a long time.
+            //  Try to invoke the driver directly if it fails to bypass
+            //  this API restriction.
+            //
+
+            if (LastError == ERROR_CALL_NOT_IMPLEMENTED)  {
+                if (YoriLibSetConsoleDisplayMode(hConsole, DisplayMode, &NewSize)) {
+                    Failed = FALSE;
+                } else {
+                    LastError = GetLastError();
+                }
+            }
+
+            if (Failed) {
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Changing console display mode failed: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return FALSE;
+            }
+        }
+
+        //
+        //  If the user wants to remove scroll bars, attempt that now.
+        //
+
+        if (!Fullscreen || !NoScroll) {
+            break;
+        }
+
+        if (DllKernel32.pGetLargestConsoleWindowSize == NULL ||
+            DllKernel32.pSetConsoleScreenBufferSize == NULL) {
+
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("contool: OS support not present\n"));
+            return FALSE;
+        } else {
+            CONSOLE_SCREEN_BUFFER_INFO ScreenInfo;
+            COORD WinSize;
+
+            NewSize = DllKernel32.pGetLargestConsoleWindowSize(hConsole);
+            if (NewSize.X == 0 && NewSize.Y == 0) {
+                LastError = GetLastError();
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Querying largest console window size failed: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return FALSE;
+            } else if (!DllKernel32.pSetConsoleScreenBufferSize(hConsole, NewSize)) {
+                LastError = GetLastError();
+                ErrText = YoriLibGetWinErrorText(LastError);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Changing console display mode failed: %s"), ErrText);
+                YoriLibFreeWinErrorText(ErrText);
+                return FALSE;
+            }
+
+            //
+            //  Check if the window size equals the buffer size.
+            //
+
+            GetConsoleScreenBufferInfo(hConsole, &ScreenInfo);
+
+            WinSize.X = (WORD)(ScreenInfo.srWindow.Right - ScreenInfo.srWindow.Left + 1);
+            WinSize.Y = (WORD)(ScreenInfo.srWindow.Bottom - ScreenInfo.srWindow.Top + 1);
+
+            if (WinSize.X == NewSize.X && WinSize.Y == NewSize.Y) {
+                break;
+            }
+
+            //
+            //  The console still appears to have bogus scroll bars that are
+            //  only needed because they exist.  Restore this to a window and
+            //  set it full screen again, which causes the console to
+            //  calculate correctly.
+            //
+
+            if (!ConToolSetFullscreen(hConsole, FALSE, FALSE)) {
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
+}
+
 #ifdef YORI_BUILTIN
 /**
  The main entrypoint for the contool builtin command.
@@ -252,11 +376,13 @@ ENTRYPOINT(
     HANDLE hConsole;
     BOOLEAN Fullscreen;
     BOOLEAN FullscreenSet;
-    DWORD LastError;
-    LPTSTR ErrText;
+    BOOLEAN ModifyConsole;
+    BOOLEAN RemoveScroll;
 
     Fullscreen = FALSE;
     FullscreenSet = FALSE;
+    ModifyConsole = FALSE;
+    RemoveScroll = FALSE;
 
     YoriLibInitEmptyString(&YsFormatString);
 
@@ -284,10 +410,16 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("fullscreen")) == 0) {
                 Fullscreen = TRUE;
                 FullscreenSet = TRUE;
+                ModifyConsole = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("noscroll")) == 0) {
+                ModifyConsole = TRUE;
+                RemoveScroll = TRUE;
                 ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("window")) == 0) {
                 Fullscreen = FALSE;
                 FullscreenSet = TRUE;
+                ModifyConsole = TRUE;
                 ArgumentUnderstood = TRUE;
             }
         } else {
@@ -308,43 +440,16 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    if (FullscreenSet) {
+    if (ModifyConsole) {
 
-        if (DllKernel32.pSetConsoleDisplayMode != NULL) {
-            DWORD DisplayMode;
-            COORD NewSize;
-            BOOLEAN Failed;
+        if (FullscreenSet) {
 
-            if (Fullscreen) {
-                DisplayMode = CONSOLE_FULLSCREEN_MODE;
+            if (DllKernel32.pSetConsoleDisplayMode == NULL) {
+                YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("contool: OS support not present\n"));
+                ConToolResult.Failure = TRUE;
             } else {
-                DisplayMode = CONSOLE_WINDOWED_MODE;
-            }
 
-            Failed = FALSE;
-            if (!DllKernel32.pSetConsoleDisplayMode(hConsole, DisplayMode, &NewSize)) {
-                LastError = GetLastError();
-                Failed = TRUE;
-
-                //
-                //  This API was only implemented as 32 bit for a long time.
-                //  Try to invoke the driver directly if it fails to bypass
-                //  this API restriction.
-                //
-
-                if (LastError == ERROR_CALL_NOT_IMPLEMENTED)  {
-                    if (YoriLibSetConsoleDisplayMode(hConsole, DisplayMode, &NewSize)) {
-                        Failed = FALSE;
-                    } else {
-                        LastError = GetLastError();
-                    }
-
-                }
-
-                if (Failed) {
-                    ErrText = YoriLibGetWinErrorText(LastError);
-                    YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Changing console display mode failed: %s"), ErrText);
-                    YoriLibFreeWinErrorText(ErrText);
+                if (!ConToolSetFullscreen(hConsole, Fullscreen, RemoveScroll)) {
                     ConToolResult.Failure = TRUE;
                 }
             }
@@ -365,7 +470,7 @@ ENTRYPOINT(
                 ConToolResult.Have.FullScreenInfo = TRUE;
             }
         }
-    
+
         if (DllKernel32.pGetCurrentConsoleFontEx != NULL) {
             ZeroMemory(&ConToolResult.FontInfo, sizeof(ConToolResult.FontInfo));
             ConToolResult.FontInfo.cbSize = sizeof(ConToolResult.FontInfo);
@@ -373,16 +478,16 @@ ENTRYPOINT(
                 ConToolResult.Have.FontInfo = TRUE;
             }
         }
-    
+
         CloseHandle(hConsole);
-    
+
         YoriLibInitEmptyString(&DisplayString);
-    
+
         //
         //  If the user specified a string, use it.  If not, fall back to a
         //  series of defaults depending on the information we have collected.
         //
-    
+
         if (YsFormatString.StartOfString != NULL) {
             YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, ConToolExpandVariables, &ConToolResult, &DisplayString);
             if (DisplayString.StartOfString != NULL) {
@@ -390,9 +495,9 @@ ENTRYPOINT(
                 YoriLibFreeStringContents(&DisplayString);
             }
         } else {
-    
+
             if (ConToolResult.Have.ScreenBufferInfo) {
-    
+
                 LPTSTR FormatString = 
                               _T("Buffer width:         $buffer_x$\n")
                               _T("Buffer height:        $buffer_y$\n")
@@ -404,9 +509,9 @@ ENTRYPOINT(
                     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
                 }
             }
-    
+
             if (ConToolResult.Have.FontInfo) {
-    
+
                 LPTSTR FormatString = 
                               _T("Font width:           $font_x$\n")
                               _T("Font height:          $font_y$\n")
@@ -428,11 +533,11 @@ ENTRYPOINT(
                     YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%y"), &DisplayString);
                 }
             }
-    
+
             YoriLibFreeStringContents(&DisplayString);
         }
     }
-    
+
     if (ConToolResult.Failure) {
         return EXIT_FAILURE;
     } else {
