@@ -186,6 +186,56 @@ YuiGetTaskbarMaximumButtonWidth(
 }
 
 /**
+ Capture the current screen dimensions and store them in the application
+ context.
+
+ @param Context Pointer to the application context.
+
+ @param ExplicitWidth If nonzero, specifies the width of the primary display.
+        If zero, this is queried from the system.
+
+ @param ExplicitHeight If nonzero, specifies the height of the primary
+        display.  If zero, this is queried from the system.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YuiGetScreenDimensions(
+    __in PYUI_CONTEXT Context,
+    __in DWORD ExplicitWidth,
+    __in DWORD ExplicitHeight
+    )
+{
+    if (ExplicitWidth != 0) {
+        Context->ScreenWidth = ExplicitWidth;
+    } else {
+        Context->ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+    }
+
+    if (ExplicitHeight != 0) {
+        Context->ScreenHeight = ExplicitHeight;
+    } else {
+        Context->ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
+    }
+
+    Context->VirtualScreenLeft = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    Context->VirtualScreenTop = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    Context->VirtualScreenWidth = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    Context->VirtualScreenHeight = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+
+    if (Context->VirtualScreenWidth == 0 ||
+        Context->VirtualScreenHeight == 0) {
+
+        Context->VirtualScreenLeft = 0;
+        Context->VirtualScreenTop = 0;
+        Context->VirtualScreenWidth = Context->ScreenWidth;
+        Context->VirtualScreenHeight = Context->ScreenHeight;
+    }
+
+    return TRUE;
+}
+
+/**
  Draw the start button, including icon and text.
 
  @param DrawItemStruct Pointer to a structure describing the button to
@@ -449,10 +499,10 @@ YuiNotifyResolutionChange(
 
     if (YuiContext.hWndDesktop != NULL) {
         DllUser32.pMoveWindow(YuiContext.hWndDesktop,
-                              0,
-                              0,
-                              YuiContext.ScreenWidth - 1,
-                              YuiContext.ScreenHeight - YuiContext.TaskbarHeight - 1,
+                              YuiContext.VirtualScreenLeft,
+                              YuiContext.VirtualScreenTop,
+                              YuiContext.VirtualScreenWidth,
+                              YuiContext.VirtualScreenHeight,
                               TRUE);
     }
 
@@ -706,8 +756,7 @@ YuiTaskbarWindowProc(
                 YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Display change          %016llx %016llx\n"), wParam, lParam);
             }
 #endif
-            YuiContext.ScreenWidth = LOWORD(lParam);
-            YuiContext.ScreenHeight = HIWORD(lParam);
+            YuiGetScreenDimensions(&YuiContext, LOWORD(lParam), HIWORD(lParam));
             YuiNotifyResolutionChange(YuiContext.hWnd);
             break;
         case WM_WTSSESSION_CHANGE:
@@ -715,8 +764,7 @@ YuiTaskbarWindowProc(
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Session change          %016llx %016llx\n"), wParam, lParam);
 #endif
             if (YuiHideExplorerTaskbar(&YuiContext)) {
-                YuiContext.ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
-                YuiContext.ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+                YuiGetScreenDimensions(&YuiContext, 0, 0);
                 YuiNotifyResolutionChange(YuiContext.hWnd);
             }
             break;
@@ -997,8 +1045,7 @@ YuiCreateWindow(
         }
     }
 
-    Context->ScreenHeight = GetSystemMetrics(SM_CYSCREEN);
-    Context->ScreenWidth = GetSystemMetrics(SM_CXSCREEN);
+    YuiGetScreenDimensions(Context, 0, 0);
 
     if (!Context->LoginShell) {
         if (YuiFindExplorerTaskbar(Context)) {

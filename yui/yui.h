@@ -123,6 +123,26 @@ typedef struct _YUI_CONTEXT {
     YORI_MINIMIZEDMETRICS SavedMinimizedMetrics;
 
     /**
+     The left coordinate of all monitors, in pixels.
+     */
+    LONG VirtualScreenLeft;
+
+    /**
+     The top coordinate of all monitors, in pixels.
+     */
+    LONG VirtualScreenTop;
+
+    /**
+     The width of the set of all monitors, in pixels.
+     */
+    LONG VirtualScreenWidth;
+
+    /**
+     The height of the set of all monitors, in pixels.
+     */
+    LONG VirtualScreenHeight;
+
+    /**
      The width of the screen, in pixels.
      */
     DWORD ScreenWidth;

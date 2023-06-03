@@ -4050,6 +4050,38 @@ typedef struct _YORI_SYSTEM_POWER_STATUS {
 #define SM_CYSMICON 50
 #endif
 
+#ifndef SM_XVIRTUALSCREEN
+/**
+ If not defined by the compilation environment, the metric indicating the
+ left coordinate of all screens.
+ */
+#define SM_XVIRTUALSCREEN 76
+#endif
+
+#ifndef SM_YVIRTUALSCREEN
+/**
+ If not defined by the compilation environment, the metric indicating the
+ top coordinate of all screens.
+ */
+#define SM_YVIRTUALSCREEN 77
+#endif
+
+#ifndef SM_CXVIRTUALSCREEN
+/**
+ If not defined by the compilation environment, the metric indicating the
+ width of all screens.
+ */
+#define SM_CXVIRTUALSCREEN 78
+#endif
+
+#ifndef SM_CYVIRTUALSCREEN
+/**
+ If not defined by the compilation environment, the metric indicating the
+ height of all screens.
+ */
+#define SM_CYVIRTUALSCREEN 79
+#endif
+
 #ifndef HSHELL_REDRAW
 /**
  If not defined by the compilation environment, the flag indicating a top
