@@ -984,6 +984,7 @@ YuiCreateWindow(
     BOOL Result;
     RECT ClientRect;
     YORI_MINIMIZEDMETRICS MinimizedMetrics;
+    DWORD NoActivate;
 
     //
     //  Explorer or other shells will register as a magic "Taskman" window.
@@ -1010,6 +1011,7 @@ YuiCreateWindow(
     Context->ShortMenuHeight = Context->SmallIconHeight + 2 * Context->ShortIconPadding;
 
     if (!YuiMenuInitializeContext(Context)) {
+        YuiCleanupGlobalState();
         return FALSE;
     }
     YuiMenuPopulate(Context);
@@ -1027,6 +1029,7 @@ YuiCreateWindow(
 
     Result = RegisterClass(&wc);
     if (!Result) {
+        YuiCleanupGlobalState();
         return FALSE;
     }
 
@@ -1041,6 +1044,7 @@ YuiCreateWindow(
         wc.lpszClassName = _T("YuiDesktop");
         Result = RegisterClass(&wc);
         if (!Result) {
+            YuiCleanupGlobalState();
             return FALSE;
         }
     }
@@ -1060,17 +1064,33 @@ YuiCreateWindow(
         Context->StartIcon = DllUser32.pLoadImageW(GetModuleHandle(NULL), MAKEINTRESOURCE(STARTICON), IMAGE_ICON, Context->SmallIconWidth, Context->SmallIconHeight, 0);
     }
 
-    Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE,
-                                   _T("YuiWnd"),
-                                   _T("Yui"),
-                                   WS_POPUP | WS_DLGFRAME | WS_CLIPCHILDREN,
-                                   0,
-                                   Context->ScreenHeight - Context->TaskbarHeight,
-                                   Context->ScreenWidth,
-                                   Context->TaskbarHeight,
-                                   NULL, NULL, NULL, 0);
-    if (Context->hWnd == NULL) {
-        return FALSE;
+    NoActivate = WS_EX_NOACTIVATE;
+
+    //
+    //  Try to create the taskbar window.  If this fails, remove
+    //  WS_EX_NOACTIVATE and try again.
+    //
+
+    while(TRUE) {
+        Context->hWnd = CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_TOPMOST | NoActivate,
+                                       _T("YuiWnd"),
+                                       _T("Yui"),
+                                       WS_POPUP | WS_DLGFRAME | WS_CLIPCHILDREN,
+                                       0,
+                                       Context->ScreenHeight - Context->TaskbarHeight,
+                                       Context->ScreenWidth,
+                                       Context->TaskbarHeight,
+                                       NULL, NULL, NULL, 0);
+        if (Context->hWnd != NULL) {
+            break;
+        }
+
+        if (NoActivate != 0) {
+            NoActivate = 0;
+        } else {
+            YuiCleanupGlobalState();
+            return FALSE;
+        }
     }
 
     //
@@ -1116,19 +1136,27 @@ YuiCreateWindow(
 
     if (Context->LoginShell && DllUser32.pSetShellWindow != NULL) {
 
-        Context->hWndDesktop = CreateWindowEx(WS_EX_NOACTIVATE,
-                                              _T("YuiDesktop"),
-                                              _T(""),
-                                              WS_POPUP | WS_VISIBLE,
-                                              0,
-                                              0,
-                                              Context->ScreenWidth,
-                                              Context->ScreenHeight - Context->TaskbarHeight,
-                                              NULL, NULL, NULL, 0);
+        while(TRUE) {
+            Context->hWndDesktop = CreateWindowEx(NoActivate,
+                                                  _T("YuiDesktop"),
+                                                  _T(""),
+                                                  WS_POPUP | WS_VISIBLE,
+                                                  0,
+                                                  0,
+                                                  Context->ScreenWidth,
+                                                  Context->ScreenHeight - Context->TaskbarHeight,
+                                                  NULL, NULL, NULL, 0);
 
-        if (Context->hWndDesktop == NULL) {
-            YuiCleanupGlobalState();
-            return FALSE;
+            if (Context->hWndDesktop != NULL) {
+                break;
+            }
+
+            if (NoActivate != 0) {
+                NoActivate = 0;
+            } else {
+                YuiCleanupGlobalState();
+                return FALSE;
+            }
         }
 
         //
@@ -1217,9 +1245,8 @@ YuiCreateWindow(
     if (DllKernel32.pGetSystemPowerStatus != NULL) {
         YORI_SYSTEM_POWER_STATUS PowerStatus;
 
-        DllKernel32.pGetSystemPowerStatus(&PowerStatus);
-
-        if ((PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
+        if (DllKernel32.pGetSystemPowerStatus(&PowerStatus) &&
+            (PowerStatus.BatteryFlag & YORI_BATTERY_FLAG_NO_BATTERY) == 0) {
 
             Context->hWndBattery = CreateWindowEx(WS_EX_STATICEDGE,
                                                   _T("STATIC"),
@@ -1426,6 +1453,10 @@ ymain(
         }
     }
 
+    if (DllShell32.pSHGetSpecialFolderPathW == NULL) {
+        YoriLibLoadShfolderFunctions();
+    }
+
     if (DllUser32.pDrawFrameControl == NULL ||
         DllUser32.pDrawIconEx == NULL ||
         DllUser32.pGetClientRect == NULL ||
@@ -1433,7 +1464,8 @@ ymain(
         DllUser32.pMoveWindow == NULL ||
         DllUser32.pSetForegroundWindow == NULL ||
         DllUser32.pSetWindowTextW == NULL ||
-        DllUser32.pShowWindow == NULL) {
+        DllUser32.pShowWindow == NULL ||
+        (DllShell32.pSHGetSpecialFolderPathW == NULL && DllShfolder.pSHGetFolderPathW == NULL)) {
 
         MessageBox(NULL, _T("yui: OS support not present"), _T("yui"), MB_ICONSTOP);
         return EXIT_FAILURE;

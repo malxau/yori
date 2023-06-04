@@ -1288,7 +1288,10 @@ YuiMenuPopulate(
             YuiContext->StartChangeNotifications[0] = NULL;
         }
         YuiContext->StartChangeNotifications[0] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[0] == NULL) {
+        if (YuiContext->StartChangeNotifications[0] == NULL ||
+            YuiContext->StartChangeNotifications[0] == INVALID_HANDLE_VALUE) {
+
+            YuiContext->StartChangeNotifications[0] = NULL;
             YoriLibFreeStringContents(&FullPath);
             return FALSE;
         }
@@ -1304,7 +1307,10 @@ YuiMenuPopulate(
             YuiContext->StartChangeNotifications[1] = NULL;
         }
         YuiContext->StartChangeNotifications[1] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[1] == NULL) {
+        if (YuiContext->StartChangeNotifications[1] == NULL ||
+            YuiContext->StartChangeNotifications[1] == INVALID_HANDLE_VALUE) {
+
+            YuiContext->StartChangeNotifications[1] = NULL;
             YoriLibFreeStringContents(&FullPath);
             return FALSE;
         }
@@ -1320,7 +1326,10 @@ YuiMenuPopulate(
             YuiContext->StartChangeNotifications[2] = NULL;
         }
         YuiContext->StartChangeNotifications[2] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[2] == NULL) {
+        if (YuiContext->StartChangeNotifications[2] == NULL ||
+            YuiContext->StartChangeNotifications[2] == INVALID_HANDLE_VALUE) {
+
+            YuiContext->StartChangeNotifications[2] = NULL;
             YoriLibFreeStringContents(&FullPath);
             return FALSE;
         }
@@ -1336,7 +1345,10 @@ YuiMenuPopulate(
             YuiContext->StartChangeNotifications[3] = NULL;
         }
         YuiContext->StartChangeNotifications[3] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
-        if (YuiContext->StartChangeNotifications[3] == NULL) {
+        if (YuiContext->StartChangeNotifications[3] == NULL ||
+            YuiContext->StartChangeNotifications[3] == INVALID_HANDLE_VALUE) {
+
+            YuiContext->StartChangeNotifications[3] = NULL;
             YoriLibFreeStringContents(&FullPath);
             return FALSE;
         }
