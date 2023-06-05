@@ -38,16 +38,6 @@ BOOL YoriShProcessRegisteredForRestart = FALSE;
  */
 LONGLONG YoriShLastRestartCleanupScan;
 
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(push)
-#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
-#endif
-
-
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(pop)
-#endif
-
 /**
  Scan restart files in the temp directory and delete any that haven't been
  written in a long time and there are no active processes with a matching

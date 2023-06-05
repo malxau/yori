@@ -765,11 +765,6 @@ YoriPkgDeletePendingPackages(
     }
 }
 
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(push)
-#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
-#endif
-
 /**
  Given a package URL, download if necessary, extract metadata, check if an
  existing package needs to be upgraded or replaced, back up any packages that
@@ -854,12 +849,10 @@ YoriPkgPreparePackageForInstall(
     //  Query for a temporary directory
     //
 
-    TempPath.LengthAllocated = GetTempPath(0, NULL);
-    if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated + PkgInfoFile.LengthInChars + 1)) {
+    if (!YoriLibGetTempPath(&TempPath, PkgInfoFile.LengthInChars + 1)) {
         Result = ERROR_NOT_ENOUGH_MEMORY;
         goto Exit;
     }
-    TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
 
     //
     //  Extract pkginfo.ini to the temporary directory
@@ -1016,10 +1009,6 @@ Exit:
     YoriPkgDeletePendingPackage(PendingPackage);
     return Result;
 }
-
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(pop)
-#endif
 
 /**
  Given a package URL, download if necessary, extract metadata, check if an

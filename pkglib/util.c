@@ -951,11 +951,6 @@ Exit:
     return Result;
 }
 
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(push)
-#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
-#endif
-
 /**
  Download a remote package into a temporary location and return the
  temporary location to allow for subsequent processing.
@@ -1021,12 +1016,10 @@ YoriPkgPackagePathToLocalPath(
         //  Query for a temporary directory
         //
 
-        TempPath.LengthAllocated = GetTempPath(0, NULL);
-        if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated)) {
+        if (!YoriLibGetTempPath(&TempPath, 0)) {
             Result = ERROR_NOT_ENOUGH_MEMORY;
             goto Exit;
         }
-        TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
 
         if (!YoriLibAllocateString(&TempFileName, MAX_PATH)) {
             YoriLibFreeStringContents(&TempPath);
@@ -1099,10 +1092,6 @@ Exit:
     YoriLibFreeStringContents(&MirroredPath);
     return Result;
 }
-
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(pop)
-#endif
 
 /**
  Display the best available error text given an installation failure with the

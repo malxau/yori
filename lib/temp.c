@@ -156,6 +156,11 @@ YoriLibGetTempPath(
     __in DWORD ExtraChars
     )
 {
+    DWORD MajorVersion;
+    DWORD MinorVersion;
+    DWORD BuildNumber;
+    DWORD CharsToAllocate;
+
     TempPathName->LengthAllocated = GetTempPath(0, NULL);
     if (TempPathName->LengthAllocated == 0) {
         return FALSE;
@@ -163,13 +168,30 @@ YoriLibGetTempPath(
 
     TempPathName->LengthAllocated += ExtraChars;
 
-    if (!YoriLibAllocateString(TempPathName, TempPathName->LengthAllocated)) {
+    YoriLibGetOsVersion(&MajorVersion, &MinorVersion, &BuildNumber);
+
+    //
+    //  NT 3.1 has a horrible bug in GetTempPathW where it confuses byte
+    //  offset with character offset and writes a NULL at a byte offset
+    //  which is twice where it should be.  To tolerate that, allocate
+    //  twice as many bytes as needed, and manually fix up the NULL below.
+    //
+
+    CharsToAllocate = TempPathName->LengthAllocated;
+    if (MajorVersion == 3 && MinorVersion == 10) {
+        CharsToAllocate = CharsToAllocate * 2;
+    }
+
+    if (!YoriLibAllocateString(TempPathName, CharsToAllocate)) {
         return FALSE;
     }
 
     TempPathName->LengthInChars = GetTempPath(TempPathName->LengthAllocated,
                                               TempPathName->StartOfString);
 
+    if (MajorVersion == 3 && MinorVersion == 10) {
+        TempPathName->StartOfString[TempPathName->LengthInChars] = '\0';
+    }
 
     return TRUE;
 }

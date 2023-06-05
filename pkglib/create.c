@@ -28,11 +28,6 @@
 #include <yorilib.h>
 #include "yoripkgp.h"
 
-#if defined(_MSC_VER) && (_MSC_VER == 1500)
-#pragma warning(push)
-#pragma warning(disable: 6309 6387) // GetTempPath is mis-annotated in old SDKs
-#endif
-
 /**
  Creates a binary (installable) package.  This could be architecture specific
  or architecture neutral.
@@ -123,11 +118,9 @@ YoriPkgCreateBinaryPackage(
     //  Query for a temporary directory
     //
 
-    TempPath.LengthAllocated = GetTempPath(0, NULL);
-    if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated)) {
+    if (!YoriLibGetTempPath(&TempPath, 0)) {
         return FALSE;
     }
-    TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
 
     if (!YoriLibAllocateString(&TempFile, TempPath.LengthAllocated + MAX_PATH)) {
         YoriLibFreeStringContents(&TempPath);
@@ -593,11 +586,9 @@ YoriPkgCreateSourcePackage(
     //  Query for a temporary directory
     //
 
-    TempPath.LengthAllocated = GetTempPath(0, NULL);
-    if (!YoriLibAllocateString(&TempPath, TempPath.LengthAllocated)) {
+    if (!YoriLibGetTempPath(&TempPath, 0)) {
         return FALSE;
     }
-    TempPath.LengthInChars = GetTempPath(TempPath.LengthAllocated, TempPath.StartOfString);
 
     if (!YoriLibAllocateString(&TempFile, TempPath.LengthAllocated + MAX_PATH)) {
         YoriLibFreeStringContents(&TempPath);
