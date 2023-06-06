@@ -318,19 +318,32 @@ SetupGetDefaultInstallDir(
 ReturnDefault:
     YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
     {
-        TCHAR WindowsDirectory[MAX_PATH];
-        DWORD CharsCopied;
+        TCHAR WindowsDirectoryBuffer[MAX_PATH];
+        YORI_STRING WindowsDirectory;
 
-        CharsCopied = GetWindowsDirectory(WindowsDirectory, sizeof(WindowsDirectory)/sizeof(WindowsDirectory[0]));
-        if (CharsCopied < 2) {
-            YoriLibSPrintf(WindowsDirectory, _T("C:"));
+        YoriLibInitEmptyString(&WindowsDirectory);
+        WindowsDirectory.StartOfString = WindowsDirectoryBuffer;
+        WindowsDirectory.LengthAllocated = sizeof(WindowsDirectoryBuffer)/sizeof(WindowsDirectoryBuffer[0]);
+
+        WindowsDirectory.LengthInChars = GetWindowsDirectory(WindowsDirectory.StartOfString, WindowsDirectory.LengthAllocated);
+        if (WindowsDirectory.LengthInChars < 2) {
+            WindowsDirectory.LengthInChars = YoriLibSPrintf(WindowsDirectory.StartOfString, _T("C:"));
         } else {
-            WindowsDirectory[2] = '\0';
+            WindowsDirectory.LengthInChars = 2;
+            WindowsDirectory.StartOfString[WindowsDirectory.LengthInChars] = '\0';
         }
 
         YoriLibInitEmptyString(InstallDir);
         if (OsVerMajor < 4) {
-            YoriLibYPrintf(InstallDir, _T("%s\\WIN32APP") TSETUP_APP_DIR, WindowsDirectory);
+
+            //
+            //  NT 3.1 User32 walks off the end of strings.  Add an extra
+            //  char here to ensure 32 bit reads won't fault on the next
+            //  page.
+            //
+
+            YoriLibAllocateString(InstallDir, WindowsDirectory.LengthInChars + sizeof("\\WIN32APP") + sizeof(TSETUP_APP_DIR) + 1);
+            YoriLibYPrintf(InstallDir, _T("%y\\WIN32APP") TSETUP_APP_DIR, &WindowsDirectory);
         } else {
             YoriLibYPrintf(InstallDir, _T("%s\\Program Files") TSETUP_APP_DIR, WindowsDirectory);
         }

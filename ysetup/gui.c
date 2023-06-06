@@ -399,14 +399,24 @@ SetupGuiDisplayUi(VOID)
 
         YORI_STRING MessageString;
         LPCSTR DllMissingWarning;
+        DWORD Length;
         DllMissingWarning = SetupGetDllMissingMessage();
+        Length = strlen(DllMissingWarning);
         YoriLibInitEmptyString(&MessageString);
-        YoriLibYPrintf(&MessageString, _T("%hs"), MessageString);
-        MessageBox(NULL,
-                   MessageString.StartOfString,
-                   _T("YSetup"),
-                   MB_ICONEXCLAMATION);
-        YoriLibFreeStringContents(&MessageString);
+
+        //
+        //  NT 3.1 User32 walks off the end of strings.  Add an extra WCHAR so
+        //  that 32 bit reads won't fault after the end.
+        //
+
+        if (YoriLibAllocateString(&MessageString, Length + 2)) {
+            YoriLibYPrintf(&MessageString, _T("%hs"), DllMissingWarning);
+            MessageBox(NULL,
+                       MessageString.StartOfString,
+                       _T("YSetup"),
+                       MB_ICONEXCLAMATION);
+            YoriLibFreeStringContents(&MessageString);
+        }
         return TRUE;
     }
 
