@@ -2025,5 +2025,67 @@ YoriLibSortStringArray(
     ASSERT (Index == Count - 1);
 }
 
+/**
+ Concatenate one yori string to an existing yori string.  Note the first
+ string may be reallocated within this routine and the caller is expected to
+ free it with @ref YoriLibFreeStringContents .
+
+ @param String The first string, which will be updated to have the contents
+        of the second string appended to it.
+
+ @param AppendString The string to copy to the end of the first string.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriLibStringConcatenate(
+    __inout PYORI_STRING String,
+    __in PCYORI_STRING AppendString
+    )
+{
+    DWORD LengthRequired;
+
+    LengthRequired = String->LengthInChars + AppendString->LengthInChars + 1;
+    if (LengthRequired > String->LengthAllocated) {
+        if (!YoriLibReallocateString(String, LengthRequired + 0x100)) {
+            return FALSE;
+        }
+    }
+
+    memcpy(&String->StartOfString[String->LengthInChars], AppendString->StartOfString, AppendString->LengthInChars * sizeof(TCHAR));
+    String->LengthInChars = String->LengthInChars + AppendString->LengthInChars;
+    String->StartOfString[String->LengthInChars] = '\0';
+    return TRUE;
+}
+
+/**
+ Concatenate a literal string to an existing yori string.  Note the first
+ string may be reallocated within this routine and the caller is expected to
+ free it with @ref YoriLibFreeStringContents .
+
+ @param String The first string, which will be updated to have the contents
+        of the second string appended to it.
+
+ @param AppendString The string to copy to the end of the first string.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriLibStringConcatenateWithLiteral(
+    __inout PYORI_STRING String,
+    __in LPCTSTR AppendString
+    )
+{
+    YORI_STRING AppendYoriString;
+
+    //
+    //  We need to length count the literal to ensure buffer sizes anyway,
+    //  so convert it into a length counted string.
+    //
+
+    YoriLibConstantString(&AppendYoriString, AppendString);
+    return YoriLibStringConcatenate(String, &AppendYoriString);
+}
+
 
 // vim:sw=4:ts=4:et:

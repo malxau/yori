@@ -3901,6 +3901,18 @@ YoriLibSortStringArray(
     __in DWORD Count
     );
 
+BOOLEAN
+YoriLibStringConcatenate(
+    __inout PYORI_STRING String,
+    __in PCYORI_STRING AppendString
+    );
+
+BOOLEAN
+YoriLibStringConcatenateWithLiteral(
+    __inout PYORI_STRING String,
+    __in LPCTSTR AppendString
+    );
+
 #undef  _tcscpy
 /**
  A null terminated strcpy function defined in terms of printf.
