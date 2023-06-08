@@ -173,18 +173,22 @@ CHAR strHelpUsage1[] =
 BOOL
 SdirUsageHelp(VOID)
 {
-    TCHAR   strUsage[1024];
+    YORI_STRING str;
+
+    YoriLibInitEmptyString(&str);
 
     if (!SdirUsageHeader(strHelpHeader)) {
         return FALSE;
     }
 
-    SdirAnsiToUnicode(strUsage, sizeof(strUsage)/sizeof(strUsage[0]), strHelpUsage1);
+    YoriLibYPrintf(&str, _T("%hs"), strHelpUsage1);
 
-    if (!SdirWriteString(strUsage)) {
+    if (!SdirWriteString(str.StartOfString)) {
+        YoriLibFreeStringContents(&str);
         return FALSE;
     }
 
+    YoriLibFreeStringContents(&str);
     return TRUE;
 }
 
@@ -235,17 +239,21 @@ CHAR strCmdLineUsage2[] = "\n"
 BOOL
 SdirUsageOpts(VOID)
 {
-    TCHAR   strUsage[1024];
+    YORI_STRING str;
+
+    YoriLibInitEmptyString(&str);
 
     if (!SdirUsageHeader(strCmdLineHeader)) {
         return FALSE;
     }
 
-    SdirAnsiToUnicode(strUsage, sizeof(strUsage)/sizeof(strUsage[0]), strCmdLineOpts);
+    YoriLibYPrintf(&str, _T("%hs"), strCmdLineOpts);
 
-    if (!SdirWriteString(strUsage)) {
+    if (!SdirWriteString(str.StartOfString)) {
+        YoriLibFreeStringContents(&str);
         return FALSE;
     }
+    YoriLibFreeStringContents(&str);
 
     return TRUE;
 }
@@ -456,7 +464,7 @@ BOOL
 SdirUsageFileColor(VOID)
 {
     TCHAR   Line[80];
-    TCHAR   strUsage[2048];
+    YORI_STRING str;
     DWORD   i;
     LPCSTR  This;
 
@@ -464,9 +472,14 @@ SdirUsageFileColor(VOID)
         return FALSE;
     }
 
-    SdirAnsiToUnicode(strUsage, sizeof(strUsage)/sizeof(strUsage[0]), strFileColorUsage1);
+    if (!YoriLibAllocateString(&str, 2048)) {
+        return FALSE;
+    }
 
-    if (!SdirWriteString(strUsage)) {
+    YoriLibYPrintf(&str, _T("%hs"), strFileColorUsage1);
+
+    if (!SdirWriteString(str.StartOfString)) {
+        YoriLibFreeStringContents(&str);
         return FALSE;
     }
 
@@ -487,12 +500,15 @@ SdirUsageFileColor(VOID)
                         SdirOptions[i].BitwiseCompareFn?"&, !&":"");
 
             if (!SdirWriteString(Line)) {
+                YoriLibFreeStringContents(&str);
                 return FALSE;
             }
         }
     }
-    SdirAnsiToUnicode(strUsage, sizeof(strUsage)/sizeof(strUsage[0]), strFileColorUsage2);
-    if (!SdirWriteString(strUsage)) {
+
+    YoriLibYPrintf(&str, _T("%hs"), strFileColorUsage2);
+    if (!SdirWriteString(str.StartOfString)) {
+        YoriLibFreeStringContents(&str);
         return FALSE;
     }
 
@@ -544,15 +560,18 @@ SdirUsageFileColor(VOID)
 
         SdirWriteStringWithAttribute(Line, Attr);
         if (!SdirWriteString(_T("\n"))) {
+            YoriLibFreeStringContents(&str);
             return FALSE;
         }
     }
 
 
-    SdirAnsiToUnicode(strUsage, sizeof(strUsage)/sizeof(strUsage[0]), strFileColorUsage3);
-    if (!SdirWriteString(strUsage)) {
+    YoriLibYPrintf(&str, _T("%hs"), strFileColorUsage3);
+    if (!SdirWriteString(str.StartOfString)) {
+        YoriLibFreeStringContents(&str);
         return FALSE;
     }
+    YoriLibFreeStringContents(&str);
 
     //
     //  We want to display built in rules, but for formatting's sake display
@@ -636,15 +655,18 @@ BOOL
 SdirUsageMetaColor(VOID)
 {
     TCHAR   Line[80];
-    TCHAR   strUsage[1024];
+    TCHAR   strUsage[80];
+    YORI_STRING str;
     DWORD   i;
 
     if (!SdirUsageHeader(strMetaColorHeader)) {
         return FALSE;
     }
 
-    SdirAnsiToUnicode(strUsage, sizeof(strUsage)/sizeof(strUsage[0]), strMetaColorUsage1);
-    if (!SdirWriteString(strUsage)) {
+    YoriLibInitEmptyString(&str);
+    YoriLibYPrintf(&str, _T("%hs"), strMetaColorUsage1);
+    if (!SdirWriteString(str.StartOfString)) {
+        YoriLibFreeStringContents(&str);
         return FALSE;
     }
 
@@ -665,15 +687,18 @@ SdirUsageMetaColor(VOID)
                         strUsage);
 
             if (!SdirWriteString(Line)) {
+                YoriLibFreeStringContents(&str);
                 return FALSE;
             }
         }
     }
 
-    SdirAnsiToUnicode(strUsage, sizeof(strUsage)/sizeof(strUsage[0]), strMetaColorUsage2);
-    if (!SdirWriteString(strUsage)) {
+    YoriLibYPrintf(&str, _T("%hs"), strMetaColorUsage2);
+    if (!SdirWriteString(str.StartOfString)) {
+        YoriLibFreeStringContents(&str);
         return FALSE;
     }
+    YoriLibFreeStringContents(&str);
 
     return TRUE;
 }
