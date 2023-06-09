@@ -4,7 +4,7 @@
  * Multi processor support for older versions of Visual C++ that don't implement
  * it natively.
  *
- * Copyright (c) 2015-2018 Malcolm J. Smith
+ * Copyright (c) 2015-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -109,6 +109,12 @@ typedef struct _CLMP_PROCESS_INFO {
      by this child process.
      */
     LPTSTR Filename;
+
+    /**
+     If TRUE, process launch was started.  If FALSE, the process has been
+     waited upon and no new process launch commenced.
+     */
+    BOOLEAN ProcessLaunchStarted;
 } CLMP_PROCESS_INFO, *PCLMP_PROCESS_INFO;
 
 /**
@@ -153,7 +159,9 @@ ClmpPumpSingleStream(
 }
 
 /**
- Wait for a child process.  If it failed, we fail.
+ Wait for a child process.  If it failed, we fail.  This function can be
+ called if a process failed to launch, or has already been waited upon,
+ so it must be willing to clean up whatever state exists.
 
  @param Process The process to wait for.
  */
@@ -166,13 +174,19 @@ ClmpWaitOnProcess (
     DWORD PipeNum;
     DWORD WaitResult;
 
-    ASSERT(Process->WindowsProcessInfo.hProcess != NULL);
+    ASSERT(Process->ProcessLaunchStarted);
 
     if (Process->WindowsProcessInfo.hProcess != NULL) {
         WaitResult = WaitForSingleObject(Process->WindowsProcessInfo.hProcess, INFINITE);
         ASSERT(WaitResult == WAIT_OBJECT_0);
         GetExitCodeProcess(Process->WindowsProcessInfo.hProcess, &ExitCode);
     } else {
+
+        //
+        //  It's safe to use a failure as an exit code so long as the
+        //  process started to launch.
+        //
+
         ExitCode = EXIT_FAILURE;
     }
 
@@ -189,7 +203,6 @@ ClmpWaitOnProcess (
             Process->Pipes[PipeNum].Pipe = NULL;
         }
     }
-
 
     //
     //  If a child failed and the parent is still going, fail with
@@ -214,6 +227,8 @@ ClmpWaitOnProcess (
         CloseHandle(Process->WindowsProcessInfo.hThread);
         Process->WindowsProcessInfo.hThread = NULL;
     }
+
+    Process->ProcessLaunchStarted = FALSE;
 }
 
 /**
@@ -232,8 +247,8 @@ ymain(
     __in YORI_STRING ArgV[]
     )
 {
-    TCHAR szCmdCommon[1024];
-    TCHAR szCmdComplete[1024];
+    YORI_STRING CommonString;
+    YORI_STRING CompleteString;
     DWORD i, j;
     PCLMP_PROCESS_INFO ProcessInfo;
     DWORD CurrentProcess = 0;
@@ -245,7 +260,12 @@ ymain(
 
     GetSystemInfo(&SysInfo);
 
-    _tcscpy(szCmdCommon, _T("cl "));
+    YoriLibInitEmptyString(&CommonString);
+    YoriLibInitEmptyString(&CompleteString);
+
+    if (!YoriLibStringConcatenateWithLiteral(&CommonString, _T("cl "))) {
+        return EXIT_FAILURE;
+    }
 
     //
     //  Scan the command line looking for switches that should
@@ -269,7 +289,7 @@ ymain(
             if (YoriLibCompareStringWithLiteralInsensitiveCount(&Arg, _T("?"), 1) == 0) {
                 ClmpHelp();
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2015-2018"));
+                YoriLibDisplayMitLicense(_T("2015-2023"));
                 return EXIT_SUCCESS;
             }
 
@@ -293,8 +313,12 @@ ymain(
                 }
 
             } else {
-                _tcscat(szCmdCommon, _T(" "));
-                _tcscat(szCmdCommon, ArgV[i].StartOfString);
+                if (!YoriLibStringConcatenateWithLiteral(&CommonString, _T(" ")) ||
+                    !YoriLibStringConcatenate(&CommonString, &ArgV[i])) {
+
+                    YoriLibFreeStringContents(&CommonString);
+                    return EXIT_FAILURE;
+                }
             }
 
             //
@@ -362,6 +386,7 @@ ymain(
     ProcessInfo = YoriLibMalloc(sizeof(CLMP_PROCESS_INFO) * NumberProcesses);
 
     if (ProcessInfo == NULL) {
+        YoriLibFreeStringContents(&CommonString);
         return EXIT_FAILURE;
     }
 
@@ -369,6 +394,7 @@ ymain(
 
     hOutputMutex = CreateMutex(NULL, FALSE, NULL);
     if (hOutputMutex == NULL) {
+        YoriLibFreeStringContents(&CommonString);
         YoriLibFree(ProcessInfo);
         return EXIT_FAILURE;
     }
@@ -388,7 +414,15 @@ ymain(
             HANDLE WriteOutPipe, WriteErrPipe;
             DWORD ThreadId;
 
-            YoriLibSPrintf(szCmdComplete, _T("%s %y"), szCmdCommon, &ArgV[i]);
+            CompleteString.LengthInChars = 0;
+            if (!YoriLibStringConcatenate(&CompleteString, &CommonString) ||
+                !YoriLibStringConcatenateWithLiteral(&CompleteString, _T(" ")) ||
+                !YoriLibStringConcatenate(&CompleteString, &ArgV[i])) {
+
+                GlobalExitCode = EXIT_FAILURE;
+                goto drain;
+            }
+
             ZeroMemory(&StartupInfo, sizeof(StartupInfo));
             StartupInfo.cb = sizeof(StartupInfo);
 
@@ -415,6 +449,13 @@ ymain(
 
             SecurityAttributes.nLength = sizeof(SecurityAttributes);
             SecurityAttributes.bInheritHandle = TRUE;
+
+            //
+            //  Mark launch as having started.  Any failure after this point
+            //  is considered an error when this process exits.
+            //
+
+            ProcessInfo[MyProcess].ProcessLaunchStarted = TRUE;
 
             //
             //  Create the aforementioned handles.
@@ -465,7 +506,7 @@ ymain(
                 StartupInfo.hStdError = WriteErrPipe;
             }
 
-            if (!CreateProcess(NULL, szCmdComplete, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
+            if (!CreateProcess(NULL, CompleteString.StartOfString, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
                 GlobalExitCode = EXIT_FAILURE;
                 goto drain;
             }
@@ -490,7 +531,7 @@ ymain(
         ZeroMemory(&StartupInfo, sizeof(StartupInfo));
         StartupInfo.cb = sizeof(StartupInfo);
 
-        if (!CreateProcess(NULL, szCmdCommon, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
+        if (!CreateProcess(NULL, CommonString.StartOfString, NULL, NULL, TRUE, CREATE_DEFAULT_ERROR_MODE, NULL, NULL, &StartupInfo, &ProcessInfo[MyProcess].WindowsProcessInfo)) {
             return EXIT_FAILURE;
         }
 
@@ -511,15 +552,20 @@ drain:
     do {
         CurrentProcess--;
 
-        ClmpWaitOnProcess(&ProcessInfo[CurrentProcess]);
+        if (ProcessInfo[CurrentProcess].ProcessLaunchStarted) {
+            ClmpWaitOnProcess(&ProcessInfo[CurrentProcess]);
+        }
 
     } while (CurrentProcess > 0);
+
+    YoriLibFree(ProcessInfo);
+    YoriLibFreeStringContents(&CommonString);
+    YoriLibFreeStringContents(&CompleteString);
+    CloseHandle(hOutputMutex);
 
     if (GlobalExitCode) {
         ExitProcess(GlobalExitCode);
     }
-
-    YoriLibFree(ProcessInfo);
 
     //
     //  All of the child processes succeeded, so we did too.
