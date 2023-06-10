@@ -318,26 +318,32 @@ LDFLAGS_GUI=$(LDFLAGS) -SUBSYSTEM:WINDOWS$(SUBSYSVER)
 !ENDIF # PROBELINKER
 
 FOR=for
-FOR_ST=for
 MKDIR=mkdir
 RMDIR=rmdir
 
+# The below is to assist NT 3.x, whose CMD builtins can be lacking:
+# - No rmdir /s/q
+# - No for /d
+# - No recursive mkdir
+
 !IFNDEF _YMAKE_VER
-!IF [yfor.exe -? >NUL 2>&1]==0
-FOR=yfor -c -p %NUMBER_OF_PROCESSORS%
-FOR_ST=yfor -c
-!ELSE
 !IF [oneyori.exe -c for -? >NUL 2>&1]==0
-FOR=oneyori -c for -c -p %NUMBER_OF_PROCESSORS%
-FOR_ST=oneyori -c for -c
-!ENDIF
+FOR=oneyori -c for -c
+MKDIR=oneyori -c ymkdir
+RMDIR=oneyori -c yrmdir
+!ELSE
+
+!IF [yfor.exe -? >NUL 2>&1]==0
+FOR=yfor -c
 !ENDIF
 
 !IF [ymkdir.exe -? >NUL 2>&1]==0
 MKDIR=ymkdir
 !ENDIF
+
 !IF [yrmdir.exe -? >NUL 2>&1]==0
 RMDIR=yrmdir
+!ENDIF
 !ENDIF
 !ENDIF
 
@@ -353,7 +359,6 @@ writeconfigcache:
 	@echo EXTERNLIBS=$(EXTERNLIBS) >>$(WRITECONFIGCACHEFILE)
 	@echo YENTRY=$(YENTRY) >>$(WRITECONFIGCACHEFILE)
 	@echo FOR=$(FOR) >>$(WRITECONFIGCACHEFILE)
-	@echo FOR_ST=$(FOR_ST) >>$(WRITECONFIGCACHEFILE)
 	@echo LDFLAGS=$(LDFLAGS) >>$(WRITECONFIGCACHEFILE)
 	@echo LDFLAGS_GUI=$(LDFLAGS_GUI) >>$(WRITECONFIGCACHEFILE)
 	@echo LIB32=$(LIB32) >>$(WRITECONFIGCACHEFILE)

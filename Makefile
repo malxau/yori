@@ -38,9 +38,12 @@ ARCH=axp
 !ENDIF # AMD64
 !ENDIF # x64
 
-BINDIR_ROOT=bin\$(ARCH)
-SYMDIR_ROOT=sym\$(ARCH)
-MODDIR_ROOT=bin\$(ARCH)\modules
+BINDIR_PARENT=bin
+SYMDIR_PARENT=sym
+
+BINDIR_ROOT=$(BINDIR_PARENT)\$(ARCH)
+SYMDIR_ROOT=$(SYMDIR_PARENT)\$(ARCH)
+MODDIR_ROOT=$(BINDIR_PARENT)\$(ARCH)\modules
 
 BINDIR=..\$(BINDIR_ROOT)
 SYMDIR=..\$(SYMDIR_ROOT)
@@ -202,7 +205,7 @@ link[dirs target=link]: $(SHDIRS) $(DIRS1) $(DIRS2)
 !ELSE
 all.real: writeconfigcache
 	@$(CURRENTTIME)
-	@$(FOR) %%i in ($(BINDIR_ROOT) $(SYMDIR_ROOT) $(MODDIR_ROOT) $(BINDIR_ROOT)\YoriInit.d) do $(STARTCMD)@if not exist %%i $(MKDIR) %%i$(STARTCMD)
+	@$(FOR) %%i in ($(BINDIR_PARENT) $(SYMDIR_PARENT) $(BINDIR_ROOT) $(SYMDIR_ROOT) $(MODDIR_ROOT) $(BINDIR_ROOT)\YoriInit.d) do $(STARTCMD)@if not exist %%i $(MKDIR) %%i$(STARTCMD)
 	@$(FOR) %%i in ($(SHDIRS) $(DIRS1)) do $(STARTCMD)@if exist %%i echo *** Compiling %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) compile & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(DIRS2)) do $(STARTCMD)@if exist %%i echo *** Compiling %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) compile & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(DIRS1)) do $(STARTCMD)@if exist %%i echo *** Linking %%i & cd %%i & $(BUILD) READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) link & cd ..$(STARTCMD)
@@ -213,11 +216,6 @@ all.real: writeconfigcache
 	@$(CURRENTTIME)
 !ENDIF
 
-beta: all.real
-	@if not exist beta $(MKDIR) beta
-	@move $(BINDIR_ROOT) beta\$(ARCH)
-	@move $(SYMDIR_ROOT) beta\$(ARCH)\sym
-
 !IFDEF _YMAKE_VER
 clean[dirs target=clean]: $(SHDIRS) $(DIRS1) $(DIRS2)
 !ELSE
@@ -225,13 +223,13 @@ clean: writeconfigcache
 	@$(FOR) %%i in ($(SHDIRS) $(DIRS1)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) clean READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@$(FOR) %%i in ($(DIRS2)) do $(STARTCMD)@if exist %%i echo *** Cleaning %%i & cd %%i & $(BUILD) clean READCONFIGCACHEFILE=..\$(WRITECONFIGCACHEFILE) & cd ..$(STARTCMD)
 	@if exist *~ erase *~
-	@$(FOR_ST) /D %%i in ($(MODDIR_ROOT) $(BINDIR_ROOT) $(SYMDIR_ROOT)) do @if exist %%i $(RMDIR) /s/q %%i
+	@$(FOR) %%i in ($(MODDIR_ROOT) $(BINDIR_ROOT) $(SYMDIR_ROOT)) do @if exist %%i $(RMDIR) /s/q %%i
 	@if exist $(WRITECONFIGCACHEFILE) erase $(WRITECONFIGCACHEFILE)
 !ENDIF
 
 distclean: clean
-	@$(FOR_ST) /D %%i in (pkg\*) do @if exist %%i $(RMDIR) /s/q %%i
-	@$(FOR_ST) %%i in (beta doc bin sym) do @if exist %%i $(RMDIR) /s/q %%i
+	@$(FOR) %%i in ($(BINDIR_PARENT) $(SYMDIR_PARENT) doc) do @if exist %%i $(RMDIR) /s/q %%i
+	@$(FOR) /D %%i in (pkg\*) do @if exist %%i $(RMDIR) /s/q %%i
 
 buildhelp:
 	@echo "ANALYZE=[0|1]    - If set, will perform static analysis during compilation"
