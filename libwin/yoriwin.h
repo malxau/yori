@@ -380,6 +380,15 @@ YoriWinHexEditSetCursorLocation(
     __in DWORD BitShift
     );
 
+__success(return)
+BOOLEAN
+YoriWinHexEditGetCursorLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PBOOLEAN AsChar,
+    __out PDWORDLONG BufferOffset,
+    __out PDWORD BitShift
+    );
+
 PYORI_WIN_CTRL_HANDLE
 YoriWinHexEditCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,

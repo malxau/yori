@@ -2003,32 +2003,6 @@ YoriWinHexEditSetColor(
 }
 
 /**
- Return the current cursor location within a hex edit control.
-
- @param CtrlHandle Pointer to the hex edit control.
-
- @param CursorOffset On successful completion, populated with the character
-        offset within the line that the cursor is currently on.
-
- @param CursorLine On successful completion, populated with the line that the
-        cursor is currently on.
- */
-VOID
-YoriWinHexEditGetCursorLocation(
-    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
-    __out PDWORD CursorOffset,
-    __out PDWORD CursorLine
-    )
-{
-    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
-
-    HexEdit = (PYORI_WIN_CTRL_HEX_EDIT)CtrlHandle;
-
-    *CursorOffset = HexEdit->CursorOffset;
-    *CursorLine = HexEdit->CursorLine;
-}
-
-/**
  Return the current viewport location within a hex edit control.
 
  @param CtrlHandle Pointer to the hex edit control.
@@ -2361,6 +2335,66 @@ YoriWinHexEditSetBytesPerWord(
     YoriWinHexEditPaint(HexEdit);
 
     return TRUE;
+}
+
+/**
+ Return the cursor offset, expressed in terms of a buffer offset and bit
+ shift.  Bit shift is only meaningful when the cell type refers to hex digit,
+ so a cursor has multiple positions per buffer offset.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param AsChar On successful completion, set to TRUE to indicate the cursor is
+        within the character representation of the offset.  If FALSE, the
+        cursor is within the hex representation of the offset.
+
+ @param BufferOffset Specifies the offset within the buffer.
+
+ @param BitShift Specifies the bits within the buffer offset.
+
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditGetCursorLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PBOOLEAN AsChar,
+    __out PDWORDLONG BufferOffset,
+    __out PDWORD BitShift
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
+    DWORD ByteOffset;
+    BOOLEAN BeyondBufferEnd;
+    DWORDLONG LocalBufferOffset;
+    DWORD LocalBitShift;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &LocalBitShift, &BeyondBufferEnd);
+    ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
+    if (CellType == YoriWinHexEditCellTypeHexDigit ||
+        CellType == YoriWinHexEditCellTypeCharValue) {
+
+        LocalBufferOffset = HexEdit->CursorLine;
+        LocalBufferOffset = LocalBufferOffset * HexEdit->BytesPerLine + ByteOffset;
+
+        *BufferOffset = LocalBufferOffset;
+        *BitShift = LocalBitShift;
+
+        if (CellType == YoriWinHexEditCellTypeCharValue) {
+            *AsChar = TRUE;
+        } else {
+            *AsChar = FALSE;
+        }
+
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 //
