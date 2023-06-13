@@ -172,7 +172,7 @@ typedef struct _YORI_WIN_CTRL_HEX_EDIT {
 
     /**
      Specifies the number of bits to use for the buffer offset.  Currently
-     supported values are 32 and 64.
+     supported values are 0, 32 and 64.
      */
     UCHAR OffsetWidth;
 
@@ -397,14 +397,27 @@ YoriWinHexEditCellType(
     }
 
     OffsetInChars = YoriWinHexEditOffsetSizeInCells(HexEdit);
-    if (CellOffset <= OffsetInChars) {
-        return YoriWinHexEditCellTypeOffset;
+    if (OffsetInChars > 0) {
+        if (CellOffset < OffsetInChars) {
+            return YoriWinHexEditCellTypeOffset;
+        } else if (CellOffset == OffsetInChars) {
+            return YoriWinHexEditCellTypeWhitespace;
+        }
     }
 
     CellsPerWord = YoriWinHexEditGetCellsPerWord(HexEdit);
     WordsPerLine = HexEdit->BytesPerLine / HexEdit->BytesPerWord;
 
     DataOffset = CellOffset - OffsetInChars;
+
+    //
+    //  If there's an offset, the first cell is a seperator.  With no offset,
+    //  bias the data offset by one so the first cell is a hex digit.
+    //
+
+    if (OffsetInChars == 0) {
+        DataOffset = DataOffset + 1;
+    }
     if (DataOffset < WordsPerLine * CellsPerWord) {
         ModValue = DataOffset % CellsPerWord;
         LocalByteOffset = (DataOffset / CellsPerWord) * HexEdit->BytesPerWord;
@@ -488,12 +501,22 @@ YoriWinHexEditCellFromCharBufferOffset(
 
     OffsetInChars = YoriWinHexEditOffsetSizeInCells(HexEdit);
 
+    //
+    //  If there is an offset, there's an extra cell of margin between the
+    //  offset and hex digits.  There's also an extra cell between hex and
+    //  char versions of the buffer.
+    //
+
+    if (OffsetInChars > 0) {
+        OffsetInChars++;
+    }
+
     CellsPerWord = YoriWinHexEditGetCellsPerWord(HexEdit);
     WordsPerLine = HexEdit->BytesPerLine / HexEdit->BytesPerWord;
 
     *EndLine = (DWORD)(BufferOffset / HexEdit->BytesPerLine);
     LineByteOffset = (DWORD)(BufferOffset % HexEdit->BytesPerLine);
-    *EndCharOffset = OffsetInChars + 2 + WordsPerLine * CellsPerWord + LineByteOffset;
+    *EndCharOffset = OffsetInChars + WordsPerLine * CellsPerWord + 1 + LineByteOffset;
     return TRUE;
 
 }
@@ -532,8 +555,19 @@ YoriWinHexEditCellFromHexBufferOffset(
     DWORD LineCellOffset;
     DWORD OffsetInChars;
     DWORD BitShiftCellIndex;
+    DWORD MarginToRemove;
 
+    MarginToRemove = 0;
     OffsetInChars = YoriWinHexEditOffsetSizeInCells(HexEdit);
+
+    //
+    //  The math below includes a space for each word.  If there's no offset,
+    //  remove the first space.
+    //
+
+    if (OffsetInChars == 0) {
+        MarginToRemove = 1;
+    }
 
     ASSERT((BufferOffset % HexEdit->BytesPerWord) == 0);
 
@@ -544,7 +578,7 @@ YoriWinHexEditCellFromHexBufferOffset(
     LineCellOffset = (LineByteOffset + HexEdit->BytesPerWord - 1) / HexEdit->BytesPerWord;
 
     BitShiftCellIndex = YoriWinHexEditGetCellIndexForBitShift(HexEdit, BitShift);
-    *EndCharOffset = OffsetInChars - 1 + ((LineCellOffset + 1) * CellsPerWord) - BitShiftCellIndex;
+    *EndCharOffset = OffsetInChars + ((LineCellOffset + 1) * CellsPerWord) - BitShiftCellIndex - MarginToRemove - 1;
     return TRUE;
 }
 
@@ -3402,7 +3436,7 @@ YoriWinHexEditCreate(
     PYORI_WIN_WINDOW_HANDLE TopLevelWindow;
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
 
-    if ((Style & (YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) == 0) {
+    if ((Style & (YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) == (YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
         return NULL;
     }
 
