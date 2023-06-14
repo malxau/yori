@@ -5,10 +5,11 @@ compile: yoridlg.lib
 
 OBJS=\
 	 about.obj    \
-	 device.obj      \
+	 device.obj   \
 	 dir.obj      \
 	 file.obj     \
 	 find.obj     \
+	 findhex.obj  \
 	 input.obj    \
 	 msgbox.obj   \
 	 replace.obj  \

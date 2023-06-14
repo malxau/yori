@@ -120,6 +120,17 @@ YoriDlgFindText(
 
 __success(return)
 BOOLEAN
+YoriDlgFindHex(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_STRING Title,
+    __in_opt PUCHAR InitialData,
+    __in DWORDLONG InitialDataLength,
+    __out PUCHAR * FindData,
+    __out PDWORDLONG FindDataLength
+    );
+
+__success(return)
+BOOLEAN
 YoriDlgInput(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_STRING Title,
