@@ -104,9 +104,14 @@ typedef struct _HEXEDIT_CONTEXT {
     DWORDLONG DataLength;
 
     /**
-     The string that was most recently searched for.
+     The data that was most recently searched for.
      */
-    YORI_STRING SearchString;
+    PUCHAR SearchBuffer;
+
+    /**
+     The length of the data that was most recently searched for.
+     */
+    DWORDLONG SearchBufferLength;
 
     /**
      The index of the hexedit menu.  This is used to enable and disable menu
@@ -133,12 +138,6 @@ typedef struct _HEXEDIT_CONTEXT {
      The index of the clear menu item.
      */
     DWORD HexEditClearMenuIndex;
-
-    /**
-     TRUE if the search should be case sensitive.  FALSE if it should be case
-     insensitive.
-     */
-    BOOLEAN SearchMatchCase;
 
     /**
      TRUE to use only 7 bit ASCII characters for visual display.
@@ -169,7 +168,9 @@ HexEditFreeHexEditContext(
     )
 {
     YoriLibFreeStringContents(&HexEditContext->OpenFileName);
-    YoriLibFreeStringContents(&HexEditContext->SearchString);
+    if (HexEditContext->SearchBuffer) {
+        YoriLibDereference(HexEditContext->SearchBuffer);
+    }
 }
 
 /**
@@ -862,6 +863,224 @@ HexEditExitButtonClicked(
 }
 
 /**
+ Search forward through a memory buffer looking for a matching sub-buffer.
+ Both are treated as opaque binary buffers.
+
+ @param Buffer Pointer to the master buffer that may contain a match.
+
+ @param BufferLength The length of the master buffer, in bytes.
+
+ @param BufferOffset The initial offset to search within the master buffer,
+        in bytes.
+
+ @param SearchBuffer Pointer to the buffer to search for.
+
+ @param SearchBufferLength The length of the search buffer, in bytes.
+
+ @param FoundOffset On successful completion (ie., a match is found), updated
+        to point to the offset within the master buffer of the match.
+
+ @return TRUE to indicate a match was found, FALSE if no match was found.
+ */
+__success(return)
+BOOLEAN
+HexEditFindNextMemorySubset(
+    __in PUCHAR Buffer,
+    __in DWORDLONG BufferLength,
+    __in DWORDLONG BufferOffset,
+    __in PUCHAR SearchBuffer,
+    __in DWORDLONG SearchBufferLength,
+    __out PDWORDLONG FoundOffset
+    )
+{
+    DWORDLONG BufferIndex;
+    DWORDLONG SearchBufferIndex;
+    DWORDLONG EndIndex;
+
+    if (BufferOffset > BufferLength ||
+        BufferLength - BufferOffset < SearchBufferLength) {
+
+        return FALSE;
+    }
+
+    EndIndex = BufferLength - SearchBufferLength + 1;
+
+    for (BufferIndex = BufferOffset; BufferIndex < EndIndex; BufferIndex++) {
+        for (SearchBufferIndex = 0; SearchBufferIndex < SearchBufferLength; SearchBufferIndex++) {
+            if (Buffer[BufferIndex + SearchBufferIndex] != SearchBuffer[SearchBufferIndex]) {
+                break;
+            }
+        }
+
+        if (SearchBufferIndex == SearchBufferLength) {
+            *FoundOffset = BufferIndex;
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
+ Find the next search match from the cursor position.
+
+ @param HexEditContext Pointer to the hexedit context, implicitly containing
+        the buffer to search and a cursor offset.
+
+ @param StartAtNextByte TRUE to indicate searching should start from the byte
+        after the cursor, FALSE if it should start at the cursor.
+
+ @return TRUE to indicate a match was found, FALSE if no match was found.
+ */
+BOOLEAN
+HexEditFindNextFromCurrentPosition(
+    __in PHEXEDIT_CONTEXT HexEditContext,
+    __in BOOLEAN StartAtNextByte
+    )
+{
+    PUCHAR Buffer;
+    DWORDLONG BufferLength;
+    DWORDLONG BufferOffset;
+    DWORD BitShift;
+    BOOLEAN AsChar;
+    DWORDLONG FindOffset;
+
+    YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
+
+    //
+    //  This can happen if the hex edit control contains no data.  In that
+    //  case, no match is found.
+    //
+
+    if (Buffer == NULL) {
+        return FALSE;
+    }
+
+    if (!YoriWinHexEditGetCursorLocation(HexEditContext->HexEdit, &AsChar, &BufferOffset, &BitShift)) {
+        YoriLibDereference(Buffer);
+        return FALSE;
+    }
+
+    if (StartAtNextByte) {
+        BufferOffset = BufferOffset + 1;
+    }
+
+    if (BufferOffset >= BufferLength) {
+        YoriLibDereference(Buffer);
+        return FALSE;
+    }
+
+    if (HexEditFindNextMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
+        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, FindOffset, 0);
+        YoriLibDereference(Buffer);
+        return TRUE;
+    }
+
+    YoriLibDereference(Buffer);
+    return FALSE;
+}
+
+/**
+ A callback invoked when the find menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditFindButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    YORI_STRING Title;
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+    PUCHAR FindData;
+    DWORDLONG FindDataLength;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    YoriLibConstantString(&Title, _T("Find"));
+
+    if (!YoriDlgFindHex(YoriWinGetWindowManagerHandle(Parent),
+                        &Title,
+                        HexEditContext->SearchBuffer,
+                        HexEditContext->SearchBufferLength,
+                        &FindData,
+                        &FindDataLength)) {
+
+        return;
+    }
+
+    if (FindData == NULL) {
+        return;
+    }
+
+    if (HexEditContext->SearchBuffer != NULL) {
+        YoriLibDereference(HexEditContext->SearchBuffer);
+    }
+
+    HexEditContext->SearchBuffer = FindData;
+    HexEditContext->SearchBufferLength = FindDataLength;
+    if (!HexEditFindNextFromCurrentPosition(HexEditContext, FALSE)) {
+        YORI_STRING ButtonText[1];
+        YORI_STRING Text;
+
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("Data not found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+    }
+}
+
+/**
+ A callback invoked when the repeat last find menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditFindNextButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    if (HexEditContext->SearchBuffer == NULL ||
+        HexEditContext->SearchBufferLength == 0) {
+
+        return;
+    }
+
+    if (!HexEditFindNextFromCurrentPosition(HexEditContext, TRUE)) {
+        YORI_STRING Title;
+        YORI_STRING Text;
+        YORI_STRING ButtonText[1];
+
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("No more matches found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+    }
+}
+
+/**
  A callback invoked when the go to menu item is invoked.
 
  @param Ctrl Pointer to the menu bar control.
@@ -1164,7 +1383,7 @@ HexEditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[7];
-    YORI_WIN_MENU_ENTRY SearchMenuEntries[1];
+    YORI_WIN_MENU_ENTRY SearchMenuEntries[4];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[4];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[4];
@@ -1212,9 +1431,24 @@ HexEditPopulateMenuBar(
 
     ZeroMemory(&SearchMenuEntries, sizeof(SearchMenuEntries));
     MenuIndex = 0;
+
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Find..."));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+F"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = HexEditFindButtonClicked;
+    MenuIndex++;
+
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Repeat Last Find"));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("F3"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = HexEditFindNextButtonClicked;
+    MenuIndex++;
+
+    SearchMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+    MenuIndex++;
+
     YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Go to..."));
     YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+G"));
     SearchMenuEntries[MenuIndex].NotifyCallback = HexEditGoToButtonClicked;
+    MenuIndex++;
 
     ZeroMemory(&ViewMenuEntries, sizeof(ViewMenuEntries));
     MenuIndex = 0;
