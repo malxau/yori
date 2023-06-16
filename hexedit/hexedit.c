@@ -1005,6 +1005,7 @@ HexEditFindButtonClicked(
                         &Title,
                         HexEditContext->SearchBuffer,
                         HexEditContext->SearchBufferLength,
+                        YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit),
                         &FindData,
                         &FindDataLength)) {
 

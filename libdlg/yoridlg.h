@@ -125,6 +125,7 @@ YoriDlgFindHex(
     __in PYORI_STRING Title,
     __in_opt PUCHAR InitialData,
     __in DWORDLONG InitialDataLength,
+    __in DWORD InitialBytesPerWord,
     __out PUCHAR * FindData,
     __out PDWORDLONG FindDataLength
     );

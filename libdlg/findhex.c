@@ -29,6 +29,14 @@
 #include <yoriwin.h>
 
 /**
+ A set of well known control IDs so the dialog can manipulate its elements.
+ */
+typedef enum _YORI_DLG_FIND_HEX_CONTROLS {
+    YoriDlgFindHexControlBuffer = 1,
+    YoriDlgFindHexControlBytesPerWord = 2
+} YORI_DLG_FIND_HEX_CONTROLS;
+
+/**
  A callback invoked when the ok button is clicked.
 
  @param Ctrl Pointer to the button that was clicked.
@@ -59,6 +67,83 @@ YoriDlgFindHexCancelButtonClicked(
 }
 
 /**
+ Convert the specified number of bytes per word into the corresponding combo
+ pull down index.
+
+ @param BytesPerWord The bytes per word.
+
+ @return The corresponding combo box index.  On any invalid value, the first
+         index (bytes) is used.
+ */
+DWORD
+YoriDlgFindHexBytesPerWordToIndex(
+    __in DWORD BytesPerWord
+    )
+{
+    DWORD Index;
+    DWORD Value;
+
+    Value = BytesPerWord;
+    Index = 0;
+
+    while(Value != 0) {
+        if (Value & 1) {
+            return Index;
+        }
+
+        Value = Value>>1;
+        Index++;
+    }
+
+    return 0;
+}
+
+/**
+ Convert the specified combo box index into the corresponding bytes per word
+ value.
+
+ @param Index The combo box index.
+
+ @return The corresponding bytes per word.
+ */
+DWORD
+YoriDlgFindHexIndexToBytesPerWord(
+    __in DWORD Index
+    )
+{
+    return (1 << Index);
+}
+
+/**
+ A callback that is invoked when the bytes per word combo box is changed.
+
+ @param Ctrl Pointer to the combo box control.
+ */
+VOID
+YoriDlgFindHexBytesPerWordChanged(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE HexEdit;
+    PYORI_WIN_WINDOW_HANDLE Window;
+    DWORD Active;
+    DWORD BytesPerWord;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    Window = YoriWinGetWindowFromWindowCtrl(Parent);
+    if (!YoriWinComboGetActiveOption(Ctrl, &Active)) {
+        return;
+    }
+
+    BytesPerWord = YoriDlgFindHexIndexToBytesPerWord(Active);
+    HexEdit = YoriWinFindControlById(Parent, YoriDlgFindHexControlBuffer);
+    ASSERT(HexEdit != NULL);
+
+    YoriWinHexEditSetBytesPerWord(HexEdit, BytesPerWord);
+}
+
+/**
  Display a dialog box for the user to search for text.
 
  @param WinMgrHandle Pointer to the window manager.
@@ -68,6 +153,8 @@ YoriDlgFindHexCancelButtonClicked(
  @param InitialData The initial data to populate into the dialog.
 
  @param InitialDataLength The size of the initial data, in bytes.
+
+ @param InitialBytesPerWord The number of bytes to display per word.
 
  @param FindData On successful completion, updated to point to a value to
         find.  Note this value is allocated within this routine and should
@@ -86,6 +173,7 @@ YoriDlgFindHex(
     __in PYORI_STRING Title,
     __in_opt PUCHAR InitialData,
     __in DWORDLONG InitialDataLength,
+    __in DWORD InitialBytesPerWord,
     __out PUCHAR * FindData,
     __out PDWORDLONG FindDataLength
     )
@@ -100,6 +188,7 @@ YoriDlgFindHex(
     DWORD_PTR Result;
     DWORD Style;
     WORD DialogWidth;
+    YORI_STRING BytesPerWordOptions[4];
 
     if (!YoriWinGetWinMgrDimensions(WinMgrHandle, &WindowSize)) {
         return FALSE;
@@ -148,15 +237,17 @@ YoriDlgFindHex(
     Area.Left = 1;
     Area.Top = (WORD)(Area.Bottom + 1);
     Area.Right = (WORD)(WindowSize.X - 2);
-    Area.Bottom = (WORD)(WindowSize.Y - 4);
+    Area.Bottom = (WORD)(WindowSize.Y - 5);
 
     YoriLibConstantString(&Caption, _T(""));
 
-    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Area, 1, Style);
+    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Area, InitialBytesPerWord, Style);
     if (HexEdit == NULL) {
         YoriWinDestroyWindow(Parent);
         return FALSE;
     }
+
+    YoriWinSetControlId(HexEdit, YoriDlgFindHexControlBuffer);
 
     if (InitialData != NULL) {
         PUCHAR InitialDataCopy;
@@ -183,6 +274,41 @@ YoriDlgFindHex(
 
         YoriLibDereference(InitialDataCopy);
     }
+
+    YoriLibConstantString(&Caption, _T("&Display As:"));
+
+    Area.Top = (WORD)(Area.Bottom + 1);
+    Area.Bottom = Area.Top;
+    Area.Left = 2;
+    Area.Right = (WORD)(Area.Left + Caption.LengthInChars - 1);
+
+    Ctrl = YoriWinLabelCreate(Parent, &Area, &Caption, 0);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Parent);
+        return FALSE;
+    }
+
+    Area.Left = (WORD)(Area.Right + 1);
+    Area.Right = (WORD)(WindowSize.X - 2);
+
+    YoriLibConstantString(&BytesPerWordOptions[0], _T("Bytes"));
+    YoriLibConstantString(&BytesPerWordOptions[1], _T("Words"));
+    YoriLibConstantString(&BytesPerWordOptions[2], _T("DWords"));
+    YoriLibConstantString(&BytesPerWordOptions[3], _T("QWords"));
+
+    Ctrl = YoriWinComboCreate(Parent, &Area, 4, BytesPerWordOptions, 0, YoriDlgFindHexBytesPerWordChanged);
+    if (Ctrl == NULL) {
+        YoriWinDestroyWindow(Parent);
+        return FALSE;
+    }
+
+    YoriWinSetControlId(Ctrl, YoriDlgFindHexControlBytesPerWord);
+
+    if (!YoriWinComboAddItems(Ctrl, BytesPerWordOptions, sizeof(BytesPerWordOptions)/sizeof(BytesPerWordOptions[0]))) {
+        YoriWinDestroyWindow(Parent);
+        return FALSE;
+    }
+    YoriWinComboSetActiveOption(Ctrl, YoriDlgFindHexBytesPerWordToIndex(InitialBytesPerWord));
 
     ButtonWidth = (WORD)(8);
 
