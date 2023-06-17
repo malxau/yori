@@ -922,6 +922,66 @@ HexEditFindNextMemorySubset(
 }
 
 /**
+ Search backward through a memory buffer looking for a matching sub-buffer.
+ Both are treated as opaque binary buffers.
+
+ @param Buffer Pointer to the master buffer that may contain a match.
+
+ @param BufferLength The length of the master buffer, in bytes.
+
+ @param BufferOffset The initial offset to search within the master buffer,
+        in bytes.
+
+ @param SearchBuffer Pointer to the buffer to search for.
+
+ @param SearchBufferLength The length of the search buffer, in bytes.
+
+ @param FoundOffset On successful completion (ie., a match is found), updated
+        to point to the offset within the master buffer of the match.
+
+ @return TRUE to indicate a match was found, FALSE if no match was found.
+ */
+__success(return)
+BOOLEAN
+HexEditFindPreviousMemorySubset(
+    __in PUCHAR Buffer,
+    __in DWORDLONG BufferLength,
+    __in DWORDLONG BufferOffset,
+    __in PUCHAR SearchBuffer,
+    __in DWORDLONG SearchBufferLength,
+    __out PDWORDLONG FoundOffset
+    )
+{
+    DWORDLONG BufferIndex;
+    DWORDLONG SearchBufferIndex;
+
+    if (BufferOffset > BufferLength ||
+        BufferLength - BufferOffset < SearchBufferLength) {
+
+        return FALSE;
+    }
+
+    for (BufferIndex = BufferOffset; TRUE; BufferIndex--) {
+        for (SearchBufferIndex = 0; SearchBufferIndex < SearchBufferLength; SearchBufferIndex++) {
+            if (Buffer[BufferIndex + SearchBufferIndex] != SearchBuffer[SearchBufferIndex]) {
+                break;
+            }
+        }
+
+        if (SearchBufferIndex == SearchBufferLength) {
+            *FoundOffset = BufferIndex;
+            return TRUE;
+        }
+
+        if (BufferIndex == 0) {
+            break;
+        }
+    }
+
+    return FALSE;
+}
+
+/**
  Find the next search match from the cursor position.
 
  @param HexEditContext Pointer to the hexedit context, implicitly containing
@@ -971,6 +1031,59 @@ HexEditFindNextFromCurrentPosition(
     }
 
     if (HexEditFindNextMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
+        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, FindOffset, 0);
+        YoriLibDereference(Buffer);
+        return TRUE;
+    }
+
+    YoriLibDereference(Buffer);
+    return FALSE;
+}
+
+/**
+ Find the previous search match from the cursor position.
+
+ @param HexEditContext Pointer to the hexedit context, implicitly containing
+        the buffer to search and a cursor offset.
+
+ @return TRUE to indicate a match was found, FALSE if no match was found.
+ */
+BOOLEAN
+HexEditFindPreviousFromCurrentPosition(
+    __in PHEXEDIT_CONTEXT HexEditContext
+    )
+{
+    PUCHAR Buffer;
+    DWORDLONG BufferLength;
+    DWORDLONG BufferOffset;
+    DWORD BitShift;
+    BOOLEAN AsChar;
+    DWORDLONG FindOffset;
+
+    YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
+
+    //
+    //  This can happen if the hex edit control contains no data.  In that
+    //  case, no match is found.
+    //
+
+    if (Buffer == NULL) {
+        return FALSE;
+    }
+
+    if (!YoriWinHexEditGetCursorLocation(HexEditContext->HexEdit, &AsChar, &BufferOffset, &BitShift)) {
+        YoriLibDereference(Buffer);
+        return FALSE;
+    }
+
+    if (BufferOffset == 0) {
+        YoriLibDereference(Buffer);
+        return FALSE;
+    }
+
+    BufferOffset = BufferOffset - 1;
+
+    if (HexEditFindPreviousMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
         YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, FindOffset, 0);
         YoriLibDereference(Buffer);
         return TRUE;
@@ -1063,6 +1176,47 @@ HexEditFindNextButtonClicked(
     }
 
     if (!HexEditFindNextFromCurrentPosition(HexEditContext, TRUE)) {
+        YORI_STRING Title;
+        YORI_STRING Text;
+        YORI_STRING ButtonText[1];
+
+        YoriLibConstantString(&Title, _T("Find"));
+        YoriLibConstantString(&Text, _T("No more matches found."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+    }
+}
+
+/**
+ A callback invoked when the find previous menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditFindPreviousButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    if (HexEditContext->SearchBuffer == NULL ||
+        HexEditContext->SearchBufferLength == 0) {
+
+        return;
+    }
+
+    if (!HexEditFindPreviousFromCurrentPosition(HexEditContext)) {
         YORI_STRING Title;
         YORI_STRING Text;
         YORI_STRING ButtonText[1];
@@ -1384,7 +1538,7 @@ HexEditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[7];
-    YORI_WIN_MENU_ENTRY SearchMenuEntries[4];
+    YORI_WIN_MENU_ENTRY SearchMenuEntries[5];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[4];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[4];
@@ -1442,6 +1596,12 @@ HexEditPopulateMenuBar(
     YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("F3"));
     SearchMenuEntries[MenuIndex].NotifyCallback = HexEditFindNextButtonClicked;
     MenuIndex++;
+
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("Find &Previous"));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Shift+F3"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = HexEditFindPreviousButtonClicked;
+    MenuIndex++;
+
 
     SearchMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
     MenuIndex++;
