@@ -1,6 +1,0 @@
-Ways to improve on NMAKE:
-- Find a way to execute preprocessor CreateProcess calls in parallel
-- A dependency-aware way to describe install, so $(BINDIR)\foo.exe: foo.exe,
-  and it's only copied if the source has changed.  The challenge is that this
-  is for a list of targets
-- Heuristic search for targets ("ymake yedit")

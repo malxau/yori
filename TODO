@@ -1,25 +1,66 @@
-v1.9:
- - General MSFIX review
 
-v1.x, maybe:
+At this point, the TODO is more a list of tasks that might be useful and/or
+fun to write.
+
+ - Format hex strings directly without printf for performance
+ - Scroll around input line on tiny windows, where the entire line doesn't
+   fit in the window
+ - Make more use something like line selection
+ - Split
+ - Ctrl+R (reverse history search)
+ - Direnv whitelist
+ - Base64 tools
+ - Tee issue on Github
+ - Start without elevation prompt
+ - Hexedit configurable offset length, default small on narrow displays
  - Use CopyFileEx when compressing to eliminate CreateFile?
  - Colorize help and error text
- - Ctrl+R
- - Edit horizontal scroll bar
  - More select should use logical line coordinates rather than conhost
    buffer coordinates to allow selection beyond screen size
  - Tab completion on %i
  - Attempt to use dbghelp stack formatting again.  Seems useful for ydbg
    to be able to output the stack of exceptions etc.
- - Environment variable editor UI
  - Mini-http client to complete the NT 3.1 story and allow NT 3.5x and 4
    RTM to install without redistributables?
- - Support move and resize of windows
- - Minimize/maximize/close
+
+ - Have co and history process window manager resize so they can set a
+   minimum size
+ - Support move and resize of libwin windows
+ - Maximize/close in libwin
+ - Minimize in libwin, implying defining an icon form of a window
  - TreeView
  - Multi-column list
+ - Edit horizontal scroll bar
 
-v2.0:
+ - Environment variable editor UI
+ - TUI start menu - Point & Shoot?
+
+ - Ymake execute preprocessor CreateProcess calls in parallel somehow
+ - Ymake dependency aware install, so $(BINDIR) is updated if the link changes
+
+ - Have hexedit format its own hex strings to support selection
+ - Hexedit replace
+ - Clipboard in hexedit
+
+ - Regedit "rename" values
+ - Regedit "rename" keys
+ - Regedit search
+ - Regedit multi-sz editor
+
+ - Yui advertize minimize location for animation rendering
+ - Find a way to restore minimized/hidden elevated windows
+ - Audio mixer/volume tray
+ - Run recent list and autocomplete
+ - Calendar view within yui clock
+ - Airplane mode toggle
+ - Shift+click in taskbar to launch new instance
+ - Right click for cascade, tile, etc.
+ - Desktop context menu
+ - Taskbar button progress
+ - Progman DDE server
+ - Extensible notification icons
+
+Longer term, larger things:
  - Port pcre
  - Use regex in hilite
  - Case statement in ys
@@ -28,4 +69,5 @@ v2.0:
  - Man or something like it
  - Edit line wrap
  - PWB
+ - ASCII art/line drawing/visio
  - Round braces in command parser, including if
