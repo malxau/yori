@@ -982,6 +982,42 @@ HexEditFindPreviousMemorySubset(
 }
 
 /**
+ Translate a byte aligned offset into a control buffer offset and bit shift.
+ This is necessary because the control can display values of different word
+ sizes, which is expressed using a buffer offset to point to the word and
+ a bit shift to refer to the digit within the word.  Here we only care about
+ being 8 bit aligned (no nibble alignment.)
+
+ @param HexEditContext Pointer to the hexedit context, implicitly containing
+        information about the bytes per word.
+
+ @param ByteOffset The offset within the buffer, in bytes.
+
+ @param BufferOffset On successful completion, updated to point to the
+        beginning of the word within the buffer.
+
+ @param BitShift On successful completion, updated to indicate the number
+        of bits to shift to point to the digit describing the specified byte.
+ */
+VOID
+HexEditByteOffsetToBufferOffsetAndShift(
+    __in PHEXEDIT_CONTEXT HexEditContext,
+    __in DWORDLONG ByteOffset,
+    __out PDWORDLONG BufferOffset,
+    __out PDWORD BitShift
+    )
+{
+    DWORDLONG BytesPerWord;
+    DWORDLONG LocalBufferOffset;
+
+    BytesPerWord = YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit);
+
+    LocalBufferOffset = ByteOffset & ~(BytesPerWord - 1);
+    *BufferOffset = LocalBufferOffset;
+    *BitShift = (DWORD)((ByteOffset - LocalBufferOffset) * 8);
+}
+
+/**
  Find the next search match from the cursor position.
 
  @param HexEditContext Pointer to the hexedit context, implicitly containing
@@ -1021,6 +1057,7 @@ HexEditFindNextFromCurrentPosition(
         return FALSE;
     }
 
+    BufferOffset = BufferOffset + (BitShift / 8);
     if (StartAtNextByte) {
         BufferOffset = BufferOffset + 1;
     }
@@ -1031,7 +1068,8 @@ HexEditFindNextFromCurrentPosition(
     }
 
     if (HexEditFindNextMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
-        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, FindOffset, 0);
+        HexEditByteOffsetToBufferOffsetAndShift(HexEditContext, FindOffset, &BufferOffset, &BitShift);
+        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, BufferOffset, BitShift);
         YoriLibDereference(Buffer);
         return TRUE;
     }
@@ -1076,6 +1114,8 @@ HexEditFindPreviousFromCurrentPosition(
         return FALSE;
     }
 
+    BufferOffset = BufferOffset + (BitShift / 8);
+
     if (BufferOffset == 0) {
         YoriLibDereference(Buffer);
         return FALSE;
@@ -1084,7 +1124,8 @@ HexEditFindPreviousFromCurrentPosition(
     BufferOffset = BufferOffset - 1;
 
     if (HexEditFindPreviousMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
-        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, FindOffset, 0);
+        HexEditByteOffsetToBufferOffsetAndShift(HexEditContext, FindOffset, &BufferOffset, &BitShift);
+        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, BufferOffset, BitShift);
         YoriLibDereference(Buffer);
         return TRUE;
     }
