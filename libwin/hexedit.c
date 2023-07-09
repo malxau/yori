@@ -740,60 +740,392 @@ YoriWinHexEditNextCellSameType(
 //
 
 /**
- Calculate the line of text to display.  This is typically the exact same
- string as the line from the file's contents, but can diverge due to 
- display requirements such as tab expansion.
+ Return the string representation for a hex digit (in the range 0-15.)
+
+ @param Value The numberic representation of the digit.
+
+ @return The character representation of the digit.
+ */
+TCHAR
+YoriWinHexEditHexDigitFromValue(
+    __in DWORD Value
+    )
+{
+    ASSERT(Value < 16);
+    if (Value >= 16) {
+        return '?';
+    }
+
+    if (Value >= 10) {
+        return (TCHAR)(Value - 10 + 'a');
+    }
+
+    return (TCHAR)(Value + '0');
+}
+
+
+/**
+ Generate a line in units of one UCHAR.
 
  @param HexEdit Pointer to the hex edit control.
 
- @param LineIndex Specifies the line number to obtain a display line for.
+ @param Output Pointer to a buffer to populate with the result.
 
- @param DisplayLine On successful completion, populated with a string to
-        display.  This may point back into the same data as the original
-        line, or may be a fresh allocation.  The caller should free it with
-        @ref YoriLibFreeStringContents .  If the result points back to the
-        original string, the MemoryToFree member will be NULL to indicate
-        that the caller has nothing to deallocate.
+ @param OutputSize The length of the output buffer, in bytes.
 
- @return TRUE to indicate success, FALSE to indicate failure.
+ @param Buffer Pointer to the start of the buffer to render.
+
+ @param BytesToDisplay Number of bytes to display.
+
+ @return The number of elements written to the Output buffer.
  */
-BOOLEAN
-YoriWinHexEditGenerateDisplayLine(
+DWORD
+YoriWinHexEditByteLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
-    __in DWORD LineIndex,
-    __inout PYORI_STRING DisplayLine
+    __out_ecount(OutputSize) PCHAR_INFO Output,
+    __in DWORD OutputSize,
+    __in_ecount(BytesToDisplay) UCHAR CONST * Buffer,
+    __in DWORD BytesToDisplay
     )
 {
+    UCHAR WordToDisplay = 0;
+    DWORD WordIndex;
+    BOOL DisplayWord;
+    DWORD ByteIndex;
+    DWORD OutputIndex = 0;
+    DWORD WordCount;
 
-    DWORDLONG Offset;
-    DWORD LineLength;
-    PUCHAR LineBuffer;
-    DWORD Flags;
-
-    Offset = LineIndex;
-    Offset = Offset * HexEdit->BytesPerLine;
-
-    if (Offset > HexEdit->BufferValid) {
-        return TRUE;
+    ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
+    if (BytesToDisplay > HexEdit->BytesPerLine) {
+        return 0;
     }
 
-    LineBuffer = &HexEdit->Buffer[Offset];
-    if (HexEdit->BufferValid - Offset < HexEdit->BytesPerLine) {
-        LineLength = (DWORD)(HexEdit->BufferValid - Offset);
-    } else {
-        LineLength = HexEdit->BytesPerLine;
+    WordCount = HexEdit->BytesPerLine / sizeof(WordToDisplay);
+    if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
+        return 0;
     }
 
-    Flags = YORI_LIB_HEX_FLAG_DISPLAY_CHARS;
-    if (HexEdit->OffsetWidth == 64) {
-        Flags = Flags | YORI_LIB_HEX_FLAG_DISPLAY_LARGE_OFFSET;
-    } else if (HexEdit->OffsetWidth == 32) {
-        Flags = Flags | YORI_LIB_HEX_FLAG_DISPLAY_OFFSET;
+    for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
+
+        WordToDisplay = 0;
+        DisplayWord = FALSE;
+
+        for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
+            if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
+                DisplayWord = TRUE;
+                WordToDisplay = (UCHAR)(WordToDisplay + (Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8)));
+            }
+        }
+
+        if (DisplayWord) {
+            PCHAR_INFO Subset;
+            Subset = &Output[OutputIndex];
+            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue(WordToDisplay >> 4);
+            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue(WordToDisplay & 0x0f);
+            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[2].Char.UnicodeChar = ' ';
+            Subset[2].Attributes = HexEdit->TextAttributes;
+            OutputIndex = OutputIndex + 3;
+        } else {
+            for (ByteIndex = 0;
+                 OutputIndex < OutputSize && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
+                 ByteIndex++) {
+
+                Output[OutputIndex].Char.UnicodeChar = ' ';
+                Output[OutputIndex].Attributes = HexEdit->TextAttributes;
+                OutputIndex++;
+            }
+        }
     }
 
-    YoriLibHexLineToString(LineBuffer, Offset, LineLength, HexEdit->BytesPerWord, Flags, FALSE, DisplayLine);
+    return OutputIndex;
+}
 
-    return TRUE;
+/**
+ Generate a line in units of one WORD.
+
+ @param HexEdit Pointer to the hex edit control.
+
+ @param Output Pointer to a buffer to populate with the result.
+
+ @param OutputSize The length of the output buffer, in bytes.
+
+ @param Buffer Pointer to the start of the buffer to render.
+
+ @param BytesToDisplay Number of bytes to display.
+
+ @return The number of elements written to the Output buffer.
+ */
+DWORD
+YoriWinHexEditWordLine(
+    __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
+    __out_ecount(OutputSize) PCHAR_INFO Output,
+    __in DWORD OutputSize,
+    __in UCHAR CONST * Buffer,
+    __in DWORD BytesToDisplay
+    )
+{
+    WORD WordToDisplay = 0;
+    DWORD WordIndex;
+    BOOL DisplayWord;
+    DWORD ByteIndex;
+    DWORD OutputIndex = 0;
+    DWORD WordCount;
+
+    ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
+    if (BytesToDisplay > HexEdit->BytesPerLine) {
+        return 0;
+    }
+
+    WordCount = HexEdit->BytesPerLine / sizeof(WordToDisplay);
+    if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
+        return 0;
+    }
+
+    for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
+
+        WordToDisplay = 0;
+        DisplayWord = FALSE;
+
+        for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
+            if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
+                DisplayWord = TRUE;
+                WordToDisplay = (WORD)(WordToDisplay + (Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8)));
+            }
+        }
+
+        if (DisplayWord) {
+            PCHAR_INFO Subset;
+            Subset = &Output[OutputIndex];
+            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 12) & 0x0f);
+            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 8) & 0x0f);
+            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 4) & 0x0f);
+            Subset[2].Attributes = HexEdit->TextAttributes;
+            Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay) & 0x0f);
+            Subset[3].Attributes = HexEdit->TextAttributes;
+            Subset[4].Char.UnicodeChar = ' ';
+            Subset[4].Attributes = HexEdit->TextAttributes;
+            OutputIndex = OutputIndex + 5;
+        } else {
+            for (ByteIndex = 0;
+                 OutputIndex < OutputSize && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
+                 ByteIndex++) {
+
+                Output[OutputIndex].Char.UnicodeChar = ' ';
+                Output[OutputIndex].Attributes = HexEdit->TextAttributes;
+                OutputIndex++;
+            }
+        }
+
+    }
+
+    return OutputIndex;
+}
+
+/**
+ Generate a line in units of one DWORD.
+
+ @param HexEdit Pointer to the hex edit control.
+
+ @param Output Pointer to a buffer to populate with the result.
+
+ @param OutputSize The length of the output buffer, in bytes.
+
+ @param Buffer Pointer to the start of the buffer to render.
+
+ @param BytesToDisplay Number of bytes to display.
+
+ @return The number of elements written to the Output buffer.
+ */
+DWORD
+YoriWinHexEditDWordLine(
+    __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
+    __out_ecount(OutputSize) PCHAR_INFO Output,
+    __in DWORD OutputSize,
+    __in UCHAR CONST * Buffer,
+    __in DWORD BytesToDisplay
+    )
+{
+    DWORD WordToDisplay = 0;
+    DWORD WordIndex;
+    BOOL DisplayWord;
+    DWORD ByteIndex;
+    DWORD OutputIndex = 0;
+    DWORD WordCount;
+
+    ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
+    if (BytesToDisplay > HexEdit->BytesPerLine) {
+        return 0;
+    }
+
+    WordCount = HexEdit->BytesPerLine / sizeof(WordToDisplay);
+    if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
+        return 0;
+    }
+
+    for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
+
+        WordToDisplay = 0;
+        DisplayWord = FALSE;
+
+        for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
+            if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
+                DisplayWord = TRUE;
+                WordToDisplay = WordToDisplay + ((DWORD)Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8));
+            }
+        }
+
+        if (DisplayWord) {
+            PCHAR_INFO Subset;
+            Subset = &Output[OutputIndex];
+            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 28) & 0x0f);
+            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 24) & 0x0f);
+            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 20) & 0x0f);
+            Subset[2].Attributes = HexEdit->TextAttributes;
+            Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 16) & 0x0f);
+            Subset[3].Attributes = HexEdit->TextAttributes;
+            Subset[4].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 12) & 0x0f);
+            Subset[4].Attributes = HexEdit->TextAttributes;
+            Subset[5].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 8) & 0x0f);
+            Subset[5].Attributes = HexEdit->TextAttributes;
+            Subset[6].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 4) & 0x0f);
+            Subset[6].Attributes = HexEdit->TextAttributes;
+            Subset[7].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay) & 0x0f);
+            Subset[7].Attributes = HexEdit->TextAttributes;
+            Subset[8].Char.UnicodeChar = ' ';
+            Subset[8].Attributes = HexEdit->TextAttributes;
+            OutputIndex = OutputIndex + 9;
+        } else {
+            for (ByteIndex = 0;
+                 OutputIndex < OutputSize && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
+                 ByteIndex++) {
+
+                Output[OutputIndex].Char.UnicodeChar = ' ';
+                Output[OutputIndex].Attributes = HexEdit->TextAttributes;
+                OutputIndex++;
+            }
+        }
+    }
+
+    return OutputIndex;
+}
+
+/**
+ Generate a line in units of one DWORDLONG.
+
+ @param HexEdit Pointer to the hex edit control.
+
+ @param Output Pointer to a buffer to populate with the result.
+
+ @param OutputSize The length of the output buffer, in bytes.
+
+ @param Buffer Pointer to the start of the buffer to render.
+
+ @param BytesToDisplay Number of bytes to display.
+
+ @return The number of elements written to the Output buffer.
+ */
+DWORD
+YoriWinHexEditDWordLongLine(
+    __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
+    __out_ecount(OutputSize) PCHAR_INFO Output,
+    __in DWORD OutputSize,
+    __in UCHAR CONST * Buffer,
+    __in DWORD BytesToDisplay
+    )
+{
+    DWORDLONG WordToDisplay = 0;
+    DWORD WordIndex;
+    BOOL DisplayWord;
+    DWORD ByteIndex;
+    DWORD OutputIndex = 0;
+    DWORD WordCount;
+
+    ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
+    if (BytesToDisplay > HexEdit->BytesPerLine) {
+        return 0;
+    }
+
+    WordCount = HexEdit->BytesPerLine / sizeof(WordToDisplay);
+    if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
+        return 0;
+    }
+
+    for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
+
+        WordToDisplay = 0;
+        DisplayWord = FALSE;
+
+        for (ByteIndex = 0; ByteIndex < sizeof(WordToDisplay); ByteIndex++) {
+            if (WordIndex * sizeof(WordToDisplay) + ByteIndex < BytesToDisplay) {
+                DisplayWord = TRUE;
+                WordToDisplay = WordToDisplay + ((DWORDLONG)Buffer[WordIndex * sizeof(WordToDisplay) + ByteIndex] << (ByteIndex * 8));
+            }
+        }
+
+        if (DisplayWord) {
+            LARGE_INTEGER DisplayValue;
+            PCHAR_INFO Subset;
+            DWORD ValToDisplay;
+            DisplayValue.QuadPart = WordToDisplay;
+            ValToDisplay = DisplayValue.HighPart;
+            Subset = &Output[OutputIndex];
+            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 28) & 0x0f);
+            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 24) & 0x0f);
+            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 20) & 0x0f);
+            Subset[2].Attributes = HexEdit->TextAttributes;
+            Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 16) & 0x0f);
+            Subset[3].Attributes = HexEdit->TextAttributes;
+            Subset[4].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 12) & 0x0f);
+            Subset[4].Attributes = HexEdit->TextAttributes;
+            Subset[5].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 8) & 0x0f);
+            Subset[5].Attributes = HexEdit->TextAttributes;
+            Subset[6].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 4) & 0x0f);
+            Subset[6].Attributes = HexEdit->TextAttributes;
+            Subset[7].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay) & 0x0f);
+            Subset[7].Attributes = HexEdit->TextAttributes;
+            Subset[8].Char.UnicodeChar = '`';
+            Subset[8].Attributes = HexEdit->TextAttributes;
+            ValToDisplay = DisplayValue.LowPart;
+            Subset[9].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 28) & 0x0f);
+            Subset[9].Attributes = HexEdit->TextAttributes;
+            Subset[10].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 24) & 0x0f);
+            Subset[10].Attributes = HexEdit->TextAttributes;
+            Subset[11].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 20) & 0x0f);
+            Subset[11].Attributes = HexEdit->TextAttributes;
+            Subset[12].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 16) & 0x0f);
+            Subset[12].Attributes = HexEdit->TextAttributes;
+            Subset[13].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 12) & 0x0f);
+            Subset[13].Attributes = HexEdit->TextAttributes;
+            Subset[14].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 8) & 0x0f);
+            Subset[14].Attributes = HexEdit->TextAttributes;
+            Subset[15].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 4) & 0x0f);
+            Subset[15].Attributes = HexEdit->TextAttributes;
+            Subset[16].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay) & 0x0f);
+            Subset[16].Attributes = HexEdit->TextAttributes;
+            Subset[17].Char.UnicodeChar = '`';
+            Subset[17].Attributes = HexEdit->TextAttributes;
+            OutputIndex = OutputIndex + 18;
+        } else {
+            for (ByteIndex = 0;
+                 OutputIndex < OutputSize && ByteIndex < (sizeof(WordToDisplay) * 2 + 1);
+                 ByteIndex++) {
+
+                Output[OutputIndex].Char.UnicodeChar = ' ';
+                Output[OutputIndex].Attributes = HexEdit->TextAttributes;
+                OutputIndex++;
+            }
+        }
+    }
+
+    return OutputIndex;
 }
 
 /**
@@ -996,53 +1328,126 @@ YoriWinHexEditPaintSingleLine(
     WORD WindowAttributes;
     WORD TextAttributes;
     WORD RowIndex;
-    YORI_STRING Line;
-    TCHAR Char;
+    YORI_STRING String;
     DWORD LinesPopulated;
-    TCHAR LineBuffer[YORI_LIB_HEXDUMP_BYTES_PER_LINE * 4 + 32];
+    TCHAR StringBuffer[sizeof("01234567`89abcdef: ")];
+    CHAR_INFO CharInfoBuffer[YORI_LIB_HEXDUMP_BYTES_PER_LINE * 4 + 32];
+    DWORD CharInfoBufferAllocated;
+    DWORD CharInfoBufferPopulated;
+    ULARGE_INTEGER Offset;
+    DWORD LineLength;
+    PUCHAR SourceBuffer;
+    DWORD WordIndex;
+    UCHAR CharToDisplay;
+    PCHAR_INFO Cell;
 
     ColumnIndex = 0;
     RowIndex = (WORD)(LineIndex - HexEdit->ViewportTop);
     WindowAttributes = HexEdit->TextAttributes;
+    TextAttributes = WindowAttributes;
 
     LinesPopulated = YoriWinHexEditLinesPopulated(HexEdit);
 
-    YoriLibInitEmptyString(&Line);
-    Line.StartOfString = LineBuffer;
-    Line.LengthAllocated = sizeof(LineBuffer)/sizeof(LineBuffer[0]);
+    YoriLibInitEmptyString(&String);
+    String.StartOfString = StringBuffer;
+    String.LengthAllocated = sizeof(StringBuffer)/sizeof(StringBuffer[0]);
+    CharInfoBufferAllocated = sizeof(CharInfoBuffer)/sizeof(CharInfoBuffer[0]);
+    CharInfoBufferPopulated = 0;
 
     if (LineIndex == 0 || LineIndex < LinesPopulated) {
-        TextAttributes = WindowAttributes;
 
-        Line.LengthInChars = 0;
-        if (!YoriWinHexEditGenerateDisplayLine(HexEdit, LineIndex, &Line)) {
-            YoriLibInitEmptyString(&Line);
+        Offset.HighPart = 0;
+        Offset.LowPart = LineIndex;
+        Offset.QuadPart = Offset.QuadPart * HexEdit->BytesPerLine;
+
+        ASSERT(Offset.QuadPart <= HexEdit->BufferValid);
+
+        SourceBuffer = &HexEdit->Buffer[Offset.QuadPart];
+        if (HexEdit->BufferValid - Offset.QuadPart < HexEdit->BytesPerLine) {
+            LineLength = (DWORD)(HexEdit->BufferValid - Offset.QuadPart);
+        } else {
+            LineLength = HexEdit->BytesPerLine;
         }
-        for (; ColumnIndex < ClientSize->X && ColumnIndex + HexEdit->ViewportLeft < Line.LengthInChars; ColumnIndex++) {
 
-            Char = Line.StartOfString[ColumnIndex + HexEdit->ViewportLeft];
+        String.LengthInChars = 0;
 
-            //
-            //  Nano server interprets NULL as "leave previous contents alone"
-            //  which is hazardous for an editor.
-            //
+        //
+        //  If the caller requested to display the buffer offset for each
+        //  line, display it
+        //
 
-            if (Char == 0 && YoriLibIsNanoServer()) {
-                Char = ' ';
+        if (HexEdit->OffsetWidth == 64) {
+            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x`%08x: "), Offset.HighPart, Offset.LowPart);
+        } else if (HexEdit->OffsetWidth == 32) {
+            String.LengthInChars = YoriLibSPrintfS(String.StartOfString, String.LengthAllocated, _T("%08x: "), Offset.LowPart);
+        }
+
+        for (ColumnIndex = 0; ColumnIndex < String.LengthInChars; ColumnIndex++) {
+            CharInfoBuffer[ColumnIndex].Char.UnicodeChar = String.StartOfString[ColumnIndex];
+            CharInfoBuffer[ColumnIndex].Attributes = TextAttributes;
+
+        }
+        CharInfoBufferPopulated += String.LengthInChars;
+
+        //
+        //  Depending on the requested display format, generate the data.
+        //
+
+        if (HexEdit->BytesPerWord == 1) {
+            CharInfoBufferPopulated += YoriWinHexEditByteLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+        } else if (HexEdit->BytesPerWord == 2) {
+            CharInfoBufferPopulated += YoriWinHexEditWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+        } else if (HexEdit->BytesPerWord == 4) {
+            CharInfoBufferPopulated += YoriWinHexEditDWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+        } else if (HexEdit->BytesPerWord == 8) {
+            CharInfoBufferPopulated += YoriWinHexEditDWordLongLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+        }
+
+        //
+        //  Generate character output.
+        //
+
+        if (CharInfoBufferPopulated < CharInfoBufferAllocated) {
+            Cell = &CharInfoBuffer[CharInfoBufferPopulated];
+            Cell->Char.UnicodeChar = ' ';
+            Cell->Attributes = TextAttributes;
+            CharInfoBufferPopulated++;
+
+            for (WordIndex = 0;
+                 WordIndex < HexEdit->BytesPerLine && CharInfoBufferPopulated < CharInfoBufferAllocated;
+                 WordIndex++, CharInfoBufferPopulated++) {
+                if (WordIndex < LineLength) {
+                    CharToDisplay = SourceBuffer[WordIndex];
+                    if (!YoriLibIsCharPrintable(CharToDisplay)) {
+                        CharToDisplay = '.';
+                    }
+                } else {
+                    CharToDisplay = ' ';
+                }
+
+                ASSERT(CharToDisplay != '\0');
+                Cell = &CharInfoBuffer[CharInfoBufferPopulated];
+                Cell->Char.UnicodeChar = CharToDisplay;
+                Cell->Attributes = TextAttributes;
             }
-
-            YoriWinSetControlClientCell(&HexEdit->Ctrl, ColumnIndex, RowIndex, Char, TextAttributes);
         }
 
-        //
-        //  Unless a tab is present, this is a no-op
-        //
+        TextAttributes = WindowAttributes;
+        for (ColumnIndex = 0; ColumnIndex < ClientSize->X && ColumnIndex + HexEdit->ViewportLeft < CharInfoBufferPopulated; ColumnIndex++) {
 
-        YoriLibFreeStringContents(&Line);
+            Cell = &CharInfoBuffer[ColumnIndex + HexEdit->ViewportLeft];
+            YoriWinSetControlClientCell(&HexEdit->Ctrl,
+                                        ColumnIndex,
+                                        RowIndex,
+                                        Cell->Char.UnicodeChar,
+                                        Cell->Attributes);
+        }
     }
     for (; ColumnIndex < ClientSize->X; ColumnIndex++) {
         YoriWinSetControlClientCell(&HexEdit->Ctrl, ColumnIndex, RowIndex, ' ', WindowAttributes);
     }
+
+    YoriLibFreeStringContents(&String);
 }
 
 /**
@@ -2703,7 +3108,7 @@ YoriWinHexEditCursorRight(
     BufferOffset = BufferOffset * HexEdit->BytesPerLine + ByteOffset;
 
     YoriWinHexEditNextCellSameType(HexEdit, CellType, BufferOffset, BitShift, &NewCursorLine, &NewCursorOffset);
-    
+
     //
     //  If the cursor is currently on the last byte, check if the new cell
     //  would be beyond the last byte and stop
