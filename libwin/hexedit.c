@@ -3,7 +3,7 @@
  *
  * Yori window hexadecimal edit control
  *
- * Copyright (c) 2020-2022 Malcolm J. Smith
+ * Copyright (c) 2020-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,11 +30,33 @@
 #include "winpriv.h"
 
 /**
- When reallocating a line, add this many extra characters on the assumption
- that the user is actively working on the line and another modification
- that needs space is likely.  This value is arbitrary.
+ Information about the selection region within a hex edit control.
  */
-#define YORI_WIN_HEX_EDIT_LINE_PADDING (0x40)
+typedef struct _YORI_WIN_HEX_EDIT_SELECT {
+
+    /**
+     Indicates if a selection is currently active, and if so, what caused the
+     activation.
+     */
+    enum {
+        YoriWinHexEditSelectNotActive = 0,
+        YoriWinHexEditSelectActive = 1
+    } Active;
+
+
+    /**
+     The first byte of the selection range.  This byte is included in the
+     selection.
+     */
+    DWORDLONG FirstByteOffset;
+
+    /**
+     The last byte of the selection range.  This byte is included in the
+     selection.
+     */
+    DWORDLONG LastByteOffset;
+
+} YORI_WIN_HEX_EDIT_SELECT, *PYORI_WIN_HEX_EDIT_SELECT;
 
 /**
  A structure describing the contents of a hex edit control.
@@ -126,6 +148,12 @@ typedef struct _YORI_WIN_CTRL_HEX_EDIT {
      on paint.
      */
     DWORD LastDirtyLine;
+
+    /**
+     Specifies the selection state of text within the multiline edit control.
+     This is encapsulated into a structure purely for readability.
+     */
+    YORI_WIN_HEX_EDIT_SELECT Selection;
 
     /**
      Records the last observed mouse location when a mouse selection is
@@ -763,6 +791,48 @@ YoriWinHexEditHexDigitFromValue(
     return (TCHAR)(Value + '0');
 }
 
+/**
+ Return a color for the cell, based on whether the cell is within a selection
+ range.
+
+ @param HexEdit Pointer to the hex edit control.
+
+ @param Offset The offset within the buffer that the cell describes.
+
+ @param PaddingAfter If TRUE, the cell is visually after Offset but before
+        Offset + 1.  This is used to extend the highlight across whitespace
+        between two selected words.
+
+ @return The color to use to display the cell.
+ */
+WORD
+YoriWinHexEditSelectionColor(
+    __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
+    __in DWORDLONG Offset,
+    __in BOOLEAN PaddingAfter
+    )
+{
+    WORD Attributes;
+    Attributes = HexEdit->TextAttributes;
+    if (HexEdit->Selection.Active == YoriWinHexEditSelectNotActive) {
+        return Attributes;
+    }
+
+    if (Offset >= HexEdit->Selection.FirstByteOffset && 
+        Offset <= HexEdit->Selection.LastByteOffset) {
+
+        if (PaddingAfter && Offset == HexEdit->Selection.LastByteOffset) {
+            return Attributes;
+        }
+
+        Attributes = (WORD)((Attributes & 0xFF00) |
+                            ((Attributes & 0xF0) >> 4) |
+                            ((Attributes & 0x0F) << 4));
+    }
+
+    return Attributes;
+}
+
 
 /**
  Generate a line in units of one UCHAR.
@@ -773,7 +843,8 @@ YoriWinHexEditHexDigitFromValue(
 
  @param OutputSize The length of the output buffer, in bytes.
 
- @param Buffer Pointer to the start of the buffer to render.
+ @param Offset The offset within the hex edit control's buffer to display
+        data from.
 
  @param BytesToDisplay Number of bytes to display.
 
@@ -784,7 +855,7 @@ YoriWinHexEditByteLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
     __in DWORD OutputSize,
-    __in_ecount(BytesToDisplay) UCHAR CONST * Buffer,
+    __in DWORDLONG Offset,
     __in DWORD BytesToDisplay
     )
 {
@@ -794,6 +865,7 @@ YoriWinHexEditByteLine(
     DWORD ByteIndex;
     DWORD OutputIndex = 0;
     DWORD WordCount;
+    UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
     if (BytesToDisplay > HexEdit->BytesPerLine) {
@@ -801,9 +873,12 @@ YoriWinHexEditByteLine(
     }
 
     WordCount = HexEdit->BytesPerLine / sizeof(WordToDisplay);
+    ASSERT(WordCount * 2 * sizeof(WordToDisplay) + 1 <= OutputSize);
     if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
         return 0;
     }
+
+    Buffer = &HexEdit->Buffer[Offset];
 
     for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
 
@@ -821,11 +896,11 @@ YoriWinHexEditByteLine(
             PCHAR_INFO Subset;
             Subset = &Output[OutputIndex];
             Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue(WordToDisplay >> 4);
-            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex, FALSE);
             Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue(WordToDisplay & 0x0f);
-            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex, FALSE);
             Subset[2].Char.UnicodeChar = ' ';
-            Subset[2].Attributes = HexEdit->TextAttributes;
+            Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex, TRUE);
             OutputIndex = OutputIndex + 3;
         } else {
             for (ByteIndex = 0;
@@ -851,7 +926,8 @@ YoriWinHexEditByteLine(
 
  @param OutputSize The length of the output buffer, in bytes.
 
- @param Buffer Pointer to the start of the buffer to render.
+ @param Offset The offset within the hex edit control's buffer to display
+        data from.
 
  @param BytesToDisplay Number of bytes to display.
 
@@ -862,7 +938,7 @@ YoriWinHexEditWordLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
     __in DWORD OutputSize,
-    __in UCHAR CONST * Buffer,
+    __in DWORDLONG Offset,
     __in DWORD BytesToDisplay
     )
 {
@@ -872,6 +948,7 @@ YoriWinHexEditWordLine(
     DWORD ByteIndex;
     DWORD OutputIndex = 0;
     DWORD WordCount;
+    UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
     if (BytesToDisplay > HexEdit->BytesPerLine) {
@@ -882,6 +959,8 @@ YoriWinHexEditWordLine(
     if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
         return 0;
     }
+
+    Buffer = &HexEdit->Buffer[Offset];
 
     for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
 
@@ -899,15 +978,15 @@ YoriWinHexEditWordLine(
             PCHAR_INFO Subset;
             Subset = &Output[OutputIndex];
             Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 12) & 0x0f);
-            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
             Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 8) & 0x0f);
-            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
             Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 4) & 0x0f);
-            Subset[2].Attributes = HexEdit->TextAttributes;
+            Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay) & 0x0f);
-            Subset[3].Attributes = HexEdit->TextAttributes;
+            Subset[3].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[4].Char.UnicodeChar = ' ';
-            Subset[4].Attributes = HexEdit->TextAttributes;
+            Subset[4].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, TRUE);
             OutputIndex = OutputIndex + 5;
         } else {
             for (ByteIndex = 0;
@@ -934,7 +1013,8 @@ YoriWinHexEditWordLine(
 
  @param OutputSize The length of the output buffer, in bytes.
 
- @param Buffer Pointer to the start of the buffer to render.
+ @param Offset The offset within the hex edit control's buffer to display
+        data from.
 
  @param BytesToDisplay Number of bytes to display.
 
@@ -945,7 +1025,7 @@ YoriWinHexEditDWordLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
     __in DWORD OutputSize,
-    __in UCHAR CONST * Buffer,
+    __in DWORDLONG Offset,
     __in DWORD BytesToDisplay
     )
 {
@@ -955,6 +1035,7 @@ YoriWinHexEditDWordLine(
     DWORD ByteIndex;
     DWORD OutputIndex = 0;
     DWORD WordCount;
+    UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
     if (BytesToDisplay > HexEdit->BytesPerLine) {
@@ -965,6 +1046,8 @@ YoriWinHexEditDWordLine(
     if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
         return 0;
     }
+
+    Buffer = &HexEdit->Buffer[Offset];
 
     for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
 
@@ -982,23 +1065,23 @@ YoriWinHexEditDWordLine(
             PCHAR_INFO Subset;
             Subset = &Output[OutputIndex];
             Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 28) & 0x0f);
-            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
             Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 24) & 0x0f);
-            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
             Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 20) & 0x0f);
-            Subset[2].Attributes = HexEdit->TextAttributes;
+            Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
             Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 16) & 0x0f);
-            Subset[3].Attributes = HexEdit->TextAttributes;
+            Subset[3].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
             Subset[4].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 12) & 0x0f);
-            Subset[4].Attributes = HexEdit->TextAttributes;
+            Subset[4].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
             Subset[5].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 8) & 0x0f);
-            Subset[5].Attributes = HexEdit->TextAttributes;
+            Subset[5].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
             Subset[6].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 4) & 0x0f);
-            Subset[6].Attributes = HexEdit->TextAttributes;
+            Subset[6].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[7].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay) & 0x0f);
-            Subset[7].Attributes = HexEdit->TextAttributes;
+            Subset[7].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[8].Char.UnicodeChar = ' ';
-            Subset[8].Attributes = HexEdit->TextAttributes;
+            Subset[8].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, TRUE);
             OutputIndex = OutputIndex + 9;
         } else {
             for (ByteIndex = 0;
@@ -1024,7 +1107,8 @@ YoriWinHexEditDWordLine(
 
  @param OutputSize The length of the output buffer, in bytes.
 
- @param Buffer Pointer to the start of the buffer to render.
+ @param Offset The offset within the hex edit control's buffer to display
+        data from.
 
  @param BytesToDisplay Number of bytes to display.
 
@@ -1035,7 +1119,7 @@ YoriWinHexEditDWordLongLine(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit,
     __out_ecount(OutputSize) PCHAR_INFO Output,
     __in DWORD OutputSize,
-    __in UCHAR CONST * Buffer,
+    __in DWORDLONG Offset,
     __in DWORD BytesToDisplay
     )
 {
@@ -1045,6 +1129,7 @@ YoriWinHexEditDWordLongLine(
     DWORD ByteIndex;
     DWORD OutputIndex = 0;
     DWORD WordCount;
+    UCHAR CONST * Buffer;
 
     ASSERT(BytesToDisplay <= HexEdit->BytesPerLine);
     if (BytesToDisplay > HexEdit->BytesPerLine) {
@@ -1055,6 +1140,8 @@ YoriWinHexEditDWordLongLine(
     if (WordCount * 2 * sizeof(WordToDisplay) + 1 > OutputSize) {
         return 0;
     }
+
+    Buffer = &HexEdit->Buffer[Offset];
 
     for (WordIndex = 0; WordIndex < WordCount; WordIndex++) {
 
@@ -1076,42 +1163,42 @@ YoriWinHexEditDWordLongLine(
             ValToDisplay = DisplayValue.HighPart;
             Subset = &Output[OutputIndex];
             Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 28) & 0x0f);
-            Subset[0].Attributes = HexEdit->TextAttributes;
+            Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 7, FALSE);
             Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 24) & 0x0f);
-            Subset[1].Attributes = HexEdit->TextAttributes;
+            Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 7, FALSE);
             Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 20) & 0x0f);
-            Subset[2].Attributes = HexEdit->TextAttributes;
+            Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 6, FALSE);
             Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 16) & 0x0f);
-            Subset[3].Attributes = HexEdit->TextAttributes;
+            Subset[3].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 6, FALSE);
             Subset[4].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 12) & 0x0f);
-            Subset[4].Attributes = HexEdit->TextAttributes;
+            Subset[4].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 5, FALSE);
             Subset[5].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 8) & 0x0f);
-            Subset[5].Attributes = HexEdit->TextAttributes;
+            Subset[5].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 5, FALSE);
             Subset[6].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 4) & 0x0f);
-            Subset[6].Attributes = HexEdit->TextAttributes;
+            Subset[6].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 4, FALSE);
             Subset[7].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay) & 0x0f);
-            Subset[7].Attributes = HexEdit->TextAttributes;
+            Subset[7].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 4, FALSE);
             Subset[8].Char.UnicodeChar = '`';
-            Subset[8].Attributes = HexEdit->TextAttributes;
+            Subset[8].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 4, TRUE);
             ValToDisplay = DisplayValue.LowPart;
             Subset[9].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 28) & 0x0f);
-            Subset[9].Attributes = HexEdit->TextAttributes;
+            Subset[9].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
             Subset[10].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 24) & 0x0f);
-            Subset[10].Attributes = HexEdit->TextAttributes;
+            Subset[10].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
             Subset[11].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 20) & 0x0f);
-            Subset[11].Attributes = HexEdit->TextAttributes;
+            Subset[11].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
             Subset[12].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 16) & 0x0f);
-            Subset[12].Attributes = HexEdit->TextAttributes;
+            Subset[12].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
             Subset[13].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 12) & 0x0f);
-            Subset[13].Attributes = HexEdit->TextAttributes;
+            Subset[13].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
             Subset[14].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 8) & 0x0f);
-            Subset[14].Attributes = HexEdit->TextAttributes;
+            Subset[14].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
             Subset[15].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 4) & 0x0f);
-            Subset[15].Attributes = HexEdit->TextAttributes;
+            Subset[15].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[16].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay) & 0x0f);
-            Subset[16].Attributes = HexEdit->TextAttributes;
-            Subset[17].Char.UnicodeChar = '`';
-            Subset[17].Attributes = HexEdit->TextAttributes;
+            Subset[16].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
+            Subset[17].Char.UnicodeChar = ' ';
+            Subset[17].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 7, TRUE);
             OutputIndex = OutputIndex + 18;
         } else {
             for (ByteIndex = 0;
@@ -1394,13 +1481,13 @@ YoriWinHexEditPaintSingleLine(
         //
 
         if (HexEdit->BytesPerWord == 1) {
-            CharInfoBufferPopulated += YoriWinHexEditByteLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+            CharInfoBufferPopulated += YoriWinHexEditByteLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
         } else if (HexEdit->BytesPerWord == 2) {
-            CharInfoBufferPopulated += YoriWinHexEditWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+            CharInfoBufferPopulated += YoriWinHexEditWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
         } else if (HexEdit->BytesPerWord == 4) {
-            CharInfoBufferPopulated += YoriWinHexEditDWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+            CharInfoBufferPopulated += YoriWinHexEditDWordLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
         } else if (HexEdit->BytesPerWord == 8) {
-            CharInfoBufferPopulated += YoriWinHexEditDWordLongLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, SourceBuffer, LineLength);
+            CharInfoBufferPopulated += YoriWinHexEditDWordLongLine(HexEdit, &CharInfoBuffer[CharInfoBufferPopulated], CharInfoBufferAllocated - CharInfoBufferPopulated, Offset.QuadPart, LineLength);
         }
 
         //
@@ -1428,7 +1515,7 @@ YoriWinHexEditPaintSingleLine(
                 ASSERT(CharToDisplay != '\0');
                 Cell = &CharInfoBuffer[CharInfoBufferPopulated];
                 Cell->Char.UnicodeChar = CharToDisplay;
-                Cell->Attributes = TextAttributes;
+                Cell->Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset.QuadPart + WordIndex, FALSE);
             }
         }
 
@@ -1581,6 +1668,32 @@ YoriWinHexEditExpandDirtyRange(
     if (NewLastDirtyLine > HexEdit->LastDirtyLine) {
         HexEdit->LastDirtyLine = NewLastDirtyLine;
     }
+}
+
+/**
+ Indicate that no range is selected in a hex edit control.
+
+ @param HexEdit Pointer to the hex edit control.
+ */
+VOID
+YoriWinHexEditClearSelection(
+    __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
+    )
+{
+
+    DWORD FirstDirtyLine;
+    DWORD LastDirtyLine;
+
+
+    if (HexEdit->Selection.Active == YoriWinHexEditSelectNotActive) {
+        return;
+    }
+
+    FirstDirtyLine = (DWORD)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
+    LastDirtyLine = (DWORD)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
+    HexEdit->Selection.Active = YoriWinHexEditSelectNotActive;
+
+    YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
 }
 
 /**
@@ -3074,6 +3187,7 @@ YoriWinHexEditCursorLeft(
 
     if (NewCursorLine != HexEdit->CursorLine || NewCursorOffset != HexEdit->CursorOffset) {
 
+        YoriWinHexEditClearSelection(HexEdit);
         YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorOffset, NewCursorLine);
         YoriWinHexEditEnsureCursorVisible(HexEdit);
         YoriWinHexEditPaint(HexEdit);
@@ -3123,6 +3237,7 @@ YoriWinHexEditCursorRight(
         }
     }
 
+    YoriWinHexEditClearSelection(HexEdit);
     YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorOffset, NewCursorLine);
     YoriWinHexEditEnsureCursorVisible(HexEdit);
     YoriWinHexEditPaint(HexEdit);
@@ -3156,6 +3271,7 @@ YoriWinHexEditCursorHome(
         BitShift = HexEdit->BytesPerWord * 8 - 4;
     }
 
+    YoriWinHexEditClearSelection(HexEdit);
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
                                                    CellType,
                                                    BufferOffset,
@@ -3198,6 +3314,7 @@ YoriWinHexEditCursorEnd(
     }
     BitShift = 0;
 
+    YoriWinHexEditClearSelection(HexEdit);
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
                                                    CellType,
                                                    BufferOffset,
@@ -3231,6 +3348,7 @@ YoriWinHexEditCursorUp(
     BufferOffset = BufferOffset * HexEdit->BytesPerLine + ByteOffset;
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
 
+    YoriWinHexEditClearSelection(HexEdit);
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
                                                    CellType,
                                                    BufferOffset,
@@ -3264,6 +3382,7 @@ YoriWinHexEditCursorDown(
     }
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
 
+    YoriWinHexEditClearSelection(HexEdit);
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
                                                    CellType,
                                                    BufferOffset,
@@ -3295,6 +3414,7 @@ YoriWinHexEditCursorCtrlHome(
         BitShift = HexEdit->BytesPerWord * 8 - 4;
     }
 
+    YoriWinHexEditClearSelection(HexEdit);
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
                                                    CellType,
                                                    BufferOffset,
@@ -3327,6 +3447,7 @@ YoriWinHexEditCursorCtrlEnd(
     BitShift = 0;
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
 
+    YoriWinHexEditClearSelection(HexEdit);
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
                                                    CellType,
                                                    BufferOffset,
@@ -3371,6 +3492,7 @@ YoriWinHexEditMouseDown(
         (CellType == YoriWinHexEditCellTypeHexDigit ||
          CellType == YoriWinHexEditCellTypeCharValue)) {
 
+        YoriWinHexEditClearSelection(HexEdit);
         YoriWinHexEditSetCursorLocationInternal(HexEdit, NewCursorChar, NewCursorLine);
 
         YoriWinHexEditEnsureCursorVisible(HexEdit);
@@ -3545,6 +3667,7 @@ YoriWinHexEditEventHandler(
                         Event->KeyDown.Char != '\n') {
 
                         if (!HexEdit->ReadOnly) {
+                            YoriWinHexEditClearSelection(HexEdit);
                             YoriWinHexEditAddChar(HexEdit, Event->KeyDown.Char);
                             YoriWinHexEditEnsureCursorVisible(HexEdit);
                             YoriWinHexEditPaint(HexEdit);
@@ -3593,6 +3716,7 @@ YoriWinHexEditEventHandler(
                 HexEdit->NumericKeyValue = 0;
                 HexEdit->NumericKeyType = YoriLibNumericKeyAscii;
 
+                YoriWinHexEditClearSelection(HexEdit);
                 YoriWinHexEditAddChar(HexEdit, Event->KeyDown.Char);
                 YoriWinHexEditEnsureCursorVisible(HexEdit);
                 YoriWinHexEditPaint(HexEdit);
@@ -3806,6 +3930,57 @@ YoriWinHexEditSetCursorLocation(
     }
     return YoriWinHexEditSetCursorToBufferLocation(HexEdit, CellType, BufferOffset, BitShift);
 }
+
+/**
+ Set the range of selected bytes to an explicitly provided range.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param FirstByteOffset The first byte to include in the selected range.
+
+ @param LastByteOffset The last byte to include in the selected range.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditSetSelectionRange(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORDLONG FirstByteOffset,
+    __in DWORDLONG LastByteOffset
+    )
+{
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    DWORD FirstDirtyLine;
+    DWORD LastDirtyLine;
+
+    HexEdit = (PYORI_WIN_CTRL_HEX_EDIT)CtrlHandle;
+
+    //
+    //  Clear the previous selection, which is really a way to update the
+    //  repaint region to redraw where it was if it existed
+    //
+
+    YoriWinHexEditClearSelection(HexEdit);
+
+    HexEdit->Selection.Active = YoriWinHexEditSelectActive;
+
+    if (FirstByteOffset >= HexEdit->BufferValid ||
+        LastByteOffset >= HexEdit->BufferValid) {
+
+        return FALSE;
+    }
+
+    HexEdit->Selection.FirstByteOffset = FirstByteOffset;
+    HexEdit->Selection.LastByteOffset = LastByteOffset;
+
+    FirstDirtyLine = (DWORD)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
+    LastDirtyLine = (DWORD)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
+
+    YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
+
+    YoriWinHexEditPaint(HexEdit);
+    return TRUE;
+}
+
 
 /**
  Create a hex edit control and add it to a window.  This is destroyed

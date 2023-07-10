@@ -1070,6 +1070,7 @@ HexEditFindNextFromCurrentPosition(
     if (HexEditFindNextMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
         HexEditByteOffsetToBufferOffsetAndShift(HexEditContext, FindOffset, &BufferOffset, &BitShift);
         YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, BufferOffset, BitShift);
+        YoriWinHexEditSetSelectionRange(HexEditContext->HexEdit, FindOffset, FindOffset + HexEditContext->SearchBufferLength - 1);
         YoriLibDereference(Buffer);
         return TRUE;
     }
@@ -1126,6 +1127,7 @@ HexEditFindPreviousFromCurrentPosition(
     if (HexEditFindPreviousMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
         HexEditByteOffsetToBufferOffsetAndShift(HexEditContext, FindOffset, &BufferOffset, &BitShift);
         YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, BufferOffset, BitShift);
+        YoriWinHexEditSetSelectionRange(HexEditContext->HexEdit, FindOffset, FindOffset + HexEditContext->SearchBufferLength - 1);
         YoriLibDereference(Buffer);
         return TRUE;
     }
