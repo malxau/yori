@@ -315,6 +315,14 @@ YoriWinHexEditGetDataNoCopy(
     __out PDWORDLONG BufferLength
     );
 
+__success(return)
+BOOLEAN
+YoriWinHexEditGetSelectedData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PVOID * Data,
+    __out PDWORDLONG DataLength
+    );
+
 BOOLEAN
 YoriWinHexEditGetModifyState(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle
@@ -391,10 +399,59 @@ YoriWinHexEditGetCursorLocation(
 
 __success(return)
 BOOLEAN
+YoriWinHexEditGetVisualCursorLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PDWORD CursorOffset,
+    __out PDWORD CursorLine
+    );
+
+VOID
+YoriWinHexEditGetViewportLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PDWORD ViewportLeft,
+    __out PDWORD ViewportTop
+    );
+
+VOID
+YoriWinHexEditSetViewportLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORD NewViewportLeft,
+    __in DWORD NewViewportTop
+    );
+
+VOID
+YoriWinHexEditClearSelection(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+BOOLEAN
+YoriWinHexEditSelectionActive(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    );
+
+__success(return)
+BOOLEAN
 YoriWinHexEditSetSelectionRange(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in DWORDLONG FirstByteOffset,
     __in DWORDLONG LastByteOffset
+    );
+
+__success(return)
+BOOLEAN
+YoriWinHexEditDeleteData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORDLONG DataOffset,
+    __in DWORDLONG Length
+    );
+
+__success(return)
+BOOLEAN
+YoriWinHexEditInsertData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORDLONG DataOffset,
+    __in PVOID Data,
+    __in DWORDLONG Length
     );
 
 PYORI_WIN_CTRL_HANDLE

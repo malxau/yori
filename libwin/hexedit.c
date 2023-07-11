@@ -1671,32 +1671,6 @@ YoriWinHexEditExpandDirtyRange(
 }
 
 /**
- Indicate that no range is selected in a hex edit control.
-
- @param HexEdit Pointer to the hex edit control.
- */
-VOID
-YoriWinHexEditClearSelection(
-    __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
-    )
-{
-
-    DWORD FirstDirtyLine;
-    DWORD LastDirtyLine;
-
-
-    if (HexEdit->Selection.Active == YoriWinHexEditSelectNotActive) {
-        return;
-    }
-
-    FirstDirtyLine = (DWORD)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
-    LastDirtyLine = (DWORD)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
-    HexEdit->Selection.Active = YoriWinHexEditSelectNotActive;
-
-    YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
-}
-
-/**
  Modify the cursor location within the hex edit control.
 
  @param HexEdit Pointer to the hex edit control.
@@ -1881,7 +1855,6 @@ YoriWinHexEditToggleInsert(
 //  BUFFER MANIPULATION FUNCTIONS
 //  =========================================
 //
-//
 
 /**
  Convert a UTF16 input character into a byte to write into the buffer.  This
@@ -1900,9 +1873,7 @@ YoriWinHexEditInputCharToByte(
 }
 
 /**
- Delete a range of characters, which may span lines.  This is used when
- deleting a selection.  When deleting ranges that are not entire lines,
- this implies merging the end of one line with the beginning of another.
+ Delete a single cell.
 
  @param HexEdit Pointer to the hex edit control containing the
         contents of the buffer.
@@ -2524,6 +2495,89 @@ YoriWinHexEditGetDataNoCopy(
 //
 
 /**
+ Indicate that no range is selected in a hex edit control.
+
+ @param CtrlHandle Pointer to the hex edit control.
+ */
+VOID
+YoriWinHexEditClearSelection(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    DWORD FirstDirtyLine;
+    DWORD LastDirtyLine;
+
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    if (HexEdit->Selection.Active == YoriWinHexEditSelectNotActive) {
+        return;
+    }
+
+    FirstDirtyLine = (DWORD)(HexEdit->Selection.FirstByteOffset / HexEdit->BytesPerLine);
+    LastDirtyLine = (DWORD)(HexEdit->Selection.LastByteOffset / HexEdit->BytesPerLine);
+    HexEdit->Selection.Active = YoriWinHexEditSelectNotActive;
+
+    YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
+}
+
+/**
+ Return a copy of the selected data in the control.  The buffer is allocated
+ within this routine and should be freed by the caller with
+ @ref YoriLibDereference.  If no data is selected, this routine returns
+ FALSE.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param Data On successful completion, updated to point to a newly allocated
+        buffer containing the selected data.
+
+ @param DataLength On successful completion, updated to point to the length
+        of the data.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditGetSelectedData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PVOID * Data,
+    __out PDWORDLONG DataLength
+    )
+{
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    PYORI_WIN_CTRL Ctrl;
+    ULARGE_INTEGER LocalDataLength;
+    PUCHAR Buffer;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    if (HexEdit->Selection.Active == YoriWinHexEditSelectNotActive) {
+        return FALSE;
+    }
+
+    LocalDataLength.QuadPart = HexEdit->Selection.LastByteOffset - HexEdit->Selection.FirstByteOffset + 1;
+    if (LocalDataLength.HighPart != 0) {
+        return FALSE;
+    }
+
+    Buffer = YoriLibReferencedMalloc(LocalDataLength.LowPart);
+    if (Buffer == NULL) {
+        return FALSE;
+    }
+
+    memcpy(Buffer, &HexEdit->Buffer[HexEdit->Selection.FirstByteOffset], LocalDataLength.LowPart);
+    *Data = Buffer;
+    *DataLength = LocalDataLength.QuadPart;
+
+    return TRUE;
+}
+
+/**
  Set the color attributes of the hex edit control.
 
  @param CtrlHandle Pointer to the hex edit control.
@@ -2947,6 +3001,157 @@ YoriWinHexEditGetCursorLocation(
     }
 
     return FALSE;
+}
+
+/**
+ Return the cursor offset, expressed in terms of the location within the
+ control in horizontal and vertical offsets.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param CursorOffset On successful completion, updated to refer to the offset
+        within the control.
+
+ @param CursorLine On successful completion, updated to refer to the line
+        within the control.
+
+ @return TRUE to indicate successful completion, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditGetVisualCursorLocation(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __out PDWORD CursorOffset,
+    __out PDWORD CursorLine
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    *CursorOffset = HexEdit->CursorOffset;
+    *CursorLine = HexEdit->CursorLine;
+
+    return TRUE;
+}
+
+/**
+ Remove a range of data from a hex edit control.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param DataOffset The offset of the first byte to remove within the hex edit
+        control.
+
+ @param Length The number of bytes to remove from the hex edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditDeleteData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORDLONG DataOffset,
+    __in DWORDLONG Length
+    )
+{
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    PYORI_WIN_CTRL Ctrl;
+    DWORDLONG LengthToRemove;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    if (DataOffset >= HexEdit->BufferValid) {
+        return FALSE;
+    }
+
+    LengthToRemove = Length;
+    if (DataOffset + LengthToRemove > HexEdit->BufferValid) {
+        LengthToRemove = HexEdit->BufferValid - DataOffset;
+    }
+
+    if (HexEdit->BufferValid > DataOffset + LengthToRemove) {
+        memmove(&HexEdit->Buffer[DataOffset],
+                &HexEdit->Buffer[DataOffset + LengthToRemove],
+                (DWORD)(HexEdit->BufferValid - DataOffset - LengthToRemove));
+    }
+
+    HexEdit->BufferValid = HexEdit->BufferValid - LengthToRemove;
+    YoriWinHexEditExpandDirtyRange(HexEdit, (DWORD)(DataOffset / HexEdit->BytesPerLine), (DWORD)-1);
+    return TRUE;
+}
+
+/**
+ Insert a range of data into a hex edit control.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param DataOffset The offset of the first byte to be updated with new data.
+
+ @param Data Pointer to the new data to insert.
+
+ @param Length The number of bytes to insert into the hex edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditInsertData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORDLONG DataOffset,
+    __in PVOID Data,
+    __in DWORDLONG Length
+    )
+{
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    if (DataOffset >= HexEdit->BufferValid) {
+        return FALSE;
+    }
+
+    if (!YoriWinHexEditInsertSpaceInBuffer(HexEdit, DataOffset, (DWORD)Length)) {
+        return FALSE;
+    }
+
+    memmove(&HexEdit->Buffer[DataOffset],
+            Data,
+            (DWORD)Length);
+
+    YoriWinHexEditExpandDirtyRange(HexEdit, (DWORD)(DataOffset / HexEdit->BytesPerLine), (DWORD)-1);
+    return TRUE;
+}
+
+/**
+ Return TRUE if a selection region is active, or FALSE if no selection is
+ currently active.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @return TRUE if a selection region is active, or FALSE if no selection is
+         currently active.
+ */
+BOOLEAN
+YoriWinHexEditSelectionActive(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle
+    )
+{
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    PYORI_WIN_CTRL Ctrl;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    if (HexEdit->Selection.Active == YoriWinHexEditSelectNotActive) {
+        return FALSE;
+    }
+    return TRUE;
 }
 
 //
