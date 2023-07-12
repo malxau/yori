@@ -29,7 +29,7 @@
 #include <yoriwin.h>
 
 /**
- A callback invoked when the ok button is clicked.
+ A callback invoked when the change one button is clicked.
 
  @param Ctrl Pointer to the button that was clicked.
  */
@@ -44,7 +44,7 @@ YoriDlgReplaceChangeOneButtonClicked(
 }
 
 /**
- A callback invoked when the ok button is clicked.
+ A callback invoked when the change all button is clicked.
 
  @param Ctrl Pointer to the button that was clicked.
  */
