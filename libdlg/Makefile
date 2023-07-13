@@ -13,6 +13,7 @@ OBJS=\
 	 input.obj    \
 	 msgbox.obj   \
 	 replace.obj  \
+	 replhex.obj  \
 
 yoridlg.lib: $(OBJS)
 	@echo $@

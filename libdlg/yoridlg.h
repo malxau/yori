@@ -152,6 +152,30 @@ YoriDlgMessageBox(
     );
 
 WORD
+YoriDlgReplaceHexGetDialogHeight(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle
+    );
+
+__success(return)
+BOOLEAN
+YoriDlgReplaceHex(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in WORD DesiredLeft,
+    __in WORD DesiredTop,
+    __in PYORI_STRING Title,
+    __in_opt PUCHAR InitialBeforeData,
+    __in DWORDLONG InitialBeforeDataLength,
+    __in_opt PUCHAR InitialAfterData,
+    __in DWORDLONG InitialAfterDataLength,
+    __in DWORD InitialBytesPerWord,
+    __out PBOOLEAN ReplaceAll,
+    __out PUCHAR * OldData,
+    __out PDWORDLONG OldDataLength,
+    __out PUCHAR * NewData,
+    __out PDWORDLONG NewDataLength
+    );
+
+WORD
 YoriDlgReplaceGetDialogHeight(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle
     );
