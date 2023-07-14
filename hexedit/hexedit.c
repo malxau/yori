@@ -1018,6 +1018,57 @@ HexEditByteOffsetToBufferOffsetAndShift(
 }
 
 /**
+ Find the next search match from a specified byte offset.
+
+ @param HexEditContext Pointer to the hexedit context, implicitly containing
+        the buffer to search.
+
+ @param StartOffset The byte offset to search within the buffer.
+
+ @param MatchOffset If a new match is found, updated to contain the offset of
+        the newly found match.
+
+ @return TRUE to indicate a match was found, FALSE if no match was found.
+ */
+__success(return)
+BOOLEAN
+HexEditFindNextFromPosition(
+    __in PHEXEDIT_CONTEXT HexEditContext,
+    __in DWORDLONG StartOffset,
+    __out PDWORDLONG MatchOffset
+    )
+{
+    PUCHAR Buffer;
+    DWORDLONG BufferLength;
+    DWORDLONG FindOffset;
+
+    YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
+
+    //
+    //  This can happen if the hex edit control contains no data.  In that
+    //  case, no match is found.
+    //
+
+    if (Buffer == NULL) {
+        return FALSE;
+    }
+
+    if (StartOffset >= BufferLength) {
+        YoriLibDereference(Buffer);
+        return FALSE;
+    }
+
+    if (HexEditFindNextMemorySubset(Buffer, BufferLength, StartOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
+        *MatchOffset = FindOffset;
+        YoriLibDereference(Buffer);
+        return TRUE;
+    }
+
+    YoriLibDereference(Buffer);
+    return FALSE;
+}
+
+/**
  Find the next search match from the cursor position.
 
  @param HexEditContext Pointer to the hexedit context, implicitly containing
@@ -1034,26 +1085,12 @@ HexEditFindNextFromCurrentPosition(
     __in BOOLEAN StartAtNextByte
     )
 {
-    PUCHAR Buffer;
-    DWORDLONG BufferLength;
     DWORDLONG BufferOffset;
+    DWORDLONG FindOffset;
     DWORD BitShift;
     BOOLEAN AsChar;
-    DWORDLONG FindOffset;
-
-    YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength);
-
-    //
-    //  This can happen if the hex edit control contains no data.  In that
-    //  case, no match is found.
-    //
-
-    if (Buffer == NULL) {
-        return FALSE;
-    }
 
     if (!YoriWinHexEditGetCursorLocation(HexEditContext->HexEdit, &AsChar, &BufferOffset, &BitShift)) {
-        YoriLibDereference(Buffer);
         return FALSE;
     }
 
@@ -1062,20 +1099,13 @@ HexEditFindNextFromCurrentPosition(
         BufferOffset = BufferOffset + 1;
     }
 
-    if (BufferOffset >= BufferLength) {
-        YoriLibDereference(Buffer);
-        return FALSE;
-    }
-
-    if (HexEditFindNextMemorySubset(Buffer, BufferLength, BufferOffset, HexEditContext->SearchBuffer, HexEditContext->SearchBufferLength, &FindOffset)) {
+    if (HexEditFindNextFromPosition(HexEditContext, BufferOffset, &FindOffset)) {
         HexEditByteOffsetToBufferOffsetAndShift(HexEditContext, FindOffset, &BufferOffset, &BitShift);
         YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, BufferOffset, BitShift);
         YoriWinHexEditSetSelectionRange(HexEditContext->HexEdit, FindOffset, FindOffset + HexEditContext->SearchBufferLength - 1);
-        YoriLibDereference(Buffer);
         return TRUE;
     }
 
-    YoriLibDereference(Buffer);
     return FALSE;
 }
 
@@ -1277,6 +1307,227 @@ HexEditFindPreviousButtonClicked(
                           0);
     }
 }
+
+/**
+ Free a buffer, update its value to NULL and length to zero.
+
+ @param Buffer Pointer to the pointer containing the buffer to free.  This
+        will be updated within this routine.
+
+ @param BufferLength Pointer to the length of the buffer.  This will be
+        updated within this routine.
+ */
+VOID
+HexEditFreeDataBuffer(
+    __in PVOID * Buffer,
+    __in PDWORDLONG BufferLength
+    )
+{
+    PVOID Data;
+    Data = *Buffer;
+    if (Data != NULL) {
+        YoriLibDereference(Data);
+        *Buffer = NULL;
+    }
+
+    *BufferLength = 0;
+}
+
+/**
+ A callback invoked when the change menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditChangeButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgr;
+    YORI_STRING Title;
+    BOOLEAN ReplaceAll;
+    BOOLEAN MatchFound;
+    BOOLEAN AsChar;
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+    DWORDLONG StartOffset;
+    DWORDLONG NextMatchOffset;
+    DWORD BitShift;
+    WORD DialogTop;
+
+    PUCHAR InitialOldData;
+    DWORDLONG InitialOldDataLength;
+    PUCHAR InitialNewData;
+    DWORDLONG InitialNewDataLength;
+    PUCHAR OldData;
+    DWORDLONG OldDataLength;
+    PUCHAR NewData;
+    DWORDLONG NewDataLength;
+
+    InitialOldData = NULL;
+    InitialOldDataLength = 0;
+    InitialNewData = NULL;
+    InitialNewDataLength = 0;
+    OldData = NULL;
+    OldDataLength = 0;
+    NewData = NULL;
+    NewDataLength = 0;
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+    WinMgr = YoriWinGetWindowManagerHandle(Parent);
+    ReplaceAll = FALSE;
+    MatchFound = FALSE;
+
+    YoriWinHexEditGetCursorLocation(HexEditContext->HexEdit, &AsChar, &StartOffset, &BitShift);
+
+    while(TRUE) {
+
+        if (!ReplaceAll) {
+
+            YoriLibConstantString(&Title, _T("Find"));
+
+            //
+            //  Populate the dialog with whatever is selected now, if anything
+            //
+
+            InitialOldData = NULL;
+            InitialOldDataLength = 0;
+            if (OldDataLength > 0) {
+                YoriLibReference(OldData);
+                InitialOldData = OldData;
+                InitialOldDataLength = OldDataLength;
+            } else {
+                if (YoriWinHexEditSelectionActive(HexEditContext->HexEdit)) {
+                    if (!YoriWinHexEditGetSelectedData(HexEditContext->HexEdit, &InitialOldData, &InitialOldDataLength)) {
+                        InitialOldData = NULL;
+                        InitialOldDataLength = 0;
+                    }
+                }
+            }
+
+            //
+            //  Position the viewport so that the selection appears below the
+            //  dialog.
+            //
+
+            DialogTop = (WORD)-1;
+            if (MatchFound && !ReplaceAll) {
+
+                COORD WinMgrSize;
+                COORD ClientSize;
+                DWORD CursorLine;
+                DWORD CursorOffset;
+                DWORD ViewportLeft;
+                DWORD ViewportTop;
+                WORD DialogHeight;
+                WORD RemainingEditHeight;
+
+                if (!YoriWinGetWinMgrDimensions(WinMgr, &WinMgrSize)) {
+                    HexEditFreeDataBuffer(&InitialOldData, &InitialOldDataLength);
+                    HexEditFreeDataBuffer(&InitialNewData, &InitialNewDataLength);
+                    HexEditFreeDataBuffer(&OldData, &OldDataLength);
+                    HexEditFreeDataBuffer(&NewData, &NewDataLength);
+                    break;
+                }
+                DialogHeight = YoriDlgReplaceHexGetDialogHeight(WinMgr);
+                DialogTop = (SHORT)(WinMgrSize.Y - DialogHeight - 1);
+
+                YoriWinGetControlClientSize(HexEditContext->HexEdit, &ClientSize);
+                YoriWinHexEditGetVisualCursorLocation(HexEditContext->HexEdit, &CursorOffset, &CursorLine);
+                YoriWinHexEditGetViewportLocation(HexEditContext->HexEdit, &ViewportLeft, &ViewportTop);
+
+                RemainingEditHeight = (SHORT)(ClientSize.Y - DialogHeight);
+
+                if (CursorLine > (DWORD)(ViewportTop + RemainingEditHeight - 1)) {
+                    ViewportTop = CursorLine - (RemainingEditHeight / 2);
+                    YoriWinHexEditSetViewportLocation(HexEditContext->HexEdit, ViewportLeft, ViewportTop);
+                }
+
+                //
+                //  When replacing one instance, make sure the user can see
+                //  the highlighted text since normal window message
+                //  processing isn't happening while we're looping displaying
+                //  dialogs.  When replacing everything updating the display
+                //  is just overhead.
+                //
+
+                YoriWinDisplayWindowContents(Parent);
+            }
+
+            InitialNewData = NewData;
+            InitialNewDataLength = NewDataLength;
+            NewData = NULL;
+            NewDataLength = 0;
+
+            HexEditFreeDataBuffer(&OldData, &OldDataLength);
+
+            if (!YoriDlgReplaceHex(YoriWinGetWindowManagerHandle(Parent),
+                                   (WORD)-1,
+                                   DialogTop,
+                                   &Title,
+                                   InitialOldData,
+                                   InitialOldDataLength,
+                                   InitialNewData,
+                                   InitialNewDataLength,
+                                   YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit),
+                                   &ReplaceAll,
+                                   &OldData,
+                                   &OldDataLength,
+                                   &NewData,
+                                   &NewDataLength)) {
+
+                HexEditFreeDataBuffer(&InitialOldData, &InitialOldDataLength);
+                HexEditFreeDataBuffer(&InitialNewData, &InitialNewDataLength);
+                HexEditFreeDataBuffer(&OldData, &OldDataLength);
+                HexEditFreeDataBuffer(&NewData, &NewDataLength);
+                break;
+            }
+
+            HexEditFreeDataBuffer(&InitialOldData, &InitialOldDataLength);
+            HexEditFreeDataBuffer(&InitialNewData, &InitialNewDataLength);
+
+            if (OldDataLength == 0) {
+                HexEditFreeDataBuffer(&OldData, &OldDataLength);
+                HexEditFreeDataBuffer(&NewData, &NewDataLength);
+                return;
+            }
+
+            HexEditFreeDataBuffer(&HexEditContext->SearchBuffer, &HexEditContext->SearchBufferLength);
+
+            YoriLibReference(OldData);
+            HexEditContext->SearchBuffer = OldData;
+            HexEditContext->SearchBufferLength = OldDataLength;
+        }
+
+        if (MatchFound) {
+            YoriWinHexEditClearSelection(HexEditContext->HexEdit);
+            YoriWinHexEditDeleteData(HexEditContext->HexEdit, StartOffset, OldDataLength);
+            YoriWinHexEditInsertData(HexEditContext->HexEdit, StartOffset, NewData, NewDataLength);
+            YoriWinHexEditSetModifyState(HexEditContext->HexEdit, TRUE);
+            StartOffset = StartOffset + NewDataLength;
+        }
+
+        if (!HexEditFindNextFromPosition(HexEditContext, StartOffset, &NextMatchOffset)) {
+            break;
+        }
+
+        MatchFound = TRUE;
+
+        //
+        //  MSFIX: In the ReplaceAll case, this is still updating the off
+        //  screen buffer constantly.  Ideally this wouldn't happen, but
+        //  it still needs to be updated once before returning to the user.
+        //
+
+        YoriWinHexEditSetSelectionRange(HexEditContext->HexEdit, NextMatchOffset, NextMatchOffset + NewDataLength - 1);
+        YoriWinHexEditSetCursorLocation(HexEditContext->HexEdit, FALSE, NextMatchOffset, 0);
+        StartOffset = NextMatchOffset;
+    }
+
+    HexEditFreeDataBuffer(&OldData, &OldDataLength);
+    HexEditFreeDataBuffer(&NewData, &NewDataLength);
+}
+
 
 /**
  A callback invoked when the go to menu item is invoked.
@@ -1581,7 +1832,7 @@ HexEditPopulateMenuBar(
     )
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[7];
-    YORI_WIN_MENU_ENTRY SearchMenuEntries[5];
+    YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[4];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[4];
@@ -1645,6 +1896,10 @@ HexEditPopulateMenuBar(
     SearchMenuEntries[MenuIndex].NotifyCallback = HexEditFindPreviousButtonClicked;
     MenuIndex++;
 
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Caption, _T("&Change..."));
+    YoriLibConstantString(&SearchMenuEntries[MenuIndex].Hotkey, _T("Ctrl+R"));
+    SearchMenuEntries[MenuIndex].NotifyCallback = HexEditChangeButtonClicked;
+    MenuIndex++;
 
     SearchMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
     MenuIndex++;
