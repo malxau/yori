@@ -2932,7 +2932,6 @@ YoriWinHexEditSetBytesPerWord(
 
     HexEdit->BytesPerWord = BytesPerWord;
 
-
     YoriWinHexEditSetCursorToBufferLocation(HexEdit, CellType, BufferOffset, BitShift);
 
     YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (DWORD)-1);
@@ -2940,6 +2939,60 @@ YoriWinHexEditSetBytesPerWord(
     YoriWinHexEditEnsureCursorVisible(HexEdit);
     YoriWinHexEditPaint(HexEdit);
 
+    return TRUE;
+}
+
+/**
+ Set the style of the hex edit control.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param NewStyle The new style to apply to the hex edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinHexEditSetStyle(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORD NewStyle
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    YORI_WIN_HEX_EDIT_CELL_TYPE CellType;
+    DWORD ByteOffset;
+    DWORD BitShift;
+    BOOLEAN BeyondBufferEnd;
+    DWORDLONG BufferOffset;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    if (NewStyle & ~(YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
+        return FALSE;
+    }
+
+    if ((NewStyle & (YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) == (YORI_WIN_HEX_EDIT_STYLE_OFFSET | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
+        return FALSE;
+    }
+
+    CellType = YoriWinHexEditCellType(HexEdit, HexEdit->CursorLine, HexEdit->CursorOffset, &ByteOffset, &BitShift, &BeyondBufferEnd);
+    BufferOffset = HexEdit->CursorLine;
+    BufferOffset = BufferOffset * HexEdit->BytesPerLine + ByteOffset;
+
+    HexEdit->OffsetWidth = 0;
+    if (NewStyle & YORI_WIN_HEX_EDIT_STYLE_OFFSET) {
+        HexEdit->OffsetWidth = 32;
+    } else if (NewStyle & YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET) {
+        HexEdit->OffsetWidth = 64;
+    }
+
+    YoriWinHexEditSetCursorToBufferLocation(HexEdit, CellType, BufferOffset, BitShift);
+
+    YoriWinHexEditExpandDirtyRange(HexEdit, HexEdit->ViewportTop, (DWORD)-1);
+
+    YoriWinHexEditEnsureCursorVisible(HexEdit);
+    YoriWinHexEditPaint(HexEdit);
     return TRUE;
 }
 

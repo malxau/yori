@@ -341,6 +341,12 @@ YoriWinHexEditSetBytesPerWord(
     );
 
 BOOLEAN
+YoriWinHexEditSetStyle(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORD NewStyle
+    );
+
+BOOLEAN
 YoriWinHexEditSetCaption(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in PYORI_STRING Caption
