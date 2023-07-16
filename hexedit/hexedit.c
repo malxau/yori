@@ -114,30 +114,51 @@ typedef struct _HEXEDIT_CONTEXT {
     DWORDLONG SearchBufferLength;
 
     /**
-     The index of the hexedit menu.  This is used to enable and disable menu
-     items based on the state of the control and clipboard.
+     The index of the view menu.  This is used to check and uncheck menu
+     items based on the state of the control.
      */
-    DWORD EditMenuIndex;
+    DWORD ViewMenuIndex;
 
     /**
-     The index of the cut menu item.
+     The index of the view as bytes menu item.
      */
-    DWORD HexEditCutMenuIndex;
+    DWORD ViewBytesMenuIndex;
 
     /**
-     The index of the copy menu item.
+     The index of the view as words menu item.
      */
-    DWORD HexEditCopyMenuIndex;
+    DWORD ViewWordsMenuIndex;
 
     /**
-     The index of the paste menu item.
+     The index of the view as double words menu item.
      */
-    DWORD HexEditPasteMenuIndex;
+    DWORD ViewDwordsMenuIndex;
 
     /**
-     The index of the clear menu item.
+     The index of the view as quad words menu item.
      */
-    DWORD HexEditClearMenuIndex;
+    DWORD ViewQwordsMenuIndex;
+
+    /**
+     The index of the view no offset menu item.
+     */
+    DWORD ViewNoOffsetMenuIndex;
+
+    /**
+     The index of the view short offset menu item.
+     */
+    DWORD ViewShortOffsetMenuIndex;
+
+    /**
+     The index of the view long offset menu item.
+     */
+    DWORD ViewLongOffsetMenuIndex;
+
+    /**
+     Specifies the number of bits to use for the buffer offset.  Currently
+     supported values are 0, 32 and 64.
+     */
+    UCHAR OffsetWidth;
 
     /**
      TRUE to use only 7 bit ASCII characters for visual display.
@@ -1576,6 +1597,79 @@ HexEditGoToButtonClicked(
 }
 
 /**
+ A callback invoked when the view button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HexEditViewButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+    PYORI_WIN_CTRL_HANDLE ViewMenu;
+    PYORI_WIN_CTRL_HANDLE ViewBytesItem;
+    PYORI_WIN_CTRL_HANDLE ViewWordsItem;
+    PYORI_WIN_CTRL_HANDLE ViewDwordsItem;
+    PYORI_WIN_CTRL_HANDLE ViewQwordsItem;
+    PYORI_WIN_CTRL_HANDLE ViewNoOffsetItem;
+    PYORI_WIN_CTRL_HANDLE ViewShortOffsetItem;
+    PYORI_WIN_CTRL_HANDLE ViewLongOffsetItem;
+    DWORDLONG BytesPerWord;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    BytesPerWord = YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit);
+
+    ViewMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, HexEditContext->ViewMenuIndex);
+    ViewBytesItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewBytesMenuIndex);
+    ViewWordsItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewWordsMenuIndex);
+    ViewDwordsItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewDwordsMenuIndex);
+    ViewQwordsItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewQwordsMenuIndex);
+    ViewNoOffsetItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewNoOffsetMenuIndex);
+    ViewShortOffsetItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewShortOffsetMenuIndex);
+    ViewLongOffsetItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewLongOffsetMenuIndex);
+
+    YoriWinMenuBarUncheckMenuItem(ViewBytesItem);
+    YoriWinMenuBarUncheckMenuItem(ViewWordsItem);
+    YoriWinMenuBarUncheckMenuItem(ViewDwordsItem);
+    YoriWinMenuBarUncheckMenuItem(ViewQwordsItem);
+
+    YoriWinMenuBarUncheckMenuItem(ViewNoOffsetItem);
+    YoriWinMenuBarUncheckMenuItem(ViewShortOffsetItem);
+    YoriWinMenuBarUncheckMenuItem(ViewLongOffsetItem);
+
+    switch(BytesPerWord) {
+        case 1:
+            YoriWinMenuBarCheckMenuItem(ViewBytesItem);
+            break;
+        case 2:
+            YoriWinMenuBarCheckMenuItem(ViewWordsItem);
+            break;
+        case 4:
+            YoriWinMenuBarCheckMenuItem(ViewDwordsItem);
+            break;
+        case 8:
+            YoriWinMenuBarCheckMenuItem(ViewQwordsItem);
+            break;
+    }
+
+    switch(HexEditContext->OffsetWidth) {
+        case 0:
+            YoriWinMenuBarCheckMenuItem(ViewNoOffsetItem);
+            break;
+        case 32:
+            YoriWinMenuBarCheckMenuItem(ViewShortOffsetItem);
+            break;
+        case 64:
+            YoriWinMenuBarCheckMenuItem(ViewLongOffsetItem);
+            break;
+    }
+}
+
+/**
  A callback invoked when the view bytes button is clicked.
 
  @param Ctrl Pointer to the button that was clicked.
@@ -1649,6 +1743,69 @@ HexEditViewQwordsButtonClicked(
     HexEditContext = YoriWinGetControlContext(Parent);
 
     YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, 8);
+}
+
+/**
+ A callback invoked when the no offset button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HexEditViewNoOffsetButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, 0)) {
+        HexEditContext->OffsetWidth = 0;
+    }
+}
+
+/**
+ A callback invoked when the short offset button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HexEditViewShortOffsetButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, YORI_WIN_HEX_EDIT_STYLE_OFFSET)) {
+        HexEditContext->OffsetWidth = 32;
+    }
+}
+
+/**
+ A callback invoked when the long offset button is clicked.
+
+ @param Ctrl Pointer to the button that was clicked.
+ */
+VOID
+HexEditViewLongOffsetButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    if (YoriWinHexEditSetStyle(HexEditContext->HexEdit, YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET)) {
+        HexEditContext->OffsetWidth = 64;
+    }
 }
 
 /**
@@ -1833,15 +1990,13 @@ HexEditPopulateMenuBar(
 {
     YORI_WIN_MENU_ENTRY FileMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
-    YORI_WIN_MENU_ENTRY ViewMenuEntries[4];
+    YORI_WIN_MENU_ENTRY ViewMenuEntries[8];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[4];
     YORI_WIN_MENU MenuBarItems;
     PYORI_WIN_CTRL_HANDLE Ctrl;
     DWORD MenuIndex;
     DWORD FileMenuCount;
-
-    UNREFERENCED_PARAMETER(HexEditContext);
 
     ZeroMemory(&FileMenuEntries, sizeof(FileMenuEntries));
     MenuIndex = 0;
@@ -1911,22 +2066,44 @@ HexEditPopulateMenuBar(
 
     ZeroMemory(&ViewMenuEntries, sizeof(ViewMenuEntries));
     MenuIndex = 0;
+    HexEditContext->ViewBytesMenuIndex = MenuIndex;
     YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&Bytes"));
     YoriLibConstantString(&ViewMenuEntries[MenuIndex].Hotkey, _T("Ctrl+B"));
     ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewBytesButtonClicked;
     MenuIndex++;
 
+    HexEditContext->ViewWordsMenuIndex = MenuIndex;
     YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&Words"));
     ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewWordsButtonClicked;
     MenuIndex++;
 
+    HexEditContext->ViewDwordsMenuIndex = MenuIndex;
     YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&DWords"));
     YoriLibConstantString(&ViewMenuEntries[MenuIndex].Hotkey, _T("Ctrl+D"));
     ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewDwordsButtonClicked;
     MenuIndex++;
 
+    HexEditContext->ViewQwordsMenuIndex = MenuIndex;
     YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&QWords"));
     ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewQwordsButtonClicked;
+    MenuIndex++;
+
+    ViewMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+    MenuIndex++;
+
+    HexEditContext->ViewNoOffsetMenuIndex = MenuIndex;
+    YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&No Offset"));
+    ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewNoOffsetButtonClicked;
+    MenuIndex++;
+
+    HexEditContext->ViewShortOffsetMenuIndex = MenuIndex;
+    YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&Short offset"));
+    ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewShortOffsetButtonClicked;
+    MenuIndex++;
+
+    HexEditContext->ViewLongOffsetMenuIndex = MenuIndex;
+    YoriLibConstantString(&ViewMenuEntries[MenuIndex].Caption, _T("&Long offset"));
+    ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewLongOffsetButtonClicked;
     MenuIndex++;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
@@ -1949,7 +2126,9 @@ HexEditPopulateMenuBar(
     MenuEntries[MenuIndex].ChildMenu.Items = SearchMenuEntries;
     MenuIndex++;
 
+    HexEditContext->ViewMenuIndex = MenuIndex;
     YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&View"));
+    MenuEntries[MenuIndex].NotifyCallback = HexEditViewButtonClicked;
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(ViewMenuEntries)/sizeof(ViewMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = ViewMenuEntries;
     MenuIndex++;
@@ -2116,6 +2295,7 @@ HexEditCreateMainWindow(
     Rect.Right = (SHORT)(WindowSize.X - 1);
     Rect.Bottom = (SHORT)(WindowSize.Y - 2);
 
+    HexEditContext->OffsetWidth = 64;
     HexEdit = YoriWinHexEditCreate(Parent, NULL, &Rect, 1, YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET);
     if (HexEdit == NULL) {
         YoriWinDestroyWindow(Parent);
