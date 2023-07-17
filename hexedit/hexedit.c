@@ -2256,6 +2256,7 @@ HexEditCreateMainWindow(
     PYORI_WIN_CTRL_HANDLE StatusBar;
     DWORD_PTR Result;
     YORI_STRING Caption;
+    DWORD Style;
 
     if (!YoriWinOpenWindowManager(TRUE, &WinMgr)) {
         return FALSE;
@@ -2274,6 +2275,16 @@ HexEditCreateMainWindow(
         YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("hexedit: window size too small\n"));
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
+    }
+
+    if (HexEditContext->OffsetWidth == (UCHAR)-1) {
+        if (WindowSize.X < 77) {
+            HexEditContext->OffsetWidth = 0;
+        } else if (WindowSize.X < 86) {
+            HexEditContext->OffsetWidth = 32;
+        } else {
+            HexEditContext->OffsetWidth = 64;
+        }
     }
 
     if (!YoriWinCreateWindow(WinMgr, WindowSize.X, WindowSize.Y, WindowSize.X, WindowSize.Y, 0, NULL, &Parent)) {
@@ -2295,8 +2306,13 @@ HexEditCreateMainWindow(
     Rect.Right = (SHORT)(WindowSize.X - 1);
     Rect.Bottom = (SHORT)(WindowSize.Y - 2);
 
-    HexEditContext->OffsetWidth = 64;
-    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Rect, 1, YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR | YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET);
+    Style = 0;
+    if (HexEditContext->OffsetWidth == 64) {
+        Style = YORI_WIN_HEX_EDIT_STYLE_LARGE_OFFSET;
+    } else if (HexEditContext->OffsetWidth == 32) {
+        Style = YORI_WIN_HEX_EDIT_STYLE_OFFSET;
+    }
+    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Rect, 1, YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR | Style);
     if (HexEdit == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -2385,6 +2401,7 @@ ENTRYPOINT(
     YORI_STRING Arg;
 
     ZeroMemory(&GlobalHexEditContext, sizeof(GlobalHexEditContext));
+    GlobalHexEditContext.OffsetWidth = (UCHAR)-1;
 
     for (i = 1; i < ArgC; i++) {
 
