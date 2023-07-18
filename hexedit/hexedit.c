@@ -37,10 +37,17 @@ CHAR strHexEditHelpText[] =
         "\n"
         "Displays hexeditor.\n"
         "\n"
-        "HEXEDIT [-license] [-a] [-r] [filename]\n"
+        "HEXEDIT [-license] [-a] [-l|-n|-s] [-b|-w|-d|-q] [-r] [filename]\n"
         "\n"
         "   -a             Use ASCII characters for drawing\n"
-        "   -r             Open file as read only\n";
+        "   -b             Display as bytes\n"
+        "   -d             Display as Dwords\n"
+        "   -l             Display long offsets\n"
+        "   -n             Display no offsets\n"
+        "   -q             Display as Qwords\n"
+        "   -r             Open file as read only\n"
+        "   -s             Display short offsets\n"
+        "   -w             Display as word\n";
 
 /**
  The copyright year string to display with license text.
@@ -153,6 +160,12 @@ typedef struct _HEXEDIT_CONTEXT {
      The index of the view long offset menu item.
      */
     DWORD ViewLongOffsetMenuIndex;
+
+    /**
+     Specifies the number of bytes per word.  Currently supported values are
+     1, 2, 4 and 8.
+     */
+    UCHAR BytesPerWord;
 
     /**
      Specifies the number of bits to use for the buffer offset.  Currently
@@ -1028,12 +1041,9 @@ HexEditByteOffsetToBufferOffsetAndShift(
     __out PDWORD BitShift
     )
 {
-    DWORDLONG BytesPerWord;
     DWORDLONG LocalBufferOffset;
 
-    BytesPerWord = YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit);
-
-    LocalBufferOffset = ByteOffset & ~(BytesPerWord - 1);
+    LocalBufferOffset = ByteOffset & ~(HexEditContext->BytesPerWord - 1);
     *BufferOffset = LocalBufferOffset;
     *BitShift = (DWORD)((ByteOffset - LocalBufferOffset) * 8);
 }
@@ -1212,7 +1222,7 @@ HexEditFindButtonClicked(
                         &Title,
                         HexEditContext->SearchBuffer,
                         HexEditContext->SearchBufferLength,
-                        YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit),
+                        HexEditContext->BytesPerWord,
                         &FindData,
                         &FindDataLength)) {
 
@@ -1490,7 +1500,7 @@ HexEditChangeButtonClicked(
                                    InitialOldDataLength,
                                    InitialNewData,
                                    InitialNewDataLength,
-                                   YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit),
+                                   HexEditContext->BytesPerWord,
                                    &ReplaceAll,
                                    &OldData,
                                    &OldDataLength,
@@ -1616,12 +1626,9 @@ HexEditViewButtonClicked(
     PYORI_WIN_CTRL_HANDLE ViewNoOffsetItem;
     PYORI_WIN_CTRL_HANDLE ViewShortOffsetItem;
     PYORI_WIN_CTRL_HANDLE ViewLongOffsetItem;
-    DWORDLONG BytesPerWord;
 
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
-
-    BytesPerWord = YoriWinHexEditGetBytesPerWord(HexEditContext->HexEdit);
 
     ViewMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, HexEditContext->ViewMenuIndex);
     ViewBytesItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, ViewMenu, HexEditContext->ViewBytesMenuIndex);
@@ -1641,7 +1648,7 @@ HexEditViewButtonClicked(
     YoriWinMenuBarUncheckMenuItem(ViewShortOffsetItem);
     YoriWinMenuBarUncheckMenuItem(ViewLongOffsetItem);
 
-    switch(BytesPerWord) {
+    switch(HexEditContext->BytesPerWord) {
         case 1:
             YoriWinMenuBarCheckMenuItem(ViewBytesItem);
             break;
@@ -1685,7 +1692,8 @@ HexEditViewBytesButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
 
-    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, 1);
+    HexEditContext->BytesPerWord = 1;
+    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, HexEditContext->BytesPerWord);
 }
 
 /**
@@ -1704,7 +1712,8 @@ HexEditViewWordsButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
 
-    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, 2);
+    HexEditContext->BytesPerWord = 2;
+    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, HexEditContext->BytesPerWord);
 }
 
 /**
@@ -1723,7 +1732,8 @@ HexEditViewDwordsButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
 
-    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, 4);
+    HexEditContext->BytesPerWord = 4;
+    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, HexEditContext->BytesPerWord);
 }
 
 /**
@@ -1742,7 +1752,8 @@ HexEditViewQwordsButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     HexEditContext = YoriWinGetControlContext(Parent);
 
-    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, 8);
+    HexEditContext->BytesPerWord = 8;
+    YoriWinHexEditSetBytesPerWord(HexEditContext->HexEdit, HexEditContext->BytesPerWord);
 }
 
 /**
@@ -2312,7 +2323,7 @@ HexEditCreateMainWindow(
     } else if (HexEditContext->OffsetWidth == 32) {
         Style = YORI_WIN_HEX_EDIT_STYLE_OFFSET;
     }
-    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Rect, 1, YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR | Style);
+    HexEdit = YoriWinHexEditCreate(Parent, NULL, &Rect, HexEditContext->BytesPerWord, YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR | Style);
     if (HexEdit == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
@@ -2402,6 +2413,7 @@ ENTRYPOINT(
 
     ZeroMemory(&GlobalHexEditContext, sizeof(GlobalHexEditContext));
     GlobalHexEditContext.OffsetWidth = (UCHAR)-1;
+    GlobalHexEditContext.BytesPerWord = 1;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -2419,8 +2431,29 @@ ENTRYPOINT(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 GlobalHexEditContext.UseAsciiDrawing = TRUE;
                 ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("b")) == 0) {
+                GlobalHexEditContext.BytesPerWord = 1;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("d")) == 0) {
+                GlobalHexEditContext.BytesPerWord = 4;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("l")) == 0) {
+                GlobalHexEditContext.OffsetWidth = 64;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("n")) == 0) {
+                GlobalHexEditContext.OffsetWidth = 0;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("q")) == 0) {
+                GlobalHexEditContext.BytesPerWord = 8;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 GlobalHexEditContext.ReadOnly = TRUE;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("s")) == 0) {
+                GlobalHexEditContext.OffsetWidth = 32;
+                ArgumentUnderstood = TRUE;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("w")) == 0) {
+                GlobalHexEditContext.BytesPerWord = 2;
                 ArgumentUnderstood = TRUE;
             }
         } else {
