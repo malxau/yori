@@ -358,6 +358,7 @@ YoriLibLoadImageHlpFunctions(VOID)
         return FALSE;
     }
 
+    DllImageHlp.pCheckSumMappedFile = (PCHECK_SUM_MAPPED_FILE)GetProcAddress(DllImageHlp.hDll, "CheckSumMappedFile");
     DllImageHlp.pMapFileAndCheckSumW = (PMAP_FILE_AND_CHECKSUMW)GetProcAddress(DllImageHlp.hDll, "MapFileAndCheckSumW");
 
     return TRUE;

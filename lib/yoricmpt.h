@@ -8698,6 +8698,18 @@ typedef struct _YORI_DBGHELP_FUNCTIONS {
 extern YORI_DBGHELP_FUNCTIONS DllDbgHelp;
 
 /**
+ A prototype for the CheckSumMappedFile function.
+ */
+typedef
+PYORILIB_PE_HEADERS WINAPI
+CHECK_SUM_MAPPED_FILE(PVOID, DWORD, PDWORD, PDWORD);
+
+/**
+ A prototype for a pointer to the CheckSumMappedFile function.
+ */
+typedef CHECK_SUM_MAPPED_FILE *PCHECK_SUM_MAPPED_FILE;
+
+/**
  A prototype for the MapFileAndCheckSumW function.
  */
 typedef
@@ -8718,6 +8730,12 @@ typedef struct _YORI_IMAGEHLP_FUNCTIONS {
      A handle to the Dll module.
      */
     HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to
+     CheckSumMappedFile.
+     */
+    PCHECK_SUM_MAPPED_FILE pCheckSumMappedFile;
 
     /**
      If it's available on the current system, a pointer to
