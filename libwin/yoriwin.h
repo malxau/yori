@@ -460,6 +460,15 @@ YoriWinHexEditInsertData(
     __in DWORDLONG Length
     );
 
+__success(return)
+BOOLEAN
+YoriWinHexEditReplaceData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORDLONG DataOffset,
+    __in PVOID Data,
+    __in DWORDLONG Length
+    );
+
 PYORI_WIN_CTRL_HANDLE
 YoriWinHexEditCreate(
     __in PYORI_WIN_WINDOW_HANDLE ParentHandle,

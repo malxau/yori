@@ -3182,6 +3182,50 @@ YoriWinHexEditInsertData(
 }
 
 /**
+ Replace a range of data in a hex edit control.
+
+ @param CtrlHandle Pointer to the hex edit control.
+
+ @param DataOffset The offset of the first byte to be updated with new data.
+
+ @param Data Pointer to the new data to insert.
+
+ @param Length The number of bytes to insert into the hex edit control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriWinHexEditReplaceData(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in DWORDLONG DataOffset,
+    __in PVOID Data,
+    __in DWORDLONG Length
+    )
+{
+    PYORI_WIN_CTRL_HEX_EDIT HexEdit;
+    PYORI_WIN_CTRL Ctrl;
+    DWORD FirstDirtyLine;
+    DWORD LastDirtyLine;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    HexEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_HEX_EDIT, Ctrl);
+
+    if (DataOffset + Length > HexEdit->BufferValid) {
+        return FALSE;
+    }
+
+    memmove(&HexEdit->Buffer[DataOffset],
+            Data,
+            (DWORD)Length);
+
+    FirstDirtyLine = (DWORD)(DataOffset / HexEdit->BytesPerLine);
+    LastDirtyLine = (DWORD)((DataOffset + Length) / HexEdit->BytesPerLine);
+    YoriWinHexEditExpandDirtyRange(HexEdit, FirstDirtyLine, LastDirtyLine);
+    return TRUE;
+}
+
+/**
  Return TRUE if a selection region is active, or FALSE if no selection is
  currently active.
 
