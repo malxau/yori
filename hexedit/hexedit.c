@@ -1820,6 +1820,78 @@ HexEditViewLongOffsetButtonClicked(
 }
 
 /**
+ A callback invoked when the calculate PE checksum menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+HexEditCalculatePEChecksumButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PHEXEDIT_CONTEXT HexEditContext;
+    YORI_STRING Title;
+    YORI_STRING Text;
+    YORI_STRING ButtonText[1];
+    PYORILIB_PE_HEADERS PeHeaders;
+    PUCHAR Buffer;
+    DWORDLONG BufferLength;
+    DWORD CurrentChecksum;
+    DWORD NewChecksum;
+    DWORD DataOffset;
+
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    HexEditContext = YoriWinGetControlContext(Parent);
+
+    YoriLibLoadImageHlpFunctions();
+
+    if (DllImageHlp.pCheckSumMappedFile == NULL) {
+        YoriLibConstantString(&Title, _T("Error"));
+        YoriLibConstantString(&Text, _T("OS support not present"));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+
+        return;
+    }
+
+    if (!YoriWinHexEditGetDataNoCopy(HexEditContext->HexEdit, &Buffer, &BufferLength)) {
+        return;
+    }
+
+    PeHeaders = DllImageHlp.pCheckSumMappedFile(Buffer, (DWORD)BufferLength, &CurrentChecksum, &NewChecksum);
+    if (PeHeaders == NULL) {
+        YoriLibDereference(Buffer);
+        YoriLibConstantString(&Title, _T("Error"));
+        YoriLibConstantString(&Text, _T("Could not calculate checksum.  Possibly not PE file?"));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+        return;
+    }
+
+
+    DataOffset = (DWORD)((PUCHAR)PeHeaders - Buffer);
+    DataOffset = DataOffset + FIELD_OFFSET(YORILIB_PE_HEADERS, OptionalHeader.CheckSum);
+    YoriLibDereference(Buffer);
+    YoriWinHexEditReplaceData(HexEditContext->HexEdit, DataOffset, &NewChecksum, sizeof(NewChecksum));
+}
+
+/**
  A callback invoked when the about menu item is invoked.
 
  @param Ctrl Pointer to the menu bar control.
@@ -2002,8 +2074,9 @@ HexEditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY FileMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
     YORI_WIN_MENU_ENTRY ViewMenuEntries[8];
+    YORI_WIN_MENU_ENTRY ToolsMenuEntries[1];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
-    YORI_WIN_MENU_ENTRY MenuEntries[4];
+    YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
     PYORI_WIN_CTRL_HANDLE Ctrl;
     DWORD MenuIndex;
@@ -2117,6 +2190,11 @@ HexEditPopulateMenuBar(
     ViewMenuEntries[MenuIndex].NotifyCallback = HexEditViewLongOffsetButtonClicked;
     MenuIndex++;
 
+    ZeroMemory(&ToolsMenuEntries, sizeof(ToolsMenuEntries));
+    MenuIndex = 0;
+    YoriLibConstantString(&ToolsMenuEntries[MenuIndex].Caption, _T("&Calculate PE Checksum"));
+    ToolsMenuEntries[MenuIndex].NotifyCallback = HexEditCalculatePEChecksumButtonClicked;
+
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
     MenuIndex = 0;
     YoriLibConstantString(&HelpMenuEntries[MenuIndex].Caption, _T("&About..."));
@@ -2142,6 +2220,11 @@ HexEditPopulateMenuBar(
     MenuEntries[MenuIndex].NotifyCallback = HexEditViewButtonClicked;
     MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(ViewMenuEntries)/sizeof(ViewMenuEntries[0]);
     MenuEntries[MenuIndex].ChildMenu.Items = ViewMenuEntries;
+    MenuIndex++;
+
+    YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Tools"));
+    MenuEntries[MenuIndex].ChildMenu.ItemCount = sizeof(ToolsMenuEntries)/sizeof(ToolsMenuEntries[0]);
+    MenuEntries[MenuIndex].ChildMenu.Items = ToolsMenuEntries;
     MenuIndex++;
 
     YoriLibConstantString(&MenuEntries[MenuIndex].Caption, _T("&Help"));
