@@ -84,10 +84,17 @@ typedef struct _YORI_SPECIAL_HEAP_HEADER {
 
 } YORI_SPECIAL_HEAP_HEADER, *PYORI_SPECIAL_HEAP_HEADER;
 
+#if defined(_M_ALPHA)
+/**
+ The number of bytes in a page on this architecture.
+ */
+#define PAGE_SIZE (0x2000)
+#else
 /**
  The number of bytes in a page on this architecture.
  */
 #define PAGE_SIZE (0x1000)
+#endif
 
 /**
  A structure containing process global state for the special heap allocator.
