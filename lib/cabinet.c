@@ -329,7 +329,17 @@ YoriLibCabAlloc(
     )
 {
     LPVOID Alloc;
-    Alloc = YoriLibMalloc(Bytes);
+    DWORD ExtraBytes;
+    ExtraBytes = 0;
+
+    //
+    //  Alpha cabinet appears to access bytes beyond its buffer.  Fudge a bit.
+    //
+#if _M_ALPHA
+    ExtraBytes = 0x1000;
+#endif
+
+    Alloc = YoriLibMalloc(Bytes + ExtraBytes);
     return Alloc;
 }
 
