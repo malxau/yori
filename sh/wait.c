@@ -492,7 +492,7 @@ YoriShPumpProcessDebugEventsAndApplyEnvironmentOnExit(
 
                 if (DbgEvent.u.Exception.ExceptionRecord.ExceptionCode == EXCEPTION_BREAKPOINT) {
                     dwContinueStatus = DBG_CONTINUE;
-#if _M_MRX000
+#if _M_MRX000 || _M_ALPHA
                     DebuggedChild = YoriShFindDebuggedChildProcess(&ExecContext->DebuggedChildren, DbgEvent.dwProcessId);
                     ASSERT(DebuggedChild != NULL);
 
