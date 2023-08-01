@@ -253,7 +253,7 @@ SdirDisplayArch (
                 StrFixed = _T("ppc  ");
                 break;
             case IMAGE_FILE_MACHINE_ALPHA:
-                StrFixed = _T("alpha");
+                StrFixed = _T("axp  ");
                 break;
             case IMAGE_FILE_MACHINE_IA64:
                 StrFixed = _T("ia64 ");
