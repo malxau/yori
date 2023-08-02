@@ -498,7 +498,7 @@ YoriPkgCollectPackagesFromSource(
     BOOL DeleteWhenFinished = FALSE;
     LPTSTR ThisLine;
     LPTSTR Equals;
-    LPTSTR KnownArchitectures[] = {_T("noarch"), _T("win32"), _T("mips"), _T("axp"), _T("ppc"), _T("arm"), _T("ia64"), _T("amd64"), _T("arm64")};
+    LPTSTR KnownArchitectures[] = {_T("noarch"), _T("win32"), _T("mips"), _T("axp"), _T("ppc"), _T("arm"), _T("ia64"), _T("axp64"), _T("amd64"), _T("arm64")};
 
     // Worst case architecture and worst case key
     TCHAR IniKey[sizeof("noarch.packagepathforolderbuilds")];
@@ -1165,7 +1165,7 @@ YoriPkgFindRemotePackages(
                 InstallCount++;
             }
         } else {
-            YORI_STRING ArchString[4];
+            YORI_STRING ArchString[5];
             DWORD ValidArchCount;
             DWORD HostArch;
             DWORD Index;
@@ -1201,6 +1201,10 @@ YoriPkgFindRemotePackages(
                     YoriLibConstantString(&ArchString[ValidArchCount], _T("win32"));
                     ValidArchCount++;
                     break;
+                case YORI_PROCESSOR_ARCHITECTURE_AXP64:
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("axp64"));
+                    ValidArchCount++;
+                    break;
                 case YORI_PROCESSOR_ARCHITECTURE_AMD64:
                     YoriLibConstantString(&ArchString[ValidArchCount], _T("amd64"));
                     ValidArchCount++;
@@ -1211,6 +1215,8 @@ YoriPkgFindRemotePackages(
                     YoriLibConstantString(&ArchString[ValidArchCount], _T("arm64"));
                     ValidArchCount++;
                     YoriLibConstantString(&ArchString[ValidArchCount], _T("arm"));
+                    ValidArchCount++;
+                    YoriLibConstantString(&ArchString[ValidArchCount], _T("amd64"));
                     ValidArchCount++;
                     YoriLibConstantString(&ArchString[ValidArchCount], _T("win32"));
                     ValidArchCount++;

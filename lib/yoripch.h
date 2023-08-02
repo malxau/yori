@@ -67,6 +67,10 @@
 #pragma warning(push)
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER >= 1300) && (defined(_M_ALPHA))
+#pragma warning(disable: 4305)
+#endif
+
 #if defined(_MSC_VER) && (_MSC_VER >= 1500)
 #pragma warning(disable: 4255) // no function prototype given.  8.1 and earlier SDKs exhibit this.
 #endif

@@ -84,12 +84,6 @@
 typedef DWORD DWORD_PTR;
 
 /**
- Definition for a pointer to a pointer size integer for compilers that
- don't contain it.
- */
-typedef DWORD_PTR *PDWORD_PTR;
-
-/**
  Definition for pointer size integer for compilers that don't contain it.
  */
 typedef ULONG ULONG_PTR;
@@ -99,7 +93,39 @@ typedef ULONG ULONG_PTR;
  */
 typedef LONG LONG_PTR;
 
+#else
+
+/**
+ Definition for pointer size integer for compilers that don't contain it.
+ */
+typedef DWORDLONG DWORD_PTR;
+
+/**
+ Definition for pointer size integer for compilers that don't contain it.
+ */
+typedef ULONGLONG ULONG_PTR;
+
+/**
+ Definition for pointer size integer for compilers that don't contain it.
+ */
+typedef LONGLONG LONG_PTR;
+
+#undef INVALID_HANDLE_VALUE
+/**
+ On 64 bit compilers without DWORD_PTR, the SDK is very early and a little
+ buggy.  Discard its definition of INVALID_HANDLE_VALUE, which casts a 32
+ bit integer into a pointer, and use one that is a native 64 bit integer.
+ */
+#define INVALID_HANDLE_VALUE ((HANDLE)-1LL)
+
 #endif
+
+/**
+ Definition for a pointer to a pointer size integer for compilers that
+ don't contain it.
+ */
+typedef DWORD_PTR *PDWORD_PTR;
+
 #endif
 
 #ifndef MAXINT_PTR
@@ -3455,6 +3481,11 @@ typedef struct _GUID {
 #define YORI_PROCESSOR_ARCHITECTURE_IA64            6
 
 /**
+ A processor architecture identifier for AXP64.
+ */
+#define YORI_PROCESSOR_ARCHITECTURE_AXP64           7
+
+/**
  A processor architecture identifier for AMD64.
  */
 #define YORI_PROCESSOR_ARCHITECTURE_AMD64           9
@@ -3561,6 +3592,14 @@ typedef struct _GUID {
  compilation environment didn't supply it.
  */
 #define IMAGE_FILE_MACHINE_POWERPCFP               (0x01f1)
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ALPHA64
+/**
+ An executable image machine type for AXP64 if the compilation environment
+ didn't supply it.
+ */
+#define IMAGE_FILE_MACHINE_ALPHA64                 (0x0284)
 #endif
 
 #ifndef IMAGE_FILE_MACHINE_IA64

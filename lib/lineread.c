@@ -221,7 +221,11 @@ BOOLEAN
 YoriLibIsInterlockedCompareExchangePointerAvailable(VOID)
 {
 #if defined(_WIN64)
+#if defined(_M_ALPHA)
+    return FALSE;
+#else
     return TRUE;
+#endif
 #elif defined(_M_IX86) && (_M_IX86 >= 400)
     return TRUE;
 #else
@@ -251,7 +255,14 @@ PVOID
 YoriLibInterlockedCompareExchangePointer(volatile PVOID * Dest, PVOID Exchange, PVOID Comperand)
 {
 #if defined(_WIN64)
+#if defined(_M_ALPHA)
+    UNREFERENCED_PARAMETER(Dest);
+    UNREFERENCED_PARAMETER(Exchange);
+    UNREFERENCED_PARAMETER(Comperand);
+    return NULL;
+#else
     return InterlockedCompareExchangePointer(Dest, Exchange, Comperand);
+#endif
 #else
     return (PVOID)(DllKernel32.pInterlockedCompareExchange((volatile LONG *)Dest, (LONG)Exchange, (LONG)Comperand));
 #endif
