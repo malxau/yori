@@ -6,10 +6,24 @@
 DAILYPATH=http://www.malsmith.net/download/?obj=yori/latest-daily
 STABLEPATH=http://www.malsmith.net/download/?obj=yori/latest-stable
 
+#
+# PPC, Alpha and AXP64 are "special" in that I can't personally build them so
+# these builds are not on the same cadence as the others.
+#
 !IF "$(ARCH)"=="ppc"
 DAILYPATH=http://www.malsmith.net/download/?obj=yori/latest-ppc-daily
 STABLEPATH=http://www.malsmith.net/download/?obj=yori/latest-ppc-stable
-!ENDIF
+!ELSE
+!IF "$(ARCH)"=="axp"
+DAILYPATH=http://www.malsmith.net/download/?obj=yori/latest-axp-daily
+STABLEPATH=http://www.malsmith.net/download/?obj=yori/latest-axp-stable
+!ELSE
+!IF "$(ARCH)"=="axp64"
+DAILYPATH=http://www.malsmith.net/download/?obj=yori/latest-axp64-daily
+STABLEPATH=http://www.malsmith.net/download/?obj=yori/latest-axp64-stable
+!ENDIF # AXP64
+!ENDIF # AXP
+!ENDIF # PPC
 
 !IF $(YORI_BUILD_ID)==0
 BUILDSTRING=$(YORI_VER_MAJOR).$(YORI_VER_MINOR)
@@ -47,21 +61,7 @@ NOARCHPKGS=out\yori-source-noarch.cab             \
 
 YSETUP=
 !IF "$(DBGSUFFIX)"==""
-!IF "$(ARCH)"=="win32"
 YSETUP=out\$(ARCH)\ysetup.exe
-!ENDIF
-!IF "$(ARCH)"=="mips"
-YSETUP=out\$(ARCH)\ysetup.exe
-!ENDIF
-!IF "$(ARCH)"=="ppc"
-YSETUP=out\$(ARCH)\ysetup.exe
-!ENDIF
-!IF "$(ARCH)"=="axp"
-YSETUP=out\$(ARCH)\ysetup.exe
-!ENDIF
-!IF "$(ARCH)"=="amd64"
-YSETUP=out\$(ARCH)\ysetup.exe
-!ENDIF
 !ENDIF
 
 all: $(ARCHPKGS) $(NOARCHPKGS) $(YSETUP)

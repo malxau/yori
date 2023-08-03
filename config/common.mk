@@ -222,10 +222,19 @@ EXTERNLIBS=$(EXTERNLIBS) msvcrt.lib
 ARCH=ppc
 !ELSE
 !IF [$(CC) 2>&1 | find "Alpha" >NUL]==0
+!IF [$(CC) 2>&1 | find "13.00" >NUL]==0
+MACHINE=ALPHA64
+ARCH=axp64
+MINOS=500
+CFLAGS_NOUNICODE=$(CFLAGS_NOUNICODE) -Ap64
+CFLAGS=$(CFLAGS) -Ap64
+!ELSE
 MACHINE=ALPHA
 # Add back msvcrt to provide 64 bit math assembly
+# MSFIX Check if this is needed.  Alpha should be able to do these trivially.
 EXTERNLIBS=$(EXTERNLIBS) msvcrt.lib
 ARCH=axp
+!ENDIF # AXP64
 !ENDIF # AXP
 !ENDIF # PPC
 !ENDIF # MIPS

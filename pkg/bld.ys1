@@ -19,13 +19,15 @@ cl /? 2>&1 | findstr /C:"for PowerPC" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=ppc
 cl /? 2>&1 | findstr /C:"Alpha C" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=axp
+cl /? 2>&1 | findstr /R /C:"Alpha C.*13.00" >NUL 2>&1
+if intcmp %ERRORLEVEL%==0;set ARCH=axp64
 cl /? 2>&1 | findstr /C:"for Itanium" >NUL 2>&1
 if intcmp %ERRORLEVEL%==0;set ARCH=ia64
 
 REM
-REM For Win32 builds, use static fdi.lib to support NT 3.1
-REM For RISC builds, use static fdi.lib because no cabinet.dll exists
-REM Not done on x64 or other architectures where cabinet.dll will be present
+REM For the original NT 3.x architectures, use static fdi.lib since
+REM cabinet.dll won't be present.  For the newer 2000 and above architectures,
+REM there's no point.
 REM
 
 set FDI=0
