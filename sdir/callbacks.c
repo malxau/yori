@@ -258,7 +258,7 @@ SdirDisplayArch (
             case IMAGE_FILE_MACHINE_IA64:
                 StrFixed = _T("ia64 ");
                 break;
-            case IMAGE_FILE_MACHINE_AXP64:
+            case IMAGE_FILE_MACHINE_ALPHA64:
                 StrFixed = _T("axp64");
                 break;
             default:
