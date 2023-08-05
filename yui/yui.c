@@ -544,6 +544,7 @@ YuiDisplayMenu(VOID)
     if (YuiContext.MenuActive) {
         return TRUE;
     }
+    YuiTaskbarSuppressFullscreenHiding(&YuiContext);
     YuiContext.MenuActive = TRUE;
     SendMessage(YuiContext.hWndStart, BM_SETSTATE, TRUE, 0);
     YuiMenuDisplayAndExecute(&YuiContext, YuiContext.hWnd);
@@ -747,7 +748,11 @@ YuiTaskbarWindowProc(
             }
 #endif
             DllUser32.pSetForegroundWindow(hwnd);
-            YuiMenuExecuteById(&YuiContext, (DWORD)wParam);
+            if ((DWORD)wParam == YUI_MENU_START) {
+                YuiDisplayMenu();
+            } else {
+                YuiMenuExecuteById(&YuiContext, (DWORD)wParam);
+            }
             PostMessage(hwnd, WM_NULL, 0, 0);
             break;
         case WM_DISPLAYCHANGE:
@@ -904,7 +909,11 @@ YuiCleanupGlobalState(VOID)
     }
 
     if (YuiContext.RunHotKeyRegistered) {
-        UnregisterHotKey(YuiContext.hWnd, 1);
+        UnregisterHotKey(YuiContext.hWnd, YUI_MENU_RUN);
+    }
+
+    if (YuiContext.StartHotKeyRegistered) {
+        UnregisterHotKey(YuiContext.hWnd, YUI_START_BUTTON);
     }
 
     if (YuiContext.ClockTimerId != 0) {
@@ -1312,6 +1321,9 @@ YuiCreateWindow(
     if (Context->LoginShell) {
         if (RegisterHotKey(Context->hWnd, YUI_MENU_RUN, MOD_WIN, 'R')) {
             Context->RunHotKeyRegistered = TRUE;
+        }
+        if (RegisterHotKey(Context->hWnd, YUI_MENU_START, MOD_WIN, VK_LWIN)) {
+            Context->StartHotKeyRegistered = TRUE;
         }
     }
 

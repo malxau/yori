@@ -273,6 +273,29 @@ YuiTaskbarUpdateFullscreenStatus(
     return FullscreenWindowActive;
 }
 
+/**
+ Temporarily display the taskbar, even if a full screen window is active.
+ This is to allow hotkeys to render the taskbar when the start menu is being
+ displayed.
+
+ @param YuiContext Pointer to the application context.
+
+ @return TRUE if a full screen mode was disabled; FALSE if no action was
+         taken.
+ */
+BOOLEAN
+YuiTaskbarSuppressFullscreenHiding(
+    __in PYUI_CONTEXT YuiContext
+    )
+{
+    if (YuiContext->FullscreenModeActive) {
+        DllUser32.pShowWindow(YuiContext->hWnd, SW_SHOW);
+        YuiContext->FullscreenModeActive = FALSE;
+        return TRUE;
+    }
+
+    return FALSE;
+}
 
 /**
  Allocate a unique identifier for a button control that will be displayed

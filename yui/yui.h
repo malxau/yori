@@ -414,6 +414,13 @@ typedef struct _YUI_CONTEXT {
     BOOLEAN RunHotKeyRegistered;
 
     /**
+     Set to TRUE if RegisterHotKey has succeeded for the start command.  This
+     is only attempted if LoginShell is TRUE and may still fail if another
+     application is handling it.
+     */
+    BOOLEAN StartHotKeyRegistered;
+
+    /**
      Set to TRUE if the application has successfully registered for session
      change notifications (implying it should unregister on exit.)
      */
@@ -542,9 +549,9 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
 #define YUI_MENU_FIRST_PROGRAM_MENU_ID (100)
 
 /**
- An identifier for the menu item to exit the program.
+ An identifier to display the initial start menu.
  */
-#define YUI_MENU_EXIT                  (1)
+#define YUI_MENU_START                 (1)
 
 /**
  An identifier for the menu item to disconnect the session.
@@ -570,6 +577,11 @@ typedef struct _YUI_MENU_OWNERDRAW_ITEM {
  An identifier for the menu item to shut down the system.
  */
 #define YUI_MENU_SHUTDOWN              (14)
+
+/**
+ An identifier for the menu item to exit the program.
+ */
+#define YUI_MENU_EXIT                  (15)
 
 /**
  An identifier for the menu item to run a program.
@@ -682,6 +694,11 @@ BOOL
 YuiDrawMenuItem(
     __in PYUI_CONTEXT YuiContext,
     __in LPDRAWITEMSTRUCT Item
+    );
+
+BOOLEAN
+YuiTaskbarSuppressFullscreenHiding(
+    __in PYUI_CONTEXT YuiContext
     );
 
 BOOL
