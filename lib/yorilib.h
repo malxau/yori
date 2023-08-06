@@ -3704,6 +3704,11 @@ YoriLibTrimSpaces(
     );
 
 VOID
+YoriLibTrimTrailingNewlines(
+    __in PYORI_STRING String
+    );
+
+VOID
 YoriLibTrimNullTerminators(
     __in PYORI_STRING String
     );

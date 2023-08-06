@@ -604,12 +604,7 @@ YoriShExecuteExpressionAndCaptureOutput(
         //  frequently emit but are of no value here
         //
 
-        while (ProcessOutput->LengthInChars > 0 &&
-               (ProcessOutput->StartOfString[ProcessOutput->LengthInChars - 1] == '\n' ||
-                ProcessOutput->StartOfString[ProcessOutput->LengthInChars - 1] == '\r')) {
-
-            ProcessOutput->LengthInChars--;
-        }
+        YoriLibTrimTrailingNewlines(ProcessOutput);
 
         //
         //  Convert any remaining newlines to spaces

@@ -639,6 +639,24 @@ YoriLibTrimSpaces(
 }
 
 /**
+ Remove newlines from the end of a Yori string.
+
+ @param String Pointer to the Yori string to remove newlines from.
+ */
+VOID
+YoriLibTrimTrailingNewlines(
+    __in PYORI_STRING String
+    )
+{
+    while (String->LengthInChars > 0 &&
+           (String->StartOfString[String->LengthInChars - 1] == '\n' ||
+            String->StartOfString[String->LengthInChars - 1] == '\r')) {
+
+        String->LengthInChars--;
+    }
+}
+
+/**
  Remove NULL terminated from the end of a Yori string.
 
  @param String Pointer to the Yori string to remove NULLs from.
