@@ -3,7 +3,7 @@
  *
  * Yori shell set environment state and execute command
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,8 +38,9 @@ CHAR strEnvHelpText[] =
         "\n"
         "Set environment state and execute a command.\n"
         "\n"
-        "ENV [-license] [Var=Value] Command\n"
+        "ENV [-license] [-iv Var] [Var=Value] Command\n"
         "\n"
+        "   -iv            Set a variable whose value is provided as standard input\n"
         "   --             Treat all further arguments as variables or commands\n";
 
 /**
@@ -57,6 +58,128 @@ EnvHelp(VOID)
 }
 
 /**
+ A buffer for a single data stream.
+ */
+typedef struct _ENV_BUFFER {
+
+    /**
+     The number of bytes currently allocated to this buffer.
+     */
+    DWORD BytesAllocated;
+
+    /**
+     The number of bytes populated with data in this buffer.
+     */
+    DWORD BytesPopulated;
+
+    /**
+     A handle to a pipe which is the source of data for this buffer.
+     */
+    HANDLE hSource;
+
+    /**
+     The data buffer.
+     */
+    PUCHAR Buffer;
+
+} ENV_BUFFER, *PENV_BUFFER;
+
+/**
+ Allocate and initialize a buffer for an input stream.
+
+ @param Buffer Pointer to the buffer to allocate structures for.
+
+ @return TRUE if the buffer is successfully initialized, FALSE if it is not.
+ */
+BOOL
+EnvAllocateBuffer(
+    __out PENV_BUFFER Buffer
+    )
+{
+    Buffer->BytesAllocated = 1024;
+    Buffer->Buffer = YoriLibMalloc(Buffer->BytesAllocated);
+    if (Buffer->Buffer == NULL) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ Free structures associated with a single input stream.
+
+ @param ThisBuffer Pointer to the single stream's buffers to deallocate.
+ */
+VOID
+EnvFreeBuffer(
+    __in PENV_BUFFER ThisBuffer
+    )
+{
+    if (ThisBuffer->Buffer != NULL) {
+        YoriLibFree(ThisBuffer->Buffer);
+    }
+}
+
+/**
+ Populate data from stdin into an in memory buffer.
+
+ @param ThisBuffer A pointer to the process buffer set.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+EnvBufferPump(
+    __in PENV_BUFFER ThisBuffer
+    )
+{
+    DWORD BytesRead;
+    BOOL Result = FALSE;
+
+    while (TRUE) {
+
+        if (ReadFile(ThisBuffer->hSource,
+                     YoriLibAddToPointer(ThisBuffer->Buffer, ThisBuffer->BytesPopulated),
+                     ThisBuffer->BytesAllocated - ThisBuffer->BytesPopulated,
+                     &BytesRead,
+                     NULL)) {
+
+            if (BytesRead == 0) {
+                Result = TRUE;
+                break;
+            }
+
+            ThisBuffer->BytesPopulated += BytesRead;
+            ASSERT(ThisBuffer->BytesPopulated <= ThisBuffer->BytesAllocated);
+            if (ThisBuffer->BytesPopulated >= ThisBuffer->BytesAllocated) {
+                DWORD NewBytesAllocated;
+                PCHAR NewBuffer;
+
+                if (ThisBuffer->BytesAllocated >= ((DWORD)-1) / 4) {
+                    break;
+                }
+
+                NewBytesAllocated = ThisBuffer->BytesAllocated * 4;
+
+                NewBuffer = YoriLibMalloc(NewBytesAllocated);
+                if (NewBuffer == NULL) {
+                    break;
+                }
+
+                memcpy(NewBuffer, ThisBuffer->Buffer, ThisBuffer->BytesAllocated);
+                YoriLibFree(ThisBuffer->Buffer);
+                ThisBuffer->Buffer = NewBuffer;
+                ThisBuffer->BytesAllocated = NewBytesAllocated;
+            }
+        } else {
+            Result = TRUE;
+            break;
+        }
+    }
+
+    return Result;
+}
+
+/**
  Process any arguments to the command that set or delete environment
  variables, and indicate on completion the first argument that indicates
  a command to execute.
@@ -68,6 +191,12 @@ EnvHelp(VOID)
 
  @param ArgV Pointer to the array of arguments.
 
+ @param StdinVariableName Optionally points to a variable name corresponding
+        to the value in Stdin.
+
+ @param Stdin Pointer to a context describing a buffer of data from stdin.
+        May be zero length if stdin does not supply data.
+
  @param StartCmdArg On successful completion, updated to point to the first
         argument to scan for a command to execute.
 
@@ -78,6 +207,8 @@ EnvModifyEnvironment(
     __in DWORD StartEnvArg,
     __in DWORD ArgC,
     __in YORI_STRING ArgV[],
+    __in_opt PYORI_STRING StdinVariableName,
+    __in PENV_BUFFER Stdin,
     __out PDWORD StartCmdArg
     )
 {
@@ -85,6 +216,8 @@ EnvModifyEnvironment(
     YORI_STRING Value;
     LPTSTR Equals;
     DWORD i;
+    DWORD StdinLength;
+    YORI_STRING StdinString;
 
     *StartCmdArg = 0;
 
@@ -120,6 +253,42 @@ EnvModifyEnvironment(
 #endif
     }
 
+    if (StdinVariableName != NULL) {
+        YoriLibInitEmptyString(&StdinString);
+
+        if (Stdin->BytesPopulated > 0) {
+            StdinLength = YoriLibGetMultibyteInputSizeNeeded(Stdin->Buffer, Stdin->BytesPopulated);
+            if (!YoriLibAllocateString(&StdinString, StdinLength + 1)) {
+                return FALSE;
+            }
+            YoriLibMultibyteInput(Stdin->Buffer, Stdin->BytesPopulated, StdinString.StartOfString, StdinLength);
+            StdinString.LengthInChars = StdinLength;
+
+            //
+            //  Truncate any newlines from the output, which tools
+            //  frequently emit but are of no value here
+            //
+
+            YoriLibTrimTrailingNewlines(&StdinString);
+            StdinString.StartOfString[StdinString.LengthInChars] = '\0';
+        }
+#ifdef YORI_BUILTIN
+        if (StdinString.LengthInChars == 0) {
+            YoriCallSetEnvironmentVariable(StdinVariableName, NULL);
+        } else {
+            YoriCallSetEnvironmentVariable(StdinVariableName, &StdinString);
+        }
+#else
+        if (StdinString.LengthInChars == 0) {
+            SetEnvironmentVariable(StdinVariableName->StartOfString, NULL);
+        } else {
+            SetEnvironmentVariable(StdinVariableName->StartOfString, StdinString.StartOfString);
+        }
+#endif
+
+        YoriLibFreeStringContents(&StdinString);
+    }
+
     return TRUE;
 }
 
@@ -153,12 +322,19 @@ ENTRYPOINT(
     )
 {
     YORI_STRING CmdLine;
+    PYORI_STRING StdinVariableName;
     DWORD ExitCode;
     BOOL ArgumentUnderstood;
     DWORD i;
     DWORD StartEnvArg = 0;
     DWORD StartCmdArg = 0;
     YORI_STRING Arg;
+    BOOLEAN LoadStdin;
+    ENV_BUFFER Stdin;
+
+    LoadStdin = FALSE;
+    StdinVariableName = NULL;
+    ZeroMemory(&Stdin, sizeof(Stdin));
 
     for (i = 1; i < ArgC; i++) {
 
@@ -171,8 +347,15 @@ ENTRYPOINT(
                 EnvHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019"));
+                YoriLibDisplayMitLicense(_T("2019-2023"));
                 return EXIT_SUCCESS;
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("iv")) == 0) {
+                if (i + 1 < ArgC) {
+                    LoadStdin = TRUE;
+                    StdinVariableName = &ArgV[i + 1];
+                    ArgumentUnderstood = TRUE;
+                    i++;
+                }
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("-")) == 0) {
                 ArgumentUnderstood = TRUE;
                 StartEnvArg = i + 1;
@@ -194,15 +377,34 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
+    if (LoadStdin) {
+        if (GetConsoleMode(GetStdHandle(STD_INPUT_HANDLE), &i)) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("env: no file or pipe for input\n"));
+            return EXIT_FAILURE;
+        }
+
+        if (!EnvAllocateBuffer(&Stdin)) {
+            return EXIT_FAILURE;
+        }
+        Stdin.hSource = GetStdHandle(STD_INPUT_HANDLE);
+
+        if (!EnvBufferPump(&Stdin)) {
+            EnvFreeBuffer(&Stdin);
+            return EXIT_FAILURE;
+        }
+    }
+
 #ifdef YORI_BUILTIN
     {
         YORI_STRING SavedEnvironment;
 
         if (!YoriLibGetEnvironmentStrings(&SavedEnvironment)) {
+            EnvFreeBuffer(&Stdin);
             return EXIT_FAILURE;
         }
 
-        EnvModifyEnvironment(StartEnvArg, ArgC, ArgV, &StartCmdArg);
+        EnvModifyEnvironment(StartEnvArg, ArgC, ArgV, StdinVariableName, &Stdin, &StartCmdArg);
+        EnvFreeBuffer(&Stdin);
 
         if (StartCmdArg == 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("env: argument not specified\n"));
@@ -210,6 +412,7 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
         if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartCmdArg, &ArgV[StartCmdArg], TRUE, TRUE, &CmdLine)) {
+            YoriLibBuiltinSetEnvironmentStrings(&SavedEnvironment);
             return EXIT_FAILURE;
         }
 
@@ -226,7 +429,8 @@ ENTRYPOINT(
         PROCESS_INFORMATION ProcessInfo;
         STARTUPINFO StartupInfo;
 
-        EnvModifyEnvironment(StartEnvArg, ArgC, ArgV, &StartCmdArg);
+        EnvModifyEnvironment(StartEnvArg, ArgC, ArgV, StdinVariableName, &Stdin, &StartCmdArg);
+        EnvFreeBuffer(&Stdin);
 
         if (StartCmdArg == 0) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("env: argument not specified\n"));
@@ -247,7 +451,6 @@ ENTRYPOINT(
             YoriLibFreeStringContents(&Executable);
             return EXIT_FAILURE;
         }
-
 
         memcpy(&ChildArgs[0], &Executable, sizeof(YORI_STRING));
         if (StartCmdArg + 1 < ArgC) {
