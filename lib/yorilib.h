@@ -531,6 +531,9 @@ YoriLibSetInputConsoleModeWithoutExtended(
 
 // *** CLIP.C ***
 
+BOOLEAN
+YoriLibOpenClipboard(VOID);
+
 __success(return)
 BOOL
 YoriLibBuildHtmlClipboardBuffer(

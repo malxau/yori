@@ -258,7 +258,7 @@ ClipCopyAsHtml(
     //  Send the buffer to the clipboard.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
@@ -405,7 +405,7 @@ ClipCopyAsRtf(
     //  Send the buffer to the clipboard.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
@@ -556,7 +556,7 @@ ClipCopyAsText(
     //  Send the buffer to the clipboard.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
@@ -740,7 +740,7 @@ ClipPasteSpecifiedFormat(
     //  Open the clipboard and fetch its contents.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
@@ -820,7 +820,7 @@ ClipPreserveText(VOID)
     //  Open the clipboard and fetch its contents.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
@@ -879,7 +879,7 @@ ClipEmptyClipboard(VOID)
     //  Open and empty the clipboard.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);
@@ -917,7 +917,7 @@ ClipListFormats(VOID)
     //  Open and empty the clipboard.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         Err = GetLastError();
         ErrText = YoriLibGetWinErrorText(Err);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("clip: could not open clipboard: %s\n"), ErrText);

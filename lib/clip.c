@@ -70,6 +70,34 @@ static const CHAR YoriLibClipDummyFragEnd[] =
  */
 #define HTMLCLIP_FRAGEND_SIZE (sizeof(YoriLibClipDummyFragEnd)-1)
 
+/**
+ Attempt to open the clipboard with some retries in case it is currently in
+ use.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriLibOpenClipboard(VOID)
+{
+    DWORD Attempt;
+
+    if (DllUser32.pOpenClipboard == NULL) {
+        return FALSE;
+    }
+
+    for (Attempt = 0; Attempt < 6; Attempt++) {
+        if (Attempt > 0) {
+            Sleep(1<<Attempt);
+        }
+
+        if (DllUser32.pOpenClipboard(NULL)) {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 //
 //  Older versions of the analysis engine don't understand that a buffer
 //  allocated with GlobalAlloc and subsequently locked with GlobalLock has
@@ -226,7 +254,7 @@ YoriLibPasteText(
     //  Open the clipboard and fetch its contents.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         return FALSE;
     }
 
@@ -305,7 +333,7 @@ YoriLibCopyText(
     //  Open the clipboard and empty its contents.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         return FALSE;
     }
 
@@ -387,7 +415,7 @@ YoriLibCopyTextRtfAndHtml(
     //  Open the clipboard and empty its contents.
     //
 
-    if (!DllUser32.pOpenClipboard(NULL)) {
+    if (!YoriLibOpenClipboard()) {
         return FALSE;
     }
 
@@ -617,7 +645,7 @@ YoriLibPasteTextWithProcessFallback(
 
     Buffer->LengthInChars = YoriLibProcessClipboard.LengthInChars;
     Buffer->StartOfString[Buffer->LengthInChars] = '\0';
-    
+
     //
     //  Truncate any newlines which are not normally intended when pasting
     //  into the shell
