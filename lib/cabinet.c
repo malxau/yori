@@ -698,6 +698,26 @@ YoriLibCabFileOpenForExtract(
             }
 
             break;
+
+        //
+        //  If the file returns access denied, check if it's due to the
+        //  hidden, system or read only bits.  If they're set and can be
+        //  cleared, retry.  If not, fail.
+        //
+
+        } else if (Err == ERROR_ACCESS_DENIED) {
+            DWORD Attributes;
+            Attributes = GetFileAttributes(FullPath->StartOfString);
+            if (Attributes != (DWORD)-1 &&
+                ((Attributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_READONLY))) != 0) {
+
+                Attributes = Attributes & ~(FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_READONLY);
+                if (!SetFileAttributes(FullPath->StartOfString, Attributes)) {
+                    break;
+                }
+            } else {
+                break;
+            }
         } else {
             break;
         }
