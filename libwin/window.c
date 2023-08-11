@@ -2196,10 +2196,16 @@ YoriWinNotifyEvent(
                                                &ChildLocation,
                                                &InChildClientArea);
 
-        if (Ctrl != NULL &&
-            YoriWinTranslateMouseEventForChild(Event, Ctrl, ChildLocation, InChildClientArea)) {
+        if (Ctrl != NULL) {
+            if (Ctrl->CanReceiveFocus &&
+                Ctrl != Window->KeyboardFocusCtrl) {
 
-            return TRUE;
+                YoriWinSetFocus(Window, Ctrl);
+            }
+            if (YoriWinTranslateMouseEventForChild(Event, Ctrl, ChildLocation, InChildClientArea)) {
+
+                return TRUE;
+            }
         }
 
     } else if (Event->EventType == YoriWinEventMouseDownInNonClient) {
@@ -2213,10 +2219,16 @@ YoriWinNotifyEvent(
                                                &ChildLocation,
                                                &InChildClientArea);
 
-        if (Ctrl != NULL &&
-            YoriWinTranslateMouseEventForChild(Event, Ctrl, ChildLocation, InChildClientArea)) {
+        if (Ctrl != NULL) {
+            if (Ctrl->CanReceiveFocus &&
+                Ctrl != Window->KeyboardFocusCtrl) {
 
-            return TRUE;
+                YoriWinSetFocus(Window, Ctrl);
+            }
+            if (YoriWinTranslateMouseEventForChild(Event, Ctrl, ChildLocation, InChildClientArea)) {
+
+                return TRUE;
+            }
         }
 
     } else if (Event->EventType == YoriWinEventMouseUpInClient ||
