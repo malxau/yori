@@ -448,7 +448,7 @@ YoriWinComboCreate(
     YoriWinItemArrayInitialize(&Combo->ItemArray);
 
     Combo->Ctrl.NotifyEventFn = YoriWinComboEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &Combo->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, FALSE, &Combo->Ctrl)) {
         YoriLibDereference(Combo);
         return NULL;
     }

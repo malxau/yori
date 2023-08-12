@@ -1138,7 +1138,7 @@ YoriWinMenuPopupEventHandler(
                 MenuPopup->ActiveItemIndex == (DWORD)(Event->MouseUp.Location.Y - 1)) {
 
                 YoriWinMenuPopupInvokeItem(MenuPopup, MenuPopup->ActiveItemIndex);
-            } 
+            }
             break;
     }
 
@@ -1196,7 +1196,7 @@ YoriWinMenuPopupCreate(
     MenuPopup->ItemCount = ItemCount;
     MenuPopup->Ctrl.NotifyEventFn = YoriWinMenuPopupEventHandler;
     MenuPopup->Outcome = Outcome;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &MenuPopup->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, TRUE, &MenuPopup->Ctrl)) {
         YoriLibDereference(MenuPopup);
         return NULL;
     }
@@ -1563,7 +1563,7 @@ YoriWinMenuBarOpenMenu(
         HorizontalOffset = (WORD)(HorizontalOffset + MenuBar->Items[Index].DisplayCaption.LengthInChars + 2);
     }
 
-    // 
+    //
     //  MSFIX: If it doesn't fit vertically, do we need some fancy scroll
     //  thing?
     //
@@ -1652,7 +1652,7 @@ YoriWinMenuBarExecuteTopMenu(
             //  Currently, this code doesn't attempt to support empty top
             //  level menus.  Doing this properly implies leaving the top
             //  level item selected but still handling left and right
-            //  navigation.  That would normally be done in 
+            //  navigation.  That would normally be done in
             //  YoriWinMenuPopupEventHandler, although if no child menu
             //  window is created, there'd be nothing to catch it.
             //
@@ -2050,7 +2050,7 @@ YoriWinMenuBarCreate(
     Size.Bottom = 0;
 
     MenuBar->Ctrl.NotifyEventFn = YoriWinMenuBarEventHandler;
-    if (!YoriWinCreateControl(Parent, &Size, FALSE, &MenuBar->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, &Size, FALSE, FALSE, &MenuBar->Ctrl)) {
         YoriLibDereference(MenuBar);
         return NULL;
     }

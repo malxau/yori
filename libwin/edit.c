@@ -2880,7 +2880,7 @@ YoriWinEditCreate(
     Edit->Text.StartOfString[Edit->Text.LengthInChars] = '\0';
     Edit->CursorOffset = Edit->Text.LengthInChars;
     Edit->Ctrl.NotifyEventFn = YoriWinEditEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &Edit->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, TRUE, &Edit->Ctrl)) {
         YoriLibFreeStringContents(&Edit->Text);
         YoriLibDereference(Edit);
         return NULL;

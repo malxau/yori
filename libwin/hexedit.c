@@ -818,7 +818,7 @@ YoriWinHexEditSelectionColor(
         return Attributes;
     }
 
-    if (Offset >= HexEdit->Selection.FirstByteOffset && 
+    if (Offset >= HexEdit->Selection.FirstByteOffset &&
         Offset <= HexEdit->Selection.LastByteOffset) {
 
         if (PaddingAfter && Offset == HexEdit->Selection.LastByteOffset) {
@@ -1822,7 +1822,7 @@ YoriWinHexEditSetCursorLocationToZero(
     __in PYORI_WIN_CTRL_HEX_EDIT HexEdit
     )
 {
-    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    YoriWinHexEditCellTypeHexDigit,
                                                    0,
                                                    HexEdit->BytesPerWord * 8 - 4);
@@ -1889,7 +1889,7 @@ YoriWinHexEditInputCharToByte(
 
  @param LastCharOffset Specifies the offset beyond the last character to
         remove.
- 
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -3574,7 +3574,7 @@ YoriWinHexEditCursorHome(
     }
 
     YoriWinHexEditClearSelection(HexEdit);
-    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    CellType,
                                                    BufferOffset,
                                                    BitShift);
@@ -3617,7 +3617,7 @@ YoriWinHexEditCursorEnd(
     BitShift = 0;
 
     YoriWinHexEditClearSelection(HexEdit);
-    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    CellType,
                                                    BufferOffset,
                                                    BitShift);
@@ -3651,7 +3651,7 @@ YoriWinHexEditCursorUp(
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
 
     YoriWinHexEditClearSelection(HexEdit);
-    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    CellType,
                                                    BufferOffset,
                                                    BitShift);
@@ -3685,7 +3685,7 @@ YoriWinHexEditCursorDown(
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
 
     YoriWinHexEditClearSelection(HexEdit);
-    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    CellType,
                                                    BufferOffset,
                                                    BitShift);
@@ -3717,7 +3717,7 @@ YoriWinHexEditCursorCtrlHome(
     }
 
     YoriWinHexEditClearSelection(HexEdit);
-    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    CellType,
                                                    BufferOffset,
                                                    BitShift);
@@ -3750,7 +3750,7 @@ YoriWinHexEditCursorCtrlEnd(
     ASSERT (CellType == YoriWinHexEditCellTypeHexDigit || CellType == YoriWinHexEditCellTypeCharValue);
 
     YoriWinHexEditClearSelection(HexEdit);
-    return YoriWinHexEditSetCursorToBufferLocation(HexEdit, 
+    return YoriWinHexEditSetCursorToBufferLocation(HexEdit,
                                                    CellType,
                                                    BufferOffset,
                                                    BitShift);
@@ -4340,7 +4340,7 @@ YoriWinHexEditCreate(
     ZeroMemory(HexEdit, sizeof(YORI_WIN_CTRL_HEX_EDIT));
 
     HexEdit->Ctrl.NotifyEventFn = YoriWinHexEditEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &HexEdit->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, TRUE, &HexEdit->Ctrl)) {
         YoriLibDereference(HexEdit);
         return NULL;
     }

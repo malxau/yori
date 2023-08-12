@@ -203,7 +203,7 @@ typedef struct _YORI_WIN_WINDOW {
      occurs the window notifies whichever control has focus that it has
      focus.  The active control with focus can change on this window but
      it will not be notified until both the window and control have focus.
-     FALSE if another window has focus, which can also mean this window 
+     FALSE if another window has focus, which can also mean this window
      has not started processing input events.
      */
     BOOLEAN HasFocus;
@@ -615,7 +615,7 @@ YoriWinInvokeAccelerator(
                 BOOLEAN ActivateNext;
                 ActivateNext = FALSE;
 
-                // 
+                //
                 //  Labels are special in that they support accelerators but
                 //  the intention is to activate the next control
                 //
@@ -1088,7 +1088,7 @@ YoriWinCreateWindowEx(
     Window->WindowSize.X = (SHORT)(WindowRect->Right - WindowRect->Left + 1);
     Window->WindowSize.Y = (SHORT)(WindowRect->Bottom - WindowRect->Top + 1);
 
-    if (!YoriWinCreateControl(NULL, WindowRect, TRUE, &Window->Ctrl)) {
+    if (!YoriWinCreateControl(NULL, WindowRect, TRUE, TRUE, &Window->Ctrl)) {
         YoriWinDestroyWindow(Window);
         return FALSE;
     }
@@ -2198,6 +2198,7 @@ YoriWinNotifyEvent(
 
         if (Ctrl != NULL) {
             if (Ctrl->CanReceiveFocus &&
+                Ctrl->ReceiveFocusOnMouseClick &&
                 Ctrl != Window->KeyboardFocusCtrl) {
 
                 YoriWinSetFocus(Window, Ctrl);

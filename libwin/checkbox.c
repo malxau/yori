@@ -313,7 +313,7 @@ YoriWinCheckboxCreate(
     ZeroMemory(Checkbox, sizeof(YORI_WIN_CTRL_CHECKBOX));
 
     Checkbox->Ctrl.NotifyEventFn = YoriWinCheckboxEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &Checkbox->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, FALSE, &Checkbox->Ctrl)) {
         YoriLibDereference(Checkbox);
         return NULL;
     }

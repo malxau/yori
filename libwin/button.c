@@ -327,7 +327,7 @@ YoriWinButtonCreate(
     }
 
     Button->Ctrl.NotifyEventFn = YoriWinButtonEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, (BOOLEAN)!Button->DisableFocus, &Button->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, (BOOLEAN)!Button->DisableFocus, FALSE, &Button->Ctrl)) {
         YoriLibDereference(Button);
         return NULL;
     }

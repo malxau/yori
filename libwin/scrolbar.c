@@ -396,7 +396,7 @@ YoriWinScrollBarCreate(
     ZeroMemory(ScrollBar, sizeof(YORI_WIN_CTRL_SCROLLBAR));
 
     ScrollBar->Ctrl.NotifyEventFn = YoriWinScrollBarEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &ScrollBar->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, FALSE, &ScrollBar->Ctrl)) {
         YoriLibDereference(ScrollBar);
         return NULL;
     }

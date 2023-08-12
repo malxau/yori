@@ -757,7 +757,7 @@ YoriWinListEventHandler(
 
                     Element = &List->ItemArray.Items[List->ActiveOption];
                     Element->Flags = Element->Flags ^ YORI_WIN_ITEM_SELECTED;
-                } 
+                }
                 List->ActiveOption = NewOption;
                 if (List->SelectionChangeCallback) {
                     List->SelectionChangeCallback(&List->Ctrl);
@@ -1251,7 +1251,7 @@ YoriWinListCreate(
     YoriWinItemArrayInitialize(&List->ItemArray);
 
     List->Ctrl.NotifyEventFn = YoriWinListEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &List->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, TRUE, &List->Ctrl)) {
         YoriLibDereference(List);
         return FALSE;
     }

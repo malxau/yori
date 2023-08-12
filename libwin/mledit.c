@@ -481,7 +481,7 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
 
 /**
  Calculate the line of text to display.  This is typically the exact same
- string as the line from the file's contents, but can diverge due to 
+ string as the line from the file's contents, but can diverge due to
  display requirements such as tab expansion.
 
  @param MultilineEdit Pointer to the multiline edit control.
@@ -2092,7 +2092,7 @@ YoriWinMultilineEditMergeLines(
     LinesToCopy = MultilineEdit->LinesPopulated - FirstLineIndex - 2;
     if (LinesToCopy > 0) {
         memmove(&MultilineEdit->LineArray[FirstLineIndex + 1],
-                &MultilineEdit->LineArray[FirstLineIndex + 2], 
+                &MultilineEdit->LineArray[FirstLineIndex + 2],
                 LinesToCopy * sizeof(YORI_STRING));
     }
     MultilineEdit->LinesPopulated--;
@@ -2167,7 +2167,7 @@ YoriWinMultilineEditSplitLines(
     LinesToCopy = MultilineEdit->LinesPopulated - LineIndex - 1;
     if (LinesToCopy > 0) {
         memmove(&MultilineEdit->LineArray[LineIndex + 2],
-                &MultilineEdit->LineArray[LineIndex + 1], 
+                &MultilineEdit->LineArray[LineIndex + 1],
                 LinesToCopy * sizeof(YORI_STRING));
     }
 
@@ -2424,7 +2424,7 @@ YoriWinMultilineEditPopulateTextRange(
  @param SelectedText On successful completion, populated with a newly
         allocated buffer containing the selected text.  The caller is
         expected to free this buffer with @ref YoriLibFreeStringContents .
- 
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -2494,7 +2494,7 @@ YoriWinMultilineEditGetTextRange(
 
  @param LastCharOffset Specifies the offset beyond the last character to
         remove.
- 
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -3082,7 +3082,7 @@ YoriWinMultilineEditInsertTextRange(
             //
 
             if (Index + 1 < Text->LengthInChars &&
-                Text->StartOfString[Index] == '\r' && 
+                Text->StartOfString[Index] == '\r' &&
                 Text->StartOfString[Index + 1] == '\n') {
 
                 Index++;
@@ -3102,7 +3102,7 @@ YoriWinMultilineEditInsertTextRange(
     //  line so we can completely ignore it.
     //
 
-    if (LineCount != 0) {                                  
+    if (LineCount != 0) {
         YoriLibFreeStringContents(&TrailingPortionOfFirstLine);
         YoriLibInitEmptyString(&TrailingPortionOfFirstLine);
     }
@@ -3404,7 +3404,7 @@ YoriWinMultilineEditOverwriteTextRange(
             //
 
             if (Index + 1 < Text->LengthInChars &&
-                Text->StartOfString[Index] == '\r' && 
+                Text->StartOfString[Index] == '\r' &&
                 Text->StartOfString[Index + 1] == '\n') {
 
                 Index++;
@@ -3502,7 +3502,7 @@ YoriWinMultilineEditAppendLinesNoDataCopy(
 
  @param CtrlHandle Pointer to the multiline edit control containing the
         selection and contents of the buffer.
- 
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 BOOLEAN
@@ -3555,7 +3555,7 @@ YoriWinMultilineEditDeleteSelection(
  @param SelectedText On successful completion, populated with a newly
         allocated buffer containing the selected text.  The caller is
         expected to free this buffer with @ref YoriLibFreeStringContents .
- 
+
  @return TRUE to indicate success, FALSE to indicate failure.
  */
 __success(return)
@@ -3625,7 +3625,7 @@ YoriWinMultilineEditCheckSelectionState(
 
  @param MultilineEdit Pointer to the multiline edit control that describes
         the selection and cursor location.
- 
+
  @param Mouse If TRUE, the selection is being initiated by mouse operations.
         If FALSE, the selection is being initiated by keyboard operations.
  */
@@ -6119,7 +6119,7 @@ YoriWinMultilineEditCreate(
     YoriLibInitializeListHead(&MultilineEdit->Redo);
 
     MultilineEdit->Ctrl.NotifyEventFn = YoriWinMultilineEditEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &MultilineEdit->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, TRUE, &MultilineEdit->Ctrl)) {
         YoriLibDereference(MultilineEdit);
         return NULL;
     }

@@ -187,6 +187,12 @@ YoriWinSetControlContext(
     __in PVOID Context
     );
 
+BOOLEAN
+YoriWinControlSetFocusOnMouseClick(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN ReceiveFocusOnMouseClick
+    );
+
 // EDIT.C
 
 /**

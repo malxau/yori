@@ -300,6 +300,14 @@ typedef struct _YORI_WIN_CTRL {
     BOOLEAN CanReceiveFocus;
 
     /**
+     If TRUE, the control should receive focus in response to a mouse click.
+     Individual controls or dialogs can suppress this behavior based on UX
+     considerations (eg. should a check box click take focus from an input
+     field), etc.
+     */
+    BOOLEAN ReceiveFocusOnMouseClick;
+
+    /**
      A bitmask of the mouse button down notifications that have been
      received by this control.  If a control has observed a mouse down event,
      it will also be sent a mouse up event, even if the event occurs outside
@@ -558,6 +566,7 @@ YoriWinCreateControl(
     __in_opt PYORI_WIN_CTRL Parent,
     __in PSMALL_RECT Rect,
     __in BOOLEAN CanReceiveFocus,
+    __in BOOLEAN ReceiveFocusOnMouseClick,
     __out PYORI_WIN_CTRL Ctrl
     );
 

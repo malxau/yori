@@ -236,7 +236,7 @@ YoriWinLabelGetNextDisplayLine(
         }
 
         //
-        //  If the text is wider than the control, and the char is not a 
+        //  If the text is wider than the control, and the char is not a
         //  soft break character, go to the previous char and do soft break
         //  processing from there.
         //
@@ -276,7 +276,7 @@ YoriWinLabelGetNextDisplayLine(
         BreakCharFound = TRUE;
     }
 
-    // 
+    //
     //  Display the string after removing the break char
     //
 
@@ -424,7 +424,7 @@ YoriWinLabelCountLinesRequiredForText(
 
  @param Label Pointer to the label control which implicitly provides
         dimensions as well as text to display.
- 
+
  @return The number of lines of text within the control.
  */
 DWORD
@@ -880,7 +880,7 @@ YoriWinLabelCreate(
     }
 
     Label->Ctrl.NotifyEventFn = YoriWinLabelEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, FALSE, &Label->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, FALSE, FALSE, &Label->Ctrl)) {
         YoriLibFreeStringContents(&Label->Caption);
         YoriLibDereference(Label);
         return NULL;

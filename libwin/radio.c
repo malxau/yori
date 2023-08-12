@@ -354,7 +354,7 @@ YoriWinRadioCreate(
     ZeroMemory(Radio, sizeof(YORI_WIN_CTRL_RADIO));
 
     Radio->Ctrl.NotifyEventFn = YoriWinRadioEventHandler;
-    if (!YoriWinCreateControl(Parent, Size, TRUE, &Radio->Ctrl)) {
+    if (!YoriWinCreateControl(Parent, Size, TRUE, FALSE, &Radio->Ctrl)) {
         YoriLibDereference(Radio);
         return NULL;
     }

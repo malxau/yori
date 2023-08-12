@@ -42,6 +42,11 @@
  @param CanReceiveFocus If TRUE, the control is capable of being selected with
         the tab key or similar.  If FALSE, focus should skip this control.
 
+ @param ReceiveFocusOnMouseClick If TRUE, clicking on the control should
+        switch input focus to it.  For some controls, a click can perform an
+        action without needing to retain focus, but the control still needs to
+        receive focus on keyboard navigation.
+
  @param Ctrl On successful completion, this control structure is updated
         to its initialized state.
 
@@ -53,6 +58,7 @@ YoriWinCreateControl(
     __in_opt PYORI_WIN_CTRL Parent,
     __in PSMALL_RECT Rect,
     __in BOOLEAN CanReceiveFocus,
+    __in BOOLEAN ReceiveFocusOnMouseClick,
     __out PYORI_WIN_CTRL Ctrl
     )
 {
@@ -76,6 +82,9 @@ YoriWinCreateControl(
 
     Ctrl->RelativeToParentClient = TRUE;
     Ctrl->CanReceiveFocus = CanReceiveFocus;
+    if (CanReceiveFocus) {
+        Ctrl->ReceiveFocusOnMouseClick = ReceiveFocusOnMouseClick;
+    }
 
     YoriLibInitializeListHead(&Ctrl->ParentControlList);
     YoriLibInitializeListHead(&Ctrl->ChildControlList);
@@ -698,7 +707,7 @@ YoriWinTranslateMouseEventForChild(
 
  @param Window On successful completion, populated with the toplevel window
         that the window coordinates are relative to.
- 
+
  @param WinCoord On successful completion, populated with the window
         coordinates.
  */
@@ -870,8 +879,6 @@ YoriWinTranslateScreenCoordinatesToWindow(
         CtrlCoord->Y = 0;
     }
 }
-
-
 
 /**
  Updates the specified cell within the control's client area.
@@ -1135,6 +1142,32 @@ YoriWinSetControlContext(
 {
     PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Ctrl->UserContext = Context;
+}
+
+/**
+ Change whether the control should receive focus in response to a mouse click.
+ Note controls can receive focus via the keyboard, even if focus is not
+ changed via a click.
+
+ @param CtrlHandle Pointer to the control.
+
+ @param ReceiveFocusOnMouseClick TRUE if the control should gain focus on a
+        mouse click, FALSE if it should not.
+
+ @return TRUE if the state was successfully changed, FALSE if it was not.
+ */
+BOOLEAN
+YoriWinControlSetFocusOnMouseClick(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN ReceiveFocusOnMouseClick
+    )
+{
+    PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    if (Ctrl->CanReceiveFocus) {
+        Ctrl->ReceiveFocusOnMouseClick = ReceiveFocusOnMouseClick;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /**
