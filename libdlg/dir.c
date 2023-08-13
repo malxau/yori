@@ -737,6 +737,7 @@ YoriDlgDir(
         return FALSE;
     }
 
+    YoriWinControlSetFocusOnMouseClick(Ctrl, FALSE);
     YoriWinSetControlId(Ctrl, YoriDlgDirControlDirectoryList);
     YoriWinListSetSelectionNotifyCallback(Ctrl, YoriDlgDirDirectorySelectionChanged);
 

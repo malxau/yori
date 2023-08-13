@@ -631,6 +631,7 @@ YoriDlgDevice(
         return FALSE;
     }
 
+    YoriWinControlSetFocusOnMouseClick(Ctrl, FALSE);
     YoriWinSetControlId(Ctrl, YoriDlgDevControlDeviceList);
     YoriWinListSetSelectionNotifyCallback(Ctrl, YoriDlgDevDeviceSelectionChanged);
 

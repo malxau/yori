@@ -854,6 +854,7 @@ YoriDlgFile(
         return FALSE;
     }
 
+    YoriWinControlSetFocusOnMouseClick(Ctrl, FALSE);
     YoriWinSetControlId(Ctrl, YoriDlgFileControlFileList);
     YoriWinListSetSelectionNotifyCallback(Ctrl, YoriDlgFileFileSelectionChanged);
 
@@ -881,6 +882,7 @@ YoriDlgFile(
         return FALSE;
     }
 
+    YoriWinControlSetFocusOnMouseClick(Ctrl, FALSE);
     YoriWinSetControlId(Ctrl, YoriDlgFileControlDirectoryList);
     YoriWinListSetSelectionNotifyCallback(Ctrl, YoriDlgFileDirectorySelectionChanged);
 
