@@ -4,6 +4,7 @@ compile: yorilib.lib yoriver.obj
 !INCLUDE "..\config\common.mk"
 
 OBJS=\
+	 bargraph.obj \
 	 builtin.obj  \
 	 cabinet.obj  \
 	 call.obj     \

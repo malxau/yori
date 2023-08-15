@@ -419,6 +419,16 @@ YORI_BUILTIN_UNLOAD_NOTIFY(VOID);
  */
 typedef YORI_BUILTIN_UNLOAD_NOTIFY *PYORI_BUILTIN_UNLOAD_NOTIFY;
 
+// *** BARGRAPH.C ***
+
+BOOLEAN
+YoriLibDisplayBarGraph(
+    __in HANDLE hOutput,
+    __in DWORD TenthsOfPercent,
+    __in DWORD GreenThreshold,
+    __in DWORD RedThreshold
+    );
+
 // *** BUILTIN.C ***
 
 BOOL
