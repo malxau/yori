@@ -276,11 +276,12 @@ ENTRYPOINT(
     BATTERY_CONTEXT BatteryContext;
     YORI_STRING DisplayString;
     YORI_STRING AllocatedFormatString;
-    LPTSTR DefaultFormatString = _T("Percent remaining: $PERCENTREMAINING$\n")
-                                 _T("Power source: $POWERSOURCE$\n")
+    BOOLEAN DisplayGraph;
+    LPTSTR DefaultFormatString = _T("Power source: $POWERSOURCE$\n")
                                  _T("Charging: $CHARGING$\n")
                                  _T("Remaining battery: $REMAINING_TIME$\n");
 
+    DisplayGraph = TRUE;
     ZeroMemory(&BatteryContext, sizeof(BatteryContext));
     for (i = 1; i < ArgC; i++) {
 
@@ -347,18 +348,23 @@ ENTRYPOINT(
         }
     }
 
-
     //
     //  Obtain a format string.
     //
 
     YoriLibInitEmptyString(&AllocatedFormatString);
     if (StartArg > 0) {
+        DisplayGraph = FALSE;
         if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, FALSE, &AllocatedFormatString)) {
             return EXIT_FAILURE;
         }
     } else {
         YoriLibConstantString(&AllocatedFormatString, DefaultFormatString);
+    }
+
+    if (DisplayGraph) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Percent remaining: %i%%\n"), BatteryContext.PowerStatus.BatteryLifePercent);
+        YoriLibDisplayBarGraph(GetStdHandle(STD_OUTPUT_HANDLE), BatteryContext.PowerStatus.BatteryLifePercent * 10, 400, 200);
     }
 
     if (AllocatedFormatString.LengthInChars > 0) {
