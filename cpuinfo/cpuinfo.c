@@ -3,7 +3,7 @@
  *
  * Yori shell display cpu topology information
  *
- * Copyright (c) 2019-2022 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -1034,18 +1034,17 @@ ENTRYPOINT(
     BOOLEAN DisplaySockets = FALSE;
     BOOLEAN DisplayFormatString = TRUE;
     BOOLEAN InsertNewline = FALSE;
+    BOOLEAN DisplayGraph = TRUE;
     YORI_STRING Arg;
     CPUINFO_CONTEXT CpuInfoContext;
     YORI_STRING DisplayString;
     YORI_STRING AllocatedFormatString;
-    LPTSTR DefaultFormatString = _T("Utilization: $UTILIZATION$\n")
-                                 _T("Core count: $CORECOUNT$\n")
+    LPTSTR DefaultFormatString = _T("Core count: $CORECOUNT$\n")
                                  _T("Performance core count: $PERFORMANCECORECOUNT$\n")
                                  _T("Efficiency core count: $EFFICIENCYCORECOUNT$\n")
                                  _T("Group count: $GROUPCOUNT$\n")
                                  _T("Logical processors: $LOGICALCOUNT$\n")
                                  _T("Numa nodes: $NUMANODECOUNT$\n");
-    LPTSTR DefaultUtilizationFormatString = _T("Utilization: $UTILIZATION$\n");
 
     ZeroMemory(&CpuInfoContext, sizeof(CpuInfoContext));
     CpuInfoContext.WaitTime = 300;
@@ -1060,7 +1059,7 @@ ENTRYPOINT(
                 CpuInfoHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2019-2022"));
+                YoriLibDisplayMitLicense(_T("2019-2023"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("a")) == 0) {
                 DisplayCores = TRUE;
@@ -1174,6 +1173,7 @@ ENTRYPOINT(
 
     YoriLibInitEmptyString(&AllocatedFormatString);
     if (StartArg > 0) {
+        DisplayGraph = FALSE;
         if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, FALSE, &AllocatedFormatString)) {
             YoriLibFree(CpuInfoContext.ProcInfo);
             return EXIT_FAILURE;
@@ -1182,22 +1182,36 @@ ENTRYPOINT(
         if (DisplayFormatString) {
             if (CpuInfoContext.TopologyLoaded) {
                 YoriLibConstantString(&AllocatedFormatString, DefaultFormatString);
-            } else {
-                YoriLibConstantString(&AllocatedFormatString, DefaultUtilizationFormatString);
             }
         }
     }
 
-    if (AllocatedFormatString.LengthInChars > 0) {
 
+    if (DisplayGraph) {
         if (InsertNewline) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
         }
 
-        //
-        //  Output the format string with summary counts.
-        //
+        if (!CpuInfoContext.UtilizationLoaded) {
+            CpuInfoLoadProcessorUtilization(&CpuInfoContext);
+        }
 
+        if (CpuInfoContext.UtilizationLoaded) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Utilization: %i.%02i%%\n"), CpuInfoContext.Utilization / 100, CpuInfoContext.Utilization % 100);
+            YoriLibDisplayBarGraph(GetStdHandle(STD_OUTPUT_HANDLE), CpuInfoContext.Utilization / 10, 500, 750);
+        }
+
+        InsertNewline = FALSE;
+    }
+
+    //
+    //  Output the format string with summary counts.
+    //
+
+    if (AllocatedFormatString.LengthInChars > 0) {
+        if (InsertNewline) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("\n"));
+        }
         YoriLibInitEmptyString(&DisplayString);
         YoriLibExpandCommandVariables(&AllocatedFormatString, '$', FALSE, CpuInfoExpandVariables, &CpuInfoContext, &DisplayString);
         if (DisplayString.StartOfString != NULL) {
