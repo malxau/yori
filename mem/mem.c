@@ -3,7 +3,7 @@
  *
  * Yori shell display memory usage
  *
- * Copyright (c) 2019 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -52,6 +52,8 @@ CHAR strMemHelpText[] =
         "                          in human friendly format\n"
         "   $COMMITLIMITBYTES$     The maximum amount of memory the system can allocate\n"
         "                          in raw bytes\n"
+        "   $MEMORYLOAD$           The percentage of memory usage.  Note modern systems\n"
+        "                          use memory opportunistically\n"
         "   $TOTALMEM$             The amount of physical memory in human friendly\n"
         "                          format\n"
         "   $TOTALMEMBYTES$        The amount of physical memory in raw bytes\n";
@@ -147,6 +149,13 @@ typedef struct _MEM_CONTEXT {
      process concept.
      */
     LARGE_INTEGER AvailableVirtual;
+
+    /**
+     The percentage of memory that is in use.  This uses an excessively
+     large integer for consistency.
+     */
+    LARGE_INTEGER MemoryLoad;
+
 } MEM_CONTEXT, *PMEM_CONTEXT;
 
 /**
@@ -191,6 +200,8 @@ MemExpandVariables(
         return MemOutputLargeInteger(MemContext->TotalCommit, 10, OutputBuffer);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("AVAILABLECOMMITBYTES")) == 0) {
         return MemOutputLargeInteger(MemContext->AvailableCommit, 10, OutputBuffer);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("MEMORYLOAD")) == 0) {
+        return MemOutputLargeInteger(MemContext->MemoryLoad, 10, OutputBuffer);
     } else {
         return 0;
     }
@@ -503,6 +514,7 @@ ENTRYPOINT(
     DWORD StartArg = 0;
     BOOLEAN DisplayProcesses = FALSE;
     BOOLEAN GroupProcesses = FALSE;
+    BOOLEAN DisplayGraph = TRUE;
     YORI_STRING Arg;
     MEM_CONTEXT MemContext;
     YORI_STRING DisplayString;
@@ -546,6 +558,7 @@ ENTRYPOINT(
     }
 
     if (StartArg > 0) {
+        DisplayGraph = FALSE;
         if (!YoriLibBuildCmdlineFromArgcArgv(ArgC - StartArg, &ArgV[StartArg], TRUE, FALSE, &AllocatedFormatString)) {
             return EXIT_FAILURE;
         }
@@ -569,6 +582,8 @@ ENTRYPOINT(
             return EXIT_FAILURE;
         }
 
+        MemContext.MemoryLoad.HighPart = 0;
+        MemContext.MemoryLoad.LowPart = MemStatusEx.dwMemoryLoad;
         MemContext.TotalPhysical.QuadPart = MemStatusEx.ullTotalPhys;
         MemContext.AvailablePhysical.QuadPart = MemStatusEx.ullAvailPhys;
         MemContext.TotalCommit.QuadPart = MemStatusEx.ullTotalPageFile;
@@ -578,6 +593,8 @@ ENTRYPOINT(
     } else if (DllKernel32.pGlobalMemoryStatus != NULL) {
         MEMORYSTATUS MemStatus;
         DllKernel32.pGlobalMemoryStatus(&MemStatus);
+        MemContext.MemoryLoad.HighPart = 0;
+        MemContext.MemoryLoad.LowPart = MemStatus.dwMemoryLoad;
         MemContext.TotalPhysical.QuadPart = MemStatus.dwTotalPhys;
         MemContext.AvailablePhysical.QuadPart = MemStatus.dwAvailPhys;
         MemContext.TotalCommit.QuadPart = MemStatus.dwTotalPageFile;
@@ -586,6 +603,10 @@ ENTRYPOINT(
         MemContext.AvailableVirtual.QuadPart = MemStatus.dwAvailVirtual;
     }
 
+    if (DisplayGraph) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Memory load: %i%%\n"), MemContext.MemoryLoad.LowPart);
+        YoriLibDisplayBarGraph(GetStdHandle(STD_OUTPUT_HANDLE), MemContext.MemoryLoad.LowPart * 10, 650, 800);
+    }
 
     YoriLibInitEmptyString(&DisplayString);
     YoriLibExpandCommandVariables(&AllocatedFormatString, '$', FALSE, MemExpandVariables, &MemContext, &DisplayString);
