@@ -340,6 +340,70 @@ DirenvUninstallApplyHook(VOID)
 }
 
 /**
+ Check if a whitelist is specified in DIRENVDIRLIST.  If one is specified,
+ check if the directory being entered is in the whitelist.  Return TRUE to
+ indicate the script can be executed, which occurs if the whitelist is
+ empty or the element is found within the whitelist.
+
+ @param Directory Pointer to a string containing the directory to check.
+
+ @return TRUE if the script in the directory should be executed, FALSE if it
+         should not be executed.
+ */
+BOOLEAN
+DirenvScriptAllowedInDirectory(
+    __in PYORI_STRING Directory
+    )
+{
+    YORI_STRING Whitelist;
+    YORI_STRING Remaining;
+    YORI_STRING Component;
+    LPTSTR NextComponent;
+
+    YoriLibInitEmptyString(&Whitelist);
+    if (!YoriLibAllocateAndGetEnvironmentVariable(_T("DIRENVDIRLIST"), &Whitelist)) {
+        return FALSE;
+    }
+
+    if (Whitelist.LengthInChars == 0) {
+        YoriLibFreeStringContents(&Whitelist);
+        return TRUE;
+    }
+
+    YoriLibInitEmptyString(&Remaining);
+    YoriLibInitEmptyString(&Component);
+
+    Remaining.LengthInChars = Whitelist.LengthInChars;
+    Remaining.StartOfString = Whitelist.StartOfString;
+
+    while (Remaining.LengthInChars > 0) {
+        Component.StartOfString = Remaining.StartOfString;
+        Component.LengthInChars = Remaining.LengthInChars;
+        NextComponent = YoriLibFindLeftMostCharacter(&Remaining, ';');
+
+        if (NextComponent != NULL) {
+            Remaining.LengthInChars = Remaining.LengthInChars - (DWORD)(NextComponent - Remaining.StartOfString) - 1;
+            Remaining.StartOfString = NextComponent + 1;
+            Component.LengthInChars = (DWORD)(NextComponent - Component.StartOfString);
+        } else {
+            Remaining.LengthInChars = 0;
+        }
+
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Comparing %y to %y\n"), Directory, &Component);
+
+        if (YoriLibCompareStringInsensitive(Directory, &Component) == 0) {
+            YoriLibFreeStringContents(&Whitelist);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Return match\n"));
+            return TRUE;
+        }
+    }
+
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Return no match found\n"));
+    YoriLibFreeStringContents(&Whitelist);
+    return FALSE;
+}
+
+/**
  Check for a directory change, and if one is detected, probe to find any
  script to invoke.  If there is a script to invoke that's different from
  any existing script, firstly undo the effects of the previous script,
@@ -424,8 +488,13 @@ DirenvApplyInternal(VOID)
             if (YoriLibCompareStringInsensitive(&NewScript, &DirenvPreviousExecutedScript) == 0) {
                 YoriLibFreeStringContents(&NewScript);
                 break;
-
             }
+
+            if (!DirenvScriptAllowedInDirectory(&CurrentDirectorySubset)) {
+                YoriLibFreeStringContents(&NewScript);
+                break;
+            }
+
             if (DirenvPreviousExecutedScript.LengthInChars > 0) {
                 DirenvUndoPreviousScript();
             }
