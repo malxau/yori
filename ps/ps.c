@@ -56,44 +56,6 @@ PsHelp(VOID)
 }
 
 /**
- Output a 64 bit integer.
-
- @param LargeInt A large integer to output.
-
- @param NumberBase Specifies the numeric base to use.  Should be 10 for
-        decimal or 16 for hex.
-
- @param OutputString Pointer to a string to populate with the contents of
-        the variable.
-
- @return The number of characters populated into the variable, or the number
-         of characters required to successfully populate the contents into
-         the variable.
- */
-DWORD
-PsOutputLargeInteger(
-    __in LARGE_INTEGER LargeInt,
-    __in DWORD NumberBase,
-    __inout PYORI_STRING OutputString
-    )
-{
-    YORI_STRING String;
-    TCHAR StringBuffer[32];
-
-    YoriLibInitEmptyString(&String);
-    String.StartOfString = StringBuffer;
-    String.LengthAllocated = sizeof(StringBuffer)/sizeof(StringBuffer[0]);
-
-    YoriLibNumberToString(&String, LargeInt.QuadPart, NumberBase, 0, ' ');
-
-    if (OutputString->LengthAllocated >= String.LengthInChars) {
-        memcpy(OutputString->StartOfString, String.StartOfString, String.LengthInChars * sizeof(TCHAR));
-    }
-
-    return String.LengthInChars;
-}
-
-/**
  Context about process enumeration tasks to perform.
  */
 typedef struct _PS_CONTEXT {
