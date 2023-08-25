@@ -1036,6 +1036,9 @@ BOOL
 YoriLibLoadCabinetFunctions(VOID);
 
 BOOL
+YoriLibLoadCrypt32Functions(VOID);
+
+BOOL
 YoriLibLoadCtl3d32Functions(VOID);
 
 BOOL

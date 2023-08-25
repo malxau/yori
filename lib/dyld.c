@@ -276,6 +276,35 @@ YoriLibLoadKernel32Functions(VOID)
 }
 
 /**
+ A structure containing pointers to crypt32.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_CRYPT32_FUNCTIONS DllCrypt32;
+
+/**
+ Load pointers to all optional crypt32.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadCrypt32Functions(VOID)
+{
+    if (DllCrypt32.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllCrypt32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("CRYPT32.DLL"));
+    if (DllCrypt32.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllCrypt32.pCryptBinaryToStringW = (PCRYPT_BINARY_TO_STRINGW)GetProcAddress(DllCrypt32.hDll, "CryptBinaryToStringW");
+    DllCrypt32.pCryptStringToBinaryW = (PCRYPT_STRING_TO_BINARYW)GetProcAddress(DllCrypt32.hDll, "CryptStringToBinaryW");
+
+    return TRUE;
+}
+
+/**
  A structure containing pointers to ctl3d32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */

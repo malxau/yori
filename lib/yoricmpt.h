@@ -5021,6 +5021,13 @@ typedef struct _CAB_CB_ERROR {
     BOOL ErrorPresent;
 } CAB_CB_ERROR, *PCAB_CB_ERROR;
 
+#ifndef CRYPT_STRING_BASE64
+/**
+ A private definition of base64 encoding in case the compilation environment
+ doesn't define it.
+ */
+#define CRYPT_STRING_BASE64  (0x01)
+#endif
 
 #ifndef UNPROTECTED_DACL_SECURITY_INFORMATION
 /**
@@ -8656,6 +8663,54 @@ typedef struct _YORI_CABINET_FUNCTIONS {
 } YORI_CABINET_FUNCTIONS, *PYORI_CABINET_FUNCTIONS;
 
 extern YORI_CABINET_FUNCTIONS DllCabinet;
+
+/**
+ Prototype for the CryptBinaryToStringW function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_BINARY_TO_STRINGW(LPBYTE, DWORD, DWORD, LPWSTR, PDWORD);
+
+/**
+ Prototype for a pointer to the CryptBinaryToStringW function.
+ */
+typedef CRYPT_BINARY_TO_STRINGW *PCRYPT_BINARY_TO_STRINGW;
+
+/**
+ Prototype for the CryptStringToBinaryW function.
+ */
+typedef
+BOOL WINAPI
+CRYPT_STRING_TO_BINARYW(LPCWSTR, DWORD, DWORD, LPBYTE, PDWORD, PDWORD, PDWORD);
+
+/**
+ Prototype for a pointer to the CryptStringToBinaryW function.
+ */
+typedef CRYPT_STRING_TO_BINARYW *PCRYPT_STRING_TO_BINARYW;
+
+/**
+ A structure containing optional function pointers to crypt32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_CRYPT32_FUNCTIONS {
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to CryptBinaryToStringW.
+     */
+    PCRYPT_BINARY_TO_STRINGW pCryptBinaryToStringW;
+
+    /**
+     If it's available on the current system, a pointer to CryptStringToBinaryW.
+     */
+    PCRYPT_STRING_TO_BINARYW pCryptStringToBinaryW;
+
+} YORI_CRYPT32_FUNCTIONS, *PYORI_CRYPT32_FUNCTIONS;
+
+extern YORI_CRYPT32_FUNCTIONS DllCrypt32;
 
 /**
  A prototype for the Ctl3dRegister function.
