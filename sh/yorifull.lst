@@ -1,5 +1,6 @@
 ..\assoc\builtins.lib
 ..\attrib\builtins.lib
+..\base64\builtins.lib
 ..\battery\builtins.lib
 ..\cab\builtins.lib
 ..\cal\builtins.lib

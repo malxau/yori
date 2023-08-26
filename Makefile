@@ -89,6 +89,7 @@ DIRS1=crt        \
       builtins   \
       assoc      \
       attrib     \
+      base64     \
       battery    \
       cab        \
       cal        \

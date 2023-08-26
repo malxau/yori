@@ -1,4 +1,5 @@
 ..\attrib\yattrib.exe|yattrib.exe
+..\base64\ybase64.exe|ybase64.exe
 ..\battery\ybattery.exe|ybattery.exe
 ..\cab\cab.exe|cab.exe
 ..\cal\ycal.exe|ycal.exe
