@@ -1356,7 +1356,6 @@ YoriWinMenuPopupWindowCreate(
     YoriWinMgrLockMouseExclusively(WinMgrHandle, PopupWindow);
     YoriWinSetCustomNotification(PopupWindow, YoriWinEventMouseDownOutsideWindow, YoriWinMenuPopupChildEvent);
     YoriWinProcessInputForWindow(PopupWindow, &ChildResult);
-    YoriWinMgrUnlockMouseExclusively(WinMgrHandle, PopupWindow);
 
     YoriWinDestroyWindow(PopupWindow);
 

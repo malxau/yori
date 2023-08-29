@@ -1052,12 +1052,15 @@ YoriWinMgrLockMouseExclusively(
     )
 {
     PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+    PYORI_WIN_CTRL WindowCtrl;
 
     ASSERT(ExclusiveWindow != NULL);
     ASSERT(!WinMgr->MouseOwnedExclusively);
     if (WinMgr->MouseOwnedExclusively) {
         return FALSE;
     }
+
+    WindowCtrl = YoriWinGetCtrlFromWindow(ExclusiveWindow);
 
     //
     //  If a different window is receiving buttons, cut them off, so all
@@ -1068,13 +1071,14 @@ YoriWinMgrLockMouseExclusively(
     //
 
     if (WinMgr->MouseButtonOwningWindow != NULL &&
-        WinMgr->MouseButtonOwningWindow != ExclusiveWindow) {
+        WinMgr->MouseButtonOwningWindow != WindowCtrl) {
 
         WinMgr->PreviousNotifiedMouseButtonState = 0;
     }
 
-    WinMgr->MouseButtonOwningWindow = ExclusiveWindow;
+    WinMgr->MouseButtonOwningWindow = WindowCtrl;
     WinMgr->MouseOwnedExclusively = TRUE;
+    ASSERT(!YoriWinIsWindowClosing(ExclusiveWindow));
 
     return TRUE;
 }
@@ -1097,14 +1101,15 @@ YoriWinMgrUnlockMouseExclusively(
     )
 {
     PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+    PYORI_WIN_CTRL WindowCtrl;
 
-    ASSERT(WinMgr->MouseOwnedExclusively);
-    ASSERT(WinMgr->MouseButtonOwningWindow == ExclusiveWindow);
     if (!WinMgr->MouseOwnedExclusively) {
         return FALSE;
     }
 
-    if (WinMgr->MouseButtonOwningWindow != ExclusiveWindow) {
+    WindowCtrl = YoriWinGetCtrlFromWindow(ExclusiveWindow);
+
+    if (WinMgr->MouseButtonOwningWindow != WindowCtrl) {
         return FALSE;
     }
 
@@ -1178,7 +1183,7 @@ YoriWinSetPreviousMouseButtonState(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in DWORD PreviousObservedMouseButtonState,
     __in DWORD PreviousNotifiedMouseButtonState,
-    __in PYORI_WIN_CTRL MouseButtonOwningWindow
+    __in_opt PYORI_WIN_CTRL MouseButtonOwningWindow
     )
 {
     PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
@@ -1187,6 +1192,7 @@ YoriWinSetPreviousMouseButtonState(
         ASSERT(WinMgr->MouseButtonOwningWindow == NULL || WinMgr->MouseButtonOwningWindow == MouseButtonOwningWindow);
         ASSERT((PreviousNotifiedMouseButtonState & PreviousObservedMouseButtonState) == PreviousNotifiedMouseButtonState);
         ASSERT((PreviousNotifiedMouseButtonState | PreviousObservedMouseButtonState) == PreviousObservedMouseButtonState);
+        ASSERT(!YoriWinIsWindowClosing(YoriWinGetWindowFromWindowCtrl(MouseButtonOwningWindow)));
         WinMgr->MouseButtonOwningWindow = MouseButtonOwningWindow;
         WinMgr->PreviousObservedMouseButtonState = PreviousObservedMouseButtonState;
         WinMgr->PreviousNotifiedMouseButtonState = PreviousNotifiedMouseButtonState;
@@ -1215,7 +1221,7 @@ YoriWinSetPreviousMouseButtonState(
          specified location.
  */
 PYORI_WIN_CTRL
-YoriWinMgrGetWindowAtPosition(
+YoriWinMgrGetWindowAtWinMgrPosition(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in COORD Pos
     )
@@ -1235,7 +1241,6 @@ YoriWinMgrGetWindowAtPosition(
 
         WindowHandle = YoriWinWindowFromZOrderListEntry(ListEntry);
         if (YoriWinIsWindowHidden(WindowHandle)) {
-
             continue;
         }
 
@@ -1250,6 +1255,44 @@ YoriWinMgrGetWindowAtPosition(
     }
 
     return NULL;
+}
+
+/**
+ Find which window, if any, is the topmost window that is rendering a specific
+ cell relative to the console's screen buffer.  This is used to determine
+ which window should receive mouse events for an action at the specified
+ location.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param Pos Specifies the location within the window manager, in console
+        screen buffer coordinates.
+
+ @return Pointer to the window control, or NULL if no window is found at the
+         specified location.
+ */
+PYORI_WIN_CTRL
+YoriWinMgrGetWindowAtScreenPosition(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in COORD Pos
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+    SMALL_RECT WinMgrRect;
+    COORD WinMgrPos;
+
+    YoriWinGetWinMgrLocation(WinMgr, &WinMgrRect);
+    if (Pos.X < WinMgrRect.Left ||
+        Pos.Y < WinMgrRect.Top ||
+        Pos.X > WinMgrRect.Right ||
+        Pos.Y > WinMgrRect.Bottom)
+    {
+        return NULL;
+    }
+
+    WinMgrPos.X = (SHORT)(Pos.X - WinMgrRect.Left);
+    WinMgrPos.Y = (SHORT)(Pos.Y - WinMgrRect.Top);
+    return YoriWinMgrGetWindowAtWinMgrPosition(WinMgrHandle, WinMgrPos);
 }
 
 /**
@@ -1867,6 +1910,38 @@ YoriWinMgrFlushAllWindows(
 
         WindowHandle = YoriWinWindowFromZOrderListEntry(ListEntry);
         YoriWinFlushWindowContents(WindowHandle);
+    }
+}
+
+/**
+ A notification from a window when it is being destroyed so any window manager
+ wide state can be torn down.
+
+ @param WinMgrHandle Pointer to the window manager.
+
+ @param WindowHandle Pointer to the window handle.
+ */
+VOID
+YoriWinMgrNotifyWindowDestroy(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER WinMgr = (PYORI_WIN_WINDOW_MANAGER)WinMgrHandle;
+    PYORI_WIN_CTRL WindowCtrl;
+
+    WindowCtrl = YoriWinGetCtrlFromWindow(WindowHandle);
+
+    //
+    //  If this window had outstanding mouse events, discard any state
+    //  to issue them.
+    //
+
+    if (WinMgr->MouseButtonOwningWindow == WindowCtrl) {
+        if (WinMgr->MouseOwnedExclusively) {
+            YoriWinMgrUnlockMouseExclusively(WinMgr, WindowHandle);
+        }
+        YoriWinSetPreviousMouseButtonState(WinMgr, 0, 0, NULL);
     }
 }
 
@@ -2515,7 +2590,6 @@ YoriWinMgrProcessMouseEvent(
     PYORI_WIN_CTRL MouseButtonOwningWindow;
     PYORI_WIN_CTRL MouseOverWindow;
     PYORI_WIN_CTRL EffectiveWindow;
-    SMALL_RECT WinMgrRect;
     COORD Location;
     BOOLEAN InWindowRange;
     BOOLEAN InWindowClientRange;
@@ -2536,16 +2610,7 @@ YoriWinMgrProcessMouseEvent(
     MouseOverWindow = NULL;
     Location.X = InputRecord->Event.MouseEvent.dwMousePosition.X;
     Location.Y = InputRecord->Event.MouseEvent.dwMousePosition.Y;
-    YoriWinGetWinMgrLocation(WinMgr, &WinMgrRect);
-    if (Location.X >= WinMgrRect.Left &&
-        Location.X <= WinMgrRect.Right &&
-        Location.Y >= WinMgrRect.Top &&
-        Location.Y <= WinMgrRect.Bottom) {
-
-        Location.X = (SHORT)(Location.X - WinMgrRect.Left);
-        Location.Y = (SHORT)(Location.Y - WinMgrRect.Top);
-        MouseOverWindow = YoriWinMgrGetWindowAtPosition(WinMgr, Location);
-    }
+    MouseOverWindow = YoriWinMgrGetWindowAtScreenPosition(WinMgr, Location);
 
     //
     //  If the window is not accepting input, don't send any events to it or
@@ -2593,7 +2658,12 @@ YoriWinMgrProcessMouseEvent(
     EffectiveWindow = NULL;
     if (MouseButtonOwningWindow != NULL) {
         EffectiveWindow = MouseButtonOwningWindow;
-        YoriWinTranslateScreenCoordinatesToWindow(WinMgr, EffectiveWindow, InputRecord->Event.MouseEvent.dwMousePosition, &InWindowRange, &InWindowClientRange, &Location);
+        YoriWinTranslateScreenCoordinatesToWindow(WinMgr,
+                                                  EffectiveWindow,
+                                                  InputRecord->Event.MouseEvent.dwMousePosition,
+                                                  &InWindowRange,
+                                                  &InWindowClientRange,
+                                                  &Location);
 
         if (InputRecord->Event.MouseEvent.dwEventFlags == 0) {
 
@@ -2671,17 +2741,32 @@ YoriWinMgrProcessMouseEvent(
                             BOOLEAN SubInWindowRange;
                             BOOLEAN SubInWindowClientRange;
 
-                            MouseOverWindow = YoriWinMgrGetWindowAtPosition(WinMgr, Location);
+                            //
+                            //  We know the window is closing, so release its
+                            //  exclusive mouse control and give it to the
+                            //  next window.
+                            //
 
-                            YoriWinTranslateScreenCoordinatesToWindow(WinMgr, MouseOverWindow, InputRecord->Event.MouseEvent.dwMousePosition, &SubInWindowRange, &SubInWindowClientRange, &Event.MouseDown.Location);
+                            YoriWinMgrUnlockMouseExclusively(WinMgr, YoriWinGetWindowFromWindowCtrl(MouseButtonOwningWindow));
 
-                            if (SubInWindowClientRange) {
-                                Event.EventType = YoriWinEventMouseDownInClient;
-                            } else if (SubInWindowRange) {
-                                Event.EventType = YoriWinEventMouseDownInNonClient;
+                            MouseOverWindow = YoriWinMgrGetWindowAtScreenPosition(WinMgr, InputRecord->Event.MouseEvent.dwMousePosition);
+                            if (MouseOverWindow != NULL) {
+                                YoriWinTranslateScreenCoordinatesToWindow(WinMgr,
+                                                                          MouseOverWindow,
+                                                                          InputRecord->Event.MouseEvent.dwMousePosition,
+                                                                          &SubInWindowRange,
+                                                                          &SubInWindowClientRange,
+                                                                          &Event.MouseDown.Location);
+
+                                if (SubInWindowClientRange) {
+                                    Event.EventType = YoriWinEventMouseDownInClient;
+                                } else if (SubInWindowRange) {
+                                    Event.EventType = YoriWinEventMouseDownInNonClient;
+                                }
+                                YoriWinSetPreviousMouseButtonState(WinMgr, 0, 0, NULL);
+                                YoriWinSetPreviousMouseButtonState(WinMgr, ButtonsPressed, ButtonsPressed, MouseOverWindow);
+                                YoriWinPostEvent(MouseOverWindow, &Event);
                             }
-
-                            YoriWinPostEvent(MouseOverWindow, &Event);
                         }
                     }
                 }
@@ -3173,11 +3258,13 @@ YoriWinMgrProcessEvents(
     //  wouldn't know that it happened (since the input is already processed.)
     //
 
-    WinMgr->MouseButtonOwningWindow = SavedMouseButtonOwningWindow;
-    WinMgr->PreviousObservedMouseButtonState = SavedPreviousObservedMouseButtonState;
-    WinMgr->PreviousNotifiedMouseButtonState = SavedPreviousNotifiedMouseButtonState;
+    if (SavedMouseButtonOwningWindow != NULL &&
+        !YoriWinIsWindowClosing(YoriWinGetWindowFromWindowCtrl(SavedMouseButtonOwningWindow))) {
 
-    // YoriWinSetPreviousMouseButtonState(WinMgrHandle, WinMgr->PreviousObservedMouseButtonState, 0, NULL);
+        WinMgr->MouseButtonOwningWindow = SavedMouseButtonOwningWindow;
+        WinMgr->PreviousObservedMouseButtonState = SavedPreviousObservedMouseButtonState;
+        WinMgr->PreviousNotifiedMouseButtonState = SavedPreviousNotifiedMouseButtonState;
+    }
 
     //
     //  Move to the next lower window (if any) and enable it and all beneath
@@ -3188,7 +3275,9 @@ YoriWinMgrProcessEvents(
     ListEntry = YoriLibGetNextListEntry(&WinMgr->ZOrderList, NULL);
     while (ListEntry != NULL) {
         ThisWindow = YoriWinWindowFromZOrderListEntry(ListEntry);
-        YoriWinEnableWindow(ThisWindow);
+        if (ThisWindow != WindowHandle) {
+            YoriWinEnableWindow(ThisWindow);
+        }
         ListEntry = YoriLibGetNextListEntry(&WinMgr->ZOrderList, ListEntry);
     }
 

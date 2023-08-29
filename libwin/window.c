@@ -727,6 +727,8 @@ YoriWinDestroyWindow(
 
     Window->Destroying = TRUE;
 
+    YoriWinMgrNotifyWindowDestroy(Window->WinMgrHandle, Window);
+
     if (Window->Contents != NULL) {
         YoriLibFree(Window->Contents);
         Window->Contents = NULL;

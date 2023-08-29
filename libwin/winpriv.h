@@ -959,6 +959,12 @@ YoriWinMgrIsWindowTopmostAndActive(
     );
 
 VOID
+YoriWinMgrNotifyWindowDestroy(
+    __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle
+    );
+
+VOID
 YoriWinMgrPushWindowZOrder(
     __in PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle,
     __in PYORI_WIN_WINDOW_HANDLE WindowHandle

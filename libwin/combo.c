@@ -249,7 +249,6 @@ YoriWinComboDisplayPullDown(
     if (!YoriWinProcessInputForWindow(ComboChildWindow, &ChildResult)) {
         ChildResult = 0;
     }
-    YoriWinMgrUnlockMouseExclusively(WinMgrHandle, ComboChildWindow);
 
     YoriWinDestroyWindow(ComboChildWindow);
 
