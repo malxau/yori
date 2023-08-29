@@ -239,7 +239,10 @@ YoriLibMallocSpecialHeap(
     Header->Line = Line;
     ASSERT(Header->OffsetToData < (PageSize + sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize));
     if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
-        DllKernel32.pRtlCaptureStackBackTrace(1, YORI_SPECIAL_HEAP_STACK_FRAMES, YoriLibAddToPointer(Header, sizeof(YORI_SPECIAL_HEAP_HEADER)), NULL);
+        DllKernel32.pRtlCaptureStackBackTrace(1,
+                                              YORI_SPECIAL_HEAP_STACK_FRAMES,
+                                              YoriLibAddToPointer(Header, sizeof(YORI_SPECIAL_HEAP_HEADER)),
+                                              NULL);
     }
 
     WaitForSingleObject(YoriLibSpecialHeap.Mutex, INFINITE);
@@ -347,13 +350,21 @@ YoriLibDisplayMemoryUsage(VOID)
         PYORI_SPECIAL_HEAP_HEADER Header;
         DWORD BytesAllocated;
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%i bytes allocated in %i allocations\n"), YoriLibSpecialHeap.BytesCurrentlyAllocated, YoriLibSpecialHeap.NumberAllocated - YoriLibSpecialHeap.NumberFreed);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%i bytes allocated in %i allocations\n"),
+                      YoriLibSpecialHeap.BytesCurrentlyAllocated,
+                      YoriLibSpecialHeap.NumberAllocated - YoriLibSpecialHeap.NumberFreed);
 
         Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, NULL);
         while (Entry != NULL) {
             Header = CONTAINING_RECORD(Entry, YORI_SPECIAL_HEAP_HEADER, ListEntry);
             BytesAllocated = (Header->PagesInAllocation - 1) * PageSize - Header->OffsetToData;
-            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs (%hs:%i) allocated %i bytes\n"), Header->Function, Header->File, Header->Line, BytesAllocated);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                          _T("%hs (%hs:%i) allocated %i bytes\n"),
+                          Header->Function,
+                          Header->File,
+                          Header->Line,
+                          BytesAllocated);
             Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, Entry);
         }
 

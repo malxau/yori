@@ -618,7 +618,9 @@ YoriLibReadLineToStringEx(
         //
 
         if (ReadContext->CurrentBufferOffset != 0) {
-            memmove(ReadContext->PreviousBuffer, YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->CurrentBufferOffset), ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset);
+            memmove(ReadContext->PreviousBuffer,
+                    YoriLibAddToPointer(ReadContext->PreviousBuffer, ReadContext->CurrentBufferOffset),
+                    ReadContext->BytesInBuffer - ReadContext->CurrentBufferOffset);
             ReadContext->BytesInBuffer -= ReadContext->CurrentBufferOffset;
             ReadContext->CurrentBufferOffset = 0;
         }

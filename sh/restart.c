@@ -268,7 +268,11 @@ YoriShSaveRestartStateWorker(
         return 0;
     }
 
-    RestartFileName.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"), RestartFileName.StartOfString, RestartFileName.LengthAllocated, NULL);
+    RestartFileName.LengthInChars =
+        YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIAUTORESTART"),
+                                                        RestartFileName.StartOfString,
+                                                        RestartFileName.LengthAllocated,
+                                                        NULL);
     if (RestartFileName.LengthInChars == 0) {
         YoriLibFreeStringContents(&RestartFileName);
         return 0;
@@ -717,7 +721,12 @@ YoriShLoadSavedRestartState(
     FontInfo.dwFontSize.Y = (USHORT)DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontHeight"), 0, RestartFileName.StartOfString);
     FontInfo.FontFamily = DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontFamily"), 0, RestartFileName.StartOfString);
     FontInfo.FontWeight = DllKernel32.pGetPrivateProfileIntW(_T("Window"), _T("FontWeight"), 0, RestartFileName.StartOfString);
-    DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("FontName"), _T(""), FontInfo.FaceName, sizeof(FontInfo.FaceName)/sizeof(FontInfo.FaceName[0]), RestartFileName.StartOfString);
+    DllKernel32.pGetPrivateProfileStringW(_T("Window"),
+                                          _T("FontName"),
+                                          _T(""),
+                                          FontInfo.FaceName,
+                                          sizeof(FontInfo.FaceName)/sizeof(FontInfo.FaceName[0]),
+                                          RestartFileName.StartOfString);
 
     if (FontInfo.dwFontSize.X > 0 && FontInfo.dwFontSize.Y > 0 && FontInfo.FontWeight > 0) {
         DllKernel32.pSetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &FontInfo);
@@ -743,14 +752,24 @@ YoriShLoadSavedRestartState(
     //  Read and populate the window title
     //
 
-    DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("Title"), _T("Yori"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    DllKernel32.pGetPrivateProfileStringW(_T("Window"),
+                                          _T("Title"),
+                                          _T("Yori"),
+                                          ReadBuffer.StartOfString,
+                                          ReadBuffer.LengthAllocated,
+                                          RestartFileName.StartOfString);
     SetConsoleTitle(ReadBuffer.StartOfString);
 
     //
     //  Read and populate the current directory
     //
 
-    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("CurrentDirectory"), _T(""), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Window"),
+                                                                     _T("CurrentDirectory"),
+                                                                     _T(""),
+                                                                     ReadBuffer.StartOfString,
+                                                                     ReadBuffer.LengthAllocated,
+                                                                     RestartFileName.StartOfString);
     if (ReadBuffer.LengthInChars > 0) {
         YoriLibSetCurrentDirectory(&ReadBuffer);
     }
@@ -759,7 +778,11 @@ YoriShLoadSavedRestartState(
     //  Populate the environment.
     //
 
-    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("Environment"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars =
+        DllKernel32.pGetPrivateProfileSectionW(_T("Environment"),
+                                               ReadBuffer.StartOfString,
+                                               ReadBuffer.LengthAllocated,
+                                               RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -786,7 +809,11 @@ YoriShLoadSavedRestartState(
     //  Populate current directories.
     //
 
-    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("CurrentDirectories"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars =
+        DllKernel32.pGetPrivateProfileSectionW(_T("CurrentDirectories"),
+                                               ReadBuffer.StartOfString,
+                                               ReadBuffer.LengthAllocated,
+                                               RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -819,7 +846,11 @@ YoriShLoadSavedRestartState(
     //  Populate aliases
     //
 
-    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("Aliases"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars =
+        DllKernel32.pGetPrivateProfileSectionW(_T("Aliases"),
+                                               ReadBuffer.StartOfString,
+                                               ReadBuffer.LengthAllocated,
+                                               RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -846,7 +877,11 @@ YoriShLoadSavedRestartState(
     //  Populate history
     //
 
-    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileSectionW(_T("History"), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars =
+        DllKernel32.pGetPrivateProfileSectionW(_T("History"),
+                                               ReadBuffer.StartOfString,
+                                               ReadBuffer.LengthAllocated,
+                                               RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         LPTSTR ThisPair;
@@ -868,7 +903,9 @@ YoriShLoadSavedRestartState(
                     ThisValue++;
                     ValueLength = _tcslen(ThisValue);
                     if (YoriLibAllocateString(&ThisEntry, ValueLength + 1)) {
-                        memcpy(ThisEntry.StartOfString, ThisValue, (ValueLength + 1) * sizeof(TCHAR));
+                        memcpy(ThisEntry.StartOfString,
+                               ThisValue,
+                               (ValueLength + 1) * sizeof(TCHAR));
                         ThisEntry.LengthInChars = ValueLength;
 
                         YoriShAddToHistory(&ThisEntry, FALSE);
@@ -883,7 +920,13 @@ YoriShLoadSavedRestartState(
     //  Populate window contents
     //
 
-    ReadBuffer.LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Window"), _T("Contents"), _T(""), ReadBuffer.StartOfString, ReadBuffer.LengthAllocated, RestartFileName.StartOfString);
+    ReadBuffer.LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Window"),
+                                              _T("Contents"),
+                                              _T(""),
+                                              ReadBuffer.StartOfString,
+                                              ReadBuffer.LengthAllocated,
+                                              RestartFileName.StartOfString);
 
     if (ReadBuffer.LengthInChars > 0) {
         HANDLE hBufferFile;

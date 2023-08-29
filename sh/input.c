@@ -423,10 +423,19 @@ YoriShDisplayAfterKeyPress(
         //
 
         if (Buffer->SuggestionString.LengthInChars > 0) {
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer,
+                                                               &ScreenInfo,
+                                                               -1 * Buffer->PreviousCurrentOffset +
+                                                                 Buffer->String.LengthInChars +
+                                                                 Buffer->SuggestionString.LengthInChars,
+                                                               NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars, &SuggestionPosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer,
+                                                               &ScreenInfo,
+                                                               -1 * Buffer->PreviousCurrentOffset +
+                                                                 Buffer->String.LengthInChars,
+                                                               &SuggestionPosition)) {
                 return FALSE;
             }
         }
@@ -438,20 +447,40 @@ YoriShDisplayAfterKeyPress(
                 NumberToWrite = Buffer->DirtyLength;
             }
 
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset + NumberToWrite, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer,
+                                                               &ScreenInfo,
+                                                               (-1 * Buffer->PreviousCurrentOffset) +
+                                                                 Buffer->DirtyBeginOffset +
+                                                                 NumberToWrite,
+                                                               NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, (-1 * Buffer->PreviousCurrentOffset) + Buffer->DirtyBeginOffset, &WritePosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer,
+                                                               &ScreenInfo,
+                                                               (-1 * Buffer->PreviousCurrentOffset) +
+                                                                 Buffer->DirtyBeginOffset,
+                                                               &WritePosition)) {
                 return FALSE;
             }
         }
 
 
         if (NumberToFill) {
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars + NumberToFill, NULL)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer,
+                                                               &ScreenInfo,
+                                                               -1 * Buffer->PreviousCurrentOffset +
+                                                                 Buffer->String.LengthInChars +
+                                                                 Buffer->SuggestionString.LengthInChars +
+                                                                 NumberToFill,
+                                                               NULL)) {
                 return FALSE;
             }
-            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer, &ScreenInfo, -1 * Buffer->PreviousCurrentOffset + Buffer->String.LengthInChars + Buffer->SuggestionString.LengthInChars, &FillPosition)) {
+            if (!YoriShDetermineCellLocationIfMovedCacheResult(Buffer,
+                                                               &ScreenInfo,
+                                                               -1 * Buffer->PreviousCurrentOffset +
+                                                                 Buffer->String.LengthInChars +
+                                                                 Buffer->SuggestionString.LengthInChars,
+                                                               &FillPosition)) {
                 return FALSE;
             }
         }
@@ -481,7 +510,11 @@ YoriShDisplayAfterKeyPress(
 
         if (Buffer->SuggestionDirty) {
             WriteConsoleOutputCharacter(hConsole, Buffer->SuggestionString.StartOfString, Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
-            FillConsoleOutputAttribute(hConsole, (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY), Buffer->SuggestionString.LengthInChars, SuggestionPosition, &NumberWritten);
+            FillConsoleOutputAttribute(hConsole,
+                                       (USHORT)((ScreenInfo.wAttributes & 0xF0) | FOREGROUND_INTENSITY),
+                                       Buffer->SuggestionString.LengthInChars,
+                                       SuggestionPosition,
+                                       &NumberWritten);
         }
 
         //

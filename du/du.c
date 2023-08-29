@@ -384,7 +384,9 @@ DuReportAndCloseAllActiveStacks(
     }
     while (TRUE) {
         if (Index > 0) {
-            DuContext->DirStack[Index - 1].SpaceConsumedInChildren += DuContext->DirStack[Index].SpaceConsumedInChildren + DuContext->DirStack[Index].SpaceConsumedThisDirectory;
+            DuContext->DirStack[Index - 1].SpaceConsumedInChildren +=
+                DuContext->DirStack[Index].SpaceConsumedInChildren +
+                DuContext->DirStack[Index].SpaceConsumedThisDirectory;
         }
         if (Index >= MinDepthToDisplay) {
             DuReportAndCloseStack(DuContext, Index);
@@ -697,9 +699,10 @@ DuFileFoundCallback(
                 break;
             }
 
-            // YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Reporting because file %y (depth %i) not in directory %y (depth %i)\n"), FilePath, Depth, &DuContext->DirStack[Index].DirectoryName, Index);
             if (Index > 0) {
-                DuContext->DirStack[Index - 1].SpaceConsumedInChildren += DuContext->DirStack[Index].SpaceConsumedInChildren + DuContext->DirStack[Index].SpaceConsumedThisDirectory;
+                DuContext->DirStack[Index - 1].SpaceConsumedInChildren +=
+                    DuContext->DirStack[Index].SpaceConsumedInChildren +
+                    DuContext->DirStack[Index].SpaceConsumedThisDirectory;
             }
             DuReportAndCloseStack(DuContext, Index);
             if (Index == 0) {

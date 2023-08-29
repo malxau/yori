@@ -872,14 +872,22 @@ YoriLibCollectEffectivePermissions (
 
     SecurityDescriptor = LocalSecurityDescriptor;
 
-    if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, sizeof(LocalSecurityDescriptor), &dwSdRequired)) {
+    if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString,
+                                       OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION,
+                                       (PSECURITY_DESCRIPTOR)SecurityDescriptor,
+                                       sizeof(LocalSecurityDescriptor),
+                                       &dwSdRequired)) {
         if (dwSdRequired != 0) {
             SecurityDescriptor = YoriLibMalloc(dwSdRequired);
             if (SecurityDescriptor == NULL) {
                 goto Exit;
             }
 
-            if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString, OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION, (PSECURITY_DESCRIPTOR)SecurityDescriptor, dwSdRequired, &dwSdRequired)) {
+            if (!DllAdvApi32.pGetFileSecurityW(FullPath->StartOfString,
+                                               OWNER_SECURITY_INFORMATION|GROUP_SECURITY_INFORMATION|DACL_SECURITY_INFORMATION,
+                                               (PSECURITY_DESCRIPTOR)SecurityDescriptor,
+                                               dwSdRequired,
+                                               &dwSdRequired)) {
                 goto Exit;
             }
         } else {
@@ -896,7 +904,14 @@ YoriLibCollectEffectivePermissions (
     }
 
     memset(&Mapping, 0, sizeof(Mapping));
-    DllAdvApi32.pAccessCheck((PSECURITY_DESCRIPTOR)SecurityDescriptor, TokenHandle, MAXIMUM_ALLOWED, &Mapping, &Privilege, &PrivilegeLength, &Entry->EffectivePermissions, &AccessGranted);
+    DllAdvApi32.pAccessCheck((PSECURITY_DESCRIPTOR)SecurityDescriptor,
+                             TokenHandle,
+                             MAXIMUM_ALLOWED,
+                             &Mapping,
+                             &Privilege,
+                             &PrivilegeLength,
+                             &Entry->EffectivePermissions,
+                             &AccessGranted);
 
 Exit:
     if (TokenHandle != NULL) {
@@ -1231,7 +1246,14 @@ YoriLibCollectFragmentCount (
         PriorLcn.QuadPart = 0;
         StartBuffer.StartingVcn.QuadPart = 0;
 
-        while ((DeviceIoControl(hFile, FSCTL_GET_RETRIEVAL_POINTERS, &StartBuffer, sizeof(StartBuffer), &u.Extents, sizeof(u), &BytesReturned, NULL) || GetLastError() == ERROR_MORE_DATA) &&
+        while ((DeviceIoControl(hFile,
+                                FSCTL_GET_RETRIEVAL_POINTERS,
+                                &StartBuffer,
+                                sizeof(StartBuffer),
+                                &u.Extents,
+                                sizeof(u),
+                                &BytesReturned,
+                                NULL) || GetLastError() == ERROR_MORE_DATA) &&
                u.Extents.ExtentCount > 0) {
 
             // 

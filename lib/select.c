@@ -497,7 +497,8 @@ YoriLibDrawCurrentSelectionDisplay(
 
     ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
 
-    RequiredLength = (Selection->CurrentlyDisplayed.Right - Selection->CurrentlyDisplayed.Left + 1) * (Selection->CurrentlyDisplayed.Bottom - Selection->CurrentlyDisplayed.Top + 1);
+    RequiredLength = (Selection->CurrentlyDisplayed.Right - Selection->CurrentlyDisplayed.Left + 1) *
+                     (Selection->CurrentlyDisplayed.Bottom - Selection->CurrentlyDisplayed.Top + 1);
 
     ActiveAttributes = &Selection->PreviousBuffer[Selection->CurrentPreviousIndex];
 
@@ -845,7 +846,13 @@ YoriLibDrawCurrentSelectionOverPreviousSelection(
         Selection->SelectionColorSet = TRUE;
     }
 
-    YoriLibCreateNewAttributeBufferFromPreviousBuffer(Selection, OldAttributes, &Selection->PreviouslyDisplayed, NewAttributes, &Selection->CurrentlyDisplayed, TRUE, Selection->SelectionColor);
+    YoriLibCreateNewAttributeBufferFromPreviousBuffer(Selection,
+                                                      OldAttributes,
+                                                      &Selection->PreviouslyDisplayed,
+                                                      NewAttributes,
+                                                      &Selection->CurrentlyDisplayed,
+                                                      TRUE,
+                                                      Selection->SelectionColor);
 
     ASSERT(Selection->CurrentPreviousIndex != NewAttributeIndex);
     Selection->CurrentPreviousIndex = NewAttributeIndex;

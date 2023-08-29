@@ -430,7 +430,13 @@ SdirItemFoundCallback(
                         FindStreamData.cStreamName[StreamLength - 6] = '\0';
                     }
 
-                    ItemContext->StreamFullPath.LengthInChars = YoriLibSPrintfS(ItemContext->StreamFullPath.StartOfString, ItemContext->StreamFullPath.LengthAllocated, _T("%s%s%s"), Opts->ParentName.StartOfString, FindData->cFileName, FindStreamData.cStreamName);
+                    ItemContext->StreamFullPath.LengthInChars =
+                        YoriLibSPrintfS(ItemContext->StreamFullPath.StartOfString,
+                                        ItemContext->StreamFullPath.LengthAllocated,
+                                        _T("%s%s%s"),
+                                        Opts->ParentName.StartOfString,
+                                        FindData->cFileName,
+                                        FindStreamData.cStreamName);
 
                     //
                     //  Assume file state is stream state
@@ -442,7 +448,11 @@ SdirItemFoundCallback(
                     //  Populate stream name
                     //
 
-                    YoriLibSPrintfS(BogusFindData.cFileName, sizeof(BogusFindData.cFileName)/sizeof(BogusFindData.cFileName[0]), _T("%s%s"), FindData->cFileName, FindStreamData.cStreamName);
+                    YoriLibSPrintfS(BogusFindData.cFileName,
+                                    sizeof(BogusFindData.cFileName)/sizeof(BogusFindData.cFileName[0]),
+                                    _T("%s%s"),
+                                    FindData->cFileName,
+                                    FindStreamData.cStreamName);
 
                     //
                     //  Populate stream information

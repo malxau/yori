@@ -171,7 +171,11 @@ BatteryExpandVariables(
                 if (BatteryContext->RemainingMinutes == 0) {
                     CharsNeeded = YoriLibSPrintfSize(_T("%i %s"), BatteryContext->RemainingHours, BatteryContext->RemainingHoursString);
                 } else {
-                    CharsNeeded = YoriLibSPrintfSize(_T("%i %s, %i %s"), BatteryContext->RemainingHours, BatteryContext->RemainingHoursString, BatteryContext->RemainingMinutes, BatteryContext->RemainingMinutesString);
+                    CharsNeeded = YoriLibSPrintfSize(_T("%i %s, %i %s"),
+                                                     BatteryContext->RemainingHours,
+                                                     BatteryContext->RemainingHoursString,
+                                                     BatteryContext->RemainingMinutes,
+                                                     BatteryContext->RemainingMinutesString);
                 }
             } else {
                 CharsNeeded = YoriLibSPrintfSize(_T("%i %s"), BatteryContext->RemainingMinutes, BatteryContext->RemainingMinutesString);
@@ -230,7 +234,12 @@ BatteryExpandVariables(
                 if (BatteryContext->RemainingMinutes == 0) {
                     YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i %s"), BatteryContext->RemainingHours, BatteryContext->RemainingHoursString);
                 } else {
-                    YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i %s, %i %s"), BatteryContext->RemainingHours, BatteryContext->RemainingHoursString, BatteryContext->RemainingMinutes, BatteryContext->RemainingMinutesString);
+                    YoriLibSPrintf(OutputBuffer->StartOfString,
+                                   _T("%i %s, %i %s"),
+                                   BatteryContext->RemainingHours,
+                                   BatteryContext->RemainingHoursString,
+                                   BatteryContext->RemainingMinutes,
+                                   BatteryContext->RemainingMinutesString);
                 }
             } else {
                 YoriLibSPrintf(OutputBuffer->StartOfString, _T("%i %s"), BatteryContext->RemainingMinutes, BatteryContext->RemainingMinutesString);

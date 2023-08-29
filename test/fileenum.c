@@ -172,7 +172,12 @@ TestEnumRoot(VOID)
     OldFilesFound = 0;
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\*"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }
@@ -189,7 +194,12 @@ TestEnumRoot(VOID)
     OldFilesFound = TestContext.FilesFound;
 
     YoriLibConstantString(&TestContext.FileSpec, _T("\\"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }
@@ -211,7 +221,12 @@ TestEnumRoot(VOID)
     //
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }
@@ -240,7 +255,12 @@ TestEnumRoot(VOID)
     }
 
     YoriLibConstantString(&TestContext.FileSpec, _T("Windows"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }
@@ -263,7 +283,12 @@ TestEnumRoot(VOID)
     YoriLibFreeStringContents(&OldCurrentDirectory);
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }
@@ -280,7 +305,12 @@ TestEnumRoot(VOID)
     OldFilesFound = TestContext.FilesFound;
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:*"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }
@@ -317,7 +347,12 @@ TestEnumWindows(VOID)
     //
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }
@@ -334,7 +369,12 @@ TestEnumWindows(VOID)
     OldFilesFound = TestContext.FilesFound;
 
     YoriLibConstantString(&TestContext.FileSpec, _T("C:\\Windows\\"));
-    if (!YoriLibForEachFile(&TestContext.FileSpec, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS, 0, TestEnumFileFoundCallback, TestEnumFileEnumerateErrorCallback, &TestContext)) {
+    if (!YoriLibForEachFile(&TestContext.FileSpec,
+                            YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_DIRECTORY_CONTENTS,
+                            0,
+                            TestEnumFileFoundCallback,
+                            TestEnumFileEnumerateErrorCallback,
+                            &TestContext)) {
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibForEachFile failed searching %y, error %i\n"), __FILE__, __LINE__, &TestContext.FileSpec, GetLastError());
         return FALSE;
     }

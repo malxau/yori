@@ -1287,7 +1287,14 @@ YuiMenuPopulate(
             FindCloseChangeNotification(YuiContext->StartChangeNotifications[0]);
             YuiContext->StartChangeNotifications[0] = NULL;
         }
-        YuiContext->StartChangeNotifications[0] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
+        YuiContext->StartChangeNotifications[0] =
+            FindFirstChangeNotification(FullPath.StartOfString,
+                                        TRUE,
+                                        FILE_NOTIFY_CHANGE_FILE_NAME |
+                                          FILE_NOTIFY_CHANGE_DIR_NAME |
+                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                          FILE_NOTIFY_CHANGE_SIZE |
+                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
         if (YuiContext->StartChangeNotifications[0] == NULL ||
             YuiContext->StartChangeNotifications[0] == INVALID_HANDLE_VALUE) {
 
@@ -1306,7 +1313,14 @@ YuiMenuPopulate(
             FindCloseChangeNotification(YuiContext->StartChangeNotifications[1]);
             YuiContext->StartChangeNotifications[1] = NULL;
         }
-        YuiContext->StartChangeNotifications[1] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
+        YuiContext->StartChangeNotifications[1] =
+            FindFirstChangeNotification(FullPath.StartOfString,
+                                        TRUE,
+                                        FILE_NOTIFY_CHANGE_FILE_NAME |
+                                          FILE_NOTIFY_CHANGE_DIR_NAME |
+                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                          FILE_NOTIFY_CHANGE_SIZE |
+                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
         if (YuiContext->StartChangeNotifications[1] == NULL ||
             YuiContext->StartChangeNotifications[1] == INVALID_HANDLE_VALUE) {
 
@@ -1325,7 +1339,14 @@ YuiMenuPopulate(
             FindCloseChangeNotification(YuiContext->StartChangeNotifications[2]);
             YuiContext->StartChangeNotifications[2] = NULL;
         }
-        YuiContext->StartChangeNotifications[2] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
+        YuiContext->StartChangeNotifications[2] =
+            FindFirstChangeNotification(FullPath.StartOfString,
+                                        TRUE,
+                                        FILE_NOTIFY_CHANGE_FILE_NAME |
+                                          FILE_NOTIFY_CHANGE_DIR_NAME |
+                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                          FILE_NOTIFY_CHANGE_SIZE |
+                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
         if (YuiContext->StartChangeNotifications[2] == NULL ||
             YuiContext->StartChangeNotifications[2] == INVALID_HANDLE_VALUE) {
 
@@ -1344,7 +1365,14 @@ YuiMenuPopulate(
             FindCloseChangeNotification(YuiContext->StartChangeNotifications[3]);
             YuiContext->StartChangeNotifications[3] = NULL;
         }
-        YuiContext->StartChangeNotifications[3] = FindFirstChangeNotification(FullPath.StartOfString, TRUE, FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_ATTRIBUTES | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_LAST_WRITE);
+        YuiContext->StartChangeNotifications[3] =
+            FindFirstChangeNotification(FullPath.StartOfString,
+                                        TRUE,
+                                        FILE_NOTIFY_CHANGE_FILE_NAME |
+                                          FILE_NOTIFY_CHANGE_DIR_NAME |
+                                          FILE_NOTIFY_CHANGE_ATTRIBUTES |
+                                          FILE_NOTIFY_CHANGE_SIZE |
+                                          FILE_NOTIFY_CHANGE_LAST_WRITE);
         if (YuiContext->StartChangeNotifications[3] == NULL ||
             YuiContext->StartChangeNotifications[3] == INVALID_HANDLE_VALUE) {
 

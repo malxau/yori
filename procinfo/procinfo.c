@@ -349,7 +349,14 @@ ProcInfoDumpHandles(
                 ObjectTypeString.StartOfString = ObjectType->TypeName.Buffer;
             }
 
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Process %lli Handle %lli Object %p Type %y(%i) Name %y\n"), ThisHandle->ProcessId, ThisHandle->HandleValue, ThisHandle->Object, &ObjectTypeString, ThisHandle->ObjectType, &ObjectNameString);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("Process %lli Handle %lli Object %p Type %y(%i) Name %y\n"),
+                          ThisHandle->ProcessId,
+                          ThisHandle->HandleValue,
+                          ThisHandle->Object,
+                          &ObjectTypeString,
+                          ThisHandle->ObjectType,
+                          &ObjectNameString);
         }
     }
 

@@ -42,13 +42,17 @@ CONST CHAR SetupDllMissingWarning1[] = "This version of Ysetup requires Cabinet.
  Warning message to display if Yori is being installed to a directory without
  long file name support.
  */
-CONST CHAR SetupNoLongFileNamesWarning1[] = "Volume does not support long file names.\n\nCompletion scripts cannot be installed to this location.\n\nSetup will continue without these components.";
+CONST CHAR SetupNoLongFileNamesWarning1[] = "Volume does not support long file names.\n\n"
+                                            "Completion scripts cannot be installed to this location.\n\n"
+                                            "Setup will continue without these components.";
 
 /**
  Warning message to display if Yori and its source code is being installed to
  a directory without long file name support.
  */
-CONST CHAR SetupNoLongFileNamesWarning2[] = "Volume does not support long file names.\n\nSource and completion scripts cannot be installed to this location.\n\nSetup will continue without these components.";
+CONST CHAR SetupNoLongFileNamesWarning2[] = "Volume does not support long file names.\n\n"
+                                            "Source and completion scripts cannot be installed to this location.\n\n"
+                                            "Setup will continue without these components.";
 
 /**
  A list of subdirectories from the application to check for packages.
@@ -455,7 +459,8 @@ SetupInstallSelectedWithOptions(
     }
 
     if (!YoriLibCreateDirectoryAndParents(InstallDir)) {
-        YoriLibConstantString(ErrorText, _T("Failed to create installation directory.  If installing into a system location, you may want to run the installer as Administrator."));
+        YoriLibConstantString(ErrorText,
+                              _T("Failed to create installation directory.  If installing into a system location, you may want to run the installer as Administrator."));
         return FALSE;
     }
 

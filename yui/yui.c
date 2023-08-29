@@ -294,7 +294,16 @@ YuiResetWorkArea(
                 Flags = SPIF_SENDWININICHANGE;
             }
 #if DBG
-            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Updating work area, OldWorkArea %i,%i-%i,%i, NewWorkArea %i,%i-%i,%i\n"), OldWorkArea.left, OldWorkArea.top, OldWorkArea.right, OldWorkArea.bottom, NewWorkArea.left, NewWorkArea.top, NewWorkArea.right, NewWorkArea.bottom);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                          _T("Updating work area, OldWorkArea %i,%i-%i,%i, NewWorkArea %i,%i-%i,%i\n"),
+                          OldWorkArea.left,
+                          OldWorkArea.top,
+                          OldWorkArea.right,
+                          OldWorkArea.bottom,
+                          NewWorkArea.left,
+                          NewWorkArea.top,
+                          NewWorkArea.right,
+                          NewWorkArea.bottom);
 #endif
             SystemParametersInfo(SPI_SETWORKAREA, 0, &NewWorkArea, Flags);
             return TRUE;

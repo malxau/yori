@@ -44,48 +44,89 @@ TestParseTwoArgCmd(VOID)
 
     YoriLibConstantString(&InputString, _T("foo bar"));
     if (!YoriLibShParseCmdlineToCmdContext(&InputString, 7, &CmdContext)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                     _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"),
+                     __FILE__,
+                     __LINE__,
+                     &InputString);
         return FALSE;
     }
 
     if (CmdContext.ArgC != 2) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 2\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 2\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[1], _T("bar")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected bar\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected bar\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted != FALSE || CmdContext.ArgContexts[0].QuoteTerminated != FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[1].Quoted != FALSE || CmdContext.ArgContexts[1].QuoteTerminated != FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[1].Quoted, CmdContext.ArgContexts[1].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[1].Quoted,
+                      CmdContext.ArgContexts[1].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArgOffset != 3) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 3\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 3\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -110,36 +151,66 @@ TestParseOneArgContainingQuotesCmd(VOID)
 
     YoriLibConstantString(&InputString, _T("foo\" \"bar"));
     if (!YoriLibShParseCmdlineToCmdContext(&InputString, 7, &CmdContext)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString);
         return FALSE;
     }
 
     if (CmdContext.ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo\" \"bar")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\" \"bar\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\" \"bar\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted != FALSE || CmdContext.ArgContexts[0].QuoteTerminated != FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArgOffset != 7) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 7\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 7\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -159,36 +230,66 @@ TestParseOneArgEnclosedInQuotesCmd(VOID)
 
     YoriLibConstantString(&InputString, _T("\"foo\""));
     if (!YoriLibShParseCmdlineToCmdContext(&InputString, InputString.LengthInChars, &CmdContext)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString);
         return FALSE;
     }
 
     if (CmdContext.ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArgOffset != 4) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 4\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 4\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -215,36 +316,66 @@ TestParseOneArgWithStartingQuotesCmd(VOID)
 
     YoriLibConstantString(&InputString, _T("\"Program Files\"\\foo"));
     if (!YoriLibShParseCmdlineToCmdContext(&InputString, 15, &CmdContext)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString);
         return FALSE;
     }
 
     if (CmdContext.ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files\\foo")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\\foo\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\\foo\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArgOffset != 13) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -271,12 +402,21 @@ TestParseOneArgWithStartingQuotesEndingSlashCmd(VOID)
 
     YoriLibConstantString(&InputString, _T("\"Program Files\"\\"));
     if (!YoriLibShParseCmdlineToCmdContext(&InputString, 15, &CmdContext)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString);
         return FALSE;
     }
 
     if (CmdContext.ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -288,25 +428,46 @@ TestParseOneArgWithStartingQuotesEndingSlashCmd(VOID)
     //
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files\\\\")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\\\\\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\\\\\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArgOffset != 13) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -333,12 +494,21 @@ TestParseOneArgWithStartingQuotesEndingCaretCmd(VOID)
 
     YoriLibConstantString(&InputString, _T("\"Program Files\"^"));
     if (!YoriLibShParseCmdlineToCmdContext(&InputString, 15, &CmdContext)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString);
         return FALSE;
     }
 
     if (CmdContext.ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -349,25 +519,46 @@ TestParseOneArgWithStartingQuotesEndingCaretCmd(VOID)
     //
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("Program Files")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected Program Files\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArgOffset != 14) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 13\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -390,30 +581,55 @@ TestParseOneArgContainingAndEnclosedInQuotesCmd(VOID)
 
     YoriLibConstantString(&InputString, _T("\"foo\"==\"foo\" "));
     if (!YoriLibShParseCmdlineToCmdContext(&InputString, InputString.LengthInChars, &CmdContext)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"), __FILE__, __LINE__, &InputString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext failed on '%y'\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString);
         return FALSE;
     }
 
     if (CmdContext.ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T("foo\"==\"foo")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\"==\"foo\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected foo\"==\"foo\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted == FALSE || CmdContext.ArgContexts[0].QuoteTerminated == FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 1,1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -424,7 +640,12 @@ TestParseOneArgContainingAndEnclosedInQuotesCmd(VOID)
     //
 
     if (CmdContext.CurrentArgOffset != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
@@ -451,31 +672,57 @@ TestParseRedirectWithEndingQuoteCmd(VOID)
     }
 
     if (CmdContext.ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgC '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgC);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&CmdContext.ArgV[0], _T(">\"file name\"")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected >\"file name\"\n"), __FILE__, __LINE__, &InputString, &CmdContext.ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgV in '%y', have %y expected >\"file name\"\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      &CmdContext.ArgV[0]);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.ArgContexts[0].Quoted != FALSE || CmdContext.ArgContexts[0].QuoteTerminated != FALSE) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"), __FILE__, __LINE__, &InputString, CmdContext.ArgContexts[0].Quoted, CmdContext.ArgContexts[0].QuoteTerminated);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected ArgContext in '%y', have %i,%i expected 0,0\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.ArgContexts[0].Quoted,
+                      CmdContext.ArgContexts[0].QuoteTerminated);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArg != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArg);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArg '%y', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArg);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }
 
     if (CmdContext.CurrentArgOffset != 12) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 12\n"), __FILE__, __LINE__, &InputString, CmdContext.CurrentArgOffset);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibShParseCmdlineToCmdContext returned unexpected CurrentArgOffset '%y', have %i expected 12\n"),
+                      __FILE__,
+                      __LINE__,
+                      &InputString,
+                      CmdContext.CurrentArgOffset);
         YoriLibShFreeCmdContext(&CmdContext);
         return FALSE;
     }

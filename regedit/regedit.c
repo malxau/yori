@@ -234,7 +234,18 @@ RegeditPopulateKeyValueList(
         }
 
         ClassLength = 0;
-        Err = DllAdvApi32.pRegQueryInfoKeyW(Key, NULL, &ClassLength, NULL, &SubKeyCount, &MaxSubKeyLength, &MaxClassLength, &ValueCount, &MaxValueNameLength, &MaxValueData, &SecurityDescriptorLength, &LastWriteTime);
+        Err = DllAdvApi32.pRegQueryInfoKeyW(Key,
+                                            NULL,
+                                            &ClassLength,
+                                            NULL,
+                                            &SubKeyCount,
+                                            &MaxSubKeyLength,
+                                            &MaxClassLength,
+                                            &ValueCount,
+                                            &MaxValueNameLength,
+                                            &MaxValueData,
+                                            &SecurityDescriptorLength,
+                                            &LastWriteTime);
 
         //
         //  Older versions of Windows insist all parameters are populated,
@@ -250,7 +261,18 @@ RegeditPopulateKeyValueList(
             }
 
             ClassLength = Text.LengthAllocated;
-            Err = DllAdvApi32.pRegQueryInfoKeyW(Key, Text.StartOfString, &ClassLength, NULL, &SubKeyCount, &MaxSubKeyLength, &MaxClassLength, &ValueCount, &MaxValueNameLength, &MaxValueData, &SecurityDescriptorLength, &LastWriteTime);
+            Err = DllAdvApi32.pRegQueryInfoKeyW(Key,
+                                                Text.StartOfString,
+                                                &ClassLength,
+                                                NULL,
+                                                &SubKeyCount,
+                                                &MaxSubKeyLength,
+                                                &MaxClassLength,
+                                                &ValueCount,
+                                                &MaxValueNameLength,
+                                                &MaxValueData,
+                                                &SecurityDescriptorLength,
+                                                &LastWriteTime);
             YoriLibFreeStringContents(&Text);
         }
 

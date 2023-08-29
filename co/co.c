@@ -306,7 +306,12 @@ CoPopulateList(
 
     YoriLibInitEmptyString(&FileSpec);
     YoriLibYPrintf(&FileSpec, _T("%y\\*"), &CoContext->CurrentDirectory);
-    YoriLibForEachFile(&FileSpec, YORILIB_FILEENUM_BASIC_EXPANSION | YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES, 0, CoFileFoundCallback, NULL, CoContext);
+    YoriLibForEachFile(&FileSpec,
+                       YORILIB_FILEENUM_BASIC_EXPANSION | YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES,
+                       0,
+                       CoFileFoundCallback,
+                       NULL,
+                       CoContext);
     YoriLibFreeStringContents(&FileSpec);
 
     if (CoContext->FilesFoundCount == 0) {
@@ -768,7 +773,12 @@ CoMoveButtonClicked(
     for (Index = 0; Index < CoContext.FilesFoundCount; Index++) {
         if (YoriWinListIsOptionSelected(CoContext.List, Index)) {
 
-            FullDest.LengthInChars = YoriLibSPrintfS(FullDest.StartOfString, FullDest.LengthAllocated, _T("%y\\%y"), &FullDir, &CoContext.FileArray[Index]->DisplayName);
+            FullDest.LengthInChars =
+                YoriLibSPrintfS(FullDest.StartOfString,
+                                FullDest.LengthAllocated,
+                                _T("%y\\%y"),
+                                &FullDir,
+                                &CoContext.FileArray[Index]->DisplayName);
 
             LastError = YoriLibMoveFile(&CoContext.FileArray[Index]->FullFilePath, &FullDest, TRUE, FALSE);
             if (LastError != ERROR_SUCCESS) {
@@ -779,7 +789,11 @@ CoMoveButtonClicked(
                     YoriLibConstantString(&Buttons[0], _T("&Ok"));
                     YoriLibConstantString(&Title, _T("Error"));
                     YoriLibInitEmptyString(&Label);
-                    YoriLibYPrintf(&Label, _T("Could not move file from \"%y\" to \"%y\": %s"), &CoContext.FileArray[Index]->FullFilePath, &FullDest, ErrText);
+                    YoriLibYPrintf(&Label,
+                                   _T("Could not move file from \"%y\" to \"%y\": %s"),
+                                   &CoContext.FileArray[Index]->FullFilePath,
+                                   &FullDest,
+                                   ErrText);
                     if (Label.LengthInChars > 0) {
                         CoTrimTrailingNewlines(&Label);
                         YoriDlgMessageBox(CoContext.WinMgr, &Title, &Label, 1, Buttons, 0, 0);
@@ -838,7 +852,12 @@ CoCopyButtonClicked(
     ListChanged = FALSE;
     for (Index = 0; Index < CoContext.FilesFoundCount; Index++) {
         if (YoriWinListIsOptionSelected(CoContext.List, Index)) {
-            FullDest.LengthInChars = YoriLibSPrintfS(FullDest.StartOfString, FullDest.LengthAllocated, _T("%y\\%y"), &FullDir, &CoContext.FileArray[Index]->DisplayName);
+            FullDest.LengthInChars =
+                YoriLibSPrintfS(FullDest.StartOfString,
+                                FullDest.LengthAllocated,
+                                _T("%y\\%y"),
+                                &FullDir,
+                                &CoContext.FileArray[Index]->DisplayName);
 
             LastError = YoriLibCopyFile(&CoContext.FileArray[Index]->FullFilePath, &FullDest);
             if (LastError != ERROR_SUCCESS) {
@@ -849,7 +868,11 @@ CoCopyButtonClicked(
                     YoriLibConstantString(&Buttons[0], _T("&Ok"));
                     YoriLibConstantString(&Title, _T("Error"));
                     YoriLibInitEmptyString(&Label);
-                    YoriLibYPrintf(&Label, _T("Could not copy file from \"%y\" to \"%y\": %s"), &CoContext.FileArray[Index]->FullFilePath, &FullDest, ErrText);
+                    YoriLibYPrintf(&Label,
+                                   _T("Could not copy file from \"%y\" to \"%y\": %s"),
+                                   &CoContext.FileArray[Index]->FullFilePath,
+                                   &FullDest,
+                                   ErrText);
                     if (Label.LengthInChars > 0) {
                         CoTrimTrailingNewlines(&Label);
                         YoriDlgMessageBox(CoContext.WinMgr, &Title, &Label, 1, Buttons, 0, 0);
@@ -1170,7 +1193,14 @@ CoCreateSynchronousMenu(VOID)
 
     YoriLibConstantString(&Title, _T("Co"));
 
-    if (!YoriWinCreateWindow(WinMgr, WindowSize.X, WindowSize.Y, WindowSize.X, WindowSize.Y, YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID, &Title, &Parent)) {
+    if (!YoriWinCreateWindow(WinMgr,
+                             WindowSize.X,
+                             WindowSize.Y,
+                             WindowSize.X,
+                             WindowSize.Y,
+                             YORI_WIN_WINDOW_STYLE_BORDER_SINGLE | YORI_WIN_WINDOW_STYLE_SHADOW_SOLID,
+                             &Title,
+                             &Parent)) {
         YoriWinCloseWindowManager(WinMgr);
         YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("co: Could not display window: terminal too small?\n"));
         return FALSE;

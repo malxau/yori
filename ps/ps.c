@@ -313,9 +313,27 @@ PsDisplayProcessByStructure(
         YoriLibFileSizeToString(&CommitString, &liCommit);
         YoriLibFileSizeToString(&WorkingSetString, &liWorkingSet);
 
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-6i | %8y | %02i:%02i:%02i | %-15y | %-10y | %-10y"), ProcessInfo->ProcessId, ProcessInfo->ParentProcessId, &LiveTimeString, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName, &WorkingSetString, &CommitString);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                      _T("%-6i | %-6i | %8y | %02i:%02i:%02i | %-15y | %-10y | %-10y"),
+                      ProcessInfo->ProcessId,
+                      ProcessInfo->ParentProcessId,
+                      &LiveTimeString,
+                      ExecTimeHours,
+                      ExecTimeMinutes,
+                      ExecTimeSeconds,
+                      &BaseName,
+                      &WorkingSetString,
+                      &CommitString);
     } else {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("%-6i | %-6i | %8y | %02i:%02i:%02i | %-15y"), ProcessInfo->ProcessId, ProcessInfo->ParentProcessId, &LiveTimeString, ExecTimeHours, ExecTimeMinutes, ExecTimeSeconds, &BaseName);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                      _T("%-6i | %-6i | %8y | %02i:%02i:%02i | %-15y"),
+                      ProcessInfo->ProcessId,
+                      ProcessInfo->ParentProcessId,
+                      &LiveTimeString,
+                      ExecTimeHours,
+                      ExecTimeMinutes,
+                      ExecTimeSeconds,
+                      &BaseName);
     }
 
     if (PsContext->DisplayCommandLine) {

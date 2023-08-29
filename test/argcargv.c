@@ -67,19 +67,34 @@ TestArgTwoArgCmd(VOID)
     }
 
     if (ArgC != 2) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 2\n"), __FILE__, __LINE__, InputString, ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 2\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgC);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[0], _T("foo")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected foo\n"), __FILE__, __LINE__, InputString, &ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected foo\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[0]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[1], _T("bar")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected bar\n"), __FILE__, __LINE__, InputString, &ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected bar\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[0]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
@@ -106,13 +121,23 @@ TestArgOneArgContainingQuotesCmd(VOID)
     }
 
     if (ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"), __FILE__, __LINE__, InputString, ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgC);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[0], _T("foo bar")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected foo bar\n"), __FILE__, __LINE__, InputString, &ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected foo bar\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[0]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
@@ -139,13 +164,23 @@ TestArgOneArgWithStartingQuotesCmd(VOID)
     }
 
     if (ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"), __FILE__, __LINE__, InputString, ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgC);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[0], _T("Program Files\\foo")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected Program Files\\foo\n"), __FILE__, __LINE__, InputString, &ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected Program Files\\foo\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[0]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
@@ -172,13 +207,23 @@ TestArgOneArgEnclosedInQuotesCmd(VOID)
     }
 
     if (ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"), __FILE__, __LINE__, InputString, ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgC);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[0], _T("foo==foo")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected foo==foo\n"), __FILE__, __LINE__, InputString, &ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected foo==foo\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[0]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
@@ -206,13 +251,23 @@ TestArgRedirectWithEndingQuoteCmd(VOID)
     }
 
     if (ArgC != 1) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"), __FILE__, __LINE__, InputString, ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 1\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgC);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[0], _T(">file name")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected >file name\n"), __FILE__, __LINE__, InputString, &ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected >file name\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[0]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
@@ -239,25 +294,45 @@ TestArgBackslashEscapeCmd(VOID)
     }
 
     if (ArgC != 3) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 3\n"), __FILE__, __LINE__, InputString, ArgC);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgC '%s', have %i expected 3\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      ArgC);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[0], _T("\\\\")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected \\\\\n"), __FILE__, __LINE__, InputString, &ArgV[0]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected \\\\\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[0]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[1], _T("\"")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected \"\n"), __FILE__, __LINE__, InputString, &ArgV[1]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected \"\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[1]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }
 
     if (YoriLibCompareStringWithLiteral(&ArgV[2], _T("\\ \\\"")) != 0) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected \\ \\\"\n"), __FILE__, __LINE__, InputString, &ArgV[2]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR,
+                      _T("%hs:%i YoriLibCmdlineToArgcArgv returned unexpected ArgV in '%s', have %y expected \\ \\\"\n"),
+                      __FILE__,
+                      __LINE__,
+                      InputString,
+                      &ArgV[2]);
         TestArgCleanupArg(ArgC, ArgV);
         return FALSE;
     }

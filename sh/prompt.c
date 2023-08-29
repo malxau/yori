@@ -206,7 +206,11 @@ YoriShDisplayPrompt(VOID)
 
                 YoriLibFreeStringContents(&YoriShGlobal.PostCmdVariable);
                 memcpy(&YoriShGlobal.PostCmdVariable, &PromptVar, sizeof(YORI_STRING));
-                YoriShGlobal.PostCmdVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPOSTCMD"), YoriShGlobal.PostCmdVariable.StartOfString, YoriShGlobal.PostCmdVariable.LengthAllocated, &YoriShGlobal.PostCmdGeneration);
+                YoriShGlobal.PostCmdVariable.LengthInChars =
+                    YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPOSTCMD"),
+                                                                    YoriShGlobal.PostCmdVariable.StartOfString,
+                                                                    YoriShGlobal.PostCmdVariable.LengthAllocated,
+                                                                    &YoriShGlobal.PostCmdGeneration);
             }
         } else {
             YoriLibFreeStringContents(&YoriShGlobal.PostCmdVariable);
@@ -233,7 +237,11 @@ YoriShDisplayPrompt(VOID)
 
                 YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);
                 memcpy(&YoriShGlobal.PromptVariable, &PromptVar, sizeof(YORI_STRING));
-                YoriShGlobal.PromptVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"), YoriShGlobal.PromptVariable.StartOfString, YoriShGlobal.PromptVariable.LengthAllocated, &YoriShGlobal.PromptGeneration);
+                YoriShGlobal.PromptVariable.LengthInChars =
+                    YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPROMPT"),
+                                                                    YoriShGlobal.PromptVariable.StartOfString,
+                                                                    YoriShGlobal.PromptVariable.LengthAllocated,
+                                                                    &YoriShGlobal.PromptGeneration);
             }
         } else {
             YoriLibFreeStringContents(&YoriShGlobal.PromptVariable);
@@ -339,7 +347,11 @@ YoriShDisplayPrompt(VOID)
 
                 YoriLibFreeStringContents(&YoriShGlobal.TitleVariable);
                 memcpy(&YoriShGlobal.TitleVariable, &PromptVar, sizeof(YORI_STRING));
-                YoriShGlobal.TitleVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORITITLE"), YoriShGlobal.TitleVariable.StartOfString, YoriShGlobal.TitleVariable.LengthAllocated, &YoriShGlobal.TitleGeneration);
+                YoriShGlobal.TitleVariable.LengthInChars =
+                    YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORITITLE"),
+                                                                    YoriShGlobal.TitleVariable.StartOfString,
+                                                                    YoriShGlobal.TitleVariable.LengthAllocated,
+                                                                    &YoriShGlobal.TitleGeneration);
             }
         } else {
             YoriLibFreeStringContents(&YoriShGlobal.TitleVariable);
@@ -444,7 +456,11 @@ YoriShExecPreCommandString(VOID)
 
                 YoriLibFreeStringContents(&YoriShGlobal.PreCmdVariable);
                 memcpy(&YoriShGlobal.PreCmdVariable, &EnvVar, sizeof(YORI_STRING));
-                YoriShGlobal.PreCmdVariable.LengthInChars = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"), YoriShGlobal.PreCmdVariable.StartOfString, YoriShGlobal.PreCmdVariable.LengthAllocated, &YoriShGlobal.PreCmdGeneration);
+                YoriShGlobal.PreCmdVariable.LengthInChars =
+                    YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORIPRECMD"),
+                                                                    YoriShGlobal.PreCmdVariable.StartOfString,
+                                                                    YoriShGlobal.PreCmdVariable.LengthAllocated,
+                                                                    &YoriShGlobal.PreCmdGeneration);
             }
         } else {
             YoriLibFreeStringContents(&YoriShGlobal.PreCmdVariable);

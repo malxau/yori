@@ -211,61 +211,121 @@ YoriPkgGetPackageInfo(
     YoriLibCloneString(PackageName, &TempBuffer);
     PackageName->LengthAllocated = MaxFieldSize;
 
-    PackageName->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("Name"), _T(""), PackageName->StartOfString, PackageName->LengthAllocated, IniPath->StartOfString);
+    PackageName->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("Name"),
+                                              _T(""),
+                                              PackageName->StartOfString,
+                                              PackageName->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(PackageVersion, &TempBuffer);
     PackageVersion->StartOfString += 1 * MaxFieldSize;
     PackageVersion->LengthAllocated = MaxFieldSize;
 
-    PackageVersion->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("Version"), _T(""), PackageVersion->StartOfString, PackageVersion->LengthAllocated, IniPath->StartOfString);
+    PackageVersion->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("Version"),
+                                              _T(""),
+                                              PackageVersion->StartOfString,
+                                              PackageVersion->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(PackageArch, &TempBuffer);
     PackageArch->StartOfString += 2 * MaxFieldSize;
     PackageArch->LengthAllocated = MaxFieldSize;
 
-    PackageArch->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("Architecture"), _T(""), PackageArch->StartOfString, PackageArch->LengthAllocated, IniPath->StartOfString);
+    PackageArch->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("Architecture"),
+                                              _T(""),
+                                              PackageArch->StartOfString,
+                                              PackageArch->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(MinimumOSBuild, &TempBuffer);
     MinimumOSBuild->StartOfString += 3 * MaxFieldSize;
     MinimumOSBuild->LengthAllocated = MaxFieldSize;
 
-    MinimumOSBuild->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("MinimumOSBuild"), _T(""), MinimumOSBuild->StartOfString, MinimumOSBuild->LengthAllocated, IniPath->StartOfString);
+    MinimumOSBuild->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("MinimumOSBuild"),
+                                              _T(""),
+                                              MinimumOSBuild->StartOfString,
+                                              MinimumOSBuild->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(PackagePathForOlderBuilds, &TempBuffer);
     PackagePathForOlderBuilds->StartOfString += 4 * MaxFieldSize;
     PackagePathForOlderBuilds->LengthAllocated = MaxFieldSize;
 
-    PackagePathForOlderBuilds->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("PackagePathForOlderBuilds"), _T(""), PackagePathForOlderBuilds->StartOfString, PackagePathForOlderBuilds->LengthAllocated, IniPath->StartOfString);
+    PackagePathForOlderBuilds->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("PackagePathForOlderBuilds"),
+                                              _T(""),
+                                              PackagePathForOlderBuilds->StartOfString,
+                                              PackagePathForOlderBuilds->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(UpgradePath, &TempBuffer);
     UpgradePath->StartOfString += 5 * MaxFieldSize;
     UpgradePath->LengthAllocated = MaxFieldSize;
 
-    UpgradePath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("UpgradePath"), _T(""), UpgradePath->StartOfString, UpgradePath->LengthAllocated, IniPath->StartOfString);
+    UpgradePath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("UpgradePath"),
+                                              _T(""),
+                                              UpgradePath->StartOfString,
+                                              UpgradePath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(SourcePath, &TempBuffer);
     SourcePath->StartOfString += 6 * MaxFieldSize;
     SourcePath->LengthAllocated = MaxFieldSize;
 
-    SourcePath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("SourcePath"), _T(""), SourcePath->StartOfString, SourcePath->LengthAllocated, IniPath->StartOfString);
+    SourcePath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("SourcePath"),
+                                              _T(""),
+                                              SourcePath->StartOfString,
+                                              SourcePath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(SymbolPath, &TempBuffer);
     SymbolPath->StartOfString += 7 * MaxFieldSize;
     SymbolPath->LengthAllocated = MaxFieldSize;
 
-    SymbolPath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("SymbolPath"), _T(""), SymbolPath->StartOfString, SymbolPath->LengthAllocated, IniPath->StartOfString);
+    SymbolPath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("SymbolPath"),
+                                              _T(""),
+                                              SymbolPath->StartOfString,
+                                              SymbolPath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(UpgradeToDailyPath, &TempBuffer);
     UpgradeToDailyPath->StartOfString += 8 * MaxFieldSize;
     UpgradeToDailyPath->LengthAllocated = MaxFieldSize;
 
-    UpgradeToDailyPath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("UpgradeToDailyPath"), _T(""), UpgradeToDailyPath->StartOfString, UpgradeToDailyPath->LengthAllocated, IniPath->StartOfString);
+    UpgradeToDailyPath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("UpgradeToDailyPath"),
+                                              _T(""),
+                                              UpgradeToDailyPath->StartOfString,
+                                              UpgradeToDailyPath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(UpgradeToStablePath, &TempBuffer);
     UpgradeToStablePath->StartOfString += 9 * MaxFieldSize;
     UpgradeToStablePath->LengthAllocated = MaxFieldSize;
 
-    UpgradeToStablePath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(_T("Package"), _T("UpgradeToStablePath"), _T(""), UpgradeToStablePath->StartOfString, UpgradeToStablePath->LengthAllocated, IniPath->StartOfString);
+    UpgradeToStablePath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(_T("Package"),
+                                              _T("UpgradeToStablePath"),
+                                              _T(""),
+                                              UpgradeToStablePath->StartOfString,
+                                              UpgradeToStablePath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibFreeStringContents(&TempBuffer);
     return TRUE;
@@ -333,43 +393,85 @@ YoriPkgGetInstalledPackageInfo(
     YoriLibCloneString(PackageVersion, &TempBuffer);
     PackageVersion->LengthAllocated = MaxFieldSize;
 
-    PackageVersion->LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("Version"), _T(""), PackageVersion->StartOfString, PackageVersion->LengthAllocated, IniPath->StartOfString);
+    PackageVersion->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
+                                              _T("Version"),
+                                              _T(""),
+                                              PackageVersion->StartOfString,
+                                              PackageVersion->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(PackageArch, &TempBuffer);
     PackageArch->StartOfString += 1 * MaxFieldSize;
     PackageArch->LengthAllocated = MaxFieldSize;
 
-    PackageArch->LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("Architecture"), _T(""), PackageArch->StartOfString, PackageArch->LengthAllocated, IniPath->StartOfString);
+    PackageArch->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
+                                              _T("Architecture"),
+                                              _T(""),
+                                              PackageArch->StartOfString,
+                                              PackageArch->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(UpgradePath, &TempBuffer);
     UpgradePath->StartOfString += 2 * MaxFieldSize;
     UpgradePath->LengthAllocated = MaxFieldSize;
 
-    UpgradePath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("UpgradePath"), _T(""), UpgradePath->StartOfString, UpgradePath->LengthAllocated, IniPath->StartOfString);
+    UpgradePath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
+                                              _T("UpgradePath"),
+                                              _T(""),
+                                              UpgradePath->StartOfString,
+                                              UpgradePath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(SourcePath, &TempBuffer);
     SourcePath->StartOfString += 3 * MaxFieldSize;
     SourcePath->LengthAllocated = MaxFieldSize;
 
-    SourcePath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("SourcePath"), _T(""), SourcePath->StartOfString, SourcePath->LengthAllocated, IniPath->StartOfString);
+    SourcePath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
+                                              _T("SourcePath"),
+                                              _T(""),
+                                              SourcePath->StartOfString,
+                                              SourcePath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(SymbolPath, &TempBuffer);
     SymbolPath->StartOfString += 4 * MaxFieldSize;
     SymbolPath->LengthAllocated = MaxFieldSize;
 
-    SymbolPath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("SymbolPath"), _T(""), SymbolPath->StartOfString, SymbolPath->LengthAllocated, IniPath->StartOfString);
+    SymbolPath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
+                                              _T("SymbolPath"),
+                                              _T(""),
+                                              SymbolPath->StartOfString,
+                                              SymbolPath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(UpgradeToDailyPath, &TempBuffer);
     UpgradeToDailyPath->StartOfString += 5 * MaxFieldSize;
     UpgradeToDailyPath->LengthAllocated = MaxFieldSize;
 
-    UpgradeToDailyPath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("UpgradeToDailyPath"), _T(""), UpgradeToDailyPath->StartOfString, UpgradeToDailyPath->LengthAllocated, IniPath->StartOfString);
+    UpgradeToDailyPath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
+                                              _T("UpgradeToDailyPath"),
+                                              _T(""),
+                                              UpgradeToDailyPath->StartOfString,
+                                              UpgradeToDailyPath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibCloneString(UpgradeToStablePath, &TempBuffer);
     UpgradeToStablePath->StartOfString += 5 * MaxFieldSize;
     UpgradeToStablePath->LengthAllocated = MaxFieldSize;
 
-    UpgradeToStablePath->LengthInChars = DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString, _T("UpgradeToStablePath"), _T(""), UpgradeToStablePath->StartOfString, UpgradeToStablePath->LengthAllocated, IniPath->StartOfString);
+    UpgradeToStablePath->LengthInChars =
+        DllKernel32.pGetPrivateProfileStringW(PackageName->StartOfString,
+                                              _T("UpgradeToStablePath"),
+                                              _T(""),
+                                              UpgradeToStablePath->StartOfString,
+                                              UpgradeToStablePath->LengthAllocated,
+                                              IniPath->StartOfString);
 
     YoriLibFreeStringContents(&TempBuffer);
     return TRUE;

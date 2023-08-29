@@ -1440,14 +1440,26 @@ MoreCopySelectionIfPresent(
             InitialUserColor = EntireLogicalLines[LineIndex].InitialUserColor;
             CharactersRemainingInMatch = EntireLogicalLines[LineIndex].CharactersRemainingInMatch;
             if (Selection->CurrentlySelected.Left > 0) {
-                LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, Selection->CurrentlySelected.Left, InitialDisplayColor, InitialUserColor, CharactersRemainingInMatch, &LineEndContext);
+                LogicalLineLength = MoreGetLogicalLineLength(MoreContext,
+                                                             &Subset,
+                                                             Selection->CurrentlySelected.Left,
+                                                             InitialDisplayColor,
+                                                             InitialUserColor,
+                                                             CharactersRemainingInMatch,
+                                                             &LineEndContext);
                 InitialDisplayColor = LineEndContext.FinalDisplayColor;
                 InitialUserColor = LineEndContext.FinalUserColor;
                 Subset.LengthInChars -= LogicalLineLength;
                 Subset.StartOfString += LogicalLineLength;
                 CharactersRemainingInMatch = LineEndContext.CharactersRemainingInMatch;
             }
-            LogicalLineLength = MoreGetLogicalLineLength(MoreContext, &Subset, Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1, InitialDisplayColor, InitialUserColor, CharactersRemainingInMatch, &LineEndContext);
+            LogicalLineLength = MoreGetLogicalLineLength(MoreContext,
+                                                         &Subset,
+                                                         Selection->CurrentlySelected.Right - Selection->CurrentlySelected.Left + 1,
+                                                         InitialDisplayColor,
+                                                         InitialUserColor,
+                                                         CharactersRemainingInMatch,
+                                                         &LineEndContext);
             CopyLogicalLines[LineIndex].InitialDisplayColor = InitialDisplayColor;
             CopyLogicalLines[LineIndex].InitialUserColor = InitialUserColor;
             CopyLogicalLines[LineIndex].CharactersRemainingInMatch = CharactersRemainingInMatch;
@@ -1990,7 +2002,11 @@ MoreProcessResizeViewport(
                     YoriLibFreeStringContents(&OldDisplayViewportLines[Index].Line);
                 }
                 FillConsoleOutputCharacter(StdOutHandle, ' ', ScreenInfo.dwSize.X * (OldLinesInViewport - NewViewportHeight + 1), NewCursorPosition, &NumberWritten);
-                FillConsoleOutputAttribute(StdOutHandle, YoriLibVtGetDefaultColor(), ScreenInfo.dwSize.X * (OldLinesInViewport - NewViewportHeight + 1), NewCursorPosition, &NumberWritten);
+                FillConsoleOutputAttribute(StdOutHandle,
+                                           YoriLibVtGetDefaultColor(),
+                                           ScreenInfo.dwSize.X * (OldLinesInViewport - NewViewportHeight + 1),
+                                           NewCursorPosition,
+                                           &NumberWritten);
             }
 
             MoreContext->ViewportHeight = NewViewportHeight;

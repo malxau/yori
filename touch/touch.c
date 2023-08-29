@@ -291,7 +291,14 @@ ENTRYPOINT(
                     FILETIME LocalNewTime;
                     ZeroMemory(&NewTime, sizeof(NewTime));
                     if (YoriLibStringToDateTime(&ArgV[i + 1], &NewTime)) {
-                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Setting time to %i/%i/%i:%i:%i:%i\n"), NewTime.wYear, NewTime.wMonth, NewTime.wDay, NewTime.wHour, NewTime.wMinute, NewTime.wSecond);
+                        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                                      _T("Setting time to %i/%i/%i:%i:%i:%i\n"),
+                                      NewTime.wYear,
+                                      NewTime.wMonth,
+                                      NewTime.wDay,
+                                      NewTime.wHour,
+                                      NewTime.wMinute,
+                                      NewTime.wSecond);
                         if (!SystemTimeToFileTime(&NewTime, &LocalNewTime) || !LocalFileTimeToFileTime(&LocalNewTime, &TimestampToUse)) {
                             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Could not parse time: %y\n"), &ArgV[i + 1]);
                         }

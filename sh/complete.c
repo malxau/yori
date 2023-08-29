@@ -813,7 +813,8 @@ YoriShFileTabCompletionCallback(
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + Filename->LengthInChars + 1 + FileCompleteContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) +
+                                        (FileCompleteContext->Prefix.LengthInChars + Filename->LengthInChars + 1 + FileCompleteContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -896,7 +897,11 @@ YoriShFileTabCompletionCallback(
         //  Allocate a match entry for this file.
         //
 
-        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) + (FileCompleteContext->Prefix.LengthInChars + FileCompleteContext->CharsToFinalSlash + FileNameToUse->LengthInChars + 1 + FileCompleteContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
+        Match = YoriLibReferencedMalloc(sizeof(YORI_SH_TAB_COMPLETE_MATCH) +
+                                        (FileCompleteContext->Prefix.LengthInChars +
+                                         FileCompleteContext->CharsToFinalSlash +
+                                         FileNameToUse->LengthInChars + 1 +
+                                         FileCompleteContext->Suffix.LengthInChars + 1) * sizeof(TCHAR));
         if (Match == NULL) {
             return FALSE;
         }
@@ -922,12 +927,23 @@ YoriShFileTabCompletionCallback(
         }
 
         if (FileCompleteContext->Suffix.LengthInChars > 0) {
-            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y\\%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse, &FileCompleteContext->Suffix);
+            Match->Value.LengthInChars =
+                YoriLibSPrintf(Match->Value.StartOfString,
+                               _T("%y%y%y\\%y"),
+                               &FileCompleteContext->Prefix,
+                               &StringToFinalSlash,
+                               FileNameToUse,
+                               &FileCompleteContext->Suffix);
             Match->CursorOffset = Match->Value.LengthInChars - FileCompleteContext->Suffix.LengthInChars;
         } else if ((FileInfo->dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0 &&
                    YoriShGlobal.CompletionTrailingSlash &&
                    !FilenameHasTrailingSlash) {
-            Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y\\"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
+            Match->Value.LengthInChars =
+                YoriLibSPrintf(Match->Value.StartOfString,
+                               _T("%y%y%y\\"),
+                               &FileCompleteContext->Prefix,
+                               &StringToFinalSlash,
+                               FileNameToUse);
             Match->CursorOffset = Match->Value.LengthInChars;
         } else {
             Match->Value.LengthInChars = YoriLibSPrintf(Match->Value.StartOfString, _T("%y%y%y"), &FileCompleteContext->Prefix, &StringToFinalSlash, FileNameToUse);
@@ -2501,7 +2517,10 @@ YoriShCompleteGenerateNewBufferString(
     //
 
     if (NewString.StartOfString != NULL) {
-        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String, PrefixBeforeBackquoteSubstring->LengthInChars + NewString.LengthInChars + SuffixAfterBackquoteSubstring->LengthInChars)) {
+        if (!YoriShEnsureStringHasEnoughCharacters(&Buffer->String,
+                                                   PrefixBeforeBackquoteSubstring->LengthInChars +
+                                                    NewString.LengthInChars +
+                                                    SuffixAfterBackquoteSubstring->LengthInChars)) {
             YoriLibFreeStringContents(&NewString);
             return;
         }

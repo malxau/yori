@@ -173,7 +173,13 @@ TailProcessStream(
 
         while (TRUE) {
 
-            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay], &LineContext, !TailContext->WaitForMore, INFINITE, hSource, &LineEnding, &TimeoutReached)) {
+            if (!YoriLibReadLineToStringEx(&TailContext->LinesArray[TailContext->LinesFound % TailContext->LinesToDisplay],
+                                           &LineContext,
+                                           !TailContext->WaitForMore,
+                                           INFINITE,
+                                           hSource,
+                                           &LineEnding,
+                                           &TimeoutReached)) {
                 break;
             }
 

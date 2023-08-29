@@ -431,7 +431,10 @@ ENTRYPOINT(
                     if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntireNaturalPath.LengthInChars) {
 
                         PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex];
-                        PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
+                        PathComponents.PathFromRoot.LengthInChars =
+                            PathComponents.EntireNaturalPath.LengthInChars -
+                            PathComponents.ShareName.LengthInChars -
+                            PathComponents.FullFileName.LengthInChars - 1;
                     } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntireNaturalPath.LengthInChars) {
                         PathComponents.BaseName.LengthInChars = 0;
                         PathComponents.FullFileName.LengthInChars = 0;
@@ -505,7 +508,10 @@ ENTRYPOINT(
                     if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars < PathComponents.EntireNaturalPath.LengthInChars) {
 
                         PathComponents.PathFromRoot.StartOfString = &PathComponents.EntireNaturalPath.StartOfString[CharIndex];
-                        PathComponents.PathFromRoot.LengthInChars = PathComponents.EntireNaturalPath.LengthInChars - PathComponents.ShareName.LengthInChars - PathComponents.FullFileName.LengthInChars - 1;
+                        PathComponents.PathFromRoot.LengthInChars =
+                            PathComponents.EntireNaturalPath.LengthInChars -
+                            PathComponents.ShareName.LengthInChars -
+                            PathComponents.FullFileName.LengthInChars - 1;
                     } else if (PathComponents.ShareName.LengthInChars + PathComponents.FullFileName.LengthInChars > PathComponents.EntireNaturalPath.LengthInChars) {
                         PathComponents.BaseName.LengthInChars = 0;
                         PathComponents.FullFileName.LengthInChars = 0;

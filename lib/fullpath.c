@@ -741,29 +741,69 @@ YoriLibFullPathMergeRootWithRelative(
     if (ReturnEscapedPath) {
         if (PathType->Flags.UncPath) {
             if (RelativePath->LengthInChars > 0) {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\\\%c\\UNC%y\\%y"), YoriLibPathPrefixChar, &CurrentDirectory, RelativePath);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("\\\\%c\\UNC%y\\%y"),
+                                    YoriLibPathPrefixChar,
+                                    &CurrentDirectory,
+                                    RelativePath);
             } else {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\\\%c\\UNC%y"), YoriLibPathPrefixChar, &CurrentDirectory);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("\\\\%c\\UNC%y"),
+                                    YoriLibPathPrefixChar,
+                                    &CurrentDirectory);
             }
         } else {
             if (RelativePath->LengthInChars > 0) {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\\\%c\\%y\\%y"), YoriLibPathPrefixChar, &CurrentDirectory, RelativePath);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("\\\\%c\\%y\\%y"),
+                                    YoriLibPathPrefixChar,
+                                    &CurrentDirectory,
+                                    RelativePath);
             } else {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\\\%c\\%y"), YoriLibPathPrefixChar, &CurrentDirectory);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("\\\\%c\\%y"),
+                                    YoriLibPathPrefixChar,
+                                    &CurrentDirectory);
             }
         }
     } else {
         if (PathType->Flags.UncPath) {
             if (RelativePath->LengthInChars > 0) {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\%y\\%y"), &CurrentDirectory, RelativePath);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("\\%y\\%y"),
+                                    &CurrentDirectory,
+                                    RelativePath);
             } else {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("\\%y"), &CurrentDirectory);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("\\%y"),
+                                    &CurrentDirectory);
             }
         } else {
             if (RelativePath->LengthInChars > 0) {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("%y\\%y"), &CurrentDirectory, RelativePath);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("%y\\%y"),
+                                    &CurrentDirectory,
+                                    RelativePath);
             } else {
-                Buffer->LengthInChars = YoriLibSPrintfS(Buffer->StartOfString, Buffer->LengthAllocated, _T("%y"), &CurrentDirectory);
+                Buffer->LengthInChars =
+                    YoriLibSPrintfS(Buffer->StartOfString,
+                                    Buffer->LengthAllocated,
+                                    _T("%y"),
+                                    &CurrentDirectory);
             }
         }
     }
@@ -1642,7 +1682,9 @@ YoriLibExpandHomeSymbol(
         }
 
         ExpandedSymbol->LengthInChars = GetEnvironmentVariable(_T("HOMEDRIVE"), ExpandedSymbol->StartOfString, ExpandedSymbol->LengthAllocated);
-        ExpandedSymbol->LengthInChars += GetEnvironmentVariable(_T("HOMEPATH"), &ExpandedSymbol->StartOfString[ExpandedSymbol->LengthInChars], ExpandedSymbol->LengthAllocated - ExpandedSymbol->LengthInChars);
+        ExpandedSymbol->LengthInChars += GetEnvironmentVariable(_T("HOMEPATH"),
+                                                                &ExpandedSymbol->StartOfString[ExpandedSymbol->LengthInChars],
+                                                                ExpandedSymbol->LengthAllocated - ExpandedSymbol->LengthInChars);
         return TRUE;
     } else if (YoriLibCompareStringWithLiteralInsensitive(SymbolToExpand, _T("~APPDIR")) == 0) {
         LPTSTR FinalSlash;

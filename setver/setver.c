@@ -609,7 +609,11 @@ SetVerPumpDebugEvents(
                         ThreadContext.Eip = (DWORD_PTR)(LPVOID)Process->StartRoutine;
 #endif
 
-                        WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
+                        WriteProcessMemory(Process->hProcess,
+                                           (LPVOID)Process->StartRoutine,
+                                           &Process->FirstInstruction,
+                                           sizeof(Process->FirstInstruction),
+                                           &BytesWritten);
                         FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
 
                         SetThreadContext(Process->hInitialThread, &ThreadContext);
@@ -645,7 +649,11 @@ SetVerPumpDebugEvents(
 #endif
                             ThreadContext.Eip = (DWORD)(DWORD_PTR)(LPVOID)Process->StartRoutine;
                             DllKernel32.pWow64SetThreadContext(Process->hInitialThread, &ThreadContext);
-                            WriteProcessMemory(Process->hProcess, (LPVOID)Process->StartRoutine, &Process->FirstInstruction, sizeof(Process->FirstInstruction), &BytesWritten);
+                            WriteProcessMemory(Process->hProcess,
+                                               (LPVOID)Process->StartRoutine,
+                                               &Process->FirstInstruction,
+                                               sizeof(Process->FirstInstruction),
+                                               &BytesWritten);
                             FlushInstructionCache(Process->hProcess, Process->StartRoutine, 1);
                             Process->ProcessStarted = TRUE;
                         }
@@ -662,7 +670,11 @@ SetVerPumpDebugEvents(
 
 
 #if SETVER_DEBUG
-                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("ExceptionCode %x Address %p ContinueStatus %x\n"), DbgEvent.u.Exception.ExceptionRecord.ExceptionCode, DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress, dwContinueStatus);
+                YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                              _T("ExceptionCode %x Address %p ContinueStatus %x\n"),
+                              DbgEvent.u.Exception.ExceptionRecord.ExceptionCode,
+                              DbgEvent.u.Exception.ExceptionRecord.ExceptionAddress,
+                              dwContinueStatus);
 #endif
 
                 break;

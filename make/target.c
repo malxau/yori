@@ -493,7 +493,12 @@ MakeCreateInferenceRule(
     MakePopulateEmbededString(&InferenceRule->TargetExtension, TargetExt, &WritePoint);
 
 #if MAKE_DEBUG_TARGETS
-    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Inference rule FromDir=%y FromExt=%y ToDir=%y ToExt=%y\n"), &InferenceRule->RelativeSourceDirectory, &InferenceRule->SourceExtension, &InferenceRule->RelativeTargetDirectory, &InferenceRule->TargetExtension);
+    YoriLibOutput(YORI_LIB_OUTPUT_STDOUT,
+                  _T("Inference rule FromDir=%y FromExt=%y ToDir=%y ToExt=%y\n"),
+                  &InferenceRule->RelativeSourceDirectory,
+                  &InferenceRule->SourceExtension,
+                  &InferenceRule->RelativeTargetDirectory,
+                  &InferenceRule->TargetExtension);
 #endif
 
     InterlockedIncrement((INTERLOCKED_VOLATILE LONG *)&Target->ReferenceCount);

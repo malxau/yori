@@ -633,7 +633,9 @@ YoriLibLocateFileExtensionsInOnePath(
             if (!PathExtData[Count].Found &&
                 FileNameLen > PathExtData[Count].Extension.LengthInChars) {
 
-                if (_tcsnicmp(PathExtData[Count].Extension.StartOfString, &FindData.cFileName[FileNameLen - PathExtData[Count].Extension.LengthInChars], PathExtData[Count].Extension.LengthInChars) == 0) {
+                if (_tcsnicmp(PathExtData[Count].Extension.StartOfString,
+                              &FindData.cFileName[FileNameLen - PathExtData[Count].Extension.LengthInChars],
+                              PathExtData[Count].Extension.LengthInChars) == 0) {
 
                     //
                     //  If we are looking for all matches of a partial match,

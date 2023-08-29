@@ -1482,7 +1482,15 @@ YoriLibExtractCab(
         goto Exit;
     }
 
-    hFdi = DllCabinet.pFdiCreate(YoriLibCabAlloc, YoriLibCabFree, YoriLibCabFdiFileOpen, YoriLibCabFdiFileRead, YoriLibCabFdiFileWrite, YoriLibCabFdiFileClose, YoriLibCabFdiFileSeek, -1, &CabErrors);
+    hFdi = DllCabinet.pFdiCreate(YoriLibCabAlloc,
+                                 YoriLibCabFree,
+                                 YoriLibCabFdiFileOpen,
+                                 YoriLibCabFdiFileRead,
+                                 YoriLibCabFdiFileWrite,
+                                 YoriLibCabFdiFileClose,
+                                 YoriLibCabFdiFileSeek,
+                                 -1,
+                                 &CabErrors);
 
     if (hFdi == NULL) {
         if (ErrorCode != NULL && *ErrorCode == ERROR_SUCCESS) {
@@ -1628,7 +1636,14 @@ YoriLibCreateCab(
         DefaultPtr = NULL;
     }
 
-    CharsCopied = WideCharToMultiByte(Encoding, 0, CabFileName->StartOfString, CabFileName->LengthInChars, CabHandle->CompressContext.CabPath, sizeof(CabHandle->CompressContext.CabPath), NULL, DefaultPtr);
+    CharsCopied = WideCharToMultiByte(Encoding,
+                                      0,
+                                      CabFileName->StartOfString,
+                                      CabFileName->LengthInChars,
+                                      CabHandle->CompressContext.CabPath,
+                                      sizeof(CabHandle->CompressContext.CabPath),
+                                      NULL,
+                                      DefaultPtr);
 
     if (CharsCopied <= 0 || CharsCopied >= sizeof(CabHandle->CompressContext.CabPath)) {
         YoriLibDereference(CabHandle);
@@ -1640,7 +1655,19 @@ YoriLibCreateCab(
         return FALSE;
     }
 
-    CabHandle->FciHandle = DllCabinet.pFciCreate(&CabHandle->Err, YoriLibCabFciFilePlaced, YoriLibCabAlloc, YoriLibCabFree, YoriLibCabFciFileOpen, YoriLibCabFciFileRead, YoriLibCabFciFileWrite, YoriLibCabFciFileClose, YoriLibCabFciFileSeek, YoriLibCabFciFileDelete, YoriLibCabFciGetTempFile, &CabHandle->CompressContext, &CabHandle->AddContext);
+    CabHandle->FciHandle = DllCabinet.pFciCreate(&CabHandle->Err,
+                                                 YoriLibCabFciFilePlaced,
+                                                 YoriLibCabAlloc,
+                                                 YoriLibCabFree,
+                                                 YoriLibCabFciFileOpen,
+                                                 YoriLibCabFciFileRead,
+                                                 YoriLibCabFciFileWrite,
+                                                 YoriLibCabFciFileClose,
+                                                 YoriLibCabFciFileSeek,
+                                                 YoriLibCabFciFileDelete,
+                                                 YoriLibCabFciGetTempFile,
+                                                 &CabHandle->CompressContext,
+                                                 &CabHandle->AddContext);
 
     if (CabHandle->FciHandle == NULL) {
         YoriLibDereference(CabHandle);
@@ -1712,7 +1739,14 @@ YoriLibAddFileToCab(
         return FALSE;
     }
 
-    Result = DllCabinet.pFciAddFile(CabHandle->FciHandle, FileNameOnDiskAnsi, FileNameInCabAnsi, FALSE, YoriLibCabFciGetNextCabinet, YoriLibCabFciStatus, YoriLibCabFciGetOpenInfo, CAB_FCI_ALGORITHM_MSZIP);
+    Result = DllCabinet.pFciAddFile(CabHandle->FciHandle,
+                                    FileNameOnDiskAnsi,
+                                    FileNameInCabAnsi,
+                                    FALSE,
+                                    YoriLibCabFciGetNextCabinet,
+                                    YoriLibCabFciStatus,
+                                    YoriLibCabFciGetOpenInfo,
+                                    CAB_FCI_ALGORITHM_MSZIP);
 
     YoriLibFree(FileNameOnDiskAnsi);
     YoriLibFree(FileNameInCabAnsi);
