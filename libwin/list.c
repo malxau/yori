@@ -146,6 +146,16 @@ YoriWinListEnsureActiveItemVisible(
         List->FirstDisplayedOption = List->ActiveOption;
     }
 
+    if (List->FirstDisplayedOption > 0 &&
+        List->FirstDisplayedOption + ElementCountToDisplay > List->ItemArray.Count) {
+
+        if (List->ItemArray.Count < ElementCountToDisplay) {
+            List->FirstDisplayedOption = 0;
+        } else {
+            List->FirstDisplayedOption = (WORD)(List->ItemArray.Count - ElementCountToDisplay);
+        }
+    }
+
     if (List->ActiveOption >= List->FirstDisplayedOption + ElementCountToDisplay) {
         List->FirstDisplayedOption = List->ActiveOption - ElementCountToDisplay + 1;
     }
@@ -1109,6 +1119,8 @@ YoriWinListReposition(
     if (!YoriWinControlReposition(Ctrl, CtrlRect)) {
         return FALSE;
     }
+
+    YoriWinListEnsureActiveItemVisible(List);
 
     WindowAttributes = List->Ctrl.DefaultAttributes;
 
