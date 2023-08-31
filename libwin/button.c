@@ -103,6 +103,9 @@ YoriWinButtonPaint(
     WORD WindowAttributes;
     WORD TextAttributes;
     WORD BorderFlags;
+    WORD Height;
+
+    Height = (WORD)(Button->Ctrl.FullRect.Bottom - Button->Ctrl.FullRect.Top + 1);
 
     BorderLocation.Left = 0;
     BorderLocation.Top = 0;
@@ -115,12 +118,18 @@ YoriWinButtonPaint(
         BorderFlags = YORI_WIN_BORDER_TYPE_SUNKEN;
     }
 
-    if (Button->EffectiveDefault || Button->HasFocus) {
-        BorderFlags = (WORD)(BorderFlags | YORI_WIN_BORDER_TYPE_DOUBLE);
-    }
-
     WindowAttributes = Button->Ctrl.DefaultAttributes;
-    YoriWinDrawBorderOnControl(&Button->Ctrl, &BorderLocation, WindowAttributes, BorderFlags);
+    if (Height >= 3) {
+        if (Button->EffectiveDefault || Button->HasFocus) {
+            BorderFlags = (WORD)(BorderFlags | YORI_WIN_BORDER_TYPE_DOUBLE);
+        }
+        YoriWinDrawBorderOnControl(&Button->Ctrl, &BorderLocation, WindowAttributes, BorderFlags);
+    } else {
+        if (Button->EffectiveDefault || Button->HasFocus) {
+            BorderFlags = (WORD)(BorderFlags | YORI_WIN_BORDER_BRIGHT);
+        }
+        YoriWinDrawSingleLineBorderOnControl(&Button->Ctrl, &BorderLocation, WindowAttributes, BorderFlags);
+    }
 
     TextAttributes = WindowAttributes;
     if (Button->HasFocus || Button->PressedAppearance) {
@@ -268,12 +277,41 @@ YoriWinButtonReposition(
 {
     PYORI_WIN_CTRL Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     PYORI_WIN_CTRL_BUTTON Button;
+    WORD Height;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     Button = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_BUTTON, Ctrl);
 
+    Height = (WORD)(CtrlRect->Bottom - CtrlRect->Top + 1);
+    if (Height == 0 || Height == 2) {
+        return FALSE;
+    }
+
+    //
+    //  Reset the client area back to cover the entire control.
+    //
+
+    Button->Ctrl.ClientRect.Left = 0;
+    Button->Ctrl.ClientRect.Top = 0;
+    Button->Ctrl.ClientRect.Right = (SHORT)(Button->Ctrl.FullRect.Right - Button->Ctrl.FullRect.Left);
+    Button->Ctrl.ClientRect.Bottom = (SHORT)(Button->Ctrl.FullRect.Bottom - Button->Ctrl.FullRect.Top);
+
     if (!YoriWinControlReposition(Ctrl, CtrlRect)) {
         return FALSE;
+    }
+
+    //
+    //  Based on the height, calculate what the client offsets ought to be.
+    //
+
+    if (Height >= 3) {
+        Button->Ctrl.ClientRect.Top++;
+        Button->Ctrl.ClientRect.Left++;
+        Button->Ctrl.ClientRect.Bottom--;
+        Button->Ctrl.ClientRect.Right--;
+    } else {
+        Button->Ctrl.ClientRect.Left++;
+        Button->Ctrl.ClientRect.Right--;
     }
 
     YoriWinLabelReposition(Button->Label, &Ctrl->ClientRect);
@@ -312,9 +350,14 @@ YoriWinButtonCreate(
     PYORI_WIN_WINDOW Parent;
     PYORI_WIN_WINDOW TopLevelWindow;
     PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
-
+    WORD Height;
 
     Parent = (PYORI_WIN_WINDOW)ParentHandle;
+
+    Height = (WORD)(Size->Bottom - Size->Top + 1);
+    if (Height == 0 || Height == 2) {
+        return FALSE;
+    }
 
     Button = YoriLibReferencedMalloc(sizeof(YORI_WIN_CTRL_BUTTON));
     if (Button == NULL) {
@@ -332,10 +375,15 @@ YoriWinButtonCreate(
         return NULL;
     }
 
-    Button->Ctrl.ClientRect.Top++;
-    Button->Ctrl.ClientRect.Left++;
-    Button->Ctrl.ClientRect.Bottom--;
-    Button->Ctrl.ClientRect.Right--;
+    if (Height >= 3) {
+        Button->Ctrl.ClientRect.Top++;
+        Button->Ctrl.ClientRect.Left++;
+        Button->Ctrl.ClientRect.Bottom--;
+        Button->Ctrl.ClientRect.Right--;
+    } else {
+        Button->Ctrl.ClientRect.Left++;
+        Button->Ctrl.ClientRect.Right--;
+    }
 
     Button->ClickCallback = ClickCallback;
 

@@ -378,7 +378,9 @@ typedef enum _YORI_WIN_CHARACTERS {
     YoriWinCharsComboDown,
     YoriWinCharsAsciiComboDown,
     YoriWinCharsRadioSelection,
-    YoriWinCharsAsciiRadioSelection
+    YoriWinCharsAsciiRadioSelection,
+    YoriWinCharsOneLineSingleBorder,
+    YoriWinCharsOneLineDoubleBorder,
 } YORI_WIN_CHARACTERS;
 
 // ITEMARAY.C
@@ -515,8 +517,21 @@ YoriWinItemArrayAddItemArray(
  */
 #define YORI_WIN_BORDER_STYLE_MASK      0x0070
 
+/**
+ A flag to indicate that the border should be displayed with a bright color.
+ */
+#define YORI_WIN_BORDER_BRIGHT          0x1000
+
 BOOLEAN
 YoriWinDrawBorderOnControl(
+    __inout PYORI_WIN_CTRL Ctrl,
+    __in PSMALL_RECT Dimensions,
+    __in WORD Attributes,
+    __in WORD BorderType
+    );
+
+BOOLEAN
+YoriWinDrawSingleLineBorderOnControl(
     __inout PYORI_WIN_CTRL Ctrl,
     __in PSMALL_RECT Dimensions,
     __in WORD Attributes,

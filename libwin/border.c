@@ -188,4 +188,56 @@ YoriWinDrawBorderOnControl(
     return TRUE;
 }
 
+/**
+ Draw characters on the edge of a single line control to represent a limited
+ border.
+
+ @param Ctrl Pointer to the control to draw the rectangle on.
+
+ @param Dimensions The dimensions of the rectangle to draw.
+
+ @param Attributes The color to use for the border.
+
+ @param BorderType Specifies if the border should be single or double line,
+        raised, lowered, or flat.  This is used within this function to change
+        color without changing characters or 3D appearence.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+YoriWinDrawSingleLineBorderOnControl(
+    __inout PYORI_WIN_CTRL Ctrl,
+    __in PSMALL_RECT Dimensions,
+    __in WORD Attributes,
+    __in WORD BorderType
+    )
+{
+    PYORI_WIN_WINDOW_MANAGER_HANDLE WinMgrHandle;
+    WORD AttributesToUse;
+    WORD BorderStyleMask;
+    CONST TCHAR* BorderChars;
+
+    if (Dimensions->Top != Dimensions->Bottom) {
+        return FALSE;
+    }
+
+    WinMgrHandle = YoriWinGetWindowManagerHandle(YoriWinGetTopLevelWindow(Ctrl));
+
+    AttributesToUse = Attributes;
+    BorderChars = YoriWinGetDrawingCharacters(WinMgrHandle, YoriWinCharsOneLineSingleBorder);
+    BorderStyleMask = (WORD)(BorderType & YORI_WIN_BORDER_STYLE_MASK);
+    if (BorderStyleMask == YORI_WIN_BORDER_TYPE_DOUBLE) {
+        BorderChars = YoriWinGetDrawingCharacters(WinMgrHandle, YoriWinCharsOneLineDoubleBorder);
+    }
+
+    if (BorderType & YORI_WIN_BORDER_BRIGHT) {
+        AttributesToUse = YoriWinBorderGetLightAttributes(AttributesToUse);
+    }
+
+    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Left, Dimensions->Top, BorderChars[0], AttributesToUse);
+    YoriWinSetControlNonClientCell(Ctrl, Dimensions->Right, Dimensions->Top, BorderChars[1], AttributesToUse);
+
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:

@@ -799,6 +799,17 @@ CONST TCHAR YoriWinRadioSelection[] = { 0x2219 };
  */
 CONST TCHAR YoriWinAsciiRadioSelection[] = { 'o' };
 
+/**
+ Characters forming the border on a single line button.
+ */
+CONST TCHAR YoriWinOneLineSingleBorder[] = { '<', '>' };
+
+/**
+ Characters forming the border on a single line button with a double line
+ border.
+ */
+CONST TCHAR YoriWinOneLineDoubleBorder[] = { 0xab, 0xbb };
+
 
 /**
  An array of known characters used for visuals.  This must correspond to the
@@ -820,7 +831,9 @@ LPCTSTR YoriWinCharacterSetChars[] = {
     YoriWinComboDown,
     YoriWinAsciiComboDown,
     YoriWinRadioSelection,
-    YoriWinAsciiRadioSelection
+    YoriWinAsciiRadioSelection,
+    YoriWinOneLineSingleBorder,
+    YoriWinOneLineDoubleBorder
 };
 
 
