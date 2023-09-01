@@ -3,7 +3,7 @@
  *
  * Yori shell mini file manager
  *
- * Copyright (c) 2019-2021 Malcolm J. Smith
+ * Copyright (c) 2019-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,6 +28,20 @@
 #include <yorilib.h>
 #include <yoriwin.h>
 #include <yoridlg.h>
+
+/**
+ The set of control identifiers allocated within this program.
+ */
+typedef enum _CO_CONTROLS {
+    CoCtrlList = 1,
+    CoCtrlExit = 2,
+    CoCtrlChangeDir = 3,
+    CoCtrlDelete = 4,
+    CoCtrlCopy = 5,
+    CoCtrlMove = 6,
+    CoCtrlSortLabel = 7,
+    CoCtrlSortCombo = 8,
+} CO_CONTROLS;
 
 /**
  Help text to display to the user.
@@ -877,9 +891,234 @@ CoSortSelected(
     }
 }
 
+/**
+ The minimum width in characters where co can hope to function.
+ */
+#define CO_MINIMUM_WIDTH (60)
 
 /**
- Display a popup window containing a list of items.
+ The minimum height in characters where co can hope to function.
+ */
+#define CO_MINIMUM_HEIGHT (20)
+
+/**
+ Determine the size of the window and location of all controls for a specified
+ window manager size.  This allows the same layout logic to be used for
+ initial creation as well as window manager resize.
+
+ @param WindowMgrSize The dimensions of the window manager.
+
+ @param WindowSize On completion, updated to contain the size of the main
+        window.
+
+ @param ListRect On completion, updated to contain the rect describing the
+        main list in window client coordinates.
+
+ @param ExitButtonRect On completion, updated to contain the rect describing
+        the exit button in window client coordinates.
+
+ @param ChangeDirButtonRect On completion, updated to contain the rect
+        describing the change dir button in window client coordinates.
+
+ @param DeleteButtonRect On completion, updated to contain the rect
+        describing the delete button in window client coordinates.
+
+ @param MoveButtonRect On completion, updated to contain the rect describing
+        the move button in window client coordinates.
+
+ @param CopyButtonRect On completion, updated to contain the rect describing
+        the copy button in window client coordinates.
+
+ @param SortLabelRect On completion, updated to contain the rect describing
+        the sort label in window client coordinates.
+
+ @param SortComboRect On completion, updated to contain the rect describing
+        the sort combo pull down in window client coordinates.
+ */
+VOID
+CoGetControlRectsFromWindowManagerSize(
+    __in COORD WindowMgrSize,
+    __out PCOORD WindowSize,
+    __out PSMALL_RECT ListRect,
+    __out PSMALL_RECT ExitButtonRect,
+    __out PSMALL_RECT ChangeDirButtonRect,
+    __out PSMALL_RECT DeleteButtonRect,
+    __out PSMALL_RECT MoveButtonRect,
+    __out PSMALL_RECT CopyButtonRect,
+    __out PSMALL_RECT SortLabelRect,
+    __out PSMALL_RECT SortComboRect
+    )
+{
+    COORD ClientSize;
+    WORD ButtonHeight;
+    WORD ButtonGap;
+
+    WindowSize->X = (SHORT)(WindowMgrSize.X * 9 / 10);
+    if (WindowSize->X < CO_MINIMUM_WIDTH) {
+        WindowSize->X = CO_MINIMUM_WIDTH;
+    }
+
+    WindowSize->Y = (SHORT)(WindowMgrSize.Y * 4 / 5);
+    if (WindowSize->Y < CO_MINIMUM_HEIGHT) {
+        WindowSize->Y = CO_MINIMUM_HEIGHT;
+    }
+
+    ClientSize.X = (WORD)(WindowSize->X - 2);
+    ClientSize.Y = (WORD)(WindowSize->Y - 2);
+
+    ButtonHeight = 3;
+    ButtonGap = 0;
+    if (ClientSize.Y <= 20) {
+        ButtonHeight = 1;
+        ButtonGap = 1;
+        if (ClientSize.Y <= 18) {
+            ButtonGap = 0;
+        }
+    }
+
+    ListRect->Left = 1;
+    ListRect->Top = 1;
+    ListRect->Right = (SHORT)(ClientSize.X - 3 - CO_BUTTON_WIDTH - 1 - 1);
+    ListRect->Bottom = (SHORT)(ClientSize.Y - 1);
+
+    ExitButtonRect->Top = (SHORT)(1);
+    ExitButtonRect->Bottom = (SHORT)(ExitButtonRect->Top + ButtonHeight - 1);
+    ExitButtonRect->Left = (SHORT)(ClientSize.X - 2 - CO_BUTTON_WIDTH - 1);
+    ExitButtonRect->Right = (SHORT)(ExitButtonRect->Left + 1 + CO_BUTTON_WIDTH);
+
+    ChangeDirButtonRect->Left = ExitButtonRect->Left;
+    ChangeDirButtonRect->Right = ExitButtonRect->Right;
+    ChangeDirButtonRect->Top = (SHORT)(ExitButtonRect->Bottom + 2 + ButtonGap);
+    ChangeDirButtonRect->Bottom = (SHORT)(ChangeDirButtonRect->Top + ButtonHeight - 1);
+
+    DeleteButtonRect->Left = ChangeDirButtonRect->Left;
+    DeleteButtonRect->Right = ChangeDirButtonRect->Right;
+    DeleteButtonRect->Top = (SHORT)(ChangeDirButtonRect->Bottom + 1 + ButtonGap);
+    DeleteButtonRect->Bottom = (SHORT)(DeleteButtonRect->Top + ButtonHeight - 1);
+
+    MoveButtonRect->Left = DeleteButtonRect->Left;
+    MoveButtonRect->Right = DeleteButtonRect->Right;
+    MoveButtonRect->Top = (SHORT)(DeleteButtonRect->Bottom + 1 + ButtonGap);
+    MoveButtonRect->Bottom = (SHORT)(MoveButtonRect->Top + ButtonHeight - 1);
+
+    CopyButtonRect->Left = MoveButtonRect->Left;
+    CopyButtonRect->Right = MoveButtonRect->Right;
+    CopyButtonRect->Top = (SHORT)(MoveButtonRect->Bottom + 1 + ButtonGap);
+    CopyButtonRect->Bottom = (SHORT)(CopyButtonRect->Top + ButtonHeight - 1);
+
+    SortLabelRect->Left = CopyButtonRect->Left;
+    SortLabelRect->Right = CopyButtonRect->Right;
+    SortLabelRect->Top = (SHORT)(CopyButtonRect->Bottom + 2 + ButtonGap);
+    SortLabelRect->Bottom = SortLabelRect->Top;
+
+    SortComboRect->Left = (SHORT)(SortLabelRect->Left + 1);
+    SortComboRect->Right = SortLabelRect->Right;
+    SortComboRect->Top = (SHORT)(SortLabelRect->Bottom + 1);
+    SortComboRect->Bottom = SortComboRect->Top;
+}
+
+/**
+ A callback that is invoked when the window manager is being resized.  This
+ typically means the user resized the window.
+
+ @param WindowHandle Handle to the main window.
+
+ @param OldPosition The old dimensions of the window manager.
+
+ @param NewPosition The new dimensions of the window manager.
+ */
+VOID
+CoResizeWindowManager(
+    __in PYORI_WIN_WINDOW_HANDLE WindowHandle,
+    __in PSMALL_RECT OldPosition,
+    __in PSMALL_RECT NewPosition
+    )
+{
+    PYORI_WIN_CTRL_HANDLE WindowCtrl;
+    SMALL_RECT Rect;
+    COORD NewSize;
+    COORD WindowSize;
+    SMALL_RECT ListRect;
+    SMALL_RECT ExitButtonRect;
+    SMALL_RECT ChangeDirButtonRect;
+    SMALL_RECT DeleteButtonRect;
+    SMALL_RECT MoveButtonRect;
+    SMALL_RECT CopyButtonRect;
+    SMALL_RECT SortLabelRect;
+    SMALL_RECT SortComboRect;
+    PYORI_WIN_CTRL_HANDLE Ctrl;
+
+    UNREFERENCED_PARAMETER(OldPosition);
+
+    WindowCtrl = YoriWinGetCtrlFromWindow(WindowHandle);
+
+    NewSize.X = (SHORT)(NewPosition->Right - NewPosition->Left + 1);
+    NewSize.Y = (SHORT)(NewPosition->Bottom - NewPosition->Top + 1);
+
+    if (NewSize.X < CO_MINIMUM_WIDTH || NewSize.Y < CO_MINIMUM_HEIGHT) {
+        return;
+    }
+
+    CoGetControlRectsFromWindowManagerSize(NewSize,
+                                           &WindowSize,
+                                           &ListRect,
+                                           &ExitButtonRect,
+                                           &ChangeDirButtonRect,
+                                           &DeleteButtonRect,
+                                           &MoveButtonRect,
+                                           &CopyButtonRect,
+                                           &SortLabelRect,
+                                           &SortComboRect);
+
+    Rect.Left = (SHORT)((NewSize.X - WindowSize.X) / 2);
+    Rect.Top = (SHORT)((NewSize.Y - WindowSize.Y) / 2);
+    Rect.Right = (SHORT)(Rect.Left + WindowSize.X - 1);
+    Rect.Bottom = (SHORT)(Rect.Top + WindowSize.Y - 1);
+
+    //
+    //  Resize the main window, including capturing its new background
+    //
+
+    if (!YoriWinWindowReposition(WindowHandle, &Rect)) {
+        return;
+    }
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlList);
+    ASSERT(Ctrl != NULL);
+    YoriWinListReposition(Ctrl, &ListRect);
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlExit);
+    ASSERT(Ctrl != NULL);
+    YoriWinButtonReposition(Ctrl, &ExitButtonRect);
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlChangeDir);
+    ASSERT(Ctrl != NULL);
+    YoriWinButtonReposition(Ctrl, &ChangeDirButtonRect);
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlDelete);
+    ASSERT(Ctrl != NULL);
+    YoriWinButtonReposition(Ctrl, &DeleteButtonRect);
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlMove);
+    ASSERT(Ctrl != NULL);
+    YoriWinButtonReposition(Ctrl, &MoveButtonRect);
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlCopy);
+    ASSERT(Ctrl != NULL);
+    YoriWinButtonReposition(Ctrl, &CopyButtonRect);
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlSortLabel);
+    ASSERT(Ctrl != NULL);
+    YoriWinLabelReposition(Ctrl, &SortLabelRect);
+
+    Ctrl = YoriWinFindControlById(WindowHandle, CoCtrlSortCombo);
+    ASSERT(Ctrl != NULL);
+    YoriWinComboReposition(Ctrl, &SortComboRect);
+}
+
+
+/**
+ Display a popup window containing a list of files and file operations.
 
  @return TRUE to indicate that the user successfully selected an option, FALSE
          to indicate the menu could not be displayed or the user cancelled the
@@ -893,6 +1132,13 @@ CoCreateSynchronousMenu(VOID)
     PYORI_WIN_CTRL_HANDLE List;
     PYORI_WIN_WINDOW_HANDLE Parent;
     SMALL_RECT ListRect;
+    SMALL_RECT ExitButtonRect;
+    SMALL_RECT ChangeDirButtonRect;
+    SMALL_RECT DeleteButtonRect;
+    SMALL_RECT MoveButtonRect;
+    SMALL_RECT CopyButtonRect;
+    SMALL_RECT SortLabelRect;
+    SMALL_RECT SortComboRect;
     COORD WindowSize;
     YORI_STRING Title;
     SMALL_RECT ButtonArea;
@@ -909,17 +1155,18 @@ CoCreateSynchronousMenu(VOID)
     if (!YoriWinGetWinMgrDimensions(WinMgr, &WindowSize)) {
         WindowSize.X = 80;
         WindowSize.Y = 24;
-    } else {
-        WindowSize.X = (SHORT)(WindowSize.X * 9 / 10);
-        if (WindowSize.X < 80) {
-            WindowSize.X = 80;
-        }
-
-        WindowSize.Y = (SHORT)(WindowSize.Y * 4 / 5);
-        if (WindowSize.Y < 24) {
-            WindowSize.Y = 24;
-        }
     }
+
+    CoGetControlRectsFromWindowManagerSize(WindowSize,
+                                           &WindowSize,
+                                           &ListRect,
+                                           &ExitButtonRect,
+                                           &ChangeDirButtonRect,
+                                           &DeleteButtonRect,
+                                           &MoveButtonRect,
+                                           &CopyButtonRect,
+                                           &SortLabelRect,
+                                           &SortComboRect);
 
     YoriLibConstantString(&Title, _T("Co"));
 
@@ -931,11 +1178,6 @@ CoCreateSynchronousMenu(VOID)
 
     YoriWinGetClientSize(Parent, &WindowSize);
 
-    ListRect.Left = 1;
-    ListRect.Top = 1;
-    ListRect.Right = (SHORT)(WindowSize.X - 3 - CO_BUTTON_WIDTH - 1 - 1);
-    ListRect.Bottom = (SHORT)(WindowSize.Y - 1);
-
     List = YoriWinListCreate(Parent, &ListRect, YORI_WIN_LIST_STYLE_VSCROLLBAR | YORI_WIN_LIST_STYLE_MULTISELECT);
     if (List == NULL) {
         YoriWinDestroyWindow(Parent);
@@ -943,6 +1185,7 @@ CoCreateSynchronousMenu(VOID)
         return FALSE;
     }
 
+    YoriWinSetControlId(List, CoCtrlList);
     ButtonWidth = (WORD)(CO_BUTTON_WIDTH);
 
     ButtonArea.Top = (SHORT)(1);
@@ -953,79 +1196,86 @@ CoCreateSynchronousMenu(VOID)
     ButtonArea.Left = (SHORT)(WindowSize.X - 2 - CO_BUTTON_WIDTH - 1);
     ButtonArea.Right = (WORD)(ButtonArea.Left + 1 + CO_BUTTON_WIDTH);
 
-    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, CoExitButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ExitButtonRect, &Caption, YORI_WIN_BUTTON_STYLE_CANCEL, CoExitButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+    YoriWinSetControlId(Ctrl, CoCtrlExit);
 
     ButtonArea.Top += 4;
     ButtonArea.Bottom += 4;
 
     YoriLibConstantString(&Caption, _T("C&hange Dir"));
-    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, CoChdirButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &ChangeDirButtonRect, &Caption, YORI_WIN_BUTTON_STYLE_DEFAULT, CoChdirButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+    YoriWinSetControlId(Ctrl, CoCtrlChangeDir);
 
     ButtonArea.Top += 3;
     ButtonArea.Bottom += 3;
 
     YoriLibConstantString(&Caption, _T("&Delete"));
-    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, 0, CoDeleteButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &DeleteButtonRect, &Caption, 0, CoDeleteButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+    YoriWinSetControlId(Ctrl, CoCtrlDelete);
 
     ButtonArea.Top += 3;
     ButtonArea.Bottom += 3;
 
     YoriLibConstantString(&Caption, _T("&Move"));
-    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, 0, CoMoveButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &MoveButtonRect, &Caption, 0, CoMoveButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+    YoriWinSetControlId(Ctrl, CoCtrlMove);
 
     ButtonArea.Top += 3;
     ButtonArea.Bottom += 3;
 
     YoriLibConstantString(&Caption, _T("&Copy"));
-    Ctrl = YoriWinButtonCreate(Parent, &ButtonArea, &Caption, 0, CoCopyButtonClicked);
+    Ctrl = YoriWinButtonCreate(Parent, &CopyButtonRect, &Caption, 0, CoCopyButtonClicked);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+    YoriWinSetControlId(Ctrl, CoCtrlCopy);
 
     ButtonArea.Top += 4;
     ButtonArea.Bottom = ButtonArea.Top;
 
     YoriLibConstantString(&Caption, _T("&Sort:"));
-    Ctrl = YoriWinLabelCreate(Parent, &ButtonArea, &Caption, 0);
+    Ctrl = YoriWinLabelCreate(Parent, &SortLabelRect, &Caption, 0);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+    YoriWinSetControlId(Ctrl, CoCtrlSortLabel);
 
     ButtonArea.Top += 1;
     ButtonArea.Bottom = ButtonArea.Top;
     ButtonArea.Left += 1;
 
     YoriLibConstantString(&Caption, _T(""));
-    Ctrl = YoriWinComboCreate(Parent, &ButtonArea, CoSortBeyondMaximum, &Caption, 0, CoSortSelected);
+    Ctrl = YoriWinComboCreate(Parent, &SortComboRect, CoSortBeyondMaximum, &Caption, 0, CoSortSelected);
     if (Ctrl == NULL) {
         YoriWinDestroyWindow(Parent);
         YoriWinCloseWindowManager(WinMgr);
         return FALSE;
     }
+    YoriWinSetControlId(Ctrl, CoCtrlSortCombo);
 
     YoriLibConstantString(&SortStrings[CoSortByName], _T("Sort by Name"));
     YoriLibConstantString(&SortStrings[CoSortBySize], _T("Sort by Size"));
@@ -1053,8 +1303,10 @@ CoCreateSynchronousMenu(VOID)
         YoriWinCloseWindowManager(WinMgr);
         CoContext.WinMgr = NULL;
         return FALSE;
-
     }
+
+    YoriWinSetWindowManagerResizeNotifyCallback(Parent, CoResizeWindowManager);
+
     Result = FALSE;
     if (!YoriWinProcessInputForWindow(Parent, &Result)) {
         Result = FALSE;
