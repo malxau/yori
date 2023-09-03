@@ -745,9 +745,9 @@ YoriShWaitForProcessOrInput(
             WaitContext->Delay = 100;
 
             if (CtrlBFoundThisPass) {
-                if (WaitContext->CtrlBCount < 3) {
+                if (WaitContext->CtrlBCount < 7) {
                     WaitContext->CtrlBCount++;
-                    WaitContext->Delay = 30;
+                    WaitContext->Delay = 20;
 
                     continue;
                 } else {
@@ -758,9 +758,9 @@ YoriShWaitForProcessOrInput(
             }
 
             if (LoseFocusFoundThisPass) {
-                if (WaitContext->LoseFocusCount < 3) {
+                if (WaitContext->LoseFocusCount < 7) {
                     WaitContext->LoseFocusCount++;
-                    WaitContext->Delay = 30;
+                    WaitContext->Delay = 20;
                 } else {
                     return YoriShWaitOutcomeLoseFocus;
                 }
