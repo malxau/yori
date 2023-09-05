@@ -7,8 +7,6 @@ fun to write.
    fit in the window
  - Make more use something like line selection
  - Ctrl+R (reverse history search)
- - Direnv whitelist
- - Base64 tools (see CryptStringToBinaryW)
  - Allow pipes to be inserted into tee output
  - Start without elevation prompt
  - Have env read variable value pair from stdin
@@ -19,11 +17,7 @@ fun to write.
  - Tab completion on %i
  - Attempt to use dbghelp stack formatting again.  Seems useful for ydbg
    to be able to output the stack of exceptions etc.
- - Mini-http client to complete the NT 3.1 story and allow NT 3.5x and 4
-   RTM to install without redistributables?
 
- - Have co and history process window manager resize so they can set a
-   minimum size
  - Support move and resize of libwin windows
  - Maximize/close in libwin
  - Minimize in libwin, implying defining an icon form of a window
@@ -33,6 +27,7 @@ fun to write.
 
  - Environment variable editor UI
  - TUI start menu - Point & Shoot?
+ - System diagnostics
 
  - Ymake execute preprocessor CreateProcess calls in parallel somehow
  - Ymake dependency aware install, so $(BINDIR) is updated if the link changes
