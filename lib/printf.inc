@@ -32,7 +32,7 @@
 #endif
 
 #define PRINTF_ANSI_TO_UNICODE(x)     (TCHAR)((UCHAR)(x))
-#define PRINTF_UNICODE_TO_ANSI(x)     (TCHAR)((x>=0x20&&x<0x80)?x:'?')
+#define PRINTF_UNICODE_TO_ANSI(x)     (TCHAR)(((x>=0x20&&x<0x80)||(x=='\r')||(x=='\n'))?x:'?')
 
 #ifdef PRINTF_SIZEONLY
 
