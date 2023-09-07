@@ -6,6 +6,7 @@ compile: yorilib.lib yoriver.obj
 OBJS=\
 	 bargraph.obj \
 	 builtin.obj  \
+	 bytebuf.obj  \
 	 cabinet.obj  \
 	 call.obj     \
 	 cancel.obj   \

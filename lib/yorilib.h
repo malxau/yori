@@ -76,6 +76,28 @@ typedef struct _YORI_STRING {
 typedef YORI_STRING CONST *PCYORI_STRING;
 
 /**
+ A buffer for a single data stream.
+ */
+typedef struct _YORI_LIB_BYTE_BUFFER {
+
+    /**
+     The data buffer.
+     */
+    PUCHAR Buffer;
+
+    /**
+     The number of bytes currently allocated to this buffer.
+     */
+    DWORDLONG BytesAllocated;
+
+    /**
+     The number of bytes populated with data in this buffer.
+     */
+    DWORDLONG BytesPopulated;
+
+} YORI_LIB_BYTE_BUFFER, *PYORI_LIB_BYTE_BUFFER;
+
+/**
  A structure describing an entry that is an element of a hash table.
  */
 typedef struct _YORI_HASH_ENTRY {
@@ -439,6 +461,38 @@ YoriLibBuiltinSetEnvironmentStrings(
 BOOL
 YoriLibBuiltinRemoveEmptyVariables(
     __inout PYORI_STRING Value
+    );
+
+// *** BYTEBUF.C ***
+
+BOOL
+YoriLibByteBufferInitialize(
+    __out PYORI_LIB_BYTE_BUFFER Buffer,
+    __in DWORDLONG InitialSize
+    );
+
+VOID
+YoriLibByteBufferCleanup(
+    __in PYORI_LIB_BYTE_BUFFER Buffer
+    );
+
+VOID
+YoriLibByteBufferReset(
+    __inout PYORI_LIB_BYTE_BUFFER Buffer
+    );
+
+__success(return != NULL)
+PUCHAR
+YoriLibByteBufferGetPointerToEnd(
+    __in PYORI_LIB_BYTE_BUFFER Buffer,
+    __in DWORDLONG MinimumLengthRequired,
+    __out_opt PDWORDLONG BytesAvailable
+    );
+
+BOOLEAN
+YoriLibByteBufferAddToPopulatedLength(
+    __in PYORI_LIB_BYTE_BUFFER Buffer,
+    __in DWORDLONG NewBytesPopulated
     );
 
 // *** CABINET.C ***
