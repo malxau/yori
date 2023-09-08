@@ -1132,6 +1132,9 @@ BOOL
 YoriLibLoadWinInetFunctions(VOID);
 
 BOOL
+YoriLibLoadWsock32Functions(VOID);
+
+BOOL
 YoriLibLoadWtsApi32Functions(VOID);
 
 // *** FILECOMP.C ***

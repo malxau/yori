@@ -10365,6 +10365,157 @@ typedef struct _YORI_WININET_FUNCTIONS {
 extern YORI_WININET_FUNCTIONS DllWinInet;
 
 /**
+ A prototype for the closesocket function.
+ */
+typedef
+INT WINAPI
+CLOSE_SOCKET_FN(SOCKET);
+
+/**
+ A prototype for a pointer to the closesocket function.
+ */
+typedef CLOSE_SOCKET_FN *PCLOSE_SOCKET_FN;
+
+/**
+ A prototype for the connect function.
+ */
+typedef
+INT WINAPI
+CONNECT_FN(SOCKET, PVOID, INT);
+
+/**
+ A prototype for a pointer to the connect function.
+ */
+typedef CONNECT_FN *PCONNECT_FN;
+
+/**
+ A prototype for the gethostbyname function.
+ */
+typedef
+struct hostent * WINAPI
+GETHOSTBYNAME(LPCSTR);
+
+/**
+ A prototype for a pointer to the gethostbyname function.
+ */
+typedef GETHOSTBYNAME *PGETHOSTBYNAME;
+
+/**
+ A prototype for the recv function.
+ */
+typedef
+INT WINAPI
+RECV_FN(SOCKET, PVOID, INT, INT);
+
+/**
+ A prototype for a pointer to the recv function.
+ */
+typedef RECV_FN *PRECV_FN;
+
+/**
+ A prototype for the send function.
+ */
+typedef
+INT WINAPI
+SEND_FN(SOCKET, PVOID, INT, INT);
+
+/**
+ A prototype for a pointer to the send function.
+ */
+typedef SEND_FN *PSEND_FN;
+
+/**
+ A prototype for the socket function.
+ */
+typedef
+SOCKET WINAPI
+SOCKET_FN(INT, INT, INT);
+
+/**
+ A prototype for a pointer to the socket function.
+ */
+typedef SOCKET_FN *PSOCKET_FN;
+
+/**
+ A prototype for the WSACleanup function.
+ */
+typedef
+INT WINAPI
+WSA_CLEANUP(VOID);
+
+/**
+ A prototype for a pointer to the WSACleanup function.
+ */
+typedef WSA_CLEANUP *PWSA_CLEANUP;
+
+/**
+ A prototype for the WSAStartup function.
+ */
+typedef
+INT WINAPI
+WSA_STARTUP(WORD, LPWSADATA);
+
+/**
+ A prototype for a pointer to the WSAStartup function.
+ */
+typedef WSA_STARTUP *PWSA_STARTUP;
+
+/**
+ A structure containing optional function pointers to wsock32.dll exported
+ functions which programs can operate without having hard dependencies on.
+ */
+typedef struct _YORI_WSOCK32_FUNCTIONS {
+
+    /**
+     A handle to the Dll module.
+     */
+    HINSTANCE hDll;
+
+    /**
+     If it's available on the current system, a pointer to closesocket.
+     */
+    PCLOSE_SOCKET_FN pclosesocket;
+
+    /**
+     If it's available on the current system, a pointer to connect.
+     */
+    PCONNECT_FN pconnect;
+
+    /**
+     If it's available on the current system, a pointer to gethostbyname.
+     */
+    PGETHOSTBYNAME pgethostbyname;
+
+    /**
+     If it's available on the current system, a pointer to recv.
+     */
+    PRECV_FN precv;
+
+    /**
+     If it's available on the current system, a pointer to send.
+     */
+    PSEND_FN psend;
+
+    /**
+     If it's available on the current system, a pointer to socket.
+     */
+    PSOCKET_FN psocket;
+
+    /**
+     If it's available on the current system, a pointer to WSACleanup.
+     */
+    PWSA_CLEANUP pWSACleanup;
+
+    /**
+     If it's available on the current system, a pointer to WSAStartup.
+     */
+    PWSA_STARTUP pWSAStartup;
+
+} YORI_WSOCK32_FUNCTIONS, *PYORI_WSOCK32_FUNCTIONS;
+
+extern YORI_WSOCK32_FUNCTIONS DllWsock32;
+
+/**
  A prototype for the WTSDisconnectSession function.
  */
 typedef

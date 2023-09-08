@@ -628,6 +628,42 @@ YoriLibLoadWinBrandFunctions(VOID)
 }
 
 /**
+ A structure containing pointers to wsock32.dll functions that can be used if
+ they are found but programs do not have a hard dependency on.
+ */
+YORI_WSOCK32_FUNCTIONS DllWsock32;
+
+/**
+ Load pointers to all optional Wsock32.dll functions.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+YoriLibLoadWsock32Functions(VOID)
+{
+
+    if (DllWsock32.hDll != NULL) {
+        return TRUE;
+    }
+
+    DllWsock32.hDll = YoriLibLoadLibraryFromSystemDirectory(_T("WSOCK32.DLL"));
+    if (DllWsock32.hDll == NULL) {
+        return FALSE;
+    }
+
+    DllWsock32.pclosesocket = (PCLOSE_SOCKET_FN)GetProcAddress(DllWsock32.hDll, "closesocket");
+    DllWsock32.pconnect = (PCONNECT_FN)GetProcAddress(DllWsock32.hDll, "connect");
+    DllWsock32.pgethostbyname = (PGETHOSTBYNAME)GetProcAddress(DllWsock32.hDll, "gethostbyname");
+    DllWsock32.precv = (PRECV_FN)GetProcAddress(DllWsock32.hDll, "recv");
+    DllWsock32.psend = (PSEND_FN)GetProcAddress(DllWsock32.hDll, "send");
+    DllWsock32.psocket = (PSOCKET_FN)GetProcAddress(DllWsock32.hDll, "socket");
+    DllWsock32.pWSACleanup = (PWSA_CLEANUP)GetProcAddress(DllWsock32.hDll, "WSACleanup");
+    DllWsock32.pWSAStartup = (PWSA_STARTUP)GetProcAddress(DllWsock32.hDll, "WSAStartup");
+
+    return TRUE;
+}
+
+/**
  A structure containing pointers to wtsapi32.dll functions that can be used if
  they are found but programs do not have a hard dependency on.
  */
