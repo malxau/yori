@@ -124,6 +124,8 @@
 #pragma warning(disable: 26451) // Arithmetic overflow
 #endif
 
+#include <winsock.h>
+
 #ifdef _UNICODE
 /**
  When Unicode is defined, indicate the literal string is Unicode.
@@ -200,6 +202,12 @@
  elements.
  */
 #define __in_ecount_opt(x)
+
+/**
+ SAL annotation describing an output buffer with a specified number of
+ bytes.
+ */
+#define __out_bcount(x)
 
 /**
  SAL annotation describing an output buffer with a specified number of

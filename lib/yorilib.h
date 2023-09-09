@@ -2440,6 +2440,51 @@ YoriLibHexLineToString(
     __inout PYORI_STRING LineBuffer
     );
 
+// *** HTTP.C ***
+
+LPVOID WINAPI
+YoriLibInternetOpen(
+    __in LPCTSTR UserAgent,
+    __in DWORD AccessType,
+    __in_opt LPCTSTR ProxyName,
+    __in_opt LPCTSTR ProxyBypass,
+    __in DWORD Flags
+    );
+
+BOOL WINAPI
+YoriLibInternetCloseHandle(
+    __in LPVOID hInternet
+    );
+
+LPVOID WINAPI
+YoriLibInternetOpenUrl(
+    __in LPVOID hInternet,
+    __in LPCTSTR Url,
+    __in LPCTSTR Headers,
+    __in DWORD HeadersLength,
+    __in DWORD Flags,
+    __in DWORD_PTR Context
+    );
+
+__success(return)
+BOOL WINAPI
+YoriLibInternetReadFile(
+    __in LPVOID hRequest,
+    __out_bcount(BytesToRead) LPVOID Buffer,
+    __in DWORD BytesToRead,
+    __out PDWORD BytesRead
+    );
+
+__success(return)
+BOOL WINAPI
+YoriLibHttpQueryInfo(
+    __in LPVOID hInternet,
+    __in DWORD InfoLevel,
+    __out LPVOID Buffer,
+    __inout PDWORD BufferLength,
+    __inout PDWORD Index
+    );
+
 // *** ICONV.C ***
 
 #ifndef CP_UTF8_OR_16

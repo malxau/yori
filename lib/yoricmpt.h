@@ -6400,6 +6400,22 @@ typedef struct _RESIZE_VIRTUAL_DISK_PARAMETERS {
     };
 } RESIZE_VIRTUAL_DISK_PARAMETERS, *PRESIZE_VIRTUAL_DISK_PARAMETERS;
 
+#ifndef HTTP_QUERY_FLAG_NUMBER
+/**
+ The flag indicating an HTTP status query wants a numeric return value, if not
+ defined by the current compilation environment.
+ */
+#define HTTP_QUERY_FLAG_NUMBER 0x20000000
+#endif
+
+#ifndef HTTP_QUERY_STATUS_CODE
+/**
+ The flag indicating an HTTP status query wants the HTTP status code, if not
+ defined by the current compilation environment.
+ */
+#define HTTP_QUERY_STATUS_CODE (0x13)
+#endif
+
 /** 
  A pseudo handle indicating the current terminal server server.
  */
@@ -10242,7 +10258,7 @@ typedef INTERNET_OPENW *PINTERNET_OPENW;
  */
 typedef
 LPVOID WINAPI
-INTERNET_OPEN_URLA(LPVOID, LPCSTR, LPCSTR, DWORD, DWORD, DWORD);
+INTERNET_OPEN_URLA(LPVOID, LPCSTR, LPCSTR, DWORD, DWORD, DWORD_PTR);
 
 /**
  A prototype for a pointer to the InternetOpenUrlA function.
@@ -10254,7 +10270,7 @@ typedef INTERNET_OPEN_URLA *PINTERNET_OPEN_URLA;
  */
 typedef
 LPVOID WINAPI
-INTERNET_OPEN_URLW(LPVOID, LPCWSTR, LPCWSTR, DWORD, DWORD, DWORD);
+INTERNET_OPEN_URLW(LPVOID, LPCWSTR, LPCWSTR, DWORD, DWORD, DWORD_PTR);
 
 /**
  A prototype for a pointer to the InternetOpenUrlW function.

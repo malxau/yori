@@ -35,6 +35,7 @@ OBJS=\
 	 group.obj    \
 	 hash.obj     \
 	 hexdump.obj  \
+	 http.obj     \
 	 iconv.obj    \
 	 jobobj.obj   \
 	 license.obj  \
