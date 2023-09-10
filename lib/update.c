@@ -313,6 +313,11 @@ YoriLibUpdateBuildHttpHeaders(
  Download a file from the internet and store it in a local location using
  WinInet.dll.  This function is only used once WinInet is loaded.
 
+ @param Dll Pointer to the Dll function table to use.  This allows this
+        function to operate against WinInet.dll or a different structure
+        with the same function signatures, which is used by the mini-HTTP
+        client.
+
  @param Url The Url to download the file from.
 
  @param TargetName If specified, the local location to store the file.
@@ -327,6 +332,7 @@ YoriLibUpdateBuildHttpHeaders(
  */
 YoriLibUpdError
 YoriLibUpdateBinaryFromUrlWinInet(
+    __in PYORI_WININET_FUNCTIONS Dll,
     __in LPTSTR Url,
     __in_opt LPTSTR TargetName,
     __in LPTSTR Agent,
@@ -353,11 +359,11 @@ YoriLibUpdateBinaryFromUrlWinInet(
     //  Open an internet connection with default proxy settings.
     //
 
-    hInternet = DllWinInet.pInternetOpenW(Agent,
-                                          0,
-                                          NULL,
-                                          NULL,
-                                          0);
+    hInternet = Dll->pInternetOpenW(Agent,
+                                    0,
+                                    NULL,
+                                    NULL,
+                                    0);
 
     if (hInternet == NULL) {
         DWORD LastError;
@@ -376,8 +382,8 @@ YoriLibUpdateBinaryFromUrlWinInet(
             DWORD AgentLen;
             DWORD BytesForAnsiAgent;
 
-            if (DllWinInet.pInternetOpenA == NULL ||
-                DllWinInet.pInternetOpenUrlA == NULL) {
+            if (Dll->pInternetOpenA == NULL ||
+                Dll->pInternetOpenUrlA == NULL) {
 
                 Return = YoriLibUpdErrorInetInit;
                 goto Exit;
@@ -397,11 +403,11 @@ YoriLibUpdateBinaryFromUrlWinInet(
             WideCharToMultiByte(CP_ACP, 0, Agent, AgentLen, AnsiAgent, BytesForAnsiAgent, NULL, NULL);
             AnsiAgent[BytesForAnsiAgent] = '\0';
 
-            hInternet = DllWinInet.pInternetOpenA(AnsiAgent,
-                                                  0,
-                                                  NULL,
-                                                  NULL,
-                                                  0);
+            hInternet = Dll->pInternetOpenA(AnsiAgent,
+                                            0,
+                                            NULL,
+                                            NULL,
+                                            0);
 
             YoriLibFree(AnsiAgent);
         }
@@ -453,13 +459,13 @@ YoriLibUpdateBinaryFromUrlWinInet(
         WideCharToMultiByte(CP_ACP, 0, Url, UrlLength, AnsiUrl, AnsiUrlLength, NULL, NULL);
         AnsiUrl[AnsiUrlLength] = '\0';
 
-        NewBinary = DllWinInet.pInternetOpenUrlA(hInternet, AnsiUrl, AnsiCombinedHeader, AnsiCombinedHeaderLength, 0, 0);
+        NewBinary = Dll->pInternetOpenUrlA(hInternet, AnsiUrl, AnsiCombinedHeader, AnsiCombinedHeaderLength, 0, 0);
         YoriLibFree(AnsiUrl);
         YoriLibFree(AnsiCombinedHeader);
 
     } else {
 
-        NewBinary = DllWinInet.pInternetOpenUrlW(hInternet, Url, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, 0, 0);
+        NewBinary = Dll->pInternetOpenUrlW(hInternet, Url, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, 0, 0);
     }
 
     if (NewBinary == NULL) {
@@ -475,12 +481,12 @@ YoriLibUpdateBinaryFromUrlWinInet(
     dwError = 0;
 
     if (WinInetOnlySupportsAnsi) {
-        if (!DllWinInet.pHttpQueryInfoA(NewBinary, 0x20000013, &dwError, &ErrorBufferSize, &ActualBinarySize)) {
+        if (!Dll->pHttpQueryInfoA(NewBinary, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE, &dwError, &ErrorBufferSize, &ActualBinarySize)) {
             Return = YoriLibUpdErrorInetConnect;
             goto Exit;
         }
     } else {
-        if (!DllWinInet.pHttpQueryInfoW(NewBinary, 0x20000013, &dwError, &ErrorBufferSize, &ActualBinarySize)) {
+        if (!Dll->pHttpQueryInfoW(NewBinary, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE, &dwError, &ErrorBufferSize, &ActualBinarySize)) {
             Return = YoriLibUpdErrorInetConnect;
             goto Exit;
         }
@@ -530,7 +536,7 @@ YoriLibUpdateBinaryFromUrlWinInet(
     //  Read from the internet location and save to the temporary file.
     //
 
-    while (DllWinInet.pInternetReadFile(NewBinary, NewBinaryData, UPDATE_READ_SIZE, &ActualBinarySize)) {
+    while (Dll->pInternetReadFile(NewBinary, NewBinaryData, UPDATE_READ_SIZE, &ActualBinarySize)) {
 
         DWORD DataWritten;
 
@@ -580,11 +586,13 @@ YoriLibUpdateBinaryFromUrlWinInet(
 
     CloseHandle(hTempFile);
     YoriLibFree(NewBinaryData);
+    NewBinaryData = NULL;
+    hTempFile = INVALID_HANDLE_VALUE;
 
     if (YoriLibUpdateBinaryFromFile(TargetName, TempName)) {
-        return YoriLibUpdErrorSuccess;
+        Return = YoriLibUpdErrorSuccess;
     } else {
-        return YoriLibUpdErrorFileReplace;
+        Return = YoriLibUpdErrorFileReplace;
     }
 
 Exit:
@@ -599,11 +607,11 @@ Exit:
     }
 
     if (NewBinary != NULL) {
-        DllWinInet.pInternetCloseHandle(NewBinary);
+        Dll->pInternetCloseHandle(NewBinary);
     }
 
     if (hInternet != NULL) {
-        DllWinInet.pInternetCloseHandle(hInternet);
+        Dll->pInternetCloseHandle(hInternet);
     }
 
     return Return;
@@ -703,7 +711,7 @@ YoriLibUpdateBinaryFromUrlWinHttp(
     }
 
     ErrorBufferSize = sizeof(dwError);
-    if (!DllWinHttp.pWinHttpQueryHeaders(hRequest, 0x20000013, NULL, &dwError, &ErrorBufferSize, NULL)) {
+    if (!DllWinHttp.pWinHttpQueryHeaders(hRequest, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE, NULL, &dwError, &ErrorBufferSize, NULL)) {
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
     }
@@ -858,6 +866,8 @@ YoriLibUpdateBinaryFromUrl(
     __in_opt PSYSTEMTIME IfModifiedSince
     )
 {
+    YORI_WININET_FUNCTIONS StubWinInet;
+
     //
     //  Dynamically load WinInet.  This means we don't have to resolve
     //  imports unless we're really using it for something, and we can
@@ -872,7 +882,7 @@ YoriLibUpdateBinaryFromUrl(
         DllWinInet.pInternetReadFile != NULL &&
         DllWinInet.pInternetCloseHandle != NULL) {
 
-        return YoriLibUpdateBinaryFromUrlWinInet(Url, TargetName, Agent, IfModifiedSince);
+        return YoriLibUpdateBinaryFromUrlWinInet(&DllWinInet, Url, TargetName, Agent, IfModifiedSince);
     }
 
     //
@@ -894,7 +904,20 @@ YoriLibUpdateBinaryFromUrl(
         return YoriLibUpdateBinaryFromUrlWinHttp(Url, TargetName, Agent, IfModifiedSince);
     }
 
-    return YoriLibUpdErrorInetInit;
+    //
+    //  If neither of the above work, use our hard coded fallback.  This is
+    //  really intended for NT 3.1 or other HTTP-less environments.
+    //
+
+    ZeroMemory(&StubWinInet, sizeof(StubWinInet));
+
+    StubWinInet.pInternetOpenW = YoriLibInternetOpen;
+    StubWinInet.pInternetOpenUrlW = YoriLibInternetOpenUrl;
+    StubWinInet.pHttpQueryInfoW = YoriLibHttpQueryInfo;
+    StubWinInet.pInternetReadFile = YoriLibInternetReadFile;
+    StubWinInet.pInternetCloseHandle = YoriLibInternetCloseHandle;
+
+    return YoriLibUpdateBinaryFromUrlWinInet(&StubWinInet, Url, TargetName, Agent, IfModifiedSince);
 }
 
 /**
