@@ -1,9 +1,9 @@
 /**
- * @file ysetup/ysetup.c
+ * @file ysetup/gui.c
  *
  * Yori shell GUI installer
  *
- * Copyright (c) 2018-2021 Malcolm J. Smith
+ * Copyright (c) 2018-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,40 @@
 #include "resource.h"
 #include "ysetup.h"
 
+/**
+ If the current operating system has a version of User32 that can access
+ data beyond the end of the string, return TRUE to indicate that it should
+ copy into a larger string to avoid faults.
+ 
+ @return TRUE if the current system depends on extra bytes at the end of
+         strings, FALSE if the system will respect string length.
+ */
+BOOLEAN
+SetupGuiUserRequiresStringPadding(VOID)
+{
+    DWORD OsVerMajor;
+    DWORD OsVerMinor;
+    DWORD OsBuildNumber;
+
+    //
+    //  NT 3.1 User32 walks off the end of strings.  Add an extra WCHAR so
+    //  that 32 bit reads won't fault after the end.
+    //
+
+    YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
+    if (OsBuildNumber <= 528) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+/**
+ Update the status line at the bottom of the dialog as install is underway.
+
+ @param Text Pointer to the text to display in the status line.
+
+ @param Context Context, which for the GUI module refers to a dialog handle.
+ */
 VOID
 SetupGuiUpdateStatus(
     __in PCYORI_STRING Text,
@@ -37,10 +71,23 @@ SetupGuiUpdateStatus(
     )
 {
     HWND hDlg;
+    YORI_STRING PaddedString;
 
     hDlg = (HWND)Context;
 
     ASSERT(YoriLibIsStringNullTerminated(Text));
+
+    if (SetupGuiUserRequiresStringPadding()) {
+        if (YoriLibAllocateString(&PaddedString, Text->LengthInChars + 2)) {
+            memcpy(PaddedString.StartOfString, Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
+            PaddedString.LengthInChars = Text->LengthInChars;
+            PaddedString.StartOfString[PaddedString.LengthInChars] = '\0';
+            SetDlgItemText(hDlg, IDC_STATUS, PaddedString.StartOfString);
+            YoriLibFreeStringContents(&PaddedString);
+        }
+        return;
+    }
+
     SetDlgItemText(hDlg, IDC_STATUS, Text->StartOfString);
 }
 
@@ -394,8 +441,7 @@ SetupGuiDisplayUi(VOID)
         }
     }
 
-    if (DllCabinet.pFdiCopy == NULL ||
-        (DllWinInet.hDll == NULL && DllWinHttp.hDll == NULL)) {
+    if (DllCabinet.pFdiCopy == NULL) {
 
         YORI_STRING MessageString;
         LPCSTR DllMissingWarning;
@@ -405,11 +451,21 @@ SetupGuiDisplayUi(VOID)
         YoriLibInitEmptyString(&MessageString);
 
         //
+        //  Add space for a NULL.
+        //
+
+        Length = Length + 1;
+
+        //
         //  NT 3.1 User32 walks off the end of strings.  Add an extra WCHAR so
         //  that 32 bit reads won't fault after the end.
         //
 
-        if (YoriLibAllocateString(&MessageString, Length + 2)) {
+        if (SetupGuiUserRequiresStringPadding()) {
+            Length = Length + 1;
+        }
+
+        if (YoriLibAllocateString(&MessageString, Length)) {
             YoriLibYPrintf(&MessageString, _T("%hs"), DllMissingWarning);
             MessageBox(NULL,
                        MessageString.StartOfString,

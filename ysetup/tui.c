@@ -323,9 +323,7 @@ SetupTuiDisplayUi(VOID)
 
     YoriLibConstantString(&Title, _T("Setup"));
 
-    if (DllCabinet.pFdiCopy == NULL || 
-        (DllWinInet.hDll == NULL && DllWinHttp.hDll == NULL)) {
-
+    if (DllCabinet.pFdiCopy == NULL) {
         YORI_STRING MessageString;
         YORI_STRING ButtonText;
         LPCSTR DllMissingWarning;
