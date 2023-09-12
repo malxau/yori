@@ -629,4 +629,110 @@ YoriLibIsRunningUnderSsh(VOID)
     return YoriLibRunningUnderSsh;
 }
 
+/**
+ Return the system page size for the current system.
+
+ @return The system page size for the current system.
+ */
+DWORD
+YoriLibGetPageSize(VOID)
+{
+#if defined(_M_ALPHA)
+    return 0x2000;
+#else
+    return 0x1000;
+#endif
+}
+
+/**
+ Check that the executable already has the specified subsystem version.
+ If it doesn't, update the system version to have the specified value.
+
+ @param NewMajor Verify, or possibly set, the subsystem major version to this
+        value.
+
+ @param NewMinor Verify, or possibly set, the subsystem minor version to this
+        value.
+
+ @return TRUE if the executable has this version or has been updated to it;
+         FALSE if the version could not be determined or updated.
+ */
+BOOLEAN
+YoriLibEnsureProcessSubsystemVersionAtLeast(
+    __in WORD NewMajor,
+    __in WORD NewMinor
+    )
+{
+    PIMAGE_DOS_HEADER DosHeader;
+    PYORILIB_PE_HEADERS PeHeaders;
+    DWORD PageSize;
+    DWORD OldProtect;
+
+    DosHeader = (PIMAGE_DOS_HEADER)GetModuleHandle(NULL);
+    PageSize = YoriLibGetPageSize();
+
+    //
+    //  Check that the executable headers fit on one page.  This should
+    //  always happen, and this routine only manipulates one page of
+    //  permissions.
+    //
+
+    if ((((DWORD_PTR)DosHeader) & ((DWORD_PTR)PageSize - 1)) != 0) {
+        return FALSE;
+    }
+
+    //
+    //  Check the executable looks like a DOS executable.
+    //
+
+    if (DosHeader->e_magic != IMAGE_DOS_SIGNATURE ||
+        DosHeader->e_lfanew == 0 ||
+        DosHeader->e_lfanew + sizeof(YORILIB_PE_HEADERS) > PageSize) {
+
+        return FALSE;
+    }
+
+    PeHeaders = YoriLibAddToPointer(DosHeader, DosHeader->e_lfanew);
+
+    //
+    //  Check that the executable looks like an NT executable.
+    //
+
+    if (PeHeaders->Signature != IMAGE_NT_SIGNATURE ||
+        PeHeaders->ImageHeader.SizeOfOptionalHeader <= FIELD_OFFSET(IMAGE_OPTIONAL_HEADER, Subsystem) + sizeof(WORD)) {
+
+        return FALSE;
+    }
+
+    //
+    //  If the executable already has a high enough version, we're done.
+    //
+
+    if (PeHeaders->OptionalHeader.MajorSubsystemVersion > NewMajor) {
+        return TRUE;
+    }
+
+    if (PeHeaders->OptionalHeader.MajorSubsystemVersion == NewMajor &&
+        PeHeaders->OptionalHeader.MinorSubsystemVersion >= NewMinor) {
+
+        return TRUE;
+    }
+
+    //
+    //  Give ourselves write access to the PE header, change it, and restore
+    //  permissions.
+    //
+
+    if (!VirtualProtect(DosHeader, PageSize, PAGE_READWRITE, &OldProtect)) {
+        return FALSE;
+    }
+
+    PeHeaders->OptionalHeader.MajorSubsystemVersion = NewMajor;
+    PeHeaders->OptionalHeader.MinorSubsystemVersion = NewMinor;
+
+    VirtualProtect(DosHeader, PageSize, OldProtect, &OldProtect);
+
+    return TRUE;
+}
+
 // vim:sw=4:ts=4:et:

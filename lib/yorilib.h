@@ -2882,6 +2882,16 @@ YoriLibResetSystemBackgroundColorSupport(VOID);
 BOOLEAN
 YoriLibIsRunningUnderSsh(VOID);
 
+DWORD
+YoriLibGetPageSize(VOID);
+
+BOOLEAN
+YoriLibEnsureProcessSubsystemVersionAtLeast(
+    __in WORD NewMajor,
+    __in WORD NewMinor
+    );
+
+
 // *** PRIV.C ***
 
 BOOL
