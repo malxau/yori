@@ -31,6 +31,409 @@
 #include "ysetup.h"
 
 /**
+ A prototype for the CreateFontW function.
+ */
+typedef
+HFONT WINAPI
+CREATE_FONTW(INT, INT, INT, INT, INT, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, DWORD, LPCWSTR);
+
+/**
+ A prototype for a pointer to the CreateFontW function.
+ */
+typedef CREATE_FONTW *PCREATE_FONTW;
+
+/**
+ A prototype for the DialogBoxParamW function.
+ */
+typedef
+LONG_PTR WINAPI
+DIALOG_BOX_PARAMW(HINSTANCE, LPCWSTR, HWND, DLGPROC, LPARAM);
+
+/**
+ A prototype for a pointer to the DialogBoxParamW function.
+ */
+typedef DIALOG_BOX_PARAMW *PDIALOG_BOX_PARAMW;
+
+/**
+ A prototype for the EnableWindow function.
+ */
+typedef
+BOOL WINAPI
+ENABLE_WINDOW(HWND, BOOL);
+
+/**
+ A prototype for a pointer to the EnableWindow function.
+ */
+typedef ENABLE_WINDOW *PENABLE_WINDOW;
+
+/**
+ A prototype for the EndDialog function.
+ */
+typedef
+BOOL WINAPI
+END_DIALOG(HWND, LONG_PTR);
+
+/**
+ A prototype for a pointer to the EndDialog function.
+ */
+typedef END_DIALOG *PEND_DIALOG;
+
+/**
+ A prototype for the GetDeviceCaps function.
+ */
+typedef
+int WINAPI
+GET_DEVICE_CAPS(HDC, INT);
+
+/**
+ A prototype for a pointer to the GetDeviceCaps function.
+ */
+typedef GET_DEVICE_CAPS *PGET_DEVICE_CAPS;
+
+/**
+ A prototype for the GetDlgItem function.
+ */
+typedef
+HWND WINAPI
+GET_DLG_ITEM(HWND, INT);
+
+/**
+ A prototype for a pointer to the GetDlgItem function.
+ */
+typedef GET_DLG_ITEM *PGET_DLG_ITEM;
+
+/**
+ A prototype for the GetWindowDC function.
+ */
+typedef
+HDC WINAPI
+GET_WINDOW_DC(HWND);
+
+/**
+ A prototype for a pointer to the GetWindowDC function.
+ */
+typedef GET_WINDOW_DC *PGET_WINDOW_DC;
+
+/**
+ A prototype for the LoadIconW function.
+ */
+typedef
+HICON WINAPI
+LOAD_ICONW(HINSTANCE, LPCWSTR);
+
+/**
+ A prototype for a pointer to the LoadIconW function.
+ */
+typedef LOAD_ICONW *PLOAD_ICONW;
+
+/**
+ A prototype for the MessageBoxW function.
+ */
+typedef
+INT WINAPI
+MESSAGE_BOXW(HWND, LPCWSTR, LPCWSTR, UINT);
+
+/**
+ A prototype for a pointer to the MessageBoxW function.
+ */
+typedef MESSAGE_BOXW *PMESSAGE_BOXW;
+
+/**
+ A prototype for the ReleaseDC function.
+ */
+typedef
+INT WINAPI
+RELEASE_DC(HWND, HDC);
+
+/**
+ A prototype for a pointer to the ReleaseDC function.
+ */
+typedef RELEASE_DC *PRELEASE_DC;
+
+/**
+ A prototype for the SendMessageW function.
+ */
+typedef
+LRESULT WINAPI
+SEND_MESSAGEW(HWND, DWORD, WPARAM, LPARAM);
+
+/**
+ A prototype for a pointer to the SendMessageW function.
+ */
+typedef SEND_MESSAGEW *PSEND_MESSAGEW;
+
+/**
+ A prototype for the SystemParametersInfoW function.
+ */
+typedef
+BOOL WINAPI
+SYSTEM_PARAMETERS_INFOW(DWORD, DWORD, PVOID, DWORD);
+
+/**
+ A prototype for a pointer to the SystemParametersInfoW function.
+ */
+typedef SYSTEM_PARAMETERS_INFOW *PSYSTEM_PARAMETERS_INFOW;
+
+/**
+ A structure containing all of the dynamically loaded functions from Gdi32
+ and User32 used by this program.
+ */
+typedef struct _YSETUP_GUI_DLL {
+
+    /**
+     A handle to gdi32.dll if it can be loaded.
+     */
+    HMODULE hGdi32;
+
+    /**
+     A handle to user32.dll if it can be loaded.
+     */
+    HMODULE hUser32;
+
+    /**
+     If it exists on the system, a pointer to CreateFontW.
+     */
+    PCREATE_FONTW pCreateFontW;
+
+    /**
+     If it exists on the system, a pointer to GetDeviceCaps.
+     */
+    PGET_DEVICE_CAPS pGetDeviceCaps;
+
+    /**
+     If it exists on the system, a pointer to DialogBoxParamW.
+     */
+    PDIALOG_BOX_PARAMW pDialogBoxParamW;
+
+    /**
+     If it exists on the system, a pointer to EnableWindow.
+     */
+    PENABLE_WINDOW pEnableWindow;
+
+    /**
+     If it exists on the system, a pointer to EndDialog.
+     */
+    PEND_DIALOG pEndDialog;
+
+    /**
+     If it exists on the system, a pointer to GetDlgItem.
+     */
+    PGET_DLG_ITEM pGetDlgItem;
+
+    /**
+     If it exists on the system, a pointer to GetWindowDC.
+     */
+    PGET_WINDOW_DC pGetWindowDC;
+
+    /**
+     If it exists on the system, a pointer to LoadIconW.
+     */
+    PLOAD_ICONW pLoadIconW;
+
+    /**
+     If it exists on the system, a pointer to MessageBoxW.
+     */
+    PMESSAGE_BOXW pMessageBoxW;
+
+    /**
+     If it exists on the system, a pointer to ReleaseDC.
+     */
+    PRELEASE_DC pReleaseDC;
+
+    /**
+     If it exists on the system, a pointer to SendMessageW.
+     */
+    PSEND_MESSAGEW pSendMessageW;
+
+    /**
+     If it exists on the system, a pointer to SystemParametersInfoW.
+     */
+    PSYSTEM_PARAMETERS_INFOW pSystemParametersInfoW;
+} YSETUP_GUI_DLL, *PYSETUP_GUI_DLL;
+
+/**
+ Pointers to User32 and Gdi32 functions which are only needed if Ysetup
+ is invoked in GUI mode.
+ */
+YSETUP_GUI_DLL DllYsetupGui;
+
+/**
+ Attempt to load Gdi32 and User32, returning TRUE if all required functions
+ for GUI support are available.
+
+ @return TRUE if GUI support is available, FALSE if it is not.
+ */
+BOOLEAN
+SetupGuiInitialize(VOID)
+{
+    DWORD MajorVersion;
+    DWORD MinorVersion;
+    DWORD BuildNumber;
+
+
+    //
+    //  This function should only ever be called once and doesn't try to
+    //  handle repeated calls.
+    //
+
+    ASSERT(DllYsetupGui.hGdi32 == NULL);
+    ASSERT(DllYsetupGui.hUser32 == NULL);
+
+    //
+    //  Check if running on NT 4 and up.  If so, update the PE header to
+    //  indicate this is a 4.0 executable before loading and initializing
+    //  UI code to ensure it gets 4.0 visuals.
+    //
+
+    YoriLibGetOsVersion(&MajorVersion, &MinorVersion, &BuildNumber);
+    if (MajorVersion >= 4) {
+        if (!YoriLibEnsureProcessSubsystemVersionAtLeast(4, 0)) {
+            return FALSE;
+        }
+    }
+
+    YoriLibLoadUser32Functions();
+    DllYsetupGui.hGdi32 = YoriLibLoadLibraryFromSystemDirectory(_T("GDI32.DLL"));
+    DllYsetupGui.hUser32 = YoriLibLoadLibraryFromSystemDirectory(_T("USER32.DLL"));
+
+    if (DllYsetupGui.hGdi32 == NULL ||
+        DllYsetupGui.hUser32 == NULL) {
+
+        return FALSE;
+    }
+
+    DllYsetupGui.pCreateFontW = (PCREATE_FONTW)GetProcAddress(DllYsetupGui.hGdi32, "CreateFontW");
+    DllYsetupGui.pGetDeviceCaps = (PGET_DEVICE_CAPS)GetProcAddress(DllYsetupGui.hGdi32, "GetDeviceCaps");
+
+    DllYsetupGui.pDialogBoxParamW = (PDIALOG_BOX_PARAMW)GetProcAddress(DllYsetupGui.hUser32, "DialogBoxParamW");
+    DllYsetupGui.pEnableWindow = (PENABLE_WINDOW)GetProcAddress(DllYsetupGui.hUser32, "EnableWindow");
+    DllYsetupGui.pEndDialog = (PEND_DIALOG)GetProcAddress(DllYsetupGui.hUser32, "EndDialog");
+    DllYsetupGui.pGetDlgItem = (PGET_DLG_ITEM)GetProcAddress(DllYsetupGui.hUser32, "GetDlgItem");
+    DllYsetupGui.pGetWindowDC = (PGET_WINDOW_DC)GetProcAddress(DllYsetupGui.hUser32, "GetWindowDC");
+    DllYsetupGui.pLoadIconW = (PLOAD_ICONW)GetProcAddress(DllYsetupGui.hUser32, "LoadIconW");
+    DllYsetupGui.pMessageBoxW = (PMESSAGE_BOXW)GetProcAddress(DllYsetupGui.hUser32, "MessageBoxW");
+    DllYsetupGui.pReleaseDC = (PRELEASE_DC)GetProcAddress(DllYsetupGui.hUser32, "ReleaseDC");
+    DllYsetupGui.pSendMessageW = (PSEND_MESSAGEW)GetProcAddress(DllYsetupGui.hUser32, "SendMessageW");
+    DllYsetupGui.pSystemParametersInfoW = (PSYSTEM_PARAMETERS_INFOW)GetProcAddress(DllYsetupGui.hUser32, "SystemParametersInfoW");
+
+    if (DllUser32.pGetDesktopWindow != NULL &&
+        DllUser32.pGetWindowRect != NULL &&
+        DllUser32.pSetWindowPos != NULL &&
+        DllYsetupGui.pCreateFontW != NULL &&
+        DllYsetupGui.pGetDeviceCaps != NULL &&
+        DllYsetupGui.pDialogBoxParamW != NULL &&
+        DllYsetupGui.pEnableWindow != NULL &&
+        DllYsetupGui.pEndDialog != NULL &&
+        DllYsetupGui.pGetDlgItem != NULL &&
+        DllYsetupGui.pGetWindowDC != NULL &&
+        DllYsetupGui.pLoadIconW != NULL &&
+        DllYsetupGui.pMessageBoxW != NULL &&
+        DllYsetupGui.pReleaseDC != NULL &&
+        DllYsetupGui.pSendMessageW != NULL &&
+        DllYsetupGui.pSystemParametersInfoW != NULL) {
+
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
+ GetDlgItemText implemented as a SendMessage wrapper to avoid additional
+ imports.
+
+ @param hWnd A handle to the dialog window.
+
+ @param DlgId The control within the dialog.
+
+ @param String Pointer to a string buffer to populate with the text of the
+        control.
+
+ @param StringLength The length of the buffer specified by String.
+
+ @return The number of characters obtained.
+ */
+DWORD
+SetupGuiGetDlgItemText(
+    __in HWND hWnd,
+    __in INT DlgId,
+    __in LPCWSTR String,
+    __in INT StringLength
+    )
+{
+    HWND hWndDlg;
+    hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
+    return (DWORD)DllYsetupGui.pSendMessageW(hWndDlg, WM_GETTEXT, StringLength, (DWORD_PTR)String);
+}
+
+/**
+ SetDlgItemText implemented as a SendMessage wrapper to avoid additional
+ imports.
+
+ @param hWnd A handle to the dialog window.
+
+ @param DlgId The control within the dialog.
+
+ @param String Pointer to a string to set into the control.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOL
+SetupGuiSetDlgItemText(
+    __in HWND hWnd,
+    __in INT DlgId,
+    __in LPCWSTR String
+    )
+{
+    HWND hWndDlg;
+    hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
+    return (DWORD)DllYsetupGui.pSendMessageW(hWndDlg, WM_SETTEXT, 0, (DWORD_PTR)String);
+}
+
+/**
+ CheckDlgButton implemented as a SendMessage wrapper to avoid additional
+ imports.
+
+ @param hWnd A handle to the dialog window.
+
+ @param DlgId The control within the dialog.
+
+ @param Check The new state of the check box.
+ */
+VOID
+SetupGuiCheckDlgButton(
+    __in HWND hWnd,
+    __in INT DlgId,
+    __in DWORD Check
+    )
+{
+    HWND hWndDlg;
+    hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
+    DllYsetupGui.pSendMessageW(hWndDlg, BM_SETCHECK, Check, 0);
+}
+
+/**
+ IsDlgButtonChecked implemented as a SendMessage wrapper to avoid additional
+ imports.
+
+ @param hWnd A handle to the dialog window.
+
+ @param DlgId The control within the dialog.
+
+ @return The check state of the check box.
+ */
+DWORD
+SetupGuiIsDlgButtonChecked(
+    __in HWND hWnd,
+    __in INT DlgId
+    )
+{
+    HWND hWndDlg;
+    hWndDlg = DllYsetupGui.pGetDlgItem(hWnd, DlgId);
+    return (DWORD)DllYsetupGui.pSendMessageW(hWndDlg, BM_GETCHECK, 0, 0);
+}
+
+/**
  If the current operating system has a version of User32 that can access
  data beyond the end of the string, return TRUE to indicate that it should
  copy into a larger string to avoid faults.
@@ -82,13 +485,13 @@ SetupGuiUpdateStatus(
             memcpy(PaddedString.StartOfString, Text->StartOfString, Text->LengthInChars * sizeof(TCHAR));
             PaddedString.LengthInChars = Text->LengthInChars;
             PaddedString.StartOfString[PaddedString.LengthInChars] = '\0';
-            SetDlgItemText(hDlg, IDC_STATUS, PaddedString.StartOfString);
+            SetupGuiSetDlgItemText(hDlg, IDC_STATUS, PaddedString.StartOfString);
             YoriLibFreeStringContents(&PaddedString);
         }
         return;
     }
 
-    SetDlgItemText(hDlg, IDC_STATUS, Text->StartOfString);
+    SetupGuiSetDlgItemText(hDlg, IDC_STATUS, Text->StartOfString);
 }
 
 /**
@@ -117,64 +520,64 @@ SetupGuiInstallSelectedFromDialog(
     //  Query the install directory and attempt to create it
     //
 
-    LengthNeeded = (DWORD)SendDlgItemMessage(hDlg, IDC_INSTALLDIR, WM_GETTEXTLENGTH, 0, 0);
+    LengthNeeded = (DWORD)DllYsetupGui.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, IDC_INSTALLDIR), WM_GETTEXTLENGTH, 0, 0);
     if (!YoriLibAllocateString(&InstallDir, LengthNeeded + 1)) {
-        MessageBox(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
+        DllYsetupGui.pMessageBoxW(hDlg, _T("Installation failed."), _T("Installation failed."), MB_ICONSTOP);
         return FALSE;
     }
-    InstallDir.LengthInChars = GetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString, InstallDir.LengthAllocated);
+    InstallDir.LengthInChars = SetupGuiGetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString, InstallDir.LengthAllocated);
 
 
     //
     //  Count the number of packages we want to install
     //
 
-    if (IsDlgButtonChecked(hDlg, IDC_COMPLETE)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_COMPLETE)) {
         InstallType = InstallTypeComplete;
-    } else if (IsDlgButtonChecked(hDlg, IDC_COREONLY)) {
+    } else if (SetupGuiIsDlgButtonChecked(hDlg, IDC_COREONLY)) {
         InstallType = InstallTypeCore;
     } else {
         InstallType = InstallTypeTypical;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_SYMBOLS)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_SYMBOLS)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_SYMBOLS;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_SOURCE)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_SOURCE)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_SOURCE;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_DESKTOP_SHORTCUT)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_DESKTOP_SHORTCUT)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_DESKTOP_SHORTCUT;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_START_SHORTCUT)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_START_SHORTCUT)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_START_SHORTCUT;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_TERMINAL_PROFILE)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_TERMINAL_PROFILE)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_TERMINAL_PROFILE;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_USER_PATH)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_USER_PATH)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_USER_PATH;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_SYSTEM_PATH)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_SYSTEM_PATH)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_SYSTEM_PATH;
     }
 
-    if (IsDlgButtonChecked(hDlg, IDC_UNINSTALL)) {
+    if (SetupGuiIsDlgButtonChecked(hDlg, IDC_UNINSTALL)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_UNINSTALL;
     }
 
     Result = SetupInstallSelectedWithOptions(&InstallDir, InstallType, InstallOptions, SetupGuiUpdateStatus, hDlg, &ErrorText);
 
     if (Result) {
-        MessageBox(hDlg, ErrorText.StartOfString, _T("Installation complete."), MB_ICONINFORMATION);
+        DllYsetupGui.pMessageBoxW(hDlg, ErrorText.StartOfString, _T("Installation complete."), MB_ICONINFORMATION);
     } else {
-        MessageBox(hDlg, ErrorText.StartOfString, _T("Installation failed."), MB_ICONSTOP);
+        DllYsetupGui.pMessageBoxW(hDlg, ErrorText.StartOfString, _T("Installation failed."), MB_ICONSTOP);
     }
 
     YoriLibFreeStringContents(&InstallDir);
@@ -220,9 +623,9 @@ SetupGuiDialogProc(
                 case IDC_TYPICAL:
                 case IDC_COMPLETE:
                     for (CtrlId = IDC_COREONLY; CtrlId <= IDC_COMPLETE; CtrlId++) {
-                        CheckDlgButton(hDlg, CtrlId, FALSE);
+                        SetupGuiCheckDlgButton(hDlg, CtrlId, FALSE);
                     }
-                    CheckDlgButton(hDlg, LOWORD(wParam), TRUE);
+                    SetupGuiCheckDlgButton(hDlg, LOWORD(wParam), TRUE);
                     break;
                 case IDC_DESKTOP_SHORTCUT:
                 case IDC_START_SHORTCUT:
@@ -233,21 +636,21 @@ SetupGuiDialogProc(
                 case IDC_SYMBOLS:
                 case IDC_UNINSTALL:
                     CtrlId = LOWORD(wParam);
-                    if (IsDlgButtonChecked(hDlg, CtrlId)) {
-                        CheckDlgButton(hDlg, CtrlId, FALSE);
+                    if (SetupGuiIsDlgButtonChecked(hDlg, CtrlId)) {
+                        SetupGuiCheckDlgButton(hDlg, CtrlId, FALSE);
                     } else {
-                        CheckDlgButton(hDlg, CtrlId, TRUE);
+                        SetupGuiCheckDlgButton(hDlg, CtrlId, TRUE);
                     }
                     break;
                 case IDC_OK:
                     if (!SetupGuiInstallSelectedFromDialog(hDlg)) {
-                        EndDialog(hDlg, FALSE);
+                        DllYsetupGui.pEndDialog(hDlg, FALSE);
                     } else {
-                        EndDialog(hDlg, TRUE);
+                        DllYsetupGui.pEndDialog(hDlg, TRUE);
                     }
                     return TRUE;
                 case IDC_CANCEL:
-                    EndDialog(hDlg, FALSE);
+                    DllYsetupGui.pEndDialog(hDlg, FALSE);
                     return TRUE;
                 case IDC_BROWSE:
                     if (DllShell32.pSHBrowseForFolderW != NULL &&
@@ -262,7 +665,7 @@ SetupGuiDialogProc(
                         if (ShellIdentifierForPath != NULL) {
                             YoriLibAllocateString(&InstallDir, MAX_PATH);
                             DllShell32.pSHGetPathFromIDListW(ShellIdentifierForPath, InstallDir.StartOfString);
-                            SetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
+                            SetupGuiSetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
                             YoriLibFreeStringContents(&InstallDir);
                             if (DllOle32.pCoTaskMemFree != NULL) {
                                 DllOle32.pCoTaskMemFree(ShellIdentifierForPath);
@@ -272,12 +675,12 @@ SetupGuiDialogProc(
             }
             break;
         case WM_CLOSE:
-            EndDialog(hDlg, 0);
+            DllYsetupGui.pEndDialog(hDlg, 0);
             return TRUE;
         case WM_INITDIALOG:
-            hIcon = LoadIcon(GetModuleHandle(NULL), MAKEINTRESOURCE(1));
-            SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-            SendMessage(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+            hIcon = DllYsetupGui.pLoadIconW(GetModuleHandle(NULL), MAKEINTRESOURCE(1));
+            DllYsetupGui.pSendMessageW(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+            DllYsetupGui.pSendMessageW(hDlg, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
 
             //
             //  Get the primary monitor's display size.  This is reduced by
@@ -285,20 +688,20 @@ SetupGuiDialogProc(
             //  use the entire desktop.
             //
 
-            if (!SystemParametersInfo(SPI_GETWORKAREA, 0, &rcDesktop, 0)) {
-                GetWindowRect(GetDesktopWindow(), &rcDesktop);
+            if (!DllYsetupGui.pSystemParametersInfoW(SPI_GETWORKAREA, 0, &rcDesktop, 0)) {
+                DllUser32.pGetWindowRect(DllUser32.pGetDesktopWindow(), &rcDesktop);
             }
 
             //
             //  Center the dialog on the display
             //
 
-            GetWindowRect(hDlg, &rcDlg);
+            DllUser32.pGetWindowRect(hDlg, &rcDlg);
 
             rcNew.left = ((rcDesktop.right - rcDesktop.left) - (rcDlg.right - rcDlg.left)) / 2;
             rcNew.top = ((rcDesktop.bottom - rcDesktop.top) - (rcDlg.bottom - rcDlg.top)) / 2;
 
-            SetWindowPos(hDlg, HWND_TOP, rcNew.left, rcNew.top, 0, 0, SWP_NOSIZE);
+            DllUser32.pSetWindowPos(hDlg, HWND_TOP, rcNew.left, rcNew.top, 0, 0, SWP_NOSIZE);
 
             {
                 TCHAR Version[32];
@@ -308,13 +711,13 @@ SetupGuiDialogProc(
 #else
                 YoriLibSPrintf(Version, _T("%i.%02i"), YORI_VER_MAJOR, YORI_VER_MINOR);
 #endif
-                SetDlgItemText(hDlg, IDC_VERSION, Version);
+                SetupGuiSetDlgItemText(hDlg, IDC_VERSION, Version);
             }
 
             SetupGetDefaultInstallDir(&InstallDir);
-            SetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
+            SetupGuiSetDlgItemText(hDlg, IDC_INSTALLDIR, InstallDir.StartOfString);
             YoriLibFreeStringContents(&InstallDir);
-            CheckDlgButton(hDlg, IDC_TYPICAL, TRUE);
+            SetupGuiCheckDlgButton(hDlg, IDC_TYPICAL, TRUE);
 
             //
             //  On NT 3.5x try to set the font to something not bold that has
@@ -329,6 +732,7 @@ SetupGuiDialogProc(
             YoriLibGetOsVersion(&OsVerMajor, &OsVerMinor, &OsBuildNumber);
             if (OsVerMajor < 4) {
 
+                INT FontHeight;
                 HFONT hFont;
                 HDC hDC;
                 DWORD Index;
@@ -358,39 +762,40 @@ SetupGuiDialogProc(
                     IDC_UNINSTALL,
                 };
 
-                hDC = GetWindowDC(hDlg);
-                hFont = CreateFont(-YoriLibMulDiv(8, GetDeviceCaps(hDC, LOGPIXELSY), 72),
-                                   0,
-                                   0,
-                                   0,
-                                   FW_NORMAL,
-                                   FALSE,
-                                   FALSE,
-                                   FALSE,
-                                   DEFAULT_CHARSET,
-                                   OUT_DEFAULT_PRECIS,
-                                   CLIP_DEFAULT_PRECIS,
-                                   DEFAULT_QUALITY,
-                                   FF_DONTCARE,
-                                   _T("MS Sans Serif"));
-                ReleaseDC(hDlg, hDC);
+                hDC = DllYsetupGui.pGetWindowDC(hDlg);
+                FontHeight = -YoriLibMulDiv(8, DllYsetupGui.pGetDeviceCaps(hDC, LOGPIXELSY), 72);
+                hFont = DllYsetupGui.pCreateFontW(FontHeight,
+                                                  0,
+                                                  0,
+                                                  0,
+                                                  FW_NORMAL,
+                                                  FALSE,
+                                                  FALSE,
+                                                  FALSE,
+                                                  DEFAULT_CHARSET,
+                                                  OUT_DEFAULT_PRECIS,
+                                                  CLIP_DEFAULT_PRECIS,
+                                                  DEFAULT_QUALITY,
+                                                  FF_DONTCARE,
+                                                  _T("MS Sans Serif"));
+                DllYsetupGui.pReleaseDC(hDlg, hDC);
 
                 for (Index = 0; Index < sizeof(ControlArray)/sizeof(ControlArray[0]); Index++) {
-                    SendDlgItemMessage(hDlg, ControlArray[Index], WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
+                    DllYsetupGui.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, ControlArray[Index]), WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
                 }
-                SendMessage(hDlg, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(TRUE, 0));
+                DllYsetupGui.pSendMessageW(hDlg, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(TRUE, 0));
 
                 //
                 //  Since we already have an NT 3.5x branch, disable controls
                 //  that depend on explorer
                 //
 
-                EnableWindow(GetDlgItem(hDlg, IDC_BROWSE), FALSE);
-                EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
-                EnableWindow(GetDlgItem(hDlg, IDC_TERMINAL_PROFILE), FALSE);
-                EnableWindow(GetDlgItem(hDlg, IDC_UNINSTALL), FALSE);
+                DllYsetupGui.pEnableWindow(DllYsetupGui.pGetDlgItem(hDlg, IDC_BROWSE), FALSE);
+                DllYsetupGui.pEnableWindow(DllYsetupGui.pGetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
+                DllYsetupGui.pEnableWindow(DllYsetupGui.pGetDlgItem(hDlg, IDC_TERMINAL_PROFILE), FALSE);
+                DllYsetupGui.pEnableWindow(DllYsetupGui.pGetDlgItem(hDlg, IDC_UNINSTALL), FALSE);
 
-                SetDlgItemText(hDlg, IDC_START_SHORTCUT, _T("Install Program Manager &shortcut"));
+                SetupGuiSetDlgItemText(hDlg, IDC_START_SHORTCUT, _T("Install Program Manager &shortcut"));
             } else if (!SetupPlatformSupportsShortcuts()) {
 
                 //
@@ -398,7 +803,7 @@ SetupGuiDialogProc(
                 //  but not a Desktop shortcut.
                 //
 
-                EnableWindow(GetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
+                DllYsetupGui.pEnableWindow(DllYsetupGui.pGetDlgItem(hDlg, IDC_DESKTOP_SHORTCUT), FALSE);
             }
 
             return TRUE;
@@ -467,16 +872,16 @@ SetupGuiDisplayUi(VOID)
 
         if (YoriLibAllocateString(&MessageString, Length)) {
             YoriLibYPrintf(&MessageString, _T("%hs"), DllMissingWarning);
-            MessageBox(NULL,
-                       MessageString.StartOfString,
-                       _T("YSetup"),
-                       MB_ICONEXCLAMATION);
+            DllYsetupGui.pMessageBoxW(NULL,
+                                      MessageString.StartOfString,
+                                      _T("YSetup"),
+                                      MB_ICONEXCLAMATION);
             YoriLibFreeStringContents(&MessageString);
         }
         return TRUE;
     }
 
-    DialogBox(NULL, MAKEINTRESOURCE(SETUPDIALOG), NULL, (DLGPROC)SetupGuiDialogProc);
+    DllYsetupGui.pDialogBoxParamW(NULL, MAKEINTRESOURCE(SETUPDIALOG), NULL, (DLGPROC)SetupGuiDialogProc, 0);
     return TRUE;
 }
 

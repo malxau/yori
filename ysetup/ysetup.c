@@ -3,7 +3,7 @@
  *
  * Yori shell bootstrap installer
  *
- * Copyright (c) 2018-2021 Malcolm J. Smith
+ * Copyright (c) 2018-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -137,7 +137,7 @@ ymain(
                 SetupHelp();
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("license")) == 0) {
-                YoriLibDisplayMitLicense(_T("2018-2021"));
+                YoriLibDisplayMitLicense(_T("2018-2023"));
                 return EXIT_SUCCESS;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("complete")) == 0) {
                 InstallType = InstallTypeComplete;
@@ -194,6 +194,22 @@ ymain(
         }
     }
 
+    if (UiToUse == UiDefault) {
+        if (StartArg > 0) {
+            UiToUse = UiCli;
+        } else if (YoriLibIsNanoServer() || YoriLibIsRunningUnderSsh()) {
+            UiToUse = UiTui;
+        } else if (SetupGuiInitialize()) {
+            UiToUse = UiGui;
+        } else {
+            UiToUse = UiTui;
+        }
+    } else if (UiToUse == UiGui) {
+        if (!SetupGuiInitialize()) {
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("ysetup: OS support not present\n"));
+        }
+    }
+
     //
     //  Initialize COM for the benefit of shell functions
     //
@@ -216,18 +232,6 @@ ymain(
     if (DllWinInet.hDll == NULL) {
         YoriLibLoadWinHttpFunctions();
     }
-
-    if (UiToUse == UiDefault) {
-        if (StartArg > 0) {
-            UiToUse = UiCli;
-        } else if (YoriLibIsNanoServer() || YoriLibIsRunningUnderSsh()) {
-            UiToUse = UiTui;
-        } else {
-            UiToUse = UiGui;
-        }
-    }
-
-
 
     if (UiToUse == UiCli) {
         YORI_STRING ErrorText;
