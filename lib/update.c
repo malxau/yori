@@ -4,7 +4,7 @@
  * Code to update a file from the internet including the running
  * executable.
  *
- * Copyright (c) 2016-2021 Malcolm J. Smith
+ * Copyright (c) 2016-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,7 +38,7 @@ YoriLibUpdErrorStrings[] = {
     _T("Could not connect to server"),
     _T("Could not read data from server"),
     _T("Data read from server is incorrect"),
-    _T("Could not write data to local file"),
+    _T("Could not write data to temporary local file"),
     _T("Could not replace existing file with new file")
 };
 
@@ -54,27 +54,43 @@ YoriLibUpdErrorStrings[] = {
  */
 BOOL
 YoriLibUpdateBinaryFromFile(
-    __in_opt LPTSTR ExistingPath,
-    __in LPTSTR NewPath
+    __in_opt PCYORI_STRING ExistingPath,
+    __in PCYORI_STRING NewPath
     )
 {
-    TCHAR MyPath[MAX_PATH];
-    TCHAR OldPath[MAX_PATH];
-    LPTSTR PathToReplace;
+    YORI_STRING MyPath;
+    YORI_STRING OldPath;
+    PCYORI_STRING PathToReplace;
     HANDLE hMyBinary;
 
+    ASSERT(ExistingPath == NULL || YoriLibIsStringNullTerminated(ExistingPath));
+    ASSERT(YoriLibIsStringNullTerminated(NewPath));
+    YoriLibInitEmptyString(&MyPath);
+    YoriLibInitEmptyString(&OldPath);
+
     if (ExistingPath == NULL) {
+
+        //
+        //  Unlike most other Win32 APIs, this one has no way to indicate how
+        //  much space it needs.
+        //
+
+        if (!YoriLibAllocateString(&MyPath, 32768)) {
+            return FALSE;
+        }
 
         //
         //  If the file name to replace is NULL, replace the currently
         //  existing binary.
         //
 
-        if (GetModuleFileName(NULL, MyPath, sizeof(MyPath)/sizeof(MyPath[0])) == 0) {
+        MyPath.LengthInChars = GetModuleFileName(NULL, MyPath.StartOfString, MyPath.LengthAllocated);
+        if (MyPath.LengthInChars == 0) {
+            YoriLibFreeStringContents(&MyPath);
             return FALSE;
         }
 
-        PathToReplace = MyPath;
+        PathToReplace = &MyPath;
     } else {
         LPTSTR FinalBackslash;
 
@@ -83,29 +99,41 @@ YoriLibUpdateBinaryFromFile(
         //  a backslash, replace that file path.
         //
 
-        FinalBackslash = _tcsrchr(ExistingPath, '\\');
+        FinalBackslash = YoriLibFindRightMostCharacter(ExistingPath, '\\');
 
         if (FinalBackslash != NULL) {
             PathToReplace = ExistingPath;
         } else {
 
             //
+            //  Unlike most other Win32 APIs, this one has no way to indicate how
+            //  much space it needs.
+            //
+
+            if (!YoriLibAllocateString(&MyPath, 32768)) {
+                return FALSE;
+            }
+
+            //
             //  If it's a file name only, assume that it refers to a file in
             //  the same path as the existing binary.
             //
 
-            if (GetModuleFileName(NULL, MyPath, sizeof(MyPath)/sizeof(MyPath[0])) == 0) {
+            MyPath.LengthInChars = GetModuleFileName(NULL, MyPath.StartOfString, MyPath.LengthAllocated);
+            if (MyPath.LengthInChars == 0) {
+                YoriLibFreeStringContents(&MyPath);
                 return FALSE;
             }
 
-            FinalBackslash = _tcsrchr(MyPath, '\\');
+            FinalBackslash = YoriLibFindRightMostCharacter(&MyPath, '\\');
             if (FinalBackslash != NULL) {
-                DWORD RemainingLength = (DWORD)(sizeof(MyPath)/sizeof(MyPath[0]) - (FinalBackslash - MyPath + 1));
-                if ((DWORD)_tcslen(ExistingPath) >= RemainingLength) {
+                DWORD RemainingLength = (DWORD)(MyPath.LengthAllocated - (FinalBackslash - MyPath.StartOfString + 1));
+                if (ExistingPath->LengthInChars >= RemainingLength) {
                     return FALSE;
                 }
-                YoriLibSPrintfS(FinalBackslash + 1, RemainingLength, _T("%s"), ExistingPath);
-                PathToReplace = MyPath;
+                YoriLibSPrintfS(FinalBackslash + 1, RemainingLength, _T("%y"), ExistingPath);
+                MyPath.LengthInChars = MyPath.LengthInChars + ExistingPath->LengthInChars;
+                PathToReplace = &MyPath;
             } else {
                 PathToReplace = ExistingPath;
             }
@@ -113,34 +141,26 @@ YoriLibUpdateBinaryFromFile(
     }
 
     //
-    //  Create a temporary name to hold the existing binary.
+    //  If the file already exists, move it to a backup name.
     //
 
-    if ((size_t)_tcslen(PathToReplace) + 4 >= (size_t)(sizeof(OldPath) / sizeof(OldPath[0]))) {
-        return FALSE;
-    }
-    YoriLibSPrintfS(OldPath, sizeof(OldPath)/sizeof(OldPath[0]), _T("%s.old"), PathToReplace);
-
-    //
-    //  Rename the existing binary to temp.  If this process has
-    //  been performed before and is incomplete the temp may exist,
-    //  but we can just clobber it with the current version.
-    //
-
-    if (!MoveFileEx(PathToReplace, OldPath, MOVEFILE_REPLACE_EXISTING)) {
-        if (GetLastError() != ERROR_FILE_NOT_FOUND) {
+    if (GetFileAttributes(PathToReplace->StartOfString) != (DWORD)-1) {
+        if (!YoriLibRenameFileToBackupName(PathToReplace, &OldPath)) {
+            YoriLibFreeStringContents(&MyPath);
             return FALSE;
         }
     }
 
     //
-    //  Rename the new binary to where the old binary was.
-    //  If it fails, try to move the old binary back.  If
-    //  that fails, there's not much we can do.
+    //  Rename the new file to where the old file was.  If it fails, try to
+    //  move the old binary back.  If that fails, there's not much we can do.
     //
 
-    if (!MoveFileEx(NewPath, PathToReplace, MOVEFILE_COPY_ALLOWED)) {
-        MoveFileEx(OldPath, PathToReplace, MOVEFILE_COPY_ALLOWED);
+    if (!MoveFileEx(NewPath->StartOfString, PathToReplace->StartOfString, MOVEFILE_COPY_ALLOWED)) {
+        if (OldPath.LengthInChars > 0) {
+            MoveFileEx(OldPath.StartOfString, PathToReplace->StartOfString, MOVEFILE_COPY_ALLOWED);
+            YoriLibFreeStringContents(&OldPath);
+        }
         return FALSE;
     }
 
@@ -154,14 +174,16 @@ YoriLibUpdateBinaryFromFile(
     //  time this process is run it is overwritten.
     //
 
-    hMyBinary = CreateFile(OldPath,
-                           DELETE,
-                           FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                           NULL,
-                           OPEN_EXISTING,
-                           FILE_FLAG_DELETE_ON_CLOSE,
-                           NULL);
-
+    if (OldPath.LengthInChars > 0) {
+        hMyBinary = CreateFile(OldPath.StartOfString,
+                               DELETE,
+                               FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
+                               NULL,
+                               OPEN_EXISTING,
+                               FILE_FLAG_DELETE_ON_CLOSE,
+                               NULL);
+        YoriLibFreeStringContents(&OldPath);
+    }
 
     return TRUE;
 }
@@ -227,18 +249,19 @@ LPCSTR YoriLibMonthNames[] = {
 __success(return)
 BOOLEAN
 YoriLibUpdateBuildHttpHeaders(
-    __in LPTSTR Url,
+    __in PCYORI_STRING Url,
     __in_opt PSYSTEMTIME IfModifiedSince,
     __out PYORI_STRING OutputHeader,
     __out PYORI_STRING HostSubset,
     __out LPTSTR *ObjectSubset
     )
 {
-    LPTSTR StartOfHost;
     LPTSTR EndOfHost;
     YORI_STRING HostHeader;
     YORI_STRING IfModifiedSinceHeader;
     YORI_STRING CombinedHeader;
+    YORI_STRING ProtocolDelimiter;
+    DWORD StartOfHost;
 
     //
     //  Newer versions of Windows will add a Host: header.  Old versions send
@@ -249,13 +272,14 @@ YoriLibUpdateBuildHttpHeaders(
     YoriLibInitEmptyString(HostSubset);
     *ObjectSubset = NULL;
 
-    StartOfHost = _tcsstr(Url, _T("://"));
-    if (StartOfHost != NULL) {
-        StartOfHost += 3;
-        EndOfHost = _tcschr(StartOfHost, '/');
+    YoriLibConstantString(&ProtocolDelimiter, _T("://"));
+    if (YoriLibFindFirstMatchingSubstring(Url, 1, &ProtocolDelimiter, &StartOfHost)) {
+        StartOfHost = StartOfHost + ProtocolDelimiter.LengthInChars;
+        HostSubset->StartOfString = &Url->StartOfString[StartOfHost];
+        HostSubset->LengthInChars = Url->LengthInChars - StartOfHost;
+        EndOfHost = YoriLibFindLeftMostCharacter(HostSubset, '/');
         if (EndOfHost != NULL) {
-            HostSubset->StartOfString = StartOfHost;
-            HostSubset->LengthInChars = (DWORD)(EndOfHost - StartOfHost);
+            HostSubset->LengthInChars = (DWORD)(EndOfHost - HostSubset->StartOfString);
             *ObjectSubset = EndOfHost;
             YoriLibYPrintf(&HostHeader, _T("Host: %y\r\n"), HostSubset);
         } else {
@@ -330,12 +354,12 @@ YoriLibUpdateBuildHttpHeaders(
 
  @return An update error code indicating success or appropriate error.
  */
-YoriLibUpdError
+YORI_LIB_UPDATE_ERROR
 YoriLibUpdateBinaryFromUrlWinInet(
     __in PYORI_WININET_FUNCTIONS Dll,
-    __in LPTSTR Url,
-    __in_opt LPTSTR TargetName,
-    __in LPTSTR Agent,
+    __in PCYORI_STRING Url,
+    __in_opt PCYORI_STRING TargetName,
+    __in PCYORI_STRING Agent,
     __in_opt PSYSTEMTIME IfModifiedSince
     )
 {
@@ -344,22 +368,30 @@ YoriLibUpdateBinaryFromUrlWinInet(
     PUCHAR NewBinaryData = NULL;
     DWORD ErrorBufferSize = 0;
     DWORD ActualBinarySize;
-    TCHAR TempName[MAX_PATH];
-    TCHAR TempPath[MAX_PATH];
+    YORI_STRING TempName;
+    YORI_STRING TempPath;
+    YORI_STRING PrefixString;
     HANDLE hTempFile = INVALID_HANDLE_VALUE;
     BOOL SuccessfullyComplete = FALSE;
     BOOL WinInetOnlySupportsAnsi = FALSE;
     DWORD dwError;
-    YoriLibUpdError Return = YoriLibUpdErrorSuccess;
+    YORI_LIB_UPDATE_ERROR Return = YoriLibUpdErrorSuccess;
     YORI_STRING CombinedHeader;
     YORI_STRING HostSubset;
     LPTSTR ObjectName;
+
+    ASSERT(YoriLibIsStringNullTerminated(Url));
+    ASSERT(YoriLibIsStringNullTerminated(Agent));
+    ASSERT(TargetName == NULL || YoriLibIsStringNullTerminated(TargetName));
+
+    YoriLibInitEmptyString(&TempName);
+    YoriLibInitEmptyString(&TempPath);
 
     //
     //  Open an internet connection with default proxy settings.
     //
 
-    hInternet = Dll->pInternetOpenW(Agent,
+    hInternet = Dll->pInternetOpenW(Agent->StartOfString,
                                     0,
                                     NULL,
                                     NULL,
@@ -379,7 +411,6 @@ YoriLibUpdateBinaryFromUrlWinInet(
 
         if (LastError == ERROR_CALL_NOT_IMPLEMENTED) {
             LPSTR AnsiAgent;
-            DWORD AgentLen;
             DWORD BytesForAnsiAgent;
 
             if (Dll->pInternetOpenA == NULL ||
@@ -391,8 +422,14 @@ YoriLibUpdateBinaryFromUrlWinInet(
 
             WinInetOnlySupportsAnsi = TRUE;
 
-            AgentLen = _tcslen(Agent);
-            BytesForAnsiAgent = WideCharToMultiByte(CP_ACP, 0, Agent, AgentLen, NULL, 0, NULL, NULL);
+            BytesForAnsiAgent = WideCharToMultiByte(CP_ACP,
+                                                    0,
+                                                    Agent->StartOfString,
+                                                    Agent->LengthInChars,
+                                                    NULL,
+                                                    0,
+                                                    NULL,
+                                                    NULL);
 
             AnsiAgent = YoriLibMalloc(BytesForAnsiAgent + 1);
             if (AnsiAgent == NULL) {
@@ -400,7 +437,14 @@ YoriLibUpdateBinaryFromUrlWinInet(
                 return FALSE;
             }
 
-            WideCharToMultiByte(CP_ACP, 0, Agent, AgentLen, AnsiAgent, BytesForAnsiAgent, NULL, NULL);
+            WideCharToMultiByte(CP_ACP,
+                                0,
+                                Agent->StartOfString,
+                                Agent->LengthInChars,
+                                AnsiAgent,
+                                BytesForAnsiAgent,
+                                NULL,
+                                NULL);
             AnsiAgent[BytesForAnsiAgent] = '\0';
 
             hInternet = Dll->pInternetOpenA(AnsiAgent,
@@ -430,13 +474,25 @@ YoriLibUpdateBinaryFromUrlWinInet(
     if (WinInetOnlySupportsAnsi) {
         DWORD AnsiCombinedHeaderLength;
         LPSTR AnsiCombinedHeader;
-        DWORD UrlLength;
         DWORD AnsiUrlLength;
         LPSTR AnsiUrl;
 
-        AnsiCombinedHeaderLength = WideCharToMultiByte(CP_ACP, 0, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, NULL, 0, NULL, NULL);
-        UrlLength = _tcslen(Url);
-        AnsiUrlLength = WideCharToMultiByte(CP_ACP, 0, Url, UrlLength, NULL, 0, NULL, NULL);
+        AnsiCombinedHeaderLength = WideCharToMultiByte(CP_ACP,
+                                                       0,
+                                                       CombinedHeader.StartOfString,
+                                                       CombinedHeader.LengthInChars,
+                                                       NULL,
+                                                       0,
+                                                       NULL,
+                                                       NULL);
+        AnsiUrlLength = WideCharToMultiByte(CP_ACP,
+                                            0,
+                                            Url->StartOfString,
+                                            Url->LengthInChars,
+                                            NULL,
+                                            0,
+                                            NULL,
+                                            NULL);
 
         AnsiCombinedHeader = YoriLibMalloc(AnsiCombinedHeaderLength + 1);
         if (AnsiCombinedHeader == NULL) {
@@ -453,19 +509,43 @@ YoriLibUpdateBinaryFromUrlWinInet(
             goto Exit;
         }
 
-        WideCharToMultiByte(CP_ACP, 0, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, AnsiCombinedHeader, AnsiCombinedHeaderLength, NULL, NULL);
+        WideCharToMultiByte(CP_ACP,
+                            0,
+                            CombinedHeader.StartOfString,
+                            CombinedHeader.LengthInChars,
+                            AnsiCombinedHeader,
+                            AnsiCombinedHeaderLength,
+                            NULL,
+                            NULL);
         AnsiCombinedHeader[AnsiCombinedHeaderLength] = '\0';
 
-        WideCharToMultiByte(CP_ACP, 0, Url, UrlLength, AnsiUrl, AnsiUrlLength, NULL, NULL);
+        WideCharToMultiByte(CP_ACP,
+                            0,
+                            Url->StartOfString,
+                            Url->LengthInChars,
+                            AnsiUrl,
+                            AnsiUrlLength,
+                            NULL,
+                            NULL);
         AnsiUrl[AnsiUrlLength] = '\0';
 
-        NewBinary = Dll->pInternetOpenUrlA(hInternet, AnsiUrl, AnsiCombinedHeader, AnsiCombinedHeaderLength, 0, 0);
+        NewBinary = Dll->pInternetOpenUrlA(hInternet,
+                                           AnsiUrl,
+                                           AnsiCombinedHeader,
+                                           AnsiCombinedHeaderLength,
+                                           0,
+                                           0);
         YoriLibFree(AnsiUrl);
         YoriLibFree(AnsiCombinedHeader);
 
     } else {
 
-        NewBinary = Dll->pInternetOpenUrlW(hInternet, Url, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, 0, 0);
+        NewBinary = Dll->pInternetOpenUrlW(hInternet,
+                                           Url->StartOfString,
+                                           CombinedHeader.StartOfString,
+                                           CombinedHeader.LengthInChars,
+                                           0,
+                                           0);
     }
 
     if (NewBinary == NULL) {
@@ -481,12 +561,20 @@ YoriLibUpdateBinaryFromUrlWinInet(
     dwError = 0;
 
     if (WinInetOnlySupportsAnsi) {
-        if (!Dll->pHttpQueryInfoA(NewBinary, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE, &dwError, &ErrorBufferSize, &ActualBinarySize)) {
+        if (!Dll->pHttpQueryInfoA(NewBinary,
+                                  HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE,
+                                  &dwError,
+                                  &ErrorBufferSize,
+                                  &ActualBinarySize)) {
             Return = YoriLibUpdErrorInetConnect;
             goto Exit;
         }
     } else {
-        if (!Dll->pHttpQueryInfoW(NewBinary, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE, &dwError, &ErrorBufferSize, &ActualBinarySize)) {
+        if (!Dll->pHttpQueryInfoW(NewBinary,
+                                  HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE,
+                                  &dwError,
+                                  &ErrorBufferSize,
+                                  &ActualBinarySize)) {
             Return = YoriLibUpdErrorInetConnect;
             goto Exit;
         }
@@ -503,25 +591,13 @@ YoriLibUpdateBinaryFromUrlWinInet(
     //  Create a temporary file to hold the contents.
     //
 
-    if (GetTempPath(sizeof(TempPath)/sizeof(TempPath[0]), TempPath) == 0) {
+    if (!YoriLibGetTempPath(&TempPath, 0)) {
         Return = YoriLibUpdErrorFileWrite;
         goto Exit;
     }
 
-    if (GetTempFileName(TempPath, _T("UPD"), 0, TempName) == 0) {
-        Return = YoriLibUpdErrorFileWrite;
-        goto Exit;
-    }
-
-    hTempFile = CreateFile(TempName,
-                           FILE_WRITE_DATA|FILE_READ_DATA,
-                           FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                           NULL,
-                           CREATE_ALWAYS,
-                           0,
-                           NULL);
-
-    if (hTempFile == INVALID_HANDLE_VALUE) {
+    YoriLibConstantString(&PrefixString, _T("UPD"));
+    if (!YoriLibGetTempFileName(&TempPath, &PrefixString, &hTempFile, &TempName)) {
         Return = YoriLibUpdErrorFileWrite;
         goto Exit;
     }
@@ -589,7 +665,7 @@ YoriLibUpdateBinaryFromUrlWinInet(
     NewBinaryData = NULL;
     hTempFile = INVALID_HANDLE_VALUE;
 
-    if (YoriLibUpdateBinaryFromFile(TargetName, TempName)) {
+    if (YoriLibUpdateBinaryFromFile(TargetName, &TempName)) {
         Return = YoriLibUpdErrorSuccess;
     } else {
         Return = YoriLibUpdErrorFileReplace;
@@ -603,8 +679,11 @@ Exit:
 
     if (hTempFile != INVALID_HANDLE_VALUE) {
         CloseHandle(hTempFile);
-        DeleteFile(TempName);
+        DeleteFile(TempName.StartOfString);
     }
+
+    YoriLibFreeStringContents(&TempPath);
+    YoriLibFreeStringContents(&TempName);
 
     if (NewBinary != NULL) {
         Dll->pInternetCloseHandle(NewBinary);
@@ -633,38 +712,45 @@ Exit:
 
  @return An update error code indicating success or appropriate error.
  */
-YoriLibUpdError
+YORI_LIB_UPDATE_ERROR
 YoriLibUpdateBinaryFromUrlWinHttp(
-    __in LPTSTR Url,
-    __in_opt LPTSTR TargetName,
-    __in LPTSTR Agent,
+    __in PCYORI_STRING Url,
+    __in_opt PCYORI_STRING TargetName,
+    __in PCYORI_STRING Agent,
     __in_opt PSYSTEMTIME IfModifiedSince
     )
 {
     PVOID hInternet = NULL;
     PVOID hConnect = NULL;
     PVOID hRequest = NULL;
-    YoriLibUpdError Return = YoriLibUpdErrorSuccess;
+    YORI_LIB_UPDATE_ERROR Return = YoriLibUpdErrorSuccess;
     YORI_STRING HostSubset;
     YORI_STRING CombinedHeader;
     LPTSTR HostName;
     LPTSTR ObjectName;
     DWORD dwError;
-    TCHAR TempName[MAX_PATH];
-    TCHAR TempPath[MAX_PATH];
+    YORI_STRING TempName;
+    YORI_STRING TempPath;
+    YORI_STRING PrefixString;
     HANDLE hTempFile = INVALID_HANDLE_VALUE;
     PUCHAR NewBinaryData = NULL;
     DWORD ActualBinarySize;
     DWORD ErrorBufferSize = 0;
     BOOL SuccessfullyComplete = FALSE;
 
+    ASSERT(YoriLibIsStringNullTerminated(Url));
+    ASSERT(YoriLibIsStringNullTerminated(Agent));
+    ASSERT(TargetName == NULL || YoriLibIsStringNullTerminated(TargetName));
+
     YoriLibInitEmptyString(&CombinedHeader);
+    YoriLibInitEmptyString(&TempName);
+    YoriLibInitEmptyString(&TempPath);
 
     //
     //  Open an internet connection with default proxy settings.
     //
 
-    hInternet = DllWinHttp.pWinHttpOpen(Agent,
+    hInternet = DllWinHttp.pWinHttpOpen(Agent->StartOfString,
                                         0,
                                         NULL,
                                         NULL,
@@ -700,7 +786,13 @@ YoriLibUpdateBinaryFromUrlWinHttp(
         goto Exit;
     }
 
-    if (!DllWinHttp.pWinHttpSendRequest(hRequest, CombinedHeader.StartOfString, CombinedHeader.LengthInChars, NULL, 0, 0, 0)) {
+    if (!DllWinHttp.pWinHttpSendRequest(hRequest,
+                                        CombinedHeader.StartOfString,
+                                        CombinedHeader.LengthInChars,
+                                        NULL,
+                                        0,
+                                        0,
+                                        0)) {
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
     }
@@ -711,7 +803,12 @@ YoriLibUpdateBinaryFromUrlWinHttp(
     }
 
     ErrorBufferSize = sizeof(dwError);
-    if (!DllWinHttp.pWinHttpQueryHeaders(hRequest, HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE, NULL, &dwError, &ErrorBufferSize, NULL)) {
+    if (!DllWinHttp.pWinHttpQueryHeaders(hRequest,
+                                         HTTP_QUERY_FLAG_NUMBER | HTTP_QUERY_STATUS_CODE,
+                                         NULL,
+                                         &dwError,
+                                         &ErrorBufferSize,
+                                         NULL)) {
         Return = YoriLibUpdErrorInetConnect;
         goto Exit;
     }
@@ -727,25 +824,13 @@ YoriLibUpdateBinaryFromUrlWinHttp(
     //  Create a temporary file to hold the contents.
     //
 
-    if (GetTempPath(sizeof(TempPath)/sizeof(TempPath[0]), TempPath) == 0) {
+    if (!YoriLibGetTempPath(&TempPath, 0)) {
         Return = YoriLibUpdErrorFileWrite;
         goto Exit;
     }
 
-    if (GetTempFileName(TempPath, _T("UPD"), 0, TempName) == 0) {
-        Return = YoriLibUpdErrorFileWrite;
-        goto Exit;
-    }
-
-    hTempFile = CreateFile(TempName,
-                           FILE_WRITE_DATA|FILE_READ_DATA,
-                           FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,
-                           NULL,
-                           CREATE_ALWAYS,
-                           0,
-                           NULL);
-
-    if (hTempFile == INVALID_HANDLE_VALUE) {
+    YoriLibConstantString(&PrefixString, _T("UPD"));
+    if (!YoriLibGetTempFileName(&TempPath, &PrefixString, &hTempFile, &TempName)) {
         Return = YoriLibUpdErrorFileWrite;
         goto Exit;
     }
@@ -811,7 +896,7 @@ YoriLibUpdateBinaryFromUrlWinHttp(
     CloseHandle(hTempFile);
     hTempFile = INVALID_HANDLE_VALUE;
 
-    if (!YoriLibUpdateBinaryFromFile(TargetName, TempName)) {
+    if (!YoriLibUpdateBinaryFromFile(TargetName, &TempName)) {
         Return = YoriLibUpdErrorFileReplace;
     }
 
@@ -823,10 +908,12 @@ Exit:
 
     if (hTempFile != INVALID_HANDLE_VALUE) {
         CloseHandle(hTempFile);
-        DeleteFile(TempName);
+        DeleteFile(TempName.StartOfString);
     }
 
     YoriLibFreeStringContents(&CombinedHeader);
+    YoriLibFreeStringContents(&TempPath);
+    YoriLibFreeStringContents(&TempName);
 
     if (hConnect != NULL) {
         DllWinHttp.pWinHttpCloseHandle(hConnect);
@@ -858,15 +945,18 @@ Exit:
 
  @return An update error code indicating success or appropriate error.
  */
-YoriLibUpdError
+YORI_LIB_UPDATE_ERROR
 YoriLibUpdateBinaryFromUrl(
-    __in LPTSTR Url,
-    __in_opt LPTSTR TargetName,
-    __in LPTSTR Agent,
+    __in PCYORI_STRING Url,
+    __in_opt PCYORI_STRING TargetName,
+    __in PCYORI_STRING Agent,
     __in_opt PSYSTEMTIME IfModifiedSince
     )
 {
     YORI_WININET_FUNCTIONS StubWinInet;
+
+    ASSERT(YoriLibIsStringNullTerminated(Url));
+    ASSERT(YoriLibIsStringNullTerminated(Agent));
 
     //
     //  Dynamically load WinInet.  This means we don't have to resolve
@@ -930,7 +1020,7 @@ YoriLibUpdateBinaryFromUrl(
  */
 LPCTSTR
 YoriLibUpdateErrorString(
-    __in YoriLibUpdError Error
+    __in YORI_LIB_UPDATE_ERROR Error
     )
 {
     if (Error >= 0 && Error < YoriLibUpdErrorMax) {

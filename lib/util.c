@@ -276,7 +276,7 @@ YoriLibCreateDirectoryAndParents(
 __success(return)
 BOOL
 YoriLibRenameFileToBackupName(
-    __in PYORI_STRING FullPath,
+    __in PCYORI_STRING FullPath,
     __out PYORI_STRING NewName
     )
 {
@@ -297,6 +297,7 @@ YoriLibRenameFileToBackupName(
     //  Find the short name by truncating to any period until a seperator
     //  is reached, and once the seperator is reached, truncate to 8 chars.
     //  This is used if the file system can't handle long file names.
+    //
 
     EndIndex = ShortFullPath.LengthInChars;
     for (Index = ShortFullPath.LengthInChars; Index > 0; Index--) {

@@ -4078,25 +4078,19 @@ typedef enum {
     YoriLibUpdErrorFileWrite,
     YoriLibUpdErrorFileReplace,
     YoriLibUpdErrorMax
-} YoriLibUpdError;
+} YORI_LIB_UPDATE_ERROR;
 
-BOOL
-YoriLibUpdateBinaryFromFile(
-    __in_opt LPTSTR ExistingPath,
-    __in LPTSTR NewPath
-    );
-
-YoriLibUpdError
+YORI_LIB_UPDATE_ERROR
 YoriLibUpdateBinaryFromUrl(
-    __in LPTSTR Url,
-    __in_opt LPTSTR TargetName,
-    __in LPTSTR Agent,
+    __in PCYORI_STRING Url,
+    __in_opt PCYORI_STRING TargetName,
+    __in PCYORI_STRING Agent,
     __in_opt PSYSTEMTIME IfModifiedSince
     );
 
 LPCTSTR
 YoriLibUpdateErrorString(
-    __in YoriLibUpdError Error
+    __in YORI_LIB_UPDATE_ERROR Error
     );
 
 // *** UTIL.C ***
@@ -4137,7 +4131,7 @@ YoriLibCreateDirectoryAndParents(
 __success(return)
 BOOL
 YoriLibRenameFileToBackupName(
-    __in PYORI_STRING FullPath,
+    __in PCYORI_STRING FullPath,
     __out PYORI_STRING NewName
     );
 

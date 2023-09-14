@@ -1009,7 +1009,7 @@ YoriPkgPackagePathToLocalPath(
         YORI_STRING TempPath;
         YORI_STRING TempFileName;
         YORI_STRING UserAgent;
-        YoriLibUpdError Error;
+        YORI_LIB_UPDATE_ERROR Error;
         YoriLibInitEmptyString(&TempPath);
 
         //
@@ -1051,7 +1051,7 @@ YoriPkgPackagePathToLocalPath(
             goto Exit;
         }
 
-        Error = YoriLibUpdateBinaryFromUrl(MirroredPath.StartOfString, TempFileName.StartOfString, UserAgent.StartOfString, NULL);
+        Error = YoriLibUpdateBinaryFromUrl(&MirroredPath, &TempFileName, &UserAgent, NULL);
 
         if (Error != YoriLibUpdErrorSuccess) {
             switch(Error) {

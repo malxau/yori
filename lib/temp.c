@@ -93,7 +93,7 @@ YoriLibGetTempFileName(
 
         Err = ERROR_SUCCESS;
         Handle = CreateFile(TestFileName.StartOfString,
-                            GENERIC_WRITE,
+                            GENERIC_READ | GENERIC_WRITE,
                             FILE_SHARE_READ | FILE_SHARE_DELETE,
                             NULL,
                             CREATE_NEW,
