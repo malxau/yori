@@ -84,18 +84,6 @@ typedef struct _YORI_SPECIAL_HEAP_HEADER {
 
 } YORI_SPECIAL_HEAP_HEADER, *PYORI_SPECIAL_HEAP_HEADER;
 
-#if defined(_M_ALPHA)
-/**
- The number of bytes in a page on this architecture.
- */
-#define PAGE_SIZE (0x2000)
-#else
-/**
- The number of bytes in a page on this architecture.
- */
-#define PAGE_SIZE (0x1000)
-#endif
-
 /**
  A structure containing process global state for the special heap allocator.
  */
@@ -197,6 +185,7 @@ YoriLibMallocSpecialHeap(
     PYORI_SPECIAL_HEAP_HEADER Commit;
     DWORD StackSize;
     DWORD OldAccess;
+    DWORD PageSize;
 #if defined(_M_MRX000) || defined(_M_ARM64) || defined(_M_ALPHA) || defined(_M_PPC)
     DWORD Alignment = sizeof(DWORD);
 #else
@@ -208,7 +197,9 @@ YoriLibMallocSpecialHeap(
         StackSize = sizeof(PVOID) * YORI_SPECIAL_HEAP_STACK_FRAMES;
     }
 
-    TotalPagesNeeded = (Bytes + sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize + 2 * PAGE_SIZE - 1) / PAGE_SIZE;
+    PageSize = YoriLibGetPageSize();
+
+    TotalPagesNeeded = (Bytes + sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize + 2 * PageSize - 1) / PageSize;
 
     if (YoriLibSpecialHeap.Mutex == NULL) {
         YoriLibSpecialHeap.Mutex = CreateMutex(NULL, FALSE, NULL);
@@ -222,31 +213,31 @@ YoriLibMallocSpecialHeap(
         YoriLibInitializeListHead(&YoriLibSpecialHeap.ActiveAllocationsList);
     }
 
-    Header = VirtualAlloc(NULL, TotalPagesNeeded * PAGE_SIZE, MEM_RESERVE, PAGE_READWRITE);
+    Header = VirtualAlloc(NULL, TotalPagesNeeded * PageSize, MEM_RESERVE, PAGE_READWRITE);
     if (Header == NULL) {
         return NULL;
     }
 
-    Commit = VirtualAlloc(Header, TotalPagesNeeded * PAGE_SIZE, MEM_COMMIT, PAGE_READWRITE);
+    Commit = VirtualAlloc(Header, TotalPagesNeeded * PageSize, MEM_COMMIT, PAGE_READWRITE);
     if (Commit == NULL) {
         VirtualFree(Header, 0, MEM_RELEASE);
         return NULL;
     }
 
-    if (!VirtualProtect((PUCHAR)Header + (TotalPagesNeeded - 1) * PAGE_SIZE, PAGE_SIZE, PAGE_NOACCESS, &OldAccess)) {
-        VirtualFree(Header, TotalPagesNeeded * PAGE_SIZE, MEM_DECOMMIT);
+    if (!VirtualProtect((PUCHAR)Header + (TotalPagesNeeded - 1) * PageSize, PageSize, PAGE_NOACCESS, &OldAccess)) {
+        VirtualFree(Header, TotalPagesNeeded * PageSize, MEM_DECOMMIT);
         VirtualFree(Header, 0, MEM_RELEASE);
         return NULL;
     }
 
-    FillMemory(Header, (TotalPagesNeeded - 1) * PAGE_SIZE, '@');
+    FillMemory(Header, (TotalPagesNeeded - 1) * PageSize, '@');
 
     Header->PagesInAllocation = TotalPagesNeeded;
-    Header->OffsetToData = ((TotalPagesNeeded - 1) * PAGE_SIZE - Bytes) & ~(Alignment - 1);
+    Header->OffsetToData = ((TotalPagesNeeded - 1) * PageSize - Bytes) & ~(Alignment - 1);
     Header->Function = Function;
     Header->File = File;
     Header->Line = Line;
-    ASSERT(Header->OffsetToData < (PAGE_SIZE + sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize));
+    ASSERT(Header->OffsetToData < (PageSize + sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize));
     if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
         DllKernel32.pRtlCaptureStackBackTrace(1, YORI_SPECIAL_HEAP_STACK_FRAMES, YoriLibAddToPointer(Header, sizeof(YORI_SPECIAL_HEAP_HEADER)), NULL);
     }
@@ -280,14 +271,17 @@ YoriLibFree(
     DWORD OldAccess;
     DWORD BytesToFree;
     DWORD StackSize;
+    DWORD PageSize;
 
     StackSize = 0;
     if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
         StackSize = sizeof(PVOID) * YORI_SPECIAL_HEAP_STACK_FRAMES;
     }
 
+    PageSize = YoriLibGetPageSize();
+
     Header = YoriLibSubtractFromPointer(Ptr, sizeof(YORI_SPECIAL_HEAP_HEADER) + StackSize);
-    Header = (PYORI_SPECIAL_HEAP_HEADER)((DWORD_PTR)Header & ~(PAGE_SIZE - 1));
+    Header = (PYORI_SPECIAL_HEAP_HEADER)((DWORD_PTR)Header & ~(PageSize - 1));
 
     TestChar = (PUCHAR)Header;
     ASSERT(TestChar + Header->OffsetToData == Ptr);
@@ -298,7 +292,7 @@ YoriLibFree(
         TestChar++;
     }
 
-    BytesToFree = (Header->PagesInAllocation - 1) * PAGE_SIZE - Header->OffsetToData;
+    BytesToFree = (Header->PagesInAllocation - 1) * PageSize - Header->OffsetToData;
 
     WaitForSingleObject(YoriLibSpecialHeap.Mutex, INFINITE);
 
@@ -313,10 +307,10 @@ YoriLibFree(
 
         OldHeader = YoriLibSpecialHeap.RecentlyFreed[MyEntry];
 
-        if (!VirtualProtect(OldHeader, PAGE_SIZE, PAGE_READWRITE, &OldAccess)) {
+        if (!VirtualProtect(OldHeader, PageSize, PAGE_READWRITE, &OldAccess)) {
             ASSERT(!"VirtualProtect failure");
         }
-        if (!VirtualFree(OldHeader, OldHeader->PagesInAllocation * PAGE_SIZE, MEM_DECOMMIT)) {
+        if (!VirtualFree(OldHeader, OldHeader->PagesInAllocation * PageSize, MEM_DECOMMIT)) {
             ASSERT(!"VirtualFree failure");
         }
         if (!VirtualFree(OldHeader, 0, MEM_RELEASE)) {
@@ -324,7 +318,7 @@ YoriLibFree(
         }
     }
 
-    if (!VirtualProtect(Header, Header->PagesInAllocation * PAGE_SIZE, PAGE_NOACCESS, &OldAccess)) {
+    if (!VirtualProtect(Header, Header->PagesInAllocation * PageSize, PAGE_NOACCESS, &OldAccess)) {
         ASSERT(!"VirtualProtect failure");
     }
 
@@ -344,6 +338,8 @@ VOID
 YoriLibDisplayMemoryUsage(VOID)
 {
 #if YORI_SPECIAL_HEAP
+    DWORD PageSize;
+    PageSize = YoriLibGetPageSize();
     if (YoriLibSpecialHeap.BytesCurrentlyAllocated > 0 ||
         (YoriLibSpecialHeap.NumberAllocated - YoriLibSpecialHeap.NumberFreed > 0)) {
 
@@ -356,7 +352,7 @@ YoriLibDisplayMemoryUsage(VOID)
         Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, NULL);
         while (Entry != NULL) {
             Header = CONTAINING_RECORD(Entry, YORI_SPECIAL_HEAP_HEADER, ListEntry);
-            BytesAllocated = (Header->PagesInAllocation - 1) * PAGE_SIZE - Header->OffsetToData;
+            BytesAllocated = (Header->PagesInAllocation - 1) * PageSize - Header->OffsetToData;
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs (%hs:%i) allocated %i bytes\n"), Header->Function, Header->File, Header->Line, BytesAllocated);
             Entry = YoriLibGetNextListEntry(&YoriLibSpecialHeap.ActiveAllocationsList, Entry);
         }
