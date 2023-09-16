@@ -44,6 +44,7 @@ CHAR strVolHelpText[] =
         "   $fsname$             The file system name\n"
         "   $fullserial$         The 64 bit serial number\n"
         "   $label$              The volume label\n"
+        "   $maxfilename$        The longest file name component supported\n"
         "   $mftsize$            The amount of bytes consumed in the NTFS MFT\n"
         "   $physicalsectorsize$ The size of each physical sector in bytes\n"
         "   $reserved$           Reserved space in bytes\n"
@@ -125,6 +126,11 @@ typedef struct _VOL_RESULT {
      The file system capability flags.
      */
     DWORD Capabilities;
+
+    /**
+     The maximum size of a file name.
+     */
+    DWORD MaxComponentLength;
 
     /**
      The size of each sector in bytes.
@@ -263,6 +269,11 @@ VolExpandVariables(
 
         CharsNeeded = VolContext->VolumeLabel.LengthInChars;
 
+    } else if (VolContext->Have.GetVolInfo &&
+               YoriLibCompareStringWithLiteral(VariableName, _T("maxfilename")) == 0) {
+
+        CharsNeeded = YoriLibSPrintfSize(_T("%i"), VolContext->MaxComponentLength);
+
     } else if (VolContext->Have.NtfsData &&
                YoriLibCompareStringWithLiteral(VariableName, _T("mftsize")) == 0) {
 
@@ -343,6 +354,8 @@ VolExpandVariables(
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%016llx"), VolContext->FullSerialNumber);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("label")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%y"), &VolContext->VolumeLabel);
+    } else if (YoriLibCompareStringWithLiteral(VariableName, _T("maxfilename")) == 0) {
+        CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%i"), VolContext->MaxComponentLength);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("mftsize")) == 0) {
         CharsNeeded = YoriLibSPrintf(OutputString->StartOfString, _T("%lli"), VolContext->NtfsData.MftValidDataLength);
     } else if (YoriLibCompareStringWithLiteral(VariableName, _T("physicalsectorsize")) == 0) {
@@ -403,7 +416,6 @@ ENTRYPOINT(
 {
     VOL_RESULT VolResult;
     BOOL ArgumentUnderstood;
-    DWORD MaxComponentLength;
     YORI_STRING DisplayString;
     YORI_STRING YsFormatString;
     DWORD StartArg = 0;
@@ -469,7 +481,7 @@ ENTRYPOINT(
     }
 
     if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &FullPathName)) {
-        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("mklink: failed to resolve %y\n"), &ArgV[StartArg]);
+        YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("vol: failed to resolve %y\n"), &ArgV[StartArg]);
         YoriLibFreeStringContents(&VolResult.VolumeLabel);
         YoriLibFreeStringContents(&VolResult.FsName);
         return EXIT_FAILURE;
@@ -490,27 +502,13 @@ ENTRYPOINT(
         return EXIT_FAILURE;
     }
 
-    if (DllKernel32.pGetVolumePathNameW != NULL &&
-        DllKernel32.pGetVolumePathNameW(FullPathName.StartOfString, VolRootName.StartOfString, VolRootName.LengthAllocated)) {
-
-        VolRootName.LengthInChars = _tcslen(VolRootName.StartOfString);
-    } else {
-
-        YORI_STRING EffectiveRoot;
-        DWORD CharsToCopy;
-        YoriLibInitEmptyString(&EffectiveRoot);
-
-        if (YoriLibFindEffectiveRoot(&FullPathName, &EffectiveRoot)) {
-            CharsToCopy = EffectiveRoot.LengthInChars;
-        } else {
-            CharsToCopy = FullPathName.LengthInChars;
-        }
-
-        memcpy(VolRootName.StartOfString, FullPathName.StartOfString, CharsToCopy * sizeof(TCHAR));
-        VolRootName.LengthInChars = CharsToCopy;
-        VolRootName.StartOfString[CharsToCopy] = '\0';
+    if (!YoriLibGetVolumePathName(&FullPathName, &VolRootName)) {
+        YoriLibFreeStringContents(&VolRootName);
+        YoriLibFreeStringContents(&VolResult.VolumeLabel);
+        YoriLibFreeStringContents(&VolResult.FsName);
+        YoriLibFreeStringContents(&FullPathName);
+        return EXIT_FAILURE;
     }
-
 
     //
     //  GetVolumeInformation wants a name with a trailing backslash.  Add one
@@ -530,7 +528,7 @@ ENTRYPOINT(
                              VolResult.VolumeLabel.StartOfString,
                              VolResult.VolumeLabel.LengthAllocated,
                              &VolResult.ShortSerialNumber,
-                             &MaxComponentLength,
+                             &VolResult.MaxComponentLength,
                              &VolResult.Capabilities,
                              VolResult.FsName.StartOfString,
                              VolResult.FsName.LengthAllocated)) {
@@ -687,6 +685,7 @@ ENTRYPOINT(
             LPTSTR FormatString = 
                           _T("File system:          $fsname$\n")
                           _T("Label:                $label$\n")
+                          _T("Longest file name:    $maxfilename$\n")
                           _T("Serial number:        $serial$\n");
             YoriLibConstantString(&YsFormatString, FormatString);
             YoriLibExpandCommandVariables(&YsFormatString, '$', FALSE, VolExpandVariables, &VolResult, &DisplayString);
