@@ -122,7 +122,7 @@ ymain(
     } UiToUse;
 
     YoriLibInitEmptyString(&NewDirectory);
-    InstallOptions = 0;
+    InstallOptions = YSETUP_INSTALL_COMPLETION;
     InstallType = InstallTypeDefault;
     UiToUse = UiDefault;
 
@@ -235,6 +235,7 @@ ymain(
 
     if (UiToUse == UiCli) {
         YORI_STRING ErrorText;
+        BOOLEAN LongNameSupport;
 
         //
         //  Unlike most code, don't use prefix escapes here, since this path
@@ -248,6 +249,18 @@ ymain(
 
         if (InstallType == InstallTypeDefault) {
             InstallType = InstallTypeTypical;
+        }
+
+        LongNameSupport = TRUE;
+        if (!YoriLibPathSupportsLongNames(&NewDirectory, &LongNameSupport)) {
+            LongNameSupport = TRUE;
+        }
+
+        if (!LongNameSupport) {
+            LPCSTR LongNameMessage;
+            LongNameMessage = SetupGetNoLongFileNamesMessage(InstallOptions);
+            YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("%hs\n"), LongNameMessage);
+            InstallOptions = InstallOptions & ~(YSETUP_INSTALL_SOURCE | YSETUP_INSTALL_COMPLETION);
         }
 
         YoriLibInitEmptyString(&ErrorText);

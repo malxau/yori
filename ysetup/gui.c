@@ -495,6 +495,53 @@ SetupGuiUpdateStatus(
 }
 
 /**
+ Upconvert a constant ANSI string to a UNICODE_STRING, adding padding as
+ required to work around NT 3.1's beyond-buffer-end walk.
+
+ @param ConstString Pointer to a constant ANSI string.
+
+ @param UnicodeString On successful completion, populated with a newly
+        allocated unicode string containing the message in ConstString.
+        The caller is expected to free this with
+        @ref YoriLibFreeStringContents .
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+SetupGuiConstAnsiToUserUnicode(
+    __in LPCSTR ConstString,
+    __out PYORI_STRING UnicodeString
+    )
+{
+    DWORD Length;
+    Length = strlen(ConstString);
+    YoriLibInitEmptyString(UnicodeString);
+
+    //
+    //  Add space for a NULL.
+    //
+
+    Length = Length + 1;
+
+    //
+    //  NT 3.1 User32 walks off the end of strings.  Add an extra WCHAR so
+    //  that 32 bit reads won't fault after the end.
+    //
+
+    if (SetupGuiUserRequiresStringPadding()) {
+        Length = Length + 1;
+    }
+
+    if (YoriLibAllocateString(UnicodeString, Length)) {
+        YoriLibYPrintf(UnicodeString, _T("%hs"), ConstString);
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  Install the user specified set of packages and options from the dialog.
 
  @param hDlg Specifies the hWnd of the dialog box.
@@ -512,12 +559,13 @@ SetupGuiInstallSelectedFromDialog(
     YSETUP_INSTALL_TYPE InstallType;
     DWORD InstallOptions;
     YORI_STRING ErrorText;
+    BOOLEAN LongNameSupport;
 
     YoriLibInitEmptyString(&ErrorText);
-    InstallOptions = 0;
+    InstallOptions = YSETUP_INSTALL_COMPLETION;
 
     //
-    //  Query the install directory and attempt to create it
+    //  Query the install directory
     //
 
     LengthNeeded = (DWORD)DllYsetupGui.pSendMessageW(DllYsetupGui.pGetDlgItem(hDlg, IDC_INSTALLDIR), WM_GETTEXTLENGTH, 0, 0);
@@ -570,6 +618,25 @@ SetupGuiInstallSelectedFromDialog(
 
     if (SetupGuiIsDlgButtonChecked(hDlg, IDC_UNINSTALL)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_UNINSTALL;
+    }
+
+    LongNameSupport = TRUE;
+    if (!YoriLibPathSupportsLongNames(&InstallDir, &LongNameSupport)) {
+        LongNameSupport = TRUE;
+    }
+
+    if (!LongNameSupport) {
+        YORI_STRING MessageString;
+        LPCSTR LongNameMessage;
+        LongNameMessage = SetupGetNoLongFileNamesMessage(InstallOptions);
+        if (SetupGuiConstAnsiToUserUnicode(LongNameMessage, &MessageString)) {
+            DllYsetupGui.pMessageBoxW(hDlg,
+                                      MessageString.StartOfString,
+                                      _T("No long file name support"),
+                                      MB_ICONEXCLAMATION);
+            InstallOptions = InstallOptions & ~(YSETUP_INSTALL_SOURCE | YSETUP_INSTALL_COMPLETION);
+            YoriLibFreeStringContents(&MessageString);
+        }
     }
 
     Result = SetupInstallSelectedWithOptions(&InstallDir, InstallType, InstallOptions, SetupGuiUpdateStatus, hDlg, &ErrorText);
@@ -847,31 +914,9 @@ SetupGuiDisplayUi(VOID)
     }
 
     if (DllCabinet.pFdiCopy == NULL) {
-
         YORI_STRING MessageString;
-        LPCSTR DllMissingWarning;
-        DWORD Length;
-        DllMissingWarning = SetupGetDllMissingMessage();
-        Length = strlen(DllMissingWarning);
-        YoriLibInitEmptyString(&MessageString);
 
-        //
-        //  Add space for a NULL.
-        //
-
-        Length = Length + 1;
-
-        //
-        //  NT 3.1 User32 walks off the end of strings.  Add an extra WCHAR so
-        //  that 32 bit reads won't fault after the end.
-        //
-
-        if (SetupGuiUserRequiresStringPadding()) {
-            Length = Length + 1;
-        }
-
-        if (YoriLibAllocateString(&MessageString, Length)) {
-            YoriLibYPrintf(&MessageString, _T("%hs"), DllMissingWarning);
+        if (SetupGuiConstAnsiToUserUnicode(SetupGetDllMissingMessage(), &MessageString)) {
             DllYsetupGui.pMessageBoxW(NULL,
                                       MessageString.StartOfString,
                                       _T("YSetup"),

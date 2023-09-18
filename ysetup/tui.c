@@ -112,9 +112,10 @@ SetupTuiInstallSelectedFromDialog(
     YORI_STRING ErrorText;
     YORI_STRING ButtonText;
     YORI_STRING Title;
+    BOOLEAN LongNameSupport;
 
     YoriLibInitEmptyString(&ErrorText);
-    InstallOptions = 0;
+    InstallOptions = YSETUP_INSTALL_COMPLETION;
     YoriLibConstantString(&ButtonText, _T("&Ok"));
 
     //
@@ -171,6 +172,30 @@ SetupTuiInstallSelectedFromDialog(
 
     if (SetupIsCheckboxChecked(Window, IDC_UNINSTALL)) {
         InstallOptions = InstallOptions | YSETUP_INSTALL_UNINSTALL;
+    }
+
+    LongNameSupport = TRUE;
+    if (!YoriLibPathSupportsLongNames(&InstallDir, &LongNameSupport)) {
+        LongNameSupport = TRUE;
+    }
+
+    if (!LongNameSupport) {
+        LPCSTR LongNameMessage;
+        LongNameMessage = SetupGetNoLongFileNamesMessage(InstallOptions);
+        YoriLibConstantString(&Title, _T("No long file name support"));
+        YoriLibInitEmptyString(&ErrorText);
+        YoriLibYPrintf(&ErrorText, _T("%hs"), LongNameMessage);
+        if (ErrorText.StartOfString != NULL) {
+            YoriDlgMessageBox(WinMgr,
+                              &Title,
+                              &ErrorText,
+                              1,
+                              &ButtonText,
+                              0,
+                              0);
+            YoriLibFreeStringContents(&ErrorText);
+        }
+        InstallOptions = InstallOptions & ~(YSETUP_INSTALL_SOURCE | YSETUP_INSTALL_COMPLETION);
     }
 
     Result = SetupInstallSelectedWithOptions(&InstallDir, InstallType, InstallOptions, SetupTuiUpdateStatus, Window, &ErrorText);

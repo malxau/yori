@@ -2287,6 +2287,13 @@ YoriLibGetVolumePathName(
     __inout PYORI_STRING VolumeName
     );
 
+__success(return)
+BOOLEAN
+YoriLibPathSupportsLongNames(
+    __in PCYORI_STRING PathName,
+    __out PBOOLEAN LongNameSupport
+    );
+
 __success(return != INVALID_HANDLE_VALUE)
 HANDLE
 YoriLibFindFirstVolume(

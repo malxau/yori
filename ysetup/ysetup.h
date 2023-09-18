@@ -41,6 +41,11 @@ SetupGetDefaultInstallDir(
 LPCSTR
 SetupGetDllMissingMessage(VOID);
 
+LPCSTR
+SetupGetNoLongFileNamesMessage(
+    __in DWORD InstallOptions
+    );
+
 /**
  The set of installation types supported by this program.
  */
@@ -90,6 +95,11 @@ typedef enum _YSETUP_INSTALL_TYPE {
  If set, an uninstall entry should be installed.
  */
 #define YSETUP_INSTALL_UNINSTALL         0x00000080
+
+/**
+ If set, completion scripts should be installed.
+ */
+#define YSETUP_INSTALL_COMPLETION        0x00000100
 
 /**
  A callback function that can be invoked to indicate status as installation

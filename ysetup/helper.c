@@ -38,6 +38,17 @@ CONST CHAR SetupDllMissingWarning1[] = "This version of Ysetup requires Cabinet.
                                        "This is included with Internet Explorer 5 or later.\n\n"
                                        "At a minimum, Cabinet.dll from Internet Explorer 5 can be copied to the System32 directory to proceed.";
 
+/**
+ Warning message to display if Yori is being installed to a directory without
+ long file name support.
+ */
+CONST CHAR SetupNoLongFileNamesWarning1[] = "Volume does not support long file names.\n\nCompletion scripts cannot be installed to this location.\n\nSetup will continue without these components.";
+
+/**
+ Warning message to display if Yori and its source code is being installed to
+ a directory without long file name support.
+ */
+CONST CHAR SetupNoLongFileNamesWarning2[] = "Volume does not support long file names.\n\nSource and completion scripts cannot be installed to this location.\n\nSetup will continue without these components.";
 
 /**
  A list of subdirectories from the application to check for packages.
@@ -59,6 +70,26 @@ LPCSTR
 SetupGetDllMissingMessage(VOID)
 {
     return SetupDllMissingWarning1;
+}
+
+/**
+ Return a constant string to display to the user if long file name support
+ is not present.  The message indicates which features will degrade.
+
+ @param InstallOptions The set of selected install options.
+
+ @return A string to display to the user.
+ */
+LPCSTR
+SetupGetNoLongFileNamesMessage(
+    __in DWORD InstallOptions
+    )
+{
+    if ((InstallOptions & YSETUP_INSTALL_SOURCE) != 0) {
+        return SetupNoLongFileNamesWarning2;
+    }
+
+    return SetupNoLongFileNamesWarning1;
 }
 
 /**
@@ -397,6 +428,7 @@ SetupInstallSelectedWithOptions(
     HANDLE OriginalStdOut;
     HANDLE OriginalStdErr;
     HANDLE NulDevice;
+    BOOLEAN LongNameSupport;
 
     YoriLibInitEmptyString(&LocalPath);
     CustomSource = NULL;
@@ -428,6 +460,18 @@ SetupInstallSelectedWithOptions(
     }
 
     //
+    //  Check if the path supports long file names.  These are almost
+    //  everywhere, so on error, assume long file name support exists.
+    //  They won't exist on NT 3.1 on FAT, or on systems where the
+    //  registry has been modified to disable them on FAT.
+    //
+
+    LongNameSupport = TRUE;
+    if (!YoriLibPathSupportsLongNames(InstallDir, &LongNameSupport)) {
+        LongNameSupport = TRUE;
+    }
+
+    //
     //  Count the number of packages we want to install
     //
 
@@ -443,9 +487,15 @@ SetupInstallSelectedWithOptions(
         PkgCount *= 2;
     }
 
-    PkgCount++;
+    //
+    //  Only add yori-completion if long file names are present
+    //
 
-    if ((InstallOptions & YSETUP_INSTALL_SOURCE) != 0) {
+    if (((InstallOptions & YSETUP_INSTALL_COMPLETION) != 0) && LongNameSupport) {
+        PkgCount++;
+    }
+
+    if (((InstallOptions & YSETUP_INSTALL_SOURCE) != 0) && LongNameSupport) {
         PkgCount++;
     }
 
@@ -493,10 +543,12 @@ SetupInstallSelectedWithOptions(
         }
     }
 
-    YoriLibConstantString(&PkgNames[PkgIndex], _T("yori-completion"));
-    PkgIndex++;
+    if (((InstallOptions & YSETUP_INSTALL_COMPLETION) != 0) && LongNameSupport) {
+        YoriLibConstantString(&PkgNames[PkgIndex], _T("yori-completion"));
+        PkgIndex++;
+    }
 
-    if ((InstallOptions & YSETUP_INSTALL_SOURCE) != 0) {
+    if (((InstallOptions & YSETUP_INSTALL_SOURCE) != 0) && LongNameSupport) {
         YoriLibConstantString(&PkgNames[PkgIndex], _T("yori-source"));
         PkgIndex++;
     }

@@ -2156,9 +2156,110 @@ YoriLibGetVolumePathName(
     if (FreeOnFailure) {
         YoriLibFreeStringContents(VolumeName);
     }
-    YoriLibFreeStringContents(VolumeName);
+    VolumeName->LengthInChars = 0;
     return FALSE;
 }
+
+/**
+ Determine if the specified directory supports long file names.
+
+ @param PathName Pointer to the directory to check.
+
+ @param LongNameSupport On successful completion, updated to TRUE to indicate
+        long name support, FALSE to indicate no long name support.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+__success(return)
+BOOLEAN
+YoriLibPathSupportsLongNames(
+    __in PCYORI_STRING PathName,
+    __out PBOOLEAN LongNameSupport
+    )
+{
+    YORI_STRING VolumeLabel;
+    YORI_STRING FsName;
+    YORI_STRING FullPathName;
+    YORI_STRING VolRootName;
+    DWORD ShortSerialNumber;
+    DWORD Capabilities;
+    DWORD MaxComponentLength;
+    BOOLEAN Result;
+
+    YoriLibInitEmptyString(&VolumeLabel);
+    YoriLibInitEmptyString(&FsName);
+    YoriLibInitEmptyString(&FullPathName);
+    YoriLibInitEmptyString(&VolRootName);
+    Result = FALSE;
+
+    if (!YoriLibAllocateString(&VolumeLabel, 256)) {
+        goto Exit;
+    }
+
+    if (!YoriLibAllocateString(&FsName, 256)) {
+        goto Exit;
+    }
+
+    if (!YoriLibUserStringToSingleFilePath(PathName, TRUE, &FullPathName)) {
+        goto Exit;
+    }
+
+    //
+    //  We want to translate the user specified path into a volume root.
+    //  Windows 2000 and above have a nice API for this, which says it's
+    //  guaranteed to return less than or equal to the size of the input
+    //  string, so we allocate the input string, plus space for a trailing
+    //  backslash and a NULL terminator.
+    //
+
+    if (!YoriLibAllocateString(&VolRootName, FullPathName.LengthInChars + 2)) {
+        goto Exit;
+    }
+
+    if (!YoriLibGetVolumePathName(&FullPathName, &VolRootName)) {
+        goto Exit;
+    }
+
+    //
+    //  GetVolumeInformation wants a name with a trailing backslash.  Add one
+    //  if needed.
+    //
+
+    if (VolRootName.LengthInChars > 0 &&
+        VolRootName.LengthInChars + 1 < VolRootName.LengthAllocated &&
+        VolRootName.StartOfString[VolRootName.LengthInChars - 1] != '\\') {
+
+        VolRootName.StartOfString[VolRootName.LengthInChars] = '\\';
+        VolRootName.StartOfString[VolRootName.LengthInChars + 1] = '\0';
+        VolRootName.LengthInChars++;
+    }
+
+    if (GetVolumeInformation(VolRootName.StartOfString,
+                             VolumeLabel.StartOfString,
+                             VolumeLabel.LengthAllocated,
+                             &ShortSerialNumber,
+                             &MaxComponentLength,
+                             &Capabilities,
+                             FsName.StartOfString,
+                             FsName.LengthAllocated)) {
+
+        Result = TRUE;
+        if (MaxComponentLength >= 255) {
+            *LongNameSupport = TRUE;
+        } else {
+            *LongNameSupport = FALSE;
+        }
+    }
+
+Exit:
+    YoriLibFreeStringContents(&FullPathName);
+    YoriLibFreeStringContents(&VolRootName);
+    YoriLibFreeStringContents(&FsName);
+    YoriLibFreeStringContents(&VolumeLabel);
+
+    return Result;
+}
+
 
 /**
  Context structure used to preserve state about the next volume to return
