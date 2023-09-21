@@ -3794,6 +3794,12 @@ YoriLibCloneString(
     __in PYORI_STRING Src
     );
 
+BOOLEAN
+YoriLibCopyString(
+    __out PYORI_STRING Dest,
+    __in PYORI_STRING Src
+    );
+
 BOOL
 YoriLibIsStringNullTerminated(
     __in PCYORI_STRING String

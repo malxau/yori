@@ -241,6 +241,33 @@ YoriLibCloneString(
 }
 
 /**
+ Copy the contents of one Yori string to another by deep copying the string
+ contents.
+
+ @param Dest The Yori string to be populated with new contents.  This string
+        will be allocated, and this function makes no attempt to free or
+        preserve previous contents.
+
+ @param Src The string that contains contents to propagate into the new
+        string.
+ */
+BOOLEAN
+YoriLibCopyString(
+    __out PYORI_STRING Dest,
+    __in PYORI_STRING Src
+    )
+{
+    if (!YoriLibAllocateString(Dest, Src->LengthInChars + 1)) {
+        return FALSE;
+    }
+
+    memcpy(Dest->StartOfString, Src->StartOfString, Src->LengthInChars * sizeof(TCHAR));
+    Dest->LengthInChars = Src->LengthInChars;
+    Dest->StartOfString[Dest->LengthInChars] = '\0';
+    return TRUE;
+}
+
+/**
  Return TRUE if the Yori string is NULL terminated.  If it is not NULL
  terminated, return FALSE.
 
