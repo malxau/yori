@@ -729,6 +729,7 @@ YoriPkgDeletePendingPackage(
         DeleteFile(PendingPackage->LocalPackagePath.StartOfString);
     }
 
+    YoriLibFreeStringContents(&PendingPackage->OriginalUrlOrPath);
     YoriLibFreeStringContents(&PendingPackage->LocalPackagePath);
     YoriLibFreeStringContents(&PendingPackage->PackageName);
     YoriLibFreeStringContents(&PendingPackage->Version);
@@ -828,6 +829,7 @@ YoriPkgPreparePackageForInstall(
     )
 {
     PYORIPKG_PACKAGE_PENDING_INSTALL PendingPackage;
+    PYORI_LIST_ENTRY ListEntry;
     YORI_STRING PkgInfoFile;
     YORI_STRING TempPath;
     YORI_STRING ErrorString;
@@ -847,23 +849,43 @@ YoriPkgPreparePackageForInstall(
         return ERROR_PROC_NOT_FOUND;
     }
 
+    //
+    //  Look to see if the URL is already in the list of packages to install,
+    //  and if so, don't do it twice.  This happens with things like source
+    //  downloads where many binary packages refer to the same source package.
+    //
+
+    ListEntry = YoriLibGetNextListEntry(&PackageList->PackageList, NULL);
+    while (ListEntry != NULL) {
+        PendingPackage = CONTAINING_RECORD(ListEntry, YORIPKG_PACKAGE_PENDING_INSTALL, PackageList);
+        if (YoriLibCompareString(PackageUrl, &PendingPackage->OriginalUrlOrPath) == 0) {
+            return ERROR_SUCCESS;
+        }
+        ListEntry = YoriLibGetNextListEntry(&PackageList->PackageList, ListEntry);
+    }
+
     YoriLibConstantString(&PkgInfoFile, _T("pkginfo.ini"));
     if (RedirectToPackageUrl != NULL) {
         YoriLibInitEmptyString(RedirectToPackageUrl);
     }
+    YoriLibInitEmptyString(&TempPath);
 
     PendingPackage = YoriLibMalloc(sizeof(YORIPKG_PACKAGE_PENDING_INSTALL));
     if (PendingPackage == NULL) {
         return ERROR_NOT_ENOUGH_MEMORY;
     }
     ZeroMemory(PendingPackage, sizeof(YORIPKG_PACKAGE_PENDING_INSTALL));
+
     Result = YoriPkgPackagePathToLocalPath(PackageUrl, PkgIniFile, &PendingPackage->LocalPackagePath, &PendingPackage->DeleteLocalPackagePath);
     if (Result != ERROR_SUCCESS) {
         YoriLibFree(PendingPackage);
         return Result;
     }
 
-    YoriLibInitEmptyString(&TempPath);
+    if (!YoriLibCopyString(&PendingPackage->OriginalUrlOrPath, PackageUrl)) {
+        Result = ERROR_NOT_ENOUGH_MEMORY;
+        goto Exit;
+    }
 
     //
     //  Query for a temporary directory

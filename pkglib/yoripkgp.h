@@ -202,6 +202,13 @@ typedef struct _YORIPKG_PACKAGE_PENDING_INSTALL {
     YORI_LIST_ENTRY PackageList;
 
     /**
+     A string containing the original URL or path used to locate the package.
+     This can be used to avoid downloading the same path repeatedly.  The
+     rest of the fields are only known once the download has occurred.
+     */
+    YORI_STRING OriginalUrlOrPath;
+
+    /**
      A string for the human readable package name.
      */
     YORI_STRING PackageName;
