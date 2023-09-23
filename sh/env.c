@@ -45,6 +45,156 @@ YoriShIsEnvironmentVariableChar(
     return FALSE;
 }
 
+/**
+ Obtain the current directory with a trailing slash using the same API
+ semantics as GetCurrentDirectory.  This is used because %__CD__% includes a
+ trailing slash, has very bad memory bugs on XP, and isn't implemented before
+ that, so doing this manually allows us to implement it consistently and
+ hopefully correctly.
+
+ @param Size The size of Buffer, in TCHARs.
+
+ @param Buffer A buffer to populate with the current directory on successful
+        completion.
+
+ @return The number of characters copied.  If this is less than Size, the
+         operation is successful.  If it's greater than Size, the buffer is
+         insufficient and the returned number of characters is needed.  If
+         it's zero, a failure occurred.  Note that these APIs will count the
+         NULL character when indicating a required buffer length, but do not
+         count the NULL character when completing successfully.
+ */
+__success(return != 0 && return < Size)
+DWORD
+YoriShGetCurrentDirectoryWithTrailingSlash(
+    __in DWORD Size,
+    __out_ecount_part_opt(Size, return + 1) _When_(Size > 0, __out_ecount_part(Size, return + 1)) LPTSTR Buffer
+    )
+{
+    YORI_STRING CurDir;
+    DWORD LengthNeeded;
+    DWORD Index;
+    BOOLEAN AddSlash;
+    LPTSTR EndPtr;
+
+    YoriLibInitEmptyString(&CurDir);
+    if (!YoriLibGetCurrentDirectory(&CurDir)) {
+        return 0;
+    }
+
+    AddSlash = FALSE;
+    LengthNeeded = CurDir.LengthInChars;
+
+    if (CurDir.LengthInChars > 0 &&
+        !YoriLibIsSep(CurDir.StartOfString[CurDir.LengthInChars - 1])) {
+
+        LengthNeeded++;
+        AddSlash = TRUE;
+    }
+
+    if (Size > LengthNeeded) {
+
+        //
+        //  Manually copy so Prefast can see what we did
+        //
+
+        EndPtr = Buffer;
+        for (Index = 0; Index < CurDir.LengthInChars; Index++) {
+            *EndPtr = CurDir.StartOfString[Index];
+            EndPtr++;
+        }
+        if (AddSlash) {
+            *EndPtr = '\\';
+            EndPtr++;
+        }
+        *EndPtr = '\0';
+    } else {
+        if (Size > 0) {
+            *Buffer = '\0';
+        }
+        LengthNeeded++;
+    }
+
+    YoriLibFreeStringContents(&CurDir);
+    return LengthNeeded;
+}
+
+/**
+ Obtain the application directory with a trailing slash using the same API
+ semantics as GetCurrentDirectory.  This is used because %__APPDIR__% includes
+ a trailing slash, has very bad memory bugs on XP, and isn't implemented before
+ that, so doing this manually allows us to implement it consistently and
+ hopefully correctly.
+
+ @param Size The size of Buffer, in TCHARs.
+
+ @param Buffer A buffer to populate with the current directory on successful
+        completion.
+
+ @return The number of characters copied.  If this is less than Size, the
+         operation is successful.  If it's greater than Size, the buffer is
+         insufficient and the returned number of characters is needed.  If
+         it's zero, a failure occurred.  Note that these APIs will count the
+         NULL character when indicating a required buffer length, but do not
+         count the NULL character when completing successfully.
+ */
+__success(return != 0 && return < Size)
+DWORD
+YoriShGetAppDirectoryWithTrailingSlash(
+    __in DWORD Size,
+    __out_ecount_part_opt(Size, return + 1) _When_(Size > 0, __out_ecount_part(Size, return + 1)) LPTSTR Buffer
+    )
+{
+    YORI_STRING AppDir;
+    DWORD LengthNeeded;
+    LPTSTR FinalSlash;
+    LPTSTR EndPtr;
+    DWORD Index;
+
+    YoriLibInitEmptyString(&AppDir);
+
+    if (!YoriLibAllocateString(&AppDir, 32768)) {
+        return 0;
+    }
+
+    AppDir.LengthInChars = GetModuleFileName(NULL, AppDir.StartOfString, AppDir.LengthAllocated);
+    if (AppDir.LengthInChars == 0) {
+        YoriLibFreeStringContents(&AppDir);
+        return 0;
+    }
+
+    FinalSlash = YoriLibFindRightMostCharacter(&AppDir, '\\');
+    if (FinalSlash == NULL) {
+        YoriLibFreeStringContents(&AppDir);
+        return 0;
+    }
+
+    AppDir.LengthInChars = (DWORD)(FinalSlash - AppDir.StartOfString + 1);
+    LengthNeeded = AppDir.LengthInChars;
+
+    if (Size > AppDir.LengthInChars) {
+
+        //
+        //  Manually copy so Prefast can see what we did
+        //
+
+        EndPtr = Buffer;
+        for (Index = 0; Index < AppDir.LengthInChars; Index++) {
+            *EndPtr = AppDir.StartOfString[Index];
+            EndPtr++;
+        }
+        *EndPtr = '\0';
+    } else {
+        if (Size > 0) {
+            *Buffer = '\0';
+        }
+        LengthNeeded++;
+    }
+
+    YoriLibFreeStringContents(&AppDir);
+    return LengthNeeded;
+}
+
 //
 //  Warning about manipulating the Variable buffer but failing the
 //  function.  This function is trying to mimic the behavior of the
@@ -78,7 +228,7 @@ __success(return != 0)
 DWORD
 YoriShGetEnvironmentVariableWithoutSubstitution(
     __in LPCTSTR Name,
-    __out_opt LPTSTR Variable,
+    __out_opt _When_(Size > 0, __out) LPTSTR Variable,
     __in DWORD Size,
     __out_opt PDWORD Generation
     )
@@ -90,8 +240,12 @@ YoriShGetEnvironmentVariableWithoutSubstitution(
     //  Query the variable and/or length required.
     //
 
-    if (_tcsicmp(Name, _T("CD")) == 0) {
+    if (_tcsicmp(Name, _T("__APPDIR__")) == 0) {
+        Length = YoriShGetAppDirectoryWithTrailingSlash(Size, Variable);
+    } else if (_tcsicmp(Name, _T("CD")) == 0) {
         Length = GetCurrentDirectory(Size, Variable);
+    } else if (tcsicmp(Name, _T("__CD__")) == 0) {
+        Length = YoriShGetCurrentDirectoryWithTrailingSlash(Size, Variable);
     } else if (tcsicmp(Name, _T("ERRORLEVEL")) == 0) {
         if (Variable != NULL) {
             Length = YoriLibSPrintfS(Variable, Size, _T("%i"), YoriShGlobal.ErrorLevel);

@@ -222,6 +222,18 @@
 #define __out_ecount_opt(x)
 
 /**
+ SAL annotation describing an output buffer with a specified number of
+ elements that will be partially written to.
+ */
+#define __out_ecount_part(x, y)
+
+/**
+ SAL annotation describing an optional output buffer with a specified number of
+ elements that will be partially written to.
+ */
+#define __out_ecount_part_opt(x, y)
+
+/**
  SAL annotation describing an optional output pointer whose value is changed.
  */
 #define __deref_opt_out

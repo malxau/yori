@@ -202,7 +202,7 @@ __success(return != 0)
 DWORD
 YoriShGetEnvironmentVariableWithoutSubstitution(
     __in LPCTSTR Name,
-    __out_opt LPTSTR Variable,
+    __out_opt _When_(Size > 0, __out) LPTSTR Variable,
     __in DWORD Size,
     __out_opt PDWORD Generation
     );
