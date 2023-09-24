@@ -947,6 +947,12 @@ YoriWinMultilineEditSetAutoIndent(
     );
 
 VOID
+YoriWinMultilineEditSetExpandTab(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN ExpandTabEnabled
+    );
+
+VOID
 YoriWinMultilineEditSetTraditionalNavigation(
     __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
     __in BOOLEAN TraditionalNavigationEnabled

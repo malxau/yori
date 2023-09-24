@@ -3,7 +3,7 @@
  *
  * Yori shell text editor
  *
- * Copyright (c) 2020-2022 Malcolm J. Smith
+ * Copyright (c) 2020-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -38,10 +38,11 @@ CHAR strEditHelpText[] =
         "\n"
         "Displays editor.\n"
         "\n"
-        "EDIT [-license] [-a] [-e encoding] [-i] [-m] [-r] [filename]\n"
+        "EDIT [-license] [-a] [-e encoding] [-et] [-i] [-m] [-r] [filename]\n"
         "\n"
         "   -a             Use ASCII characters for drawing\n"
         "   -e <encoding>  Specifies the character encoding to use\n"
+        "   -et            Enable tab key expansion into spaces\n"
         "   -i             Disable auto indent\n"
         "   -m             Use modern keyboard navigation instead of Edit compatible\n"
         "   -r             Open file as read only\n";
@@ -50,7 +51,7 @@ CHAR strEditHelpText[] =
  The copyright year string to display with license text.
  */
 const
-TCHAR strEditCopyrightYear[] = _T("2020-2022");
+TCHAR strEditCopyrightYear[] = _T("2020-2023");
 
 /**
  Display usage text to the user.
@@ -164,6 +165,11 @@ typedef struct _EDIT_CONTEXT {
     DWORD OptionsAutoIndentMenuIndex;
 
     /**
+     The index of the expand tab item in the options menu.
+     */
+    DWORD OptionsExpandTabMenuIndex;
+
+    /**
      TRUE if a BOM should be written to the output stream, FALSE if not.
      */
     BOOLEAN WriteBom;
@@ -180,6 +186,12 @@ typedef struct _EDIT_CONTEXT {
      line should start at the beginning of the line.
      */
     BOOLEAN AutoIndent;
+
+    /**
+     TRUE to enable expand tab, where a tab key press is substituted with
+     space characters.  FALSE if a tab key press should be a tab character.
+     */
+    BOOLEAN ExpandTab;
 
     /**
      TRUE to enable traditional MS-DOS edit navigation, where the cursor can
@@ -2186,6 +2198,38 @@ EditAutoIndentOptionsButtonClicked(
 }
 
 /**
+ A callback invoked when the expand tab options menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+EditExpandTabOptionsButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE OptionsMenu;
+    PYORI_WIN_CTRL_HANDLE ExpandTabMenuItem;
+
+    PEDIT_CONTEXT EditContext;
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+
+    OptionsMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->OptionsMenuIndex);
+    ExpandTabMenuItem = YoriWinMenuBarGetSubmenuHandle(Ctrl, OptionsMenu, EditContext->OptionsExpandTabMenuIndex);
+
+
+    if (EditContext->ExpandTab) {
+        EditContext->ExpandTab = FALSE;
+        YoriWinMenuBarUncheckMenuItem(ExpandTabMenuItem);
+    } else {
+        EditContext->ExpandTab = TRUE;
+        YoriWinMenuBarCheckMenuItem(ExpandTabMenuItem);
+    }
+    YoriWinMultilineEditSetExpandTab(EditContext->MultilineEdit, EditContext->ExpandTab);
+}
+
+/**
  A callback invoked when the about menu item is invoked.
 
  @param Ctrl Pointer to the menu bar control.
@@ -2363,7 +2407,7 @@ EditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
     YORI_WIN_MENU_ENTRY EditMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
-    YORI_WIN_MENU_ENTRY OptionsMenuEntries[3];
+    YORI_WIN_MENU_ENTRY OptionsMenuEntries[4];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
@@ -2487,6 +2531,14 @@ EditPopulateMenuBar(
     YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Auto indent"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditAutoIndentOptionsButtonClicked;
     EditContext->OptionsAutoIndentMenuIndex = MenuIndex;
+
+    MenuIndex++;
+    if (EditContext->ExpandTab) {
+        OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
+    }
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Expand tab"));
+    OptionsMenuEntries[MenuIndex].NotifyCallback = EditExpandTabOptionsButtonClicked;
+    EditContext->OptionsExpandTabMenuIndex = MenuIndex;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
     MenuIndex = 0;
@@ -2692,6 +2744,7 @@ EditCreateMainWindow(
 
     YoriWinMultilineEditSetAutoIndent(MultilineEdit, EditContext->AutoIndent);
     YoriWinMultilineEditSetTraditionalNavigation(MultilineEdit, EditContext->TraditionalNavigation);
+    YoriWinMultilineEditSetExpandTab(MultilineEdit, EditContext->ExpandTab);
 
     Rect.Top = (SHORT)(Rect.Bottom + 1);
     Rect.Bottom = Rect.Top;
@@ -2810,6 +2863,7 @@ ENTRYPOINT(
 
     GlobalEditContext.TraditionalNavigation = TRUE;
     GlobalEditContext.AutoIndent = TRUE;
+    GlobalEditContext.ExpandTab = FALSE;
 
     for (i = 1; i < ArgC; i++) {
 
@@ -2837,6 +2891,9 @@ ENTRYPOINT(
                         i++;
                     }
                 }
+            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("et")) == 0) {
+                GlobalEditContext.ExpandTab = FALSE;
+                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
                 GlobalEditContext.AutoIndent = FALSE;
                 ArgumentUnderstood = TRUE;

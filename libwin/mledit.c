@@ -3,7 +3,7 @@
  *
  * Yori window multiline edit control
  *
- * Copyright (c) 2020 Malcolm J. Smith
+ * Copyright (c) 2020-2023 Malcolm J. Smith
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -470,6 +470,13 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
      previous lines.  FALSE if new lines should start at offset zero.
      */
     BOOLEAN AutoIndent;
+
+    /**
+     TRUE if a tab key should be substituted with the number of spaces
+     specified in TabWidth.  FALSE if it should be retained as a tab and only
+     visually rendered according to TabWidth.
+     */
+    BOOLEAN ExpandTab;
 
 } YORI_WIN_CTRL_MULTILINE_EDIT, *PYORI_WIN_CTRL_MULTILINE_EDIT;
 
@@ -4597,6 +4604,31 @@ YoriWinMultilineEditSetAutoIndent(
 }
 
 /**
+ Enable or disable tab expansion.  If a tab key is pressed when tab expansion
+ is enabled, it is substituted in text with the number of spaces from
+ TabWidth.  If tab expansion is disabled, the key inserts a tab character into
+ text.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param ExpandTabEnabled TRUE to enable expand tab behavior; FALSE to disable
+        expand tab behavior.
+ */
+VOID
+YoriWinMultilineEditSetExpandTab(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN ExpandTabEnabled
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    MultilineEdit->ExpandTab = ExpandTabEnabled;
+}
+
+/**
  Returns TRUE if the multiline edit control has been modified by the user
  since the last time @ref YoriWinMultilineEditSetModifyState indicated that
  no user modification has occurred.
@@ -5230,8 +5262,26 @@ YoriWinMultilineEditAddChar(
     YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
 
     YoriLibInitEmptyString(&String);
-    String.StartOfString = &Char;
-    String.LengthInChars = 1;
+
+    if (Char == '\t' && MultilineEdit->ExpandTab) {
+        DWORD CharIndex;
+
+        if (MultilineEdit->TabWidth == 0) {
+            return TRUE;
+        }
+
+        if (!YoriLibAllocateString(&String, MultilineEdit->TabWidth)) {
+            return FALSE;
+        }
+
+        for (CharIndex = 0; CharIndex < MultilineEdit->TabWidth; CharIndex++) {
+            String.StartOfString[CharIndex] = ' ';
+        }
+        String.LengthInChars = MultilineEdit->TabWidth;
+    } else {
+        String.StartOfString = &Char;
+        String.LengthInChars = 1;
+    }
 
     if (!MultilineEdit->InsertMode) {
         if (!YoriWinMultilineEditOverwriteTextRange(MultilineEdit,
@@ -5241,6 +5291,7 @@ YoriWinMultilineEditAddChar(
                                                     &String,
                                                     &NewCursorLine,
                                                     &NewCursorOffset)) {
+            YoriLibFreeStringContents(&String);
             return FALSE;
         }
     } else {
@@ -5251,10 +5302,12 @@ YoriWinMultilineEditAddChar(
                                                  &String,
                                                  &NewCursorLine,
                                                  &NewCursorOffset)) {
+            YoriLibFreeStringContents(&String);
             return FALSE;
         }
     }
 
+    YoriLibFreeStringContents(&String);
     YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
 
     return TRUE;
