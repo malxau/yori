@@ -274,7 +274,7 @@ YoriLibFree(
     DWORD OldAccess;
     DWORD BytesToFree;
     DWORD StackSize;
-    DWORD PageSize;
+    DWORD_PTR PageSize;
 
     StackSize = 0;
     if (DllKernel32.pRtlCaptureStackBackTrace != NULL) {
@@ -295,7 +295,7 @@ YoriLibFree(
         TestChar++;
     }
 
-    BytesToFree = (Header->PagesInAllocation - 1) * PageSize - Header->OffsetToData;
+    BytesToFree = (Header->PagesInAllocation - 1) * (DWORD)PageSize - Header->OffsetToData;
 
     WaitForSingleObject(YoriLibSpecialHeap.Mutex, INFINITE);
 
