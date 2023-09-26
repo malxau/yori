@@ -2809,7 +2809,7 @@ YoriLibTranslateNumericKeyToChar(
  A definition for a callback function to invoke for each object enumerated in
  an object manager directory.
  */
-typedef BOOL YORILIB_OBJECT_ENUM_FN(PCYORI_STRING FullName, PCYORI_STRING NameOnly, PYORI_STRING Type, PVOID Context);
+typedef BOOL YORILIB_OBJECT_ENUM_FN(PCYORI_STRING FullName, PCYORI_STRING NameOnly, PCYORI_STRING Type, PVOID Context);
 
 /**
  A pointer to a callback function to invoke for each object enumerated in an
