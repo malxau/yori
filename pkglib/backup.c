@@ -849,6 +849,10 @@ YoriPkgPreparePackageForInstall(
         return ERROR_PROC_NOT_FOUND;
     }
 
+    if (RedirectToPackageUrl != NULL) {
+        YoriLibInitEmptyString(RedirectToPackageUrl);
+    }
+
     //
     //  Look to see if the URL is already in the list of packages to install,
     //  and if so, don't do it twice.  This happens with things like source
@@ -865,9 +869,6 @@ YoriPkgPreparePackageForInstall(
     }
 
     YoriLibConstantString(&PkgInfoFile, _T("pkginfo.ini"));
-    if (RedirectToPackageUrl != NULL) {
-        YoriLibInitEmptyString(RedirectToPackageUrl);
-    }
     YoriLibInitEmptyString(&TempPath);
 
     PendingPackage = YoriLibMalloc(sizeof(YORIPKG_PACKAGE_PENDING_INSTALL));

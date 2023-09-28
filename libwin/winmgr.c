@@ -1205,7 +1205,7 @@ YoriWinSetPreviousMouseButtonState(
         ASSERT(WinMgr->MouseButtonOwningWindow == NULL || WinMgr->MouseButtonOwningWindow == MouseButtonOwningWindow);
         ASSERT((PreviousNotifiedMouseButtonState & PreviousObservedMouseButtonState) == PreviousNotifiedMouseButtonState);
         ASSERT((PreviousNotifiedMouseButtonState | PreviousObservedMouseButtonState) == PreviousObservedMouseButtonState);
-        ASSERT(!YoriWinIsWindowClosing(YoriWinGetWindowFromWindowCtrl(MouseButtonOwningWindow)));
+        ASSERT(MouseButtonOwningWindow == NULL || !YoriWinIsWindowClosing(YoriWinGetWindowFromWindowCtrl(MouseButtonOwningWindow)));
         WinMgr->MouseButtonOwningWindow = MouseButtonOwningWindow;
         WinMgr->PreviousObservedMouseButtonState = PreviousObservedMouseButtonState;
         WinMgr->PreviousNotifiedMouseButtonState = PreviousNotifiedMouseButtonState;
