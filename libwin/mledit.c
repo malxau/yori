@@ -2311,7 +2311,6 @@ YoriWinMultilineEditFindPreviousIndentLine(
 
     ASSERT(MultilineEdit->AutoIndentApplied);
     YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, MultilineEdit->AutoIndentSourceLine, &CurrentIndent);
-    ASSERT(MultilineEdit->AutoIndentSourceLength <= CurrentIndent.LengthInChars);
     CurrentIndent.LengthInChars = MultilineEdit->AutoIndentSourceLength;
 
     //
@@ -4345,6 +4344,8 @@ YoriWinMultilineEditClear(
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+
+    YoriWinMultilineEditClearSelection(MultilineEdit);
 
     for (Index = 0; Index < MultilineEdit->LinesPopulated; Index++) {
         YoriLibFreeStringContents(&MultilineEdit->LineArray[Index]);
