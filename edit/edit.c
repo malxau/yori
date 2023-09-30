@@ -1044,6 +1044,12 @@ EditOpenButtonClicked(
         YoriLibFreeStringContents(&Text);
         return;
     }
+
+    if (!EditPromptForSaveIfModified(Ctrl, EditContext)) {
+        YoriLibFreeStringContents(&Text);
+        return;
+    }
+
     YoriLibInitEmptyString(&FullName);
 
     if (!YoriLibUserStringToSingleFilePath(&Text, TRUE, &FullName)) {
