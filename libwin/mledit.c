@@ -2227,7 +2227,15 @@ YoriWinMultilineEditGetTextRangeLength(
     DWORD LineIndex;
 
     if (FirstLine == LastLine) {
-        CharsInRange = LastCharOffset - FirstCharOffset;
+        ASSERT(LastCharOffset >= FirstCharOffset);
+        CharsInRange = 0;
+        if (FirstCharOffset >= MultilineEdit->LineArray[FirstLine].LengthInChars) {
+            CharsInRange = 0;
+        } else if (LastCharOffset >= MultilineEdit->LineArray[FirstLine].LengthInChars) {
+            CharsInRange = MultilineEdit->LineArray[FirstLine].LengthInChars - FirstCharOffset;
+        } else {
+            CharsInRange = LastCharOffset - FirstCharOffset;
+        }
     } else {
         LinesInRange = LastLine - FirstLine;
         CharsInRange = 0;
@@ -2237,7 +2245,11 @@ YoriWinMultilineEditGetTextRangeLength(
         for (LineIndex = FirstLine + 1; LineIndex < LastLine; LineIndex++) {
             CharsInRange += MultilineEdit->LineArray[LineIndex].LengthInChars;
         }
-        CharsInRange += LastCharOffset;
+        if (LastCharOffset < MultilineEdit->LineArray[LineIndex].LengthInChars) {
+            CharsInRange += LastCharOffset;
+        } else {
+            CharsInRange += MultilineEdit->LineArray[LineIndex].LengthInChars;
+        }
         CharsInRange += LinesInRange * NewlineLength;
     }
 
@@ -2379,8 +2391,17 @@ YoriWinMultilineEditPopulateTextRange(
     Line = &MultilineEdit->LineArray[FirstLine];
 
     if (FirstLine == LastLine) {
-        CharsInRange = LastCharOffset - FirstCharOffset;
-        memcpy(SelectedText->StartOfString, &Line->StartOfString[FirstCharOffset], CharsInRange * sizeof(TCHAR));
+        if (FirstCharOffset > Line->LengthInChars) {
+            CharsInRange = 0;
+        } else if (LastCharOffset > Line->LengthInChars) {
+            CharsInRange = Line->LengthInChars - FirstCharOffset;
+        } else {
+            CharsInRange = LastCharOffset - FirstCharOffset;
+        }
+
+        if (CharsInRange > 0) {
+            memcpy(SelectedText->StartOfString, &Line->StartOfString[FirstCharOffset], CharsInRange * sizeof(TCHAR));
+        }
         SelectedText->LengthInChars = CharsInRange;
     } else {
         Ptr = SelectedText->StartOfString;
@@ -2398,7 +2419,12 @@ YoriWinMultilineEditPopulateTextRange(
         }
         memcpy(Ptr, NewlineString->StartOfString, NewlineString->LengthInChars * sizeof(TCHAR));
         Ptr += NewlineString->LengthInChars;
-        memcpy(Ptr, MultilineEdit->LineArray[LastLine].StartOfString, LastCharOffset * sizeof(TCHAR));
+        if (LastCharOffset < MultilineEdit->LineArray[LastLine].LengthInChars) {
+            CharsInRange = LastCharOffset;
+        } else {
+            CharsInRange = MultilineEdit->LineArray[LastLine].LengthInChars;
+        }
+        memcpy(Ptr, MultilineEdit->LineArray[LastLine].StartOfString, CharsInRange * sizeof(TCHAR));
         Ptr += LastCharOffset;
 
         SelectedText->LengthInChars = (DWORD)(Ptr - SelectedText->StartOfString);
