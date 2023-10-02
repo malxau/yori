@@ -2963,6 +2963,17 @@ YoriWinMultilineEditInsertTextRange(
         FirstLine < MultilineEdit->LinesPopulated) {
 
         YoriWinMultilineEditGetIndentationOnLine(MultilineEdit, FirstLine, &AutoIndentLeadingString);
+
+        //
+        //  Truncate if a line is being inserted within the indent itself.
+        //  This is to avoid double-indenting - the new line will contain the
+        //  trailing portion of the current line's indent, and auto indent
+        //  should only fill in the leading portion, which may be empty.
+        //
+
+        if (FirstCharOffset < AutoIndentLeadingString.LengthInChars) {
+            AutoIndentLeadingString.LengthInChars = FirstCharOffset;
+        }
         LocalLastCharOffset = AutoIndentLeadingString.LengthInChars;
     }
 
@@ -4107,8 +4118,10 @@ YoriWinMultilineEditPasteText(
     )
 {
     YORI_STRING Text;
+    PYORI_STRING Line;
     PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
     PYORI_WIN_CTRL Ctrl;
+    DWORD Index;
 
     Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
     MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
@@ -4121,6 +4134,22 @@ YoriWinMultilineEditPasteText(
     if (!YoriLibPasteTextWithProcessFallback(&Text)) {
         return FALSE;
     }
+    if (MultilineEdit->AutoIndentApplied &&
+        MultilineEdit->CursorLine == MultilineEdit->AutoIndentAppliedLine) {
+
+        Line = &MultilineEdit->LineArray[MultilineEdit->CursorLine];
+
+        for (Index = 0;
+             Index < Line->LengthInChars &&
+             Index < Text.LengthInChars &&
+             Index < MultilineEdit->AutoIndentSourceLength &&
+             Line->StartOfString[Index] == Text.StartOfString[Index];
+             Index++);
+
+        Text.StartOfString = Text.StartOfString + Index;
+        Text.LengthInChars = Text.LengthInChars - Index;
+    }
+
     if (!YoriWinMultilineEditInsertTextAtCursor(CtrlHandle, &Text)) {
         YoriLibFreeStringContents(&Text);
         return FALSE;
