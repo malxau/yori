@@ -102,6 +102,29 @@ MakeTrimWhitespace(
 }
 
 /**
+ Indicate if the string consists entirely of whitespace characters.
+
+ @param String Pointer to the string.
+
+ @return TRUE if every character in the string is whitespace, FALSE if a non-
+         whitespace character is found.
+ */
+BOOLEAN
+MakeIsStringWhitespace(
+    __in PCYORI_STRING String
+    )
+{
+    DWORD Index;
+    for (Index = 0; Index < String->LengthInChars; Index++) {
+        if (!MakeIsCharWhitespace(String->StartOfString[Index])) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
+}
+
+/**
  Remove separators from the beginning and end of a Yori string.
  Note this implies advancing the StartOfString pointer, so a caller
  cannot assume this pointer is unchanged across the call.
@@ -259,6 +282,9 @@ MakeDetermineLineType(
 
     if (ScopeContext->ParserState == MakeParserRecipeActive) {
         if (MakeIsCharWhitespace(Line->StartOfString[0])) {
+            if (MakeIsStringWhitespace(Line)) {
+                return MakeLineTypeEmpty;
+            }
             return MakeLineTypeRecipe;
         }
     } else if (ScopeContext->ParserState == MakeParserInlineFileActive) {
