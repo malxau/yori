@@ -768,30 +768,6 @@ YoriWinHexEditNextCellSameType(
 //
 
 /**
- Return the string representation for a hex digit (in the range 0-15.)
-
- @param Value The numberic representation of the digit.
-
- @return The character representation of the digit.
- */
-TCHAR
-YoriWinHexEditHexDigitFromValue(
-    __in DWORD Value
-    )
-{
-    ASSERT(Value < 16);
-    if (Value >= 16) {
-        return '?';
-    }
-
-    if (Value >= 10) {
-        return (TCHAR)(Value - 10 + 'a');
-    }
-
-    return (TCHAR)(Value + '0');
-}
-
-/**
  Return a color for the cell, based on whether the cell is within a selection
  range.
 
@@ -895,9 +871,9 @@ YoriWinHexEditByteLine(
         if (DisplayWord) {
             PCHAR_INFO Subset;
             Subset = &Output[OutputIndex];
-            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue(WordToDisplay >> 4);
+            Subset[0].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 4);
             Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex, FALSE);
-            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue(WordToDisplay & 0x0f);
+            Subset[1].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay & 0x0f);
             Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex, FALSE);
             Subset[2].Char.UnicodeChar = ' ';
             Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex, TRUE);
@@ -977,13 +953,13 @@ YoriWinHexEditWordLine(
         if (DisplayWord) {
             PCHAR_INFO Subset;
             Subset = &Output[OutputIndex];
-            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 12) & 0x0f);
+            Subset[0].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 12);
             Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
-            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 8) & 0x0f);
+            Subset[1].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 8);
             Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
-            Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 4) & 0x0f);
+            Subset[2].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 4);
             Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
-            Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay) & 0x0f);
+            Subset[3].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay);
             Subset[3].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[4].Char.UnicodeChar = ' ';
             Subset[4].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, TRUE);
@@ -1064,21 +1040,21 @@ YoriWinHexEditDWordLine(
         if (DisplayWord) {
             PCHAR_INFO Subset;
             Subset = &Output[OutputIndex];
-            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 28) & 0x0f);
+            Subset[0].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 28);
             Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
-            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 24) & 0x0f);
+            Subset[1].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 24);
             Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
-            Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 20) & 0x0f);
+            Subset[2].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 20);
             Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
-            Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 16) & 0x0f);
+            Subset[3].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 16);
             Subset[3].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
-            Subset[4].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 12) & 0x0f);
+            Subset[4].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 12);
             Subset[4].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
-            Subset[5].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 8) & 0x0f);
+            Subset[5].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 8);
             Subset[5].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
-            Subset[6].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay >> 4) & 0x0f);
+            Subset[6].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay >> 4);
             Subset[6].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
-            Subset[7].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((WordToDisplay) & 0x0f);
+            Subset[7].Char.UnicodeChar = YoriLibHexDigitFromValue(WordToDisplay);
             Subset[7].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[8].Char.UnicodeChar = ' ';
             Subset[8].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, TRUE);
@@ -1162,40 +1138,40 @@ YoriWinHexEditDWordLongLine(
             DisplayValue.QuadPart = WordToDisplay;
             ValToDisplay = DisplayValue.HighPart;
             Subset = &Output[OutputIndex];
-            Subset[0].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 28) & 0x0f);
+            Subset[0].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 28);
             Subset[0].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 7, FALSE);
-            Subset[1].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 24) & 0x0f);
+            Subset[1].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 24);
             Subset[1].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 7, FALSE);
-            Subset[2].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 20) & 0x0f);
+            Subset[2].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 20);
             Subset[2].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 6, FALSE);
-            Subset[3].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 16) & 0x0f);
+            Subset[3].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 16);
             Subset[3].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 6, FALSE);
-            Subset[4].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 12) & 0x0f);
+            Subset[4].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 12);
             Subset[4].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 5, FALSE);
-            Subset[5].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 8) & 0x0f);
+            Subset[5].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 8);
             Subset[5].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 5, FALSE);
-            Subset[6].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 4) & 0x0f);
+            Subset[6].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 4);
             Subset[6].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 4, FALSE);
-            Subset[7].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay) & 0x0f);
+            Subset[7].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay);
             Subset[7].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 4, FALSE);
             Subset[8].Char.UnicodeChar = '`';
             Subset[8].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 4, TRUE);
             ValToDisplay = DisplayValue.LowPart;
-            Subset[9].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 28) & 0x0f);
+            Subset[9].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 28);
             Subset[9].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
-            Subset[10].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 24) & 0x0f);
+            Subset[10].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 24);
             Subset[10].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 3, FALSE);
-            Subset[11].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 20) & 0x0f);
+            Subset[11].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 20);
             Subset[11].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
-            Subset[12].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 16) & 0x0f);
+            Subset[12].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 16);
             Subset[12].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 2, FALSE);
-            Subset[13].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 12) & 0x0f);
+            Subset[13].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 12);
             Subset[13].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
-            Subset[14].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 8) & 0x0f);
+            Subset[14].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 8);
             Subset[14].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 1, FALSE);
-            Subset[15].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay >> 4) & 0x0f);
+            Subset[15].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay >> 4);
             Subset[15].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
-            Subset[16].Char.UnicodeChar = YoriWinHexEditHexDigitFromValue((ValToDisplay) & 0x0f);
+            Subset[16].Char.UnicodeChar = YoriLibHexDigitFromValue(ValToDisplay);
             Subset[16].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay), FALSE);
             Subset[17].Char.UnicodeChar = ' ';
             Subset[17].Attributes = YoriWinHexEditSelectionColor(HexEdit, Offset + WordIndex * sizeof(WordToDisplay) + 7, TRUE);

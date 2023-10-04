@@ -2416,6 +2416,11 @@ YoriLibHashRemoveByKey(
  */
 #define YORI_LIB_HEX_FLAG_C_STYLE              (0x00000010)
 
+TCHAR
+YoriLibHexDigitFromValue(
+    __in DWORD Value
+    );
+
 BOOL
 YoriLibHexDump(
     __in LPCSTR Buffer,
