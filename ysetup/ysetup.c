@@ -43,7 +43,9 @@ CHAR strHelpText[] =
         "       [-userpath] [directory]\n"
         "\n"
         "   -gui           Use graphical installer (default)\n"
+#if YSETUP_TUI
         "   -text          Use text installer\n"
+#endif
         "\n"
         "   -core          Install minimal components.\n"
         "   -typical       Install typical components.\n"
@@ -117,7 +119,9 @@ ymain(
     enum {
         UiDefault,
         UiCli,
+#if YSETUP_TUI
         UiTui,
+#endif
         UiGui
     } UiToUse;
 
@@ -166,9 +170,11 @@ ymain(
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("terminal")) == 0) {
                 InstallOptions = InstallOptions | YSETUP_INSTALL_TERMINAL_PROFILE;
                 ArgumentUnderstood = TRUE;
+#if YSETUP_TUI
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("text")) == 0) {
                 UiToUse = UiTui;
                 ArgumentUnderstood = TRUE;
+#endif
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("typical")) == 0) {
                 InstallType = InstallTypeTypical;
                 ArgumentUnderstood = TRUE;
@@ -197,12 +203,18 @@ ymain(
     if (UiToUse == UiDefault) {
         if (StartArg > 0) {
             UiToUse = UiCli;
+#if YSETUP_TUI
         } else if (YoriLibIsNanoServer() || YoriLibIsRunningUnderSsh()) {
             UiToUse = UiTui;
+#endif
         } else if (SetupGuiInitialize()) {
             UiToUse = UiGui;
         } else {
+#if YSETUP_TUI
             UiToUse = UiTui;
+#else
+            UiToUse = UiCli;
+#endif
         }
     } else if (UiToUse == UiGui) {
         if (!SetupGuiInitialize()) {
@@ -274,8 +286,10 @@ ymain(
 
         YoriLibFreeStringContents(&NewDirectory);
         YoriLibFreeStringContents(&ErrorText);
+#if YSETUP_TUI
     } else if (UiToUse == UiTui) {
         SetupTuiDisplayUi();
+#endif
     } else {
         SetupGuiDisplayUi();
     }
