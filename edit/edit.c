@@ -170,6 +170,11 @@ typedef struct _EDIT_CONTEXT {
     DWORD OptionsExpandTabMenuIndex;
 
     /**
+     The index of the trim trailing whitespace item in the options menu.
+     */
+    DWORD OptionsTrimTrailingWhitespaceMenuIndex;
+
+    /**
      TRUE if a BOM should be written to the output stream, FALSE if not.
      */
     BOOLEAN WriteBom;
@@ -192,6 +197,12 @@ typedef struct _EDIT_CONTEXT {
      space characters.  FALSE if a tab key press should be a tab character.
      */
     BOOLEAN ExpandTab;
+
+    /**
+     TRUE to remove trailing whitespace at the end of a line on navigation.
+     FALSE to retain trailing whitespace.
+     */
+    BOOLEAN TrimTrailingWhitespace;
 
     /**
      TRUE to enable traditional MS-DOS edit navigation, where the cursor can
@@ -2236,6 +2247,59 @@ EditExpandTabOptionsButtonClicked(
 }
 
 /**
+ A callback invoked when the trim trailing whitespace options menu item is
+ invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+EditTrimTrailingWhitespaceOptionsButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PYORI_WIN_CTRL_HANDLE OptionsMenu;
+    PYORI_WIN_CTRL_HANDLE TrimTrailingWhitespaceMenuItem;
+
+    PEDIT_CONTEXT EditContext;
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+
+    OptionsMenu = YoriWinMenuBarGetSubmenuHandle(Ctrl, NULL, EditContext->OptionsMenuIndex);
+    TrimTrailingWhitespaceMenuItem = YoriWinMenuBarGetSubmenuHandle(Ctrl,
+                                                                    OptionsMenu,
+                                                                    EditContext->OptionsTrimTrailingWhitespaceMenuIndex);
+
+
+    if (EditContext->TrimTrailingWhitespace) {
+        EditContext->TrimTrailingWhitespace = FALSE;
+        YoriWinMenuBarUncheckMenuItem(TrimTrailingWhitespaceMenuItem);
+    } else {
+        EditContext->TrimTrailingWhitespace = TRUE;
+        YoriWinMenuBarCheckMenuItem(TrimTrailingWhitespaceMenuItem);
+    }
+    YoriWinMultilineEditSetTrimTrailingWhitespace(EditContext->MultilineEdit, EditContext->TrimTrailingWhitespace);
+}
+
+
+/**
+ A callback invoked when the save defaults options menu item is invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+EditSaveDefaultsOptionsButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    PEDIT_CONTEXT EditContext;
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+}
+
+/**
  A callback invoked when the about menu item is invoked.
 
  @param Ctrl Pointer to the menu bar control.
@@ -2413,7 +2477,7 @@ EditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
     YORI_WIN_MENU_ENTRY EditMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
-    YORI_WIN_MENU_ENTRY OptionsMenuEntries[4];
+    YORI_WIN_MENU_ENTRY OptionsMenuEntries[5];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
@@ -2545,6 +2609,14 @@ EditPopulateMenuBar(
     YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Expand tab"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditExpandTabOptionsButtonClicked;
     EditContext->OptionsExpandTabMenuIndex = MenuIndex;
+
+    MenuIndex++;
+    if (EditContext->TrimTrailingWhitespace) {
+        OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_CHECKED;
+    }
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("Remove trailing &whitespace"));
+    OptionsMenuEntries[MenuIndex].NotifyCallback = EditTrimTrailingWhitespaceOptionsButtonClicked;
+    EditContext->OptionsTrimTrailingWhitespaceMenuIndex = MenuIndex;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
     MenuIndex = 0;
@@ -2870,6 +2942,7 @@ ENTRYPOINT(
     GlobalEditContext.TraditionalNavigation = TRUE;
     GlobalEditContext.AutoIndent = TRUE;
     GlobalEditContext.ExpandTab = FALSE;
+    GlobalEditContext.TrimTrailingWhitespace = TRUE;
 
     for (i = 1; i < ArgC; i++) {
 

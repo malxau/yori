@@ -478,6 +478,13 @@ typedef struct _YORI_WIN_CTRL_MULTILINE_EDIT {
      */
     BOOLEAN ExpandTab;
 
+    /**
+     TRUE if any whitespace on the end of a line should be removed when the
+     cursor moves to a different line.  FALSE if all trailing spaces should
+     be retained.
+     */
+    BOOLEAN TrimTrailingWhitespace;
+
 } YORI_WIN_CTRL_MULTILINE_EDIT, *PYORI_WIN_CTRL_MULTILINE_EDIT;
 
 //
@@ -3532,6 +3539,51 @@ YoriWinMultilineEditAppendLinesNoDataCopy(
     return TRUE;
 }
 
+/**
+ Check if the line contains trailing whitespace, and if so, truncate it.
+
+ @param MultilineEdit Pointer to the multiline edit control.
+
+ @param LineIndex The line index to check for trailing whitespace.
+
+ @return TRUE if trailing whitespace was removed, FALSE if it was not.
+ */
+BOOLEAN
+YoriWinMultilineEditTrimTrailingWhitespace(
+    __in PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit,
+    __in DWORD LineIndex
+    )
+{
+    PYORI_STRING Line;
+    DWORD Index;
+    DWORD CharsToTruncate;
+    TCHAR Char;
+
+    if (LineIndex > MultilineEdit->LinesPopulated) {
+        return FALSE;
+    }
+
+    Line = &MultilineEdit->LineArray[LineIndex];
+
+    if (Line->LengthInChars == 0) {
+        return FALSE;
+    }
+
+    for (Index = Line->LengthInChars; Index > 0; Index--) {
+        Char = Line->StartOfString[Index - 1];
+        if (Char != ' ' && Char != '\t') {
+            break;
+        }
+    }
+
+    CharsToTruncate = Line->LengthInChars - Index;
+    if (CharsToTruncate == 0) {
+        return FALSE;
+    }
+
+    return YoriWinMultilineEditDeleteTextRange(MultilineEdit, FALSE, FALSE, LineIndex, Index, LineIndex, Index + CharsToTruncate);
+}
+
 //
 //  =========================================
 //  SELECTION FUNCTIONS
@@ -4685,6 +4737,30 @@ YoriWinMultilineEditSetExpandTab(
 }
 
 /**
+ Enable or disable white space trimming.  If the cursor moves to a new line,
+ this controls whether trailing whitespace should be removed.  If TRUE,
+ whitespace is removed; if FALSE, it is retained.
+
+ @param CtrlHandle Pointer to the multiline edit control.
+
+ @param TrimTrailingWhitespaceEnabled TRUE to trim trailing white space on
+        cursor move, FALSE to retain trailing white space.
+ */
+VOID
+YoriWinMultilineEditSetTrimTrailingWhitespace(
+    __in PYORI_WIN_CTRL_HANDLE CtrlHandle,
+    __in BOOLEAN TrimTrailingWhitespaceEnabled
+    )
+{
+    PYORI_WIN_CTRL Ctrl;
+    PYORI_WIN_CTRL_MULTILINE_EDIT MultilineEdit;
+
+    Ctrl = (PYORI_WIN_CTRL)CtrlHandle;
+    MultilineEdit = CONTAINING_RECORD(Ctrl, YORI_WIN_CTRL_MULTILINE_EDIT, Ctrl);
+    MultilineEdit->TrimTrailingWhitespace = TrimTrailingWhitespaceEnabled;
+}
+
+/**
  Returns TRUE if the multiline edit control has been modified by the user
  since the last time @ref YoriWinMultilineEditSetModifyState indicated that
  no user modification has occurred.
@@ -4946,6 +5022,10 @@ YoriWinMultilineEditPageUp(
             MultilineEdit->ViewportTop = 0;
         }
 
+        if (MultilineEdit->TrimTrailingWhitespace && NewCursorLine != MultilineEdit->CursorLine) {
+            YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
+        }
+
         YoriWinMultilineEditExpandDirtyRange(MultilineEdit, MultilineEdit->ViewportTop, (DWORD)-1);
 
         YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
@@ -4993,6 +5073,10 @@ YoriWinMultilineEditPageDown(
             NewCursorLine = MultilineEdit->CursorLine + ViewportHeight;
         } else if (MultilineEdit->CursorLine + 1 < MultilineEdit->LinesPopulated) {
             NewCursorLine = MultilineEdit->LinesPopulated - 1;
+        }
+
+        if (MultilineEdit->TrimTrailingWhitespace && NewCursorLine != MultilineEdit->CursorLine) {
+            YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
         }
 
         YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
@@ -5092,6 +5176,10 @@ YoriWinMultilineEditNotifyDoubleClick(
 
         if (NewCursorLine >= MultilineEdit->LinesPopulated) {
             return;
+        }
+
+        if (MultilineEdit->TrimTrailingWhitespace && NewCursorLine != MultilineEdit->CursorLine) {
+            YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
         }
 
         //
@@ -5279,6 +5367,10 @@ YoriWinMultilineEditScrollForMouseSelect(
         }
     }
 
+    if (MultilineEdit->TrimTrailingWhitespace && NewCursorLine != MultilineEdit->CursorLine) {
+        YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
+    }
+
     YoriWinMultilineEditClearDesiredDisplayOffset(MultilineEdit);
     YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
     if (MultilineEdit->Selection.Active == YoriWinMultilineEditSelectMouseFromTopDown ||
@@ -5408,6 +5500,9 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
                 ASSERT(!MultilineEdit->TraditionalEditNavigation);
                 NewCursorLine = NewCursorLine - 1;
                 NewCursorOffset = MultilineEdit->LineArray[NewCursorLine].LengthInChars;
+                if (MultilineEdit->TrimTrailingWhitespace) {
+                    YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
+                }
             } else {
                 NewCursorOffset = MultilineEdit->CursorOffset - 1;
             }
@@ -5439,6 +5534,9 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
 
                     NewCursorLine = NewCursorLine + 1;
                     NewCursorOffset = 0;
+                    if (MultilineEdit->TrimTrailingWhitespace) {
+                        YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
+                    }
                 }
             }
             YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorOffset, NewCursorLine);
@@ -5500,6 +5598,9 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
             } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
                 YoriWinMultilineEditClearSelection(MultilineEdit);
             }
+            if (MultilineEdit->TrimTrailingWhitespace) {
+                YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
+            }
             NewCursorLine = MultilineEdit->CursorLine - 1;
             YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
             YoriWinMultilineEditFindCursorCharFromDisplayChar(MultilineEdit,
@@ -5520,6 +5621,9 @@ YoriWinMultilineEditProcessPossiblyEnhancedKey(
                 YoriWinMultilineEditStartSelectionAtCursor(MultilineEdit, FALSE);
             } else if (YoriWinMultilineEditSelectionActive(&MultilineEdit->Ctrl)) {
                 YoriWinMultilineEditClearSelection(MultilineEdit);
+            }
+            if (MultilineEdit->TrimTrailingWhitespace) {
+                YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
             }
             NewCursorLine = MultilineEdit->CursorLine + 1;
             YoriWinMultilineEditPopulateDesiredDisplayOffset(MultilineEdit);
@@ -5980,6 +6084,9 @@ YoriWinMultilineEditEventHandler(
                                                                                         Event->MouseDown.Location.Y,
                                                                                         &NewCursorLine,
                                                                                         &NewCursorChar)) {
+                    if (MultilineEdit->TrimTrailingWhitespace && MultilineEdit->CursorLine != NewCursorLine) {
+                        YoriWinMultilineEditTrimTrailingWhitespace(MultilineEdit, MultilineEdit->CursorLine);
+                    }
 
                     YoriWinMultilineEditSetCursorLocationInternal(MultilineEdit, NewCursorChar, NewCursorLine);
                     YoriWinMultilineEditClearSelection(MultilineEdit);
@@ -6266,6 +6373,7 @@ YoriWinMultilineEditCreate(
     MultilineEdit->Ctrl.ClientRect.Right--;
 
     MultilineEdit->InsertMode = TRUE;
+    MultilineEdit->TrimTrailingWhitespace = TRUE;
     MultilineEdit->TextAttributes = MultilineEdit->Ctrl.DefaultAttributes;
     TopLevelWindow = YoriWinGetTopLevelWindow(Parent);
     WinMgrHandle = YoriWinGetWindowManagerHandle(TopLevelWindow);
