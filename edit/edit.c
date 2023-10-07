@@ -175,6 +175,13 @@ typedef struct _EDIT_CONTEXT {
     DWORD OptionsTrimTrailingWhitespaceMenuIndex;
 
     /**
+     The number of space characters to display for each tab character.  This
+     is temporarily initialized to -1 to indicate the edit control should
+     use a default value.
+     */
+    DWORD TabWidth;
+
+    /**
      TRUE if a BOM should be written to the output stream, FALSE if not.
      */
     BOOLEAN WriteBom;
@@ -242,6 +249,94 @@ EditFreeEditContext(
 {
     YoriLibFreeStringContents(&EditContext->OpenFileName);
     YoriLibFreeStringContents(&EditContext->SearchString);
+}
+
+/**
+ Attempt to load user settings from the registry.  Unless the user has saved
+ settings, there will be nothing to load.
+
+ @param EditContext Pointer to the edit context to populate with default
+        settings.
+
+ @return TRUE to indicate success, FALSE to indicate failure.
+ */
+BOOLEAN
+EditLoadDefaults(
+    __in PEDIT_CONTEXT EditContext
+    )
+{
+    HKEY hKey;
+    DWORD Err;
+    DWORD Value;
+    DWORD ValueSize;
+    DWORD Type;
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegOpenKeyExW == NULL ||
+        DllAdvApi32.pRegQueryValueExW == NULL) {
+
+        // MSFIX: Error
+        return FALSE;
+    }
+
+    Err = DllAdvApi32.pRegOpenKeyExW(HKEY_CURRENT_USER,
+                                     _T("SOFTWARE\\malsmith.net\\Yedit"),
+                                     0,
+                                     KEY_QUERY_VALUE,
+                                     &hKey);
+    if (Err != ERROR_SUCCESS) {
+        return TRUE;
+    }
+
+    ValueSize = sizeof(Value);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("TabWidth"), NULL, &Type, (LPBYTE)&Value, &ValueSize);
+    if (Err == ERROR_SUCCESS && Type == REG_DWORD && ValueSize == sizeof(DWORD)) {
+        EditContext->TabWidth = Value;
+    }
+
+    ValueSize = sizeof(Value);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("AutoIndent"), NULL, &Type, (LPBYTE)&Value, &ValueSize);
+    if (Err == ERROR_SUCCESS && Type == REG_DWORD && ValueSize == sizeof(DWORD)) {
+        if (Value != 0) {
+            EditContext->AutoIndent = TRUE;
+        } else {
+            EditContext->AutoIndent = FALSE;
+        }
+    }
+
+    ValueSize = sizeof(Value);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("ExpandTab"), NULL, &Type, (LPBYTE)&Value, &ValueSize);
+    if (Err == ERROR_SUCCESS && Type == REG_DWORD && ValueSize == sizeof(DWORD)) {
+        if (Value != 0) {
+            EditContext->ExpandTab = TRUE;
+        } else {
+            EditContext->ExpandTab = FALSE;
+        }
+    }
+
+    ValueSize = sizeof(Value);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("TraditionalNavigation"), NULL, &Type, (LPBYTE)&Value, &ValueSize);
+    if (Err == ERROR_SUCCESS && Type == REG_DWORD && ValueSize == sizeof(DWORD)) {
+        if (Value != 0) {
+            EditContext->TraditionalNavigation = TRUE;
+        } else {
+            EditContext->TraditionalNavigation = FALSE;
+        }
+    }
+
+    ValueSize = sizeof(Value);
+    Err = DllAdvApi32.pRegQueryValueExW(hKey, _T("TrimTrailingWhitespace"), NULL, &Type, (LPBYTE)&Value, &ValueSize);
+    if (Err == ERROR_SUCCESS && Type == REG_DWORD && ValueSize == sizeof(DWORD)) {
+        if (Value != 0) {
+            EditContext->TrimTrailingWhitespace = TRUE;
+        } else {
+            EditContext->TrimTrailingWhitespace = FALSE;
+        }
+    }
+
+    DllAdvApi32.pRegCloseKey(hKey);
+    return TRUE;
 }
 
 /**
@@ -2138,14 +2233,11 @@ EditDisplayOptionsButtonClicked(
     Parent = YoriWinGetControlParent(Ctrl);
     EditContext = YoriWinGetControlContext(Parent);
 
-    if (!YoriWinMultilineEditGetTabWidth(EditContext->MultilineEdit, &NewTabWidth)) {
+    if (!EditOpts(YoriWinGetWindowManagerHandle(Parent), EditContext->TabWidth, &NewTabWidth)) {
         return;
     }
 
-    if (!EditOpts(YoriWinGetWindowManagerHandle(Parent), NewTabWidth, &NewTabWidth)) {
-        return;
-    }
-
+    EditContext->TabWidth = NewTabWidth;
     YoriWinMultilineEditSetTabWidth(EditContext->MultilineEdit, NewTabWidth);
 }
 
@@ -2281,6 +2373,124 @@ EditTrimTrailingWhitespaceOptionsButtonClicked(
     YoriWinMultilineEditSetTrimTrailingWhitespace(EditContext->MultilineEdit, EditContext->TrimTrailingWhitespace);
 }
 
+/**
+ A callback invoked when the save default settings options menu item is
+ invoked.
+
+ @param Ctrl Pointer to the menu bar control.
+ */
+VOID
+EditSaveDefaultSettingsOptionsButtonClicked(
+    __in PYORI_WIN_CTRL_HANDLE Ctrl
+    )
+{
+    PYORI_WIN_CTRL_HANDLE Parent;
+    HKEY hKey;
+    DWORD Err;
+    DWORD Disposition;
+    DWORD Value;
+    PEDIT_CONTEXT EditContext;
+    YORI_STRING Title;
+    YORI_STRING Text;
+    YORI_STRING ButtonText[1];
+
+    Parent = YoriWinGetControlParent(Ctrl);
+    EditContext = YoriWinGetControlContext(Parent);
+
+    YoriLibLoadAdvApi32Functions();
+
+    if (DllAdvApi32.pRegCloseKey == NULL ||
+        DllAdvApi32.pRegCreateKeyExW == NULL ||
+        DllAdvApi32.pRegSetValueExW == NULL) {
+
+        YoriLibConstantString(&Title, _T("Error"));
+        YoriLibConstantString(&Text, _T("The operating system does not support registry updates."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+        return;
+    }
+
+    Err = DllAdvApi32.pRegCreateKeyExW(HKEY_CURRENT_USER,
+                                       _T("SOFTWARE\\malsmith.net\\Yedit"),
+                                       0,
+                                       NULL,
+                                       0,
+                                       KEY_SET_VALUE,
+                                       NULL,
+                                       &hKey,
+                                       &Disposition);
+    if (Err != ERROR_SUCCESS) {
+        YoriLibConstantString(&Title, _T("Error"));
+        YoriLibConstantString(&Text, _T("Could not open registry key."));
+        YoriLibConstantString(&ButtonText[0], _T("&Ok"));
+
+        YoriDlgMessageBox(YoriWinGetWindowManagerHandle(Parent),
+                          &Title,
+                          &Text,
+                          1,
+                          ButtonText,
+                          0,
+                          0);
+        return;
+    }
+
+    Value = EditContext->TabWidth;
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("TabWidth"), 0, REG_DWORD, (LPBYTE)&Value, sizeof(Value));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    Value = 0;
+    if (EditContext->AutoIndent) {
+        Value = 1;
+    }
+
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("AutoIndent"), 0, REG_DWORD, (LPBYTE)&Value, sizeof(Value));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    Value = 0;
+    if (EditContext->ExpandTab) {
+        Value = 1;
+    }
+
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("ExpandTab"), 0, REG_DWORD, (LPBYTE)&Value, sizeof(Value));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    Value = 0;
+    if (EditContext->TraditionalNavigation) {
+        Value = 1;
+    }
+
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("TraditionalNavigation"), 0, REG_DWORD, (LPBYTE)&Value, sizeof(Value));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+    Value = 0;
+    if (EditContext->TrimTrailingWhitespace) {
+        Value = 1;
+    }
+
+    Err = DllAdvApi32.pRegSetValueExW(hKey, _T("TrimTrailingWhitespace"), 0, REG_DWORD, (LPBYTE)&Value, sizeof(Value));
+    if (Err != ERROR_SUCCESS) {
+        goto Exit;
+    }
+
+Exit:
+
+    DllAdvApi32.pRegCloseKey(hKey);
+}
 
 /**
  A callback invoked when the save defaults options menu item is invoked.
@@ -2477,7 +2687,7 @@ EditPopulateMenuBar(
     YORI_WIN_MENU_ENTRY FileMenuEntries[6];
     YORI_WIN_MENU_ENTRY EditMenuEntries[7];
     YORI_WIN_MENU_ENTRY SearchMenuEntries[6];
-    YORI_WIN_MENU_ENTRY OptionsMenuEntries[5];
+    YORI_WIN_MENU_ENTRY OptionsMenuEntries[7];
     YORI_WIN_MENU_ENTRY HelpMenuEntries[1];
     YORI_WIN_MENU_ENTRY MenuEntries[5];
     YORI_WIN_MENU MenuBarItems;
@@ -2617,6 +2827,13 @@ EditPopulateMenuBar(
     YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("Remove trailing &whitespace"));
     OptionsMenuEntries[MenuIndex].NotifyCallback = EditTrimTrailingWhitespaceOptionsButtonClicked;
     EditContext->OptionsTrimTrailingWhitespaceMenuIndex = MenuIndex;
+
+    MenuIndex++;
+    OptionsMenuEntries[MenuIndex].Flags = YORI_WIN_MENU_ENTRY_SEPERATOR;
+
+    MenuIndex++;
+    YoriLibConstantString(&OptionsMenuEntries[MenuIndex].Caption, _T("&Save default settings"));
+    OptionsMenuEntries[MenuIndex].NotifyCallback = EditSaveDefaultSettingsOptionsButtonClicked;
 
     ZeroMemory(&HelpMenuEntries, sizeof(HelpMenuEntries));
     MenuIndex = 0;
@@ -2820,9 +3037,15 @@ EditCreateMainWindow(
         return FALSE;
     }
 
+    if (EditContext->TabWidth != (DWORD)-1) {
+        YoriWinMultilineEditSetTabWidth(MultilineEdit, EditContext->TabWidth);
+    } else {
+        YoriWinMultilineEditGetTabWidth(MultilineEdit, &EditContext->TabWidth);
+    }
     YoriWinMultilineEditSetAutoIndent(MultilineEdit, EditContext->AutoIndent);
     YoriWinMultilineEditSetTraditionalNavigation(MultilineEdit, EditContext->TraditionalNavigation);
     YoriWinMultilineEditSetExpandTab(MultilineEdit, EditContext->ExpandTab);
+    YoriWinMultilineEditSetTrimTrailingWhitespace(MultilineEdit, EditContext->TrimTrailingWhitespace);
 
     Rect.Top = (SHORT)(Rect.Bottom + 1);
     Rect.Bottom = Rect.Top;
@@ -2939,10 +3162,13 @@ ENTRYPOINT(
         GlobalEditContext.Encoding = CP_ACP;
     }
 
+    GlobalEditContext.TabWidth = (DWORD)-1;
     GlobalEditContext.TraditionalNavigation = TRUE;
     GlobalEditContext.AutoIndent = TRUE;
     GlobalEditContext.ExpandTab = FALSE;
     GlobalEditContext.TrimTrailingWhitespace = TRUE;
+
+    EditLoadDefaults(&GlobalEditContext);
 
     for (i = 1; i < ArgC; i++) {
 
@@ -2993,8 +3219,6 @@ ENTRYPOINT(
             YoriLibOutput(YORI_LIB_OUTPUT_STDERR, _T("Argument not understood, ignored: %y\n"), &ArgV[i]);
         }
     }
-
-    YoriLibLoadAdvApi32Functions();
 
     if (StartArg > 0 && StartArg < ArgC) {
         if (!YoriLibUserStringToSingleFilePath(&ArgV[StartArg], TRUE, &GlobalEditContext.OpenFileName)) {
