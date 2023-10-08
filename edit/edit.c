@@ -38,13 +38,10 @@ CHAR strEditHelpText[] =
         "\n"
         "Displays editor.\n"
         "\n"
-        "EDIT [-license] [-a] [-e encoding] [-et] [-i] [-m] [-r] [filename]\n"
+        "EDIT [-license] [-a] [-e encoding] [-r] [filename]\n"
         "\n"
         "   -a             Use ASCII characters for drawing\n"
         "   -e <encoding>  Specifies the character encoding to use\n"
-        "   -et            Enable tab key expansion into spaces\n"
-        "   -i             Disable auto indent\n"
-        "   -m             Use modern keyboard navigation instead of Edit compatible\n"
         "   -r             Open file as read only\n";
 
 /**
@@ -3196,15 +3193,6 @@ ENTRYPOINT(
                         i++;
                     }
                 }
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("et")) == 0) {
-                GlobalEditContext.ExpandTab = FALSE;
-                ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("i")) == 0) {
-                GlobalEditContext.AutoIndent = FALSE;
-                ArgumentUnderstood = TRUE;
-            } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("m")) == 0) {
-                GlobalEditContext.TraditionalNavigation = FALSE;
-                ArgumentUnderstood = TRUE;
             } else if (YoriLibCompareStringWithLiteralInsensitive(&Arg, _T("r")) == 0) {
                 GlobalEditContext.ReadOnly = TRUE;
                 ArgumentUnderstood = TRUE;
