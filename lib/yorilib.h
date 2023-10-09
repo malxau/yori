@@ -3802,7 +3802,7 @@ YoriLibCloneString(
 BOOLEAN
 YoriLibCopyString(
     __out PYORI_STRING Dest,
-    __in PYORI_STRING Src
+    __in PCYORI_STRING Src
     );
 
 BOOL

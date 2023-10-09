@@ -4322,14 +4322,11 @@ YoriWinHexEditCreate(
     }
 
     if (Caption != NULL && Caption->LengthInChars > 0) {
-        if (!YoriLibAllocateString(&HexEdit->Caption, Caption->LengthInChars)) {
+        if (!YoriLibCopyString(&HexEdit->Caption, Caption)) {
             YoriWinDestroyControl(&HexEdit->Ctrl);
             YoriLibDereference(HexEdit);
             return NULL;
         }
-
-        memcpy(HexEdit->Caption.StartOfString, Caption->StartOfString, Caption->LengthInChars * sizeof(TCHAR));
-        HexEdit->Caption.LengthInChars = Caption->LengthInChars;
     }
 
     if (Style & YORI_WIN_HEX_EDIT_STYLE_VSCROLLBAR) {

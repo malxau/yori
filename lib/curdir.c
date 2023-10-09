@@ -73,13 +73,9 @@ YoriLibGetOnDiskCaseForPath(
         return FALSE;
     }
 
-    if (!YoriLibAllocateString(&NewPath, Path->LengthInChars + 1)) {
+    if (!YoriLibCopyString(&NewPath, Path)) {
         return FALSE;
     }
-
-    memcpy(NewPath.StartOfString, Path->StartOfString, Path->LengthInChars * sizeof(TCHAR));
-    NewPath.LengthInChars = Path->LengthInChars;
-    NewPath.StartOfString[NewPath.LengthInChars] = '\0';
 
     while (NewPath.LengthInChars > EffectiveRoot.LengthInChars &&
            YoriLibIsSep(NewPath.StartOfString[NewPath.LengthInChars - 1])) {

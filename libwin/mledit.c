@@ -3300,12 +3300,9 @@ YoriWinMultilineEditOverwriteTextRange(
 
             if (Undo->u.OverwriteText.Text.StartOfString == NULL) {
                 Line = &MultilineEdit->LineArray[FirstLine];
-                if (!YoriLibAllocateString(&Undo->u.OverwriteText.Text, Line->LengthInChars)) {
+                if (!YoriLibCopyString(&Undo->u.OverwriteText.Text, Line)) {
                     return FALSE;
                 }
-
-                memcpy(Undo->u.OverwriteText.Text.StartOfString, Line->StartOfString, Line->LengthInChars * sizeof(TCHAR));
-                Undo->u.OverwriteText.Text.LengthInChars = Line->LengthInChars;
 
                 Undo->u.OverwriteText.FirstLineToDelete = FirstLine;
                 Undo->u.OverwriteText.FirstCharOffsetToDelete = 0;
@@ -6341,14 +6338,11 @@ YoriWinMultilineEditCreate(
     }
 
     if (Caption != NULL && Caption->LengthInChars > 0) {
-        if (!YoriLibAllocateString(&MultilineEdit->Caption, Caption->LengthInChars)) {
+        if (!YoriLibCopyString(&MultilineEdit->Caption, Caption)) {
             YoriWinDestroyControl(&MultilineEdit->Ctrl);
             YoriLibDereference(MultilineEdit);
             return NULL;
         }
-
-        memcpy(MultilineEdit->Caption.StartOfString, Caption->StartOfString, Caption->LengthInChars * sizeof(TCHAR));
-        MultilineEdit->Caption.LengthInChars = Caption->LengthInChars;
     }
 
     if (Style & YORI_WIN_MULTILINE_EDIT_STYLE_VSCROLLBAR) {

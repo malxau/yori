@@ -1609,12 +1609,9 @@ YoriWinEditOverwriteTextRange(
             if (Undo->u.OverwriteText.Text.StartOfString == NULL) {
                 PYORI_STRING Line;
                 Line = &Edit->Text;
-                if (!YoriLibAllocateString(&Undo->u.OverwriteText.Text, Line->LengthInChars)) {
+                if (!YoriLibCopyString(&Undo->u.OverwriteText.Text, Line)) {
                     return FALSE;
                 }
-
-                memcpy(Undo->u.OverwriteText.Text.StartOfString, Line->StartOfString, Line->LengthInChars * sizeof(TCHAR));
-                Undo->u.OverwriteText.Text.LengthInChars = Line->LengthInChars;
 
                 Undo->u.OverwriteText.FirstCharOffsetToDelete = 0;
                 Undo->u.OverwriteText.LastCharOffsetToDelete = Line->LengthInChars;
@@ -2870,14 +2867,11 @@ YoriWinEditCreate(
         Edit->NumericOnly = TRUE;
     }
 
-    if (!YoriLibAllocateString(&Edit->Text, InitialText->LengthInChars + 1)) {
+    if (!YoriLibCopyString(&Edit->Text, InitialText)) {
         YoriLibDereference(Edit);
         return NULL;
     }
 
-    memcpy(Edit->Text.StartOfString, InitialText->StartOfString, InitialText->LengthInChars * sizeof(TCHAR));
-    Edit->Text.LengthInChars = InitialText->LengthInChars;
-    Edit->Text.StartOfString[Edit->Text.LengthInChars] = '\0';
     Edit->CursorOffset = Edit->Text.LengthInChars;
     Edit->Ctrl.NotifyEventFn = YoriWinEditEventHandler;
     if (!YoriWinCreateControl(Parent, Size, TRUE, TRUE, &Edit->Ctrl)) {

@@ -1101,12 +1101,10 @@ YoriWinCreateWindowEx(
     //
 
     if (Title != NULL) {
-        if (!YoriLibAllocateString(&Window->Title, Title->LengthInChars + 1)) {
+        if (!YoriLibCopyString(&Window->Title, Title)) {
             YoriWinDestroyWindow(Window);
             return FALSE;
         }
-
-        Window->Title.LengthInChars = YoriLibSPrintf(Window->Title.StartOfString, _T("%y"), Title);
     }
 
     //

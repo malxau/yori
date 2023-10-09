@@ -639,13 +639,10 @@ YoriDlgFileRefreshView(
         Wildcard->LengthInChars != State->CurrentWildcard.LengthInChars) {
 
         YoriLibInitEmptyString(&SearchString);
-        if (!YoriLibAllocateString(&SearchString, Wildcard->LengthInChars + 1)) {
+        if (!YoriLibCopyString(&SearchString, Wildcard)) {
             return;
         }
 
-        memcpy(SearchString.StartOfString, Wildcard->StartOfString, Wildcard->LengthInChars * sizeof(TCHAR));
-        SearchString.StartOfString[Wildcard->LengthInChars] = '\0';
-        SearchString.LengthInChars = Wildcard->LengthInChars;
         YoriLibFreeStringContents(&State->CurrentWildcard);
         memcpy(&State->CurrentWildcard, &SearchString, sizeof(YORI_STRING));
     }
