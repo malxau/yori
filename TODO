@@ -2,7 +2,8 @@
 At this point, the TODO is more a list of tasks that might be useful and/or
 fun to write.
 
- - Format hex strings directly without printf for performance
+ - Reuse new byte buffer
+ - Change completion script name evaluation to allow 8.3 compliance
  - Scroll around input line on tiny windows, where the entire line doesn't
    fit in the window
  - Make more use something like line selection
@@ -23,7 +24,10 @@ fun to write.
  - Minimize in libwin, implying defining an icon form of a window
  - TreeView
  - Multi-column list
+ - Sort file and directory dialogs
+ - Edit reposition viewport after paste
  - Edit horizontal scroll bar
+ - Edit parse vim tags
 
  - Environment variable editor UI
  - TUI start menu - Point & Shoot?
