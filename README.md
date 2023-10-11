@@ -1,5 +1,11 @@
 # Yori: CMD reimagined
 
+## Code status update
+
+This project has been a fun respite from corporate life, and Github is now requiring 2FA for contributions, which seems like a good time to go elsewhere.  I'm supposed to lose this account in the next day or two, so if code updates stop soon, that's why.
+
+## Intro
+
 Yori is a CMD replacement shell that supports backquotes, job control, and improves tab completion, file matching, aliases, command history, and more.  It includes a handful of native Win32 tools that implement commonly needed tasks which can be used with any shell.
 
 ## Build
