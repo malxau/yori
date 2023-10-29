@@ -1137,6 +1137,90 @@ YoriLibLoadWsock32Functions(VOID);
 BOOL
 YoriLibLoadWtsApi32Functions(VOID);
 
+// *** ENV.C ***
+
+__success(return)
+BOOL
+YoriLibGetEnvironmentStrings(
+    __out PYORI_STRING EnvStrings
+    );
+
+__success(return)
+BOOL
+YoriLibAreEnvironmentStringsValid(
+    __inout PYORI_STRING EnvStrings
+    );
+
+__success(return)
+BOOL
+YoriLibAreAnsiEnvironmentStringsValid(
+    __in PUCHAR AnsiEnvStringBuffer,
+    __in DWORD BufferLength,
+    __out PYORI_STRING UnicodeStrings
+    );
+
+__success(return)
+BOOL
+YoriLibAllocateAndGetEnvironmentVariable(
+    __in LPCTSTR Name,
+    __inout PYORI_STRING Value
+    );
+
+__success(return)
+BOOL
+YoriLibGetEnvironmentVariableAsNumber(
+    __in LPCTSTR Name,
+    __out PLONGLONG Value
+    );
+
+__success(return)
+BOOL
+YoriLibAddEnvironmentComponentToString(
+    __inout PYORI_STRING ExistingString,
+    __in PCYORI_STRING NewComponent,
+    __in BOOL InsertAtFront
+    );
+
+__success(return)
+BOOL
+YoriLibAddEnvironmentComponentReturnString(
+    __in PYORI_STRING EnvironmentVariable,
+    __in PYORI_STRING NewComponent,
+    __in BOOL InsertAtFront,
+    __out PYORI_STRING Result
+    );
+
+__success(return)
+BOOL
+YoriLibAddEnvironmentComponent(
+    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING NewComponent,
+    __in BOOL InsertAtFront
+    );
+
+__success(return)
+BOOL
+YoriLibRemoveEnvironmentComponentFromString(
+    __in PYORI_STRING String,
+    __in PYORI_STRING ComponentToRemove,
+    __out PYORI_STRING Result
+    );
+
+__success(return)
+BOOL
+YoriLibRemoveEnvironmentComponentReturnString(
+    __in PYORI_STRING EnvironmentVariable,
+    __in PYORI_STRING ComponentToRemove,
+    __out PYORI_STRING Result
+    );
+
+__success(return)
+BOOL
+YoriLibRemoveEnvironmentComponent(
+    __in LPTSTR EnvironmentVariable,
+    __in PYORI_STRING ComponentToRemove
+    );
+
 // *** FILECOMP.C ***
 
 /**
@@ -2903,329 +2987,6 @@ YoriLibEnsureProcessSubsystemVersionAtLeast(
     __in WORD NewMinor
     );
 
-
-// *** PRIV.C ***
-
-BOOL
-YoriLibEnableBackupPrivilege(VOID);
-
-BOOL
-YoriLibEnableDebugPrivilege(VOID);
-
-BOOL
-YoriLibEnableManageVolumePrivilege(VOID);
-
-BOOL
-YoriLibEnableShutdownPrivilege(VOID);
-
-BOOL
-YoriLibEnableSymbolicLinkPrivilege(VOID);
-
-BOOL
-YoriLibEnableSystemTimePrivilege(VOID);
-
-BOOL
-YoriLibEnableTakeOwnershipPrivilege(VOID);
-
-// *** PROCESS.C ***
-
-__success(return)
-BOOL
-YoriLibGetSystemProcessList(
-    __out PYORI_SYSTEM_PROCESS_INFORMATION *ProcessInfo
-    );
-
-__success(return)
-BOOL
-YoriLibGetSystemHandlesList(
-    __out PYORI_SYSTEM_HANDLE_INFORMATION_EX *HandlesInfo
-    );
-
-// *** PROGMAN.C ***
-
-__success(return)
-BOOL
-YoriLibAddProgmanItem(
-    __in PCYORI_STRING GroupName,
-    __in PCYORI_STRING ItemName,
-    __in PCYORI_STRING ItemPath,
-    __in_opt PCYORI_STRING WorkingDirectory,
-    __in_opt PCYORI_STRING IconPath,
-    __in DWORD IconIndex
-    );
-
-// *** RECYCLE.C ***
-
-BOOL
-YoriLibRecycleBinFile(
-    __in PYORI_STRING FilePath
-    );
-
-// *** STRMENUM.C ***
-
-BOOL
-YoriLibForEachStream(
-    __in PYORI_STRING FileSpec,
-    __in DWORD MatchFlags,
-    __in DWORD Depth,
-    __in PYORILIB_FILE_ENUM_FN Callback,
-    __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
-    __in PVOID Context
-    );
-
-// *** TEMP.C ***
-
-__success(return)
-BOOLEAN
-YoriLibGetTempFileName(
-    __in PYORI_STRING PathName,
-    __in PYORI_STRING PrefixString,
-    __out_opt PHANDLE TempHandle,
-    __out_opt PYORI_STRING TempFileName
-    );
-
-BOOL
-YoriLibGetTempPath(
-    __out PYORI_STRING TempPathName,
-    __in DWORD ExtraChars
-    );
-
-// *** VT.C ***
-
-/**
- Convert an ANSI attribute (in RGB order) back into Windows BGR order.
- */
-#define YoriLibAnsiToWindowsNibble(COL)      \
-    (((COL) & 8?FOREGROUND_INTENSITY:0)|     \
-     ((COL) & 4?FOREGROUND_BLUE:0)|          \
-     ((COL) & 2?FOREGROUND_GREEN:0)|         \
-     ((COL) & 1?FOREGROUND_RED:0))
-
-/**
- Convert an ANSI attribute, containing both a background and a foreground
- (in RGB order) back into Windows BGR order.
- */
-#define YoriLibAnsiToWindowsByte(COL)          \
-    (UCHAR)(YoriLibAnsiToWindowsNibble(COL) |  \
-     (YoriLibAnsiToWindowsNibble((COL)>>4)<<4));
-
-/**
- Convert a Win32 text attribute into an ANSI escape value.  This happens
- because the two disagree on RGB order.
- */
-#define YoriLibWindowsToAnsi(COL)      \
-    (((COL) & FOREGROUND_BLUE?4:0)|    \
-     ((COL) & FOREGROUND_GREEN?2:0)|   \
-     ((COL) & FOREGROUND_RED?1:0))
-
-/**
- The maximum length of a string used to describe a VT sequence generated
- internally by one of these tools.
- */
-#define YORI_MAX_INTERNAL_VT_ESCAPE_CHARS sizeof("E[0;999;999;1m")
-
-BOOL
-YoriLibOutputTextToMultibyteDevice(
-    __in HANDLE hOutput,
-    __in PCYORI_STRING String
-    );
-
-/**
- Output the string to the standard output device.
- */
-#define YORI_LIB_OUTPUT_STDOUT 0x00
-
-/**
- Output the string to the standard error device.
- */
-#define YORI_LIB_OUTPUT_STDERR 0x01
-
-/**
- Output the string to the debugger device.
- */
-#define YORI_LIB_OUTPUT_DEBUG  0x02
-
-/**
- Remove VT100 escapes if the target is not expecting to handle these.
- */
-#define YORI_LIB_OUTPUT_STRIP_VT 0x10
-
-/**
- Include VT100 escapes in the output stream with no processing.
- */
-#define YORI_LIB_OUTPUT_PASSTHROUGH_VT 0x20
-
-/**
- Initialize the output stream with any header information.
-*/
-typedef BOOL (* YORI_LIB_VT_INITIALIZE_STREAM_FN)(HANDLE, DWORDLONG*);
-
-/**
- End processing for the specified stream.
-*/
-typedef BOOL (* YORI_LIB_VT_END_STREAM_FN)(HANDLE, DWORDLONG*);
-
-/**
- Output text between escapes to the output device.
-*/
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
-
-/**
- A callback function to receive an escape and translate it into the
- appropriate action.
-*/
-typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
-
-/**
- A set of callback functions that can be invoked when processing VT100
- enhanced text and format it for the appropriate output device.
- */
-typedef struct _YORI_LIB_VT_CALLBACK_FUNCTIONS {
-
-    /**
-     Initialize the output stream with any header information.
-    */
-    YORI_LIB_VT_INITIALIZE_STREAM_FN InitializeStream;
-
-    /**
-     End processing for the specified stream.
-    */
-    YORI_LIB_VT_END_STREAM_FN EndStream;
-
-    /**
-     Output text between escapes to the output device.
-    */
-    YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN ProcessAndOutputText;
-
-    /**
-     A callback function to receive an escape and translate it into the
-     appropriate action.
-    */
-    YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN ProcessAndOutputEscape;
-
-    /**
-     Context which is passed between functions and is opaque to the VT engine.
-     */
-    DWORDLONG Context;
-
-} YORI_LIB_VT_CALLBACK_FUNCTIONS, *PYORI_LIB_VT_CALLBACK_FUNCTIONS;
-
-BOOL
-YoriLibConsoleSetFunctions(
-    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
-    );
-
-BOOL
-YoriLibConsoleNoEscapeSetFunctions(
-    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
-    );
-
-BOOL
-YoriLibUtf8TextWithEscapesSetFunctions(
-    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
-    );
-
-BOOL
-YoriLibUtf8TextNoEscapesSetFunctions(
-    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
-    );
-
-BOOL
-YoriLibProcessVtEscapesOnOpenStream(
-    __in LPTSTR String,
-    __in DWORD StringLength,
-    __in HANDLE hOutput,
-    __in PYORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks
-    );
-
-BOOL
-YoriLibOutput(
-    __in DWORD Flags,
-    __in LPCTSTR szFmt,
-    ...
-    );
-
-BOOL
-YoriLibOutputToDevice(
-    __in HANDLE hOut,
-    __in DWORD Flags,
-    __in LPCTSTR szFmt,
-    ...
-    );
-
-BOOL
-YoriLibOutputString(
-    __in HANDLE hOut,
-    __in DWORD Flags,
-    __in PYORI_STRING String
-    );
-
-BOOL
-YoriLibVtSetConsoleTextAttributeOnDevice(
-    __in HANDLE hOut,
-    __in DWORD Flags,
-    __in UCHAR Ctrl,
-    __in WORD Attribute
-    );
-
-__success(return)
-BOOL
-YoriLibVtStringForTextAttribute(
-    __inout PYORI_STRING String,
-    __in UCHAR Ctrl,
-    __in WORD Attribute
-    );
-
-BOOL
-YoriLibVtSetConsoleTextAttribute(
-    __in DWORD Flags,
-    __in WORD Attribute
-    );
-
-VOID
-YoriLibVtSetLineEnding(
-    __in LPTSTR LineEnding
-    );
-
-LPTSTR
-YoriLibVtGetLineEnding(VOID);
-
-VOID
-YoriLibVtSetDefaultColor(
-    __in WORD NewDefaultColor
-    );
-
-WORD
-YoriLibVtGetDefaultColor(VOID);
-
-BOOL
-YoriLibVtFinalColorFromSequence(
-    __in WORD InitialColor,
-    __in PCYORI_STRING EscapeSequence,
-    __out PWORD FinalColor
-    );
-
-BOOL
-YoriLibStripVtEscapes(
-    __in PYORI_STRING VtText,
-    __inout PYORI_STRING PlainText
-    );
-
-BOOL
-YoriLibGetWindowDimensions(
-    __in HANDLE OutputHandle,
-    __out_opt PDWORD Width,
-    __out_opt PDWORD Height
-    );
-
-BOOL
-YoriLibQueryConsoleCapabilities(
-    __in HANDLE OutputHandle,
-    __out_opt PBOOL SupportsColor,
-    __out_opt PBOOL SupportsExtendedChars,
-    __out_opt PBOOL SupportsAutoLineWrap
-    );
-
 // *** PATH.C ***
 
 /**
@@ -3276,7 +3037,6 @@ YoriLibLocateExecutableInPath(
     __in_opt PVOID MatchAllContext,
     __out _When_(MatchAllCallback != NULL, _Post_invalid_) PYORI_STRING PathName
     );
-
 
 // *** PRINTF.C ***
 
@@ -3366,88 +3126,61 @@ YoriLibYPrintf(
     ...
     );
 
-// *** ENV.C ***
+// *** PRIV.C ***
+
+BOOL
+YoriLibEnableBackupPrivilege(VOID);
+
+BOOL
+YoriLibEnableDebugPrivilege(VOID);
+
+BOOL
+YoriLibEnableManageVolumePrivilege(VOID);
+
+BOOL
+YoriLibEnableShutdownPrivilege(VOID);
+
+BOOL
+YoriLibEnableSymbolicLinkPrivilege(VOID);
+
+BOOL
+YoriLibEnableSystemTimePrivilege(VOID);
+
+BOOL
+YoriLibEnableTakeOwnershipPrivilege(VOID);
+
+// *** PROCESS.C ***
 
 __success(return)
 BOOL
-YoriLibGetEnvironmentStrings(
-    __out PYORI_STRING EnvStrings
+YoriLibGetSystemProcessList(
+    __out PYORI_SYSTEM_PROCESS_INFORMATION *ProcessInfo
     );
 
 __success(return)
 BOOL
-YoriLibAreEnvironmentStringsValid(
-    __inout PYORI_STRING EnvStrings
+YoriLibGetSystemHandlesList(
+    __out PYORI_SYSTEM_HANDLE_INFORMATION_EX *HandlesInfo
     );
+
+// *** PROGMAN.C ***
 
 __success(return)
 BOOL
-YoriLibAreAnsiEnvironmentStringsValid(
-    __in PUCHAR AnsiEnvStringBuffer,
-    __in DWORD BufferLength,
-    __out PYORI_STRING UnicodeStrings
+YoriLibAddProgmanItem(
+    __in PCYORI_STRING GroupName,
+    __in PCYORI_STRING ItemName,
+    __in PCYORI_STRING ItemPath,
+    __in_opt PCYORI_STRING WorkingDirectory,
+    __in_opt PCYORI_STRING IconPath,
+    __in DWORD IconIndex
     );
 
-__success(return)
-BOOL
-YoriLibAllocateAndGetEnvironmentVariable(
-    __in LPCTSTR Name,
-    __inout PYORI_STRING Value
-    );
+// *** RECYCLE.C ***
 
-__success(return)
 BOOL
-YoriLibGetEnvironmentVariableAsNumber(
-    __in LPCTSTR Name,
-    __out PLONGLONG Value
-    );
-
-__success(return)
-BOOL
-YoriLibAddEnvironmentComponentToString(
-    __inout PYORI_STRING ExistingString,
-    __in PCYORI_STRING NewComponent,
-    __in BOOL InsertAtFront
-    );
-
-__success(return)
-BOOL
-YoriLibAddEnvironmentComponentReturnString(
-    __in PYORI_STRING EnvironmentVariable,
-    __in PYORI_STRING NewComponent,
-    __in BOOL InsertAtFront,
-    __out PYORI_STRING Result
-    );
-
-__success(return)
-BOOL
-YoriLibAddEnvironmentComponent(
-    __in LPTSTR EnvironmentVariable,
-    __in PYORI_STRING NewComponent,
-    __in BOOL InsertAtFront
-    );
-
-__success(return)
-BOOL
-YoriLibRemoveEnvironmentComponentFromString(
-    __in PYORI_STRING String,
-    __in PYORI_STRING ComponentToRemove,
-    __out PYORI_STRING Result
-    );
-
-__success(return)
-BOOL
-YoriLibRemoveEnvironmentComponentReturnString(
-    __in PYORI_STRING EnvironmentVariable,
-    __in PYORI_STRING ComponentToRemove,
-    __out PYORI_STRING Result
-    );
-
-__success(return)
-BOOL
-YoriLibRemoveEnvironmentComponent(
-    __in LPTSTR EnvironmentVariable,
-    __in PYORI_STRING ComponentToRemove
+YoriLibRecycleBinFile(
+    __in PYORI_STRING FilePath
     );
 
 // *** SCHEME.C ***
@@ -4082,6 +3815,35 @@ YoriLibStringConcatenateWithLiteral(
  */
 #define wcscpy(a,b)  YoriLibSPrintf(a, L"%s", b)
 
+// *** STRMENUM.C ***
+
+BOOL
+YoriLibForEachStream(
+    __in PYORI_STRING FileSpec,
+    __in DWORD MatchFlags,
+    __in DWORD Depth,
+    __in PYORILIB_FILE_ENUM_FN Callback,
+    __in_opt PYORILIB_FILE_ENUM_ERROR_FN ErrorCallback,
+    __in PVOID Context
+    );
+
+// *** TEMP.C ***
+
+__success(return)
+BOOLEAN
+YoriLibGetTempFileName(
+    __in PYORI_STRING PathName,
+    __in PYORI_STRING PrefixString,
+    __out_opt PHANDLE TempHandle,
+    __out_opt PYORI_STRING TempFileName
+    );
+
+BOOL
+YoriLibGetTempPath(
+    __out PYORI_STRING TempPathName,
+    __in DWORD ExtraChars
+    );
+
 // *** UPDATE.C ***
 
 /**
@@ -4218,5 +3980,244 @@ DWORD
 YoriLibShellExecuteInstanceToError(
     __in HINSTANCE hInst
     );
+
+// *** VT.C ***
+
+/**
+ Convert an ANSI attribute (in RGB order) back into Windows BGR order.
+ */
+#define YoriLibAnsiToWindowsNibble(COL)      \
+    (((COL) & 8?FOREGROUND_INTENSITY:0)|     \
+     ((COL) & 4?FOREGROUND_BLUE:0)|          \
+     ((COL) & 2?FOREGROUND_GREEN:0)|         \
+     ((COL) & 1?FOREGROUND_RED:0))
+
+/**
+ Convert an ANSI attribute, containing both a background and a foreground
+ (in RGB order) back into Windows BGR order.
+ */
+#define YoriLibAnsiToWindowsByte(COL)          \
+    (UCHAR)(YoriLibAnsiToWindowsNibble(COL) |  \
+     (YoriLibAnsiToWindowsNibble((COL)>>4)<<4));
+
+/**
+ Convert a Win32 text attribute into an ANSI escape value.  This happens
+ because the two disagree on RGB order.
+ */
+#define YoriLibWindowsToAnsi(COL)      \
+    (((COL) & FOREGROUND_BLUE?4:0)|    \
+     ((COL) & FOREGROUND_GREEN?2:0)|   \
+     ((COL) & FOREGROUND_RED?1:0))
+
+/**
+ The maximum length of a string used to describe a VT sequence generated
+ internally by one of these tools.
+ */
+#define YORI_MAX_INTERNAL_VT_ESCAPE_CHARS sizeof("E[0;999;999;1m")
+
+BOOL
+YoriLibOutputTextToMultibyteDevice(
+    __in HANDLE hOutput,
+    __in PCYORI_STRING String
+    );
+
+/**
+ Output the string to the standard output device.
+ */
+#define YORI_LIB_OUTPUT_STDOUT 0x00
+
+/**
+ Output the string to the standard error device.
+ */
+#define YORI_LIB_OUTPUT_STDERR 0x01
+
+/**
+ Output the string to the debugger device.
+ */
+#define YORI_LIB_OUTPUT_DEBUG  0x02
+
+/**
+ Remove VT100 escapes if the target is not expecting to handle these.
+ */
+#define YORI_LIB_OUTPUT_STRIP_VT 0x10
+
+/**
+ Include VT100 escapes in the output stream with no processing.
+ */
+#define YORI_LIB_OUTPUT_PASSTHROUGH_VT 0x20
+
+/**
+ Initialize the output stream with any header information.
+*/
+typedef BOOL (* YORI_LIB_VT_INITIALIZE_STREAM_FN)(HANDLE, DWORDLONG*);
+
+/**
+ End processing for the specified stream.
+*/
+typedef BOOL (* YORI_LIB_VT_END_STREAM_FN)(HANDLE, DWORDLONG*);
+
+/**
+ Output text between escapes to the output device.
+*/
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
+
+/**
+ A callback function to receive an escape and translate it into the
+ appropriate action.
+*/
+typedef BOOL (* YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN)(HANDLE, PCYORI_STRING, DWORDLONG*);
+
+/**
+ A set of callback functions that can be invoked when processing VT100
+ enhanced text and format it for the appropriate output device.
+ */
+typedef struct _YORI_LIB_VT_CALLBACK_FUNCTIONS {
+
+    /**
+     Initialize the output stream with any header information.
+    */
+    YORI_LIB_VT_INITIALIZE_STREAM_FN InitializeStream;
+
+    /**
+     End processing for the specified stream.
+    */
+    YORI_LIB_VT_END_STREAM_FN EndStream;
+
+    /**
+     Output text between escapes to the output device.
+    */
+    YORI_LIB_VT_PROCESS_AND_OUTPUT_TEXT_FN ProcessAndOutputText;
+
+    /**
+     A callback function to receive an escape and translate it into the
+     appropriate action.
+    */
+    YORI_LIB_VT_PROCESS_AND_OUTPUT_ESCAPE_FN ProcessAndOutputEscape;
+
+    /**
+     Context which is passed between functions and is opaque to the VT engine.
+     */
+    DWORDLONG Context;
+
+} YORI_LIB_VT_CALLBACK_FUNCTIONS, *PYORI_LIB_VT_CALLBACK_FUNCTIONS;
+
+BOOL
+YoriLibConsoleSetFunctions(
+    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
+    );
+
+BOOL
+YoriLibConsoleNoEscapeSetFunctions(
+    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
+    );
+
+BOOL
+YoriLibUtf8TextWithEscapesSetFunctions(
+    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
+    );
+
+BOOL
+YoriLibUtf8TextNoEscapesSetFunctions(
+    __out PYORI_LIB_VT_CALLBACK_FUNCTIONS CallbackFunctions
+    );
+
+BOOL
+YoriLibProcessVtEscapesOnOpenStream(
+    __in LPTSTR String,
+    __in DWORD StringLength,
+    __in HANDLE hOutput,
+    __in PYORI_LIB_VT_CALLBACK_FUNCTIONS Callbacks
+    );
+
+BOOL
+YoriLibOutput(
+    __in DWORD Flags,
+    __in LPCTSTR szFmt,
+    ...
+    );
+
+BOOL
+YoriLibOutputToDevice(
+    __in HANDLE hOut,
+    __in DWORD Flags,
+    __in LPCTSTR szFmt,
+    ...
+    );
+
+BOOL
+YoriLibOutputString(
+    __in HANDLE hOut,
+    __in DWORD Flags,
+    __in PYORI_STRING String
+    );
+
+BOOL
+YoriLibVtSetConsoleTextAttributeOnDevice(
+    __in HANDLE hOut,
+    __in DWORD Flags,
+    __in UCHAR Ctrl,
+    __in WORD Attribute
+    );
+
+__success(return)
+BOOL
+YoriLibVtStringForTextAttribute(
+    __inout PYORI_STRING String,
+    __in UCHAR Ctrl,
+    __in WORD Attribute
+    );
+
+BOOL
+YoriLibVtSetConsoleTextAttribute(
+    __in DWORD Flags,
+    __in WORD Attribute
+    );
+
+VOID
+YoriLibVtSetLineEnding(
+    __in LPTSTR LineEnding
+    );
+
+LPTSTR
+YoriLibVtGetLineEnding(VOID);
+
+VOID
+YoriLibVtSetDefaultColor(
+    __in WORD NewDefaultColor
+    );
+
+WORD
+YoriLibVtGetDefaultColor(VOID);
+
+BOOL
+YoriLibVtFinalColorFromSequence(
+    __in WORD InitialColor,
+    __in PCYORI_STRING EscapeSequence,
+    __out PWORD FinalColor
+    );
+
+BOOL
+YoriLibStripVtEscapes(
+    __in PYORI_STRING VtText,
+    __inout PYORI_STRING PlainText
+    );
+
+BOOL
+YoriLibGetWindowDimensions(
+    __in HANDLE OutputHandle,
+    __out_opt PDWORD Width,
+    __out_opt PDWORD Height
+    );
+
+BOOL
+YoriLibQueryConsoleCapabilities(
+    __in HANDLE OutputHandle,
+    __out_opt PBOOL SupportsColor,
+    __out_opt PBOOL SupportsExtendedChars,
+    __out_opt PBOOL SupportsAutoLineWrap
+    );
+
+
+// MSFIX Out of order here
 
 // vim:sw=4:ts=4:et:
