@@ -9404,6 +9404,18 @@ GET_KEYBOARD_LAYOUT(DWORD);
 typedef GET_KEYBOARD_LAYOUT *PGET_KEYBOARD_LAYOUT;
 
 /**
+ A prototype for the GetShellWindow function.
+ */
+typedef
+HWND WINAPI
+GET_SHELL_WINDOW(VOID);
+
+/**
+ A prototype for a pointer to the GetShellWindow function.
+ */
+typedef GET_SHELL_WINDOW *PGET_SHELL_WINDOW;
+
+/**
  A prototype for the GetTaskmanWindow function.
  */
 typedef
@@ -9733,6 +9745,11 @@ typedef struct _YORI_USER32_FUNCTIONS {
      If it's available on the current system, a pointer to GetKeyboardLayout.
      */
     PGET_KEYBOARD_LAYOUT pGetKeyboardLayout;
+
+    /**
+     If it's available on the current system, a pointer to GetShellWindow.
+     */
+    PGET_SHELL_WINDOW pGetShellWindow;
 
     /**
      If it's available on the current system, a pointer to GetTaskmanWindow.

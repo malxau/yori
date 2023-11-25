@@ -1010,7 +1010,9 @@ YuiCreateWindow(
     //
 
     if (DllUser32.pGetTaskmanWindow != NULL &&
-        DllUser32.pGetTaskmanWindow() == NULL) {
+        DllUser32.pGetShellWindow != NULL &&
+        DllUser32.pGetTaskmanWindow() == NULL &&
+        DllUser32.pGetShellWindow() == NULL) {
 
         Context->LoginShell = TRUE;
     }
