@@ -485,6 +485,7 @@ YoriShDisplayWarnings(VOID)
 {
     YORI_ALLOC_SIZE_T EnvVarLength;
     YORI_STRING ModuleName;
+    BOOLEAN WarningDisplayed;
 
     EnvVarLength = YoriShGetEnvironmentVariableWithoutSubstitution(_T("YORINOWARNINGS"), NULL, 0, NULL);
     if (EnvVarLength > 0) {
@@ -512,6 +513,8 @@ YoriShDisplayWarnings(VOID)
     if (!YoriLibAllocateString(&ModuleName, 32768)) {
         return FALSE;
     }
+
+    WarningDisplayed = FALSE;
 
     ModuleName.LengthInChars = (YORI_ALLOC_SIZE_T)GetModuleFileName(NULL, ModuleName.StartOfString, ModuleName.LengthAllocated);
     if (ModuleName.LengthInChars > 0 && ModuleName.LengthInChars < ModuleName.LengthAllocated) {
@@ -566,6 +569,7 @@ YoriShDisplayWarnings(VOID)
                               _T("Warning: This build of Yori is %i %s old.  Run ypm -u to upgrade.\n"),
                               UnitToDisplay,
                               UnitLabel);
+                WarningDisplayed = TRUE;
             }
         }
     }
@@ -574,10 +578,14 @@ YoriShDisplayWarnings(VOID)
         BOOL IsWow = FALSE;
         if (DllKernel32.pIsWow64Process(GetCurrentProcess(), &IsWow) && IsWow) {
             YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("Warning: This a 32 bit version of Yori on a 64 bit system.\n   Run 'ypm -a amd64 -u' to switch to the 64 bit version.\n"));
+            WarningDisplayed = TRUE;
         }
     }
 
     YoriLibFreeStringContents(&ModuleName);
+    if (WarningDisplayed) {
+        YoriLibOutput(YORI_LIB_OUTPUT_STDOUT, _T("  (Set YORINOWARNINGS=1 to suppress these messages)\n"));
+    }
     return TRUE;
 }
 
