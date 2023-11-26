@@ -242,6 +242,16 @@ YoriShInit(VOID)
             if (YoriLibAllocateString(&CompletePath, ModuleName.LengthInChars + sizeof("\\completion"))) {
                 CompletePath.LengthInChars = YoriLibSPrintf(CompletePath.StartOfString, _T("%y\\completion"), &ModuleName);
                 YoriLibAddEnvironmentComponent(_T("YORICOMPLETEPATH"), &CompletePath, FALSE);
+
+                //
+                //  Convert "completion" into "complete" so there's an 8.3
+                //  compliant name in the search path
+                //
+
+                CompletePath.LengthInChars = (YORI_ALLOC_SIZE_T)(CompletePath.LengthInChars - 2);
+                CompletePath.StartOfString[CompletePath.LengthInChars - 1] = 'e';
+                CompletePath.StartOfString[CompletePath.LengthInChars] = '\0';
+                YoriLibAddEnvironmentComponent(_T("YORICOMPLETEPATH"), &CompletePath, FALSE);
                 YoriLibFreeStringContents(&CompletePath);
             }
         }

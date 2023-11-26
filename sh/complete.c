@@ -1707,6 +1707,7 @@ YoriShResolveTabCompletionActionForExecutable(
     YORI_STRING FullArgs;
     PYORI_STRING Executable;
     YORI_ALLOC_SIZE_T FinalSeperator;
+    LPTSTR FinalPeriod;
 
     YoriLibInitializeListHead(&Action->List);
 
@@ -1750,21 +1751,23 @@ YoriShResolveTabCompletionActionForExecutable(
     //  isn't one, perform a default action.
     //
 
-    if (!YoriLibPathLocateUnknownExtensionUnknownLocation(&FilePartOnly, &YoriCompletePathVariable, FALSE, NULL, NULL, &FoundCompletionScript)) {
-        YoriLibFreeStringContents(&FoundCompletionScript);
-        YoriLibFreeStringContents(&YoriCompletePathVariable);
+    while (!YoriLibPathLocateUnknownExtensionUnknownLocation(&FilePartOnly, &YoriCompletePathVariable, FALSE, NULL, NULL, &FoundCompletionScript) ||
+        FoundCompletionScript.LengthInChars == 0) {
 
-        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
-        return TRUE;
+        FinalPeriod = YoriLibFindRightMostCharacter(&FilePartOnly, '.');
+        if (FinalPeriod == NULL) {
+            YoriLibFreeStringContents(&FoundCompletionScript);
+            YoriLibFreeStringContents(&YoriCompletePathVariable);
+
+            Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
+            return TRUE;
+        }
+
+        FilePartOnly.LengthInChars = (YORI_ALLOC_SIZE_T)(FinalPeriod - FilePartOnly.StartOfString);
     }
 
     YoriLibFreeStringContents(&YoriCompletePathVariable);
-
-    if (FoundCompletionScript.LengthInChars == 0) {
-        YoriLibFreeStringContents(&FoundCompletionScript);
-        Action->CompletionAction = CompletionActionTypeFilesAndDirectories;
-        return TRUE;
-    }
+    ASSERT(FoundCompletionScript.LengthInChars > 0);
 
     //
     //  If there is one, create an expression and invoke the script.
