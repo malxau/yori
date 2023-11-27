@@ -252,18 +252,18 @@ BatteryExpandVariables(
 
 #ifdef YORI_BUILTIN
 /**
- The main entrypoint for the cpuinfo builtin command.
+ The main entrypoint for the battery builtin command.
  */
 #define ENTRYPOINT YoriCmd_YBATTERY
 #else
 /**
- The main entrypoint for the cpuinfo standalone application.
+ The main entrypoint for the battery standalone application.
  */
 #define ENTRYPOINT ymain
 #endif
 
 /**
- The main entrypoint for the cpuinfo cmdlet.
+ The main entrypoint for the battery cmdlet.
 
  @param ArgC The number of arguments.
 
