@@ -57,6 +57,7 @@ OBJS=\
 	 scut.obj     \
 	 scheme.obj   \
 	 select.obj   \
+	 strarray.obj \
 	 string.obj   \
 	 strmenum.obj \
 	 temp.obj     \

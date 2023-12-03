@@ -103,8 +103,9 @@ YoriWinItemArrayReallocateArrayForNewItems(
     //
 
     if (NumNewItems > ItemArray->CountAllocated - ItemArray->Count) {
-        YORI_ALLOC_SIZE_T ItemsToAllocate;
         PYORI_WIN_ITEM_ENTRY CombinedOptions;
+        DWORD BytesRequired;
+        DWORD ItemsToAllocate;
 
         ItemsToAllocate = (ItemArray->CountAllocated / 5);
 
@@ -118,7 +119,13 @@ YoriWinItemArrayReallocateArrayForNewItems(
 
         ItemsToAllocate = ItemsToAllocate + ItemArray->CountAllocated;
 
-        CombinedOptions = YoriLibReferencedMalloc(ItemsToAllocate * sizeof(YORI_WIN_ITEM_ENTRY));
+        BytesRequired = ItemsToAllocate * sizeof(YORI_WIN_ITEM_ENTRY);
+
+        if (!YoriLibIsSizeAllocatable(BytesRequired)) {
+            return FALSE;
+        }
+
+        CombinedOptions = YoriLibReferencedMalloc(BytesRequired);
         if (CombinedOptions == NULL) {
             return FALSE;
         }
@@ -128,7 +135,7 @@ YoriWinItemArrayReallocateArrayForNewItems(
         }
 
         ItemArray->Items = CombinedOptions;
-        ItemArray->CountAllocated = ItemsToAllocate;
+        ItemArray->CountAllocated = (YORI_ALLOC_SIZE_T)ItemsToAllocate;
     }
 
     return TRUE;

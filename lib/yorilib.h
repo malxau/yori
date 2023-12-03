@@ -119,6 +119,45 @@ typedef struct _YORI_STRING {
 typedef YORI_STRING CONST *PCYORI_STRING;
 
 /**
+ An array of strings that can be appended to and sorted.
+ */
+typedef struct _YORI_STRING_ARRAY {
+
+    /**
+     Count of items with meaningful data in the array.
+     */
+    YORI_ALLOC_SIZE_T Count;
+
+    /**
+     Number of elements allocated in the Items array.
+     */
+    YORI_ALLOC_SIZE_T CountAllocated;
+
+    /**
+     The base of the string allocation (to reference when consuming.)
+     */
+    LPTSTR StringAllocationBase;
+
+    /**
+     The current end of the string allocation (to write to when consuming.)
+     */
+    LPTSTR StringAllocationCurrent;
+
+    /**
+     The number of characters remaining in the string allocation.
+     */
+    YORI_ALLOC_SIZE_T StringAllocationRemaining;
+
+    /**
+     An array of items in memory.  This allocation is referenced because it
+     is used here, and may be referenced by each string that is contained
+     within the allocation.
+     */
+    PYORI_STRING Items;
+
+} YORI_STRING_ARRAY, *PYORI_STRING_ARRAY;
+
+/**
  A buffer for a single data stream.
  */
 typedef struct _YORI_LIB_BYTE_BUFFER {
@@ -3579,6 +3618,25 @@ YoriLibSetSelectionColor(
 BOOL
 YoriLibIsYoriQuickEditEnabled(VOID);
 
+// *** STRARRAY.C ***
+
+VOID
+YoriStringArrayInitialize(
+    __out PYORI_STRING_ARRAY StringArray
+    );
+
+VOID
+YoriStringArrayCleanup(
+    __inout PYORI_STRING_ARRAY StringArray
+    );
+
+__success(return)
+BOOLEAN
+YoriStringArrayAddItems(
+    __inout PYORI_STRING_ARRAY StringArray,
+    __in PCYORI_STRING NewItems,
+    __in YORI_ALLOC_SIZE_T NumNewItems
+    );
 
 // *** STRING.C ***
 

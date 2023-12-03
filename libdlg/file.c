@@ -506,7 +506,7 @@ YoriDlgFileFileFoundCallback(
     )
 {
     YORI_STRING FileNameOnly;
-    PYORI_WIN_CTRL_HANDLE FileListCtrl;
+    PYORI_STRING_ARRAY StringArray;
 
     UNREFERENCED_PARAMETER(FilePath);
     UNREFERENCED_PARAMETER(Depth);
@@ -515,10 +515,10 @@ YoriDlgFileFileFoundCallback(
         return TRUE;
     }
 
-    FileListCtrl = (PYORI_WIN_CTRL_HANDLE)Context;
+    StringArray = (PYORI_STRING_ARRAY)Context;
     YoriLibConstantString(&FileNameOnly, FileInfo->cFileName);
 
-    YoriWinListAddItems(FileListCtrl, &FileNameOnly, 1);
+    YoriStringArrayAddItems(StringArray, &FileNameOnly, 1);
     return TRUE;
 }
 
@@ -547,7 +547,7 @@ YoriDlgFileDirFoundCallback(
     )
 {
     YORI_STRING FileNameOnly;
-    PYORI_WIN_CTRL_HANDLE DirListCtrl;
+    PYORI_STRING_ARRAY StringArray;
 
     UNREFERENCED_PARAMETER(FilePath);
     UNREFERENCED_PARAMETER(Depth);
@@ -564,10 +564,10 @@ YoriDlgFileDirFoundCallback(
         return TRUE;
     }
 
-    DirListCtrl = (PYORI_WIN_CTRL_HANDLE)Context;
+    StringArray = (PYORI_STRING_ARRAY)Context;
     YoriLibConstantString(&FileNameOnly, FileInfo->cFileName);
 
-    YoriWinListAddItems(DirListCtrl, &FileNameOnly, 1);
+    YoriStringArrayAddItems(StringArray, &FileNameOnly, 1);
     return TRUE;
 }
 
@@ -601,6 +601,7 @@ YoriDlgFileRefreshView(
     TCHAR DriveProbeString[sizeof("A:\\")];
     TCHAR DriveDisplayString[sizeof("[-A-]")];
     UINT DriveProbeResult;
+    YORI_STRING_ARRAY NewListItems;
 
     if (!YoriLibUserStringToSingleFilePath(Directory, TRUE, &FullDir)) {
         return;
@@ -659,7 +660,11 @@ YoriDlgFileRefreshView(
     }
 
     YoriWinListClearAllItems(FileList);
-    YoriLibForEachFile(&SearchString, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_BASIC_EXPANSION, 0, YoriDlgFileFileFoundCallback, NULL, FileList);
+    YoriStringArrayInitialize(&NewListItems);
+    YoriLibForEachFile(&SearchString, YORILIB_FILEENUM_RETURN_FILES | YORILIB_FILEENUM_BASIC_EXPANSION, 0, YoriDlgFileFileFoundCallback, NULL, &NewListItems);
+    YoriLibSortStringArray(NewListItems.Items, NewListItems.Count);
+    YoriWinListAddItems(FileList, NewListItems.Items, NewListItems.Count);
+    YoriStringArrayCleanup(&NewListItems);
 
 
     //
@@ -672,7 +677,10 @@ YoriDlgFileRefreshView(
     }
 
     YoriWinListClearAllItems(DirList);
-    YoriLibForEachFile(&SearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES | YORILIB_FILEENUM_BASIC_EXPANSION, 0, YoriDlgFileDirFoundCallback, NULL, DirList);
+    YoriLibForEachFile(&SearchString, YORILIB_FILEENUM_RETURN_DIRECTORIES | YORILIB_FILEENUM_INCLUDE_DOTFILES | YORILIB_FILEENUM_BASIC_EXPANSION, 0, YoriDlgFileDirFoundCallback, NULL, &NewListItems);
+    YoriLibSortStringArray(NewListItems.Items, NewListItems.Count);
+    YoriWinListAddItems(DirList, NewListItems.Items, NewListItems.Count);
+    YoriStringArrayCleanup(&NewListItems);
     State->NumberDirectories = YoriWinListGetItemCount(DirList);
 
     //
