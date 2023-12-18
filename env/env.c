@@ -231,6 +231,9 @@ EnvModifyEnvironment(
 
             Buffer = YoriLibByteBufferGetPointerToValidData(&Stdin->ByteBuffer, 0, &BytesPopulated);
             ASSERT(Buffer != NULL);
+            if (Buffer == NULL) {
+                return FALSE;
+            }
 
             StdinLength = YoriLibGetMultibyteInputSizeNeeded(Buffer, BytesPopulated);
             if (!YoriLibAllocateString(&StdinString, StdinLength + 1)) {
