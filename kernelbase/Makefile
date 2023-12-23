@@ -15,6 +15,6 @@ compile:
 
 !INCLUDE "..\config\common.mk"
 
-kernelbase.lib: $(OBJS)
+kernelbase.lib: $(OBJS) kernelbase.def
 	@echo $@
 	@$(LIB32) $(LIBFLAGS) -MACHINE:$(MACHINE) -DEF:kernelbase.def -out:$@

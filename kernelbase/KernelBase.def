@@ -1,5 +1,6 @@
 LIBRARY KERNELBASE
 EXPORTS
+AllocConsole
 CloseHandle
 ContinueDebugEvent
 CreateConsoleScreenBuffer
@@ -14,6 +15,7 @@ DebugBreak
 DeleteFileW
 DeviceIoControl
 DuplicateHandle
+EnumResourceNamesW
 ExitProcess
 ExpandEnvironmentStringsW
 FileTimeToLocalFileTime
